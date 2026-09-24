@@ -1,3 +1,4 @@
+/** 脚本项目设置：保存并规范语言、诊断与运行相关选项。 */
 import { reactive } from 'vue'
 
 export interface ScriptProjectSettings {
@@ -34,7 +35,7 @@ export const scriptProjectSettings = reactive<ScriptProjectSettings>({
   remoteDebug: { enabled: false, host: '127.0.0.1', port: 47960, authentication: 'token', tokenHash: '', allowExportedPlayers: false }
 })
 
-export function normalizeScriptSettings(source: unknown): ScriptProjectSettings {
+/** 规范化脚本 API、信号、格式、检查、索引和测试预算，限制远程调试为回环主机与令牌认证。 */ export function normalizeScriptSettings(source: unknown): ScriptProjectSettings {
   const item = source && typeof source === 'object' ? source as Partial<ScriptProjectSettings> : {}
   const formatting = item.formatting && typeof item.formatting === 'object' ? item.formatting : {} as Partial<ScriptProjectSettings['formatting']>
   const lint = item.lint && typeof item.lint === 'object' ? item.lint : {} as Partial<ScriptProjectSettings['lint']>
@@ -44,7 +45,7 @@ export function normalizeScriptSettings(source: unknown): ScriptProjectSettings 
   return {
     apiVersion: Number(item.apiVersion) === 1 ? 1 : 2,
     customSignals: Array.isArray(item.customSignals)
-      ? [...new Set(item.customSignals.filter(value => typeof value === 'string').map(value => value.trim().slice(0, 128)).filter(Boolean))].slice(0, 256)
+      ? [...new Set(item.customSignals.filter(/* 比较 typeof value 与 'string'，返回严格相等的判断结果。 */ value => typeof value === 'string').map(/* 调用 value.trim().slice(0, 128) 并返回调用结果。 */ value => value.trim().slice(0, 128)).filter(Boolean))].slice(0, 256)
       : [],
     maxConsoleEntries: Math.min(10_000, Math.max(100, Math.round(Number(item.maxConsoleEntries) || 2000))),
     debuggerEnabled: item.debuggerEnabled !== false,
@@ -85,6 +86,6 @@ export function normalizeScriptSettings(source: unknown): ScriptProjectSettings 
   }
 }
 
-export function serializeScriptSettings(): ScriptProjectSettings {
+/* 调用 normalizeScriptSettings(scriptProjectSettings) 并返回调用结果。 */ export function serializeScriptSettings(): ScriptProjectSettings {
   return normalizeScriptSettings(scriptProjectSettings)
 }

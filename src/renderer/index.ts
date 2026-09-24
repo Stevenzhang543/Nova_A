@@ -1,3 +1,4 @@
+/** 二维渲染器工厂：根据所选能力与配置创建对应渲染后端。 */
 import { Canvas2DRenderer } from './Canvas2DRenderer'
 import { WebGL2Renderer } from './WebGL2Renderer'
 import type { Renderer2D } from './types'
@@ -10,6 +11,7 @@ export * from './capabilities'
 /** A canvas which acquired WebGL cannot switch context types; the owner must remount it. */
 export class RendererCanvasReplacementRequired extends Error {}
 
+/* 创建指定或首选的二维后端；WebGL 初始化失败时尝试 Canvas2D，必要时要求上层换新画布。 */
 export function createRenderer2D(canvas: HTMLCanvasElement, canvas2dOnly = false): Renderer2D {
   const requestedPath = renderingSettings.rendererPath
   if (canvas2dOnly) { const renderer = new Canvas2DRenderer(canvas); reportRendererCreated('Canvas2D', requestedPath); return renderer }

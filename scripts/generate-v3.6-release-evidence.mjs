@@ -1,3 +1,4 @@
+/** 版本3.6：汇集发布报告与产物文件，生成带来源记录的发布证据。 */
 import { readFile, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'

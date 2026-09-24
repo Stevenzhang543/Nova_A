@@ -1,3 +1,4 @@
+<!-- 运行组件检查器：编辑实体运行组件配置与资源关联。 -->
 <template>
   <section v-if="animator && componentVisible('Animator', t('animator'))" class="runtime-component">
     <header><strong>{{ t('animator') }}</strong><button @click="remove('Animator')">×</button></header>
@@ -258,87 +259,87 @@ import { timelineRuntime } from '../runtime/timeline'
 
 const props = defineProps<{ entity: Entity; searchQuery?: string; category?: InspectorCategory }>()
 const breakpointIds = new WeakMap<object, number>(); let nextBreakpointId = 0
-function breakpointResourceKey(point: object, field: string): string { let id = breakpointIds.get(point); if (id === undefined) { id = ++nextBreakpointId; breakpointIds.set(point, id) } return props.entity.uuid + ':breakpoint:' + id + ':' + field }
+/** 为断点对象分配稳定的弱引用编号，并结合实体及字段生成编辑资源键。 */ function breakpointResourceKey(point: object, field: string): string { let id = breakpointIds.get(point); if (id === undefined) { id = ++nextBreakpointId; breakpointIds.set(point, id) } return props.entity.uuid + ':breakpoint:' + id + ':' + field }
 const uiImageInput = ref<HTMLInputElement | null>(null)
-const ValueRange = defineComponent({ props: { component: { type: Object as PropType<Slider | ProgressBar>, required: true } }, setup(componentProps) { return () => h('div', { class: 'range-values' }, [['min', 'Min'], ['max', 'Max'], ['value', t('value')]].map(([key, label]) => h('label', [h('span', label), h(NumericExpressionInput, { modelValue: componentProps.component[key as 'min'], resourceKey: props.entity.uuid + ':' + componentProps.component.uuid + ':' + key, step: 1, 'onUpdate:modelValue': (value: number) => { componentProps.component[key as 'min'] = value } })])) ) } })
+const ValueRange = defineComponent({ props: { component: { type: Object as PropType<Slider | ProgressBar>, required: true } }, /** 为范围组件创建渲染函数，编辑最小值、最大值和当前值。 */ setup(componentProps) { return /** 渲染三个带稳定资源键的数值表达式输入。 */ () => h('div', { class: 'range-values' }, [['min', 'Min'], ['max', 'Max'], ['value', t('value')]].map(/** 为一个范围字段生成标签及输入组件，并绑定更新回调。 */ ([key, label]) => h('label', [h('span', label), h(NumericExpressionInput, { modelValue: componentProps.component[key as 'min'], resourceKey: props.entity.uuid + ':' + componentProps.component.uuid + ':' + key, step: 1, 'onUpdate:modelValue': /** 将已验证的输入数值写回对应范围字段。 */ (value: number) => { componentProps.component[key as 'min'] = value } })])) ) } })
 const anchorPresets = ['top-left', 'top', 'top-right', 'left', 'center', 'right', 'bottom-left', 'bottom', 'bottom-right', 'stretch'] as const
 const uiKinds: UiElementKind[] = ['Canvas', 'Panel', 'Image', 'Text', 'Button', 'Slider', 'ProgressBar', 'Checkbox', 'TextInput']
-const imageAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'image'))
-const audioAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'audio'))
-const fontAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'font'))
-const themeAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'uiTheme'))
-const controllerAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'controller'))
-const rigAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'rig'))
-const skinAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'skin'))
-const timelineAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'timeline'))
-const tileSetAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'tileset'))
-const animator = computed(() => props.entity.getComponent<Animator>('Animator'))
-const skeleton = computed(() => props.entity.getComponent<Skeleton2D>('Skeleton2D'))
-const timelinePlayer = computed(() => props.entity.getComponent<TimelinePlayer>('TimelinePlayer'))
-const audioSource = computed(() => props.entity.getComponent<AudioSource>('AudioSource'))
-const audioListener = computed(() => props.entity.getComponent<AudioListener>('AudioListener'))
-const rectTransform = computed(() => props.entity.getComponent<RectTransform>('RectTransform'))
-const canvas = computed(() => props.entity.getComponent<Canvas>('Canvas'))
-const panel = computed(() => props.entity.getComponent<Panel>('Panel'))
-const image = computed(() => props.entity.getComponent<Image>('Image'))
-const text = computed(() => props.entity.getComponent<Text>('Text'))
-const button = computed(() => props.entity.getComponent<Button>('Button'))
-const slider = computed(() => props.entity.getComponent<Slider>('Slider'))
-const progress = computed(() => props.entity.getComponent<ProgressBar>('ProgressBar'))
-const checkbox = computed(() => props.entity.getComponent<Checkbox>('Checkbox'))
-const textInput = computed(() => props.entity.getComponent<TextInput>('TextInput'))
-const tileMap = computed(() => props.entity.getComponent<TileMap2D>('TileMap2D'))
-const particleEmitter = computed(() => props.entity.getComponent<ParticleEmitter2D>('ParticleEmitter2D'))
-const light = computed(() => props.entity.getComponent<Light2D>('Light2D'))
-const shadowCaster = computed(() => props.entity.getComponent<ShadowCaster2D>('ShadowCaster2D'))
+const imageAssets = computed(/** 筛选图片资源供组件绑定。 */ () => assetState.records.filter(/* 比较 asset.assetType 与 'image'，返回严格相等的判断结果。 */ asset => asset.assetType === 'image'))
+const audioAssets = computed(/** 筛选音频资源供组件绑定。 */ () => assetState.records.filter(/* 比较 asset.assetType 与 'audio'，返回严格相等的判断结果。 */ asset => asset.assetType === 'audio'))
+const fontAssets = computed(/** 筛选字体资源供组件绑定。 */ () => assetState.records.filter(/* 比较 asset.assetType 与 'font'，返回严格相等的判断结果。 */ asset => asset.assetType === 'font'))
+const themeAssets = computed(/** 筛选界面主题资源供组件绑定。 */ () => assetState.records.filter(/* 比较 asset.assetType 与 'uiTheme'，返回严格相等的判断结果。 */ asset => asset.assetType === 'uiTheme'))
+const controllerAssets = computed(/** 筛选动画控制器资源供绑定。 */ () => assetState.records.filter(/* 比较 asset.assetType 与 'controller'，返回严格相等的判断结果。 */ asset => asset.assetType === 'controller'))
+const rigAssets = computed(/** 筛选骨架资源供绑定。 */ () => assetState.records.filter(/* 比较 asset.assetType 与 'rig'，返回严格相等的判断结果。 */ asset => asset.assetType === 'rig'))
+const skinAssets = computed(/** 筛选皮肤资源供绑定。 */ () => assetState.records.filter(/* 比较 asset.assetType 与 'skin'，返回严格相等的判断结果。 */ asset => asset.assetType === 'skin'))
+const timelineAssets = computed(/** 筛选时间轴资源供绑定。 */ () => assetState.records.filter(/* 比较 asset.assetType 与 'timeline'，返回严格相等的判断结果。 */ asset => asset.assetType === 'timeline'))
+const tileSetAssets = computed(/** 筛选图集资源供瓦片绑定。 */ () => assetState.records.filter(/* 比较 asset.assetType 与 'tileset'，返回严格相等的判断结果。 */ asset => asset.assetType === 'tileset'))
+const animator = computed(/* 调用 props.entity.getComponent<Animator>('Animator') 并返回调用结果。 */ () => props.entity.getComponent<Animator>('Animator'))
+const skeleton = computed(/* 调用 props.entity.getComponent<Skeleton2D>('Skeleton2D') 并返回调用结果。 */ () => props.entity.getComponent<Skeleton2D>('Skeleton2D'))
+const timelinePlayer = computed(/* 调用 props.entity.getComponent<TimelinePlayer>('TimelinePlayer') 并返回调用结果。 */ () => props.entity.getComponent<TimelinePlayer>('TimelinePlayer'))
+const audioSource = computed(/* 调用 props.entity.getComponent<AudioSource>('AudioSource') 并返回调用结果。 */ () => props.entity.getComponent<AudioSource>('AudioSource'))
+const audioListener = computed(/* 调用 props.entity.getComponent<AudioListener>('AudioListener') 并返回调用结果。 */ () => props.entity.getComponent<AudioListener>('AudioListener'))
+const rectTransform = computed(/* 调用 props.entity.getComponent<RectTransform>('RectTransform') 并返回调用结果。 */ () => props.entity.getComponent<RectTransform>('RectTransform'))
+const canvas = computed(/* 调用 props.entity.getComponent<Canvas>('Canvas') 并返回调用结果。 */ () => props.entity.getComponent<Canvas>('Canvas'))
+const panel = computed(/* 调用 props.entity.getComponent<Panel>('Panel') 并返回调用结果。 */ () => props.entity.getComponent<Panel>('Panel'))
+const image = computed(/* 调用 props.entity.getComponent<Image>('Image') 并返回调用结果。 */ () => props.entity.getComponent<Image>('Image'))
+const text = computed(/* 调用 props.entity.getComponent<Text>('Text') 并返回调用结果。 */ () => props.entity.getComponent<Text>('Text'))
+const button = computed(/* 调用 props.entity.getComponent<Button>('Button') 并返回调用结果。 */ () => props.entity.getComponent<Button>('Button'))
+const slider = computed(/* 调用 props.entity.getComponent<Slider>('Slider') 并返回调用结果。 */ () => props.entity.getComponent<Slider>('Slider'))
+const progress = computed(/* 调用 props.entity.getComponent<ProgressBar>('ProgressBar') 并返回调用结果。 */ () => props.entity.getComponent<ProgressBar>('ProgressBar'))
+const checkbox = computed(/* 调用 props.entity.getComponent<Checkbox>('Checkbox') 并返回调用结果。 */ () => props.entity.getComponent<Checkbox>('Checkbox'))
+const textInput = computed(/* 调用 props.entity.getComponent<TextInput>('TextInput') 并返回调用结果。 */ () => props.entity.getComponent<TextInput>('TextInput'))
+const tileMap = computed(/* 调用 props.entity.getComponent<TileMap2D>('TileMap2D') 并返回调用结果。 */ () => props.entity.getComponent<TileMap2D>('TileMap2D'))
+const particleEmitter = computed(/* 调用 props.entity.getComponent<ParticleEmitter2D>('ParticleEmitter2D') 并返回调用结果。 */ () => props.entity.getComponent<ParticleEmitter2D>('ParticleEmitter2D'))
+const light = computed(/* 调用 props.entity.getComponent<Light2D>('Light2D') 并返回调用结果。 */ () => props.entity.getComponent<Light2D>('Light2D'))
+const shadowCaster = computed(/* 调用 props.entity.getComponent<ShadowCaster2D>('ShadowCaster2D') 并返回调用结果。 */ () => props.entity.getComponent<ShadowCaster2D>('ShadowCaster2D'))
 const jointKinds = ['FixedJoint2D', 'WeldJoint2D', 'DistanceJoint2D', 'RopeJoint2D', 'RevoluteJoint2D', 'MotorJoint2D', 'PrismaticJoint2D', 'SpringJoint2D'] as const
-const joints = computed(() => jointKinds.flatMap(kind => { const component = props.entity.getComponent<Joint2D>(kind); return component ? [component] : [] }))
-const visibleJoints = computed(() => joints.value.filter(joint => componentVisible(joint.kind, t(joint.kind))))
-const jointTargets = computed(() => physicsState.world.entities.filter(entity => entity !== props.entity && entity.hasComponent('RigidBody2D') && entity.getCollider()))
+const joints = computed(/** 枚举已知关节种类并收集实体实际拥有的关节组件。 */ () => jointKinds.flatMap(/** 读取指定种类关节，存在时返回单项，否则不产生条目。 */ kind => { const component = props.entity.getComponent<Joint2D>(kind); return component ? [component] : [] }))
+const visibleJoints = computed(/* 调用 joints.value.filter(joint => componentVisible(joint.kind, t(joint.kind))) 并返回调用结果。 */ () => joints.value.filter(/* 调用 componentVisible(joint.kind, t(joint.kind)) 并返回调用结果。 */ joint => componentVisible(joint.kind, t(joint.kind))))
+const jointTargets = computed(/** 筛选其他具有刚体及碰撞体的实体作为关节目标。 */ () => physicsState.world.entities.filter(/* 先计算 entity !== props.entity && entity.hasComponent('RigidBody2D')；仅当其为真值时求右侧 entity.getCollider()，返回短路求值结果。 */ entity => entity !== props.entity && entity.hasComponent('RigidBody2D') && entity.getCollider()))
 
-function componentCategory(kind: ComponentKind): InspectorCategory {
+/** 将界面、渲染、关节或其他组件分类到对应检查器组。 */ function componentCategory(kind: ComponentKind): InspectorCategory {
   if (['Canvas', 'RectTransform', 'Panel', 'Image', 'Text', 'Button', 'Slider', 'ProgressBar', 'Checkbox', 'TextInput'].includes(kind)) return 'ui'
   if (['TileMap2D', 'ParticleEmitter2D', 'Light2D', 'ShadowCaster2D'].includes(kind)) return 'render'
   if (kind.endsWith('Joint2D')) return 'physics'
   return 'gameplay'
 }
-function componentVisible(kind: ComponentKind, title: string): boolean {
+/** 先检查类别，再用搜索词匹配组件标题和种类。 */ function componentVisible(kind: ComponentKind, title: string): boolean {
   const category = props.category ?? 'all'
   if (category !== 'all' && category !== componentCategory(kind)) return false
   const needle = (props.searchQuery ?? '').trim().toLocaleLowerCase()
   return !needle || `${title} ${kind}`.toLocaleLowerCase().includes(needle)
 }
-watch(() => animator.value?.controllerAsset, reference => {
+watch(/* 返回 animator.value?.controllerAsset 的当前值。 */ () => animator.value?.controllerAsset, /** 控制器引用变化时同步参数默认值和默认状态；无控制器时清空参数与状态。 */ reference => {
   if (!animator.value) return
   const document = readAnimatorController(reference ?? null)
   if (!document) { animator.value.parameters = {}; animator.value.currentState = ''; return }
-  animator.value.parameters = Object.fromEntries(document.parameters.map(parameter => [parameter.name, animator.value!.parameters[parameter.name] ?? parameter.defaultValue]))
+  animator.value.parameters = Object.fromEntries(document.parameters.map(/* 返回按声明顺序构造的数组 [parameter.name, animator.value!.parameters[parameter.name] ?? parameter.defaultValue]。 */ parameter => [parameter.name, animator.value!.parameters[parameter.name] ?? parameter.defaultValue]))
   animator.value.currentState = document.defaultState
 })
-async function remove(kind: ComponentKind) {
+/** 确认移除组件，成功后记录历史。 */ async function remove(kind: ComponentKind) {
   const approved = await requestConfirmation({ title: t('removeComponent'), message: `${t('removeComponent')}: ${kind}?`, confirmLabel: t('confirmAction'), cancelLabel: t('cancel'), destructive: true })
   if (approved && props.entity.removeComponent(kind)) pushHistory(`Remove ${kind}`)
 }
-function create(kind: UiElementKind) {
+/** 按当前实体是否能容纳界面元素决定父级，再创建界面实体。 */ function create(kind: UiElementKind) {
   const canContainUi = props.entity.hasComponent('Canvas') || props.entity.hasComponent('Panel')
   createUiEntity(kind, canContainUi ? props.entity.uuid : props.entity.parentUuid)
 }
-async function importUiImage(event: Event) {
+/** 导入图片到精灵目录，将首个图片资源绑定到界面图片并记录历史，最后清空文件输入。 */ async function importUiImage(event: Event) {
   const input = event.target as HTMLInputElement
   if (!image.value || !input.files?.length) return
   const imported = await importAssetFiles(input.files, 'Assets/Sprites')
-  const asset = imported.find(candidate => candidate.assetType === 'image')
+  const asset = imported.find(/* 比较 candidate.assetType 与 'image'，返回严格相等的判断结果。 */ candidate => candidate.assetType === 'image')
   if (asset) { image.value.spriteAsset = assetReference(asset.uuid); pushHistory('Import UI image') }
   input.value = ''
 }
-function rgbHex(value: { r: number; g: number; b: number }) { return `#${[value.r, value.g, value.b].map(channel => Math.round(channel).toString(16).padStart(2, '0')).join('')}` }
-function setColor(target: { r: number; g: number; b: number }, event: Event) { const value = (event.target as HTMLInputElement).value; target.r = parseInt(value.slice(1, 3), 16); target.g = parseInt(value.slice(3, 5), 16); target.b = parseInt(value.slice(5, 7), 16) }
-function addPlaylistClip(event: Event) { const select = event.target as HTMLSelectElement, reference = select.value; if (audioSource.value && reference && audioSource.value.playlist.length < 256) audioSource.value.playlist.push(reference); select.value = '' }
-function anchorLabel(preset: typeof anchorPresets[number]) { return t(`anchor_${preset.replace(/-/g, '_')}` as Parameters<typeof t>[0]) }
-function resizeMap(axis: 'width' | 'height', value: number) { const map = tileMap.value; if (!map || !beginHistoryTransaction('Resize TileMap', null, props.entity.uuid + ':' + map.uuid + ':' + axis)) return; try { resizeTileMap(map, axis === 'width' ? value : map.width, axis === 'height' ? value : map.height); commitHistoryTransaction() } catch (error) { cancelHistoryTransaction(); throw error } }
-function tileMapChanged() { if (!tileMap.value) return; tileMap.value.revision++; invalidateTileMap(tileMap.value); pushHistory('Edit TileMap') }
-function openTilemapEditor() { tilemapEditorState.selectedEntityUuid = props.entity.uuid; tilemapEditorState.active = true; editorState.bottomPanelTab = 'tilemap'; editorState.bottomPanelOpen = true }
-function addBreakpoint() { if (rectTransform.value && rectTransform.value.breakpoints.length < 32) rectTransform.value.breakpoints.push({ minWidth: 0, maxWidth: 1280, visible: true, position: { ...rectTransform.value.position }, size: { ...rectTransform.value.size } }) }
+/** 将 RGB 通道转换为两位十六进制颜色文本。 */ function rgbHex(value: { r: number; g: number; b: number }) { return `#${[value.r, value.g, value.b].map(/* 调用 Math.round(channel).toString(16).padStart(2, '0') 并返回调用结果。 */ channel => Math.round(channel).toString(16).padStart(2, '0')).join('')}` }
+/** 从颜色输入解析并写入 RGB 通道。 */ function setColor(target: { r: number; g: number; b: number }, event: Event) { const value = (event.target as HTMLInputElement).value; target.r = parseInt(value.slice(1, 3), 16); target.g = parseInt(value.slice(3, 5), 16); target.b = parseInt(value.slice(5, 7), 16) }
+/** 未达到二百五十六项时将所选音频引用添加到播放列表，然后清空选择。 */ function addPlaylistClip(event: Event) { const select = event.target as HTMLSelectElement, reference = select.value; if (audioSource.value && reference && audioSource.value.playlist.length < 256) audioSource.value.playlist.push(reference); select.value = '' }
+/* 调用 t(`anchor_${preset.replace(/-/g, '_')}` as Parameters<typeof t>[0]) 并返回调用结果。 */ function anchorLabel(preset: typeof anchorPresets[number]) { return t(`anchor_${preset.replace(/-/g, '_')}` as Parameters<typeof t>[0]) }
+/** 在历史事务内调整瓦片地图尺寸，成功提交，异常取消事务并重新抛出。 */ function resizeMap(axis: 'width' | 'height', value: number) { const map = tileMap.value; if (!map || !beginHistoryTransaction('Resize TileMap', null, props.entity.uuid + ':' + map.uuid + ':' + axis)) return; try { resizeTileMap(map, axis === 'width' ? value : map.width, axis === 'height' ? value : map.height); commitHistoryTransaction() } catch (error) { cancelHistoryTransaction(); throw error } }
+/** 瓦片地图改变时递增修订、使缓存失效并记录历史。 */ function tileMapChanged() { if (!tileMap.value) return; tileMap.value.revision++; invalidateTileMap(tileMap.value); pushHistory('Edit TileMap') }
+/** 选中当前瓦片实体并打开底部瓦片编辑器。 */ function openTilemapEditor() { tilemapEditorState.selectedEntityUuid = props.entity.uuid; tilemapEditorState.active = true; editorState.bottomPanelTab = 'tilemap'; editorState.bottomPanelOpen = true }
+/** 矩形布局断点未达到三十二项时添加默认区间，并复制当前位移和尺寸。 */ function addBreakpoint() { if (rectTransform.value && rectTransform.value.breakpoints.length < 32) rectTransform.value.breakpoints.push({ minWidth: 0, maxWidth: 1280, visible: true, position: { ...rectTransform.value.position }, size: { ...rectTransform.value.size } }) }
 </script>
 
 <style scoped>

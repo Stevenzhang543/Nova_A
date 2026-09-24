@@ -1,5 +1,7 @@
+// 工程迁移命令行示例：读取文件并输出经过校验的当前工程格式。
 use std::io::{self, Read};
 
+// 读取标准输入中的工程 JSON，将迁移结果或失败信息写入输出。
 fn main() {
     let mut source = String::new();
     io::stdin()

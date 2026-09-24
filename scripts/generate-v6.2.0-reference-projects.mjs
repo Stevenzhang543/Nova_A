@@ -1,3 +1,4 @@
+/** 版本6.2.0：生成参考项目与对应资源，供功能演示和版本验证使用。 */
 import { createHash } from 'node:crypto'
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
@@ -10,7 +11,7 @@ try{
   await build({configFile:false,root,logLevel:'warn',ssr:{noExternal:true},build:{ssr:'src/projects/templates.ts',outDir:compiled,emptyOutDir:false,rollupOptions:{output:{entryFileNames:'templates.mjs'}}}})
   const templates=await import(`${pathToFileURL(join(compiled,'templates.mjs')).href}?v=${Date.now()}`),project=templates.createTemplateProject('mouse-knockout','Nova 6.2.0 Behavior Contract Audit')
   project.projectSettings.build.gameName='Contract Knockout'
-  const script=project.assets.find(asset=>asset.path==='Assets/Scripts/KnockoutGameManager.rhai')
+  const script=project.assets.find(/* 比较 asset.path 与 'Assets/Scripts/KnockoutGameManager.rhai'，返回严格相等的判断结果。 */ asset=>asset.path==='Assets/Scripts/KnockoutGameManager.rhai')
   if(!script)throw new Error('Mouse Knockout script asset is missing.')
   script.source=`// @nova strict deterministic\n// @budget commands 32\n// @budget logs 8\n\n${script.source}`
   const digest=createHash('sha256').update(script.source).digest('hex');script.sourceModified=0;script.byteLength=new TextEncoder().encode(script.source).byteLength;script.pipeline={...script.pipeline,sourceHash:digest,artifactHash:digest,contentHash:digest,cacheKey:digest,lastValidSource:script.source,error:'',status:'ready'}

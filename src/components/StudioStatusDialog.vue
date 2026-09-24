@@ -1,3 +1,4 @@
+<!-- 工作室状态对话框：展示稳定契约、兼容政策、已知问题及经隐私确认的诊断导出入口。 -->
 <template>
   <Teleport to="body">
     <section v-if="state.visible" class="studio-overlay" role="dialog" aria-modal="true" v-modal-focus :aria-label="t('studioStatus')" @keydown.esc="closeStudioStatus">
@@ -24,8 +25,8 @@ import { openBundledManual } from '../runtime/openManual'
 import { closeStudioStatus, NOVA_STABLE_CONTRACTS, stableContractDiagnostics, studioStatusState as state } from '../runtime/stableContracts'
 import { exportCrashReportPackage, exportDiagnosticBundle, KNOWN_ISSUES, KNOWN_ISSUES_FEED, RELEASE_CHANNELS, supportState as support } from '../runtime/support'
 const copied = ref(false)
-async function copy(): Promise<void> { try { await navigator.clipboard.writeText(stableContractDiagnostics()); copied.value = true; window.setTimeout(() => { copied.value = false }, 1_500) } catch (error) { reportRecoverableError(error, 'Copy Studio diagnostics') } }
-function openManual(): void { closeStudioStatus(); void openBundledManual() }
+/** 复制稳定契约诊断并显示短暂成功反馈，剪贴板错误交给可恢复错误中心。 */ async function copy(): Promise<void> { try { await navigator.clipboard.writeText(stableContractDiagnostics()); copied.value = true; window.setTimeout(/** 复制提示到期后恢复未复制状态。 */ () => { copied.value = false }, 1_500) } catch (error) { reportRecoverableError(error, 'Copy Studio diagnostics') } }
+/** 关闭状态对话框并异步打开内置手册。 */ function openManual(): void { closeStudioStatus(); void openBundledManual() }
 </script>
 
 <style scoped>

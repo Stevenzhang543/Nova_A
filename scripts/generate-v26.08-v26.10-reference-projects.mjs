@@ -1,3 +1,4 @@
+/** 版本26.08：生成参考项目与对应资源，供功能演示和版本验证使用。 */
 import { cp, mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -55,32 +56,32 @@ const specifications = [
   }
 ]
 
-const requestedRelease = process.argv.find(value => value.startsWith('--release='))?.slice('--release='.length) ?? await inferReleaseFromAuthority()
+const requestedRelease = process.argv.find(/* 调用 value.startsWith('--release=') 并返回调用结果。 */ value => value.startsWith('--release='))?.slice('--release='.length) ?? await inferReleaseFromAuthority()
 const verifyOnly = process.argv.includes('--verify-only')
 if (!releaseOrder.has(requestedRelease)) throw new Error('Use --release=26.08, --release=26.09, or --release=26.10.')
-const selectedSpecifications = specifications.filter(item => releaseOrder.get(item.release) <= releaseOrder.get(requestedRelease))
+const selectedSpecifications = specifications.filter(/* 比较 releaseOrder.get(item.release) 与 releaseOrder.get(requestedRelease)，返回小于或等于的判断结果。 */ item => releaseOrder.get(item.release) <= releaseOrder.get(requestedRelease))
 
-async function inferReleaseFromAuthority() {
+/** 从项目格式权威文件推断26.08至26.10版本，无法识别时要求显式版本。 */ async function inferReleaseFromAuthority() {
   const authority = await readFile(join(root, 'src', 'projects', 'projectFormat.ts'), 'utf8')
   const match = authority.match(/NOVA_RELEASE_NAME\s*=\s*['"](26\.(?:08|09|10))['"]/)
   if (!match) throw new Error('Cannot infer the calendar release. Pass --release=26.08, --release=26.09, or --release=26.10.')
   return match[1]
 }
 
-function binding(device, code, extra = {}) {
+/** 创建带默认缩放、死区、曲线和修饰键的输入绑定并应用覆盖。 */ function binding(device, code, extra = {}) {
   return { device, code, scale: 1, x: 1, y: 0, gamepad: 0, deviceId: '', deadzone: 0, threshold: 0.0001, invert: false, responseCurve: 'linear', modifiers: [], chord: [], ...extra }
 }
 
-function action(name, kind, bindings) {
+/** 创建启用的手写笔游戏输入动作及默认交互参数。 */ function action(name, kind, bindings) {
   return { name, kind, bindings, enabled: true, context: 'Gameplay', map: 'Default', schemes: ['Pen'], interaction: 'press', holdSeconds: 0.35, tapSeconds: 0.25, multiTapCount: 2, consume: false, priority: 0, callback: '' }
 }
 
-function authorPenActions(project) {
+/** 保留其他输入动作，替换压力、倾斜、旋转和笔按钮动作。 */ function authorPenActions(project) {
   project.projectSettings ??= {}
   const existing = Array.isArray(project.projectSettings.inputMap) ? project.projectSettings.inputMap : []
   const penNames = new Set(['PenPressure', 'PenTilt', 'PenTwist', 'PenTip', 'PenBarrel', 'PenEraser'])
   project.projectSettings.inputMap = [
-    ...existing.filter(item => !penNames.has(item?.name)),
+    ...existing.filter(/* 返回 penNames.has(item?.name) 的逻辑取反结果。 */ item => !penNames.has(item?.name)),
     action('PenPressure', 'axis', [binding('pen-pressure', 'pressure')]),
     action('PenTilt', 'vector2', [binding('pen-tilt', 'x', { x: 1, y: 0 }), binding('pen-tilt', 'y', { x: 0, y: 1 })]),
     action('PenTwist', 'axis', [binding('pen-twist', 'twist')]),
@@ -90,7 +91,7 @@ function authorPenActions(project) {
   ]
 }
 
-function updateCurrentProject(project, specification) {
+/** 升级项目身份和Windows构建元数据，按参考类型补充手写笔或无界面服务配置。 */ function updateCurrentProject(project, specification) {
   project.engineVersion = specification.engineVersion
   project.projectName = specification.title
   project.projectMetadata ??= {}
@@ -128,17 +129,17 @@ function updateCurrentProject(project, specification) {
   return project
 }
 
-function behaviorsFor(specification) {
-  return specification.goals.map((description, index) => ({
+/** 将参考目标转换为具名行为与预期结果。 */ function behaviorsFor(specification) {
+  return specification.goals.map(/** 为单个目标生成稳定行为标识及可见操作预期。 */ (description, index) => ({
     id: `${specification.id}-behavior-${index + 1}`,
     description,
     expectedOutcome: `The ${specification.authoring} path visibly demonstrates ${description}, survives save/reload, and fails with an actionable diagnostic when a required capability is unavailable.`
   }))
 }
 
-function controlsFor(specification) {
+/** 组合行为、三语言布局和构建步骤，生成参考操作清单。 */ function controlsFor(specification) {
   const behaviors = behaviorsFor(specification)
-  const actions = behaviors.map((behavior, index) => ({ action: `${index + 1}. Demonstrate ${behavior.description}.`, expected: behavior.expectedOutcome, behaviorId: behavior.id }))
+  const actions = behaviors.map(/** 将行为说明转换为顺序操作和对应预期。 */ (behavior, index) => ({ action: `${index + 1}. Demonstrate ${behavior.description}.`, expected: behavior.expectedOutcome, behaviorId: behavior.id }))
   actions.push({ action: 'Repeat the workflow in English, German, and Chinese at 1024×640 through 3840×2160 and 80–200% UI scale.', expected: 'Text, controls, canvases, popovers, focus order, and scrolling remain contained and keyboard reachable.', behaviorId: `${specification.id}-localized-layout` })
   actions.push({ action: 'Build supported Web and Windows outputs from the unmodified reference.', expected: `Validation passes, the player launches, and output metadata reports public release ${specification.release}, engine ${specification.engineVersion}, Project Format ${projectFormatMajor}, and schema ${schemaVersion}.`, behaviorId: `${specification.id}-build-output` })
   return {
@@ -153,7 +154,7 @@ function controlsFor(specification) {
   }
 }
 
-function outputFor(specification, project) {
+/** 生成参考项目格式、数量和行为预期，外部观察保持待验证。 */ function outputFor(specification, project) {
   return {
     format: 'nova-reference-expected-output', version: 1,
     publicRelease: specification.release, release: specification.release,
@@ -169,11 +170,11 @@ function outputFor(specification, project) {
   }
 }
 
-function assert(condition, message) {
+/** 条件不成立时抛出给定断言消息。 */ function assert(condition, message) {
   if (!condition) throw new Error(message)
 }
 
-async function projectDocumentsBelow(directory) {
+/** 递归读取具有有效项目格式和场景数组的原生项目文档。 */ async function projectDocumentsBelow(directory) {
   const documents = []
   for (const entry of await readdir(directory, { withFileTypes: true })) {
     const path = join(directory, entry.name)
@@ -186,8 +187,8 @@ async function projectDocumentsBelow(directory) {
   return documents
 }
 
-function assertPenAuthoring(project) {
-  const map = new Map(project.projectSettings?.inputMap?.map(item => [item.name, item]) ?? [])
+/** 核验手写笔动作类型、启用状态、零死区和双轴贡献，并保留虚拟控件。 */ function assertPenAuthoring(project) {
+  const map = new Map(project.projectSettings?.inputMap?.map(/* 返回按声明顺序构造的数组 [item.name, item]。 */ item => [item.name, item]) ?? [])
   const expected = [
     ['PenPressure', 'axis', [['pen-pressure', 'pressure']]],
     ['PenTilt', 'vector2', [['pen-tilt', 'x'], ['pen-tilt', 'y']]],
@@ -199,15 +200,15 @@ function assertPenAuthoring(project) {
   for (const [name, kind, bindings] of expected) {
     const value = map.get(name)
     assert(value?.kind === kind && value.enabled === true && value.context === 'Gameplay' && value.map === 'Default', `${name} is not an enabled authored ${kind} action.`)
-    assert(bindings.every(([device, code]) => value.bindings?.some(item => item.device === device && item.code === code && item.deadzone === 0)), `${name} does not contain its exact zero-dead-zone pen binding.`)
+    assert(bindings.every(/* 调用 value.bindings?.some(item => item.device === device && item.code === code && item.deadzone === 0) 并返回调用结果。 */ ([device, code]) => value.bindings?.some(/* 先计算 item.device === device && item.code === code；仅当其为真值时求右侧 item.deadzone === 0，返回短路求值结果。 */ item => item.device === device && item.code === code && item.deadzone === 0)), `${name} does not contain its exact zero-dead-zone pen binding.`)
   }
   const tilt = map.get('PenTilt')
-  assert(tilt.bindings.find(item => item.code === 'x')?.x === 1 && tilt.bindings.find(item => item.code === 'x')?.y === 0, 'PenTilt X does not author the X vector contribution.')
-  assert(tilt.bindings.find(item => item.code === 'y')?.x === 0 && tilt.bindings.find(item => item.code === 'y')?.y === 1, 'PenTilt Y does not author the Y vector contribution.')
+  assert(tilt.bindings.find(/* 比较 item.code 与 'x'，返回严格相等的判断结果。 */ item => item.code === 'x')?.x === 1 && tilt.bindings.find(/* 比较 item.code 与 'x'，返回严格相等的判断结果。 */ item => item.code === 'x')?.y === 0, 'PenTilt X does not author the X vector contribution.')
+  assert(tilt.bindings.find(/* 比较 item.code 与 'y'，返回严格相等的判断结果。 */ item => item.code === 'y')?.x === 0 && tilt.bindings.find(/* 比较 item.code 与 'y'，返回严格相等的判断结果。 */ item => item.code === 'y')?.y === 1, 'PenTilt Y does not author the Y vector contribution.')
   assert(project.projectSettings?.deviceInput?.virtualControls?.length >= 2, 'The platform input reference lost its authored virtual controls.')
 }
 
-function assertCompanion(document, format, specification) {
+/** 校验参考伴随文档格式、版本、引擎和身份字段一致。 */ function assertCompanion(document, format, specification) {
   assert(document?.format === format && document.version === 1, `${specification.id} has an invalid ${format} envelope.`)
   assert(document.publicRelease === specification.release && document.release === specification.release, `${specification.id} has mismatched public release metadata.`)
   assert(document.engineVersion === specification.engineVersion, `${specification.id} has mismatched engine metadata.`)
@@ -215,7 +216,7 @@ function assertCompanion(document, format, specification) {
   assert(document.referenceId === specification.id && document.reference === specification.id, `${specification.id} has mismatched reference identity metadata.`)
 }
 
-function assertReference(specification, project, controls, output) {
+/** 核验项目身份、构建组合和行为操作清单，特定参考额外检查手写笔绑定。 */ function assertReference(specification, project, controls, output) {
   assert(project.engineVersion === specification.engineVersion, `${specification.id} project engine version is stale.`)
   assert(project.projectFormatMajor === projectFormatMajor && project.formatVersion === schemaVersion, `${specification.id} project format/schema is stale.`)
   assert(project.projectMetadata?.template === specification.id && project.projectMetadata?.name === specification.title && project.projectName === specification.title, `${specification.id} project identity is inconsistent.`)
@@ -227,13 +228,13 @@ function assertReference(specification, project, controls, output) {
   assertCompanion(controls, 'nova-reference-test-controls', specification)
   assertCompanion(output, 'nova-reference-expected-output', specification)
   assert(Array.isArray(output.behaviors) && output.behaviors.length === specification.goals.length, `${specification.id} expected output does not cover every required behavior.`)
-  assert(output.behaviors.every((item, index) => item.id === `${specification.id}-behavior-${index + 1}` && item.description === specification.goals[index] && item.expectedOutcome?.includes(item.description)), `${specification.id} behavior oracles are incomplete or ambiguous.`)
+  assert(output.behaviors.every(/** 核对每项行为标识、目标描述和包含描述的预期结果。 */ (item, index) => item.id === `${specification.id}-behavior-${index + 1}` && item.description === specification.goals[index] && item.expectedOutcome?.includes(item.description)), `${specification.id} behavior oracles are incomplete or ambiguous.`)
   assert(Array.isArray(controls.actions) && controls.actions.length === specification.goals.length + 2, `${specification.id} controls do not cover behavior, layout, and output workflows.`)
-  assert(new Set(controls.actions.map(item => item.behaviorId)).size === controls.actions.length && controls.actions.every(item => item.action && item.expected && item.behaviorId), `${specification.id} controls have missing or duplicate behavioral assertions.`)
+  assert(new Set(controls.actions.map(/* 返回 item.behaviorId 的当前值。 */ item => item.behaviorId)).size === controls.actions.length && controls.actions.every(/* 先计算 item.action && item.expected；仅当其为真值时求右侧 item.behaviorId，返回短路求值结果。 */ item => item.action && item.expected && item.behaviorId), `${specification.id} controls have missing or duplicate behavioral assertions.`)
   if (specification.id === 'platform-v2608-touch-pen-accessibility') assertPenAuthoring(project)
 }
 
-async function writeReference(specification) {
+/** 复制既有参考项目并升级主文档与嵌套文档，校验后写入说明和操作预期。 */ async function writeReference(specification) {
   const source = join(projectsRoot, specification.source)
   const destination = join(projectsRoot, specification.id)
   await mkdir(destination, { recursive: true })
@@ -253,7 +254,7 @@ async function writeReference(specification) {
   await writeFile(join(destination, 'expected-output.json'), `${JSON.stringify(output, null, 2)}\n`)
 }
 
-async function verifyReference(specification) {
+/** 读取已生成参考项目及伴随文件，验证主文档、嵌套版本和说明一致。 */ async function verifyReference(specification) {
   const destination = join(projectsRoot, specification.id)
   const [project, controls, output, readme] = await Promise.all([
     readFile(join(destination, 'project.nova'), 'utf8').then(JSON.parse),
@@ -276,7 +277,7 @@ const start = '<!-- NOVA_V2608_V2610_REFERENCES_START -->'
 const end = '<!-- NOVA_V2608_V2610_REFERENCES_END -->'
 if (!verifyOnly) {
   let readme = await readFile(readmePath, 'utf8')
-  const lines = selectedSpecifications.map(item => `- [${item.title}](projects/${item.id}/README.md) — public release ${item.release}; ${item.authoring}; ${item.goals.join('; ')}.`).join('\n')
+  const lines = selectedSpecifications.map(/** 将参考标题、路径、版本及目标格式化为目录链接。 */ item => `- [${item.title}](projects/${item.id}/README.md) — public release ${item.release}; ${item.authoring}; ${item.goals.join('; ')}.`).join('\n')
   const block = `${start}\n## Nova_A calendar qualification references\n\nThis generated region contains the cumulative qualified reference set through public release ${requestedRelease}.\n\n${lines}\n${end}`
   if (readme.includes(start) && readme.includes(end)) readme = `${readme.slice(0, readme.indexOf(start))}${block}${readme.slice(readme.indexOf(end) + end.length)}`
   else readme = `${readme.trimEnd()}\n\n${block}\n`

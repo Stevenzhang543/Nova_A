@@ -1,3 +1,4 @@
+/* 依据当前版本检查中英德手册的版本标识及必需课程内容。 */
 import { readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 
@@ -15,7 +16,7 @@ const requiredReleaseLessons = milestone >= 2610
       : []
 const components = ['Transform2D', 'Camera2D', 'SpriteRenderer2D', 'ShapeRenderer2D', 'TextRenderer2D', 'RigidBody2D', 'BoxCollider2D', 'EllipseCollider2D', 'PolygonCollider2D', 'FixedJoint2D', 'DistanceJoint2D', 'RevoluteJoint2D', 'PrismaticJoint2D', 'SpringJoint2D', 'Rope2D', 'Script2D', 'Animator', 'AudioSource', 'AudioListener', 'ParticleEmitter2D', 'Canvas', 'RectTransform', 'Image', 'Text', 'Button', 'Slider', 'ProgressBar', 'Checkbox', 'TextInput', 'TileMap2D', 'Skeleton2D', 'TimelinePlayer']
 const requiredConcepts = [/Project (?:Manager|Format 2)|Projektmanager|项目管理器/i, /Project Format 2/i, /Save|Spielstand|存档/i, /WASM/i, /Build|构建/i, /Physics|Physik|物理/i, /Prefab|预制体/i, /Animation|动画/i, /Audio|音频/i, /TileMap/i, /Profiler|性能分析/i, /Console|Konsole|控制台/i]
-const assert = (condition, message) => { if (!condition) throw new Error(message) }
+const assert = /* 条件不满足时抛出指定错误，使当前审计立即失败。 */ (condition, message) => { if (!condition) throw new Error(message) }
 
 for (const file of manuals) {
   const source = await readFile(resolve(root, 'manual', file), 'utf8')

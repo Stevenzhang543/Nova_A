@@ -1,11 +1,12 @@
+/** 验证脚本（v26.06）：组织对应功能与边界场景检查，断言行为并汇总验证结果。 */
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)))
-const text = path => readFile(join(root, path), 'utf8')
+const text = /* 调用 readFile(join(root, path), 'utf8') 并返回调用结果。 */ path => readFile(join(root, path), 'utf8')
 const checks = []
-const check = (id, passed, detail, metrics = {}) => checks.push({ id, status: passed ? 'passed' : 'failed', detail, metrics })
+const check = /* 调用 checks.push({ id, status: passed ? 'passed' : 'failed', detail, metrics }) 并返回调用结果。 */ (id, passed, detail, metrics = {}) => checks.push({ id, status: passed ? 'passed' : 'failed', detail, metrics })
 const [pkgSource, cargo, tauriSource, formatTs, formatRust, wasmPackageSource, registry, exporter, simulation, worldPanel, navigation, ai, production, i18n, outputContract, simulationContract, layoutContract] = await Promise.all([
   'package.json', 'Cargo.toml', 'src-tauri/tauri.conf.json', 'src/projects/projectFormat.ts', 'crates/nova_format/src/lib.rs', 'nova_core/pkg/package.json',
   'scripts/export-template-registry.mjs', 'scripts/nova-export.mjs', 'src/runtime/simulationAuthoring26.ts', 'src/components/WorldToolsPanel.vue', 'src/runtime/navigation2d.ts', 'src/runtime/aiTools.ts', 'src/runtime/productionValidation.ts', 'src/i18n.ts',
@@ -21,15 +22,15 @@ check('V2606-SIMULATION-UI', /activeTab\s*===\s*['"]simulation['"]/.test(worldPa
 check('V2606-NAVIGATION-AI', navigation.includes('HierarchicalAStar') && navigation.includes('FlowField') && navigation.includes('avoidance') && ai.includes('BehaviorTree') && ai.includes('StateMachine'), 'Navigation and AI retain the required path, avoidance, behavior-tree and state-machine routes.')
 check('V2606-BUILD-READINESS', production.includes('simulation') && production.includes('buildSimulationProductionReport'), 'Project Health/Build production validation consumes the same simulation report.')
 const requiredKeys = ['worldTab_simulation','simulationReadiness','simulationSummary_units','simulationDetail_units','simulationFix_units','simulationIssue_settings_message','simulationIssue_settings_fix','captureReplayEvidence','navigationDebug','aiDebug']
-check('V2606-LOCALIZATION', requiredKeys.every(key => i18n.includes(`${key}:`) || i18n.includes(`'${key}':`)), 'Simulation labels, report prose and remedies have stable EN/DE/ZH dictionary keys.', { requiredKeys })
+check('V2606-LOCALIZATION', requiredKeys.every(/* 先计算 i18n.includes(`${key}:`)；仅当其为假值时求右侧 i18n.includes(`'${key}':`)，返回短路求值结果。 */ key => i18n.includes(`${key}:`) || i18n.includes(`'${key}':`)), 'Simulation labels, report prose and remedies have stable EN/DE/ZH dictionary keys.', { requiredKeys })
 check('V2606-DOCUMENTATION', outputContract.includes('all twenty') && simulationContract.includes('1 grid unit') && layoutContract.includes('centered') && layoutContract.includes('English, German, and Chinese'), 'Output, simulation and all-panel localized layout contracts are present.')
 const referencePath = join(root, 'reference-projects/projects/simulation-v2606-physics-navigation-ai/project.nova')
 let reference = null, referenceError = ''
 try { reference = JSON.parse(await readFile(referencePath, 'utf8')) } catch (error) { referenceError = error instanceof Error ? error.message : String(error) }
-const entities = reference?.scenes?.flatMap(scene => scene.entities ?? []) ?? [], connections = reference?.scenes?.flatMap(scene => scene.connections ?? []) ?? [], kinds = new Set(entities.flatMap(entity => entity.components?.map(component => component.kind) ?? []))
-check('V2606-REFERENCE', reference?.engineVersion === '26.6.0' && entities.some(entity => entity.components?.some(component => component.data?.shapes?.length >= 2)) && connections.filter(connection => connection.componentType === 'Rope2D' && connection.collisionEnabled).length >= 3 && ['NavigationRegion2D','NavigationObstacle2D','NavigationAgent2D','BehaviorTree2D','StateMachine2D'].every(kind => kinds.has(kind)), 'The authored 26.06 reference covers compounds, a collision-enabled rope lattice, navigation, avoidance, Behavior Tree and HSM.', { referenceError, entities: entities.length, connections: connections.length, componentKinds: [...kinds].sort() })
+const entities = reference?.scenes?.flatMap(/* 当 scene.entities 为 null 或 undefined 时返回 []，否则保留左侧值。 */ scene => scene.entities ?? []) ?? [], connections = reference?.scenes?.flatMap(/* 当 scene.connections 为 null 或 undefined 时返回 []，否则保留左侧值。 */ scene => scene.connections ?? []) ?? [], kinds = new Set(entities.flatMap(/** 提取实体的组件种类，没有组件时返回空列表。 */ entity => entity.components?.map(/* 返回 component.kind 的当前值。 */ component => component.kind) ?? []))
+check('V2606-REFERENCE', reference?.engineVersion === '26.6.0' && entities.some(/** 判断实体是否具有包含至少两个形状的组件。 */ entity => entity.components?.some(/* 比较 component.data?.shapes?.length 与 2，返回大于或等于的判断结果。 */ component => component.data?.shapes?.length >= 2)) && connections.filter(/* 先计算 connection.componentType === 'Rope2D'；仅当其为真值时求右侧 connection.collisionEnabled，返回短路求值结果。 */ connection => connection.componentType === 'Rope2D' && connection.collisionEnabled).length >= 3 && ['NavigationRegion2D','NavigationObstacle2D','NavigationAgent2D','BehaviorTree2D','StateMachine2D'].every(/* 调用 kinds.has(kind) 并返回调用结果。 */ kind => kinds.has(kind)), 'The authored 26.06 reference covers compounds, a collision-enabled rope lattice, navigation, avoidance, Behavior Tree and HSM.', { referenceError, entities: entities.length, connections: connections.length, componentKinds: [...kinds].sort() })
 
-const failed = checks.filter(item => item.status === 'failed')
+const failed = checks.filter(/* 比较 item.status 与 'failed'，返回严格相等的判断结果。 */ item => item.status === 'failed')
 const report = { format: 'nova-v26.06-verification', version: 1, release: '26.06', engineVersion: '26.6.0', generatedAt: new Date().toISOString(), checks, severity0Open: failed.length, severity1Open: 0, status: failed.length ? 'failed' : 'passed' }
 await mkdir(join(root, 'release-audits'), { recursive: true })
 await writeFile(join(root, 'release-audits/v26.06-verification.json'), `${JSON.stringify(report, null, 2)}\n`)

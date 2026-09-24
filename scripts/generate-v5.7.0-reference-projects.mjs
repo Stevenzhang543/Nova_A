@@ -1,3 +1,4 @@
+/** 版本5.7.0：生成参考项目与对应资源，供功能演示和版本验证使用。 */
 import { createHash } from 'node:crypto'
 import { cp, mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
@@ -10,10 +11,10 @@ const specs = [
   { id: 'world-v57-streaming-handoff', source: 'streamed-world', name: 'Streaming State Handoff 5.7', kind: 'world' },
   { id: 'tilemap-v57-background-bake', source: 'content-v44-tilemap-streaming', name: 'Deterministic Tile World 5.7', kind: 'tilemap' }
 ]
-function uuid(seed) { const chars = createHash('sha256').update(`nova-v57:${seed}`).digest('hex').slice(0, 32).split(''); chars[12] = '4'; chars[16] = '8'; const value = chars.join(''); return `${value.slice(0, 8)}-${value.slice(8, 12)}-${value.slice(12, 16)}-${value.slice(16, 20)}-${value.slice(20)}` }
-function component(entity, kind) { return entity?.components?.find(value => value.kind === kind) }
-function addComponent(entity, kind, data, seed) { const value = { uuid: uuid(`${seed}:${kind}`), kind, enabled: true, removed: false, data }; entity.components.push(value); return value }
-function textAsset(project, spec, type, name, document) {
+/** 由5.7命名空间散列生成稳定标识。 */ function uuid(seed) { const chars = createHash('sha256').update(`nova-v57:${seed}`).digest('hex').slice(0, 32).split(''); chars[12] = '4'; chars[16] = '8'; const value = chars.join(''); return `${value.slice(0, 8)}-${value.slice(8, 12)}-${value.slice(12, 16)}-${value.slice(16, 20)}-${value.slice(20)}` }
+/** 按组件种类查找实体组件。 */ function component(entity, kind) { return entity?.components?.find(/* 比较 value.kind 与 kind，返回严格相等的判断结果。 */ value => value.kind === kind) }
+/** 为实体追加带稳定身份的组件记录并返回组件。 */ function addComponent(entity, kind, data, seed) { const value = { uuid: uuid(`${seed}:${kind}`), kind, enabled: true, removed: false, data }; entity.components.push(value); return value }
+/** 序列化人工智能文档并追加对应文本资源，返回引用。 */ function textAsset(project, spec, type, name, document) {
   const id = uuid(`${spec.id}:${type}:${name}`), source = JSON.stringify(document, null, 2), basis = project.assets[0] ?? {}
   project.assets.push({ ...structuredClone(basis), uuid: id, name, path: `Assets/AI/${name}`, assetType: type, mimeType: `application/x-nova-${type}`, byteLength: new TextEncoder().encode(source).byteLength, source, sourceModified: 0, importedAt: 0, width: 0, height: 0, duration: 0, fontFamily: '', script: undefined, unknownFields: undefined })
   return `asset://${id}`
@@ -25,7 +26,7 @@ for (const spec of specs) {
   project.engineVersion = '5.7.0'; project.projectFormatMajor = 2; project.formatVersion = 29
   project.projectMetadata ??= {}; Object.assign(project.projectMetadata, { name: spec.name, template: spec.id, updatedAt: '2026-08-27T00:00:00.000Z' })
   if (project.projectSettings?.build?.releaseEngineering) project.projectSettings.build.releaseEngineering.release = '5.7.0'
-  const entities = project.scenes?.flatMap(scene => scene.entities ?? []) ?? project.entities ?? [], host = entities.find(entity => !component(entity, 'Camera2D')) ?? entities[0]
+  const entities = project.scenes?.flatMap(/* 当 scene.entities 为 null 或 undefined 时返回 []，否则保留左侧值。 */ scene => scene.entities ?? []) ?? project.entities ?? [], host = entities.find(/* 返回 component(entity, 'Camera2D') 的逻辑取反结果。 */ entity => !component(entity, 'Camera2D')) ?? entities[0]
   if (spec.kind === 'navigation' && host) {
     const region = component(host, 'NavigationRegion2D') ?? addComponent(host, 'NavigationRegion2D', {}, spec.id)
     Object.assign(region.data, { polygon: [{ x: -32, y: -20 }, { x: 32, y: -20 }, { x: 32, y: 20 }, { x: -32, y: 20 }], navigationMode: 'Grid', algorithm: 'HierarchicalAStar', cellSize: .5, clusterSize: 16, allowDiagonal: true, dynamic: true, rebakeInterval: .5, navigationLayer: 1, navigationMask: 1, traversalCost: 1, source: 'Manual', sourceEntityUuid: null, agentRadius: .4, links: [{ id: uuid('nav-link'), start: { x: -8, y: 0 }, end: { x: 8, y: 0 }, bidirectional: true, cost: .5, enabled: true }], costAreas: [{ id: uuid('nav-cost'), name: 'Mud', shape: 'Box', center: { x: 0, y: -4 }, size: { x: 12, y: 4 }, radius: 2, multiplier: 4, navigationLayer: 1, enabled: true }], bakedRevision: 0 })
@@ -36,14 +37,14 @@ for (const spec of specs) {
     const behavior = component(host, 'BehaviorTree2D') ?? addComponent(host, 'BehaviorTree2D', {}, spec.id); Object.assign(behavior.data, { treeAsset: reference, tickRate: 10, currentNode: '', blackboardOverrides: { aggression: .9 } })
   }
   if (spec.kind === 'world') {
-    const chunks = entities.flatMap(entity => { const value = component(entity, 'WorldChunk2D'); return value ? [{ entity, value }] : [] })
+    const chunks = entities.flatMap(/** 保留具有世界分块组件的实体及组件配对。 */ entity => { const value = component(entity, 'WorldChunk2D'); return value ? [{ entity, value }] : [] })
     if (!chunks.length && host) chunks.push({ entity: host, value: addComponent(host, 'WorldChunk2D', {}, spec.id) })
     for (let index = 0; index < chunks.length; index++) Object.assign(chunks[index].value.data, { size: { x: 64, y: 64 }, loadDistance: 48, unloadDistance: 72, prefetchDistance: 96, preloadPriority: chunks.length - index, memoryEstimateMb: 16, initiallyLoaded: index === 0, ownership: 'scene', dependencies: index ? [chunks[index - 1].entity.uuid] : [], cachePolicy: index % 2 ? 'LRU' : 'Retain', saveStateKey: `cell-${index}` })
   }
   if (spec.kind === 'tilemap') {
-    const tileMap = entities.map(entity => component(entity, 'TileMap2D')).find(Boolean)
+    const tileMap = entities.map(/* 调用 component(entity, 'TileMap2D') 并返回调用结果。 */ entity => component(entity, 'TileMap2D')).find(Boolean)
     if (tileMap) Object.assign(tileMap.data, { chunkSize: 16, streamingEnabled: true, streamingRadius: 3, bakeCollision: true, bakeNavigation: true, bakeOccluders: true })
-    const placement = project.assets.find(asset => asset.assetType === 'prefab' || asset.assetType === 'scene'), tileSet = project.assets.find(asset => asset.assetType === 'tileset' && typeof asset.source === 'string')
+    const placement = project.assets.find(/* 先计算 asset.assetType === 'prefab'；仅当其为假值时求右侧 asset.assetType === 'scene'，返回短路求值结果。 */ asset => asset.assetType === 'prefab' || asset.assetType === 'scene'), tileSet = project.assets.find(/* 先计算 asset.assetType === 'tileset'；仅当其为真值时求右侧 typeof asset.source === 'string'，返回短路求值结果。 */ asset => asset.assetType === 'tileset' && typeof asset.source === 'string')
     if (placement && tileSet) { try { const document = JSON.parse(tileSet.source); if (document.tiles?.[0]) document.tiles[0].prefabAsset = placement.assetType === 'prefab' ? `asset://${placement.uuid}` : null, document.tiles[0].sceneAsset = placement.assetType === 'scene' ? `asset://${placement.uuid}` : null; tileSet.source = JSON.stringify(document, null, 2); tileSet.byteLength = new TextEncoder().encode(tileSet.source).byteLength } catch {} }
   }
   await writeFile(path, `${JSON.stringify(project, null, 2)}\n`)

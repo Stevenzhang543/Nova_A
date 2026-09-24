@@ -1,3 +1,4 @@
+/** 实体几何与物理规范化：计算凸包、面积及惯性，限制非法数值并同步质量、密度和碰撞形状。 */
 import type { Vec2 } from './types'
 import { prepareColliderSet, solverShapeArea, solverShapeInertia } from '../runtime/physicsGeometry'
 import type { ColliderShapeDescriptor2D, PhysicsShapeKind } from '../runtime/physicsProduction'
@@ -66,40 +67,40 @@ interface GeometryEntity {
   } | null
 }
 
-export function finiteNumber(value: unknown, fallback = 0): number {
+/** 把输入转换为有限数值并限制物理量级；无法转换时使用备用值。 */ export function finiteNumber(value: unknown, fallback = 0): number {
   const numeric = typeof value === 'number' ? value : Number(value)
   if (!Number.isFinite(numeric)) return fallback
   return Math.min(Math.max(numeric, -MAX_PHYSICS_MAGNITUDE), MAX_PHYSICS_MAGNITUDE)
 }
 
-export function clampNumber(value: unknown, min: number, max: number, fallback = min): number {
+/* 调用 Math.min(Math.max(finiteNumber(value, fallback), min), max) 并返回调用结果。 */ export function clampNumber(value: unknown, min: number, max: number, fallback = min): number {
   return Math.min(Math.max(finiteNumber(value, fallback), min), max)
 }
 
-export function positiveNumber(value: unknown, fallback = MIN_SIZE): number {
+/** 取有限数的绝对值，并保证不小于最小尺寸或给定备用值。 */ export function positiveNumber(value: unknown, fallback = MIN_SIZE): number {
   const numeric = Math.abs(finiteNumber(value, fallback))
   return numeric >= MIN_SIZE ? numeric : Math.max(fallback, MIN_SIZE)
 }
 
-export function normalizeAngle(angle: unknown): number {
+/** 把有限弧度映射到负 π（含）至正 π（不含）的等价角度。 */ export function normalizeAngle(angle: unknown): number {
   const numeric = finiteNumber(angle, 0)
   const fullTurn = Math.PI * 2
   return ((numeric + Math.PI) % fullTurn + fullTurn) % fullTurn - Math.PI
 }
 
-function cross(origin: Vec2, a: Vec2, b: Vec2): number {
+/* 计算表达式 (a.x - origin.x) * (b.y - origin.y) - (a.y - origin.y) * (b.x - origin.x) 并返回结果，沿用操作数的原有类型规则。 */ function cross(origin: Vec2, a: Vec2, b: Vec2): number {
   return (a.x - origin.x) * (b.y - origin.y) - (a.y - origin.y) * (b.x - origin.x)
 }
 
-function samePoint(a: Vec2, b: Vec2): boolean {
+/* 先计算 a.x === b.x；仅当其为真值时求右侧 a.y === b.y，返回短路求值结果。 */ function samePoint(a: Vec2, b: Vec2): boolean {
   return a.x === b.x && a.y === b.y
 }
 
-export function convexHull(points: Vec2[]): Vec2[] {
+/** 先规范点坐标、排序去重，再用上下单调链移除非左转点，返回凸包。 */ export function convexHull(points: Vec2[]): Vec2[] {
   const sorted = points
-    .map(point => ({ x: finiteNumber(point.x), y: finiteNumber(point.y) }))
-    .sort((a, b) => a.x - b.x || a.y - b.y)
-    .filter((point, index, values) => index === 0 || !samePoint(point, values[index - 1]))
+    .map(/** 构造并返回记录 { x: finiteNumber(point.x), y: finiteNumber(point.y) }，字段按当前实参及捕获状态求值。 */ point => ({ x: finiteNumber(point.x), y: finiteNumber(point.y) }))
+    .sort(/* 先计算 a.x - b.x；仅当其为假值时求右侧 a.y - b.y，返回短路求值结果。 */ (a, b) => a.x - b.x || a.y - b.y)
+    .filter(/* 先计算 index === 0；仅当其为假值时求右侧 !samePoint(point, values[index - 1])，返回短路求值结果。 */ (point, index, values) => index === 0 || !samePoint(point, values[index - 1]))
 
   if (sorted.length <= 2) return sorted
 
@@ -125,7 +126,7 @@ export function convexHull(points: Vec2[]): Vec2[] {
   return [...lower, ...upper]
 }
 
-export function isValidConvexPolygon(vertices: Vec2[]): boolean {
+/** 检查顶点数、凸包数量、面积及连续转向一致性，拒绝退化或非凸多边形。 */ export function isValidConvexPolygon(vertices: Vec2[]): boolean {
   if (vertices.length < 3) return false
   const hull = convexHull(vertices)
   if (hull.length !== vertices.length || polygonArea(vertices) <= MIN_AREA) return false
@@ -144,7 +145,7 @@ export function isValidConvexPolygon(vertices: Vec2[]): boolean {
   return true
 }
 
-export function polygonArea(vertices: Vec2[], scale: Vec2 = { x: 1, y: 1 }): number {
+/** 用缩放后顶点的鞋带公式计算绝对面积；不足三个点时为零。 */ export function polygonArea(vertices: Vec2[], scale: Vec2 = { x: 1, y: 1 }): number {
   if (vertices.length < 3) return 0
   let twiceArea = 0
   for (let index = 0; index < vertices.length; index++) {
@@ -156,11 +157,11 @@ export function polygonArea(vertices: Vec2[], scale: Vec2 = { x: 1, y: 1 }): num
   return Math.abs(twiceArea) * 0.5
 }
 
-export function entityArea(entity: GeometryEntity): number {
+/** 优先累计准备后的复合碰撞形状面积，否则按椭圆或多边形几何计算。 */ export function entityArea(entity: GeometryEntity): number {
   const collider = entity.getCollider?.()
   if (collider) {
     const prepared = prepareColliderSet(collider, false)
-    const compoundArea = prepared.shapes.reduce((sum, shape) => sum + solverShapeArea(shape, entity.transform.scale), 0)
+    const compoundArea = prepared.shapes.reduce(/* 计算表达式 sum + solverShapeArea(shape, entity.transform.scale) 并返回结果，沿用操作数的原有类型规则。 */ (sum, shape) => sum + solverShapeArea(shape, entity.transform.scale), 0)
     if (compoundArea > MIN_AREA) return compoundArea
   }
   if (collider?.kind === 'EllipseCollider2D' || (!collider && entity.shapeType === 'Circle')) {
@@ -171,14 +172,14 @@ export function entityArea(entity: GeometryEntity): number {
   return polygonArea(collider?.vertices ?? entity.vertices ?? [], entity.transform.scale)
 }
 
-export function effectiveInertia(entity: GeometryEntity): number {
+/** 手动模式保留有效惯性；自动模式按复合形状面积分配质量，或用椭圆及多边形公式计算并限制下界。 */ export function effectiveInertia(entity: GeometryEntity): number {
   const mass = clampNumber(entity.mass, MIN_MASS, MAX_MASS, 1)
   if (!entity.autoInertia) return positiveNumber(entity.inertia, mass)
   const collider = entity.getCollider?.()
   if (collider) {
-    const shapes = prepareColliderSet(collider, false).shapes.filter(shape => !shape.sensor)
-    const areas = shapes.map(shape => solverShapeArea(shape, entity.transform.scale)), totalArea = areas.reduce((sum, area) => sum + area, 0)
-    if (totalArea > MIN_AREA) return Math.max(shapes.reduce((sum, shape, index) => sum + solverShapeInertia(shape, entity.transform.scale, mass * areas[index] / totalArea), 0), MIN_INERTIA)
+    const shapes = prepareColliderSet(collider, false).shapes.filter(/* 返回 shape.sensor 的逻辑取反结果。 */ shape => !shape.sensor)
+    const areas = shapes.map(/* 调用 solverShapeArea(shape, entity.transform.scale) 并返回调用结果。 */ shape => solverShapeArea(shape, entity.transform.scale)), totalArea = areas.reduce(/* 计算表达式 sum + area 并返回结果，沿用操作数的原有类型规则。 */ (sum, area) => sum + area, 0)
+    if (totalArea > MIN_AREA) return Math.max(shapes.reduce(/* 计算表达式 sum + solverShapeInertia(shape, entity.transform.scale, mass * areas[index] / totalArea) 并返回结果，沿用操作数的原有类型规则。 */ (sum, shape, index) => sum + solverShapeInertia(shape, entity.transform.scale, mass * areas[index] / totalArea), 0), MIN_INERTIA)
   }
 
   if (collider?.kind === 'EllipseCollider2D' || (!collider && entity.shapeType === 'Circle')) {
@@ -189,7 +190,7 @@ export function effectiveInertia(entity: GeometryEntity): number {
       + mass * (offset.x * offset.x + offset.y * offset.y), MIN_INERTIA)
   }
 
-  const vertices = (collider?.vertices ?? entity.vertices ?? []).map(vertex => ({
+  const vertices = (collider?.vertices ?? entity.vertices ?? []).map(/** 将多边形顶点转换成有限的缩放坐标，用于惯性积分。 */ vertex => ({
     x: finiteNumber(vertex.x) * positiveNumber(entity.transform.scale.x, 1),
     y: finiteNumber(vertex.y) * positiveNumber(entity.transform.scale.y, 1)
   }))
@@ -210,13 +211,13 @@ export function effectiveInertia(entity: GeometryEntity): number {
   return Math.max(Math.abs(mass * weightedSum / (6 * crossSum)), MIN_INERTIA)
 }
 
-export function syncMassFromDensity(entity: GeometryEntity): void {
+/** 限制密度后以面积计算质量，并在自动惯性模式下重算惯性。 */ export function syncMassFromDensity(entity: GeometryEntity): void {
   entity.density = clampNumber(entity.density, MIN_DENSITY, MAX_DENSITY, 1)
   entity.mass = clampNumber(entity.density * entityArea(entity), MIN_MASS, MAX_MASS, 1)
   if (entity.autoInertia) entity.inertia = effectiveInertia(entity)
 }
 
-export function syncDensityFromMass(entity: GeometryEntity): void {
+/** 限制质量，面积足够时反算密度，并在自动惯性模式下重算惯性。 */ export function syncDensityFromMass(entity: GeometryEntity): void {
   entity.mass = clampNumber(entity.mass, MIN_MASS, MAX_MASS, 1)
   const area = entityArea(entity)
   if (area > MIN_AREA) {
@@ -225,7 +226,7 @@ export function syncDensityFromMass(entity: GeometryEntity): void {
   if (entity.autoInertia) entity.inertia = effectiveInertia(entity)
 }
 
-function normalizeTransform(entity: GeometryEntity): void {
+/** 规范位置及角度，保证缩放量有限且非零，同时保留镜像符号。 */ function normalizeTransform(entity: GeometryEntity): void {
   entity.transform.position.x = finiteNumber(entity.transform.position.x)
   entity.transform.position.y = finiteNumber(entity.transform.position.y)
   entity.transform.rotation = normalizeAngle(entity.transform.rotation)
@@ -233,7 +234,7 @@ function normalizeTransform(entity: GeometryEntity): void {
   entity.transform.scale.y = (finiteNumber(entity.transform.scale.y, 1) < 0 ? -1 : 1) * positiveNumber(entity.transform.scale.y, 1)
 }
 
-function normalizeMotion(entity: GeometryEntity): void {
+/** 规范平移及旋转运动、作用力和重力数值，并将阻尼限制为非负。 */ function normalizeMotion(entity: GeometryEntity): void {
   entity.velocity.x = finiteNumber(entity.velocity.x)
   entity.velocity.y = finiteNumber(entity.velocity.y)
   entity.acceleration.x = finiteNumber(entity.acceleration.x)
@@ -248,23 +249,23 @@ function normalizeMotion(entity: GeometryEntity): void {
   entity.angularDamping = Math.max(0, finiteNumber(entity.angularDamping, 0))
 }
 
-function normalizeMaterial(entity: GeometryEntity): void {
+/** 将恢复系数限制在零至一，恢复阈值及摩擦系数限制为非负。 */ function normalizeMaterial(entity: GeometryEntity): void {
   entity.restitution = clampNumber(entity.restitution, 0, 1, 0)
   entity.restitutionThreshold = Math.max(finiteNumber(entity.restitutionThreshold, 1), 0)
   entity.staticFriction = Math.max(0, finiteNumber(entity.staticFriction, 0))
   entity.dynamicFriction = Math.max(0, finiteNumber(entity.dynamicFriction, 0))
 }
 
-function normalizeAppearance(entity: GeometryEntity): void {
+/** 规范透明度与 RGB 整数通道，避免非法绘制颜色。 */ function normalizeAppearance(entity: GeometryEntity): void {
   entity.transparency = clampNumber(entity.transparency, 0, 100, 100)
   entity.color.r = Math.round(clampNumber(entity.color.r, 0, 255, 0))
   entity.color.g = Math.round(clampNumber(entity.color.g, 0, 255, 180))
   entity.color.b = Math.round(clampNumber(entity.color.b, 0, 255, 255))
 }
 
-function normalizeShape(entity: GeometryEntity): void {
+/** 保留线及路径的点序并限制长度；椭圆规范半径，多边形使用凸包或对应形状的备用顶点。 */ function normalizeShape(entity: GeometryEntity): void {
   if ((entity.authoring?.kind === 'Line' || entity.authoring?.kind === 'Path') && entity.renderer) {
-    entity.renderer.vertices = entity.renderer.vertices.slice(0, 10_000).map(point => ({ x: finiteNumber(point.x), y: finiteNumber(point.y) }))
+    entity.renderer.vertices = entity.renderer.vertices.slice(0, 10_000).map(/** 构造并返回记录 { x: finiteNumber(point.x), y: finiteNumber(point.y) }，字段按当前实参及捕获状态求值。 */ point => ({ x: finiteNumber(point.x), y: finiteNumber(point.y) }))
     if (entity.renderer.vertices.length < 2) entity.renderer.vertices = [{ x: -.5, y: 0 }, { x: .5, y: 0 }]
     return
   }
@@ -299,7 +300,7 @@ function normalizeShape(entity: GeometryEntity): void {
   }
 }
 
-export function normalizeEntity(entity: GeometryEntity): void {
+/** 依次规范变换、运动、材质和外观，约束图层及碰撞参数，最后更新形状和有效惯性。 */ export function normalizeEntity(entity: GeometryEntity): void {
   normalizeTransform(entity)
   normalizeMotion(entity)
   normalizeMaterial(entity)

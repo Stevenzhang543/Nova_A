@@ -1,3 +1,4 @@
+<!-- 内置手册查看器：在模态窗口中加载本地手册，支持章节定位与重新加载。 -->
 <template>
   <Teleport to="body">
     <section v-if="state.visible" class="manual-viewer" role="dialog" aria-modal="true" v-modal-focus :aria-label="t('manual')" @keydown.esc="closeBundledManual">
@@ -15,8 +16,8 @@ import { t } from '../i18n'
 import { closeBundledManual, manualViewerState as state, reloadBundledManual } from '../runtime/openManual'
 
 const loaded = ref(false)
-const manualSource = computed(() => `./manual/index.html${state.section ? `#${state.section}` : ''}`)
-watch(() => state.reloadToken, () => { loaded.value = false })
+const manualSource = computed(/** 根据可选章节标识生成本地手册页面地址与锚点。 */ () => `./manual/index.html${state.section ? `#${state.section}` : ''}`)
+watch(/* 返回 state.reloadToken 的当前值。 */ () => state.reloadToken, /** 重新加载标识变化时恢复加载提示，等待嵌入页面完成加载。 */ () => { loaded.value = false })
 </script>
 
 <style scoped>

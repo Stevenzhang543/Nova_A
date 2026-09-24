@@ -1,3 +1,4 @@
+<!-- 编辑器主布局：按需加载工作区，保留画布与检查器，并管理面板停靠和空闲预热。 -->
 <template>
   <div class="editor-root" data-control-scope="editor-shell" :class="{ 'read-only': recoveryState.readOnly }" @contextmenu.prevent @click="closeContextMenu">
     <div v-if="recoveryState.readOnly" class="read-only-banner" role="status">{{ t('readOnlyRecoveryBanner') }}</div>
@@ -76,12 +77,12 @@ import { recoveryState } from '../runtime/recovery'
 import { recordWarmStartup } from '../runtime/largeWorldPerformance'
 import { t } from '../i18n'
 
-const loadConfigPanel = () => import('../components/ConfigPanel.vue')
-const loadEditorBottomPanel = () => import('../components/EditorBottomPanel.vue')
-const loadScriptWorkspace = () => import('../components/ScriptWorkspace.vue')
-const loadPresentationPanel = () => import('../components/PresentationPanel.vue')
-const loadManageWorkspace = () => import('../components/ManageWorkspace.vue')
-const loadPhysicsRuntimePanel = () => import('../components/PhysicsRuntimePanel.vue')
+const loadConfigPanel = /** 按需加载对象检查器。 */ () => import('../components/ConfigPanel.vue')
+const loadEditorBottomPanel = /** 按需加载底部工作面板。 */ () => import('../components/EditorBottomPanel.vue')
+const loadScriptWorkspace = /** 按需加载脚本工作区。 */ () => import('../components/ScriptWorkspace.vue')
+const loadPresentationPanel = /** 按需加载界面呈现工作室。 */ () => import('../components/PresentationPanel.vue')
+const loadManageWorkspace = /** 按需加载管理工作区。 */ () => import('../components/ManageWorkspace.vue')
+const loadPhysicsRuntimePanel = /** 按需加载物理监视器。 */ () => import('../components/PhysicsRuntimePanel.vue')
 const ConfigPanel = defineAsyncComponent(loadConfigPanel)
 const EditorBottomPanel = defineAsyncComponent(loadEditorBottomPanel)
 const ScriptWorkspace = defineAsyncComponent(loadScriptWorkspace)
@@ -90,21 +91,21 @@ const ManageWorkspace = defineAsyncComponent(loadManageWorkspace)
 const PhysicsRuntimePanel = defineAsyncComponent(loadPhysicsRuntimePanel)
 
 initializeEditorWorkspaces()
-const showHierarchy = computed(() => (state.currentPage === 'scene' || state.currentPage === 'game') && state.hierarchyVisible)
-const showInspector = computed(() => state.currentPage === 'scene' && state.inspectorVisible && state.activeWorkspace !== 'ui' && (physicsState.selectedEntityIds.length > 0 || state.componentPickerOpen))
-watch(() => [showHierarchy.value,showInspector.value,state.bottomPanelVisible,state.bottomPanelOpen,state.currentPage], () => {
+const showHierarchy = computed(/** 仅在场景或游戏视图且开关启用时显示层级。 */ () => (state.currentPage === 'scene' || state.currentPage === 'game') && state.hierarchyVisible)
+const showInspector = computed(/** 场景视图非界面工作区且有选择或组件选择器时显示启用的检查器。 */ () => state.currentPage === 'scene' && state.inspectorVisible && state.activeWorkspace !== 'ui' && (physicsState.selectedEntityIds.length > 0 || state.componentPickerOpen))
+watch(/** 收集面板可见性及页面作为最大化恢复依赖。 */ () => [showHierarchy.value,showInspector.value,state.bottomPanelVisible,state.bottomPanelOpen,state.currentPage], /** 当前最大化面板已不可用时恢复普通布局。 */ () => {
   const panel=workspaceState.maximizedPanel
   if(panel==='hierarchy'&&!showHierarchy.value || panel==='inspector'&&!showInspector.value || panel==='bottom'&&(!state.bottomPanelVisible||!state.bottomPanelOpen||['settings','manage','script'].includes(state.currentPage)))restorePanelLayout()
 })
 const inspectorLoaded = ref(showInspector.value)
-watch(showInspector, visible => { if (visible) inspectorLoaded.value = true })
+watch(showInspector, /** 检查器首次可见后保留其已加载状态。 */ visible => { if (visible) inspectorLoaded.value = true })
 let idleWarmup = 0
 let warmupCancelled = false
-const cancelWarmupForInput = () => {
+const cancelWarmupForInput = /** 取消空闲预热并取消已排队空闲回调。 */ () => {
   warmupCancelled = true
   if (idleWarmup) window.cancelIdleCallback(idleWarmup)
 }
-onMounted(() => {
+onMounted(/** 仅在较高内存和核心数设备逐个空闲预载模块，真实指针或键盘输入会取消预热。 */ () => {
   const memory = Number((navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? 8)
   const cores = navigator.hardwareConcurrency || 8
   // Low-end devices load only the requested workspace. Faster devices warm one
@@ -112,30 +113,30 @@ onMounted(() => {
   if (memory <= 4 || cores <= 4) return
   const queue = [loadConfigPanel, loadScriptWorkspace, loadPresentationPanel, loadManageWorkspace, loadPhysicsRuntimePanel]
   const started = performance.now()
-  const warmNext = (deadline: IdleDeadline) => {
+  const warmNext = /** 检查取消和队列状态；空闲预算不足则重排，否则加载一个模块后安排后续。 */ (deadline: IdleDeadline) => {
     if (warmupCancelled || !queue.length) { if (!queue.length) recordWarmStartup(started); return }
     if (!deadline.didTimeout && deadline.timeRemaining() < 6) { idleWarmup = window.requestIdleCallback(warmNext, { timeout: 3_000 }); return }
     const load = queue.shift()!
-    void load().finally(() => { if (!warmupCancelled) idleWarmup = window.requestIdleCallback(warmNext, { timeout: 3_000 }) })
+    void load().finally(/** 模块加载结束且未取消时安排下一次空闲预热。 */ () => { if (!warmupCancelled) idleWarmup = window.requestIdleCallback(warmNext, { timeout: 3_000 }) })
   }
   window.addEventListener('pointerdown', cancelWarmupForInput, { once: true, passive: true })
   window.addEventListener('keydown', cancelWarmupForInput, { once: true })
   idleWarmup = window.requestIdleCallback(warmNext, { timeout: 3_000 })
 })
-onBeforeUnmount(() => {
+onBeforeUnmount(/** 卸载时取消预热并移除一次性输入监听。 */ () => {
   cancelWarmupForInput()
   window.removeEventListener('pointerdown', cancelWarmupForInput)
   window.removeEventListener('keydown', cancelWarmupForInput)
 })
 const draggedPanel = ref<'hierarchy' | 'inspector' | ''>(''), dragTarget = ref('')
-function isFloating(panel: 'hierarchy' | 'inspector'): boolean { return workspaceState.floatingPanels.includes(panel) }
+/** 检查指定面板是否为浮动面板。 */ function isFloating(panel: 'hierarchy' | 'inspector'): boolean { return workspaceState.floatingPanels.includes(panel) }
 let panelDragFromControl = false
-function preparePanelDrag(event: PointerEvent): void {
+/** 记录拖拽起点是否为交互控件，避免控件操作误触面板拖动。 */ function preparePanelDrag(event: PointerEvent): void {
   panelDragFromControl = event.target instanceof Element && Boolean(event.target.closest('input,textarea,select,button,a,[role="slider"],[contenteditable="true"]'))
 }
-function startPanelDrag(event: DragEvent, panel: 'hierarchy' | 'inspector'): void { if (panelDragFromControl) { event.preventDefault(); return } if (event.target !== event.currentTarget) return; draggedPanel.value = panel; event.dataTransfer?.setData('application/x-nova-panel', panel) }
-function endPanelDrag(): void { draggedPanel.value = ''; dragTarget.value = '' }
-function dropPanel(destination: 'left' | 'right' | 'floating'): void { if (draggedPanel.value) dockEditorPanel(draggedPanel.value, destination); draggedPanel.value = ''; dragTarget.value = '' }
+/** 只允许面板本体且非交互控件开始拖动，并设置面板拖拽数据。 */ function startPanelDrag(event: DragEvent, panel: 'hierarchy' | 'inspector'): void { if (panelDragFromControl) { event.preventDefault(); return } if (event.target !== event.currentTarget) return; draggedPanel.value = panel; event.dataTransfer?.setData('application/x-nova-panel', panel) }
+/** 清除面板拖动及目标状态。 */ function endPanelDrag(): void { draggedPanel.value = ''; dragTarget.value = '' }
+/** 有拖动面板时停靠到目标区域，然后清除拖动状态。 */ function dropPanel(destination: 'left' | 'right' | 'floating'): void { if (draggedPanel.value) dockEditorPanel(draggedPanel.value, destination); draggedPanel.value = ''; dragTarget.value = '' }
 </script>
 
 <style scoped>

@@ -1,3 +1,4 @@
+<!-- 日志控制台：按文本、等级和分类筛选编辑器日志，并定位关联资源。 -->
 <template>
   <section class="console-panel">
     <header>
@@ -25,21 +26,21 @@ import { editorState, type EditorLogCategory, type EditorLogLevel } from '../sto
 const levels: EditorLogLevel[] = ['trace', 'debug', 'info', 'warning', 'error', 'fatal']
 const categories: EditorLogCategory[] = ['Engine', 'Physics', 'Renderer', 'Script', 'Input', 'Plugin', 'Save', 'Assets', 'Audio', 'Runtime', 'Project', 'Editor']
 const search = ref(''), level = ref<EditorLogLevel | 'all'>('all'), category = ref<EditorLogCategory | 'all'>('all')
-const visible = computed(() => {
+const visible = computed(/** 规范化搜索词，并根据等级、分类和文本条件返回可见日志。 */ () => {
   const query = search.value.trim().toLocaleLowerCase()
-  return editorState.logs.filter(entry => (level.value === 'all' || entry.level === level.value)
+  return editorState.logs.filter(/** 仅保留符合所选等级、分类且包含搜索词的日志条目。 */ entry => (level.value === 'all' || entry.level === level.value)
     && (category.value === 'all' || entry.category === category.value)
     && (!query || `${entry.category} ${entry.message} ${entry.source ?? ''}`.toLocaleLowerCase().includes(query)))
 })
 
-function levelLabel(value: EditorLogLevel): string { return t(value === 'debug' ? 'debugLevel' : value) }
-function openSource(source?: string) {
+/** 将日志等级转换为界面文案，调试等级使用专用翻译键。 */ function levelLabel(value: EditorLogLevel): string { return t(value === 'debug' ? 'debugLevel' : value) }
+/** 解析日志来源中的资源标识；资源存在时选中它、切换所在文件夹并打开资源标签。 */ function openSource(source?: string) {
   if (!source) return
   const reference = source.match(/^asset:\/\/[0-9a-f-]+/i)?.[0] ?? source
   const guid = assetGuid(reference)
-  if (!guid || !assetState.records.some(asset => asset.uuid === guid)) return
+  if (!guid || !assetState.records.some(/* 比较 asset.uuid 与 guid，返回严格相等的判断结果。 */ asset => asset.uuid === guid)) return
   assetState.selectedGuid = guid
-  const asset = assetState.records.find(candidate => candidate.uuid === guid)!
+  const asset = assetState.records.find(/* 比较 candidate.uuid 与 guid，返回严格相等的判断结果。 */ candidate => candidate.uuid === guid)!
   assetState.currentFolder = asset.path.slice(0, asset.path.lastIndexOf('/'))
   editorState.bottomPanelTab = 'assets'
 }

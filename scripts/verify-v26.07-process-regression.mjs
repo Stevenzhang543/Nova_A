@@ -1,3 +1,4 @@
+/** 验证脚本（v26.07-process-regression）：组织对应功能与边界场景检查，断言行为并汇总验证结果。 */
 import { createHash } from 'node:crypto'
 import { execFileSync } from 'node:child_process'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
@@ -22,8 +23,8 @@ execFileSync(process.execPath, [join(root, 'scripts/verify-v6.6.0-networking.mjs
 const sourceBytes = await readFile(sourceReportPath)
 const source = JSON.parse(sourceBytes.toString('utf8'))
 const expected = [2, 4, 8]
-const processMatrix = expected.map(count => {
-  const matches = source.checks?.filter(check => check?.id === `V660-${count}-PEER-SOAK`) ?? []
+const processMatrix = expected.map(/** 查找唯一的多进程长测结果，核对参与者、客户端、RPC与确认指标后生成汇总。 */ count => {
+  const matches = source.checks?.filter(/* 比较 check?.id 与 `V660-${count}-PEER-SOAK`，返回严格相等的判断结果。 */ check => check?.id === `V660-${count}-PEER-SOAK`) ?? []
   const check = matches[0]
   const clients = Array.isArray(check?.metrics?.clientPeers) ? check.metrics.clientPeers.length : -1
   const passed = matches.length === 1
@@ -50,7 +51,7 @@ const sourceAuthorityPassed = source.format === 'nova-v6.6.0-network-verificatio
   && Number(source.severity0Open ?? 0) === 0
   && Number(source.severity1Open ?? 0) === 0
   && Number.isFinite(Date.parse(source.generatedAt))
-const failed = processMatrix.filter(item => item.status !== 'passed')
+const failed = processMatrix.filter(/* 比较 item.status 与 'passed'，返回严格不等的判断结果。 */ item => item.status !== 'passed')
 const status = sourceAuthorityPassed && failed.length === 0 ? 'passed' : 'failed'
 
 const output = {

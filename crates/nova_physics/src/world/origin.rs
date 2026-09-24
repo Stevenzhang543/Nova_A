@@ -1,9 +1,12 @@
+// 从扁平刚体记录的世界坐标减去原点偏移。
+// 世界原点平移：同步当前与历史刚体、绳索及求解缓存，保持局部锚点和身份。
 fn shift_body_coordinates(values: &mut [f64], offset: Vec2) {
     for record in values.chunks_exact_mut(STRIDE) {
         record[2] -= offset.x;
         record[3] -= offset.y;
     }
 }
+// 平移绳索节点的世界坐标，同时保留局部锚点。
 fn shift_rope_coordinates(values: &mut [f64], offset: Vec2) {
     for record in values.chunks_exact_mut(CONNECTION_STRIDE) {
         let count = non_negative(record[27], 0.0).min(ROPE_NODE_CAPACITY as f64) as usize;
@@ -15,12 +18,13 @@ fn shift_rope_coordinates(values: &mut [f64], offset: Vec2) {
     }
 }
 impl PhysicsWorld {
+    // 原子校验原点偏移，再同步当前、历史及求解缓存中的世界坐标。
     /// Translate the coordinate frame without a teleport, wake, handle change or solver rebuild.
     pub fn shift_origin(&mut self, x: f64, y: f64) -> Result<(), &'static str> {
         if !x.is_finite() || !y.is_finite() || x.abs() > 1e12 || y.abs() > 1e12 {
             return Err("origin shift must be finite and within world bounds");
         }
-        if self.bodies.iter().any(|record| {
+        if self.bodies.iter().any(/* 判断 ! ((record . values [2] - x) . is_finite () && (record . values [3] - y) . is_finite ()) 是否成立，供过滤或有效性检查使用。 */ |record| {
             !((record.values[2] - x).is_finite() && (record.values[3] - y).is_finite())
         }) {
             return Err("origin shift would create a nonfinite body position");
@@ -72,6 +76,7 @@ impl PhysicsWorld {
 #[cfg(test)]
 mod origin_shift_tests {
     use super::*;
+    // 构造当前回归场景所需的刚体扁平记录。
     fn record(x: f64) -> Vec<f64> {
         let mut data = vec![0.0; STRIDE];
         data[2] = x;
@@ -83,6 +88,7 @@ mod origin_shift_tests {
         data[48] = 1.0;
         data
     }
+    // 验证原点平移保留句柄、休眠、历史状态和求解缓存。
     #[test]
     fn origin_shift_preserves_handles_sleep_previous_state_and_solver_cache() {
         let mut world = PhysicsWorld::new();
@@ -112,6 +118,7 @@ mod origin_shift_tests {
         assert_eq!(world.configuration_rebuilds(), rebuilds);
         assert_eq!(world.overlap_point([0.0, -20.0], 1), vec![44]);
     }
+    // 验证原点平移不破坏接触生命周期与缓存冲量。
     #[test]
     fn origin_shift_preserves_contact_lifecycle_and_impulses() {
         let mut world = PhysicsWorld::new();
@@ -129,14 +136,15 @@ mod origin_shift_tests {
                 < 1e-9
         );
         let pending = world.drain_events();
-        assert!(pending.iter().any(|event| matches!(event, PhysicsEvent::ContactStarted(value) if value.point[0].abs() < 1.0)));
+        assert!(pending.iter().any(/* 检查事件或命令是否符合当前测试预期：matches ! (event , PhysicsEvent :: ContactStarted (value) if value . point [0] . abs () < 1.0)。 */ |event| matches!(event, PhysicsEvent::ContactStarted(value) if value.point[0].abs() < 1.0)));
         world.step(0.01, 0.0, 0.0);
         assert!(world
             .drain_events()
             .iter()
-            .any(|event| matches!(event, PhysicsEvent::ContactStayed(_))));
+            .any(/* 检查事件或命令是否符合当前测试预期：matches ! (event , PhysicsEvent :: ContactStayed (_))。 */ |event| matches!(event, PhysicsEvent::ContactStayed(_))));
         assert_eq!(world.configuration_rebuilds(), rebuilds);
     }
+    // 验证原点平移同步绳缓冲和节点，同时保持局部锚点。
     #[test]
     fn origin_shift_translates_rope_buffers_and_nodes_without_modifying_local_anchors() {
         let mut world = PhysicsWorld::new();
@@ -178,6 +186,7 @@ mod origin_shift_tests {
         world.step(0.01, 0.0, 0.0);
         assert_eq!(world.configuration_rebuilds(), rebuilds);
     }
+    // 验证非法原点平移无部分修改，重复平移可等价回放。
     #[test]
     fn invalid_origin_shift_is_atomic_and_repeated_shifts_replay_equivalently() {
         let mut shifted = PhysicsWorld::new();
@@ -211,6 +220,7 @@ mod origin_shift_tests {
 #[cfg(test)]
 mod quality_binding_tests {
     use super::*;
+    // 创建使用指定位置迭代次数的物理测试世界。
     fn simulation(position_iterations: usize) -> PhysicsWorld {
         let mut world = PhysicsWorld::new();
         world.set_quality_iterations(1, 1, position_iterations, 0.001, 0.001, 0.5);
@@ -228,6 +238,7 @@ mod quality_binding_tests {
         world.step(0.001, 0.0, 0.0);
         world
     }
+    // 验证增加位置迭代降低残余穿透而不改变速度。
     #[test]
     fn independently_bound_position_iterations_reduce_residual_penetration_without_velocity_changes(
     ) {

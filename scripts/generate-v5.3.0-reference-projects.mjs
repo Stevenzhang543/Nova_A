@@ -1,3 +1,4 @@
+/** 版本5.3.0：生成参考项目与对应资源，供功能演示和版本验证使用。 */
 import { createHash } from 'node:crypto'
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
@@ -7,17 +8,17 @@ import { createServer } from 'vite'
 const root = dirname(dirname(fileURLToPath(import.meta.url)))
 const output = join(root, 'reference-projects/projects/visual-scripting-v53-production')
 let identity = 0
-const fixedUuid = () => `53000000-0000-4000-8000-${(++identity).toString(16).padStart(12, '0')}`
+const fixedUuid = /** 递增身份计数并编码为5.3参考固定格式标识。 */ () => `53000000-0000-4000-8000-${(++identity).toString(16).padStart(12, '0')}`
 Object.defineProperty(globalThis, 'crypto', { configurable: true, value: { randomUUID: fixedUuid } })
 Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { platform: 'Win32', hardwareConcurrency: 8 } })
-globalThis.window ??= { addEventListener(){}, removeEventListener(){}, dispatchEvent(){} }
-globalThis.localStorage ??= { getItem(){ return null }, setItem(){}, removeItem(){} }
+globalThis.window ??= { /** 生成器环境桩不注册全局事件。 */ addEventListener(){}, /** 生成器环境桩不执行事件移除。 */ removeEventListener(){}, /** 生成器环境桩忽略事件派发。 */ dispatchEvent(){} }
+globalThis.localStorage ??= { /* 返回固定值 null。 */ getItem(){ return null }, /** 隔离存储桩忽略写入，不持久化生成过程数据。 */ setItem(){}, /** 隔离存储桩忽略删除请求。 */ removeItem(){} }
 const server = await createServer({ root, appType: 'custom', logLevel: 'silent', server: { middlewareMode: true } })
 await server.watcher.close()
 
-const connect = (scope, fromNode, fromKey, toNode, toKey) => {
-  const from = fromNode.pins.find(pin => pin.key === fromKey && pin.direction === 'output')
-  const to = toNode.pins.find(pin => pin.key === toKey && pin.direction === 'input')
+const connect = /** 查找指定输入输出端口，缺失则报错，否则追加确定性连线。 */ (scope, fromNode, fromKey, toNode, toKey) => {
+  const from = fromNode.pins.find(/* 先计算 pin.key === fromKey；仅当其为真值时求右侧 pin.direction === 'output'，返回短路求值结果。 */ pin => pin.key === fromKey && pin.direction === 'output')
+  const to = toNode.pins.find(/* 先计算 pin.key === toKey；仅当其为真值时求右侧 pin.direction === 'input'，返回短路求值结果。 */ pin => pin.key === toKey && pin.direction === 'input')
   if (!from || !to) throw new Error(`Missing fixture pin ${fromNode.type}.${fromKey} -> ${toNode.type}.${toKey}`)
   scope.edges.push({ uuid: fixedUuid(), from: { nodeUuid: fromNode.uuid, pinUuid: from.uuid }, to: { nodeUuid: toNode.uuid, pinUuid: to.uuid } })
 }
@@ -55,23 +56,23 @@ try {
   graph.customEvents.push(customEvent)
   production.synchronizeGraphSignatures(graph)
 
-  const calculateEntry = calculate.nodes.find(node => node.type === 'routine.entry')
-  const calculateReturn = calculate.nodes.find(node => node.type === 'routine.return')
+  const calculateEntry = calculate.nodes.find(/* 比较 node.type 与 'routine.entry'，返回严格相等的判断结果。 */ node => node.type === 'routine.entry')
+  const calculateReturn = calculate.nodes.find(/* 比较 node.type 与 'routine.return'，返回严格相等的判断结果。 */ node => node.type === 'routine.return')
   const multiply = catalog.createGraphNode('math.multiply', 280, 210, graph, calculate)
   const multiplier = catalog.createGraphNode('variable.get', 250, 370, graph, calculate)
   multiplier.config.variableUuid = graph.variables[0].uuid
-  const multiplierPin = multiplier.pins.find(pin => pin.key === 'value'); multiplierPin.valueType = 'Number'; multiplierPin.defaultValue = 2
+  const multiplierPin = multiplier.pins.find(/* 比较 pin.key 与 'value'，返回严格相等的判断结果。 */ pin => pin.key === 'value'); multiplierPin.valueType = 'Number'; multiplierPin.defaultValue = 2
   calculate.nodes.push(multiply, multiplier)
   connect(calculate, calculateEntry, 'score', multiply, 'a')
   connect(calculate, multiplier, 'value', multiply, 'b')
   connect(calculate, multiply, 'value', calculateReturn, 'bonus')
 
   announce.edges.splice(0)
-  const announceEntry = announce.nodes.find(node => node.type === 'routine.entry')
-  const announceReturn = announce.nodes.find(node => node.type === 'routine.return')
+  const announceEntry = announce.nodes.find(/* 比较 node.type 与 'routine.entry'，返回严格相等的判断结果。 */ node => node.type === 'routine.entry')
+  const announceReturn = announce.nodes.find(/* 比较 node.type 与 'routine.return'，返回严格相等的判断结果。 */ node => node.type === 'routine.return')
   const setLocal = catalog.createGraphNode('local.set', 260, 140, graph, announce); setLocal.config.localUuid = announce.locals[0].uuid
   const getLocal = catalog.createGraphNode('local.get', 500, 330, graph, announce); getLocal.config.localUuid = announce.locals[0].uuid
-  for (const pin of [...setLocal.pins, ...getLocal.pins].filter(pin => pin.kind === 'data')) { pin.valueType = 'String'; pin.defaultValue = '' }
+  for (const pin of [...setLocal.pins, ...getLocal.pins].filter(/* 比较 pin.kind 与 'data'，返回严格相等的判断结果。 */ pin => pin.kind === 'data')) { pin.valueType = 'String'; pin.defaultValue = '' }
   const routineLog = catalog.createGraphNode('api.log_info', 520, 140, graph, announce)
   announce.nodes.push(setLocal, getLocal, routineLog)
   connect(announce, announceEntry, 'next', setLocal, 'exec')
@@ -80,8 +81,8 @@ try {
   connect(announce, getLocal, 'value', routineLog, 'message')
   connect(announce, routineLog, 'next', announceReturn, 'exec')
 
-  const start = graph.nodes.find(node => node.type === 'event.start')
-  const defaultLog = graph.nodes.find(node => node.type === 'api.log_info')
+  const start = graph.nodes.find(/* 比较 node.type 与 'event.start'，返回严格相等的判断结果。 */ node => node.type === 'event.start')
+  const defaultLog = graph.nodes.find(/* 比较 node.type 与 'api.log_info'，返回严格相等的判断结果。 */ node => node.type === 'api.log_info')
   graph.edges.splice(0)
   const calculateCall = catalog.createGraphNode(`routine.call.${calculate.uuid}`, 280, 300, graph)
   const numberToString = catalog.createGraphNode('convert.number_to_string', 520, 310, graph)
@@ -91,7 +92,7 @@ try {
   const customConverter = catalog.createGraphNode('convert.number_to_string', 340, 650, graph)
   const customLog = catalog.createGraphNode('api.log_info', 380, 520, graph)
   graph.nodes.push(calculateCall, numberToString, announceCall, subgraphCall, customReceiver, customConverter, customLog)
-  calculateCall.pins.find(pin => pin.key === 'score').defaultValue = 5
+  calculateCall.pins.find(/* 比较 pin.key 与 'score'，返回严格相等的判断结果。 */ pin => pin.key === 'score').defaultValue = 5
   connect(graph, calculateCall, 'bonus', numberToString, 'value')
   connect(graph, numberToString, 'result', announceCall, 'message')
   connect(graph, start, 'next', announceCall, 'exec')
@@ -107,7 +108,7 @@ try {
 
   const source = types.serializeGraphDocument(graph)
   const result = compiler.compileGraphSource(source)
-  const scriptErrors = result.valid ? language.analyzeScript(result.source, 2).diagnostics.filter(item => item.severity === 'error') : []
+  const scriptErrors = result.valid ? language.analyzeScript(result.source, 2).diagnostics.filter(/* 比较 item.severity 与 'error'，返回严格相等的判断结果。 */ item => item.severity === 'error') : []
   if (!result.valid || scriptErrors.length || !result.source.includes('fn calculate_bonus(__nova_call_depth, score)') || !result.source.includes('fn score_changed(score)')) throw new Error(`Production fixture failed to compile: ${JSON.stringify({ diagnostics: result.diagnostics, scriptErrors })}`)
 
   const base = types.parseGraphDocument(source), ours = types.parseGraphDocument(source), theirs = types.parseGraphDocument(source)
@@ -124,7 +125,7 @@ try {
 
   const baseProject = JSON.parse(await readFile(join(root, 'reference-projects/projects/visual-scripting-v52-foundation/project.nova'), 'utf8'))
   baseProject.engineVersion = '5.3.0'; baseProject.projectMetadata.name = 'Visual Scripting Production'; baseProject.projectMetadata.template = 'visual-scripting-v53-production'
-  const graphAsset = baseProject.assets.find(asset => asset.assetType === 'visualScript')
+  const graphAsset = baseProject.assets.find(/* 比较 asset.assetType 与 'visualScript'，返回严格相等的判断结果。 */ asset => asset.assetType === 'visualScript')
   const hash = createHash('sha256').update(source).digest('hex')
   Object.assign(graphAsset, { name: 'ProductionGraph.nova-graph', path: 'Assets/Visual Scripts/ProductionGraph.nova-graph', byteLength: new TextEncoder().encode(source).byteLength, source })
   Object.assign(graphAsset.pipeline, { importerVersion: 'visual-graph-1', sourceHash: hash, artifactHash: hash, contentHash: hash, cacheKey: hash, lastValidSource: source, error: '', status: 'ready' })
@@ -136,17 +137,17 @@ try {
   await writeFile(join(output, 'merge-fixtures/base.nova-graph'), types.serializeGraphDocument(base))
   await writeFile(join(output, 'merge-fixtures/ours.nova-graph'), types.serializeGraphDocument(ours))
   await writeFile(join(output, 'merge-fixtures/theirs.nova-graph'), types.serializeGraphDocument(theirs))
-  await writeFile(join(output, 'merge-fixtures/expected.json'), `${JSON.stringify({ conflicts: merge.conflicts.map(item => ({ identity: item.identity, path: item.path })), automaticChanges: merge.changes }, null, 2)}\n`)
+  await writeFile(join(output, 'merge-fixtures/expected.json'), `${JSON.stringify({ conflicts: merge.conflicts.map(/** 提取身份和路径组成资源引用摘要。 */ item => ({ identity: item.identity, path: item.path })), automaticChanges: merge.changes }, null, 2)}\n`)
   await writeFile(join(output, 'hot-reload-fixtures/compatible.nova-graph'), types.serializeGraphDocument(compatible))
   await writeFile(join(output, 'hot-reload-fixtures/incompatible.nova-graph'), types.serializeGraphDocument(incompatible))
   await writeFile(join(output, 'hot-reload-fixtures/expected.json'), `${JSON.stringify({ compatible: compatiblePlan, incompatible: incompatiblePlan }, null, 2)}\n`)
   await writeFile(join(output, 'package-node-fixture.json'), `${JSON.stringify({ manifestVersion: 1, id: 'top.whitelists.novaa.visual-fixture', name: 'Visual Fixture Library', version: '1.0.0', engine: '^5.3.0', dependencies: {}, dependencyHashes: {}, entryPointType: 'runtime', apiCompatibility: '2', pluginApi: null, native: false, sha256: 'a'.repeat(64), signature: 'fixture-only', publisher: 'Whitelist fixture', publisherVerified: false, permissions: [], license: 'MIT', visualNodes: [{ id: 'comfortable-log', title: 'Comfortable Log', category: 'Libraries', description: 'Package-defined wrapper for a stable API-v2 callable.', callable: 'log_info', inputs: [{ name: 'message', valueType: 'String', defaultValue: 'Package node ready' }], output: null }] }, null, 2)}\n`)
-  await writeFile(join(output, 'debug-trace-fixture.json'), `${JSON.stringify({ graphUuid: graph.uuid, commands: [{ type: 'graphTrace', graphUuid: graph.uuid, scopeUuid: graph.uuid, nodeUuid: start.uuid, edgeUuid: '', depth: 1, durationMicros: 10, values: { bonus_multiplier: 2 } }, { type: 'graphTrace', graphUuid: graph.uuid, scopeUuid: graph.uuid, nodeUuid: '', edgeUuid: graph.edges.find(edge => edge.from.nodeUuid === start.uuid)?.uuid, depth: 1, durationMicros: 3, values: { bonus_multiplier: 2 } }, { type: 'graphTrace', graphUuid: graph.uuid, scopeUuid: graph.uuid, nodeUuid: announceCall.uuid, edgeUuid: '', depth: 1, durationMicros: 7, values: { bonus_multiplier: 2 } }], expected: { sequence: [start.uuid, graph.edges.find(edge => edge.from.nodeUuid === start.uuid)?.uuid, announceCall.uuid], breakpointNode: announceCall.uuid, coverageNodes: 2, deterministic: true } }, null, 2)}\n`)
+  await writeFile(join(output, 'debug-trace-fixture.json'), `${JSON.stringify({ graphUuid: graph.uuid, commands: [{ type: 'graphTrace', graphUuid: graph.uuid, scopeUuid: graph.uuid, nodeUuid: start.uuid, edgeUuid: '', depth: 1, durationMicros: 10, values: { bonus_multiplier: 2 } }, { type: 'graphTrace', graphUuid: graph.uuid, scopeUuid: graph.uuid, nodeUuid: '', edgeUuid: graph.edges.find(/* 比较 edge.from.nodeUuid 与 start.uuid，返回严格相等的判断结果。 */ edge => edge.from.nodeUuid === start.uuid)?.uuid, depth: 1, durationMicros: 3, values: { bonus_multiplier: 2 } }, { type: 'graphTrace', graphUuid: graph.uuid, scopeUuid: graph.uuid, nodeUuid: announceCall.uuid, edgeUuid: '', depth: 1, durationMicros: 7, values: { bonus_multiplier: 2 } }], expected: { sequence: [start.uuid, graph.edges.find(/* 比较 edge.from.nodeUuid 与 start.uuid，返回严格相等的判断结果。 */ edge => edge.from.nodeUuid === start.uuid)?.uuid, announceCall.uuid], breakpointNode: announceCall.uuid, coverageNodes: 2, deterministic: true } }, null, 2)}\n`)
   await writeFile(join(output, 'README.md'), '# Visual scripting v5.3 production reference\n\nEngine **5.3.0**, Project Format 2, schema 29, Graph Format 1 and Rhai API v2.\n\nOpen `project.nova`, enter Script → Visual Graph and select `ProductionGraph`. Inspect three reusable routine scopes, the typed interface, custom event, macro local, breakpoint, watches, generated Rhai, hot-reload cases and semantic three-way merge fixtures. Press Play to observe the same queued runtime commands as the generated Rhai source.\n\nRequired packages: none. `package-node-fixture.json` is declarative audit input and is never installed or executed.\n\nExternal gates still pending: independent clean-machine lifecycle, publisher signing, non-Chromium browser matrix and the real 72-hour soak.\n')
   await writeFile(join(output, 'test-controls.json'), `${JSON.stringify({ engineVersion: '5.3.0', actions: [{ action: 'Switch graph scopes', expected: 'Main, function, macro and subgraph canvases retain independent viewport/content' }, { action: 'Play to breakpoint', expected: 'Runtime pauses once at announce_bonus without replaying prior commands' }, { action: 'Step into/over/out', expected: 'Ordered node traces advance with stable call depth' }, { action: 'Save compatible fixture', expected: 'Hot reload preserves bonus_multiplier' }, { action: 'Merge fixtures', expected: 'One tooltip conflict; independent comment move/text changes merge automatically' }, { action: 'Enable reduced motion', expected: 'Active wire remains emphasized without moving dash animation' }] }, null, 2)}\n`)
   await writeFile(join(output, 'expected-output.json'), `${JSON.stringify({ engineVersion: '5.3.0', graphFormat: 1, apiVersion: 2, routines: { function: 1, macro: 1, subgraph: 1 }, customEvents: 1, interfaces: 1, locals: 1, breakpoints: 1, watches: 2, compileStatus: 'passed', staticScriptErrors: 0, mergeConflicts: 1, hotReloadCompatible: true, hotReloadIncompatibleRejected: true }, null, 2)}\n`)
 } finally {
-  await Promise.race([server.close(), new Promise(resolve => setTimeout(resolve, 2_000))])
+  await Promise.race([server.close(), new Promise(/* 调用 setTimeout(resolve, 2_000) 并返回调用结果。 */ resolve => setTimeout(resolve, 2_000))])
 }
 
 const projects = join(root, 'reference-projects/projects')

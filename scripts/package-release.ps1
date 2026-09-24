@@ -1,3 +1,4 @@
+# 发布打包：验证冻结源码与证据，构造精确产物清单和可复现归档。
 [CmdletBinding()]
 param(
   [Parameter(Mandatory = $true)]
@@ -10,6 +11,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+# 以流方式计算文件 SHA-256，返回小写十六进制并释放流与算法对象。
 function Get-Sha256Lower {
   param(
     [Parameter(Mandatory = $true)]
@@ -29,10 +31,11 @@ function Get-Sha256Lower {
 
 . (Join-Path $PSScriptRoot 'release-policy.ps1')
 
+# 按主、次、修订号逐段比较版本，判断候选是否不高于上限。
 function Test-VersionAtMost {
   param([string]$Candidate, [string]$Maximum)
-  $candidateParts = @($Candidate.Split('.') | ForEach-Object { [int]$_ })
-  $maximumParts = @($Maximum.Split('.') | ForEach-Object { [int]$_ })
+  $candidateParts = @($Candidate.Split('.') | ForEach-Object <# 把版本号的一段转换为整数，供逐段大小比较。 #> { [int]$_ })
+  $maximumParts = @($Maximum.Split('.') | ForEach-Object <# 把版本号的一段转换为整数，供逐段大小比较。 #> { [int]$_ })
   if ($candidateParts.Count -ne 3 -or $maximumParts.Count -ne 3) { return $false }
   for ($index = 0; $index -lt 3; $index++) {
     if ($candidateParts[$index] -lt $maximumParts[$index]) { return $true }
@@ -41,6 +44,7 @@ function Test-VersionAtMost {
   return $true
 }
 
+# 按序号排序文件并固定 ZIP 条目时间，生成可复现压缩包。
 function New-DeterministicZip {
   param([Parameter(Mandatory = $true)][string]$SourceDirectory, [Parameter(Mandatory = $true)][string]$DestinationPath)
   Add-Type -AssemblyName System.IO.Compression
@@ -63,6 +67,7 @@ function New-DeterministicZip {
   finally { $archive.Dispose(); $stream.Dispose() }
 }
 
+# 校验前端、Tauri、Rust 和锁文件中的版本权威完全一致。
 function Assert-VersionAuthorities {
   param([Parameter(Mandatory = $true)][string]$Root, [Parameter(Mandatory = $true)][string]$MachineVersion)
   $packageVersion = (Get-Content -LiteralPath (Join-Path $Root 'package.json') -Raw | ConvertFrom-Json).version
@@ -71,24 +76,27 @@ function Assert-VersionAuthorities {
   $tauriCargo = [regex]::Match((Get-Content -LiteralPath (Join-Path $Root 'src-tauri\Cargo.toml') -Raw), '(?m)^version\s*=\s*"([^"]+)"').Groups[1].Value
   $frontend = [regex]::Match((Get-Content -LiteralPath (Join-Path $Root 'src\projects\projectFormat.ts') -Raw), "NOVA_ENGINE_VERSION\s*=\s*'([^']+)'").Groups[1].Value
   $rustFormat = [regex]::Match((Get-Content -LiteralPath (Join-Path $Root 'crates\nova_format\src\lib.rs') -Raw), 'CURRENT_ENGINE_VERSION:\s*&str\s*=\s*"([^"]+)"').Groups[1].Value
-  $lockEntries = @([regex]::Matches((Get-Content -LiteralPath (Join-Path $Root 'Cargo.lock') -Raw), '(?ms)^name = "nova_[^"]+"\r?\nversion = "([^"]+)"') | ForEach-Object { $_.Groups[1].Value })
+  $lockEntries = @([regex]::Matches((Get-Content -LiteralPath (Join-Path $Root 'Cargo.lock') -Raw), '(?ms)^name = "nova_[^"]+"\r?\nversion = "([^"]+)"') | ForEach-Object <# 读取正则表达式第一个捕获组中的版本或校验值。 #> { $_.Groups[1].Value })
   $lockVersions = @($lockEntries | Sort-Object -Unique)
   $authorities = @($packageVersion, $tauriVersion, $workspaceCargo, $tauriCargo, $frontend, $rustFormat) + $lockVersions
-  if ($lockEntries.Count -lt 7 -or @($authorities | Where-Object { $_ -ne $MachineVersion }).Count -gt 0) { throw "Release version authorities do not all equal ${MachineVersion}: $($authorities -join ', ')." }
+  if ($lockEntries.Count -lt 7 -or @($authorities | Where-Object <# 按条件 $_ -ne $MachineVersion 筛选当前条目。 #> { $_ -ne $MachineVersion }).Count -gt 0) { throw "Release version authorities do not all equal ${MachineVersion}: $($authorities -join ', ')." }
 }
 
+# 按公开版本判断是否强制结构化发布证据。
 function Test-RequiresStructuredEvidence {
   param([Parameter(Mandatory = $true)][string]$Label)
   $calendar = Get-CalendarReleaseInfo -Label $Label
   return $null -ne $calendar -and ($calendar.Year -gt 26 -or ($calendar.Year -eq 26 -and $calendar.Sequence -ge 6))
 }
 
+# 按公开版本判断是否强制无界面运行时证据。
 function Test-RequiresHeadlessAuthority {
   param([Parameter(Mandatory = $true)][string]$Label)
   $calendar = Get-CalendarReleaseInfo -Label $Label
   return $null -ne $calendar -and ($calendar.Year -gt 26 -or ($calendar.Year -eq 26 -and $calendar.Sequence -ge 7))
 }
 
+# 返回该版本必须具备的本地构建名称集合。
 function Get-ExpectedLocalBuildNames {
   param([Parameter(Mandatory = $true)][string]$Label)
   $names = @('web-editor','web-player','windows-editor','windows-nsis','windows-msi')
@@ -96,6 +104,7 @@ function Get-ExpectedLocalBuildNames {
   return @($names | Sort-Object)
 }
 
+# 检查当前版本示例的工程、说明和操作预期是否一致且齐全。
 function Assert-CurrentReleaseReferences {
   param(
     [Parameter(Mandatory = $true)][string]$ProjectRoot,
@@ -129,6 +138,7 @@ function Assert-CurrentReleaseReferences {
   if ($matches -lt 1) { throw "No complete reference project identifies public $PublicLabel / machine $MachineVersion." }
 }
 
+# 校验每份证据与本地构建的路径、唯一性、字节数和哈希，并要求精确清单。
 function Assert-StructuredEvidence {
   param(
     [Parameter(Mandatory = $true)][string]$EvidenceRoot,
@@ -149,7 +159,7 @@ function Assert-StructuredEvidence {
     if ([string]$entry.bytes -notmatch '^\d+$' -or [string]$entry.sha256 -notmatch '^[a-f0-9]{64}$' -or $file.Length -ne [long]$entry.bytes -or (Get-Sha256Lower -LiteralPath $fullPath) -ne [string]$entry.sha256) { throw "Evidence manifest digest or byte count is stale: $relativePath" }
   }
   $resolvedManifest = [IO.Path]::GetFullPath((Join-Path $resolvedRoot 'evidence-manifest.json'))
-  $actualPaths = @(Get-ChildItem -LiteralPath $resolvedRoot -File -Recurse | Where-Object FullName -ne $resolvedManifest | ForEach-Object { $_.FullName.Substring($resolvedRoot.Length).TrimStart('\').Replace('\','/') } | Sort-Object -Unique)
+  $actualPaths = @(Get-ChildItem -LiteralPath $resolvedRoot -File -Recurse | Where-Object FullName -ne $resolvedManifest | ForEach-Object <# 将绝对文件路径转换为规范化的归档相对路径。 #> { $_.FullName.Substring($resolvedRoot.Length).TrimStart('\').Replace('\','/') } | Sort-Object -Unique)
   if (@(Compare-Object @($paths | Sort-Object) $actualPaths).Count -gt 0) { throw 'Evidence manifest does not cover the exact unique evidence file inventory.' }
   if (Test-RequiresStructuredEvidence -Label ([string]$Manifest.release)) {
     $requiredEvidence = @('build/local-builds.json','build/windows-smoke.json','external/gates.json','layout/layout-browser.json','performance/benchmarks.json','performance/stability-local.json','runtime/dependency-audit.json','runtime/migration-history.json','runtime/product-audit.json','runtime/template-catalog.json','runtime/user-interactions.json','runtime/verification.json','manual/MANUAL.en.md','manual/MANUAL.de.md','manual/MANUAL.zh-CN.md','manual/index.html')
@@ -179,6 +189,7 @@ function Assert-StructuredEvidence {
   }
 }
 
+# 对短暂文件访问失败执行有界重试；用尽次数后报告具体操作错误。
 function Invoke-WithTransientFileRetry {
   param(
     [Parameter(Mandatory = $true)]
@@ -202,6 +213,7 @@ function Invoke-WithTransientFileRetry {
   }
 }
 
+# 读取可用的 Git 修订和工作区状态；源码快照环境明确标记无 Git 身份。
 function Get-SourceIdentity {
   param([Parameter(Mandatory = $true)][string]$Root)
   $gitMetadata = Join-Path $Root '.git'
@@ -216,6 +228,7 @@ function Get-SourceIdentity {
   return [pscustomobject]@{ Revision = 'unavailable-source-snapshot'; State = 'filesystem-snapshot' }
 }
 
+# 识别环境凭据、密钥及敏感配置，阻止其进入源码包。
 function Test-SensitiveSourcePath {
   param([Parameter(Mandatory = $true)][string]$Path)
   $name = [IO.Path]::GetFileName($Path)
@@ -225,6 +238,7 @@ function Test-SensitiveSourcePath {
   return $name -match '^(?:\.npmrc|\.pypirc|credentials?(?:\..+)?\.json|secrets?(?:\..+)?\.json)$'
 }
 
+# 排除依赖、构建产物、缓存和本地工作文件。
 function Test-ExcludedSourcePath {
   param([Parameter(Mandatory = $true)][string]$Path)
   $normalized = $Path.Replace('\','/').TrimStart('/')
@@ -237,6 +251,7 @@ function Test-ExcludedSourcePath {
   return $false
 }
 
+# 优先使用冻结清单，否则安全遍历非链接源文件并稳定排序。
 function Get-FilesystemSourceFiles {
   param([Parameter(Mandatory = $true)][string]$Root)
   if ($script:requiresFrozenSnapshot) { return @($script:frozenSourceManifest.sourceInputs | ForEach-Object path) }
@@ -258,6 +273,7 @@ function Get-FilesystemSourceFiles {
   return $ordered
 }
 
+# 逐文件验证证据绑定的源码大小和哈希，再核对整体清单摘要。
 function Assert-EvidenceSourceInputs {
   param([Parameter(Mandatory = $true)][string]$ProjectRoot, [Parameter(Mandatory = $true)][pscustomobject]$Manifest)
   $expected = [Collections.Generic.List[object]]::new()
@@ -344,6 +360,10 @@ $requiredInputs = @($artifacts.Keys) + @(
   (Join-Path $projectRoot 'docs\STABLE_CONTRACTS.md'),
   (Join-Path $projectRoot 'docs\KNOWN_LIMITATIONS.md')
 )
+# 26.24 起必须随包带当前版本部署指南；在创建发布目录前验证，避免静默沿用旧说明。
+$requiresCurrentHostingGuide = [version]$MachineVersion -ge [version]'26.24.0'
+$hostingGuide = Join-Path $projectRoot $(if ($requiresCurrentHostingGuide) { 'docs\WEB_HOSTING_' + $Version.Replace('.', '_') + '.md' } else { 'docs\WEB_HOSTING_26_23.md' })
+if ($requiresCurrentHostingGuide) { $requiredInputs += $hostingGuide }
 if ($requiresStructuredEvidence) { $requiredInputs += $structuredEvidenceManifest }
 foreach ($source in $requiredInputs) {
   if (-not (Test-Path -LiteralPath $source -PathType Leaf)) {
@@ -390,7 +410,7 @@ New-Item -ItemType Directory -Path $webStage | Out-Null
 try {
   Copy-Item -Path (Join-Path $projectRoot 'dist\*') -Destination $webStage -Recurse -Force
   Copy-Item -LiteralPath (Join-Path $projectRoot 'LICENSE.md') -Destination (Join-Path $webStage 'LICENSE.md') -Force
-  $hostingGuide = Join-Path $projectRoot 'docs\WEB_HOSTING_26_23.md'
+
   if (Test-Path -LiteralPath $hostingGuide) { Copy-Item -LiteralPath $hostingGuide -Destination (Join-Path $webStage 'HOSTING.md') }
   $fontLicenseDirectory = Join-Path $webStage 'FONT_LICENSES'
   New-Item -ItemType Directory -Path $fontLicenseDirectory -Force | Out-Null
@@ -409,7 +429,7 @@ Verify every packaged file against `SHA256SUMS.txt`. Release metadata is in `rel
   [IO.File]::WriteAllText((Join-Path $webStage 'release-metadata.json'), "$webMetadata`n", [Text.UTF8Encoding]::new($false))
   [string[]]$webChecksumFiles = @(Get-ChildItem -LiteralPath $webStage -File -Recurse | Where-Object Name -ne 'SHA256SUMS.txt' | ForEach-Object FullName)
   [Array]::Sort($webChecksumFiles, [StringComparer]::Ordinal)
-  $webChecksums = @($webChecksumFiles | ForEach-Object { $relative = $_.Substring($webStage.Length).TrimStart('\').Replace('\','/'); "{0}  {1}" -f (Get-Sha256Lower -LiteralPath $_), $relative })
+  $webChecksums = @($webChecksumFiles | ForEach-Object <# 计算网站暂存文件哈希并输出相对路径，形成部署校验清单。 #> { $relative = $_.Substring($webStage.Length).TrimStart('\').Replace('\','/'); "{0}  {1}" -f (Get-Sha256Lower -LiteralPath $_), $relative })
   [IO.File]::WriteAllLines((Join-Path $webStage 'SHA256SUMS.txt'), $webChecksums, [Text.UTF8Encoding]::new($false))
   New-DeterministicZip -SourceDirectory $webStage -DestinationPath $webArchive
 }
@@ -420,7 +440,7 @@ finally {
 $referenceArchive = Join-Path $releaseDirectory "Nova_A-v$Version-reference-projects.zip"
 $referenceStage = Join-Path ([System.IO.Path]::GetTempPath()) ("nova-a-references-" + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $referenceStage | Out-Null
-try { Invoke-WithTransientFileRetry -Operation 'Reference-project archive creation' -Action {
+try { Invoke-WithTransientFileRetry -Operation 'Reference-project archive creation' -Action <# 复制不高于当前版本的有效示例工程及共享说明，再生成确定性的示例归档。 #> {
   foreach ($entry in @(Get-ChildItem -LiteralPath (Join-Path $projectRoot 'reference-projects') | Where-Object Name -ne 'projects')) { Copy-Item -LiteralPath $entry.FullName -Destination $referenceStage -Recurse -Force }
   $projectsStage = Join-Path $referenceStage 'projects'; New-Item -ItemType Directory -Path $projectsStage -Force | Out-Null
   foreach ($directory in @(Get-ChildItem -LiteralPath (Join-Path $projectRoot 'reference-projects\projects') -Directory)) {
@@ -497,7 +517,7 @@ try {
   $packagedArtifacts = Get-ChildItem -LiteralPath $releaseDirectory -File |
     Where-Object Name -NotIn @((Split-Path -Leaf $evidenceArchive), 'SHA256SUMS.txt') |
     Sort-Object Name |
-    ForEach-Object { [ordered]@{ name = $_.Name; bytes = $_.Length; sha256 = (Get-Sha256Lower -LiteralPath $_.FullName) } }
+    ForEach-Object <# 记录发布文件的名称、字节数及 SHA-256。 #> { [ordered]@{ name = $_.Name; bytes = $_.Length; sha256 = (Get-Sha256Lower -LiteralPath $_.FullName) } }
   $artifactHashReport = [ordered]@{ format = 'nova-root-artifact-hashes'; version = 1; release = $Version; generatedAt = $releaseGeneratedAt; note = 'The evidence archive and checksum manifest are excluded to avoid circular hashes.'; artifacts = @($packagedArtifacts) } | ConvertTo-Json -Depth 6
   $artifactHashPath = Join-Path $evidenceRefresh 'build\root-artifact-hashes.json'
   New-Item -ItemType Directory -Path (Split-Path -Parent $artifactHashPath) -Force | Out-Null
@@ -507,7 +527,7 @@ try {
   [string[]]$evidenceEntryFiles = @(Get-ChildItem -LiteralPath $evidenceRefresh -File -Recurse | Where-Object FullName -ne $manifestPath | ForEach-Object FullName)
   [Array]::Sort($evidenceEntryFiles, [StringComparer]::Ordinal)
   $manifest.entries = @($evidenceEntryFiles |
-    ForEach-Object {
+    ForEach-Object <# 为刷新后的证据文件记录相对路径、字节数、哈希和来源环境。 #> {
       $file = Get-Item -LiteralPath $_
       [pscustomobject]@{
         path = $file.FullName.Substring($evidenceRefresh.Length).TrimStart('\').Replace('\','/')
@@ -518,7 +538,7 @@ try {
         environment = $manifest.environment.id
       }
     })
-  $manifest | ConvertTo-Json -Depth 20 | ForEach-Object { [IO.File]::WriteAllText($manifestPath, "$_`n", [Text.UTF8Encoding]::new($false)) }
+  $manifest | ConvertTo-Json -Depth 20 | ForEach-Object <# 将序列化清单以无 BOM 的 UTF-8 写入，并补充末尾换行。 #> { [IO.File]::WriteAllText($manifestPath, "$_`n", [Text.UTF8Encoding]::new($false)) }
   Remove-Item -LiteralPath $evidenceArchive -Force
   New-DeterministicZip -SourceDirectory $evidenceRefresh -DestinationPath $evidenceArchive
 }
@@ -530,7 +550,7 @@ $checksumPath = Join-Path $releaseDirectory 'SHA256SUMS.txt'
 $checksumLines = Get-ChildItem -LiteralPath $releaseDirectory -File |
   Where-Object Name -ne 'SHA256SUMS.txt' |
   Sort-Object Name |
-  ForEach-Object { "{0}  {1}" -f (Get-Sha256Lower -LiteralPath $_.FullName), $_.Name }
+  ForEach-Object <# 输出发布文件的 SHA-256 与文件名，形成标准校验和行。 #> { "{0}  {1}" -f (Get-Sha256Lower -LiteralPath $_.FullName), $_.Name }
 [System.IO.File]::WriteAllLines($checksumPath, $checksumLines, [System.Text.UTF8Encoding]::new($false))
 
 $expectedNames = @(

@@ -1,3 +1,4 @@
+/** 测试夹具：为 v26.12-rhai-corpus.mjs 提供受控数据或执行环境，限定于对应验证场景。 */
 /** Actual Nova WASM behavior corpus shared by parser and graph verifiers. */
 export const rhaiCorpus = [
   { name: 'arrays, maps and compound writes', source: 'fn start(){let a=[1,2];a[1]+=3;let m=#{x:2};m.x+=4;print(a[1]+m.x);}', logs: ['11'], kinds: ['Array', 'Map', 'MapEntry', 'Index', 'Member', 'Assignment'] },

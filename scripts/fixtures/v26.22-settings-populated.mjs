@@ -1,5 +1,6 @@
+/** 测试夹具：为 v26.22-settings-populated.mjs 提供受控数据或执行环境，限定于对应验证场景。 */
 /** Populated persistence fixtures. Runtime/device behavior is audited separately. */
-export function populateSettingsFixture22(modules){
+/** 结构说明（自动提取）：populateSettingsFixture22；输入 modules；直接调用 packages.enableOfficialPackage、Error、assets.createTextAsset、JSON.stringify、materials.defaultMaterial 等；写入 refs[…]、asset.assetType、asset.source、asset.mimeType 等；返回路径包含 refs；包含循环处理；包含显式抛错路径。 */ export function populateSettingsFixture22(modules){
  const {physics:p,assets,materials,box,packages}=modules,refs={}
  if(!packages.enableOfficialPackage(packages.OFFICIAL_NETWORKING_PACKAGE_ID))throw Error('Networking fixture package could not be enabled')
  for(const type of ['image','audio','material','resource','script']){

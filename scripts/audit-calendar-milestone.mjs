@@ -1,15 +1,18 @@
+/* 按传入的公开发布与引擎版本汇总审计报告、源码及严重问题状态，生成日历里程碑证据。 */
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
 import { dirname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)))
-const release = process.argv.find(value => value.startsWith('--release='))?.slice(10)
-const machine = process.argv.find(value => value.startsWith('--engine='))?.slice(9)
+const release = process.argv.find(/* 调用 value.startsWith('--release=') 并返回调用结果。 */ value => value.startsWith('--release='))?.slice(10)
+const machine = process.argv.find(/* 调用 value.startsWith('--engine=') 并返回调用结果。 */ value => value.startsWith('--engine='))?.slice(9)
 if (!release || !machine) throw new Error('Use --release and --engine.')
 const audits = join(root, 'release-audits'), checks = []
-const check = (id, passed, detail, metrics = {}) => checks.push({ id, status: passed ? 'passed' : 'failed', detail, metrics })
-const read = path => readFile(join(root, path), 'utf8')
+const check = /* 调用 checks.push({ id, status: passed ? 'passed' : 'failed', detail, metrics }) 并返回调用结果。 */ (id, passed, detail, metrics = {}) => checks.push({ id, status: passed ? 'passed' : 'failed', detail, metrics })
+const read = /* 调用 readFile(join(root, path), 'utf8') 并返回调用结果。 */ path => readFile(join(root, path), 'utf8')
+/* 读取并解析指定审计报告，缺失或格式错误时返回明确的缺失状态与错误说明。 */
 async function report(name) { try { return JSON.parse(await readFile(join(audits, name), 'utf8')) } catch (error) { return { status: 'missing', error: error instanceof Error ? error.message : String(error) } } }
+/* 递归列出目录下的全部文件路径，保留目录遍历顺序。 */
 async function filesBelow(directory) { const output = []; for (const entry of await readdir(directory, { withFileTypes: true })) { const path = join(directory, entry.name); entry.isDirectory() ? output.push(...await filesBelow(path)) : output.push(path) } return output }
 
 const focus = release === '26.08' ? 'v26.08-platform-input.json' : release === '26.09' ? 'v26.09-runtime-performance.json' : 'v26.10-readiness-verification.json'
@@ -19,8 +22,8 @@ const reportNames = [
   `v${release}-dependency-audit.json`, `v${release}-benchmarks.json`, `v${release}-stability-smoke.json`,
   'template-catalog-verification.json', 'repository-hygiene.json'
 ]
-const reports = Object.fromEntries(await Promise.all(reportNames.map(async name => [name, await report(name)])))
-const reportIssues = Object.entries(reports).flatMap(([name, value]) => {
+const reports = Object.fromEntries(await Promise.all(reportNames.map(/* 返回按声明顺序构造的数组 [name, await report(name)]。 */ async name => [name, await report(name)])))
+const reportIssues = Object.entries(reports).flatMap(/* 检查聚合报告的通过状态、版本和未关闭严重问题，并返回当前报告的异常列表。 */ ([name, value]) => {
   const issues = []
   if (value.status !== 'passed') issues.push(`${name}: status=${String(value.status)}`)
   if (value.engineVersion && value.engineVersion !== machine) issues.push(`${name}: engineVersion=${String(value.engineVersion)}`)
@@ -31,11 +34,11 @@ const reportIssues = Object.entries(reports).flatMap(([name, value]) => {
 })
 check('CAL-AUDIT-REPORTS', reportIssues.length === 0, 'Focused behavior, templates, history, user interactions, layouts, native output, dependency, performance, stability and repository hygiene reports are current and passed.', { reports: reportNames.length, issues: reportIssues })
 
-const vuePaths = (await filesBelow(join(root, 'src'))).filter(path => path.endsWith('.vue')).sort()
-const vue = await Promise.all(vuePaths.map(async path => ({ path: relative(root, path).split('\\').join('/'), source: await readFile(path, 'utf8') })))
-check('CAL-AUDIT-ALL-PANELS', vue.length >= 65 && vue.every(item => item.source.includes('<template') && item.source.includes('<script')), 'Every Vue panel participates in the programmer-facing source audit.', { panels: vue.length })
+const vuePaths = (await filesBelow(join(root, 'src'))).filter(/* 调用 path.endsWith('.vue') 并返回调用结果。 */ path => path.endsWith('.vue')).sort()
+const vue = await Promise.all(vuePaths.map(/* 读取文件源码并将路径转换为相对仓库根目录的正斜杠形式。 */ async path => ({ path: relative(root, path).split('\\').join('/'), source: await readFile(path, 'utf8') })))
+check('CAL-AUDIT-ALL-PANELS', vue.length >= 65 && vue.every(/* 先计算 item.source.includes('<template')；仅当其为真值时求右侧 item.source.includes('<script')，返回短路求值结果。 */ item => item.source.includes('<template') && item.source.includes('<script')), 'Every Vue panel participates in the programmer-facing source audit.', { panels: vue.length })
 const [manualEn, manualDe, manualZh, manualHtml, css, packageSource, instructions] = await Promise.all(['manual/MANUAL.en.md', 'manual/MANUAL.de.md', 'manual/MANUAL.zh-CN.md', 'manual/index.html', 'src/assets/main.css', 'package.json', 'instructions.txt'].map(read))
-check('CAL-AUDIT-MANUALS', [manualEn, manualDe, manualZh].every(text => text.includes(`Engine: **${machine}**`)) && manualHtml.includes(`Nova_A ${release}`) && manualHtml.includes(`Engine ${machine}`) && [manualEn, manualDe, manualZh].every(text => (text.match(/<a id="/g) ?? []).length >= 300), 'English, German, Chinese and browser manuals share the public release, machine authority and hundreds of task anchors.', { anchors: [manualEn, manualDe, manualZh].map(text => (text.match(/<a id="/g) ?? []).length) })
+check('CAL-AUDIT-MANUALS', [manualEn, manualDe, manualZh].every(/* 调用 text.includes(`Engine: **${machine}**`) 并返回调用结果。 */ text => text.includes(`Engine: **${machine}**`)) && manualHtml.includes(`Nova_A ${release}`) && manualHtml.includes(`Engine ${machine}`) && [manualEn, manualDe, manualZh].every(/* 比较 (text.match(/<a id="/g) ?? []).length 与 300，返回大于或等于的判断结果。 */ text => (text.match(/<a id="/g) ?? []).length >= 300), 'English, German, Chinese and browser manuals share the public release, machine authority and hundreds of task anchors.', { anchors: [manualEn, manualDe, manualZh].map(/* 返回 (text.match(/<a id="/g) ?? []).length 的当前值。 */ text => (text.match(/<a id="/g) ?? []).length) })
 check('CAL-AUDIT-NO-REMOVAL', (instructions.includes('No feature') || instructions.includes('Keep every feature') || instructions.includes('without deleting')) && css.includes('prefers-reduced-motion') && packageSource.includes('verify:templates'), 'The release retains features/animations and still gates template behavior.')
 const marker = release.split('.')[1]
 const requiredReferences = release === '26.08' ? ['platform-v2608-touch-pen-accessibility'] : release === '26.09' ? ['performance-v2609-large-world', 'collaboration-v2609-semantic-merge'] : ['creator-v2610-code-game', 'creator-v2610-block-game', 'creator-v2610-mixed-game']
@@ -50,7 +53,7 @@ check('CAL-AUDIT-REFERENCES', refIssues.length === 0 && marker.length === 2, 'Ev
 const layout = reports[`v${release}-layout-browser.json`]
 const interactions = reports[`v${release}-user-interactions.json`]
 check('CAL-AUDIT-USER-SURFACES', Number(layout.results?.length ?? 0) >= (release === '26.10' ? 300 : 80) && Number(interactions.summary?.registeredControls ?? 0) >= 100 && Number(interactions.summary?.dragSurfacesPassed ?? 0) >= 2 && interactions.fatalSurface === false, 'Rendered layout and safe click/drag/input traversal cover the complete editor with no fatal surface.', { layoutStates: layout.results?.length ?? 0, controls: interactions.summary?.registeredControls ?? 0, drags: interactions.summary?.dragSurfacesPassed ?? 0 })
-const failed = checks.filter(item => item.status === 'failed')
+const failed = checks.filter(/* 比较 item.status 与 'failed'，返回严格相等的判断结果。 */ item => item.status === 'failed')
 const externalGates = { publisherSigning: 'pending-external', cleanMachineLifecycle: 'pending-external', secondMachineReproducibility: 'pending-external', matchingHostLinuxMacos: 'pending-external', androidHardwareStore: 'pending-external', nativeAssistiveTechnology: 'pending-external', independentBeginnerExpertObservation: 'pending-external', realLowEndHardware: 'pending-external', independentSecurityReview: 'pending-external', soak72Hours: 'pending-external' }
 const output = { format: `nova-v${release}-product-audit`, version: 1, release, engineVersion: machine, generatedAt: new Date().toISOString(), perspectives: ['programmer', 'normal-user', 'binding', 'runtime', 'layout', 'localization', 'output', 'release'], checks, severity0Open: failed.length, severity1Open: 0, externalGates, status: failed.length ? 'failed' : 'passed' }
 await mkdir(audits, { recursive: true })

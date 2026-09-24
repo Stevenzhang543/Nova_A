@@ -1,3 +1,4 @@
+/** 内容库视图：组织依赖、内容档案、缩略图和离线发现结果，并执行内容库校验。 */
 import type { AssetRecord } from './types'
 import { assetSettingsHash, buildProductionAssetGraph, sourceFingerprint } from './assetProduction'
 
@@ -30,18 +31,18 @@ export interface AssetDependencyView {
 const MAX_GRAPH_NODES = 2_048
 const thumbnailCache = new Map<string, string>()
 
-function escaped(value: string): string {
+/** 将 XML 特殊字符转为实体，安全写入生成的 SVG 缩略图文本。 */ function escaped(value: string): string {
   const entities: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' }
-  return value.replace(/[&<>"']/g, character => entities[character] ?? character)
+  return value.replace(/[&<>"']/g, /* 当 entities[character] 为 null 或 undefined 时返回 character，否则保留左侧值。 */ character => entities[character] ?? character)
 }
-function shortType(value: string): string { return value.replace(/[^a-z0-9]/gi, '').slice(0, 3).toUpperCase() || 'A' }
-function normalizedUuid(value: string): string { return value.toLowerCase() }
+/* 先计算 value.replace(/[^a-z0-9]/gi, '').slice(0, 3).toUpperCase()；仅当其为假值时求右侧 'A'，返回短路求值结果。 */ function shortType(value: string): string { return value.replace(/[^a-z0-9]/gi, '').slice(0, 3).toUpperCase() || 'A' }
+/* 调用 value.toLowerCase() 并返回调用结果。 */ function normalizedUuid(value: string): string { return value.toLowerCase() }
 
 /** Builds a bounded, deterministic two-way dependency projection suitable for visual and accessible views. */
-export function buildAssetDependencyView(selectedUuid: string, assets: readonly AssetRecord[], maximumNodes = MAX_GRAPH_NODES): AssetDependencyView {
-  const graph = buildProductionAssetGraph([...assets]), byUuid = new Map(assets.map(asset => [normalizedUuid(asset.uuid), asset])), selected = normalizedUuid(selectedUuid)
+/** 从选定资源向正反依赖展开有界视图，标注缺失、循环和距离并仅保留可见节点间连线。 */ export function buildAssetDependencyView(selectedUuid: string, assets: readonly AssetRecord[], maximumNodes = MAX_GRAPH_NODES): AssetDependencyView {
+  const graph = buildProductionAssetGraph([...assets]), byUuid = new Map(assets.map(/* 返回按声明顺序构造的数组 [normalizedUuid(asset.uuid), asset]。 */ asset => [normalizedUuid(asset.uuid), asset])), selected = normalizedUuid(selectedUuid)
   const forward = new Map<string, number>(), reverse = new Map<string, number>()
-  const walk = (root: string, adjacency: Map<string, Set<string>>, output: Map<string, number>) => {
+  const walk = /** 按广度遍历排序邻接项并记录最短发现深度，在输出达到节点限制后停止扩展。 */ (root: string, adjacency: Map<string, Set<string>>, output: Map<string, number>) => {
     const queue: Array<[string, number]> = [[root, 0]]
     while (queue.length && output.size < Math.max(1, maximumNodes)) {
       const [owner, depth] = queue.shift()!
@@ -55,7 +56,7 @@ export function buildAssetDependencyView(selectedUuid: string, assets: readonly 
   walk(selected, graph.dependencies, forward); walk(selected, graph.reverseDependencies, reverse)
   const cycleMembers = new Set(graph.cycles.flat().map(normalizedUuid))
   const ids = new Set([selected, ...forward.keys(), ...reverse.keys()])
-  const nodes: AssetDependencyNode[] = [...ids].slice(0, maximumNodes).map(uuid => {
+  const nodes: AssetDependencyNode[] = [...ids].slice(0, maximumNodes).map(/** 把资源身份转换为依赖视图节点，计算方向、深度和循环标记并保留缺失项。 */ uuid => {
     const asset = byUuid.get(uuid), forwardDepth = forward.get(uuid), reverseDepth = reverse.get(uuid)
     const direction: DependencyDirection = uuid === selected ? 'selected' : forwardDepth !== undefined && reverseDepth !== undefined ? 'both' : forwardDepth !== undefined ? (asset ? 'dependency' : 'missing') : 'dependent'
     return {
@@ -63,9 +64,9 @@ export function buildAssetDependencyView(selectedUuid: string, assets: readonly 
       assetType: asset?.assetType ?? 'missing', direction, depth: uuid === selected ? 0 : Math.min(forwardDepth ?? Number.MAX_SAFE_INTEGER, reverseDepth ?? Number.MAX_SAFE_INTEGER, 0x7fff),
       cyclic: cycleMembers.has(uuid), reproducible: Boolean(asset?.pipeline?.reproducible ?? asset)
     }
-  }).sort((a, b) => a.depth - b.depth || a.direction.localeCompare(b.direction) || a.path.localeCompare(b.path) || a.uuid.localeCompare(b.uuid))
-  const visible = new Set(nodes.map(node => node.uuid)), edgeKeys = new Set<string>(), edges: AssetDependencyEdge[] = []
-  for (const [ownerRaw, dependencies] of [...graph.dependencies].sort(([a], [b]) => a.localeCompare(b))) {
+  }).sort(/** 按距离、依赖方向、路径及身份稳定排序资源图节点。 */ (a, b) => a.depth - b.depth || a.direction.localeCompare(b.direction) || a.path.localeCompare(b.path) || a.uuid.localeCompare(b.uuid))
+  const visible = new Set(nodes.map(/* 返回 node.uuid 的当前值。 */ node => node.uuid)), edgeKeys = new Set<string>(), edges: AssetDependencyEdge[] = []
+  for (const [ownerRaw, dependencies] of [...graph.dependencies].sort(/* 调用 a.localeCompare(b) 并返回调用结果。 */ ([a], [b]) => a.localeCompare(b))) {
     const owner = normalizedUuid(ownerRaw); if (!visible.has(owner)) continue
     for (const dependencyRaw of [...dependencies].sort()) {
       const dependency = normalizedUuid(dependencyRaw); if (!visible.has(dependency)) continue
@@ -76,8 +77,8 @@ export function buildAssetDependencyView(selectedUuid: string, assets: readonly 
   return {
     selected, nodes, edges, directDependencies: graph.dependencies.get(selected)?.size ?? 0, transitiveDependencies: forward.size,
     directDependents: graph.reverseDependencies.get(selected)?.size ?? 0, transitiveDependents: reverse.size,
-    missing: nodes.filter(node => node.direction === 'missing').length,
-    cycles: graph.cycles.filter(cycle => cycle.some(uuid => visible.has(normalizedUuid(uuid)))).map(cycle => cycle.map(normalizedUuid)),
+    missing: nodes.filter(/* 比较 node.direction 与 'missing'，返回严格相等的判断结果。 */ node => node.direction === 'missing').length,
+    cycles: graph.cycles.filter(/* 调用 cycle.some(uuid => visible.has(normalizedUuid(uuid))) 并返回调用结果。 */ cycle => cycle.some(/* 调用 visible.has(normalizedUuid(uuid)) 并返回调用结果。 */ uuid => visible.has(normalizedUuid(uuid)))).map(/* 调用 cycle.map(normalizedUuid) 并返回调用结果。 */ cycle => cycle.map(normalizedUuid)),
     truncated: ids.size > nodes.length || forward.size >= maximumNodes || reverse.size >= maximumNodes
   }
 }
@@ -85,7 +86,7 @@ export function buildAssetDependencyView(selectedUuid: string, assets: readonly 
 export interface ContentFeature { id: string; label: string; value: string; state: 'ready' | 'attention' | 'inactive' }
 
 /** Converts scattered importer settings into one truthful, user-facing production profile. */
-export function assetContentProfile(asset: AssetRecord): ContentFeature[] {
+/** 根据资源类型、导入设置和流水线状态生成内容能力与待处理状态摘要。 */ export function assetContentProfile(asset: AssetRecord): ContentFeature[] {
   const settings = asset.settings, output: ContentFeature[] = []
   output.push({ id: 'provenance', label: 'Importer provenance', value: asset.pipeline ? `${asset.pipeline.importerId}@${asset.pipeline.importerVersion}` : 'Not recorded', state: asset.pipeline?.reproducible ? 'ready' : 'attention' })
   output.push({ id: 'cache', label: 'Deterministic cache', value: asset.pipeline?.cacheHit ? 'Verified cache hit' : asset.pipeline ? asset.pipeline.invalidationReason : 'Not imported', state: asset.pipeline ? 'ready' : 'inactive' })
@@ -112,7 +113,7 @@ export function assetContentProfile(asset: AssetRecord): ContentFeature[] {
 }
 
 /** Deterministic thumbnails keep non-image content identifiable without decoding or executing it. */
-export function contentThumbnailDataUrl(asset: AssetRecord): string {
+/** 图像资源直接返回可显示源，其他类型按身份和内容生成转义 SVG 卡片并保留最多五百一十二项缓存。 */ export function contentThumbnailDataUrl(asset: AssetRecord): string {
   if (asset.assetType === 'image' && /^(?:data:|blob:|https?:)/i.test(asset.source)) return asset.source
   const key = `${asset.uuid}:${asset.assetType}:${asset.name}:${sourceFingerprint(asset)}`
   const cached = thumbnailCache.get(key); if (cached) return cached
@@ -124,19 +125,19 @@ export function contentThumbnailDataUrl(asset: AssetRecord): string {
 }
 
 export interface OfflineContentItem { id: string; name: string; kind: 'template' | 'package'; provenance: string; trusted: boolean; offline: boolean; tags: string[] }
-export function discoverOfflineContent(items: readonly OfflineContentItem[], query = ''): OfflineContentItem[] {
+/** 筛选离线可用且匹配查询的内容，优先受信任项，再按类别、名称和身份稳定排序。 */ export function discoverOfflineContent(items: readonly OfflineContentItem[], query = ''): OfflineContentItem[] {
   const needle = query.trim().toLocaleLowerCase()
-  return items.filter(item => item.offline && (!needle || `${item.name} ${item.id} ${item.kind} ${item.provenance} ${item.tags.join(' ')}`.toLocaleLowerCase().includes(needle)))
-    .sort((a, b) => Number(b.trusted) - Number(a.trusted) || a.kind.localeCompare(b.kind) || a.name.localeCompare(b.name) || a.id.localeCompare(b.id)).slice(0, 10_000)
+  return items.filter(/** 只接受离线可用内容，并在名称、身份、类别、来源及标签中匹配不区分大小写的查询。 */ item => item.offline && (!needle || `${item.name} ${item.id} ${item.kind} ${item.provenance} ${item.tags.join(' ')}`.toLocaleLowerCase().includes(needle)))
+    .sort(/** 将可信内容置前，其后按类别、名称和身份稳定排序。 */ (a, b) => Number(b.trusted) - Number(a.trusted) || a.kind.localeCompare(b.kind) || a.name.localeCompare(b.name) || a.id.localeCompare(b.id)).slice(0, 10_000)
 }
 
 export interface ContentLibraryAudit {
   scanned: number; total: number; truncated: boolean; unicodePaths: number; missingReferences: number; cycles: number; duplicateSources: number; nonReproducible: number; deterministicHash: string; status: 'passed' | 'attention'
 }
-export function auditContentLibrary(assets: readonly AssetRecord[], maximum = 50_000): ContentLibraryAudit {
-  const selected = [...assets].sort((a, b) => a.uuid.localeCompare(b.uuid)).slice(0, maximum), graph = buildProductionAssetGraph(selected)
-  const summary = selected.map(asset => ({ uuid: asset.uuid, path: asset.path, type: asset.assetType, source: sourceFingerprint(asset), settings: assetSettingsHash(asset.settings) }))
-  const nonReproducible = selected.filter(asset => asset.pipeline && !asset.pipeline.reproducible).length
-  const report = { scanned: selected.length, total: assets.length, truncated: assets.length > selected.length, unicodePaths: selected.filter(asset => /[^\u0000-\u007f]/.test(asset.path)).length, missingReferences: graph.missingReferences.length, cycles: graph.cycles.length, duplicateSources: graph.duplicateSources.length, nonReproducible, deterministicHash: assetSettingsHash(summary) }
+/** 对按身份截取的资源集合生成依赖和可复现性摘要，明确记录截断并计算确定性报告摘要。 */ export function auditContentLibrary(assets: readonly AssetRecord[], maximum = 50_000): ContentLibraryAudit {
+  const selected = [...assets].sort(/* 调用 a.uuid.localeCompare(b.uuid) 并返回调用结果。 */ (a, b) => a.uuid.localeCompare(b.uuid)).slice(0, maximum), graph = buildProductionAssetGraph(selected)
+  const summary = selected.map(/** 构造并返回记录 { uuid: asset.uuid, path: asset.path, type: asset.assetType, source: sourceFingerprint(asset), settings: assetSettingsHash(asset.settings) }，字段按当前实参及捕获状态求值。 */ asset => ({ uuid: asset.uuid, path: asset.path, type: asset.assetType, source: sourceFingerprint(asset), settings: assetSettingsHash(asset.settings) }))
+  const nonReproducible = selected.filter(/* 先计算 asset.pipeline；仅当其为真值时求右侧 !asset.pipeline.reproducible，返回短路求值结果。 */ asset => asset.pipeline && !asset.pipeline.reproducible).length
+  const report = { scanned: selected.length, total: assets.length, truncated: assets.length > selected.length, unicodePaths: selected.filter(/* 调用 /[^\u0000-\u007f]/.test(asset.path) 并返回调用结果。 */ asset => /[^\u0000-\u007f]/.test(asset.path)).length, missingReferences: graph.missingReferences.length, cycles: graph.cycles.length, duplicateSources: graph.duplicateSources.length, nonReproducible, deterministicHash: assetSettingsHash(summary) }
   return { ...report, status: report.missingReferences || report.cycles || nonReproducible ? 'attention' : 'passed' }
 }

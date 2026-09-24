@@ -1,9 +1,10 @@
+/* 检查动画、绑定、时间轴与相关面板源码中的集成契约；失败时抛出带动画审计上下文的错误。 */
 import { readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 
 const root = process.cwd()
-const read = path => readFile(resolve(root, path), 'utf8')
-const assert = (condition, message) => { if (!condition) throw new Error(`Animation audit failed: ${message}`) }
+const read = /* 调用 readFile(resolve(root, path), 'utf8') 并返回调用结果。 */ path => readFile(resolve(root, path), 'utf8')
+const assert = /* 条件不满足时抛出带动画审计前缀的错误，停止当前检查。 */ (condition, message) => { if (!condition) throw new Error(`Animation audit failed: ${message}`) }
 const [panel, animation, rigging, timeline, gameplay, state, renderer, geometry, canvas, components, inspector, assets, bottom, format, pak, i18n] = await Promise.all([
   read('src/components/AnimationPanel.vue'), read('src/runtime/animation.ts'), read('src/runtime/rigging.ts'), read('src/runtime/timeline.ts'),
   read('src/runtime/GameplayRuntime.ts'), read('src/editor/animationStudioState.ts'), read('src/renderer/sceneRenderer.ts'), read('src/renderer/geometry.ts'),
@@ -28,6 +29,6 @@ assert(animation.includes('reimportAnimationClip') && bottom.includes('trackMapp
 assert(format.includes('CURRENT_FORMAT_VERSION: u32 = 29') && format.includes('Skeleton2D') && format.includes('TimelinePlayer'), 'current schema component validation is not active')
 assert(pak.includes('excludedOptionalUuids') && pak.includes('usesRigging') && pak.includes('usesTimeline'), 'unused rig/timeline resources are not stripped from player packs')
 assert(components.includes('class TextInput') && bottom.includes('flex-wrap: wrap'), 'UI regression guard is incomplete')
-for (const locale of ['Object.assign(en', 'Object.assign(de', 'Object.assign(zh']) assert(i18n.split(locale).some(block => block.slice(0, 8_000).includes('animationWorkspace')), `${locale} lacks v2.4 translations`)
+for (const locale of ['Object.assign(en', 'Object.assign(de', 'Object.assign(zh']) assert(i18n.split(locale).some(/* 调用 block.slice(0, 8_000).includes('animationWorkspace') 并返回调用结果。 */ block => block.slice(0, 8_000).includes('animationWorkspace')), `${locale} lacks v2.4 translations`)
 
 console.log('Animation audit passed: authoring, curves, events, layered controllers, rigging/skinning, Timeline, recording, import, schema, renderer, inspector, localization, and optional build stripping are connected.')

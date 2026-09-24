@@ -1,3 +1,4 @@
+/** 版本6.5.0：生成参考项目与对应资源，供功能演示和版本验证使用。 */
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
@@ -7,7 +8,7 @@ import { build } from 'vite'
 const root = dirname(dirname(fileURLToPath(import.meta.url)))
 const output = join(root, 'reference-projects/projects/creator-v650-physics-renderer')
 const compiled = await mkdtemp(join(tmpdir(), 'nova-v650-reference-'))
-const shape = (id, kind, offset, size, properties = {}) => ({ id, kind, offset, rotation: 0, size, radius: Math.min(size.x, size.y) * .5, points: [], enabled: true, sensor: false, physicsLayer: 0, collisionMask: 0xffff_ffff, oneWay: false, oneWayNormal: { x: 0, y: 1 }, ...properties })
+const shape = /** 创建启用的碰撞形状默认配置，并允许传入属性覆盖几何和碰撞参数。 */ (id, kind, offset, size, properties = {}) => ({ id, kind, offset, rotation: 0, size, radius: Math.min(size.x, size.y) * .5, points: [], enabled: true, sensor: false, physicsLayer: 0, collisionMask: 0xffff_ffff, oneWay: false, oneWayNormal: { x: 0, y: 1 }, ...properties })
 try {
   await build({ configFile: false, root, logLevel: 'warn', ssr: { noExternal: true }, build: { ssr: true, outDir: compiled, emptyOutDir: false, rollupOptions: { input: { templates: join(root, 'src/projects/templates.ts') }, output: { entryFileNames: '[name].mjs', chunkFileNames: 'chunks/[name]-[hash].mjs' } } } })
   const templates = await import(`${pathToFileURL(join(compiled, 'templates.mjs')).href}?v=${Date.now()}`)
@@ -19,8 +20,8 @@ try {
     { id: 'hero-fidelity', name: 'Hero fidelity', enabled: true, center: { x: 0, y: 0 }, size: { x: 10, y: 8 }, priority: 10, preset: 'High', maximumPixelRatio: 1.75, particleBudget: 15_000, shadowQuality: 'Soft' }
   ] }
   const scene = project.scenes[0]
-  const colliderOf = name => scene.entities.find(entity => entity.name === name)?.components.find(component => component.kind.endsWith('Collider2D'))?.data
-  const bodyOf = name => scene.entities.find(entity => entity.name === name)?.components.find(component => component.kind === 'RigidBody2D')?.data
+  const colliderOf = /** 按实体名称取得其首个二维碰撞器组件的数据。 */ name => scene.entities.find(/* 比较 entity.name 与 name，返回严格相等的判断结果。 */ entity => entity.name === name)?.components.find(/* 调用 component.kind.endsWith('Collider2D') 并返回调用结果。 */ component => component.kind.endsWith('Collider2D'))?.data
+  const bodyOf = /** 按实体名称取得其二维刚体组件的数据。 */ name => scene.entities.find(/* 比较 entity.name 与 name，返回严格相等的判断结果。 */ entity => entity.name === name)?.components.find(/* 比较 component.kind 与 'RigidBody2D'，返回严格相等的判断结果。 */ component => component.kind === 'RigidBody2D')?.data
   const cross = colliderOf('Jointed Box')
   if (!cross) throw new Error('Physics Sandbox Jointed Box collider is missing.')
   cross.shapes = [

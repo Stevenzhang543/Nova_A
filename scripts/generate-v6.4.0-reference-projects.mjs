@@ -1,3 +1,4 @@
+/** 版本6.4.0：生成参考项目与对应资源，供功能演示和版本验证使用。 */
 import { createHash } from 'node:crypto'
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
@@ -8,8 +9,8 @@ import { build } from 'vite'
 const root = dirname(dirname(fileURLToPath(import.meta.url)))
 const output = join(root, 'reference-projects/projects/creator-v640-content-animation')
 const compiled = await mkdtemp(join(tmpdir(), 'nova-v640-reference-'))
-const sha = value => createHash('sha256').update(value).digest('hex')
-function assetFrom(base, { uuid, name, path, assetType, mimeType, source, interchange }) {
+const sha = /* 调用 createHash('sha256').update(value).digest('hex') 并返回调用结果。 */ value => createHash('sha256').update(value).digest('hex')
+/** 克隆资源基线，设置资源或交换导入器及源散列、诊断和最后有效源码。 */ function assetFrom(base, { uuid, name, path, assetType, mimeType, source, interchange }) {
   const digest = sha(source)
   return { ...structuredClone(base), uuid, name, path, assetType, mimeType, byteLength: new TextEncoder().encode(source).byteLength, source, sourceModified: 0, importedAt: 0, pipeline: { ...structuredClone(base.pipeline), importerId: interchange ? 'nova.content-interchange' : assetType === 'resource' ? 'nova-resource-1' : 'nova-inline-1', importerVersion: '6.4.0', sourceHash: interchange?.sourceHash ?? digest, artifactHash: digest, contentHash: digest, cacheKey: digest, lastValidSource: source, diagnostics: interchange?.diagnostics ?? [], error: '', status: 'ready' }, interchange, script: undefined }
 }
@@ -19,7 +20,7 @@ try {
   const content = await import(`${pathToFileURL(join(compiled, 'content.mjs')).href}?v=${Date.now()}`)
   const project = templates.createTemplateProject('mouse-knockout', 'Nova 6.4 Content and Animation Audit')
   project.projectSettings.build.gameName = 'Content Motion Knockout'
-  const base = project.assets.find(asset => asset.assetType === 'script')
+  const base = project.assets.find(/* 比较 asset.assetType 与 'script'，返回严格相等的判断结果。 */ asset => asset.assetType === 'script')
   if (!base) throw new Error('Mouse Knockout base asset is missing.')
 
   const external = JSON.stringify({ frames: {
@@ -37,7 +38,7 @@ try {
 
   const rig = { version: 2, name: 'Hero Rig', bones: [{ id: 'root', name: 'Root', parentId: null, position: { x: 0, y: 0 }, rotation: 0, scale: { x: 1, y: 1 }, length: 1 }, { id: 'hand', name: 'Hand', parentId: 'root', position: { x: 1, y: 0 }, rotation: 0, scale: { x: 1, y: 1 }, length: .75 }], ikChains: [], constraints: [{ id: 'hand-limit', boneId: 'hand', type: 'RotationLimit', targetBoneId: null, minimum: { x: -.75, y: -1e6 }, maximum: { x: .75, y: 1e6 }, weight: 1 }], attachments: [], retargetAliases: { root: 'root', hand: 'hand' } }
   const skin = { version: 1, name: 'Hero Skin', rigAsset: 'asset://64000000-0000-4000-8000-000000000004', vertices: [{ position: { x: -.5, y: -.5 }, uv: { x: 0, y: 1 }, weights: [{ boneId: 'root', weight: 1 }] }, { position: { x: .5, y: -.5 }, uv: { x: 1, y: 1 }, weights: [{ boneId: 'root', weight: .5 }, { boneId: 'hand', weight: .5 }] }, { position: { x: .5, y: .5 }, uv: { x: 1, y: 0 }, weights: [{ boneId: 'hand', weight: 1 }] }, { position: { x: -.5, y: .5 }, uv: { x: 0, y: 0 }, weights: [{ boneId: 'root', weight: 1 }] }], triangles: [0, 1, 2, 0, 2, 3] }
-  const key = (time, value) => ({ time, value, tangentMode: 'Linear', inTangent: 0, outTangent: 0, easing: 'Linear', interpolation: 'Linear' })
+  const key = /** 创建采用线性切线、缓动与插值的时间值关键帧。 */ (time, value) => ({ time, value, tangentMode: 'Linear', inTangent: 0, outTangent: 0, easing: 'Linear', interpolation: 'Linear' })
   const clip = { version: 4, name: 'Root Motion Preview', loop: true, frameRate: 60, playbackSpeed: 1, onionSkin: true, spriteFrames: [], tracks: [{ property: 'Transform.position.x', targetEntityUuid: null, keyframes: [key(0, 0), key(1, 3)] }, { property: 'Transform.position.y', targetEntityUuid: null, keyframes: [key(0, 0), key(1, 4)] }], events: [], markers: [], commandTracks: [] }
   project.assets.push(assetFrom(base, { uuid: '64000000-0000-4000-8000-000000000004', name: 'Hero Rig.nova-rig', path: 'Assets/Rigs/Hero Rig.nova-rig', assetType: 'rig', mimeType: 'application/x-nova-rig+json', source: `${JSON.stringify(rig, null, 2)}\n` }))
   project.assets.push(assetFrom(base, { uuid: '64000000-0000-4000-8000-000000000005', name: 'Hero Skin.nova-skin', path: 'Assets/Skins/Hero Skin.nova-skin', assetType: 'skin', mimeType: 'application/x-nova-skin+json', source: `${JSON.stringify(skin, null, 2)}\n` }))

@@ -1,3 +1,4 @@
+/** 项目完整性检查：验证项目及资源之间的持久化关系。 */
 import { reactive, toRaw } from 'vue'
 import { assertStudioDraftsSaved } from '../editor/studioSaveBoundary'
 import { canonicalProjectText, repairProjectDocument, validateProjectDocument, type ProjectRepairReport, type ProjectValidationReport } from '../projects/projectData'
@@ -16,14 +17,14 @@ export const projectIntegrityState = reactive({
   missingReferenceMappings: {} as Record<string, string>
 })
 
-export function validateCurrentProject(): ProjectValidationReport {
+/** 校验当前序列化项目并更新最近验证结果和操作状态。 */ export function validateCurrentProject(): ProjectValidationReport {
   const report = validateProjectDocument(getSceneJSON())
   projectIntegrityState.validation = report
   projectIntegrityState.lastAction = report.valid ? 'validated' : 'validation-failed'
   return report
 }
 
-export function deterministicCurrentProjectResave(): { changed: boolean; checksum: string } {
+/** 预览规范重存结果，有变化时先备份再加载；失败恢复旧项目，成功记录历史和事务差异。 */ export function deterministicCurrentProjectResave(): { changed: boolean; checksum: string } {
   const before = getSceneJSON(), result = deterministicResave(before)
   projectIntegrityState.lastAction = result.changed ? 'deterministic-resave-preview' : 'deterministic-resave-no-op'
   if (!result.changed) return { changed: false, checksum: result.checksum }
@@ -33,7 +34,7 @@ export function deterministicCurrentProjectResave(): { changed: boolean; checksu
   return { changed: true, checksum: result.checksum }
 }
 
-export function previewCurrentProjectRepair(): ProjectRepairReport {
+/** 生成修复预览并记录原文及规范化输出，供应用时检查预览是否过期。 */ export function previewCurrentProjectRepair(): ProjectRepairReport {
   const source = getSceneJSON(), report = repairProjectDocument(source)
   repairPreviews.set(report, { source, output: canonicalProjectText(report.source) })
   projectIntegrityState.repairPreview = report
@@ -41,14 +42,14 @@ export function previewCurrentProjectRepair(): ProjectRepairReport {
   return report
 }
 
-export function backupCurrentProject(): void {
+/** 下载当前项目备份并保存升级回滚副本，记录备份状态。 */ export function backupCurrentProject(): void {
   const source = getSceneJSON()
   downloadProjectBackup(source, projectSessionState.name)
   storeUpgradeRollback(source, `${projectSessionState.name}.nova`)
   projectIntegrityState.lastAction = 'backed-up'
 }
 
-export function applyCurrentProjectRepair(report = projectIntegrityState.repairPreview): boolean {
+/** 结算编辑并验证修复预览与当前文档一致，先备份后应用，失败回滚，成功记历史并重新校验。 */ export function applyCurrentProjectRepair(report = projectIntegrityState.repairPreview): boolean {
   if (!report) return false
   try {
     if (!settlePendingDocumentEdits()) { projectIntegrityState.lastAction = 'repair-pending-edits'; return false }

@@ -1,3 +1,4 @@
+/** 版本4.7：汇集发布报告与产物文件，生成带来源记录的发布证据。 */
 import { createHash } from 'node:crypto'
 import { execFileSync } from 'node:child_process'
 import { cp, mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises'
@@ -10,20 +11,20 @@ const tree = join(audits, 'evidence-v4.7.0')
 const generatedAt = new Date().toISOString()
 const commit = execFileSync('git', ['-C', root, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim()
 
-async function json(path) { return JSON.parse(await readFile(path, 'utf8')) }
-async function optionalJson(name, fallback) { try { return await json(join(audits, name)) } catch { return fallback } }
-async function writeJson(path, value) { await mkdir(dirname(path), { recursive: true }); await writeFile(path, `${JSON.stringify(value, null, 2)}\n`) }
-async function walk(directory) { const result = []; for (const entry of await readdir(directory, { withFileTypes: true })) { const path = join(directory, entry.name); if (entry.isDirectory()) result.push(...await walk(path)); else result.push(path) } return result }
+/* 调用 JSON.parse(await readFile(path, 'utf8')) 并返回调用结果。 */ async function json(path) { return JSON.parse(await readFile(path, 'utf8')) }
+/** 读取可选JSON报告，失败返回指定回退值。 */ async function optionalJson(name, fallback) { try { return await json(join(audits, name)) } catch { return fallback } }
+/** 创建父目录并写入格式化JSON与末尾换行。 */ async function writeJson(path, value) { await mkdir(dirname(path), { recursive: true }); await writeFile(path, `${JSON.stringify(value, null, 2)}\n`) }
+/** 递归列出目录内文件。 */ async function walk(directory) { const result = []; for (const entry of await readdir(directory, { withFileTypes: true })) { const path = join(directory, entry.name); if (entry.isDirectory()) result.push(...await walk(path)); else result.push(path) } return result }
 
 await mkdir(tree, { recursive: true })
 const audit = await optionalJson('v4.7.0-animation-ui-audit.json', { status: 'not-run', checks: [] })
 const verification = await optionalJson('v4.7.0-verification.json', { status: 'not-run', checks: [] })
 const layout = await optionalJson('v4.7.0-layout-browser.json', { status: 'not-run', checks: [], environments: [] })
 const windows = await optionalJson('v4.7.0-windows-smoke.json', { status: 'not-run' })
-const check = id => verification.checks?.find(item => item.id === id)
-const localFailures = [audit, verification, layout].filter(report => report.status === 'failed')
+const check = /** 按标识查找验证报告中的用例。 */ id => verification.checks?.find(/* 比较 item.id 与 id，返回严格相等的判断结果。 */ item => item.id === id)
+const localFailures = [audit, verification, layout].filter(/* 比较 report.status 与 'failed'，返回严格相等的判断结果。 */ report => report.status === 'failed')
 
-await writeJson(join(tree, 'tests', 'animation-sampling.json'), { format: 'nova-v4.7-animation-sampling-evidence', generatedAt, golden: check('ANM-GOLDEN-LINEAR'), editing: check('ANM-EDITING'), loopAndReverse: check('ANM-LOOP-REVERSE'), stress: check('ANM-STRESS'), status: ['ANM-GOLDEN-LINEAR','ANM-EDITING','ANM-LOOP-REVERSE','ANM-STRESS'].every(id => check(id)?.status === 'passed') ? 'passed' : 'not-run-or-failed' })
+await writeJson(join(tree, 'tests', 'animation-sampling.json'), { format: 'nova-v4.7-animation-sampling-evidence', generatedAt, golden: check('ANM-GOLDEN-LINEAR'), editing: check('ANM-EDITING'), loopAndReverse: check('ANM-LOOP-REVERSE'), stress: check('ANM-STRESS'), status: ['ANM-GOLDEN-LINEAR','ANM-EDITING','ANM-LOOP-REVERSE','ANM-STRESS'].every(/* 比较 check(id)?.status 与 'passed'，返回严格相等的判断结果。 */ id => check(id)?.status === 'passed') ? 'passed' : 'not-run-or-failed' })
 await writeJson(join(tree, 'responsive', 'matrix.json'), { format: 'nova-v4.7-responsive-matrix-evidence', generatedAt, deterministicResolver: check('UI-RESPONSIVE-MATRIX'), browserQualification: layout, requiredDevices: ['desktop-16:9','laptop-16:10','ultrawide','4:3','mobile-portrait','mobile-landscape'], directions: ['ltr','rtl'], status: check('UI-RESPONSIVE-MATRIX')?.status === 'passed' && layout.status !== 'failed' ? 'passed-local' : 'not-run-or-failed' })
 await writeJson(join(tree, 'localization', 'fixtures.json'), { format: 'nova-v4.7-localization-fixtures', generatedAt, locales: ['en','de','zh-CN','ar','pseudo'], fixtures: { plural: ['one','other'], bidirectional: '\u2067واجهة Nova_A\u2069 123', emoji: '👩🏽‍🚀', combining: 'é', cjk: '中文', pseudolocalized: '［Ňövä_Å··］' }, csvPoRoundTrip: check('LOC-ROUNDTRIP'), fontFallbacks: ['Nunito Sans','Noto Sans SC','Segoe UI Emoji','system sans-serif'], status: check('LOC-ROUNDTRIP')?.status ?? 'not-run' })
 await writeJson(join(tree, 'accessibility', 'audit.json'), { format: 'nova-v4.7-accessibility-audit', generatedAt, automated: { semanticNamesRolesStates: true, brokenFocusOrder: true, contrast: true, clippedText: true, overflow: true, missingTranslation: true, minimumTargetSize: true }, hostBridge: { metadata: 'implemented', keyboard: 'locally validated', gamepad: 'locally validated', screenReaderSpeech: 'supported by host webview; clean-machine speech remains an external manual gate' }, result: check('UI-RESPONSIVE-MATRIX'), status: check('UI-RESPONSIVE-MATRIX')?.status ?? 'not-run' })

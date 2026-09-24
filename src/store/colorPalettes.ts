@@ -1,3 +1,4 @@
+/** 界面配色选择：登记配色集合并按明暗模式校验当前选择。 */
 /** Exact semantic roles supplied in app_color_palette_system.md. */
 export const COLOR_PALETTES = [
   { id: 'cloud-blue', name: 'Cloud Blue', mode: 'light', background: '#F7F9FC', surface: '#FFFFFF', primary: '#4F6F8F', secondary: '#8EA9B8', accent: '#7FA6A0', text: '#263746' },
@@ -7,8 +8,8 @@ export const COLOR_PALETTES = [
   { id: 'night-garden', name: 'Night Garden', mode: 'dark', background: '#171518', surface: '#211E23', primary: '#806F8D', secondary: '#5F6D78', accent: '#738778', text: '#DDD8DF' }
 ] as const
 export type ColorPaletteId = typeof COLOR_PALETTES[number]['id']
-export function colorPalette(value: unknown) { return COLOR_PALETTES.find(item => item.id === value) }
-export function paletteForMode(value: unknown, mode: 'light' | 'dark'): ColorPaletteId {
+/** 按配色标识查询已登记配色，未知输入返回 undefined。 */ export function colorPalette(value: unknown) { return COLOR_PALETTES.find(/* 比较 item.id 与 value，返回严格相等的判断结果。 */ item => item.id === value) }
+/** 保留与所需明暗模式一致的已登记配色，否则使用对应模式默认配色。 */ export function paletteForMode(value: unknown, mode: 'light' | 'dark'): ColorPaletteId {
   const palette = colorPalette(value)
   return palette?.mode === mode ? palette.id : mode === 'light' ? 'cloud-blue' : 'midnight-blue'
 }

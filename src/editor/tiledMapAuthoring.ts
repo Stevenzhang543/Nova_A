@@ -1,3 +1,4 @@
+/** Tiled 地图实例化：把已导入地图资源创建为场景内可编辑的瓦片地图对象。 */
 import { assetState, resolveAsset } from '../assets/AssetDatabase'
 import { resolveTiledMapAsset } from '../assets/tiledMapAssets'
 import { physicsState, pushHistory, selectEntities } from '../store/physics'
@@ -6,7 +7,7 @@ import { BoxEntity } from '../world/BoxEntity'
 import { TileMap2D } from '../world/components'
 import { normalizeTileMap } from '../runtime/tilemap'
 /** Prepare every dependency and cell before allocating a scene identity; commit one history transaction. */
-export function instantiateImportedTileMap(reference: string) {
+/** 解析已导入地图，创建规范化地图组件并替换基础实体的渲染与物理组件，选中新对象并记录历史。 */ export function instantiateImportedTileMap(reference: string) {
   const asset=resolveAsset(reference);if(!asset)throw new Error('TILED_SCENE: The map is missing.')
   const plan=resolveTiledMapAsset(asset,assetState.records),component=new TileMap2D()
   Object.assign(component,{tileSetAsset:'asset://'+asset.uuid,width:plan.width,height:plan.height,tileSize:{x:1,y:plan.tileHeight/plan.tileWidth},layers:plan.layers,tiles:plan.layers[0].tiles,activeLayer:0})

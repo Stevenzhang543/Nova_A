@@ -1,3 +1,4 @@
+<!-- 事件表编辑器：编辑继承、条件和动作，维护草稿与转换源。 -->
 <template>
   <section class="event-studio">
     <ObjectBlueprintEditor v-if="blueprintEditorUuid" :key="blueprintEditorUuid" :asset-uuid="blueprintEditorUuid" @close="blueprintEditorUuid=null" @derive="deriveBlueprint" />
@@ -26,7 +27,7 @@
         <div><span>{{ t('selectedObject') }}</span><strong>{{ selectedEntity?.name ?? t('none') }}</strong><small>{{ selectedEntity ? `${selectedEntity.components.length} ${t('components')}` : t('selectObjectForEvents') }}</small></div>
         <label><span>{{ t('eventOwner') }}</span><select v-model="document.ownerComponent" @change="markDirty"><option value="Entity">{{ t('entity') }}</option><option v-for="component in selectedEntity?.components ?? []" :key="component.uuid" :value="component.kind">{{ component.kind }}</option></select></label>
         <label><span>{{ t('logicAsset') }}</span><select v-model="document.logicAsset" @change="logicChanged"><option :value="null">{{ t('none') }}</option><option v-for="asset in logicAssets" :key="asset.uuid" :value="assetReference(asset.uuid)">{{ asset.name }} · {{ asset.assetType === 'script' ? 'Rhai' : t('visualGraph') }}</option></select></label>
-        <label><span>{{ t('inheritsFrom') }}</span><select v-model="document.baseSheetAsset" @change="markDirty"><option :value="null">{{ t('none') }}</option><option v-for="asset in sheetAssets.filter(item => item.uuid !== activeAsset?.uuid)" :key="asset.uuid" :value="assetReference(asset.uuid)">{{ asset.name }}</option></select></label>
+<!-- 继承候选过滤回调排除当前事件表资源。 -->        <label><span>{{ t('inheritsFrom') }}</span><select v-model="document.baseSheetAsset" @change="markDirty"><option :value="null">{{ t('none') }}</option><option v-for="asset in sheetAssets.filter(item => item.uuid !== activeAsset?.uuid)" :key="asset.uuid" :value="assetReference(asset.uuid)">{{ asset.name }}</option></select></label>
       </section>
 
       <section class="event-list">
@@ -94,61 +95,61 @@ import { OBJECT_EVENT_KINDS, resolveEventSheetPrimaryLogic, attachEventSheet, ca
 import { createQuickObjectWorkflow } from '../runtime/objectBlueprints'
 
 const assetSearch=ref(''),eventSearch=ref(''),dirty=ref(false),document=shallowRef<EventSheetDocument>(defaultEventSheet()),activeUuid=ref('')
-const sheetAssets=computed(()=>{void assetState.generation;return assetState.records.filter(asset=>asset.assetType==='eventSheet').sort((a,b)=>a.path.localeCompare(b.path))})
-const blueprintAssets=computed(()=>{void assetState.generation;return assetState.records.filter(asset=>asset.assetType==='objectBlueprint').sort((a,b)=>a.path.localeCompare(b.path))})
-const logicAssets=computed(()=>{void assetState.generation;return assetState.records.filter(asset=>asset.assetType==='script'||asset.assetType==='visualScript').sort((a,b)=>a.path.localeCompare(b.path))})
-const filteredAssets=computed(()=>{const query=assetSearch.value.trim().toLowerCase();return query?sheetAssets.value.filter(asset=>`${asset.name} ${asset.path}`.toLowerCase().includes(query)):sheetAssets.value})
-const activeAsset=computed(()=>sheetAssets.value.find(asset=>asset.uuid===activeUuid.value)??null)
+const sheetAssets=computed(/** 依赖资源代次列出事件表并按路径排序。 */ ()=>{void assetState.generation;return assetState.records.filter(/* 比较 asset.assetType 与 'eventSheet'，返回严格相等的判断结果。 */ asset=>asset.assetType==='eventSheet').sort(/* 调用 a.path.localeCompare(b.path) 并返回调用结果。 */ (a,b)=>a.path.localeCompare(b.path))})
+const blueprintAssets=computed(/** 依赖资源代次列出对象蓝图并按路径排序。 */ ()=>{void assetState.generation;return assetState.records.filter(/* 比较 asset.assetType 与 'objectBlueprint'，返回严格相等的判断结果。 */ asset=>asset.assetType==='objectBlueprint').sort(/* 调用 a.path.localeCompare(b.path) 并返回调用结果。 */ (a,b)=>a.path.localeCompare(b.path))})
+const logicAssets=computed(/** 依赖资源代次列出代码及图逻辑资源并按路径排序。 */ ()=>{void assetState.generation;return assetState.records.filter(/* 先计算 asset.assetType==='script'；仅当其为假值时求右侧 asset.assetType==='visualScript'，返回短路求值结果。 */ asset=>asset.assetType==='script'||asset.assetType==='visualScript').sort(/* 调用 a.path.localeCompare(b.path) 并返回调用结果。 */ (a,b)=>a.path.localeCompare(b.path))})
+const filteredAssets=computed(/** 按名称和路径搜索事件表，空查询返回全部。 */ ()=>{const query=assetSearch.value.trim().toLowerCase();return query?sheetAssets.value.filter(/* 调用 `${asset.name} ${asset.path}`.toLowerCase().includes(query) 并返回调用结果。 */ asset=>`${asset.name} ${asset.path}`.toLowerCase().includes(query)):sheetAssets.value})
+const activeAsset=computed(/** 查找活动事件表资源。 */ ()=>sheetAssets.value.find(/* 比较 asset.uuid 与 activeUuid.value，返回严格相等的判断结果。 */ asset=>asset.uuid===activeUuid.value)??null)
 const draftProjectId=projectSessionState.id,loadedBaseSource=ref<string|null>(null)
-const savedEventSource=computed(()=>{void assetState.generation;return activeAsset.value?readTextAsset(activeAsset.value.uuid):null})
-const eventDraftConflict=computed(()=>dirty.value&&savedEventSource.value!==loadedBaseSource.value)
-function eventDraftCandidate():StudioDraftCandidate|null{return dirty.value&&activeAsset.value?{record:activeAsset.value,projectId:draftProjectId,kind:'events',source:JSON.stringify(document.value),baseSource:loadedBaseSource.value}:null}
-function retainEventDraft(){const candidate=eventDraftCandidate();if(candidate)retainStudioDraft(candidate)}
-function acceptEventDraftBase(){loadedBaseSource.value=savedEventSource.value;retainEventDraft()}
-const unregisterDraftOwner=registerStudioDraftOwner({read:eventDraftCandidate,discard:()=>{if(!restoreDiscardedDraft())throw Error(panelControlLabel('draftInvalid'))}})
-const selectedEntity=computed(()=>physicsState.world.entities.find(entity=>entity.id===physicsState.selectedEntityId)??null)
-const attached=computed(()=>!!activeAsset.value&&selectedEntity.value?.script2D?.eventSheetAsset===assetReference(activeAsset.value.uuid))
-const logicRecord=computed(()=>resolveAsset(resolveEventSheetPrimaryLogic(document.value)))
-const callbacks=computed(()=>[...callbackNamesInLogic(document.value)].sort())
-const diagnostics=computed(()=>[...validateEventSheetDraft(document.value,preferencesState.locale),...validateEventSheet(document.value,assetState.records)])
-const errors=computed(()=>diagnostics.value.filter(issue=>issue.severity==='error'))
+const savedEventSource=computed(/** 依赖资源代次读取活动事件表保存源。 */ ()=>{void assetState.generation;return activeAsset.value?readTextAsset(activeAsset.value.uuid):null})
+const eventDraftConflict=computed(/* 先计算 dirty.value；仅当其为真值时求右侧 savedEventSource.value!==loadedBaseSource.value，返回短路求值结果。 */ ()=>dirty.value&&savedEventSource.value!==loadedBaseSource.value)
+/** 仅在草稿已修改且活动资源存在时构造恢复候选。 */ function eventDraftCandidate():StudioDraftCandidate|null{return dirty.value&&activeAsset.value?{record:activeAsset.value,projectId:draftProjectId,kind:'events',source:JSON.stringify(document.value),baseSource:loadedBaseSource.value}:null}
+/** 存在候选时保存事件表恢复草稿。 */ function retainEventDraft(){const candidate=eventDraftCandidate();if(candidate)retainStudioDraft(candidate)}
+/** 接受最新保存源为冲突基线并保留草稿。 */ function acceptEventDraftBase(){loadedBaseSource.value=savedEventSource.value;retainEventDraft()}
+const unregisterDraftOwner=registerStudioDraftOwner({read:eventDraftCandidate,discard:/** 尝试恢复保存版本以放弃草稿，失败抛出本地化错误。 */ ()=>{if(!restoreDiscardedDraft())throw Error(panelControlLabel('draftInvalid'))}})
+const selectedEntity=computed(/** 查找当前选中世界实体。 */ ()=>physicsState.world.entities.find(/* 比较 entity.id 与 physicsState.selectedEntityId，返回严格相等的判断结果。 */ entity=>entity.id===physicsState.selectedEntityId)??null)
+const attached=computed(/* 先计算 !!activeAsset.value；仅当其为真值时求右侧 selectedEntity.value?.script2D?.eventSheetAsset===assetReference(activeAsset.value.uuid)，返回短路求值结果。 */ ()=>!!activeAsset.value&&selectedEntity.value?.script2D?.eventSheetAsset===assetReference(activeAsset.value.uuid))
+const logicRecord=computed(/* 调用 resolveAsset(resolveEventSheetPrimaryLogic(document.value)) 并返回调用结果。 */ ()=>resolveAsset(resolveEventSheetPrimaryLogic(document.value)))
+const callbacks=computed(/* 调用 [...callbackNamesInLogic(document.value)].sort() 并返回调用结果。 */ ()=>[...callbackNamesInLogic(document.value)].sort())
+const diagnostics=computed(/** 合并事件表字段和资源引用校验结果。 */ ()=>[...validateEventSheetDraft(document.value,preferencesState.locale),...validateEventSheet(document.value,assetState.records)])
+const errors=computed(/** 筛选阻断保存的错误诊断。 */ ()=>diagnostics.value.filter(/* 比较 issue.severity 与 'error'，返回严格相等的判断结果。 */ issue=>issue.severity==='error'))
 const eventKinds=OBJECT_EVENT_KINDS
-const visibleHandlers=computed(()=>{const query=eventSearch.value.trim().toLowerCase();return query?document.value.handlers.filter(handler=>`${handler.name} ${handler.kind} ${handler.selector} ${handler.callback}`.toLowerCase().includes(query)):document.value.handlers})
+const visibleHandlers=computed(/** 按名称、种类、选择器和回调搜索事件处理项。 */ ()=>{const query=eventSearch.value.trim().toLowerCase();return query?document.value.handlers.filter(/* 调用 `${handler.name} ${handler.kind} ${handler.selector} ${handler.callback}`.toLowerCase().includes(query) 并返回调用结果。 */ handler=>`${handler.name} ${handler.kind} ${handler.selector} ${handler.callback}`.toLowerCase().includes(query)):document.value.handlers})
 
 const transitions=createEventSheetTransitionGuard({
-  snapshot:()=>({identity:activeUuid.value,source:JSON.stringify(document.value),dirty:dirty.value}),
-  chooseSave:()=>requestConfirmation({title:panelControlLabel('draftTitle'),message:panelControlLabel('draftMessage'),confirmLabel:panelControlLabel('saveContinue'),cancelLabel:panelControlLabel('otherChoices'),destructive:false}),
-  chooseDiscard:()=>requestConfirmation({title:panelControlLabel('discardTitle'),message:panelControlLabel('discardMessage'),confirmLabel:panelControlLabel('discard'),cancelLabel:t('cancel'),destructive:true}),
-  save:()=>save(),
-  report:(reason,error)=>addEditorLog(reason==='failed'?(error instanceof Error?error.message:String(error)):panelControlLabel(reason==='invalid'?'draftInvalid':'draftStale'),'Script','error',activeUuid.value)
+  snapshot:/** 提供当前资源身份、序列化内容与脏状态作为切换快照。 */ ()=>({identity:activeUuid.value,source:JSON.stringify(document.value),dirty:dirty.value}),
+  chooseSave:/** 请求保存并继续或查看其他选择的确认。 */ ()=>requestConfirmation({title:panelControlLabel('draftTitle'),message:panelControlLabel('draftMessage'),confirmLabel:panelControlLabel('saveContinue'),cancelLabel:panelControlLabel('otherChoices'),destructive:false}),
+  chooseDiscard:/** 请求放弃草稿或取消的破坏性确认。 */ ()=>requestConfirmation({title:panelControlLabel('discardTitle'),message:panelControlLabel('discardMessage'),confirmLabel:panelControlLabel('discard'),cancelLabel:t('cancel'),destructive:true}),
+  save:/* 调用 save() 并返回调用结果。 */ ()=>save(),
+  report:/** 按失败、无效或过期原因写入事件表错误日志。 */ (reason,error)=>addEditorLog(reason==='failed'?(error instanceof Error?error.message:String(error)):panelControlLabel(reason==='invalid'?'draftInvalid':'draftStale'),'Script','error',activeUuid.value)
 })
-function runSheetTransition(operation: () => boolean | void | Promise<boolean | void>): Promise<boolean> {
+/* 根据 settleEditorDrafts() 的真假，分别返回 transitions.run(operation) 或 Promise.resolve(false)。 */ function runSheetTransition(operation: () => boolean | void | Promise<boolean | void>): Promise<boolean> {
   return settleEditorDrafts() ? transitions.run(operation) : Promise.resolve(false)
 }
-function commitDocument(uuid:string,value:EventSheetDocument){const previous=activeAsset.value,previousDirty=dirty.value;const record=sheetAssets.value.find(asset=>asset.uuid===uuid),source=readTextAsset(uuid),recovery=record?readStudioDraft(record,draftProjectId,'events',source):null;const next=recovery?JSON.parse(recovery.entry.source) as EventSheetDocument:value;if(previousDirty&&previous&&previous.uuid!==uuid)clearStudioDraft(previous,draftProjectId);document.value=next;loadedBaseSource.value=recovery?recovery.entry.baseSource:source;activeUuid.value=uuid;assetState.selectedGuid=uuid;graphStudioState.activeEventSheetUuid=uuid;dirty.value=!!recovery}
-async function open(uuid:string){
+/** 载入目标资源及恢复草稿，更新保存基线、资源选择及事件表状态，必要时清理旧草稿。 */ function commitDocument(uuid:string,value:EventSheetDocument){const previous=activeAsset.value,previousDirty=dirty.value;const record=sheetAssets.value.find(/* 比较 asset.uuid 与 uuid，返回严格相等的判断结果。 */ asset=>asset.uuid===uuid),source=readTextAsset(uuid),recovery=record?readStudioDraft(record,draftProjectId,'events',source):null;const next=recovery?JSON.parse(recovery.entry.source) as EventSheetDocument:value;if(previousDirty&&previous&&previous.uuid!==uuid)clearStudioDraft(previous,draftProjectId);document.value=next;loadedBaseSource.value=recovery?recovery.entry.baseSource:source;activeUuid.value=uuid;assetState.selectedGuid=uuid;graphStudioState.activeEventSheetUuid=uuid;dirty.value=!!recovery}
+/** 读取解析目标事件表，通过草稿切换守卫后提交，失败恢复活动标识并记录错误。 */ async function open(uuid:string){
   if(uuid===activeUuid.value)return true
   const source=readTextAsset(uuid);if(!source){if(graphStudioState.activeEventSheetUuid===uuid)graphStudioState.activeEventSheetUuid=activeUuid.value;return false}
   try{
     const parsed=parseEventSheet(source)
-    const accepted=await runSheetTransition(()=>{if(readTextAsset(uuid)!==source){addEditorLog(panelControlLabel('draftStale'),'Script','error',uuid);return false}commitDocument(uuid,parsed);return true})
+    const accepted=await runSheetTransition(/** 切换等待后重新检查目标源未变化，再提交解析文档。 */ ()=>{if(readTextAsset(uuid)!==source){addEditorLog(panelControlLabel('draftStale'),'Script','error',uuid);return false}commitDocument(uuid,parsed);return true})
     if(!accepted&&graphStudioState.activeEventSheetUuid===uuid)graphStudioState.activeEventSheetUuid=activeUuid.value
     return accepted
   }catch(error){addEditorLog(error instanceof Error?error.message:String(error),'Script','error',uuid);if(graphStudioState.activeEventSheetUuid===uuid)graphStudioState.activeEventSheetUuid=activeUuid.value;return false}
 }
-function restoreDiscardedDraft(){
+/** 脏草稿可读取并解析保存源时恢复该版本并清理缓存；无效源保留草稿并报错。 */ function restoreDiscardedDraft(){
   if(!dirty.value)return true
   const source=readTextAsset(activeUuid.value)
   if(!source){addEditorLog(panelControlLabel('draftInvalid'),'Script','error',activeUuid.value);return false}
   try{document.value=parseEventSheet(source);loadedBaseSource.value=source;dirty.value=false;if(activeAsset.value)clearStudioDraft(activeAsset.value,draftProjectId);return true}catch(error){addEditorLog(error instanceof Error?error.message:String(error),'Script','error',activeUuid.value);return false}
 }
-async function requestLeave(){return runSheetTransition(()=>restoreDiscardedDraft())}
+/* 调用 runSheetTransition(()=>restoreDiscardedDraft()) 并返回调用结果。 */ async function requestLeave(){return runSheetTransition(/* 调用 restoreDiscardedDraft() 并返回调用结果。 */ ()=>restoreDiscardedDraft())}
 defineExpose({requestLeave})
-function markDirty(){dirty.value=true;document.value={...document.value};retainEventDraft()}
-function logicTemplate(name:string){return `// ${name}\nfn awake() { }\nfn start() { }\nfn update(dt) { }\nfn fixed_update(dt) { }\nfn on_timer(name) { }\nfn on_task(name) { }\nfn on_destroy() { }\nfn on_signal(name, payload, source) { }\nfn on_collision_enter(other, px, py, nx, ny, rvx, rvy) { }\nfn on_trigger_enter(other, px, py, nx, ny, rvx, rvy) { }\n`}
-async function createForSelection(){const expected=selectedEntity.value;return runSheetTransition(()=>{if(selectedEntity.value!==expected){addEditorLog(panelControlLabel('draftStale'),'Script','error');return false}const entity=selectedEntity.value,name=entity?`${entity.name} Events`:t('newEventSheet');let logic=entity?.script2D?.scriptAsset??null;if(!logic){const asset=createTextAsset(`${entity?.name??'Object'} Logic`,'script',logicTemplate(`${entity?.name??'Object'} Logic`),'Assets/Scripts');logic=assetReference(asset.uuid)}const asset=createEventSheetAsset(name,logic);commitDocument(asset.uuid,parseEventSheet(readTextAsset(asset.uuid)!));if(entity)attachToSelection();pushHistory('Create Event Sheet');return true})}
-function attachToSelection(){if(!selectedEntity.value||!activeAsset.value)return;if(attachEventSheet(selectedEntity.value,assetReference(activeAsset.value.uuid))){physicsState.world.invalidateRuntime();pushHistory('Attach Event Sheet');addEditorLog(t('eventSheetAttached',{name:selectedEntity.value.name}),'Script')}}
-function save():boolean{
+/** 标记文档已修改，刷新引用并保留恢复草稿。 */ function markDirty(){dirty.value=true;document.value={...document.value};retainEventDraft()}
+/** 生成含生命周期及事件回调空函数的关联 Rhai 模板。 */ function logicTemplate(name:string){return `// ${name}\nfn awake() { }\nfn start() { }\nfn update(dt) { }\nfn fixed_update(dt) { }\nfn on_timer(name) { }\nfn on_task(name) { }\nfn on_destroy() { }\nfn on_signal(name, payload, source) { }\nfn on_collision_enter(other, px, py, nx, ny, rvx, rvy) { }\nfn on_trigger_enter(other, px, py, nx, ny, rvx, rvy) { }\n`}
+/** 记住当前实体，通过草稿守卫后创建与其关联的事件表。 */ async function createForSelection(){const expected=selectedEntity.value;return runSheetTransition(/** 重新确认选择未变，按需创建逻辑脚本，再创建事件表、加载、关联并记录历史。 */ ()=>{if(selectedEntity.value!==expected){addEditorLog(panelControlLabel('draftStale'),'Script','error');return false}const entity=selectedEntity.value,name=entity?`${entity.name} Events`:t('newEventSheet');let logic=entity?.script2D?.scriptAsset??null;if(!logic){const asset=createTextAsset(`${entity?.name??'Object'} Logic`,'script',logicTemplate(`${entity?.name??'Object'} Logic`),'Assets/Scripts');logic=assetReference(asset.uuid)}const asset=createEventSheetAsset(name,logic);commitDocument(asset.uuid,parseEventSheet(readTextAsset(asset.uuid)!));if(entity)attachToSelection();pushHistory('Create Event Sheet');return true})}
+/** 将活动事件表绑定到选中实体，成功使运行时失效并记录历史日志。 */ function attachToSelection(){if(!selectedEntity.value||!activeAsset.value)return;if(attachEventSheet(selectedEntity.value,assetReference(activeAsset.value.uuid))){physicsState.world.invalidateRuntime();pushHistory('Attach Event Sheet');addEditorLog(t('eventSheetAttached',{name:selectedEntity.value.name}),'Script')}}
+/** 先提交子控件草稿，要求有效资源、无诊断错误或外部冲突；保存成功更新关联和基线、清除恢复草稿并记录历史。 */ function save():boolean{
   if(!settleEditorDrafts()||!activeAsset.value||errors.value.length)return false
   if(!dirty.value)return true
   if(eventDraftConflict.value){addEditorLog(panelControlLabel('draftStale'),'Script','error',activeUuid.value);return false}
@@ -159,28 +160,28 @@ function save():boolean{
     addEditorLog(t('eventSheetSaved',{name:activeAsset.value.name}),'Script');dirty.value=false;loadedBaseSource.value=readTextAsset(activeAsset.value.uuid);clearStudioDraft(activeAsset.value,draftProjectId);return true
   }catch(error){addEditorLog(error instanceof Error?error.message:String(error),'Script','error',activeUuid.value);return false}
 }
-function addHandler(){document.value.handlers.push(defaultEventHandler('start'));markDirty()}
-function removeHandler(uuid:string){document.value.handlers=document.value.handlers.filter(handler=>handler.uuid!==uuid);markDirty()}
-function eventKindChanged(handler:ObjectEventHandler){const replacement=defaultEventHandler(handler.kind);handler.callback=replacement.callback;handler.name=replacement.name;handler.selector='';markDirty()}
-function logicChanged(){markDirty()}
-async function openLogic(){return runSheetTransition(()=>{if(!restoreDiscardedDraft())return false;const record=logicRecord.value;if(!record)return false;if(record.assetType==='visualScript')openGraphAsset(record.uuid);else{openScriptAsset(record.uuid);graphStudioState.mode='code'}return true})}
-const blueprintEditorUuid=ref<string|null>(null),ownershipLabels=computed(()=>objectOwnershipCopy[preferencesState.locale])
-async function createBlueprint(){const expected=selectedEntity.value;if(!expected)return;return runSheetTransition(()=>{if(selectedEntity.value!==expected)return false;try{blueprintEditorUuid.value=authorBlueprintFromEntity(expected,activeAsset.value?assetReference(activeAsset.value.uuid):null);return true}catch(error){addEditorLog(error instanceof Error?error.message:String(error),'Assets','error');return false}})}
-function instantiateBlueprint(uuid:string){try{const values=authorBlueprintInstance(uuid);addEditorLog(t('objectBlueprintInstantiated',{count:values.length}),'Assets')}catch(error){addEditorLog(error instanceof Error?error.message:String(error),'Assets','error')}}
-function deriveBlueprint(uuid:string){try{blueprintEditorUuid.value=authorDerivedBlueprint(uuid,ownershipLabels.value.deriveName)}catch(error){addEditorLog(error instanceof Error?error.message:String(error),'Assets','error')}}async function quickObject(kind:AuthoringObjectKind){return runSheetTransition(()=>{const result=createQuickObjectWorkflow(kind,kind==='Sprite'?t('spriteObject'):t('shapeObject'));if(!result)return false;const record=resolveAsset(result.eventSheetAsset);if(!record)return false;commitDocument(record.uuid,parseEventSheet(readTextAsset(record.uuid)!));pushHistory('Quick Object Workflow');return true})}
-function needsSelector(kind:ObjectEventKind){return ['input-pressed','input-released','timer','task','signal','ui','animation','network'].includes(kind)}
-function selectorLabel(kind:ObjectEventKind){if(kind==='task')return ownershipLabels.value.taskName;return t(kind.startsWith('input-')?'inputAction':kind==='timer'?'timerName':kind==='ui'?'uiEvent':kind==='animation'?'animationEvent':kind==='network'?'networkEvent':'signalName')}
-function eventKindLabel(kind:ObjectEventKind){return kind==='destroy'?ownershipLabels.value.eventDestroy:kind==='task'?ownershipLabels.value.eventTask:t(`event_${kind}`)} 
-function eventDescription(kind:ObjectEventKind){return kind==='destroy'?ownershipLabels.value.destroyHint:kind==='task'?ownershipLabels.value.taskHint:t(`event_${kind}_hint`)}
+/** 添加默认 start 处理项并标脏。 */ function addHandler(){document.value.handlers.push(defaultEventHandler('start'));markDirty()}
+/** 按标识删除处理项并标脏。 */ function removeHandler(uuid:string){document.value.handlers=document.value.handlers.filter(/* 比较 handler.uuid 与 uuid，返回严格不等的判断结果。 */ handler=>handler.uuid!==uuid);markDirty()}
+/** 处理项种类变化时重置默认名称、回调及选择器并标脏。 */ function eventKindChanged(handler:ObjectEventHandler){const replacement=defaultEventHandler(handler.kind);handler.callback=replacement.callback;handler.name=replacement.name;handler.selector='';markDirty()}
+/** 逻辑引用变化时标记文档修改。 */ function logicChanged(){markDirty()}
+/** 通过草稿切换守卫后打开关联逻辑编辑器。 */ async function openLogic(){return runSheetTransition(/** 恢复可放弃草稿后解析逻辑资源，按图或代码类型打开对应编辑器。 */ ()=>{if(!restoreDiscardedDraft())return false;const record=logicRecord.value;if(!record)return false;if(record.assetType==='visualScript')openGraphAsset(record.uuid);else{openScriptAsset(record.uuid);graphStudioState.mode='code'}return true})}
+const blueprintEditorUuid=ref<string|null>(null),ownershipLabels=computed(/* 返回 objectOwnershipCopy[preferencesState.locale] 的当前值。 */ ()=>objectOwnershipCopy[preferencesState.locale])
+/** 固定当前选择，通过草稿守卫后从实体创建蓝图。 */ async function createBlueprint(){const expected=selectedEntity.value;if(!expected)return;return runSheetTransition(/** 确认实体选择未变后创建蓝图并打开其编辑器，异常写入资源日志。 */ ()=>{if(selectedEntity.value!==expected)return false;try{blueprintEditorUuid.value=authorBlueprintFromEntity(expected,activeAsset.value?assetReference(activeAsset.value.uuid):null);return true}catch(error){addEditorLog(error instanceof Error?error.message:String(error),'Assets','error');return false}})}
+/** 实例化蓝图并记录生成数量，失败记录错误。 */ function instantiateBlueprint(uuid:string){try{const values=authorBlueprintInstance(uuid);addEditorLog(t('objectBlueprintInstantiated',{count:values.length}),'Assets')}catch(error){addEditorLog(error instanceof Error?error.message:String(error),'Assets','error')}}
+/** 创建派生蓝图并打开，失败记录错误。 */ function deriveBlueprint(uuid:string){try{blueprintEditorUuid.value=authorDerivedBlueprint(uuid,ownershipLabels.value.deriveName)}catch(error){addEditorLog(error instanceof Error?error.message:String(error),'Assets','error')}}/** 通过草稿守卫执行快捷对象创建流程。 */ async function quickObject(kind:AuthoringObjectKind){return runSheetTransition(/** 创建快捷对象及事件表，加载其文档并记录工作流历史。 */ ()=>{const result=createQuickObjectWorkflow(kind,kind==='Sprite'?t('spriteObject'):t('shapeObject'));if(!result)return false;const record=resolveAsset(result.eventSheetAsset);if(!record)return false;commitDocument(record.uuid,parseEventSheet(readTextAsset(record.uuid)!));pushHistory('Quick Object Workflow');return true})}
+/* 调用 ['input-pressed','input-released','timer','task','signal','ui','animation','network'].includes(kind) 并返回调用结果。 */ function needsSelector(kind:ObjectEventKind){return ['input-pressed','input-released','timer','task','signal','ui','animation','network'].includes(kind)}
+/** 根据事件种类返回任务、输入、计时器、界面、动画、网络或信号选择器标签。 */ function selectorLabel(kind:ObjectEventKind){if(kind==='task')return ownershipLabels.value.taskName;return t(kind.startsWith('input-')?'inputAction':kind==='timer'?'timerName':kind==='ui'?'uiEvent':kind==='animation'?'animationEvent':kind==='network'?'networkEvent':'signalName')}
+/* 根据 kind==='destroy' 的真假，分别返回 ownershipLabels.value.eventDestroy 或 kind==='task'?ownershipLabels.value.eventTask:t(`event_${kind}`)。 */ function eventKindLabel(kind:ObjectEventKind){return kind==='destroy'?ownershipLabels.value.eventDestroy:kind==='task'?ownershipLabels.value.eventTask:t(`event_${kind}`)} 
+/* 根据 kind==='destroy' 的真假，分别返回 ownershipLabels.value.destroyHint 或 kind==='task'?ownershipLabels.value.taskHint:t(`event_${kind}_hint`)。 */ function eventDescription(kind:ObjectEventKind){return kind==='destroy'?ownershipLabels.value.destroyHint:kind==='task'?ownershipLabels.value.taskHint:t(`event_${kind}_hint`)}
 
-watch(savedEventSource,source=>{
+watch(savedEventSource,/** 无本地脏草稿且保存源变化时重新解析，失败记录错误但保留当前编辑。 */ source=>{
   if(dirty.value||!source||source===loadedBaseSource.value)return
   try{document.value=parseEventSheet(source);loadedBaseSource.value=source}
   catch(error){addEditorLog(error instanceof Error?error.message:String(error),'Script','error',activeUuid.value)}
 })
-watch(()=>graphStudioState.activeEventSheetUuid,uuid=>{if(uuid&&uuid!==activeUuid.value)open(uuid)})
-onBeforeUnmount(()=>{retainEventDraft();unregisterDraftOwner()})
-onMounted(()=>{const selected=assetState.records.find(asset=>asset.uuid===graphStudioState.activeEventSheetUuid&&asset.assetType==='eventSheet')??assetState.records.find(asset=>asset.uuid===assetState.selectedGuid&&asset.assetType==='eventSheet')??sheetAssets.value[0];if(selected)open(selected.uuid)})
+watch(/* 返回 graphStudioState.activeEventSheetUuid 的当前值。 */ ()=>graphStudioState.activeEventSheetUuid,/** 外部活动事件表标识变化时打开目标。 */ uuid=>{if(uuid&&uuid!==activeUuid.value)open(uuid)})
+onBeforeUnmount(/** 卸载时保留草稿并解除保存边界注册。 */ ()=>{retainEventDraft();unregisterDraftOwner()})
+onMounted(/** 挂载时优先打开工作室活动事件表，再使用资源选择或列表首项。 */ ()=>{const selected=assetState.records.find(/* 先计算 asset.uuid===graphStudioState.activeEventSheetUuid；仅当其为真值时求右侧 asset.assetType==='eventSheet'，返回短路求值结果。 */ asset=>asset.uuid===graphStudioState.activeEventSheetUuid&&asset.assetType==='eventSheet')??assetState.records.find(/* 先计算 asset.uuid===assetState.selectedGuid；仅当其为真值时求右侧 asset.assetType==='eventSheet'，返回短路求值结果。 */ asset=>asset.uuid===assetState.selectedGuid&&asset.assetType==='eventSheet')??sheetAssets.value[0];if(selected)open(selected.uuid)})
 </script>
 
 <style scoped>

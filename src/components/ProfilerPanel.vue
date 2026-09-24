@@ -1,3 +1,4 @@
+<!-- 性能分析面板：查看帧指标、运行诊断和测试结果。 -->
 <template>
   <section class="production-panel">
     <header class="production-header">
@@ -34,7 +35,7 @@
           <article><span>{{ t('audioUnderruns') }}</span><strong>{{ audioRuntime.diagnostics.underruns }}</strong></article>
         </div>
         <svg class="trace-chart" viewBox="0 0 600 110" preserveAspectRatio="none" :aria-label="t('frameHistory')"><line x1="0" y1="93.3" x2="600" y2="93.3"/><line x1="0" y1="76.7" x2="600" y2="76.7"/><polyline :points="chartPoints" /></svg>
-        <div class="flame-view"><article v-for="metric in timingMetrics.filter(item => item.value > 0)" :key="metric.label" :style="{ width: `${Math.max(8, metric.value / Math.max(.001,current.frameMs) * 100)}%` }"><span>{{ t(metric.label) }}</span><output>{{ metric.value.toFixed(2) }} ms</output></article></div>
+<!-- 火焰视图过滤回调仅展示耗时大于零的指标。 -->        <div class="flame-view"><article v-for="metric in timingMetrics.filter(item => item.value > 0)" :key="metric.label" :style="{ width: `${Math.max(8, metric.value / Math.max(.001,current.frameMs) * 100)}%` }"><span>{{ t(metric.label) }}</span><output>{{ metric.value.toFixed(2) }} ms</output></article></div>
         <div class="button-row"><button @click="profilerState.frozen = !profilerState.frozen">{{ t(profilerState.frozen ? 'resumeProfiler' : 'freezeProfiler') }}</button><button @click="clearProfiler">{{ t('clearSamples') }}</button><button class="primary" @click="takeCapture">{{ t('capturePerformance') }}</button></div>
       </section>
       <section class="card settings-card">
@@ -139,7 +140,7 @@
       <aside class="card results-card">
         <header><strong>{{ t('testResults') }}</strong><span>{{ testRunnerState.completed }}/{{ testRunnerState.total }}</span></header>
         <p v-if="testRunnerState.running">{{ t('runningTest', { name: testRunnerState.activeTest }) }}</p>
-        <article v-for="result in testRunnerState.results" :key="result.id" :class="result.status"><strong>{{ result.name }}</strong><span>{{ result.status }} · {{ result.durationMs.toFixed(1) }} ms</span><small v-if="result.error">{{ result.error }}</small><small v-for="assertion in result.assertions.filter(item => !item.passed)" :key="assertion.kind">{{ assertion.message }}</small><img v-if="result.screenshot" :src="result.screenshot" :alt="result.name"></article>
+<!-- 断言过滤回调仅展示测试中未通过的断言。 -->        <article v-for="result in testRunnerState.results" :key="result.id" :class="result.status"><strong>{{ result.name }}</strong><span>{{ result.status }} · {{ result.durationMs.toFixed(1) }} ms</span><small v-if="result.error">{{ result.error }}</small><small v-for="assertion in result.assertions.filter(item => !item.passed)" :key="assertion.kind">{{ assertion.message }}</small><img v-if="result.screenshot" :src="result.screenshot" :alt="result.name"></article>
       </aside>
     </div>
 
@@ -278,32 +279,32 @@ import { performanceRuntimeState as runtimePerformance } from '../runtime/largeW
 
 type TabId = 'trace' | 'memory' | 'replay' | 'tests' | 'data' | 'jobs' | 'scripts' | 'runtime' | 'network'
 const activeTab = ref<TabId>('trace')
-const current = computed(() => profilerState.current)
-const timingMetrics = computed(() => [{ label: 'frameTime' as const, value: current.value.frameMs }, { label: 'inputTime' as const, value: current.value.inputMs }, { label: 'physicsTime' as const, value: current.value.physicsMs }, { label: 'renderingTime' as const, value: current.value.renderingMs }, { label: 'scriptsTime' as const, value: current.value.scriptsMs }, { label: 'animationTime' as const, value: current.value.animationMs }, { label: 'audioTime' as const, value: current.value.audioMs }, { label: 'assetsTime' as const, value: current.value.assetsMs }, { label: 'otherTime' as const, value: current.value.otherMs }])
-const activeContacts = computed(() => Math.round(physicsState.world.entities.reduce((total, entity) => total + entity.contactCount, 0) / 2))
-const sleepingBodies = computed(() => physicsState.world.entities.filter(entity => entity.rigidBody.sleeping).length)
-const continuousBodies = computed(() => physicsState.world.entities.filter(entity => entity.rigidBody.continuousCollision === 'Continuous').length)
-const jointConstraints = computed(() => physicsState.world.entities.filter(entity => entity.components.some(component => component.kind.endsWith('Joint2D'))).length + physicsState.world.connections.length)
-const chartPoints = computed(() => profilerState.samples.map((sample, index, all) => `${all.length <= 1 ? 0 : index / (all.length - 1) * 600},${110 - Math.min(100, sample.frameMs * 3)}`).join(' '))
+const current = computed(/* 返回 profilerState.current 的当前值。 */ () => profilerState.current)
+const timingMetrics = computed(/** 按固定顺序生成当前帧各子系统耗时指标。 */ () => [{ label: 'frameTime' as const, value: current.value.frameMs }, { label: 'inputTime' as const, value: current.value.inputMs }, { label: 'physicsTime' as const, value: current.value.physicsMs }, { label: 'renderingTime' as const, value: current.value.renderingMs }, { label: 'scriptsTime' as const, value: current.value.scriptsMs }, { label: 'animationTime' as const, value: current.value.animationMs }, { label: 'audioTime' as const, value: current.value.audioMs }, { label: 'assetsTime' as const, value: current.value.assetsMs }, { label: 'otherTime' as const, value: current.value.otherMs }])
+const activeContacts = computed(/* 调用 Math.round(physicsState.world.entities.reduce((total, entity) => total + entity.contactCount, 0) / 2) 并返回调用结果。 */ () => Math.round(physicsState.world.entities.reduce(/* 计算表达式 total + entity.contactCount 并返回结果，沿用操作数的原有类型规则。 */ (total, entity) => total + entity.contactCount, 0) / 2))
+const sleepingBodies = computed(/* 返回 physicsState.world.entities.filter(entity => entity.rigidBody.sleeping).length 的当前值。 */ () => physicsState.world.entities.filter(/* 返回 entity.rigidBody.sleeping 的当前值。 */ entity => entity.rigidBody.sleeping).length)
+const continuousBodies = computed(/* 返回 physicsState.world.entities.filter(entity => entity.rigidBody.continuousCollision === 'Continuous').length 的当前值。 */ () => physicsState.world.entities.filter(/* 比较 entity.rigidBody.continuousCollision 与 'Continuous'，返回严格相等的判断结果。 */ entity => entity.rigidBody.continuousCollision === 'Continuous').length)
+const jointConstraints = computed(/** 统计含关节的实体数加世界连接数。 */ () => physicsState.world.entities.filter(/* 调用 entity.components.some(component => component.kind.endsWith('Joint2D')) 并返回调用结果。 */ entity => entity.components.some(/* 调用 component.kind.endsWith('Joint2D') 并返回调用结果。 */ component => component.kind.endsWith('Joint2D'))).length + physicsState.world.connections.length)
+const chartPoints = computed(/** 把帧采样映射为固定宽度折线。 */ () => profilerState.samples.map(/** 按采样索引与受限帧耗时计算折线坐标。 */ (sample, index, all) => `${all.length <= 1 ? 0 : index / (all.length - 1) * 600},${110 - Math.min(100, sample.frameMs * 3)}`).join(' '))
 const debugOptions = [{ key: 'showColliders', label: 'showColliders' }, { key: 'showContactPoints', label: 'showContactPoints' }, { key: 'showNormals', label: 'showNormals' }, { key: 'showSleepingBodies', label: 'showSleepingBodies' }, { key: 'showAabbs', label: 'showAabbs' }, { key: 'showJointConstraints', label: 'showJointConstraints' }, { key: 'showRopeNodes', label: 'showRopeNodes' }, { key: 'showCharacterContacts', label: 'showCharacterContacts' }, { key: 'showCentersOfMass', label: 'showCentersOfMass' }, { key: 'showVelocities', label: 'showVelocities' }, { key: 'showForces', label: 'showForces' }, { key: 'colorByPhysicsLayer', label: 'colorByPhysicsLayer' }] as const
-const recentLifetimeEvents = computed(() => tools.lifetimeEvents.slice(-200).reverse())
+const recentLifetimeEvents = computed(/* 调用 tools.lifetimeEvents.slice(-200).reverse() 并返回调用结果。 */ () => tools.lifetimeEvents.slice(-200).reverse())
 const captureA = ref(''), captureB = ref('')
 const annotationDraft = ref('')
-const selectedPerformanceCapture = computed(() => tools.captures.find(capture => capture.id === (captureB.value || captureA.value)) ?? null)
-const replayAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'replay'))
+const selectedPerformanceCapture = computed(/** 优先取得比较项 B，否则使用 A 对应捕获。 */ () => tools.captures.find(/* 比较 capture.id 与 (captureB.value || captureA.value)，返回严格相等的判断结果。 */ capture => capture.id === (captureB.value || captureA.value)) ?? null)
+const replayAssets = computed(/** 筛选重放资源。 */ () => assetState.records.filter(/* 比较 asset.assetType 与 'replay'，返回严格相等的判断结果。 */ asset => asset.assetType === 'replay'))
 const selectedReplay = ref('')
 const selectedTestId = ref(settings.testing.tests[0]?.id ?? '')
-const selectedTest = computed(() => settings.testing.tests.find(test => test.id === selectedTestId.value) ?? null)
-const schemaAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'dataSchema'))
-const tableAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'dataTable'))
+const selectedTest = computed(/** 查找当前选中项目测试。 */ () => settings.testing.tests.find(/* 比较 test.id 与 selectedTestId.value，返回严格相等的判断结果。 */ test => test.id === selectedTestId.value) ?? null)
+const schemaAssets = computed(/** 筛选数据模式资源。 */ () => assetState.records.filter(/* 比较 asset.assetType 与 'dataSchema'，返回严格相等的判断结果。 */ asset => asset.assetType === 'dataSchema'))
+const tableAssets = computed(/** 筛选数据表资源。 */ () => assetState.records.filter(/* 比较 asset.assetType 与 'dataTable'，返回严格相等的判断结果。 */ asset => asset.assetType === 'dataTable'))
 const schemaGuid = ref(schemaAssets.value[0]?.uuid ?? ''), tableGuid = ref(tableAssets.value[0]?.uuid ?? '')
 const schemaDraft = ref<DataSchemaResource | null>(null), tableDraft = ref<DataTableResource | null>(null)
 const dataSourceType = ref<'csv' | 'json' | 'database'>('csv'), dataImportSource = ref(''), dataIssues = ref<DataValidationIssue[]>([]), dataStatus = ref('')
 const jobResult = ref(''), cancelJob = ref<(() => void) | null>(null)
 type NetworkModule = typeof import('../runtime/networking')
 const networkModule = shallowRef<NetworkModule | null>(null), networkState = shallowRef<NetworkModule['networkingState'] | null>(null), networkBusy = ref(false)
-const networkPackageEnabled = computed(() => packageEnabled(OFFICIAL_NETWORKING_PACKAGE_ID))
-const tabs = computed<Array<{ id: TabId; label: Parameters<typeof t>[0] }>>(() => [
+const networkPackageEnabled = computed(/* 调用 packageEnabled(OFFICIAL_NETWORKING_PACKAGE_ID) 并返回调用结果。 */ () => packageEnabled(OFFICIAL_NETWORKING_PACKAGE_ID))
+const tabs = computed<Array<{ id: TabId; label: Parameters<typeof t>[0] }>>(/** 生成性能工具标签，仅在联网包启用时添加网络标签。 */ () => [
   { id: 'trace', label: 'frameTrace' }, { id: 'memory', label: 'memoryAndLifetimes' }, { id: 'replay', label: 'replay' },
   { id: 'tests', label: 'tests' }, { id: 'data', label: 'data' }, { id: 'jobs', label: 'jobs' }, { id: 'scripts', label: 'scriptProfiler' }, { id: 'runtime', label: 'debug' },
   ...(networkPackageEnabled.value ? [{ id: 'network' as const, label: 'networking' as const }] : [])
@@ -312,60 +313,60 @@ const diagnosticsCopied = ref(false)
 const scriptCaptureA = ref(-1), scriptCaptureB = ref(-1)
 const scriptComparison = ref<ReturnType<typeof compareScriptProfiles>>([])
 
-watch(schemaGuid, guid => { schemaDraft.value = guid ? readDataSchema(guid) : null }, { immediate: true })
-watch(tableGuid, guid => { tableDraft.value = guid ? readDataTable(guid) : null }, { immediate: true })
+watch(schemaGuid, /** 模式资源选择变化时加载或清空模式草稿。 */ guid => { schemaDraft.value = guid ? readDataSchema(guid) : null }, { immediate: true })
+watch(tableGuid, /** 数据表选择变化时加载或清空表草稿。 */ guid => { tableDraft.value = guid ? readDataTable(guid) : null }, { immediate: true })
 
-function selectTab(tab: TabId) { activeTab.value = tab; if (tab === 'network' && networkPackageEnabled.value) void safeLoadNetworkModule() }
-async function copyDiagnostics() { try { await navigator.clipboard.writeText(`${faultDiagnostics()}\n\n${feedbackDiagnostics()}\n\n${recoveryDiagnostics()}`); diagnosticsCopied.value = true; setTimeout(() => { diagnosticsCopied.value = false }, 1500) } catch (error) { reportRecoverableError(error, 'Copy Debug diagnostics') } }
-function commit() { loadProductionSettings(serializeProductionSettings()); pushHistory('Edit production settings', 'project:production') }
-function signed(value: number) { return `${value >= 0 ? '+' : ''}${value.toFixed(2)}` }
-function signedInteger(value: number) { return `${value >= 0 ? '+' : ''}${Math.round(value)}` }
-function takeCapture() { const capture = capturePerformance(`Capture ${tools.captures.length + 1}`, editorState.rendererStats); if (!captureA.value) captureA.value = capture.id; else captureB.value = capture.id }
-function compareCaptures() { comparePerformanceCaptures(captureA.value, captureB.value) }
-function annotate() { addProfilerAnnotation(annotationDraft.value); annotationDraft.value = '' }
-function exportPerformanceCapture() { const capture = selectedPerformanceCapture.value; if (!capture) return; download(`${capture.id}.nova-perf.json`, serializePerformanceCapture(capture)); download(`${capture.id}.ci.json`, JSON.stringify(performanceCaptureCiReport(capture), null, 2)) }
-function takeScriptCapture() { const capture = captureScriptProfile(); const index = profilerState.scriptCaptures.indexOf(capture); if (scriptCaptureA.value < 0) scriptCaptureA.value = index; else scriptCaptureB.value = index }
-function compareScriptCaptures() { const first = profilerState.scriptCaptures[scriptCaptureA.value], second = profilerState.scriptCaptures[scriptCaptureB.value]; scriptComparison.value = first && second ? compareScriptProfiles(first, second) : [] }
-function exportCurrentScriptProfile() { const capture = captureScriptProfile(); download(`nova-script-profile-${Date.now()}.json`, JSON.stringify(capture, null, 2)) }
+/** 切换标签，网络标签按需安全加载联网模块。 */ function selectTab(tab: TabId) { activeTab.value = tab; if (tab === 'network' && networkPackageEnabled.value) void safeLoadNetworkModule() }
+/** 复制故障、任务和恢复诊断，短暂显示成功；异常进入可恢复错误中心。 */ async function copyDiagnostics() { try { await navigator.clipboard.writeText(`${faultDiagnostics()}\n\n${feedbackDiagnostics()}\n\n${recoveryDiagnostics()}`); diagnosticsCopied.value = true; setTimeout(/** 复制提示到期后恢复默认状态。 */ () => { diagnosticsCopied.value = false }, 1500) } catch (error) { reportRecoverableError(error, 'Copy Debug diagnostics') } }
+/** 序列化再载入以归一化生产设置，并记录项目范围历史。 */ function commit() { loadProductionSettings(serializeProductionSettings()); pushHistory('Edit production settings', 'project:production') }
+/** 格式化带正负符号的两位小数。 */ function signed(value: number) { return `${value >= 0 ? '+' : ''}${value.toFixed(2)}` }
+/** 格式化带正负符号的整数。 */ function signedInteger(value: number) { return `${value >= 0 ? '+' : ''}${Math.round(value)}` }
+/** 创建性能捕获，依次填入比较选择 A 或 B。 */ function takeCapture() { const capture = capturePerformance(`Capture ${tools.captures.length + 1}`, editorState.rendererStats); if (!captureA.value) captureA.value = capture.id; else captureB.value = capture.id }
+/** 比较指定两份性能捕获。 */ function compareCaptures() { comparePerformanceCaptures(captureA.value, captureB.value) }
+/** 添加性能注记并清空输入。 */ function annotate() { addProfilerAnnotation(annotationDraft.value); annotationDraft.value = '' }
+/** 下载所选性能捕获及对应 CI 报告。 */ function exportPerformanceCapture() { const capture = selectedPerformanceCapture.value; if (!capture) return; download(`${capture.id}.nova-perf.json`, serializePerformanceCapture(capture)); download(`${capture.id}.ci.json`, JSON.stringify(performanceCaptureCiReport(capture), null, 2)) }
+/** 捕获脚本性能，并依次设置比较索引 A 或 B。 */ function takeScriptCapture() { const capture = captureScriptProfile(); const index = profilerState.scriptCaptures.indexOf(capture); if (scriptCaptureA.value < 0) scriptCaptureA.value = index; else scriptCaptureB.value = index }
+/** 两份脚本捕获都存在时计算差异，否则清空比较结果。 */ function compareScriptCaptures() { const first = profilerState.scriptCaptures[scriptCaptureA.value], second = profilerState.scriptCaptures[scriptCaptureB.value]; scriptComparison.value = first && second ? compareScriptProfiles(first, second) : [] }
+/** 捕获当前脚本性能并下载 JSON。 */ function exportCurrentScriptProfile() { const capture = captureScriptProfile(); download(`nova-script-profile-${Date.now()}.json`, JSON.stringify(capture, null, 2)) }
 
-function recordReplay() { if (!toggleSimulation(true)) return; startReplayRecording(getSceneJSON(), physicsState.globalSettings.tickRate); gameplayRuntime.beginSession() }
-function finishReplay() { const wasRecording = replayState.mode === 'recording'; const document = wasRecording ? exportReplay(physicsState.globalSettings.tickRate) : null; stopReplay(); if (document) { const asset = createTextAsset(`Replay ${new Date().toISOString().replace(/[:.]/g, '-')}`, 'replay', JSON.stringify(document, null, 2), 'Assets/Replays'); selectedReplay.value = asset.uuid; pushHistory('Record deterministic replay') } }
-function playReplay() { const source = readTextAsset(selectedReplay.value); if (!source) return; const document = normalizeReplayDocument(JSON.parse(source)); if (!loadProject(document.initialProject)) return; if (!toggleSimulation(true)) return; gameplayRuntime.beginSession(); startReplayPlayback(document) }
-function download(name: string, source: string, type = 'application/json') { const url = URL.createObjectURL(new Blob([source], { type })); const anchor = document.createElement('a'); anchor.href = url; anchor.download = name; anchor.click(); window.setTimeout(() => URL.revokeObjectURL(url), 0) }
-function downloadReplay() { const source = readTextAsset(selectedReplay.value); if (source) download('recording.nova-replay', source) }
+/** 成功进入仿真后，以项目初始源和 tick 频率启动录制及游戏会话。 */ function recordReplay() { if (!toggleSimulation(true)) return; startReplayRecording(getSceneJSON(), physicsState.globalSettings.tickRate); gameplayRuntime.beginSession() }
+/** 停止重放，若此前录制则导出文档为资源、选中新资源并记录历史。 */ function finishReplay() { const wasRecording = replayState.mode === 'recording'; const document = wasRecording ? exportReplay(physicsState.globalSettings.tickRate) : null; stopReplay(); if (document) { const asset = createTextAsset(`Replay ${new Date().toISOString().replace(/[:.]/g, '-')}`, 'replay', JSON.stringify(document, null, 2), 'Assets/Replays'); selectedReplay.value = asset.uuid; pushHistory('Record deterministic replay') } }
+/** 读取规范化重放，加载初始项目并启动会话，再开始重放。 */ function playReplay() { const source = readTextAsset(selectedReplay.value); if (!source) return; const document = normalizeReplayDocument(JSON.parse(source)); if (!loadProject(document.initialProject)) return; if (!toggleSimulation(true)) return; gameplayRuntime.beginSession(); startReplayPlayback(document) }
+/** 下载指定内容和媒体类型，下一轮释放临时对象地址。 */ function download(name: string, source: string, type = 'application/json') { const url = URL.createObjectURL(new Blob([source], { type })); const anchor = document.createElement('a'); anchor.href = url; anchor.download = name; anchor.click(); window.setTimeout(/* 调用 URL.revokeObjectURL(url) 并返回调用结果。 */ () => URL.revokeObjectURL(url), 0) }
+/** 存在所选重放源时下载为重放文件。 */ function downloadReplay() { const source = readTextAsset(selectedReplay.value); if (source) download('recording.nova-replay', source) }
 
-function addTest() { const id = `test-${Date.now().toString(36)}`; settings.testing.tests.push({ id, name: t('newTest'), kind: 'scene', sceneUuid: sceneManager.activeSceneUuid, steps: 60, timeoutMs: settings.testing.defaultTimeoutMs, captureScreenshot: false, tags: [], fixture: '', setup: '', teardown: '', seed: 1, retries: 0, flakyInfrastructure: false, assertions: [{ kind: 'finitePhysics', target: '', expected: '' }] }); selectedTestId.value = id; commit() }
-async function removeTest() { const test = selectedTest.value; if (!test || !await requestConfirmation({ title: t('delete'), message: test.name, confirmLabel: t('delete'), cancelLabel: t('cancel'), destructive: true })) return; settings.testing.tests.splice(settings.testing.tests.indexOf(test), 1); selectedTestId.value = settings.testing.tests[0]?.id ?? ''; commit() }
-function addAssertion() { selectedTest.value?.assertions.push({ kind: 'finitePhysics', target: '', expected: '' }); commit() }
-async function runTests(id?: string) { try { await runProjectTests(id) } catch (error) { testRunnerState.error = error instanceof Error ? error.message : String(error) } }
-function downloadTestReport(format: 'json' | 'junit') { const report = testRunnerState.lastReport; if (!report) return; download(format === 'json' ? 'nova-test-report.json' : 'nova-test-report.xml', format === 'json' ? JSON.stringify(report, null, 2) : testReportJUnit(report), format === 'json' ? 'application/json' : 'application/xml') }
+/** 创建带有限物理断言的默认场景测试，选中并提交设置。 */ function addTest() { const id = `test-${Date.now().toString(36)}`; settings.testing.tests.push({ id, name: t('newTest'), kind: 'scene', sceneUuid: sceneManager.activeSceneUuid, steps: 60, timeoutMs: settings.testing.defaultTimeoutMs, captureScreenshot: false, tags: [], fixture: '', setup: '', teardown: '', seed: 1, retries: 0, flakyInfrastructure: false, assertions: [{ kind: 'finitePhysics', target: '', expected: '' }] }); selectedTestId.value = id; commit() }
+/** 确认后删除选中测试，选择下一项并提交设置。 */ async function removeTest() { const test = selectedTest.value; if (!test || !await requestConfirmation({ title: t('delete'), message: test.name, confirmLabel: t('delete'), cancelLabel: t('cancel'), destructive: true })) return; settings.testing.tests.splice(settings.testing.tests.indexOf(test), 1); selectedTestId.value = settings.testing.tests[0]?.id ?? ''; commit() }
+/** 给选中测试增加默认断言并提交设置。 */ function addAssertion() { selectedTest.value?.assertions.push({ kind: 'finitePhysics', target: '', expected: '' }); commit() }
+/** 运行全部或指定测试，失败显示运行器错误。 */ async function runTests(id?: string) { try { await runProjectTests(id) } catch (error) { testRunnerState.error = error instanceof Error ? error.message : String(error) } }
+/** 存在报告时按 JSON 或 JUnit XML 格式下载。 */ function downloadTestReport(format: 'json' | 'junit') { const report = testRunnerState.lastReport; if (!report) return; download(format === 'json' ? 'nova-test-report.json' : 'nova-test-report.xml', format === 'json' ? JSON.stringify(report, null, 2) : testReportJUnit(report), format === 'json' ? 'application/json' : 'application/xml') }
 
-function newSchema() { const asset = createDataSchemaAsset(); schemaGuid.value = asset.uuid; pushHistory('Create data schema') }
-function newTable() { const asset = createDataTableAsset('Data Table', schemaGuid.value || null); tableGuid.value = asset.uuid; pushHistory('Create data table') }
-function addField() { schemaDraft.value?.fields.push({ name: `field_${(schemaDraft.value?.fields.length ?? 0) + 1}`, type: 'string', required: false, default: '' }) }
-function setFieldDefault(field: DataFieldSchema, event: Event) { const value = (event.target as HTMLInputElement).value; field.default = field.type === 'boolean' ? value === 'true' : field.type === 'number' || field.type === 'integer' ? Number(value) || 0 : value }
-function saveSchemaDraft() { if (schemaDraft.value && schemaGuid.value && saveDataSchema(schemaGuid.value, schemaDraft.value)) { schemaDraft.value = readDataSchema(schemaGuid.value); pushHistory('Save data schema') } }
-function saveTableDraft() { if (tableDraft.value && tableGuid.value && saveDataTable(tableGuid.value, tableDraft.value)) pushHistory('Save data table') }
-function downloadAccessors() { if (!schemaDraft.value) return; download(`${schemaDraft.value.name}.generated.ts`, generateTypedDataAccessors(schemaDraft.value), 'text/typescript') }
-async function importData() { if (!schemaDraft.value || !tableDraft.value) return; try { const result = await importDataText(dataImportSource.value, dataSourceType.value, schemaDraft.value); tableDraft.value.rows = result.rows; tableDraft.value.source = dataSourceType.value; tableDraft.value.schemaAsset = schemaGuid.value || null; dataIssues.value = result.issues; dataStatus.value = result.issues.length ? t('dataValidationIssues', { count: result.issues.length }) : t('dataValidationPassed', { count: result.rows.length }) } catch (error) { dataIssues.value = []; dataStatus.value = error instanceof Error ? error.message : String(error) } }
+/** 创建数据模式资源、选中并记录历史。 */ function newSchema() { const asset = createDataSchemaAsset(); schemaGuid.value = asset.uuid; pushHistory('Create data schema') }
+/** 按当前模式引用创建数据表资源并记录历史。 */ function newTable() { const asset = createDataTableAsset('Data Table', schemaGuid.value || null); tableGuid.value = asset.uuid; pushHistory('Create data table') }
+/** 为模式草稿添加默认字符串字段。 */ function addField() { schemaDraft.value?.fields.push({ name: `field_${(schemaDraft.value?.fields.length ?? 0) + 1}`, type: 'string', required: false, default: '' }) }
+/** 按字段类型将输入转换为布尔、数值或字符串默认值。 */ function setFieldDefault(field: DataFieldSchema, event: Event) { const value = (event.target as HTMLInputElement).value; field.default = field.type === 'boolean' ? value === 'true' : field.type === 'number' || field.type === 'integer' ? Number(value) || 0 : value }
+/** 保存有效模式草稿成功后重读并记录历史。 */ function saveSchemaDraft() { if (schemaDraft.value && schemaGuid.value && saveDataSchema(schemaGuid.value, schemaDraft.value)) { schemaDraft.value = readDataSchema(schemaGuid.value); pushHistory('Save data schema') } }
+/** 保存有效数据表草稿成功后记录历史。 */ function saveTableDraft() { if (tableDraft.value && tableGuid.value && saveDataTable(tableGuid.value, tableDraft.value)) pushHistory('Save data table') }
+/** 存在模式草稿时生成并下载 TypeScript 类型化访问器。 */ function downloadAccessors() { if (!schemaDraft.value) return; download(`${schemaDraft.value.name}.generated.ts`, generateTypedDataAccessors(schemaDraft.value), 'text/typescript') }
+/** 按数据源类型导入文本到表草稿，更新模式引用、诊断和状态，异常显示错误。 */ async function importData() { if (!schemaDraft.value || !tableDraft.value) return; try { const result = await importDataText(dataImportSource.value, dataSourceType.value, schemaDraft.value); tableDraft.value.rows = result.rows; tableDraft.value.source = dataSourceType.value; tableDraft.value.schemaAsset = schemaGuid.value || null; dataIssues.value = result.issues; dataStatus.value = result.issues.length ? t('dataValidationIssues', { count: result.issues.length }) : t('dataValidationPassed', { count: result.rows.length }) } catch (error) { dataIssues.value = []; dataStatus.value = error instanceof Error ? error.message : String(error) } }
 
-function runJob(kind: 'hash' | 'parseJson') { jobResult.value = ''; const job = scheduleJob(kind, kind === 'hash' ? getSceneJSON() : '{"nova":2.8}'); cancelJob.value = job.cancel; void job.promise.then(value => { jobResult.value = typeof value === 'string' ? value : JSON.stringify(value); cancelJob.value = null }).catch(error => { jobResult.value = error instanceof Error ? error.message : String(error); cancelJob.value = null }) }
-function cancelActiveJob() { cancelJob.value?.(); cancelJob.value = null }
+/** 调度哈希或 JSON 任务，登记取消入口并处理成功与失败结果。 */ function runJob(kind: 'hash' | 'parseJson') { jobResult.value = ''; const job = scheduleJob(kind, kind === 'hash' ? getSceneJSON() : '{"nova":2.8}'); cancelJob.value = job.cancel; void job.promise.then(/** 显示作业字符串或 JSON 结果并清除取消入口。 */ value => { jobResult.value = typeof value === 'string' ? value : JSON.stringify(value); cancelJob.value = null }).catch(/** 显示作业异常并清除取消入口。 */ error => { jobResult.value = error instanceof Error ? error.message : String(error); cancelJob.value = null }) }
+/** 调用活动作业取消函数并清除引用。 */ function cancelActiveJob() { cancelJob.value?.(); cancelJob.value = null }
 
-async function loadNetworkModule() { if (!networkModule.value) networkModule.value = await loadProductionNetworkingModule(); networkState.value = networkModule.value.networkingState }
-async function safeLoadNetworkModule() { try { await loadNetworkModule() } catch (error) { reportRecoverableError(error, 'Load optional networking', 'Runtime') } }
-function installNetworking() { if (enableOfficialPackage(OFFICIAL_NETWORKING_PACKAGE_ID)) { commit(); void safeLoadNetworkModule() } }
-async function grantLegacyNetworkPermission() { if (!await requestConfirmation({ title: t('grantNetworkPermission'), message: t('networkPermissionPrompt'), confirmLabel: t('grant'), cancelLabel: t('cancel'), destructive: false })) return; settings.networking.permissionGranted = true; settings.networking.enabled = true; commit() }
-async function startNetwork() { networkBusy.value = true; try { networkModule.value = await startProductionNetworking(); networkState.value = networkModule.value.networkingState } catch (error) { reportRecoverableError(error, 'Start optional networking', 'Runtime') } finally { networkBusy.value = false } }
-async function stopNetwork() { networkBusy.value = true; try { await stopProductionNetworking() } catch (error) { reportRecoverableError(error, 'Stop optional networking', 'Runtime') } finally { networkBusy.value = false } }
-function replicateSelected() { const entity = physicsState.world.entities.find(item => item.id === physicsState.selectedEntityId); if (!entity || settings.networking.replicatedEntities.some(item => item.entityUuid === entity.uuid)) return; settings.networking.replicatedEntities.push({ entityUuid: entity.uuid, authority: 'server', properties: ['transform', 'velocity'], interpolate: true, predict: false, ownerPeerId: '', alwaysRelevant: true, interestRadius: 0, sceneUuid: sceneManager.activeSceneUuid ?? '' }); commit() }
-function removeReplication(uuid: string) {
-  const index = settings.networking.replicatedEntities.findIndex(item => item.entityUuid === uuid)
+/** 按需加载联网模块并绑定其状态。 */ async function loadNetworkModule() { if (!networkModule.value) networkModule.value = await loadProductionNetworkingModule(); networkState.value = networkModule.value.networkingState }
+/** 加载联网模块失败时报告可恢复运行错误。 */ async function safeLoadNetworkModule() { try { await loadNetworkModule() } catch (error) { reportRecoverableError(error, 'Load optional networking', 'Runtime') } }
+/** 启用官方联网包成功后保存配置并安全加载模块。 */ function installNetworking() { if (enableOfficialPackage(OFFICIAL_NETWORKING_PACKAGE_ID)) { commit(); void safeLoadNetworkModule() } }
+/** 经权限确认后启用并授权联网，再保存配置。 */ async function grantLegacyNetworkPermission() { if (!await requestConfirmation({ title: t('grantNetworkPermission'), message: t('networkPermissionPrompt'), confirmLabel: t('grant'), cancelLabel: t('cancel'), destructive: false })) return; settings.networking.permissionGranted = true; settings.networking.enabled = true; commit() }
+/** 标记忙碌并启动联网模块，失败报告可恢复错误，结束清除忙碌状态。 */ async function startNetwork() { networkBusy.value = true; try { networkModule.value = await startProductionNetworking(); networkState.value = networkModule.value.networkingState } catch (error) { reportRecoverableError(error, 'Start optional networking', 'Runtime') } finally { networkBusy.value = false } }
+/** 标记忙碌并停止联网，失败报告可恢复错误，结束清除忙碌状态。 */ async function stopNetwork() { networkBusy.value = true; try { await stopProductionNetworking() } catch (error) { reportRecoverableError(error, 'Stop optional networking', 'Runtime') } finally { networkBusy.value = false } }
+/** 选中实体尚未复制时添加服务端权威的默认位置速度复制配置并保存。 */ function replicateSelected() { const entity = physicsState.world.entities.find(/* 比较 item.id 与 physicsState.selectedEntityId，返回严格相等的判断结果。 */ item => item.id === physicsState.selectedEntityId); if (!entity || settings.networking.replicatedEntities.some(/* 比较 item.entityUuid 与 entity.uuid，返回严格相等的判断结果。 */ item => item.entityUuid === entity.uuid)) return; settings.networking.replicatedEntities.push({ entityUuid: entity.uuid, authority: 'server', properties: ['transform', 'velocity'], interpolate: true, predict: false, ownerPeerId: '', alwaysRelevant: true, interestRadius: 0, sceneUuid: sceneManager.activeSceneUuid ?? '' }); commit() }
+/** 按实体标识删除复制配置并保存。 */ function removeReplication(uuid: string) {
+  const index = settings.networking.replicatedEntities.findIndex(/* 比较 item.entityUuid 与 uuid，返回严格相等的判断结果。 */ item => item.entityUuid === uuid)
   if (index < 0) return
   settings.networking.replicatedEntities.splice(index, 1)
   commit()
 }
-function entityName(uuid: string) { return physicsState.world.entities.find(entity => entity.uuid === uuid)?.name ?? uuid }
+/** 查找实体名称，缺失时显示标识。 */ function entityName(uuid: string) { return physicsState.world.entities.find(/* 比较 entity.uuid 与 uuid，返回严格相等的判断结果。 */ entity => entity.uuid === uuid)?.name ?? uuid }
 </script>
 
 <style scoped>

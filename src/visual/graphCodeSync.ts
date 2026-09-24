@@ -1,4 +1,6 @@
+/** 代码与图资源同步：维护源标记、结构投影和伙伴资源，关联保存失败时恢复原记录。 */
 import { assetState, createTextAsset, readTextAsset, updateTextAsset } from '../assets/AssetDatabase'
+import { defaultScriptMetadata, type AssetRecord } from '../assets/types'
 import { SCRIPT_API_V2_MANIFEST } from '../editor/scriptApi'
 import { compileGraph } from './graphCompiler'
 import { createGraphNode, defaultVisualGraph, graphNodeDefinition } from './graphCatalog'
@@ -38,6 +40,7 @@ export interface GraphConversionCoverage {
 
 /** Reports the exact editable/escape boundary of the bidirectional projection.
  * Escape blocks remain executable in the same sandbox and are never discarded. */
+/** 遍历主图及例程，统计可编辑块与显式源码块；源码保留不计为结构化覆盖。 */
 export function graphConversionCoverage(graphInput: NovaGraphDocument): GraphConversionCoverage {
   const graph = parseGraphDocument(serializeGraphDocument(graphInput)), escapeBlocks: GraphConversionCoverage['escapeBlocks'] = []
   for (const scope of graphScopes(graph)) for (const node of scope.nodes) {
@@ -45,17 +48,23 @@ export function graphConversionCoverage(graphInput: NovaGraphDocument): GraphCon
     if (!explicit) continue
     escapeBlocks.push({ nodeUuid: node.uuid, scopeUuid: String(('uuid' in scope ? scope.uuid : graph.uuid) ?? graph.uuid), title: node.title, kind: explicit, source: String(node.config.rhaiSourceOverride ?? node.config.source ?? '').slice(0, 64_000) })
   }
-  const total = graphScopes(graph).reduce((sum, scope) => sum + scope.nodes.length, 0), escaped = escapeBlocks.length, native = Math.max(0, total - escaped), percent = total ? native / total : 1
+  const total = graphScopes(graph).reduce(/** 累加主图和例程的实际节点数。 */ (sum, scope) => sum + scope.nodes.length, 0), escaped = escapeBlocks.length, native = Math.max(0, total - escaped), percent = total ? native / total : 1
   return { total, native, escaped, percent, escapeBlocks, summary: `${native}/${total} blocks are structurally editable; ${escaped} explicit Execute Rhai escape block${escaped === 1 ? '' : 's'} preserve the remainder losslessly.` }
 }
 
+/** 先投影源码，再按真实图节点计算结构化覆盖率。 */
 export function rhaiConversionCoverage(source: string): GraphConversionCoverage { return graphConversionCoverage(createGraphFromRhaiSource(source, 'Conversion coverage')) }
 
+/** 返回主图和全部例程作用域，供统一遍历节点与连线。 */
 function graphScopes(graph: NovaGraphDocument): GraphCanvasScope[] { return [graph, ...graph.routines] }
+/** 将旧图变量名转换为可生成的 ASCII 标识符，空结果使用 value。 */
 function safeIdentifier(value: string): string { return value.replace(/[^A-Za-z0-9_]/g, '_').replace(/^[^A-Za-z_]+/, '') || 'value' }
-function meaningful(lines: string[]): string[] { return lines.filter(line => line.trim() && !line.includes('__nova_graph_trace(')) }
+/** 忽略空行和自动追踪语句，保留用于比较的实际程序行。 */
+function meaningful(lines: string[]): string[] { return lines.filter(/** 排除空行和生成追踪行。 */ line => line.trim() && !line.includes('__nova_graph_trace(')) }
+/** 删除行尾节点或变量映射标记，不改写行内用户源码。 */
 function withoutMarker(line: string): string { return line.replace(NODE_MARKER, '').replace(VARIABLE_MARKER, '').replace(/\s+$/, '') }
 
+/** 只识别词法安全行中的图关联注释，记录精确范围以支持无损解绑。 */
 function graphLinkMarkers(source: string): Array<{ uuid: string; start: number; end: number }> {
   if (!source.includes(GRAPH_LINK_PREFIX)) return []
   const safeLines = new Set<number>(); syntaxMask(source, true, safeLines)
@@ -68,28 +77,31 @@ function graphLinkMarkers(source: string): Array<{ uuid: string; start: number; 
   }
   return markers
 }
+/** 优先读取标准文件头关联标记，必要时扫描其他安全注释行。 */
 function linkedGraphUuid(source: string): string {
   // Generated scripts start with their marker: keep this frequent lookup cheap.
   const header = /^\/\/ @nova-graph-link ([0-9a-f-]{36})[ \t]*(?:\r?\n|$)/i.exec(source)
   return header?.[1].toLowerCase() ?? graphLinkMarkers(source)[0]?.uuid ?? ''
 }
 
+/** 根据声明标识符找到图变量，用于生成稳定的变量映射注释。 */
 function variableLine(graph: NovaGraphDocument, line: string): string | null {
   const match = line.match(/(?:^|\s)let\s+([A-Za-z_][A-Za-z0-9_]*)\s*=/)
   if (!match) return null
-  return graph.variables.find(variable => safeIdentifier(variable.name) === match[1])?.uuid ?? null
+  return graph.variables.find(/* 比较 safeIdentifier(variable.name) 与 match[1]，返回严格相等的判断结果。 */ variable => safeIdentifier(variable.name) === match[1])?.uuid ?? null
 }
 
 /** A deterministic Rhai projection. Marker comments are valid Rhai comments,
  * so the exact source is also the runtime source and can be edited normally. */
+/** 编译图并附加合法 Rhai 映射注释；编译失败返回空串，结构图保留完整原文投影。 */
 export function createLinkedRhaiSource(graphInput: NovaGraphDocument): string {
   const result = compileGraph(graphInput)
   if (!result.valid) return ''
   if (result.graph.language) return GRAPH_LINK_PREFIX + result.graph.uuid + '\n// Rhai structure IR 1: code and typed nodes share the same program.\n' + result.source
-  const mapping = new Map(result.mappings.filter(item => item.nodeUuid).map(item => [item.generatedLine, item.nodeUuid]))
+  const mapping = new Map(result.mappings.filter(/* 返回 item.nodeUuid 的当前值。 */ item => item.nodeUuid).map(/** 将生成行号映射到稳定节点标识。 */ item => [item.generatedLine, item.nodeUuid]))
   const lines = result.source.replace(/\s+$/, '').split('\n')
   const safeMarkerLines = new Set<number>(); syntaxMask(result.source, true, safeMarkerLines)
-  const marked = lines.map((line, index) => {
+  const marked = lines.map(/** 仅在词法安全行附加映射标记，导出声明保持原样。 */ (line, index) => {
     if (!safeMarkerLines.has(index)) return line
     // The runtime's export preprocessor consumes the declaration before Rhai
     // parsing and currently requires its literal to end at the semicolon.
@@ -103,6 +115,7 @@ export function createLinkedRhaiSource(graphInput: NovaGraphDocument): string {
 }
 
 interface Regions { nodes: Map<string, string[]>; variables: Map<string, string[]>; unowned: string[] }
+/** 依据旧格式节点和变量标记划分代码区域，另行保存没有归属的模块源码。 */
 function sourceRegions(source: string): Regions {
   const nodes = new Map<string, string[]>(), variables = new Map<string, string[]>(), unowned: string[] = []
   let currentNode = ''
@@ -128,6 +141,7 @@ function sourceRegions(source: string): Regions {
   return { nodes, variables, unowned }
 }
 
+/** 按顶层逗号拆分参数，跳过引号、转义及嵌套括号内部的逗号。 */
 function splitArguments(source: string): string[] {
   const values: string[] = []
   let quote = '', escaped = false, depth = 0, start = 0
@@ -148,6 +162,7 @@ function splitArguments(source: string): string[] {
   return values.filter(Boolean)
 }
 
+/** 仅解析可无损表示的静态字面量；无法确定类型的 Rhai 表达式返回 undefined。 */
 function parseValue(source: string): GraphValue | undefined {
   const value = source.trim()
   if (value === '()' || value === 'null') return null
@@ -171,13 +186,14 @@ function parseValue(source: string): GraphValue | undefined {
 interface RhaiFunctionRegion { name: string; parameters: string[]; start: number; end: number; body: string }
 
 /** Keeps offsets while hiding comments and quoted text from structural scans. */
+/** 用空格遮蔽注释和可选字符串，同时保留换行与 UTF-16 位置供结构扫描使用。 */
 function syntaxMask(source: string, hideStrings = true, safeMarkerLines?: Set<number>): string {
   const masked = source.split('')
   let quote = '', escaped = false, lineComment = false, commentDepth = 0, line = 0
   for (let index = 0; index < source.length; index++) {
     const character = source[index], next = source[index + 1]
     if (character === '\n') { if (!quote && !commentDepth) safeMarkerLines?.add(line); line++ }
-    const hide = () => { if (character !== '\n' && character !== '\r') masked[index] = ' ' }
+    const hide = /** 遮蔽非换行字符并保留源位置。 */ () => { if (character !== '\n' && character !== '\r') masked[index] = ' ' }
     if (lineComment) { hide(); if (character === '\n') lineComment = false; continue }
     if (commentDepth) {
       hide()
@@ -194,6 +210,7 @@ function syntaxMask(source: string, hideStrings = true, safeMarkerLines?: Set<nu
   return masked.join('')
 }
 
+/** 在词法遮罩上匹配花括号，未闭合时返回 -1。 */
 function matchingBrace(source: string, opening: number): number {
   const masked = syntaxMask(source)
   let depth = 0
@@ -205,23 +222,25 @@ function matchingBrace(source: string, opening: number): number {
   return -1
 }
 
+/** 提取旧格式可安全识别的函数范围与参数，忽略超限或非简单签名。 */
 function rhaiFunctionRegions(source: string): RhaiFunctionRegion[] {
   const result: RhaiFunctionRegion[] = [], matcher = /\bfn\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(([^)]*)\)\s*\{/g, masked = syntaxMask(source)
   for (let match = matcher.exec(masked); match; match = matcher.exec(masked)) {
     const opening = masked.indexOf('{', match.index), closing = matchingBrace(source, opening)
     if (closing < 0) break
     const parameters = splitArguments(match[2])
-    if (parameters.length > 64 || parameters.some(value => !/^[A-Za-z_][A-Za-z0-9_]*$/.test(value))) continue
+    if (parameters.length > 64 || parameters.some(/* 返回 /^[A-Za-z_][A-Za-z0-9_]*$/.test(value) 的逻辑取反结果。 */ value => !/^[A-Za-z_][A-Za-z0-9_]*$/.test(value))) continue
     result.push({ name: match[1], parameters, start: match.index, end: closing + 1, body: source.slice(opening + 1, closing) })
     matcher.lastIndex = closing + 1
   }
   return result
 }
 
+/** 按顶层分号或完整控制块拆分语句，保持 else 和 catch 附着于前块。 */
 function rhaiStatements(source: string): string[] {
   const result: string[] = [], masked = syntaxMask(source)
   let depth = 0, start = 0
-  const push = (end: number) => { const value = source.slice(start, end).trim(); if (value) result.push(value); start = end }
+  const push = /** 收集非空语句并推进起点。 */ (end: number) => { const value = source.slice(start, end).trim(); if (value) result.push(value); start = end }
   for (let index = 0; index < source.length; index++) {
     const character = masked[index]
     if ('([{'.includes(character)) depth++
@@ -236,12 +255,14 @@ function rhaiStatements(source: string): string[] {
   return result
 }
 
+/** 仅在指定方向的端口均存在时创建执行连线，避免生成悬空端点。 */
 function connectPin(scope: GraphCanvasScope, from: GraphNode, fromKey: string, to: GraphNode, toKey = 'exec'): void {
-  const output = from.pins.find(pin => pin.direction === 'output' && pin.key === fromKey)
-  const input = to.pins.find(pin => pin.direction === 'input' && pin.key === toKey)
+  const output = from.pins.find(/** 查找指定键的输出端口。 */ pin => pin.direction === 'output' && pin.key === fromKey)
+  const input = to.pins.find(/** 查找指定键的输入端口。 */ pin => pin.direction === 'input' && pin.key === toKey)
   if (output && input) scope.edges.push({ uuid: crypto.randomUUID().toLowerCase(), from: { nodeUuid: from.uuid, pinUuid: output.uuid }, to: { nodeUuid: to.uuid, pinUuid: input.uuid } })
 }
 
+/** 反复去除完整包裹表达式的外层括号，不去除只包裹局部子式的括号。 */
 function withoutOuterParentheses(source: string): string {
   let value = source.trim()
   let changed = true
@@ -259,6 +280,7 @@ function withoutOuterParentheses(source: string): string {
   return value
 }
 
+/** 从右向左查找指定顶层运算符，排除括号内、一元符号及指数符号。 */
 function topLevelOperator(source: string, operators: readonly string[]): { left: string; operator: string; right: string } | null {
   const masked = syntaxMask(source)
   let depth = 0
@@ -279,6 +301,7 @@ function topLevelOperator(source: string, operators: readonly string[]): { left:
   return null
 }
 
+/** 识别占据整个表达式的简单函数调用，并按顶层参数规则拆分实参。 */
 function exactCall(sourceInput: string): { name: string; args: string[] } | null {
   const source = sourceInput.trim().replace(/;$/, '').trim(), masked = syntaxMask(source), match = masked.match(/^([A-Za-z_][A-Za-z0-9_]*)\s*\(/)
   if (!match) return null
@@ -291,17 +314,18 @@ function exactCall(sourceInput: string): { name: string; args: string[] } | null
   return null
 }
 
+/** 把旧图表达式投影为变量、API 或运算节点；不能结构化的部分保留为源码节点。 */
 function expressionNode(sourceInput: string, x: number, y: number, graph: NovaGraphDocument, scope: GraphCanvasScope): GraphNode {
   const source = withoutOuterParentheses(sourceInput.trim().replace(/;$/, ''))
-  const variable = graph.variables.find(item => safeIdentifier(item.name) === source)
+  const variable = graph.variables.find(/* 比较 safeIdentifier(item.name) 与 source，返回严格相等的判断结果。 */ item => safeIdentifier(item.name) === source)
   if (variable) {
-    const node = createGraphNode('variable.get', x, y, graph), output = node.pins.find(pin => pin.key === 'value')
+    const node = createGraphNode('variable.get', x, y, graph), output = node.pins.find(/* 比较 pin.key 与 'value'，返回严格相等的判断结果。 */ pin => pin.key === 'value')
     node.config.variableUuid = variable.uuid; if (output) output.valueType = variable.valueType; scope.nodes.push(node); return node
   }
   const callable = exactCall(source)
   const definition = callable ? graphNodeDefinition(`api.${callable.name}`, graph, null) : null
-  if (callable && definition?.pins.some(pin => pin.direction === 'output' && pin.kind === 'data') && callable.args.length === definition.pins.filter(pin => pin.direction === 'input' && pin.kind === 'data').length) {
-    const node = createGraphNode(definition.type, x, y, graph), args = callable.args, inputs = node.pins.filter(pin => pin.direction === 'input' && pin.kind === 'data')
+  if (callable && definition?.pins.some(/** 判断是否提供数据输出。 */ pin => pin.direction === 'output' && pin.kind === 'data') && callable.args.length === definition.pins.filter(/** 筛选数据输入以核对实参数量。 */ pin => pin.direction === 'input' && pin.kind === 'data').length) {
+    const node = createGraphNode(definition.type, x, y, graph), args = callable.args, inputs = node.pins.filter(/** 按顺序收集数据输入端口。 */ pin => pin.direction === 'input' && pin.kind === 'data')
     scope.nodes.push(node)
     if (args.length === inputs.length) for (let index = 0; index < inputs.length; index++) assignExpression(scope, node, inputs[index].key, args[index], x - 220, y + index * 62, graph)
     return node
@@ -322,36 +346,38 @@ function expressionNode(sourceInput: string, x: number, y: number, graph: NovaGr
   node.config.source = source.slice(0, 64_000); node.title = 'Rhai expression'; scope.nodes.push(node); return node
 }
 
+/** 将字面量写入数据端口，否则创建表达式节点并连接输出。 */
 function assignExpression(scope: GraphCanvasScope, node: GraphNode, pinKey: string, source: string, x: number, y: number, graph: NovaGraphDocument): void {
-  const pin = node.pins.find(candidate => candidate.direction === 'input' && candidate.kind === 'data' && candidate.key === pinKey)
+  const pin = node.pins.find(/** 定位指定键的数据输入。 */ candidate => candidate.direction === 'input' && candidate.kind === 'data' && candidate.key === pinKey)
   if (!pin) return
   const value = parseValue(source)
-  const matchesType = pin.valueType === 'Data' || pin.valueType === 'Number' && typeof value === 'number' || pin.valueType === 'Boolean' && typeof value === 'boolean' || ['String', 'Entity', 'Resource'].includes(pin.valueType ?? '') && typeof value === 'string' || pin.valueType === 'Vec2' && Array.isArray(value) && value.length === 2 && value.every(item => typeof item === 'number')
+  const matchesType = pin.valueType === 'Data' || pin.valueType === 'Number' && typeof value === 'number' || pin.valueType === 'Boolean' && typeof value === 'boolean' || ['String', 'Entity', 'Resource'].includes(pin.valueType ?? '') && typeof value === 'string' || pin.valueType === 'Vec2' && Array.isArray(value) && value.length === 2 && value.every(/* 比较 typeof item 与 'number'，返回严格相等的判断结果。 */ item => typeof item === 'number')
   if (value !== undefined && matchesType && !(pin.required && value === null) && JSON.stringify(sanitizeGraphValue(value, pin.valueType ?? 'Data')) === JSON.stringify(value)) {
     pin.defaultValue = value
     const originals = node.config.rhaiInputSources && typeof node.config.rhaiInputSources === 'object' && !Array.isArray(node.config.rhaiInputSources) ? node.config.rhaiInputSources : {}
     originals[pinKey] = source.trim(); node.config.rhaiInputSources = originals
     return
   }
-  const expression = expressionNode(source, x, y, graph, scope), output = expression.pins.find(candidate => candidate.direction === 'output' && candidate.kind === 'data')
+  const expression = expressionNode(source, x, y, graph, scope), output = expression.pins.find(/** 选择表达式的数据输出。 */ candidate => candidate.direction === 'output' && candidate.kind === 'data')
   if (output) scope.edges.push({ uuid: crypto.randomUUID().toLowerCase(), from: { nodeUuid: expression.uuid, pinUuid: output.uuid }, to: { nodeUuid: node.uuid, pinUuid: pin.uuid } })
 }
 
+/** 把可识别的调用、赋值或控制语句转换为旧式执行节点，其余保留原语句。 */
 function statementNode(statement: string, x: number, y: number, graph: NovaGraphDocument, scope: GraphCanvasScope = graph): GraphNode {
   const assignment = statement.match(/^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*([\s\S]+?)\s*;?$/)
-  const variable = assignment ? graph.variables.find(item => safeIdentifier(item.name) === assignment[1]) : null
+  const variable = assignment ? graph.variables.find(/* 比较 safeIdentifier(item.name) 与 assignment[1]，返回严格相等的判断结果。 */ item => safeIdentifier(item.name) === assignment[1]) : null
   if (assignment && variable) {
     const node = createGraphNode('variable.set', x, y, graph)
     node.config.variableUuid = variable.uuid
-    const valuePin = node.pins.find(pin => pin.key === 'value')
+    const valuePin = node.pins.find(/* 比较 pin.key 与 'value'，返回严格相等的判断结果。 */ pin => pin.key === 'value')
     if (valuePin) { valuePin.valueType = variable.valueType; assignExpression(scope, node, 'value', assignment[2], x - 230, y + 70, graph) }
     return node
   }
   const callableMatch = exactCall(statement)
   const callable = callableMatch?.name ?? '', definition = callable ? graphNodeDefinition(`api.${callable}`, graph, null) : null
-  if (definition?.pins.some(pin => pin.kind === 'execution' && pin.direction === 'input')) {
+  if (definition?.pins.some(/** 判断 API 是否接受执行流。 */ pin => pin.kind === 'execution' && pin.direction === 'input')) {
     const node = createGraphNode(definition.type, x, y, graph)
-    const inputs = node.pins.filter(pin => pin.direction === 'input' && pin.kind === 'data'), argumentsList = callableMatch?.args ?? []
+    const inputs = node.pins.filter(/** 取得 API 数据实参端口。 */ pin => pin.direction === 'input' && pin.kind === 'data'), argumentsList = callableMatch?.args ?? []
     if (argumentsList.length === inputs.length) {
       for (let index = 0; index < inputs.length; index++) assignExpression(scope, node, inputs[index].key, argumentsList[index], x - 230, y + index * 70, graph)
       return node
@@ -359,23 +385,24 @@ function statementNode(statement: string, x: number, y: number, graph: NovaGraph
     node.config.rhaiSourceOverride = statement.slice(0, 64_000)
     return node
   }
-  const routine = callable ? graph.routines.find(item => safeIdentifier(item.name) === callable) : null
+  const routine = callable ? graph.routines.find(/* 比较 safeIdentifier(item.name) 与 callable，返回严格相等的判断结果。 */ item => safeIdentifier(item.name) === callable) : null
   if (routine) {
     const node = createGraphNode(`routine.call.${routine.uuid}`, x, y, graph)
-    const inputs = node.pins.filter(pin => pin.direction === 'input' && pin.kind === 'data'), argumentsList = callableMatch?.args ?? []
+    const inputs = node.pins.filter(/** 取得例程调用输入端口。 */ pin => pin.direction === 'input' && pin.kind === 'data'), argumentsList = callableMatch?.args ?? []
     if (inputs.length !== argumentsList.length) { node.config.rhaiSourceOverride = statement; return node }
     for (let index = 0; index < Math.min(inputs.length, argumentsList.length); index++) assignExpression(scope, node, inputs[index].key, argumentsList[index], x - 230, y + index * 70, graph)
     return node
   }
   const node = createGraphNode('code.statement', x, y, graph)
   node.config.source = statement.slice(0, 64_000)
-  node.title = callable && SCRIPT_API_V2_MANIFEST.entries.some(entry => entry.callable === callable) ? callable.replace(/_/g, ' ') : 'Rhai block'
+  node.title = callable && SCRIPT_API_V2_MANIFEST.entries.some(/* 比较 entry.callable 与 callable，返回严格相等的判断结果。 */ entry => entry.callable === callable) ? callable.replace(/_/g, ' ') : 'Rhai block'
   node.category = callable ? 'Code' : 'Flow'
   return node
 }
 
 interface StructuredBlock { kind: 'if' | 'repeat'; condition: string; first: string; second: string; indexName?: string }
 
+/** 识别完整 if/else 或有静态上限的整数循环，其他控制流交给源码保留路径。 */
 function structuredBlock(statement: string): StructuredBlock | null {
   const source = statement.trim().replace(/;$/, '')
   if (/^if\b/.test(source)) {
@@ -397,6 +424,7 @@ function structuredBlock(statement: string): StructuredBlock | null {
   return null
 }
 
+/** 递归构造分支和循环执行链，限制单作用域语句数并返回尾端口。 */
 function populateExecution(scope: GraphCanvasScope, statements: string[], start: GraphNode, startKey: string, graph: NovaGraphDocument, y: number): { node: GraphNode; key: string } {
   if (statements.length > 2_048) throw new Error('A visual execution scope exceeds 2,048 statements; split the script before converting.')
   let previous = start, previousKey = startKey, index = 0
@@ -420,12 +448,14 @@ function populateExecution(scope: GraphCanvasScope, statements: string[], start:
   return { node: previous, key: previousKey }
 }
 
+/** 将已提取区域替换为空格并保留换行，使模块剩余部分维持原行号。 */
 function eraseRanges(source: string, ranges: Array<{ start: number; end: number }>): string {
   const characters = source.split('')
   for (const range of ranges) for (let index = range.start; index < range.end; index++) if (characters[index] !== '\n') characters[index] = ' '
   return characters.join('')
 }
 
+/** 将函数尾表达式显式返回，递归处理尾部分支以保留 Rhai 隐式返回语义。 */
 function preserveImplicitReturn(statements: string[]): string[] {
   const last = statements[statements.length - 1]
   if (!last || !syntaxMask(last).trim() || syntaxMask(last).trim().endsWith(';') || /^\s*(?:return|throw|for|while|loop|try)\b/.test(last)) return statements
@@ -440,6 +470,7 @@ function preserveImplicitReturn(statements: string[]): string[] {
 /** Converts ordinary Rhai into an editable graph without discarding source.
  * Recognized lifecycle/API statements become typed blocks; unsupported syntax
  * remains a bounded Rhai block and therefore round-trips with the same behavior. */
+/** 维护旧图兼容投影：识别安全语句、保留无法转换的源码并拒绝超限输入。 */
 export function createLegacyGraphFromRhaiSource(sourceInput: string, name = 'Visual Script', requestedUuid = ''): NovaGraphDocument {
   if (sourceInput.length > 64_000) throw new Error('Rhai conversion supports up to 64,000 source characters; split the script before converting. The original source has not been changed.')
   const source = sourceInput.replace(/\r\n?/g, '\n').replace(/^\/\/ @nova-graph-link [0-9a-f-]{36}\s*\n/im, '')
@@ -459,7 +490,7 @@ export function createLegacyGraphFromRhaiSource(sourceInput: string, name = 'Vis
   for (let match = variableMatcher.exec(variableSource); match; match = variableMatcher.exec(variableSource)) {
     const value = parseValue(match[3]); if (value === undefined || JSON.stringify(sanitizeGraphValue(value)) !== JSON.stringify(value)) continue
     const declarationStart = match.index + (match[0].startsWith('\n') ? 1 : 0), exposed = /@export\b/.test(match[1])
-    graph.variables.push({ uuid: crypto.randomUUID().toLowerCase(), name: match[2], valueType: typeof value === 'boolean' ? 'Boolean' : typeof value === 'number' ? 'Number' : typeof value === 'string' ? 'String' : Array.isArray(value) && value.length === 2 && value.every(item => typeof item === 'number') ? 'Vec2' : 'Data', defaultValue: value, exposed, serialized: true, group: 'Graph', tooltip: '', minimum: null, maximum: null, step: typeof value === 'number' ? .01 : null, resourceType: null })
+    graph.variables.push({ uuid: crypto.randomUUID().toLowerCase(), name: match[2], valueType: typeof value === 'boolean' ? 'Boolean' : typeof value === 'number' ? 'Number' : typeof value === 'string' ? 'String' : Array.isArray(value) && value.length === 2 && value.every(/* 比较 typeof item 与 'number'，返回严格相等的判断结果。 */ item => typeof item === 'number') ? 'Vec2' : 'Data', defaultValue: value, exposed, serialized: true, group: 'Graph', tooltip: '', minimum: null, maximum: null, step: typeof value === 'number' ? .01 : null, resourceType: null })
     const variable = graph.variables[graph.variables.length - 1]
     variable.sourceLiteral = match[3].trim()
     const metadata = match[1].match(/@export\(([^\n]*)\)/)?.[1]
@@ -480,10 +511,10 @@ export function createLegacyGraphFromRhaiSource(sourceInput: string, name = 'Vis
   // Hoisting a literal across arbitrary module initialization can change which
   // bindings exist at each statement. Keep that initialization in source order.
   if (syntaxMask(remainder).trim()) { graph.variables = []; remainder = eraseRanges(source, functions) }
-  const customFunctions = functions.filter(region => !graphNodeDefinition(`event.${region.name}`, graph, null))
+  const customFunctions = functions.filter(/* 返回 graphNodeDefinition(`event.${region.name}`, graph, null) 的逻辑取反结果。 */ region => !graphNodeDefinition(`event.${region.name}`, graph, null))
   for (const region of customFunctions) {
     const routine = createGraphRoutine('function', region.name)
-    routine.nodes.find(node => node.type === 'routine.entry')!.config.rhaiOriginalSignature = true
+    routine.nodes.find(/* 比较 node.type 与 'routine.entry'，返回严格相等的判断结果。 */ node => node.type === 'routine.entry')!.config.rhaiOriginalSignature = true
     for (const parameter of region.parameters) addRoutineParameter(routine, 'input', parameter, 'Data')
     graph.routines.push(routine)
   }
@@ -492,9 +523,9 @@ export function createLegacyGraphFromRhaiSource(sourceInput: string, name = 'Vis
   for (const region of functions) {
     const eventType = `event.${region.name}`
     if (!graphNodeDefinition(eventType, graph, null)) {
-      const routine = graph.routines.find(item => item.name === region.name)
+      const routine = graph.routines.find(/* 比较 item.name 与 region.name，返回严格相等的判断结果。 */ item => item.name === region.name)
       if (!routine) continue
-      const entry = routine.nodes.find(node => node.type === 'routine.entry'), exit = routine.nodes.find(node => node.type === 'routine.return')
+      const entry = routine.nodes.find(/* 比较 node.type 与 'routine.entry'，返回严格相等的判断结果。 */ node => node.type === 'routine.entry'), exit = routine.nodes.find(/* 比较 node.type 与 'routine.return'，返回严格相等的判断结果。 */ node => node.type === 'routine.return')
       if (!entry || !exit) continue
       routine.edges = []
       // Rhai's final expression is its return value; retain branch structure
@@ -522,44 +553,49 @@ export function createLegacyGraphFromRhaiSource(sourceInput: string, name = 'Vis
   return parseGraphDocument(serializeGraphDocument(graph))
 }
 
+/** 移除生成的关联头和结构说明，保留提交给结构语法解析器的作者源码。 */
 function syntaxProjectionSource(source: string): string {
   return source.replace(/^\/\/ @nova-graph-link [0-9a-f-]{36}\r?\n(?:\/\/ (?:Rhai structure IR 1:|Bidirectional projection:)[^\r\n]*(?:\r?\n|$))?/i, '')
 }
 
 /** New code projections use the shared span-preserving Rhai IR. */
+/** 通过结构语法投影创建图，按请求保留图标识符。 */
 export function createGraphFromRhaiSource(sourceInput: string, name = 'Visual Script', requestedUuid = ''): NovaGraphDocument {
   return parseGraphDocument(serializeGraphDocument(projectRhaiSyntax(syntaxProjectionSource(sourceInput), name, requestedUuid)))
 }
 
+/** 查找输入端口已有的字面量来源，供增量源码修改复用。 */
 function incomingLiteral(scope: GraphCanvasScope, node: GraphNode, pin: GraphPin): GraphNode | null {
-  const edge = scope.edges.find(candidate => candidate.to.nodeUuid === node.uuid && candidate.to.pinUuid === pin.uuid)
-  return edge ? scope.nodes.find(candidate => candidate.uuid === edge.from.nodeUuid && candidate.type.startsWith('literal.')) ?? null : null
+  const edge = scope.edges.find(/** 定位当前输入的入边。 */ candidate => candidate.to.nodeUuid === node.uuid && candidate.to.pinUuid === pin.uuid)
+  return edge ? scope.nodes.find(/** 确认来源为字面量节点。 */ candidate => candidate.uuid === edge.from.nodeUuid && candidate.type.startsWith('literal.')) ?? null : null
 }
 
+/** 只更新可解析字面量或未连线端口默认值，拒绝覆盖非字面量连接。 */
 function assignInput(scope: GraphCanvasScope, node: GraphNode, pin: GraphPin, source: string): boolean {
   const value = parseValue(source)
   if (value === undefined) return false
   const literal = incomingLiteral(scope, node, pin)
   if (literal) literal.config.value = value
-  else if (!scope.edges.some(edge => edge.to.nodeUuid === node.uuid && edge.to.pinUuid === pin.uuid)) pin.defaultValue = value
+  else if (!scope.edges.some(/** 检查输入是否已被连线占用。 */ edge => edge.to.nodeUuid === node.uuid && edge.to.pinUuid === pin.uuid)) pin.defaultValue = value
   else return false
   return true
 }
 
+/** 尝试将旧格式节点区域修改应用到类型化输入，否则以源码覆盖保留修改。 */
 function applyStructuredNodeEdit(graph: NovaGraphDocument, nodeUuid: string, lines: string[]): boolean {
-  const scope = graphScopes(graph).find(candidate => candidate.nodes.some(node => node.uuid === nodeUuid))
-  const node = scope?.nodes.find(candidate => candidate.uuid === nodeUuid)
+  const scope = graphScopes(graph).find(/** 查找包含目标节点的作用域。 */ candidate => candidate.nodes.some(/* 比较 node.uuid 与 nodeUuid，返回严格相等的判断结果。 */ node => node.uuid === nodeUuid))
+  const node = scope?.nodes.find(/* 比较 candidate.uuid 与 nodeUuid，返回严格相等的判断结果。 */ candidate => candidate.uuid === nodeUuid)
   if (!scope || !node || node.type.startsWith('event.') || node.type.startsWith('custom.event.') || node.type === 'routine.entry') return false
-  const source = meaningful(lines).filter(line => !/^\s*[{}]\s*$/.test(line)).join('\n').trim()
+  const source = meaningful(lines).filter(/* 返回 /^\s*[{}]\s*$/.test(line) 的逻辑取反结果。 */ line => !/^\s*[{}]\s*$/.test(line)).join('\n').trim()
   if (!source) return false
   if (node.type === 'code.module' || node.type === 'code.statement') { node.config.source = source.slice(0, 64_000); delete node.config.rhaiSourceOverride; return true }
   const callable = node.type.startsWith('api.') ? node.type.slice(4) : ''
   if (callable) {
     const match = source.match(new RegExp(`(?:let\\s+[A-Za-z_][A-Za-z0-9_]*\\s*=\\s*)?${callable}\\s*\\(([\\s\\S]*)\\)\\s*;?$`))
     if (match) {
-      const inputs = node.pins.filter(pin => pin.direction === 'input' && pin.kind === 'data')
+      const inputs = node.pins.filter(/** 取得待更新 API 输入端口。 */ pin => pin.direction === 'input' && pin.kind === 'data')
       const args = splitArguments(match[1])
-      if (args.length === inputs.length && inputs.every((pin, index) => assignInput(scope, node, pin, args[index]))) {
+      if (args.length === inputs.length && inputs.every(/** 按索引应用实参，任一失败即拒绝。 */ (pin, index) => assignInput(scope, node, pin, args[index]))) {
         delete node.config.rhaiSourceOverride
         return true
       }
@@ -567,15 +603,16 @@ function applyStructuredNodeEdit(graph: NovaGraphDocument, nodeUuid: string, lin
   }
   if (node.type === 'variable.set' || node.type === 'local.set') {
     const match = source.match(/^[A-Za-z_][A-Za-z0-9_]*\s*=\s*([\s\S]+?)\s*;?$/)
-    const input = node.pins.find(pin => pin.key === 'value' && pin.direction === 'input')
+    const input = node.pins.find(/** 定位赋值的值输入端口。 */ pin => pin.key === 'value' && pin.direction === 'input')
     if (match && input && assignInput(scope, node, input, match[1])) { delete node.config.rhaiSourceOverride; return true }
   }
   node.config.rhaiSourceOverride = source.slice(0, 64_000)
   return true
 }
 
+/** 按稳定变量标识应用可解析的声明名称和默认值修改。 */
 function applyVariableEdit(graph: NovaGraphDocument, uuid: string, lines: string[]): boolean {
-  const variable = graph.variables.find(item => item.uuid === uuid)
+  const variable = graph.variables.find(/* 比较 item.uuid 与 uuid，返回严格相等的判断结果。 */ item => item.uuid === uuid)
   const source = meaningful(lines).join(' ').trim()
   const match = source.match(/^(?:@export\([^)]*\)\s*)?let\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*([\s\S]+?)\s*;$/)
   if (!variable || !match) return false
@@ -586,12 +623,13 @@ function applyVariableEdit(graph: NovaGraphDocument, uuid: string, lines: string
   return true
 }
 
+/** 同步未结构化模块内容，按需要创建、更新或移除对应源码节点。 */
 function synchronizeRawModule(graph: NovaGraphDocument, source: string): boolean {
   const value = source.trim().slice(0, 64_000)
-  let node = graph.nodes.find(item => item.type === 'code.module')
+  let node = graph.nodes.find(/* 比较 item.type 与 'code.module'，返回严格相等的判断结果。 */ item => item.type === 'code.module')
   if (!value) {
     if (!node) return false
-    graph.nodes = graph.nodes.filter(item => item.uuid !== node!.uuid)
+    graph.nodes = graph.nodes.filter(/* 比较 item.uuid 与 node!.uuid，返回严格不等的判断结果。 */ item => item.uuid !== node!.uuid)
     return true
   }
   if (!node) {
@@ -603,40 +641,42 @@ function synchronizeRawModule(graph: NovaGraphDocument, source: string): boolean
   return true
 }
 
+/** 移除生成追踪和映射注释后比较源码；字符串及普通作者注释不作为标记删除。 */
 function projectionSource(source: string): string {
   const normalized = source.replace(/\r\n?/g, '\n'), safeLines = new Set<number>(), masked = syntaxMask(normalized, true, safeLines).split('\n')
-  return normalized.split('\n').flatMap((raw, index) => {
+  return normalized.split('\n').flatMap(/** 过滤生成头和追踪，保留作者源码。 */ (raw, index) => {
     const line = safeLines.has(index) ? withoutMarker(raw) : raw
     if (/^\s*__nova_graph_trace\(/.test(masked[index]) || safeLines.has(index) && (line.startsWith(GRAPH_LINK_PREFIX) || /^\/\/ (?:Generated by Nova_A Visual Scripting|Bidirectional projection:|Linked \.rhai)/.test(line))) return []
     return [line]
   }).join('\n').trim()
 }
 
+/** 重建旧图后复用同名变量、例程和语义未变节点的标识，保留对应断点引用。 */
 function rebuildLinkedGraph(previous: NovaGraphDocument, source: string): NovaGraphDocument {
   const graph = createLegacyGraphFromRhaiSource(projectionSource(source), previous.name, previous.uuid)
   // Variable identities are referenced by serialized component overrides.
   for (const variable of graph.variables) {
-    const old = previous.variables.find(item => item.name === variable.name)
+    const old = previous.variables.find(/* 比较 item.name 与 variable.name，返回严格相等的判断结果。 */ item => item.name === variable.name)
     if (!old) continue
     const importedUuid = variable.uuid; variable.uuid = old.uuid
     for (const scope of graphScopes(graph)) for (const node of scope.nodes) if (node.config.variableUuid === importedUuid) node.config.variableUuid = old.uuid
   }
   for (const routine of graph.routines) {
-    const old = previous.routines.find(item => item.name === routine.name)
+    const old = previous.routines.find(/* 比较 item.name 与 routine.name，返回严格相等的判断结果。 */ item => item.name === routine.name)
     if (!old) continue
     const importedUuid = routine.uuid; routine.uuid = old.uuid
     routine.description = old.description
     for (const direction of ['inputs', 'outputs'] as const) for (const parameter of routine[direction]) {
-      const oldParameter = old[direction].find(item => item.name === parameter.name)
+      const oldParameter = old[direction].find(/* 比较 item.name 与 parameter.name，返回严格相等的判断结果。 */ item => item.name === parameter.name)
       if (oldParameter) parameter.uuid = oldParameter.uuid
     }
     for (const scope of graphScopes(graph)) for (const node of scope.nodes) if (node.type === `routine.call.${importedUuid}`) node.type = `routine.call.${old.uuid}`
   }
   // Keep unchanged block identities so their breakpoints survive structural
   // edits. Changed/new blocks keep fresh IDs and the newly arranged positions.
-  const semanticNode = (node: GraphNode) => JSON.stringify({ type: node.type, config: node.config, pins: node.pins.map(pin => [pin.key, pin.direction, pin.kind, pin.valueType, pin.defaultValue]) })
+  const semanticNode = /** 生成不含临时身份的节点语义比较键。 */ (node: GraphNode) => JSON.stringify({ type: node.type, config: node.config, pins: node.pins.map(/** 提取端口语义属性供等价比较。 */ pin => [pin.key, pin.direction, pin.kind, pin.valueType, pin.defaultValue]) })
   for (const scope of graphScopes(graph)) {
-    const oldScope = scope === graph ? previous : previous.routines.find(item => item.uuid === (scope as { uuid?: string }).uuid)
+    const oldScope = scope === graph ? previous : previous.routines.find(/* 比较 item.uuid 与 (scope as { uuid?: string }).uuid，返回严格相等的判断结果。 */ item => item.uuid === (scope as { uuid?: string }).uuid)
     if (!oldScope) continue
     const available = new Map<string, GraphNode[]>(), nodeIds = new Map<string, string>(), pinIds = new Map<string, string>()
     for (const node of oldScope.nodes) { const key = semanticNode(node), nodes = available.get(key) ?? []; nodes.push(node); available.set(key, nodes) }
@@ -644,7 +684,7 @@ function rebuildLinkedGraph(previous: NovaGraphDocument, source: string): NovaGr
       const old = available.get(semanticNode(node))?.shift()
       if (!old) continue
       nodeIds.set(node.uuid, old.uuid)
-      for (const pin of node.pins) pinIds.set(pin.uuid, old.pins.find(item => item.key === pin.key && item.direction === pin.direction)?.uuid ?? pin.uuid)
+      for (const pin of node.pins) pinIds.set(pin.uuid, old.pins.find(/** 按键和方向复用旧端口身份。 */ item => item.key === pin.key && item.direction === pin.direction)?.uuid ?? pin.uuid)
       node.uuid = old.uuid
       for (const pin of node.pins) pin.uuid = pinIds.get(pin.uuid) ?? pin.uuid
     }
@@ -655,18 +695,19 @@ function rebuildLinkedGraph(previous: NovaGraphDocument, source: string): NovaGr
       edge.to.pinUuid = pinIds.get(edge.to.pinUuid) ?? edge.to.pinUuid
     }
   }
-  const retainedNodes = new Set(graphScopes(graph).flatMap(scope => scope.nodes.map(node => node.uuid)))
-  graph.debug = { ...previous.debug, breakpoints: previous.debug.breakpoints.filter(item => retainedNodes.has(item.nodeUuid)) }
+  const retainedNodes = new Set(graphScopes(graph).flatMap(/** 汇总现有节点身份。 */ scope => scope.nodes.map(/* 返回 node.uuid 的当前值。 */ node => node.uuid)))
+  graph.debug = { ...previous.debug, breakpoints: previous.debug.breakpoints.filter(/** 只保留仍指向现有节点的断点。 */ item => retainedNodes.has(item.nodeUuid)) }
   return graph
 }
 
+/** 优先增量更新关联图；完整投影不能解释编辑时重建，避免丢失新增或删除的语句。 */
 export function applyLinkedRhaiSource(graphInput: NovaGraphDocument, source: string): Omit<GraphCodeSyncResult, 'graphAssetUuid'> {
   const graph = parseGraphDocument(serializeGraphDocument(graphInput))
   const baselineSource = createLinkedRhaiSource(graph)
   if (graph.language) {
     if (source === baselineSource || source === syntaxProjectionSource(baselineSource)) return { graph, changedNodes: [], changedVariables: [], rawModuleChanged: false }
     const rebuilt = projectRhaiSyntax(syntaxProjectionSource(source), graph.name, graph.uuid, graph)
-    return { graph: parseGraphDocument(serializeGraphDocument(rebuilt)), changedNodes: rebuilt.nodes.map(node => node.uuid), changedVariables: [], rawModuleChanged: false }
+    return { graph: parseGraphDocument(serializeGraphDocument(rebuilt)), changedNodes: rebuilt.nodes.map(/* 返回 node.uuid 的当前值。 */ node => node.uuid), changedVariables: [], rawModuleChanged: false }
   }
   if (source.replace(/\r\n?/g, '\n').trim() === baselineSource.trim()) return { graph, changedNodes: [], changedVariables: [], rawModuleChanged: false }
   const baseline = sourceRegions(baselineSource)
@@ -688,33 +729,120 @@ export function applyLinkedRhaiSource(graphInput: NovaGraphDocument, source: str
   // must not resurrect old nodes or silently discard unowned statements.
   if (projectionSource(createLinkedRhaiSource(graph)) !== projectionSource(source)) {
     const rebuilt = rebuildLinkedGraph(graphInput, source)
-    return { graph: rebuilt, changedNodes: graphScopes(rebuilt).flatMap(scope => scope.nodes.map(node => node.uuid)), changedVariables: rebuilt.variables.map(variable => variable.uuid), rawModuleChanged: true }
+    return { graph: rebuilt, changedNodes: graphScopes(rebuilt).flatMap(/** 汇总重建后的节点身份。 */ scope => scope.nodes.map(/* 返回 node.uuid 的当前值。 */ node => node.uuid)), changedVariables: rebuilt.variables.map(/* 返回 variable.uuid 的当前值。 */ variable => variable.uuid), rawModuleChanged: true }
   }
   return { graph, changedNodes, changedVariables, rawModuleChanged }
 }
 
+/** 从图名生成默认伙伴脚本名，实际路径冲突由资源数据库处理。 */
 export function createLinkedScriptName(graph: NovaGraphDocument): string { return `${graph.name} Linked` }
 
+/** 收集实际引用此图的脚本，元数据与源标记冲突时拒绝猜测所属文档。 */
+function graphCompanions(graph: NovaGraphDocument): AssetRecord[] {
+  const companions: AssetRecord[] = []
+  for (const asset of assetState.records) {
+    if (asset.assetType !== 'script') continue
+    const metadata = asset.script?.linkedGraphUuid || '', marker = linkedGraphUuid(readTextAsset(asset.uuid) ?? '')
+    if (metadata !== graph.uuid && marker !== graph.uuid) continue
+    if (metadata && marker && metadata !== marker) throw new Error('Linked script has conflicting graph identities: ' + asset.path)
+    companions.push(asset)
+  }
+  return companions
+}
+/** 只备份会写入的记录；失败时同时恢复新增资源、顺序、目录、选择及代次，不提交历史或运行时通知。 */
+function linkedAssetTransaction<T>(records: readonly AssetRecord[], operation: () => T): T {
+  const order = [...assetState.records], folders = [...assetState.folders], selected = assetState.selectedGuid, folder = assetState.currentFolder, generation = assetState.generation
+  const snapshots = records.map(/** 保留原对象身份并深拷贝将被写入的字段，供精确回滚。 */ record => ({ record, before: JSON.parse(JSON.stringify(record)) as AssetRecord }))
+  try { return operation() } catch (error) {
+    for (const {record, before} of snapshots) {
+      for (const key of Object.keys(record)) if (!(key in before)) delete (record as unknown as Record<string, unknown>)[key]
+      Object.assign(record, before)
+    }
+    assetState.records = order; assetState.folders = folders; assetState.selectedGuid = selected; assetState.currentFolder = folder; assetState.generation = generation
+    throw error
+  }
+}
+/** 与文本资源写入器相同的保护目录边界，在任一伙伴改变前检查整个写集合。 */
+function assertWritableCompanions(records: readonly AssetRecord[]): void {
+  for (const record of records) if (record.path.startsWith('.nova/')) throw new Error('Linked resource is read-only/protected: ' + record.path)
+}
+/** 同步单个伙伴的源码及关联元数据；读回校验失败将由调用事务回滚。 */
+function writeLinkedCompanion(asset: AssetRecord, graph: NovaGraphDocument, source: string): boolean {
+  const changed = readTextAsset(asset.uuid) !== source
+  if (changed && !updateTextAsset(asset.uuid, source)) throw new Error('Linked script write failed: ' + asset.path)
+  if (readTextAsset(asset.uuid) !== source) throw new Error('Linked script verification failed: ' + asset.path)
+  asset.script ??= defaultScriptMetadata(); asset.script.linkedGraphUuid = graph.uuid
+  return changed
+}
+/** 原有公开同步入口保持返回变更标识；任一伙伴不可写或校验失败时整体拒绝。 */
 export function synchronizeLinkedScriptsForGraph(graph: NovaGraphDocument): string[] {
   const source = createLinkedRhaiSource(graph)
   if (!source) return []
-  const updated: string[] = []
-  for (const asset of assetState.records) {
-    if (asset.assetType !== 'script') continue
-    const current = readTextAsset(asset.uuid) ?? ''
-    if (asset.script?.linkedGraphUuid !== graph.uuid && linkedGraphUuid(current) !== graph.uuid) continue
-    asset.script ??= { version: 2, apiVersion: 2, breakpoints: [], breakpointDetails: [], tests: [], packageDependencies: [], packageName: '', reloadPolicy: 'preserve', signalConnections: [], recoverySource: '', lastSavedHash: '', linkedGraphUuid: graph.uuid }
-    asset.script.linkedGraphUuid = graph.uuid
-    if (current !== source && updateTextAsset(asset.uuid, source)) updated.push(asset.uuid)
-  }
-  return updated
+  const companions = graphCompanions(graph); assertWritableCompanions(companions)
+  return linkedAssetTransaction(companions, /** 所有伙伴写入及读回成功后才返回变更集合。 */ () => {
+    const updated: string[] = []
+    for (const asset of companions) if (writeLinkedCompanion(asset, graph, source)) updated.push(asset.uuid)
+    return updated
+  })
+}
+/** 一次提交图与全部伙伴；故障注入仅供回归测试，正常编辑器不传入该选项。 */
+export function commitLinkedGraphAsset(graphAssetUuid: string, graph: NovaGraphDocument, faultAt?: 'after-graph' | 'after-scripts' | 'after-create'): { source: string; scriptUuids: string[] } {
+  const graphAsset = assetState.records.find(/** 资源身份与类型都必须匹配，不能把其他资源当作图覆盖。 */ asset => asset.uuid === graphAssetUuid && asset.assetType === 'visualScript')
+  if (!graphAsset || parseGraphDocument(readTextAsset(graphAssetUuid) ?? '').uuid !== graph.uuid) throw new Error('The graph asset identity changed before saving.')
+  const source = serializeGraphDocument(graph), linkedSource = createLinkedRhaiSource(graph)
+  if (!linkedSource) throw new Error('The linked graph cannot compile; no asset was saved.')
+  const companions = graphCompanions(graph); assertWritableCompanions([graphAsset, ...companions])
+  return linkedAssetTransaction([graphAsset, ...companions], /** 按图、伙伴、必要的新脚本顺序提交，任何阶段出错都撤销本次写入。 */ () => {
+    if (!updateTextAsset(graphAssetUuid, source) || readTextAsset(graphAssetUuid) !== source) throw new Error('Linked graph write verification failed.')
+    if (faultAt === 'after-graph') throw new Error('Injected linked save interruption after graph.')
+    const scriptUuids: string[] = []
+    for (const asset of companions) { writeLinkedCompanion(asset, graph, linkedSource); scriptUuids.push(asset.uuid) }
+    if (faultAt === 'after-scripts') throw new Error('Injected linked save interruption after scripts.')
+    if (!companions.length) {
+      const asset = createTextAsset(createLinkedScriptName(graph), 'script', linkedSource, 'Assets/Scripts/Generated')
+      writeLinkedCompanion(asset, graph, linkedSource); scriptUuids.push(asset.uuid)
+      if (faultAt === 'after-create') throw new Error('Injected linked save interruption after creation.')
+    }
+    return { source, scriptUuids }
+  })
 }
 
+/** 原子保存代码、断点等元数据及对应图；失败恢复资源状态，成功后由界面通知运行时。 */
+export function commitLinkedScriptAsset(scriptUuid: string, source: string, metadata?: AssetRecord['script'], faultAt?: 'after-source' | 'after-graph'): EnsuredGraphCodeSyncResult {
+  const script = assetState.records.find(/** 仅允许脚本资源进入代码保存事务。 */ asset => asset.uuid === scriptUuid && asset.assetType === 'script')
+  if (!script) throw new Error('The script asset is unavailable.')
+  assertWritableCompanions([script])
+  // 代码保存只会写当前脚本与其图；不复制项目中无关的大型脚本和图。
+  const requestedGraph = script.script?.linkedGraphUuid || linkedGraphUuid(source)
+  const records = [script]
+  if (requestedGraph) for (const asset of assetState.records) {
+    if (asset.assetType !== 'visualScript') continue
+    try { if (parseGraphDocument(readTextAsset(asset.uuid) ?? '').uuid === requestedGraph) { records.push(asset); break } }
+    catch { /* 无关的损坏图不参与此事务；真正缺失的目标由投影入口报告。 */ }
+  }
+  return linkedAssetTransaction(records, /** 先保存原文再投影，任一步失败都撤销断点和资源创建。 */ () => {
+    if (!updateTextAsset(scriptUuid, source) || readTextAsset(scriptUuid) !== source) throw new Error('Linked script write verification failed.')
+    if (metadata) {
+      // 断点/恢复元数据不能重定向伙伴；关联身份始终取当前资源，避免过期副本创建重复图。
+      const linkedGraphUuid = script.script?.linkedGraphUuid || ''
+      script.script = { ...JSON.parse(JSON.stringify(metadata)), linkedGraphUuid } as AssetRecord['script']
+    }
+    if (faultAt === 'after-source') throw new Error('Injected source save interruption after source.')
+    const result = ensureLinkedGraphForScript(scriptUuid, source)
+    if (!result) throw new Error('The linked graph could not be created.')
+    if (faultAt === 'after-graph') throw new Error('Injected source save interruption after graph.')
+    return result
+  })
+}
+
+/** 按脚本元数据和源标记定位准确图资源，拒绝冲突身份并更新投影。 */
 export function synchronizeLinkedGraphForScript(scriptUuid: string, source: string): GraphCodeSyncResult | null {
-  const script = assetState.records.find(asset => asset.uuid === scriptUuid && asset.assetType === 'script')
-  const requestedGraph = script?.script?.linkedGraphUuid || linkedGraphUuid(source)
+  const script = assetState.records.find(/** 匹配指定身份的脚本资源。 */ asset => asset.uuid === scriptUuid && asset.assetType === 'script')
+  const metadataGraph = script?.script?.linkedGraphUuid || '', markerGraph = linkedGraphUuid(source)
+  if (metadataGraph && markerGraph && metadataGraph !== markerGraph) throw new Error('Linked script has conflicting graph identities.')
+  const requestedGraph = metadataGraph || markerGraph
   if (!script || !requestedGraph) return null
-  const graphAsset = assetState.records.find(asset => {
+  const graphAsset = assetState.records.find(/** 解析候选图内部身份，跳过无关损坏资源。 */ asset => {
     if (asset.assetType !== 'visualScript') return false
     const graphSource = readTextAsset(asset.uuid)
     if (!graphSource) return false
@@ -724,47 +852,67 @@ export function synchronizeLinkedGraphForScript(scriptUuid: string, source: stri
   const graphSource = readTextAsset(graphAsset.uuid)
   if (!graphSource) throw new Error('The linked visual graph source is unavailable.')
   const currentGraph = parseGraphDocument(graphSource)
-  const synchronized = currentGraph.language || source.split(/\r?\n/).some(line => NODE_MARKER.test(line) || VARIABLE_MARKER.test(line))
+  const synchronized = currentGraph.language || source.split(/\r?\n/).some(/** 检查旧格式节点或变量映射标记。 */ line => NODE_MARKER.test(line) || VARIABLE_MARKER.test(line))
     ? applyLinkedRhaiSource(currentGraph, source)
-    : { graph: createGraphFromRhaiSource(source, currentGraph.name, currentGraph.uuid), changedNodes: currentGraph.nodes.map(node => node.uuid), changedVariables: currentGraph.variables.map(variable => variable.uuid), rawModuleChanged: true }
-  if (!updateTextAsset(graphAsset.uuid, serializeGraphDocument(synchronized.graph))) throw new Error('The linked visual graph could not be saved.')
-  script.script!.linkedGraphUuid = synchronized.graph.uuid
-  return { graphAssetUuid: graphAsset.uuid, ...synchronized }
+    : { graph: createGraphFromRhaiSource(source, currentGraph.name, currentGraph.uuid), changedNodes: currentGraph.nodes.map(/* 返回 node.uuid 的当前值。 */ node => node.uuid), changedVariables: currentGraph.variables.map(/* 返回 variable.uuid 的当前值。 */ variable => variable.uuid), rawModuleChanged: true }
+  assertWritableCompanions([script, graphAsset])
+  return linkedAssetTransaction([script, graphAsset], /** 模式切换也校验图写回；失败不改变关联元数据或已保存图。 */ () => {
+    const nextSource = serializeGraphDocument(synchronized.graph)
+    if (!updateTextAsset(graphAsset.uuid, nextSource) || readTextAsset(graphAsset.uuid) !== nextSource) throw new Error('The linked visual graph could not be saved.')
+    script.script ??= defaultScriptMetadata(); script.script.linkedGraphUuid = synchronized.graph.uuid
+    return { graphAssetUuid: graphAsset.uuid, ...synchronized }
+  })
 }
 
 /** Ensures manual Rhai always has a visual companion. The source itself is not
  * rewritten during first linkage; saving either companion afterwards creates
  * the stable marker projection used for precise incremental synchronization. */
+/** 复用既有图或创建首个结构图，首次关联不重写作者的脚本文本。 */
 export function ensureLinkedGraphForScript(scriptUuid: string, source: string): EnsuredGraphCodeSyncResult | null {
   const existing = synchronizeLinkedGraphForScript(scriptUuid, source)
   if (existing) return { ...existing, created: false, linkedScriptUuid: scriptUuid }
-  const script = assetState.records.find(item => item.uuid === scriptUuid && item.assetType === 'script')
+  const script = assetState.records.find(/** 定位待创建图伙伴的脚本。 */ item => item.uuid === scriptUuid && item.assetType === 'script')
   if (!script) return null
   const graph = createGraphFromRhaiSource(source, script.name.replace(/\.rhai$/i, ''))
-  const graphAsset = createTextAsset(`${graph.name} Visual`, 'visualScript', serializeGraphDocument(graph), 'Assets/Visual Scripts')
-  script.script ??= { version: 2, apiVersion: 2, breakpoints: [], breakpointDetails: [], tests: [], packageDependencies: [], packageName: '', reloadPolicy: 'preserve', signalConnections: [], recoverySource: '', lastSavedHash: '', linkedGraphUuid: graph.uuid }
-  script.script.linkedGraphUuid = graph.uuid
-  return { graphAssetUuid: graphAsset.uuid, graph, changedNodes: graph.nodes.map(node => node.uuid), changedVariables: graph.variables.map(variable => variable.uuid), rawModuleChanged: graph.nodes.some(node => node.type === 'code.module'), created: true, linkedScriptUuid: scriptUuid }
+  assertWritableCompanions([script])
+  return linkedAssetTransaction([script], /** 首次切换创建的图、目录、选择及脚本关联一并提交。 */ () => {
+    const source = serializeGraphDocument(graph)
+    const graphAsset = createTextAsset(`${graph.name} Visual`, 'visualScript', source, 'Assets/Visual Scripts')
+    if (readTextAsset(graphAsset.uuid) !== source) throw new Error('The new visual graph failed verification.')
+    script.script ??= defaultScriptMetadata(); script.script.linkedGraphUuid = graph.uuid
+    return { graphAssetUuid: graphAsset.uuid, graph, changedNodes: graph.nodes.map(/** 返回新投影节点身份。 */ node => node.uuid), changedVariables: graph.variables.map(/** 返回新投影变量身份。 */ variable => variable.uuid), rawModuleChanged: graph.nodes.some(/** 标记是否含显式源码模块。 */ node => node.type === 'code.module'), created: true, linkedScriptUuid: scriptUuid }
+  })
 }
 
+/** 复用完整伙伴集合，或在同一事务中创建并验证脚本，失败时不留下孤立资源。 */
 export function ensureLinkedScriptForGraph(graph: NovaGraphDocument): { scriptUuid: string; created: boolean } | null {
-  const existing = assetState.records.find(asset => asset.assetType === 'script' && linkedScriptGraphUuid(asset.uuid) === graph.uuid)
+  const existing = graphCompanions(graph)[0]
   if (existing) { synchronizeLinkedScriptsForGraph(graph); return { scriptUuid: existing.uuid, created: false } }
   const source = createLinkedRhaiSource(graph); if (!source) return null
-  const asset = createTextAsset(createLinkedScriptName(graph), 'script', source, 'Assets/Scripts/Generated')
-  if (!linkScriptToGraph(asset.uuid, graph)) return null
-  return { scriptUuid: asset.uuid, created: true }
+  return linkedAssetTransaction([], /** 创建目录、资源和关联标识一并提交或回滚。 */ () => {
+    const asset = createTextAsset(createLinkedScriptName(graph), 'script', source, 'Assets/Scripts/Generated')
+    writeLinkedCompanion(asset, graph, source)
+    return { scriptUuid: asset.uuid, created: true }
+  })
 }
 
+/** 校验伙伴可写且投影可编译，写入成功后才记录图关联身份。 */
 export function linkScriptToGraph(scriptUuid: string, graph: NovaGraphDocument): boolean {
-  const asset = assetState.records.find(item => item.uuid === scriptUuid && item.assetType === 'script')
+  const asset = assetState.records.find(/** 定位待关联的脚本。 */ item => item.uuid === scriptUuid && item.assetType === 'script')
   if (!asset?.script) return false
-  asset.script.linkedGraphUuid = graph.uuid
-  return updateTextAsset(scriptUuid, createLinkedRhaiSource(graph))
+  const source = createLinkedRhaiSource(graph)
+  if (!source || asset.path.startsWith('.nova/')) return false
+  return linkedAssetTransaction([asset], /** 源码写入成功后才改变关联标识，防止失败留下错误伙伴关系。 */ () => {
+    if (!updateTextAsset(scriptUuid, source)) return false
+    if (readTextAsset(scriptUuid) !== source) throw new Error('Linked script verification failed: ' + asset.path)
+    asset.script!.linkedGraphUuid = graph.uuid
+    return true
+  })
 }
 
+/** 只移除安全识别的图关联注释和元数据，写入失败时保留原关联。 */
 export function unlinkScriptFromGraph(scriptUuid: string): void {
-  const asset = assetState.records.find(item => item.uuid === scriptUuid && item.assetType === 'script')
+  const asset = assetState.records.find(/** 定位待解绑的脚本。 */ item => item.uuid === scriptUuid && item.assetType === 'script')
   if (!asset) return
   const source = readTextAsset(scriptUuid)
   if (source === null) throw new Error('The linked script source is unavailable; its link was retained.')
@@ -776,7 +924,8 @@ export function unlinkScriptFromGraph(scriptUuid: string): void {
   if (asset.script) asset.script.linkedGraphUuid = ''
 }
 
+/** 读取脚本的图关联身份，元数据缺失时回退到源码标记。 */
 export function linkedScriptGraphUuid(scriptUuid: string): string {
-  const asset = assetState.records.find(item => item.uuid === scriptUuid && item.assetType === 'script')
+  const asset = assetState.records.find(/** 定位脚本以读取关联元数据。 */ item => item.uuid === scriptUuid && item.assetType === 'script')
   return asset?.script?.linkedGraphUuid || linkedGraphUuid(readTextAsset(scriptUuid) ?? '')
 }

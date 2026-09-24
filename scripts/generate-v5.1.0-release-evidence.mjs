@@ -1,3 +1,4 @@
+/** 版本5.1.0：汇集发布报告与产物文件，生成带来源记录的发布证据。 */
 import { createHash } from 'node:crypto'
 import { cp, mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises'
 import { execFileSync } from 'node:child_process'
@@ -10,8 +11,8 @@ const audits = join(root, 'release-audits')
 const evidence = join(audits, 'evidence-v5.1.0')
 const generatedAt = new Date().toISOString()
 const commit = execFileSync('git', ['-C', root, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim()
-const sha256 = value => createHash('sha256').update(value).digest('hex')
-const writeJson = (path, value) => writeFile(path, `${JSON.stringify(value, null, 2)}\n`)
+const sha256 = /* 调用 createHash('sha256').update(value).digest('hex') 并返回调用结果。 */ value => createHash('sha256').update(value).digest('hex')
+const writeJson = /* 调用 writeFile(path, `${JSON.stringify(value, null, 2)}\n`) 并返回调用结果。 */ (path, value) => writeFile(path, `${JSON.stringify(value, null, 2)}\n`)
 
 const productAuditPath = join(audits, 'v5.1.0-product-audit.json')
 const productAudit = JSON.parse(await readFile(productAuditPath, 'utf8'))
@@ -79,14 +80,14 @@ await writeJson(join(audits, 'v5.1.0-stability-smoke.json'), {
 await writeJson(join(evidence, 'external/gates.json'), {
   format: 'nova-external-certification-gates', version: 1, release: '5.1.0', generatedAt,
   gates: ['publisher signing', 'independent clean-machine install and portable launch', 'cross-host Linux/macOS builds', '72-hour soak']
-    .map(name => ({ name, status: 'pending-external', claimed: false }))
+    .map(/** 为指定外部资格生成待外部验证且不声称通过的条目。 */ name => ({ name, status: 'pending-external', claimed: false }))
 })
 
-async function filesUnder(directory) {
+/** 递归枚举普通文件并兼容不同Node目录父路径字段。 */ async function filesUnder(directory) {
   const entries = await readdir(directory, { withFileTypes: true, recursive: true })
-  return entries.filter(entry => entry.isFile()).map(entry => join(entry.parentPath ?? entry.path, entry.name))
+  return entries.filter(/* 调用 entry.isFile() 并返回调用结果。 */ entry => entry.isFile()).map(/* 调用 join(entry.parentPath ?? entry.path, entry.name) 并返回调用结果。 */ entry => join(entry.parentPath ?? entry.path, entry.name))
 }
-const entries = await Promise.all((await filesUnder(evidence)).sort().map(async path => {
+const entries = await Promise.all((await filesUnder(evidence)).sort().map(/** 读取证据文件并记录相对路径、散列、大小及来源。 */ async path => {
   const source = await readFile(path)
   return { path: relative(evidence, path).replaceAll('\\', '/'), sha256: sha256(source), bytes: (await stat(path)).size, source: commit, tool: 'generate-v5.1.0-release-evidence.mjs', environment: environment.id }
 }))

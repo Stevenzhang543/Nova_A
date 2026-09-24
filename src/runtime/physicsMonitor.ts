@@ -1,3 +1,4 @@
+/** 物理运行监控：收集求解状态、异常和性能指标，供调试面板查看。 */
 import { reactive } from 'vue'
 import { NOVA_ENGINE_VERSION } from '../projects/projectFormat'
 import type { Entity } from '../world/Entity'
@@ -99,22 +100,22 @@ export const physicsMonitorState = reactive({
   sessionStartedAt: 0
 })
 
-function magnitude(vector: { x: number; y: number } | [number, number]): number {
+/** 结构说明（自动提取）：magnitude；输入 vector；直接调用 Array.isArray、Math.hypot。 */ function magnitude(vector: { x: number; y: number } | [number, number]): number {
   const x = Array.isArray(vector) ? vector[0] : vector.x
   const y = Array.isArray(vector) ? vector[1] : vector.y
   return Math.hypot(x, y)
 }
 
-function finite(value: unknown): number {
+/* 根据 typeof value === 'number' && Number.isFinite(value) 的真假，分别返回 value 或 0。 */ function finite(value: unknown): number {
   return typeof value === 'number' && Number.isFinite(value) ? value : 0
 }
 
-function vector(value: unknown): [number, number] {
+/** 结构说明（自动提取）：vector；输入 value；直接调用 Array.isArray、finite。 */ function vector(value: unknown): [number, number] {
   if (!Array.isArray(value)) return [0, 0]
   return [finite(value[0]), finite(value[1])]
 }
 
-function directionDegrees(from: [number, number], to: [number, number]): number {
+/** 结构说明（自动提取）：directionDegrees；输入 from、to；直接调用 magnitude、Math.atan2；写入 delta；包含循环处理。 */ function directionDegrees(from: [number, number], to: [number, number]): number {
   if (magnitude(from) < 1e-12 || magnitude(to) < 1e-12) return 0
   let delta = Math.atan2(to[1], to[0]) - Math.atan2(from[1], from[0])
   while (delta > Math.PI) delta -= Math.PI * 2
@@ -122,7 +123,7 @@ function directionDegrees(from: [number, number], to: [number, number]): number 
   return delta * 180 / Math.PI
 }
 
-export function beginPhysicsMonitorSession(): void {
+/** 结构说明（自动提取）：beginPhysicsMonitorSession；无显式参数；直接调用 physicsMonitorState.bodies.splice、physicsMonitorState.collisions.splice、physicsMonitorState.constraints.splice、physicsMonitorState.warnings.splice、performance.now 等；写入 physicsMonitorState.query、physicsMonitorState.frozen、physicsMonitorState.collapsed、physicsMonitorState.sessionStartedAt 等。 */ export function beginPhysicsMonitorSession(): void {
   physicsMonitorState.bodies.splice(0)
   physicsMonitorState.collisions.splice(0)
   physicsMonitorState.constraints.splice(0)
@@ -137,17 +138,17 @@ export function beginPhysicsMonitorSession(): void {
   speedHistory = new Map()
 }
 
-export function clearCollisionTimeline(): void {
+/** 执行时调用 physicsMonitorState.collisions.splice(0)；不显式返回调用结果。 */ export function clearCollisionTimeline(): void {
   physicsMonitorState.collisions.splice(0)
 }
 
-export function togglePhysicsPin(uuid: string): void {
+/** 结构说明（自动提取）：togglePhysicsPin；输入 uuid；直接调用 physicsMonitorState.pinnedUuids.indexOf、physicsMonitorState.pinnedUuids.splice、physicsMonitorState.pinnedUuids.push。 */ export function togglePhysicsPin(uuid: string): void {
   const index = physicsMonitorState.pinnedUuids.indexOf(uuid)
   if (index >= 0) physicsMonitorState.pinnedUuids.splice(index, 1)
   else if (physicsMonitorState.pinnedUuids.length < 256) physicsMonitorState.pinnedUuids.push(uuid)
 }
 
-export function capturePhysicsSnapshot(name = `Physics capture ${physicsMonitorState.captures.length + 1}`): PhysicsMonitorCapture {
+/** 结构说明（自动提取）：capturePhysicsSnapshot；输入 name；直接调用 crypto.randomUUID、slice、name.trim、toISOString、Date 等；返回路径包含 capture。 */ export function capturePhysicsSnapshot(name = `Physics capture ${physicsMonitorState.captures.length + 1}`): PhysicsMonitorCapture {
   const capture: PhysicsMonitorCapture = {
     id: crypto.randomUUID(),
     name: name.trim().slice(0, 80) || 'Physics capture',
@@ -163,19 +164,19 @@ export function capturePhysicsSnapshot(name = `Physics capture ${physicsMonitorS
   return capture
 }
 
-export function comparePhysicsSnapshots(first: PhysicsMonitorCapture, second: PhysicsMonitorCapture): Array<{ uuid: string; name: string; speedDelta: number; energyDelta: number; contactDelta: number }> {
-  const before = new Map(first.bodies.map(body => [body.uuid, body]))
-  return second.bodies.map(body => {
+/** 结构说明（自动提取）：comparePhysicsSnapshots；输入 first、second；直接调用 Map、first.bodies.map、sort、second.bodies.map。 */ export function comparePhysicsSnapshots(first: PhysicsMonitorCapture, second: PhysicsMonitorCapture): Array<{ uuid: string; name: string; speedDelta: number; energyDelta: number; contactDelta: number }> {
+  const before = new Map(first.bodies.map(/* 返回按声明顺序构造的数组 [body.uuid, body]。 */ body => [body.uuid, body]))
+  return second.bodies.map(/** 结构说明（自动提取）：second.bodies.map 回调；输入 body；直接调用 before.get。 */ body => {
     const previous = before.get(body.uuid)
     return { uuid: body.uuid, name: body.name, speedDelta: body.speed - (previous?.speed ?? 0), energyDelta: body.kineticEnergy - (previous?.kineticEnergy ?? 0), contactDelta: body.contactCount - (previous?.contactCount ?? 0) }
-  }).sort((a, b) => Math.abs(b.energyDelta) - Math.abs(a.energyDelta) || a.uuid.localeCompare(b.uuid))
+  }).sort(/* 先计算 Math.abs(b.energyDelta) - Math.abs(a.energyDelta)；仅当其为假值时求右侧 a.uuid.localeCompare(b.uuid)，返回短路求值结果。 */ (a, b) => Math.abs(b.energyDelta) - Math.abs(a.energyDelta) || a.uuid.localeCompare(b.uuid))
 }
 
-export function physicsCaptureJson(capture: PhysicsMonitorCapture): string {
+/** 结构说明（自动提取）：physicsCaptureJson；输入 capture；直接调用 JSON.stringify。 */ export function physicsCaptureJson(capture: PhysicsMonitorCapture): string {
   return `${JSON.stringify({ format: 'nova-physics-capture', version: 1, engineVersion: NOVA_ENGINE_VERSION, units: { position: 'm', velocity: 'm/s', acceleration: 'm/s²', force: 'N', energy: 'J' }, capture }, null, 2)}\n`
 }
 
-export function recordPhysicsTelemetry(
+/** 结构说明（自动提取）：recordPhysicsTelemetry；输入 entities、connections、events、diagnostics、tickRate、profile、elapsedMs；直接调用 Math.max、slice、entities.filter、Math.min、finite 等；写入 lastPhysicsStep、lastDiagnostics、previousBodyState；包含循环处理。 */ export function recordPhysicsTelemetry(
   entities: Entity[],
   connections: Connection[],
   events: RuntimePhysicsEvent[],
@@ -189,9 +190,9 @@ export function recordPhysicsTelemetry(
   lastPhysicsStep = diagnostics.totalPhysicsSteps
   lastDiagnostics = { ...diagnostics }
 
-  const monitored = entities.filter(entity => entity.enabled && entity.hasComponent('RigidBody2D')).slice(0, 20_000)
+  const monitored = entities.filter(/* 先计算 entity.enabled；仅当其为真值时求右侧 entity.hasComponent('RigidBody2D')，返回短路求值结果。 */ entity => entity.enabled && entity.hasComponent('RigidBody2D')).slice(0, 20_000)
   const fixedDelta = 1 / Math.min(1_000, Math.max(1, finite(tickRate) || 60))
-  physicsMonitorState.bodies.splice(0, physicsMonitorState.bodies.length, ...monitored.map(entity => {
+  physicsMonitorState.bodies.splice(0, physicsMonitorState.bodies.length, ...monitored.map(/** 结构说明（自动提取）：monitored.map 回调；输入 entity；直接调用 magnitude、previousBodyState.get、slice、speedHistory.get、speedHistory.set 等。 */ entity => {
     const speed = magnitude(entity.velocity)
     const previous = previousBodyState.get(entity.uuid)
     const measuredAcceleration = previous ? {
@@ -223,12 +224,12 @@ export function recordPhysicsTelemetry(
       sleeping: entity.rigidBody.sleeping
     }
   }))
-  previousBodyState = new Map(monitored.map(entity => [entity.uuid, { velocity: { ...entity.velocity } }]))
-  const liveUuids = new Set(monitored.map(entity => entity.uuid))
+  previousBodyState = new Map(monitored.map(/* 返回按声明顺序构造的数组 [entity.uuid, { velocity: { ...entity.velocity } }]。 */ entity => [entity.uuid, { velocity: { ...entity.velocity } }]))
+  const liveUuids = new Set(monitored.map(/* 返回 entity.uuid 的当前值。 */ entity => entity.uuid))
   for (const uuid of speedHistory.keys()) if (!liveUuids.has(uuid)) speedHistory.delete(uuid)
 
-  const namesById = new Map(entities.map(entity => [entity.id, entity.name]))
-  physicsMonitorState.constraints.splice(0, physicsMonitorState.constraints.length, ...connections.map(connection => ({
+  const namesById = new Map(entities.map(/* 返回按声明顺序构造的数组 [entity.id, entity.name]。 */ entity => [entity.id, entity.name]))
+  physicsMonitorState.constraints.splice(0, physicsMonitorState.constraints.length, ...connections.map(/** 结构说明（自动提取）：connections.map 回调；输入 connection；直接调用 namesById.get、finite；返回表达式求值结果。 */ connection => ({
     uuid: connection.uuid,
     name: connection.name,
     kind: connection.componentType,
@@ -241,16 +242,16 @@ export function recordPhysicsTelemetry(
     collideConnected: connection.collideConnected,
     breakState: connection.breakState,
     breakLink: connection.breakLink
-  })).sort((a, b) => a.name.localeCompare(b.name) || a.uuid.localeCompare(b.uuid)))
+  })).sort(/* 先计算 a.name.localeCompare(b.name)；仅当其为假值时求右侧 a.uuid.localeCompare(b.uuid)，返回短路求值结果。 */ (a, b) => a.name.localeCompare(b.name) || a.uuid.localeCompare(b.uuid)))
 
   const activeProfile = profile ?? { id: 'Balanced', name: 'Balanced', tickRate, maxCatchUpSteps: 8, minimumSubsteps: 8, velocityIterations: 20, positionIterations: 16, interpolation: 'Interpolate', droppedTimePolicy: 'Drop', sleepLinearThreshold: .001, sleepAngularThreshold: .001, timeToSleep: .5, physicsBudgetMs: 4 }
-  physicsMonitorState.warnings.splice(0, physicsMonitorState.warnings.length, ...physicsInstabilityWarnings({ bodyCount: diagnostics.bodyCount, contactCount: monitored.reduce((total, entity) => total + entity.contactCount, 0) / 2, connectionCount: diagnostics.connectionCount, droppedSeconds: diagnostics.droppedSeconds, elapsedMs, profile: activeProfile }))
+  physicsMonitorState.warnings.splice(0, physicsMonitorState.warnings.length, ...physicsInstabilityWarnings({ bodyCount: diagnostics.bodyCount, contactCount: monitored.reduce(/* 计算表达式 total + entity.contactCount 并返回结果，沿用操作数的原有类型规则。 */ (total, entity) => total + entity.contactCount, 0) / 2, connectionCount: diagnostics.connectionCount, droppedSeconds: diagnostics.droppedSeconds, elapsedMs, profile: activeProfile }))
 
-  const names = new Map(entities.map(entity => [entity.uuid, entity.name]))
+  const names = new Map(entities.map(/* 返回按声明顺序构造的数组 [entity.uuid, entity.name]。 */ entity => [entity.uuid, entity.name]))
   for (const event of events) {
     if (!['collisionStarted', 'collisionStayed', 'collisionEnded', 'triggerEntered', 'triggerStayed', 'triggerExited'].includes(event.type)) continue
     if (event.type === 'collisionStayed' || event.type === 'triggerStayed') {
-      const existing = physicsMonitorState.collisions.findIndex(item => item.type === event.type && item.firstUuid === event.firstEntityUuid && item.secondUuid === event.secondEntityUuid)
+      const existing = physicsMonitorState.collisions.findIndex(/* 先计算 item.type === event.type && item.firstUuid === event.firstEntityUuid；仅当其为真值时求右侧 item.secondUuid === event.secondEntityUuid，返回短路求值结果。 */ item => item.type === event.type && item.firstUuid === event.firstEntityUuid && item.secondUuid === event.secondEntityUuid)
       if (existing >= 0) physicsMonitorState.collisions.splice(existing, 1)
     }
     const incoming = vector(event.initialRelativeVelocity)

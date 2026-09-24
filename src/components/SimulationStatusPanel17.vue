@@ -1,3 +1,4 @@
+<!-- 仿真状态面板：展示运行状态并提供导航烘焙及原点移动。 -->
 <template>
   <section class="simulation-status17" :aria-label="text('title')" data-audit="simulation-status17">
     <details>
@@ -36,9 +37,9 @@ import { navigationBakeState as bake, navigationProfile, requestNavigationBake, 
 import { worldStreamingState as streams, cancelWorldStreaming, retryWorldStreaming } from '../runtime/worldStreaming'
 import { worldGameplayState as world, shiftWorldOrigin } from '../runtime/worldGameplay'
 import { worldTransform } from '../world/hierarchy'
-const error = ref(''), selected = computed(() => physicsState.world.entities.find(entity => entity.id === physicsState.selectedEntityId))
-async function requestBake(): Promise<void> { try { error.value = ''; await requestNavigationBake(physicsState.world.entities) } catch (failure) { error.value = String(failure) } }
-function shift(): void { if (!selected.value || physicsState.playMode === 'editing') return; try { error.value = ''; shiftWorldOrigin(worldTransform(selected.value, physicsState.world.entities).position) } catch (failure) { error.value = String(failure) } }
+const error = ref(''), selected = computed(/** 取得选中世界实体供原点操作使用。 */ () => physicsState.world.entities.find(/* 比较 entity.id 与 physicsState.selectedEntityId，返回严格相等的判断结果。 */ entity => entity.id === physicsState.selectedEntityId))
+/** 请求世界导航烘焙，清除旧错误并显示本次失败。 */ async function requestBake(): Promise<void> { try { error.value = ''; await requestNavigationBake(physicsState.world.entities) } catch (failure) { error.value = String(failure) } }
+/** 仅在运行且有选中实体时将原点移至其世界位置，失败显示错误。 */ function shift(): void { if (!selected.value || physicsState.playMode === 'editing') return; try { error.value = ''; shiftWorldOrigin(worldTransform(selected.value, physicsState.world.entities).position) } catch (failure) { error.value = String(failure) } }
 </script>
 <style scoped>
 .simulation-status17{min-width:0;container-type:inline-size;padding:10px;border:1px solid var(--border-subtle);border-radius:10px;background:var(--surface-1);color:var(--text-primary);font-size:inherit;line-height:1.5}

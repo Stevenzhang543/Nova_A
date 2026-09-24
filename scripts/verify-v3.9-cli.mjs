@@ -1,3 +1,4 @@
+/** 功能回归脚本：执行 verify-v3.9-cli.mjs 对应场景，保留断言和证据输出。 */
 import { createHash } from 'node:crypto'
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
@@ -10,14 +11,14 @@ const root = dirname(dirname(fileURLToPath(import.meta.url)))
 const temporary = await mkdtemp(join(tmpdir(), 'nova-a-v3.9-cli-'))
 const project = join(root, 'reference-projects', 'projects', 'build-automation', 'project.nova')
 const commands = []
-const run = (name, args, expected = 0) => {
+const run = /** 结构说明（自动提取）：run；输入 name、args、expected；直接调用 spawnSync、join、result.stderr.trim、flatMap、filter 等；返回路径包含 record；包含显式抛错路径。 */ (name, args, expected = 0) => {
   const result = spawnSync(process.execPath, [join(root, 'scripts', 'nova-cli.mjs'), name, ...args, '--jsonl'], { cwd: root, encoding: 'utf8', windowsHide: true })
-  const record = { command: name, args, exitCode: result.status, expected, stderr: result.stderr.trim(), events: result.stdout.trim().split(/\r?\n/).filter(Boolean).flatMap(line => { try { return [JSON.parse(line)] } catch { return [] } }) }
+  const record = { command: name, args, exitCode: result.status, expected, stderr: result.stderr.trim(), events: result.stdout.trim().split(/\r?\n/).filter(Boolean).flatMap(/** 结构说明（自动提取）：flatMap 回调；输入 line；直接调用 JSON.parse。 */ line => { try { return [JSON.parse(line)] } catch { return [] } }) }
   commands.push(record)
   if (result.status !== expected) throw new Error(name + ' exited ' + result.status + ', expected ' + expected + ': ' + result.stderr + result.stdout)
   return record
 }
-const hashFile = async path => createHash('sha256').update(await readFile(path)).digest('hex')
+const hashFile = /* 调用 createHash('sha256').update(await readFile(path)).digest('hex') 并返回调用结果。 */ async path => createHash('sha256').update(await readFile(path)).digest('hex')
 
 try {
   run('version', [])
@@ -49,7 +50,7 @@ try {
   await writeFile(futurePath, JSON.stringify(future))
   run('validate', ['--project', futurePath], 1)
 
-  const status = firstHash === secondHash && commands.every(item => item.exitCode === item.expected) ? 'passed' : 'failed'
+  const status = firstHash === secondHash && commands.every(/* 比较 item.exitCode 与 item.expected，返回严格相等的判断结果。 */ item => item.exitCode === item.expected) ? 'passed' : 'failed'
   const report = {
     format: 'nova-build-cli-matrix', version: 1, engineVersion: '3.9.0', generatedAt: new Date().toISOString(),
     commands, deterministicBuildHashes: { first: firstHash, second: secondHash, identical: firstHash === secondHash },

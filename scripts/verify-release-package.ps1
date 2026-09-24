@@ -1,3 +1,4 @@
+# 独立发布包核验：检查精确文件集合、校验和、版本及归档内的源码和证据。
 [CmdletBinding()]
 param(
   [Parameter(Mandatory = $true)]
@@ -10,6 +11,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+# 以流方式计算文件 SHA-256，返回小写十六进制并释放流与算法对象。
 function Get-Sha256Lower {
   param(
     [Parameter(Mandatory = $true)]
@@ -31,14 +33,16 @@ function Get-Sha256Lower {
 
 . (Join-Path $PSScriptRoot 'release-policy.ps1')
 
+# 按主、次、修订号逐段比较版本，判断候选是否不高于上限。
 function Test-VersionAtMost {
   param([string]$Candidate, [string]$Maximum)
   if ($Candidate -notmatch '^\d+\.\d+\.\d+$' -or $Maximum -notmatch '^\d+\.\d+\.\d+$') { return $false }
-  $left = @($Candidate.Split('.') | ForEach-Object { [int]$_ }); $right = @($Maximum.Split('.') | ForEach-Object { [int]$_ })
+  $left = @($Candidate.Split('.') | ForEach-Object <# 把版本号的一段转换为整数，供逐段大小比较。 #> { [int]$_ }); $right = @($Maximum.Split('.') | ForEach-Object <# 把版本号的一段转换为整数，供逐段大小比较。 #> { [int]$_ })
   for ($index = 0; $index -lt 3; $index++) { if ($left[$index] -lt $right[$index]) { return $true }; if ($left[$index] -gt $right[$index]) { return $false } }
   return $true
 }
 
+# 校验前端、Tauri、Rust 和锁文件中的版本权威完全一致。
 function Assert-VersionAuthorities {
   param([string]$Root, [string]$Expected)
   $values = @(
@@ -49,23 +53,26 @@ function Assert-VersionAuthorities {
     [regex]::Match((Get-Content -LiteralPath (Join-Path $Root 'src\projects\projectFormat.ts') -Raw), "NOVA_ENGINE_VERSION\s*=\s*'([^']+)'").Groups[1].Value,
     [regex]::Match((Get-Content -LiteralPath (Join-Path $Root 'crates\nova_format\src\lib.rs') -Raw), 'CURRENT_ENGINE_VERSION:\s*&str\s*=\s*"([^"]+)"').Groups[1].Value
   )
-  $lockEntries = @([regex]::Matches((Get-Content -LiteralPath (Join-Path $Root 'Cargo.lock') -Raw), '(?ms)^name = "nova_[^"]+"\r?\nversion = "([^"]+)"') | ForEach-Object { $_.Groups[1].Value })
+  $lockEntries = @([regex]::Matches((Get-Content -LiteralPath (Join-Path $Root 'Cargo.lock') -Raw), '(?ms)^name = "nova_[^"]+"\r?\nversion = "([^"]+)"') | ForEach-Object <# 读取正则表达式第一个捕获组中的版本或校验值。 #> { $_.Groups[1].Value })
   $lockVersions = @($lockEntries | Sort-Object -Unique)
-  if ($lockEntries.Count -lt 7 -or @(($values + $lockVersions) | Where-Object { $_ -ne $Expected }).Count -gt 0) { throw "Packaged source version authorities do not all equal $Expected." }
+  if ($lockEntries.Count -lt 7 -or @(($values + $lockVersions) | Where-Object <# 按条件 $_ -ne $Expected 筛选当前条目。 #> { $_ -ne $Expected }).Count -gt 0) { throw "Packaged source version authorities do not all equal $Expected." }
 }
 
+# 按公开版本判断是否强制结构化发布证据。
 function Test-RequiresStructuredEvidence {
   param([Parameter(Mandatory = $true)][string]$Label)
   $calendar = Get-CalendarReleaseInfo -Label $Label
   return $null -ne $calendar -and ($calendar.Year -gt 26 -or ($calendar.Year -eq 26 -and $calendar.Sequence -ge 6))
 }
 
+# 按公开版本判断是否强制无界面运行时证据。
 function Test-RequiresHeadlessAuthority {
   param([Parameter(Mandatory = $true)][string]$Label)
   $calendar = Get-CalendarReleaseInfo -Label $Label
   return $null -ne $calendar -and ($calendar.Year -gt 26 -or ($calendar.Year -eq 26 -and $calendar.Sequence -ge 7))
 }
 
+# 返回该版本必须具备的本地构建名称集合。
 function Get-ExpectedLocalBuildNames {
   param([Parameter(Mandatory = $true)][string]$Label)
   $names = @('web-editor','web-player','windows-editor','windows-nsis','windows-msi')
@@ -73,6 +80,7 @@ function Get-ExpectedLocalBuildNames {
   return @($names | Sort-Object)
 }
 
+# 独立检查源码归档中禁止出现的缓存、构建产物和敏感文件路径。
 function Test-ForbiddenSourceArchivePath {
   param([Parameter(Mandatory = $true)][string]$Path)
   $normalized = $Path.Replace('\','/').TrimStart('/')
@@ -118,7 +126,7 @@ $releaseNotes = Get-Content -LiteralPath (Join-Path $releaseRoot 'RELEASE_NOTES.
 $editLedger = Get-Content -LiteralPath (Join-Path $releaseRoot 'EDIT_LEDGER.md') -Raw
 if ($releaseNotes -notmatch [regex]::Escape($Version) -or $releaseNotes -notmatch [regex]::Escape($MachineVersion)) { throw 'Release notes do not identify both public and machine versions.' }
 if ($editLedger -notmatch [regex]::Escape($Version) -or $editLedger -notmatch [regex]::Escape($MachineVersion) -or $editLedger -notmatch 'Files (changed|added)' -or $editLedger -notmatch 'deterministic path-level manifest') { throw 'Edit ledger does not identify the release, machine authority, and exhaustive path-level file section.' }
-$ledgerPaths = @([regex]::Matches($editLedger, '(?m)^- `([^`]+)` — ') | ForEach-Object { $_.Groups[1].Value })
+$ledgerPaths = @([regex]::Matches($editLedger, '(?m)^- `([^`]+)` — ') | ForEach-Object <# 读取正则表达式第一个捕获组中的版本或校验值。 #> { $_.Groups[1].Value })
 if ($ledgerPaths.Count -lt 20 -or @($ledgerPaths | Select-Object -Unique).Count -ne $ledgerPaths.Count) { throw 'Edit ledger path manifest is incomplete or contains duplicate paths.' }
 
 $checksumNames = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
@@ -129,7 +137,7 @@ foreach ($line in Get-Content -LiteralPath (Join-Path $releaseRoot 'SHA256SUMS.t
   $actualHash = Get-Sha256Lower -LiteralPath (Join-Path $releaseRoot $name)
   if ($actualHash -ne $expectedHash) { throw "Root checksum mismatch: $name" }
 }
-$expectedChecksummed = @($expected | Where-Object { $_ -ne 'SHA256SUMS.txt' } | Sort-Object)
+$expectedChecksummed = @($expected | Where-Object <# 按条件 $_ -ne 'SHA256SUMS.txt' 筛选当前条目。 #> { $_ -ne 'SHA256SUMS.txt' } | Sort-Object)
 if (@(Compare-Object $expectedChecksummed @($checksumNames | Sort-Object)).Count -gt 0) { throw 'Root checksum manifest does not cover the exact ten payload artifacts.' }
 $checksumCount = $checksumNames.Count
 
@@ -160,7 +168,7 @@ try {
     $webHash = Get-Sha256Lower -LiteralPath $webPath
     if ($webHash -ne $expectedHash) { throw "Web checksum mismatch: $relativePath" }
   }
-  $actualWebPaths = @(Get-ChildItem -LiteralPath $web -File -Recurse | Where-Object Name -ne 'SHA256SUMS.txt' | ForEach-Object { $_.FullName.Substring($web.Length).TrimStart('\').Replace('\','/') } | Sort-Object -Unique)
+  $actualWebPaths = @(Get-ChildItem -LiteralPath $web -File -Recurse | Where-Object Name -ne 'SHA256SUMS.txt' | ForEach-Object <# 将绝对文件路径转换为规范化的归档相对路径。 #> { $_.FullName.Substring($web.Length).TrimStart('\').Replace('\','/') } | Sort-Object -Unique)
   if (@(Compare-Object @($webChecksumPaths | Sort-Object) $actualWebPaths).Count -gt 0) { throw 'Web checksum manifest does not cover the exact unique web payload inventory.' }
 
   $source = Join-Path $temporaryRoot 'source'
@@ -168,11 +176,11 @@ try {
     if (-not (Test-Path -LiteralPath (Join-Path $source $required))) { throw "Source package is missing $required" }
   }
   Assert-VersionAuthorities -Root $source -Expected $MachineVersion
-  $sourceIgnoreRules = @(Get-Content -LiteralPath (Join-Path $source '.gitignore') | ForEach-Object { $_.Trim() } | Where-Object { $_ -and -not $_.StartsWith('#') })
+  $sourceIgnoreRules = @(Get-Content -LiteralPath (Join-Path $source '.gitignore') | ForEach-Object <# 去除当前清单行首尾空白。 #> { $_.Trim() } | Where-Object <# 按条件 $_ -and -not $_.StartsWith('#') 筛选当前条目。 #> { $_ -and -not $_.StartsWith('#') })
   foreach ($requiredRule in @('/instructions.txt','stage*/')) {
     if ($requiredRule -notin $sourceIgnoreRules) { throw "Packaged .gitignore is missing required rule $requiredRule." }
   }
-  $forbiddenSource = Get-ChildItem -LiteralPath $source -Recurse -Force | Where-Object {
+  $forbiddenSource = Get-ChildItem -LiteralPath $source -Recurse -Force | Where-Object <# 计算归档文件相对路径并应用禁止源文件路径策略。 #> {
     $relative = $_.FullName.Substring($source.Length + 1)
     Test-ForbiddenSourceArchivePath -Path $relative
   }
@@ -266,11 +274,11 @@ try {
   $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
   if ($manifest.format -ne 'nova-release-evidence-manifest' -or $manifest.version -ne 1 -or $manifest.release -ne $Version -or $manifest.machineVersion -ne $MachineVersion -or $manifest.engineVersion -ne $MachineVersion -or $manifest.localQualificationComplete -ne $true -or $manifest.localReportAuthorities.status -ne 'passed') { throw 'Evidence manifest release authority or local qualification state is incorrect.' }
   if ($manifest.externalGates) {
-    $unexpectedExternalPass = @($manifest.externalGates.psobject.Properties | Where-Object { $_.Value -eq 'passed' })
+    $unexpectedExternalPass = @($manifest.externalGates.psobject.Properties | Where-Object <# 按条件 $_.Value -eq 'passed' 筛选当前条目。 #> { $_.Value -eq 'passed' })
     if ($unexpectedExternalPass.Count -gt 0) { throw 'Evidence manifest claims an external gate passed without packaged external evidence.' }
   }
   $sourceInputs = @($manifest.sourceInputs)
-  [string[]]$sourceFiles = @(Get-ChildItem -LiteralPath $source -File -Recurse | ForEach-Object { $_.FullName.Substring($source.Length).TrimStart('\').Replace('\','/') })
+  [string[]]$sourceFiles = @(Get-ChildItem -LiteralPath $source -File -Recurse | ForEach-Object <# 将绝对文件路径转换为规范化的归档相对路径。 #> { $_.FullName.Substring($source.Length).TrimStart('\').Replace('\','/') })
   [Array]::Sort($sourceFiles, [StringComparer]::Ordinal)
   if ($sourceInputs.Count -ne $sourceFiles.Count) { throw 'Evidence sourceInputs does not cover the exact packaged source inventory.' }
   $digestText = [Text.StringBuilder]::new()
@@ -313,11 +321,11 @@ try {
     $hash = Get-Sha256Lower -LiteralPath $path
     if ([string]$entry.bytes -notmatch '^\d+$' -or $entry.sha256 -notmatch '^[a-f0-9]{64}$' -or $hash -ne $entry.sha256 -or $file.Length -ne [long]$entry.bytes) { throw "Evidence digest or byte count mismatch: $relativePath" }
   }
-  $actualEvidencePaths = @($evidenceFiles | ForEach-Object { $_.FullName.Substring($evidence.Length).TrimStart('\').Replace('\','/') } | Sort-Object -Unique)
+  $actualEvidencePaths = @($evidenceFiles | ForEach-Object <# 将绝对文件路径转换为规范化的归档相对路径。 #> { $_.FullName.Substring($evidence.Length).TrimStart('\').Replace('\','/') } | Sort-Object -Unique)
   if (@(Compare-Object @($evidencePaths | Sort-Object) $actualEvidencePaths).Count -gt 0) { throw 'Evidence manifest does not cover the exact unique evidence inventory.' }
   $rootHashReport = Get-Content -LiteralPath (Join-Path $evidence 'build\root-artifact-hashes.json') -Raw | ConvertFrom-Json
   if ($rootHashReport.format -ne 'nova-root-artifact-hashes' -or $rootHashReport.version -ne 1 -or $rootHashReport.release -ne $Version) { throw 'Root-artifact evidence authority is invalid.' }
-  $expectedRootHashNames = @($expected | Where-Object { $_ -notin @("Nova_A-v$Version-release-evidence.zip", 'SHA256SUMS.txt') } | Sort-Object)
+  $expectedRootHashNames = @($expected | Where-Object <# 按条件 $_ -notin @("Nova_A-v$Version-release-evidence.zip", 'SHA256SUMS.txt') 筛选当前条目。 #> { $_ -notin @("Nova_A-v$Version-release-evidence.zip", 'SHA256SUMS.txt') } | Sort-Object)
   $rootHashNames = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
   foreach ($artifact in @($rootHashReport.artifacts)) {
     $name = [string]$artifact.name

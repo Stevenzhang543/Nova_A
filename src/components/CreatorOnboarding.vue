@@ -1,3 +1,4 @@
+<!-- 创作者引导：管理步骤、焦点、键盘翻页及学习入口。 -->
 <template>
   <Transition name="onboarding">
     <div v-if="learning.onboardingVisible" ref="dialog" class="onboarding-scrim" role="dialog" aria-modal="true" v-modal-focus tabindex="-1" :aria-labelledby="`onboarding-title-${learning.onboardingStep}`" @keydown="onKeyDown">
@@ -31,11 +32,11 @@ const steps: ReadonlyArray<{ icon: string; title: TranslationKey; description: T
   { icon: '◎', title: 'onboardingTestRecover', description: 'onboardingTestRecoverHint', points: ['onboardingPlayPoint', 'onboardingHealthPoint', 'onboardingRecoveryPoint'] },
   { icon: '▶', title: 'onboardingBuildShip', description: 'onboardingBuildShipHint', points: ['onboardingBuildPoint', 'onboardingEvidencePoint', 'onboardingExternalPoint'] }
 ]
-const current = computed(() => steps[Math.min(steps.length - 1, Math.max(0, learning.onboardingStep))])
+const current = computed(/* 返回 steps[Math.min(steps.length - 1, Math.max(0, learning.onboardingStep))] 的当前值。 */ () => steps[Math.min(steps.length - 1, Math.max(0, learning.onboardingStep))])
 const dialog = ref<HTMLElement | null>(null)
-watch(() => learning.onboardingVisible, visible => { if (visible) void nextTick(() => dialog.value?.focus()) }, { immediate: true })
-function next(): void { if (learning.onboardingStep < steps.length - 1) learning.onboardingStep++; else { finishCreatorOnboarding(); editorState.activeWorkspace = 'manage'; editorState.currentPage = 'manage'; editorState.manageSection = 'learn' } }
-function onKeyDown(event: KeyboardEvent): void {
+watch(/* 返回 learning.onboardingVisible 的当前值。 */ () => learning.onboardingVisible, /** 引导显示时等待 DOM 更新后聚焦对话框。 */ visible => { if (visible) void nextTick(/** 对话框存在时设置键盘焦点。 */ () => dialog.value?.focus()) }, { immediate: true })
+/** 推进引导步骤，最后一步结束引导并打开管理工作区学习栏目。 */ function next(): void { if (learning.onboardingStep < steps.length - 1) learning.onboardingStep++; else { finishCreatorOnboarding(); editorState.activeWorkspace = 'manage'; editorState.currentPage = 'manage'; editorState.manageSection = 'learn' } }
+/** 处理未消费的退出键及根容器翻页键，阻止已处理事件继续传播。 */ function onKeyDown(event: KeyboardEvent): void {
   if (event.defaultPrevented) return
   if (event.key !== 'Escape' && event.target !== event.currentTarget) return
   if (event.key === 'Escape') finishCreatorOnboarding()

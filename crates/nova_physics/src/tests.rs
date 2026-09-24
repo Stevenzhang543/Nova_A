@@ -1,7 +1,9 @@
+// 物理行为回归：检查单位、材料、刚体、复合碰撞、绳索及关节的数值约束。
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    // 构造椭圆测试刚体的扁平记录。
     fn ellipse_record(id: f64, x: f64, y: f64, radius_x: f64, radius_y: f64) -> Vec<f64> {
         let mut record = vec![0.0; STRIDE];
         record[0] = id;
@@ -22,6 +24,7 @@ mod tests {
         record
     }
 
+    // 构造矩形测试刚体的扁平记录。
     fn box_record(id: f64, x: f64, y: f64, width: f64, height: f64) -> Vec<f64> {
         let mut record = vec![0.0; STRIDE];
         record[0] = id;
@@ -52,10 +55,12 @@ mod tests {
         record
     }
 
+    // 检查结果中所有浮点数是否为有限值。
     fn all_finite(values: &[f64]) -> bool {
-        values.iter().all(|value| value.is_finite())
+        values.iter().all(/* 判断 value . is_finite () 是否成立，供过滤或有效性检查使用。 */ |value| value.is_finite())
     }
 
+    // 验证双精度重力积分产生预期速度。
     #[test]
     fn integrates_gravity_with_f64_precision() {
         let input = ellipse_record(1.0, 0.0, 0.0, 1.0, 1.0);
@@ -65,6 +70,7 @@ mod tests {
         assert!(all_finite(&output));
     }
 
+    // 验证重合椭圆能分离且数值保持有限。
     #[test]
     fn coincident_ellipses_remain_finite_and_separate() {
         let mut input = ellipse_record(1.0, 0.0, 0.0, 2.0, 1.0);
@@ -79,6 +85,7 @@ mod tests {
         assert!(separation > 0.0);
     }
 
+    // 验证静态刚体不随物理推进移动。
     #[test]
     fn static_body_does_not_move() {
         let mut input = box_record(1.0, 3.0, 4.0, 2.0, 2.0);
@@ -90,6 +97,7 @@ mod tests {
         assert_eq!(output[3], 4.0);
     }
 
+    // 验证运动学刚体按速度移动但不受外力积分。
     #[test]
     fn kinematic_body_integrates_velocity_without_forces() {
         let mut input = box_record(1.0, 0.0, 0.0, 2.0, 2.0);
@@ -101,6 +109,7 @@ mod tests {
         assert!((output[3] - 0.4).abs() < 1.0e-10);
     }
 
+    // 验证传感器上报接触但不产生接触冲量。
     #[test]
     fn sensors_report_contacts_without_applying_impulses() {
         let mut input = ellipse_record(1.0, -0.5, 0.0, 1.0, 1.0);
@@ -115,6 +124,7 @@ mod tests {
         assert!((output[STRIDE + 4] + 1.0).abs() < 1.0e-10);
     }
 
+    // 验证碰撞层隔离阻止不允许的接触。
     #[test]
     fn collision_layers_are_isolated() {
         let mut input = ellipse_record(1.0, 0.0, 0.0, 1.0, 1.0);
@@ -126,6 +136,7 @@ mod tests {
         assert_eq!(output[STRIDE + 29], 0.0);
     }
 
+    // 验证损坏数值输入经清理后不传播非有限值。
     #[test]
     fn malformed_numbers_are_sanitized() {
         let mut input = ellipse_record(1.0, f64::NAN, f64::INFINITY, -1.0, 0.0);
@@ -136,6 +147,7 @@ mod tests {
         assert!(output[8] > 0.0);
     }
 
+    // 验证形状惯量与解析公式一致。
     #[test]
     fn shape_inertia_matches_analytic_values() {
         let ellipse = Shape::Ellipse {
@@ -156,6 +168,7 @@ mod tests {
         assert!((rectangle.inertia(4.0) - expected).abs() < 1.0e-10);
     }
 
+    // 验证旋转椭圆与多边形接触流形保持有限。
     #[test]
     fn rotated_ellipse_and_polygon_generate_a_finite_manifold() {
         let mut input = ellipse_record(1.0, 0.0, 0.0, 2.0, 0.5);
@@ -170,6 +183,7 @@ mod tests {
         assert!(output[32] > 0.0);
     }
 
+    // 验证完全弹性正碰按预期交换反向速度。
     #[test]
     fn perfectly_elastic_head_on_collision_reverses_velocities() {
         let mut input = ellipse_record(1.0, -0.95, 0.0, 1.0, 1.0);
@@ -187,9 +201,10 @@ mod tests {
         assert!(output[STRIDE + 4] > 0.99);
     }
 
+    // 验证材质混合模式确定性地影响接触恢复系数。
     #[test]
     fn material_combine_modes_change_pair_restitution_deterministically() {
-        let collide = |mode: f64| {
+        let collide = /* 按给定材质混合模式运行同一碰撞场景，比较恢复系数造成的速度差。 */ |mode: f64| {
             let mut first = ellipse_record(1.0, -0.95, 0.0, 1.0, 1.0);
             first[4] = 1.0;
             first[10] = 1.0;
@@ -209,6 +224,7 @@ mod tests {
         assert!(maximum[4] < -0.99 && maximum[STRIDE + 4] > 0.99);
     }
 
+    // 验证旧刚体记录升级和降级保留形状及运动状态。
     #[test]
     fn v3_3_body_records_upgrade_and_downgrade_without_shape_or_motion_loss() {
         let mut current = ellipse_record(7.0, 2.0, -3.0, 0.75, 1.25);
@@ -221,6 +237,7 @@ mod tests {
         assert!((output[13] - 1.25).abs() < 1.0e-10);
     }
 
+    // 验证恢复阈值抑制低速弹跳。
     #[test]
     fn restitution_threshold_suppresses_low_speed_bounce() {
         let mut input = ellipse_record(1.0, -0.95, 0.0, 1.0, 1.0);
@@ -238,6 +255,7 @@ mod tests {
         assert!(output[STRIDE + 4].abs() < 1.0e-8);
     }
 
+    // 验证连续碰撞阻止高速刚体穿过薄墙。
     #[test]
     fn high_speed_body_does_not_tunnel_through_a_thin_wall() {
         let mut input = ellipse_record(1.0, -5.0, 0.0, 0.5, 0.5);
@@ -252,6 +270,7 @@ mod tests {
         assert!(output[4] < 1_000.0);
     }
 
+    // 验证大于一的有效摩擦系数不被错误截断。
     #[test]
     fn friction_coefficients_above_one_are_preserved() {
         let mut input = box_record(1.0, 0.0, 0.0, 1.0, 1.0);
@@ -262,6 +281,7 @@ mod tests {
         assert_eq!(body.static_friction, 2.5);
     }
 
+    // 验证退化多边形使用后备形状且不崩溃。
     #[test]
     fn degenerate_polygon_vertices_fall_back_without_panicking() {
         let mut input = box_record(1.0, 0.0, 0.0, 2.0, 3.0);
@@ -269,12 +289,13 @@ mod tests {
             .iter_mut()
             .take(42)
             .skip(34)
-            .for_each(|value| *value = 0.0);
+            .for_each(/* 计算并返回 * value = 0.0，用于当前 degenerate_polygon_vertices_fall_back_without_panicking 流程。 */ |value| *value = 0.0);
         let body = Body::from_data(&input, 0);
         assert!((body.shape.area() - 6.0).abs() < 1.0e-10);
         assert!(body.inertia.is_finite());
     }
 
+    // 验证胶囊形状凸近似有限且可复现。
     #[test]
     fn capsule_shape_uses_a_finite_deterministic_convex_approximation() {
         let mut input = box_record(1.0, 0.0, 0.0, 2.0, 6.0);
@@ -282,11 +303,12 @@ mod tests {
         let body = Body::from_data(&input, 0);
         let Shape::Polygon { ref vertices } = body.shape else { panic!("capsule must be convex") };
         assert_eq!(vertices.len(), 12);
-        assert!(vertices.iter().all(|vertex| vertex.x.is_finite() && vertex.y.is_finite()));
+        assert!(vertices.iter().all(/* 在当前宏表达式中计算 vertex . x . is_finite () && vertex . y . is_finite ()，供查询映射、过滤或断言使用。 */ |vertex| vertex.x.is_finite() && vertex.y.is_finite()));
         assert!(Shape::Polygon { vertices: vertices.clone() }.area() > 8.0);
         assert!(body.inertia.is_finite());
     }
 
+    // 验证有限线段保留明确指定的厚度。
     #[test]
     fn finite_segment_preserves_explicit_thickness() {
         let mut input = box_record(1.0, 0.0, 0.0, 8.0, 0.125);
@@ -296,6 +318,7 @@ mod tests {
         assert!(body.inertia.is_finite());
     }
 
+    // 验证不可移动传感器仍报告重叠。
     #[test]
     fn immovable_sensors_still_report_overlap() {
         let mut input = box_record(1.0, 0.0, 0.0, 2.0, 2.0);
@@ -309,6 +332,7 @@ mod tests {
         assert!(output[STRIDE + 29] > 0.0);
     }
 
+    // 验证最小尺度形状可碰撞且惯量符合解析值。
     #[test]
     fn minimum_scale_shapes_collide_and_keep_analytic_inertia() {
         let radius = MIN_DIMENSION;
@@ -326,6 +350,7 @@ mod tests {
         assert!((output[26] - expected_inertia).abs() <= expected_inertia * 1.0e-10);
     }
 
+    // 验证力、加速度与力矩满足质量和惯量关系。
     #[test]
     fn force_acceleration_and_torque_follow_newtons_laws() {
         let mut input = ellipse_record(1.0, 0.0, 0.0, 1.0, 1.0);
@@ -338,6 +363,7 @@ mod tests {
         assert!((output[15] - 0.2).abs() < 1.0e-12);
     }
 
+    // 验证偏心穿透修正计入转动有效质量。
     #[test]
     fn off_center_penetration_correction_respects_rotational_effective_mass() {
         let dynamic = Body::from_data(&box_record(1.0, 0.0, 0.0, 2.0, 2.0), 0);
@@ -372,6 +398,7 @@ mod tests {
         assert_eq!(bodies[1].position, Vec2::new(2.0, 0.0));
     }
 
+    // 验证指数空气阻尼对时间步划分保持一致。
     #[test]
     fn exponential_air_damping_is_timestep_independent() {
         let mut input = ellipse_record(1.0, 0.0, 0.0, 1.0, 1.0);
@@ -380,6 +407,7 @@ mod tests {
         assert!((output[4] - 10.0 * (-0.4_f64).exp()).abs() < 1.0e-12);
     }
 
+    // 验证静摩擦能使低速滑动矩形稳定下来。
     #[test]
     fn static_friction_settles_a_slow_sliding_box() {
         let mut dynamic = box_record(1.0, 0.0, 0.0, 1.0, 1.0);
@@ -401,6 +429,7 @@ mod tests {
         assert!(state[5].abs() < 1.0e-3, "vertical velocity={}", state[5]);
     }
 
+    // 验证运动学物体能向动态刚体传递接触动量。
     #[test]
     fn moving_kinematic_body_transfers_momentum_to_dynamic_body() {
         let mut kinematic = box_record(1.0, -0.75, 0.0, 1.0, 1.0);
@@ -413,6 +442,7 @@ mod tests {
         assert!((output[4] - 2.0).abs() < 1.0e-12);
     }
 
+    // 构造连接两端刚体及静止长度的测试记录。
     fn connection_record(body_a: usize, body_b: usize, rest_length: f64) -> Vec<f64> {
         let mut record = vec![0.0; CONNECTION_STRIDE];
         record[0] = 1.0;
@@ -429,6 +459,7 @@ mod tests {
         record
     }
 
+    // 验证刚性绳约束限制端点分离。
     #[test]
     fn rigid_string_prevents_endpoints_from_separating() {
         let mut bodies = ellipse_record(1.0, -1.0, 0.0, 0.1, 0.1);
@@ -443,6 +474,7 @@ mod tests {
         assert_eq!(output[bodies.len() + 17], 0.0);
     }
 
+    // 验证可伸长绳施加带阻尼的胡克张力。
     #[test]
     fn stretchable_string_applies_damped_hooke_tension() {
         let mut bodies = ellipse_record(1.0, -1.0, 0.0, 0.1, 0.1);
@@ -459,6 +491,7 @@ mod tests {
         assert!(output[bodies.len() + 18] > 0.0);
     }
 
+    // 验证弯曲与拉伸过载产生不同失效状态。
     #[test]
     fn overload_reports_distinct_bending_and_stretch_failures() {
         let mut bodies = ellipse_record(1.0, 0.0, 0.0, 0.1, 0.1);
@@ -486,6 +519,7 @@ mod tests {
         assert_eq!(stretched_output[bodies.len() + 17], 2.0);
     }
 
+    // 验证非法连接索引不会损坏刚体输出。
     #[test]
     fn invalid_connection_indices_are_ignored_without_corrupting_bodies() {
         let bodies = ellipse_record(1.0, 0.0, 0.0, 1.0, 1.0);
@@ -496,6 +530,7 @@ mod tests {
         assert_eq!(output[2], 0.0);
     }
 
+    // 验证重叠绑定刚体保持相对变换。
     #[test]
     fn bound_overlapping_bodies_preserve_relative_transform() {
         let mut bodies = box_record(1.0, 0.0, 0.0, 1.0, 1.0);
@@ -529,6 +564,7 @@ mod tests {
         assert!(all_finite(&output));
     }
 
+    // 验证刚性复合体按组合质量响应外力。
     #[test]
     fn rigid_compound_uses_combined_mass_for_external_force() {
         let first = box_record(1.0, 0.0, 0.0, 1.0, 1.0);
@@ -550,6 +586,7 @@ mod tests {
         assert!((output[15] - output[STRIDE + 15]).abs() < 1.0e-10);
     }
 
+    // 验证不相容层之间的连接不传递力。
     #[test]
     fn cross_layer_connection_transmits_no_force() {
         let mut first = ellipse_record(1.0, -1.0, 0.0, 0.1, 0.1);
@@ -564,6 +601,7 @@ mod tests {
         assert!((output[STRIDE + 4] - 10.0).abs() < 1.0e-10);
     }
 
+    // 验证物理绳节点受重力并回传更新状态。
     #[test]
     fn physical_string_nodes_receive_gravity_and_return_state() {
         let mut first = ellipse_record(1.0, -1.0, 0.0, 0.1, 0.1);
@@ -586,6 +624,7 @@ mod tests {
         assert!(all_finite(&output));
     }
 
+    // 验证绳节点与相容层刚体发生碰撞。
     #[test]
     fn physical_string_node_collides_with_same_layer_body() {
         let mut first = ellipse_record(1.0, -2.0, 0.0, 0.1, 0.1);
@@ -609,6 +648,7 @@ mod tests {
         assert!(all_finite(&output));
     }
 
+    // 验证物理绳排除与自身连接的两个端点刚体。
     #[test]
     fn physical_string_excludes_both_connected_bodies_from_collision() {
         let mut first = ellipse_record(1.0, -1.0, 0.0, 1.5, 1.5);
@@ -629,6 +669,7 @@ mod tests {
         assert!(output[node_offset + 3].abs() < 1.0e-12);
     }
 
+    // 验证绳段接触冲量传递到锚点刚体。
     #[test]
     fn segment_collision_impulse_reaches_anchor_bodies() {
         let first = ellipse_record(1.0, -2.0, 0.0, 0.1, 0.1);
@@ -650,6 +691,7 @@ mod tests {
         assert!(all_finite(&output));
     }
 
+    // 验证绳索断裂后两侧碎段仍继续模拟。
     #[test]
     fn broken_physical_string_keeps_both_fragments_simulated() {
         let mut first = ellipse_record(1.0, -1.0, 0.0, 0.1, 0.1);
@@ -672,6 +714,7 @@ mod tests {
         assert!(all_finite(&output));
     }
 
+    // 验证偏心绳锚点向刚体施加力矩。
     #[test]
     fn off_center_rope_anchor_applies_torque() {
         let first = ellipse_record(1.0, -1.0, 0.0, 0.5, 0.5);
@@ -692,6 +735,7 @@ mod tests {
         assert!(all_finite(&output));
     }
 
+    // 验证手工多节点绳在重力下产生形变。
     #[test]
     fn multi_node_manual_rope_deforms_under_gravity() {
         let mut first = ellipse_record(1.0, -2.0, 0.0, 0.1, 0.1);
@@ -720,12 +764,13 @@ mod tests {
         assert!(all_finite(&output));
     }
 
+    // 验证绳线密度产生正确的离散节点质量。
     #[test]
     fn rope_linear_density_sets_exact_lumped_node_mass() {
         let mut bodies_data = ellipse_record(1.0, -3.0, 0.0, 0.1, 0.1);
         bodies_data.extend(ellipse_record(2.0, 3.0, 0.0, 0.1, 0.1));
         let bodies: Vec<Body> = (0..bodies_data.len() / STRIDE)
-            .map(|index| Body::from_data(&bodies_data, index * STRIDE))
+            .map(/* 计算并返回 Body :: from_data (& bodies_data , index * STRIDE)，用于当前 rope_linear_density_sets_exact_lumped_node_mass 流程。 */ |index| Body::from_data(&bodies_data, index * STRIDE))
             .collect();
         let mut connection = connection_record(0, 1, 6.0);
         connection[24] = 1.0;
@@ -736,6 +781,7 @@ mod tests {
         assert!((rope_node_inverse_mass(&constraint) - expected_inverse_mass).abs() < 1.0e-12);
     }
 
+    // 验证绳刚度不随节点采样数量错误变化。
     #[test]
     fn stretchable_rope_stiffness_is_sampling_independent() {
         let mut bodies = ellipse_record(1.0, -1.0, 0.0, 0.1, 0.1);
@@ -767,6 +813,7 @@ mod tests {
         assert!((one_tension - three_tension).abs() < 1.0e-6);
     }
 
+    // 验证带阻尼碰撞绳在多步模拟后仍保持有界。
     #[test]
     fn damped_collision_rope_remains_bounded_over_many_steps() {
         let mut bodies = ellipse_record(1.0, 1.0, -2.0, 0.7, 0.7);
@@ -806,10 +853,11 @@ mod tests {
             bodies.copy_from_slice(&output[..body_length]);
             connection.copy_from_slice(&output[body_length..]);
             assert!(all_finite(&output));
-            assert!(output.iter().all(|value| value.abs() < 1.0e8));
+            assert!(output.iter().all(/* 在当前宏表达式中计算 value . abs () < 1.0e8，供查询映射、过滤或断言使用。 */ |value| value.abs() < 1.0e8));
         }
     }
 
+    // 验证禁止弯曲的可伸长绳抵抗曲率变化。
     #[test]
     fn non_bendable_stretchable_rope_resists_curvature() {
         let mut bodies = ellipse_record(1.0, -2.0, 0.0, 0.1, 0.1);
@@ -837,6 +885,7 @@ mod tests {
         assert!(middle_y < 1.5, "middle_y={middle_y}");
     }
 
+    // 验证断裂绳段不会跨断口重新耦合弯曲约束。
     #[test]
     fn broken_non_bendable_fragments_do_not_recouple_across_gap() {
         let mut bodies = ellipse_record(1.0, -2.0, 0.0, 0.1, 0.1);
@@ -867,6 +916,7 @@ mod tests {
         assert!((output[offset + 5] + 1.0).abs() < 1.0e-12);
     }
 
+    // 验证局部重力、角阻尼和手工惯量均作用到模拟。
     #[test]
     fn local_gravity_scale_angular_damping_and_manual_inertia_are_bound() {
         let mut body = ellipse_record(1.0, 0.0, 0.0, 1.0, 1.0);
@@ -889,6 +939,7 @@ mod tests {
         assert!((output[26] - 2.0).abs() < 1.0e-12);
     }
 
+    // 验证世界单位未被隐藏缩放。
     #[test]
     fn one_world_unit_remains_one_configured_unit() {
         let mut body = box_record(1.0, 3.0, -4.0, 1.0, 1.0);
@@ -900,6 +951,7 @@ mod tests {
         assert!((output[3] + 5.5).abs() < 1.0e-10, "y={}", output[3]);
     }
 
+    // 验证零碰撞掩码完全禁用接触。
     #[test]
     fn zero_collision_mask_disables_contacts() {
         let mut first = ellipse_record(1.0, 0.0, 0.0, 1.0, 1.0);
@@ -912,6 +964,7 @@ mod tests {
         assert_eq!(output[STRIDE + 29], 0.0);
     }
 
+    // 验证冻结旋转同时阻止力矩和角冲量。
     #[test]
     fn freeze_rotation_rejects_torque_and_angular_impulses() {
         let mut body = box_record(1.0, 0.0, 0.0, 2.0, 1.0);
@@ -923,6 +976,7 @@ mod tests {
         assert_eq!(output[15], 0.0);
     }
 
+    // 验证连续碰撞模式控制自适应子步数。
     #[test]
     fn continuous_mode_controls_adaptive_substeps() {
         let mut continuous = ellipse_record(1.0, 0.0, 0.0, 0.1, 0.1);
@@ -935,6 +989,7 @@ mod tests {
         assert_eq!(determine_sub_steps(&[discrete_body], 0.1, 0.0, BASE_SUB_STEPS), BASE_SUB_STEPS);
     }
 
+    // 验证冲量唤醒休眠刚体。
     #[test]
     fn sleeping_body_wakes_when_an_impulse_arrives() {
         let data = ellipse_record(1.0, 0.0, 0.0, 1.0, 1.0);
@@ -946,6 +1001,7 @@ mod tests {
         assert!(body.velocity.x > 0.0);
     }
 
+    // 验证静止刚体无需接触也可休眠。
     #[test]
     fn motionless_body_sleeps_without_requiring_a_contact() {
         let data = ellipse_record(1.0, 0.0, 0.0, 1.0, 1.0);
@@ -954,6 +1010,7 @@ mod tests {
         assert!(body.sleeping);
     }
 
+    // 验证固定关节保持参考相对变换。
     #[test]
     fn fixed_joint_preserves_the_reference_transform() {
         let mut bodies = box_record(1.0, 0.0, 0.0, 1.0, 1.0);
@@ -969,6 +1026,7 @@ mod tests {
         assert!((output[4] - output[STRIDE + 4]).abs() < 1.0e-6);
     }
 
+    // 验证普通关节的碰撞排除不会错误传播到整个链。
     #[test]
     fn ordinary_joint_collision_suppression_is_not_transitive() {
         let bodies = vec![
@@ -992,6 +1050,7 @@ mod tests {
         assert!(active_bound_pairs(&bindings, bodies.len()).contains(&(0, 2)));
     }
 
+    // 验证普通关节排除两个端点绑定组之间的内部碰撞。
     #[test]
     fn ordinary_joint_suppresses_both_endpoint_binding_components() {
         let bodies = vec![
@@ -1016,6 +1075,7 @@ mod tests {
         }
     }
 
+    // 验证固定关节断裂力矩依据约束反作用。
     #[test]
     fn fixed_joint_break_torque_observes_constraint_reaction() {
         let mut bodies = box_record(1.0, 0.0, 0.0, 1.0, 1.0);
@@ -1032,6 +1092,7 @@ mod tests {
         assert_eq!(output[offset + 17], 1.0);
     }
 
+    // 验证距离关节维持设定长度。
     #[test]
     fn distance_joint_holds_its_configured_length() {
         let mut bodies = ellipse_record(1.0, -1.0, 0.0, 0.1, 0.1);
@@ -1046,6 +1107,7 @@ mod tests {
         assert!((distance - 2.0).abs() < 1.0e-5, "distance={distance}, a=({},{}), b=({},{}), va=({},{}), vb=({},{})", output[2], output[3], output[STRIDE + 2], output[STRIDE + 3], output[4], output[5], output[STRIDE + 4], output[STRIDE + 5]);
     }
 
+    // 验证绳关节在限长内松弛，超过限长时约束伸展。
     #[test]
     fn rope_joint_is_slack_below_its_maximum_length_and_limits_extension() {
         let mut slack_bodies = ellipse_record(1.0, -0.5, 0.0, 0.1, 0.1);
@@ -1062,6 +1124,7 @@ mod tests {
         assert!(distance <= 2.0 + 1.0e-6, "distance={distance}");
     }
 
+    // 验证转动关节保持锚点重合并允许相对旋转。
     #[test]
     fn revolute_joint_keeps_anchors_together_but_allows_rotation() {
         let mut bodies = box_record(1.0, -1.0, 0.0, 1.0, 1.0);
@@ -1080,6 +1143,7 @@ mod tests {
         assert!((output[STRIDE + 14] - output[14]).abs() > 1.0e-4);
     }
 
+    // 验证移动关节锁定垂直运动并应用轴向限位。
     #[test]
     fn prismatic_joint_locks_perpendicular_motion_and_applies_limits() {
         let mut bodies = box_record(1.0, 0.0, 0.0, 1.0, 1.0);
@@ -1101,6 +1165,7 @@ mod tests {
         assert!(output[STRIDE + 2] <= 2.0 + 1.0e-5, "x={}", output[STRIDE + 2]);
     }
 
+    // 验证弹簧关节在拉伸和压缩两侧产生胡克力。
     #[test]
     fn spring_joint_applies_hooke_force_in_both_directions() {
         let mut bodies = ellipse_record(1.0, -1.0, 0.0, 0.1, 0.1);
@@ -1115,6 +1180,7 @@ mod tests {
         assert!(output[STRIDE + 4] < 0.0);
     }
 
+    // 验证单向平台阻挡上方落体并允许从下方通过。
     #[test]
     fn one_way_platform_blocks_above_and_allows_passage_from_below() {
         let mut falling = box_record(1.0, 0.0, 0.30, 0.5, 0.5);
@@ -1135,6 +1201,7 @@ mod tests {
         assert!((passed[5] - 2.0).abs() < 1.0e-10);
     }
 
+    // 验证持久复合子体具有准确的接触身份和惯量。
     #[test]
     fn retained_compound_children_have_exact_contact_identity_and_inertia() {
         let mut world = PhysicsWorld::new();
@@ -1151,13 +1218,14 @@ mod tests {
         }
         world.upsert_collider_shapes(10, &child).unwrap();
         world.step(1.0 / 120.0, 0.0, 0.0);
-        let contacts = world.drain_events().into_iter().filter_map(|event| match event {
+        let contacts = world.drain_events().into_iter().filter_map(/* 计算并返回 match event { PhysicsEvent :: ContactStarted (contact) => Some (contact) , _ => None ,，用于当前 retained_compound_children_have_exact_contact_identity_and_inertia 流程。 */ |event| match event {
             PhysicsEvent::ContactStarted(contact) => Some(contact), _ => None,
         }).collect::<Vec<_>>();
-        assert!(contacts.iter().any(|contact| contact.first_collider == 42 || contact.second_collider == 42));
+        assert!(contacts.iter().any(/* 在当前宏表达式中计算 contact . first_collider == 42 || contact . second_collider == 42，供查询映射、过滤或断言使用。 */ |contact| contact.first_collider == 42 || contact.second_collider == 42));
         assert!(world.state()[26] > first[26], "compound inertia must include the offset child");
     }
 
+    // 验证接触动态刚体作为同一物理岛休眠。
     #[test]
     fn touching_dynamic_bodies_sleep_as_one_island() {
         let mut bodies = box_record(1.0, 0.0, 0.0, 1.0, 1.0);
@@ -1168,6 +1236,7 @@ mod tests {
         assert!(world.bodies[0].sleeping);
     }
 
+    // 验证移动电机沿轴驱动且转动限位限制角度。
     #[test]
     fn prismatic_motor_drives_linear_axis_and_revolute_limits_rotation() {
         let mut bodies = box_record(1.0, 0.0, 0.0, 1.0, 1.0);
@@ -1186,6 +1255,7 @@ mod tests {
         assert!(normalize_angle(state[STRIDE + 14] - state[14]).abs() <= 0.2001);
     }
 
+    // 验证传感器子形状不改变复合质量属性。
     #[test]
     fn sensor_children_do_not_change_compound_mass_properties() {
         let mut body = Body::from_data(&box_record(1.0, 0.0, 0.0, 2.0, 2.0), 0);
@@ -1199,6 +1269,7 @@ mod tests {
         assert!(body.collider_children[0].is_sensor);
     }
 
+    // 验证旋转复合体连续碰撞使用最远子表面尺度。
     #[test]
     fn rotational_compound_ccd_uses_the_farthest_child_surface() {
         let mut record = box_record(1.0, 0.0, 0.0, 1.0, 1.0);
@@ -1215,21 +1286,23 @@ mod tests {
         assert!(determine_sub_steps(&[compound], 1.0 / 60.0, 0.0, 1) > 1);
     }
 
+    // 验证不同固定频率下重力速度保持一致。
     #[test]
     fn gravity_velocity_is_consistent_at_30_60_and_120_hz() {
-        let simulate = |rate: usize| {
+        let simulate = /* 按指定频率推进一秒重力模拟，返回最终垂直速度供频率对照。 */ |rate: usize| {
             let mut state = ellipse_record(1.0, 0.0, 0.0, 0.5, 0.5);
             for _ in 0..rate { state = step_physics(&state, 1.0 / rate as f64, 9.81, 0.0); }
             state[5]
         };
         let velocities = [simulate(30), simulate(60), simulate(120)];
-        assert!(velocities.iter().all(|velocity| (*velocity + 9.81).abs() < 1.0e-10), "velocities={velocities:?}");
+        assert!(velocities.iter().all(/* 在当前宏表达式中计算 (* velocity + 9.81) . abs () < 1.0e-10，供查询映射、过滤或断言使用。 */ |velocity| (*velocity + 9.81).abs() < 1.0e-10), "velocities={velocities:?}");
         assert!((velocities[0] - velocities[2]).abs() < 1.0e-10);
     }
 
+    // 验证弹性碰撞速度不随世界形状尺度变化。
     #[test]
     fn elastic_collision_velocity_is_invariant_under_world_scale() {
-        let collide = |scale: f64| {
+        let collide = /* 按给定形状尺度运行同一弹性碰撞，返回可对照的最终速度。 */ |scale: f64| {
             let mut first = ellipse_record(1.0, -0.95 * scale, 0.0, scale, scale);
             first[4] = 1.0; first[10] = 1.0; first[27] = 0.0;
             let mut second = ellipse_record(2.0, 0.95 * scale, 0.0, scale, scale);

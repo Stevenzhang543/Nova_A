@@ -1,3 +1,4 @@
+/** 网络编辑界面的多语言标签及失败提示。 */
 import { preferencesState } from '../store/preferences'
 const labels = {
   interestX: ['Interest X', 'Interessenmittelpunkt X', '关注中心 X'],
@@ -29,7 +30,7 @@ const labels = {
   epochFailure: ['Traffic from an old or changed connection was rejected. Reconnect through the normal session handshake.', 'Nachrichten einer alten oder geänderten Verbindung wurden abgewiesen. Über den normalen Sitzungsaufbau erneut verbinden.', '已拒绝来自旧连接或已变更连接的消息。请通过正常会话握手重新连接。']
 } as const
 export type NetworkLabel18 = keyof typeof labels
-export function networkLabel18(key: NetworkLabel18): string { return labels[key][preferencesState.locale === 'de' ? 1 : preferencesState.locale === 'zh' ? 2 : 0] }
-export function networkFailure18(message: string): string {
+/* 返回 labels[key][preferencesState.locale === 'de' ? 1 : preferencesState.locale === 'zh' ? 2 : 0] 的当前值。 */ export function networkLabel18(key: NetworkLabel18): string { return labels[key][preferencesState.locale === 'de' ? 1 : preferencesState.locale === 'zh' ? 2 : 0] }
+/** 按基线、可靠传输及重放纪元关键词选择本地化失败类别，其余使用通用失败提示。 */ export function networkFailure18(message: string): string {
   return networkLabel18(/baseline|resync/i.test(message) ? 'baselineFailure' : /reliable|acknowledg/i.test(message) ? 'reliableFailure' : /epoch|replay protection/i.test(message) ? 'epochFailure' : 'failure')
 }

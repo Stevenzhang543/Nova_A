@@ -1,20 +1,21 @@
+/** 版本6.7.0：生成参考项目与对应资源，供功能演示和版本验证使用。 */
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root=dirname(dirname(fileURLToPath(import.meta.url))),projectsRoot=join(root,'reference-projects/projects')
-const readJson=async path=>JSON.parse(await readFile(path,'utf8')),writeJson=(path,value)=>writeFile(path,`${JSON.stringify(value,null,2)}\n`)
+const readJson=/* 调用 JSON.parse(await readFile(path,'utf8')) 并返回调用结果。 */ async path=>JSON.parse(await readFile(path,'utf8')),writeJson=/* 调用 writeFile(path,`${JSON.stringify(value,null,2)}\n`) 并返回调用结果。 */ (path,value)=>writeFile(path,`${JSON.stringify(value,null,2)}\n`)
 const base=await readJson(join(projectsRoot,'gameplay-v54-platformer/project.nova'))
-function identify(project,name,template){
+/** 配置6.7.0无代码参考项目身份，移除该示例的脚本资源，并设置确定性交付与键盘、手柄和触摸无障碍参数。 */ function identify(project,name,template){
   project.engineVersion='6.7.0';project.projectName=name;project.projectMetadata.name=name;project.projectMetadata.template=template;project.projectMetadata.updatedAt='2026-09-01T00:00:00.000Z';project.projectMetadata.description='No-code touch, keyboard and gamepad platformer with safe-area and accessibility evidence.'
-  project.manifest.name=name;project.manifest.engineCompatibility.maximumExclusive='7.0.0';project.assets=project.assets.filter(asset=>asset.assetType!=='script')
+  project.manifest.name=name;project.manifest.engineCompatibility.maximumExclusive='7.0.0';project.assets=project.assets.filter(/* 比较 asset.assetType 与 'script'，返回严格不等的判断结果。 */ asset=>asset.assetType!=='script')
   project.projectSettings.build.gameName=name;project.projectSettings.build.platform.version='6.7.0';project.projectSettings.build.platform.identifier=`top.whitelists.novaa.${template.replace(/[^a-z0-9]/g,'')}`
   project.projectSettings.build.delivery={...project.projectSettings.build.delivery,deterministic:true,incremental:true,patchManifest:true,provenance:true,sbom:true,exportTemplate:'web-es2022-v1'}
   project.projectSettings.presentation.accessibility={...project.projectSettings.presentation.accessibility,keyboardNavigation:true,gamepadNavigation:true,screenReaderMetadata:true,announceFocusChanges:true,textScale:1,captionScale:1,minimumTargetSize:44}
 }
-function binding(device,code,extra={}){return{device,code,scale:1,x:0,y:0,gamepad:0,deadzone:.15,modifiers:[],chord:[],threshold:.01,invert:false,responseCurve:'linear',deviceId:'',...extra}}
+/** 创建指定设备和代码的输入绑定默认值，并用额外参数覆盖死区、修饰键和响应曲线等设置。 */ function binding(device,code,extra={}){return{device,code,scale:1,x:0,y:0,gamepad:0,deadzone:.15,modifiers:[],chord:[],threshold:.01,invert:false,responseCurve:'linear',deviceId:'',...extra}}
 const touch=structuredClone(base);identify(touch,'Nova 6.7 Touch Platformer','creator-v670-touch-platformer')
-const horizontal=touch.projectSettings.inputMap.find(action=>action.name==='MoveHorizontal'),jump=touch.projectSettings.inputMap.find(action=>action.name==='Jump')
+const horizontal=touch.projectSettings.inputMap.find(/* 比较 action.name 与 'MoveHorizontal'，返回严格相等的判断结果。 */ action=>action.name==='MoveHorizontal'),jump=touch.projectSettings.inputMap.find(/* 比较 action.name 与 'Jump'，返回严格相等的判断结果。 */ action=>action.name==='Jump')
 horizontal.bindings.push(binding('gamepad-axis','0',{deadzone:.16}),binding('gesture','pan-x'))
 jump.bindings.push(binding('gamepad-button','0'),binding('gesture','tap'))
 touch.projectSettings.deviceInput={
@@ -25,8 +26,8 @@ touch.projectSettings.deviceInput={
     {id:'v670-jump',label:'Jump',accessibleLabel:'Jump',action:'Jump',kind:'button',anchor:'bottom-right',offsetX:34,offsetY:34,size:76,opacity:.86,value:1,deadzone:.1,hapticMs:14}
   ]
 }
-for(const entity of touch.scenes.flatMap(scene=>scene.entities)){
-  const canvas=entity.components.find(component=>component.kind==='Canvas')
+for(const entity of touch.scenes.flatMap(/* 返回 scene.entities 的当前值。 */ scene=>scene.entities)){
+  const canvas=entity.components.find(/* 比较 component.kind 与 'Canvas'，返回严格相等的判断结果。 */ component=>component.kind==='Canvas')
   if(canvas)Object.assign(canvas.data,{safeArea:true,safeAreaInsets:{left:47,top:0,right:47,bottom:21},dpiScale:3,localePreview:'en'})
 }
 const touchDir=join(projectsRoot,'creator-v670-touch-platformer');await mkdir(touchDir,{recursive:true});await writeJson(join(touchDir,'project.nova'),touch)

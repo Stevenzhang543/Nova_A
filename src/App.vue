@@ -1,3 +1,4 @@
+<!-- 应用根组件：选择编辑器或播放器入口，加载全局窗口并初始化恢复与编辑服务。 -->
 <template>
   <template v-if="mode === 'editor'">
     <ProjectManager v-if="projectManager.visible" />
@@ -39,19 +40,19 @@ import { externalChangeState } from './runtime/projectExternalChanges'
 
 // The launcher and exported player no longer parse the complete editor workspace
 // up front. Each mode retains the same UI and animations after its chunk loads.
-const EditorLayout = defineAsyncComponent(() => import('./layout/EditorLayout.vue'))
-const PlayerApp = defineAsyncComponent(() => import('./PlayerApp.vue'))
-const ManualViewer = defineAsyncComponent(() => import('./components/ManualViewer.vue'))
-const StudioStatusDialog = defineAsyncComponent(() => import('./components/StudioStatusDialog.vue'))
-const ErrorRecovery = defineAsyncComponent(() => import('./components/ErrorRecovery.vue'))
-const RecoveryCenter = defineAsyncComponent(() => import('./components/RecoveryCenter.vue'))
-const WorkspaceManager = defineAsyncComponent(() => import('./components/WorkspaceManager.vue'))
-const ShortcutEditor = defineAsyncComponent(() => import('./components/ShortcutEditor.vue'))
-const UndoHistoryPanel = defineAsyncComponent(() => import('./components/UndoHistoryPanel.vue'))
-const ExternalChangeDialog = defineAsyncComponent(() => import('./components/ExternalChangeDialog.vue'))
+const EditorLayout = defineAsyncComponent(/** 按需加载编辑器布局。 */ () => import('./layout/EditorLayout.vue'))
+const PlayerApp = defineAsyncComponent(/** 按需加载播放器入口。 */ () => import('./PlayerApp.vue'))
+const ManualViewer = defineAsyncComponent(/** 按需加载手册窗口。 */ () => import('./components/ManualViewer.vue'))
+const StudioStatusDialog = defineAsyncComponent(/** 按需加载工作室状态窗口。 */ () => import('./components/StudioStatusDialog.vue'))
+const ErrorRecovery = defineAsyncComponent(/** 按需加载错误恢复窗口。 */ () => import('./components/ErrorRecovery.vue'))
+const RecoveryCenter = defineAsyncComponent(/** 按需加载项目恢复中心。 */ () => import('./components/RecoveryCenter.vue'))
+const WorkspaceManager = defineAsyncComponent(/** 按需加载工作区管理窗口。 */ () => import('./components/WorkspaceManager.vue'))
+const ShortcutEditor = defineAsyncComponent(/** 按需加载快捷键窗口。 */ () => import('./components/ShortcutEditor.vue'))
+const UndoHistoryPanel = defineAsyncComponent(/** 按需加载历史面板。 */ () => import('./components/UndoHistoryPanel.vue'))
+const ExternalChangeDialog = defineAsyncComponent(/** 按需加载外部变更对话框。 */ () => import('./components/ExternalChangeDialog.vue'))
 const mode = ref<'loading' | 'editor' | 'player'>('loading')
 let editorShortcutsInstalled = false
-function handleGlobalShortcut(event: KeyboardEvent) {
+/** 处理未消费的全屏、历史导航及快捷键、工作区、任务状态窗口命令。 */ function handleGlobalShortcut(event: KeyboardEvent) {
   if (event.defaultPrevented) return
   if (shortcutMatches(event, 'fullscreen')) { event.preventDefault(); void toggleEditorFullscreen() }
   else if (shortcutMatches(event, 'navigateBack')) { event.preventDefault(); navigateHistory('back') }
@@ -60,7 +61,7 @@ function handleGlobalShortcut(event: KeyboardEvent) {
   else if (shortcutMatches(event, 'workspaceManager')) { event.preventDefault(); editorState.workspaceManagerOpen = !editorState.workspaceManagerOpen }
   else if (shortcutMatches(event, 'statusCenter')) { event.preventDefault(); editorState.statusCenterOpen = !editorState.statusCenterOpen }
 }
-onMounted(async () => {
+onMounted(/** 挂载时依据查询参数或原生运行模式选择入口，原生检测失败回退编辑器并初始化。 */ async () => {
   if (new URLSearchParams(location.search).get('player') === '1') { mode.value = 'player'; return }
   if ('__TAURI_INTERNALS__' in window) {
     try {
@@ -73,7 +74,7 @@ onMounted(async () => {
   mode.value = 'editor'
   await prepareEditor()
 })
-async function prepareEditor() {
+/** 安装编辑服务，先初始化窗口，再注册快捷键与恢复会话，尝试安全恢复并应用安全模式限制。 */ async function prepareEditor() {
   installStableControlRegistry()
   installSelectValueDetails()
   installProjectMutationRouter()
@@ -94,7 +95,7 @@ async function prepareEditor() {
   } catch { /* Recovery Center can still restore persisted snapshots. */ }
   await applySafeModeRestrictions()
 }
-onBeforeUnmount(() => { disposeSelectValueDetails(); disposeProjectMutationRouter(); if (editorShortcutsInstalled) window.removeEventListener('keydown', handleGlobalShortcut); disposeEditorWindow() })
+onBeforeUnmount(/** 卸载时释放选择详情、项目变更路由、快捷键及窗口服务。 */ () => { disposeSelectValueDetails(); disposeProjectMutationRouter(); if (editorShortcutsInstalled) window.removeEventListener('keydown', handleGlobalShortcut); disposeEditorWindow() })
 </script>
 
 <style>.app-loading { height: 100vh; display: grid; place-items: center; color: var(--text-muted); background: var(--bg-base); font-weight: 700; }</style>

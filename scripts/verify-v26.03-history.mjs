@@ -1,12 +1,13 @@
+/** 验证脚本（v26.03-history）：组织对应功能与边界场景检查，断言行为并汇总验证结果。 */
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
 import { dirname, extname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)))
 const checks = []
-const check = (id, passed, detail, metrics = {}) => checks.push({ id, status: passed ? 'passed' : 'failed', detail, metrics })
+const check = /* 调用 checks.push({ id, status: passed ? 'passed' : 'failed', detail, metrics }) 并返回调用结果。 */ (id, passed, detail, metrics = {}) => checks.push({ id, status: passed ? 'passed' : 'failed', detail, metrics })
 
-async function filesBelow(directory) {
+/** 递归遍历目录并收集所有非目录条目的路径。 */ async function filesBelow(directory) {
   const output = []
   for (const entry of await readdir(directory, { withFileTypes: true })) {
     const path = join(directory, entry.name)
@@ -16,9 +17,9 @@ async function filesBelow(directory) {
   return output
 }
 
-const roots = ['reference-projects', 'tests/fixtures/migrations', 'release-fixtures'].map(path => join(root, path))
-const all = (await Promise.all(roots.map(path => filesBelow(path).catch(() => [])))).flat()
-const candidates = all.filter(path => ['.nova', '.json'].includes(extname(path).toLowerCase()))
+const roots = ['reference-projects', 'tests/fixtures/migrations', 'release-fixtures'].map(/* 调用 join(root, path) 并返回调用结果。 */ path => join(root, path))
+const all = (await Promise.all(roots.map(/* 调用 filesBelow(path).catch(() => []) 并返回调用结果。 */ path => filesBelow(path).catch(/* 返回按声明顺序构造的数组 []。 */ () => [])))).flat()
+const candidates = all.filter(/* 调用 ['.nova', '.json'].includes(extname(path).toLowerCase()) 并返回调用结果。 */ path => ['.nova', '.json'].includes(extname(path).toLowerCase()))
 const parsed = [], malformed = []
 for (const path of candidates) {
   try { parsed.push({ path: relative(root, path).replaceAll('\\', '/'), value: JSON.parse(await readFile(path, 'utf8')) }) }
@@ -26,23 +27,23 @@ for (const path of candidates) {
 }
 check('V2603-HISTORY-JSON', malformed.length === 0 && parsed.length >= 120, 'Every JSON/NOVA history, template, migration and reference fixture parses without executing content.', { documents: parsed.length, malformed })
 
-const projects = parsed.filter(item => item.value && typeof item.value === 'object' && (item.path.endsWith('.nova') || item.value.projectFormat === 'Nova_A Project Format 2'))
-const schemas = [...new Set(projects.map(item => Number(item.value.formatVersion)).filter(Number.isInteger))].sort((a, b) => a - b)
-const invalid = projects.filter(item => !Array.isArray(item.value.scenes) || !Number.isInteger(Number(item.value.formatVersion)) || Number(item.value.formatVersion) < 1)
-check('V2603-HISTORY-PROJECTS', projects.length >= 80 && invalid.length === 0 && schemas.includes(29), 'All project fixtures retain registered positive schemas and scene collections; current schema 29 is represented.', { projects: projects.length, schemas, invalid: invalid.map(item => item.path) })
+const projects = parsed.filter(/** 筛选具有对象内容且扩展名或格式标记符合Nova项目的数据项。 */ item => item.value && typeof item.value === 'object' && (item.path.endsWith('.nova') || item.value.projectFormat === 'Nova_A Project Format 2'))
+const schemas = [...new Set(projects.map(/* 调用 Number(item.value.formatVersion) 并返回调用结果。 */ item => Number(item.value.formatVersion)).filter(Number.isInteger))].sort(/* 计算表达式 a - b 并返回结果，沿用操作数的原有类型规则。 */ (a, b) => a - b)
+const invalid = projects.filter(/** 识别缺少场景数组或具有无效、低于一的格式版本的项目。 */ item => !Array.isArray(item.value.scenes) || !Number.isInteger(Number(item.value.formatVersion)) || Number(item.value.formatVersion) < 1)
+check('V2603-HISTORY-PROJECTS', projects.length >= 80 && invalid.length === 0 && schemas.includes(29), 'All project fixtures retain registered positive schemas and scene collections; current schema 29 is represented.', { projects: projects.length, schemas, invalid: invalid.map(/* 返回 item.path 的当前值。 */ item => item.path) })
 
 const [formatRust, projectUpgrade, manifestSource, expectedSource] = await Promise.all([
   'crates/nova_format/src/lib.rs',
   'src/runtime/projectUpgrade.ts',
   'src/projects/projectManifest.ts',
   'tests/fixtures/migrations/public-schema-expected.json'
-].map(path => readFile(join(root, path), 'utf8')))
+].map(/* 调用 readFile(join(root, path), 'utf8') 并返回调用结果。 */ path => readFile(join(root, path), 'utf8')))
 const expected = JSON.parse(expectedSource)
 check('V2603-HISTORY-AUTHORITY', formatRust.includes('CURRENT_ENGINE_VERSION: &str = "26.3.0"') && formatRust.includes('CURRENT_FORMAT_VERSION: u32 = 29') && formatRust.includes('v2601_seals_historical_engine_boundaries_without_changing_schema_29'), 'Rust owns engine/schema authority and retains the schema-29 historical boundary test.')
 check('V2603-HISTORY-WIRING', projectUpgrade.includes('downloadProjectBackup') && projectUpgrade.includes('storeUpgradeRollback') && projectUpgrade.includes('semanticProjectDiff') && manifestSource.includes("maximumExclusive: '27.0.0'"), 'Upgrade preview, backup, semantic diff, rollback and the 2026 compatibility ceiling remain connected.')
 check('V2603-HISTORY-GOLDEN', expected.targetEngine === '26.3.0' && expected.targetSchema === 29 && expected.preservedMarker?.preserve === true, 'The public migration golden projection targets 26.3.0/schema 29 and retains unknown authored data.', { expected })
 
-const failed = checks.filter(item => item.status === 'failed')
+const failed = checks.filter(/* 比较 item.status 与 'failed'，返回严格相等的判断结果。 */ item => item.status === 'failed')
 const report = { format: 'nova-v26.03-history-verification', version: 1, engineVersion: '26.3.0', releaseLabel: '26.03', generatedAt: new Date().toISOString(), checks, severity0Open: failed.length, severity1Open: 0, status: failed.length ? 'failed' : 'passed' }
 await mkdir(join(root, 'release-audits'), { recursive: true })
 await writeFile(join(root, 'release-audits/v26.03-history-verification.json'), `${JSON.stringify(report, null, 2)}\n`)

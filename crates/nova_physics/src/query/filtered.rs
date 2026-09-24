@@ -1,3 +1,4 @@
+// 带身份与过滤条件的精确二维物理查询，以及去重、排序和边界测试。
 #[derive(Clone, Copy, Debug, serde::Deserialize)]
 pub enum PhysicsQueryKind2D {
     Ray,
@@ -35,6 +36,7 @@ pub struct PhysicsFilteredHit2D {
     pub body_type: &'static str,
 }
 
+// 计算形状表面或内部距查询点最近的位置。
 fn closest_collider_point(body: &Body, point: Vec2) -> Vec2 {
     if point_in_body(body, point) {
         return point;
@@ -70,7 +72,7 @@ fn closest_collider_point(body: &Body, point: Vec2) -> Vec2 {
             // its constraint is strictly decreasing. Bisection has a fixed budget.
             let a2 = a * a;
             let b2 = b * b;
-            let constraint = |lambda: f64| {
+            let constraint = /* 计算并返回 (a * local . x / (a2 + lambda)) . powi (2) + (b * local . y / (b2 + lambda)) . powi (2)，用于当前 closest_collider_point 流程。 */ |lambda: f64| {
                 (a * local.x / (a2 + lambda)).powi(2) + (b * local.y / (b2 + lambda)).powi(2)
             };
             let mut low = 0.0;
@@ -91,6 +93,7 @@ fn closest_collider_point(body: &Body, point: Vec2) -> Vec2 {
 }
 
 impl PhysicsWorld {
+    // 展开碰撞体记录并保留所有者和子形状身份。
     fn query_records_with_identity(&self) -> Vec<(u32, u32, Body)> {
         let mut records = Vec::new();
         for record in &self.bodies {
@@ -116,6 +119,7 @@ impl PhysicsWorld {
         records
     }
 
+    // 先应用身份、层和传感器过滤，再执行精确查询、稳定排序及去重。
     pub fn query_filtered(
         &self,
         request: &PhysicsQueryRequest2D,
@@ -138,10 +142,10 @@ impl PhysicsWorld {
         ];
         if scalars
             .iter()
-            .any(|value| !value.is_finite() || value.abs() > 1.0e12)
+            .any(/* 判断 ! value . is_finite () || value . abs () > 1.0e12 是否成立，供过滤或有效性检查使用。 */ |value| !value.is_finite() || value.abs() > 1.0e12)
             || request.distance < 0.0
             || request.radius <= 0.0
-            || request.size.iter().any(|value| *value <= 0.0)
+            || request.size.iter().any(/* 判断 * value <= 0.0 是否成立，供过滤或有效性检查使用。 */ |value| *value <= 0.0)
         {
             return Err("PHYSICS_QUERY_INPUT: finite bounded coordinates, positive dimensions and nonnegative distance are required");
         }
@@ -155,7 +159,7 @@ impl PhysicsWorld {
         let collider_count: usize = self
             .bodies
             .iter()
-            .map(|record| 1 + record.collider_shapes.len() / COLLIDER_CHILD_STRIDE)
+            .map(/* 计算并返回 1 + record . collider_shapes . len () / COLLIDER_CHILD_STRIDE，用于当前 query_filtered 流程。 */ |record| 1 + record.collider_shapes.len() / COLLIDER_CHILD_STRIDE)
             .sum();
         if collider_count > 100_000 {
             return Err("PHYSICS_QUERY_LIMIT: more than100000 collider pieces require a smaller query world");
@@ -214,8 +218,8 @@ impl PhysicsWorld {
                 | PhysicsQueryKind2D::Circle
                 | PhysicsQueryKind2D::Box => {
                     let overlaps = shape.as_ref().map_or_else(
-                        || point_in_body(&body, origin),
-                        |query| !collide(query, &body).is_empty(),
+                        /* 计算并返回 point_in_body (& body , origin)，用于当前 query_filtered 流程。 */ || point_in_body(&body, origin),
+                        /* 判断 ! collide (query , & body) . is_empty () 是否成立，供过滤或有效性检查使用。 */ |query| !collide(query, &body).is_empty(),
                     );
                     overlaps.then_some(PhysicsQueryHit {
                         handle,
@@ -242,7 +246,7 @@ impl PhysicsWorld {
                 });
             }
         }
-        hits.sort_by(|a, b| {
+        hits.sort_by(/* 按命中距离、所属刚体句柄和子形状身份依次排序。 */ |a, b| {
             a.hit
                 .distance
                 .total_cmp(&b.hit.distance)
@@ -250,7 +254,7 @@ impl PhysicsWorld {
                 .then(a.collider.cmp(&b.collider))
         });
         let mut owners = HashSet::new();
-        hits.retain(|hit| owners.insert(hit.hit.handle));
+        hits.retain(/* 计算并返回 owners . insert (hit . hit . handle)，用于当前 query_filtered 流程。 */ |hit| owners.insert(hit.hit.handle));
         hits.truncate(request.maximum_results);
         Ok(hits)
     }
@@ -258,6 +262,7 @@ impl PhysicsWorld {
 #[cfg(test)]
 mod filtered_query_tests {
     use super::*;
+    // 构造当前回归场景所需的刚体扁平记录。
     fn record(x: f64, y: f64) -> Vec<f64> {
         let mut value = vec![0.0; STRIDE];
         value[2] = x;
@@ -271,6 +276,7 @@ mod filtered_query_tests {
         value[42] = u32::MAX as f64;
         value
     }
+    // 构造指定查询类型的默认过滤请求。
     fn request(kind: PhysicsQueryKind2D) -> PhysicsQueryRequest2D {
         PhysicsQueryRequest2D {
             kind,
@@ -286,6 +292,7 @@ mod filtered_query_tests {
             maximum_results: 4096,
         }
     }
+    // 验证射线、扫掠和最近点选择前先执行过滤。
     #[test]
     fn filters_before_selecting_ray_sweep_and_nearest() {
         let mut world = PhysicsWorld::new();
@@ -309,6 +316,7 @@ mod filtered_query_tests {
             assert!(!hits[0].sensor);
         }
     }
+    // 验证复合子形状先过滤，再按所属刚体去重。
     #[test]
     fn filters_compound_children_before_owner_deduplication() {
         let mut world = PhysicsWorld::new();
@@ -351,6 +359,7 @@ mod filtered_query_tests {
             assert!(world.query_filtered(&query).unwrap().is_empty());
         }
     }
+    // 验证最近点查询不会遗漏角度采样间的小目标。
     #[test]
     fn nearest_finds_small_targets_between_angular_samples() {
         let mut world = PhysicsWorld::new();
@@ -372,6 +381,7 @@ mod filtered_query_tests {
         assert_eq!(hits[0].hit.handle, 7);
         assert!((hits[0].hit.distance - 9.999).abs() < 1.0e-9);
     }
+    // 验证椭圆最近点满足表面方程和法线约束。
     #[test]
     fn ellipse_closest_point_satisfies_surface_and_normal_constraints() {
         let mut world = PhysicsWorld::new();
@@ -389,6 +399,7 @@ mod filtered_query_tests {
         query.origin = [0.0, 0.0];
         assert_eq!(world.query_filtered(&query).unwrap()[0].hit.distance, 0.0);
     }
+    // 验证持久刚体修改立即影响查询，等距结果保持稳定顺序。
     #[test]
     fn query_changes_follow_retained_body_edits_and_stable_ties() {
         let mut world = PhysicsWorld::new();
@@ -401,6 +412,7 @@ mod filtered_query_tests {
         world.destroy_body(20);
         assert_eq!(world.query_filtered(&query).unwrap()[0].hit.handle, 10);
     }
+    // 验证查询拒绝非法数值和超预算请求。
     #[test]
     fn rejects_invalid_or_excessive_requests() {
         let world = PhysicsWorld::new();

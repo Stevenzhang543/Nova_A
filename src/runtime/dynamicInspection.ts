@@ -1,10 +1,11 @@
+/** 动态对象检查：把脚本动态值转换为编辑器可查看的字段与状态描述。 */
 /** Read-only inspection of supplied snapshot data, never a script evaluator. */
 export function snapshotPath(root: unknown, path: string): unknown {
   if (!path.trim() || path.length > 512) throw new Error('A snapshot path of 1–512 characters is required.');
   const parts: string[] = [];
   let cursor = 0;
-  const space = () => { while (/\s/.test(path[cursor] ?? '') && cursor < path.length) cursor++; };
-  const identifier = (afterDot = false) => { const match = (afterDot ? /^[\w$]+/ : /^[A-Za-z_$][\w$]*/).exec(path.slice(cursor)); if (!match) throw new Error('Expected a snapshot property name.'); cursor += match[0].length; return match[0]; };
+  const space = /** 推进游标跳过属性路径中的空白。 */ () => { while (/\s/.test(path[cursor] ?? '') && cursor < path.length) cursor++; };
+  const identifier = /** 从当前游标解析属性标识符，点后允许数字开头，无法匹配时抛出路径错误。 */ (afterDot = false) => { const match = (afterDot ? /^[\w$]+/ : /^[A-Za-z_$][\w$]*/).exec(path.slice(cursor)); if (!match) throw new Error('Expected a snapshot property name.'); cursor += match[0].length; return match[0]; };
   space(); parts.push(identifier());
   while (cursor < path.length) {
     space(); if (cursor === path.length) break;
@@ -38,12 +39,12 @@ export function snapshotPath(root: unknown, path: string): unknown {
   return value;
 }
 
-export function snapshotPreview(value: unknown, maxCharacters = 12000): string {
+/** 用字符、深度和节点预算渲染调试快照，避免调用访问器并标记循环或截断内容。 */ export function snapshotPreview(value: unknown, maxCharacters = 12000): string {
   const limit = Math.max(64, Math.min(12000, Math.floor(maxCharacters) || 12000));
   let output = '', visited = 0, exhausted = false;
   const ancestors = new WeakSet<object>();
-  const put = (text: string) => { const remaining = limit - output.length; if (text.length > remaining) exhausted = true; output += text.slice(0, Math.max(0, remaining)); };
-  const render = (item: unknown, depth: number): void => {
+  const put = /** 按剩余字符预算追加预览片段，超出时记录截断标记。 */ (text: string) => { const remaining = limit - output.length; if (text.length > remaining) exhausted = true; output += text.slice(0, Math.max(0, remaining)); };
+  const render = /** 递归展示基础值和自有数据字段，限制深度及成员数，跳过访问器并识别祖先循环。 */ (item: unknown, depth: number): void => {
     if (output.length >= limit) { exhausted = true; return; }
     if (++visited > 256) { put('[item limit]'); return; }
     if (item === null) { put('null'); return; }
@@ -69,12 +70,12 @@ export function snapshotPreview(value: unknown, maxCharacters = 12000): string {
   return output;
 }
 
-export function snapshotValueType(value: unknown): string {
+/* 根据 value === null 的真假，分别返回 'null' 或 Array.isArray(value) ? 'array' : typeof value === 'object' ? 'map' : typeof value。 */ export function snapshotValueType(value: unknown): string {
   return value === null ? 'null' : Array.isArray(value) ? 'array' : typeof value === 'object' ? 'map' : typeof value
 }
 
 /** Find comparison operators outside quoted literals and bracket keys. */
-export function snapshotComparison(expression: string): [string, string, string] | null {
+/** 扫描引号与方括号层级，在顶层拆出首个支持的比较运算符及两侧表达式。 */ export function snapshotComparison(expression: string): [string, string, string] | null {
   let quote = '', escaped = false, depth = 0
   for (let index = 0; index < expression.length; index++) {
     const ch = expression[index]

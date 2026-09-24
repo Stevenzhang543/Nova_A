@@ -1,3 +1,4 @@
+/** 场景实例关系：维护嵌套场景来源与实例化记录。 */
 import { assetReference, createTextAsset, readTextAsset, resolveAsset } from '../assets/AssetDatabase'
 import {
   captureEntityBundle,
@@ -17,9 +18,9 @@ export interface SceneAssetDocument {
   bundle: EntityBundle
 }
 
-function clone<T>(value: T): T { return JSON.parse(JSON.stringify(value)) as T }
+/** 结构说明（自动提取）：clone；输入 value；直接调用 JSON.parse、JSON.stringify。 */ function clone<T>(value: T): T { return JSON.parse(JSON.stringify(value)) as T }
 
-function sceneDocument(reference: string): { reference: string; document: SceneAssetDocument } | null {
+/** 结构说明（自动提取）：sceneDocument；输入 reference；直接调用 resolveAsset、readTextAsset、JSON.parse、Array.isArray、assetReference。 */ function sceneDocument(reference: string): { reference: string; document: SceneAssetDocument } | null {
   const asset = resolveAsset(reference)
   const source = readTextAsset(reference)
   if (!asset || asset.assetType !== 'scene' || !source) return null
@@ -30,7 +31,7 @@ function sceneDocument(reference: string): { reference: string; document: SceneA
   } catch { return null }
 }
 
-export function createSceneAssetFromEntities(entityIds: number[], requestedName = 'Instanced Scene'): string | null {
+/** 结构说明（自动提取）：createSceneAssetFromEntities；输入 entityIds、requestedName；直接调用 captureEntityBundle、slice、requestedName.trim、clone、createTextAsset 等。 */ export function createSceneAssetFromEntities(entityIds: number[], requestedName = 'Instanced Scene'): string | null {
   const bundle = captureEntityBundle(entityIds)
   if (!bundle) return null
   const document: SceneAssetDocument = { sceneAssetVersion: 1, name: requestedName.trim().slice(0, 80) || 'Instanced Scene', bundle: clone(bundle) }
@@ -39,7 +40,7 @@ export function createSceneAssetFromEntities(entityIds: number[], requestedName 
   return assetReference(asset.uuid)
 }
 
-export function instantiateSceneAsset(reference: string, position?: Vec2, select = true, invalidateRuntime = true): Entity[] {
+/** 结构说明（自动提取）：instantiateSceneAsset；输入 reference、position、select、invalidateRuntime；直接调用 sceneDocument、instantiateEntityBundle、normalizeUuid、entity.sceneLayers.push、worldTransform 等；返回路径包含 instance.entities；包含循环处理。 */ export function instantiateSceneAsset(reference: string, position?: Vec2, select = true, invalidateRuntime = true): Entity[] {
   const stored = sceneDocument(reference)
   if (!stored) return []
   const instance = instantiateEntityBundle(stored.document.bundle, { x: 0, y: 0 }, '', select, invalidateRuntime)
@@ -55,13 +56,13 @@ export function instantiateSceneAsset(reference: string, position?: Vec2, select
   return instance.entities
 }
 
-export function sceneInstanceEntities(entity: Entity): Entity[] {
+/** 结构说明（自动提取）：sceneInstanceEntities；输入 entity；直接调用 physicsState.world.entities.filter。 */ export function sceneInstanceEntities(entity: Entity): Entity[] {
   const layer = entity.sceneLayers[entity.sceneLayers.length - 1]
   if (!layer) return []
-  return physicsState.world.entities.filter(candidate => candidate.sceneLayers[candidate.sceneLayers.length - 1]?.instanceUuid === layer.instanceUuid)
+  return physicsState.world.entities.filter(/* 比较 candidate.sceneLayers[candidate.sceneLayers.length - 1]?.instanceUuid 与 layer.instanceUuid，返回严格相等的判断结果。 */ candidate => candidate.sceneLayers[candidate.sceneLayers.length - 1]?.instanceUuid === layer.instanceUuid)
 }
 
-export function unpackSceneInstance(entity: Entity): boolean {
+/** 结构说明（自动提取）：unpackSceneInstance；输入 entity；直接调用 sceneInstanceEntities、candidate.sceneLayers.pop、pushHistory；包含循环处理。 */ export function unpackSceneInstance(entity: Entity): boolean {
   const entities = sceneInstanceEntities(entity)
   if (!entities.length) return false
   for (const candidate of entities) candidate.sceneLayers.pop()

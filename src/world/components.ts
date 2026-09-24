@@ -1,3 +1,4 @@
+/** 二维组件数据模型：定义渲染、物理、动画、音频、界面及玩法组件的默认值和持久化复制边界。 */
 import { validateComponentValues } from './componentValidation'
 import { normalizeUuid } from './identity'
 import type { Vec2 } from './types'
@@ -82,7 +83,7 @@ abstract class ComponentBase implements Component2D {
   enabled = true
   removed = false
 
-  protected constructor(uuid?: string) {
+  /** 将 normalizeUuid(uuid) 赋给 this.uuid，不显式返回值。 */ protected constructor(uuid?: string) {
     this.uuid = normalizeUuid(uuid)
   }
 }
@@ -109,7 +110,7 @@ export class ShapeRenderer2D extends ComponentBase {
   sortingLayer = 1
   orderInLayer = 0
 
-  constructor(shape: RendererShape2D, uuid?: string) {
+  /** 初始化组件 UUID 并保存形状类型，其他绘制字段使用声明的默认值。 */ constructor(shape: RendererShape2D, uuid?: string) {
     super(uuid)
     this.shape = shape
   }
@@ -132,7 +133,7 @@ export class SpriteRenderer2D extends ComponentBase {
   lightMask = 0xffff_ffff
   nineSlice = { enabled: false, left: 0, top: 0, right: 0, bottom: 0 }
 
-  constructor(uuid?: string) { super(uuid) }
+  /** 初始化 SpriteRenderer2D 实例时调用 super(uuid)；不显式返回调用结果。 */ constructor(uuid?: string) { super(uuid) }
 }
 
 export class TextRenderer2D extends ComponentBase {
@@ -151,7 +152,7 @@ export class TextRenderer2D extends ComponentBase {
   orderInLayer = 0
   material = 'Default'
 
-  constructor(uuid?: string) { super(uuid) }
+  /** 初始化 TextRenderer2D 实例时调用 super(uuid)；不显式返回调用结果。 */ constructor(uuid?: string) { super(uuid) }
 }
 
 export class Camera2D extends ComponentBase {
@@ -175,7 +176,7 @@ export class Camera2D extends ComponentBase {
   clearColor = true
   renderTexture = ''
 
-  constructor(uuid?: string) { super(uuid) }
+  /** 初始化 Camera2D 实例时调用 super(uuid)；不显式返回调用结果。 */ constructor(uuid?: string) { super(uuid) }
 }
 
 export type ScriptPropertyValue = null | number | string | boolean | ScriptPropertyValue[] | { [key: string]: ScriptPropertyValue }
@@ -205,7 +206,7 @@ export class Script2D extends ComponentBase {
   propertyMetadata: Record<string, ScriptPropertyMetadata> = {}
   lastError: string | null = null
 
-  constructor(uuid?: string) { super(uuid) }
+  /** 初始化 Script2D 实例时调用 super(uuid)；不显式返回调用结果。 */ constructor(uuid?: string) { super(uuid) }
 }
 
 export type AnimatorParameterValue = boolean | number
@@ -219,7 +220,7 @@ export class Animator extends ComponentBase {
   parameters: Record<string, AnimatorParameterValue> = {}
   layerWeights: Record<string, number> = {}
 
-  constructor(uuid?: string) { super(uuid) }
+  /** 初始化 Animator 实例时调用 super(uuid)；不显式返回调用结果。 */ constructor(uuid?: string) { super(uuid) }
 }
 
 export interface BonePose2D {
@@ -236,7 +237,7 @@ export class Skeleton2D extends ComponentBase {
   pose: BonePose2D[] = []
   previewEnabled = true
 
-  constructor(uuid?: string) { super(uuid) }
+  /** 初始化 Skeleton2D 实例时调用 super(uuid)；不显式返回调用结果。 */ constructor(uuid?: string) { super(uuid) }
 }
 
 export class TimelinePlayer extends ComponentBase {
@@ -250,7 +251,7 @@ export class TimelinePlayer extends ComponentBase {
   skipped = false
   variables: Record<string, string | number | boolean> = {}
 
-  constructor(uuid?: string) { super(uuid) }
+  /** 初始化 TimelinePlayer 实例时调用 super(uuid)；不显式返回调用结果。 */ constructor(uuid?: string) { super(uuid) }
 }
 
 export type AudioBus = string
@@ -283,14 +284,14 @@ export class AudioSource extends ComponentBase {
   playlistMode: 'Single' | 'Sequential' | 'Random' = 'Single'
   playlistIndex = 0
 
-  constructor(uuid?: string) { super(uuid) }
+  /** 初始化 AudioSource 实例时调用 super(uuid)；不显式返回调用结果。 */ constructor(uuid?: string) { super(uuid) }
 }
 
 export class AudioListener extends ComponentBase {
   readonly kind = 'AudioListener' as const
   active = true
 
-  constructor(uuid?: string) { super(uuid) }
+  /** 初始化 AudioListener 实例时调用 super(uuid)；不显式返回调用结果。 */ constructor(uuid?: string) { super(uuid) }
 }
 
 export type AnchorPreset =
@@ -310,7 +311,7 @@ export class Canvas extends ComponentBase {
   themeAsset: string | null = null
   themeVariant = 'default'
 
-  constructor(uuid?: string) { super(uuid) }
+  /** 初始化 Canvas 实例时调用 super(uuid)；不显式返回调用结果。 */ constructor(uuid?: string) { super(uuid) }
 }
 
 export class RectTransform extends ComponentBase {
@@ -355,7 +356,7 @@ export class RectTransform extends ComponentBase {
   remapAction = ''
   remapBindingIndex = 0
 
-  constructor(uuid?: string) { super(uuid) }
+  /** 初始化 RectTransform 实例时调用 super(uuid)；不显式返回调用结果。 */ constructor(uuid?: string) { super(uuid) }
 }
 
 export class Panel extends ComponentBase {
@@ -388,7 +389,7 @@ export class Panel extends ComponentBase {
   styleClass = 'panel'
   styleOverrides: Record<string, string | number> = {}
 
-  constructor(uuid?: string) { super(uuid) }
+  /** 初始化 Panel 实例时调用 super(uuid)；不显式返回调用结果。 */ constructor(uuid?: string) { super(uuid) }
 }
 
 export class Image extends ComponentBase {
@@ -399,7 +400,7 @@ export class Image extends ComponentBase {
   preserveAspect = true
   nineSlice = { enabled: false, left: 0, top: 0, right: 0, bottom: 0 }
 
-  constructor(uuid?: string) { super(uuid) }
+  /** 初始化 Image 实例时调用 super(uuid)；不显式返回调用结果。 */ constructor(uuid?: string) { super(uuid) }
 }
 
 export class Text extends ComponentBase {
@@ -419,7 +420,7 @@ export class Text extends ComponentBase {
   inputPromptAction = ''
   captionCategory: 'None' | 'Dialogue' | 'Effects' | 'Music' = 'None'
 
-  constructor(uuid?: string) { super(uuid) }
+  /** 初始化 Text 实例时调用 super(uuid)；不显式返回调用结果。 */ constructor(uuid?: string) { super(uuid) }
 }
 
 export type ButtonVisualState = 'Normal' | 'Hovered' | 'Pressed' | 'Disabled'
@@ -441,7 +442,7 @@ export class Button extends ComponentBase {
   styleClass = 'button'
   styleOverrides: Record<string, string | number> = {}
 
-  constructor(uuid?: string) { super(uuid) }
+  /** 初始化 Button 实例时调用 super(uuid)；不显式返回调用结果。 */ constructor(uuid?: string) { super(uuid) }
 }
 
 export class Slider extends ComponentBase {
@@ -454,7 +455,7 @@ export class Slider extends ComponentBase {
   styleClass = 'slider'
   styleOverrides: Record<string, string | number> = {}
 
-  constructor(uuid?: string) { super(uuid) }
+  /** 初始化 Slider 实例时调用 super(uuid)；不显式返回调用结果。 */ constructor(uuid?: string) { super(uuid) }
 }
 
 export class ProgressBar extends ComponentBase {
@@ -467,7 +468,7 @@ export class ProgressBar extends ComponentBase {
   styleClass = 'progress'
   styleOverrides: Record<string, string | number> = {}
 
-  constructor(uuid?: string) { super(uuid) }
+  /** 初始化 ProgressBar 实例时调用 super(uuid)；不显式返回调用结果。 */ constructor(uuid?: string) { super(uuid) }
 }
 
 export class Checkbox extends ComponentBase {
@@ -479,7 +480,7 @@ export class Checkbox extends ComponentBase {
   styleClass = 'checkbox'
   styleOverrides: Record<string, string | number> = {}
 
-  constructor(uuid?: string) { super(uuid) }
+  /** 初始化 Checkbox 实例时调用 super(uuid)；不显式返回调用结果。 */ constructor(uuid?: string) { super(uuid) }
 }
 
 export class TextInput extends ComponentBase {
@@ -492,7 +493,7 @@ export class TextInput extends ComponentBase {
   styleClass = 'input'
   styleOverrides: Record<string, string | number> = {}
 
-  constructor(uuid?: string) { super(uuid) }
+  /** 初始化 TextInput 实例时调用 super(uuid)；不显式返回调用结果。 */ constructor(uuid?: string) { super(uuid) }
 }
 
 export class TileMap2D extends ComponentBase {
@@ -536,7 +537,7 @@ export class TileMap2D extends ComponentBase {
   bakeOccluders = false
   revision = 0
 
-  constructor(uuid?: string) { super(uuid) }
+  /** 初始化 TileMap2D 实例时调用 super(uuid)；不显式返回调用结果。 */ constructor(uuid?: string) { super(uuid) }
 }
 
 export class CharacterBody2D extends ComponentBase {
@@ -560,7 +561,7 @@ export class CharacterBody2D extends ComponentBase {
   platformVelocity: Vec2 = { x: 0, y: 0 }
   secondsSinceFloor = Number.POSITIVE_INFINITY
 
-  constructor(uuid?: string) { super(uuid) }
+  /** 初始化 CharacterBody2D 实例时调用 super(uuid)；不显式返回调用结果。 */ constructor(uuid?: string) { super(uuid) }
 }
 
 export class Area2D extends ComponentBase {
@@ -571,7 +572,7 @@ export class Area2D extends ComponentBase {
   collisionMask = 0xffff_ffff
   monitorable = true
 
-  constructor(uuid?: string) { super(uuid) }
+  /** 初始化 Area2D 实例时调用 super(uuid)；不显式返回调用结果。 */ constructor(uuid?: string) { super(uuid) }
 }
 
 export interface AreaEffect2D {
@@ -594,7 +595,7 @@ export class AreaEffector2D extends ComponentBase {
     drag: 0, fluidDensity: 1, damagePerSecond: 0, signal: 'area.effect'
   }]
 
-  constructor(uuid?: string) { super(uuid) }
+  /** 初始化 AreaEffector2D 实例时调用 super(uuid)；不显式返回调用结果。 */ constructor(uuid?: string) { super(uuid) }
 }
 
 export class NavigationRegion2D extends ComponentBase {
@@ -617,7 +618,7 @@ export class NavigationRegion2D extends ComponentBase {
   costAreas: Array<{ id: string; name: string; shape: 'Box' | 'Circle'; center: Vec2; size: Vec2; radius: number; multiplier: number; navigationLayer: number; enabled: boolean }> = []
   bakedRevision = 0
 
-  constructor(uuid?: string) { super(uuid) }
+  /** 初始化 NavigationRegion2D 实例时调用 super(uuid)；不显式返回调用结果。 */ constructor(uuid?: string) { super(uuid) }
 }
 
 export class NavigationObstacle2D extends ComponentBase {
@@ -629,7 +630,7 @@ export class NavigationObstacle2D extends ComponentBase {
   navigationLayer = 1
   avoidanceVelocity: Vec2 = { x: 0, y: 0 }
 
-  constructor(uuid?: string) { super(uuid) }
+  /** 初始化 NavigationObstacle2D 实例时调用 super(uuid)；不显式返回调用结果。 */ constructor(uuid?: string) { super(uuid) }
 }
 
 export class NavigationAgent2D extends ComponentBase {
@@ -653,7 +654,7 @@ export class NavigationAgent2D extends ComponentBase {
   velocity: Vec2 = { x: 0, y: 0 }
   pathStatus: 'Idle' | 'Pending' | 'Ready' | 'Unreachable' = 'Idle'
 
-  constructor(uuid?: string) { super(uuid) }
+  /** 初始化 NavigationAgent2D 实例时调用 super(uuid)；不显式返回调用结果。 */ constructor(uuid?: string) { super(uuid) }
 }
 
 export class BehaviorTree2D extends ComponentBase {
@@ -663,7 +664,7 @@ export class BehaviorTree2D extends ComponentBase {
   currentNode = ''
   blackboardOverrides: Record<string, boolean | number | string> = {}
 
-  constructor(uuid?: string) { super(uuid) }
+  /** 初始化 BehaviorTree2D 实例时调用 super(uuid)；不显式返回调用结果。 */ constructor(uuid?: string) { super(uuid) }
 }
 
 export class StateMachine2D extends ComponentBase {
@@ -671,7 +672,7 @@ export class StateMachine2D extends ComponentBase {
   machineAsset: string | null = null
   currentState = ''
 
-  constructor(uuid?: string) { super(uuid) }
+  /** 初始化 StateMachine2D 实例时调用 super(uuid)；不显式返回调用结果。 */ constructor(uuid?: string) { super(uuid) }
 }
 
 export class GridMover2D extends ComponentBase {
@@ -683,7 +684,7 @@ export class GridMover2D extends ComponentBase {
   localSpace = false
   runtimeCooldown = 0
 
-  constructor(uuid?: string) { super(uuid) }
+  /** 初始化 GridMover2D 实例时调用 super(uuid)；不显式返回调用结果。 */ constructor(uuid?: string) { super(uuid) }
 }
 
 export class PlatformController2D extends ComponentBase {
@@ -696,7 +697,7 @@ export class PlatformController2D extends ComponentBase {
   jumpImpulse = 10
   maximumFallSpeed = 30
 
-  constructor(uuid?: string) { super(uuid) }
+  /** 初始化 PlatformController2D 实例时调用 super(uuid)；不显式返回调用结果。 */ constructor(uuid?: string) { super(uuid) }
 }
 
 export class TopDownController2D extends ComponentBase {
@@ -706,7 +707,7 @@ export class TopDownController2D extends ComponentBase {
   acceleration = 30
   rotateToMovement = false
 
-  constructor(uuid?: string) { super(uuid) }
+  /** 初始化 TopDownController2D 实例时调用 super(uuid)；不显式返回调用结果。 */ constructor(uuid?: string) { super(uuid) }
 }
 
 export class Health2D extends ComponentBase {
@@ -719,7 +720,7 @@ export class Health2D extends ComponentBase {
   diedSignal = 'health.died'
   runtimeInvulnerability = 0
 
-  constructor(uuid?: string) { super(uuid) }
+  /** 初始化 Health2D 实例时调用 super(uuid)；不显式返回调用结果。 */ constructor(uuid?: string) { super(uuid) }
 }
 
 export class DamageHitbox2D extends ComponentBase {
@@ -731,7 +732,7 @@ export class DamageHitbox2D extends ComponentBase {
   destroyOnHit = false
   hitSignal = 'damage.hit'
 
-  constructor(uuid?: string) { super(uuid) }
+  /** 初始化 DamageHitbox2D 实例时调用 super(uuid)；不显式返回调用结果。 */ constructor(uuid?: string) { super(uuid) }
 }
 
 export class Collectible2D extends ComponentBase {
@@ -741,7 +742,7 @@ export class Collectible2D extends ComponentBase {
   destroyOnCollect = true
   collectedSignal = 'collectible.collected'
 
-  constructor(uuid?: string) { super(uuid) }
+  /** 初始化 Collectible2D 实例时调用 super(uuid)；不显式返回调用结果。 */ constructor(uuid?: string) { super(uuid) }
 }
 
 export class Projectile2D extends ComponentBase {
@@ -754,7 +755,7 @@ export class Projectile2D extends ComponentBase {
   lifetime = 5
   runtimeLifetime = 5
 
-  constructor(uuid?: string) { super(uuid) }
+  /** 初始化 Projectile2D 实例时调用 super(uuid)；不显式返回调用结果。 */ constructor(uuid?: string) { super(uuid) }
 }
 
 export class Spawner2D extends ComponentBase {
@@ -770,7 +771,7 @@ export class Spawner2D extends ComponentBase {
   runtimeStarted = false
   runtimeSpawned: string[] = []
 
-  constructor(uuid?: string) { super(uuid) }
+  /** 初始化 Spawner2D 实例时调用 super(uuid)；不显式返回调用结果。 */ constructor(uuid?: string) { super(uuid) }
 }
 
 export class Cooldown2D extends ComponentBase {
@@ -781,7 +782,7 @@ export class Cooldown2D extends ComponentBase {
   runtimeRemaining = 0
   runtimeReady = true
 
-  constructor(uuid?: string) { super(uuid) }
+  /** 初始化 Cooldown2D 实例时调用 super(uuid)；不显式返回调用结果。 */ constructor(uuid?: string) { super(uuid) }
 }
 
 export class Lifetime2D extends ComponentBase {
@@ -790,7 +791,7 @@ export class Lifetime2D extends ComponentBase {
   useDespawn = true
   runtimeRemaining = 5
 
-  constructor(uuid?: string) { super(uuid) }
+  /** 初始化 Lifetime2D 实例时调用 super(uuid)；不显式返回调用结果。 */ constructor(uuid?: string) { super(uuid) }
 }
 
 /** Drives an entity toward the active Game-view pointer in world space.
@@ -800,7 +801,7 @@ export class MouseFollower2D extends ComponentBase {
   offset: Vec2 = { x: 0, y: 0 }
   maximumSpeed = 0
 
-  constructor(uuid?: string) { super(uuid) }
+  /** 初始化 MouseFollower2D 实例时调用 super(uuid)；不显式返回调用结果。 */ constructor(uuid?: string) { super(uuid) }
 }
 
 export class CameraFollow2D extends ComponentBase {
@@ -813,7 +814,7 @@ export class CameraFollow2D extends ComponentBase {
   followX = true
   followY = true
 
-  constructor(uuid?: string) { super(uuid) }
+  /** 初始化 CameraFollow2D 实例时调用 super(uuid)；不显式返回调用结果。 */ constructor(uuid?: string) { super(uuid) }
 }
 
 export class WorldChunk2D extends ComponentBase {
@@ -831,7 +832,7 @@ export class WorldChunk2D extends ComponentBase {
   cachePolicy: 'Release' | 'Retain' | 'LRU' = 'LRU'
   saveStateKey = ''
 
-  constructor(uuid?: string) { super(uuid) }
+  /** 初始化 WorldChunk2D 实例时调用 super(uuid)；不显式返回调用结果。 */ constructor(uuid?: string) { super(uuid) }
 }
 
 export class Portal2D extends ComponentBase {
@@ -841,7 +842,7 @@ export class Portal2D extends ComponentBase {
   triggerRadius = 1
   preload = true
 
-  constructor(uuid?: string) { super(uuid) }
+  /** 初始化 Portal2D 实例时调用 super(uuid)；不显式返回调用结果。 */ constructor(uuid?: string) { super(uuid) }
 }
 
 export class ObjectPool2D extends ComponentBase {
@@ -857,7 +858,7 @@ export class ObjectPool2D extends ComponentBase {
   reusedCount = 0
   leakedCount = 0
 
-  constructor(uuid?: string) { super(uuid) }
+  /** 初始化 ObjectPool2D 实例时调用 super(uuid)；不显式返回调用结果。 */ constructor(uuid?: string) { super(uuid) }
 }
 
 export class ParticleEmitter2D extends ComponentBase {
@@ -905,7 +906,7 @@ export class ParticleEmitter2D extends ComponentBase {
   trailLength = 12
   trailWidth = .08
 
-  constructor(uuid?: string) { super(uuid) }
+  /** 初始化 ParticleEmitter2D 实例时调用 super(uuid)；不显式返回调用结果。 */ constructor(uuid?: string) { super(uuid) }
 }
 
 export class Light2D extends ComponentBase {
@@ -921,7 +922,7 @@ export class Light2D extends ComponentBase {
   castsShadows = true
   shadowSoftness = .5
 
-  constructor(uuid?: string) { super(uuid) }
+  /** 初始化 Light2D 实例时调用 super(uuid)；不显式返回调用结果。 */ constructor(uuid?: string) { super(uuid) }
 }
 
 export class ShadowCaster2D extends ComponentBase {
@@ -930,11 +931,11 @@ export class ShadowCaster2D extends ComponentBase {
   selfShadows = false
   opacity = .85
 
-  constructor(uuid?: string) { super(uuid) }
+  /** 初始化 ShadowCaster2D 实例时调用 super(uuid)；不显式返回调用结果。 */ constructor(uuid?: string) { super(uuid) }
 }
 
 /** Null is the JSON representation of an unlimited joint threshold. */
-export function normalizeJointBreakThreshold(value: unknown): number {
+/** 将空值及正无穷解释为不断裂阈值；有效数值限制为非负，无效值也退回无限阈值。 */ export function normalizeJointBreakThreshold(value: unknown): number {
   if (value == null || value === Number.POSITIVE_INFINITY) return Number.POSITIVE_INFINITY
   const numeric = typeof value === 'number' ? value : Number(value)
   return Number.isFinite(numeric) ? Math.max(0, numeric) : Number.POSITIVE_INFINITY
@@ -962,7 +963,7 @@ export class Joint2D extends ComponentBase {
   referenceAngle = 0
   initialized = false
 
-  constructor(kind: JointKind2D, uuid?: string) {
+  /** 初始化组件 UUID 并保存具体关节种类。 */ constructor(kind: JointKind2D, uuid?: string) {
     super(uuid)
     this.kind = kind
   }
@@ -995,7 +996,7 @@ export class RigidBody2D extends ComponentBase {
   contactNormal: Vec2 = { x: 0, y: 0 }
   penetrationDepth = 0
 
-  constructor(uuid?: string) {
+  /** 初始化 RigidBody2D 实例时调用 super(uuid)；不显式返回调用结果。 */ constructor(uuid?: string) {
     super(uuid)
   }
 }
@@ -1038,7 +1039,7 @@ export class Collider2D extends ComponentBase {
     , restitutionCombine: 'Maximum'
   }
 
-  constructor(kind: ColliderKind2D, uuid?: string) {
+  /** 初始化碰撞器 UUID 和类别，并按椭圆、多边形或箱形类别选择初始形状模型。 */ constructor(kind: ColliderKind2D, uuid?: string) {
     super(uuid)
     this.kind = kind
     this.shapeModel = kind === 'EllipseCollider2D' ? 'Circle' : kind === 'PolygonCollider2D' ? 'ConvexPolygon' : 'Box'
@@ -1054,12 +1055,12 @@ export type EntityComponent =
   | Collectible2D | Projectile2D | Spawner2D | Cooldown2D | Lifetime2D | MouseFollower2D | CameraFollow2D | WorldChunk2D | Portal2D | ObjectPool2D
   | ParticleEmitter2D | Light2D | ShadowCaster2D | Joint2D | RigidBody2D | Collider2D
 
-function clonePersistedValue<T>(value: T): T {
+/** 保留 undefined，否则通过 JSON 深拷贝生成独立的持久化值。 */ function clonePersistedValue<T>(value: T): T {
   if (value === undefined) return value
   return JSON.parse(JSON.stringify(value)) as T
 }
 
-export function copyComponentValues<T extends Component2D>(component: T): Record<string, unknown> {
+/** 复制可编辑持久化字段，排除身份、移除标记、纹理对象及临时运动和游戏运行状态。 */ export function copyComponentValues<T extends Component2D>(component: T): Record<string, unknown> {
   const values: Record<string, unknown> = {}
   for (const [key, value] of Object.entries(component)) {
     if (key === 'uuid' || key === 'kind' || key === 'removed' || key === 'textureImage' || key === 'lastError' || key === 'state'
@@ -1069,7 +1070,7 @@ export function copyComponentValues<T extends Component2D>(component: T): Record
   return values
 }
 
-export function pasteComponentValues(component: Component2D, values: Record<string, unknown>): void {
+/** 先验证整份候选数据，再深拷贝已有可写字段；保留组件身份并规范关节断裂阈值。 */ export function pasteComponentValues(component: Component2D, values: Record<string, unknown>): void {
   validateComponentValues(component.kind, values)
   const target = component as unknown as Record<string, unknown>
   for (const [key, value] of Object.entries(clonePersistedValue(values))) {

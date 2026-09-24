@@ -1,3 +1,4 @@
+/** 版本6.8.0：生成参考项目与对应资源，供功能演示和版本验证使用。 */
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'

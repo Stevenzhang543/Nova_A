@@ -1,3 +1,4 @@
+<!-- 资源包管理面板：浏览、启用和检查项目扩展包。 -->
 <template>
   <section class="package-manager" data-doc="manual/package-security">
     <header class="package-header">
@@ -105,27 +106,27 @@ const selectedId = ref(''), manifestInput = ref<HTMLInputElement | null>(null)
 const registryOpen = ref(false), selectedRegistryId = ref('')
 const pluginToolsOpen = ref(false)
 const cacheProblems = ref<string[]>([])
-const selected = computed(() => packages.installed.find(item => item.manifest.id === selectedId.value) ?? null)
-const compatibility = computed(() => selected.value ? packageCompatibility(selected.value) : [])
-const update = computed(() => selected.value ? packageUpdate(selected.value) : null)
-const pluginManifest = computed(() => plugins.manifests.find(item => item.id === selected.value?.manifest.id) ?? null)
-const catalog = computed(() => registryPackages())
-const selectedRegistry = computed(() => catalog.value.find(item => item.id === selectedRegistryId.value) ?? catalog.value[0] ?? null)
-const installedRegistry = computed(() => packages.installed.some(item => item.manifest.id === selectedRegistry.value?.id))
-const reviewRegistry = computed(() => selectedRegistry.value ? reviewPackageSecurity(selectedRegistry.value) : { status: 'unverified', blocking: [], warnings: [] })
-const installReviewRegistry = computed(() => selectedRegistry.value ? packageInstallReview(selectedRegistry.value) : { pluginApiCompatibility: '', certification: 'uncertified', license: '', provenance: '', executionAllowed: false, blocking: [], warnings: [] })
-const updatePermissions = computed(() => selected.value && update.value ? update.value.permissions.filter(permission => !selected.value!.grantedPermissions.includes(permission)) : [])
-const rollbackAvailable = computed(() => Boolean(selected.value && packages.rollback[selected.value.manifest.id]?.length))
-function matches(item: InstalledPackage, status: typeof statuses[number]): boolean {
+const selected = computed(/** 查找当前选中的已安装包。 */ () => packages.installed.find(/* 比较 item.manifest.id 与 selectedId.value，返回严格相等的判断结果。 */ item => item.manifest.id === selectedId.value) ?? null)
+const compatibility = computed(/* 根据 selected.value 的真假，分别返回 packageCompatibility(selected.value) 或 []。 */ () => selected.value ? packageCompatibility(selected.value) : [])
+const update = computed(/* 根据 selected.value 的真假，分别返回 packageUpdate(selected.value) 或 null。 */ () => selected.value ? packageUpdate(selected.value) : null)
+const pluginManifest = computed(/** 查找所选包对应插件清单。 */ () => plugins.manifests.find(/* 比较 item.id 与 selected.value?.manifest.id，返回严格相等的判断结果。 */ item => item.id === selected.value?.manifest.id) ?? null)
+const catalog = computed(/* 调用 registryPackages() 并返回调用结果。 */ () => registryPackages())
+const selectedRegistry = computed(/** 查找选中目录条目，否则回退首项或空值。 */ () => catalog.value.find(/* 比较 item.id 与 selectedRegistryId.value，返回严格相等的判断结果。 */ item => item.id === selectedRegistryId.value) ?? catalog.value[0] ?? null)
+const installedRegistry = computed(/** 检查所选目录包是否已经安装。 */ () => packages.installed.some(/* 比较 item.manifest.id 与 selectedRegistry.value?.id，返回严格相等的判断结果。 */ item => item.manifest.id === selectedRegistry.value?.id))
+const reviewRegistry = computed(/** 存在目录选择时生成安全审核，否则返回未验证空结果。 */ () => selectedRegistry.value ? reviewPackageSecurity(selectedRegistry.value) : { status: 'unverified', blocking: [], warnings: [] })
+const installReviewRegistry = computed(/** 存在选择时生成安装审核，否则返回禁止执行的未认证空结果。 */ () => selectedRegistry.value ? packageInstallReview(selectedRegistry.value) : { pluginApiCompatibility: '', certification: 'uncertified', license: '', provenance: '', executionAllowed: false, blocking: [], warnings: [] })
+const updatePermissions = computed(/** 比较更新权限与已授予权限，列出新增权限。 */ () => selected.value && update.value ? update.value.permissions.filter(/* 返回 selected.value!.grantedPermissions.includes(permission) 的逻辑取反结果。 */ permission => !selected.value!.grantedPermissions.includes(permission)) : [])
+const rollbackAvailable = computed(/* 调用 Boolean(selected.value && packages.rollback[selected.value.manifest.id]?.length) 并返回调用结果。 */ () => Boolean(selected.value && packages.rollback[selected.value.manifest.id]?.length))
+/** 根据项目、更新、不兼容或禁用状态过滤已安装包。 */ function matches(item: InstalledPackage, status: typeof statuses[number]): boolean {
   if (status === 'project') return item.project
   if (status === 'updates') return packageUpdate(item) !== null
   if (status === 'incompatible') return packageCompatibility(item).length > 0
   if (status === 'disabled') return !item.enabled
   return true
 }
-const visiblePackages = computed(() => packages.installed.filter(item => matches(item, packages.selectedStatus)))
-function count(status: typeof statuses[number]): number { return packages.installed.filter(item => matches(item, status)).length }
-async function importManifest(event: Event): Promise<void> {
+const visiblePackages = computed(/* 调用 packages.installed.filter(item => matches(item, packages.selectedStatus)) 并返回调用结果。 */ () => packages.installed.filter(/* 调用 matches(item, packages.selectedStatus) 并返回调用结果。 */ item => matches(item, packages.selectedStatus)))
+/* 返回 packages.installed.filter(item => matches(item, status)).length 的当前值。 */ function count(status: typeof statuses[number]): number { return packages.installed.filter(/* 调用 matches(item, status) 并返回调用结果。 */ item => matches(item, status)).length }
+/** 读取并验证包清单与可选插件，经权限确认后安装并登记历史，失败写入任务和包错误。 */ async function importManifest(event: Event): Promise<void> {
   const input = event.target as HTMLInputElement, file = input.files?.[0]; input.value = ''
   if (!file) return
   const task = startTask(t('importPackageManifest'), { detail: file.name })
@@ -139,13 +140,13 @@ async function importManifest(event: Event): Promise<void> {
     const item = installPackageManifest(raw.package ?? raw, raw.source)
     if (plugin && item.manifest.version === plugin.version) {
       pluginRuntime.unload(plugin.id)
-      const index = plugins.manifests.findIndex(candidate => candidate.id === plugin.id)
+      const index = plugins.manifests.findIndex(/* 比较 candidate.id 与 plugin.id，返回严格相等的判断结果。 */ candidate => candidate.id === plugin.id)
       if (index >= 0) plugins.manifests.splice(index, 1, plugin); else plugins.manifests.push(plugin)
     }
     selectedId.value = item.manifest.id; pushHistory('Install package'); completeTask(task, item.manifest.name)
   } catch (error) { packages.errors.push(error instanceof Error ? error.message : String(error)); failTask(task, error) }
 }
-async function requestUninstall(): Promise<void> {
+/** 计算卸载影响并请求确认，确认后重新检查选择身份再卸载、记录历史及任务结果。 */ async function requestUninstall(): Promise<void> {
   if (!selected.value) return
   const reviewed = selected.value
   const impact = packageUninstallImpact(reviewed.manifest.id)
@@ -159,13 +160,13 @@ async function requestUninstall(): Promise<void> {
     selectedId.value = ''; pushHistory('Uninstall package'); completeTask(task, packageName)
   } catch (error) { failTask(task, error) }
 }
-function setEnabled(item: InstalledPackage, enabled: boolean): void {
+/** 更新包启用状态，同步插件项目开关并记录对应历史。 */ function setEnabled(item: InstalledPackage, enabled: boolean): void {
   if (!setPackageEnabled(item.manifest.id, enabled)) return
-  const plugin = plugins.manifests.find(candidate => candidate.id === item.manifest.id)
+  const plugin = plugins.manifests.find(/* 比较 candidate.id 与 item.manifest.id，返回严格相等的判断结果。 */ candidate => candidate.id === item.manifest.id)
   if (plugin) plugin.projectEnabled = enabled
   pushHistory(enabled ? 'Enable package' : 'Disable package', `package:${item.manifest.id}`)
 }
-async function applyUpdate(): Promise<void> {
+/** 审核新增权限，等待后重新检查包与更新身份，批准后更新并记录任务结果。 */ async function applyUpdate(): Promise<void> {
   if (!selected.value) return
   const reviewed = selected.value, candidate = update.value, permissions = [...updatePermissions.value]
   const task = startTask(t('applyPackageUpdate'), { detail: reviewed.manifest.name })
@@ -177,7 +178,7 @@ async function applyUpdate(): Promise<void> {
   if (!approvePackageUpdatePermissions(reviewed.manifest.id, permissions)) { failTask(task, new Error(t('operationFailed'))); return }
   pushHistory('Update package', `package:${selected.value.manifest.id}`); completeTask(task, selected.value.manifest.version)
 }
-async function installSelectedRegistry(): Promise<void> {
+/** 审核目录包的可执行性和权限，确认后重新检查选择与目录再安装并记录历史。 */ async function installSelectedRegistry(): Promise<void> {
   if (!selectedRegistry.value) return
   const reviewed = selectedRegistry.value, registry = packages.selectedRegistry
   const task = startTask(t('installPackage'), { detail: reviewed.name })
@@ -189,9 +190,9 @@ async function installSelectedRegistry(): Promise<void> {
   try { const item = installRegistryPackage(reviewed.id); selectedId.value = item.manifest.id; pushHistory('Install registry package'); completeTask(task, item.manifest.name) }
   catch (error) { failTask(task, error) }
 }
-function performRollback(): void { if (!selected.value || !rollbackPackage(selected.value.manifest.id)) return; pushHistory('Rollback package', `package:${selected.value.manifest.id}`) }
-function verifyCache(): void { cacheProblems.value = verifyPackageCache() }
-async function openPackageUrl(url: string): Promise<void> {
+/** 回滚所选包成功后记录资源范围历史。 */ function performRollback(): void { if (!selected.value || !rollbackPackage(selected.value.manifest.id)) return; pushHistory('Rollback package', `package:${selected.value.manifest.id}`) }
+/** 校验资源包缓存并更新问题列表。 */ function verifyCache(): void { cacheProblems.value = verifyPackageCache() }
+/** 仅处理 HTTPS 地址；原生环境交给外部链接插件并捕获错误，Web 以隔离来源的新窗口打开。 */ async function openPackageUrl(url: string): Promise<void> {
   if (!/^https:\/\//i.test(url)) return
   if ('__TAURI_INTERNALS__' in window) { try { const { openUrl } = await import('@tauri-apps/plugin-opener'); await openUrl(url); return } catch (error) { packages.errors.push(error instanceof Error ? error.message : String(error)); return } }
   window.open(url, '_blank', 'noopener,noreferrer')

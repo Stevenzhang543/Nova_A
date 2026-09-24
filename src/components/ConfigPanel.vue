@@ -1,3 +1,4 @@
+<!-- 对象属性检查器：编辑实体组件、资源绑定及场景属性，协调验证和历史。 -->
 <template>
   <div class="config-wrapper" data-doc="manual/inspector" :class="[dock,{'panel-maximized':workspaceState.maximizedPanel==='inspector'}]" :style="{ width: `${panelWidth}px` }">
     <PanelResizeHandle v-model="panelWidth" orientation="vertical" :minimum="252" :maximum="480" :reset-value="292" :reverse="dock==='right'" :label="t('inspector')" :disabled="workspaceState.maximizedPanel==='inspector'" @commit="estate.inspectorWidth=$event" />
@@ -57,7 +58,7 @@
             <PropertyRow :label="t('pathSmoothing')" path="Path.smoothing"><NumberRange v-model="selectedEntity.authoring.path.smoothing" :min="0" :max="1" :step="0.01" /></PropertyRow>
             <label class="stacked-field"><span>{{ t('pathPoints') }}</span><PathTextInput :model-value="pathPointsText" kind="points" :resource-key="numericResourceKey + ':path.points'" rows="3" @commit="updatePathPoints" /></label>
             <label class="stacked-field"><span>{{ t('pathTangents') }}</span><PathTextInput :model-value="pathTangentsText" kind="tangents" :maximum="selectedEntity.authoring.path.points.length" :resource-key="numericResourceKey + ':path.tangents'" rows="3" :placeholder="t('pathTangentsHint')" @commit="updatePathTangents" /></label>
-            <PropertyRow :label="t('pathFollower')"><select v-model="selectedEntity.authoring.path.follower.targetUuid"><option :value="null">{{ t('none') }}</option><option v-for="entity in state.world.entities.filter(entity => entity !== selectedEntity)" :key="entity.uuid" :value="entity.uuid">{{ entity.name }}</option></select></PropertyRow>
+<!-- 路径跟随目标过滤回调排除当前选中实体。 -->            <PropertyRow :label="t('pathFollower')"><select v-model="selectedEntity.authoring.path.follower.targetUuid"><option :value="null">{{ t('none') }}</option><option v-for="entity in state.world.entities.filter(entity => entity !== selectedEntity)" :key="entity.uuid" :value="entity.uuid">{{ entity.name }}</option></select></PropertyRow>
             <PropertyRow :label="t('pathProgress')"><NumberRange v-model="selectedEntity.authoring.path.follower.progress" :min="0" :max="1" :step="0.001" /></PropertyRow>
             <PropertyRow :label="t('pathSpeed')"><NumericExpressionInput v-model="selectedEntity.authoring.path.follower.speed" :step="0.01" :resource-key="numericResourceKey + ':selectedEntity.authoring.path.follower.speed'" /></PropertyRow>
             <PropertyRow :label="t('orientToPath')"><ToggleSwitch v-model="selectedEntity.authoring.path.follower.orient" /></PropertyRow>
@@ -68,7 +69,7 @@
           <PropertyRow :label="t('entityGroups')"><input v-model="groupsText" type="text"></PropertyRow>
           <PropertyRow :label="t('namedLayer')"><select v-model="selectedEntity.namedLayer"><option v-for="layer in sceneManager.activeScene.settings.namedLayers" :key="layer.id" :value="layer.name">{{ layer.name }}</option></select></PropertyRow>
           <PropertyRow :label="t('entityOwnership')"><select v-model="selectedEntity.ownership"><option value="Scene">{{ t('sceneOwned') }}</option><option value="Prefab">{{ t('prefabOwned') }}</option><option value="Runtime">{{ t('runtimeOwned') }}</option></select></PropertyRow>
-          <PropertyRow :label="t('ownerEntity')"><select v-model="selectedEntity.ownerUuid"><option :value="null">{{ t('none') }}</option><option v-for="entity in state.world.entities.filter(entity => entity !== selectedEntity)" :key="entity.uuid" :value="entity.uuid">{{ entity.name }}</option></select></PropertyRow>
+<!-- 拥有者候选过滤回调排除当前选中实体。 -->          <PropertyRow :label="t('ownerEntity')"><select v-model="selectedEntity.ownerUuid"><option :value="null">{{ t('none') }}</option><option v-for="entity in state.world.entities.filter(entity => entity !== selectedEntity)" :key="entity.uuid" :value="entity.uuid">{{ entity.name }}</option></select></PropertyRow>
           <PropertyRow :label="t('editorOnlyEntity')"><ToggleSwitch v-model="selectedEntity.editorOnly" /></PropertyRow>
           <PropertyRow :label="t('runtimePersistence')"><select v-model="selectedEntity.runtimePersistence"><option value="Scene">{{ t('persistenceScene') }}</option><option value="Session">{{ t('persistenceSession') }}</option><option value="SaveGame">{{ t('persistenceSaveGame') }}</option><option value="Transient">{{ t('persistenceTransient') }}</option></select></PropertyRow>
           <div v-if="selectedValidation.length" class="authoring-validation" role="status"><strong>{{ t('componentValidation') }}</strong><button v-for="issue in selectedValidation" :key="`${issue.code}:${issue.component}`" :class="issue.severity" :title="issue.fix">{{ issue.message }}</button></div>
@@ -191,7 +192,7 @@
           <PropertyRow :label="t('backgroundColor')"><input type="color" :value="rgbHex(selectedEntity.camera2D.backgroundColor)" @input="setRgb(selectedEntity.camera2D!.backgroundColor, $event)"></PropertyRow>
           <PropertyRow :label="t('pixelPerfect')" path="Camera.pixelPerfect"><ToggleSwitch v-model="selectedEntity.camera2D.pixelPerfect" /></PropertyRow>
           <PropertyRow :label="t('cameraPreview')"><ToggleSwitch v-model="selectedEntity.camera2D.previewInEditor" /></PropertyRow>
-          <PropertyRow :label="t('cameraFollowTarget')"><select v-model="selectedEntity.camera2D.followTargetUuid"><option :value="null">{{ t('none') }}</option><option v-for="entity in state.world.entities.filter(entity => entity !== selectedEntity)" :key="entity.uuid" :value="entity.uuid">{{ entity.name }}</option></select></PropertyRow>
+<!-- 相机跟随目标过滤回调排除当前选中实体。 -->          <PropertyRow :label="t('cameraFollowTarget')"><select v-model="selectedEntity.camera2D.followTargetUuid"><option :value="null">{{ t('none') }}</option><option v-for="entity in state.world.entities.filter(entity => entity !== selectedEntity)" :key="entity.uuid" :value="entity.uuid">{{ entity.name }}</option></select></PropertyRow>
           <PropertyRow :label="t('cameraSmoothing')"><ToggleSwitch v-model="selectedEntity.camera2D.smoothing.enabled" /></PropertyRow>
           <PropertyRow v-if="selectedEntity.camera2D.smoothing.enabled" :label="t('smoothingSpeed')" path="Camera.smoothingSpeed"><NumericExpressionInput v-model="selectedEntity.camera2D.smoothing.speed" :minimum="0" :step="0.1" :resource-key="numericResourceKey + ':selectedEntity.camera2D.smoothing.speed'" /></PropertyRow>
           <PropertyRow :label="t('cameraLimits')"><ToggleSwitch v-model="selectedEntity.camera2D.limits.enabled" /></PropertyRow>
@@ -411,85 +412,85 @@ import { attachEventSheet } from '../runtime/eventSheets'
 import { openEventSheetAsset } from '../visual/graphStudioState'
 import { applyEditorWorkspace, workspaceState } from '../editor/workspaces'
 
-const InspectorSection = defineComponent({ props: { title: { type: String, required: true }, category: { type: String, default: 'general' }, open: Boolean }, setup(props, { slots }) { return () => h('details', { class: 'inspector-section', open: props.open, style: { display: inspectorSectionVisible(props.title, props.category as InspectorCategory) ? '' : 'none' } }, [h('summary', [h('span', props.title), h('i', '⌄')]), h('div', { class: 'section-body' }, slots.default?.())]) } })
-function namePropertyControls(nodes: VNode[], label: string): VNode[] {
-  return nodes.map(node => {
+const InspectorSection = defineComponent({ props: { title: { type: String, required: true }, category: { type: String, default: 'general' }, open: Boolean }, /** 创建可按分类与搜索隐藏的折叠属性分区。 */ setup(props, { slots }) { return /** 渲染分区标题、展开状态及插槽内容。 */ () => h('details', { class: 'inspector-section', open: props.open, style: { display: inspectorSectionVisible(props.title, props.category as InspectorCategory) ? '' : 'none' } }, [h('summary', [h('span', props.title), h('i', '⌄')]), h('div', { class: 'section-body' }, slots.default?.())]) } })
+/** 递归复制属性控件并补充无障碍名称，成对数值区分横纵轴。 */ function namePropertyControls(nodes: VNode[], label: string): VNode[] {
+  return nodes.map(/** 复制单个节点并为无标签交互控件及其子节点补充名称。 */ node => {
     if (!isVNode(node)) return node
     const interactive = typeof node.type === 'object' || ['input', 'select', 'textarea', 'button'].includes(String(node.type))
     const copy = cloneVNode(node, interactive && !node.props?.['aria-label'] && !node.props?.['aria-labelledby'] ? { 'aria-label': label } : {})
     if (Array.isArray(node.children)) {
       const pair = String(node.props?.class ?? '').split(' ').includes('pair')
-      copy.children = node.children.map((child, index) => isVNode(child) ? namePropertyControls([child], pair ? `${label} ${index === 0 ? 'X' : 'Y'}` : label)[0] : child)
+      copy.children = node.children.map(/* 根据 isVNode(child) 的真假，分别返回 namePropertyControls([child], pair ? `${label} ${index === 0 ? 'X' : 'Y'}` : label)[0] 或 child。 */ (child, index) => isVNode(child) ? namePropertyControls([child], pair ? `${label} ${index === 0 ? 'X' : 'Y'}` : label)[0] : child)
     }
     return copy
   })
 }
-const PropertyRow = defineComponent({ props: { label: { type: String, required: true }, path: { type: String, default: '' } }, setup(props, { slots }) { return () => {
+const PropertyRow = defineComponent({ props: { label: { type: String, required: true }, path: { type: String, default: '' } }, /** 创建支持固定、修改筛选及属性元数据的属性行组件。 */ setup(props, { slots }) { return /** 按筛选渲染属性名称、单位、控件和默认值、目标及覆盖详情。 */ () => {
   if (estate.inspectorPinnedOnly && (!props.path || !estate.pinnedInspectorProperties.includes(props.path))) return null
   if (estate.inspectorModifiedOnly && (!props.path || !modifiedPropertyPaths.value.has(props.path))) return null
   const metadata = props.path ? propertyMetadata(props.path) : undefined
-  return h('div', { role: 'group', 'aria-label': props.label, class: ['property-row', { modified: props.path && modifiedPropertyPaths.value.has(props.path), pinned: props.path && estate.pinnedInspectorProperties.includes(props.path) }], 'data-property-path': props.path || undefined, title: metadata?.help, onContextmenu: props.path ? (event: MouseEvent) => openPropertyMenu(event, props.path) : undefined }, [h('span', [props.path && estate.pinnedInspectorProperties.includes(props.path) ? h('i', '★') : null, props.label, metadata?.unit ? h('small', metadata.unit) : null]), h('div', { class: 'property-control' }, [...namePropertyControls(slots.default?.() ?? [], props.label), props.path ? h('details', {class:'property-details', 'data-non-project-control':''}, [h('summary', propertyCopy.value.details), metadata ? h('small', propertyCopy.value.defaults + ': ' + metadata.defaults.join(', ')) : null, h('small', propertyCopy.value.destination + ': ' + numericResourceKey.value + '/' + props.path), selectedEntity.value?.prefabOverrides[props.path] !== undefined ? h('small', propertyCopy.value.override) : null]) : null])])
+  return h('div', { role: 'group', 'aria-label': props.label, class: ['property-row', { modified: props.path && modifiedPropertyPaths.value.has(props.path), pinned: props.path && estate.pinnedInspectorProperties.includes(props.path) }], 'data-property-path': props.path || undefined, title: metadata?.help, onContextmenu: props.path ? /* 调用 openPropertyMenu(event, props.path) 并返回调用结果。 */ (event: MouseEvent) => openPropertyMenu(event, props.path) : undefined }, [h('span', [props.path && estate.pinnedInspectorProperties.includes(props.path) ? h('i', '★') : null, props.label, metadata?.unit ? h('small', metadata.unit) : null]), h('div', { class: 'property-control' }, [...namePropertyControls(slots.default?.() ?? [], props.label), props.path ? h('details', {class:'property-details', 'data-non-project-control':''}, [h('summary', propertyCopy.value.details), metadata ? h('small', propertyCopy.value.defaults + ': ' + metadata.defaults.join(', ')) : null, h('small', propertyCopy.value.destination + ': ' + numericResourceKey.value + '/' + props.path), selectedEntity.value?.prefabOverrides[props.path] !== undefined ? h('small', propertyCopy.value.override) : null]) : null])])
 } } })
-const DiagnosticRow = defineComponent({ props: { label: { type: String, required: true }, value: { type: String, required: true }, active: Boolean }, setup(props) { return () => h('div', { class: ['diagnostic-row', { active: props.active }] }, [h('span', props.label), h('code', props.value)]) } })
-const ToggleSwitch = defineComponent({ props: { modelValue: { type: Boolean, required: true } }, emits: ['update:modelValue'], setup(props, { emit }) { return () => h('button', { class: ['toggle', { active: props.modelValue }], role: 'switch', 'aria-checked': props.modelValue, onClick: () => { emit('update:modelValue', !props.modelValue); onConfigChange() } }, h('i')) } })
+const DiagnosticRow = defineComponent({ props: { label: { type: String, required: true }, value: { type: String, required: true }, active: Boolean }, /** 建立显示标签、数值和激活样式的诊断行。 */ setup(props) { return /* 调用 h('div', { class: ['diagnostic-row', { active: props.active }] }, [h('span', props.label), h('code', props.value)]) 并返回调用结果。 */ () => h('div', { class: ['diagnostic-row', { active: props.active }] }, [h('span', props.label), h('code', props.value)]) } })
+const ToggleSwitch = defineComponent({ props: { modelValue: { type: Boolean, required: true } }, emits: ['update:modelValue'], /** 建立具有开关语义的布尔控件，点击后提交配置修改。 */ setup(props, { emit }) { return /** 渲染当前布尔开关状态并绑定更新事件。 */ () => h('button', { class: ['toggle', { active: props.modelValue }], role: 'switch', 'aria-checked': props.modelValue, onClick: /** 反转布尔值并调用统一配置提交。 */ () => { emit('update:modelValue', !props.modelValue); onConfigChange() } }, h('i')) } })
 const NumberRange = defineComponent({
   inheritAttrs: false,
   props: {modelValue: {type:Number,required:true},min:{type:Number,required:true},max:{type:Number,required:true},step:{type:Number,required:true}},
   emits: ['update:modelValue'],
-  setup(props, {emit,attrs}) {
-    const update = (event: Event) => { const value=Number((event.target as HTMLInputElement).value); if(Number.isFinite(value)) emit('update:modelValue',value) }
-    return () => h('div', {class:'number-range'}, [
-      h('input', {type:'range','aria-label':attrs['aria-label'],'aria-labelledby':attrs['aria-labelledby'],value:props.modelValue,min:props.min,max:props.max,step:props.step,onInput:update,onPointerdown:(event:PointerEvent)=>beginRangeGesture(event,String(attrs['aria-label'] || 'property'))}),
-      h(NumericExpressionInput, {resourceKey:numericResourceKey.value,modelValue:props.modelValue,step:props.step,'aria-label':attrs['aria-label'],'aria-labelledby':attrs['aria-labelledby'],'onUpdate:modelValue':(value:number)=>emit('update:modelValue',value)})
+  /** 建立滑块与表达式数值输入的同步控件。 */ setup(props, {emit,attrs}) {
+    const update = /** 读取滑块数值，仅向父级提交有限数。 */ (event: Event) => { const value=Number((event.target as HTMLInputElement).value); if(Number.isFinite(value)) emit('update:modelValue',value) }
+    return /** 渲染滑块和表达式输入，并连接范围拖动事务。 */ () => h('div', {class:'number-range'}, [
+      h('input', {type:'range','aria-label':attrs['aria-label'],'aria-labelledby':attrs['aria-labelledby'],value:props.modelValue,min:props.min,max:props.max,step:props.step,onInput:update,onPointerdown:/* 调用 beginRangeGesture(event,String(attrs['aria-label'] || 'property')) 并返回调用结果。 */ (event:PointerEvent)=>beginRangeGesture(event,String(attrs['aria-label'] || 'property'))}),
+      h(NumericExpressionInput, {resourceKey:numericResourceKey.value,modelValue:props.modelValue,step:props.step,'aria-label':attrs['aria-label'],'aria-labelledby':attrs['aria-labelledby'],'onUpdate:modelValue':/* 调用 emit('update:modelValue',value) 并返回调用结果。 */ (value:number)=>emit('update:modelValue',value)})
     ])
   }
 })
 const ComponentTools = defineComponent({
   props: { kind: { type: String, required: true } },
-  setup(props) {
-    return () => {
+  /** 建立所选组件的启停、重置、复制粘贴、预设、排序和删除工具。 */ setup(props) {
+    return /** 仅对存在的组件渲染工具按钮，并保护变换组件不可移除和排序。 */ () => {
       const kind = props.kind as ComponentKind
       const component = selectedEntity.value?.getComponent(kind, true)
       if (!component) return null
       return h('div', { class: 'component-tools' }, [
-        kind === 'Transform2D' ? null : h('button', { class: { active: component.enabled }, title: t('componentEnabled'), onClick: () => toggleComponent(kind) }, component.enabled ? 'On' : 'Off'),
-        h('button', { title: t('resetComponent'), onClick: () => resetComponent(kind) }, '↻'),
-        h('button', { title: t('copyComponent'), onClick: () => copyComponent(kind) }, 'Copy'),
-        h('button', { disabled: componentClipboard.value?.kind !== kind, title: t('pasteComponent'), onClick: () => pasteComponent(kind) }, 'Paste'),
-        h('button', { title: t('componentPreset'), onClick: () => useComponentPreset(kind) }, componentPresets(kind).length ? 'Preset' : '+Preset'),
-        kind === 'Transform2D' ? null : h('button', { title: t('moveComponentUp'), onClick: () => reorderComponent(kind, -1) }, '↑'),
-        kind === 'Transform2D' ? null : h('button', { title: t('moveComponentDown'), onClick: () => reorderComponent(kind, 1) }, '↓'),
-        kind === 'Transform2D' ? null : h('button', { class: 'danger', title: t('removeComponent'), onClick: () => removeComponent(kind) }, '×')
+        kind === 'Transform2D' ? null : h('button', { class: { active: component.enabled }, title: t('componentEnabled'), onClick: /* 调用 toggleComponent(kind) 并返回调用结果。 */ () => toggleComponent(kind) }, component.enabled ? 'On' : 'Off'),
+        h('button', { title: t('resetComponent'), onClick: /* 调用 resetComponent(kind) 并返回调用结果。 */ () => resetComponent(kind) }, '↻'),
+        h('button', { title: t('copyComponent'), onClick: /* 调用 copyComponent(kind) 并返回调用结果。 */ () => copyComponent(kind) }, 'Copy'),
+        h('button', { disabled: componentClipboard.value?.kind !== kind, title: t('pasteComponent'), onClick: /* 调用 pasteComponent(kind) 并返回调用结果。 */ () => pasteComponent(kind) }, 'Paste'),
+        h('button', { title: t('componentPreset'), onClick: /* 调用 useComponentPreset(kind) 并返回调用结果。 */ () => useComponentPreset(kind) }, componentPresets(kind).length ? 'Preset' : '+Preset'),
+        kind === 'Transform2D' ? null : h('button', { title: t('moveComponentUp'), onClick: /* 调用 reorderComponent(kind, -1) 并返回调用结果。 */ () => reorderComponent(kind, -1) }, '↑'),
+        kind === 'Transform2D' ? null : h('button', { title: t('moveComponentDown'), onClick: /* 调用 reorderComponent(kind, 1) 并返回调用结果。 */ () => reorderComponent(kind, 1) }, '↓'),
+        kind === 'Transform2D' ? null : h('button', { class: 'danger', title: t('removeComponent'), onClick: /* 调用 removeComponent(kind) 并返回调用结果。 */ () => removeComponent(kind) }, '×')
       ])
     }
   }
 })
 
-const pluginInspectorContributions = computed(() => pluginState.contributions.filter(item => ['menus', 'inspectors', 'gizmos', 'components'].includes(item.kind)))
-function invokePluginInspector(kind: PluginContributionKind, id: string, pluginId: string): void {
+const pluginInspectorContributions = computed(/* 调用 pluginState.contributions.filter(item => ['menus', 'inspectors', 'gizmos', 'components'].includes(item.kind)) 并返回调用结果。 */ () => pluginState.contributions.filter(/* 调用 ['menus', 'inspectors', 'gizmos', 'components'].includes(item.kind) 并返回调用结果。 */ item => ['menus', 'inspectors', 'gizmos', 'components'].includes(item.kind)))
+/** 调用指定插件贡献的检查器入口。 */ function invokePluginInspector(kind: PluginContributionKind, id: string, pluginId: string): void {
   pluginRuntime.invokeContribution(kind, id, pluginId)
 }
 
-const selectedEntities = computed(() => {
+const selectedEntities = computed(/** 从世界实体中筛选当前多选标识。 */ () => {
   const ids = new Set(state.selectedEntityIds)
-  return state.world.entities.filter(entity => ids.has(entity.id))
+  return state.world.entities.filter(/* 调用 ids.has(entity.id) 并返回调用结果。 */ entity => ids.has(entity.id))
 })
-const selectedEntity = computed(() => state.selectedEntityId === null ? null : state.world.entities.find(entity => entity.id === state.selectedEntityId) ?? null)
-const propertyCopy = computed(() => ({
+const selectedEntity = computed(/** 按主选择标识查找实体，没有选择时返回空值。 */ () => state.selectedEntityId === null ? null : state.world.entities.find(/* 比较 entity.id 与 state.selectedEntityId，返回严格相等的判断结果。 */ entity => entity.id === state.selectedEntityId) ?? null)
+const propertyCopy = computed(/** 按当前语言提供属性详情与位置编辑说明。 */ () => ({
   en: {positionMode:'Position editing',center:'Selection center',shared:'Shared value',details:'Property details',defaults:'Default',destination:'Destination',override:'Prefab override'},
   de: {positionMode:'Position bearbeiten',center:'Auswahlmittelpunkt',shared:'Gemeinsamer Wert',details:'Eigenschaftsdetails',defaults:'Standardwert',destination:'Ziel',override:'Prefab-Überschreibung'},
   zh: {positionMode:'位置编辑',center:'选择中心',shared:'共同数值',details:'属性详情',defaults:'默认值',destination:'目标资源',override:'预制体覆盖'}
 })[prefs.locale])
 const multiPositionMode = ref<'center' | 'shared'>('center')
-const numericResourceKey = computed(() => selectedEntities.value.map(entity => entity.uuid).sort().join('|'))
+const numericResourceKey = computed(/** 由已排序实体标识组成数值控件资源键。 */ () => selectedEntities.value.map(/* 返回 entity.uuid 的当前值。 */ entity => entity.uuid).sort().join('|'))
 // The Inspector owns pointer gestures: child property controls can be replaced while rendering.
 let rangeGesture: {resource:string} | null = null
-function clearRangeGesture(): void {
+/** 清除范围拖动状态并解除结束及取消监听。 */ function clearRangeGesture(): void {
   rangeGesture = null
   window.removeEventListener('pointerup', finishRangeGesture)
   window.removeEventListener('pointercancel', cancelRangeGesture)
 }
-function finishRangeGesture(): void {
+/** 资源身份未变时提交范围手势，否则取消历史事务。 */ function finishRangeGesture(): void {
   if (!rangeGesture) return
   const sameResource = rangeGesture.resource === numericResourceKey.value
   clearRangeGesture()
@@ -497,13 +498,13 @@ function finishRangeGesture(): void {
   onConfigChange()
   commitHistoryTransaction()
 }
-function cancelRangeGesture(): void {
+/** 取消范围手势并回滚历史事务。 */ function cancelRangeGesture(): void {
   if (!rangeGesture) return
   clearRangeGesture()
   cancelHistoryTransaction()
 }
-function onInspectorPointerDown(event: PointerEvent): void { const target = event.target; if (target instanceof HTMLInputElement && target.type === 'range') beginRangeGesture(event, target.labels?.[0]?.innerText.trim() || target.getAttribute('aria-label') || 'property') }
-function beginRangeGesture(event: PointerEvent, label: string): void {
+/** 检测检查器内范围输入按下，并以控件标签开始手势。 */ function onInspectorPointerDown(event: PointerEvent): void { const target = event.target; if (target instanceof HTMLInputElement && target.type === 'range') beginRangeGesture(event, target.labels?.[0]?.innerText.trim() || target.getAttribute('aria-label') || 'property') }
+/** 仅左键且无活动手势时开启历史事务并安装结束监听。 */ function beginRangeGesture(event: PointerEvent, label: string): void {
   if (event.button !== 0 || rangeGesture) return
   const target = event.target instanceof HTMLElement ? event.target : null
   const resource = target?.closest<HTMLElement>('[data-resource-key]')?.dataset.resourceKey || numericResourceKey.value
@@ -514,45 +515,45 @@ function beginRangeGesture(event: PointerEvent, label: string): void {
 }
 watch(numericResourceKey, cancelRangeGesture, {flush:'sync'})
 onUnmounted(cancelRangeGesture)
-onUnmounted(registerEditorDraft({validate:()=>true,commit:finishRangeGesture,cancel:clearRangeGesture}))
+onUnmounted(registerEditorDraft({validate:/* 返回固定值 true。 */ ()=>true,commit:finishRangeGesture,cancel:clearRangeGesture}))
 
-const physicsMaterialAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'material' && physicsMaterialDocument(asset.uuid)))
+const physicsMaterialAssets = computed(/* 调用 assetState.records.filter(asset => asset.assetType === 'material' && physicsMaterialDocument(asset.uuid)) 并返回调用结果。 */ () => assetState.records.filter(/* 先计算 asset.assetType === 'material'；仅当其为真值时求右侧 physicsMaterialDocument(asset.uuid)，返回短路求值结果。 */ asset => asset.assetType === 'material' && physicsMaterialDocument(asset.uuid)))
 const colliderShapeKinds: PhysicsShapeKind[] = ['Box', 'Circle', 'Capsule', 'Segment', 'Chain', 'WorldBoundary', 'ConvexPolygon', 'ConcavePolygon']
 const materialCombineModes = ['Average', 'Minimum', 'Maximum', 'Multiply'] as const
-const colliderShapeSupport = computed(() => { const entity=selectedEntity.value, model = entity?.collider.shapeModel ?? 'Box'; const support = PHYSICS_SHAPE_SUPPORT[model]; const blocked=(model==='ConcavePolygon'||model==='Chain')&&entity&&!entity.isStatic&&!entity.isKinematic?' Dynamic bodies must use finite convex children.':''; return `${support.simulation}: ${support.note}${blocked}` })
-const colliderShapeModel = computed({ get: () => selectedEntity.value?.collider.shapeModel ?? 'Box', set: (kind: PhysicsShapeKind) => { const entity = selectedEntity.value; if (!entity) return; entity.collider.shapeModel = kind; if (kind === 'WorldBoundary') { entity.rigidBody.bodyType = 'Static'; entity.collider.sensor = false; entity.rigidBody.freezeRotation = true } normalizeEntity(entity); pushHistory('Change collider shape') } })
-function addColliderShape() { const collider = selectedEntity.value?.getCollider(); if (!collider || collider.shapes.length >= 32) return; collider.shapes.push({ id: createUuid(), kind: 'Box', offset: { x: 0, y: 0 }, rotation: 0, size: { x: 1, y: 1 }, radius: .5, points: [], enabled: true, sensor: collider.sensor, physicsLayer: collider.physicsLayer, collisionMask: collider.collisionMask, oneWay: false, oneWayNormal: {x:0,y:1} }); pushHistory('Add collider shape') }
-function removeColliderShape(index: number) { const collider = selectedEntity.value?.getCollider(); if (!collider || index < 0 || index >= collider.shapes.length) return; collider.shapes.splice(index, 1); pushHistory('Remove collider shape') }
-function formatColliderPoints(points: Array<{x:number;y:number}>) { return points.map(point=>`${point.x}, ${point.y}`).join('\n') }
-function setColliderPoints(shape: {points:Array<{x:number;y:number}>}, event: Event) { const rows=(event.target as HTMLTextAreaElement).value.split(/[\n;]+/).flatMap(row=>{const [x,y]=row.trim().split(/[\s,]+/).map(Number);return Number.isFinite(x)&&Number.isFinite(y)?[{x,y}]:[]}).slice(0,128); if(rows.length>=2){shape.points=rows;pushHistory('Edit collider points')} }
-const collisionMaskNames = computed(() => { const mask = selectedEntity.value?.collider.collisionMask ?? 0; return state.globalSettings.layers.filter(layer => (mask & ((2 ** layer.id) >>> 0)) !== 0).map(layer => layer.name).join(', ') })
-const canEdit = computed(() => state.playMode === 'editing')
+const colliderShapeSupport = computed(/** 组合碰撞形状支持说明，并提示动态凹形或链形限制。 */ () => { const entity=selectedEntity.value, model = entity?.collider.shapeModel ?? 'Box'; const support = PHYSICS_SHAPE_SUPPORT[model]; const blocked=(model==='ConcavePolygon'||model==='Chain')&&entity&&!entity.isStatic&&!entity.isKinematic?' Dynamic bodies must use finite convex children.':''; return `${support.simulation}: ${support.note}${blocked}` })
+const colliderShapeModel = computed({ get: /* 当 selectedEntity.value?.collider.shapeModel 为 null 或 undefined 时返回 'Box'，否则保留左侧值。 */ () => selectedEntity.value?.collider.shapeModel ?? 'Box', set: /** 更新碰撞形状；世界边界强制静态非传感器并冻结旋转。 */ (kind: PhysicsShapeKind) => { const entity = selectedEntity.value; if (!entity) return; entity.collider.shapeModel = kind; if (kind === 'WorldBoundary') { entity.rigidBody.bodyType = 'Static'; entity.collider.sensor = false; entity.rigidBody.freezeRotation = true } normalizeEntity(entity); pushHistory('Change collider shape') } })
+/** 在最多三十二个子形状限制内添加默认盒形碰撞。 */ function addColliderShape() { const collider = selectedEntity.value?.getCollider(); if (!collider || collider.shapes.length >= 32) return; collider.shapes.push({ id: createUuid(), kind: 'Box', offset: { x: 0, y: 0 }, rotation: 0, size: { x: 1, y: 1 }, radius: .5, points: [], enabled: true, sensor: collider.sensor, physicsLayer: collider.physicsLayer, collisionMask: collider.collisionMask, oneWay: false, oneWayNormal: {x:0,y:1} }); pushHistory('Add collider shape') }
+/** 按有效索引删除碰撞子形状并记录历史。 */ function removeColliderShape(index: number) { const collider = selectedEntity.value?.getCollider(); if (!collider || index < 0 || index >= collider.shapes.length) return; collider.shapes.splice(index, 1); pushHistory('Remove collider shape') }
+/* 调用 points.map(point=>`${point.x}, ${point.y}`).join('\n') 并返回调用结果。 */ function formatColliderPoints(points: Array<{x:number;y:number}>) { return points.map(/** 将碰撞点格式化为逗号分隔的坐标。 */ point=>`${point.x}, ${point.y}`).join('\n') }
+/** 解析最多一百二十八个有效点，至少两点时更新碰撞几何。 */ function setColliderPoints(shape: {points:Array<{x:number;y:number}>}, event: Event) { const rows=(event.target as HTMLTextAreaElement).value.split(/[\n;]+/).flatMap(/** 将单行坐标解析为有限二维点，忽略无效行。 */ row=>{const [x,y]=row.trim().split(/[\s,]+/).map(Number);return Number.isFinite(x)&&Number.isFinite(y)?[{x,y}]:[]}).slice(0,128); if(rows.length>=2){shape.points=rows;pushHistory('Edit collider points')} }
+const collisionMaskNames = computed(/** 按碰撞掩码筛选物理层并拼接名称。 */ () => { const mask = selectedEntity.value?.collider.collisionMask ?? 0; return state.globalSettings.layers.filter(/* 比较 (mask & ((2 ** layer.id) >>> 0)) 与 0，返回严格不等的判断结果。 */ layer => (mask & ((2 ** layer.id) >>> 0)) !== 0).map(/* 返回 layer.name 的当前值。 */ layer => layer.name).join(', ') })
+const canEdit = computed(/* 比较 state.playMode 与 'editing'，返回严格相等的判断结果。 */ () => state.playMode === 'editing')
 const blueprintEditorUuid=ref<string|null>(null)
-function createOwnedBlueprint(){const entity=selectedEntity.value;if(!entity)return;try{blueprintEditorUuid.value=authorBlueprintFromEntity(entity)}catch(error){addEditorLog(error instanceof Error?error.message:String(error),'Assets','error')}}
-function deriveOwnedBlueprint(uuid:string){try{blueprintEditorUuid.value=authorDerivedBlueprint(uuid,objectOwnershipCopy[prefs.locale].deriveName)}catch(error){addEditorLog(error instanceof Error?error.message:String(error),'Assets','error')}}
-const selectedConnections = computed(() => selectedEntity.value ? state.world.connections.filter(connection => connection.anchors.some(anchor => anchor.entityId === selectedEntity.value!.id)) : [])
-const entityColor = computed(() => selectedEntity.value ? `rgb(${selectedEntity.value.color.r}, ${selectedEntity.value.color.g}, ${selectedEntity.value.color.b})` : 'transparent')
-const selectedEntityArea = computed(() => selectedEntity.value ? entityArea(selectedEntity.value) : 0)
-const effectiveEntityInertia = computed(() => selectedEntity.value ? effectiveInertia(selectedEntity.value) : 0)
+/** 从当前实体创作对象蓝图，失败时记录资源错误。 */ function createOwnedBlueprint(){const entity=selectedEntity.value;if(!entity)return;try{blueprintEditorUuid.value=authorBlueprintFromEntity(entity)}catch(error){addEditorLog(error instanceof Error?error.message:String(error),'Assets','error')}}
+/** 创建派生蓝图并打开，失败时记录资源错误。 */ function deriveOwnedBlueprint(uuid:string){try{blueprintEditorUuid.value=authorDerivedBlueprint(uuid,objectOwnershipCopy[prefs.locale].deriveName)}catch(error){addEditorLog(error instanceof Error?error.message:String(error),'Assets','error')}}
+const selectedConnections = computed(/** 列出锚点连接到当前实体的连接。 */ () => selectedEntity.value ? state.world.connections.filter(/** 判断连接是否含当前实体的锚点。 */ connection => connection.anchors.some(/* 比较 anchor.entityId 与 selectedEntity.value!.id，返回严格相等的判断结果。 */ anchor => anchor.entityId === selectedEntity.value!.id)) : [])
+const entityColor = computed(/** 把当前实体颜色转换为样式字符串，没有实体时透明。 */ () => selectedEntity.value ? `rgb(${selectedEntity.value.color.r}, ${selectedEntity.value.color.g}, ${selectedEntity.value.color.b})` : 'transparent')
+const selectedEntityArea = computed(/* 根据 selectedEntity.value 的真假，分别返回 entityArea(selectedEntity.value) 或 0。 */ () => selectedEntity.value ? entityArea(selectedEntity.value) : 0)
+const effectiveEntityInertia = computed(/* 根据 selectedEntity.value 的真假，分别返回 effectiveInertia(selectedEntity.value) 或 0。 */ () => selectedEntity.value ? effectiveInertia(selectedEntity.value) : 0)
 const componentClipboard = ref<{ kind: ComponentKind; values: Record<string, unknown> } | null>(null)
 const modifiedPropertyPaths = ref(new Set<string>())
 const propertyClipboard = ref<Array<string | number | boolean> | null>(null)
 const propertyMenu = reactive({ visible: false, x: 0, y: 0, path: '', row: null as HTMLElement | null })
-const currentPropertyMetadata = computed<PropertyMetadata | undefined>(() => propertyMetadata(propertyMenu.path))
-const isCurrentPropertyPinned = computed(() => estate.pinnedInspectorProperties.includes(propertyMenu.path))
+const currentPropertyMetadata = computed<PropertyMetadata | undefined>(/* 调用 propertyMetadata(propertyMenu.path) 并返回调用结果。 */ () => propertyMetadata(propertyMenu.path))
+const isCurrentPropertyPinned = computed(/* 调用 estate.pinnedInspectorProperties.includes(propertyMenu.path) 并返回调用结果。 */ () => estate.pinnedInspectorProperties.includes(propertyMenu.path))
 const props = withDefaults(defineProps<{ dock?: 'left' | 'right' }>(), { dock: 'right' })
-const dock = computed(() => props.dock)
+const dock = computed(/* 返回 props.dock 的当前值。 */ () => props.dock)
 const panelWidth = ref(estate.inspectorWidth)
-watch(() => estate.inspectorWidth, value => { panelWidth.value=value })
-const imageAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'image'))
-const fontAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'font'))
-const scriptAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'script' || asset.assetType === 'visualScript'))
-const eventSheetAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'eventSheet'))
-const objectBlueprintAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'objectBlueprint'))
-const pathAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'path'))
-const pathPointsText = computed(() => selectedEntity.value?.authoring.path.points.map(point => `${point.x},${point.y}`).join(' ') ?? '')
-const pathTangentsText = computed(() => selectedEntity.value?.authoring.path.tangents.map(tangent => `${tangent.incoming.x},${tangent.incoming.y}:${tangent.outgoing.x},${tangent.outgoing.y}`).join(' ') ?? '')
-const scriptPropertyGroups = computed(() => {
+watch(/* 返回 estate.inspectorWidth 的当前值。 */ () => estate.inspectorWidth, /** 将外部尺寸更新同步到检查器宽度。 */ value => { panelWidth.value=value })
+const imageAssets = computed(/** 筛选图像资源。 */ () => assetState.records.filter(/* 比较 asset.assetType 与 'image'，返回严格相等的判断结果。 */ asset => asset.assetType === 'image'))
+const fontAssets = computed(/** 筛选字体资源。 */ () => assetState.records.filter(/* 比较 asset.assetType 与 'font'，返回严格相等的判断结果。 */ asset => asset.assetType === 'font'))
+const scriptAssets = computed(/* 调用 assetState.records.filter(asset => asset.assetType === 'script' || asset.assetType === 'visualScript') 并返回调用结果。 */ () => assetState.records.filter(/* 先计算 asset.assetType === 'script'；仅当其为假值时求右侧 asset.assetType === 'visualScript'，返回短路求值结果。 */ asset => asset.assetType === 'script' || asset.assetType === 'visualScript'))
+const eventSheetAssets = computed(/** 筛选事件表资源。 */ () => assetState.records.filter(/* 比较 asset.assetType 与 'eventSheet'，返回严格相等的判断结果。 */ asset => asset.assetType === 'eventSheet'))
+const objectBlueprintAssets = computed(/** 筛选对象蓝图资源。 */ () => assetState.records.filter(/* 比较 asset.assetType 与 'objectBlueprint'，返回严格相等的判断结果。 */ asset => asset.assetType === 'objectBlueprint'))
+const pathAssets = computed(/** 筛选路径资源。 */ () => assetState.records.filter(/* 比较 asset.assetType 与 'path'，返回严格相等的判断结果。 */ asset => asset.assetType === 'path'))
+const pathPointsText = computed(/* 当 selectedEntity.value?.authoring.path.points.map(point => `${point.x},${point.y}`).join(' ') 为 null 或 undefined 时返回 ''，否则保留左侧值。 */ () => selectedEntity.value?.authoring.path.points.map(/** 将路径点格式化为紧凑坐标文本。 */ point => `${point.x},${point.y}`).join(' ') ?? '')
+const pathTangentsText = computed(/** 把路径所有入射与出射切线串接为编辑文本。 */ () => selectedEntity.value?.authoring.path.tangents.map(/** 格式化单个入射和出射切线坐标。 */ tangent => `${tangent.incoming.x},${tangent.incoming.y}:${tangent.outgoing.x},${tangent.outgoing.y}`).join(' ') ?? '')
+const scriptPropertyGroups = computed(/** 按脚本属性元数据分组导出属性，缺省使用脚本组件标题。 */ () => {
   const script = selectedEntity.value?.script2D
   if (!script) return []
   const groups = new Map<string, Array<{ name: string; value: ScriptPropertyValue; metadata: ScriptPropertyMetadata | null }>>()
@@ -560,14 +561,14 @@ const scriptPropertyGroups = computed(() => {
     const metadata = script.propertyMetadata[name] ?? null, group = metadata?.group || t('script2D')
     groups.set(group, [...(groups.get(group) ?? []), { name, value, metadata }])
   }
-  return [...groups].map(([name, properties]) => ({ name, properties }))
+  return [...groups].map(/** 将分组映射项转换为组名与属性列表。 */ ([name, properties]) => ({ name, properties }))
 })
-const materialAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'material'))
+const materialAssets = computed(/** 筛选材质资源。 */ () => assetState.records.filter(/* 比较 asset.assetType 与 'material'，返回严格相等的判断结果。 */ asset => asset.assetType === 'material'))
 
-function compatibleScriptResources(resourceType: string) {
+/** 按脚本资源类型映射可绑定资源，未知类型保留全部资源。 */ function compatibleScriptResources(resourceType: string) {
   const expected: Record<string, string[]> = { Texture2D: ['image'], AudioClip: ['audio'], Font: ['font'], Scene: ['scene'], Prefab: ['prefab'], AnimationClip: ['animation'], AnimatorController: ['controller'], Material: ['material'], Script: ['script'] }
   const types = expected[resourceType] ?? []
-  return types.length ? assetState.records.filter(asset => types.includes(asset.assetType)) : assetState.records
+  return types.length ? assetState.records.filter(/* 调用 types.includes(asset.assetType) 并返回调用结果。 */ asset => types.includes(asset.assetType)) : assetState.records
 }
 const optionalComponents: ComponentKind[] = ['SpriteRenderer2D', 'TextRenderer2D', 'Camera2D', 'Light2D', 'ShadowCaster2D', 'Script2D', 'Animator', 'Skeleton2D', 'TimelinePlayer', 'AudioSource', 'AudioListener', 'Canvas', 'RectTransform', 'Panel', 'Image', 'Text', 'Button', 'Slider', 'ProgressBar', 'Checkbox', 'TextInput', 'TileMap2D', 'ParticleEmitter2D', 'CharacterBody2D', 'GridMover2D', 'PlatformController2D', 'TopDownController2D', 'Health2D', 'DamageHitbox2D', 'Collectible2D', 'Projectile2D', 'Spawner2D', 'Cooldown2D', 'Lifetime2D', 'MouseFollower2D', 'CameraFollow2D', 'Area2D', 'AreaEffector2D', 'NavigationRegion2D', 'NavigationObstacle2D', 'NavigationAgent2D', 'BehaviorTree2D', 'StateMachine2D', 'WorldChunk2D', 'Portal2D', 'ObjectPool2D', 'FixedJoint2D', 'DistanceJoint2D', 'RevoluteJoint2D', 'PrismaticJoint2D', 'SpringJoint2D']
 const inspectorCategories = [
@@ -578,25 +579,25 @@ const inspectorCategories = [
 ]
 const componentSearch = ref('')
 const componentSearchInput = ref<HTMLInputElement | null>(null)
-const addableComponents = computed(() => {
+const addableComponents = computed(/** 合并已移除与尚未添加的可选组件，并考虑官方包可用性。 */ () => {
   if (!selectedEntity.value) return []
-  const removed = [...selectedEntity.value.componentMap.values()].filter(component => component.removed && component.kind !== 'Transform2D').map(component => component.kind)
-  const packageAvailable = (kind: ComponentKind) => !['BehaviorTree2D', 'StateMachine2D'].includes(kind) ? kind !== 'ObjectPool2D' || packageEnabled(OFFICIAL_OBJECT_POOL_PACKAGE_ID) : packageEnabled(OFFICIAL_AI_PACKAGE_ID)
-  const missing = optionalComponents.filter(kind => packageAvailable(kind) && !selectedEntity.value!.componentMap.has(kind))
+  const removed = [...selectedEntity.value.componentMap.values()].filter(/* 先计算 component.removed；仅当其为真值时求右侧 component.kind !== 'Transform2D'，返回短路求值结果。 */ component => component.removed && component.kind !== 'Transform2D').map(/* 返回 component.kind 的当前值。 */ component => component.kind)
+  const packageAvailable = /** 按人工智能或对象池组件类别检查对应包是否启用。 */ (kind: ComponentKind) => !['BehaviorTree2D', 'StateMachine2D'].includes(kind) ? kind !== 'ObjectPool2D' || packageEnabled(OFFICIAL_OBJECT_POOL_PACKAGE_ID) : packageEnabled(OFFICIAL_AI_PACKAGE_ID)
+  const missing = optionalComponents.filter(/* 先计算 packageAvailable(kind)；仅当其为真值时求右侧 !selectedEntity.value!.componentMap.has(kind)，返回短路求值结果。 */ kind => packageAvailable(kind) && !selectedEntity.value!.componentMap.has(kind))
   return [...new Set([...removed, ...missing])]
 })
-const filteredAddableComponents = computed(() => {
+const filteredAddableComponents = computed(/** 按组件名、类型和分类标签筛选可添加组件。 */ () => {
   const needle = componentSearch.value.trim().toLocaleLowerCase()
-  return addableComponents.value.filter(kind => !needle || `${componentTitle(kind)} ${kind} ${t(componentCategoryLabel(componentCategory(kind)))}`.toLocaleLowerCase().includes(needle))
+  return addableComponents.value.filter(/** 判断组件的本地化名称、类型或分类是否匹配搜索词。 */ kind => !needle || `${componentTitle(kind)} ${kind} ${t(componentCategoryLabel(componentCategory(kind)))}`.toLocaleLowerCase().includes(needle))
 })
-const componentGroups = computed(() => {
+const componentGroups = computed(/** 组织收藏、最近使用及分类组件列表。 */ () => {
   const groups: Array<{ name: string; kinds: ComponentKind[] }> = []
-  const append = (name: string, source: ComponentKind[]) => { const kinds = source.filter(kind => filteredAddableComponents.value.includes(kind)); if (kinds.length) groups.push({ name, kinds }) }
-  if (!componentSearch.value.trim()) { append(t('favorites'), componentPaletteState.favorites); append(t('recentlyUsed'), componentPaletteState.recent.filter(kind => !componentPaletteState.favorites.includes(kind))) }
-  for (const category of ['Core', '2D', 'Physics', 'Gameplay', 'UI', 'Audio', 'Camera', 'Navigation', 'Script', 'Packages'] as ComponentPaletteCategory[]) append(category, filteredAddableComponents.value.filter(kind => componentPaletteMetadata(kind).category === category))
+  const append = /** 仅当来源中含可用组件时追加分组。 */ (name: string, source: ComponentKind[]) => { const kinds = source.filter(/* 调用 filteredAddableComponents.value.includes(kind) 并返回调用结果。 */ kind => filteredAddableComponents.value.includes(kind)); if (kinds.length) groups.push({ name, kinds }) }
+  if (!componentSearch.value.trim()) { append(t('favorites'), componentPaletteState.favorites); append(t('recentlyUsed'), componentPaletteState.recent.filter(/* 返回 componentPaletteState.favorites.includes(kind) 的逻辑取反结果。 */ kind => !componentPaletteState.favorites.includes(kind))) }
+  for (const category of ['Core', '2D', 'Physics', 'Gameplay', 'UI', 'Audio', 'Camera', 'Navigation', 'Script', 'Packages'] as ComponentPaletteCategory[]) append(category, filteredAddableComponents.value.filter(/* 比较 componentPaletteMetadata(kind).category 与 category，返回严格相等的判断结果。 */ kind => componentPaletteMetadata(kind).category === category))
   return groups
 })
-const coreInspectorSections = computed(() => {
+const coreInspectorSections = computed(/** 根据当前实体已有组件构造核心属性分区列表。 */ () => {
   if (!selectedEntity.value) return []
   const entity = selectedEntity.value
   return [
@@ -605,70 +606,70 @@ const coreInspectorSections = computed(() => {
     entity.spriteRenderer ? [t('spriteRenderer2D'), 'render'] : null, entity.textRenderer ? [t('textRenderer2D'), 'render'] : null,
     entity.camera2D ? [t('camera2D'), 'render'] : null, entity.script2D ? [t('script2D'), 'gameplay'] : null,
     entity.hasComponent('RigidBody2D') ? [t('rigidBody2D'), 'physics'] : null, entity.getCollider() ? [t('collider2D'), 'physics'] : null
-  ].filter((entry): entry is [string, string] => entry !== null)
+  ].filter(/* 比较 entry 与 null，返回严格不等的判断结果。 */ (entry): entry is [string, string] => entry !== null)
 })
-const inspectorHasMatches = computed(() => {
-  if (coreInspectorSections.value.some(([title, category]) => inspectorSectionVisible(title, category as InspectorCategory))) return true
+const inspectorHasMatches = computed(/** 检查核心分区或未移除组件中是否存在可见结果。 */ () => {
+  if (coreInspectorSections.value.some(/* 调用 inspectorSectionVisible(title, category as InspectorCategory) 并返回调用结果。 */ ([title, category]) => inspectorSectionVisible(title, category as InspectorCategory))) return true
   if (!selectedEntity.value) return false
-  return [...selectedEntity.value.componentMap.values()].some(component => !component.removed && inspectorSectionVisible(componentTitle(component.kind), componentCategory(component.kind)))
+  return [...selectedEntity.value.componentMap.values()].some(/* 先计算 !component.removed；仅当其为真值时求右侧 inspectorSectionVisible(componentTitle(component.kind), componentCategory(component.kind))，返回短路求值结果。 */ component => !component.removed && inspectorSectionVisible(componentTitle(component.kind), componentCategory(component.kind)))
 })
 
-function inspectorSectionVisible(title: string, category: InspectorCategory): boolean {
+/** 按检查器分类及标题搜索判断分区可见性。 */ function inspectorSectionVisible(title: string, category: InspectorCategory): boolean {
   if (estate.inspectorCategory !== 'all' && estate.inspectorCategory !== category) return false
   const needle = estate.inspectorSearch.trim().toLocaleLowerCase()
   return !needle || title.toLocaleLowerCase().includes(needle)
 }
 
-function componentCategory(kind: ComponentKind): InspectorCategory {
+/** 把组件类型映射到界面、渲染、物理或玩法分类。 */ function componentCategory(kind: ComponentKind): InspectorCategory {
   if (['Canvas', 'RectTransform', 'Panel', 'Image', 'Text', 'Button', 'Slider', 'ProgressBar', 'Checkbox', 'TextInput'].includes(kind)) return 'ui'
   if (['SpriteRenderer2D', 'TextRenderer2D', 'Camera2D', 'TileMap2D', 'ParticleEmitter2D', 'Light2D', 'ShadowCaster2D'].includes(kind)) return 'render'
   if (['Area2D'].includes(kind)) return 'physics'
   if (kind.endsWith('Joint2D')) return 'physics'
   return 'gameplay'
 }
-function componentCategoryLabel(category: InspectorCategory): 'categoryGeneral' | 'categoryTransform' | 'categoryRendering' | 'categoryPhysics' | 'categoryGameplay' | 'categoryUi' {
+/** 将检查器分类转换为本地化标签键。 */ function componentCategoryLabel(category: InspectorCategory): 'categoryGeneral' | 'categoryTransform' | 'categoryRendering' | 'categoryPhysics' | 'categoryGameplay' | 'categoryUi' {
   const labels: Record<InspectorCategory, 'categoryGeneral' | 'categoryTransform' | 'categoryRendering' | 'categoryPhysics' | 'categoryGameplay' | 'categoryUi'> = { general: 'categoryGeneral', transform: 'categoryTransform', render: 'categoryRendering', physics: 'categoryPhysics', gameplay: 'categoryGameplay', ui: 'categoryUi', all: 'categoryGeneral' }
   return labels[category]
 }
-function componentGlyph(kind: ComponentKind): string {
+/** 按组件分类返回对应图形标记。 */ function componentGlyph(kind: ComponentKind): string {
   const category = componentCategory(kind)
   return ({ ui: '▣', render: '◇', physics: '◎', gameplay: '{}', general: '•', transform: '↗', all: '•' })[category]
 }
-function openComponentPicker(): void {
+/** 清空组件搜索并打开选择器，更新后聚焦输入。 */ function openComponentPicker(): void {
   componentSearch.value = ''
   estate.componentPickerOpen = true
-  void nextTick(() => componentSearchInput.value?.focus())
+  void nextTick(/* 调用 componentSearchInput.value?.focus() 并返回调用结果。 */ () => componentSearchInput.value?.focus())
 }
-function closeComponentPicker(): void { estate.componentPickerOpen = false }
-function chooseComponent(kind: ComponentKind): void { addComponent(kind); markComponentRecent(kind); closeComponentPicker() }
-const parentCandidates = computed(() => selectedEntity.value
-  ? state.world.entities.filter(entity => entity !== selectedEntity.value && !wouldCreateParentCycle(selectedEntity.value!, entity.uuid, state.world.entities))
+/** 关闭组件选择器。 */ function closeComponentPicker(): void { estate.componentPickerOpen = false }
+/** 添加组件、记录最近使用并关闭选择器。 */ function chooseComponent(kind: ComponentKind): void { addComponent(kind); markComponentRecent(kind); closeComponentPicker() }
+const parentCandidates = computed(/** 列出既非自身又不会产生父子循环的父级候选。 */ () => selectedEntity.value
+  ? state.world.entities.filter(/* 先计算 entity !== selectedEntity.value；仅当其为真值时求右侧 !wouldCreateParentCycle(selectedEntity.value!, entity.uuid, state.world.entities)，返回短路求值结果。 */ entity => entity !== selectedEntity.value && !wouldCreateParentCycle(selectedEntity.value!, entity.uuid, state.world.entities))
   : [])
 const selectedParentUuid = computed({
-  get: () => selectedEntity.value?.parentUuid ?? '',
-  set: value => {
+  get: /* 当 selectedEntity.value?.parentUuid 为 null 或 undefined 时返回 ''，否则保留左侧值。 */ () => selectedEntity.value?.parentUuid ?? '',
+  set: /** 设置或清除父级，成功后记录历史。 */ value => {
     if (!selectedEntity.value) return
     if (setParent(selectedEntity.value, value || null, state.world.entities)) pushHistory()
   }
 })
 const tagsText = computed({
-  get: () => selectedEntity.value?.tags.join(', ') ?? '',
-  set: value => {
+  get: /* 当 selectedEntity.value?.tags.join(', ') 为 null 或 undefined 时返回 ''，否则保留左侧值。 */ () => selectedEntity.value?.tags.join(', ') ?? '',
+  set: /** 拆分并净化标签，去重后限制为三十二项。 */ value => {
     if (!selectedEntity.value) return
-    selectedEntity.value.tags = [...new Set(value.split(',').map(tag => tag.trim()).filter(Boolean))].slice(0, 32)
+    selectedEntity.value.tags = [...new Set(value.split(',').map(/* 调用 tag.trim() 并返回调用结果。 */ tag => tag.trim()).filter(Boolean))].slice(0, 32)
   }
 })
 const groupsText = computed({
-  get: () => selectedEntity.value?.groups.join(', ') ?? '',
-  set: value => { if (selectedEntity.value) selectedEntity.value.groups = cleanList(value) }
+  get: /* 当 selectedEntity.value?.groups.join(', ') 为 null 或 undefined 时返回 ''，否则保留左侧值。 */ () => selectedEntity.value?.groups.join(', ') ?? '',
+  set: /** 净化输入列表并写入当前实体分组。 */ value => { if (selectedEntity.value) selectedEntity.value.groups = cleanList(value) }
 })
-function cleanList(value: string): string[] { return [...new Set(value.split(',').map(item => item.trim()).filter(Boolean))].slice(0, 32) }
-const prefabOverrideCount = computed(() => selectedEntity.value ? Object.keys(selectedEntity.value.prefabOverrides).length : 0)
-const prefabComparison = computed(() => selectedEntity.value?.prefabAsset ? comparePrefabInstance(selectedEntity.value) : [])
-const prefabConflicts = computed(() => selectedEntity.value ? prefabConflictReport(selectedEntity.value) : [])
-const selectedValidation = computed(() => selectedEntity.value ? validateEntityAuthoring(selectedEntity.value, state.world.entities) : [])
+/* 调用 [...new Set(value.split(',').map(item => item.trim()).filter(Boolean))].slice(0, 32) 并返回调用结果。 */ function cleanList(value: string): string[] { return [...new Set(value.split(',').map(/* 调用 item.trim() 并返回调用结果。 */ item => item.trim()).filter(Boolean))].slice(0, 32) }
+const prefabOverrideCount = computed(/* 根据 selectedEntity.value 的真假，分别返回 Object.keys(selectedEntity.value.prefabOverrides).length 或 0。 */ () => selectedEntity.value ? Object.keys(selectedEntity.value.prefabOverrides).length : 0)
+const prefabComparison = computed(/* 根据 selectedEntity.value?.prefabAsset 的真假，分别返回 comparePrefabInstance(selectedEntity.value) 或 []。 */ () => selectedEntity.value?.prefabAsset ? comparePrefabInstance(selectedEntity.value) : [])
+const prefabConflicts = computed(/* 根据 selectedEntity.value 的真假，分别返回 prefabConflictReport(selectedEntity.value) 或 []。 */ () => selectedEntity.value ? prefabConflictReport(selectedEntity.value) : [])
+const selectedValidation = computed(/* 根据 selectedEntity.value 的真假，分别返回 validateEntityAuthoring(selectedEntity.value, state.world.entities) 或 []。 */ () => selectedEntity.value ? validateEntityAuthoring(selectedEntity.value, state.world.entities) : [])
 
-function componentTitle(kind: ComponentKind): string {
+/** 按组件类型取得本地化标题，碰撞组件使用通用标题。 */ function componentTitle(kind: ComponentKind): string {
   if (kind === 'Transform2D') return t('transform2D')
   if (kind === 'ShapeRenderer2D') return t('shapeRenderer2D')
   if (kind === 'SpriteRenderer2D') return t('spriteRenderer2D')
@@ -722,7 +723,7 @@ function componentTitle(kind: ComponentKind): string {
   return t('collider2D')
 }
 
-function newOptionalComponent(kind: ComponentKind): Component2D | null {
+/** 按可选组件类型创建默认实例，不支持时返回空值。 */ function newOptionalComponent(kind: ComponentKind): Component2D | null {
   if (kind === 'Animator') return new Animator()
   if (kind === 'Skeleton2D') return new Skeleton2D()
   if (kind === 'TimelinePlayer') return new TimelinePlayer()
@@ -768,52 +769,52 @@ function newOptionalComponent(kind: ComponentKind): Component2D | null {
   if (kind.endsWith('Joint2D')) return new Joint2D(kind as JointKind2D)
   return null
 }
-function toggleComponent(kind: ComponentKind) {
+/** 切换组件启用状态并记录历史，变换组件保持启用。 */ function toggleComponent(kind: ComponentKind) {
   const component = selectedEntity.value?.getComponent(kind, true)
   if (!component || kind === 'Transform2D') return
   component.enabled = !component.enabled
   pushHistory()
 }
-function reorderComponent(kind: ComponentKind, direction: -1 | 1) {
+/** 在允许范围内调整组件顺序并重建有序映射。 */ function reorderComponent(kind: ComponentKind, direction: -1 | 1) {
   const entity = selectedEntity.value; if (!entity || kind === 'Transform2D') return
-  const entries = [...entity.componentMap.entries()], index = entries.findIndex(([candidate]) => candidate === kind), destination = index + direction
+  const entries = [...entity.componentMap.entries()], index = entries.findIndex(/* 比较 candidate 与 kind，返回严格相等的判断结果。 */ ([candidate]) => candidate === kind), destination = index + direction
   if (index < 0 || destination < 1 || destination >= entries.length) return
   const [entry] = entries.splice(index, 1); entries.splice(destination, 0, entry)
   entity.componentMap.clear(); for (const [entryKind, component] of entries) entity.componentMap.set(entryKind, component)
   pushHistory('Reorder component', `components:${entity.uuid}`)
 }
 
-function propertyControls(row: HTMLElement | null): Array<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | HTMLButtonElement> {
+/** 取得属性行内输入框、选择框、文本框和开关按钮。 */ function propertyControls(row: HTMLElement | null): Array<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | HTMLButtonElement> {
   return row ? [...row.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | HTMLButtonElement>('input,select,textarea,button[role="switch"]')] : []
 }
-function readControl(control: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | HTMLButtonElement): string | number | boolean {
+/** 按开关、复选框、数值或文本类型读取控件值。 */ function readControl(control: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | HTMLButtonElement): string | number | boolean {
   if (control instanceof HTMLButtonElement) return control.getAttribute('aria-checked') === 'true'
   if (control instanceof HTMLInputElement && control.type === 'checkbox') return control.checked
   if (control instanceof HTMLInputElement && (control.type === 'number' || control.type === 'range')) return Number(control.value)
   return control.value
 }
-function writeControl(control: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | HTMLButtonElement, value: string | number | boolean): void {
+/** 按控件类型写值，并触发原有输入与变更事件。 */ function writeControl(control: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | HTMLButtonElement, value: string | number | boolean): void {
   if (control instanceof HTMLButtonElement) { if ((control.getAttribute('aria-checked') === 'true') !== Boolean(value)) control.click(); return }
   if (control instanceof HTMLInputElement && control.type === 'checkbox') control.checked = Boolean(value)
   else control.value = String(value)
   control.dispatchEvent(new Event('input', { bubbles: true })); control.dispatchEvent(new Event('change', { bubbles: true }))
 }
-function openPropertyMenu(event: MouseEvent, path: string) { event.preventDefault(); propertyMenu.visible = true; propertyMenu.x = Math.min(event.clientX, window.innerWidth - 230); propertyMenu.y = Math.min(event.clientY, window.innerHeight - 330); propertyMenu.path = path; propertyMenu.row = event.currentTarget as HTMLElement }
-function closePropertyMenu() { propertyMenu.visible = false; propertyMenu.row = null }
-function resetPropertyValue() { const metadata = currentPropertyMetadata.value, controls = propertyControls(propertyMenu.row); if (!metadata) return; controls.forEach((control, index) => writeControl(control, metadata.defaults[Math.min(index, metadata.defaults.length - 1)])); modifiedPropertyPaths.value.delete(propertyMenu.path); modifiedPropertyPaths.value = new Set(modifiedPropertyPaths.value); pushHistory('Reset property', `property:${numericResourceKey.value}:${propertyMenu.path}`); closePropertyMenu() }
-function revertPropertyOverride() { const entity = selectedEntity.value; if (entity?.prefabAsset) resetPrefabOverride(entity, propertyMenu.path); modifiedPropertyPaths.value.delete(propertyMenu.path); modifiedPropertyPaths.value = new Set(modifiedPropertyPaths.value); pushHistory('Revert property override', `property:${numericResourceKey.value}:${propertyMenu.path}`); closePropertyMenu() }
-function copyPropertyValue() { propertyClipboard.value = propertyControls(propertyMenu.row).map(readControl); closePropertyMenu() }
-function pastePropertyValue() { const values = propertyClipboard.value; if (!values) return; propertyControls(propertyMenu.row).forEach((control, index) => writeControl(control, values[Math.min(index, values.length - 1)])); modifiedPropertyPaths.value.add(propertyMenu.path); modifiedPropertyPaths.value = new Set(modifiedPropertyPaths.value); pushHistory('Paste property value', `property:${numericResourceKey.value}:${propertyMenu.path}`); closePropertyMenu() }
-function copyPropertyPath() { void navigator.clipboard?.writeText(propertyMenu.path).catch(() => undefined); estate.statusText = propertyMenu.path; closePropertyMenu() }
-function keyframeProperty() { if (selectedEntity.value) { recordEntityProperties([selectedEntity.value]); estate.bottomPanelTab = 'animation'; estate.bottomPanelOpen = true; estate.statusText = t('propertyKeyframed') } closePropertyMenu() }
-function togglePropertyPin() { const index = estate.pinnedInspectorProperties.indexOf(propertyMenu.path); if (index >= 0) estate.pinnedInspectorProperties.splice(index, 1); else estate.pinnedInspectorProperties.push(propertyMenu.path); closePropertyMenu() }
-function copyComponent(kind: ComponentKind) {
+/** 打开属性菜单并限制位置，保存属性路径和来源行。 */ function openPropertyMenu(event: MouseEvent, path: string) { event.preventDefault(); propertyMenu.visible = true; propertyMenu.x = Math.min(event.clientX, window.innerWidth - 230); propertyMenu.y = Math.min(event.clientY, window.innerHeight - 330); propertyMenu.path = path; propertyMenu.row = event.currentTarget as HTMLElement }
+/** 关闭属性菜单并清除来源行。 */ function closePropertyMenu() { propertyMenu.visible = false; propertyMenu.row = null }
+/** 用属性元数据默认值重置控件，清除修改标记并记录历史。 */ function resetPropertyValue() { const metadata = currentPropertyMetadata.value, controls = propertyControls(propertyMenu.row); if (!metadata) return; controls.forEach(/* 调用 writeControl(control, metadata.defaults[Math.min(index, metadata.defaults.length - 1)]) 并返回调用结果。 */ (control, index) => writeControl(control, metadata.defaults[Math.min(index, metadata.defaults.length - 1)])); modifiedPropertyPaths.value.delete(propertyMenu.path); modifiedPropertyPaths.value = new Set(modifiedPropertyPaths.value); pushHistory('Reset property', `property:${numericResourceKey.value}:${propertyMenu.path}`); closePropertyMenu() }
+/** 撤销指定预制体覆盖，清除修改标记并记录历史。 */ function revertPropertyOverride() { const entity = selectedEntity.value; if (entity?.prefabAsset) resetPrefabOverride(entity, propertyMenu.path); modifiedPropertyPaths.value.delete(propertyMenu.path); modifiedPropertyPaths.value = new Set(modifiedPropertyPaths.value); pushHistory('Revert property override', `property:${numericResourceKey.value}:${propertyMenu.path}`); closePropertyMenu() }
+/** 将属性行控件值复制到内部剪贴板。 */ function copyPropertyValue() { propertyClipboard.value = propertyControls(propertyMenu.row).map(readControl); closePropertyMenu() }
+/** 把剪贴板值写入属性控件，标记修改并记录历史。 */ function pastePropertyValue() { const values = propertyClipboard.value; if (!values) return; propertyControls(propertyMenu.row).forEach(/* 调用 writeControl(control, values[Math.min(index, values.length - 1)]) 并返回调用结果。 */ (control, index) => writeControl(control, values[Math.min(index, values.length - 1)])); modifiedPropertyPaths.value.add(propertyMenu.path); modifiedPropertyPaths.value = new Set(modifiedPropertyPaths.value); pushHistory('Paste property value', `property:${numericResourceKey.value}:${propertyMenu.path}`); closePropertyMenu() }
+/** 复制属性路径到系统剪贴板，同时在状态栏显示路径。 */ function copyPropertyPath() { void navigator.clipboard?.writeText(propertyMenu.path).catch(/* 返回 undefined 的当前值。 */ () => undefined); estate.statusText = propertyMenu.path; closePropertyMenu() }
+/** 记录当前实体动画属性并打开动画面板。 */ function keyframeProperty() { if (selectedEntity.value) { recordEntityProperties([selectedEntity.value]); estate.bottomPanelTab = 'animation'; estate.bottomPanelOpen = true; estate.statusText = t('propertyKeyframed') } closePropertyMenu() }
+/** 切换当前属性路径的固定状态。 */ function togglePropertyPin() { const index = estate.pinnedInspectorProperties.indexOf(propertyMenu.path); if (index >= 0) estate.pinnedInspectorProperties.splice(index, 1); else estate.pinnedInspectorProperties.push(propertyMenu.path); closePropertyMenu() }
+/** 复制组件可序列化值并显示完成状态。 */ function copyComponent(kind: ComponentKind) {
   const component = selectedEntity.value?.getComponent(kind, true)
   if (!component) return
   componentClipboard.value = { kind, values: copyComponentValues(component) }
   estate.statusText = t('componentCopied')
 }
-function applyInspectorComponentValues(component: Component2D, values: Record<string, unknown>, label: string): boolean {
+/** 在历史事务中应用组件值、规范化并捕获覆盖及录制；失败时回滚并显示错误。 */ function applyInspectorComponentValues(component: Component2D, values: Record<string, unknown>, label: string): boolean {
   const entity = selectedEntity.value
   if (!entity || !beginHistoryTransaction(label, null, `component:${entity.uuid}:${component.kind}`)) return false
   try {
@@ -830,12 +831,12 @@ function applyInspectorComponentValues(component: Component2D, values: Record<st
     return false
   }
 }
-function pasteComponent(kind: ComponentKind) {
+/** 仅同类型组件允许粘贴，并使用事务入口应用值。 */ function pasteComponent(kind: ComponentKind) {
   const component = selectedEntity.value?.getComponent(kind, true)
   if (!component || componentClipboard.value?.kind !== kind) return
   if (applyInspectorComponentValues(component, componentClipboard.value.values, `Paste ${kind} values`)) estate.statusText = t('componentPasted')
 }
-function useComponentPreset(kind: ComponentKind) {
+/** 存在预设时应用首个预设，否则保存当前组件为预设。 */ function useComponentPreset(kind: ComponentKind) {
   const component = selectedEntity.value?.getComponent(kind, true)
   if (!component) return
   const existing = componentPresets(kind)[0]
@@ -847,14 +848,14 @@ function useComponentPreset(kind: ComponentKind) {
   estate.statusText = t('componentPresetSaved')
 }
 
-function resetComponent(kind: ComponentKind) {
+/** 恢复组件默认配置，形状和碰撞保留几何，再启用并记录历史。 */ function resetComponent(kind: ComponentKind) {
   const entity = selectedEntity.value
   const component = entity?.getComponent(kind, true)
   if (!entity || !component) return
   if (component instanceof Transform) pasteComponentValues(component, copyComponentValues(new Transform()))
   else if (component instanceof ShapeRenderer2D) {
     const fresh = new ShapeRenderer2D(component.shape)
-    fresh.vertices = component.vertices.map(vertex => ({ ...vertex }))
+    fresh.vertices = component.vertices.map(/** 复制保留的渲染几何顶点。 */ vertex => ({ ...vertex }))
     fresh.radiusX = component.radiusX
     fresh.radiusY = component.radiusY
     pasteComponentValues(component, copyComponentValues(fresh))
@@ -866,7 +867,7 @@ function resetComponent(kind: ComponentKind) {
   else if (component instanceof Collider2D) {
     const fresh = new Collider2D(component.kind)
     fresh.size = { ...component.size }
-    fresh.vertices = component.vertices.map(vertex => ({ ...vertex }))
+    fresh.vertices = component.vertices.map(/** 复制保留的碰撞几何顶点。 */ vertex => ({ ...vertex }))
     fresh.radiusX = component.radiusX
     fresh.radiusY = component.radiusY
     pasteComponentValues(component, copyComponentValues(fresh))
@@ -880,7 +881,7 @@ function resetComponent(kind: ComponentKind) {
   pushHistory()
   estate.statusText = t('componentReset')
 }
-async function removeComponent(kind: ComponentKind) {
+/** 确认后移除非变换组件并记录历史。 */ async function removeComponent(kind: ComponentKind) {
   const entity = selectedEntity.value
   if (!entity || kind === 'Transform2D') return
   const approved = await requestConfirmation({ title: t('removeComponent'), message: `${t('removeComponent')}: ${componentTitle(kind)}?`, confirmLabel: t('confirmAction'), cancelLabel: t('cancel'), destructive: true })
@@ -888,7 +889,7 @@ async function removeComponent(kind: ComponentKind) {
   pushHistory()
   estate.statusText = t('componentRemoved')
 }
-function addRemovedComponent(kind: ComponentKind) {
+/** 恢复已移除组件的存在和启用状态。 */ function addRemovedComponent(kind: ComponentKind) {
   const component = selectedEntity.value?.getComponent(kind, true)
   if (!component) return
   component.removed = false
@@ -896,13 +897,13 @@ function addRemovedComponent(kind: ComponentKind) {
   pushHistory()
   estate.statusText = t('componentAdded')
 }
-function addComponent(kind: ComponentKind) {
+/** 检查冲突后添加组件及依赖，配置角色物理和界面无障碍并记录历史。 */ function addComponent(kind: ComponentKind) {
   const entity = selectedEntity.value
   if (!entity) return
   const existing = entity.getComponent(kind, true)
   if (existing) { addRemovedComponent(kind); return }
   const rule = componentAuthoringRule(kind)
-  if (rule.conflicts.some(conflict => entity.hasComponent(conflict))) { estate.statusText = t('componentConflictWarning', { component: kind, conflict: rule.conflicts.find(conflict => entity.hasComponent(conflict)) ?? '' }); return }
+  if (rule.conflicts.some(/* 调用 entity.hasComponent(conflict) 并返回调用结果。 */ conflict => entity.hasComponent(conflict))) { estate.statusText = t('componentConflictWarning', { component: kind, conflict: rule.conflicts.find(/* 调用 entity.hasComponent(conflict) 并返回调用结果。 */ conflict => entity.hasComponent(conflict)) ?? '' }); return }
   if (kind === 'SpriteRenderer2D') { const component = entity.addComponent(new SpriteRenderer2D()); component.sortingLayer = entity.layer }
   else if (kind === 'TextRenderer2D') { const component = entity.addComponent(new TextRenderer2D()); component.sortingLayer = entity.layer }
   else if (kind === 'Camera2D') entity.addComponent(new Camera2D())
@@ -933,15 +934,15 @@ function addComponent(kind: ComponentKind) {
 
 const builderOpen = ref(false)
 const editingConnectionId = ref<number | null>(null)
-function openConnection(id: number | null) { editingConnectionId.value = id; builderOpen.value = true }
-async function confirmConnectionAction(title: string, message: string): Promise<boolean> { return !prefs.confirmDestructiveActions || requestConfirmation({ title, message, confirmLabel: t('confirmAction'), cancelLabel: t('cancel'), destructive: true }) }
-async function removeConnection(id: number) { if (!await confirmConnectionAction(t('deleteConnectionTitle'), t('confirmConnectionDelete'))) return; deleteConnection(id); pushHistory(); estate.statusText = t('connectionDeleted') }
-async function separate(id: number) { if (!await confirmConnectionAction(t('separateBindingTitle'), t('confirmSeparateBinding'))) return; deleteConnection(id); pushHistory(); estate.statusText = t('bindingSeparated') }
-function repair(id: number) { repairConnection(id); pushHistory() }
+/** 设置待编辑连接并打开连接构建器。 */ function openConnection(id: number | null) { editingConnectionId.value = id; builderOpen.value = true }
+/** 按偏好决定是否请求破坏性连接操作确认。 */ async function confirmConnectionAction(title: string, message: string): Promise<boolean> { return !prefs.confirmDestructiveActions || requestConfirmation({ title, message, confirmLabel: t('confirmAction'), cancelLabel: t('cancel'), destructive: true }) }
+/** 确认后删除连接，记录历史并更新状态。 */ async function removeConnection(id: number) { if (!await confirmConnectionAction(t('deleteConnectionTitle'), t('confirmConnectionDelete'))) return; deleteConnection(id); pushHistory(); estate.statusText = t('connectionDeleted') }
+/** 确认后删除绑定连接，使复合体分离并记录历史。 */ async function separate(id: number) { if (!await confirmConnectionAction(t('separateBindingTitle'), t('confirmSeparateBinding'))) return; deleteConnection(id); pushHistory(); estate.statusText = t('bindingSeparated') }
+/** 修复指定连接并记录历史。 */ function repair(id: number) { repairConnection(id); pushHistory() }
 
 const inspectorControlIds = new WeakMap<HTMLElement, number>()
 let nextInspectorControlId = 0
-function onConfigChange(event?: Event) {
+/** 规范化实体、捕获预制体覆盖及动画属性，并按实体和控件身份合并历史。 */ function onConfigChange(event?: Event) {
   if (!canEdit.value || !selectedEntity.value) return
   const target = event?.target instanceof HTMLElement ? event.target : null
   const path = target?.closest<HTMLElement>('[data-property-path]')?.dataset.propertyPath
@@ -956,75 +957,75 @@ function onConfigChange(event?: Event) {
   const mergeKey = target ? `property:${selectedEntity.value.uuid}:${path ?? 'field'}:${inspectorControlIds.get(target)}` : null
   pushHistory('Set property', mergeKey)
 }
-function physicsMaterialDocument(uuid: string) { const source = readTextAsset(uuid); if (!source) return null; try { const value = JSON.parse(source) as Record<string, unknown>; return value.format === 'nova-physics-material' ? normalizePhysicsMaterial(value) : null } catch { return null } }
-function physicsMaterialName(uuid: string) { return physicsMaterialDocument(uuid)?.name ?? t('physicsMaterial') }
-function applySelectedPhysicsMaterial() { const entity = selectedEntity.value; if (!entity?.collider.materialAsset) return; const material = physicsMaterialDocument(entity.collider.materialAsset.replace(/^asset:\/\//, '')); if (!material) return; Object.assign(entity.collider.material, material); if (entity.rigidBody.massMode === 'Automatic') entity.rigidBody.density = material.density; onConfigChange() }
-function setAuthoringOrder(value: number) { const entity = selectedEntity.value; if (!entity || !Number.isFinite(value)) return; entity.authoring.zOrder = Math.trunc(value) }
-function setAuthoringLayer(value: number) { const entity = selectedEntity.value; if (!entity || !estate.layers.includes(value)) return; entity.layer = value; entity.authoring.renderLayer = value; estate.activeLayer = value }
-function updatePathPoints(value: ParsedPathText, event?: Event) { const entity = selectedEntity.value; if (!entity || value.kind !== 'points') return; entity.authoring.path.points = value.points; entity.renderer.vertices = value.points.map(point => ({ ...point })); entity.authoring.path.tangents = entity.authoring.path.tangents.slice(0, value.points.length); onConfigChange(event) }
-function updatePathTangents(value: ParsedPathText, event?: Event) { const entity = selectedEntity.value; if (!entity || value.kind !== 'tangents') return; entity.authoring.path.tangents = value.tangents; onConfigChange(event) }
-function pathDocument(source: string) { try { const value = JSON.parse(source) as Record<string, unknown>; if (value.format !== 'nova-path-2d' || value.version !== 1 || !Array.isArray(value.points)) return null; return value } catch { return null } }
-function loadSelectedPathAsset() { const entity = selectedEntity.value, source = readTextAsset(entity?.authoring.path.asset); if (!entity || !source) return; const document = pathDocument(source); if (!document) { estate.statusText = t('invalidPathAsset'); return } const points = (document.points as Array<Record<string, unknown>>).slice(0, 10_000).map(point => ({ x: finiteNumber(point.x), y: finiteNumber(point.y) })); if (points.length < 2) return; entity.authoring.path.points = points; entity.authoring.path.closed = document.closed === true; entity.authoring.path.smoothing = Math.min(1, Math.max(0, finiteNumber(document.smoothing, .5))); entity.authoring.path.tangents = Array.isArray(document.tangents) ? (document.tangents as Array<Record<string, Record<string, unknown>>>).slice(0, points.length).map(tangent => ({ incoming: { x: finiteNumber(tangent.incoming?.x), y: finiteNumber(tangent.incoming?.y) }, outgoing: { x: finiteNumber(tangent.outgoing?.x), y: finiteNumber(tangent.outgoing?.y) } })) : []; entity.renderer.vertices = points.map(point => ({ ...point })); pushHistory('Load reusable path', `path:${entity.uuid}`) }
-function saveSelectedPathAsset() { if (!settleEditorDrafts()) return; const entity = selectedEntity.value; if (!entity || entity.authoring.path.points.length < 2) return; const source = JSON.stringify({ format: 'nova-path-2d', version: 1, closed: entity.authoring.path.closed, smoothing: entity.authoring.path.smoothing, points: entity.authoring.path.points, tangents: entity.authoring.path.tangents }, null, 2); const asset = createTextAsset(`${entity.name} Path`, 'path', source, 'Assets/Paths'); entity.authoring.path.asset = assetReference(asset.uuid); assetState.selectedGuid = asset.uuid; pushHistory('Save reusable path', `path:${entity.uuid}`); estate.statusText = t('reusablePathSaved') }
-function synchronizeScriptProperties() {
+/** 解析并验证物理材质格式，失败时返回空值。 */ function physicsMaterialDocument(uuid: string) { const source = readTextAsset(uuid); if (!source) return null; try { const value = JSON.parse(source) as Record<string, unknown>; return value.format === 'nova-physics-material' ? normalizePhysicsMaterial(value) : null } catch { return null } }
+/* 当 physicsMaterialDocument(uuid)?.name 为 null 或 undefined 时返回 t('physicsMaterial')，否则保留左侧值。 */ function physicsMaterialName(uuid: string) { return physicsMaterialDocument(uuid)?.name ?? t('physicsMaterial') }
+/** 应用绑定物理材质，自动质量模式同步密度，再提交配置。 */ function applySelectedPhysicsMaterial() { const entity = selectedEntity.value; if (!entity?.collider.materialAsset) return; const material = physicsMaterialDocument(entity.collider.materialAsset.replace(/^asset:\/\//, '')); if (!material) return; Object.assign(entity.collider.material, material); if (entity.rigidBody.massMode === 'Automatic') entity.rigidBody.density = material.density; onConfigChange() }
+/** 仅接受有限数并将作者排序值截为整数。 */ function setAuthoringOrder(value: number) { const entity = selectedEntity.value; if (!entity || !Number.isFinite(value)) return; entity.authoring.zOrder = Math.trunc(value) }
+/** 设置有效图层，同步作者渲染层及编辑器活动层。 */ function setAuthoringLayer(value: number) { const entity = selectedEntity.value; if (!entity || !estate.layers.includes(value)) return; entity.layer = value; entity.authoring.renderLayer = value; estate.activeLayer = value }
+/** 更新作者路径点和独立渲染顶点，截短切线并提交配置。 */ function updatePathPoints(value: ParsedPathText, event?: Event) { const entity = selectedEntity.value; if (!entity || value.kind !== 'points') return; entity.authoring.path.points = value.points; entity.renderer.vertices = value.points.map(/** 复制路径点避免作者与渲染几何共享对象。 */ point => ({ ...point })); entity.authoring.path.tangents = entity.authoring.path.tangents.slice(0, value.points.length); onConfigChange(event) }
+/** 更新已解析路径切线并提交配置。 */ function updatePathTangents(value: ParsedPathText, event?: Event) { const entity = selectedEntity.value; if (!entity || value.kind !== 'tangents') return; entity.authoring.path.tangents = value.tangents; onConfigChange(event) }
+/** 验证路径资源格式、版本和点数组，解析失败返回空值。 */ function pathDocument(source: string) { try { const value = JSON.parse(source) as Record<string, unknown>; if (value.format !== 'nova-path-2d' || value.version !== 1 || !Array.isArray(value.points)) return null; return value } catch { return null } }
+/** 加载路径资源并限制点数、净化坐标和切线，同步渲染几何并记录历史。 */ function loadSelectedPathAsset() { const entity = selectedEntity.value, source = readTextAsset(entity?.authoring.path.asset); if (!entity || !source) return; const document = pathDocument(source); if (!document) { estate.statusText = t('invalidPathAsset'); return } const points = (document.points as Array<Record<string, unknown>>).slice(0, 10_000).map(/** 将资源点坐标转换为有限数。 */ point => ({ x: finiteNumber(point.x), y: finiteNumber(point.y) })); if (points.length < 2) return; entity.authoring.path.points = points; entity.authoring.path.closed = document.closed === true; entity.authoring.path.smoothing = Math.min(1, Math.max(0, finiteNumber(document.smoothing, .5))); entity.authoring.path.tangents = Array.isArray(document.tangents) ? (document.tangents as Array<Record<string, Record<string, unknown>>>).slice(0, points.length).map(/** 将资源入射和出射切线坐标转换为有限数。 */ tangent => ({ incoming: { x: finiteNumber(tangent.incoming?.x), y: finiteNumber(tangent.incoming?.y) }, outgoing: { x: finiteNumber(tangent.outgoing?.x), y: finiteNumber(tangent.outgoing?.y) } })) : []; entity.renderer.vertices = points.map(/** 复制加载后的路径点到渲染几何。 */ point => ({ ...point })); pushHistory('Load reusable path', `path:${entity.uuid}`) }
+/** 结算编辑草稿后保存可复用路径资源，绑定并选中新资源。 */ function saveSelectedPathAsset() { if (!settleEditorDrafts()) return; const entity = selectedEntity.value; if (!entity || entity.authoring.path.points.length < 2) return; const source = JSON.stringify({ format: 'nova-path-2d', version: 1, closed: entity.authoring.path.closed, smoothing: entity.authoring.path.smoothing, points: entity.authoring.path.points, tangents: entity.authoring.path.tangents }, null, 2); const asset = createTextAsset(`${entity.name} Path`, 'path', source, 'Assets/Paths'); entity.authoring.path.asset = assetReference(asset.uuid); assetState.selectedGuid = asset.uuid; pushHistory('Save reusable path', `path:${entity.uuid}`); estate.statusText = t('reusablePathSaved') }
+/** 从运行时同步脚本导出属性，成功时记录历史。 */ function synchronizeScriptProperties() {
   if (!selectedEntity.value?.script2D) return
   const error = gameplayRuntime.synchronizeExports(selectedEntity.value)
   estate.statusText = error ?? t('scriptPropertiesUpdated')
   if (!error) pushHistory('Refresh script properties')
 }
-function applySelectedEventSheet() { const entity=selectedEntity.value,reference=entity?.script2D?.eventSheetAsset;if(!entity||!reference)return;if(attachEventSheet(entity,reference)){synchronizeScriptProperties();pushHistory('Attach Event Sheet');state.world.invalidateRuntime()} }
-function openSelectedEventSheet() { const uuid=assetGuid(selectedEntity.value?.script2D?.eventSheetAsset);if(!uuid)return;openEventSheetAsset(uuid);applyEditorWorkspace('script') }
-function setScriptProperty(name: string, value: ScriptPropertyValue) {
+/** 绑定当前事件表后刷新脚本属性、记录历史并失效运行时。 */ function applySelectedEventSheet() { const entity=selectedEntity.value,reference=entity?.script2D?.eventSheetAsset;if(!entity||!reference)return;if(attachEventSheet(entity,reference)){synchronizeScriptProperties();pushHistory('Attach Event Sheet');state.world.invalidateRuntime()} }
+/** 打开绑定的事件表并切换到脚本工作区。 */ function openSelectedEventSheet() { const uuid=assetGuid(selectedEntity.value?.script2D?.eventSheetAsset);if(!uuid)return;openEventSheetAsset(uuid);applyEditorWorkspace('script') }
+/** 设置脚本导出属性并提交配置变化。 */ function setScriptProperty(name: string, value: ScriptPropertyValue) {
   if (!selectedEntity.value?.script2D) return
   selectedEntity.value.script2D.properties[name] = value
   onConfigChange()
 }
-function isScriptVec2(value: ScriptPropertyValue): value is [number, number] { return Array.isArray(value) && value.length === 2 && value.every(item => typeof item === 'number' && Number.isFinite(item)) }
-function scriptDataText(value: ScriptPropertyValue): string { try { return JSON.stringify(value, null, 2) } catch { return 'null' } }
-function setScriptVectorPart(name: string, index: 0 | 1, number: number) { const value = selectedEntity.value?.script2D?.properties[name]; if (value === undefined || !isScriptVec2(value)) return; if (!Number.isFinite(number)) return; const next: [number, number] = [value[0], value[1]]; next[index] = number; setScriptProperty(name, next) }
-function setScriptDataProperty(name: string, event: Event) { try { const value = JSON.parse((event.target as HTMLTextAreaElement).value) as ScriptPropertyValue; setScriptProperty(name, value); estate.statusText = t('scriptPropertiesUpdated') } catch { estate.statusText = t('invalidGraphData') } }
-function createSelectedPrefab() {
+/* 先计算 Array.isArray(value) && value.length === 2；仅当其为真值时求右侧 value.every(item => typeof item === 'number' && Number.isFinite(item))，返回短路求值结果。 */ function isScriptVec2(value: ScriptPropertyValue): value is [number, number] { return Array.isArray(value) && value.length === 2 && value.every(/* 先计算 typeof item === 'number'；仅当其为真值时求右侧 Number.isFinite(item)，返回短路求值结果。 */ item => typeof item === 'number' && Number.isFinite(item)) }
+/** 将脚本结构数据格式化为 JSON，序列化失败时显示空值文本。 */ function scriptDataText(value: ScriptPropertyValue): string { try { return JSON.stringify(value, null, 2) } catch { return 'null' } }
+/** 仅对二维向量和有限输入复制更新指定分量。 */ function setScriptVectorPart(name: string, index: 0 | 1, number: number) { const value = selectedEntity.value?.script2D?.properties[name]; if (value === undefined || !isScriptVec2(value)) return; if (!Number.isFinite(number)) return; const next: [number, number] = [value[0], value[1]]; next[index] = number; setScriptProperty(name, next) }
+/** 解析脚本 JSON 属性并提交，失败则显示无效数据提示。 */ function setScriptDataProperty(name: string, event: Event) { try { const value = JSON.parse((event.target as HTMLTextAreaElement).value) as ScriptPropertyValue; setScriptProperty(name, value); estate.statusText = t('scriptPropertiesUpdated') } catch { estate.statusText = t('invalidGraphData') } }
+/** 将当前实体保存为预制体并显示成功或失败状态。 */ function createSelectedPrefab() {
   if (!selectedEntity.value) return
   const reference = createPrefabFromEntities([selectedEntity.value.id], selectedEntity.value.name)
   estate.statusText = reference ? t('prefabCreated') : t('prefabFailed')
 }
-function applySelectedPrefab() { if (selectedEntity.value && applyPrefabFromInstance(selectedEntity.value)) estate.statusText = t('prefabApplied') }
-function revertSelectedPrefab() { if (selectedEntity.value && revertPrefabInstance(selectedEntity.value)) estate.statusText = t('prefabReverted') }
-function unpackSelectedPrefab() { if (selectedEntity.value && unpackPrefabInstance(selectedEntity.value)) estate.statusText = t('prefabUnpacked') }
-function createSelectedPrefabVariant() { const entity = selectedEntity.value; if (!entity) return; const reference = createPrefabVariantFromInstance(entity); estate.statusText = reference ? t('prefabVariantCreated') : t('prefabFailed') }
-function locateSelectedPrefab() { const guid = assetGuid(selectedEntity.value?.prefabAsset); if (!guid) return; assetState.selectedGuid = guid; estate.bottomPanelTab = 'assets'; estate.bottomPanelVisible = true; estate.bottomPanelOpen = true; estate.statusText = selectedEntity.value?.prefabAsset ?? '' }
-function resetSelectedPrefabOverride(path: string) { if (selectedEntity.value && resetPrefabOverride(selectedEntity.value, path)) estate.statusText = t('prefabOverrideReset') }
-function unpackSelectedScene() { if (selectedEntity.value && unpackSceneInstance(selectedEntity.value)) estate.statusText = t('sceneUnpacked') }
-function onLayerChange() { if (selectedEntity.value) estate.activeLayer = selectedEntity.value.layer }
-const bodyType = computed({ get: () => !selectedEntity.value ? 'Dynamic' : selectedEntity.value.isStatic ? 'Static' : selectedEntity.value.isKinematic ? 'Kinematic' : 'Dynamic', set: value => { if (!selectedEntity.value) return; selectedEntity.value.isStatic = value === 'Static'; selectedEntity.value.isKinematic = value === 'Kinematic'; normalizeEntity(selectedEntity.value) } })
-function onDensityChange() { if (selectedEntity.value) { selectedEntity.value.rigidBody.massMode = 'Automatic'; syncMassFromDensity(selectedEntity.value) } }
-function onMassChange() { if (selectedEntity.value) { selectedEntity.value.rigidBody.massMode = 'Manual'; syncDensityFromMass(selectedEntity.value) } }
-watch(selectedEntityArea, area => { if (selectedEntity.value && area > MIN_AREA && selectedEntity.value.rigidBody.massMode === 'Automatic') syncMassFromDensity(selectedEntity.value) })
+/** 把当前实例修改应用回预制体并显示状态。 */ function applySelectedPrefab() { if (selectedEntity.value && applyPrefabFromInstance(selectedEntity.value)) estate.statusText = t('prefabApplied') }
+/** 恢复当前预制体实例并显示状态。 */ function revertSelectedPrefab() { if (selectedEntity.value && revertPrefabInstance(selectedEntity.value)) estate.statusText = t('prefabReverted') }
+/** 解包当前预制体实例并显示状态。 */ function unpackSelectedPrefab() { if (selectedEntity.value && unpackPrefabInstance(selectedEntity.value)) estate.statusText = t('prefabUnpacked') }
+/** 从当前实例创建预制体变体并显示结果。 */ function createSelectedPrefabVariant() { const entity = selectedEntity.value; if (!entity) return; const reference = createPrefabVariantFromInstance(entity); estate.statusText = reference ? t('prefabVariantCreated') : t('prefabFailed') }
+/** 在资源面板定位当前预制体并打开底栏。 */ function locateSelectedPrefab() { const guid = assetGuid(selectedEntity.value?.prefabAsset); if (!guid) return; assetState.selectedGuid = guid; estate.bottomPanelTab = 'assets'; estate.bottomPanelVisible = true; estate.bottomPanelOpen = true; estate.statusText = selectedEntity.value?.prefabAsset ?? '' }
+/** 重置指定预制体属性覆盖并显示状态。 */ function resetSelectedPrefabOverride(path: string) { if (selectedEntity.value && resetPrefabOverride(selectedEntity.value, path)) estate.statusText = t('prefabOverrideReset') }
+/** 解包当前场景实例并显示状态。 */ function unpackSelectedScene() { if (selectedEntity.value && unpackSceneInstance(selectedEntity.value)) estate.statusText = t('sceneUnpacked') }
+/** 将编辑器活动层同步到实体所在层。 */ function onLayerChange() { if (selectedEntity.value) estate.activeLayer = selectedEntity.value.layer }
+const bodyType = computed({ get: /** 按实体静态及运动学状态取得物理体类型。 */ () => !selectedEntity.value ? 'Dynamic' : selectedEntity.value.isStatic ? 'Static' : selectedEntity.value.isKinematic ? 'Kinematic' : 'Dynamic', set: /** 更新静态和运动学标记并规范化实体。 */ value => { if (!selectedEntity.value) return; selectedEntity.value.isStatic = value === 'Static'; selectedEntity.value.isKinematic = value === 'Kinematic'; normalizeEntity(selectedEntity.value) } })
+/** 密度修改时切换自动质量并重新计算质量。 */ function onDensityChange() { if (selectedEntity.value) { selectedEntity.value.rigidBody.massMode = 'Automatic'; syncMassFromDensity(selectedEntity.value) } }
+/** 质量修改时切换手动质量并反算密度。 */ function onMassChange() { if (selectedEntity.value) { selectedEntity.value.rigidBody.massMode = 'Manual'; syncDensityFromMass(selectedEntity.value) } }
+watch(selectedEntityArea, /** 面积有效且使用自动质量时重新计算质量。 */ area => { if (selectedEntity.value && area > MIN_AREA && selectedEntity.value.rigidBody.massMode === 'Automatic') syncMassFromDensity(selectedEntity.value) })
 
 const textureInput = ref<HTMLInputElement | null>(null)
-async function applyTexture(event: Event) { const entity = selectedEntity.value; const file = (event.target as HTMLInputElement).files?.[0]; if (!entity || !file) return; try { const [asset] = await importAssetFiles([file], 'Assets/Sprites'); if (!asset) return; entity.renderer.textureAsset = assetReference(asset.uuid); entity.texture = null; entity.textureImage = undefined; pushHistory('Import texture asset') } catch { estate.statusText = t('textureFailed') } }
-function clearTexture() { if (!selectedEntity.value) return; selectedEntity.value.renderer.textureAsset = null; selectedEntity.value.texture = null; selectedEntity.value.textureImage = undefined; if (textureInput.value) textureInput.value.value = ''; pushHistory() }
-function rgbHex(color: { r: number; g: number; b: number }): string { return `#${[color.r, color.g, color.b].map(value => Math.min(255, Math.max(0, Math.round(value))).toString(16).padStart(2, '0')).join('')}` }
-function setRgb(target: { r: number; g: number; b: number }, event: Event) { const value = Number.parseInt((event.target as HTMLInputElement).value.slice(1), 16); target.r = value >> 16 & 255; target.g = value >> 8 & 255; target.b = value & 255; onConfigChange() }
+/** 导入纹理文件并绑定资源，清除旧纹理缓存并记录历史。 */ async function applyTexture(event: Event) { const entity = selectedEntity.value; const file = (event.target as HTMLInputElement).files?.[0]; if (!entity || !file) return; try { const [asset] = await importAssetFiles([file], 'Assets/Sprites'); if (!asset) return; entity.renderer.textureAsset = assetReference(asset.uuid); entity.texture = null; entity.textureImage = undefined; pushHistory('Import texture asset') } catch { estate.statusText = t('textureFailed') } }
+/** 清除纹理资源和缓存及文件选择，记录历史。 */ function clearTexture() { if (!selectedEntity.value) return; selectedEntity.value.renderer.textureAsset = null; selectedEntity.value.texture = null; selectedEntity.value.textureImage = undefined; if (textureInput.value) textureInput.value.value = ''; pushHistory() }
+/** 将颜色通道约束为字节并编码为十六进制颜色。 */ function rgbHex(color: { r: number; g: number; b: number }): string { return `#${[color.r, color.g, color.b].map(/* 调用 Math.min(255, Math.max(0, Math.round(value))).toString(16).padStart(2, '0') 并返回调用结果。 */ value => Math.min(255, Math.max(0, Math.round(value))).toString(16).padStart(2, '0')).join('')}` }
+/** 解析颜色输入并更新三通道，再提交配置变化。 */ function setRgb(target: { r: number; g: number; b: number }, event: Event) { const value = Number.parseInt((event.target as HTMLInputElement).value.slice(1), 16); target.r = value >> 16 & 255; target.g = value >> 8 & 255; target.b = value & 255; onConfigChange() }
 
 const impulseX = ref(0), impulseY = ref(0), offsetX = ref(0), offsetY = ref(0), angularImpulse = ref(0)
-function applyImpulse() { const entity = selectedEntity.value; if (!entity || bodyType.value !== 'Dynamic') return; normalizeEntity(entity); const x = finiteNumber(impulseX.value), y = finiteNumber(impulseY.value); entity.velocity.x += x / entity.mass; entity.velocity.y += y / entity.mass; entity.angularVelocity += (finiteNumber(offsetX.value) * y - finiteNumber(offsetY.value) * x) / effectiveInertia(entity); normalizeEntity(entity); pushHistory() }
-function applyAngularImpulse() { const entity = selectedEntity.value; if (!entity || bodyType.value !== 'Dynamic') return; entity.angularVelocity += finiteNumber(angularImpulse.value) / effectiveInertia(entity); normalizeEntity(entity); pushHistory() }
+/** 为动态刚体应用线性与偏心角冲量，规范化并记录历史。 */ function applyImpulse() { const entity = selectedEntity.value; if (!entity || bodyType.value !== 'Dynamic') return; normalizeEntity(entity); const x = finiteNumber(impulseX.value), y = finiteNumber(impulseY.value); entity.velocity.x += x / entity.mass; entity.velocity.y += y / entity.mass; entity.angularVelocity += (finiteNumber(offsetX.value) * y - finiteNumber(offsetY.value) * x) / effectiveInertia(entity); normalizeEntity(entity); pushHistory() }
+/** 为动态刚体按有效转动惯量应用角冲量。 */ function applyAngularImpulse() { const entity = selectedEntity.value; if (!entity || bodyType.value !== 'Dynamic') return; entity.angularVelocity += finiteNumber(angularImpulse.value) / effectiveInertia(entity); normalizeEntity(entity); pushHistory() }
 
 const showColorPicker = ref(false), tempColor = ref('#ffffff')
-function openColorPicker() { if (!selectedEntity.value) return; const { r, g, b } = selectedEntity.value.color; tempColor.value = `#${[r, g, b].map(value => Math.round(value).toString(16).padStart(2, '0')).join('')}`; showColorPicker.value = true }
-function applyColor() { if (selectedEntity.value) { const value = Number.parseInt(tempColor.value.slice(1), 16); selectedEntity.value.color = { r: value >> 16 & 255, g: value >> 8 & 255, b: value & 255 }; pushHistory() } showColorPicker.value = false }
+/** 以当前实体颜色初始化并打开颜色选择器。 */ function openColorPicker() { if (!selectedEntity.value) return; const { r, g, b } = selectedEntity.value.color; tempColor.value = `#${[r, g, b].map(/* 调用 Math.round(value).toString(16).padStart(2, '0') 并返回调用结果。 */ value => Math.round(value).toString(16).padStart(2, '0')).join('')}`; showColorPicker.value = true }
+/** 将临时颜色写入实体并记录历史，然后关闭选择器。 */ function applyColor() { if (selectedEntity.value) { const value = Number.parseInt(tempColor.value.slice(1), 16); selectedEntity.value.color = { r: value >> 16 & 255, g: value >> 8 & 255, b: value & 255 }; pushHistory() } showColorPicker.value = false }
 
-const rotationDegrees = computed({ get: () => selectedEntity.value ? Number((-selectedEntity.value.transform.rotation * 180 / Math.PI).toFixed(4)) : 0, set: value => { if (selectedEntity.value && Number.isFinite(value)) selectedEntity.value.transform.rotation = -value * Math.PI / 180 } })
-const colliderRotationDegrees = computed({ get: () => selectedEntity.value ? Number((-selectedEntity.value.collider.rotation * 180 / Math.PI).toFixed(4)) : 0, set: value => { if (selectedEntity.value && Number.isFinite(value)) selectedEntity.value.collider.rotation = -value * Math.PI / 180 } })
-function colliderDimension(axis: 'x' | 'y'): number {
+const rotationDegrees = computed({ get: /* 根据 selectedEntity.value 的真假，分别返回 Number((-selectedEntity.value.transform.rotation * 180 / Math.PI).toFixed(4)) 或 0。 */ () => selectedEntity.value ? Number((-selectedEntity.value.transform.rotation * 180 / Math.PI).toFixed(4)) : 0, set: /** 把有限的界面角度转换为反向弧度写入实体旋转。 */ value => { if (selectedEntity.value && Number.isFinite(value)) selectedEntity.value.transform.rotation = -value * Math.PI / 180 } })
+const colliderRotationDegrees = computed({ get: /* 根据 selectedEntity.value 的真假，分别返回 Number((-selectedEntity.value.collider.rotation * 180 / Math.PI).toFixed(4)) 或 0。 */ () => selectedEntity.value ? Number((-selectedEntity.value.collider.rotation * 180 / Math.PI).toFixed(4)) : 0, set: /** 把有限的界面角度转换为反向弧度写入碰撞旋转。 */ value => { if (selectedEntity.value && Number.isFinite(value)) selectedEntity.value.collider.rotation = -value * Math.PI / 180 } })
+/** 按椭圆直径或顶点范围取得碰撞形状尺寸。 */ function colliderDimension(axis: 'x' | 'y'): number {
   const collider = selectedEntity.value?.getCollider()
   if (!collider) return 0
   if (collider.kind === 'EllipseCollider2D') return (axis === 'x' ? collider.radiusX : collider.radiusY) * 2
-  const values = collider.vertices.map(vertex => vertex[axis])
+  const values = collider.vertices.map(/* 返回 vertex[axis] 的当前值。 */ vertex => vertex[axis])
   return values.length ? Math.max(...values) - Math.min(...values) : collider.size[axis]
 }
-function setColliderDimension(axis: 'x' | 'y', value: number) {
+/** 验证目标尺寸后调整椭圆半径或按比例缩放多边形轴向顶点。 */ function setColliderDimension(axis: 'x' | 'y', value: number) {
   const collider = selectedEntity.value?.getCollider()
   if (!collider || !Number.isFinite(value) || value < MIN_SIZE) return
   if (collider.kind === 'EllipseCollider2D') {
@@ -1032,35 +1033,35 @@ function setColliderDimension(axis: 'x' | 'y', value: number) {
     else collider.radiusY = value / 2
   } else {
     const current = colliderDimension(axis)
-    if (current > 0) collider.vertices.forEach(vertex => { vertex[axis] *= value / current })
+    if (current > 0) collider.vertices.forEach(/** 按目标与当前尺寸比例缩放顶点指定轴。 */ vertex => { vertex[axis] *= value / current })
     collider.size[axis] = value
   }
 }
-const colliderSizeX = computed({ get: () => colliderDimension('x'), set: value => setColliderDimension('x', value) })
-const colliderSizeY = computed({ get: () => colliderDimension('y'), set: value => setColliderDimension('y', value) })
-function entityDimension(axis: 'x' | 'y'): number { const entity = selectedEntity.value; if (!entity) return 0; if (entity instanceof CircleEntity) return (axis === 'x' ? entity.radiusX * entity.transform.scale.x : entity.radiusY * entity.transform.scale.y) * 2; if (!(entity instanceof BoxEntity || entity instanceof TriangleEntity)) return 0; const values = entity.vertices.map(vertex => vertex[axis]); return (Math.max(...values) - Math.min(...values)) * entity.transform.scale[axis] }
-function setEntityDimension(axis: 'x' | 'y', value: number) { const entity = selectedEntity.value; if (!entity || !Number.isFinite(value) || value < MIN_SIZE) return; if (entity instanceof CircleEntity) entity.transform.scale[axis] = value / ((axis === 'x' ? entity.radiusX : entity.radiusY) * 2); else if (entity instanceof BoxEntity || entity instanceof TriangleEntity) { const values = entity.vertices.map(vertex => vertex[axis]); entity.transform.scale[axis] = value / (Math.max(...values) - Math.min(...values)) } }
-const absoluteSizeX = computed({ get: () => entityDimension('x'), set: value => setEntityDimension('x', value) })
-const absoluteSizeY = computed({ get: () => entityDimension('y'), set: value => setEntityDimension('y', value) })
+const colliderSizeX = computed({ get: /* 调用 colliderDimension('x') 并返回调用结果。 */ () => colliderDimension('x'), set: /* 调用 setColliderDimension('x', value) 并返回调用结果。 */ value => setColliderDimension('x', value) })
+const colliderSizeY = computed({ get: /* 调用 colliderDimension('y') 并返回调用结果。 */ () => colliderDimension('y'), set: /* 调用 setColliderDimension('y', value) 并返回调用结果。 */ value => setColliderDimension('y', value) })
+/** 计算带实体缩放的圆、盒或三角形轴向尺寸。 */ function entityDimension(axis: 'x' | 'y'): number { const entity = selectedEntity.value; if (!entity) return 0; if (entity instanceof CircleEntity) return (axis === 'x' ? entity.radiusX * entity.transform.scale.x : entity.radiusY * entity.transform.scale.y) * 2; if (!(entity instanceof BoxEntity || entity instanceof TriangleEntity)) return 0; const values = entity.vertices.map(/* 返回 vertex[axis] 的当前值。 */ vertex => vertex[axis]); return (Math.max(...values) - Math.min(...values)) * entity.transform.scale[axis] }
+/** 由目标尺寸反算实体缩放，拒绝非法或过小输入。 */ function setEntityDimension(axis: 'x' | 'y', value: number) { const entity = selectedEntity.value; if (!entity || !Number.isFinite(value) || value < MIN_SIZE) return; if (entity instanceof CircleEntity) entity.transform.scale[axis] = value / ((axis === 'x' ? entity.radiusX : entity.radiusY) * 2); else if (entity instanceof BoxEntity || entity instanceof TriangleEntity) { const values = entity.vertices.map(/* 返回 vertex[axis] 的当前值。 */ vertex => vertex[axis]); entity.transform.scale[axis] = value / (Math.max(...values) - Math.min(...values)) } }
+const absoluteSizeX = computed({ get: /* 调用 entityDimension('x') 并返回调用结果。 */ () => entityDimension('x'), set: /* 调用 setEntityDimension('x', value) 并返回调用结果。 */ value => setEntityDimension('x', value) })
+const absoluteSizeY = computed({ get: /* 调用 entityDimension('y') 并返回调用结果。 */ () => entityDimension('y'), set: /* 调用 setEntityDimension('y', value) 并返回调用结果。 */ value => setEntityDimension('y', value) })
 
 type SharedBooleanProperty = 'enabled' | 'editorVisible' | 'editorLocked'
-function sharedBoolean(property: SharedBooleanProperty): string {
-  const values = new Set(selectedEntities.value.map(entity => entity[property]))
+/** 多选布尔值不一致时显示混合，否则显示是或否。 */ function sharedBoolean(property: SharedBooleanProperty): string {
+  const values = new Set(selectedEntities.value.map(/* 返回 entity[property] 的当前值。 */ entity => entity[property]))
   if (values.size !== 1) return t('mixed')
   return values.has(true) ? t('yes') : t('no')
 }
-function toggleAll(property: SharedBooleanProperty) {
+/** 将多选布尔属性统一切换为全部为真状态的反值并记录历史。 */ function toggleAll(property: SharedBooleanProperty) {
   if (!canEdit.value) return
-  const next = !selectedEntities.value.every(entity => entity[property])
+  const next = !selectedEntities.value.every(/* 返回 entity[property] 的当前值。 */ entity => entity[property])
   for (const entity of selectedEntities.value) entity[property] = next
   pushHistory('Set shared property', `multi:${numericResourceKey.value}:${property}`)
 }
 const multiLayer = computed({
-  get: () => {
-    const layers = new Set(selectedEntities.value.map(entity => entity.layer))
+  get: /** 多选对象同层时返回层值，混合层时返回空值。 */ () => {
+    const layers = new Set(selectedEntities.value.map(/* 返回 entity.layer 的当前值。 */ entity => entity.layer))
     return layers.size === 1 ? String([...layers][0]) : ''
   },
-  set: value => {
+  set: /** 验证图层后批量设置选择实体并记录历史。 */ value => {
     if (!canEdit.value || value === '') return
     const layer = Number(value)
     if (!estate.layers.includes(layer)) return
@@ -1068,7 +1069,7 @@ const multiLayer = computed({
     pushHistory('Set shared sorting layer', `multi:${numericResourceKey.value}:layer`)
   }
 })
-function setMultiPosition(axis: 'x' | 'y', value: number) {
+/** 按共享值或选择中心模式修改多选位置，捕获覆盖或整体平移并记录历史。 */ function setMultiPosition(axis: 'x' | 'y', value: number) {
   if (!canEdit.value || !Number.isFinite(value)) return
   if (multiPositionMode.value === 'shared') {
     for (const entity of selectedEntities.value) { entity.transform.position[axis] = value; capturePrefabOverrides(entity) }
@@ -1076,28 +1077,28 @@ function setMultiPosition(axis: 'x' | 'y', value: number) {
     pushHistory('Set shared position', `multi-position:${numericResourceKey.value}:shared:${axis}`)
     return
   }
-  const ids = selectedEntities.value.map(entity => entity.id)
+  const ids = selectedEntities.value.map(/* 返回 entity.id 的当前值。 */ entity => entity.id)
   const center = selectionCenter(ids, state.world.entities)
   const delta = { x: 0, y: 0 }
   delta[axis] = value - center[axis]
   applyTranslation(captureTransforms(ids, state.world.entities), delta, state.world.entities)
   pushHistory('Move entities', `multi-position:${numericResourceKey.value}:${axis}`)
 }
-const multiPositionX = computed({ get: () => multiPositionMode.value === 'shared' ? selectedEntities.value[0]?.transform.position.x ?? 0 : Number(selectionCenter(selectedEntities.value.map(entity => entity.id), state.world.entities).x.toFixed(4)), set: value => setMultiPosition('x', value) })
-const multiPositionY = computed({ get: () => multiPositionMode.value === 'shared' ? selectedEntities.value[0]?.transform.position.y ?? 0 : Number(selectionCenter(selectedEntities.value.map(entity => entity.id), state.world.entities).y.toFixed(4)), set: value => setMultiPosition('y', value) })
-function mixedPosition(axis: 'x' | 'y'): boolean { return new Set(selectedEntities.value.map(entity => entity.transform.position[axis])).size > 1 }
-function sharedList(selector: (entity: typeof selectedEntities.value[number]) => string[]): string {
-  const values = selectedEntities.value.map(entity => selector(entity).join(', '))
+const multiPositionX = computed({ get: /** 读取共享横坐标或保留四位小数的选择中心横坐标。 */ () => multiPositionMode.value === 'shared' ? selectedEntities.value[0]?.transform.position.x ?? 0 : Number(selectionCenter(selectedEntities.value.map(/* 返回 entity.id 的当前值。 */ entity => entity.id), state.world.entities).x.toFixed(4)), set: /* 调用 setMultiPosition('x', value) 并返回调用结果。 */ value => setMultiPosition('x', value) })
+const multiPositionY = computed({ get: /** 读取共享纵坐标或保留四位小数的选择中心纵坐标。 */ () => multiPositionMode.value === 'shared' ? selectedEntities.value[0]?.transform.position.y ?? 0 : Number(selectionCenter(selectedEntities.value.map(/* 返回 entity.id 的当前值。 */ entity => entity.id), state.world.entities).y.toFixed(4)), set: /* 调用 setMultiPosition('y', value) 并返回调用结果。 */ value => setMultiPosition('y', value) })
+/** 判断多选对象指定位置分量是否存在不同数值。 */ function mixedPosition(axis: 'x' | 'y'): boolean { return new Set(selectedEntities.value.map(/* 返回 entity.transform.position[axis] 的当前值。 */ entity => entity.transform.position[axis])).size > 1 }
+/** 仅所有选择对象列表相同时返回共同文本，否则返回空值。 */ function sharedList(selector: (entity: typeof selectedEntities.value[number]) => string[]): string {
+  const values = selectedEntities.value.map(/* 调用 selector(entity).join(', ') 并返回调用结果。 */ entity => selector(entity).join(', '))
   return new Set(values).size === 1 ? values[0] ?? '' : ''
 }
-const multiTags = computed(() => sharedList(entity => entity.tags))
-const multiGroups = computed(() => sharedList(entity => entity.groups))
-const commonComponentKinds = computed(() => {
+const multiTags = computed(/** 读取多选实体的共同标签文本。 */ () => sharedList(/* 返回 entity.tags 的当前值。 */ entity => entity.tags))
+const multiGroups = computed(/** 读取多选实体的共同分组文本。 */ () => sharedList(/* 返回 entity.groups 的当前值。 */ entity => entity.groups))
+const commonComponentKinds = computed(/** 计算所有选中实体共同拥有的组件类型。 */ () => {
   const [first, ...rest] = selectedEntities.value
-  return first ? first.components.map(component => component.kind).filter(kind => rest.every(entity => entity.hasComponent(kind))) : []
+  return first ? first.components.map(/* 返回 component.kind 的当前值。 */ component => component.kind).filter(/* 调用 rest.every(entity => entity.hasComponent(kind)) 并返回调用结果。 */ kind => rest.every(/* 调用 entity.hasComponent(kind) 并返回调用结果。 */ entity => entity.hasComponent(kind))) : []
 })
-function setMultiTags(value: string) { if (!canEdit.value) return; const tags = cleanList(value); for (const entity of selectedEntities.value) entity.tags = [...tags]; pushHistory('Set shared tags', `multi:${numericResourceKey.value}:tags`) }
-function setMultiGroups(value: string) { if (!canEdit.value) return; const groups = cleanList(value); for (const entity of selectedEntities.value) entity.groups = [...groups]; pushHistory('Set shared groups', `multi:${numericResourceKey.value}:groups`) }
+/** 净化标签后为每个选中实体复制设置并记录历史。 */ function setMultiTags(value: string) { if (!canEdit.value) return; const tags = cleanList(value); for (const entity of selectedEntities.value) entity.tags = [...tags]; pushHistory('Set shared tags', `multi:${numericResourceKey.value}:tags`) }
+/** 净化分组后为每个选中实体复制设置并记录历史。 */ function setMultiGroups(value: string) { if (!canEdit.value) return; const groups = cleanList(value); for (const entity of selectedEntities.value) entity.groups = [...groups]; pushHistory('Set shared groups', `multi:${numericResourceKey.value}:groups`) }
 
 </script>
 

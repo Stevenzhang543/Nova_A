@@ -1,3 +1,4 @@
+/** 二维渲染接口类型：声明绘制命令、相机、纹理及渲染后端之间的数据约定。 */
 import type { Vec2 } from '../world/types'
 
 export type TextureFilter = 'Nearest' | 'Linear'
@@ -142,6 +143,7 @@ export interface Renderer2D {
 
 export const WHITE: RenderColor = { r: 255, g: 255, b: 255, a: 1 }
 
+/* 将整数 RGB 与浮点透明度转换为限制在零至一范围内的渲染颜色元组。 */
 export function normalizedColor(color: RenderColor): [number, number, number, number] {
   return [
     Math.min(1, Math.max(0, color.r / 255)),

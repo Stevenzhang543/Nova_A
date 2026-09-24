@@ -1,3 +1,4 @@
+/** 可访问性验证资料：组织检查项目、执行证据与待确认事项。 */
 import { reactive } from 'vue'
 import type { UiAccessibilityNode } from './gameUi'
 import { NOVA_ENGINE_VERSION } from '../projects/projectFormat'
@@ -40,13 +41,13 @@ export const nativeAccessibilityState = reactive({
   capabilities: { platform: typeof navigator === 'undefined' ? 'unknown' : navigator.platform || 'web', webviewDomBridge: true, nativeCustomAdapters: false, automationProvider: 'Web ARIA', notes: ['Semantic HTML and ARIA are exposed by the active browser/WebView accessibility tree.'] } as NativeAccessibilityCapabilities
 })
 
-const finite = (value: number, fallback = 0): number => Number.isFinite(value) ? value : fallback
-export function createSemanticEvidence(nodes: readonly UiAccessibilityNode[], options: { locale?: string; direction?: 'ltr' | 'rtl'; textScale?: number; generatedAt?: string } = {}): SemanticEvidenceSnapshot {
+const finite = /* 根据 Number.isFinite(value) 的真假，分别返回 value 或 fallback。 */ (value: number, fallback = 0): number => Number.isFinite(value) ? value : fallback
+/** 结构说明（自动提取）：createSemanticEvidence；输入 nodes、options；直接调用 toISOString、Date、slice、Math.min、Math.max 等；返回路径包含 result；包含循环处理。 */ export function createSemanticEvidence(nodes: readonly UiAccessibilityNode[], options: { locale?: string; direction?: 'ltr' | 'rtl'; textScale?: number; generatedAt?: string } = {}): SemanticEvidenceSnapshot {
   const result: SemanticEvidenceSnapshot = {
     format: 'nova-semantic-accessibility-snapshot', version: 1, engineVersion: NOVA_ENGINE_VERSION,
     generatedAt: options.generatedAt ?? new Date().toISOString(), locale: (options.locale || 'en').slice(0, 32),
     direction: options.direction === 'rtl' ? 'rtl' : 'ltr', textScale: Math.min(4, Math.max(.75, finite(options.textScale ?? 1, 1))),
-    nodes: nodes.slice(0, 10_000).map(node => ({
+    nodes: nodes.slice(0, 10_000).map(/** 结构说明（自动提取）：map 回调；输入 node；直接调用 node.uuid.slice、node.role.slice、node.label.slice、node.description.slice、node.state.slice 等；返回表达式求值结果。 */ node => ({
       uuid: node.uuid.slice(0, 160), role: node.role.slice(0, 64), name: node.label.slice(0, 500), description: node.description.slice(0, 2_000),
       state: node.state.slice(0, 500), value: { text: node.value.slice(0, 500), minimum: node.valueMin, maximum: node.valueMax, current: node.valueNow, checked: node.checked },
       live: node.live, focusOrder: Math.max(-1, Math.round(finite(node.tabIndex, -1))), disabled: node.disabled, focused: node.focused,
@@ -63,11 +64,11 @@ export function createSemanticEvidence(nodes: readonly UiAccessibilityNode[], op
     if (node.live !== 'off' && !node.name.trim() && !node.value.text.trim()) result.issues.push({ code: 'NOVA-A11Y-SNAPSHOT-LIVE', severity: 'warning', uuid: node.uuid, message: 'Live region has no announceable content.' })
     if (node.focusOrder > 0) { const previous = names.get(node.focusOrder); if (previous) result.issues.push({ code: 'NOVA-A11Y-SNAPSHOT-ORDER', severity: 'warning', uuid: node.uuid, message: `Focus order duplicates ${previous}.` }); else names.set(node.focusOrder, node.name) }
   }
-  result.issues.sort((a,b)=>a.uuid.localeCompare(b.uuid)||a.code.localeCompare(b.code))
+  result.issues.sort(/* 先计算 a.uuid.localeCompare(b.uuid)；仅当其为假值时求右侧 a.code.localeCompare(b.code)，返回短路求值结果。 */ (a,b)=>a.uuid.localeCompare(b.uuid)||a.code.localeCompare(b.code))
   return result
 }
 
-export async function detectNativeAccessibilityCapabilities(): Promise<NativeAccessibilityCapabilities> {
+/** 结构说明（自动提取）：detectNativeAccessibilityCapabilities；无显式参数；直接调用 invoke、slice、String、Array.isArray、response.notes.map；写入 nativeAccessibilityState.loading、nativeAccessibilityState.error、nativeAccessibilityState.capabilities；返回路径包含 nativeAccessibilityState.capabilities；等待异步结果。 */ export async function detectNativeAccessibilityCapabilities(): Promise<NativeAccessibilityCapabilities> {
   nativeAccessibilityState.loading = true; nativeAccessibilityState.error = ''
   if (typeof window === 'undefined' || !('__TAURI_INTERNALS__' in window)) {
     nativeAccessibilityState.capabilities = {
@@ -86,7 +87,7 @@ export async function detectNativeAccessibilityCapabilities(): Promise<NativeAcc
     nativeAccessibilityState.capabilities = {
       platform: String(response.platform || 'unknown').slice(0,64), webviewDomBridge: response.webviewDomBridge === true,
       nativeCustomAdapters: response.nativeCustomAdapters === true, automationProvider: String(response.automationProvider || 'Web ARIA').slice(0,160),
-      notes: Array.isArray(response.notes) ? response.notes.map(value=>String(value).slice(0,500)).slice(0,16) : []
+      notes: Array.isArray(response.notes) ? response.notes.map(/* 调用 String(value).slice(0,500) 并返回调用结果。 */ value=>String(value).slice(0,500)).slice(0,16) : []
     }
   } catch (error) {
     nativeAccessibilityState.error = error instanceof Error ? error.message : String(error)
@@ -94,9 +95,9 @@ export async function detectNativeAccessibilityCapabilities(): Promise<NativeAcc
   return nativeAccessibilityState.capabilities
 }
 
-export function downloadSemanticEvidence(snapshot: SemanticEvidenceSnapshot, filename = 'nova-accessibility-snapshot.json'): void {
+/** 结构说明（自动提取）：downloadSemanticEvidence；输入 snapshot、filename；直接调用 Blob、JSON.stringify、URL.createObjectURL、document.createElement、slice 等；写入 link.href、link.download。 */ export function downloadSemanticEvidence(snapshot: SemanticEvidenceSnapshot, filename = 'nova-accessibility-snapshot.json'): void {
   if (typeof document === 'undefined') return
   const blob = new Blob([`${JSON.stringify(snapshot,null,2)}\n`],{type:'application/json'}), url=URL.createObjectURL(blob), link=document.createElement('a')
-  link.href=url; link.download=filename.replace(/[^a-z0-9._-]/gi,'_').slice(0,160); link.click(); setTimeout(()=>URL.revokeObjectURL(url),0)
+  link.href=url; link.download=filename.replace(/[^a-z0-9._-]/gi,'_').slice(0,160); link.click(); setTimeout(/* 调用 URL.revokeObjectURL(url) 并返回调用结果。 */ ()=>URL.revokeObjectURL(url),0)
 }
 

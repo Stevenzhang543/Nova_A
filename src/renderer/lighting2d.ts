@@ -1,3 +1,4 @@
+/** 二维光照合成：处理灯光范围、阴影及法线响应，并提供调试视图和后处理覆盖绘制。 */
 import { entityBoundaryPoints } from '../world/Connection'
 import { resolveTexture } from '../assets/AssetDatabase'
 import { Light2D, ShadowCaster2D } from '../world/components'
@@ -20,12 +21,14 @@ interface LightingOptions {
   activeLayer: number
 }
 
+/* 选择当前游戏相机；没有有效游戏相机或处于编辑状态时使用编辑相机。 */
 function cameraFor(entities: Entity[], options: LightingOptions): CameraRenderView {
   return options.gameView
     ? activeGameCamera(entities, options.width, options.height)?.view ?? options.editorCamera
     : options.editorCamera
 }
 
+/* 将世界点变换到相机视口中的画布像素坐标。 */
 function worldToScreen(point: Vec2, camera: CameraRenderView, width: number, height: number): Vec2 {
   if (!camera.position) return { x: point.x * camera.scale + camera.offset.x, y: camera.offset.y - point.y * camera.scale }
   const viewport = camera.viewport ?? { x: 0, y: 0, width: 1, height: 1 }
@@ -36,10 +39,12 @@ function worldToScreen(point: Vec2, camera: CameraRenderView, width: number, hei
   return { x: viewportX + viewport.width * width * .5 + view.x * camera.scale, y: viewportY + viewport.height * height * .5 - view.y * camera.scale }
 }
 
+/* 将层编号映射为无符号三十二位掩码中的对应位。 */
 function layerBit(layer: number): number { return (1 << (layer & 31)) >>> 0 }
 
+/* 筛选可见且与光源层掩码互相匹配的实体，排除灯光、相机及 UI 对象。 */
 function compatibleTargets(entities: Entity[], lightEntity: Entity, light: Light2D, activeLayer: number, gameView: boolean): Entity[] {
-  return entities.filter(entity => {
+  return entities.filter(/* 判断实体是否可接受当前光源，综合编辑可见性及双向灯光层掩码。 */ entity => {
     if (!entity.enabled || !entity.authoring.visible || (!gameView && (!entity.editorVisible || entity.layer !== activeLayer))) return false
     if ((light.layerMask & layerBit(entity.layer)) === 0) return false
     const spriteMask = entity.spriteRenderer?.lightMask ?? 0xffff_ffff
@@ -47,11 +52,12 @@ function compatibleTargets(entities: Entity[], lightEntity: Entity, light: Light
   })
 }
 
+/* 将目标实体边界合并为裁剪路径，返回是否存在可裁剪的有效轮廓。 */
 function clipTargets(context: CanvasRenderingContext2D, targets: Entity[], entities: Entity[], camera: CameraRenderView, width: number, height: number): boolean {
   context.beginPath()
   let paths = 0
   for (const entity of targets) {
-    const points = entityBoundaryPoints(entity, 48, entities).map(point => worldToScreen(point, camera, width, height))
+    const points = entityBoundaryPoints(entity, 48, entities).map(/* 调用 worldToScreen(point, camera, width, height) 并返回调用结果。 */ point => worldToScreen(point, camera, width, height))
     if (points.length < 3) continue
     context.moveTo(points[0].x, points[0].y)
     for (let index = 1; index < points.length; index++) context.lineTo(points[index].x, points[index].y)
@@ -61,6 +67,7 @@ function clipTargets(context: CanvasRenderingContext2D, targets: Entity[], entit
   return paths > 0
 }
 
+/* 按方向光、点光或聚光配置消减暗幕并叠加颜色及内外角光照。 */
 function punchLight(context: CanvasRenderingContext2D, light: Light2D, position: Vec2, rotation: number, scale: number, options: LightingOptions): void {
   const radius = Math.max(1, light.range * scale)
   const strength = Math.min(1, light.intensity / 4)
@@ -97,6 +104,7 @@ function punchLight(context: CanvasRenderingContext2D, light: Light2D, position:
   context.restore()
 }
 
+/* 根据有效投影体的边缘向远离光源的方向拉伸阴影，遵守质量与层掩码设置。 */
 function drawShadows(context: CanvasRenderingContext2D, lightEntity: Entity, light: Light2D, entities: Entity[], camera: CameraRenderView, options: LightingOptions): void {
   if (!light.castsShadows || activeRenderQuality.shadowQuality === 'Off' || light.lightType === 'Directional') return
   const lightWorld = worldTransform(lightEntity, entities).position
@@ -106,14 +114,14 @@ function drawShadows(context: CanvasRenderingContext2D, lightEntity: Entity, lig
     const caster = casterEntity.getComponent<ShadowCaster2D>('ShadowCaster2D')
     if (!casterEntity.enabled || !casterEntity.authoring.visible || (!options.gameView && (!casterEntity.editorVisible || casterEntity.layer !== options.activeLayer)) || !caster?.enabled || caster.removed || (caster.layerMask & light.layerMask) === 0 || (casterEntity === lightEntity && !caster.selfShadows)) continue
     const boundary = entityBoundaryPoints(casterEntity, activeRenderQuality.shadowQuality === 'Ultra' ? 64 : activeRenderQuality.shadowQuality === 'Soft' ? 32 : 12, entities)
-      .map(point => worldToScreen(point, camera, options.width, options.height))
+      .map(/* 调用 worldToScreen(point, camera, options.width, options.height) 并返回调用结果。 */ point => worldToScreen(point, camera, options.width, options.height))
     if (boundary.length < 2) continue
     context.save(); context.globalCompositeOperation = 'source-over'; context.fillStyle = `rgba(0,0,0,${caster.opacity})`
     if (!caster.selfShadows) { context.beginPath(); context.rect(0, 0, options.width, options.height); context.moveTo(boundary[0].x, boundary[0].y); for (const point of boundary.slice(1)) context.lineTo(point.x, point.y); context.closePath(); context.clip('evenodd') }
     if (activeRenderQuality.shadowQuality === 'Soft' || activeRenderQuality.shadowQuality === 'Ultra') context.filter = `blur(${activeRenderQuality.shadowQuality === 'Ultra' ? 8 : 4}px)`
     for (let index = 0; index < boundary.length; index++) {
       const first = boundary[index], second = boundary[(index + 1) % boundary.length]
-      const extend = (point: Vec2) => { const dx = point.x - lightScreen.x, dy = point.y - lightScreen.y, length = Math.max(1e-6, Math.hypot(dx, dy)); return { x: point.x + dx / length * shadowLength, y: point.y + dy / length * shadowLength } }
+      const extend = /* 沿远离光源的方向延伸边界点，得到阴影四边形的远端顶点。 */ (point: Vec2) => { const dx = point.x - lightScreen.x, dy = point.y - lightScreen.y, length = Math.max(1e-6, Math.hypot(dx, dy)); return { x: point.x + dx / length * shadowLength, y: point.y + dy / length * shadowLength } }
       const firstFar = extend(first), secondFar = extend(second)
       context.beginPath(); context.moveTo(first.x, first.y); context.lineTo(second.x, second.y); context.lineTo(secondFar.x, secondFar.y); context.lineTo(firstFar.x, firstFar.y); context.closePath(); context.fill()
     }
@@ -121,6 +129,7 @@ function drawShadows(context: CanvasRenderingContext2D, lightEntity: Entity, lig
   }
 }
 
+/* 按纹理版本和离散光照方向缓存法线贴图的漫反射响应，读取失败时返回空。 */
 function normalResponse(reference: string, direction: Vec2): HTMLCanvasElement | null {
   const texture = resolveTexture(reference)
   if (!texture) return null
@@ -148,6 +157,7 @@ function normalResponse(reference: string, direction: Vec2): HTMLCanvasElement |
   } catch { return null }
 }
 
+/* 将光照方向转换到精灵局部空间，叠加法线响应并考虑距离衰减和翻转。 */
 function drawNormalMappedLight(context: CanvasRenderingContext2D, targets: Entity[], lightEntity: Entity, light: Light2D, entities: Entity[], camera: CameraRenderView, options: LightingOptions): void {
   const lightWorld = worldTransform(lightEntity, entities).position
   for (const entity of targets) {
@@ -171,13 +181,14 @@ function drawNormalMappedLight(context: CanvasRenderingContext2D, targets: Entit
   }
 }
 
+/* 逐相机绘制环境暗幕、光照、法线响应与阴影，返回此次光照处理耗时。 */
 export function renderLighting2D(context: CanvasRenderingContext2D, entities: Entity[], options: LightingOptions): number {
   if (!renderingSettings.lightingEnabled) return 0
   lightingFrame++
   const started = performance.now()
-  const lights = entities.flatMap(entity => { const light = entity.getComponent<Light2D>('Light2D'); return entity.enabled && entity.authoring.visible && (options.gameView || (entity.editorVisible && entity.layer === options.activeLayer)) && light?.enabled && !light.removed ? [{ entity, light }] : [] })
+  const lights = entities.flatMap(/* 收集启用且可见的光源组件，并保留其所属实体供后续变换使用。 */ entity => { const light = entity.getComponent<Light2D>('Light2D'); return entity.enabled && entity.authoring.visible && (options.gameView || (entity.editorVisible && entity.layer === options.activeLayer)) && light?.enabled && !light.removed ? [{ entity, light }] : [] })
   const cameras = options.gameView
-    ? activeGameCameras(entities, options.width, options.height).map(camera => camera.view)
+    ? activeGameCameras(entities, options.width, options.height).map(/* 返回 camera.view 的当前值。 */ camera => camera.view)
     : [options.editorCamera]
   for (const camera of cameras.length ? cameras : [options.editorCamera]) {
     context.save()
@@ -201,6 +212,7 @@ export function renderLighting2D(context: CanvasRenderingContext2D, entities: En
   return performance.now() - started
 }
 
+/* 绘制光照、过度绘制、批次或法线贴图调试视图，并返回处理耗时。 */
 export function renderDebugView2D(context: CanvasRenderingContext2D, entities: Entity[], options: LightingOptions): number {
   if (renderingSettings.debugView === 'None') return 0
   const started = performance.now(), camera = cameraFor(entities, options)
@@ -214,10 +226,10 @@ export function renderDebugView2D(context: CanvasRenderingContext2D, entities: E
       gradient.addColorStop(0, `rgba(${light.color.r},${light.color.g},${light.color.b},.9)`); gradient.addColorStop(1, 'rgba(0,0,0,0)'); context.fillStyle = gradient; context.fillRect(position.x - radius, position.y - radius, radius * 2, radius * 2)
     }
   } else {
-    const visible = entities.filter(entity => entity.enabled && (options.gameView || entity.layer === options.activeLayer))
+    const visible = entities.filter(/* 先计算 entity.enabled；仅当其为真值时求右侧 (options.gameView || entity.layer === options.activeLayer)，返回短路求值结果。 */ entity => entity.enabled && (options.gameView || entity.layer === options.activeLayer))
     for (const entity of visible) {
-      const points = entityBoundaryPoints(entity, 32, entities).map(point => worldToScreen(point, camera, options.width, options.height)); if (points.length < 3) continue
-      context.beginPath(); context.moveTo(points[0].x, points[0].y); points.slice(1).forEach(point => context.lineTo(point.x, point.y)); context.closePath()
+      const points = entityBoundaryPoints(entity, 32, entities).map(/* 调用 worldToScreen(point, camera, options.width, options.height) 并返回调用结果。 */ point => worldToScreen(point, camera, options.width, options.height)); if (points.length < 3) continue
+      context.beginPath(); context.moveTo(points[0].x, points[0].y); points.slice(1).forEach(/* 调用 context.lineTo(point.x, point.y) 并返回调用结果。 */ point => context.lineTo(point.x, point.y)); context.closePath()
       if (renderingSettings.debugView === 'Overdraw') { context.fillStyle = 'rgba(255,55,70,.18)'; context.fill() }
       else if (renderingSettings.debugView === 'BatchBreaks') {
         const material = entity.spriteRenderer?.material ?? entity.textRenderer?.material ?? entity.renderer.material
@@ -230,6 +242,7 @@ export function renderDebugView2D(context: CanvasRenderingContext2D, entities: E
   context.restore(); return performance.now() - started
 }
 
+/* 启用后处理且暗角非零时叠加径向暗角，返回处理耗时。 */
 export function renderPostProcessOverlay(context: CanvasRenderingContext2D, width: number, height: number): number {
   if (!renderingSettings.postProcessing.enabled || activePostProcessing.vignette <= 0) return 0
   const started = performance.now(), amount = activePostProcessing.vignette
@@ -239,6 +252,7 @@ export function renderPostProcessOverlay(context: CanvasRenderingContext2D, widt
   return performance.now() - started
 }
 
+/* 将当前曝光、对比度、饱和度、模糊与泛光设置组合成画布过滤器字符串。 */
 export function worldPostProcessFilter(): string {
   if (!renderingSettings.postProcessing.enabled) return 'none'
   const effect = activePostProcessing

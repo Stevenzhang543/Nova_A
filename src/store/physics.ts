@@ -1,3 +1,4 @@
+/** 场景编辑与物理状态桥接：序列化和加载项目，创建及修改实体，协调播放、保存与撤销历史。 */
 import { notify } from '../runtime/editorFeedback'
 import { assertStudioDraftsSaved } from '../editor/studioSaveBoundary'
 import { validateComponentValues } from '../world/componentValidation'
@@ -172,7 +173,7 @@ export const physicsState = reactive<PhysicsState>({
 
 export const sceneManager = reactive(new SceneManager())
 
-export function normalizeGlobalSettings(): void {
+/** 约束重力、阻力、时间倍率及步进参数，规范化物理档案和固定长度无符号碰撞矩阵。 */ export function normalizeGlobalSettings(): void {
   physicsState.globalSettings.gravity = finiteNumber(physicsState.globalSettings.gravity, 9.8)
   physicsState.globalSettings.airFriction = Math.max(0, finiteNumber(physicsState.globalSettings.airFriction, 0.01))
   physicsState.globalSettings.timeScale = Math.max(0, finiteNumber(physicsState.globalSettings.timeScale, 1))
@@ -189,21 +190,21 @@ export function normalizeGlobalSettings(): void {
   const source = Array.isArray(physicsState.globalSettings.collisionMatrix)
     ? physicsState.globalSettings.collisionMatrix
     : defaultCollisionMatrix()
-  physicsState.globalSettings.collisionMatrix = Array.from({ length: PHYSICS_LAYER_COUNT }, (_, layer) => {
+  physicsState.globalSettings.collisionMatrix = Array.from({ length: PHYSICS_LAYER_COUNT }, /** 限制每层碰撞位掩码到无符号三十二位范围，缺失时默认仅与自身层碰撞。 */ (_, layer) => {
     const value = finiteNumber(source[layer], 1 << layer)
     return Math.min(0xffff_ffff, Math.max(0, Math.round(value))) >>> 0
   })
 }
 
-export function enterEditMode(id: number | null): void {
+/** 同步单选、选择列表和聚焦实体身份，传 null 时清空选择。 */ export function enterEditMode(id: number | null): void {
   physicsState.selectedEntityId = id
   physicsState.selectedEntityIds.splice(0, physicsState.selectedEntityIds.length, ...(id === null ? [] : [id]))
   physicsState.focusEntityID = id
 }
 
-export function selectEntities(ids: number[], mode: SelectionMode = 'replace', primaryId?: number | null): void {
-  const valid = new Set(physicsState.world.entities.map(entity => entity.id))
-  const requested = [...new Set(ids)].filter(id => valid.has(id))
+/** 过滤不存在与重复实体，再按选择模式更新集合，并确定合法主选择。 */ export function selectEntities(ids: number[], mode: SelectionMode = 'replace', primaryId?: number | null): void {
+  const valid = new Set(physicsState.world.entities.map(/* 返回 entity.id 的当前值。 */ entity => entity.id))
+  const requested = [...new Set(ids)].filter(/* 调用 valid.has(id) 并返回调用结果。 */ id => valid.has(id))
   const next = updateSelection(physicsState.selectedEntityIds, requested, mode)
   physicsState.selectedEntityIds.splice(0, physicsState.selectedEntityIds.length, ...next)
   const preferred = primaryId !== undefined && primaryId !== null && next.includes(primaryId)
@@ -212,12 +213,12 @@ export function selectEntities(ids: number[], mode: SelectionMode = 'replace', p
   physicsState.selectedEntityId = preferred
 }
 
-export function selectedEntities(): Entity[] {
+/** 按世界原有顺序返回当前选择身份对应的实体列表。 */ export function selectedEntities(): Entity[] {
   const ids = new Set(physicsState.selectedEntityIds)
-  return physicsState.world.entities.filter(entity => ids.has(entity.id))
+  return physicsState.world.entities.filter(/* 调用 ids.has(entity.id) 并返回调用结果。 */ entity => ids.has(entity.id))
 }
 
-function serializeComponent(component: Component2D): Record<string, unknown> {
+/** 按组件类型复制可持久化字段，脚本仅保存允许序列化的属性，附带组件身份及启用移除状态。 */ function serializeComponent(component: Component2D): Record<string, unknown> {
   const data: Record<string, unknown> = {}
   if (component instanceof Transform) {
     data.parentUuid = component.parentUuid
@@ -226,7 +227,7 @@ function serializeComponent(component: Component2D): Record<string, unknown> {
     data.scale = { ...component.scale }
   } else if (component instanceof ShapeRenderer2D) {
     data.shape = component.shape
-    data.vertices = component.vertices.map(vertex => ({ ...vertex }))
+    data.vertices = component.vertices.map(/** 构造并返回记录 { ...vertex }，字段按当前实参及捕获状态求值。 */ vertex => ({ ...vertex }))
     data.radiusX = component.radiusX
     data.radiusY = component.radiusY
     data.color = { ...component.color }
@@ -277,7 +278,7 @@ function serializeComponent(component: Component2D): Record<string, unknown> {
       scriptAsset: component.scriptAsset,
       eventSheetAsset: component.eventSheetAsset,
       objectBlueprintAsset: component.objectBlueprintAsset,
-      properties: Object.fromEntries(Object.entries(component.properties).filter(([name]) => component.propertyMetadata[name]?.serialized !== false))
+      properties: Object.fromEntries(Object.entries(component.properties).filter(/* 比较 component.propertyMetadata[name]?.serialized 与 false，返回严格不等的判断结果。 */ ([name]) => component.propertyMetadata[name]?.serialized !== false))
     })
   } else if (component instanceof RigidBody2D) {
     Object.assign(data, {
@@ -308,9 +309,9 @@ function serializeComponent(component: Component2D): Record<string, unknown> {
       size: { ...component.size },
       radiusX: component.radiusX,
       radiusY: component.radiusY,
-      vertices: component.vertices.map(vertex => ({ ...vertex })),
+      vertices: component.vertices.map(/** 构造并返回记录 { ...vertex }，字段按当前实参及捕获状态求值。 */ vertex => ({ ...vertex })),
       shapeModel: component.shapeModel,
-      shapes: component.shapes.map(shape => ({ ...shape, offset: { ...shape.offset }, size: { ...shape.size }, points: shape.points.map(point => ({ ...point })) })),
+      shapes: component.shapes.map(/** 构造并返回记录 { ...shape, offset: { ...shape.offset }, size: { ...shape.size }, points: shape.points.map(point => ({ ...point })) }，字段按当前实参及捕获状态求值。 */ shape => ({ ...shape, offset: { ...shape.offset }, size: { ...shape.size }, points: shape.points.map(/** 构造并返回记录 { ...point }，字段按当前实参及捕获状态求值。 */ point => ({ ...point })) })),
       sensor: component.sensor,
       physicsLayer: component.physicsLayer,
       collisionMask: component.collisionMask >>> 0,
@@ -325,17 +326,17 @@ function serializeComponent(component: Component2D): Record<string, unknown> {
   return { uuid: component.uuid, kind: component.kind, enabled: component.enabled, removed: component.removed, data }
 }
 
-export function serializeEntity(entity: Entity): Record<string, unknown> {
+/** 规范化实体后生成持久化的创作数据。 */ export function serializeEntity(entity: Entity): Record<string, unknown> {
   normalizeEntity(entity)
   return entityAuthoringData(entity)
 }
 
 /** Detached authoring values for inspectors; does not normalize or mutate the entity. */
-export function readEntityAuthoringData(entity: Entity): Record<string, unknown> {
+/** 深复制实体创作数据，向调用方提供不共享可变对象的读取快照。 */ export function readEntityAuthoringData(entity: Entity): Record<string, unknown> {
   return JSON.parse(JSON.stringify(entityAuthoringData(entity))) as Record<string, unknown>
 }
 
-function entityAuthoringData(entity: Entity): Record<string, unknown> {
+/** 汇集实体身份、编辑属性、实例覆盖、创作元数据和组件记录，不含运行时数字身份。 */ function entityAuthoringData(entity: Entity): Record<string, unknown> {
   return {
     uuid: entity.uuid,
     name: entity.name,
@@ -363,9 +364,9 @@ function entityAuthoringData(entity: Entity): Record<string, unknown> {
   }
 }
 
-function serializeActiveScene(): Record<string, unknown> {
+/** 规范化设置并捕获活动场景实体、图层和连接，将连接实体数字身份转换为稳定引用。 */ function serializeActiveScene(): Record<string, unknown> {
   normalizeGlobalSettings()
-  const entitiesById = new Map(physicsState.world.entities.map(entity => [entity.id, entity]))
+  const entitiesById = new Map(physicsState.world.entities.map(/* 返回按声明顺序构造的数组 [entity.id, entity]。 */ entity => [entity.id, entity]))
   return {
     layers: [...editorState.layers],
     activeLayer: editorState.activeLayer,
@@ -373,29 +374,29 @@ function serializeActiveScene(): Record<string, unknown> {
     globalSettings: {
       ...physicsState.globalSettings,
       collisionMatrix: [...physicsState.globalSettings.collisionMatrix],
-      layers: physicsState.globalSettings.layers.map(layer => ({ ...layer })),
+      layers: physicsState.globalSettings.layers.map(/** 构造并返回记录 { ...layer }，字段按当前实参及捕获状态求值。 */ layer => ({ ...layer })),
       profile: { ...physicsState.globalSettings.profile }
     },
     entities: physicsState.world.entities.map(serializeEntity),
-    connections: physicsState.world.connections.map(connection => {
+    connections: physicsState.world.connections.map(/** 复制连接持久化字段并去除运行身份，将无限断裂阈值编码为空值以供存储。 */ connection => {
       const { id: _runtimeId, ...stored } = connection
       void _runtimeId
       return {
       ...stored,
       breakForce: Number.isFinite(connection.breakForce) ? connection.breakForce : null,
       breakTorque: Number.isFinite(connection.breakTorque) ? connection.breakTorque : null,
-      anchors: connection.anchors.map(anchor => {
+      anchors: connection.anchors.map(/** 用实体稳定身份替换锚点运行身份，并复制局部位置。 */ anchor => {
         const { entityId, ...storedAnchor } = anchor
         return { ...storedAnchor, entityUuid: entitiesById.get(entityId)?.uuid, localPoint: { ...anchor.localPoint } }
       }),
       restLengths: [...connection.restLengths],
-      manualSegments: connection.manualSegments.map(segment => segment.map(point => ({ ...point }))),
-      ropeNodes: connection.ropeNodes.map(node => ({ position: { ...node.position }, velocity: { ...node.velocity } }))
+      manualSegments: connection.manualSegments.map(/* 调用 segment.map(point => ({ ...point })) 并返回调用结果。 */ segment => segment.map(/** 构造并返回记录 { ...point }，字段按当前实参及捕获状态求值。 */ point => ({ ...point }))),
+      ropeNodes: connection.ropeNodes.map(/** 构造并返回记录 { position: { ...node.position }, velocity: { ...node.velocity } }，字段按当前实参及捕获状态求值。 */ node => ({ position: { ...node.position }, velocity: { ...node.velocity } }))
     }} )
   }
 }
 
-function projectSource(): Record<string, unknown> {
+/** 捕获当前场景并同步资源依赖元数据，汇集可保存的项目版本、资源、设置、回收站和所有场景。 */ function projectSource(): Record<string, unknown> {
   // serializeActiveScene creates persistence-owned component/metadata values,
   // including copies of global arrays. Avoid cloning that complete fresh tree
   // again before canonical serialization.
@@ -416,7 +417,7 @@ function projectSource(): Record<string, unknown> {
     plugins: serializePluginManifests(),
     packages: serializePackageState(),
     projectTrash: serializeProjectTrash(),
-    projectSettings: { inputMap: normalizeInputMap(physicsState.inputMap), deviceInput: serializeDeviceInputSettings(), audio: normalizeAudioSettings(physicsState.audioSettings), physics: serializePhysicsProjectSettings(), build: serializeBuildSettings(sceneManager.scenes.map(scene => scene.uuid)), scripting: serializeScriptSettings(), rendering: serializeRenderingSettings(), world: serializeWorldGameplaySettings(), presentation: { localization: serializeLocalizationSettings(), accessibility: serializeRuntimeAccessibilitySettings(), uiAudio: serializeUiAudioSettings() }, production: serializeProductionSettings() },
+    projectSettings: { inputMap: normalizeInputMap(physicsState.inputMap), deviceInput: serializeDeviceInputSettings(), audio: normalizeAudioSettings(physicsState.audioSettings), physics: serializePhysicsProjectSettings(), build: serializeBuildSettings(sceneManager.scenes.map(/* 返回 scene.uuid 的当前值。 */ scene => scene.uuid)), scripting: serializeScriptSettings(), rendering: serializeRenderingSettings(), world: serializeWorldGameplaySettings(), presentation: { localization: serializeLocalizationSettings(), accessibility: serializeRuntimeAccessibilitySettings(), uiAudio: serializeUiAudioSettings() }, production: serializeProductionSettings() },
     projectStructure: {
       assetsRoot: 'Assets', settingsRoot: 'ProjectSettings', cacheRoot: '.nova/cache', importedRoot: '.nova/imported'
     },
@@ -425,7 +426,7 @@ function projectSource(): Record<string, unknown> {
   }
 }
 
-export function getSceneJSON(): string {
+/* 调用 canonicalProjectText(projectSource()) 并返回调用结果。 */ export function getSceneJSON(): string {
   // projectSource is already normalized to the current schema. Passing it
   // through the migration boundary would parse and allocate the complete
   // document twice more, which is particularly costly for 10k-object scenes.
@@ -452,11 +453,11 @@ const ASSET_COMPONENT_FIELDS: Partial<Record<ComponentKind, string[]>> = {
   ParticleEmitter2D: ['particleSystemAsset', 'textureAsset', 'material']
 }
 
-function matchesAssetReference(value: unknown, uuid: string): boolean {
+/* 先计算 value === uuid；仅当其为假值时求右侧 value === `asset://${uuid}`，返回短路求值结果。 */ function matchesAssetReference(value: unknown, uuid: string): boolean {
   return value === uuid || value === `asset://${uuid}`
 }
 
-function visitStoredAssetReferences(scene: Record<string, unknown>, uuid: string, clear: boolean, replacementUuid?: string): number {
+/** 遍历存储场景实体及已知组件资源字段，统计引用并按需替换，变更预制体引用时清除实例覆盖。 */ function visitStoredAssetReferences(scene: Record<string, unknown>, uuid: string, clear: boolean, replacementUuid?: string): number {
   if (!Array.isArray(scene.entities)) return 0
   let count = 0
   const replacement = replacementUuid ? `asset://${replacementUuid}` : null
@@ -490,7 +491,7 @@ function visitStoredAssetReferences(scene: Record<string, unknown>, uuid: string
   return count
 }
 
-function visitLiveAssetReferences(uuid: string, clear: boolean, replacementUuid?: string): number {
+/** 遍历活动世界实体及已知组件资源字段，统计或替换资源引用，重置受影响预制体绑定。 */ function visitLiveAssetReferences(uuid: string, clear: boolean, replacementUuid?: string): number {
   let count = 0
   const replacement = replacementUuid ? `asset://${replacementUuid}` : null
   for (const entity of physicsState.world.entities) {
@@ -519,11 +520,11 @@ function visitLiveAssetReferences(uuid: string, clear: boolean, replacementUuid?
   return count
 }
 
-function visitDocumentAssetReferences(uuid: string, clear: boolean, replacementUuid?: string): number {
+/** 解析动画、控制器和瓦片集文本，递归统计或替换目标资源引用，仅写回有变化的有效文档。 */ function visitDocumentAssetReferences(uuid: string, clear: boolean, replacementUuid?: string): number {
   let count = 0
   const target = `asset://${uuid}`
   const replacement = replacementUuid ? `asset://${replacementUuid}` : null
-  const visit = (value: unknown): unknown => {
+  const visit = /** 递归遍历数组和对象，识别裸身份或资源地址并统计，修改模式下替换匹配值。 */ (value: unknown): unknown => {
     if (value === uuid || value === target) { count++; return clear ? replacement : value }
     if (Array.isArray(value)) return value.map(visit)
     if (value && typeof value === 'object') {
@@ -546,7 +547,7 @@ function visitDocumentAssetReferences(uuid: string, clear: boolean, replacementU
 }
 
 /** Counts references in the live scene and every unloaded scene document. */
-export function countAssetReferences(uuid: string): number {
+/** 汇总活动世界、非活动场景以及支持的资源文档中的目标引用数量。 */ export function countAssetReferences(uuid: string): number {
   let count = visitLiveAssetReferences(uuid, false)
   for (const scene of sceneManager.scenes) {
     if (scene.uuid !== sceneManager.activeSceneUuid) count += visitStoredAssetReferences(scene.data, uuid, false)
@@ -555,7 +556,7 @@ export function countAssetReferences(uuid: string): number {
 }
 
 /** Clears an asset reference everywhere so deleting an asset cannot leave a broken scene. */
-export function clearAssetReferences(uuid: string): number {
+/** 清空活动世界、非活动场景和支持文档中的目标资源引用，返回修改次数。 */ export function clearAssetReferences(uuid: string): number {
   let count = visitLiveAssetReferences(uuid, true)
   for (const scene of sceneManager.scenes) {
     if (scene.uuid !== sceneManager.activeSceneUuid) count += visitStoredAssetReferences(scene.data, uuid, true)
@@ -564,7 +565,7 @@ export function clearAssetReferences(uuid: string): number {
 }
 
 /** Replaces a missing GUID in live, unloaded-scene, and editor-document references. */
-export function replaceAssetReferences(uuid: string, replacementUuid: string): number {
+/** 校验新旧资源身份后在活动世界、非活动场景与支持文档中替换引用并汇总数量。 */ export function replaceAssetReferences(uuid: string, replacementUuid: string): number {
   if (!uuid || !replacementUuid || uuid === replacementUuid) return 0
   let count = visitLiveAssetReferences(uuid, true, replacementUuid)
   for (const scene of sceneManager.scenes) {
@@ -573,14 +574,14 @@ export function replaceAssetReferences(uuid: string, replacementUuid: string): n
   return count + visitDocumentAssetReferences(uuid, true, replacementUuid)
 }
 
-function copyVector(target: { x: number; y: number }, source: unknown): void {
+/** 仅从对象读取有限坐标值写入目标向量，非法分量沿用原坐标。 */ function copyVector(target: { x: number; y: number }, source: unknown): void {
   if (!source || typeof source !== 'object') return
   const vector = source as { x?: unknown; y?: unknown }
   target.x = finiteNumber(vector.x, target.x)
   target.y = finiteNumber(vector.y, target.y)
 }
 
-function normalizeIdentifier(value: unknown, fallback = 1): number {
+/* 调用 Math.min(Number.MAX_SAFE_INTEGER, Math.max(1, Math.round(finiteNumber(value, fallback)))) 并返回调用结果。 */ function normalizeIdentifier(value: unknown, fallback = 1): number {
   return Math.min(Number.MAX_SAFE_INTEGER, Math.max(1, Math.round(finiteNumber(value, fallback))))
 }
 
@@ -592,19 +593,19 @@ const SCALAR_ENTITY_PROPERTIES = [
 
 const BOOLEAN_ENTITY_PROPERTIES = ['autoInertia', 'isSensor', 'isStatic', 'isKinematic'] as const
 
-function normalizedVertices(vertices: SceneEntityData['vertices'], minimum = 3): Array<{ x: number; y: number }> | null {
+/** 要求最小顶点数并限制读取长度，保留一个超限哨兵点供物理准备明确报错。 */ function normalizedVertices(vertices: SceneEntityData['vertices'], minimum = 3): Array<{ x: number; y: number }> | null {
   if (!Array.isArray(vertices) || vertices.length < minimum) return null
   // Preserve a bounded one-point-over-limit sentinel. Physics preparation can
   // then produce an explicit diagnostic instead of silently truncating while
   // hostile multi-million-point payloads never reach quadratic validation.
-  return vertices.slice(0, MAX_AUTHORED_COLLIDER_POINTS + 1).map(vertex => ({ x: finiteNumber(vertex.x, 0), y: finiteNumber(vertex.y, 0) }))
+  return vertices.slice(0, MAX_AUTHORED_COLLIDER_POINTS + 1).map(/** 构造并返回记录 { x: finiteNumber(vertex.x, 0), y: finiteNumber(vertex.y, 0) }，字段按当前实参及捕获状态求值。 */ vertex => ({ x: finiteNumber(vertex.x, 0), y: finiteNumber(vertex.y, 0) }))
 }
 
-function storedComponent(item: SceneEntityData, kind: ComponentKind): SceneComponentData | undefined {
-  return item.components?.find(component => component.kind === kind)
+/** 按组件类型查找存储实体的首个组件记录。 */ function storedComponent(item: SceneEntityData, kind: ComponentKind): SceneComponentData | undefined {
+  return item.components?.find(/* 比较 component.kind 与 kind，返回严格相等的判断结果。 */ component => component.kind === kind)
 }
 
-function storedShapeType(item: SceneEntityData): string | undefined {
+/** 优先使用实体类型，再由渲染器几何推断基础形状，最后兼容旧形状或名称字段。 */ function storedShapeType(item: SceneEntityData): string | undefined {
   if (item.entityType) return item.entityType
   const renderer = storedComponent(item, 'ShapeRenderer2D')?.data
   if (renderer?.shape === 'Ellipse') return 'Circle'
@@ -616,7 +617,7 @@ function storedShapeType(item: SceneEntityData): string | undefined {
   return item.shapeType ?? item.name
 }
 
-function createShapeEntity(item: SceneEntityData, id: number, position: { x: number; y: number }): Entity {
+/** 按存储形状构造圆、矩形或三角形实体，兼容旧顶点数据，不支持类型抛错。 */ function createShapeEntity(item: SceneEntityData, id: number, position: { x: number; y: number }): Entity {
   const shapeType = storedShapeType(item)
   if (shapeType === 'Circle') {
     const radiusX = finiteNumber(item.radiusX, 1)
@@ -636,11 +637,11 @@ function createShapeEntity(item: SceneEntityData, id: number, position: { x: num
   throw new Error(t('unsupportedShape', { shape: String(shapeType) }))
 }
 
-function recordData(component: SceneComponentData | undefined): Record<string, unknown> {
+/* 根据 component?.data && typeof component.data === 'object' 的真假，分别返回 component.data 或 {}。 */ function recordData(component: SceneComponentData | undefined): Record<string, unknown> {
   return component?.data && typeof component.data === 'object' ? component.data : {}
 }
 
-function applyComponentMetadata(target: { enabled: boolean; removed: boolean }, source: SceneComponentData): void {
+/** 恢复启用与移除标记，已移除组件始终禁用。 */ function applyComponentMetadata(target: { enabled: boolean; removed: boolean }, source: SceneComponentData): void {
   target.enabled = source.enabled !== false
   target.removed = source.removed === true
   if (target.removed) target.enabled = false
@@ -655,7 +656,7 @@ const EXTENDED_COMPONENT_KINDS = [
   'FixedJoint2D', 'WeldJoint2D', 'DistanceJoint2D', 'RopeJoint2D', 'RevoluteJoint2D', 'MotorJoint2D', 'PrismaticJoint2D', 'SpringJoint2D'
 ] as const
 
-function createExtendedComponent(kind: typeof EXTENDED_COMPONENT_KINDS[number], uuid?: string): Component2D {
+/** 按扩展组件类型构造对应实例，未命中已列类型时交给关节组件构造器。 */ function createExtendedComponent(kind: typeof EXTENDED_COMPONENT_KINDS[number], uuid?: string): Component2D {
   if (kind === 'Animator') return new Animator(uuid)
   if (kind === 'Skeleton2D') return new Skeleton2D(uuid)
   if (kind === 'TimelinePlayer') return new TimelinePlayer(uuid)
@@ -701,16 +702,16 @@ function createExtendedComponent(kind: typeof EXTENDED_COMPONENT_KINDS[number], 
   return new Joint2D(kind, uuid)
 }
 
-function clamp(value: unknown, fallback: number, minimum: number, maximum: number): number {
+/* 调用 Math.min(maximum, Math.max(minimum, finiteNumber(value, fallback))) 并返回调用结果。 */ function clamp(value: unknown, fallback: number, minimum: number, maximum: number): number {
   return Math.min(maximum, Math.max(minimum, finiteNumber(value, fallback)))
 }
 
-function safeVector(value: unknown, fallback: { x: number; y: number }): { x: number; y: number } {
+/** 将任意输入转换为有限二维坐标，缺失或非法分量使用回退值。 */ function safeVector(value: unknown, fallback: { x: number; y: number }): { x: number; y: number } {
   const source = value && typeof value === 'object' ? value as Record<string, unknown> : {}
   return { x: finiteNumber(source.x, fallback.x), y: finiteNumber(source.y, fallback.y) }
 }
 
-function safeColor(value: unknown, fallback: { r: number; g: number; b: number }): { r: number; g: number; b: number } {
+/** 把输入颜色转换为零至二百五十五的整数通道，缺失或非法值使用默认颜色。 */ function safeColor(value: unknown, fallback: { r: number; g: number; b: number }): { r: number; g: number; b: number } {
   const source = value && typeof value === 'object' ? value as Record<string, unknown> : {}
   return {
     r: Math.round(clamp(source.r, fallback.r, 0, 255)),
@@ -719,7 +720,7 @@ function safeColor(value: unknown, fallback: { r: number; g: number; b: number }
   }
 }
 
-function safeStyleOverrides(value: unknown): Record<string, string | number> {
+/** 仅保留允许覆盖的样式字段，限制字符串长度并剔除非有限数值。 */ function safeStyleOverrides(value: unknown): Record<string, string | number> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return {}
   const allowed = new Set(['background', 'foreground', 'border', 'borderWidth', 'cornerRadius', 'fontSize', 'fontWeight', 'opacity'])
   const result: Record<string, string | number> = {}
@@ -731,7 +732,7 @@ function safeStyleOverrides(value: unknown): Record<string, string | number> {
   return result
 }
 
-function normalizeExtendedComponent(component: Component2D): void {
+/** 按实际扩展组件类型限制数值、列表、文本和枚举，恢复缺省结构并失效需要重建的瓦片缓存。 */ function normalizeExtendedComponent(component: Component2D): void {
   if (component instanceof Animator) {
     component.controllerAsset = typeof component.controllerAsset === 'string' ? component.controllerAsset : null
     component.speed = clamp(component.speed, 1, -100, 100)
@@ -749,7 +750,7 @@ function normalizeExtendedComponent(component: Component2D): void {
   } else if (component instanceof Skeleton2D) {
     component.rigAsset = typeof component.rigAsset === 'string' ? component.rigAsset : null
     component.skinAsset = typeof component.skinAsset === 'string' ? component.skinAsset : null
-    component.pose = (Array.isArray(component.pose) ? component.pose : []).slice(0, 512).flatMap(value => {
+    component.pose = (Array.isArray(component.pose) ? component.pose : []).slice(0, 512).flatMap(/** 保留有骨骼身份的姿态记录，限制身份长度并规范化位置、旋转和缩放。 */ value => {
       if (!value || typeof value.boneId !== 'string') return []
       return [{ boneId: value.boneId.slice(0, 80), position: safeVector(value.position, { x: 0, y: 0 }), rotation: finiteNumber(value.rotation), scale: safeVector(value.scale, { x: 1, y: 1 }) }]
     })
@@ -766,7 +767,7 @@ function normalizeExtendedComponent(component: Component2D): void {
     if (!['Linear', 'Inverse', 'Exponential', 'Custom'].includes(component.attenuationCurve)) component.attenuationCurve = 'Linear'
     component.voicePriority = Math.round(clamp(component.voicePriority, 50, 0, 255))
     if (!['ImportSetting', 'Stream', 'Buffer'].includes(component.streamOverride)) component.streamOverride = 'ImportSetting'
-    component.customAttenuation = (Array.isArray(component.customAttenuation) ? component.customAttenuation : []).slice(0, 64).map(point => ({ distance: clamp(point?.distance, 0, 0, 1), gain: clamp(point?.gain, 1, 0, 1) })).sort((a, b) => a.distance - b.distance)
+    component.customAttenuation = (Array.isArray(component.customAttenuation) ? component.customAttenuation : []).slice(0, 64).map(/** 构造并返回记录 { distance: clamp(point?.distance, 0, 0, 1), gain: clamp(point?.gain, 1, 0, 1) }，字段按当前实参及捕获状态求值。 */ point => ({ distance: clamp(point?.distance, 0, 0, 1), gain: clamp(point?.gain, 1, 0, 1) })).sort(/* 计算表达式 a.distance - b.distance 并返回结果，沿用操作数的原有类型规则。 */ (a, b) => a.distance - b.distance)
     if (component.customAttenuation.length < 2) component.customAttenuation = [{ distance: 0, gain: 1 }, { distance: 1, gain: 0 }]
   } else if (component instanceof Canvas) {
     component.referenceSize = safeVector(component.referenceSize, { x: 1920, y: 1080 })
@@ -797,7 +798,7 @@ function normalizeExtendedComponent(component: Component2D): void {
     component.maxSize.x = clamp(component.maxSize.x, 100_000, component.minSize.x, 1e9); component.maxSize.y = clamp(component.maxSize.y, 100_000, component.minSize.y, 1e9)
     component.aspectRatio = clamp(component.aspectRatio, 0, 0, 1e6)
     if (!['None', 'Fit', 'WidthControlsHeight', 'HeightControlsWidth'].includes(component.aspectConstraint)) component.aspectConstraint = 'None'
-    component.breakpoints = (Array.isArray(component.breakpoints) ? component.breakpoints : []).slice(0, 32).map(point => ({ minWidth: clamp(point?.minWidth, 0, 0, 100_000), maxWidth: clamp(point?.maxWidth, 100_000, 0, 100_000), visible: point?.visible !== false, position: safeVector(point?.position, component.position), size: safeVector(point?.size, component.size) })).filter(point => point.maxWidth >= point.minWidth)
+    component.breakpoints = (Array.isArray(component.breakpoints) ? component.breakpoints : []).slice(0, 32).map(/** 限制响应断点宽度并恢复可见性与布局坐标，缺失位置尺寸采用当前组件值。 */ point => ({ minWidth: clamp(point?.minWidth, 0, 0, 100_000), maxWidth: clamp(point?.maxWidth, 100_000, 0, 100_000), visible: point?.visible !== false, position: safeVector(point?.position, component.position), size: safeVector(point?.size, component.size) })).filter(/* 比较 point.maxWidth 与 point.minWidth，返回大于或等于的判断结果。 */ point => point.maxWidth >= point.minWidth)
     component.tabIndex = Math.round(clamp(component.tabIndex, 0, -1, 100_000)); component.remapBindingIndex = Math.round(clamp(component.remapBindingIndex, 0, 0, 31))
     for (const key of ['focusUp', 'focusDown', 'focusLeft', 'focusRight'] as const) component[key] = typeof component[key] === 'string' && component[key] ? component[key]!.slice(0, 160) : null
     component.accessibilityRole = typeof component.accessibilityRole === 'string' ? component.accessibilityRole.slice(0, 80) : ''
@@ -869,27 +870,27 @@ function normalizeExtendedComponent(component: Component2D): void {
     component.radius = clamp(component.radius, 2, 1e-6, 1e9); component.collisionMask = Math.round(clamp(component.collisionMask, 0xffff_ffff, 0, 0xffff_ffff)) >>> 0
     if (!['Box', 'Circle'].includes(component.shape)) component.shape = 'Box'
   } else if (component instanceof AreaEffector2D) {
-    component.priority = Math.round(clamp(component.priority, 0, -10_000, 10_000)); component.effectors = (Array.isArray(component.effectors) ? component.effectors : []).slice(0, 32).map((effect, index) => ({
+    component.priority = Math.round(clamp(component.priority, 0, -10_000, 10_000)); component.effectors = (Array.isArray(component.effectors) ? component.effectors : []).slice(0, 32).map(/** 规范化区域效果类型、身份、方向和受力参数，非法类型回退为信号效果。 */ (effect, index) => ({
       id: typeof effect.id === 'string' ? effect.id.slice(0, 80) : `effect-${index}`, kind: ['Gravity', 'Wind', 'Drag', 'Buoyancy', 'Damage', 'Signal'].includes(effect.kind) ? effect.kind : 'Signal',
       enabled: effect.enabled !== false, direction: safeVector(effect.direction, { x: 0, y: -1 }), strength: finiteNumber(effect.strength), drag: clamp(effect.drag, 0, 0, 1e9),
       fluidDensity: clamp(effect.fluidDensity, 1, 0, 1e9), damagePerSecond: clamp(effect.damagePerSecond, 0, 0, 1e9), signal: typeof effect.signal === 'string' ? effect.signal.slice(0, 128) : 'area.effect'
     }))
   } else if (component instanceof NavigationRegion2D) {
-    component.polygon = (Array.isArray(component.polygon) ? component.polygon : []).slice(0, 4096).map(point => safeVector(point, { x: 0, y: 0 }))
+    component.polygon = (Array.isArray(component.polygon) ? component.polygon : []).slice(0, 4096).map(/* 调用 safeVector(point, { x: 0, y: 0 }) 并返回调用结果。 */ point => safeVector(point, { x: 0, y: 0 }))
     component.cellSize = clamp(component.cellSize, .5, .01, 1e6); component.clusterSize = Math.round(clamp(component.clusterSize, 16, 4, 64)); component.rebakeInterval = clamp(component.rebakeInterval, .5, .02, 60); component.navigationLayer = Math.round(clamp(component.navigationLayer, 1, 1, 32)); component.navigationMask = Math.round(clamp(component.navigationMask, 1, 0, 0xffff_ffff)) >>> 0; component.traversalCost = clamp(component.traversalCost, 1, .001, 1e6); component.agentRadius = clamp(component.agentRadius, .4, 0, 1e6)
     if (!['Grid', 'Polygon'].includes(component.navigationMode)) component.navigationMode = 'Grid'
     if (!['SceneGeometry', 'TileMap', 'Manual'].includes(component.source)) component.source = 'Manual'
     component.sourceEntityUuid = typeof component.sourceEntityUuid === 'string' ? component.sourceEntityUuid.slice(0, 128) : null
-    component.links = (Array.isArray(component.links) ? component.links : []).slice(0, 2048).map((link, index) => ({ id: typeof link.id === 'string' ? link.id.slice(0, 80) : `link-${index}`, start: safeVector(link.start, { x: 0, y: 0 }), end: safeVector(link.end, { x: 1, y: 0 }), bidirectional: link.bidirectional !== false, cost: clamp(link.cost, 1, .001, 1e6), enabled: link.enabled !== false }))
-    component.costAreas = (Array.isArray(component.costAreas) ? component.costAreas : []).slice(0, 2048).map((area, index) => { const size = safeVector(area.size, { x: 1, y: 1 }); return { id: typeof area.id === 'string' ? area.id.slice(0, 80) : `cost-${index}`, name: typeof area.name === 'string' ? area.name.slice(0, 80) : `Cost ${index + 1}`, shape: area.shape === 'Circle' ? 'Circle' as const : 'Box' as const, center: safeVector(area.center, { x: 0, y: 0 }), size: { x: clamp(size.x, 1, .001, 1e6), y: clamp(size.y, 1, .001, 1e6) }, radius: clamp(area.radius, 1, .001, 1e6), multiplier: clamp(area.multiplier, 1, .001, 1_000), navigationLayer: Math.round(clamp(area.navigationLayer, component.navigationLayer, 1, 32)), enabled: area.enabled !== false } })
+    component.links = (Array.isArray(component.links) ? component.links : []).slice(0, 2048).map(/** 规范化导航连接身份、端点、代价及方向启用标记。 */ (link, index) => ({ id: typeof link.id === 'string' ? link.id.slice(0, 80) : `link-${index}`, start: safeVector(link.start, { x: 0, y: 0 }), end: safeVector(link.end, { x: 1, y: 0 }), bidirectional: link.bidirectional !== false, cost: clamp(link.cost, 1, .001, 1e6), enabled: link.enabled !== false }))
+    component.costAreas = (Array.isArray(component.costAreas) ? component.costAreas : []).slice(0, 2048).map(/** 规范化导航代价区域的形状、位置尺寸、倍率和导航层。 */ (area, index) => { const size = safeVector(area.size, { x: 1, y: 1 }); return { id: typeof area.id === 'string' ? area.id.slice(0, 80) : `cost-${index}`, name: typeof area.name === 'string' ? area.name.slice(0, 80) : `Cost ${index + 1}`, shape: area.shape === 'Circle' ? 'Circle' as const : 'Box' as const, center: safeVector(area.center, { x: 0, y: 0 }), size: { x: clamp(size.x, 1, .001, 1e6), y: clamp(size.y, 1, .001, 1e6) }, radius: clamp(area.radius, 1, .001, 1e6), multiplier: clamp(area.multiplier, 1, .001, 1_000), navigationLayer: Math.round(clamp(area.navigationLayer, component.navigationLayer, 1, 32)), enabled: area.enabled !== false } })
     if (!['AStar', 'HierarchicalAStar', 'FlowField'].includes(component.algorithm)) component.algorithm = 'AStar'
   } else if (component instanceof NavigationObstacle2D) {
     component.size = safeVector(component.size, { x: 1, y: 1 }); component.size.x = clamp(component.size.x, 1, .001, 1e6); component.size.y = clamp(component.size.y, 1, .001, 1e6); component.radius = clamp(component.radius, .5, .001, 1e6); component.navigationLayer = Math.round(clamp(component.navigationLayer, 1, 1, 32)); component.avoidanceVelocity = safeVector(component.avoidanceVelocity, { x: 0, y: 0 }); component.dynamic = component.dynamic !== false; if (!['Box', 'Circle'].includes(component.shape)) component.shape = 'Circle'
   } else if (component instanceof NavigationAgent2D) {
     component.targetPosition = safeVector(component.targetPosition, { x: 0, y: 0 }); component.targetEntityUuid = typeof component.targetEntityUuid === 'string' ? component.targetEntityUuid.slice(0, 128) : null
-    component.speed = clamp(component.speed, 4, 0, 1e6); component.acceleration = clamp(component.acceleration, 20, 0, 1e9); component.radius = clamp(component.radius, .4, .001, 1e6); component.stoppingDistance = clamp(component.stoppingDistance, .1, 0, 1e6); component.avoidanceRadius = clamp(component.avoidanceRadius, 1.2, 0, 1e6); component.maximumAvoidanceNeighbors = Math.round(clamp(component.maximumAvoidanceNeighbors, 16, 1, 32)); component.repathInterval = clamp(component.repathInterval, .25, .02, 60); component.navigationLayer = Math.round(clamp(component.navigationLayer, 1, 1, 32)); component.navigationMask = Math.round(clamp(component.navigationMask, 1, 0, 0xffff_ffff)) >>> 0; component.avoidancePriority = clamp(component.avoidancePriority, .5, 0, 1); component.velocity = safeVector(component.velocity, { x: 0, y: 0 }); component.path = (Array.isArray(component.path) ? component.path : []).slice(0, 65_536).map(point => safeVector(point, { x: 0, y: 0 })); component.pathIndex = Math.round(clamp(component.pathIndex, 0, 0, component.path.length)); if (!['Idle', 'Pending', 'Ready', 'Unreachable'].includes(component.pathStatus)) component.pathStatus = 'Idle'
+    component.speed = clamp(component.speed, 4, 0, 1e6); component.acceleration = clamp(component.acceleration, 20, 0, 1e9); component.radius = clamp(component.radius, .4, .001, 1e6); component.stoppingDistance = clamp(component.stoppingDistance, .1, 0, 1e6); component.avoidanceRadius = clamp(component.avoidanceRadius, 1.2, 0, 1e6); component.maximumAvoidanceNeighbors = Math.round(clamp(component.maximumAvoidanceNeighbors, 16, 1, 32)); component.repathInterval = clamp(component.repathInterval, .25, .02, 60); component.navigationLayer = Math.round(clamp(component.navigationLayer, 1, 1, 32)); component.navigationMask = Math.round(clamp(component.navigationMask, 1, 0, 0xffff_ffff)) >>> 0; component.avoidancePriority = clamp(component.avoidancePriority, .5, 0, 1); component.velocity = safeVector(component.velocity, { x: 0, y: 0 }); component.path = (Array.isArray(component.path) ? component.path : []).slice(0, 65_536).map(/* 调用 safeVector(point, { x: 0, y: 0 }) 并返回调用结果。 */ point => safeVector(point, { x: 0, y: 0 })); component.pathIndex = Math.round(clamp(component.pathIndex, 0, 0, component.path.length)); if (!['Idle', 'Pending', 'Ready', 'Unreachable'].includes(component.pathStatus)) component.pathStatus = 'Idle'
   } else if (component instanceof BehaviorTree2D) {
-    component.treeAsset = typeof component.treeAsset === 'string' ? component.treeAsset : null; component.tickRate = clamp(component.tickRate, 10, 1, 1000); component.blackboardOverrides = Object.fromEntries(Object.entries(component.blackboardOverrides && typeof component.blackboardOverrides === 'object' ? component.blackboardOverrides : {}).slice(0, 256).flatMap(([key, value]) => typeof value === 'boolean' || typeof value === 'number' && Number.isFinite(value) || typeof value === 'string' ? [[key.slice(0, 80), typeof value === 'string' ? value.slice(0, 256) : value]] : []))
+    component.treeAsset = typeof component.treeAsset === 'string' ? component.treeAsset : null; component.tickRate = clamp(component.tickRate, 10, 1, 1000); component.blackboardOverrides = Object.fromEntries(Object.entries(component.blackboardOverrides && typeof component.blackboardOverrides === 'object' ? component.blackboardOverrides : {}).slice(0, 256).flatMap(/** 保留布尔、有限数字及受限长度文本黑板值，并限制键长度。 */ ([key, value]) => typeof value === 'boolean' || typeof value === 'number' && Number.isFinite(value) || typeof value === 'string' ? [[key.slice(0, 80), typeof value === 'string' ? value.slice(0, 256) : value]] : []))
   } else if (component instanceof StateMachine2D) component.machineAsset = typeof component.machineAsset === 'string' ? component.machineAsset : null
   else if (component instanceof GridMover2D) { component.action = typeof component.action === 'string' ? component.action.slice(0, 80) : 'Move'; component.cellSize = safeVector(component.cellSize, { x: 1, y: 1 }); component.cellSize.x = clamp(component.cellSize.x, 1, .000001, 1e9); component.cellSize.y = clamp(component.cellSize.y, 1, .000001, 1e9); component.repeatDelay = clamp(component.repeatDelay, .12, 0, 60) }
   else if (component instanceof PlatformController2D) { component.moveAction = typeof component.moveAction === 'string' ? component.moveAction.slice(0, 80) : 'Horizontal'; component.jumpAction = typeof component.jumpAction === 'string' ? component.jumpAction.slice(0, 80) : 'Jump'; component.speed = clamp(component.speed, 6, 0, 1e6); component.acceleration = clamp(component.acceleration, 36, 0, 1e9); component.airControl = clamp(component.airControl, .55, 0, 1); component.jumpImpulse = clamp(component.jumpImpulse, 10, 0, 1e9); component.maximumFallSpeed = clamp(component.maximumFallSpeed, 30, 0, 1e9) }
@@ -940,7 +941,7 @@ function normalizeExtendedComponent(component: Component2D): void {
   }
 }
 
-function applyStoredComponents(entity: Entity, item: SceneEntityData): void {
+/** 从组件记录重建变换、渲染、脚本、扩展和物理组件，保留作者组件顺序与必要旧格式默认值。 */ function applyStoredComponents(entity: Entity, item: SceneEntityData): void {
   if (!Array.isArray(item.components)) return
 
   const transformSource = storedComponent(item, 'Transform2D')
@@ -1082,12 +1083,12 @@ function applyStoredComponents(entity: Entity, item: SceneEntityData): void {
     script.scriptAsset = typeof data.scriptAsset === 'string' ? data.scriptAsset : null
     script.eventSheetAsset = typeof data.eventSheetAsset === 'string' ? data.eventSheetAsset : null
     script.objectBlueprintAsset = typeof data.objectBlueprintAsset === 'string' ? data.objectBlueprintAsset : null
-    const safeScriptProperty = (value: unknown, depth = 0): ScriptPropertyValue | undefined => {
+    const safeScriptProperty = /** 限制脚本属性嵌套深度与集合规模，仅保留可序列化基础值和有限数值，非法值返回 undefined。 */ (value: unknown, depth = 0): ScriptPropertyValue | undefined => {
       if (depth > 8) return undefined
       if (value === null || typeof value === 'string' || typeof value === 'boolean') return value
       if (typeof value === 'number') return Number.isFinite(value) ? value : undefined
-      if (Array.isArray(value)) return value.slice(0, 1024).flatMap(item => { const safe = safeScriptProperty(item, depth + 1); return safe === undefined ? [] : [safe] })
-      if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value as Record<string, unknown>).slice(0, 1024).flatMap(([key, item]) => { const safe = safeScriptProperty(item, depth + 1); return safe === undefined ? [] : [[key.slice(0, 128), safe]] }))
+      if (Array.isArray(value)) return value.slice(0, 1024).flatMap(/** 递归规范化脚本数组成员并过滤不支持的值。 */ item => { const safe = safeScriptProperty(item, depth + 1); return safe === undefined ? [] : [safe] })
+      if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value as Record<string, unknown>).slice(0, 1024).flatMap(/** 递归规范化脚本对象字段，限制键长度并过滤不支持的值。 */ ([key, item]) => { const safe = safeScriptProperty(item, depth + 1); return safe === undefined ? [] : [[key.slice(0, 128), safe]] }))
       return undefined
     }
     if (data.properties && typeof data.properties === 'object' && !Array.isArray(data.properties)) {
@@ -1133,7 +1134,7 @@ function applyStoredComponents(entity: Entity, item: SceneEntityData): void {
     entity.removeComponent('RigidBody2D')
   }
 
-  const colliderSources = item.components.filter(component => component.kind === 'BoxCollider2D' || component.kind === 'EllipseCollider2D' || component.kind === 'PolygonCollider2D')
+  const colliderSources = item.components.filter(/* 先计算 component.kind === 'BoxCollider2D' || component.kind === 'EllipseCollider2D'；仅当其为假值时求右侧 component.kind === 'PolygonCollider2D'，返回短路求值结果。 */ component => component.kind === 'BoxCollider2D' || component.kind === 'EllipseCollider2D' || component.kind === 'PolygonCollider2D')
   if (colliderSources.length) {
     for (const kind of ['BoxCollider2D', 'EllipseCollider2D', 'PolygonCollider2D'] as const) entity.componentMap.delete(kind)
     for (const colliderSource of colliderSources) {
@@ -1149,7 +1150,7 @@ function applyStoredComponents(entity: Entity, item: SceneEntityData): void {
     if (shapeModels.includes(data.shapeModel as typeof shapeModels[number])) collider.shapeModel = data.shapeModel as typeof collider.shapeModel
     const vertices = normalizedVertices(data.vertices as SceneEntityData['vertices'], collider.shapeModel === 'Chain' ? 2 : 3)
     if (vertices) collider.vertices = vertices
-    collider.shapes = Array.isArray(data.shapes) ? data.shapes.slice(0, 128).flatMap((value, index) => {
+    collider.shapes = Array.isArray(data.shapes) ? data.shapes.slice(0, 128).flatMap(/** 过滤无效复合碰撞形状，规范化几何和碰撞属性，并从主碰撞体继承缺省层与传感器设置。 */ (value, index) => {
       if (!value || typeof value !== 'object') return []
       const raw = value as Record<string, unknown>
       const kind = shapeModels.includes(raw.kind as typeof shapeModels[number]) ? raw.kind as typeof collider.shapeModel : 'Box'
@@ -1197,7 +1198,7 @@ function applyStoredComponents(entity: Entity, item: SceneEntityData): void {
   for (const component of remainingComponents.values()) entity.componentMap.set(component.kind, component)
 }
 
-function applyStoredProperties(entity: Entity, source: Record<string, unknown>): void {
+/** 将旧格式白名单数值和布尔实体属性写入实例，非法数值保留原值。 */ function applyStoredProperties(entity: Entity, source: Record<string, unknown>): void {
   const mutableEntity = entity as unknown as Record<string, unknown>
   for (const property of SCALAR_ENTITY_PROPERTIES) {
     if (source[property] !== undefined) {
@@ -1209,7 +1210,7 @@ function applyStoredProperties(entity: Entity, source: Record<string, unknown>):
   }
 }
 
-function applyStoredAppearance(entity: Entity, source: Record<string, unknown>): void {
+/** 恢复旧格式名称、纹理及有限颜色分量。 */ function applyStoredAppearance(entity: Entity, source: Record<string, unknown>): void {
   if (typeof source.name === 'string' && source.name.trim()) entity.name = source.name.trim()
   if (typeof source.texture === 'string' || source.texture === null) entity.texture = source.texture
   if (!source.color || typeof source.color !== 'object') return
@@ -1219,7 +1220,7 @@ function applyStoredAppearance(entity: Entity, source: Record<string, unknown>):
   entity.color.b = finiteNumber(color.b, entity.color.b)
 }
 
-function applyStoredTransform(entity: Entity, item: SceneEntityData, source: Record<string, unknown>): void {
+/** 恢复旧格式变换、速度、加速度和力，非法坐标沿用当前分量。 */ function applyStoredTransform(entity: Entity, item: SceneEntityData, source: Record<string, unknown>): void {
   if (item.transform) {
     copyVector(entity.transform.position, item.transform.position)
     copyVector(entity.transform.scale, item.transform.scale)
@@ -1230,7 +1231,7 @@ function applyStoredTransform(entity: Entity, item: SceneEntityData, source: Rec
   copyVector(entity.force, source.force)
 }
 
-export function createEntityFromData(item: SceneEntityData, forcedId?: number): Entity {
+/** 先校验实体和组件数据，再兼容新旧记录重建实体、实例与创作元数据，规范化后恢复作者显式无障碍设置。 */ export function createEntityFromData(item: SceneEntityData, forcedId?: number): Entity {
   if (!item || typeof item !== 'object') throw new Error(t('invalidEntityRecord'))
   validateEntityMetadataValues(item)
   if (Array.isArray(item.components)) for (const component of item.components) {
@@ -1257,8 +1258,8 @@ export function createEntityFromData(item: SceneEntityData, forcedId?: number): 
   entity.enabled = item.enabled !== false
   entity.editorVisible = item.editorVisible !== false
   entity.editorLocked = item.editorLocked === true
-  entity.tags = Array.isArray(item.tags) ? item.tags.filter(tag => typeof tag === 'string').map(tag => tag.slice(0, 80)) : []
-  entity.groups = Array.isArray(item.groups) ? [...new Set(item.groups.filter(group => typeof group === 'string').map(group => group.trim().slice(0, 80)).filter(Boolean))].slice(0, 32) : []
+  entity.tags = Array.isArray(item.tags) ? item.tags.filter(/* 比较 typeof tag 与 'string'，返回严格相等的判断结果。 */ tag => typeof tag === 'string').map(/* 调用 tag.slice(0, 80) 并返回调用结果。 */ tag => tag.slice(0, 80)) : []
+  entity.groups = Array.isArray(item.groups) ? [...new Set(item.groups.filter(/* 比较 typeof group 与 'string'，返回严格相等的判断结果。 */ group => typeof group === 'string').map(/* 调用 group.trim().slice(0, 80) 并返回调用结果。 */ group => group.trim().slice(0, 80)).filter(Boolean))].slice(0, 32) : []
   entity.namedLayer = typeof item.namedLayer === 'string' && item.namedLayer.trim() ? item.namedLayer.trim().slice(0, 80) : `Layer ${entity.layer}`
   entity.ownerUuid = typeof item.ownerUuid === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(item.ownerUuid) ? normalizeUuid(item.ownerUuid) : null
   entity.ownership = item.ownership === 'Prefab' || item.ownership === 'Runtime' ? item.ownership : 'Scene'
@@ -1273,11 +1274,11 @@ export function createEntityFromData(item: SceneEntityData, forcedId?: number): 
   entity.prefabOverrides = item.prefabOverrides && typeof item.prefabOverrides === 'object' && !Array.isArray(item.prefabOverrides)
     ? JSON.parse(JSON.stringify(item.prefabOverrides)) as Record<string, unknown>
     : {}
-  entity.prefabLayers = Array.isArray(item.prefabLayers) ? item.prefabLayers.flatMap(layer => {
+  entity.prefabLayers = Array.isArray(item.prefabLayers) ? item.prefabLayers.flatMap(/** 过滤无效预制体层，规范化实例来源身份并深复制覆盖值。 */ layer => {
     if (!layer || typeof layer.asset !== 'string' || typeof layer.instanceUuid !== 'string' || typeof layer.sourceUuid !== 'string') return []
     return [{ asset: layer.asset, instanceUuid: normalizeUuid(layer.instanceUuid), sourceUuid: normalizeUuid(layer.sourceUuid), overrides: layer.overrides && typeof layer.overrides === 'object' ? JSON.parse(JSON.stringify(layer.overrides)) as Record<string, unknown> : {} }]
   }).slice(0, 32) : []
-  entity.sceneLayers = Array.isArray(item.sceneLayers) ? item.sceneLayers.flatMap(layer => {
+  entity.sceneLayers = Array.isArray(item.sceneLayers) ? item.sceneLayers.flatMap(/** 过滤无效场景实例层，规范化实例身份和来源身份。 */ layer => {
     if (!layer || typeof layer.asset !== 'string' || typeof layer.instanceUuid !== 'string' || typeof layer.sourceUuid !== 'string') return []
     return [{ asset: layer.asset, instanceUuid: normalizeUuid(layer.instanceUuid), sourceUuid: normalizeUuid(layer.sourceUuid) }]
   }).slice(0, 32) : []
@@ -1309,10 +1310,10 @@ export function createEntityFromData(item: SceneEntityData, forcedId?: number): 
       entity.authoring.path.closed = authoring.path.closed === true
       entity.authoring.path.smoothing = Math.min(1, Math.max(0, finiteNumber(authoring.path.smoothing, entity.authoring.path.smoothing)))
       entity.authoring.path.points = Array.isArray(authoring.path.points)
-        ? authoring.path.points.slice(0, 10_000).map(point => ({ x: finiteNumber(point.x), y: finiteNumber(point.y) }))
+        ? authoring.path.points.slice(0, 10_000).map(/** 构造并返回记录 { x: finiteNumber(point.x), y: finiteNumber(point.y) }，字段按当前实参及捕获状态求值。 */ point => ({ x: finiteNumber(point.x), y: finiteNumber(point.y) }))
         : entity.authoring.path.points
       entity.authoring.path.tangents = Array.isArray(authoring.path.tangents)
-        ? authoring.path.tangents.slice(0, entity.authoring.path.points.length).map(tangent => ({ incoming: { x: finiteNumber(tangent?.incoming?.x), y: finiteNumber(tangent?.incoming?.y) }, outgoing: { x: finiteNumber(tangent?.outgoing?.x), y: finiteNumber(tangent?.outgoing?.y) } }))
+        ? authoring.path.tangents.slice(0, entity.authoring.path.points.length).map(/** 把路径切线的入向和出向控制坐标转换为有限数值。 */ tangent => ({ incoming: { x: finiteNumber(tangent?.incoming?.x), y: finiteNumber(tangent?.incoming?.y) }, outgoing: { x: finiteNumber(tangent?.outgoing?.x), y: finiteNumber(tangent?.outgoing?.y) } }))
         : entity.authoring.path.tangents
       entity.authoring.path.asset = typeof authoring.path.asset === 'string' ? authoring.path.asset.slice(0, 256) : null
       if (authoring.path.follower) entity.authoring.path.follower = {
@@ -1326,7 +1327,7 @@ export function createEntityFromData(item: SceneEntityData, forcedId?: number): 
 
   if (entity.isStatic) entity.isKinematic = false
   normalizeEntity(entity)
-  const storedRectData = item.components?.find(component => component.kind === 'RectTransform')?.data
+  const storedRectData = item.components?.find(/* 比较 component.kind 与 'RectTransform'，返回严格相等的判断结果。 */ component => component.kind === 'RectTransform')?.data
   const rect = entity.getComponent<RectTransform>('RectTransform')
   if (rect && (entity.hasComponent('Button') || entity.hasComponent('Slider') || entity.hasComponent('Checkbox') || entity.hasComponent('TextInput')) && storedRectData?.skipNavigation !== true) rect.skipNavigation = false
   configureUiAccessibility(entity)
@@ -1341,13 +1342,13 @@ export function createEntityFromData(item: SceneEntityData, forcedId?: number): 
 export type UiElementKind = 'Canvas' | 'Panel' | 'Image' | 'Text' | 'Button' | 'Slider' | 'ProgressBar' | 'Checkbox' | 'TextInput'
 
 /** Creates a renderer-independent runtime UI entity without a physics body or collider. */
-export function createUiEntity(kind: UiElementKind, parentUuid: string | null = null, recordHistory = true): Entity {
+/** 创建无物理碰撞的界面实体，必要时建立根画布，配置默认组件尺寸、位置和无障碍行为，并按选项记录历史。 */ export function createUiEntity(kind: UiElementKind, parentUuid: string | null = null, recordHistory = true): Entity {
   if (kind !== 'Canvas' && !parentUuid) {
-    const canvas = physicsState.world.entities.find(entity => entity.hasComponent('Canvas') && !entity.parentUuid)
+    const canvas = physicsState.world.entities.find(/* 先计算 entity.hasComponent('Canvas')；仅当其为真值时求右侧 !entity.parentUuid，返回短路求值结果。 */ entity => entity.hasComponent('Canvas') && !entity.parentUuid)
     parentUuid = canvas?.uuid ?? createUiEntity('Canvas', null, false).uuid
   }
   const entity = physicsState.world.addBox({ x: 0, y: 0 }, { x: 1, y: 1 })
-  const sameKind = physicsState.world.entities.filter(candidate => candidate.name === kind || candidate.name.startsWith(`${kind} `)).length
+  const sameKind = physicsState.world.entities.filter(/* 先计算 candidate.name === kind；仅当其为假值时求右侧 candidate.name.startsWith(`${kind} `)，返回短路求值结果。 */ candidate => candidate.name === kind || candidate.name.startsWith(`${kind} `)).length
   entity.name = sameKind ? `${kind} ${sameKind + 1}` : kind
   entity.layer = editorState.activeLayer
   entity.renderer.enabled = false
@@ -1379,7 +1380,7 @@ export function createUiEntity(kind: UiElementKind, parentUuid: string | null = 
       Button: { x: 210, y: -140 }, Slider: { x: 210, y: -35 }, ProgressBar: { x: 210, y: 60 },
       Checkbox: { x: 210, y: 145 }, TextInput: { x: 0, y: 270 }
     }
-    const sameKindSiblingCount = physicsState.world.entities.filter(candidate => candidate !== entity && candidate.parentUuid === entity.parentUuid && candidate.hasComponent(kind)).length
+    const sameKindSiblingCount = physicsState.world.entities.filter(/* 先计算 candidate !== entity && candidate.parentUuid === entity.parentUuid；仅当其为真值时求右侧 candidate.hasComponent(kind)，返回短路求值结果。 */ candidate => candidate !== entity && candidate.parentUuid === entity.parentUuid && candidate.hasComponent(kind)).length
     const position = defaultPositions[kind]
     rect.position = { x: position.x + sameKindSiblingCount * 24, y: position.y + sameKindSiblingCount * 20 }
   }
@@ -1391,7 +1392,7 @@ export function createUiEntity(kind: UiElementKind, parentUuid: string | null = 
 }
 
 /** Creates a tilemap host entity; tile collision is generated in merged runtime batches. */
-export function createTileMapEntity(): Entity {
+/** 在当前图层创建瓦片地图实体，去除刚体与碰撞组件，选中新实体并记录历史。 */ export function createTileMapEntity(): Entity {
   const entity = physicsState.world.addBox({ x: 0, y: 0 }, { x: 1, y: 1 })
   entity.name = 'TileMap'
   entity.layer = editorState.activeLayer
@@ -1405,10 +1406,10 @@ export function createTileMapEntity(): Entity {
   return entity
 }
 
-export function cloneEntity(original: Entity, layer = original.layer, offset = { x: 0, y: 0 }): Entity {
+/** 序列化原实体并去除实体及组件身份，以新运行身份重建后应用图层和位移、规范化结果。 */ export function cloneEntity(original: Entity, layer = original.layer, offset = { x: 0, y: 0 }): Entity {
   const data = serializeEntity(original) as SceneEntityData
   delete data.uuid
-  data.components?.forEach(component => { delete component.uuid })
+  data.components?.forEach(/** 移除复制数据中的组件稳定身份，确保重建时产生独立身份。 */ component => { delete component.uuid })
   const clone = createEntityFromData(data, physicsState.world.allocateId())
   clone.layer = layer
   clone.transform.position.x += finiteNumber(offset.x)
@@ -1431,35 +1432,35 @@ export interface EntityBundleInstance {
 
 let entityClipboard: EntityBundle | null = null
 
-export function captureEntityBundle(ids: number[]): EntityBundle | null {
+/** 捕获所选实体子树和内部连接，保存根身份及锚点稳定身份，返回独立可复制数据包。 */ export function captureEntityBundle(ids: number[]): EntityBundle | null {
   const entities = subtreeEntities(ids, physicsState.world.entities)
   if (!entities.length) return null
-  const includedIds = new Set(entities.map(entity => entity.id))
-  const includedUuids = new Set(entities.map(entity => entity.uuid))
+  const includedIds = new Set(entities.map(/* 返回 entity.id 的当前值。 */ entity => entity.id))
+  const includedUuids = new Set(entities.map(/* 返回 entity.uuid 的当前值。 */ entity => entity.uuid))
   const rootUuids = entities
-    .filter(entity => !entity.parentUuid || !includedUuids.has(entity.parentUuid))
-    .map(entity => entity.uuid)
-  const uuidById = new Map(physicsState.world.entities.map(entity => [entity.id, entity.uuid]))
-  const connections = physicsState.world.connections.flatMap(connection => {
-    if (!connection.anchors.every(anchor => includedIds.has(anchor.entityId))) return []
+    .filter(/* 先计算 !entity.parentUuid；仅当其为假值时求右侧 !includedUuids.has(entity.parentUuid)，返回短路求值结果。 */ entity => !entity.parentUuid || !includedUuids.has(entity.parentUuid))
+    .map(/* 返回 entity.uuid 的当前值。 */ entity => entity.uuid)
+  const uuidById = new Map(physicsState.world.entities.map(/* 返回按声明顺序构造的数组 [entity.id, entity.uuid]。 */ entity => [entity.id, entity.uuid]))
+  const connections = physicsState.world.connections.flatMap(/** 仅捕获全部锚点都属于复制集合的连接，并记录锚点稳定身份。 */ connection => {
+    if (!connection.anchors.every(/* 调用 includedIds.has(anchor.entityId) 并返回调用结果。 */ anchor => includedIds.has(anchor.entityId))) return []
     return [{
       connection: JSON.parse(JSON.stringify(connection)) as Connection,
-      anchorUuids: connection.anchors.map(anchor => uuidById.get(anchor.entityId) ?? '')
+      anchorUuids: connection.anchors.map(/* 当 uuidById.get(anchor.entityId) 为 null 或 undefined 时返回 ''，否则保留左侧值。 */ anchor => uuidById.get(anchor.entityId) ?? '')
     }]
   })
   return {
-    entities: entities.map(entity => JSON.parse(JSON.stringify(serializeEntity(entity))) as SceneEntityData),
+    entities: entities.map(/** 将实体序列化后深复制，使剪贴板内容独立于当前对象。 */ entity => JSON.parse(JSON.stringify(serializeEntity(entity))) as SceneEntityData),
     connections,
     rootUuids
   }
 }
 
-export function copySelectedEntities(): number {
+/** 将当前选择子树保存到实体剪贴板，返回捕获实体数量。 */ export function copySelectedEntities(): number {
   entityClipboard = captureEntityBundle(physicsState.selectedEntityIds)
   return entityClipboard?.entities.length ?? 0
 }
 
-export function instantiateEntityBundle(
+/** 为复制包分配实体和实例新身份，重连父子与连接锚点，平移根子树并按选项更新选择和运行时。 */ export function instantiateEntityBundle(
   clipboard: EntityBundle,
   offset: { x: number; y: number },
   rootNameSuffix = ' copy',
@@ -1480,7 +1481,7 @@ export function instantiateEntityBundle(
       : null
     const cloneRecord = JSON.parse(JSON.stringify(record)) as SceneEntityData
     delete cloneRecord.uuid
-    cloneRecord.components?.forEach(component => { delete component.uuid })
+    cloneRecord.components?.forEach(/** 移除组件身份，防止复制实体与源实体共享组件稳定身份。 */ component => { delete component.uuid })
     const clone = createEntityFromData(cloneRecord, physicsState.world.allocateId())
     if (record.prefabInstanceUuid) {
       let instanceUuid = clonedPrefabInstances.get(record.prefabInstanceUuid)
@@ -1490,12 +1491,12 @@ export function instantiateEntityBundle(
       }
       clone.prefabInstanceUuid = instanceUuid
     }
-    clone.prefabLayers = clone.prefabLayers.map(layer => {
+    clone.prefabLayers = clone.prefabLayers.map(/** 为复制预制体层复用或分配新实例身份，保留层内其他记录。 */ layer => {
       let instanceUuid = clonedPrefabInstances.get(layer.instanceUuid)
       if (!instanceUuid) { instanceUuid = normalizeUuid(undefined); clonedPrefabInstances.set(layer.instanceUuid, instanceUuid) }
       return { ...layer, instanceUuid }
     })
-    clone.sceneLayers = clone.sceneLayers.map(layer => {
+    clone.sceneLayers = clone.sceneLayers.map(/** 为复制场景层复用或分配新实例身份，保留层内其他记录。 */ layer => {
       let instanceUuid = clonedSceneInstances.get(layer.instanceUuid)
       if (!instanceUuid) { instanceUuid = normalizeUuid(undefined); clonedSceneInstances.set(layer.instanceUuid, instanceUuid) }
       return { ...layer, instanceUuid }
@@ -1509,7 +1510,7 @@ export function instantiateEntityBundle(
   for (const [clone, sourceParent] of pendingParents) {
     clone.parentUuid = sourceParent
       ? sourceToClone.get(sourceParent)?.uuid
-        ?? (physicsState.world.entities.some(entity => entity.uuid === sourceParent) ? sourceParent : null)
+        ?? (physicsState.world.entities.some(/* 比较 entity.uuid 与 sourceParent，返回严格相等的判断结果。 */ entity => entity.uuid === sourceParent) ? sourceParent : null)
       : null
   }
 
@@ -1525,7 +1526,7 @@ export function instantiateEntityBundle(
     connection.id = physicsState.world.allocateConnectionId()
     connection.uuid = normalizeUuid(undefined)
     if (rootNameSuffix) connection.name = `${connection.name}${rootNameSuffix}`.slice(0, 80)
-    connection.anchors.forEach((anchor, index) => {
+    connection.anchors.forEach(/** 优先按稳定身份查找克隆实体，回退到数字身份映射更新连接锚点。 */ (anchor, index) => {
       const sourceUuid = stored.anchorUuids[index]
       const clone = sourceToClone.get(sourceUuid)
       if (clone) anchor.entityId = clone.id
@@ -1538,23 +1539,23 @@ export function instantiateEntityBundle(
     if (normalizeConnection(connection, physicsState.world.entities)) physicsState.world.connections.push(connection)
   }
 
-  const pastedRoots = clipboard.rootUuids.flatMap(uuid => {
+  const pastedRoots = clipboard.rootUuids.flatMap(/** 从源根身份提取成功克隆的根实体，跳过不存在的映射。 */ uuid => {
     const entity = sourceToClone.get(uuid)
     return entity ? [entity] : []
   })
-  if (select) selectEntities(pastedRoots.map(entity => entity.id), 'replace')
+  if (select) selectEntities(pastedRoots.map(/* 返回 entity.id 的当前值。 */ entity => entity.id), 'replace')
   if (invalidateRuntime) physicsState.world.invalidateRuntime()
   return { entities: [...sourceToClone.values()], roots: pastedRoots, sourceToEntity: sourceToClone }
 }
 
-export function pasteEntities(offset = { x: 10, y: -10 }): Entity[] {
+/** 实例化当前剪贴板，有实体时记录粘贴历史，并返回新实体。 */ export function pasteEntities(offset = { x: 10, y: -10 }): Entity[] {
   if (!entityClipboard) return []
   const pasted = instantiateEntityBundle(entityClipboard, offset)
   if (pasted.entities.length) pushHistory('Paste entities')
   return pasted.entities
 }
 
-export function duplicateSelectedEntities(): Entity[] {
+/** 捕获当前选择并以默认偏移实例化，有复制结果时记录历史。 */ export function duplicateSelectedEntities(): Entity[] {
   const clipboard = captureEntityBundle(physicsState.selectedEntityIds)
   if (!clipboard) return []
   const pasted = instantiateEntityBundle(clipboard, { x: 10, y: -10 })
@@ -1562,7 +1563,7 @@ export function duplicateSelectedEntities(): Entity[] {
   return pasted.entities
 }
 
-export function addConnection(entityIds: number[], modes: AnchorMode[] = []): Connection {
+/** 分配连接身份并按指定实体与模式创建连接模型，追加到当前世界。 */ export function addConnection(entityIds: number[], modes: AnchorMode[] = []): Connection {
   const connection = createConnectionModel(
     physicsState.world.allocateConnectionId(),
     physicsState.world.entities,
@@ -1573,13 +1574,13 @@ export function addConnection(entityIds: number[], modes: AnchorMode[] = []): Co
   return connection
 }
 
-export function deleteConnection(connectionId: number): void {
-  const index = physicsState.world.connections.findIndex(connection => connection.id === connectionId)
+/** 按运行身份移除对应连接，未找到时不更改世界。 */ export function deleteConnection(connectionId: number): void {
+  const index = physicsState.world.connections.findIndex(/* 比较 connection.id 与 connectionId，返回严格相等的判断结果。 */ connection => connection.id === connectionId)
   if (index !== -1) physicsState.world.connections.splice(index, 1)
 }
 
-export function repairConnection(connectionId: number): void {
-  const connection = physicsState.world.connections.find(candidate => candidate.id === connectionId)
+/** 重置连接断裂和受力状态，启用碰撞时重新生成绳索节点。 */ export function repairConnection(connectionId: number): void {
+  const connection = physicsState.world.connections.find(/* 比较 candidate.id 与 connectionId，返回严格相等的判断结果。 */ candidate => candidate.id === connectionId)
   if (!connection) return
   connection.breakState = 'intact'
   connection.breakLink = -1
@@ -1588,25 +1589,25 @@ export function repairConnection(connectionId: number): void {
   if (connection.collisionEnabled) initializeRopeNodes(connection, physicsState.world.entities)
 }
 
-export function detachEntityFromConnections(entityId: number): void {
+/** 从全部连接删除指定实体锚点，并移除失去有效结构的连接。 */ export function detachEntityFromConnections(entityId: number): void {
   for (let index = physicsState.world.connections.length - 1; index >= 0; index--) {
     const connection = physicsState.world.connections[index]
-    connection.anchors = connection.anchors.filter(anchor => anchor.entityId !== entityId)
-    if (!normalizeConnection(connection, physicsState.world.entities.filter(entity => entity.id !== entityId))) {
+    connection.anchors = connection.anchors.filter(/* 比较 anchor.entityId 与 entityId，返回严格不等的判断结果。 */ anchor => anchor.entityId !== entityId)
+    if (!normalizeConnection(connection, physicsState.world.entities.filter(/* 比较 entity.id 与 entityId，返回严格不等的判断结果。 */ entity => entity.id !== entityId))) {
       physicsState.world.connections.splice(index, 1)
     }
   }
 }
 
-export function duplicateConnections(entityIdMap: Map<number, number>): void {
+/** 仅复制所有锚点都在实体映射中的连接，分配新身份并重映射锚点、清空受力状态。 */ export function duplicateConnections(entityIdMap: Map<number, number>): void {
   const originals = [...physicsState.world.connections]
   for (const original of originals) {
-    if (!original.anchors.every(anchor => entityIdMap.has(anchor.entityId))) continue
+    if (!original.anchors.every(/* 调用 entityIdMap.has(anchor.entityId) 并返回调用结果。 */ anchor => entityIdMap.has(anchor.entityId))) continue
     const clone = JSON.parse(JSON.stringify(original)) as Connection
     clone.id = physicsState.world.allocateConnectionId()
     clone.uuid = normalizeUuid(undefined)
     clone.name = `${original.name} copy`
-    clone.anchors.forEach(anchor => { anchor.entityId = entityIdMap.get(anchor.entityId)! })
+    clone.anchors.forEach(/** 将 entityIdMap.get(anchor.entityId)! 赋给 anchor.entityId，不显式返回值。 */ anchor => { anchor.entityId = entityIdMap.get(anchor.entityId)! })
     clone.breakState = 'intact'
     clone.tension = 0
     clone.strain = 0
@@ -1614,7 +1615,7 @@ export function duplicateConnections(entityIdMap: Map<number, number>): void {
   }
 }
 
-function claimIdentifier(value: unknown, fallback: number, used: Set<number>): number | null {
+/** 从规范化候选开始寻找未占用安全整数身份，必要时从一重新搜索，耗尽返回 null。 */ function claimIdentifier(value: unknown, fallback: number, used: Set<number>): number | null {
   let id = normalizeIdentifier(value, fallback)
   while (used.has(id) && id < Number.MAX_SAFE_INTEGER) id++
   if (used.has(id)) {
@@ -1626,12 +1627,12 @@ function claimIdentifier(value: unknown, fallback: number, used: Set<number>): n
   return id
 }
 
-function loadEntities(records: SceneEntityData[]): { entities: Entity[]; maximumId: number; uuidToId: Map<string, number> } {
+/** 重建实体列表并保证数字身份和稳定身份唯一，同时生成身份映射及最大数字身份。 */ function loadEntities(records: SceneEntityData[]): { entities: Entity[]; maximumId: number; uuidToId: Map<string, number> } {
   const usedIds = new Set<number>()
   const usedUuids = new Set<string>()
   const uuidToId = new Map<string, number>()
   let maximumId = 0
-  const entities = records.map(item => {
+  const entities = records.map(/** 为单条实体记录分配未占用的数字和稳定身份，再构造实体并登记映射。 */ item => {
     const id = claimIdentifier(item.id, maximumId + 1, usedIds)
     if (id === null) throw new Error('Entity ID space is exhausted')
     maximumId = Math.max(maximumId, id)
@@ -1645,7 +1646,7 @@ function loadEntities(records: SceneEntityData[]): { entities: Entity[]; maximum
   return { entities, maximumId, uuidToId }
 }
 
-function loadConnections(records: unknown[], entities: Entity[], uuidToId: Map<string, number>): { connections: Connection[]; maximumId: number } {
+/** 过滤不合法连接记录，分配唯一数字身份、解析锚点实体引用并保留规范化成功的连接。 */ function loadConnections(records: unknown[], entities: Entity[], uuidToId: Map<string, number>): { connections: Connection[]; maximumId: number } {
   const usedIds = new Set<number>()
   let maximumId = 0
   const connections: Connection[] = []
@@ -1657,7 +1658,7 @@ function loadConnections(records: unknown[], entities: Entity[], uuidToId: Map<s
     const connection = JSON.parse(JSON.stringify(item)) as Connection
     connection.id = id
     connection.uuid = normalizeUuid(item.uuid)
-    connection.anchors = item.anchors.flatMap(anchor => {
+    connection.anchors = item.anchors.flatMap(/** 将锚点的数字或稳定实体引用转换为运行身份，丢弃无法解析的锚点。 */ anchor => {
       const runtimeId = typeof anchor.entityId === 'number'
         ? normalizeIdentifier(anchor.entityId)
         : typeof anchor.entityUuid === 'string' ? uuidToId.get(anchor.entityUuid) : undefined
@@ -1670,7 +1671,7 @@ function loadConnections(records: unknown[], entities: Entity[], uuidToId: Map<s
   return { connections, maximumId }
 }
 
-function loadGlobalSettings(scene: Record<string, unknown>): void {
+/** 从场景读取有限数值、插值、物理档案和碰撞矩阵，再统一规范化全局设置。 */ function loadGlobalSettings(scene: Record<string, unknown>): void {
   if (!scene.globalSettings || typeof scene.globalSettings !== 'object') return
   const settings = scene.globalSettings as Record<string, unknown>
   physicsState.globalSettings.gravity = finiteNumber(settings.gravity, physicsState.globalSettings.gravity)
@@ -1686,24 +1687,24 @@ function loadGlobalSettings(scene: Record<string, unknown>): void {
   })
   physicsState.globalSettings.layers = normalizePhysicsLayers(settings.layers)
   if (Array.isArray(settings.collisionMatrix)) {
-    physicsState.globalSettings.collisionMatrix = settings.collisionMatrix.map(value => finiteNumber(value))
+    physicsState.globalSettings.collisionMatrix = settings.collisionMatrix.map(/* 调用 finiteNumber(value) 并返回调用结果。 */ value => finiteNumber(value))
   }
   normalizeGlobalSettings()
 }
 
-function serializePhysicsProjectSettings(): Record<string, unknown> {
+/** 规范化物理设置并复制可保存的重力、时间、求解档案及碰撞层矩阵。 */ function serializePhysicsProjectSettings(): Record<string, unknown> {
   normalizeGlobalSettings()
   return {
     gravity: physicsState.globalSettings.gravity,
     airFriction: physicsState.globalSettings.airFriction,
     timeScale: physicsState.globalSettings.timeScale,
     profile: { ...physicsState.globalSettings.profile },
-    layers: physicsState.globalSettings.layers.map(layer => ({ ...layer })),
+    layers: physicsState.globalSettings.layers.map(/** 构造并返回记录 { ...layer }，字段按当前实参及捕获状态求值。 */ layer => ({ ...layer })),
     collisionMatrix: [...physicsState.globalSettings.collisionMatrix]
   }
 }
 
-function loadPhysicsProjectSettings(value: unknown): void {
+/** 读取项目级物理设置，从规范化档案同步步频和插值，再规范化碰撞层矩阵。 */ function loadPhysicsProjectSettings(value: unknown): void {
   if (!value || typeof value !== 'object') return
   const settings = value as Record<string, unknown>
   physicsState.globalSettings.gravity = finiteNumber(settings.gravity, physicsState.globalSettings.gravity)
@@ -1714,22 +1715,22 @@ function loadPhysicsProjectSettings(value: unknown): void {
   physicsState.globalSettings.maxCatchUpSteps = physicsState.globalSettings.profile.maxCatchUpSteps
   physicsState.globalSettings.interpolation = physicsState.globalSettings.profile.interpolation
   physicsState.globalSettings.layers = normalizePhysicsLayers(settings.layers)
-  if (Array.isArray(settings.collisionMatrix)) physicsState.globalSettings.collisionMatrix = settings.collisionMatrix.map(value => finiteNumber(value, 0) >>> 0)
+  if (Array.isArray(settings.collisionMatrix)) physicsState.globalSettings.collisionMatrix = settings.collisionMatrix.map(/** 将碰撞矩阵值规范化为有限数值并转换为无符号三十二位位掩码。 */ value => finiteNumber(value, 0) >>> 0)
   normalizeGlobalSettings()
 }
 
 /** Recover the authored document if a later hydration/normalization owner rejects it. */
-export function loadProject(jsonString: string, preserveRuntimeSession = false): boolean {
+/** 加载前保留运行、选择、场景及历史状态，装载失败且已修改文档时恢复旧文档并保留原错误。 */ export function loadProject(jsonString: string, preserveRuntimeSession = false): boolean {
   const rollback = {
     source: null as string | null,
     mode: physicsState.playMode, running: physicsState.simulationRunning, simulation: simulationSnapshot,
-    selected: new Set(selectedEntities().map(entity => entity.uuid)),
-    primary: physicsState.world.entities.find(entity => entity.id === physicsState.selectedEntityId)?.uuid,
-    scenes: new Map(sceneManager.scenes.map(scene => [scene.uuid, {externalState:scene.externalState,validationState:scene.validationState,dirty:scene.dirty}])),
+    selected: new Set(selectedEntities().map(/* 返回 entity.uuid 的当前值。 */ entity => entity.uuid)),
+    primary: physicsState.world.entities.find(/* 比较 entity.id 与 physicsState.selectedEntityId，返回严格相等的判断结果。 */ entity => entity.id === physicsState.selectedEntityId)?.uuid,
+    scenes: new Map(sceneManager.scenes.map(/* 返回按声明顺序构造的数组 [scene.uuid, {externalState:scene.externalState,validationState:scene.validationState,dirty:scene.dirty}]。 */ scene => [scene.uuid, {externalState:scene.externalState,validationState:scene.validationState,dirty:scene.dirty}])),
     navigation: [...sceneManager.navigationHistory], navigationIndex: sceneManager.navigationIndex,
     transactions: [...activeHistoryTransactions], baseline: historyBaseline
   }
-  const loaded = hydrateProjectDocument(jsonString, preserveRuntimeSession, () => { rollback.source = getSceneJSON() })
+  const loaded = hydrateProjectDocument(jsonString, preserveRuntimeSession, /** 将 getSceneJSON() 赋给 rollback.source，不显式返回值。 */ () => { rollback.source = getSceneJSON() })
   if (loaded || rollback.source === null) return loaded
   const failure = editorState.statusText
   if (!hydrateProjectDocument(rollback.source, true)) {
@@ -1737,8 +1738,8 @@ export function loadProject(jsonString: string, preserveRuntimeSession = false):
     return false
   }
   physicsState.playMode = rollback.mode; physicsState.simulationRunning = rollback.running; simulationSnapshot = rollback.simulation
-  const ids = physicsState.world.entities.filter(entity => rollback.selected.has(entity.uuid)).map(entity => entity.id)
-  selectEntities(ids, 'replace', physicsState.world.entities.find(entity => entity.uuid === rollback.primary)?.id ?? ids.at(-1) ?? null)
+  const ids = physicsState.world.entities.filter(/* 调用 rollback.selected.has(entity.uuid) 并返回调用结果。 */ entity => rollback.selected.has(entity.uuid)).map(/* 返回 entity.id 的当前值。 */ entity => entity.id)
+  selectEntities(ids, 'replace', physicsState.world.entities.find(/* 比较 entity.uuid 与 rollback.primary，返回严格相等的判断结果。 */ entity => entity.uuid === rollback.primary)?.id ?? ids.at(-1) ?? null)
   for (const scene of sceneManager.scenes) {
     const previous = rollback.scenes.get(scene.uuid)
     if (previous) Object.assign(scene, previous)
@@ -1751,9 +1752,9 @@ export function loadProject(jsonString: string, preserveRuntimeSession = false):
   return false
 }
 
-function hydrateProjectDocument(jsonString: string, preserveRuntimeSession = false, beforeHydrate?: () => void): boolean {
-  const selectedUuids = new Set(selectedEntities().map(entity => entity.uuid))
-  const primaryUuid = physicsState.world.entities.find(entity => entity.id === physicsState.selectedEntityId)?.uuid
+/** 校验版本与场景数据后加载资源、项目设置和活动世界，恢复有效选择；异常转换为加载失败状态。 */ function hydrateProjectDocument(jsonString: string, preserveRuntimeSession = false, beforeHydrate?: () => void): boolean {
+  const selectedUuids = new Set(selectedEntities().map(/* 返回 entity.uuid 的当前值。 */ entity => entity.uuid))
+  const primaryUuid = physicsState.world.entities.find(/* 比较 entity.id 与 physicsState.selectedEntityId，返回严格相等的判断结果。 */ entity => entity.id === physicsState.selectedEntityId)?.uuid
   try {
     const preliminary: unknown = JSON.parse(jsonString)
     const preliminaryRecord = !Array.isArray(preliminary) && preliminary && typeof preliminary === 'object' ? preliminary as Record<string, unknown> : null
@@ -1797,7 +1798,7 @@ function hydrateProjectDocument(jsonString: string, preserveRuntimeSession = fal
       ? project.scenes
       : [{ uuid: normalizeUuid(undefined), name: 'Main Scene', ...project }]
     sceneManager.importProject(sceneRecords, project.activeSceneUuid)
-    Object.assign(buildSettings, normalizeBuildSettings(projectSettings.build, sceneManager.scenes.map(scene => scene.uuid)))
+    Object.assign(buildSettings, normalizeBuildSettings(projectSettings.build, sceneManager.scenes.map(/* 返回 scene.uuid 的当前值。 */ scene => scene.uuid)))
     const scene = sceneManager.activeScene.data
     if (!Array.isArray(scene.entities)) throw new Error(t('missingEntitiesArray'))
 
@@ -1816,14 +1817,14 @@ function hydrateProjectDocument(jsonString: string, preserveRuntimeSession = fal
     )
 
     const parsedLayers = Array.isArray(scene.layers)
-      ? scene.layers.map(layer => normalizeIdentifier(layer))
-      : entities.map(entity => entity.layer)
-    const layers = [...new Set([1, ...parsedLayers, ...entities.map(entity => entity.layer)])].sort((a, b) => a - b)
+      ? scene.layers.map(/* 调用 normalizeIdentifier(layer) 并返回调用结果。 */ layer => normalizeIdentifier(layer))
+      : entities.map(/* 返回 entity.layer 的当前值。 */ entity => entity.layer)
+    const layers = [...new Set([1, ...parsedLayers, ...entities.map(/* 返回 entity.layer 的当前值。 */ entity => entity.layer)])].sort(/* 计算表达式 a - b 并返回结果，沿用操作数的原有类型规则。 */ (a, b) => a - b)
     const namedLayers = sceneManager.activeScene.settings.namedLayers
-    for (const layer of layers) if (!namedLayers.some(candidate => candidate.id === layer)) namedLayers.push({ id: layer, name: `Layer ${layer}`, visible: true, locked: false })
-    namedLayers.sort((first, second) => first.id - second.id)
+    for (const layer of layers) if (!namedLayers.some(/* 比较 candidate.id 与 layer，返回严格相等的判断结果。 */ candidate => candidate.id === layer)) namedLayers.push({ id: layer, name: `Layer ${layer}`, visible: true, locked: false })
+    namedLayers.sort(/* 计算表达式 first.id - second.id 并返回结果，沿用操作数的原有类型规则。 */ (first, second) => first.id - second.id)
     for (const entity of entities) {
-      const definition = namedLayers.find(layer => layer.id === entity.layer)
+      const definition = namedLayers.find(/* 比较 layer.id 与 entity.layer，返回严格相等的判断结果。 */ layer => layer.id === entity.layer)
       if (definition && (!entity.namedLayer || /^Layer \d+$/.test(entity.namedLayer))) entity.namedLayer = definition.name
     }
 
@@ -1853,8 +1854,8 @@ function hydrateProjectDocument(jsonString: string, preserveRuntimeSession = fal
 
     cancelEditorDrafts()
     cancelPendingProjectMutations()
-    const validSelection = entities.filter(entity => selectedUuids.has(entity.uuid)).map(entity => entity.id)
-    selectEntities(validSelection, 'replace', entities.find(entity => entity.uuid === primaryUuid)?.id ?? validSelection.at(-1) ?? null)
+    const validSelection = entities.filter(/* 调用 selectedUuids.has(entity.uuid) 并返回调用结果。 */ entity => selectedUuids.has(entity.uuid)).map(/* 返回 entity.id 的当前值。 */ entity => entity.id)
+    selectEntities(validSelection, 'replace', entities.find(/* 比较 entity.uuid 与 primaryUuid，返回严格相等的判断结果。 */ entity => entity.uuid === primaryUuid)?.id ?? validSelection.at(-1) ?? null)
     return true
   } catch (error) {
     console.error('Failed to load project', error)
@@ -1863,7 +1864,7 @@ function hydrateProjectDocument(jsonString: string, preserveRuntimeSession = fal
   }
 }
 
-function reloadSceneManagerProject(preserveRuntimeSession = false): boolean {
+/** 序列化当前场景管理器及项目设置并重新加载，成功后恢复仍有效的有限导航历史。 */ function reloadSceneManagerProject(preserveRuntimeSession = false): boolean {
   const navigationHistory = [...sceneManager.navigationHistory]
   const navigationIndex = sceneManager.navigationIndex
   const source = JSON.stringify({
@@ -1879,21 +1880,21 @@ function reloadSceneManagerProject(preserveRuntimeSession = false): boolean {
     assetDatabase: serializeAssetDatabaseSettings(),
     plugins: serializePluginManifests(),
     packages: serializePackageState(),
-    projectSettings: { inputMap: normalizeInputMap(physicsState.inputMap), deviceInput: serializeDeviceInputSettings(), audio: normalizeAudioSettings(physicsState.audioSettings), physics: serializePhysicsProjectSettings(), build: serializeBuildSettings(sceneManager.scenes.map(scene => scene.uuid)), scripting: serializeScriptSettings(), rendering: serializeRenderingSettings(), world: serializeWorldGameplaySettings(), presentation: { localization: serializeLocalizationSettings(), accessibility: serializeRuntimeAccessibilitySettings(), uiAudio: serializeUiAudioSettings() }, production: serializeProductionSettings() },
+    projectSettings: { inputMap: normalizeInputMap(physicsState.inputMap), deviceInput: serializeDeviceInputSettings(), audio: normalizeAudioSettings(physicsState.audioSettings), physics: serializePhysicsProjectSettings(), build: serializeBuildSettings(sceneManager.scenes.map(/* 返回 scene.uuid 的当前值。 */ scene => scene.uuid)), scripting: serializeScriptSettings(), rendering: serializeRenderingSettings(), world: serializeWorldGameplaySettings(), presentation: { localization: serializeLocalizationSettings(), accessibility: serializeRuntimeAccessibilitySettings(), uiAudio: serializeUiAudioSettings() }, production: serializeProductionSettings() },
     activeSceneUuid: sceneManager.activeSceneUuid,
     scenes: sceneManager.serialize()
   })
   const loaded = loadProject(source, preserveRuntimeSession)
   if (loaded) {
-    const known = new Set(sceneManager.scenes.map(scene => scene.uuid))
-    sceneManager.navigationHistory = navigationHistory.filter(uuid => known.has(uuid)).slice(-100)
+    const known = new Set(sceneManager.scenes.map(/* 返回 scene.uuid 的当前值。 */ scene => scene.uuid))
+    sceneManager.navigationHistory = navigationHistory.filter(/* 调用 known.has(uuid) 并返回调用结果。 */ uuid => known.has(uuid)).slice(-100)
     if (!sceneManager.navigationHistory.length) sceneManager.navigationHistory = [sceneManager.activeSceneUuid]
     sceneManager.navigationIndex = Math.min(sceneManager.navigationHistory.length - 1, Math.max(0, navigationIndex))
   }
   return loaded
 }
 
-export function createScene(name?: string): boolean {
+/** 结算编辑后捕获当前场景、清空选择和纹理，创建并切换新场景后重建项目世界。 */ export function createScene(name?: string): boolean {
   if (!settlePendingDocumentEdits()) return false
   selectEntities([], 'replace')
   clearRenderTextures()
@@ -1903,9 +1904,9 @@ export function createScene(name?: string): boolean {
   return reloadSceneManagerProject()
 }
 
-export function setActiveScene(uuid: string): boolean {
+/** 验证目标场景并结算编辑，保存当前场景后切换目标并重新加载世界。 */ export function setActiveScene(uuid: string): boolean {
   if (uuid === sceneManager.activeSceneUuid) return true
-  if (!sceneManager.scenes.some(scene => scene.uuid === uuid) || !settlePendingDocumentEdits()) return false
+  if (!sceneManager.scenes.some(/* 比较 scene.uuid 与 uuid，返回严格相等的判断结果。 */ scene => scene.uuid === uuid) || !settlePendingDocumentEdits()) return false
   selectEntities([], 'replace')
   clearRenderTextures()
   sceneManager.captureActive(serializeActiveScene())
@@ -1914,10 +1915,10 @@ export function setActiveScene(uuid: string): boolean {
 }
 
 /** Navigate only after the outgoing world's drafts have reached their original scene. */
-export function navigateScene(offset: -1 | 1): boolean {
+/** 验证历史导航目标并结算编辑，捕获当前场景后移动历史位置并重建世界。 */ export function navigateScene(offset: -1 | 1): boolean {
   const index = sceneManager.navigationIndex + offset
   const uuid = sceneManager.navigationHistory[index]
-  if (!uuid || !sceneManager.scenes.some(scene => scene.uuid === uuid) || !settlePendingDocumentEdits()) return false
+  if (!uuid || !sceneManager.scenes.some(/* 比较 scene.uuid 与 uuid，返回严格相等的判断结果。 */ scene => scene.uuid === uuid) || !settlePendingDocumentEdits()) return false
   sceneManager.captureActive(serializeActiveScene())
   if (!sceneManager.navigate(offset)) return false
   selectEntities([], 'replace')
@@ -1925,48 +1926,48 @@ export function navigateScene(offset: -1 | 1): boolean {
   return reloadSceneManagerProject()
 }
 
-export function reloadActiveScene(): boolean {
+/** 结算编辑并清空选择和渲染纹理，再从场景管理器重新加载项目。 */ export function reloadActiveScene(): boolean {
   if (!settlePendingDocumentEdits()) return false
   selectEntities([], 'replace')
   clearRenderTextures()
   return reloadSceneManagerProject()
 }
 
-export function setSceneLoaded(uuid: string, loaded: boolean): boolean {
+/** 验证加载开关和场景身份，结算编辑并捕获场景后更新加载状态、重建世界。 */ export function setSceneLoaded(uuid: string, loaded: boolean): boolean {
   if (typeof loaded !== 'boolean') return false
-  if (!sceneManager.scenes.some(scene => scene.uuid === uuid) || !settlePendingDocumentEdits()) return false
+  if (!sceneManager.scenes.some(/* 比较 scene.uuid 与 uuid，返回严格相等的判断结果。 */ scene => scene.uuid === uuid) || !settlePendingDocumentEdits()) return false
   sceneManager.captureActive(serializeActiveScene())
   if (!sceneManager.setLoaded(uuid, loaded)) return false
   return reloadSceneManagerProject()
 }
 
 /** Runtime-only scene switch. Persistent entities retain their UUID and state. */
-export function prepareRuntimeSceneTransition(identifier?: string): PreparedRuntimeSceneTransition {
+/** 准备可提交的运行时场景切换，提供实体构造、全局设置与选择图层视图的捕获恢复适配器。 */ export function prepareRuntimeSceneTransition(identifier?: string): PreparedRuntimeSceneTransition {
   return prepareSceneTransition({
-    scenes: sceneManager, world: physicsState.world, origin: () => ({ ...worldGameplayState.originOffset }),
-    createEntity: (record, id) => createEntityFromData(record, id),
-    captureView: () => ({ settings: JSON.parse(JSON.stringify(physicsState.globalSettings)) as GlobalPhysicsSettings, layers: [...editorState.layers], activeLayer: editorState.activeLayer, renderLayer: editorState.renderLayer, selection: [...physicsState.selectedEntityIds], selected: physicsState.selectedEntityId }),
-    restoreView: view => { Object.assign(physicsState.globalSettings, view.settings); editorState.layers.splice(0, editorState.layers.length, ...view.layers); editorState.activeLayer = view.activeLayer; editorState.renderLayer = view.renderLayer; physicsState.selectedEntityIds.splice(0, physicsState.selectedEntityIds.length, ...view.selection); physicsState.selectedEntityId = view.selected },
-    applyView: (scene, entities) => {
-      const layers = [...new Set([1, ...(Array.isArray(scene.layers) ? scene.layers.map(layer => normalizeIdentifier(layer)) : []), ...entities.map(entity => entity.layer)])].sort((a, b) => a - b)
+    scenes: sceneManager, world: physicsState.world, origin: /** 构造并返回记录 { ...worldGameplayState.originOffset }，字段按当前实参及捕获状态求值。 */ () => ({ ...worldGameplayState.originOffset }),
+    createEntity: /* 调用 createEntityFromData(record, id) 并返回调用结果。 */ (record, id) => createEntityFromData(record, id),
+    captureView: /** 深复制全局物理设置并保存图层和选择，供场景切换失败时恢复。 */ () => ({ settings: JSON.parse(JSON.stringify(physicsState.globalSettings)) as GlobalPhysicsSettings, layers: [...editorState.layers], activeLayer: editorState.activeLayer, renderLayer: editorState.renderLayer, selection: [...physicsState.selectedEntityIds], selected: physicsState.selectedEntityId }),
+    restoreView: /** 恢复场景切换前的全局设置、图层和实体选择。 */ view => { Object.assign(physicsState.globalSettings, view.settings); editorState.layers.splice(0, editorState.layers.length, ...view.layers); editorState.activeLayer = view.activeLayer; editorState.renderLayer = view.renderLayer; physicsState.selectedEntityIds.splice(0, physicsState.selectedEntityIds.length, ...view.selection); physicsState.selectedEntityId = view.selected },
+    applyView: /** 根据新场景及实体建立合法图层，加载场景设置并过滤不存在的选择。 */ (scene, entities) => {
+      const layers = [...new Set([1, ...(Array.isArray(scene.layers) ? scene.layers.map(/* 调用 normalizeIdentifier(layer) 并返回调用结果。 */ layer => normalizeIdentifier(layer)) : []), ...entities.map(/* 返回 entity.layer 的当前值。 */ entity => entity.layer)])].sort(/* 计算表达式 a - b 并返回结果，沿用操作数的原有类型规则。 */ (a, b) => a - b)
       editorState.layers.splice(0, editorState.layers.length, ...layers)
       loadGlobalSettings(scene)
       const activeLayer = normalizeIdentifier(scene.activeLayer, layers[0]), renderLayer = normalizeIdentifier(scene.renderLayer, layers[0])
       editorState.activeLayer = layers.includes(activeLayer) ? activeLayer : layers[0]
       editorState.renderLayer = scene.renderLayer === 'all' || !layers.includes(renderLayer) ? 'all' : renderLayer
-      selectEntities(physicsState.selectedEntityIds.filter(id => entities.some(entity => entity.id === id)), 'replace', physicsState.selectedEntityId)
+      selectEntities(physicsState.selectedEntityIds.filter(/** 仅保留新场景实体列表中仍存在的选择身份。 */ id => entities.some(/* 比较 entity.id 与 id，返回严格相等的判断结果。 */ entity => entity.id === id)), 'replace', physicsState.selectedEntityId)
     }
   }, identifier)
 }
 
-export function runtimeLoadScene(identifier: string): boolean {
+/** 准备并提交指定运行时场景，失败时显示原因并返回 false。 */ export function runtimeLoadScene(identifier: string): boolean {
   try { return prepareRuntimeSceneTransition(identifier).commit() } catch (error) { editorState.statusText = `Runtime scene preparation failed: ${error instanceof Error ? error.message : String(error)}`; return false }
 }
-export function runtimeReloadScene(): boolean {
+/** 准备并提交当前运行时场景的重新加载，失败时更新状态提示。 */ export function runtimeReloadScene(): boolean {
   try { return prepareRuntimeSceneTransition().commit() } catch (error) { editorState.statusText = `Runtime scene preparation failed: ${error instanceof Error ? error.message : String(error)}`; return false }
 }
 
-function settlePlaybackEdits(allowStudioDrafts = false): boolean {
+/** 播放前结算文档编辑，并按预览选项检查工作室草稿是否已保存。 */ function settlePlaybackEdits(allowStudioDrafts = false): boolean {
   if (!settlePendingDocumentEdits()) return false
   if (!allowStudioDrafts) {
     try { assertStudioDraftsSaved() } catch (error) {
@@ -1979,7 +1980,7 @@ function settlePlaybackEdits(allowStudioDrafts = false): boolean {
 }
 
 /** Asset preview owners may retain drafts while previewing an explicitly selected asset. */
-export function toggleSimulation(state: boolean, options: { assetPreview?: boolean } = {}): boolean {
+/** 首次播放前结算编辑并保存恢复快照，切换运行标记以及播放、暂停或编辑状态。 */ export function toggleSimulation(state: boolean, options: { assetPreview?: boolean } = {}): boolean {
   if (state && physicsState.playMode === 'editing' && !settlePlaybackEdits(options.assetPreview === true)) return false
   if (state && !physicsState.simulationRunning && simulationSnapshot === null) {
     simulationSnapshot = getSceneJSON()
@@ -1990,7 +1991,7 @@ export function toggleSimulation(state: boolean, options: { assetPreview?: boole
   return true
 }
 
-export function resetSimulation(): void {
+/** 停止仿真并恢复编辑模式，存在播放前快照时重新加载该文档。 */ export function resetSimulation(): void {
   const snapshot = simulationSnapshot
   physicsState.simulationRunning = false
   physicsState.playMode = 'editing'
@@ -1998,7 +1999,7 @@ export function resetSimulation(): void {
   if (snapshot) loadProject(snapshot)
 }
 
-export function singleStepSimulation(): boolean {
+/** 结算首次步进前编辑并保存恢复快照，在暂停状态执行一个物理步并更新诊断。 */ export function singleStepSimulation(): boolean {
   if (physicsState.playMode === 'editing' && !settlePlaybackEdits()) return false
   physicsState.simulationRunning = false
   if (simulationSnapshot === null) simulationSnapshot = getSceneJSON()
@@ -2007,15 +2008,15 @@ export function singleStepSimulation(): boolean {
   return true
 }
 
-export function stopPlayMode(): void {
+/** 执行时调用 resetSimulation()；不显式返回调用结果。 */ export function stopPlayMode(): void {
   resetSimulation()
 }
 
-export function hasRuntimeSession(): boolean {
+/* 比较 simulationSnapshot 与 null，返回严格不等的判断结果。 */ export function hasRuntimeSession(): boolean {
   return simulationSnapshot !== null
 }
 
-export async function saveProject(): Promise<boolean> {
+/** 结算编辑并检查只读状态，选择原生事务、浏览器文件或下载保存通道，成功后更新手动保存与外部变更基线。 */ export async function saveProject(): Promise<boolean> {
   if (!settlePendingDocumentEdits()) return false
   assertStudioDraftsSaved()
   const jsonString = stableProjectText(getSceneJSON())
@@ -2029,8 +2030,8 @@ export async function saveProject(): Promise<boolean> {
       const handle = await (window as unknown as { showSaveFilePicker: (options: unknown) => Promise<{ createWritable: () => Promise<{ write: (value: string) => Promise<void>; close: () => Promise<void>; abort?: () => Promise<void> }> }> }).showSaveFilePicker({ suggestedName: 'project.nova', types: [{ description: 'Nova_A Project', accept: { 'application/json': ['.nova', '.json'] } }] })
       await commitProjectTransaction(jsonString, { label: 'Save project', scopes: [...projectTransactionState.unsavedScopes], sink: {
         kind: 'browser-file', writable: true, destination: 'project.nova',
-        async write(files) {
-          const project = files.find(file => file.path === 'project.nova'); if (!project) throw new Error('The project transaction did not contain project.nova.')
+        /** 从保存事务提取项目文本，写入浏览器文件并关闭句柄，成功后清空暂存引用。 */ async write(files) {
+          const project = files.find(/* 比较 file.path 与 'project.nova'，返回严格相等的判断结果。 */ file => file.path === 'project.nova'); if (!project) throw new Error('The project transaction did not contain project.nova.')
           saveState.staged = await handle.createWritable(); await saveState.staged.write(project.contents); await saveState.staged.close(); saveState.staged = null
         }
       } })
@@ -2042,10 +2043,10 @@ export async function saveProject(): Promise<boolean> {
   } else {
     await commitProjectTransaction(jsonString, { label: 'Save project', scopes: [...projectTransactionState.unsavedScopes], sink: {
       kind: 'download', writable: true, destination: 'project.nova',
-      async write(files) {
-        const project = files.find(file => file.path === 'project.nova'); if (!project) throw new Error('The project transaction did not contain project.nova.')
+      /** 从保存事务提取项目文本，创建临时地址触发文件下载，随后释放地址。 */ async write(files) {
+        const project = files.find(/* 比较 file.path 与 'project.nova'，返回严格相等的判断结果。 */ file => file.path === 'project.nova'); if (!project) throw new Error('The project transaction did not contain project.nova.')
         const url = URL.createObjectURL(new Blob([project.contents], { type: 'application/json' })), anchor = document.createElement('a')
-        anchor.href = url; anchor.download = 'project.nova'; anchor.click(); window.setTimeout(() => URL.revokeObjectURL(url), 0)
+        anchor.href = url; anchor.download = 'project.nova'; anchor.click(); window.setTimeout(/* 调用 URL.revokeObjectURL(url) 并返回调用结果。 */ () => URL.revokeObjectURL(url), 0)
       }
     } })
   }
@@ -2058,7 +2059,7 @@ export async function saveProject(): Promise<boolean> {
   return true
 }
 
-export function clearScene(): void {
+/** 停止仿真并清空实体连接，失效运行时、清空选择并重置数字身份计数。 */ export function clearScene(): void {
   physicsState.simulationRunning = false
   physicsState.playMode = 'editing'
   simulationSnapshot = null
@@ -2070,8 +2071,8 @@ export function clearScene(): void {
   physicsState.world.resetConnectionId()
 }
 
-export function deleteSelected(): void {
-  const ids = new Set(subtreeEntities(physicsState.selectedEntityIds, physicsState.world.entities).map(entity => entity.id))
+/** 删除全部选择子树并先清除关联连接，恢复编辑选择状态，空世界重置身份计数。 */ export function deleteSelected(): void {
+  const ids = new Set(subtreeEntities(physicsState.selectedEntityIds, physicsState.world.entities).map(/* 返回 entity.id 的当前值。 */ entity => entity.id))
   if (!ids.size) return
   for (const id of ids) detachEntityFromConnections(id)
   for (let index = physicsState.world.entities.length - 1; index >= 0; index--) {
@@ -2084,18 +2085,18 @@ export function deleteSelected(): void {
   }
 }
 
-export function deleteEntity(id: number): void {
-  const ids = new Set(subtreeEntities([id], physicsState.world.entities).map(entity => entity.id))
+/** 删除指定实体及其子树和关联连接，再过滤已删除对象的选择。 */ export function deleteEntity(id: number): void {
+  const ids = new Set(subtreeEntities([id], physicsState.world.entities).map(/* 返回 entity.id 的当前值。 */ entity => entity.id))
   if (!ids.size) return
   for (const entityId of ids) detachEntityFromConnections(entityId)
   for (let index = physicsState.world.entities.length - 1; index >= 0; index--) {
     if (ids.has(physicsState.world.entities[index].id)) physicsState.world.entities.splice(index, 1)
   }
-  const selection = physicsState.selectedEntityIds.filter(entityId => !ids.has(entityId))
+  const selection = physicsState.selectedEntityIds.filter(/* 返回 ids.has(entityId) 的逻辑取反结果。 */ entityId => !ids.has(entityId))
   selectEntities(selection, 'replace')
 }
 
-export function resetCamera(): void {
+/** 恢复编辑摄像机缩放和目标状态，将原点偏移设置到首个画布中心。 */ export function resetCamera(): void {
   physicsState.camera.scale = 40
   physicsState.camera.targetScale = null
   physicsState.camera.targetOffset = null
@@ -2105,21 +2106,21 @@ export function resetCamera(): void {
     : { x: 0, y: 0 }
 }
 
-export function moveToFront(id: number): void {
-  const index = physicsState.world.entities.findIndex(entity => entity.id === id)
+/** 将指定实体移至绘制列表末尾，缺失时保持原状态。 */ export function moveToFront(id: number): void {
+  const index = physicsState.world.entities.findIndex(/* 比较 entity.id 与 id，返回严格相等的判断结果。 */ entity => entity.id === id)
   if (index === -1) return
   const [entity] = physicsState.world.entities.splice(index, 1)
   physicsState.world.entities.push(entity)
 }
 
-export function moveToBack(id: number): void {
-  const index = physicsState.world.entities.findIndex(entity => entity.id === id)
+/** 将指定实体移至绘制列表开头，缺失时保持原状态。 */ export function moveToBack(id: number): void {
+  const index = physicsState.world.entities.findIndex(/* 比较 entity.id 与 id，返回严格相等的判断结果。 */ entity => entity.id === id)
   if (index === -1) return
   const [entity] = physicsState.world.entities.splice(index, 1)
   physicsState.world.entities.unshift(entity)
 }
 
-export function duplicateEntity(id: number): Entity | null {
+/** 捕获实体子树包并按默认偏移实例化，返回首个克隆或 null。 */ export function duplicateEntity(id: number): Entity | null {
   const clipboard = captureEntityBundle([id])
   if (!clipboard) return null
   const clone = instantiateEntityBundle(clipboard, { x: 10, y: -10 }).entities[0] ?? null
@@ -2147,7 +2148,7 @@ export const historyState = reactive({
 const AUTOSAVE_KEY = 'nova_a.autosave.v2'
 let autosaveTimer: number | null = null
 
-function readAutosave(): string | null {
+/** 安全读取本地自动保存文本，存储不可用或失败返回 null。 */ function readAutosave(): string | null {
   if (typeof localStorage === 'undefined') return null
   try {
     return localStorage.getItem(AUTOSAVE_KEY)
@@ -2158,10 +2159,10 @@ function readAutosave(): string | null {
 
 export const autosaveState = reactive({ available: readAutosave() !== null })
 
-function scheduleAutosave(): void {
+/** 启用自动保存时重置防抖计时，在配置间隔后保存当前项目和恢复快照。 */ function scheduleAutosave(): void {
   if (!preferencesState.autosave || typeof window === 'undefined') return
   if (autosaveTimer !== null) window.clearTimeout(autosaveTimer)
-  autosaveTimer = window.setTimeout(() => {
+  autosaveTimer = window.setTimeout(/** 保存当前项目至本地及恢复快照，写入失败只记录警告，最后释放计时句柄。 */ () => {
     try {
       const source = getSceneJSON()
       localStorage.setItem(AUTOSAVE_KEY, source)
@@ -2174,17 +2175,17 @@ function scheduleAutosave(): void {
   }, preferencesState.autosaveInterval * 1000)
 }
 
-export function restoreAutosave(): boolean {
+/** 更新自动保存可用状态，有内容时通过正常项目加载入口恢复。 */ export function restoreAutosave(): boolean {
   const value = readAutosave()
   autosaveState.available = value !== null
   return value ? loadProject(value) : false
 }
 
-export function hasAutosave(): boolean {
+/* 返回 autosaveState.available 的当前值。 */ export function hasAutosave(): boolean {
   return autosaveState.available
 }
 
-function syncHistoryState(): void {
+/** 同步撤销栈状态和内存用量，结合未保存作用域及手动基线摘要更新脏标记。 */ function syncHistoryState(): void {
   historyState.length = commandHistory.length
   historyState.index = commandHistory.index
   historyState.canUndo = commandHistory.canUndo
@@ -2199,14 +2200,14 @@ function syncHistoryState(): void {
 }
 
 /** Keep non-command editor navigation from becoming the implicit undo target. */
-export function synchronizeHistoryBaseline(): void {
+/** 仅在普通编辑状态更新历史文档基线，避免历史恢复期间覆盖基线。 */ export function synchronizeHistoryBaseline(): void {
   if (physicsState.playMode !== 'editing' || applyingHistory) return
   historyBaseline = getSceneJSON()
   syncHistoryState()
 }
 
-function applyHistoryDocument(document: string): void {
-  const externalStates = new Map(sceneManager.scenes.map(scene => [scene.uuid, {externalState: scene.externalState, validationState: scene.validationState}]))
+/** 取消未提交草稿后恢复历史文档，保留场景外部状态及仍有效导航，并用重入标记保护恢复过程。 */ function applyHistoryDocument(document: string): void {
+  const externalStates = new Map(sceneManager.scenes.map(/* 返回按声明顺序构造的数组 [scene.uuid, {externalState: scene.externalState, validationState: scene.validationState}]。 */ scene => [scene.uuid, {externalState: scene.externalState, validationState: scene.validationState}]))
   const navigation = [...sceneManager.navigationHistory], navigationIndex = sceneManager.navigationIndex
   cancelEditorDrafts()
   cancelPendingProjectMutations()
@@ -2217,7 +2218,7 @@ function applyHistoryDocument(document: string): void {
       const external = externalStates.get(scene.uuid)
       if (external) Object.assign(scene, external)
     }
-    sceneManager.navigationHistory = navigation.filter(uuid => sceneManager.scenes.some(scene => scene.uuid === uuid))
+    sceneManager.navigationHistory = navigation.filter(/** 只保留历史恢复后仍存在场景的导航身份。 */ uuid => sceneManager.scenes.some(/* 比较 scene.uuid 与 uuid，返回严格相等的判断结果。 */ scene => scene.uuid === uuid))
     if (!sceneManager.navigationHistory.length) sceneManager.navigationHistory = [sceneManager.activeSceneUuid]
     sceneManager.navigationIndex = Math.min(navigationIndex, sceneManager.navigationHistory.length - 1)
     historyBaseline = getSceneJSON()
@@ -2226,7 +2227,7 @@ function applyHistoryDocument(document: string): void {
   }
 }
 
-function commandScope(label: string): ProjectMutationScope {
+/** 依据操作标签关键词推断修改作用域，用于脏状态和资源历史分类。 */ function commandScope(label: string): ProjectMutationScope {
   const value = label.toLowerCase()
   if (/asset|import|prefab|folder|sprite|texture|material|shader/.test(value)) return 'asset'
   if (/script|code|rhai/.test(value)) return 'script'
@@ -2238,7 +2239,7 @@ function commandScope(label: string): ProjectMutationScope {
   return 'scene'
 }
 
-export function pushHistory(label = 'Edit scene', mergeKey: string | null = null, affectedResource = 'project.nova'): void {
+/** 在编辑模式比较序列化文档基线，提交实际变化或更新活动事务，标记脏状态并安排自动保存。 */ export function pushHistory(label = 'Edit scene', mergeKey: string | null = null, affectedResource = 'project.nova'): void {
   if (physicsState.playMode !== 'editing' || applyingHistory) return
   const stateString = getSceneJSON()
   if (activeHistoryTransactions.length) { historyBaseline = stateString; scheduleAutosave(); return }
@@ -2264,11 +2265,11 @@ export function pushHistory(label = 'Edit scene', mergeKey: string | null = null
   historyBaseline = stateString
   syncHistoryState()
   scheduleAutosave()
-  window.setTimeout(() => refreshSourceStatus(getSceneJSON()), 0)
+  window.setTimeout(/* 调用 refreshSourceStatus(getSceneJSON()) 并返回调用结果。 */ () => refreshSourceStatus(getSceneJSON()), 0)
 }
 
 /** Settle valid drafts and implicit edits before a document/history boundary. */
-export function settlePendingDocumentEdits(): boolean {
+/** 提交有效控件草稿和待处理修改，记录文档差异并关闭活动事务，非法草稿返回 false。 */ export function settlePendingDocumentEdits(): boolean {
   if (applyingHistory || physicsState.playMode !== 'editing') return true
   if (!settleEditorDrafts()) return false
   flushPendingProjectMutations()
@@ -2279,7 +2280,7 @@ export function settlePendingDocumentEdits(): boolean {
 }
 
 /** Groups any number of document mutations into one named, reversible command. */
-export function beginHistoryTransaction(label: string, mergeKey: string | null = null, affectedResource = mergeKey ?? 'project.nova'): boolean {
+/** 仅在编辑且非历史恢复状态开启事务，最外层先结算待处理编辑，再保存事务前文档。 */ export function beginHistoryTransaction(label: string, mergeKey: string | null = null, affectedResource = mergeKey ?? 'project.nova'): boolean {
   if (physicsState.playMode !== 'editing' || applyingHistory) return false
   if (!activeHistoryTransactions.length && !settlePendingDocumentEdits()) return false
   const before = getSceneJSON(); if (historyBaseline === null) historyBaseline = before
@@ -2287,7 +2288,7 @@ export function beginHistoryTransaction(label: string, mergeKey: string | null =
   return true
 }
 
-export function commitHistoryTransaction(): boolean {
+/** 先序列化验证当前文档再出栈，嵌套事务只更新基线，最外层提交单个历史命令和脏状态。 */ export function commitHistoryTransaction(): boolean {
   const transaction = activeHistoryTransactions[activeHistoryTransactions.length - 1]; if (!transaction) return false
   // Serialization can reject a malformed draft; retain the transaction for correction/cancel.
   const after = getSceneJSON()
@@ -2299,34 +2300,34 @@ export function commitHistoryTransaction(): boolean {
   commandHistory.commit(new DocumentMutationCommand({ label: transaction.label, before: transaction.before, after, apply: applyHistoryDocument, mergeKey: transaction.mergeKey, scope, affectedResource: transaction.affectedResource }), true)
   markProjectDirty(scope)
   if (scope === 'scene' || scope === 'asset') sceneManager.markDirty()
-  syncHistoryState(); scheduleAutosave(); window.setTimeout(() => refreshSourceStatus(getSceneJSON()), 0); return true
+  syncHistoryState(); scheduleAutosave(); window.setTimeout(/* 调用 refreshSourceStatus(getSceneJSON()) 并返回调用结果。 */ () => refreshSourceStatus(getSceneJSON()), 0); return true
 }
 
-export function cancelHistoryTransaction(): boolean {
+/** 先恢复最内层事务前文档，成功后移除事务并同步历史状态。 */ export function cancelHistoryTransaction(): boolean {
   const transaction = activeHistoryTransactions[activeHistoryTransactions.length - 1]; if (!transaction) return false
   applyHistoryDocument(transaction.before); activeHistoryTransactions.pop(); syncHistoryState(); return true
 }
 
-export function clearEditorHistory(reason = 'project-open', source = getSceneJSON(), establishManualBaseline = true): void {
+/** 清空命令和活动事务并更新文档基线，按需建立手动保存基线。 */ export function clearEditorHistory(reason = 'project-open', source = getSceneJSON(), establishManualBaseline = true): void {
   commandHistory.clear(reason); activeHistoryTransactions = []; historyBaseline = source; if (establishManualBaseline) markTransactionBaseline(source); syncHistoryState()
 }
 
-export function undo(): void {
+/** 先结算待处理编辑，再撤销一条命令并刷新历史、状态提示及源码状态。 */ export function undo(): void {
   if (!settlePendingDocumentEdits()) return
   if (!commandHistory.undo()) return
   syncHistoryState()
   editorState.statusText = t('undoSuccess')
-  window.setTimeout(() => refreshSourceStatus(getSceneJSON()), 0)
+  window.setTimeout(/* 调用 refreshSourceStatus(getSceneJSON()) 并返回调用结果。 */ () => refreshSourceStatus(getSceneJSON()), 0)
 }
 
-export function redo(): void {
+/** 先结算待处理编辑，再重做一条命令并刷新历史、状态提示及源码状态。 */ export function redo(): void {
   if (!settlePendingDocumentEdits()) return
   if (!commandHistory.redo()) return
   syncHistoryState()
   editorState.statusText = t('redoSuccess')
-  window.setTimeout(() => refreshSourceStatus(getSceneJSON()), 0)
+  window.setTimeout(/* 调用 refreshSourceStatus(getSceneJSON()) 并返回调用结果。 */ () => refreshSourceStatus(getSceneJSON()), 0)
 }
 
-setProjectMutationRecorder((label, mergeKey, resource) => {
+setProjectMutationRecorder(/** 仅在编辑状态把项目修改通知转换为带合并键和资源定位的历史记录。 */ (label, mergeKey, resource) => {
   if (physicsState.playMode === 'editing') pushHistory(label, mergeKey, resource)
 })

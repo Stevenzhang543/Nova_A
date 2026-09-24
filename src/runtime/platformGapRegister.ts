@@ -1,3 +1,4 @@
+/** 平台差距登记：记录尚待实现或实机验证的平台能力，不把未验证支持当作通过。 */
 export type PlatformGapStatus = 'closed' | 'intentional-scope' | 'deferred-external' | 'open-blocking'
 
 export type PlatformGapArea =
@@ -25,7 +26,7 @@ export interface PlatformGap {
   target: string
 }
 
-function gap(entry: PlatformGap): Readonly<PlatformGap> {
+/* 调用 Object.freeze({ ...entry, evidence: Object.freeze([...entry.evidence]) }) 并返回调用结果。 */ function gap(entry: PlatformGap): Readonly<PlatformGap> {
   return Object.freeze({ ...entry, evidence: Object.freeze([...entry.evidence]) })
 }
 
@@ -232,16 +233,16 @@ export const PLATFORM_GAP_STATUSES: readonly PlatformGapStatus[] = Object.freeze
 
 export const PLATFORM_GAP_SUMMARY = Object.freeze({
   total: PLATFORM_GAP_REGISTER.length,
-  closed: PLATFORM_GAP_REGISTER.filter(item => item.status === 'closed').length,
-  intentionalScope: PLATFORM_GAP_REGISTER.filter(item => item.status === 'intentional-scope').length,
-  deferredExternal: PLATFORM_GAP_REGISTER.filter(item => item.status === 'deferred-external').length,
-  openBlocking: PLATFORM_GAP_REGISTER.filter(item => item.status === 'open-blocking').length
+  closed: PLATFORM_GAP_REGISTER.filter(/* 比较 item.status 与 'closed'，返回严格相等的判断结果。 */ item => item.status === 'closed').length,
+  intentionalScope: PLATFORM_GAP_REGISTER.filter(/* 比较 item.status 与 'intentional-scope'，返回严格相等的判断结果。 */ item => item.status === 'intentional-scope').length,
+  deferredExternal: PLATFORM_GAP_REGISTER.filter(/* 比较 item.status 与 'deferred-external'，返回严格相等的判断结果。 */ item => item.status === 'deferred-external').length,
+  openBlocking: PLATFORM_GAP_REGISTER.filter(/* 比较 item.status 与 'open-blocking'，返回严格相等的判断结果。 */ item => item.status === 'open-blocking').length
 })
 
-export function platformGap(id: string): Readonly<PlatformGap> | undefined {
-  return PLATFORM_GAP_REGISTER.find(item => item.id === id)
+/** 结构说明（自动提取）：platformGap；输入 id；直接调用 PLATFORM_GAP_REGISTER.find。 */ export function platformGap(id: string): Readonly<PlatformGap> | undefined {
+  return PLATFORM_GAP_REGISTER.find(/* 比较 item.id 与 id，返回严格相等的判断结果。 */ item => item.id === id)
 }
 
-export function blockingPlatformGaps(): readonly Readonly<PlatformGap>[] {
-  return PLATFORM_GAP_REGISTER.filter(item => item.status === 'open-blocking')
+/** 结构说明（自动提取）：blockingPlatformGaps；无显式参数；直接调用 PLATFORM_GAP_REGISTER.filter。 */ export function blockingPlatformGaps(): readonly Readonly<PlatformGap>[] {
+  return PLATFORM_GAP_REGISTER.filter(/* 比较 item.status 与 'open-blocking'，返回严格相等的判断结果。 */ item => item.status === 'open-blocking')
 }

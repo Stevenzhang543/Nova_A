@@ -1,3 +1,4 @@
+/** 版本4.2：汇集发布报告与产物文件，生成带来源记录的发布证据。 */
 import { createHash } from 'node:crypto'
 import { spawnSync } from 'node:child_process'
 import { cp, mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises'
@@ -6,10 +7,10 @@ import { dirname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root=dirname(dirname(fileURLToPath(import.meta.url))), audits=join(root,'release-audits'), tree=join(audits,'evidence-v4.2.0'), generatedAt=new Date().toISOString()
-const command=(name,args)=>{const result=spawnSync(name,args,{cwd:root,encoding:'utf8'});return result.status===0?result.stdout.trim():`unavailable: ${(result.stderr||result.error?.message||'').trim()}`}
-const readJson=async(path,fallback={})=>{try{return JSON.parse(await readFile(join(root,path),'utf8'))}catch{return fallback}}
-const writeJson=async(path,value)=>{const target=join(tree,path);await mkdir(dirname(target),{recursive:true});await writeFile(target,`${JSON.stringify(value,null,2)}\n`)}
-const writeText=async(path,value)=>{const target=join(tree,path);await mkdir(dirname(target),{recursive:true});await writeFile(target,value)}
+const command=/** 执行命令并读取成功输出，失败返回可读的不可用原因。 */ (name,args)=>{const result=spawnSync(name,args,{cwd:root,encoding:'utf8'});return result.status===0?result.stdout.trim():`unavailable: ${(result.stderr||result.error?.message||'').trim()}`}
+const readJson=/** 读取并解析仓库内JSON文件，失败返回调用方回退值。 */ async(path,fallback={})=>{try{return JSON.parse(await readFile(join(root,path),'utf8'))}catch{return fallback}}
+const writeJson=/** 创建证据目标目录并写入格式化JSON与末尾换行。 */ async(path,value)=>{const target=join(tree,path);await mkdir(dirname(target),{recursive:true});await writeFile(target,`${JSON.stringify(value,null,2)}\n`)}
+const writeText=/** 创建证据目标目录并写入原始内容。 */ async(path,value)=>{const target=join(tree,path);await mkdir(dirname(target),{recursive:true});await writeFile(target,value)}
 await rm(tree,{recursive:true,force:true});await mkdir(tree,{recursive:true})
 
 const audit=await readJson('release-audits/v4.2.0-integrity-audit.json',{status:'not-run',checks:[]})
@@ -20,15 +21,15 @@ const fault=await readJson('release-audits/v4.2.0-fault-injection.json',{status:
 const migrations=await readJson('release-audits/v4.2.0-migration-results.json',{status:'not-run',results:[]})
 const undo=await readJson('release-audits/v4.2.0-undo-coverage.json',{status:'not-run'})
 const fuzz=await readJson('release-audits/v4.2.0-parser-fuzz.json',{status:'not-run'})
-const reports=[audit,integration,layout,windows],checks=reports.flatMap(report=>report.checks??report.results??[]),failed=checks.filter(item=>item.status==='failed')
+const reports=[audit,integration,layout,windows],checks=reports.flatMap(/* 当 report.checks??report.results 为 null 或 undefined 时返回 []，否则保留左侧值。 */ report=>report.checks??report.results??[]),failed=checks.filter(/* 比较 item.status 与 'failed'，返回严格相等的判断结果。 */ item=>item.status==='failed')
 const packageInfo=JSON.parse(await readFile(join(root,'package.json'),'utf8'))
 const source={commit:command('git',['rev-parse','HEAD']),branch:command('git',['branch','--show-current']),describe:command('git',['describe','--tags','--always','--dirty']),dirty:Boolean(command('git',['status','--short'])),signedTag:null}
 const environment={id:'NOVA-WIN-BUILD-HOST',generatedAt,host:{platform:platform(),release:release(),arch:process.arch,cpu:cpus()[0]?.model??'',logicalCpus:cpus().length,memoryBytes:totalmem()},tools:{node:process.version,pnpm:packageInfo.packageManager,rustc:command('rustc',['--version']),cargo:command('cargo',['--version']),wasmPack:command('wasm-pack',['--version']),vite:packageInfo.devDependencies.vite,tauri:packageInfo.devDependencies['@tauri-apps/cli']},source}
 await writeJson('environments/test-environments.json',{format:'nova-test-environments',version:1,release:'4.2.0',executed:[environment],external:[{id:'NOVA-WIN-CLEAN',status:'pending-clean-machine-gate'},{id:'NOVA-WIN-HIDPI',status:'pending-physical-monitor-gate'},{id:'NOVA-WEB-FIREFOX',status:'pending-browser-gate'},{id:'NOVA-LINUX-REF',status:'pending-experimental-target'},{id:'NOVA-MAC-REF',status:'pending-experimental-target'}]})
-const xml=value=>String(value).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;')
-const junit=checks.map(item=>`  <testcase classname="NovaA.v4.2" name="${xml(item.id??item.name??'check')}">${item.status==='failed'?`<failure message="${xml(JSON.stringify(item.detail??''))}"/>`:String(item.status).startsWith('pending')?'<skipped/>':''}</testcase>`).join('\n')
+const xml=/* 调用 String(value).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;') 并返回调用结果。 */ value=>String(value).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;')
+const junit=checks.map(/** 生成4.2测试XML条目，对失败或待处理状态编码。 */ item=>`  <testcase classname="NovaA.v4.2" name="${xml(item.id??item.name??'check')}">${item.status==='failed'?`<failure message="${xml(JSON.stringify(item.detail??''))}"/>`:String(item.status).startsWith('pending')?'<skipped/>':''}</testcase>`).join('\n')
 await writeText('tests/junit.xml',`<?xml version="1.0" encoding="UTF-8"?>\n<testsuite name="Nova_A 4.2" tests="${checks.length}" failures="${failed.length}" timestamp="${generatedAt}">\n${junit}\n</testsuite>\n`)
-await writeJson('tests/summary.json',{format:'nova-v4.2-test-summary',version:1,generatedAt,total:checks.length,passed:checks.filter(item=>item.status==='passed').length,failed:failed.length,reports:reports.map(report=>({format:report.format??'unknown',status:report.status??'not-run'})),severity0Open:0,severity1Open:failed.length,status:failed.length?'failed':reports.some(report=>report.status==='not-run')?'incomplete':'passed'})
+await writeJson('tests/summary.json',{format:'nova-v4.2-test-summary',version:1,generatedAt,total:checks.length,passed:checks.filter(/* 比较 item.status 与 'passed'，返回严格相等的判断结果。 */ item=>item.status==='passed').length,failed:failed.length,reports:reports.map(/** 生成带未知格式和未运行回退值的报告摘要。 */ report=>({format:report.format??'unknown',status:report.status??'not-run'})),severity0Open:0,severity1Open:failed.length,status:failed.length?'failed':reports.some(/* 比较 report.status 与 'not-run'，返回严格相等的判断结果。 */ report=>report.status==='not-run')?'incomplete':'passed'})
 for(const name of ['v4.2.0-integrity-audit.json','v4.2.0-integrity-verification.json','v4.2.0-fault-injection.json','v4.2.0-migration-results.json','v4.2.0-undo-coverage.json','v4.2.0-parser-fuzz.json','v4.2.0-layout-browser.json','v4.2.0-windows-smoke.json']){try{await cp(join(audits,name),join(tree,'tests',name))}catch{}}
 
 const docs=['SERIALIZATION_SPECIFICATION_4_2.md','SCHEMA_COMPATIBILITY_MATRIX_4_2.md','PROJECT_TRANSACTIONS_4_2.md','UNDO_COVERAGE_4_2.md','RECOVERY_4_2.md','MIGRATION_AND_ROLLBACK_4_2.md','EXTERNAL_CHANGES_4_2.md','KNOWN_ISSUES_4_2.md']
@@ -66,7 +67,7 @@ await writeFile(join(audits,'v4.2.0-third-party-notices.md'),'# Nova_A 4.2 third
 
 const entries=[]
 for(const file of await walk(tree)){if(file.endsWith('evidence-manifest.json'))continue;const bytes=await readFile(file),info=await stat(file);entries.push({path:relative(tree,file).replaceAll('\\','/'),sha256:createHash('sha256').update(bytes).digest('hex'),bytes:info.size,source:source.commit,tool:'Nova_A generate-v4.2-release-evidence.mjs',environment:environment.id})}
-entries.sort((a,b)=>a.path.localeCompare(b.path));await writeJson('evidence-manifest.json',{format:'nova-release-evidence-manifest',version:1,release:'4.2.0',generatedAt,source,tool:environment.tools,environment:{id:environment.id,host:environment.host},entries,externalGates})
+entries.sort(/* 调用 a.path.localeCompare(b.path) 并返回调用结果。 */ (a,b)=>a.path.localeCompare(b.path));await writeJson('evidence-manifest.json',{format:'nova-release-evidence-manifest',version:1,release:'4.2.0',generatedAt,source,tool:environment.tools,environment:{id:environment.id,host:environment.host},entries,externalGates})
 console.log(`Wrote Nova_A v4.2 evidence: ${entries.length} hashed entries; local failures ${failed.length}; external gates ${externalGates.length}.`)
 
-async function walk(directory){const output=[];for(const item of await readdir(directory,{withFileTypes:true})){const path=join(directory,item.name);if(item.isDirectory())output.push(...await walk(path));else output.push(path)}return output}
+/** 递归收集目录中的文件路径。 */ async function walk(directory){const output=[];for(const item of await readdir(directory,{withFileTypes:true})){const path=join(directory,item.name);if(item.isDirectory())output.push(...await walk(path));else output.push(path)}return output}

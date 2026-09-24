@@ -1,3 +1,4 @@
+/** 游戏脚本运行桥接：组织脚本实例和回调，将脚本命令应用到场景与各游戏子系统。 */
 import { setStreamRuntimeHooks } from './streamLifecycle'
 import { assetState, readTextAsset, resolveAsset, updateTextAsset } from '../assets/AssetDatabase'
 import { addEditorLog, editorState } from '../store/editor'
@@ -79,7 +80,7 @@ const MAX_SCRIPT_BRIDGE_BYTES = 16 * 1024 * 1024
 const MAX_SCRIPT_BRIDGE_COMMANDS = 4_096
 const MAX_SCRIPT_BRIDGE_LOGS = 512
 
-function parseScriptExecution(source: string, limits = { commands: MAX_SCRIPT_BRIDGE_COMMANDS, logs: MAX_SCRIPT_BRIDGE_LOGS }): ScriptExecution {
+/** 结构说明（自动提取）：parseScriptExecution；输入 source、limits；直接调用 Error、JSON.parse、Array.isArray、Math.min、Math.max 等；包含显式抛错路径。 */ function parseScriptExecution(source: string, limits = { commands: MAX_SCRIPT_BRIDGE_COMMANDS, logs: MAX_SCRIPT_BRIDGE_LOGS }): ScriptExecution {
   if (source.length > MAX_SCRIPT_BRIDGE_BYTES) throw new Error('Script result exceeded the 16 MB host-bridge limit.')
   const value = JSON.parse(source) as Partial<ScriptExecution> | null
   if (!value || !Array.isArray(value.commands) || !Array.isArray(value.logs) || !value.properties || typeof value.properties !== 'object' || Array.isArray(value.properties)) throw new Error('Script result did not match the host-bridge contract.')
@@ -87,8 +88,8 @@ function parseScriptExecution(source: string, limits = { commands: MAX_SCRIPT_BR
   const logLimit = Math.min(MAX_SCRIPT_BRIDGE_LOGS, Math.max(1, Math.round(limits.logs)))
   if (value.commands.length > commandLimit) throw new Error(`Script emitted more than its ${commandLimit}-command behavior budget in one invocation.`)
   if (value.logs.length > logLimit) throw new Error(`Script emitted more than its ${logLimit}-log behavior budget in one invocation.`)
-  if (value.commands.some(command => !command || typeof command !== 'object' || typeof (command as { type?: unknown }).type !== 'string')) throw new Error('Script emitted a malformed host command.')
-  if (value.logs.some(log => !log || typeof log !== 'object' || typeof (log as { level?: unknown }).level !== 'string' || typeof (log as { message?: unknown }).message !== 'string')) throw new Error('Script emitted a malformed log entry.')
+  if (value.commands.some(/* 先计算 !command || typeof command !== 'object'；仅当其为假值时求右侧 typeof (command as { type?: unknown }).type !== 'string'，返回短路求值结果。 */ command => !command || typeof command !== 'object' || typeof (command as { type?: unknown }).type !== 'string')) throw new Error('Script emitted a malformed host command.')
+  if (value.logs.some(/** 结构说明（自动提取）：value.logs.some 回调；输入 log；返回表达式求值结果。 */ log => !log || typeof log !== 'object' || typeof (log as { level?: unknown }).level !== 'string' || typeof (log as { message?: unknown }).message !== 'string')) throw new Error('Script emitted a malformed log entry.')
   return value as ScriptExecution
 }
 
@@ -266,11 +267,11 @@ export class GameplayRuntime {
   private pendingGraphExecution: PendingGraphExecution | null = null
   private networkUnsubscribe: (() => void) | null = null
 
-  get isActive(): boolean { return this.active }
+  /* 返回 this.active 的当前值。 */ get isActive(): boolean { return this.active }
   /** Stable through scene changes; increments only when a new Play session begins. */
-  get sessionIdentity(): number { return this.playSessionIdentity }
+  /* 返回 this.playSessionIdentity 的当前值。 */ get sessionIdentity(): number { return this.playSessionIdentity }
 
-  beginSession(): void {
+  /** 结构说明（自动提取）：beginSession；无显式参数；直接调用 authoredEntities.clear、compiledExports.clear、captureAuthoredEntity、input.start、time.reset 等；写入 active、scriptDebugState.exceptionPolicy、fixedPressed、fixedReleased 等；包含循环处理。 */ beginSession(): void {
     if (this.active) return
     this.playSessionIdentity++
     this.authoredEntities.clear(); this.compiledExports.clear()
@@ -284,16 +285,16 @@ export class GameplayRuntime {
     audioRuntime.stopAll();audioRuntime.begin(physicsState.audioSettings)
     audioRuntime.setTransportTime({seconds:0,playing:true,scale:physicsState.globalSettings.timeScale})
     for (const entity of physicsState.world.entities) beginEntityLifetime(entity)
-    setPoolRuntimeHooks({ clock: () => this.time.value.elapsed, beforeRelease: entities => {
+    setPoolRuntimeHooks({ clock: /* 返回 this.time.value.elapsed 的当前值。 */ () => this.time.value.elapsed, beforeRelease: /** 结构说明（自动提取）：匿名回调；输入 entities；直接调用 destroying.add、runDestructionCallbacks、clearEntityRuntimeState、destroying.delete；包含循环处理。 */ entities => {
       for (const entity of entities) this.destroying.add(entity.uuid)
       for (const entity of entities) { this.runDestructionCallbacks(entity); this.clearEntityRuntimeState(entity) }
       for (const entity of entities) this.destroying.delete(entity.uuid)
     } })
-    setStreamRuntimeHooks({ beforeDeactivate: (entities, world) => {
+    setStreamRuntimeHooks({ beforeDeactivate: /** 结构说明（自动提取）：匿名回调；输入 entities、world；直接调用 destroying.add、runDestructionCallbacks、clearEntityRuntimeState、destroying.delete；包含循环处理。 */ (entities, world) => {
       for (const entity of entities) this.destroying.add(entity.uuid)
       for (const entity of entities) { this.runDestructionCallbacks(entity, world); this.clearEntityRuntimeState(entity) }
       for (const entity of entities) this.destroying.delete(entity.uuid)
-    }, afterActivate: (_entities, fresh) => { initializeGameplayEntities(fresh); this.ensureLifecycle() } }, physicsState.world.entities)
+    }, afterActivate: /** 结构说明（自动提取）：匿名回调；输入 _entities、fresh；直接调用 initializeGameplayEntities、ensureLifecycle。 */ (_entities, fresh) => { initializeGameplayEntities(fresh); this.ensureLifecycle() } }, physicsState.world.entities)
     resetDeterministicSeed()
     resetGameFlow()
     beginGameplayComponents(physicsState.world.entities)
@@ -310,13 +311,13 @@ export class GameplayRuntime {
     this.fixedReleased = {}
     this.ensureScriptRuntime()
     this.compileAttachedScripts()
-    animationRuntime.onEvent = (entity, event) => {
+    animationRuntime.onEvent = /** 结构说明（自动提取）：匿名回调；输入 entity、event；直接调用 JSON.parse、emitSignal；写入 payload。 */ (entity, event) => {
       let payload: unknown = event.payload
       try { payload = event.payload ? JSON.parse(event.payload) : null } catch { /* Plain text payload. */ }
       this.emitSignal(event.signal, payload, entity.uuid, `animation:${entity.uuid}`)
     }
-    animationRuntime.onCommand = (entity, track, command) => {
-      const target = track.targetEntityUuid ? physicsState.world.entities.find(candidate => candidate.uuid === track.targetEntityUuid) ?? entity : entity
+    animationRuntime.onCommand = /** 结构说明（自动提取）：匿名回调；输入 entity、track、command；直接调用 physicsState.world.entities.find、JSON.parse、runEntityFunction、command.value.slice、target.getComponent 等；写入 payload、audio.audioClip、animator.currentState、player.timelineAsset 等。 */ (entity, track, command) => {
+      const target = track.targetEntityUuid ? physicsState.world.entities.find(/* 比较 candidate.uuid 与 track.targetEntityUuid，返回严格相等的判断结果。 */ candidate => candidate.uuid === track.targetEntityUuid) ?? entity : entity
       let payload: unknown = command.payload
       try { payload = command.payload ? JSON.parse(command.payload) : null } catch { /* Plain text payload. */ }
       if (track.kind === 'Method') this.runEntityFunction(target, command.value.slice(0, 80))
@@ -325,7 +326,7 @@ export class GameplayRuntime {
       else if (track.kind === 'Timeline') { const player = target.getComponent<TimelinePlayer>('TimelinePlayer'); if (player) { if (command.value) player.timelineAsset = command.value; player.currentTime = 0; player.playing = true } }
       else this.emitSignal(track.kind === 'VisualGraph' ? `visual.${command.value}` : command.value || 'animation.command', payload, target.uuid, `animation:${entity.uuid}`)
     }
-    timelineRuntime.onEvent = (entity, clip, type) => {
+    timelineRuntime.onEvent = /** 结构说明（自动提取）：匿名回调；输入 entity、clip、type；直接调用 entity.getComponent、clip.value.slice、JSON.parse、clip.value.trim、slice 等；写入 animator.currentState、payload。 */ (entity, clip, type) => {
       if (type === 'Animation') {
         const animator = entity.getComponent<Animator>('Animator')
         if (animator && typeof clip.value === 'string') animator.currentState = clip.value.slice(0, 80)
@@ -340,21 +341,21 @@ export class GameplayRuntime {
     this.emitSignal('scene.started', { scene: sceneManager.activeSceneUuid }, '', 'runtime')
     useSaveProject()
     void pluginRuntime.start()
-    void beginWorldGameplay((name, payload, target, source) => this.emitSignal(name, payload, target, source), () => this.active && this.sessionGeneration === sessionGeneration)
+    void beginWorldGameplay(/* 调用 this.emitSignal(name, payload, target, source) 并返回调用结果。 */ (name, payload, target, source) => this.emitSignal(name, payload, target, source), /* 先计算 this.active；仅当其为真值时求右侧 this.sessionGeneration === sessionGeneration，返回短路求值结果。 */ () => this.active && this.sessionGeneration === sessionGeneration)
     beginProductionRuntime()
     this.networkUnsubscribe?.()
-    const rpcCleanup = onProductionRpc((name, payload, context) => this.emitSignal(`network.${name}`, { payload, sender: context.sender, tick: context.tick }, '', context.sender))
-    const sceneCleanup = onProductionSceneHandoff((sceneUuid, spawnTag, peerId) => { this.pendingScene = { type: 'load', identifier: sceneUuid }; this.emitSignal('network.scene_handoff', { scene: sceneUuid, spawnTag, peer: peerId }, '', peerId) })
-    const remoteInputCleanup = onProductionRemoteInput(frame => {
+    const rpcCleanup = onProductionRpc(/* 调用 this.emitSignal(`network.${name}`, { payload, sender: context.sender, tick: context.tick }, '', context.sender) 并返回调用结果。 */ (name, payload, context) => this.emitSignal(`network.${name}`, { payload, sender: context.sender, tick: context.tick }, '', context.sender))
+    const sceneCleanup = onProductionSceneHandoff(/** 结构说明（自动提取）：onProductionSceneHandoff 回调；输入 sceneUuid、spawnTag、peerId；直接调用 emitSignal；写入 pendingScene。 */ (sceneUuid, spawnTag, peerId) => { this.pendingScene = { type: 'load', identifier: sceneUuid }; this.emitSignal('network.scene_handoff', { scene: sceneUuid, spawnTag, peer: peerId }, '', peerId) })
+    const remoteInputCleanup = onProductionRemoteInput(/** 结构说明（自动提取）：onProductionRemoteInput 回调；输入 frame；直接调用 emitSignal；包含循环处理。 */ frame => {
       for (const entityUuid of frame.targetEntityUuids) this.emitSignal('network.input', { input: frame.input, sender: frame.peerId, tick: frame.tick, entity: entityUuid }, entityUuid, frame.peerId)
     })
-    this.networkUnsubscribe = () => { rpcCleanup(); sceneCleanup(); remoteInputCleanup() }
+    this.networkUnsubscribe = /** 结构说明（自动提取）：匿名回调；无显式参数；直接调用 rpcCleanup、sceneCleanup、remoteInputCleanup。 */ () => { rpcCleanup(); sceneCleanup(); remoteInputCleanup() }
     this.ensureLifecycle()
     this.flushStructuralCommands()
     addEditorLog('Gameplay runtime started', 'Runtime')
   }
 
-  frame(frameDelta: number, viewport?: DOMRect): void {
+  /** 结构说明（自动提取）：frame；输入 frameDelta、viewport；直接调用 synchronizePerformanceWorld、flushHotReloads、performance.now、Object.assign、physicsState.world.update 等；写入 inputSnapshot、scriptsMs、quitRequested、editorState.statusText。 */ frame(frameDelta: number, viewport?: DOMRect): void {
     synchronizePerformanceWorld(physicsState.world.entities)
     if (this.active) this.flushHotReloads()
     if (physicsState.playMode !== 'playing') {
@@ -392,7 +393,7 @@ export class GameplayRuntime {
       frameDelta,
       true,
       physicsState.globalSettings,
-      fixedDelta => {
+      /** 结构说明（自动提取）：physicsState.world.update 回调；输入 fixedDelta；直接调用 performance.now、replayFixedInput、runPhase、flushEntityCommands、updateGameplayComponents 等；写入 inputSnapshot、fixedPressed、fixedReleased、firstFixedStep 等。 */ fixedDelta => {
         const fixedScriptsStarted = performance.now()
         const fixedInput = firstFixedStep
           ? { ...frameInput, pressed: { ...this.fixedPressed }, released: { ...this.fixedReleased } }
@@ -406,11 +407,11 @@ export class GameplayRuntime {
         this.time.value.fixedDelta = fixedDelta
         this.runPhase('fixed_update')
         this.flushEntityCommands()
-        updateGameplayComponents(physicsState.world.entities, this.inputSnapshot, fixedDelta, (name, payload, target, source) => this.emitSignal(name, payload, target, source), (prefab, owner) => {
+        updateGameplayComponents(physicsState.world.entities, this.inputSnapshot, fixedDelta, /* 调用 this.emitSignal(name, payload, target, source) 并返回调用结果。 */ (name, payload, target, source) => this.emitSignal(name, payload, target, source), /** 结构说明（自动提取）：updateGameplayComponents 回调；输入 prefab、owner；直接调用 worldTransform、spawnRuntimePrefab。 */ (prefab, owner) => {
           const transform = worldTransform(owner, physicsState.world.entities)
           return spawnRuntimePrefab(prefab, { position: transform.position, rotation: transform.rotation, scale: { x: 1, y: 1 } })
-        }, (target, despawn) => this.queueEntityRemoval(target, despawn))
-        beforeWorldPhysicsStep(fixedDelta, this.time.value.elapsed, this.time.value.frame, (name, payload, target, source) => this.emitSignal(name, payload, target, source), scene => { this.pendingScene = { type: 'load', identifier: scene } })
+        }, /* 调用 this.queueEntityRemoval(target, despawn) 并返回调用结果。 */ (target, despawn) => this.queueEntityRemoval(target, despawn))
+        beforeWorldPhysicsStep(fixedDelta, this.time.value.elapsed, this.time.value.frame, /* 调用 this.emitSignal(name, payload, target, source) 并返回调用结果。 */ (name, payload, target, source) => this.emitSignal(name, payload, target, source), /** 将 { type: 'load', identifier: scene } 赋给 this.pendingScene，不显式返回值。 */ scene => { this.pendingScene = { type: 'load', identifier: scene } })
         this.mediaClock.advance(fixedDelta)
         setTileAnimationTime(this.mediaClock.seconds); setRuntimeCaptionTime(this.mediaClock.seconds)
         audioRuntime.setTransportTime({seconds:this.mediaClock.seconds,playing:true,scale:this.time.value.scale})
@@ -418,7 +419,7 @@ export class GameplayRuntime {
         timelineRuntime.update(physicsState.world.entities, fixedDelta)
         fixedScriptsMs += performance.now() - fixedScriptsStarted
       },
-      () => { const checksum = physicsState.world.stateChecksum(); completeReplayFixedStep(checksum); updateProductionRuntime(physicsState.world.entities, this.time.value.fixedDelta, this.inputSnapshot, checksum) }
+      /** 结构说明（自动提取）：physicsState.world.update 回调；无显式参数；直接调用 physicsState.world.stateChecksum、completeReplayFixedStep、updateProductionRuntime。 */ () => { const checksum = physicsState.world.stateChecksum(); completeReplayFixedStep(checksum); updateProductionRuntime(physicsState.world.entities, this.time.value.fixedDelta, this.inputSnapshot, checksum) }
     ))
     const physicsAndFixedScriptsMs = performance.now() - physicsStarted
     scriptsMs += fixedScriptsMs
@@ -449,7 +450,7 @@ export class GameplayRuntime {
     }
   }
 
-  stepOnce(viewport?: DOMRect): void {
+  /** 结构说明（自动提取）：stepOnce；输入 viewport；直接调用 beginSession、flushHotReloads、synchronizePerformanceWorld、dispatchSignals、ensureLifecycle 等；写入 inputSnapshot、fixedPressed、fixedReleased。 */ stepOnce(viewport?: DOMRect): void {
     if (!this.active) this.beginSession()
     this.flushHotReloads()
     synchronizePerformanceWorld(physicsState.world.entities)
@@ -468,11 +469,11 @@ export class GameplayRuntime {
     this.dispatchTimerExpirations(this.time.beginFrame(this.time.value.fixedDelta, physicsState.globalSettings.tickRate, physicsState.globalSettings.timeScale))
     this.runPhase('fixed_update')
     this.flushEntityCommands()
-    updateGameplayComponents(physicsState.world.entities, this.inputSnapshot, this.time.value.fixedDelta, (name, payload, target, source) => this.emitSignal(name, payload, target, source), (prefab, owner) => {
+    updateGameplayComponents(physicsState.world.entities, this.inputSnapshot, this.time.value.fixedDelta, /* 调用 this.emitSignal(name, payload, target, source) 并返回调用结果。 */ (name, payload, target, source) => this.emitSignal(name, payload, target, source), /** 结构说明（自动提取）：updateGameplayComponents 回调；输入 prefab、owner；直接调用 worldTransform、spawnRuntimePrefab。 */ (prefab, owner) => {
       const transform = worldTransform(owner, physicsState.world.entities)
       return spawnRuntimePrefab(prefab, { position: transform.position, rotation: transform.rotation, scale: { x: 1, y: 1 } })
-    }, (target, despawn) => this.queueEntityRemoval(target, despawn))
-    beforeWorldPhysicsStep(this.time.value.fixedDelta, this.time.value.elapsed, this.time.value.frame, (name, payload, target, source) => this.emitSignal(name, payload, target, source), scene => { this.pendingScene = { type: 'load', identifier: scene } })
+    }, /* 调用 this.queueEntityRemoval(target, despawn) 并返回调用结果。 */ (target, despawn) => this.queueEntityRemoval(target, despawn))
+    beforeWorldPhysicsStep(this.time.value.fixedDelta, this.time.value.elapsed, this.time.value.frame, /* 调用 this.emitSignal(name, payload, target, source) 并返回调用结果。 */ (name, payload, target, source) => this.emitSignal(name, payload, target, source), /** 将 { type: 'load', identifier: scene } 赋给 this.pendingScene，不显式返回值。 */ scene => { this.pendingScene = { type: 'load', identifier: scene } })
     Object.assign(physicsState.engineDiagnostics, physicsState.world.singleStep(physicsState.globalSettings))
     const checksum = physicsState.world.stateChecksum()
     completeReplayFixedStep(checksum)
@@ -491,7 +492,7 @@ export class GameplayRuntime {
     this.flushStructuralCommands()
   }
 
-  stopSession(log = true): void {
+  /** 结构说明（自动提取）：stopSession；输入 log；直接调用 setStreamRuntimeHooks、destroying.add、runDestructionCallbacks、retireEntityLifetime、pendingDestroy.clear 等；写入 pendingPrefabs、animationRuntime.onEvent、animationRuntime.onCommand、timelineRuntime.onEvent 等；包含循环处理。 */ stopSession(log = true): void {
     if (!this.active) return
     setStreamRuntimeHooks(null)
     this.sessionGeneration++
@@ -548,7 +549,7 @@ export class GameplayRuntime {
     if (log) addEditorLog('Gameplay runtime stopped', 'Runtime')
   }
 
-  private decorateViewportInput(snapshot: InputSnapshot, viewport?: DOMRect): InputSnapshot {
+  /** 结构说明（自动提取）：decorateViewportInput；输入 snapshot、viewport；直接调用 Math.max、activeGameCamera、gameScreenToWorld、visibleWorldBounds；写入 snapshot.mouseWorldPosition、snapshot.viewBounds、snapshot.viewportSize；返回路径包含 snapshot。 */ private decorateViewportInput(snapshot: InputSnapshot, viewport?: DOMRect): InputSnapshot {
     const width = Math.max(1, viewport?.width ?? 1), height = Math.max(1, viewport?.height ?? 1)
     const active = activeGameCamera(physicsState.world.entities, width, height)
     const view = active?.view ?? { scale: physicsState.camera.scale, offset: physicsState.camera.offset }
@@ -560,7 +561,7 @@ export class GameplayRuntime {
     return snapshot
   }
 
-  synchronizeExports(entity: Entity): string | null {
+  /** 结构说明（自动提取）：synchronizeExports；输入 entity；直接调用 resolveAsset、readTextAsset、resolveScriptBundle、Error、errorMessage 等；写入 source、component.lastError、component.propertyMetadata、next[…] 等；返回路径包含 component.lastError；包含循环处理；包含显式抛错路径。 */ synchronizeExports(entity: Entity): string | null {
     const component = entity.script2D
     const asset = resolveAsset(component?.scriptAsset)
     const storedSource = readTextAsset(component?.scriptAsset)
@@ -572,7 +573,7 @@ export class GameplayRuntime {
     try {
       const exports = JSON.parse(this.scriptRuntime.validate(source)) as ExportedProperty[]
       const next: Record<string, ScriptPropertyValue> = {}
-      component.propertyMetadata = Object.fromEntries(exports.map(exported => [exported.name, { ...exported, defaultValue: exported.defaultValue ?? exported.value }]))
+      component.propertyMetadata = Object.fromEntries(exports.map(/* 返回按声明顺序构造的数组 [exported.name, { ...exported, defaultValue: exported.defaultValue ?? exported.value }]。 */ exported => [exported.name, { ...exported, defaultValue: exported.defaultValue ?? exported.value }]))
       for (const exported of exports) next[exported.name] = this.exportValue(exported, component.properties[exported.name])
       component.properties = next
       component.lastError = null
@@ -583,7 +584,7 @@ export class GameplayRuntime {
     }
   }
 
-  validateSource(source: string): { error: string | null; exports: ExportedProperty[] } {
+  /** 结构说明（自动提取）：validateSource；输入 source；直接调用 ensureScriptRuntime、JSON.parse、scriptRuntime.validate、errorMessage。 */ validateSource(source: string): { error: string | null; exports: ExportedProperty[] } {
     this.ensureScriptRuntime()
     if (!this.scriptRuntime) return { error: 'Script runtime is still loading', exports: [] }
     try {
@@ -594,7 +595,7 @@ export class GameplayRuntime {
   }
 
   /** Read the exact draft/module bundle for editor analysis without invoking the VM. */
-  resolveModuleSource(scriptUuid: string, source: string, overrides = new Map<string, string>()): { source: string | null; error: string | null } {
+  /** 结构说明（自动提取）：resolveModuleSource；输入 scriptUuid、source、overrides；直接调用 Map、next.set、resolveScriptBundle、errorMessage。 */ resolveModuleSource(scriptUuid: string, source: string, overrides = new Map<string, string>()): { source: string | null; error: string | null } {
     try {
       const next = new Map(overrides)
       next.set(scriptUuid, source)
@@ -603,7 +604,7 @@ export class GameplayRuntime {
     } catch (error) { return { source: null, error: this.errorMessage(error) } }
   }
 
-  validateModuleSource(scriptUuid: string, source: string, overrides = new Map<string, string>()): { error: string | null; exports: ExportedProperty[] } {
+  /** 结构说明（自动提取）：validateModuleSource；输入 scriptUuid、source、overrides；直接调用 Map、next.set、resolveScriptBundle、validateSource、errorMessage。 */ validateModuleSource(scriptUuid: string, source: string, overrides = new Map<string, string>()): { error: string | null; exports: ExportedProperty[] } {
     try {
       const next = new Map(overrides)
       next.set(scriptUuid, source)
@@ -615,7 +616,7 @@ export class GameplayRuntime {
     }
   }
 
-  queueHotReload(scriptUuid: string, source: string): void {
+  /** 结构说明（自动提取）：queueHotReload；输入 scriptUuid、source；直接调用 pendingReloads.delete、pendingRollbackHistory.delete、validateModuleSource、pendingReloads.set；写入 scriptDebugState.hotReload。 */ queueHotReload(scriptUuid: string, source: string): void {
     // A newer request supersedes even a previously valid queued draft.
     this.pendingReloads.delete(scriptUuid)
     this.pendingRollbackHistory.delete(scriptUuid)
@@ -633,7 +634,7 @@ export class GameplayRuntime {
     scriptDebugState.hotReload = { status: 'pending', scriptUuid, message: 'Analyzed candidate queued for a transactional frame-boundary swap', frame: this.time.value.frame }
   }
 
-  queueGraphHotReload(scriptUuid: string, candidateSource: string, previousSource: string): void {
+  /** 结构说明（自动提取）：queueGraphHotReload；输入 scriptUuid、candidateSource、previousSource；直接调用 pendingReloads.delete、pendingRollbackHistory.delete、planGraphHotReload、graphStateValues、graphPlan.reasons.join 等；写入 scriptDebugState.hotReload；包含显式抛错路径。 */ queueGraphHotReload(scriptUuid: string, candidateSource: string, previousSource: string): void {
     // A newer request supersedes even a previously valid queued draft.
     this.pendingReloads.delete(scriptUuid)
     this.pendingRollbackHistory.delete(scriptUuid)
@@ -659,7 +660,7 @@ export class GameplayRuntime {
     }
   }
 
-  rollbackHotReload(scriptUuid: string): boolean {
+  /** 结构说明（自动提取）：rollbackHotReload；输入 scriptUuid；直接调用 peekHotReloadRollback、resolveAsset、compiledDocuments.get、validateModuleSource、updateTextAsset 等；写入 scriptDebugState.hotReload。 */ rollbackHotReload(scriptUuid: string): boolean {
     const rollback = peekHotReloadRollback(scriptUuid)
     if (!rollback || !scriptProjectSettings.hotReloadEnabled || resolveAsset(scriptUuid)?.script?.reloadPolicy === 'disabled') return false
     if (rollback.source === this.compiledDocuments.get(scriptUuid)) {
@@ -674,7 +675,7 @@ export class GameplayRuntime {
     return true
   }
 
-  emitSignal(name: string, payload: unknown = null, target = '', source = 'editor', deliveredCallbacks: string[] = []): void {
+  /** 结构说明（自动提取）：emitSignal；输入 name、payload、target、source、deliveredCallbacks；直接调用 slice、name.trim、pendingSignals.push、serializable、target.trim 等。 */ emitSignal(name: string, payload: unknown = null, target = '', source = 'editor', deliveredCallbacks: string[] = []): void {
     const clean = name.trim().slice(0, 128)
     if (!clean) return
     this.pendingSignals.push({ name: clean, payload: this.serializable(payload), target: target.trim().slice(0, 128), source: source.trim().slice(0, 128), deliveredCallbacks: [...deliveredCallbacks] })
@@ -684,14 +685,14 @@ export class GameplayRuntime {
     }
   }
 
-  debugContinue(): void {
+  /** 结构说明（自动提取）：debugContinue；无显式参数；直接调用 clearScriptDebugger、requestDebugStep、requestGraphStep、physicsState.world.entities.find、processScriptCommands 等；写入 pendingGraphExecution、physicsState.playMode、pendingDebugInvocation。 */ debugContinue(): void {
     if (this.pendingGraphExecution) {
       const pending = this.pendingGraphExecution
       this.pendingGraphExecution = null
       clearScriptDebugger()
       requestDebugStep('continue')
       requestGraphStep('continue')
-      const entity = physicsState.world.entities.find(candidate => candidate.uuid === pending.entityUuid)
+      const entity = physicsState.world.entities.find(/* 比较 candidate.uuid 与 pending.entityUuid，返回严格相等的判断结果。 */ candidate => candidate.uuid === pending.entityUuid)
       if (entity) this.processScriptCommands(entity, pending.scriptUuid, pending.sourcePath, pending.functionName, pending.commands, pending.nextIndex)
       if (!this.pendingGraphExecution && physicsState.playMode === 'paused') physicsState.playMode = 'playing'
       return
@@ -701,20 +702,20 @@ export class GameplayRuntime {
     clearScriptDebugger()
     requestDebugStep('continue')
     if (pending) {
-      const entity = physicsState.world.entities.find(candidate => candidate.uuid === pending.entityUuid)
+      const entity = physicsState.world.entities.find(/* 比较 candidate.uuid 与 pending.entityUuid，返回严格相等的判断结果。 */ candidate => candidate.uuid === pending.entityUuid)
       if (entity) this.runEntityFunction(entity, pending.functionName, pending.contact, pending.event, true, pending.logicAsset, false, pending.callbackKind)
     }
     if (physicsState.playMode === 'paused') physicsState.playMode = 'playing'
   }
 
-  debugStep(mode: Exclude<DebugStepMode, 'continue'> = 'over'): void {
+  /** 结构说明（自动提取）：debugStep；输入 mode；直接调用 clearScriptDebugger、requestDebugStep、requestGraphStep、physicsState.world.entities.find、processScriptCommands 等；写入 pendingGraphExecution、physicsState.playMode、graphDebugState.paused、graphDebugState.reason 等。 */ debugStep(mode: Exclude<DebugStepMode, 'continue'> = 'over'): void {
     if (this.pendingGraphExecution) {
       const pending = this.pendingGraphExecution
       this.pendingGraphExecution = null
       clearScriptDebugger()
       requestDebugStep(mode)
       requestGraphStep(mode)
-      const entity = physicsState.world.entities.find(candidate => candidate.uuid === pending.entityUuid)
+      const entity = physicsState.world.entities.find(/* 比较 candidate.uuid 与 pending.entityUuid，返回严格相等的判断结果。 */ candidate => candidate.uuid === pending.entityUuid)
       if (entity) this.processScriptCommands(entity, pending.scriptUuid, pending.sourcePath, pending.functionName, pending.commands, pending.nextIndex)
       physicsState.playMode = 'paused'
       if (!this.pendingGraphExecution) {
@@ -730,7 +731,7 @@ export class GameplayRuntime {
     clearScriptDebugger()
     requestDebugStep(mode)
     if (pending) {
-      const entity = physicsState.world.entities.find(candidate => candidate.uuid === pending.entityUuid)
+      const entity = physicsState.world.entities.find(/* 比较 candidate.uuid 与 pending.entityUuid，返回严格相等的判断结果。 */ candidate => candidate.uuid === pending.entityUuid)
       if (entity) this.runEntityFunction(entity, pending.functionName, pending.contact, pending.event, true, pending.logicAsset, false, pending.callbackKind)
     }
     physicsState.playMode = 'paused'
@@ -738,7 +739,7 @@ export class GameplayRuntime {
     scriptDebugState.reason = `Step ${mode} completed at a safe callback boundary`
   }
 
-  debugRestart(): void {
+  /** 结构说明（自动提取）：debugRestart；无显式参数；直接调用 stopSession、beginSession；写入 physicsState.playMode、scriptDebugState.paused、scriptDebugState.reason。 */ debugRestart(): void {
     this.stopSession(false)
     this.beginSession()
     physicsState.playMode = 'paused'
@@ -746,8 +747,8 @@ export class GameplayRuntime {
     scriptDebugState.reason = 'Runtime restarted; continue to enter the next callback'
   }
 
-  cancelDebugTask(taskId: string): boolean {
-    const task = scriptDebugState.tasks.find(item => item.id === taskId)
+  /** 结构说明（自动提取）：cancelDebugTask；输入 taskId；直接调用 scriptDebugState.tasks.find、includes、time.cancelTask、updateDebugTask、addEditorLog。 */ cancelDebugTask(taskId: string): boolean {
+    const task = scriptDebugState.tasks.find(/* 比较 item.id 与 taskId，返回严格相等的判断结果。 */ item => item.id === taskId)
     if (!task || !['queued', 'running', 'waiting'].includes(task.state)) return false
     this.time.cancelTask(task.entityUuid, task.name)
     updateDebugTask({ ...task, state: 'cancelled', detail: `Cancelled from Script Studio at frame ${this.time.value.frame}` })
@@ -755,21 +756,21 @@ export class GameplayRuntime {
     return true
   }
 
-  runScriptTests(scriptUuid?: string, options: { tags?: string[]; includeSkipped?: boolean; testNames?: string[] } = {}): ScriptTestResult[] {
+  /** 结构说明（自动提取）：runScriptTests；输入 scriptUuid、options；直接调用 resetScriptCoverage、physicsState.world.entities.flatMap、values、Map、references.flatMap 等；写入 source；返回路径包含 results；包含循环处理。 */ runScriptTests(scriptUuid?: string, options: { tags?: string[]; includeSkipped?: boolean; testNames?: string[] } = {}): ScriptTestResult[] {
     if (scriptProjectSettings.testing.coverageEnabled) resetScriptCoverage()
-    const references = scriptUuid ? [scriptUuid] : physicsState.world.entities.flatMap(entity => [entity.script2D?.scriptAsset, ...resolveEventHandlers(entity.script2D?.eventSheetAsset).map(handler => handler.logicAsset)])
-    const assets = [...new Map(references.flatMap(reference => { const asset = resolveAsset(reference); return asset && (asset.assetType === 'script' || asset.assetType === 'visualScript') ? [[asset.uuid, asset] as const] : [] })).values()]
+    const references = scriptUuid ? [scriptUuid] : physicsState.world.entities.flatMap(/** 结构说明（自动提取）：physicsState.world.entities.flatMap 回调；输入 entity；直接调用 map、resolveEventHandlers；返回表达式求值结果。 */ entity => [entity.script2D?.scriptAsset, ...resolveEventHandlers(entity.script2D?.eventSheetAsset).map(/* 返回 handler.logicAsset 的当前值。 */ handler => handler.logicAsset)])
+    const assets = [...new Map(references.flatMap(/** 结构说明（自动提取）：references.flatMap 回调；输入 reference；直接调用 resolveAsset。 */ reference => { const asset = resolveAsset(reference); return asset && (asset.assetType === 'script' || asset.assetType === 'visualScript') ? [[asset.uuid, asset] as const] : [] })).values()]
     const results: ScriptTestResult[] = []
     for (const asset of assets) {
       let source: string | null = null
       try { source = this.resolveScriptBundle(asset.uuid) } catch (error) { results.push({ script: asset.name, test: 'module resolution', passed: false, skipped: false, durationMs: 0, seed: 1, caseName: '', tags: [], message: this.errorMessage(error) }); continue }
       if (!source) continue
       const analysis = analyzeScript(source), selectedNames = new Set(options.testNames ?? [])
-      const tests = analysis.tests.filter(test => (!options.tags?.length || options.tags.every(tag => test.tags.includes(tag))) && (!options.testNames || selectedNames.has(test.name)))
+      const tests = analysis.tests.filter(/** 结构说明（自动提取）：analysis.tests.filter 回调；输入 test；直接调用 options.tags.every、selectedNames.has；返回表达式求值结果。 */ test => (!options.tags?.length || options.tags.every(/* 调用 test.tags.includes(tag) 并返回调用结果。 */ tag => test.tags.includes(tag))) && (!options.testNames || selectedNames.has(test.name)))
       results.push(...executeScriptTestSuite({
         scriptUuid: asset.uuid, scriptName: asset.name, source, functions: new Set(Object.keys(analysis.functions)), tests, includeSkipped: options.includeSkipped,
-        createVm: () => new WasmScriptRuntime(), parseExecution: parseScriptExecution,
-        onExecution: functionName => { if (scriptProjectSettings.testing.coverageEnabled) recordScriptCoverage(asset.uuid, source!, functionName) },
+        createVm: /** 结构说明（自动提取）：匿名回调；无显式参数；直接调用 WasmScriptRuntime；返回表达式求值结果。 */ () => new WasmScriptRuntime(), parseExecution: parseScriptExecution,
+        onExecution: /** 结构说明（自动提取）：匿名回调；输入 functionName；直接调用 recordScriptCoverage。 */ functionName => { if (scriptProjectSettings.testing.coverageEnabled) recordScriptCoverage(asset.uuid, source!, functionName) },
         context: {
           apiVersion: asset.script?.apiVersion ?? scriptProjectSettings.apiVersion, entity: 'test-entity', entityName: 'Script test', components: [], entities: {},
           time: { delta: 0, fixedDelta: 1 / 60, elapsed: 0, scale: 1, frame: 0 }, randomSeed: scriptProjectSettings.deterministicTestSeed, input: EMPTY_INPUT,
@@ -779,11 +780,11 @@ export class GameplayRuntime {
     }
     if (!results.length && scriptProjectSettings.testing.failOnEmpty) results.push({ script: 'Selected scripts', test: 'discovery', passed: false, skipped: false, durationMs: 0, seed: 1, caseName: '', tags: [], message: 'No tests matched the selected scripts, tags and names.' })
     scriptDebugState.testResults.splice(0, scriptDebugState.testResults.length, ...results)
-    addEditorLog(`Script tests: ${results.filter(result => result.passed && !result.skipped).length}/${results.filter(result => !result.skipped).length} passed, ${results.filter(result => result.skipped).length} skipped`, 'Script', results.every(result => result.passed) ? 'info' : 'error')
+    addEditorLog(`Script tests: ${results.filter(/* 先计算 result.passed；仅当其为真值时求右侧 !result.skipped，返回短路求值结果。 */ result => result.passed && !result.skipped).length}/${results.filter(/* 返回 result.skipped 的逻辑取反结果。 */ result => !result.skipped).length} passed, ${results.filter(/* 返回 result.skipped 的当前值。 */ result => result.skipped).length} skipped`, 'Script', results.every(/* 返回 result.passed 的当前值。 */ result => result.passed) ? 'info' : 'error')
     return results
   }
 
-  invokeUiCallback(entity: Entity, functionName: string): void {
+  /** 结构说明（自动提取）：invokeUiCallback；输入 entity、functionName；直接调用 functionName.trim、entityLifetimeActive、isRemovalPending、dispatchTimelineUiAction、addEditorLog 等。 */ invokeUiCallback(entity: Entity, functionName: string): void {
     const requested = functionName.trim()
     if (!this.active || !entity.enabled || !entityLifetimeActive(entity) || this.isRemovalPending(entity)) return
     const timelineAction = dispatchTimelineUiAction(entity, requested, physicsState.world.entities)
@@ -791,7 +792,7 @@ export class GameplayRuntime {
     const callback = requested.slice(0, 80)
     if (!callback || !this.canRun(entity)) return
     const primary = resolveAsset(entity.script2D?.scriptAsset)?.uuid
-    const sheetOwnsCallback = resolveEventHandlers(entity.script2D?.eventSheetAsset).some(handler => handler.kind === 'ui' && (!handler.selector || handler.selector === callback) && handler.callback === callback && resolveAsset(handler.logicAsset)?.uuid === primary)
+    const sheetOwnsCallback = resolveEventHandlers(entity.script2D?.eventSheetAsset).some(/** 结构说明（自动提取）：some 回调；输入 handler；直接调用 resolveAsset；返回表达式求值结果。 */ handler => handler.kind === 'ui' && (!handler.selector || handler.selector === callback) && handler.callback === callback && resolveAsset(handler.logicAsset)?.uuid === primary)
     const direct = callback !== 'on_signal' && !sheetOwnsCallback
     const delivered = direct && primary ? [JSON.stringify([primary, callback])] : []
     this.emitSignal(`ui.${callback}`, { entity: entity.uuid }, entity.uuid, entity.uuid, delivered)
@@ -803,15 +804,15 @@ export class GameplayRuntime {
     this.flushStructuralCommands()
   }
 
-  private ensureScriptRuntime(): void {
+  /** 结构说明（自动提取）：ensureScriptRuntime；无显式参数；直接调用 WasmScriptRuntime；写入 scriptRuntime。 */ private ensureScriptRuntime(): void {
     if (!this.scriptRuntime && !physicsState.world.wasmError) {
       try { this.scriptRuntime = new WasmScriptRuntime() } catch { /* WASM is not initialized yet. */ }
     }
   }
 
-  private ensureLifecycle(): void {
+  /** 结构说明（自动提取）：ensureLifecycle；无显式参数；直接调用 captureAuthoredEntity、physicsState.world.entities.filter、awakened.has、awakened.add、runEntityFunction 等；写入 diagnostics.scripts；包含循环处理。 */ private ensureLifecycle(): void {
     for (const entity of physicsState.world.entities) this.captureAuthoredEntity(entity, 'runtime-spawned')
-    const scripted = physicsState.world.entities.filter(entity => this.canRun(entity))
+    const scripted = physicsState.world.entities.filter(/* 调用 this.canRun(entity) 并返回调用结果。 */ entity => this.canRun(entity))
     this.diagnostics.scripts = scripted.length
     for (const entity of scripted) {
       if (!this.awakened.has(entity.uuid)) {
@@ -829,21 +830,21 @@ export class GameplayRuntime {
     }
   }
 
-  private dispatchInputCallbacks(snapshot: InputSnapshot): void {
+  /** 结构说明（自动提取）：dispatchInputCallbacks；输入 snapshot；直接调用 emitSignal、physicsState.world.entities.filter、runEntityFunction、runEventSheetHandlers；包含循环处理。 */ private dispatchInputCallbacks(snapshot: InputSnapshot): void {
     for (const action of physicsState.inputMap) {
       const phase = snapshot.performed[action.name] ? 'performed' : snapshot.cancelled[action.name] ? 'cancelled' : ''
       if (!phase) continue
       this.emitSignal(`input.${action.name}.${phase}`, { action: action.name, phase, axis: snapshot.axes[action.name] ?? 0, vector: snapshot.vectors[action.name] ?? [0, 0], duration: snapshot.durations[action.name] ?? 0 }, '', 'input')
       if (!action.callback) continue
-      for (const entity of physicsState.world.entities.filter(candidate => this.canRun(candidate))) this.runEntityFunction(entity, action.callback)
+      for (const entity of physicsState.world.entities.filter(/* 调用 this.canRun(candidate) 并返回调用结果。 */ candidate => this.canRun(candidate))) this.runEntityFunction(entity, action.callback)
     }
-    for (const entity of physicsState.world.entities.filter(candidate => this.canRun(candidate))) for (const action of physicsState.inputMap) {
+    for (const entity of physicsState.world.entities.filter(/* 调用 this.canRun(candidate) 并返回调用结果。 */ candidate => this.canRun(candidate))) for (const action of physicsState.inputMap) {
       if (snapshot.pressed[action.name]) this.runEventSheetHandlers(entity, 'input-pressed', action.name)
       if (snapshot.released[action.name]) this.runEventSheetHandlers(entity, 'input-released', action.name)
     }
   }
 
-  private runPhase(functionName: LifecycleFunction): void {
+  /** 结构说明（自动提取）：runPhase；输入 functionName；直接调用 runEntityFunction、runEventSheetHandlers；包含循环处理。 */ private runPhase(functionName: LifecycleFunction): void {
     for (const entity of [...physicsState.world.entities]) {
       if (scriptDebugState.paused) break
       this.runEntityFunction(entity, functionName)
@@ -852,7 +853,7 @@ export class GameplayRuntime {
     }
   }
 
-  private runEventSheetHandlers(entity: Entity, kind: ObjectEventKind, selector = '', canonicalCallback = '', contact?: ScriptContact, event?: ScriptEvent, alreadyDispatched: readonly string[] = []): Set<string> {
+  /** 结构说明（自动提取）：runEventSheetHandlers；输入 entity、kind、selector、canonicalCallback、contact、event、alreadyDispatched；直接调用 resolveAsset、Set、JSON.stringify、canRun、resolveEventHandlers 等；返回路径包含 dispatched；包含循环处理。 */ private runEventSheetHandlers(entity: Entity, kind: ObjectEventKind, selector = '', canonicalCallback = '', contact?: ScriptContact, event?: ScriptEvent, alreadyDispatched: readonly string[] = []): Set<string> {
     const reference = entity.script2D?.eventSheetAsset
     const primary = resolveAsset(entity.script2D?.scriptAsset)?.uuid
     const dispatched = new Set<string>([...alreadyDispatched, ...(canonicalCallback && primary ? [JSON.stringify([primary, canonicalCallback])] : [])])
@@ -867,24 +868,24 @@ export class GameplayRuntime {
     return dispatched
   }
 
-  private runDestructionCallbacks(entity: Entity, world?: Entity[]): void {
+  /** 结构说明（自动提取）：runDestructionCallbacks；输入 entity、world；直接调用 runEntityFunction、runEventSheetHandlers；写入 callbackWorld。 */ private runDestructionCallbacks(entity: Entity, world?: Entity[]): void {
     const previous = this.callbackWorld
     if (world) this.callbackWorld = world
     try { this.runEntityFunction(entity, 'on_destroy', undefined, undefined, true, undefined, true); this.runEventSheetHandlers(entity, 'destroy', '', 'on_destroy') }
     finally { this.callbackWorld = previous }
   }
 
-  private captureAuthoredEntity(entity: Entity, origin: 'scene' | 'runtime-spawned'): void {
+  /** 结构说明（自动提取）：captureAuthoredEntity；输入 entity、origin；直接调用 authoredEntities.has、authoredEntities.set、readEntityAuthoringData。 */ private captureAuthoredEntity(entity: Entity, origin: 'scene' | 'runtime-spawned'): void {
     if (!this.authoredEntities.has(entity.uuid)) this.authoredEntities.set(entity.uuid, { origin, data: readEntityAuthoringData(entity) })
   }
 
-  inspectObjectRuntime(entityUuid: string) {
-    const entity = physicsState.world.entities.find(candidate => candidate.uuid === entityUuid), authored = this.authoredEntities.get(entityUuid)
+  /** 结构说明（自动提取）：inspectObjectRuntime；输入 entityUuid；直接调用 physicsState.world.entities.find、authoredEntities.get、resolveAsset、Set、filter 等；包含循环处理。 */ inspectObjectRuntime(entityUuid: string) {
+    const entity = physicsState.world.entities.find(/* 比较 candidate.uuid 与 entityUuid，返回严格相等的判断结果。 */ candidate => candidate.uuid === entityUuid), authored = this.authoredEntities.get(entityUuid)
     const primary = resolveAsset(entity?.script2D?.scriptAsset)?.uuid
-    const behaviorIds = new Set([primary, ...(entity ? resolveEventHandlers(entity.script2D?.eventSheetAsset).map(handler => resolveAsset(handler.logicAsset)?.uuid) : [])].filter((uuid): uuid is string => !!uuid))
-    const storedScript = (authored?.data.components as Array<{ kind: string; data: { properties?: Record<string, ScriptPropertyValue> } }> | undefined)?.find(component => component.kind === 'Script2D')
-    const behaviors = [...behaviorIds].map(scriptUuid => ({ scriptUuid, sourcePath: resolveAsset(scriptUuid)?.path ?? '', primary: scriptUuid === primary,
-      authoredProperties: { ...Object.fromEntries((this.compiledExports.get(scriptUuid) ?? []).map(item => [item.name, item.defaultValue ?? item.value])), ...(scriptUuid === primary ? storedScript?.data.properties ?? {} : {}) },
+    const behaviorIds = new Set([primary, ...(entity ? resolveEventHandlers(entity.script2D?.eventSheetAsset).map(/* 返回 resolveAsset(handler.logicAsset)?.uuid 的当前值。 */ handler => resolveAsset(handler.logicAsset)?.uuid) : [])].filter(/* 返回 !uuid 的逻辑取反结果。 */ (uuid): uuid is string => !!uuid))
+    const storedScript = (authored?.data.components as Array<{ kind: string; data: { properties?: Record<string, ScriptPropertyValue> } }> | undefined)?.find(/* 比较 component.kind 与 'Script2D'，返回严格相等的判断结果。 */ component => component.kind === 'Script2D')
+    const behaviors = [...behaviorIds].map(/** 结构说明（自动提取）：map 回调；输入 scriptUuid；直接调用 resolveAsset、Object.fromEntries、map、compiledExports.get、behaviorProperties.get；返回表达式求值结果。 */ scriptUuid => ({ scriptUuid, sourcePath: resolveAsset(scriptUuid)?.path ?? '', primary: scriptUuid === primary,
+      authoredProperties: { ...Object.fromEntries((this.compiledExports.get(scriptUuid) ?? []).map(/* 返回按声明顺序构造的数组 [item.name, item.defaultValue ?? item.value]。 */ item => [item.name, item.defaultValue ?? item.value])), ...(scriptUuid === primary ? storedScript?.data.properties ?? {} : {}) },
       properties: scriptUuid === primary ? entity?.script2D?.properties ?? {} : this.behaviorProperties.get(`${entityUuid}:${scriptUuid}`) ?? {}
     }))
     const subscriptions: Array<{ sourceSheetAsset: string | null; scriptUuid: string; signal: string; callback: string; source: string; target: string }> = []
@@ -911,7 +912,7 @@ export class GameplayRuntime {
     }
   }
 
-  private runEntityFunction(entity: Entity, functionName: LifecycleFunction | string, contact?: ScriptContact, event?: ScriptEvent, bypassBreakpoint = false, logicAsset?: string | null, duringDestruction = false, callbackKind?: string): void {
+  /** 结构说明（自动提取）：runEntityFunction；输入 entity、functionName、contact、event、bypassBreakpoint、logicAsset、duringDestruction、callbackKind；直接调用 canRun、isRemovalPending、destroying.has、resolveAsset、compiledSources.get 等；写入 source、declared、contractValidation、breakpoint.hitCount 等；包含循环处理。 */ private runEntityFunction(entity: Entity, functionName: LifecycleFunction | string, contact?: ScriptContact, event?: ScriptEvent, bypassBreakpoint = false, logicAsset?: string | null, duringDestruction = false, callbackKind?: string): void {
     const component = entity.script2D
     if (!this.canRun(entity) || !component) return
     if (!duringDestruction && functionName !== 'on_destroy' && (this.isRemovalPending(entity) || this.destroying.has(entity.uuid))) return
@@ -932,14 +933,14 @@ export class GameplayRuntime {
     // per-frame callbacks. Besides avoiding wasted work, this keeps Play
     // responsive on projects with many narrowly scoped scripts.
     if (!declared.names.has(functionName)) return
-    const enabledPackages = packageState.installed.filter(item => item.enabled && item.project).map(item => item.manifest.id)
-    const contractSignature = `${JSON.stringify(declared.contract.contract)}:${declared.contract.apiUsage.map(value => value.name).join(',')}:${entity.components.map(value => value.kind).sort().join(',')}:${physicsState.inputMap.map(value => value.name).sort().join(',')}:${assetState.generation}:${enabledPackages.sort().join(',')}`
+    const enabledPackages = packageState.installed.filter(/* 先计算 item.enabled；仅当其为真值时求右侧 item.project，返回短路求值结果。 */ item => item.enabled && item.project).map(/* 返回 item.manifest.id 的当前值。 */ item => item.manifest.id)
+    const contractSignature = `${JSON.stringify(declared.contract.contract)}:${declared.contract.apiUsage.map(/* 返回 value.name 的当前值。 */ value => value.name).join(',')}:${entity.components.map(/* 返回 value.kind 的当前值。 */ value => value.kind).sort().join(',')}:${physicsState.inputMap.map(/* 返回 value.name 的当前值。 */ value => value.name).sort().join(',')}:${assetState.generation}:${enabledPackages.sort().join(',')}`
     const contractKey = `${entity.uuid}:${asset.uuid}`
     let contractValidation = this.contractValidations.get(contractKey)
     if (!contractValidation || contractValidation.signature !== contractSignature) {
-      const availableAssets = assetState.records.flatMap(item => [item.uuid, item.path])
-      const report = validateScriptContract(source, { components: entity.components.map(value => value.kind), inputActions: physicsState.inputMap.map(value => value.name), assets: availableAssets, packages: enabledPackages })
-      contractValidation = { signature: contractSignature, error: report.diagnostics.filter(item => item.severity === 'error').map(item => `${item.code} line ${item.line}: ${item.message}`).join(' ') || null }
+      const availableAssets = assetState.records.flatMap(/* 返回按声明顺序构造的数组 [item.uuid, item.path]。 */ item => [item.uuid, item.path])
+      const report = validateScriptContract(source, { components: entity.components.map(/* 返回 value.kind 的当前值。 */ value => value.kind), inputActions: physicsState.inputMap.map(/* 返回 value.name 的当前值。 */ value => value.name), assets: availableAssets, packages: enabledPackages })
+      contractValidation = { signature: contractSignature, error: report.diagnostics.filter(/* 比较 item.severity 与 'error'，返回严格相等的判断结果。 */ item => item.severity === 'error').map(/** 按模板 `${item.code} line ${item.line}: ${item.message}` 生成并返回字符串。 */ item => `${item.code} line ${item.line}: ${item.message}`).join(' ') || null }
       this.contractValidations.set(contractKey, contractValidation)
     }
     if (contractValidation.error) { this.reportScriptError(entity, contractValidation.error); return }
@@ -954,10 +955,10 @@ export class GameplayRuntime {
       entity: entity.uuid,
       invocationId: ++this.invocationSerial,
       callbackKind: callbackKind ?? functionName,
-      entityGenerations: Object.fromEntries(executionWorld.filter(entityLifetimeActive).map(value => [value.uuid, entityLifetimeGeneration(value)])),
+      entityGenerations: Object.fromEntries(executionWorld.filter(entityLifetimeActive).map(/* 返回按声明顺序构造的数组 [value.uuid, entityLifetimeGeneration(value)]。 */ value => [value.uuid, entityLifetimeGeneration(value)])),
       entityName: entity.name,
-      components: entity.components.map(value => value.kind),
-      entities: Object.fromEntries(executionWorld.filter(entityLifetimeActive).map(value => [value.name, value.uuid])),
+      components: entity.components.map(/* 返回 value.kind 的当前值。 */ value => value.kind),
+      entities: Object.fromEntries(executionWorld.filter(entityLifetimeActive).map(/* 返回按声明顺序构造的数组 [value.name, value.uuid]。 */ value => [value.name, value.uuid])),
       sceneEntities: runtimeSceneEntitySnapshots(executionWorld),
       time: { ...this.time.value },
       randomSeed: Math.floor(deterministicRandom() * 0x1_0000_0000),
@@ -972,12 +973,12 @@ export class GameplayRuntime {
         scale: [runtimeTransform.scale.x, runtimeTransform.scale.y]
       },
       rigidBody: entity.hasComponent('RigidBody2D') ? {
-        velocity: (() => { const character = entity.getComponent<CharacterBody2D>('CharacterBody2D'); return character ? [character.motionVelocity.x, character.motionVelocity.y] : [entity.velocity.x, entity.velocity.y] })(),
+        velocity: (/** 结构说明（自动提取）：匿名回调；无显式参数；直接调用 entity.getComponent。 */ () => { const character = entity.getComponent<CharacterBody2D>('CharacterBody2D'); return character ? [character.motionVelocity.x, character.motionVelocity.y] : [entity.velocity.x, entity.velocity.y] })(),
         angularVelocity: entity.angularVelocity,
         mass: entity.mass,
         bodyType: entity.isStatic ? 'Static' : entity.isKinematic ? 'Kinematic' : 'Dynamic'
       } : null,
-      character: (() => {
+      character: (/** 结构说明（自动提取）：匿名回调；无显式参数；直接调用 entity.getComponent、canUseCoyoteTime。 */ () => {
         const character = entity.getComponent<CharacterBody2D>('CharacterBody2D')
         return character ? {
           onFloor: character.onFloor, onWall: character.onWall, onCeiling: character.onCeiling,
@@ -990,9 +991,9 @@ export class GameplayRuntime {
     }
     if (!bypassBreakpoint && scriptProjectSettings.debuggerEnabled && scriptDebugState.enabled && !scriptDebugState.paused) {
       const language = analyzeScript(source), fn = language.functions[functionName], rich = analyzeScript26(source)
-      const legacy = (asset.script?.breakpoints ?? []).map((line, index): ScriptBreakpointMetadata => ({ id: `line-${line}-${index}`, line, functionName: '', condition: '', hitCondition: 0, logMessage: '', enabled: true, hitCount: 0 }))
+      const legacy = (asset.script?.breakpoints ?? []).map(/** 构造并返回记录 { id: `line-${line}-${index}`, line, functionName: '', condition: '', hitCondition: 0, logMessage: '', enabled: true, hitCount: 0 }，字段按当前实参及捕获状态求值。 */ (line, index): ScriptBreakpointMetadata => ({ id: `line-${line}-${index}`, line, functionName: '', condition: '', hitCondition: 0, logMessage: '', enabled: true, hitCount: 0 }))
       const details = asset.script?.breakpointDetails?.length ? asset.script.breakpointDetails : legacy
-      const breakpoint = details.find(point => point.enabled && fn && point.line >= fn.line && point.line <= fn.endLine && Boolean(statementAtLine(rich, point.line, functionName)) && (!point.functionName || point.functionName === functionName))
+      const breakpoint = details.find(/** 结构说明（自动提取）：details.find 回调；输入 point；直接调用 Boolean、statementAtLine；返回表达式求值结果。 */ point => point.enabled && fn && point.line >= fn.line && point.line <= fn.endLine && Boolean(statementAtLine(rich, point.line, functionName)) && (!point.functionName || point.functionName === functionName))
       if (breakpoint) {
         breakpoint.hitCount = Math.min(1_000_000_000, breakpoint.hitCount + 1)
         let condition = true
@@ -1038,7 +1039,7 @@ export class GameplayRuntime {
     }
   }
 
-  private processScriptCommands(entity: Entity, scriptUuid: string, sourcePath: string, functionName: string, commands: ScriptCommand[], startIndex = 0, allowPause = true): boolean {
+  /** 结构说明（自动提取）：processScriptCommands；输入 entity、scriptUuid、sourcePath、functionName、commands、startIndex、allowPause；直接调用 Math.max、applyCommand、recordGraphTrace、addEditorLog、clearGraphPause 等；写入 pendingGraphExecution、physicsState.playMode；包含循环处理。 */ private processScriptCommands(entity: Entity, scriptUuid: string, sourcePath: string, functionName: string, commands: ScriptCommand[], startIndex = 0, allowPause = true): boolean {
     for (let index = Math.max(0, startIndex); index < commands.length; index++) {
       const command = commands[index]
       if (command.type !== 'graphTrace') {
@@ -1058,8 +1059,8 @@ export class GameplayRuntime {
     return true
   }
 
-  private applyCommand(entity: Entity, command: Exclude<ScriptCommand, GraphTraceCommand>): void {
-    const finite = (value: number) => finiteNumber(value, 0)
+  /** 结构说明（自动提取）：applyCommand；输入 entity、command；直接调用 entity.hasComponent、finite、worldTransform、physicsState.world.teleport、setWorldTransform 等；写入 entity.velocity.x、entity.velocity.y、entity.velocity、entity.angularVelocity 等。 */ private applyCommand(entity: Entity, command: Exclude<ScriptCommand, GraphTraceCommand>): void {
+    const finite = /* 调用 finiteNumber(value, 0) 并返回调用结果。 */ (value: number) => finiteNumber(value, 0)
     if (command.type === 'applyForce' && entity.hasComponent('RigidBody2D') && entity.mass > 0 && !entity.isStatic && !entity.isKinematic) {
       entity.velocity.x += finite(command.x) / entity.mass * this.time.value.fixedDelta
       entity.velocity.y += finite(command.y) / entity.mass * this.time.value.fixedDelta
@@ -1144,7 +1145,7 @@ export class GameplayRuntime {
     normalizeEntity(entity)
   }
 
-  private flushDynamicCommands(): void {
+  /** 结构说明（自动提取）：flushDynamicCommands；无显式参数；直接调用 pendingDynamicCommands.splice、commandSourceActive、spawnRuntimePrefab、addEditorLog、next 等；写入 spawned、mutation；包含循环处理。 */ private flushDynamicCommands(): void {
     let spawned = false
     const batch = this.pendingDynamicCommands.splice(0, MAX_SCRIPT_BRIDGE_COMMANDS)
     for (const entry of batch) {
@@ -1177,28 +1178,28 @@ export class GameplayRuntime {
       if (mutation) applyTargetMutation(target, mutation)
     }
     if (spawned) physicsState.world.invalidateRuntime()
-    const living = new Set(physicsState.world.entities.map(entity => entity.uuid))
+    const living = new Set(physicsState.world.entities.map(/* 返回 entity.uuid 的当前值。 */ entity => entity.uuid))
     for (const [pending, resolved] of this.pendingHandleResolutions) if (!living.has(resolved.uuid)) this.pendingHandleResolutions.delete(pending)
   }
 
-  private commandSource(entity: Entity) { return { sourceUuid: entity.uuid, sourceGeneration: entityLifetimeGeneration(entity), allowRetiredSource: this.destroying.has(entity.uuid) } }
-  private commandSourceActive(source: { sourceUuid: string; sourceGeneration: number; allowRetiredSource: boolean }): boolean {
-    return source.allowRetiredSource || physicsState.world.entities.some(entity => entity.uuid === source.sourceUuid && inspectEntityLifetimeGeneration(entity) === source.sourceGeneration)
+  /** 构造并返回记录 { sourceUuid: entity.uuid, sourceGeneration: entityLifetimeGeneration(entity), allowRetiredSource: this.destroying.has(entity.uuid) }，字段按当前实参及捕获状态求值。 */ private commandSource(entity: Entity) { return { sourceUuid: entity.uuid, sourceGeneration: entityLifetimeGeneration(entity), allowRetiredSource: this.destroying.has(entity.uuid) } }
+  /** 结构说明（自动提取）：commandSourceActive；输入 source；直接调用 physicsState.world.entities.some。 */ private commandSourceActive(source: { sourceUuid: string; sourceGeneration: number; allowRetiredSource: boolean }): boolean {
+    return source.allowRetiredSource || physicsState.world.entities.some(/* 先计算 entity.uuid === source.sourceUuid；仅当其为真值时求右侧 inspectEntityLifetimeGeneration(entity) === source.sourceGeneration，返回短路求值结果。 */ entity => entity.uuid === source.sourceUuid && inspectEntityLifetimeGeneration(entity) === source.sourceGeneration)
   }
-  private queueEntityRemoval(entity: Entity, despawn: boolean): void { (despawn ? this.pendingDespawn : this.pendingDestroy).set(entity.id, entityLifetimeGeneration(entity)) }
-  private isRemovalPending(entity: Entity): boolean { const generation = inspectEntityLifetimeGeneration(entity); return generation !== null && (this.pendingDestroy.get(entity.id) === generation || this.pendingDespawn.get(entity.id) === generation) }
+  /** 执行时调用 (despawn ? this.pendingDespawn : this.pendingDestroy).set(entity.id, entityLifetimeGeneration(entity))；不显式返回调用结果。 */ private queueEntityRemoval(entity: Entity, despawn: boolean): void { (despawn ? this.pendingDespawn : this.pendingDestroy).set(entity.id, entityLifetimeGeneration(entity)) }
+  /** 结构说明（自动提取）：isRemovalPending；输入 entity；直接调用 inspectEntityLifetimeGeneration、pendingDestroy.get、pendingDespawn.get。 */ private isRemovalPending(entity: Entity): boolean { const generation = inspectEntityLifetimeGeneration(entity); return generation !== null && (this.pendingDestroy.get(entity.id) === generation || this.pendingDespawn.get(entity.id) === generation) }
 
-  private flushEntityCommands(): void {
+  /** 结构说明（自动提取）：flushEntityCommands；无显式参数；直接调用 flushDynamicCommands、slice、pendingDespawn.delete、physicsState.world.entities.find、inspectEntityLifetimeGeneration 等；包含循环处理。 */ private flushEntityCommands(): void {
     this.flushDynamicCommands()
     for (const [id, generation] of [...this.pendingDespawn].slice(0, MAX_SCRIPT_BRIDGE_COMMANDS)) {
       this.pendingDespawn.delete(id)
-      const entity = physicsState.world.entities.find(candidate => candidate.id === id)
+      const entity = physicsState.world.entities.find(/* 比较 candidate.id 与 id，返回严格相等的判断结果。 */ candidate => candidate.id === id)
       if (entity && inspectEntityLifetimeGeneration(entity) === generation && !releasePooled(entity)) this.queueEntityRemoval(entity, false)
     }
     const pending = [...this.pendingDestroy].slice(0, MAX_SCRIPT_BRIDGE_COMMANDS)
     for (const [id, generation] of pending) {
       this.pendingDestroy.delete(id)
-      const entity = physicsState.world.entities.find(candidate => candidate.id === id)
+      const entity = physicsState.world.entities.find(/* 比较 candidate.id 与 id，返回严格相等的判断结果。 */ candidate => candidate.id === id)
       if (!entity || inspectEntityLifetimeGeneration(entity) !== generation || this.destroying.has(entity.uuid)) continue
       const doomed = subtreeEntities([id], physicsState.world.entities)
       for (const candidate of doomed) this.destroying.add(candidate.uuid)
@@ -1219,7 +1220,7 @@ export class GameplayRuntime {
     this.ensureLifecycle()
   }
 
-  private flushStructuralCommands(): void {
+  /** 结构说明（自动提取）：flushStructuralCommands；无显式参数；直接调用 flushEntityCommands、prepareRuntimeSceneTransition、addEditorLog、errorMessage、transaction.commit 等；写入 pendingScene、transaction、pendingPrefabs、pendingDynamicCommands 等；包含循环处理。 */ private flushStructuralCommands(): void {
     this.flushEntityCommands()
     const scene = this.pendingScene
     this.pendingScene = null
@@ -1230,7 +1231,7 @@ export class GameplayRuntime {
     catch (error) { addEditorLog(`Runtime scene preparation failed: ${this.errorMessage(error)}`, 'Runtime', 'error'); return }
     if (!transaction.commit()) { addEditorLog(`Runtime scene transition failed: ${transaction.error ?? 'Commit rejected'}`, 'Runtime', 'error'); return }
     finishWorldSceneTransition()
-    const retained = new Set(transaction.preservedEntityUuids), unloading = before.filter(entity => !retained.has(entity.uuid))
+    const retained = new Set(transaction.preservedEntityUuids), unloading = before.filter(/* 返回 retained.has(entity.uuid) 的逻辑取反结果。 */ entity => !retained.has(entity.uuid))
     this.pendingDestroy.clear()
     this.pendingDespawn.clear()
     this.pendingPrefabs = []
@@ -1243,25 +1244,25 @@ export class GameplayRuntime {
     for (const entity of unloading) this.destroying.add(entity.uuid)
     for (const entity of unloading) { this.runDestructionCallbacks(entity, before); this.clearEntityRuntimeState(entity); retireEntityLifetime(entity) }
     for (const entity of unloading) this.destroying.delete(entity.uuid)
-    const living = new Set(physicsState.world.entities.map(entity => entity.uuid))
+    const living = new Set(physicsState.world.entities.map(/* 返回 entity.uuid 的当前值。 */ entity => entity.uuid))
     for (const [pending, resolved] of this.pendingHandleResolutions) if (!living.has(resolved.uuid)) this.pendingHandleResolutions.delete(pending)
     for (const uuid of [...this.awakened]) if (!living.has(uuid)) this.awakened.delete(uuid)
     for (const uuid of [...this.started]) if (!living.has(uuid)) this.started.delete(uuid)
     beginGameplayComponents(physicsState.world.entities)
     const sessionGeneration = ++this.sessionGeneration
-    void beginWorldGameplay((name, payload, target, source) => this.emitSignal(name, payload, target, source), () => this.active && this.sessionGeneration === sessionGeneration)
+    void beginWorldGameplay(/* 调用 this.emitSignal(name, payload, target, source) 并返回调用结果。 */ (name, payload, target, source) => this.emitSignal(name, payload, target, source), /* 先计算 this.active；仅当其为真值时求右侧 this.sessionGeneration === sessionGeneration，返回短路求值结果。 */ () => this.active && this.sessionGeneration === sessionGeneration)
     this.diagnostics.sceneSwitches++
     this.ensureLifecycle()
     this.emitSignal('scene.loaded', { type: scene.type }, '', 'runtime')
     addEditorLog(`Runtime scene ${scene.type === 'reload' ? 'reloaded' : 'loaded'}`, 'Runtime')
   }
 
-  private dispatchPhysicsEvents(events: RuntimePhysicsEvent[]): void {
-    processGameplayContacts(events, physicsState.world.entities, (name, payload, target, source) => this.emitSignal(name, payload, target, source), (target, despawn) => this.queueEntityRemoval(target, despawn))
+  /** 结构说明（自动提取）：dispatchPhysicsEvents；输入 events；直接调用 processGameplayContacts、physicsState.world.entities.find、worldTransform、runEntityFunction、runEventSheetHandlers 等；包含循环处理。 */ private dispatchPhysicsEvents(events: RuntimePhysicsEvent[]): void {
+    processGameplayContacts(events, physicsState.world.entities, /* 调用 this.emitSignal(name, payload, target, source) 并返回调用结果。 */ (name, payload, target, source) => this.emitSignal(name, payload, target, source), /* 调用 this.queueEntityRemoval(target, despawn) 并返回调用结果。 */ (target, despawn) => this.queueEntityRemoval(target, despawn))
     for (const event of events) {
       if (!event.firstEntityUuid || !event.secondEntityUuid) continue
-      const first = physicsState.world.entities.find(entity => entity.uuid === event.firstEntityUuid)
-      const second = physicsState.world.entities.find(entity => entity.uuid === event.secondEntityUuid)
+      const first = physicsState.world.entities.find(/* 比较 entity.uuid 与 event.firstEntityUuid，返回严格相等的判断结果。 */ entity => entity.uuid === event.firstEntityUuid)
+      const second = physicsState.world.entities.find(/* 比较 entity.uuid 与 event.secondEntityUuid，返回严格相等的判断结果。 */ entity => entity.uuid === event.secondEntityUuid)
       if (!first || !second) continue
       const functionName = event.type === 'collisionStarted' ? 'on_collision_enter'
         : event.type === 'collisionStayed' ? 'on_collision_stay'
@@ -1293,27 +1294,27 @@ export class GameplayRuntime {
     this.flushEntityCommands()
   }
 
-  private canRun(entity: Entity): boolean {
+  /** 结构说明（自动提取）：canRun；输入 entity；直接调用 entityLifetimeActive。 */ private canRun(entity: Entity): boolean {
     const script = entity.script2D
     return entity.enabled && entityLifetimeActive(entity) && !!script && script.enabled && !script.removed
   }
 
-  private clearEntityRuntimeState(entity: Entity): void {
+  /** 结构说明（自动提取）：clearEntityRuntimeState；输入 entity；直接调用 retireWorldGameplayEntity、time.removeEntity、awakened.delete、started.delete、behaviorProperties.keys 等；写入 pendingSignals、pendingDebugInvocation、pendingGraphExecution；包含循环处理。 */ private clearEntityRuntimeState(entity: Entity): void {
     retireWorldGameplayEntity(entity.uuid)
     this.time.removeEntity(entity.uuid); this.awakened.delete(entity.uuid); this.started.delete(entity.uuid)
     for (const key of this.behaviorProperties.keys()) if (key.startsWith(`${entity.uuid}:`)) this.behaviorProperties.delete(key)
     for (const key of this.contractValidations.keys()) if (key.startsWith(`${entity.uuid}:`)) this.contractValidations.delete(key)
-    this.pendingSignals = this.pendingSignals.filter(signal => signal.target !== entity.uuid)
+    this.pendingSignals = this.pendingSignals.filter(/* 比较 signal.target 与 entity.uuid，返回严格不等的判断结果。 */ signal => signal.target !== entity.uuid)
     if (this.pendingDebugInvocation?.entityUuid === entity.uuid) this.pendingDebugInvocation = null
     if (this.pendingGraphExecution?.entityUuid === entity.uuid) this.pendingGraphExecution = null
   }
 
-  private latchFixedInput(snapshot: InputSnapshot): void {
+  /** 结构说明（自动提取）：latchFixedInput；输入 snapshot；直接调用 Object.entries；写入 fixedPressed[…]、fixedReleased[…]；包含循环处理。 */ private latchFixedInput(snapshot: InputSnapshot): void {
     for (const [name, active] of Object.entries(snapshot.pressed)) if (active) this.fixedPressed[name] = true
     for (const [name, active] of Object.entries(snapshot.released)) if (active) this.fixedReleased[name] = true
   }
 
-  private reportScriptError(entity: Entity, message: string): void {
+  /** 结构说明（自动提取）：reportScriptError；输入 entity、message；直接调用 addEditorLog；写入 component.lastError。 */ private reportScriptError(entity: Entity, message: string): void {
     const component = entity.script2D
     if (!component) return
     if (component.lastError !== message) addEditorLog(`${entity.name}: ${message}`, 'Script', 'error', component.scriptAsset ?? undefined)
@@ -1321,14 +1322,14 @@ export class GameplayRuntime {
     this.diagnostics.scriptErrors++
   }
 
-  private errorMessage(error: unknown): string {
+  /** 结构说明（自动提取）：errorMessage；输入 error；直接调用 replace、String；返回路径包含 error.message。 */ private errorMessage(error: unknown): string {
     if (error instanceof Error) return error.message
     return String(error).replace(/^JsValue\((.*)\)$/s, '$1')
   }
 
-  private compileAttachedScripts(): void {
+  /** 结构说明（自动提取）：compileAttachedScripts；无显式参数；直接调用 Set、map、resolveEventHandlers、resolveAsset、resolveScriptBundle 等；包含循环处理。 */ private compileAttachedScripts(): void {
     for (const entity of physicsState.world.entities) {
-      const references = new Set([entity.script2D?.scriptAsset, ...resolveEventHandlers(entity.script2D?.eventSheetAsset).map(handler => handler.logicAsset)])
+      const references = new Set([entity.script2D?.scriptAsset, ...resolveEventHandlers(entity.script2D?.eventSheetAsset).map(/* 返回 handler.logicAsset 的当前值。 */ handler => handler.logicAsset)])
       for (const reference of references) {
       const uuid = resolveAsset(reference)?.uuid
       if (!uuid) continue
@@ -1342,14 +1343,14 @@ export class GameplayRuntime {
     }
   }
 
-  private ensureCompiled(scriptUuid: string, source: string, candidateDocument?: string): ExportedProperty[] {
-    const registerCompiledGraph = (): void => { const asset = resolveAsset(scriptUuid); if (asset?.assetType === 'visualScript') { const document = this.compiledDocuments.get(scriptUuid); if (document !== undefined) registerGraphDebugDocument(document) } }
+  /** 结构说明（自动提取）：ensureCompiled；输入 scriptUuid、source、candidateDocument；直接调用 compiledSources.get、registerCompiledGraph、Error、Map、resolveScriptBundle 等；返回路径包含 exports；包含循环处理；包含显式抛错路径。 */ private ensureCompiled(scriptUuid: string, source: string, candidateDocument?: string): ExportedProperty[] {
+    const registerCompiledGraph = /** 结构说明（自动提取）：registerCompiledGraph；无显式参数；直接调用 resolveAsset、compiledDocuments.get、registerGraphDebugDocument。 */ (): void => { const asset = resolveAsset(scriptUuid); if (asset?.assetType === 'visualScript') { const document = this.compiledDocuments.get(scriptUuid); if (document !== undefined) registerGraphDebugDocument(document) } }
     if (this.compiledSources.get(scriptUuid) === source) { registerCompiledGraph(); return [] }
     if (!this.scriptRuntime) throw new Error('Script runtime is unavailable')
     const documents = new Map<string, string>()
     if (this.resolveScriptBundle(scriptUuid, candidateDocument === undefined ? new Map() : new Map([[scriptUuid, candidateDocument]]), documents) !== source) throw Error('Script module source changed before compilation; retry the candidate.')
     const contract = parseScriptContract(source)
-    if (!contract.valid) throw new Error(contract.diagnostics.filter(item => item.severity === 'error').map(item => `${item.code} line ${item.line}: ${item.message}`).join(' '))
+    if (!contract.valid) throw new Error(contract.diagnostics.filter(/* 比较 item.severity 与 'error'，返回严格相等的判断结果。 */ item => item.severity === 'error').map(/** 按模板 `${item.code} line ${item.line}: ${item.message}` 生成并返回字符串。 */ item => `${item.code} line ${item.line}: ${item.message}`).join(' '))
     const runtime = this.scriptRuntime as unknown as { compile_cached(id: string, source: string): string }
     const exports = JSON.parse(runtime.compile_cached(scriptUuid, source)) as ExportedProperty[]
     this.compiledExports.set(scriptUuid, exports)
@@ -1363,7 +1364,7 @@ export class GameplayRuntime {
     return exports
   }
 
-  private flushHotReloads(): void {
+  /** 结构说明（自动提取）：flushHotReloads；无显式参数；直接调用 Map、pendingReloads.clear、pendingRollbackHistory.clear、next、queued.keys 等；写入 scriptDebugState.hotReload、candidateRuntime、candidate.exports、replacedRuntime 等；包含循环处理；包含显式抛错路径。 */ private flushHotReloads(): void {
     const queued = new Map(this.pendingReloads); this.pendingReloads.clear()
     const rollbackHistory = new Map(this.pendingRollbackHistory); this.pendingRollbackHistory.clear()
     if (!queued.size) return
@@ -1378,7 +1379,7 @@ export class GameplayRuntime {
     let committed = false
     try {
       const affected = new Set(queued.keys())
-      for (const [root, documents] of this.compiledModuleDocuments) if ([...queued.keys()].some(uuid => documents.has(uuid))) affected.add(root)
+      for (const [root, documents] of this.compiledModuleDocuments) if ([...queued.keys()].some(/* 调用 documents.has(uuid) 并返回调用结果。 */ uuid => documents.has(uuid))) affected.add(root)
       const priorDocuments = new Map<string, string>()
       for (const documents of this.compiledModuleDocuments.values()) for (const [uuid, raw] of documents) if (!priorDocuments.has(uuid)) priorDocuments.set(uuid, raw)
       const candidates = new Map<string, { source: string; previousSource: string; previousDocument: string; documents: Map<string, string>; contract: ScriptContractReport; names: Set<string>; recreate: boolean; exports: ExportedProperty[] }>()
@@ -1391,7 +1392,7 @@ export class GameplayRuntime {
         const documents = new Map<string, string>(), source = this.resolveScriptBundle(uuid, overrides, documents)
         if (!source) throw Error(`Reload module cannot be resolved: ${asset.name}`)
         const contract = parseScriptContract(source)
-        if (!contract.valid) throw Error(contract.diagnostics.filter(item => item.severity === 'error').map(item => item.message).join(' '))
+        if (!contract.valid) throw Error(contract.diagnostics.filter(/* 比较 item.severity 与 'error'，返回严格相等的判断结果。 */ item => item.severity === 'error').map(/* 返回 item.message 的当前值。 */ item => item.message).join(' '))
         const previousSource = this.compiledSources.get(uuid) ?? this.resolveScriptBundle(uuid, priorDocuments) ?? source
         candidates.set(uuid, { source, previousSource, previousDocument: this.compiledDocuments.get(uuid) ?? priorDocuments.get(uuid) ?? readTextAsset(uuid) ?? previousSource, documents, contract, names: new Set(Object.keys(analyzeScript(source).functions)), recreate: asset.script?.reloadPolicy === 'recreate', exports: [] })
       }
@@ -1399,7 +1400,7 @@ export class GameplayRuntime {
       const nextSources = new Map(this.compiledSources)
       for (const [uuid, candidate] of candidates) nextSources.set(uuid, candidate.source)
       candidateRuntime = this.scriptRuntime?.fork() ?? new WasmScriptRuntime()
-      const compileSources = this.scriptRuntime ? new Map([...candidates].map(([uuid, candidate]) => [uuid, candidate.source])) : nextSources
+      const compileSources = this.scriptRuntime ? new Map([...candidates].map(/* 返回按声明顺序构造的数组 [uuid, candidate.source]。 */ ([uuid, candidate]) => [uuid, candidate.source])) : nextSources
       for (const [uuid, source] of compileSources) {
         const exports = JSON.parse(candidateRuntime.compile_cached(uuid, source)) as ExportedProperty[]
         const candidate = candidates.get(uuid)
@@ -1413,14 +1414,14 @@ export class GameplayRuntime {
         if (plan.classification === 'rejected' || plan.classification === 'restart-required') throw Error(`${plan.classification === 'restart-required' ? 'Restart required: ' : ''}${plan.reasons.join(' ')}`)
       }
       // Prepare all primary and inherited state transfers before publishing the candidate VM.
-      const transfers = [...candidates].flatMap(([uuid, candidate]) => physicsState.world.entities.flatMap(entity => {
+      const transfers = [...candidates].flatMap(/** 结构说明（自动提取）：flatMap 回调；输入 [uuid, candidate]；直接调用 physicsState.world.entities.flatMap；返回表达式求值结果。 */ ([uuid, candidate]) => physicsState.world.entities.flatMap(/** 结构说明（自动提取）：physicsState.world.entities.flatMap 回调；输入 entity；直接调用 resolveAsset、behaviorProperties.has、behaviorProperties.get、Object.fromEntries、candidate.exports.map。 */ entity => {
           const component = entity.script2D
           if (!component) return []
           const primary = resolveAsset(component.scriptAsset)?.uuid === uuid, key = `${entity.uuid}:${uuid}`
           if (!primary && !this.behaviorProperties.has(key)) return []
           const previous = primary ? component.properties : this.behaviorProperties.get(key)!
-          const properties = Object.fromEntries(candidate.exports.map(exported => [exported.name, this.exportValue(exported, candidate.recreate ? undefined : previous[exported.name])]))
-          const metadata = Object.fromEntries(candidate.exports.map(exported => [exported.name, { ...exported, defaultValue: exported.defaultValue ?? exported.value }]))
+          const properties = Object.fromEntries(candidate.exports.map(/* 返回按声明顺序构造的数组 [exported.name, this.exportValue(exported, candidate.recreate ? undefined : previous[exported.name])]。 */ exported => [exported.name, this.exportValue(exported, candidate.recreate ? undefined : previous[exported.name])]))
+          const metadata = Object.fromEntries(candidate.exports.map(/* 返回按声明顺序构造的数组 [exported.name, { ...exported, defaultValue: exported.defaultValue ?? exported.value }]。 */ exported => [exported.name, { ...exported, defaultValue: exported.defaultValue ?? exported.value }]))
           return [{ entity, component, primary, key, properties, metadata, recreate: candidate.recreate }]
       }))
       replacedRuntime = this.scriptRuntime
@@ -1456,12 +1457,12 @@ export class GameplayRuntime {
     }
   }
 
-  private dispatchSignals(): void {
+  /** 结构说明（自动提取）：dispatchSignals；无显式参数；直接调用 pendingSignals.splice、signalWorld.filter、runEntityFunction、signal.name.startsWith、runEventSheetHandlers 等；写入 scriptDebugState.lastSignal；包含循环处理。 */ private dispatchSignals(): void {
     const batch = this.pendingSignals.splice(0)
     for (const signal of batch) {
       scriptDebugState.lastSignal = { name: signal.name, source: signal.source, target: signal.target }
       const signalWorld = this.callbackWorld ?? physicsState.world.entities
-      const recipients = signal.target ? signalWorld.filter(entity => entity.uuid === signal.target) : signalWorld
+      const recipients = signal.target ? signalWorld.filter(/* 比较 entity.uuid 与 signal.target，返回严格相等的判断结果。 */ entity => entity.uuid === signal.target) : signalWorld
       for (const entity of recipients) {
         this.runEntityFunction(entity, 'on_signal', undefined, signal)
         const eventKind: ObjectEventKind = signal.name.startsWith('ui.') ? 'ui' : signal.name.startsWith('animation.') ? 'animation' : signal.name.startsWith('network.') ? 'network' : 'signal'
@@ -1478,30 +1479,30 @@ export class GameplayRuntime {
     }
   }
 
-  private dispatchTimerExpirations(expired: readonly TimerExpiration[]): void {
+  /** 结构说明（自动提取）：dispatchTimerExpirations；输入 expired；直接调用 time.consumeExpiration、physicsState.world.entities.find、runEntityFunction、runEventSheetHandlers、updateDebugTask；包含循环处理。 */ private dispatchTimerExpirations(expired: readonly TimerExpiration[]): void {
     for (const timer of expired) {
       if (!this.time.consumeExpiration(timer)) continue
-      const entity = physicsState.world.entities.find(candidate => candidate.uuid === timer.entityUuid)
+      const entity = physicsState.world.entities.find(/* 比较 candidate.uuid 与 timer.entityUuid，返回严格相等的判断结果。 */ candidate => candidate.uuid === timer.entityUuid)
       if (entity && timer.kind === 'timer') { this.runEntityFunction(entity, 'on_timer', undefined, { name: timer.name, source: entity.uuid, payload: null }); this.runEventSheetHandlers(entity, 'timer', timer.name, 'on_timer', undefined, { name: timer.name, source: entity.uuid, payload: null }) }
       else if (entity) { updateDebugTask({ id: `${entity.uuid}:${timer.name}`, name: timer.name, state: 'completed', entityUuid: entity.uuid, detail: `Completed at frame ${this.time.value.frame}` }); this.runEntityFunction(entity, 'on_task', undefined, { name: timer.name, source: entity.uuid, payload: null }); this.runEventSheetHandlers(entity, 'task', timer.name, 'on_task', undefined, { name: timer.name, source: entity.uuid, payload: null }) }
     }
   }
 
-  private resolveScriptBundle(scriptUuid: string, overrides = new Map<string, string>(), documents?: Map<string, string>): string | null {
+  /** 结构说明（自动提取）：resolveScriptBundle；输入 scriptUuid、overrides、documents；直接调用 resolveProjectScriptBundle。 */ private resolveScriptBundle(scriptUuid: string, overrides = new Map<string, string>(), documents?: Map<string, string>): string | null {
     return resolveProjectScriptBundle(scriptUuid, {
-      resolveAsset: reference => { const asset = resolveAsset(reference) ?? assetState.records.find(candidate => candidate.path === reference); return asset && (asset.assetType === 'script' || asset.assetType === 'visualScript') ? { uuid: asset.uuid, path: asset.path, assetType: asset.assetType } : null },
-      readSource: uuid => { const raw = overrides.get(uuid) ?? readTextAsset(uuid); if (raw !== null) documents?.set(uuid, raw); return raw },
+      resolveAsset: /** 结构说明（自动提取）：匿名回调；输入 reference；直接调用 resolveAsset、assetState.records.find。 */ reference => { const asset = resolveAsset(reference) ?? assetState.records.find(/* 比较 candidate.path 与 reference，返回严格相等的判断结果。 */ candidate => candidate.path === reference); return asset && (asset.assetType === 'script' || asset.assetType === 'visualScript') ? { uuid: asset.uuid, path: asset.path, assetType: asset.assetType } : null },
+      readSource: /** 结构说明（自动提取）：匿名回调；输入 uuid；直接调用 overrides.get、readTextAsset、documents.set；返回路径包含 raw。 */ uuid => { const raw = overrides.get(uuid) ?? readTextAsset(uuid); if (raw !== null) documents?.set(uuid, raw); return raw },
       compileVisual: executableGraphSource
     })
   }
 
-  private serializable(value: unknown): unknown {
+  /** 结构说明（自动提取）：serializable；输入 value；直接调用 JSON.parse、JSON.stringify。 */ private serializable(value: unknown): unknown {
     try { return JSON.parse(JSON.stringify(value)) } catch { return null }
   }
 
-  private exportValue(exported: ExportedProperty, previous: unknown): ScriptPropertyValue {
+  /** 结构说明（自动提取）：exportValue；输入 exported、previous；直接调用 Array.isArray、clone、Number.isFinite、Number、Math.min 等。 */ private exportValue(exported: ExportedProperty, previous: unknown): ScriptPropertyValue {
     const fallback = exported.defaultValue ?? exported.value
-    const clone = (value: ScriptPropertyValue): ScriptPropertyValue => JSON.parse(JSON.stringify(value)) as ScriptPropertyValue
+    const clone = /** 结构说明（自动提取）：clone；输入 value；直接调用 JSON.parse、JSON.stringify；返回表达式求值结果。 */ (value: ScriptPropertyValue): ScriptPropertyValue => JSON.parse(JSON.stringify(value)) as ScriptPropertyValue
     if (previous === undefined || previous === null && fallback !== null || typeof previous !== typeof fallback || Array.isArray(previous) !== Array.isArray(fallback)) return clone(fallback)
     if (typeof previous === 'number') {
       if (!Number.isFinite(previous)) return Number(fallback)
@@ -1511,8 +1512,8 @@ export class GameplayRuntime {
     try { return clone(previous as ScriptPropertyValue) } catch { return clone(fallback) }
   }
 
-  private formatLogpoint(template: string, context: Record<string, unknown>): string {
-    return template.slice(0, 1_024).replace(/\{([A-Za-z_][A-Za-z0-9_.]*)\}/g, (_match, path: string) => {
+  /** 结构说明（自动提取）：formatLogpoint；输入 template、context；直接调用 replace、template.slice。 */ private formatLogpoint(template: string, context: Record<string, unknown>): string {
+    return template.slice(0, 1_024).replace(/\{([A-Za-z_][A-Za-z0-9_.]*)\}/g, /** 结构说明（自动提取）：replace 回调；输入 _match、path；直接调用 evaluateDebugExpression、JSON.stringify。 */ (_match, path: string) => {
       try { const value = evaluateDebugExpression(path, context); return typeof value === 'string' ? value : JSON.stringify(value) } catch { return `<${path}: unavailable>` }
     })
   }

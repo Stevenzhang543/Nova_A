@@ -1,3 +1,4 @@
+/** 图层配色：优先返回预设颜色，为更多图层按黄金比例色相生成稳定颜色。 */
 export interface RgbColor { r: number; g: number; b: number }
 
 const LAYER_COLORS: readonly RgbColor[] = [
@@ -11,7 +12,7 @@ const LAYER_COLORS: readonly RgbColor[] = [
   { r: 130, g: 174, b: 65 }
 ]
 
-function hslChannel(p: number, q: number, value: number): number {
+/** 将循环色相位置按 HSL 分段插值为一个颜色通道。 */ function hslChannel(p: number, q: number, value: number): number {
   let t = value
   if (t < 0) t += 1
   if (t > 1) t -= 1
@@ -21,7 +22,7 @@ function hslChannel(p: number, q: number, value: number): number {
   return p
 }
 
-export function defaultColorForLayer(layer: number): RgbColor {
+/** 将层号规范为正整数，复制预设颜色或从稳定色相计算 RGB 值。 */ export function defaultColorForLayer(layer: number): RgbColor {
   const normalized = Math.max(1, Math.round(Number.isFinite(layer) ? layer : 1))
   if (normalized <= LAYER_COLORS.length) return { ...LAYER_COLORS[normalized - 1] }
   const hue = ((normalized - 1) * 0.618033988749895) % 1
@@ -38,7 +39,7 @@ export function defaultColorForLayer(layer: number): RgbColor {
   }
 }
 
-export function layerColorCss(layer: number): string {
+/** 把指定图层默认 RGB 颜色格式化成 CSS 色值。 */ export function layerColorCss(layer: number): string {
   const color = defaultColorForLayer(layer)
   return `rgb(${color.r}, ${color.g}, ${color.b})`
 }

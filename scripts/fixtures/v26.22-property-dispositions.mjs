@@ -1,21 +1,22 @@
+/** 测试夹具：为 v26.22-property-dispositions.mjs 提供受控数据或执行环境，限定于对应验证场景。 */
 /** Exact non-authored component fields; new omissions must be reviewed explicitly. */
 export const runtimeComponentFields22 = {
  ShapeRenderer2D:{textureImage:'Decoded browser image cache; texture/textureAsset are the authored sources.'},
  Script2D:{propertyMetadata:'Derived from script export annotations; script source is authoritative.',lastError:'Latest execution/compile diagnostic; not an authored property.'},
  Animator:{currentState:'Runtime state-machine observation; default controller state is authored in the controller asset.'},
  Button:{state:'Pointer/keyboard interaction state; resets when the player starts.'},
- CharacterBody2D:Object.fromEntries(['requestedMotion','motionVelocity','onFloor','onWall','onCeiling','floorNormal','wallNormal','ceilingNormal','platformVelocity','secondsSinceFloor'].map(field=>[field,'Movement/collision step observation; produced by character motion and contact resolution.'])),
- NavigationAgent2D:Object.fromEntries(['path','pathIndex','velocity','pathStatus'].map(field=>[field,'Navigation query/following result; target and navigation parameters are authored.'])),
+ CharacterBody2D:Object.fromEntries(['requestedMotion','motionVelocity','onFloor','onWall','onCeiling','floorNormal','wallNormal','ceilingNormal','platformVelocity','secondsSinceFloor'].map(/* 返回按声明顺序构造的数组 [field,'Movement/collision step observation; produced by character motion and contact resolution.']。 */ field=>[field,'Movement/collision step observation; produced by character motion and contact resolution.'])),
+ NavigationAgent2D:Object.fromEntries(['path','pathIndex','velocity','pathStatus'].map(/* 返回按声明顺序构造的数组 [field,'Navigation query/following result; target and navigation parameters are authored.']。 */ field=>[field,'Navigation query/following result; target and navigation parameters are authored.'])),
  BehaviorTree2D:{currentNode:'Runtime tree execution cursor; tree asset and blackboard are the authored sources.'},
  StateMachine2D:{currentState:'Runtime state cursor; initialState is the authored source.'},
  GridMover2D:{runtimeCooldown:'Runtime movement countdown.'},
  Health2D:{runtimeInvulnerability:'Runtime invulnerability countdown.'},
  Projectile2D:{runtimeLifetime:'Runtime lifetime countdown.'},
- Spawner2D:Object.fromEntries(['runtimeRemaining','runtimeStarted','runtimeSpawned'].map(field=>[field,'Runtime spawn scheduling/count observation.'])),
+ Spawner2D:Object.fromEntries(['runtimeRemaining','runtimeStarted','runtimeSpawned'].map(/* 返回按声明顺序构造的数组 [field,'Runtime spawn scheduling/count observation.']。 */ field=>[field,'Runtime spawn scheduling/count observation.'])),
  Cooldown2D:{runtimeRemaining:'Runtime cooldown countdown.',runtimeReady:'Runtime cooldown completion state.'},
  Lifetime2D:{runtimeRemaining:'Runtime lifetime countdown.'},
  ObjectPool2D:{activeCount:'Runtime count of active pooled objects.'},
- RigidBody2D:Object.fromEntries(['sleeping','sleepTimer','contactCount','contactNormal','penetrationDepth'].map(field=>[field,'Physics step sleep/contact observation; computed by the engine.']))
+ RigidBody2D:Object.fromEntries(['sleeping','sleepTimer','contactCount','contactNormal','penetrationDepth'].map(/* 返回按声明顺序构造的数组 [field,'Physics step sleep/contact observation; computed by the engine.']。 */ field=>[field,'Physics step sleep/contact observation; computed by the engine.']))
 }
 
 /** Populated fixtures for empty authored containers; references test persistence, not resolution. */
@@ -31,7 +32,7 @@ export const structuredComponentValues22 = {
 }
 
 /** Valid alternatives for dependent/integer/unit-vector fields, separate from discovery's invalid probes. */
-export function canonicalComponentValue22(component,field,current){
+/** 结构说明（自动提取）：canonicalComponentValue22；输入 component、field、current；直接调用 encodeURIComponent、colors.includes；写入 tiles[…]；返回路径包含 integers[…]、tiles、undefined。 */ export function canonicalComponentValue22(component,field,current){
  const id=component+'.'+field
  if(id==='ShapeRenderer2D.texture')return 'data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"><rect width="1" height="1" fill="#ffffff"/></svg>')
  if(id==='Health2D.maximum')return 125

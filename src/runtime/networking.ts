@@ -1,3 +1,4 @@
+/** 网络运行核心：管理连接、会话、消息传递、同步状态及断开清理。 */
 import { reactive } from 'vue'
 import type { Entity } from '../world/Entity'
 import { finiteNumber } from '../world/geometry'
@@ -107,27 +108,27 @@ export const networkingState = reactive({
 class LocalLobbyTransport implements NetworkTransport {
   readonly kind = 'local-loopback' as const
   private channel: BroadcastChannel | null = null
-  async connect(onMessage: (source: string, peer: string) => void, onState: (state: string) => void): Promise<void> {
+  /** 结构说明（自动提取）：connect；输入 onMessage、onState；直接调用 Error、BroadcastChannel、networkSessionId、onState；写入 channel、channel.onmessage、channel.onmessageerror；包含显式抛错路径。 */ async connect(onMessage: (source: string, peer: string) => void, onState: (state: string) => void): Promise<void> {
     if (typeof BroadcastChannel === 'undefined') throw new Error('This runtime does not provide local lobby channels.')
     this.channel = new BroadcastChannel(`nova-a-${networkSessionId()}`)
-    this.channel.onmessage = event => { const value = event.data as { source?: unknown; peer?: unknown; target?: unknown }; if (typeof value?.source === 'string' && typeof value.peer === 'string' && value.peer !== networkingState.localPeerId && (typeof value.target !== 'string' || !value.target || value.target === networkingState.localPeerId)) onMessage(value.source, value.peer) }
-    this.channel.onmessageerror = () => onState('Local lobby message could not be decoded.')
+    this.channel.onmessage = /** 结构说明（自动提取）：匿名回调；输入 event；直接调用 onMessage。 */ event => { const value = event.data as { source?: unknown; peer?: unknown; target?: unknown }; if (typeof value?.source === 'string' && typeof value.peer === 'string' && value.peer !== networkingState.localPeerId && (typeof value.target !== 'string' || !value.target || value.target === networkingState.localPeerId)) onMessage(value.source, value.peer) }
+    this.channel.onmessageerror = /* 调用 onState('Local lobby message could not be decoded.') 并返回调用结果。 */ () => onState('Local lobby message could not be decoded.')
     onState('connected')
   }
-  async send(source: string, target = ''): Promise<void> { if (!this.channel) throw new Error('Local lobby is not open.'); this.channel.postMessage({ source, peer: networkingState.localPeerId, target }) }
-  async close(): Promise<void> { this.channel?.close(); this.channel = null }
+  /** 结构说明（自动提取）：send；输入 source、target；直接调用 Error、channel.postMessage；包含显式抛错路径。 */ async send(source: string, target = ''): Promise<void> { if (!this.channel) throw new Error('Local lobby is not open.'); this.channel.postMessage({ source, peer: networkingState.localPeerId, target }) }
+  /** 结构说明（自动提取）：close；无显式参数；直接调用 channel.close；写入 channel。 */ async close(): Promise<void> { this.channel?.close(); this.channel = null }
 }
 
 class WebSocketTransport implements NetworkTransport {
   readonly kind = 'websocket' as const
   private socket: WebSocket | null = null
-  async connect(onMessage: (source: string, peer: string) => void, onState: (state: string) => void): Promise<void> {
+  /** 结构说明（自动提取）：connect；输入 onMessage、onState；直接调用 test、Error、Promise；等待异步结果；包含显式抛错路径。 */ async connect(onMessage: (source: string, peer: string) => void, onState: (state: string) => void): Promise<void> {
     if (!/^wss?:\/\//i.test(productionSettings.networking.endpoint)) throw new Error('WebSocket endpoint must begin with ws:// or wss://.')
-    await new Promise<void>((resolve, reject) => {
+    await new Promise<void>(/** 结构说明（自动提取）：匿名回调；输入 resolve、reject；直接调用 WebSocket、globalThis.setTimeout；写入 socket、socket.onopen、socket.onmessage、socket.onerror 等。 */ (resolve, reject) => {
       const socket = new WebSocket(productionSettings.networking.endpoint); this.socket = socket
-      const timeout = globalThis.setTimeout(() => reject(new Error('WebSocket connection timed out.')), 10_000)
-      socket.onopen = () => { clearTimeout(timeout); onState('connected'); resolve() }
-      socket.onmessage = event => {
+      const timeout = globalThis.setTimeout(/* 调用 reject(new Error('WebSocket connection timed out.')) 并返回调用结果。 */ () => reject(new Error('WebSocket connection timed out.')), 10_000)
+      socket.onopen = /** 结构说明（自动提取）：匿名回调；无显式参数；直接调用 clearTimeout、onState、resolve。 */ () => { clearTimeout(timeout); onState('connected'); resolve() }
+      socket.onmessage = /** 结构说明（自动提取）：匿名回调；输入 event；直接调用 JSON.parse、test、onMessage。 */ event => {
         const source = typeof event.data === 'string' ? event.data : ''
         try {
           const route = JSON.parse(source) as { format?: unknown; version?: unknown; target?: unknown; sender?: unknown; payload?: unknown }
@@ -135,12 +136,12 @@ class WebSocketTransport implements NetworkTransport {
         } catch { /* A one-peer/raw broker remains backwards compatible. */ }
         onMessage(source, 'websocket-peer')
       }
-      socket.onerror = () => { clearTimeout(timeout); reject(new Error('WebSocket transport failed.')) }
-      socket.onclose = () => onState('closed')
+      socket.onerror = /** 结构说明（自动提取）：匿名回调；无显式参数；直接调用 clearTimeout、reject、Error。 */ () => { clearTimeout(timeout); reject(new Error('WebSocket transport failed.')) }
+      socket.onclose = /* 调用 onState('closed') 并返回调用结果。 */ () => onState('closed')
     })
   }
-  async send(source: string, target = ''): Promise<void> { if (this.socket?.readyState !== WebSocket.OPEN) throw new Error('WebSocket is not connected.'); this.socket.send(target ? stableNetworkJson({ format: 'nova-network-route', version: 1, sender: networkingState.localPeerId, target, payload: source }) : source) }
-  async close(): Promise<void> { this.socket?.close(1000, 'Nova_A session stopped'); this.socket = null }
+  /** 结构说明（自动提取）：send；输入 source、target；直接调用 Error、socket.send、stableNetworkJson；包含显式抛错路径。 */ async send(source: string, target = ''): Promise<void> { if (this.socket?.readyState !== WebSocket.OPEN) throw new Error('WebSocket is not connected.'); this.socket.send(target ? stableNetworkJson({ format: 'nova-network-route', version: 1, sender: networkingState.localPeerId, target, payload: source }) : source) }
+  /** 结构说明（自动提取）：close；无显式参数；直接调用 socket.close；写入 socket。 */ async close(): Promise<void> { this.socket?.close(1000, 'Nova_A session stopped'); this.socket = null }
 }
 
 class NativeUdpTransport implements NetworkTransport {
@@ -148,11 +149,11 @@ class NativeUdpTransport implements NetworkTransport {
   private socketId: number | null = null
   private pollTimer: ReturnType<typeof setTimeout> | null = null
   private peers = new Map<string, string>()
-  async connect(onMessage: (source: string, peer: string) => void, onState: (state: string) => void): Promise<void> {
+  /** 结构说明（自动提取）：connect；输入 onMessage、onState；直接调用 Error、invoke、onState、poll；写入 socketId；等待异步结果；包含显式抛错路径。 */ async connect(onMessage: (source: string, peer: string) => void, onState: (state: string) => void): Promise<void> {
     if (typeof window === 'undefined' || !('__TAURI_INTERNALS__' in window)) throw new Error('Native UDP transport is available only in a Nova_A desktop player.')
     const { invoke } = await import('@tauri-apps/api/core')
     this.socketId = await invoke<number>('udp_open', { bindAddress: productionSettings.networking.bindAddress })
-    const poll = async () => {
+    const poll = /** 结构说明（自动提取）：poll；无显式参数；直接调用 invoke、onMessage、onState、String、globalThis.setTimeout；写入 pollTimer；包含循环处理；等待异步结果。 */ async () => {
       if (this.socketId === null) return
       try {
         const packets = await invoke<Array<{ source: string; payload: string }>>('udp_receive', { socketId: this.socketId, maximum: 64 })
@@ -162,7 +163,7 @@ class NativeUdpTransport implements NetworkTransport {
     }
     onState('connected'); void poll()
   }
-  async send(source: string, target = ''): Promise<void> {
+  /** 结构说明（自动提取）：send；输入 source、target；直接调用 Error、productionSettings.networking.endpoint.replace、peers.get、peers.values、slice 等；包含循环处理；等待异步结果；包含显式抛错路径。 */ async send(source: string, target = ''): Promise<void> {
     if (this.socketId === null) throw new Error('UDP socket is not open.')
     const { invoke } = await import('@tauri-apps/api/core')
     const configured = productionSettings.networking.endpoint.replace(/^udp:\/\//i, '')
@@ -174,16 +175,16 @@ class NativeUdpTransport implements NetworkTransport {
       await invoke('udp_send', { socketId: this.socketId, target: destination, payload: source })
     }
   }
-  async close(): Promise<void> {
+  /** 结构说明（自动提取）：close；无显式参数；直接调用 clearTimeout、invoke、peers.clear；写入 pollTimer、socketId；等待异步结果。 */ async close(): Promise<void> {
     if (this.pollTimer !== null) clearTimeout(this.pollTimer); this.pollTimer = null
     if (this.socketId !== null) { const { invoke } = await import('@tauri-apps/api/core'); await invoke('udp_close', { socketId: this.socketId }) }
     this.socketId = null; this.peers.clear()
   }
-  bindPeer(peerId: string, endpoint: string): void { if (peerId && endpoint && this.peers.size < productionSettings.networking.maxPeers) this.peers.set(peerId, endpoint) }
-  unbindPeer(peerId: string): void {
+  /** 结构说明（自动提取）：bindPeer；输入 peerId、endpoint；直接调用 peers.set。 */ bindPeer(peerId: string, endpoint: string): void { if (peerId && endpoint && this.peers.size < productionSettings.networking.maxPeers) this.peers.set(peerId, endpoint) }
+  /** 结构说明（自动提取）：unbindPeer；输入 peerId；直接调用 peers.get、peers.delete、catch、then。 */ unbindPeer(peerId: string): void {
     const endpoint = this.peers.get(peerId), socketId = this.socketId
     this.peers.delete(peerId)
-    if (endpoint && socketId !== null) void import('@tauri-apps/api/core').then(({ invoke }) => invoke('udp_forget_peer', { socketId, target: endpoint })).catch(() => undefined)
+    if (endpoint && socketId !== null) void import('@tauri-apps/api/core').then(/* 调用 invoke('udp_forget_peer', { socketId, target: endpoint }) 并返回调用结果。 */ ({ invoke }) => invoke('udp_forget_peer', { socketId, target: endpoint })).catch(/* 返回 undefined 的当前值。 */ () => undefined)
   }
 }
 
@@ -204,7 +205,7 @@ const handshakenPeers = new Set<string>()
 const peerSources = new Map<string, string>()
 const peerEpochs = new Map<string, string>()
 const retiredPeerEpochs = new Map<string, number>()
-function pruneRetiredEpochs(): void { for (const [key, until] of retiredPeerEpochs) if (until < Date.now()) retiredPeerEpochs.delete(key) }
+/** 结构说明（自动提取）：pruneRetiredEpochs；无显式参数；直接调用 Date.now、retiredPeerEpochs.delete；包含循环处理。 */ function pruneRetiredEpochs(): void { for (const [key, until] of retiredPeerEpochs) if (until < Date.now()) retiredPeerEpochs.delete(key) }
 const sourcePeers = new Map<string, string>()
 const scheduledDeliveries = new Set<ReturnType<typeof setTimeout>>()
 const baselinePending = new Map<string, Set<string>>()
@@ -221,46 +222,46 @@ let serviceAbort: AbortController | null = null
 const serviceHandles: NetworkServiceHandle[] = []
 let reconnectAllowed = false
 let startupPromise: Promise<void> | null = null
-function requireConnectionGeneration(generation: number): void { if (generation !== connectionGeneration) throw new DOMException('Network session opening was cancelled.', 'AbortError') }
+/** 结构说明（自动提取）：requireConnectionGeneration；输入 generation；直接调用 DOMException；包含显式抛错路径。 */ function requireConnectionGeneration(generation: number): void { if (generation !== connectionGeneration) throw new DOMException('Network session opening was cancelled.', 'AbortError') }
 
-function networkSessionId(): string { let hash = 0x811c9dc5; const source = `${productionSettings.networking.sessionName}:${productionSettings.networking.schemaVersion}`; for (const char of source) hash = Math.imul(hash ^ char.charCodeAt(0), 0x01000193); return `session-${(hash >>> 0).toString(16).padStart(8, '0')}` }
-function peerIdentity(): string { const uuid = typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`; return `${productionSettings.networking.playerName.replace(/[^a-zA-Z0-9_.-]/g, '_').slice(0, 32)}-${uuid.slice(0, 12)}` }
-function channel(id: string): NetworkChannelDefinition | null { return productionSettings.networking.channels.find(item => item.id === id) ?? null }
-function channelByDelivery(delivery: NetworkChannelDefinition['delivery'], preferred: string): NetworkChannelDefinition | null { const preferredChannel = channel(preferred); return preferredChannel?.delivery === delivery ? preferredChannel : productionSettings.networking.channels.find(item => item.delivery === delivery) ?? null }
-function addEvent(message: string, level: 'info' | 'warning' | 'error' = 'info'): void { networkingState.events.push({ at: Date.now(), level, message: message.slice(0, 300) }); if (networkingState.events.length > 500) networkingState.events.splice(0, networkingState.events.length - 500) }
-function channelStat(id: string): { sent: number; received: number; dropped: number } { return networkingState.channelStats[id] ??= { sent: 0, received: 0, dropped: 0 } }
-function packetSummary(direction: 'in' | 'out', peer: string, packet: NetworkPacket, bytes: number, accepted: boolean): void { networkingState.packetSummaries.push({ direction, at: Date.now(), peer: peer.slice(0, 80), channel: packet.channel, kind: packet.kind, sequence: packet.sequence, bytes, accepted }); if (networkingState.packetSummaries.length > 1_000) networkingState.packetSummaries.splice(0, networkingState.packetSummaries.length - 1_000) }
-function updatePeer(id: string, payload?: HelloPayload, verified = verifiedPeers.has(id)): boolean { const now = Date.now(), existing = networkingState.peerDetails.find(peer => peer.id === id); if (existing) { existing.lastSeenAt = now; existing.verified ||= verified; return true }; if (networkingState.peerDetails.length >= productionSettings.networking.maxPeers) return false; networkingState.peerDetails.push({ id, name: payload?.playerName ?? id, role: payload?.role ?? 'peer', verified, connectedAt: now, lastSeenAt: now, sceneUuid: '' }); networkingState.peers = networkingState.peerDetails.length; return true }
-function authorityClaimTrusted(sender: string, source: string): boolean {
+/** 结构说明（自动提取）：networkSessionId；无显式参数；直接调用 Math.imul、char.charCodeAt、padStart、toString；写入 hash；包含循环处理。 */ function networkSessionId(): string { let hash = 0x811c9dc5; const source = `${productionSettings.networking.sessionName}:${productionSettings.networking.schemaVersion}`; for (const char of source) hash = Math.imul(hash ^ char.charCodeAt(0), 0x01000193); return `session-${(hash >>> 0).toString(16).padStart(8, '0')}` }
+/** 结构说明（自动提取）：peerIdentity；无显式参数；直接调用 crypto.randomUUID、toString、Date.now、slice、Math.random 等。 */ function peerIdentity(): string { const uuid = typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`; return `${productionSettings.networking.playerName.replace(/[^a-zA-Z0-9_.-]/g, '_').slice(0, 32)}-${uuid.slice(0, 12)}` }
+/** 结构说明（自动提取）：channel；输入 id；直接调用 productionSettings.networking.channels.find。 */ function channel(id: string): NetworkChannelDefinition | null { return productionSettings.networking.channels.find(/* 比较 item.id 与 id，返回严格相等的判断结果。 */ item => item.id === id) ?? null }
+/** 结构说明（自动提取）：channelByDelivery；输入 delivery、preferred；直接调用 channel、productionSettings.networking.channels.find。 */ function channelByDelivery(delivery: NetworkChannelDefinition['delivery'], preferred: string): NetworkChannelDefinition | null { const preferredChannel = channel(preferred); return preferredChannel?.delivery === delivery ? preferredChannel : productionSettings.networking.channels.find(/* 比较 item.delivery 与 delivery，返回严格相等的判断结果。 */ item => item.delivery === delivery) ?? null }
+/** 结构说明（自动提取）：addEvent；输入 message、level；直接调用 networkingState.events.push、Date.now、message.slice、networkingState.events.splice。 */ function addEvent(message: string, level: 'info' | 'warning' | 'error' = 'info'): void { networkingState.events.push({ at: Date.now(), level, message: message.slice(0, 300) }); if (networkingState.events.length > 500) networkingState.events.splice(0, networkingState.events.length - 500) }
+/** 结构说明（自动提取）：channelStat；输入 id；写入 networkingState.channelStats[…]。 */ function channelStat(id: string): { sent: number; received: number; dropped: number } { return networkingState.channelStats[id] ??= { sent: 0, received: 0, dropped: 0 } }
+/** 结构说明（自动提取）：packetSummary；输入 direction、peer、packet、bytes、accepted；直接调用 networkingState.packetSummaries.push、Date.now、peer.slice、networkingState.packetSummaries.splice。 */ function packetSummary(direction: 'in' | 'out', peer: string, packet: NetworkPacket, bytes: number, accepted: boolean): void { networkingState.packetSummaries.push({ direction, at: Date.now(), peer: peer.slice(0, 80), channel: packet.channel, kind: packet.kind, sequence: packet.sequence, bytes, accepted }); if (networkingState.packetSummaries.length > 1_000) networkingState.packetSummaries.splice(0, networkingState.packetSummaries.length - 1_000) }
+/** 结构说明（自动提取）：updatePeer；输入 id、payload、verified；直接调用 Date.now、networkingState.peerDetails.find、networkingState.peerDetails.push；写入 existing.lastSeenAt、existing.verified、networkingState.peers。 */ function updatePeer(id: string, payload?: HelloPayload, verified = verifiedPeers.has(id)): boolean { const now = Date.now(), existing = networkingState.peerDetails.find(/* 比较 peer.id 与 id，返回严格相等的判断结果。 */ peer => peer.id === id); if (existing) { existing.lastSeenAt = now; existing.verified ||= verified; return true }; if (networkingState.peerDetails.length >= productionSettings.networking.maxPeers) return false; networkingState.peerDetails.push({ id, name: payload?.playerName ?? id, role: payload?.role ?? 'peer', verified, connectedAt: now, lastSeenAt: now, sceneUuid: '' }); networkingState.peers = networkingState.peerDetails.length; return true }
+/** 结构说明（自动提取）：authorityClaimTrusted；输入 sender、source；直接调用 verifiedPeers.has、productionSettings.networking.endpoint.replace。 */ function authorityClaimTrusted(sender: string, source: string): boolean {
   if (verifiedPeers.has(sender)) return true
   if (transport?.kind === 'local-loopback') return source === sender
   if (transport?.kind === 'native-udp') return source === productionSettings.networking.endpoint.replace(/^udp:\/\//i, '')
   return false
 }
-function nextSequence(channelId: string, peer = '*', commit = true): number { const destination = peer || '*', key = `${destination}:${channelId}`, baseline = sequenceByChannel.get(key) ?? (destination === '*' ? 0 : sequenceByChannel.get(`*:${channelId}`) ?? 0), next = (baseline + 1) & 0x7fff_ffff; if (commit) sequenceByChannel.set(key, next || 1); return next || 1 }
+/** 结构说明（自动提取）：nextSequence；输入 channelId、peer、commit；直接调用 sequenceByChannel.get、sequenceByChannel.set。 */ function nextSequence(channelId: string, peer = '*', commit = true): number { const destination = peer || '*', key = `${destination}:${channelId}`, baseline = sequenceByChannel.get(key) ?? (destination === '*' ? 0 : sequenceByChannel.get(`*:${channelId}`) ?? 0), next = (baseline + 1) & 0x7fff_ffff; if (commit) sequenceByChannel.set(key, next || 1); return next || 1 }
 const MAX_SEQUENCE = 0x7fff_ffff
-function sequenceDistance(previous: number, current: number): number { if (current === previous) return 0; return current > previous ? current - previous : MAX_SEQUENCE - previous + current }
-function nextExpectedSequence(previous: number): number { return previous >= MAX_SEQUENCE ? 1 : previous + 1 }
-function protocolLimits() { return { maximumPacketBytes: productionSettings.networking.maximumPacketBytes, maximumMessagesPerSecond: productionSettings.networking.maximumMessagesPerSecond, schemaVersion: productionSettings.networking.schemaVersion } }
-function authenticationChecksum(packet: NetworkPacket): string { const { security: _security, ...unsigned } = packet; return networkChecksum(unsigned) }
-function securePacket(packet: NetworkPacket): NetworkPacket {
+/** 结构说明（自动提取）：sequenceDistance；输入 previous、current。 */ function sequenceDistance(previous: number, current: number): number { if (current === previous) return 0; return current > previous ? current - previous : MAX_SEQUENCE - previous + current }
+/* 根据 previous >= MAX_SEQUENCE 的真假，分别返回 1 或 previous + 1。 */ function nextExpectedSequence(previous: number): number { return previous >= MAX_SEQUENCE ? 1 : previous + 1 }
+/** 结构说明（自动提取）：protocolLimits；无显式参数。 */ function protocolLimits() { return { maximumPacketBytes: productionSettings.networking.maximumPacketBytes, maximumMessagesPerSecond: productionSettings.networking.maximumMessagesPerSecond, schemaVersion: productionSettings.networking.schemaVersion } }
+/** 结构说明（自动提取）：authenticationChecksum；输入 packet；直接调用 networkChecksum。 */ function authenticationChecksum(packet: NetworkPacket): string { const { security: _security, ...unsigned } = packet; return networkChecksum(unsigned) }
+/** 结构说明（自动提取）：securePacket；输入 packet；直接调用 createNetworkNonce、Date.now、createAuthenticationProof、authenticationChecksum；写入 envelope.proof、packet.security；返回路径包含 packet。 */ function securePacket(packet: NetworkPacket): NetworkPacket {
   const envelope: NetworkSecurityEnvelope = { epoch: sessionEpoch, nonce: createNetworkNonce(packet.sequence), issuedAt: Date.now(), proof: '' }
   if (productionSettings.networking.authentication.mode === 'hook') envelope.proof = createAuthenticationProof(productionSettings.networking.authentication.providerId, { sessionId: packet.sessionId, sender: packet.sender, epoch: envelope.epoch, nonce: envelope.nonce, issuedAt: envelope.issuedAt, packetChecksum: authenticationChecksum(packet) })
   packet.security = envelope
   return packet
 }
-function refreshProductionDiagnostics(): void {
+/** 结构说明（自动提取）：refreshProductionDiagnostics；无显式参数；直接调用 networkingState.ownership.splice、authorityTable.entries、networkingState.peerInterests.splice、sort、peerInterests.values 等。 */ function refreshProductionDiagnostics(): void {
   networkingState.ownership.splice(0, networkingState.ownership.length, ...authorityTable.entries())
-  networkingState.peerInterests.splice(0, networkingState.peerInterests.length, ...[...peerInterests.values()].sort((a, b) => a.peerId.localeCompare(b.peerId)))
+  networkingState.peerInterests.splice(0, networkingState.peerInterests.length, ...[...peerInterests.values()].sort(/* 调用 a.peerId.localeCompare(b.peerId) 并返回调用结果。 */ (a, b) => a.peerId.localeCompare(b.peerId)))
   networkingState.rollbackTimeline.splice(0, networkingState.rollbackTimeline.length, ...rollbackTimeline.snapshot())
   networkingState.replicationDiffs.splice(0, networkingState.replicationDiffs.length, ...replicationDiffs.snapshot())
 }
-function removePeer(peerId: string, reason: string): void {
+/** 结构说明（自动提取）：removePeer；输入 peerId、reason；直接调用 peerEpochs.get、pruneRetiredEpochs、retiredPeerEpochs.set、Date.now、baselineSending.delete 等；写入 networkingState.peers、networkingState.reliablePending、networkingState.disconnectCleanups；包含循环处理。 */ function removePeer(peerId: string, reason: string): void {
   const epoch = peerEpochs.get(peerId); pruneRetiredEpochs()
   if (epoch && retiredPeerEpochs.size < 4096) retiredPeerEpochs.set(`${peerId}:${epoch}`, Date.now() + productionSettings.networking.security.maximumPacketAgeMs)
   baselineSending.delete(peerId); snapshotCursors.delete(peerId)
   for (const [uuid, target] of interpolationTargets) if (target.sender === peerId) interpolationTargets.delete(uuid)
-  const index = networkingState.peerDetails.findIndex(item => item.id === peerId)
+  const index = networkingState.peerDetails.findIndex(/* 比较 item.id 与 peerId，返回严格相等的判断结果。 */ item => item.id === peerId)
   if (index >= 0) networkingState.peerDetails.splice(index, 1)
   networkingState.peers = networkingState.peerDetails.length
   verifiedPeers.delete(peerId); handshakenPeers.delete(peerId); peerEpochs.delete(peerId); remoteInputs.delete(peerId); peerInterests.delete(peerId); const source = peerSources.get(peerId); peerSources.delete(peerId); if (source && sourcePeers.get(source) === peerId) sourcePeers.delete(source); baselinePending.delete(peerId); baselineTransfers.delete(peerId); clearDeferredInbound(peerId); replayProtection.clearPeer(peerId); inboundRate.clearPrefix(`${peerId}:`); rpcRate.clearPrefix(`${peerId}:`)
@@ -276,23 +277,23 @@ function removePeer(peerId: string, reason: string): void {
   if (released.length) addEvent(`${released.length} owned object(s) returned to authority after ${reason}.`, 'warning')
   refreshProductionDiagnostics()
 }
-function pruneDisconnectedPeers(now = Date.now()): void {
+/** 结构说明（自动提取）：pruneDisconnectedPeers；输入 now；直接调用 Math.max、removePeer、addEvent、peerInterests.delete、refreshProductionDiagnostics；包含循环处理。 */ function pruneDisconnectedPeers(now = Date.now()): void {
   const timeout = Math.max(5_000, productionSettings.networking.authentication.handshakeTimeoutMs * 2)
   for (const peer of [...networkingState.peerDetails]) if (now - peer.lastSeenAt > timeout) { removePeer(peer.id, 'peer timeout'); addEvent(`${peer.name} timed out and was removed.`, 'warning') }
   for (const [peerId, view] of peerInterests) if (now - view.updatedAt > timeout) peerInterests.delete(peerId)
   refreshProductionDiagnostics()
 }
 
-function cancelScheduledDeliveries(): void { for (const timer of scheduledDeliveries) globalThis.clearTimeout(timer); scheduledDeliveries.clear() }
-async function closeNetworkServices(): Promise<void> { serviceAbort?.abort(); serviceAbort = null; const handles = serviceHandles.splice(0); await Promise.all(handles.map(handle => handle.close().catch(() => undefined))) }
-async function openNetworkServices(generation: number): Promise<void> {
+/** 结构说明（自动提取）：cancelScheduledDeliveries；无显式参数；直接调用 globalThis.clearTimeout、scheduledDeliveries.clear；包含循环处理。 */ function cancelScheduledDeliveries(): void { for (const timer of scheduledDeliveries) globalThis.clearTimeout(timer); scheduledDeliveries.clear() }
+/** 结构说明（自动提取）：closeNetworkServices；无显式参数；直接调用 serviceAbort.abort、serviceHandles.splice、Promise.all、handles.map；写入 serviceAbort；等待异步结果。 */ async function closeNetworkServices(): Promise<void> { serviceAbort?.abort(); serviceAbort = null; const handles = serviceHandles.splice(0); await Promise.all(handles.map(/** 结构说明（自动提取）：handles.map 回调；输入 handle；直接调用 catch、handle.close；返回表达式求值结果。 */ handle => handle.close().catch(/* 返回 undefined 的当前值。 */ () => undefined))) }
+/** 结构说明（自动提取）：openNetworkServices；输入 generation；直接调用 closeNetworkServices、requireConnectionGeneration、AbortController、selectedNetworkServiceIds、openReviewedNetworkService 等；写入 serviceAbort；包含循环处理；等待异步结果；包含显式抛错路径。 */ async function openNetworkServices(generation: number): Promise<void> {
   await closeNetworkServices(); requireConnectionGeneration(generation)
   const abort = new AbortController(); serviceAbort = abort
   const selected = selectedNetworkServiceIds(productionSettings.networking)
   for (const kind of ['identity', 'lobby', 'relay'] as NetworkServiceKind[]) {
     if (!selected[kind]) continue
     const handle = await openReviewedNetworkService(kind, productionSettings.networking, { sessionId: networkingState.sessionId, localPeerId: networkingState.localPeerId, role: productionSettings.networking.role, signal: abort.signal })
-    if (generation !== connectionGeneration || abort.signal.aborted) { await handle.close().catch(() => undefined); requireConnectionGeneration(generation); throw new DOMException('Network service opening was cancelled.', 'AbortError') }
+    if (generation !== connectionGeneration || abort.signal.aborted) { await handle.close().catch(/* 返回 undefined 的当前值。 */ () => undefined); requireConnectionGeneration(generation); throw new DOMException('Network service opening was cancelled.', 'AbortError') }
     serviceHandles.push(handle)
     const operation = kind === 'identity' ? 'identify' : kind === 'lobby' ? (productionSettings.networking.role === 'client' ? 'discover' : 'publish') : 'connect'
     await handle.request(operation, Object.freeze({ sessionName: productionSettings.networking.sessionName, role: productionSettings.networking.role, peerId: networkingState.localPeerId }))
@@ -300,16 +301,16 @@ async function openNetworkServices(generation: number): Promise<void> {
     addEvent(`Reviewed ${kind} service ${selected[kind]} opened for ${operation}.`)
   }
 }
-function resetConnectionPeerState(): void {
+/** 结构说明（自动提取）：resetConnectionPeerState；无显式参数；直接调用 removePeer、networkingState.peerDetails.splice、remoteSnapshots.splice、remoteInputs.clear、inboundSequences.clear 等；写入 networkingState.peers；包含循环处理。 */ function resetConnectionPeerState(): void {
   for (const peer of [...networkingState.peerDetails]) removePeer(peer.id, 'session reset')
   networkingState.peerDetails.splice(0); networkingState.peers = 0; remoteSnapshots.splice(0); remoteInputs.clear(); inboundSequences.clear(); reliableBuffers.clear(); peerSources.clear(); peerEpochs.clear(); retiredPeerEpochs.clear(); baselineSending.clear(); snapshotCursors.clear(); sourcePeers.clear(); baselinePending.clear(); baselineTransfers.clear(); clearDeferredInbound(); preAdmissionRpcs.splice(0); verifiedPeers.clear(); handshakenPeers.clear(); peerInterests.clear(); interpolationTargets.clear(); replayProtection.clear(); reliableWindow.clear(); outboundRate.clear(); inboundRate.clear(); rpcRate.clear()
 }
 
-async function transportSend(source: string, packet: NetworkPacket, target: string, resend = false): Promise<boolean> {
+/** 结构说明（自动提取）：transportSend；输入 source、packet、target、resend；直接调用 utf8Bytes、simulator.decide、channelStat、packetSummary、Math.max 等；包含循环处理；等待异步结果。 */ async function transportSend(source: string, packet: NetworkPacket, target: string, resend = false): Promise<boolean> {
   if (!transport || networkingState.status !== 'connected') return false
   const activeTransport = transport, generation = connectionGeneration, bytes = utf8Bytes(source), decision = simulator.decide(productionSettings.networking.simulation)
   if (decision.dropped) { networkingState.droppedPackets++; channelStat(packet.channel).dropped++; packetSummary('out', target || '*', packet, bytes, false); return packet.delivery === 'reliable-ordered' }
-  const deliver = async () => {
+  const deliver = /** 结构说明（自动提取）：deliver；无显式参数；直接调用 activeTransport.send、channelStat、packetSummary、String；写入 networkingState.sentBytes、networkingState.lastError；等待异步结果。 */ async () => {
     if (transport !== activeTransport || connectionGeneration !== generation || networkingState.status !== 'connected') return false
     try { await activeTransport.send(source, target); networkingState.sentBytes += bytes; networkingState.sentPackets++; channelStat(packet.channel).sent++; packetSummary('out', target || '*', packet, bytes, true); if (resend) networkingState.reliableResent++; return true } catch (error) { networkingState.lastError = error instanceof Error ? error.message : String(error); networkingState.droppedPackets++; channelStat(packet.channel).dropped++; return false }
   }
@@ -317,24 +318,24 @@ async function transportSend(source: string, packet: NetworkPacket, target: stri
     const delay = decision.delayMs + copy
     if (delay) {
       if (scheduledDeliveries.size >= Math.max(64, Math.min(4_096, productionSettings.networking.maximumPendingReliable * 4))) { networkingState.droppedPackets++; channelStat(packet.channel).dropped++; continue }
-      const timer = globalThis.setTimeout(() => { scheduledDeliveries.delete(timer); void deliver() }, delay); scheduledDeliveries.add(timer)
+      const timer = globalThis.setTimeout(/** 结构说明（自动提取）：globalThis.setTimeout 回调；无显式参数；直接调用 scheduledDeliveries.delete、deliver。 */ () => { scheduledDeliveries.delete(timer); void deliver() }, delay); scheduledDeliveries.add(timer)
     } else await deliver()
   }
   return true
 }
 
-export async function sendNetworkPacket(kind: NetworkPacket['kind'], payload: unknown, channelId: string, target = ''): Promise<boolean> {
+/** 结构说明（自动提取）：sendNetworkPacket；输入 kind、payload、channelId、target；直接调用 channel、performance.now、outboundRate.accept、channelStat、networkingState.peerDetails.map 等；写入 networkingState.lastError、deliveries、networkingState.bandwidthOutKbps、budgetStarted 等；包含循环处理；等待异步结果；包含显式抛错路径。 */ export async function sendNetworkPacket(kind: NetworkPacket['kind'], payload: unknown, channelId: string, target = ''): Promise<boolean> {
   if (!transport || networkingState.status !== 'connected' || !productionSettings.networking.enabled || !productionSettings.networking.permissionGranted) return false
   const contract = channel(channelId); if (!contract) { networkingState.lastError = `Unknown network channel ${channelId}.`; return false }
   if (transport.kind === 'native-udp' && !target && !networkingState.peerDetails.length && (productionSettings.networking.role === 'host' || productionSettings.networking.role === 'server')) return true
   const now = performance.now()
   if (!outboundRate.accept('global', productionSettings.networking.maximumMessagesPerSecond, now) || !outboundRate.accept(channelId, contract.messagesPerSecond, now)) { networkingState.rateLimited++; channelStat(channelId).dropped++; return false }
-  const targets = contract.delivery === 'reliable-ordered' && kind !== 'ack' && !target && networkingState.peerDetails.length ? networkingState.peerDetails.map(peer => peer.id) : [target]
+  const targets = contract.delivery === 'reliable-ordered' && kind !== 'ack' && !target && networkingState.peerDetails.length ? networkingState.peerDetails.map(/* 返回 peer.id 的当前值。 */ peer => peer.id) : [target]
   let deliveries: Array<{ destination: string; packet: NetworkPacket; source: string; bytes: number }>
   try {
     const payloadError = validateNetworkValue(payload); if (payloadError) throw new Error(payloadError)
     if (utf8Bytes(stableNetworkJson(payload)) > contract.maximumPayloadBytes) throw new Error(`Packet payload exceeds channel ${channelId}.`)
-    deliveries = targets.map(destination => {
+    deliveries = targets.map(/** 结构说明（自动提取）：targets.map 回调；输入 destination；直接调用 securePacket、createNetworkPacket、nextSequence、serializeNetworkPacket、utf8Bytes 等；包含显式抛错路径。 */ destination => {
       const packet = securePacket(createNetworkPacket({ sessionId: networkingState.sessionId, sender: networkingState.localPeerId, channel: channelId, delivery: contract.delivery, sequence: nextSequence(channelId, destination || '*', false), ack: null, tick, schema: productionSettings.networking.schemaVersion, kind, payload })), source = serializeNetworkPacket(packet), bytes = utf8Bytes(source)
       if (bytes > productionSettings.networking.maximumPacketBytes) throw new Error('Packet exceeds the configured byte bound.')
       return { destination, packet, source, bytes }
@@ -342,7 +343,7 @@ export async function sendNetworkPacket(kind: NetworkPacket['kind'], payload: un
   } catch (error) { networkingState.lastError = error instanceof Error ? error.message : String(error); networkingState.schemaRejected++; if (productionSettings.networking.authentication.mode === 'hook') networkingState.authenticationRejected++; return false }
   if (now - budgetStarted >= 1_000) { networkingState.bandwidthOutKbps = Math.round(budgetBytes * 8 / 1024); budgetStarted = now; budgetBytes = 0 }
   const limit = productionSettings.networking.bandwidthKbps * 1024 / 8
-  const totalBytes = deliveries.reduce((sum, item) => sum + item.bytes, 0)
+  const totalBytes = deliveries.reduce(/* 计算表达式 sum + item.bytes 并返回结果，沿用操作数的原有类型规则。 */ (sum, item) => sum + item.bytes, 0)
   if (budgetBytes + totalBytes > limit) { networkingState.droppedPackets += deliveries.length; channelStat(channelId).dropped += deliveries.length; return false }
   if (contract.delivery === 'reliable-ordered' && kind !== 'ack') {
     if (!reliableWindow.canTrack(deliveries.length)) { networkingState.droppedPackets += deliveries.length; networkingState.reliableExpired += deliveries.length; return false }
@@ -352,14 +353,14 @@ export async function sendNetworkPacket(kind: NetworkPacket['kind'], payload: un
   budgetBytes += totalBytes
   for (const item of deliveries) sequenceByChannel.set(`${item.destination || '*'}:${item.packet.channel}`, item.packet.sequence)
   if (kind === 'resync') for (const item of deliveries) if (item.destination) { const pending = baselinePending.get(item.destination) ?? new Set<string>(); pending.add(`${item.packet.channel}:${item.packet.sequence}`); baselinePending.set(item.destination, pending) }
-  const delivered = await Promise.all(deliveries.map(item => transportSend(item.source, item.packet, item.destination)))
+  const delivered = await Promise.all(deliveries.map(/* 调用 transportSend(item.source, item.packet, item.destination) 并返回调用结果。 */ item => transportSend(item.source, item.packet, item.destination)))
   return delivered.every(Boolean)
 }
 
-async function sendAck(packet: NetworkPacket, _peer: string): Promise<void> { const ack = securePacket(createNetworkPacket({ sessionId: networkingState.sessionId, sender: networkingState.localPeerId, channel: packet.channel, delivery: packet.delivery, sequence: 0, ack: packet.sequence, tick, schema: productionSettings.networking.schemaVersion, kind: 'ack', payload: null })); await transportSend(serializeNetworkPacket(ack), ack, packet.sender) }
-async function sendAuthoritativeBaseline(peerId: string, reliable: NetworkChannelDefinition): Promise<void> {
+/** 结构说明（自动提取）：sendAck；输入 packet、_peer；直接调用 securePacket、createNetworkPacket、transportSend、serializeNetworkPacket；等待异步结果。 */ async function sendAck(packet: NetworkPacket, _peer: string): Promise<void> { const ack = securePacket(createNetworkPacket({ sessionId: networkingState.sessionId, sender: networkingState.localPeerId, channel: packet.channel, delivery: packet.delivery, sequence: 0, ack: packet.sequence, tick, schema: productionSettings.networking.schemaVersion, kind: 'ack', payload: null })); await transportSend(serializeNetworkPacket(ack), ack, packet.sender) }
+/** 结构说明（自动提取）：sendAuthoritativeBaseline；输入 peerId、reliable；直接调用 baselineSending.add、baselinePending.set、Set、exportMultiplayerSave、authorityTable.entries 等；写入 low、high、offset、windowStarted 等；包含循环处理；等待异步结果；包含显式抛错路径。 */ async function sendAuthoritativeBaseline(peerId: string, reliable: NetworkChannelDefinition): Promise<void> {
   baselineSending.add(peerId); baselinePending.set(peerId, new Set())
-  const document: BaselineDocument = { format: 'nova-network-baseline', version: 1, save: exportMultiplayerSave(lastEntities, tick), authority: authorityTable.entries(), scenes: networkingState.peerDetails.map(peer => ({ peerId: peer.id, sceneUuid: peer.sceneUuid })).filter(item => item.sceneUuid).slice(0, 64) }
+  const document: BaselineDocument = { format: 'nova-network-baseline', version: 1, save: exportMultiplayerSave(lastEntities, tick), authority: authorityTable.entries(), scenes: networkingState.peerDetails.map(/** 构造并返回记录 { peerId: peer.id, sceneUuid: peer.sceneUuid }，字段按当前实参及捕获状态求值。 */ peer => ({ peerId: peer.id, sceneUuid: peer.sceneUuid })).filter(/* 返回 item.sceneUuid 的当前值。 */ item => item.sceneUuid).slice(0, 64) }
   const source = stableNetworkJson(document), configuredByteBudget = Math.max(1_024, productionSettings.networking.bandwidthKbps * 1024 / 8), maximumChunkBytes = Math.max(128, Math.min(48_000, reliable.maximumPayloadBytes - 2_048, productionSettings.networking.maximumPacketBytes - 4_096, configuredByteBudget - 768))
   const chunks: string[] = []
   for (let offset = 0; offset < source.length;) {
@@ -373,7 +374,7 @@ async function sendAuthoritativeBaseline(peerId: string, reliable: NetworkChanne
   const generation = connectionGeneration, targetEpoch = peerEpochs.get(peerId), byteBudget = configuredByteBudget, messageBudget = Math.max(1, Math.min(productionSettings.networking.maximumMessagesPerSecond, reliable.messagesPerSecond)); let windowStarted = performance.now(), windowBytes = 0, windowMessages = 0
   for (let index = 0; index < chunks.length; index++) {
     const estimate = Math.min(byteBudget, utf8Bytes(chunks[index]) + 768), elapsed = performance.now() - windowStarted
-    if (windowMessages >= messageBudget || windowBytes + estimate > byteBudget) { await new Promise(resolve => globalThis.setTimeout(resolve, Math.max(1, 1_000 - elapsed))); windowStarted = performance.now(); windowBytes = 0; windowMessages = 0 }
+    if (windowMessages >= messageBudget || windowBytes + estimate > byteBudget) { await new Promise(/* 调用 globalThis.setTimeout(resolve, Math.max(1, 1_000 - elapsed)) 并返回调用结果。 */ resolve => globalThis.setTimeout(resolve, Math.max(1, 1_000 - elapsed))); windowStarted = performance.now(); windowBytes = 0; windowMessages = 0 }
     if (generation !== connectionGeneration || !transport || networkingState.status !== 'connected' || !handshakenPeers.has(peerId) || peerEpochs.get(peerId) !== targetEpoch) throw new Error('Authoritative baseline transfer was cancelled with the session or peer.')
     if (!await sendNetworkPacket('resync', { transferId, index, count: chunks.length, checksum, chunk: chunks[index] } satisfies BaselineChunkPayload, reliable.id, peerId)) throw new Error(`Authoritative baseline chunk ${index + 1}/${chunks.length} could not be queued.`)
     windowBytes += estimate; windowMessages++
@@ -381,23 +382,23 @@ async function sendAuthoritativeBaseline(peerId: string, reliable: NetworkChanne
   baselineSending.delete(peerId)
   if (!baselinePending.get(peerId)?.size) { baselinePending.delete(peerId); drainDeferredInbound(peerId) }
 }
-function queuePreAdmissionRpc(payload: RpcPayload, channelId: string): boolean {
+/** 结构说明（自动提取）：queuePreAdmissionRpc；输入 payload、channelId；直接调用 channel、Math.max、Math.min、preAdmissionRpcs.push、JSON.parse 等。 */ function queuePreAdmissionRpc(payload: RpcPayload, channelId: string): boolean {
   if (channel(channelId)?.delivery !== 'reliable-ordered' || preAdmissionRpcs.length >= Math.max(1, productionSettings.networking.maximumPendingReliable)) return false
   const expiresIn = Math.max(1_000, Math.min(30_000, productionSettings.networking.authentication.handshakeTimeoutMs))
   preAdmissionRpcs.push({ payload: JSON.parse(stableNetworkJson(payload)) as RpcPayload, channelId, expiresAt: Date.now() + expiresIn })
   return true
 }
-function flushPreAdmissionRpcs(peerId: string): void {
+/** 结构说明（自动提取）：flushPreAdmissionRpcs；输入 peerId；直接调用 Date.now、preAdmissionRpcs.splice、sendNetworkPacket；包含循环处理。 */ function flushPreAdmissionRpcs(peerId: string): void {
   const now = Date.now(), pending = preAdmissionRpcs.splice(0)
   for (const item of pending) if (item.expiresAt >= now) void sendNetworkPacket('rpc', item.payload, item.channelId, peerId)
 }
-function rpcEntityUuid(payload: unknown): string { if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return ''; const value = payload as Record<string, unknown>, candidate = value.entityUuid ?? value.entity; return typeof candidate === 'string' ? candidate.slice(0, 128) : '' }
-function acceptsRpc(contract: NetworkRpcDefinition, remoteRole: string, sender: string, payload: unknown): boolean { const localRole = productionSettings.networking.role; const direction = contract.direction === 'bidirectional' || (contract.direction === 'client-to-server' && (localRole === 'server' || localRole === 'host') && remoteRole === 'client') || (contract.direction === 'server-to-client' && localRole === 'client' && (remoteRole === 'server' || remoteRole === 'host')); const entityUuid = rpcEntityUuid(payload), authority = contract.authority === 'any' || (contract.authority === 'owner' && Boolean(entityUuid) && authorityTable.owner(entityUuid) === sender) || (contract.authority === 'server' && (remoteRole === 'server' || remoteRole === 'host')); return direction && authority }
+/** 结构说明（自动提取）：rpcEntityUuid；输入 payload；直接调用 Array.isArray、candidate.slice。 */ function rpcEntityUuid(payload: unknown): string { if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return ''; const value = payload as Record<string, unknown>, candidate = value.entityUuid ?? value.entity; return typeof candidate === 'string' ? candidate.slice(0, 128) : '' }
+/** 结构说明（自动提取）：acceptsRpc；输入 contract、remoteRole、sender、payload；直接调用 rpcEntityUuid、Boolean、authorityTable.owner。 */ function acceptsRpc(contract: NetworkRpcDefinition, remoteRole: string, sender: string, payload: unknown): boolean { const localRole = productionSettings.networking.role; const direction = contract.direction === 'bidirectional' || (contract.direction === 'client-to-server' && (localRole === 'server' || localRole === 'host') && remoteRole === 'client') || (contract.direction === 'server-to-client' && localRole === 'client' && (remoteRole === 'server' || remoteRole === 'host')); const entityUuid = rpcEntityUuid(payload), authority = contract.authority === 'any' || (contract.authority === 'owner' && Boolean(entityUuid) && authorityTable.owner(entityUuid) === sender) || (contract.authority === 'server' && (remoteRole === 'server' || remoteRole === 'host')); return direction && authority }
 const NETWORK_WORLD_BOUND = 1_000_000_000
-function boundedNetworkNumber(value: unknown, maximum = NETWORK_WORLD_BOUND): number | null { return typeof value === 'number' && Number.isFinite(value) && Math.abs(value) <= maximum ? value : null }
-function normalizeEntitySnapshot(value: unknown): EntitySnapshot[] { if (!Array.isArray(value)) return []; const seen = new Set<string>(); return value.slice(0, 2_000).flatMap(raw => { if (!raw || typeof raw !== 'object' || typeof (raw as Record<string, unknown>).uuid !== 'string') return []; const item = raw as Record<string, unknown>, uuid = String(item.uuid); if (!/^[A-Za-z0-9_.-]{1,128}$/.test(uuid) || seen.has(uuid)) return []; seen.add(uuid); const output: EntitySnapshot = { uuid }, position = item.position, velocity = item.velocity; if (Array.isArray(position) && position.length === 2) { const x = boundedNetworkNumber(position[0]), y = boundedNetworkNumber(position[1]); if (x !== null && y !== null) output.position = [x, y] } if (typeof item.rotation === 'number') { const rotation = boundedNetworkNumber(item.rotation, 1_000_000_000_000); if (rotation !== null) output.rotation = rotation } if (Array.isArray(velocity) && velocity.length === 2) { const x = boundedNetworkNumber(velocity[0]), y = boundedNetworkNumber(velocity[1]); if (x !== null && y !== null) output.velocity = [x, y] } return output.position || output.rotation !== undefined || output.velocity ? [output] : [] }) }
+/* 根据 typeof value === 'number' && Number.isFinite(value) && Math.abs(value) <= maximum 的真假，分别返回 value 或 null。 */ function boundedNetworkNumber(value: unknown, maximum = NETWORK_WORLD_BOUND): number | null { return typeof value === 'number' && Number.isFinite(value) && Math.abs(value) <= maximum ? value : null }
+/** 结构说明（自动提取）：normalizeEntitySnapshot；输入 value；直接调用 Array.isArray、Set、flatMap、value.slice。 */ function normalizeEntitySnapshot(value: unknown): EntitySnapshot[] { if (!Array.isArray(value)) return []; const seen = new Set<string>(); return value.slice(0, 2_000).flatMap(/** 结构说明（自动提取）：flatMap 回调；输入 raw；直接调用 String、test、seen.has、seen.add、Array.isArray 等；写入 output.position、output.rotation、output.velocity。 */ raw => { if (!raw || typeof raw !== 'object' || typeof (raw as Record<string, unknown>).uuid !== 'string') return []; const item = raw as Record<string, unknown>, uuid = String(item.uuid); if (!/^[A-Za-z0-9_.-]{1,128}$/.test(uuid) || seen.has(uuid)) return []; seen.add(uuid); const output: EntitySnapshot = { uuid }, position = item.position, velocity = item.velocity; if (Array.isArray(position) && position.length === 2) { const x = boundedNetworkNumber(position[0]), y = boundedNetworkNumber(position[1]); if (x !== null && y !== null) output.position = [x, y] } if (typeof item.rotation === 'number') { const rotation = boundedNetworkNumber(item.rotation, 1_000_000_000_000); if (rotation !== null) output.rotation = rotation } if (Array.isArray(velocity) && velocity.length === 2) { const x = boundedNetworkNumber(velocity[0]), y = boundedNetworkNumber(velocity[1]); if (x !== null && y !== null) output.velocity = [x, y] } return output.position || output.rotation !== undefined || output.velocity ? [output] : [] }) }
 
-function clearDeferredInbound(peerId = ''): void {
+/** 结构说明（自动提取）：clearDeferredInbound；输入 peerId；直接调用 deferredInbound.clear、deferredInbound.get、Math.max、deferredInbound.delete；写入 deferredInboundCount。 */ function clearDeferredInbound(peerId = ''): void {
   if (!peerId) { deferredInbound.clear(); deferredInboundCount = 0; return }
   const pending = deferredInbound.get(peerId)
   if (!pending) return
@@ -405,7 +406,7 @@ function clearDeferredInbound(peerId = ''): void {
   deferredInbound.delete(peerId)
 }
 
-function deferInboundPacket(packet: NetworkPacket, peer: string): boolean {
+/** 结构说明（自动提取）：deferInboundPacket；输入 packet、peer；直接调用 deferredInbound.get、Map、pending.has、Math.max、pending.set 等。 */ function deferInboundPacket(packet: NetworkPacket, peer: string): boolean {
   if (packet.delivery !== 'reliable-ordered' || packet.kind === 'ack' || packet.sequence <= 0) return false
   const key = `${packet.channel}:${packet.sequence}`, pending = deferredInbound.get(packet.sender) ?? new Map<string, DeferredInboundPacket>()
   if (pending.has(key)) return true
@@ -415,15 +416,15 @@ function deferInboundPacket(packet: NetworkPacket, peer: string): boolean {
   return true
 }
 
-function drainDeferredInbound(peerId: string): void {
+/** 结构说明（自动提取）：drainDeferredInbound；输入 peerId；直接调用 deferredInbound.get、clearDeferredInbound、sort、pending.values、processAcceptedPacket；包含循环处理。 */ function drainDeferredInbound(peerId: string): void {
   const pending = deferredInbound.get(peerId)
   if (!pending) return
   clearDeferredInbound(peerId)
-  const packets = [...pending.values()].sort((left, right) => left.packet.channel.localeCompare(right.packet.channel) || left.packet.sequence - right.packet.sequence)
+  const packets = [...pending.values()].sort(/* 先计算 left.packet.channel.localeCompare(right.packet.channel)；仅当其为假值时求右侧 left.packet.sequence - right.packet.sequence，返回短路求值结果。 */ (left, right) => left.packet.channel.localeCompare(right.packet.channel) || left.packet.sequence - right.packet.sequence)
   for (const item of packets) processAcceptedPacket(item.packet, item.peer)
 }
 
-function processPacket(packet: NetworkPacket, peer: string): void {
+/** 结构说明（自动提取）：processPacket；输入 packet、peer；直接调用 reliableWindow.acknowledge、reliableWindow.acknowledgeBootstrap、baselinePending.get、baseline.delete、baselineSending.has 等；写入 networkingState.reliablePending、detail.sceneUuid、networkingState.lastError、transfer 等；包含循环处理；包含显式抛错路径。 */ function processPacket(packet: NetworkPacket, peer: string): void {
   if (packet.kind === 'ack') { if (packet.ack !== null && (reliableWindow.acknowledge(packet.sender, packet.channel, packet.ack) || reliableWindow.acknowledgeBootstrap(packet.channel, packet.ack))) networkingState.reliableAcknowledged++; const baseline = baselinePending.get(packet.sender); if (packet.ack !== null && baseline) { baseline.delete(`${packet.channel}:${packet.ack}`); if (!baseline.size && !baselineSending.has(packet.sender)) { baselinePending.delete(packet.sender); addEvent(`Authoritative baseline acknowledged by ${packet.sender}.`); drainDeferredInbound(packet.sender) } }; networkingState.reliablePending = reliableWindow.size; return }
   if (packet.kind === 'hello' || packet.kind === 'join') {
     const payload = packet.payload && typeof packet.payload === 'object' ? packet.payload as Partial<HelloPayload> : {}, claimedRole = payload.role === 'server' || payload.role === 'host' ? payload.role : 'client', localRole = productionSettings.networking.role
@@ -437,15 +438,15 @@ function processPacket(packet: NetworkPacket, peer: string): void {
     handshakenPeers.add(packet.sender); const reliable = channelByDelivery('reliable-ordered', 'events')
     if (!wasKnown && claimedRole !== admittedRole) addEvent(`Peer ${packet.sender} requested ${claimedRole} authority and was admitted as client.`, 'warning')
     if (!wasKnown && packet.kind === 'hello' && reliable) void sendNetworkPacket('join', { role: localRole, playerName: productionSettings.networking.playerName, lateJoin: productionSettings.networking.lateJoin } satisfies HelloPayload, reliable.id, packet.sender)
-    if (!wasKnown && tick > 0 && productionSettings.networking.lateJoin && (localRole === 'server' || localRole === 'host')) { networkingState.lateJoins++; if (reliable) void sendAuthoritativeBaseline(packet.sender, reliable).catch(error => { removePeer(packet.sender, 'failed authoritative baseline'); networkingState.lastError = error instanceof Error ? error.message : String(error); addEvent(networkingState.lastError, 'error') }) }
+    if (!wasKnown && tick > 0 && productionSettings.networking.lateJoin && (localRole === 'server' || localRole === 'host')) { networkingState.lateJoins++; if (reliable) void sendAuthoritativeBaseline(packet.sender, reliable).catch(/** 结构说明（自动提取）：catch 回调；输入 error；直接调用 removePeer、String、addEvent；写入 networkingState.lastError。 */ error => { removePeer(packet.sender, 'failed authoritative baseline'); networkingState.lastError = error instanceof Error ? error.message : String(error); addEvent(networkingState.lastError, 'error') }) }
     if (!wasKnown) flushPreAdmissionRpcs(packet.sender)
     addEvent(`${hello.playerName} joined as ${hello.role}.`); return
   }
   if (!updatePeer(packet.sender)) { networkingState.droppedPackets++; networkingState.schemaRejected++; return }
   if (packet.kind === 'leave') { removePeer(packet.sender, 'disconnect'); addEvent(`${packet.sender} left.`); return }
   if (packet.kind === 'authority') {
-    const value = packet.payload && typeof packet.payload === 'object' ? packet.payload as Partial<AuthorityPayload> : {}, entityUuid = typeof value.entityUuid === 'string' ? value.entityUuid.slice(0, 128) : '', targetPeerId = typeof value.targetPeerId === 'string' ? value.targetPeerId.slice(0, 80) : '', remoteRole = networkingState.peerDetails.find(item => item.id === packet.sender)?.role ?? 'client'
-    const authorized = productionSettings.networking.allowAuthorityTransfer && ((remoteRole === 'server' || remoteRole === 'host') || authorityTable.owner(entityUuid) === packet.sender) && (targetPeerId === networkingState.localPeerId || networkingState.peerDetails.some(item => item.id === targetPeerId))
+    const value = packet.payload && typeof packet.payload === 'object' ? packet.payload as Partial<AuthorityPayload> : {}, entityUuid = typeof value.entityUuid === 'string' ? value.entityUuid.slice(0, 128) : '', targetPeerId = typeof value.targetPeerId === 'string' ? value.targetPeerId.slice(0, 80) : '', remoteRole = networkingState.peerDetails.find(/* 比较 item.id 与 packet.sender，返回严格相等的判断结果。 */ item => item.id === packet.sender)?.role ?? 'client'
+    const authorized = productionSettings.networking.allowAuthorityTransfer && ((remoteRole === 'server' || remoteRole === 'host') || authorityTable.owner(entityUuid) === packet.sender) && (targetPeerId === networkingState.localPeerId || networkingState.peerDetails.some(/* 比较 item.id 与 targetPeerId，返回严格相等的判断结果。 */ item => item.id === targetPeerId))
     if (!authorized || !authorityTable.transfer(entityUuid, targetPeerId)) { networkingState.schemaRejected++; addEvent(`Authority transfer from ${packet.sender} was rejected.`, 'warning'); return }
     interpolationTargets.delete(entityUuid); networkingState.authorityTransfers++; refreshProductionDiagnostics(); addEvent(`Authority for ${entityUuid} transferred to ${targetPeerId}.`); return
   }
@@ -455,20 +456,20 @@ function processPacket(packet: NetworkPacket, peer: string): void {
     peerInterests.set(packet.sender, { peerId: packet.sender, center: [Number(center[0]), Number(center[1])], radius: Math.max(0, Math.min(productionSettings.networking.interest.maximumRadius, Number(value.radius))), sceneUuid: typeof value.sceneUuid === 'string' ? value.sceneUuid.slice(0, 128) : '', updatedAt: Date.now() }); refreshProductionDiagnostics(); return
   }
   if (packet.kind === 'scene') {
-    const value = packet.payload && typeof packet.payload === 'object' ? packet.payload as Partial<ScenePayload> : {}, remoteRole = networkingState.peerDetails.find(item => item.id === packet.sender)?.role ?? 'client', sceneUuid = typeof value.sceneUuid === 'string' ? value.sceneUuid.slice(0, 128) : '', spawnTag = typeof value.spawnTag === 'string' ? value.spawnTag.slice(0, 80) : ''
+    const value = packet.payload && typeof packet.payload === 'object' ? packet.payload as Partial<ScenePayload> : {}, remoteRole = networkingState.peerDetails.find(/* 比较 item.id 与 packet.sender，返回严格相等的判断结果。 */ item => item.id === packet.sender)?.role ?? 'client', sceneUuid = typeof value.sceneUuid === 'string' ? value.sceneUuid.slice(0, 128) : '', spawnTag = typeof value.spawnTag === 'string' ? value.spawnTag.slice(0, 80) : ''
     if (!productionSettings.networking.allowSceneHandoff || (remoteRole !== 'server' && remoteRole !== 'host') || !sceneUuid) { networkingState.schemaRejected++; addEvent('Scene handoff was rejected by authority or project policy.', 'warning'); return }
-    const detail = networkingState.peerDetails.find(item => item.id === packet.sender); if (detail) detail.sceneUuid = sceneUuid
+    const detail = networkingState.peerDetails.find(/* 比较 item.id 与 packet.sender，返回严格相等的判断结果。 */ item => item.id === packet.sender); if (detail) detail.sceneUuid = sceneUuid
     networkingState.sceneHandoffs++; addEvent(`Scene handoff to ${sceneUuid} received from ${packet.sender}.`); void sceneHandoffHandler?.(sceneUuid, spawnTag, packet.sender); return
   }
-  if (packet.kind === 'rpc') { networkingState.rpcCalls++; const payload = packet.payload && typeof packet.payload === 'object' ? packet.payload as Partial<RpcPayload> : {}, contract = productionSettings.networking.rpcContracts.find(item => item.name === payload.name), remoteRole = networkingState.peerDetails.find(item => item.id === packet.sender)?.role ?? 'client'; if (!contract || contract.channelId !== packet.channel || !acceptsRpc(contract, remoteRole, packet.sender, payload.value) || !validatePayloadSchema(payload.value, contract.payloadSchema) || utf8Bytes(stableNetworkJson(payload.value)) > contract.maximumPayloadBytes || !rpcRate.accept(`${packet.sender}:${contract.name}`, contract.callsPerSecond, performance.now())) { networkingState.rpcRejected++; networkingState.schemaRejected++; return }; try { rpcHandlers.get(contract.name)?.(payload.value, { sender: packet.sender, tick: packet.tick }) } catch (error) { networkingState.lastError = error instanceof Error ? error.message : String(error); addEvent(`RPC ${contract.name} failed: ${networkingState.lastError}`, 'error') }; return }
+  if (packet.kind === 'rpc') { networkingState.rpcCalls++; const payload = packet.payload && typeof packet.payload === 'object' ? packet.payload as Partial<RpcPayload> : {}, contract = productionSettings.networking.rpcContracts.find(/* 比较 item.name 与 payload.name，返回严格相等的判断结果。 */ item => item.name === payload.name), remoteRole = networkingState.peerDetails.find(/* 比较 item.id 与 packet.sender，返回严格相等的判断结果。 */ item => item.id === packet.sender)?.role ?? 'client'; if (!contract || contract.channelId !== packet.channel || !acceptsRpc(contract, remoteRole, packet.sender, payload.value) || !validatePayloadSchema(payload.value, contract.payloadSchema) || utf8Bytes(stableNetworkJson(payload.value)) > contract.maximumPayloadBytes || !rpcRate.accept(`${packet.sender}:${contract.name}`, contract.callsPerSecond, performance.now())) { networkingState.rpcRejected++; networkingState.schemaRejected++; return }; try { rpcHandlers.get(contract.name)?.(payload.value, { sender: packet.sender, tick: packet.tick }) } catch (error) { networkingState.lastError = error instanceof Error ? error.message : String(error); addEvent(`RPC ${contract.name} failed: ${networkingState.lastError}`, 'error') }; return }
   if (packet.kind === 'input') { const normalized = normalizeNetworkInput(packet.payload, true); if (!normalized) { networkingState.schemaRejected++; networkingState.droppedPackets++; addEvent(`Malformed input frame from ${packet.sender} was rejected.`, 'warning'); return }; const frames = remoteInputs.get(packet.sender) ?? new Map<number, InputSnapshot>(); frames.set(packet.tick, normalized); while (frames.size > Math.max(1, productionSettings.networking.rollbackFrames)) frames.delete(frames.keys().next().value ?? 0); remoteInputs.set(packet.sender, frames); networkingState.inputFrames++; return }
   if (packet.kind === 'resync') {
-    const reject = (message: string): void => {
+    const reject = /** 结构说明（自动提取）：reject；输入 message；直接调用 removePeer、addEvent、scheduleReconnect；写入 networkingState.lastError、networkingState.status。 */ (message: string): void => {
       removePeer(packet.sender, 'invalid authoritative baseline')
       networkingState.schemaRejected++; networkingState.droppedPackets++; networkingState.lastError = message; addEvent(message, 'error')
       if (productionSettings.networking.role === 'client') { networkingState.status = 'error'; scheduleReconnect() }
     }
-    const payload = packet.payload && typeof packet.payload === 'object' ? packet.payload as Partial<BaselineChunkPayload> : {}, remoteRole = networkingState.peerDetails.find(item => item.id === packet.sender)?.role ?? 'client'
+    const payload = packet.payload && typeof packet.payload === 'object' ? packet.payload as Partial<BaselineChunkPayload> : {}, remoteRole = networkingState.peerDetails.find(/* 比较 item.id 与 packet.sender，返回严格相等的判断结果。 */ item => item.id === packet.sender)?.role ?? 'client'
     const valid = productionSettings.networking.role === 'client' && productionSettings.networking.lateJoin && (remoteRole === 'server' || remoteRole === 'host') && typeof payload.transferId === 'string' && /^[A-Za-z0-9_.-]{1,80}$/.test(payload.transferId) && Number.isSafeInteger(payload.index) && Number.isSafeInteger(payload.count) && Number(payload.count) >= 1 && Number(payload.count) <= 256 && Number(payload.index) >= 0 && Number(payload.index) < Number(payload.count) && typeof payload.checksum === 'string' && /^[a-f0-9]{24}$/i.test(payload.checksum) && typeof payload.chunk === 'string'
     if (!valid) { reject('Unauthorized or malformed authoritative baseline. Reconnect after correcting the sender.'); return }
     const chunkPayload = payload as BaselineChunkPayload
@@ -485,7 +486,7 @@ function processPacket(packet: NetworkPacket, peer: string): void {
     }
     if (transfer.chunks.size !== transfer.count) { void sendAck(packet, peer); return }
     try {
-      const source = Array.from({ length: transfer.count }, (_, index) => transfer!.chunks.get(index) ?? '').join('')
+      const source = Array.from({ length: transfer.count }, /* 当 transfer!.chunks.get(index) 为 null 或 undefined 时返回 ''，否则保留左侧值。 */ (_, index) => transfer!.chunks.get(index) ?? '').join('')
       if (networkChecksum(source) !== transfer.checksum) throw new Error('Authoritative baseline checksum mismatch.')
       const document = JSON.parse(source) as Partial<BaselineDocument>
       if (!document || document.format !== 'nova-network-baseline' || document.version !== 1 || !document.save || !Array.isArray(document.authority) || !Array.isArray(document.scenes) || document.scenes.length > 64) throw new Error('Authoritative baseline format is invalid.')
@@ -494,12 +495,12 @@ function processPacket(packet: NetworkPacket, peer: string): void {
         if (!scene || typeof scene.peerId !== 'string' || !/^[A-Za-z0-9_.-]{1,80}$/.test(scene.peerId) || typeof scene.sceneUuid !== 'string' || !/^[A-Za-z0-9_.-]{1,128}$/.test(scene.sceneUuid) || scenePeers.has(scene.peerId)) throw new Error('Authoritative baseline scene identity is invalid.')
         scenePeers.add(scene.peerId)
       }
-      const definitions = productionSettings.networking.replicatedEntities, allowed = new Set(definitions.map(definition => definition.entityUuid)), stagedAuthority = new NetworkAuthorityTable()
+      const definitions = productionSettings.networking.replicatedEntities, allowed = new Set(definitions.map(/* 返回 definition.entityUuid 的当前值。 */ definition => definition.entityUuid)), stagedAuthority = new NetworkAuthorityTable()
       if (!stagedAuthority.restore(document.authority, definitions)) throw new Error('Authoritative baseline ownership is invalid.')
-      if (!Array.isArray(document.save.entities) || document.save.entities.some(entity => !entity || !allowed.has(entity.uuid))) throw new Error('Authoritative baseline contains an entity outside the replication contract.')
-      const restored = importMultiplayerSave(document.save, lastEntities, new Map(definitions.map(definition => [definition.entityUuid, definition.properties])))
+      if (!Array.isArray(document.save.entities) || document.save.entities.some(/* 先计算 !entity；仅当其为假值时求右侧 !allowed.has(entity.uuid)，返回短路求值结果。 */ entity => !entity || !allowed.has(entity.uuid))) throw new Error('Authoritative baseline contains an entity outside the replication contract.')
+      const restored = importMultiplayerSave(document.save, lastEntities, new Map(definitions.map(/* 返回按声明顺序构造的数组 [definition.entityUuid, definition.properties]。 */ definition => [definition.entityUuid, definition.properties])))
       authorityTable.restore(stagedAuthority.entries(), definitions)
-      for (const scene of document.scenes) { const detail = networkingState.peerDetails.find(item => item.id === scene.peerId); if (detail) detail.sceneUuid = scene.sceneUuid }
+      for (const scene of document.scenes) { const detail = networkingState.peerDetails.find(/* 比较 item.id 与 scene.peerId，返回严格相等的判断结果。 */ item => item.id === scene.peerId); if (detail) detail.sceneUuid = scene.sceneUuid }
       tick = Math.max(tick, restored.tick); networkingState.currentTick = tick
       networkingState.lateJoins++; networkingState.snapshots++; baselineTransfers.delete(packet.sender); refreshProductionDiagnostics()
       addEvent('Late-join baseline restored ' + restored.restored + ' entities and current authority state.')
@@ -513,9 +514,9 @@ function processPacket(packet: NetworkPacket, peer: string): void {
   if (packet.kind === 'pong') { const sentAt = Number((packet.payload as { sentAt?: unknown })?.sentAt); if (Number.isFinite(sentAt)) networkingState.pingMs = Math.max(0, performance.now() - sentAt) }
 }
 
-function commitPacketReplay(packet: NetworkPacket): void { replayProtection.accept(packet.sender, packet.security, Date.now(), productionSettings.networking.security.maximumPacketAgeMs, productionSettings.networking.security.replayWindow, productionSettings.networking.authentication.mode === 'hook' || productionSettings.networking.authentication.requireVerifiedPeers) }
+/** 结构说明（自动提取）：commitPacketReplay；输入 packet；直接调用 replayProtection.accept、Date.now。 */ function commitPacketReplay(packet: NetworkPacket): void { replayProtection.accept(packet.sender, packet.security, Date.now(), productionSettings.networking.security.maximumPacketAgeMs, productionSettings.networking.security.replayWindow, productionSettings.networking.authentication.mode === 'hook' || productionSettings.networking.authentication.requireVerifiedPeers) }
 
-function processAcceptedPacket(packet: NetworkPacket, peer: string): void {
+/** 结构说明（自动提取）：processAcceptedPacket；输入 packet、peer；直接调用 inboundSequences.has、handshakenPeers.has、inboundSequences.set、inboundSequences.get、sequenceDistance 等；写入 networkingState.lastError、expected；包含循环处理。 */ function processAcceptedPacket(packet: NetworkPacket, peer: string): void {
   const sequenceKey = `${packet.sender}:${packet.channel}`
   if (packet.delivery === 'reliable-ordered' && !inboundSequences.has(sequenceKey) && packet.sequence > 0 && ((packet.kind === 'hello' || packet.kind === 'join' || packet.kind === 'resync') || !handshakenPeers.has(packet.sender))) inboundSequences.set(sequenceKey, packet.sequence - 1)
   const previous = inboundSequences.get(sequenceKey) ?? 0
@@ -532,7 +533,7 @@ function processAcceptedPacket(packet: NetworkPacket, peer: string): void {
   while (buffer.has(expected)) { const ordered = buffer.get(expected)!; buffer.delete(expected); inboundSequences.set(sequenceKey, expected); processPacket(ordered, peer); if (!handshakenPeers.has(packet.sender)) break; if (ordered.kind !== 'resync') void sendAck(ordered, peer); expected = nextExpectedSequence(expected) }
 }
 
-function receive(source: string, peer: string): void {
+/** 结构说明（自动提取）：receive；输入 source、peer；直接调用 stopNetworking、utf8Bytes、performance.now、Math.round、inboundRate.accept 等；写入 networkingState.bandwidthInKbps、receiveBudgetStarted、receiveBudgetBytes、networkingState.lastError 等。 */ function receive(source: string, peer: string): void {
   if (!productionSettings.networking.enabled || !productionSettings.networking.permissionGranted) { void stopNetworking(); return }
   if (!transport || networkingState.status !== 'connected') return
   const bytes = utf8Bytes(source), now = performance.now()
@@ -552,7 +553,7 @@ function receive(source: string, peer: string): void {
     authenticated = Boolean(security && verifyAuthenticationProof(productionSettings.networking.authentication.providerId, { sessionId: packet.sessionId, sender: packet.sender, epoch: security.epoch, nonce: security.nonce, issuedAt: security.issuedAt, packetChecksum: authenticationChecksum(packet) }, security.proof))
     if (!authenticated) { networkingState.droppedPackets++; networkingState.authenticationRejected++; networkingState.lastError = 'Packet authentication proof was rejected.'; return }
   }
-  let knownPeer = networkingState.peerDetails.find(item => item.id === packet.sender)
+  let knownPeer = networkingState.peerDetails.find(/* 比较 item.id 与 packet.sender，返回严格相等的判断结果。 */ item => item.id === packet.sender)
   const lifecyclePacket = packet.kind === 'hello' || packet.kind === 'join', admittedEpoch = peerEpochs.get(packet.sender), incomingEpoch = packet.security?.epoch ?? '', replacingEpoch = admittedEpoch !== undefined && admittedEpoch !== incomingEpoch
   pruneRetiredEpochs()
   if ((incomingEpoch && retiredPeerEpochs.has(`${packet.sender}:${incomingEpoch}`)) || (replacingEpoch && (!lifecyclePacket || !incomingEpoch)) || ((!knownPeer || replacingEpoch) && retiredPeerEpochs.size >= 4096)) { networkingState.droppedPackets++; networkingState.replayRejected++; networkingState.lastError = 'Packet epoch is retired, changed without a lifecycle handshake, or reconnect history is full.'; return }
@@ -578,24 +579,24 @@ function receive(source: string, peer: string): void {
   processAcceptedPacket(packet, peer)
 }
 
-function scheduleReconnect(): void { if (!reconnectAllowed || !productionSettings.networking.enabled || !productionSettings.networking.permissionGranted || !productionSettings.networking.reconnect || networkingState.status === 'disabled' || reconnectTimer !== null) return; if (networkingState.reconnectAttempts >= productionSettings.networking.reconnectMaxAttempts) { networkingState.status = 'error'; networkingState.lastError = 'Reconnect attempt limit reached.'; return }; networkingState.status = 'reconnecting'; const delay = Math.min(10_000, 500 * 2 ** Math.min(5, networkingState.reconnectAttempts++)); reconnectTimer = globalThis.setTimeout(() => { reconnectTimer = null; const active = transport; transport = null; void (async () => { if (active) try { await active.close() } catch {}; if (reconnectAllowed) await startNetworking() })().catch(error => { networkingState.status = 'error'; networkingState.lastError = error instanceof Error ? error.message : String(error) }) }, delay) }
+/** 结构说明（自动提取）：scheduleReconnect；无显式参数；直接调用 Math.min、globalThis.setTimeout；写入 networkingState.status、networkingState.lastError、reconnectTimer。 */ function scheduleReconnect(): void { if (!reconnectAllowed || !productionSettings.networking.enabled || !productionSettings.networking.permissionGranted || !productionSettings.networking.reconnect || networkingState.status === 'disabled' || reconnectTimer !== null) return; if (networkingState.reconnectAttempts >= productionSettings.networking.reconnectMaxAttempts) { networkingState.status = 'error'; networkingState.lastError = 'Reconnect attempt limit reached.'; return }; networkingState.status = 'reconnecting'; const delay = Math.min(10_000, 500 * 2 ** Math.min(5, networkingState.reconnectAttempts++)); reconnectTimer = globalThis.setTimeout(/** 结构说明（自动提取）：globalThis.setTimeout 回调；无显式参数；直接调用 catch；写入 reconnectTimer、transport。 */ () => { reconnectTimer = null; const active = transport; transport = null; void (/** 结构说明（自动提取）：匿名回调；无显式参数；直接调用 active.close、startNetworking；等待异步结果。 */ async () => { if (active) try { await active.close() } catch {}; if (reconnectAllowed) await startNetworking() })().catch(/** 结构说明（自动提取）：catch 回调；输入 error；直接调用 String；写入 networkingState.status、networkingState.lastError。 */ error => { networkingState.status = 'error'; networkingState.lastError = error instanceof Error ? error.message : String(error) }) }, delay) }
 
-export function startNetworking(): Promise<void> {
+/** 结构说明（自动提取）：startNetworking；无显式参数；直接调用 startNetworkingSession、catch、pending.finally；写入 startupPromise；返回路径包含 startupPromise、pending。 */ export function startNetworking(): Promise<void> {
   if (startupPromise) return startupPromise
   const pending = startNetworkingSession(); startupPromise = pending
-  void pending.finally(() => { if (startupPromise === pending) startupPromise = null }).catch(() => undefined)
+  void pending.finally(/** 结构说明（自动提取）：pending.finally 回调；无显式参数；写入 startupPromise。 */ () => { if (startupPromise === pending) startupPromise = null }).catch(/* 返回 undefined 的当前值。 */ () => undefined)
   return pending
 }
 
-async function startNetworkingSession(): Promise<void> {
+/** 结构说明（自动提取）：startNetworkingSession；无显式参数；直接调用 Error、some、networkAuthenticationProviders、createReviewedNetworkTransport、find 等；写入 networkingState.status、networkingState.encryptedTransport、networkingState.encryptionMessage、networkingState.lastError 等；等待异步结果；包含显式抛错路径。 */ async function startNetworkingSession(): Promise<void> {
   if (!productionSettings.networking.enabled) throw new Error('Networking is disabled for this project.')
   if (!productionSettings.networking.permissionGranted) { networkingState.status = 'permission-required'; throw new Error('Network permission must be granted explicitly before a session starts.') }
   if (transport) return
   if (productionSettings.networking.authentication.requireVerifiedPeers && productionSettings.networking.authentication.mode !== 'hook') throw new Error('Verified peers require a reviewed authentication hook.')
-  if (productionSettings.networking.authentication.mode === 'hook' && !networkAuthenticationProviders().some(provider => provider.id === productionSettings.networking.authentication.providerId)) throw new Error('The selected network authentication provider is not registered.')
+  if (productionSettings.networking.authentication.mode === 'hook' && !networkAuthenticationProviders().some(/* 比较 provider.id 与 productionSettings.networking.authentication.providerId，返回严格相等的判断结果。 */ provider => provider.id === productionSettings.networking.authentication.providerId)) throw new Error('The selected network authentication provider is not registered.')
   const reviewed = productionSettings.networking.transportAdapterId ? createReviewedNetworkTransport(productionSettings.networking.transportAdapterId, productionSettings.networking) : null
   if (productionSettings.networking.transportAdapterId && !reviewed) throw new Error(`Reviewed transport adapter ${productionSettings.networking.transportAdapterId} is not registered.`)
-  const adapterEncrypted = reviewedNetworkTransports().find(item => item.id === productionSettings.networking.transportAdapterId)?.encrypted === true, encryption = networkEncryptionGuidance(productionSettings.networking, adapterEncrypted); networkingState.encryptedTransport = encryption.protected; networkingState.encryptionMessage = encryption.message
+  const adapterEncrypted = reviewedNetworkTransports().find(/* 比较 item.id 与 productionSettings.networking.transportAdapterId，返回严格相等的判断结果。 */ item => item.id === productionSettings.networking.transportAdapterId)?.encrypted === true, encryption = networkEncryptionGuidance(productionSettings.networking, adapterEncrypted); networkingState.encryptedTransport = encryption.protected; networkingState.encryptionMessage = encryption.message
   if (encryption.severity === 'error') { networkingState.status = 'error'; networkingState.lastError = encryption.message; throw new Error(encryption.message) }
   reconnectAllowed = true; connectionGeneration++; cancelScheduledDeliveries(); resetConnectionPeerState(); networkingState.status = 'connecting'; networkingState.lastError = ''; networkingState.sessionMode = productionSettings.networking.sessionMode; networkingState.sessionId = networkSessionId(); networkingState.localPeerId ||= peerIdentity(); simulator = new DeterministicNetworkSimulator(productionSettings.networking.simulation.seed); reliableWindow = new ReliablePacketWindow(productionSettings.networking.maximumPendingReliable); sessionEpoch = createNetworkEpoch(); tick = 0; snapshotAccumulator = 0; budgetStarted = performance.now(); budgetBytes = 0; receiveBudgetStarted = budgetStarted; receiveBudgetBytes = 0; rollbackTimeline.clear(); replicationDiffs.clear(); authorityTable.initialize(productionSettings.networking.replicatedEntities, networkingState.localPeerId, productionSettings.networking.role); refreshProductionDiagnostics()
   const generation = connectionGeneration
@@ -604,11 +605,11 @@ async function startNetworkingSession(): Promise<void> {
     await openNetworkServices(generation); requireConnectionGeneration(generation)
     transport = productionSettings.networking.sessionMode === 'local' ? new LocalLobbyTransport() : reviewed ?? (productionSettings.networking.transport === 'native-udp' ? new NativeUdpTransport() : new WebSocketTransport()); ownedTransport = transport; networkingState.transport = transport.kind; networkingState.transportAdapterId = productionSettings.networking.transportAdapterId
     if (encryption.severity === 'warning') addEvent(encryption.message, 'warning')
-    await ownedTransport.connect((source, peer) => { if (generation === connectionGeneration && transport === ownedTransport) receive(source, peer) }, state => { if (generation !== connectionGeneration || transport !== ownedTransport) return; if (state === 'connected') networkingState.status = 'connected'; else if (networkingState.status !== 'disabled') { networkingState.lastError = state; scheduleReconnect() } }); requireConnectionGeneration(generation); networkingState.status = 'connected'; networkingState.reconnectAttempts = 0; addEvent(`${ownedTransport.kind} session started${serviceHandles.length ? ` with ${serviceHandles.length} explicitly selected reviewed service(s)` : '; no Nova_A cloud service is involved'}.`); const reliable = channelByDelivery('reliable-ordered', 'events'); if (!reliable) throw new Error('At least one reliable channel is required for session control.'); await sendNetworkPacket('hello', { role: productionSettings.networking.role, playerName: productionSettings.networking.playerName, lateJoin: productionSettings.networking.lateJoin } satisfies HelloPayload, reliable.id)
+    await ownedTransport.connect(/** 结构说明（自动提取）：ownedTransport.connect 回调；输入 source、peer；直接调用 receive。 */ (source, peer) => { if (generation === connectionGeneration && transport === ownedTransport) receive(source, peer) }, /** 结构说明（自动提取）：ownedTransport.connect 回调；输入 state；直接调用 scheduleReconnect；写入 networkingState.status、networkingState.lastError。 */ state => { if (generation !== connectionGeneration || transport !== ownedTransport) return; if (state === 'connected') networkingState.status = 'connected'; else if (networkingState.status !== 'disabled') { networkingState.lastError = state; scheduleReconnect() } }); requireConnectionGeneration(generation); networkingState.status = 'connected'; networkingState.reconnectAttempts = 0; addEvent(`${ownedTransport.kind} session started${serviceHandles.length ? ` with ${serviceHandles.length} explicitly selected reviewed service(s)` : '; no Nova_A cloud service is involved'}.`); const reliable = channelByDelivery('reliable-ordered', 'events'); if (!reliable) throw new Error('At least one reliable channel is required for session control.'); await sendNetworkPacket('hello', { role: productionSettings.networking.role, playerName: productionSettings.networking.playerName, lateJoin: productionSettings.networking.lateJoin } satisfies HelloPayload, reliable.id)
   } catch (error) { if (generation !== connectionGeneration) { if (ownedTransport) try { await ownedTransport.close() } catch {}; throw new DOMException('Network session opening was cancelled.', 'AbortError') }; networkingState.status = 'error'; networkingState.lastError = error instanceof Error ? error.message : String(error); addEvent(networkingState.lastError, 'error'); const active = transport; transport = null; const closingServices = closeNetworkServices(); await Promise.allSettled([closingServices, active?.close()]); if (generation === connectionGeneration) scheduleReconnect(); throw error }
 }
 
-export async function stopNetworking(disableState = true): Promise<void> {
+/** 结构说明（自动提取）：stopNetworking；输入 disableState；直接调用 clearTimeout、channelByDelivery、sendNetworkPacket、Promise.resolve、cancelScheduledDeliveries 等；写入 reconnectAllowed、reconnectTimer、startupPromise、transport 等；等待异步结果。 */ export async function stopNetworking(disableState = true): Promise<void> {
   reconnectAllowed = false
   if (reconnectTimer !== null) clearTimeout(reconnectTimer)
   reconnectTimer = null
@@ -623,9 +624,9 @@ export async function stopNetworking(disableState = true): Promise<void> {
   await Promise.allSettled([leaving, closingServices, active?.close()])
 }
 
-function localSnapshot(entities: Entity[], full = false, targetPeer = ''): SnapshotPayload {
-  const definitions = new Map(productionSettings.networking.replicatedEntities.map(definition => [definition.entityUuid, definition])), view = targetPeer ? peerInterests.get(targetPeer) : undefined
-  const snapshots = entities.flatMap(entity => {
+/** 结构说明（自动提取）：localSnapshot；输入 entities、full、targetPeer；直接调用 Map、productionSettings.networking.replicatedEntities.map、peerInterests.get、sort、slice 等。 */ function localSnapshot(entities: Entity[], full = false, targetPeer = ''): SnapshotPayload {
+  const definitions = new Map(productionSettings.networking.replicatedEntities.map(/* 返回按声明顺序构造的数组 [definition.entityUuid, definition]。 */ definition => [definition.entityUuid, definition])), view = targetPeer ? peerInterests.get(targetPeer) : undefined
+  const snapshots = entities.flatMap(/** 结构说明（自动提取）：entities.flatMap 回调；输入 entity；直接调用 definitions.get、authorityTable.owner、worldTransform、finiteNumber、entityRelevantToPeer 等；写入 snapshot.position、snapshot.rotation、snapshot.velocity。 */ entity => {
     const definition = definitions.get(entity.uuid); if (!definition) return []
     const owner = authorityTable.owner(entity.uuid), sendsAuthority = definition.authority === 'server' ? productionSettings.networking.role === 'server' || productionSettings.networking.role === 'host' : owner === networkingState.localPeerId || productionSettings.networking.role === 'host' || productionSettings.networking.role === 'server'
     if (!sendsAuthority) return []
@@ -636,11 +637,11 @@ function localSnapshot(entities: Entity[], full = false, targetPeer = ''): Snaps
     if (definition.properties.includes('rotation')) snapshot.rotation = finiteNumber(transform.rotation)
     if (definition.properties.includes('velocity')) snapshot.velocity = [finiteNumber(entity.velocity.x), finiteNumber(entity.velocity.y)]
     return snapshot.position || snapshot.rotation !== undefined || snapshot.velocity ? [snapshot] : []
-  }).slice(0, 2_000).sort((left, right) => left.uuid.localeCompare(right.uuid))
+  }).slice(0, 2_000).sort(/* 调用 left.uuid.localeCompare(right.uuid) 并返回调用结果。 */ (left, right) => left.uuid.localeCompare(right.uuid))
   return { checksum: networkChecksum(snapshots), full, entities: snapshots }
 }
 
-function snapshotPage(snapshot: SnapshotPayload, target: string, contract: NetworkChannelDefinition): SnapshotPayload | null {
+/** 结构说明（自动提取）：snapshotPage；输入 snapshot、target、contract；直接调用 repeat、utf8Bytes、stableNetworkJson、createNetworkPacket、Math.min 等；写入 bytes、networkingState.snapshotPageEntities、networkingState.snapshotDeferredEntities、networkingState.lastError；包含循环处理。 */ function snapshotPage(snapshot: SnapshotPayload, target: string, contract: NetworkChannelDefinition): SnapshotPayload | null {
   if (!snapshot.entities.length) return null
   const empty = { entities: [], checksum: '0'.repeat(24), full: false }, emptyBytes = utf8Bytes(stableNetworkJson(empty))
   const envelope = createNetworkPacket({ sessionId: networkingState.sessionId, sender: networkingState.localPeerId, channel: contract.id, delivery: contract.delivery, sequence: MAX_SEQUENCE, ack: null, tick: MAX_SEQUENCE, schema: productionSettings.networking.schemaVersion, kind: 'snapshot', payload: empty, security: { epoch: sessionEpoch, nonce: '0'.repeat(24), issuedAt: Number.MAX_SAFE_INTEGER, proof: productionSettings.networking.authentication.mode === 'hook' ? '0'.repeat(512) : '' } })
@@ -655,13 +656,13 @@ function snapshotPage(snapshot: SnapshotPayload, target: string, contract: Netwo
   networkingState.snapshotPageEntities = page.length; networkingState.snapshotDeferredEntities = snapshot.entities.length - page.length
   if (!page.length) { networkingState.lastError = 'A replicated entity cannot fit the state channel or packet byte limit. Increase the limit or reduce replicated properties.'; return null }
   snapshotCursors.set(target, (start + page.length) % snapshot.entities.length)
-  page.sort((a, b) => a.uuid.localeCompare(b.uuid))
+  page.sort(/* 调用 a.uuid.localeCompare(b.uuid) 并返回调用结果。 */ (a, b) => a.uuid.localeCompare(b.uuid))
   return { entities: page, checksum: networkChecksum(page), full: false }
 }
 
-function predictionSnapshot(entities: Entity[]): SnapshotPayload {
-  const definitions = new Map(productionSettings.networking.replicatedEntities.map(definition => [definition.entityUuid, definition]))
-  return { checksum: lastChecksum, full: true, entities: entities.flatMap(entity => {
+/** 结构说明（自动提取）：predictionSnapshot；输入 entities；直接调用 Map、productionSettings.networking.replicatedEntities.map、slice、entities.flatMap。 */ function predictionSnapshot(entities: Entity[]): SnapshotPayload {
+  const definitions = new Map(productionSettings.networking.replicatedEntities.map(/* 返回按声明顺序构造的数组 [definition.entityUuid, definition]。 */ definition => [definition.entityUuid, definition]))
+  return { checksum: lastChecksum, full: true, entities: entities.flatMap(/** 结构说明（自动提取）：entities.flatMap 回调；输入 entity；直接调用 definitions.get、worldTransform、definition.properties.includes、finiteNumber；写入 snapshot.position、snapshot.rotation、snapshot.velocity。 */ entity => {
     const definition = definitions.get(entity.uuid); if (!definition) return []
     const transform = worldTransform(entity, entities), snapshot: EntitySnapshot = { uuid: entity.uuid }
     if (definition.properties.includes('transform')) snapshot.position = [finiteNumber(transform.position.x), finiteNumber(transform.position.y)]
@@ -671,8 +672,8 @@ function predictionSnapshot(entities: Entity[]): SnapshotPayload {
   }).slice(0, 2_000) }
 }
 
-function parentFirstNetworkStates<T extends { uuid: string }>(states: readonly T[], entities: readonly Entity[]): T[] {
-  const byUuid = new Map(entities.map(entity => [entity.uuid, entity])), depths = new Map<string, number>()
+/** 结构说明（自动提取）：parentFirstNetworkStates；输入 states、entities；直接调用 Map、entities.map、byUuid.get、Set、depths.has 等；写入 networkingState.lastError、entity；包含循环处理。 */ function parentFirstNetworkStates<T extends { uuid: string }>(states: readonly T[], entities: readonly Entity[]): T[] {
+  const byUuid = new Map(entities.map(/* 返回按声明顺序构造的数组 [entity.uuid, entity]。 */ entity => [entity.uuid, entity])), depths = new Map<string, number>()
   for (const state of states) {
     let entity = byUuid.get(state.uuid)
     const chain: string[] = [], seen = new Set<string>()
@@ -683,18 +684,18 @@ function parentFirstNetworkStates<T extends { uuid: string }>(states: readonly T
     let depth = entity ? depths.get(entity.uuid)! : -1
     for (const uuid of chain.reverse()) depths.set(uuid, ++depth)
   }
-  return [...states].sort((a, b) => (depths.get(a.uuid) ?? 0) - (depths.get(b.uuid) ?? 0) || a.uuid.localeCompare(b.uuid))
+  return [...states].sort(/* 先计算 (depths.get(a.uuid) ?? 0) - (depths.get(b.uuid) ?? 0)；仅当其为假值时求右侧 a.uuid.localeCompare(b.uuid)，返回短路求值结果。 */ (a, b) => (depths.get(a.uuid) ?? 0) - (depths.get(b.uuid) ?? 0) || a.uuid.localeCompare(b.uuid))
 }
 
-function reconcile(snapshotPacket: NetworkPacket, entities: Entity[]): void {
-  const payload = snapshotPacket.payload as SnapshotPayload, history = localHistory.find(item => item.tick === snapshotPacket.tick)
-  const comparedHistory = history?.snapshot.entities.filter(entity => payload.entities.some(remote => remote.uuid === entity.uuid)).sort((left, right) => left.uuid.localeCompare(right.uuid)) ?? [], comparedChecksum = comparedHistory.length ? networkChecksum(comparedHistory) : ''
+/** 结构说明（自动提取）：reconcile；输入 snapshotPacket、entities；直接调用 localHistory.find、sort、history.snapshot.entities.filter、networkChecksum、rollbackTimeline.push 等；写入 networkingState.replayedInputs、entity.velocity；包含循环处理。 */ function reconcile(snapshotPacket: NetworkPacket, entities: Entity[]): void {
+  const payload = snapshotPacket.payload as SnapshotPayload, history = localHistory.find(/* 比较 item.tick 与 snapshotPacket.tick，返回严格相等的判断结果。 */ item => item.tick === snapshotPacket.tick)
+  const comparedHistory = history?.snapshot.entities.filter(/** 结构说明（自动提取）：history.snapshot.entities.filter 回调；输入 entity；直接调用 payload.entities.some；返回表达式求值结果。 */ entity => payload.entities.some(/* 比较 remote.uuid 与 entity.uuid，返回严格相等的判断结果。 */ remote => remote.uuid === entity.uuid)).sort(/* 调用 left.uuid.localeCompare(right.uuid) 并返回调用结果。 */ (left, right) => left.uuid.localeCompare(right.uuid)) ?? [], comparedChecksum = comparedHistory.length ? networkChecksum(comparedHistory) : ''
   if (payload.checksum && comparedChecksum && payload.checksum !== comparedChecksum) { networkingState.divergences++; rollbackTimeline.push({ tick: snapshotPacket.tick, peerId: snapshotPacket.sender, checksumBefore: comparedChecksum, checksumAfter: payload.checksum, replayedInputs: 0, correction: 0, reason: 'authoritative-checksum-divergence' }) }
-  const definitions = new Map(productionSettings.networking.replicatedEntities.map(definition => [definition.entityUuid, definition]))
-  const ordered = parentFirstNetworkStates(payload.entities, entities), byUuid = new Map(entities.map(entity => [entity.uuid, entity]))
-  const previousWorld = new Map(ordered.flatMap(state => { const entity = byUuid.get(state.uuid); return entity ? [[state.uuid, worldTransform(entity, entities)] as const] : [] }))
+  const definitions = new Map(productionSettings.networking.replicatedEntities.map(/* 返回按声明顺序构造的数组 [definition.entityUuid, definition]。 */ definition => [definition.entityUuid, definition]))
+  const ordered = parentFirstNetworkStates(payload.entities, entities), byUuid = new Map(entities.map(/* 返回按声明顺序构造的数组 [entity.uuid, entity]。 */ entity => [entity.uuid, entity]))
+  const previousWorld = new Map(ordered.flatMap(/** 结构说明（自动提取）：ordered.flatMap 回调；输入 state；直接调用 byUuid.get、worldTransform。 */ state => { const entity = byUuid.get(state.uuid); return entity ? [[state.uuid, worldTransform(entity, entities)] as const] : [] }))
   for (const candidate of ordered) {
-    const definition = definitions.get(candidate.uuid), entity = entities.find(entity => entity.uuid === candidate.uuid), peerRole = networkingState.peerDetails.find(item => item.id === snapshotPacket.sender)?.role ?? 'client', owner = authorityTable.owner(candidate.uuid)
+    const definition = definitions.get(candidate.uuid), entity = entities.find(/* 比较 entity.uuid 与 candidate.uuid，返回严格相等的判断结果。 */ entity => entity.uuid === candidate.uuid), peerRole = networkingState.peerDetails.find(/* 比较 item.id 与 snapshotPacket.sender，返回严格相等的判断结果。 */ item => item.id === snapshotPacket.sender)?.role ?? 'client', owner = authorityTable.owner(candidate.uuid)
     const authoritativeServer = productionSettings.networking.role === 'client' && (peerRole === 'server' || peerRole === 'host')
     const receivesAuthority = definition?.authority === 'server' ? authoritativeServer : owner ? owner === snapshotPacket.sender || (owner !== networkingState.localPeerId && authoritativeServer) : authoritativeServer
     if (!definition || !entity || !receivesAuthority) continue
@@ -704,7 +705,7 @@ function reconcile(snapshotPacket: NetworkPacket, entities: Entity[]): void {
     if (remote.position && (remote.position[0] !== current.position.x || remote.position[1] !== current.position.y)) fields.push('transform')
     if (remote.rotation !== undefined && remote.rotation !== current.rotation) fields.push('rotation')
     if (remote.velocity && (remote.velocity[0] !== entity.velocity.x || remote.velocity[1] !== entity.velocity.y)) fields.push('velocity')
-    const rollback = definition.predict && error > productionSettings.networking.reconciliationThreshold ? replayNetworkTransformDeltas(remote, snapshotPacket.tick, localHistory.map(frame => ({ tick: frame.tick, entities: frame.snapshot.entities }))) : null
+    const rollback = definition.predict && error > productionSettings.networking.reconciliationThreshold ? replayNetworkTransformDeltas(remote, snapshotPacket.tick, localHistory.map(/** 构造并返回记录 { tick: frame.tick, entities: frame.snapshot.entities }，字段按当前实参及捕获状态求值。 */ frame => ({ tick: frame.tick, entities: frame.snapshot.entities }))) : null
     const targetX = rollback?.state.position?.[0] ?? projectedX, targetY = rollback?.state.position?.[1] ?? projectedY, targetRotation = rollback?.state.rotation ?? remote.rotation, targetVelocity = rollback?.state.velocity ?? remote.velocity
     const blend = rollback || !definition.interpolate ? 1 : 0
     if (rollback) { networkingState.predictionCorrections++; networkingState.rollbacks++; networkingState.replayedInputs += rollback.replayedFrames; rollbackTimeline.push({ tick: snapshotPacket.tick, peerId: snapshotPacket.sender, checksumBefore: history?.checksum ?? '', checksumAfter: payload.checksum, replayedInputs: rollback.replayedFrames, correction: error, reason: 'authoritative-rollback-replay' }) }
@@ -716,7 +717,7 @@ function reconcile(snapshotPacket: NetworkPacket, entities: Entity[]): void {
   refreshProductionDiagnostics()
 }
 
-export function updateNetworking(entities: Entity[], fixedDelta: number, input?: InputSnapshot, physicsChecksum = ''): void {
+/** 结构说明（自动提取）：updateNetworking；输入 entities、fixedDelta、input、physicsChecksum；直接调用 stopNetworking、authorityTable.synchronize、interpolationTargets.clear、refreshProductionDiagnostics、cloneNetworkInput 等；写入 networkingState.currentTick、lastEntities、lastInput、lastChecksum 等；包含循环处理。 */ export function updateNetworking(entities: Entity[], fixedDelta: number, input?: InputSnapshot, physicsChecksum = ''): void {
   if (!productionSettings.networking.enabled || !productionSettings.networking.permissionGranted) { void stopNetworking(); return }
   if (!transport || networkingState.status !== 'connected') return
   if (authorityTable.synchronize(productionSettings.networking.replicatedEntities, networkingState.localPeerId, productionSettings.networking.role)) { interpolationTargets.clear(); refreshProductionDiagnostics() }
@@ -730,21 +731,21 @@ export function updateNetworking(entities: Entity[], fixedDelta: number, input?:
   if (snapshotAccumulator + Number.EPSILON >= interval) {
     snapshotAccumulator = Math.max(0, snapshotAccumulator - interval); if (snapshotAccumulator < 1e-9) snapshotAccumulator = 0; const stateChannel = channelByDelivery('unreliable-sequenced', 'state')
     if (stateChannel) {
-      const targets = networkingState.peerDetails.filter(peer => !baselinePending.has(peer.id)).map(peer => peer.id)
+      const targets = networkingState.peerDetails.filter(/* 返回 baselinePending.has(peer.id) 的逻辑取反结果。 */ peer => !baselinePending.has(peer.id)).map(/* 返回 peer.id 的当前值。 */ peer => peer.id)
       for (const target of targets) { const targeted = localSnapshot(entities, false, target), page = snapshotPage(targeted, target, stateChannel); if (page) void sendNetworkPacket('snapshot', page, stateChannel.id, target) }
     }
   }
   while (remoteSnapshots.length) reconcile(remoteSnapshots.shift()!, entities)
   const interpolationDelta = Math.max(0, Math.min(.25, fixedDelta))
-  const interpolationOrder = parentFirstNetworkStates([...interpolationTargets.keys()].map(uuid => ({ uuid })), entities)
-  const beforeInterpolation = new Map(interpolationOrder.flatMap(state => { const entity = entities.find(entity => entity.uuid === state.uuid); return entity ? [[state.uuid, worldTransform(entity, entities)] as const] : [] }))
+  const interpolationOrder = parentFirstNetworkStates([...interpolationTargets.keys()].map(/** 构造并返回记录 { uuid }，字段按当前实参及捕获状态求值。 */ uuid => ({ uuid })), entities)
+  const beforeInterpolation = new Map(interpolationOrder.flatMap(/** 结构说明（自动提取）：interpolationOrder.flatMap 回调；输入 state；直接调用 entities.find、worldTransform。 */ state => { const entity = entities.find(/* 比较 entity.uuid 与 state.uuid，返回严格相等的判断结果。 */ entity => entity.uuid === state.uuid); return entity ? [[state.uuid, worldTransform(entity, entities)] as const] : [] }))
   for (const { uuid: entityUuid } of interpolationOrder) {
-    const target = interpolationTargets.get(entityUuid)!, definition = productionSettings.networking.replicatedEntities.find(item => item.entityUuid === entityUuid)
+    const target = interpolationTargets.get(entityUuid)!, definition = productionSettings.networking.replicatedEntities.find(/* 比较 item.entityUuid 与 entityUuid，返回严格相等的判断结果。 */ item => item.entityUuid === entityUuid)
     if (!definition || !definition.interpolate) { interpolationTargets.delete(entityUuid); continue }
     if (!definition.properties.includes('transform')) delete target.position
     if (!definition.properties.includes('rotation')) delete target.rotation
     if (!definition.properties.includes('velocity')) delete target.velocity
-    const entity = entities.find(candidate => candidate.uuid === entityUuid); if (!entity) { interpolationTargets.delete(entityUuid); continue }
+    const entity = entities.find(/* 比较 candidate.uuid 与 entityUuid，返回严格相等的判断结果。 */ candidate => candidate.uuid === entityUuid); if (!entity) { interpolationTargets.delete(entityUuid); continue }
     const current = beforeInterpolation.get(entityUuid)!, alpha = Math.min(1, interpolationDelta / Math.max(interpolationDelta, target.remaining))
     setWorldTransform(entity, { ...current, position: target.position ? { x: current.position.x + (target.position[0] - current.position.x) * alpha, y: current.position.y + (target.position[1] - current.position.y) * alpha } : current.position, rotation: target.rotation === undefined ? current.rotation : current.rotation + (target.rotation - current.rotation) * alpha }, entities)
     if (target.velocity) entity.velocity = { x: entity.velocity.x + (target.velocity[0] - entity.velocity.x) * alpha, y: entity.velocity.y + (target.velocity[1] - entity.velocity.y) * alpha }
@@ -753,24 +754,24 @@ export function updateNetworking(entities: Entity[], fixedDelta: number, input?:
   const reliableBefore = reliableWindow.size, dueReliable = reliableWindow.due(performance.now(), productionSettings.networking.reliableRetryMs, productionSettings.networking.reliableMaximumAttempts)
   networkingState.reliableExpired += Math.max(0, reliableBefore - reliableWindow.size)
   const expired = reliableWindow.takeExpired()
-  for (const peerId of new Set(expired.map(item => item.peer))) {
+  for (const peerId of new Set(expired.map(/* 返回 item.peer 的当前值。 */ item => item.peer))) {
     if (peerId === '*' && productionSettings.networking.role !== 'client') continue
     if (peerId !== '*') removePeer(peerId, 'reliable acknowledgement timeout')
     else reliableWindow.clearPeer('*')
     networkingState.lastError = `Reliable delivery to ${peerId} exhausted its acknowledgement retries. Reconnect the peer.`; addEvent(networkingState.lastError, 'error')
     if (productionSettings.networking.role === 'client') { networkingState.status = 'error'; scheduleReconnect() }
   }
-  for (const pending of dueReliable) if (networkingState.status === 'connected' && (pending.peer === '*' || networkingState.peerDetails.some(peer => peer.id === pending.peer))) void transportSend(pending.source, pending.packet, pending.peer === '*' ? '' : pending.peer, true)
+  for (const pending of dueReliable) if (networkingState.status === 'connected' && (pending.peer === '*' || networkingState.peerDetails.some(/* 比较 peer.id 与 pending.peer，返回严格相等的判断结果。 */ peer => peer.id === pending.peer))) void transportSend(pending.source, pending.packet, pending.peer === '*' ? '' : pending.peer, true)
   networkingState.reliablePending = reliableWindow.size
-  const inputs = [...remoteInputs].flatMap(([peerId, frames]) => { const value = frames.get(tick); return value ? [{ peerId, input: value }] : [] }); if (lastInput) inputs.push({ peerId: networkingState.localPeerId, input: lastInput })
+  const inputs = [...remoteInputs].flatMap(/** 结构说明（自动提取）：flatMap 回调；输入 [peerId, frames]；直接调用 frames.get。 */ ([peerId, frames]) => { const value = frames.get(tick); return value ? [{ peerId, input: value }] : [] }); if (lastInput) inputs.push({ peerId: networkingState.localPeerId, input: lastInput })
   recordMultiplayerReplayFrame(tick, inputs, lastChecksum, networkingState.packetSummaries.slice(-32))
   if (tick % Math.max(1, Math.round(1 / Math.max(.0001, fixedDelta))) === 0) { pruneDisconnectedPeers(); const reliable = channelByDelivery('reliable-ordered', 'events'); if (reliable) { void sendNetworkPacket('ping', { sentAt: performance.now() }, reliable.id); if (localInterest && productionSettings.networking.interest.enabled) void sendNetworkPacket('interest', { center: localInterest.center, radius: localInterest.radius, sceneUuid: localInterest.sceneUuid } satisfies InterestPayload, reliable.id) } }
 }
 
-export function registerRpc(name: string, handler: (payload: unknown, context: { sender: string; tick: number }) => void): () => void { const key = name.trim().replace(/[^a-zA-Z0-9_.-]/g, '_').slice(0, 80); rpcHandlers.set(key, handler); return () => rpcHandlers.delete(key) }
-export function callRpc(name: string, payload: unknown): boolean {
+/** 结构说明（自动提取）：registerRpc；输入 name、handler；直接调用 slice、replace、name.trim、rpcHandlers.set。 */ export function registerRpc(name: string, handler: (payload: unknown, context: { sender: string; tick: number }) => void): () => void { const key = name.trim().replace(/[^a-zA-Z0-9_.-]/g, '_').slice(0, 80); rpcHandlers.set(key, handler); return /* 调用 rpcHandlers.delete(key) 并返回调用结果。 */ () => rpcHandlers.delete(key) }
+/** 结构说明（自动提取）：callRpc；输入 name、payload；直接调用 productionSettings.networking.rpcContracts.find、rpcEntityUuid、Boolean、authorityTable.owner、validatePayloadSchema 等；写入 payloadValid。 */ export function callRpc(name: string, payload: unknown): boolean {
   if (!productionSettings.networking.enabled || !productionSettings.networking.permissionGranted || !transport || networkingState.status !== 'connected') return false
-  const contract = productionSettings.networking.rpcContracts.find(item => item.name === name), localRole = productionSettings.networking.role
+  const contract = productionSettings.networking.rpcContracts.find(/* 比较 item.name 与 name，返回严格相等的判断结果。 */ item => item.name === name), localRole = productionSettings.networking.role
   if (!contract) { networkingState.rpcRejected++; return false }
   const direction = contract.direction === 'bidirectional' || (contract.direction === 'client-to-server' && localRole === 'client') || (contract.direction === 'server-to-client' && (localRole === 'server' || localRole === 'host')), entityUuid = rpcEntityUuid(payload), authority = contract.authority === 'any' || (contract.authority === 'owner' && Boolean(entityUuid) && authorityTable.owner(entityUuid) === networkingState.localPeerId) || (contract.authority === 'server' && (localRole === 'server' || localRole === 'host'))
   let payloadValid = false
@@ -783,21 +784,21 @@ export function callRpc(name: string, payload: unknown): boolean {
   }
   networkingState.rpcCalls++; void sendNetworkPacket('rpc', rpc, contract.channelId); return true
 }
-export function setNetworkInterest(center: [number, number], radius = productionSettings.networking.interest.defaultRadius, sceneUuid = ''): boolean { if (!center.every(Number.isFinite) || !Number.isFinite(radius)) return false; localInterest = { peerId: networkingState.localPeerId, center: [finiteNumber(center[0]), finiteNumber(center[1])], radius: Math.max(0, Math.min(productionSettings.networking.interest.maximumRadius, radius)), sceneUuid: sceneUuid.slice(0, 128), updatedAt: Date.now() }; const reliable = channelByDelivery('reliable-ordered', 'events'); if (reliable && networkingState.status === 'connected') void sendNetworkPacket('interest', { center: localInterest.center, radius: localInterest.radius, sceneUuid: localInterest.sceneUuid } satisfies InterestPayload, reliable.id); return true }
-export function transferNetworkAuthority(entityUuid: string, targetPeerId: string): boolean { const source = entityUuid.slice(0, 128), target = targetPeerId.slice(0, 80), localRole = productionSettings.networking.role, authorized = productionSettings.networking.allowAuthorityTransfer && ((localRole === 'server' || localRole === 'host') || authorityTable.owner(source) === networkingState.localPeerId) && (target === networkingState.localPeerId || networkingState.peerDetails.some(peer => peer.id === target)); if (!authorized || !authorityTable.transfer(source, target)) return false; interpolationTargets.delete(source); networkingState.authorityTransfers++; refreshProductionDiagnostics(); const reliable = channelByDelivery('reliable-ordered', 'events'); if (reliable && networkingState.status === 'connected') void sendNetworkPacket('authority', { entityUuid: source, targetPeerId: target } satisfies AuthorityPayload, reliable.id); return true }
-export function handoffNetworkScene(targetPeerId: string, sceneUuid: string, spawnTag = ''): boolean { const localRole = productionSettings.networking.role, target = targetPeerId.slice(0, 80), scene = sceneUuid.slice(0, 128); if (!productionSettings.networking.allowSceneHandoff || (localRole !== 'server' && localRole !== 'host') || !scene || !networkingState.peerDetails.some(peer => peer.id === target)) return false; const reliable = channelByDelivery('reliable-ordered', 'events'); if (!reliable || networkingState.status !== 'connected') return false; networkingState.sceneHandoffs++; void sendNetworkPacket('scene', { sceneUuid: scene, spawnTag: spawnTag.slice(0, 80) } satisfies ScenePayload, reliable.id, target); return true }
-export function registerNetworkSceneHandoff(handler: (sceneUuid: string, spawnTag: string, peerId: string) => void | Promise<void>): () => void { sceneHandoffHandler = handler; return () => { if (sceneHandoffHandler === handler) sceneHandoffHandler = null } }
-export function consumeRemoteInput(peerId: string, targetTick = tick): InputSnapshot | null { const frames = remoteInputs.get(peerId), input = frames?.get(targetTick) ?? null; if (input) frames?.delete(targetTick); return input ? cloneNetworkInput(input) : null }
-export function drainRemoteInputs(maxFrames = 64): RemoteNetworkInputFrame[] {
-  const limit = Math.max(1, Math.min(256, Math.round(Number(maxFrames) || 64))), ownership = authorityTable.entries(), pending = [...remoteInputs].flatMap(([peerId, frames]) => [...frames].map(([frameTick, input]) => ({ peerId, tick: frameTick, input }))).sort((left, right) => left.tick - right.tick || left.peerId.localeCompare(right.peerId)).slice(0, limit)
-  return pending.map(frame => { remoteInputs.get(frame.peerId)?.delete(frame.tick); return { peerId: frame.peerId, tick: frame.tick, input: cloneNetworkInput(frame.input), targetEntityUuids: ownership.filter(item => item.ownerPeerId === frame.peerId).map(item => item.entityUuid).sort() } })
+/** 结构说明（自动提取）：setNetworkInterest；输入 center、radius、sceneUuid；直接调用 center.every、Number.isFinite、finiteNumber、Math.max、Math.min 等；写入 localInterest。 */ export function setNetworkInterest(center: [number, number], radius = productionSettings.networking.interest.defaultRadius, sceneUuid = ''): boolean { if (!center.every(Number.isFinite) || !Number.isFinite(radius)) return false; localInterest = { peerId: networkingState.localPeerId, center: [finiteNumber(center[0]), finiteNumber(center[1])], radius: Math.max(0, Math.min(productionSettings.networking.interest.maximumRadius, radius)), sceneUuid: sceneUuid.slice(0, 128), updatedAt: Date.now() }; const reliable = channelByDelivery('reliable-ordered', 'events'); if (reliable && networkingState.status === 'connected') void sendNetworkPacket('interest', { center: localInterest.center, radius: localInterest.radius, sceneUuid: localInterest.sceneUuid } satisfies InterestPayload, reliable.id); return true }
+/** 结构说明（自动提取）：transferNetworkAuthority；输入 entityUuid、targetPeerId；直接调用 entityUuid.slice、targetPeerId.slice、authorityTable.owner、networkingState.peerDetails.some、authorityTable.transfer 等。 */ export function transferNetworkAuthority(entityUuid: string, targetPeerId: string): boolean { const source = entityUuid.slice(0, 128), target = targetPeerId.slice(0, 80), localRole = productionSettings.networking.role, authorized = productionSettings.networking.allowAuthorityTransfer && ((localRole === 'server' || localRole === 'host') || authorityTable.owner(source) === networkingState.localPeerId) && (target === networkingState.localPeerId || networkingState.peerDetails.some(/* 比较 peer.id 与 target，返回严格相等的判断结果。 */ peer => peer.id === target)); if (!authorized || !authorityTable.transfer(source, target)) return false; interpolationTargets.delete(source); networkingState.authorityTransfers++; refreshProductionDiagnostics(); const reliable = channelByDelivery('reliable-ordered', 'events'); if (reliable && networkingState.status === 'connected') void sendNetworkPacket('authority', { entityUuid: source, targetPeerId: target } satisfies AuthorityPayload, reliable.id); return true }
+/** 结构说明（自动提取）：handoffNetworkScene；输入 targetPeerId、sceneUuid、spawnTag；直接调用 targetPeerId.slice、sceneUuid.slice、networkingState.peerDetails.some、channelByDelivery、sendNetworkPacket 等。 */ export function handoffNetworkScene(targetPeerId: string, sceneUuid: string, spawnTag = ''): boolean { const localRole = productionSettings.networking.role, target = targetPeerId.slice(0, 80), scene = sceneUuid.slice(0, 128); if (!productionSettings.networking.allowSceneHandoff || (localRole !== 'server' && localRole !== 'host') || !scene || !networkingState.peerDetails.some(/* 比较 peer.id 与 target，返回严格相等的判断结果。 */ peer => peer.id === target)) return false; const reliable = channelByDelivery('reliable-ordered', 'events'); if (!reliable || networkingState.status !== 'connected') return false; networkingState.sceneHandoffs++; void sendNetworkPacket('scene', { sceneUuid: scene, spawnTag: spawnTag.slice(0, 80) } satisfies ScenePayload, reliable.id, target); return true }
+/** 结构说明（自动提取）：registerNetworkSceneHandoff；输入 handler；写入 sceneHandoffHandler。 */ export function registerNetworkSceneHandoff(handler: (sceneUuid: string, spawnTag: string, peerId: string) => void | Promise<void>): () => void { sceneHandoffHandler = handler; return /** 结构说明（自动提取）：匿名回调；无显式参数；写入 sceneHandoffHandler。 */ () => { if (sceneHandoffHandler === handler) sceneHandoffHandler = null } }
+/** 结构说明（自动提取）：consumeRemoteInput；输入 peerId、targetTick；直接调用 remoteInputs.get、frames.get、frames.delete、cloneNetworkInput。 */ export function consumeRemoteInput(peerId: string, targetTick = tick): InputSnapshot | null { const frames = remoteInputs.get(peerId), input = frames?.get(targetTick) ?? null; if (input) frames?.delete(targetTick); return input ? cloneNetworkInput(input) : null }
+/** 结构说明（自动提取）：drainRemoteInputs；输入 maxFrames；直接调用 Math.max、Math.min、Math.round、Number、authorityTable.entries 等。 */ export function drainRemoteInputs(maxFrames = 64): RemoteNetworkInputFrame[] {
+  const limit = Math.max(1, Math.min(256, Math.round(Number(maxFrames) || 64))), ownership = authorityTable.entries(), pending = [...remoteInputs].flatMap(/* 调用 [...frames].map(([frameTick, input]) => ({ peerId, tick: frameTick, input })) 并返回调用结果。 */ ([peerId, frames]) => [...frames].map(/** 构造并返回记录 { peerId, tick: frameTick, input }，字段按当前实参及捕获状态求值。 */ ([frameTick, input]) => ({ peerId, tick: frameTick, input }))).sort(/* 先计算 left.tick - right.tick；仅当其为假值时求右侧 left.peerId.localeCompare(right.peerId)，返回短路求值结果。 */ (left, right) => left.tick - right.tick || left.peerId.localeCompare(right.peerId)).slice(0, limit)
+  return pending.map(/** 结构说明（自动提取）：pending.map 回调；输入 frame；直接调用 delete、remoteInputs.get、cloneNetworkInput、sort、map 等。 */ frame => { remoteInputs.get(frame.peerId)?.delete(frame.tick); return { peerId: frame.peerId, tick: frame.tick, input: cloneNetworkInput(frame.input), targetEntityUuids: ownership.filter(/* 比较 item.ownerPeerId 与 frame.peerId，返回严格相等的判断结果。 */ item => item.ownerPeerId === frame.peerId).map(/* 返回 item.entityUuid 的当前值。 */ item => item.entityUuid).sort() } })
 }
-export function rollbackSnapshot(targetTick: number): boolean {
+/** 结构说明（自动提取）：rollbackSnapshot；输入 targetTick；直接调用 Number.isSafeInteger、find、reverse、parentFirstNetworkStates、lastEntities.find 等；写入 entity.velocity、tick、networkingState.currentTick、snapshotAccumulator；包含循环处理。 */ export function rollbackSnapshot(targetTick: number): boolean {
   if (!Number.isSafeInteger(targetTick) || targetTick < 0) return false
-  const frame = [...localHistory].reverse().find(item => item.tick <= targetTick)
+  const frame = [...localHistory].reverse().find(/* 比较 item.tick 与 targetTick，返回小于或等于的判断结果。 */ item => item.tick <= targetTick)
   if (!frame) return false
   for (const state of parentFirstNetworkStates(frame.snapshot.entities, lastEntities)) {
-    const entity = lastEntities.find(candidate => candidate.uuid === state.uuid); if (!entity) continue
+    const entity = lastEntities.find(/* 比较 candidate.uuid 与 state.uuid，返回严格相等的判断结果。 */ candidate => candidate.uuid === state.uuid); if (!entity) continue
     const current = worldTransform(entity, lastEntities)
     setWorldTransform(entity, { ...current, position: state.position ? { x: state.position[0], y: state.position[1] } : current.position, rotation: state.rotation ?? current.rotation }, lastEntities)
     if (state.velocity) entity.velocity = { x: state.velocity[0], y: state.velocity[1] }
@@ -810,8 +811,8 @@ export function rollbackSnapshot(targetTick: number): boolean {
   refreshProductionDiagnostics(); return true
 }
 
-export function multiplayerSave(): MultiplayerSaveDocument { return exportMultiplayerSave(lastEntities, tick) }
-export function restoreMultiplayerSave(value: unknown): { tick: number; restored: number } {
+/* 调用 exportMultiplayerSave(lastEntities, tick) 并返回调用结果。 */ export function multiplayerSave(): MultiplayerSaveDocument { return exportMultiplayerSave(lastEntities, tick) }
+/** 结构说明（自动提取）：restoreMultiplayerSave；输入 value；直接调用 importMultiplayerSave、localHistory.splice、remoteSnapshots.splice、interpolationTargets.clear；写入 tick、networkingState.currentTick、snapshotAccumulator；返回路径包含 restored。 */ export function restoreMultiplayerSave(value: unknown): { tick: number; restored: number } {
   const restored = importMultiplayerSave(value, lastEntities)
   if (!transport) tick = restored.tick
   networkingState.currentTick = tick
@@ -819,8 +820,8 @@ export function restoreMultiplayerSave(value: unknown): { tick: number; restored
   return restored
 }
 
-export function captureNetworkDiagnostics(): string { return networkDiagnosticCapture(networkingState as unknown as Record<string, unknown>, networkingState.events, networkingState.packetSummaries) }
-export function networkRuntimeSnapshot(): Readonly<{ tick: number; localHistory: number; remoteInputs: number; reliablePending: number; owners: number; interestViews: number; rollbackEntries: number; replicationDiffs: number }> { return Object.freeze({ tick, localHistory: localHistory.length, remoteInputs: [...remoteInputs.values()].reduce((sum, frames) => sum + frames.size, 0), reliablePending: reliableWindow.size, owners: authorityTable.entries().length, interestViews: peerInterests.size, rollbackEntries: networkingState.rollbackTimeline.length, replicationDiffs: networkingState.replicationDiffs.length }) }
+/** 结构说明（自动提取）：captureNetworkDiagnostics；无显式参数；直接调用 networkDiagnosticCapture。 */ export function captureNetworkDiagnostics(): string { return networkDiagnosticCapture(networkingState as unknown as Record<string, unknown>, networkingState.events, networkingState.packetSummaries) }
+/** 结构说明（自动提取）：networkRuntimeSnapshot；无显式参数；直接调用 Object.freeze、reduce、remoteInputs.values、authorityTable.entries。 */ export function networkRuntimeSnapshot(): Readonly<{ tick: number; localHistory: number; remoteInputs: number; reliablePending: number; owners: number; interestViews: number; rollbackEntries: number; replicationDiffs: number }> { return Object.freeze({ tick, localHistory: localHistory.length, remoteInputs: [...remoteInputs.values()].reduce(/* 计算表达式 sum + frames.size 并返回结果，沿用操作数的原有类型规则。 */ (sum, frames) => sum + frames.size, 0), reliablePending: reliableWindow.size, owners: authorityTable.entries().length, interestViews: peerInterests.size, rollbackEntries: networkingState.rollbackTimeline.length, replicationDiffs: networkingState.replicationDiffs.length }) }
 
 /** Test-only injection remains explicit and never starts a real socket. */
-export async function startNetworkingWithTransport(testTransport: NetworkTransport): Promise<void> { if (!productionSettings.networking.enabled || !productionSettings.networking.permissionGranted) throw new Error('Explicit enabled permission is required.'); if (productionSettings.networking.authentication.requireVerifiedPeers && productionSettings.networking.authentication.mode !== 'hook') throw new Error('Verified peers require a reviewed authentication hook.'); if (transport) await stopNetworking(); connectionGeneration++; cancelScheduledDeliveries(); resetConnectionPeerState(); networkingState.sessionId = networkSessionId(); networkingState.localPeerId ||= peerIdentity(); sessionEpoch = createNetworkEpoch(); tick = 0; snapshotAccumulator = 0; budgetStarted = performance.now(); budgetBytes = 0; receiveBudgetStarted = budgetStarted; receiveBudgetBytes = 0; authorityTable.initialize(productionSettings.networking.replicatedEntities, networkingState.localPeerId, productionSettings.networking.role); refreshProductionDiagnostics(); transport = testTransport; networkingState.transport = testTransport.kind; networkingState.status = 'connecting'; await testTransport.connect(receive, state => { networkingState.status = state === 'connected' ? 'connected' : 'error' }); networkingState.status = 'connected' }
+/** 结构说明（自动提取）：startNetworkingWithTransport；输入 testTransport；直接调用 Error、stopNetworking、cancelScheduledDeliveries、resetConnectionPeerState、networkSessionId 等；写入 networkingState.sessionId、networkingState.localPeerId、sessionEpoch、tick 等；等待异步结果；包含显式抛错路径。 */ export async function startNetworkingWithTransport(testTransport: NetworkTransport): Promise<void> { if (!productionSettings.networking.enabled || !productionSettings.networking.permissionGranted) throw new Error('Explicit enabled permission is required.'); if (productionSettings.networking.authentication.requireVerifiedPeers && productionSettings.networking.authentication.mode !== 'hook') throw new Error('Verified peers require a reviewed authentication hook.'); if (transport) await stopNetworking(); connectionGeneration++; cancelScheduledDeliveries(); resetConnectionPeerState(); networkingState.sessionId = networkSessionId(); networkingState.localPeerId ||= peerIdentity(); sessionEpoch = createNetworkEpoch(); tick = 0; snapshotAccumulator = 0; budgetStarted = performance.now(); budgetBytes = 0; receiveBudgetStarted = budgetStarted; receiveBudgetBytes = 0; authorityTable.initialize(productionSettings.networking.replicatedEntities, networkingState.localPeerId, productionSettings.networking.role); refreshProductionDiagnostics(); transport = testTransport; networkingState.transport = testTransport.kind; networkingState.status = 'connecting'; await testTransport.connect(receive, /** 将 state === 'connected' ? 'connected' : 'error' 赋给 networkingState.status，不显式返回值。 */ state => { networkingState.status = state === 'connected' ? 'connected' : 'error' }); networkingState.status = 'connected' }

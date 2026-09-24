@@ -1,3 +1,4 @@
+<!-- 粒子模块编辑器：显示诊断与成本，编辑模块值并提交规范化粒子配置。 -->
 <template>
   <section class="particle-graph-editor">
     <header><div><strong>{{ t('particleGraph') }}</strong><small>{{ t('particleGraphHint') }}</small></div><label>{{ t('simulationBackend') }}<select v-model="document.simulation" @change="commit"><option>Auto</option><option>CPU</option><option>GPU</option></select></label></header>
@@ -25,7 +26,7 @@
       </main>
       <aside class="particle-preview">
         <strong>{{ t('budgetEstimate') }}</strong><dl><div><dt>{{ t('maxParticles') }}</dt><dd>{{ cost.maximumParticles }}</dd></div><div><dt>{{ t('operationsPerFrame') }}</dt><dd>{{ cost.operationsPerFrame }}</dd></div><div><dt>CPU</dt><dd>{{ cost.estimatedCpuMs }} ms</dd></div><div><dt>{{ t('trailVertices') }}</dt><dd>{{ cost.trailVertices }}</dd></div></dl>
-        <p>{{ backendMessage }}</p><p :class="diagnostics.some(item=>item.severity==='error') ? 'error' : diagnostics.length ? 'warning' : 'good'">{{ diagnostics.length ? t('particleFallbackNotice') : costMessage }}</p>
+<!-- 诊断过滤回调检查是否存在错误，决定提示的错误或警告样式。 -->        <p>{{ backendMessage }}</p><p :class="diagnostics.some(item=>item.severity==='error') ? 'error' : diagnostics.length ? 'warning' : 'good'">{{ diagnostics.length ? t('particleFallbackNotice') : costMessage }}</p>
       </aside>
     </div>
   </section>
@@ -39,18 +40,18 @@ import { panelControlLabel } from '../editor/panelControlCopy'
 import { normalizeParticleGraph, particleGraphCost, validateParticleGraph, type ParticleGraphDocument } from '../renderer/particleGraph'
 const props = defineProps<{ modelValue: ParticleGraphDocument; backend: 'WebGL2' | 'Canvas2D'; resourceKey?: string }>()
 const emit = defineEmits<{ 'update:modelValue': [value: ParticleGraphDocument] }>()
-const selectedId = ref('spawn'), document = computed(() => props.modelValue), selected = computed(() => document.value.modules.find(item => item.id === selectedId.value) ?? document.value.modules[0] ?? null)
-const diagnostics = computed(() => validateParticleGraph(document.value, props.backend)), cost = computed(() => particleGraphCost(document.value))
-const backendMessage = computed(() => props.backend === 'Canvas2D' ? t('particleCpuOnly') : document.value.simulation === 'GPU' && document.value.modules.some(item => item.enabled && ['Collision','Events','SubEmitter'].includes(item.kind)) ? t('particleHybridFallback') : t('particleCpuGpu'))
-const costMessage = computed(() => cost.value.operationsPerFrame > 700_000 ? t('particleBudgetReduce') : t('particleBudgetGood'))
-const editableSelected = computed(() => selected.value && ['Spawn','Shape','Velocity','Force','Size','Collision','Events','SubEmitter','Trail','Renderer'].includes(selected.value.kind))
-function commit(){emit('update:modelValue',normalizeParticleGraph(document.value))}
-function toggle(id:string,event:Event){const item=document.value.modules.find(candidate=>candidate.id===id);if(item)item.enabled=(event.target as HTMLInputElement).checked;commit()}
-function value(key:string,fallback:number|string){return selected.value?.values[key]??fallback}
-function vectorComponent(key:string,fallback:number[],index:number):number{const raw=selected.value?.values[key];return Array.isArray(raw)?Number(raw[index]??fallback[index]):fallback[index]!}
-function setNumber(key:string,number:number,integer=false){if(!selected.value||!Number.isFinite(number))return;selected.value.values[key]=integer?Math.round(number):number;commit()}
-function setText(key:string,event:Event){if(!selected.value)return;selected.value.values[key]=(event.target as HTMLInputElement|HTMLSelectElement).value;commit()}
-function setVectorComponent(key:string,fallback:number[],index:number,number:number){if(!selected.value||!Number.isFinite(number))return;const values=[vectorComponent(key,fallback,0),vectorComponent(key,fallback,1)];values[index]=number;selected.value.values[key]=values;commit()}
+const selectedId = ref('spawn'), document = computed(/* 返回 props.modelValue 的当前值。 */ () => props.modelValue), selected = computed(/** 读取选中模块，缺失时回退首项或空值。 */ () => document.value.modules.find(/* 比较 item.id 与 selectedId.value，返回严格相等的判断结果。 */ item => item.id === selectedId.value) ?? document.value.modules[0] ?? null)
+const diagnostics = computed(/** 按当前后端校验粒子图。 */ () => validateParticleGraph(document.value, props.backend)), cost = computed(/** 估算粒子图运行成本。 */ () => particleGraphCost(document.value))
+const backendMessage = computed(/** 根据 Canvas 后端或 GPU 不支持的启用模块显示 CPU、混合或通用执行提示。 */ () => props.backend === 'Canvas2D' ? t('particleCpuOnly') : document.value.simulation === 'GPU' && document.value.modules.some(/** 检查启用的碰撞、事件或子发射器模块是否需要回退。 */ item => item.enabled && ['Collision','Events','SubEmitter'].includes(item.kind)) ? t('particleHybridFallback') : t('particleCpuGpu'))
+const costMessage = computed(/** 按每帧操作成本阈值显示预算建议。 */ () => cost.value.operationsPerFrame > 700_000 ? t('particleBudgetReduce') : t('particleBudgetGood'))
+const editableSelected = computed(/** 判断选中模块是否属于提供通用参数控件的种类。 */ () => selected.value && ['Spawn','Shape','Velocity','Force','Size','Collision','Events','SubEmitter','Trail','Renderer'].includes(selected.value.kind))
+/** 规范化粒子文档并向父组件发出更新。 */ function commit(){emit('update:modelValue',normalizeParticleGraph(document.value))}
+/** 更新指定模块启用状态后提交文档。 */ function toggle(id:string,event:Event){const item=document.value.modules.find(/* 比较 candidate.id 与 id，返回严格相等的判断结果。 */ candidate=>candidate.id===id);if(item)item.enabled=(event.target as HTMLInputElement).checked;commit()}
+/** 读取所选模块值，缺失使用调用方默认值。 */ function value(key:string,fallback:number|string){return selected.value?.values[key]??fallback}
+/** 读取向量指定分量并转换为数字，非数组时使用默认分量。 */ function vectorComponent(key:string,fallback:number[],index:number):number{const raw=selected.value?.values[key];return Array.isArray(raw)?Number(raw[index]??fallback[index]):fallback[index]!}
+/** 只接受有限数值，按需取整后写入所选模块并提交。 */ function setNumber(key:string,number:number,integer=false){if(!selected.value||!Number.isFinite(number))return;selected.value.values[key]=integer?Math.round(number):number;commit()}
+/** 读取输入或选择控件文本，写入所选模块并提交。 */ function setText(key:string,event:Event){if(!selected.value)return;selected.value.values[key]=(event.target as HTMLInputElement|HTMLSelectElement).value;commit()}
+/** 保留另一个向量分量，更新指定有限分量并提交。 */ function setVectorComponent(key:string,fallback:number[],index:number,number:number){if(!selected.value||!Number.isFinite(number))return;const values=[vectorComponent(key,fallback,0),vectorComponent(key,fallback,1)];values[index]=number;selected.value.values[key]=values;commit()}
 </script>
 
 <style scoped>

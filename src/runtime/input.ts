@@ -1,3 +1,4 @@
+/** 游戏输入系统：维护键盘、指针和动作映射，提供当前帧及边沿输入查询。 */
 import { applyGamepadAxisCalibration, sensorValue, TouchPointerDeduplicator } from './deviceInput'
 import { inputPromptForAction, inputPromptState, setInputModality } from './inputModality'
 
@@ -88,13 +89,13 @@ export interface PenInputState {
 
 export const INPUT_DEVICES: readonly InputDevice[] = ['keyboard', 'physical-key', 'mouse-button', 'mouse-wheel', 'mouse-motion', 'gamepad-button', 'gamepad-axis', 'touch', 'gesture', 'sensor', 'pen-button', 'pen-pressure', 'pen-tilt', 'pen-twist']
 const INPUT_DEVICE_KINDS: readonly InputDeviceKind[] = ['keyboard', 'mouse', 'gamepad', 'touch', 'sensor', 'pen']
-const defaultDeadzone = (device: InputDevice): number => device === 'pen-pressure' || device === 'pen-tilt' || device === 'pen-twist' ? 0 : .18
+const defaultDeadzone = /* 根据 device === 'pen-pressure' || device === 'pen-tilt' || device === 'pen-twist' 的真假，分别返回 0 或 .18。 */ (device: InputDevice): number => device === 'pen-pressure' || device === 'pen-tilt' || device === 'pen-twist' ? 0 : .18
 
-export function createInputBinding(device: InputDevice = 'keyboard', code = 'Space'): InputBinding {
+/** 结构说明（自动提取）：createInputBinding；输入 device、code；直接调用 normalizePenBindingCode、defaultDeadzone。 */ export function createInputBinding(device: InputDevice = 'keyboard', code = 'Space'): InputBinding {
   return { device, code: normalizePenBindingCode(device, code), scale: 1, x: 1, y: 0, gamepad: 0, deviceId: '', deadzone: defaultDeadzone(device), threshold: .0001, invert: false, responseCurve: 'linear', modifiers: [], chord: [] }
 }
 
-export function defaultInputMap(): InputAction[] {
+/** 结构说明（自动提取）：defaultInputMap；无显式参数；直接调用 createInputAction、createInputBinding。 */ export function defaultInputMap(): InputAction[] {
   return [
     createInputAction('MoveLeft', 'button', [createInputBinding('keyboard', 'KeyA'), createInputBinding('keyboard', 'ArrowLeft')]),
     createInputAction('MoveRight', 'button', [createInputBinding('keyboard', 'KeyD'), createInputBinding('keyboard', 'ArrowRight')]),
@@ -121,19 +122,19 @@ export function defaultInputMap(): InputAction[] {
   ]
 }
 
-export function createInputAction(name: string, kind: InputActionKind = 'button', bindings: InputBinding[] = [createInputBinding()]): InputAction {
+/** 结构说明（自动提取）：createInputAction；输入 name、kind、bindings。 */ export function createInputAction(name: string, kind: InputActionKind = 'button', bindings: InputBinding[] = [createInputBinding()]): InputAction {
   return { name, kind, bindings, enabled: true, context: 'Gameplay', map: 'Default', schemes: [], interaction: 'press', holdSeconds: .35, tapSeconds: .25, multiTapCount: 2, consume: false, priority: 0, callback: '' }
 }
 
-function finite(value: unknown, fallback: number): number {
+/* 根据 typeof value === 'number' && Number.isFinite(value) 的真假，分别返回 value 或 fallback。 */ function finite(value: unknown, fallback: number): number {
   return typeof value === 'number' && Number.isFinite(value) ? value : fallback
 }
 
-function cleanText(value: unknown, fallback: string, maximum = 160): string {
+/* 根据 typeof value === 'string' && value.trim() 的真假，分别返回 value.trim().slice(0, maximum) 或 fallback。 */ function cleanText(value: unknown, fallback: string, maximum = 160): string {
   return typeof value === 'string' && value.trim() ? value.trim().slice(0, maximum) : fallback
 }
 
-export function normalizePenBindingCode(device: InputDevice, source: unknown): string {
+/** 结构说明（自动提取）：normalizePenBindingCode；输入 device、source；直接调用 slice、toLowerCase、source.trim、test、source.slice。 */ export function normalizePenBindingCode(device: InputDevice, source: unknown): string {
   const code = typeof source === 'string' ? source.trim().toLowerCase().slice(0, 80) : ''
   if (device === 'pen-button') return code === 'tip' || code === 'barrel' || code === 'eraser' || /^button-(?:[0-9]|[12][0-9]|3[01])$/.test(code) ? code : 'tip'
   if (device === 'pen-pressure') return 'pressure'
@@ -142,7 +143,7 @@ export function normalizePenBindingCode(device: InputDevice, source: unknown): s
   return typeof source === 'string' ? source.slice(0, 80) : ''
 }
 
-export function normalizeInputDeviceIdentity(source: unknown, fallbackIndex = 0): InputDeviceIdentity {
+/** 结构说明（自动提取）：normalizeInputDeviceIdentity；输入 source、fallbackIndex；直接调用 INPUT_DEVICE_KINDS.includes、Math.min、Math.max、Math.round、finite 等。 */ export function normalizeInputDeviceIdentity(source: unknown, fallbackIndex = 0): InputDeviceIdentity {
   const item = source && typeof source === 'object' ? source as Partial<InputDeviceIdentity> : {}
   const kind = INPUT_DEVICE_KINDS.includes(item.kind as InputDeviceKind) ? item.kind as InputDeviceKind : 'keyboard'
   const index = Math.min(63, Math.max(0, Math.round(finite(item.index, fallbackIndex))))
@@ -155,10 +156,10 @@ export function normalizeInputDeviceIdentity(source: unknown, fallbackIndex = 0)
   }
 }
 
-export function normalizeInputDeviceIdentities(source: unknown): InputDeviceIdentity[] {
+/** 结构说明（自动提取）：normalizeInputDeviceIdentities；输入 source；直接调用 Array.isArray、Set、flatMap、source.slice。 */ export function normalizeInputDeviceIdentities(source: unknown): InputDeviceIdentity[] {
   if (!Array.isArray(source)) return []
   const seen = new Set<string>()
-  return source.slice(0, 64).flatMap((value, index) => {
+  return source.slice(0, 64).flatMap(/** 结构说明（自动提取）：flatMap 回调；输入 value、index；直接调用 normalizeInputDeviceIdentity、seen.has、seen.add。 */ (value, index) => {
     const identity = normalizeInputDeviceIdentity(value, index), key = `${identity.kind}:${identity.index}:${identity.id}`
     if (seen.has(key)) return []
     seen.add(key)
@@ -166,7 +167,7 @@ export function normalizeInputDeviceIdentities(source: unknown): InputDeviceIden
   })
 }
 
-export function normalizeInputMap(source: unknown): InputAction[] {
+/** 结构说明（自动提取）：normalizeInputMap；输入 source；直接调用 Array.isArray、defaultInputMap、Set、slice、item.name.trim 等；包含循环处理。 */ export function normalizeInputMap(source: unknown): InputAction[] {
   if (!Array.isArray(source)) return defaultInputMap()
   const names = new Set<string>()
   const actions: InputAction[] = []
@@ -177,7 +178,7 @@ export function normalizeInputMap(source: unknown): InputAction[] {
     if (!name || names.has(name)) continue
     names.add(name)
     const kind: InputActionKind = item.kind === 'axis' || item.kind === 'vector2' ? item.kind : 'button'
-    const bindings = Array.isArray(item.bindings) ? item.bindings.flatMap(rawBinding => {
+    const bindings = Array.isArray(item.bindings) ? item.bindings.flatMap(/** 结构说明（自动提取）：item.bindings.flatMap 回调；输入 rawBinding；直接调用 INPUT_DEVICES.includes、normalizePenBindingCode、Math.min、Math.max、finite 等。 */ rawBinding => {
       if (!rawBinding || typeof rawBinding !== 'object') return []
       const binding = rawBinding as Partial<InputBinding>
       const device = INPUT_DEVICES.includes(binding.device as InputDevice) ? binding.device as InputDevice : 'keyboard'
@@ -195,8 +196,8 @@ export function normalizeInputMap(source: unknown): InputAction[] {
         threshold: Math.min(1, Math.max(0, finite(binding.threshold, .0001))),
         invert: binding.invert === true,
         responseCurve: responseCurves.includes(binding.responseCurve as InputResponseCurve) ? binding.responseCurve as InputResponseCurve : 'linear',
-        modifiers: Array.isArray(binding.modifiers) ? [...new Set(binding.modifiers.filter((value): value is InputModifier => allowedModifiers.includes(value as InputModifier)))].slice(0, 4) : [],
-        chord: Array.isArray(binding.chord) ? [...new Set(binding.chord.filter(value => typeof value === 'string').map(value => value.slice(0, 80)).filter(Boolean))].slice(0, 8) : []
+        modifiers: Array.isArray(binding.modifiers) ? [...new Set(binding.modifiers.filter(/* 调用 allowedModifiers.includes(value as InputModifier) 并返回调用结果。 */ (value): value is InputModifier => allowedModifiers.includes(value as InputModifier)))].slice(0, 4) : [],
+        chord: Array.isArray(binding.chord) ? [...new Set(binding.chord.filter(/* 比较 typeof value 与 'string'，返回严格相等的判断结果。 */ value => typeof value === 'string').map(/* 调用 value.slice(0, 80) 并返回调用结果。 */ value => value.slice(0, 80)).filter(Boolean))].slice(0, 8) : []
       }]
     }) : []
     const interactions: InputInteraction[] = ['press', 'hold', 'tap', 'multiTap']
@@ -204,7 +205,7 @@ export function normalizeInputMap(source: unknown): InputAction[] {
       name, kind, bindings: bindings.slice(0, 32), enabled: item.enabled !== false,
       context: typeof item.context === 'string' ? item.context.trim().slice(0, 80) || 'Gameplay' : 'Gameplay',
       map: typeof item.map === 'string' ? item.map.trim().slice(0, 80) || 'Default' : 'Default',
-      schemes: Array.isArray(item.schemes) ? [...new Set(item.schemes.filter(value => typeof value === 'string').map(value => value.trim().slice(0, 80)).filter(Boolean))].slice(0, 16) : [],
+      schemes: Array.isArray(item.schemes) ? [...new Set(item.schemes.filter(/* 比较 typeof value 与 'string'，返回严格相等的判断结果。 */ value => typeof value === 'string').map(/* 调用 value.trim().slice(0, 80) 并返回调用结果。 */ value => value.trim().slice(0, 80)).filter(Boolean))].slice(0, 16) : [],
       interaction: interactions.includes(item.interaction as InputInteraction) ? item.interaction as InputInteraction : 'press',
       holdSeconds: Math.min(60, Math.max(.001, finite(item.holdSeconds, .35))),
       tapSeconds: Math.min(10, Math.max(.001, finite(item.tapSeconds, .25))),
@@ -218,8 +219,8 @@ export function normalizeInputMap(source: unknown): InputAction[] {
 }
 
 /** Replaces one project input binding without changing the action's axis/vector semantics. */
-export function rebindInputAction(actions: InputAction[], actionName: string, bindingIndex: number, value: Pick<InputBinding, 'device' | 'code'>): boolean {
-  const action = actions.find(candidate => candidate.name === actionName)
+/** 结构说明（自动提取）：rebindInputAction；输入 actions、actionName、bindingIndex、value；直接调用 actions.find、Number.isInteger、INPUT_DEVICES.includes、action.bindings.push、createInputBinding 等；写入 action.bindings[…]；包含循环处理。 */ export function rebindInputAction(actions: InputAction[], actionName: string, bindingIndex: number, value: Pick<InputBinding, 'device' | 'code'>): boolean {
+  const action = actions.find(/* 比较 candidate.name 与 actionName，返回严格相等的判断结果。 */ candidate => candidate.name === actionName)
   if (!action || !Number.isInteger(bindingIndex) || bindingIndex < 0 || bindingIndex > 31 || !value || !INPUT_DEVICES.includes(value.device)) return false
   while (action.bindings.length <= bindingIndex) action.bindings.push(createInputBinding(value.device, value.code))
   const previous = action.bindings[bindingIndex]
@@ -227,17 +228,17 @@ export function rebindInputAction(actions: InputAction[], actionName: string, bi
   return true
 }
 
-function bindingSignature(binding: InputBinding): string {
+/** 结构说明（自动提取）：bindingSignature；输入 binding；直接调用 join、sort。 */ function bindingSignature(binding: InputBinding): string {
   return [binding.device, binding.deviceId || binding.gamepad, binding.code, [...binding.modifiers].sort().join('+'), [...binding.chord].sort().join('+')].join(':')
 }
 
-function looksLikePhysicalKeyCode(code: string): boolean {
+/** 结构说明（自动提取）：looksLikePhysicalKeyCode；输入 code；直接调用 test。 */ function looksLikePhysicalKeyCode(code: string): boolean {
   return /^(?:Key[A-Z]|Digit[0-9]|Numpad[A-Za-z0-9]+|Arrow(?:Up|Down|Left|Right)|F(?:[1-9]|1[0-9]|2[0-4])|(?:Shift|Control|Alt|Meta)(?:Left|Right)|Space|Enter|Escape|Tab|Backspace|Delete|Insert|Home|End|Page(?:Up|Down)|CapsLock|ContextMenu|Bracket(?:Left|Right)|Backslash|Semicolon|Quote|Comma|Period|Slash|Backquote|Minus|Equal)$/.test(code)
 }
 
-function logicalKey(code: string): string { return code.length === 1 ? code.toLocaleLowerCase() : code }
+/* 根据 code.length === 1 的真假，分别返回 code.toLocaleLowerCase() 或 code。 */ function logicalKey(code: string): string { return code.length === 1 ? code.toLocaleLowerCase() : code }
 
-function pointerButtonMask(button: number): number {
+/** 结构说明（自动提取）：pointerButtonMask；输入 button。 */ function pointerButtonMask(button: number): number {
   if (button === 0) return 1
   if (button === 1) return 4
   if (button === 2) return 2
@@ -248,7 +249,7 @@ function pointerButtonMask(button: number): number {
 }
 
 /** Finds deterministic duplicate physical bindings without treating two bindings inside one action as a conflict. */
-export function detectInputConflicts(actions: InputAction[]): InputConflict[] {
+/** 结构说明（自动提取）：detectInputConflicts；输入 actions；直接调用 Map、normalizeInputMap、action.bindings.entries、bindingSignature、seen.get 等；包含循环处理。 */ export function detectInputConflicts(actions: InputAction[]): InputConflict[] {
   const seen = new Map<string, { action: string; bindingIndex: number }>()
   const conflicts: InputConflict[] = []
   for (const action of normalizeInputMap(actions)) for (const [bindingIndex, binding] of action.bindings.entries()) {
@@ -256,19 +257,19 @@ export function detectInputConflicts(actions: InputAction[]): InputConflict[] {
     if (previous && previous.action !== action.name) conflicts.push({ signature, action: action.name, bindingIndex, conflictsWithAction: previous.action, conflictsWithBindingIndex: previous.bindingIndex })
     else if (!previous) seen.set(signature, { action: action.name, bindingIndex })
   }
-  return conflicts.sort((first, second) => first.signature.localeCompare(second.signature) || first.action.localeCompare(second.action))
+  return conflicts.sort(/* 先计算 first.signature.localeCompare(second.signature)；仅当其为假值时求右侧 first.action.localeCompare(second.action)，返回短路求值结果。 */ (first, second) => first.signature.localeCompare(second.signature) || first.action.localeCompare(second.action))
 }
 
-function cloneSnapshot(snapshot: InputSnapshot): InputSnapshot {
+/** 结构说明（自动提取）：cloneSnapshot；输入 snapshot；直接调用 Object.fromEntries、map、Object.entries、snapshot.devices.map。 */ function cloneSnapshot(snapshot: InputSnapshot): InputSnapshot {
   return {
     down: { ...snapshot.down }, pressed: { ...snapshot.pressed }, released: { ...snapshot.released }, performed: { ...snapshot.performed }, cancelled: { ...snapshot.cancelled }, phases: { ...snapshot.phases }, durations: { ...snapshot.durations }, tapCounts: { ...snapshot.tapCounts }, consumed: { ...snapshot.consumed }, axes: { ...snapshot.axes },
-    vectors: Object.fromEntries(Object.entries(snapshot.vectors).map(([key, value]) => [key, [...value] as [number, number]])),
+    vectors: Object.fromEntries(Object.entries(snapshot.vectors).map(/* 返回按声明顺序构造的数组 [key, [...value] as [number, number]]。 */ ([key, value]) => [key, [...value] as [number, number]])),
     mousePosition: [...snapshot.mousePosition], mouseWorldPosition: [...snapshot.mouseWorldPosition], viewBounds: [...snapshot.viewBounds], viewportSize: [...snapshot.viewportSize], wheel: [...snapshot.wheel], pointerDelta: [...snapshot.pointerDelta], touches: snapshot.touches,
-    devices: snapshot.devices.map(device => ({ ...device })), contexts: [...snapshot.contexts], maps: [...snapshot.maps], scheme: snapshot.scheme
+    devices: snapshot.devices.map(/** 构造并返回记录 { ...device }，字段按当前实参及捕获状态求值。 */ device => ({ ...device })), contexts: [...snapshot.contexts], maps: [...snapshot.maps], scheme: snapshot.scheme
   }
 }
 
-function emptySnapshot(): InputSnapshot {
+/** 结构说明（自动提取）：emptySnapshot；无显式参数。 */ function emptySnapshot(): InputSnapshot {
   return { down: {}, pressed: {}, released: {}, performed: {}, cancelled: {}, phases: {}, durations: {}, tapCounts: {}, consumed: {}, axes: {}, vectors: {}, mousePosition: [0, 0], mouseWorldPosition: [0, 0], viewBounds: [0, 0, 0, 0], viewportSize: [0, 0], wheel: [0, 0], pointerDelta: [0, 0], touches: 0, devices: [], contexts: ['Gameplay'], maps: ['Default'], scheme: 'Any' }
 }
 
@@ -306,26 +307,26 @@ export class InputManager {
   private recording: { startedAt: number; frames: InputRecordingFrame[] } | null = null
   private replay: { recording: InputRecording; startedAt: number; index: number; loop: boolean } | null = null
 
-  readonly onKeyDown = (event: KeyboardEvent) => {
+  readonly onKeyDown = /** 结构说明（自动提取）：匿名回调；输入 event；直接调用 isTypingTarget、keyboard.add、logicalKeys.add、logicalKey、updateModifiers 等。 */ (event: KeyboardEvent) => {
     if (!event.defaultPrevented && !event.isComposing && event.keyCode !== 229 && !this.isTypingTarget(event.target)) { this.keyboard.add(event.code); this.logicalKeys.add(logicalKey(event.key)); this.updateModifiers(event); if (!event.repeat) setInputModality('keyboard') }
   }
-  readonly onKeyUp = (event: KeyboardEvent) => { this.keyboard.delete(event.code); this.logicalKeys.delete(logicalKey(event.key)); this.updateModifiers(event) }
-  readonly onMouseDown = (event: MouseEvent) => { if (this.acceptMouse(event)) { this.mouseButtons.add(event.button); setInputModality('mouse') } }
-  readonly onMouseUp = (event: MouseEvent) => { if (this.acceptMouse(event)) this.mouseButtons.delete(event.button) }
-  readonly onMouseMove = (event: MouseEvent) => { if (!this.acceptMouse(event)) return; this.clientX = event.clientX; this.clientY = event.clientY; this.movementX += event.movementX; this.movementY += event.movementY; if (Math.abs(event.movementX) + Math.abs(event.movementY) >= 1) setInputModality('mouse') }
-  readonly onWheel = (event: WheelEvent) => { this.wheelX += event.deltaX; this.wheelY += event.deltaY; if (Math.abs(event.deltaX) + Math.abs(event.deltaY) >= .5) setInputModality('mouse') }
-  readonly onFocusIn = (event: FocusEvent) => { if (this.isTypingTarget(event.target)) { this.keyboard.clear(); this.logicalKeys.clear(); this.modifiers.clear() } }
-  readonly onBlur = () => this.releaseTransientInput()
-  readonly onPageHide = () => this.releaseTransientInput()
-  readonly onVisibilityChange = () => { if (typeof document !== 'undefined' && document.hidden) this.releaseTransientInput() }
-  readonly onTouchStart = (event: TouchEvent) => {
+  readonly onKeyUp = /** 结构说明（自动提取）：匿名回调；输入 event；直接调用 keyboard.delete、logicalKeys.delete、logicalKey、updateModifiers。 */ (event: KeyboardEvent) => { this.keyboard.delete(event.code); this.logicalKeys.delete(logicalKey(event.key)); this.updateModifiers(event) }
+  readonly onMouseDown = /** 结构说明（自动提取）：匿名回调；输入 event；直接调用 acceptMouse、mouseButtons.add、setInputModality。 */ (event: MouseEvent) => { if (this.acceptMouse(event)) { this.mouseButtons.add(event.button); setInputModality('mouse') } }
+  readonly onMouseUp = /** 结构说明（自动提取）：匿名回调；输入 event；直接调用 acceptMouse、mouseButtons.delete。 */ (event: MouseEvent) => { if (this.acceptMouse(event)) this.mouseButtons.delete(event.button) }
+  readonly onMouseMove = /** 结构说明（自动提取）：匿名回调；输入 event；直接调用 acceptMouse、Math.abs、setInputModality；写入 clientX、clientY、movementX、movementY。 */ (event: MouseEvent) => { if (!this.acceptMouse(event)) return; this.clientX = event.clientX; this.clientY = event.clientY; this.movementX += event.movementX; this.movementY += event.movementY; if (Math.abs(event.movementX) + Math.abs(event.movementY) >= 1) setInputModality('mouse') }
+  readonly onWheel = /** 结构说明（自动提取）：匿名回调；输入 event；直接调用 Math.abs、setInputModality；写入 wheelX、wheelY。 */ (event: WheelEvent) => { this.wheelX += event.deltaX; this.wheelY += event.deltaY; if (Math.abs(event.deltaX) + Math.abs(event.deltaY) >= .5) setInputModality('mouse') }
+  readonly onFocusIn = /** 结构说明（自动提取）：匿名回调；输入 event；直接调用 isTypingTarget、keyboard.clear、logicalKeys.clear、modifiers.clear。 */ (event: FocusEvent) => { if (this.isTypingTarget(event.target)) { this.keyboard.clear(); this.logicalKeys.clear(); this.modifiers.clear() } }
+  readonly onBlur = /* 调用 this.releaseTransientInput() 并返回调用结果。 */ () => this.releaseTransientInput()
+  readonly onPageHide = /* 调用 this.releaseTransientInput() 并返回调用结果。 */ () => this.releaseTransientInput()
+  readonly onVisibilityChange = /** 结构说明（自动提取）：匿名回调；无显式参数；直接调用 releaseTransientInput。 */ () => { if (typeof document !== 'undefined' && document.hidden) this.releaseTransientInput() }
+  readonly onTouchStart = /** 结构说明（自动提取）：匿名回调；输入 event；直接调用 performance.now、mouseButtons.clear、Array.from、pointerDeduplicator.recordTouch、touches.set 等；写入 clientX、clientY；包含循环处理。 */ (event: TouchEvent) => {
     const now = performance.now()
     this.mouseButtons.clear()
     for (const touch of Array.from(event.changedTouches)) { this.pointerDeduplicator.recordTouch(now, touch.clientX, touch.clientY); this.touches.set(touch.identifier, { x: touch.clientX, y: touch.clientY, previousX: touch.clientX, previousY: touch.clientY, startX: touch.clientX, startY: touch.clientY, startedAt: now }); this.clientX = touch.clientX; this.clientY = touch.clientY }
     if (event.changedTouches.length) setInputModality('touch')
     this.resetPairGesture()
   }
-  readonly onTouchMove = (event: TouchEvent) => {
+  readonly onTouchMove = /** 结构说明（自动提取）：匿名回调；输入 event；直接调用 performance.now、Array.from、touches.get、pointerDeduplicator.recordTouch、gestures.set 等；写入 state.previousX、state.previousY、state.x、state.y 等；包含循环处理。 */ (event: TouchEvent) => {
     const now = performance.now()
     let moved = false
     for (const touch of Array.from(event.changedTouches)) { const state = this.touches.get(touch.identifier); this.pointerDeduplicator.recordTouch(now, touch.clientX, touch.clientY); if (state) { state.previousX = state.x; state.previousY = state.y; state.x = touch.clientX; state.y = touch.clientY; const dx = state.x - state.previousX, dy = state.y - state.previousY; this.gestures.set('pan-x', Math.max(-1, Math.min(1, dx / 48))); this.gestures.set('pan-y', Math.max(-1, Math.min(1, dy / 48))); moved ||= Math.abs(dx) + Math.abs(dy) >= 1; this.clientX = touch.clientX; this.clientY = touch.clientY } }
@@ -340,34 +341,34 @@ export class InputManager {
       this.gestures.set('two-finger-pan-x', Math.max(-1, Math.min(1, (centerX - this.pairGesture.centerX) / 96))); this.gestures.set('two-finger-pan-y', Math.max(-1, Math.min(1, (centerY - this.pairGesture.centerY) / 96)))
     }
   }
-  readonly onTouchEnd = (event: TouchEvent) => {
+  readonly onTouchEnd = /** 结构说明（自动提取）：匿名回调；输入 event；直接调用 performance.now、Array.from、pointerDeduplicator.recordTouch、touches.get、Math.hypot 等；写入 lastTouchTapAt；包含循环处理。 */ (event: TouchEvent) => {
     const now = performance.now()
     for (const touch of Array.from(event.changedTouches)) { this.pointerDeduplicator.recordTouch(now, touch.clientX, touch.clientY); const state = this.touches.get(touch.identifier); if (!state) continue; const dx = touch.clientX - state.startX, dy = touch.clientY - state.startY, elapsed = now - state.startedAt, distance = Math.hypot(dx, dy); if (elapsed <= 350 && distance < 18) { this.gestures.set('tap', 1); if (now - this.lastTouchTapAt <= 450) this.gestures.set('double-tap', 1); this.lastTouchTapAt = now } else if (elapsed >= 500 && distance < 18) this.gestures.set('long-press', 1); else { this.gestures.set('swipe-x', Math.max(-1, Math.min(1, dx / 120))); this.gestures.set('swipe-y', Math.max(-1, Math.min(1, dy / 120))) }; this.touches.delete(touch.identifier) }
     this.resetPairGesture()
   }
-  readonly onTouchCancel = (event: TouchEvent) => {
+  readonly onTouchCancel = /** 结构说明（自动提取）：匿名回调；输入 event；直接调用 performance.now、Array.from、pointerDeduplicator.recordTouch、touches.delete、gestures.clear 等；包含循环处理。 */ (event: TouchEvent) => {
     const now = performance.now()
     for (const touch of Array.from(event.changedTouches)) { this.pointerDeduplicator.recordTouch(now, touch.clientX, touch.clientY); this.touches.delete(touch.identifier) }
     this.gestures.clear()
     this.resetPairGesture()
   }
-  readonly onPointerDown = (event: PointerEvent) => {
+  readonly onPointerDown = /** 结构说明（自动提取）：匿名回调；输入 event；直接调用 updatePen、setInputModality。 */ (event: PointerEvent) => {
     if (event.pointerType !== 'pen') return
     this.updatePen(event)
     setInputModality('pen')
   }
-  readonly onPointerMove = (event: PointerEvent) => {
+  readonly onPointerMove = /** 结构说明（自动提取）：匿名回调；输入 event；直接调用 pens.get、Math.abs、updatePen、setInputModality。 */ (event: PointerEvent) => {
     if (event.pointerType !== 'pen') return
     const previous = this.pens.get(event.pointerId), moved = !previous || Math.abs(event.clientX - previous.x) + Math.abs(event.clientY - previous.y) >= 1 || Math.abs(event.pressure - previous.pressure) >= .01 || Math.abs(event.tiltX - previous.tiltX) + Math.abs(event.tiltY - previous.tiltY) >= 1 || event.twist !== previous.twist
     this.updatePen(event)
     if (moved) setInputModality('pen')
   }
-  readonly onPointerUp = (event: PointerEvent) => { if (event.pointerType === 'pen') this.releasePen(event.pointerId, event.clientX, event.clientY) }
-  readonly onPointerCancel = (event: PointerEvent) => { if (event.pointerType === 'pen') this.releasePen(event.pointerId, event.clientX, event.clientY) }
-  readonly onGamepadConnected = (event: GamepadEvent) => this.updateGamepad(event.gamepad, true)
-  readonly onGamepadDisconnected = (event: GamepadEvent) => this.updateGamepad(event.gamepad, false)
+  readonly onPointerUp = /** 结构说明（自动提取）：匿名回调；输入 event；直接调用 releasePen。 */ (event: PointerEvent) => { if (event.pointerType === 'pen') this.releasePen(event.pointerId, event.clientX, event.clientY) }
+  readonly onPointerCancel = /** 结构说明（自动提取）：匿名回调；输入 event；直接调用 releasePen。 */ (event: PointerEvent) => { if (event.pointerType === 'pen') this.releasePen(event.pointerId, event.clientX, event.clientY) }
+  readonly onGamepadConnected = /* 调用 this.updateGamepad(event.gamepad, true) 并返回调用结果。 */ (event: GamepadEvent) => this.updateGamepad(event.gamepad, true)
+  readonly onGamepadDisconnected = /* 调用 this.updateGamepad(event.gamepad, false) 并返回调用结果。 */ (event: GamepadEvent) => this.updateGamepad(event.gamepad, false)
 
-  start(): void {
+  /** 结构说明（自动提取）：start；无显式参数；直接调用 window.addEventListener、document.addEventListener、devices.set；写入 attached。 */ start(): void {
     if (this.attached) return
     this.attached = true
     window.addEventListener('keydown', this.onKeyDown)
@@ -395,7 +396,7 @@ export class InputManager {
     this.devices.set('mouse:0', { id: 'mouse:0', kind: 'mouse', index: 0, connected: true, mapping: 'pointer' })
   }
 
-  stop(): void {
+  /** 结构说明（自动提取）：stop；无显式参数；直接调用 window.removeEventListener、document.removeEventListener、releaseAllInputs、devices.clear、previousDown.clear 等；写入 attached、sampledGamepads、lastGamepadInventoryAt、gamepadInventorySignature 等。 */ stop(): void {
     if (!this.attached) return
     this.attached = false
     window.removeEventListener('keydown', this.onKeyDown)
@@ -434,10 +435,10 @@ export class InputManager {
     this.replay = null
   }
 
-  sample(actions: InputAction[], viewport?: DOMRect): InputSnapshot {
+  /** 结构说明（自动提取）：sample；输入 actions、viewport；直接调用 sampleReplay、actions.some、some、devices.values、readGamepads 等；写入 current、sampledGamepads、snapshot.mousePosition、snapshot.wheel 等；返回路径包含 replayed、snapshot；包含循环处理。 */ sample(actions: InputAction[], viewport?: DOMRect): InputSnapshot {
     const replayed = this.sampleReplay()
     if (replayed) { this.current = replayed; return replayed }
-    const samplesGamepad = actions.some(action => action.bindings.some(binding => binding.device === 'gamepad-button' || binding.device === 'gamepad-axis')) || [...this.devices.values()].some(device => device.kind === 'gamepad' && device.connected)
+    const samplesGamepad = actions.some(/* 调用 action.bindings.some(binding => binding.device === 'gamepad-button' || binding.device === 'gamepad-axis') 并返回调用结果。 */ action => action.bindings.some(/* 先计算 binding.device === 'gamepad-button'；仅当其为假值时求右侧 binding.device === 'gamepad-axis'，返回短路求值结果。 */ binding => binding.device === 'gamepad-button' || binding.device === 'gamepad-axis')) || [...this.devices.values()].some(/* 先计算 device.kind === 'gamepad'；仅当其为真值时求右侧 device.connected，返回短路求值结果。 */ device => device.kind === 'gamepad' && device.connected)
     this.sampledGamepads = samplesGamepad ? this.readGamepads() : []
     if (samplesGamepad) { this.synchronizeGamepadInventory(this.sampledGamepads); this.detectMeaningfulGamepadActivity(this.sampledGamepads) }
     const snapshot = emptySnapshot()
@@ -448,12 +449,12 @@ export class InputManager {
     snapshot.pointerDelta = [this.movementX, this.movementY]
     snapshot.touches = this.touches.size
     snapshot.devices = this.deviceSnapshot()
-    snapshot.contexts = this.contexts.map(context => context.name)
+    snapshot.contexts = this.contexts.map(/* 返回 context.name 的当前值。 */ context => context.name)
     snapshot.maps = [...this.maps].sort()
     snapshot.scheme = this.scheme
-    const activeContexts = new Map(this.contexts.map(context => [context.name, context]))
+    const activeContexts = new Map(this.contexts.map(/* 返回按声明顺序构造的数组 [context.name, context]。 */ context => [context.name, context]))
     const consumedBindings = new Set<string>()
-    const ordered = normalizeInputMap(actions).filter(action => action.enabled && this.maps.has(action.map) && activeContexts.has(action.context) && (!action.schemes.length || this.scheme === 'Any' || action.schemes.includes(this.scheme))).sort((first, second) => {
+    const ordered = normalizeInputMap(actions).filter(/** 结构说明（自动提取）：filter 回调；输入 action；直接调用 maps.has、activeContexts.has、action.schemes.includes；返回表达式求值结果。 */ action => action.enabled && this.maps.has(action.map) && activeContexts.has(action.context) && (!action.schemes.length || this.scheme === 'Any' || action.schemes.includes(this.scheme))).sort(/** 结构说明（自动提取）：sort 回调；输入 first、second；直接调用 activeContexts.get、first.name.localeCompare。 */ (first, second) => {
       const contextDelta = (activeContexts.get(second.context)?.priority ?? 0) - (activeContexts.get(first.context)?.priority ?? 0)
       return contextDelta || second.priority - first.priority || first.name.localeCompare(second.name)
     })
@@ -461,7 +462,7 @@ export class InputManager {
     const nowMs = now * 1_000
     for (const touch of this.touches.values()) if (nowMs - touch.startedAt >= 500 && Math.hypot(touch.x - touch.startX, touch.y - touch.startY) < 18) this.gestures.set('long-press', 1)
     for (const action of ordered) {
-      const values = action.bindings.map(binding => consumedBindings.has(bindingSignature(binding)) ? 0 : this.bindingValue(binding))
+      const values = action.bindings.map(/* 根据 consumedBindings.has(bindingSignature(binding)) 的真假，分别返回 0 或 this.bindingValue(binding)。 */ binding => consumedBindings.has(bindingSignature(binding)) ? 0 : this.bindingValue(binding))
       if (action.kind === 'vector2') {
         let x = 0, y = 0
         for (const [index, binding] of action.bindings.entries()) {
@@ -477,10 +478,10 @@ export class InputManager {
         snapshot.axes[action.name] = Math.hypot(x, y)
       } else {
         const virtual = this.virtualActions.get(action.name), virtualValue = typeof virtual === 'number' ? virtual : 0
-        const value = Math.min(1, Math.max(-1, action.bindings.reduce((total, binding, index) => total + values[index] * binding.scale, 0) + virtualValue))
+        const value = Math.min(1, Math.max(-1, action.bindings.reduce(/* 计算表达式 total + values[index] * binding.scale 并返回结果，沿用操作数的原有类型规则。 */ (total, binding, index) => total + values[index] * binding.scale, 0) + virtualValue))
         snapshot.axes[action.name] = value
       }
-      const threshold = Math.min(...action.bindings.map(binding => binding.threshold), .0001)
+      const threshold = Math.min(...action.bindings.map(/* 返回 binding.threshold 的当前值。 */ binding => binding.threshold), .0001)
       const down = Math.abs(snapshot.axes[action.name] ?? 0) > threshold
       const previous = this.previousDown.get(action.name) ?? false
       const state = this.interactionState.get(action.name) ?? { startedAt: now, lastTapAt: -Infinity, taps: 0, performed: false }
@@ -514,7 +515,7 @@ export class InputManager {
       const contextConsumes = activeContexts.get(action.context)?.consume === true
       const consumed = (action.consume || contextConsumes) && (down || performed)
       snapshot.consumed[action.name] = consumed
-      if (consumed) action.bindings.forEach((binding, index) => { if (values[index] !== 0) consumedBindings.add(bindingSignature(binding)) })
+      if (consumed) action.bindings.forEach(/** 结构说明（自动提取）：action.bindings.forEach 回调；输入 binding、index；直接调用 consumedBindings.add、bindingSignature。 */ (binding, index) => { if (values[index] !== 0) consumedBindings.add(bindingSignature(binding)) })
       this.previousDown.set(action.name, down)
       this.interactionState.set(action.name, state)
     }
@@ -528,24 +529,24 @@ export class InputManager {
     return snapshot
   }
 
-  snapshot(): InputSnapshot { return this.current }
+  /* 返回 this.current 的当前值。 */ snapshot(): InputSnapshot { return this.current }
 
-  setVirtualAction(actionName: string, value: number | [number, number]): boolean {
+  /** 结构说明（自动提取）：setVirtualAction；输入 actionName、value；直接调用 slice、actionName.trim、Array.isArray、virtualActions.set、Math.min 等。 */ setVirtualAction(actionName: string, value: number | [number, number]): boolean {
     const name = actionName.trim().slice(0, 80); if (!name) return false
     if (Array.isArray(value)) this.virtualActions.set(name, [Math.min(1, Math.max(-1, finite(value[0], 0))), Math.min(1, Math.max(-1, finite(value[1], 0)))])
     else this.virtualActions.set(name, Math.min(1, Math.max(-1, finite(value, 0))))
     return true
   }
-  releaseVirtualAction(actionName: string): void { this.virtualActions.delete(actionName.trim()) }
-  releaseAllVirtualActions(): void { this.virtualActions.clear() }
+  /** 执行时调用 this.virtualActions.delete(actionName.trim())；不显式返回调用结果。 */ releaseVirtualAction(actionName: string): void { this.virtualActions.delete(actionName.trim()) }
+  /** 执行时调用 this.virtualActions.clear()；不显式返回调用结果。 */ releaseAllVirtualActions(): void { this.virtualActions.clear() }
 
-  pushContext(name: string, priority = 0, consume = false): boolean { const clean = name.trim().slice(0, 80); if (!clean) return false; const existing = this.contexts.find(context => context.name === clean); if (existing) { existing.priority = Math.min(10_000, Math.max(-10_000, Math.round(finite(priority, 0)))); existing.consume = consume; return true }; if (this.contexts.length >= 32) return false; this.contexts.push({ name: clean, priority: Math.min(10_000, Math.max(-10_000, Math.round(finite(priority, 0)))), consume }); return true }
-  popContext(name: string): boolean { const index = this.contexts.findIndex(context => context.name === name.trim()); if (index < 0 || (this.contexts.length === 1 && this.contexts[index].name === 'Gameplay')) return false; this.contexts.splice(index, 1); return true }
-  enableMap(name: string): boolean { const clean = name.trim().slice(0, 80); if (!clean || this.maps.size >= 32 && !this.maps.has(clean)) return false; this.maps.add(clean); return true }
-  disableMap(name: string): boolean { const clean = name.trim(); if (!clean || clean === 'Default') return false; return this.maps.delete(clean) }
-  setScheme(name: string): boolean { const clean = name.trim().slice(0, 80); if (!clean) return false; this.scheme = clean; return true }
+  /** 结构说明（自动提取）：pushContext；输入 name、priority、consume；直接调用 slice、name.trim、contexts.find、Math.min、Math.max 等；写入 existing.priority、existing.consume。 */ pushContext(name: string, priority = 0, consume = false): boolean { const clean = name.trim().slice(0, 80); if (!clean) return false; const existing = this.contexts.find(/* 比较 context.name 与 clean，返回严格相等的判断结果。 */ context => context.name === clean); if (existing) { existing.priority = Math.min(10_000, Math.max(-10_000, Math.round(finite(priority, 0)))); existing.consume = consume; return true }; if (this.contexts.length >= 32) return false; this.contexts.push({ name: clean, priority: Math.min(10_000, Math.max(-10_000, Math.round(finite(priority, 0)))), consume }); return true }
+  /** 结构说明（自动提取）：popContext；输入 name；直接调用 contexts.findIndex、contexts.splice。 */ popContext(name: string): boolean { const index = this.contexts.findIndex(/* 比较 context.name 与 name.trim()，返回严格相等的判断结果。 */ context => context.name === name.trim()); if (index < 0 || (this.contexts.length === 1 && this.contexts[index].name === 'Gameplay')) return false; this.contexts.splice(index, 1); return true }
+  /** 结构说明（自动提取）：enableMap；输入 name；直接调用 slice、name.trim、maps.has、maps.add。 */ enableMap(name: string): boolean { const clean = name.trim().slice(0, 80); if (!clean || this.maps.size >= 32 && !this.maps.has(clean)) return false; this.maps.add(clean); return true }
+  /** 结构说明（自动提取）：disableMap；输入 name；直接调用 name.trim、maps.delete。 */ disableMap(name: string): boolean { const clean = name.trim(); if (!clean || clean === 'Default') return false; return this.maps.delete(clean) }
+  /** 结构说明（自动提取）：setScheme；输入 name；直接调用 slice、name.trim；写入 scheme。 */ setScheme(name: string): boolean { const clean = name.trim().slice(0, 80); if (!clean) return false; this.scheme = clean; return true }
 
-  connectedDevices(): InputDeviceIdentity[] {
+  /** 结构说明（自动提取）：connectedDevices；无显式参数；直接调用 Date.now、performance.now、readGamepads、synchronizeGamepadInventory、deviceSnapshot；写入 sampledGamepads。 */ connectedDevices(): InputDeviceIdentity[] {
     const now = typeof performance === 'undefined' ? Date.now() : performance.now()
     if (now - this.lastGamepadInventoryAt >= 1_000) {
       this.sampledGamepads = this.readGamepads()
@@ -554,15 +555,15 @@ export class InputManager {
     return this.deviceSnapshot()
   }
 
-  onDeviceChange(listener: (device: InputDeviceIdentity, event: 'connected' | 'disconnected') => void): () => void { this.deviceListeners.add(listener); return () => this.deviceListeners.delete(listener) }
+  /** 结构说明（自动提取）：onDeviceChange；输入 listener；直接调用 deviceListeners.add。 */ onDeviceChange(listener: (device: InputDeviceIdentity, event: 'connected' | 'disconnected') => void): () => void { this.deviceListeners.add(listener); return /* 调用 this.deviceListeners.delete(listener) 并返回调用结果。 */ () => this.deviceListeners.delete(listener) }
 
-  beginRecording(): void { this.recording = { startedAt: performance.now(), frames: [] }; this.replay = null }
-  endRecording(): InputRecording { const frames = this.recording?.frames ?? []; this.recording = null; return { version: 1, duration: frames[frames.length - 1]?.time ?? 0, frames: frames.map(frame => ({ time: frame.time, snapshot: cloneSnapshot(frame.snapshot) })) } }
-  playRecording(recording: InputRecording, loop = false): boolean { const normalized = normalizeInputRecording(recording); if (!normalized.frames.length) return false; this.recording = null; this.replay = { recording: normalized, startedAt: performance.now(), index: 0, loop }; return true }
-  stopReplay(): void { this.replay = null }
+  /** 结构说明（自动提取）：beginRecording；无显式参数；直接调用 performance.now；写入 recording、replay。 */ beginRecording(): void { this.recording = { startedAt: performance.now(), frames: [] }; this.replay = null }
+  /** 结构说明（自动提取）：endRecording；无显式参数；直接调用 frames.map；写入 recording。 */ endRecording(): InputRecording { const frames = this.recording?.frames ?? []; this.recording = null; return { version: 1, duration: frames[frames.length - 1]?.time ?? 0, frames: frames.map(/** 构造并返回记录 { time: frame.time, snapshot: cloneSnapshot(frame.snapshot) }，字段按当前实参及捕获状态求值。 */ frame => ({ time: frame.time, snapshot: cloneSnapshot(frame.snapshot) })) } }
+  /** 结构说明（自动提取）：playRecording；输入 recording、loop；直接调用 normalizeInputRecording、performance.now；写入 recording、replay。 */ playRecording(recording: InputRecording, loop = false): boolean { const normalized = normalizeInputRecording(recording); if (!normalized.frames.length) return false; this.recording = null; this.replay = { recording: normalized, startedAt: performance.now(), index: 0, loop }; return true }
+  /** 将 null 赋给 this.replay，不显式返回值。 */ stopReplay(): void { this.replay = null }
 
   /** Releases held transient state without erasing action history, so the next sample reports releases/cancellation. */
-  releaseAllInputs(): void {
+  /** 结构说明（自动提取）：releaseAllInputs；无显式参数；直接调用 keyboard.clear、logicalKeys.clear、modifiers.clear、mouseButtons.clear、touches.clear 等；写入 lastPenPointerId、pairGesture、lastTouchTapAt、wheelX 等。 */ releaseAllInputs(): void {
     this.keyboard.clear()
     this.logicalKeys.clear()
     this.modifiers.clear()
@@ -581,8 +582,8 @@ export class InputManager {
     this.pointerDeduplicator.clear()
   }
 
-  private bindingValue(binding: InputBinding): number {
-    if (!binding.modifiers.every(modifier => this.modifiers.has(modifier)) || !binding.chord.every(code => this.keyboard.has(code) || this.logicalKeys.has(logicalKey(code)))) return 0
+  /** 结构说明（自动提取）：bindingValue；输入 binding；直接调用 binding.modifiers.every、binding.chord.every、logicalKeys.has、logicalKey、looksLikePhysicalKeyCode 等；写入 value。 */ private bindingValue(binding: InputBinding): number {
+    if (!binding.modifiers.every(/* 调用 this.modifiers.has(modifier) 并返回调用结果。 */ modifier => this.modifiers.has(modifier)) || !binding.chord.every(/* 先计算 this.keyboard.has(code)；仅当其为假值时求右侧 this.logicalKeys.has(logicalKey(code))，返回短路求值结果。 */ code => this.keyboard.has(code) || this.logicalKeys.has(logicalKey(code)))) return 0
     let value = 0
     if (binding.device === 'keyboard') value = this.logicalKeys.has(logicalKey(binding.code)) || (looksLikePhysicalKeyCode(binding.code) && this.keyboard.has(binding.code)) ? 1 : 0
     else if (binding.device === 'physical-key') value = this.keyboard.has(binding.code) ? 1 : 0
@@ -598,7 +599,7 @@ export class InputManager {
     else if (binding.device.startsWith('pen')) value = this.penBindingValue(binding)
     else {
       const candidates = this.sampledGamepads
-      const gamepad = binding.deviceId ? candidates.find(item => item.id === binding.deviceId) : candidates.find(item => item.index === binding.gamepad)
+      const gamepad = binding.deviceId ? candidates.find(/* 比较 item.id 与 binding.deviceId，返回严格相等的判断结果。 */ item => item.id === binding.deviceId) : candidates.find(/* 比较 item.index 与 binding.gamepad，返回严格相等的判断结果。 */ item => item.index === binding.gamepad)
       if (!gamepad) return 0
       if (binding.device === 'gamepad-button') value = gamepad.buttons[Number.parseInt(binding.code, 10) || 0]?.value ?? 0
       else { const axis = Number.parseInt(binding.code, 10) || 0; value = applyGamepadAxisCalibration(gamepad.axes[axis] ?? 0, gamepad.id, axis) }
@@ -610,9 +611,9 @@ export class InputManager {
     return Math.sign(value) * sign * curved
   }
 
-  private updateModifiers(event: KeyboardEvent): void { this.modifiers.clear(); if (event.ctrlKey) this.modifiers.add('Control'); if (event.shiftKey) this.modifiers.add('Shift'); if (event.altKey) this.modifiers.add('Alt'); if (event.metaKey) this.modifiers.add('Meta') }
-  private releaseTransientInput(): void { this.releaseAllInputs() }
-  private updatePen(event: PointerEvent): void {
+  /** 结构说明（自动提取）：updateModifiers；输入 event；直接调用 modifiers.clear、modifiers.add。 */ private updateModifiers(event: KeyboardEvent): void { this.modifiers.clear(); if (event.ctrlKey) this.modifiers.add('Control'); if (event.shiftKey) this.modifiers.add('Shift'); if (event.altKey) this.modifiers.add('Alt'); if (event.metaKey) this.modifiers.add('Meta') }
+  /** 执行时调用 this.releaseAllInputs()；不显式返回调用结果。 */ private releaseTransientInput(): void { this.releaseAllInputs() }
+  /** 结构说明（自动提取）：updatePen；输入 event；直接调用 pens.get、finite、Math.max、Math.round、Math.min 等；写入 movementX、movementY、clientX、clientY 等。 */ private updatePen(event: PointerEvent): void {
     const previous = this.pens.get(event.pointerId)
     if (previous) { this.movementX += event.clientX - previous.x; this.movementY += event.clientY - previous.y }
     this.clientX = finite(event.clientX, this.clientX)
@@ -630,12 +631,12 @@ export class InputManager {
     this.pointerDeduplicator.recordPointer(performance.now(), state.x, state.y)
     this.devices.set('pen:0', normalizeInputDeviceIdentity({ id: 'pen:0', kind: 'pen', index: 0, connected: true, mapping: 'pointer' }))
   }
-  private releasePen(pointerId: number, x: number, y: number): void {
+  /** 结构说明（自动提取）：releasePen；输入 pointerId、x、y；直接调用 pointerDeduplicator.recordPointer、performance.now、finite、pens.delete、next 等；写入 lastPenPointerId。 */ private releasePen(pointerId: number, x: number, y: number): void {
     this.pointerDeduplicator.recordPointer(performance.now(), finite(x, this.clientX), finite(y, this.clientY))
     this.pens.delete(pointerId)
     if (this.lastPenPointerId === pointerId) this.lastPenPointerId = this.pens.keys().next().value ?? null
   }
-  private penBindingValue(binding: InputBinding): number {
+  /** 结构说明（自动提取）：penBindingValue；输入 binding；直接调用 pens.get、Number.parseInt、binding.code.replace、Number.isInteger、pointerButtonMask；返回路径包含 state.pressure。 */ private penBindingValue(binding: InputBinding): number {
     const state = this.lastPenPointerId === null ? undefined : this.pens.get(this.lastPenPointerId)
     if (!state) return 0
     if (binding.device === 'pen-pressure') return state.pressure
@@ -647,17 +648,17 @@ export class InputManager {
     const button = Number.parseInt(binding.code.replace(/^button-/, ''), 10)
     return Number.isInteger(button) && (state.buttons & pointerButtonMask(button)) !== 0 ? 1 : 0
   }
-  private readGamepads(): Gamepad[] {
+  /** 结构说明（自动提取）：readGamepads；无显式参数；直接调用 slice、filter、Array.from、navigator.getGamepads。 */ private readGamepads(): Gamepad[] {
     if (typeof navigator === 'undefined' || typeof navigator.getGamepads !== 'function') return []
-    try { return Array.from(navigator.getGamepads()).filter((item): item is Gamepad => Boolean(item && item.connected !== false)).slice(0, 16) }
+    try { return Array.from(navigator.getGamepads()).filter(/* 调用 Boolean(item && item.connected !== false) 并返回调用结果。 */ (item): item is Gamepad => Boolean(item && item.connected !== false)).slice(0, 16) }
     catch { return [] }
   }
-  private synchronizeGamepadInventory(gamepads: readonly Gamepad[]): void {
+  /** 结构说明（自动提取）：synchronizeGamepadInventory；输入 gamepads；直接调用 Date.now、performance.now、join、sort、gamepads.map 等；写入 lastGamepadInventoryAt、gamepadInventorySignature；包含循环处理。 */ private synchronizeGamepadInventory(gamepads: readonly Gamepad[]): void {
     this.lastGamepadInventoryAt = typeof performance === 'undefined' ? Date.now() : performance.now()
-    const signature = gamepads.map(gamepad => `${gamepad.index}:${gamepad.id}:${gamepad.mapping}:${gamepad.connected}`).sort().join('|')
+    const signature = gamepads.map(/** 按模板 `${gamepad.index}:${gamepad.id}:${gamepad.mapping}:${gamepad.connected}` 生成并返回字符串。 */ gamepad => `${gamepad.index}:${gamepad.id}:${gamepad.mapping}:${gamepad.connected}`).sort().join('|')
     if (signature === this.gamepadInventorySignature) return
     this.gamepadInventorySignature = signature
-    const connected = new Set(gamepads.map(gamepad => `gamepad:${gamepad.index}`))
+    const connected = new Set(gamepads.map(/** 按模板 `gamepad:${gamepad.index}` 生成并返回字符串。 */ gamepad => `gamepad:${gamepad.index}`))
     for (const gamepad of gamepads) {
       const key = `gamepad:${gamepad.index}`, previous = this.devices.get(key)
       const device = normalizeInputDeviceIdentity({ id: gamepad.id || key, kind: 'gamepad', index: gamepad.index, connected: true, mapping: gamepad.mapping || 'unknown' })
@@ -670,24 +671,24 @@ export class InputManager {
       for (const listener of this.deviceListeners) listener({ ...device }, 'disconnected')
     }
   }
-  private detectMeaningfulGamepadActivity(gamepads: readonly Gamepad[]): void {
-    const active = gamepads.find(gamepad => gamepad.buttons.some(button => button.pressed || button.value >= .5) || gamepad.axes.some((axis, index) => Math.abs(applyGamepadAxisCalibration(axis, gamepad.id, index)) >= .35))
+  /** 结构说明（自动提取）：detectMeaningfulGamepadActivity；输入 gamepads；直接调用 gamepads.find、setInputModality。 */ private detectMeaningfulGamepadActivity(gamepads: readonly Gamepad[]): void {
+    const active = gamepads.find(/** 结构说明（自动提取）：gamepads.find 回调；输入 gamepad；直接调用 gamepad.buttons.some、gamepad.axes.some；返回表达式求值结果。 */ gamepad => gamepad.buttons.some(/* 先计算 button.pressed；仅当其为假值时求右侧 button.value >= .5，返回短路求值结果。 */ button => button.pressed || button.value >= .5) || gamepad.axes.some(/* 比较 Math.abs(applyGamepadAxisCalibration(axis, gamepad.id, index)) 与 .35，返回大于或等于的判断结果。 */ (axis, index) => Math.abs(applyGamepadAxisCalibration(axis, gamepad.id, index)) >= .35))
     if (active) setInputModality('gamepad', active.id)
   }
-  private deviceSnapshot(): InputDeviceIdentity[] {
+  /** 结构说明（自动提取）：deviceSnapshot；无显式参数；直接调用 devices.set、normalizeInputDeviceIdentity、map、sort、filter 等。 */ private deviceSnapshot(): InputDeviceIdentity[] {
     if (this.touches.size) this.devices.set('touch:0', normalizeInputDeviceIdentity({ id: 'touch:0', kind: 'touch', index: 0, connected: true, mapping: 'direct' }))
-    return [...this.devices.values()].filter(device => device.connected).sort((a, b) => a.kind.localeCompare(b.kind) || a.index - b.index).map((device, index) => normalizeInputDeviceIdentity(device, index))
+    return [...this.devices.values()].filter(/* 返回 device.connected 的当前值。 */ device => device.connected).sort(/* 先计算 a.kind.localeCompare(b.kind)；仅当其为假值时求右侧 a.index - b.index，返回短路求值结果。 */ (a, b) => a.kind.localeCompare(b.kind) || a.index - b.index).map(/* 调用 normalizeInputDeviceIdentity(device, index) 并返回调用结果。 */ (device, index) => normalizeInputDeviceIdentity(device, index))
   }
-  private updateGamepad(gamepad: Gamepad, connected: boolean): void {
+  /** 结构说明（自动提取）：updateGamepad；输入 gamepad、connected；直接调用 normalizeInputDeviceIdentity、devices.set、listener；写入 lastGamepadInventoryAt、gamepadInventorySignature；包含循环处理。 */ private updateGamepad(gamepad: Gamepad, connected: boolean): void {
     const device = normalizeInputDeviceIdentity({ id: gamepad.id || `gamepad:${gamepad.index}`, kind: 'gamepad', index: gamepad.index, connected, mapping: gamepad.mapping || 'unknown' })
     this.devices.set(`gamepad:${gamepad.index}`, device)
     this.lastGamepadInventoryAt = -Infinity
     this.gamepadInventorySignature = ''
     for (const listener of this.deviceListeners) listener({ ...device }, connected ? 'connected' : 'disconnected')
   }
-  private acceptMouse(event: MouseEvent): boolean { const capabilities = (event as MouseEvent & { sourceCapabilities?: { firesTouchEvents?: boolean } }).sourceCapabilities; return this.pointerDeduplicator.acceptMouse(performance.now(), event.clientX, event.clientY, capabilities?.firesTouchEvents === true) }
-  private resetPairGesture(): void { const pair = [...this.touches.values()]; if (pair.length < 2) { this.pairGesture = null; return }; this.pairGesture = { distance: Math.hypot(pair[0].x - pair[1].x, pair[0].y - pair[1].y), angle: Math.atan2(pair[1].y - pair[0].y, pair[1].x - pair[0].x), centerX: (pair[0].x + pair[1].x) / 2, centerY: (pair[0].y + pair[1].y) / 2 } }
-  private sampleReplay(): InputSnapshot | null {
+  /** 结构说明（自动提取）：acceptMouse；输入 event；直接调用 pointerDeduplicator.acceptMouse、performance.now。 */ private acceptMouse(event: MouseEvent): boolean { const capabilities = (event as MouseEvent & { sourceCapabilities?: { firesTouchEvents?: boolean } }).sourceCapabilities; return this.pointerDeduplicator.acceptMouse(performance.now(), event.clientX, event.clientY, capabilities?.firesTouchEvents === true) }
+  /** 结构说明（自动提取）：resetPairGesture；无显式参数；直接调用 touches.values、Math.hypot、Math.atan2；写入 pairGesture。 */ private resetPairGesture(): void { const pair = [...this.touches.values()]; if (pair.length < 2) { this.pairGesture = null; return }; this.pairGesture = { distance: Math.hypot(pair[0].x - pair[1].x, pair[0].y - pair[1].y), angle: Math.atan2(pair[1].y - pair[0].y, pair[1].x - pair[0].x), centerX: (pair[0].x + pair[1].x) / 2, centerY: (pair[0].y + pair[1].y) / 2 } }
+  /** 结构说明（自动提取）：sampleReplay；无显式参数；直接调用 performance.now、cloneSnapshot；写入 replay、replay.startedAt、replay.index、elapsed；包含循环处理。 */ private sampleReplay(): InputSnapshot | null {
     const replay = this.replay; if (!replay) return null
     let elapsed = (performance.now() - replay.startedAt) / 1000
     if (elapsed > replay.recording.duration) { if (!replay.loop) { const last = replay.recording.frames[replay.recording.frames.length - 1]; this.replay = null; return last ? cloneSnapshot(last.snapshot) : null }; replay.startedAt = performance.now(); replay.index = 0; elapsed = 0 }
@@ -695,18 +696,18 @@ export class InputManager {
     return cloneSnapshot(replay.recording.frames[replay.index].snapshot)
   }
 
-  private isTypingTarget(target: EventTarget | null): boolean {
+  /** 结构说明（自动提取）：isTypingTarget；输入 target；直接调用 Boolean、target.closest。 */ private isTypingTarget(target: EventTarget | null): boolean {
     return typeof HTMLElement !== 'undefined' && target instanceof HTMLElement && (target.isContentEditable || Boolean(target.closest('input, textarea, select, button, a[href], [contenteditable]:not([contenteditable="false"]), [role="button"], [role="tab"], [role="menuitem"], [role="textbox"], [role="slider"], [role="checkbox"]')))
   }
 }
 
-export function normalizeInputRecording(source: unknown): InputRecording {
+/** 结构说明（自动提取）：normalizeInputRecording；输入 source；直接调用 sort、flatMap、slice、Array.isArray、Math.max 等。 */ export function normalizeInputRecording(source: unknown): InputRecording {
   const item = source && typeof source === 'object' ? source as Partial<InputRecording> : {}
-  const frames = (Array.isArray(item.frames) ? item.frames : []).slice(0, 100_000).flatMap(frame => {
+  const frames = (Array.isArray(item.frames) ? item.frames : []).slice(0, 100_000).flatMap(/** 结构说明（自动提取）：flatMap 回调；输入 frame；直接调用 emptySnapshot、Math.max、finite、cloneSnapshot、Array.isArray 等。 */ frame => {
     if (!frame || typeof frame !== 'object' || !frame.snapshot || typeof frame.snapshot !== 'object') return []
     const empty = emptySnapshot(), snapshot = frame.snapshot as Partial<InputSnapshot>
     return [{ time: Math.max(0, finite(frame.time, 0)), snapshot: cloneSnapshot({ ...empty, ...snapshot, mousePosition: Array.isArray(snapshot.mousePosition) ? [finite(snapshot.mousePosition[0], 0), finite(snapshot.mousePosition[1], 0)] : empty.mousePosition, mouseWorldPosition: Array.isArray(snapshot.mouseWorldPosition) ? [finite(snapshot.mouseWorldPosition[0], 0), finite(snapshot.mouseWorldPosition[1], 0)] : empty.mouseWorldPosition, viewBounds: Array.isArray(snapshot.viewBounds) && snapshot.viewBounds.length >= 4 ? [finite(snapshot.viewBounds[0], 0), finite(snapshot.viewBounds[1], 0), finite(snapshot.viewBounds[2], 0), finite(snapshot.viewBounds[3], 0)] : empty.viewBounds, viewportSize: Array.isArray(snapshot.viewportSize) ? [Math.max(0, finite(snapshot.viewportSize[0], 0)), Math.max(0, finite(snapshot.viewportSize[1], 0))] : empty.viewportSize, wheel: Array.isArray(snapshot.wheel) ? [finite(snapshot.wheel[0], 0), finite(snapshot.wheel[1], 0)] : empty.wheel, pointerDelta: Array.isArray(snapshot.pointerDelta) ? [finite(snapshot.pointerDelta[0], 0), finite(snapshot.pointerDelta[1], 0)] : empty.pointerDelta, touches: Math.max(0, Math.round(finite(snapshot.touches, 0))), devices: normalizeInputDeviceIdentities(snapshot.devices) }) }]
-  }).sort((a, b) => a.time - b.time)
+  }).sort(/* 计算表达式 a.time - b.time 并返回结果，沿用操作数的原有类型规则。 */ (a, b) => a.time - b.time)
   const last = frames[frames.length - 1]
   return { version: 1, duration: Math.max(finite(item.duration, last?.time ?? 0), last?.time ?? 0), frames }
 }

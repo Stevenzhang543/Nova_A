@@ -1,3 +1,4 @@
+/** 平台支持信息：描述运行目标的能力、约束及可用交付方式。 */
 export type PlatformSupportTier = 'tier-1' | 'tier-2' | 'experimental' | 'unsupported'
 
 export interface PlatformSupportEntry {
@@ -27,14 +28,14 @@ export const PLATFORM_SUPPORT_MATRIX: readonly PlatformSupportEntry[] = Object.f
   Object.freeze({ id: 'android', label: 'Android', tier: 'experimental', architectures: ['aarch64'] as const, editor: false, runtime: true, referenceMatrixPassed: false, availability: 'available', buildHosts: ['windows', 'linux', 'macos'] as const, minimumSystem: 'Android 10+, aarch64; local JDK 17, SDK 35, build-tools, NDK 27 and validated template', evidence: 'external/mobile-export-matrix.json', lastQualified: '6.7.0-local-toolchain-gated', reason: 'Optional Android authoring/build/deploy is exposed with live toolchain gates. Production signing, clean-device lifecycle, input/audio hardware and store review remain explicit external qualification gates.' })
 ])
 
-export function platformSupport(id: string): PlatformSupportEntry {
-  return PLATFORM_SUPPORT_MATRIX.find(item => item.id === id) ?? PLATFORM_SUPPORT_MATRIX[4]
+/** 结构说明（自动提取）：platformSupport；输入 id；直接调用 PLATFORM_SUPPORT_MATRIX.find。 */ export function platformSupport(id: string): PlatformSupportEntry {
+  return PLATFORM_SUPPORT_MATRIX.find(/* 比较 item.id 与 id，返回严格相等的判断结果。 */ item => item.id === id) ?? PLATFORM_SUPPORT_MATRIX[4]
 }
 
-export function selectableBuildPlatforms(): PlatformSupportEntry[] {
-  return PLATFORM_SUPPORT_MATRIX.filter(item => item.availability === 'available')
+/** 结构说明（自动提取）：selectableBuildPlatforms；无显式参数；直接调用 PLATFORM_SUPPORT_MATRIX.filter。 */ export function selectableBuildPlatforms(): PlatformSupportEntry[] {
+  return PLATFORM_SUPPORT_MATRIX.filter(/* 比较 item.availability 与 'available'，返回严格相等的判断结果。 */ item => item.availability === 'available')
 }
 
-export function platformTierLabel(tier: PlatformSupportTier): string {
+/** 结构说明（自动提取）：platformTierLabel；输入 tier。 */ export function platformTierLabel(tier: PlatformSupportTier): string {
   return tier === 'tier-1' ? 'Production qualified' : tier === 'tier-2' ? 'Qualified with target limitations' : tier === 'experimental' ? 'Experimental' : 'Unsupported'
 }

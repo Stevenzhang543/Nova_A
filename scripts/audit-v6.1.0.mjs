@@ -1,10 +1,11 @@
+/* 审计 6.1.0 的窗口、性能与设计契约，并核对模板、交互和布局证据。 */
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root=dirname(dirname(fileURLToPath(import.meta.url))),checks=[]
-const check=(id,passed,detail,metrics={})=>checks.push({id,status:passed?'passed':'failed',detail,metrics})
-const read=path=>readFile(join(root,path),'utf8'),json=async path=>JSON.parse(await read(path))
+const check=/* 调用 checks.push({id,status:passed?'passed':'failed',detail,metrics}) 并返回调用结果。 */ (id,passed,detail,metrics={})=>checks.push({id,status:passed?'passed':'failed',detail,metrics})
+const read=/* 调用 readFile(join(root,path),'utf8') 并返回调用结果。 */ path=>readFile(join(root,path),'utf8'),json=/* 调用 JSON.parse(await read(path)) 并返回调用结果。 */ async path=>JSON.parse(await read(path))
 const [pkg,tauri,cargo,nativeCargo,format,windowSource,canvas,layout,app,styles,profiler,graph,instructions,verification,catalog,interactions,layoutReport]=await Promise.all([
   json('package.json'),json('src-tauri/tauri.conf.json'),read('Cargo.toml'),read('src-tauri/Cargo.toml'),read('src/projects/projectFormat.ts'),read('src/runtime/editorWindow.ts'),read('src/components/WorldCanvas.vue'),read('src/layout/EditorLayout.vue'),read('src/App.vue'),read('src/assets/main.css'),read('src/runtime/profiler.ts'),read('src/renderer/renderGraph.ts'),read('instructions.txt'),json('release-audits/v6.1.0-verification.json'),json('release-audits/template-catalog-verification.json'),json('release-audits/v6.1.0-user-interactions.json'),json('release-audits/v6.1.0-layout-browser.json')
 ])
@@ -18,7 +19,7 @@ check('V610-TEMPLATES',catalog.status==='passed'&&catalog.engineVersion==='6.1.0
 check('V610-INTERACTIONS',interactions.status==='passed'&&interactions.severity0Open===0&&interactions.severity1Open===0,'User-style interaction traversal reports no critical failure.',interactions.summary)
 check('V610-LAYOUT',layoutReport.status==='passed'&&layoutReport.severity0Open===0&&layoutReport.severity1Open===0,'EN/DE/ZH layout remains contained through 200% scale.',{states:layoutReport.matrix.length})
 check('V610-INSTRUCTIONS',instructions.includes('## 6.1.0')&&instructions.includes('pnpm verify:v6.1.0:interactions')&&instructions.includes('pnpm release:v6.1.0'),'The implementation and release audit contract is documented.')
-const failed=checks.filter(item=>item.status==='failed'),report={format:'nova-v6.1.0-product-audit',version:1,engineVersion:'6.1.0',generatedAt:new Date().toISOString(),perspectives:['programmer','user','localization','layout','environment','performance','game-export','release'],checks,severity0Open:0,severity1Open:failed.length,externalGates:{publisherSigning:'pending-external',cleanMachineLifecycle:'pending-external',secondMachineReproducibility:'pending-external',independentHardwareAccessibility:'pending-external',soak72Hours:'pending-external'},status:failed.length?'failed':'passed'}
+const failed=checks.filter(/* 比较 item.status 与 'failed'，返回严格相等的判断结果。 */ item=>item.status==='failed'),report={format:'nova-v6.1.0-product-audit',version:1,engineVersion:'6.1.0',generatedAt:new Date().toISOString(),perspectives:['programmer','user','localization','layout','environment','performance','game-export','release'],checks,severity0Open:0,severity1Open:failed.length,externalGates:{publisherSigning:'pending-external',cleanMachineLifecycle:'pending-external',secondMachineReproducibility:'pending-external',independentHardwareAccessibility:'pending-external',soak72Hours:'pending-external'},status:failed.length?'failed':'passed'}
 await mkdir(join(root,'release-audits'),{recursive:true});await writeFile(join(root,'release-audits/v6.1.0-product-audit.json'),`${JSON.stringify(report,null,2)}\n`)
 if(failed.length){console.error(failed);process.exit(1)}
 console.log(`Nova_A v6.1.0 product audit passed: ${checks.length} checks.`)

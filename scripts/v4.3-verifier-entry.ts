@@ -1,3 +1,4 @@
+/** 仓库工具模块 v4.3-verifier-entry.ts：供构建、资料生成或验证流程调用。 */
 import * as authoring from '../src/editor/authoring2d'
 import * as sceneAuthoring from '../src/editor/sceneAuthoring'
 import * as store from '../src/store/physics'

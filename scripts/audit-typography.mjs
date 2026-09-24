@@ -1,3 +1,4 @@
+/* 递归扫描 Vue 和 CSS 源码中的排版规则并汇总违规项。 */
 import { readFile, readdir } from 'node:fs/promises'
 import { join, relative } from 'node:path'
 
@@ -6,6 +7,7 @@ const sourceRoot = join(root, 'src')
 const failures = []
 const checked = []
 
+/* 递归收集 Vue 和 CSS 文件，供后续字体与排版源码规则检查。 */
 async function visit(directory) {
   for (const entry of await readdir(directory, { withFileTypes: true })) {
     const path = join(directory, entry.name)

@@ -1,3 +1,4 @@
+<!-- 对象蓝图编辑器：校验结构与依赖，维护可恢复草稿，协调保存冲突和关闭选择。 -->
 <template>
   <Teleport to="body">
     <div class="blueprint-scrim" @keydown.escape.stop.prevent="requestClose">
@@ -10,7 +11,7 @@
           <fieldset :disabled="!canEdit || pending">
             <div class="blueprint-fields">
               <label><span>{{ labels.name }}</span><input v-model="document.name" maxlength="120"></label>
-              <label><span>{{ labels.base }}</span><select v-model="document.baseBlueprintAsset"><option :value="null">—</option><option v-for="asset in assetsOf('objectBlueprint').filter(asset=>asset.uuid!==assetUuid)" :key="asset.uuid" :value="assetReference(asset.uuid)">{{ asset.name }}</option></select></label>
+<!-- 基础蓝图候选过滤回调排除当前编辑蓝图。 -->              <label><span>{{ labels.base }}</span><select v-model="document.baseBlueprintAsset"><option :value="null">—</option><option v-for="asset in assetsOf('objectBlueprint').filter(asset=>asset.uuid!==assetUuid)" :key="asset.uuid" :value="assetReference(asset.uuid)">{{ asset.name }}</option></select></label>
               <label><span>{{ labels.prefab }}</span><select v-model="document.prefabAsset"><option :value="null">{{ labels.inherited }} / —</option><option v-for="asset in assetsOf('prefab')" :key="asset.uuid" :value="assetReference(asset.uuid)">{{ asset.name }}</option></select></label>
               <label><span>{{ labels.eventSheet }}</span><select v-model="document.eventSheetAsset"><option :value="null">{{ labels.inherited }} / —</option><option v-for="asset in assetsOf('eventSheet')" :key="asset.uuid" :value="assetReference(asset.uuid)">{{ asset.name }}</option></select></label>
               <label><span>{{ labels.tags }}</span><textarea :value="document.tags.join('\n')" rows="3" @input="setMembers('tags',$event)"></textarea></label>
@@ -43,39 +44,39 @@ import { objectOwnershipCopy } from '../editor/objectOwnershipCopy'
 import { vModalFocus } from '../editor/modalFocus'
 import StudioDraftConflict from './StudioDraftConflict.vue'
 const props=defineProps<{assetUuid:string}>(),emit=defineEmits<{close:[];derive:[uuid:string]}>()
-const labels=computed(()=>objectOwnershipCopy[preferencesState.locale]),componentKinds=STABLE_COMPONENT_KINDS
+const labels=computed(/* 返回 objectOwnershipCopy[preferencesState.locale] 的当前值。 */ ()=>objectOwnershipCopy[preferencesState.locale]),componentKinds=STABLE_COMPONENT_KINDS
 const document=ref<ObjectBlueprintDocument|null>(null),activeRecord=shallowRef<AssetRecord|null>(null),baseSource=ref<string|null>(null),cleanJson=ref(''),status=ref(''),pending=ref(false),projectId=projectSessionState.id
-const canEdit=computed(()=>physicsState.playMode==='editing'),draftJson=computed(()=>JSON.stringify(document.value)),dirty=computed(()=>Boolean(document.value)&&draftJson.value!==cleanJson.value)
-const savedSource=computed(()=>{void assetState.generation;return readTextAsset(props.assetUuid)}),conflict=computed(()=>dirty.value&&savedSource.value!==baseSource.value)
-const diagnostics=computed(()=>{void assetState.generation;if(!document.value)return[];const raw=validateObjectBlueprintFields(document.value,componentKinds);return raw.length?raw:validateObjectBlueprintDraft(props.assetUuid,document.value,assetState.records)})
-function candidate():StudioDraftCandidate|null{return dirty.value&&activeRecord.value?{record:activeRecord.value,projectId,kind:'blueprint',source:draftJson.value,baseSource:baseSource.value}:null}
-function retain(){const value=candidate();if(value)retainStudioDraft(value)}
-const unregister=registerStudioDraftOwner({read:candidate,discard:()=>{if(!discardDraft())throw Error(status.value)}})
-function readDocument(source:string):ObjectBlueprintDocument {
+const canEdit=computed(/* 比较 physicsState.playMode 与 'editing'，返回严格相等的判断结果。 */ ()=>physicsState.playMode==='editing'),draftJson=computed(/** 将当前蓝图序列化为草稿 JSON。 */ ()=>JSON.stringify(document.value)),dirty=computed(/** 存在蓝图且序列化结果不同于干净版本时标记未保存。 */ ()=>Boolean(document.value)&&draftJson.value!==cleanJson.value)
+const savedSource=computed(/** 依赖资源代次读取当前蓝图源内容。 */ ()=>{void assetState.generation;return readTextAsset(props.assetUuid)}),conflict=computed(/** 草稿已修改且保存源不同于草稿基线时判定外部冲突。 */ ()=>dirty.value&&savedSource.value!==baseSource.value)
+const diagnostics=computed(/** 先校验字段和组件种类，字段通过后再校验蓝图与资源引用。 */ ()=>{void assetState.generation;if(!document.value)return[];const raw=validateObjectBlueprintFields(document.value,componentKinds);return raw.length?raw:validateObjectBlueprintDraft(props.assetUuid,document.value,assetState.records)})
+/** 只有存在脏草稿和活动资源时才构造恢复候选。 */ function candidate():StudioDraftCandidate|null{return dirty.value&&activeRecord.value?{record:activeRecord.value,projectId,kind:'blueprint',source:draftJson.value,baseSource:baseSource.value}:null}
+/** 存在候选时保留蓝图恢复草稿。 */ function retain(){const value=candidate();if(value)retainStudioDraft(value)}
+const unregister=registerStudioDraftOwner({read:candidate,discard:/** 尝试放弃草稿，失败将当前状态作为错误抛出。 */ ()=>{if(!discardDraft())throw Error(status.value)}})
+/** 解析并检查蓝图格式、版本、标识及必要数组，结构错误抛出缺失源提示。 */ function readDocument(source:string):ObjectBlueprintDocument {
   const value=JSON.parse(source)
   if(value?.format!=='nova-object-blueprint'||value.version!==1||typeof value.uuid!=='string'||!Array.isArray(value.tags)||!Array.isArray(value.groups)||!Array.isArray(value.requiredComponents)||!Array.isArray(value.excludedComponents))throw Error(labels.value.missingSource)
   return value
 }
-function load(){
+/** 载入蓝图及可恢复草稿，同步资源身份、保存基线和干净版本；异常保留错误状态。 */ function load(){
   try{const record=resolveAsset(props.assetUuid),source=readTextAsset(props.assetUuid);if(!record||record.assetType!=='objectBlueprint'||source===null)throw Error(labels.value.missingSource)
     const saved=readDocument(source),recovery=readStudioDraft(record,projectId,'blueprint',source),next=recovery?readDocument(recovery.entry.source):saved
     activeRecord.value=record;baseSource.value=recovery?recovery.entry.baseSource:source;cleanJson.value=JSON.stringify(saved);document.value=next;status.value=''
   }catch(error){status.value=error instanceof Error?error.message:String(error)}
 }
-watch(()=>props.assetUuid,()=>{retain();load()},{immediate:true});watch(draftJson,retain)
-watch(()=>assetState.generation,()=>{if(!dirty.value&&resolveAsset(props.assetUuid)===activeRecord.value&&savedSource.value!==baseSource.value)load()})
-onBeforeUnmount(()=>{retain();unregister()})
-function assetsOf(type:AssetType){return assetState.records.filter(record=>record.assetType===type).sort((a,b)=>a.path.localeCompare(b.path))}
-function setMembers(field:'tags'|'groups',event:Event){if(!document.value)return;const text=(event.target as HTMLTextAreaElement).value;document.value[field]=text===''?[]:text.split('\n')}
-function keepDraft(){if(!activeRecord.value)return;baseSource.value=savedSource.value;status.value='';retain()}
-function discardDraft(){try{const source=readTextAsset(props.assetUuid);if(source===null)throw Error(labels.value.missingSource);const next=readDocument(source);if(activeRecord.value)clearStudioDraft(activeRecord.value,projectId);baseSource.value=source;cleanJson.value=JSON.stringify(next);document.value=next;status.value='';return true}catch(error){status.value=error instanceof Error?error.message:String(error);return false}}
-function save():boolean {
+watch(/* 返回 props.assetUuid 的当前值。 */ ()=>props.assetUuid,/** 切换编辑对象前保留旧草稿，再加载新对象。 */ ()=>{retain();load()},{immediate:true});watch(draftJson,retain)
+watch(/* 返回 assetState.generation 的当前值。 */ ()=>assetState.generation,/** 只有无脏草稿、资源身份未变且保存源变化时自动重载。 */ ()=>{if(!dirty.value&&resolveAsset(props.assetUuid)===activeRecord.value&&savedSource.value!==baseSource.value)load()})
+onBeforeUnmount(/** 卸载时保留草稿并解除保存边界注册。 */ ()=>{retain();unregister()})
+/** 按类型筛选资源，并按路径排序。 */ function assetsOf(type:AssetType){return assetState.records.filter(/* 比较 record.assetType 与 type，返回严格相等的判断结果。 */ record=>record.assetType===type).sort(/** 以资源路径的本地比较顺序排序。 */ (a,b)=>a.path.localeCompare(b.path))}
+/** 将标签或分组文本按换行保存，空文本对应空数组。 */ function setMembers(field:'tags'|'groups',event:Event){if(!document.value)return;const text=(event.target as HTMLTextAreaElement).value;document.value[field]=text===''?[]:text.split('\n')}
+/** 接受当前外部保存源作为基线，同时保留用户草稿。 */ function keepDraft(){if(!activeRecord.value)return;baseSource.value=savedSource.value;status.value='';retain()}
+/** 重读并验证保存版本，成功清除恢复草稿并更新基线，失败保留错误。 */ function discardDraft(){try{const source=readTextAsset(props.assetUuid);if(source===null)throw Error(labels.value.missingSource);const next=readDocument(source);if(activeRecord.value)clearStudioDraft(activeRecord.value,projectId);baseSource.value=source;cleanJson.value=JSON.stringify(next);document.value=next;status.value='';return true}catch(error){status.value=error instanceof Error?error.message:String(error);return false}}
+/** 校验编辑权限、资源身份、冲突和诊断后保存蓝图；成功更新基线及历史，失败保留恢复草稿。 */ function save():boolean {
   if(!canEdit.value||!document.value||!activeRecord.value||resolveAsset(props.assetUuid)!==activeRecord.value){status.value=labels.value.missingSource;return false}
   if(conflict.value){status.value=labels.value.conflict;return false}
-  if(diagnostics.value.some(issue=>!('severity'in issue)||issue.severity==='error')){status.value=labels.value.invalid;retain();return false}
+  if(diagnostics.value.some(/** 没有显式严重程度或严重程度为错误的诊断视为阻断项。 */ issue=>!('severity'in issue)||issue.severity==='error')){status.value=labels.value.invalid;retain();return false}
   try{if(!saveObjectBlueprintAsset(activeRecord.value.uuid,document.value))throw Error(labels.value.saveFailed);baseSource.value=readTextAsset(activeRecord.value.uuid);cleanJson.value=draftJson.value;clearStudioDraft(activeRecord.value,projectId);pushHistory('Save Object Blueprint',`blueprint:${activeRecord.value.uuid}`);status.value=labels.value.saved;return true}catch(error){status.value=error instanceof Error?error.message:String(error);retain();return false}
 }
-async function requestClose(){
+/** 避免重复关闭请求，先询问保存，再允许放弃；等待期间源变化则中止关闭以保护编辑。 */ async function requestClose(){
   if(pending.value)return
   if(!dirty.value){emit('close');return}
   pending.value=true;const original=draftJson.value,saved=savedSource.value
@@ -83,8 +84,8 @@ async function requestClose(){
     const discard=await requestConfirmation({title:labels.value.confirmClose,message:labels.value.discardQuestion,confirmLabel:labels.value.discard,cancelLabel:labels.value.cancel,destructive:true});if(original!==draftJson.value||saved!==savedSource.value){status.value=labels.value.sourceChanged;return}if(discard&&discardDraft())emit('close')
   }finally{pending.value=false}
 }
-function instantiate(){if(dirty.value){status.value=labels.value.saveFirst;return}try{authorBlueprintInstance(props.assetUuid);status.value=labels.value.instanceCreated}catch(error){status.value=error instanceof Error?error.message:labels.value.instantiateFailed}}
-function derive(){if(dirty.value){status.value=labels.value.saveFirst;return}emit('derive',props.assetUuid)}
+/** 要求蓝图先保存，再创建实例并显示成功或异常。 */ function instantiate(){if(dirty.value){status.value=labels.value.saveFirst;return}try{authorBlueprintInstance(props.assetUuid);status.value=labels.value.instanceCreated}catch(error){status.value=error instanceof Error?error.message:labels.value.instantiateFailed}}
+/** 草稿无修改时通知父组件派生蓝图，否则要求先保存。 */ function derive(){if(dirty.value){status.value=labels.value.saveFirst;return}emit('derive',props.assetUuid)}
 defineExpose({requestClose,save})
 </script>
 

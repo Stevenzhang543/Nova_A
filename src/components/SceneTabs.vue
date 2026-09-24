@@ -1,3 +1,4 @@
+<!-- 场景标签栏：切换场景并管理载入、继承和场景设置。 -->
 <template>
   <section class="scene-tabs" data-control-scope="scene-tabs" :data-resource-key="`scene:${active.uuid}`" :aria-label="t('sceneTabs')">
     <div class="history-actions">
@@ -16,7 +17,7 @@
       <header><div><small>{{ t('sceneSettings') }}</small><strong>{{ active.name }}</strong></div><button @click="settingsOpen = false">×</button></header>
       <label><span>{{ t('sceneTemplate') }}</span><select v-model="active.settings.templateId" @change="changed('Set scene template', 'settings.templateId')"><option :value="null">{{ t('none') }}</option><option v-for="template in templates" :key="template.id" :value="template.id">{{ t(template.label) }}</option></select></label>
       <label><span>{{ t('sceneRuntimePolicy') }}</span><select v-model="active.settings.runtimePolicy" @change="changed('Set scene runtime policy', 'settings.runtimePolicy')"><option value="Replace">{{ t('sceneReplace') }}</option><option value="Additive">{{ t('sceneAdditive') }}</option><option value="Overlay">{{ t('sceneOverlay') }}</option></select></label>
-      <label><span>{{ t('sceneInheritance') }}</span><select :value="active.settings.inheritanceSourceUuid ?? ''" @change="setInheritance(($event.target as HTMLSelectElement).value)"><option value="">{{ t('none') }}</option><option v-for="scene in sceneManager.scenes.filter(scene => scene.uuid !== active.uuid)" :key="scene.uuid" :value="scene.uuid">{{ scene.name }}</option></select></label>
+<!-- 场景继承候选过滤回调排除当前活动场景。 -->      <label><span>{{ t('sceneInheritance') }}</span><select :value="active.settings.inheritanceSourceUuid ?? ''" @change="setInheritance(($event.target as HTMLSelectElement).value)"><option value="">{{ t('none') }}</option><option v-for="scene in sceneManager.scenes.filter(scene => scene.uuid !== active.uuid)" :key="scene.uuid" :value="scene.uuid">{{ scene.name }}</option></select></label>
       <label><span>{{ t('sceneTags') }}</span><input :value="active.settings.tags.join(', ')" @change="setTags(($event.target as HTMLInputElement).value)"></label>
       <section class="named-layers"><header><strong>{{ t('namedLayers') }}</strong><button @click="addNamedLayer">＋</button></header><div v-for="layer in active.settings.namedLayers" :key="layer.id"><i :style="{ background: layerColorCss(layer.id) }"></i><input v-model="layer.name" @change="renameLayer(layer.id, layer.name)"><button :class="{ active: layer.visible }" :title="t('entityVisible')" @click="layer.visible = !layer.visible; changed('Toggle named layer visibility', `settings.namedLayers.${layer.id}.visible`)">◉</button><button :class="{ active: layer.locked }" :title="t('entityLocked')" @click="layer.locked = !layer.locked; changed('Toggle named layer lock', `settings.namedLayers.${layer.id}.locked`)">▣</button></div></section>
       <section class="dependencies"><strong>{{ t('sceneDependencies') }} · {{ dependencies.length }}</strong><code v-for="dependency in dependencies" :key="dependency">{{ dependency }}</code><p v-if="!dependencies.length">{{ t('noSceneDependencies') }}</p></section>
@@ -42,31 +43,31 @@ const templates = [
   { id: 'ui-overlay', label: 'templateUiOverlay', description: 'templateUiOverlayDescription' },
   { id: 'camera-stage', label: 'templateCameraStage', description: 'templateCameraStageDescription' }
 ] as const
-const loadedScenes = computed(() => sceneManager.scenes.filter(scene => scene.loaded))
-const active = computed(() => sceneManager.activeScene)
-const dependencies = computed(() => sceneManager.inspectDependencies(active.value))
-function tabDescription(scene: SceneDocument): string { return `${scene.name} · ${scene.validationState} · ${scene.externalState} · ${scene.prefabState}` }
-function activate(uuid: string) { if (setActiveScene(uuid)) synchronizeHistoryBaseline() }
-function navigate(offset: -1 | 1) { if (navigateScene(offset)) synchronizeHistoryBaseline() }
-function close(uuid: string) { if (setSceneLoaded(uuid, false)) pushHistory('Close scene tab', `scene:${uuid}`) }
-function cleanList(value: string) { return [...new Set(value.split(',').map(item => item.trim()).filter(Boolean))].slice(0, 32) }
-function changed(label: string, path: string) { sceneManager.markDirty(); pushHistory(label, `scene-settings:${active.value.uuid}:${path}`, `scene:${active.value.uuid}`) }
-function setTags(value: string) { active.value.settings.tags = cleanList(value); changed('Set scene tags', 'settings.tags') }
-function setInheritance(value: string) { if (sceneManager.setInheritance(active.value.uuid, value || null)) changed('Set scene inheritance', 'settings.inheritanceSourceUuid') }
-function addNamedLayer() { const id = Math.max(0, ...active.value.settings.namedLayers.map(layer => layer.id)) + 1; active.value.settings.namedLayers.push({ id, name: `Layer ${id}`, visible: true, locked: false }); changed('Add named layer', 'settings.namedLayers') }
-function renameLayer(id: number, name: string) { const layer = active.value.settings.namedLayers.find(candidate => candidate.id === id); if (!layer) return; layer.name = name.trim().slice(0, 80) || `Layer ${id}`; for (const entity of physicsState.world.entities.filter(entity => entity.layer === id)) entity.namedLayer = layer.name; changed('Rename named layer', `settings.namedLayers.${id}.name`) }
-function createFromTemplate(id: typeof templates[number]['id']) {
-  if (!createScene(t(templates.find(template => template.id === id)?.label ?? 'newScene'))) return
+const loadedScenes = computed(/** 仅显示当前已加载场景。 */ () => sceneManager.scenes.filter(/* 返回 scene.loaded 的当前值。 */ scene => scene.loaded))
+const active = computed(/* 返回 sceneManager.activeScene 的当前值。 */ () => sceneManager.activeScene)
+const dependencies = computed(/* 调用 sceneManager.inspectDependencies(active.value) 并返回调用结果。 */ () => sceneManager.inspectDependencies(active.value))
+/** 组合场景名称、校验、外部变更和预制体状态作为标签说明。 */ function tabDescription(scene: SceneDocument): string { return `${scene.name} · ${scene.validationState} · ${scene.externalState} · ${scene.prefabState}` }
+/** 切换场景成功后同步历史基线。 */ function activate(uuid: string) { if (setActiveScene(uuid)) synchronizeHistoryBaseline() }
+/** 按前后偏移切换场景成功后同步历史基线。 */ function navigate(offset: -1 | 1) { if (navigateScene(offset)) synchronizeHistoryBaseline() }
+/** 卸载场景标签成功后记录该场景历史。 */ function close(uuid: string) { if (setSceneLoaded(uuid, false)) pushHistory('Close scene tab', `scene:${uuid}`) }
+/* 调用 [...new Set(value.split(',').map(item => item.trim()).filter(Boolean))].slice(0, 32) 并返回调用结果。 */ function cleanList(value: string) { return [...new Set(value.split(',').map(/* 调用 item.trim() 并返回调用结果。 */ item => item.trim()).filter(Boolean))].slice(0, 32) }
+/** 标记场景已修改，并按设置路径记录场景范围历史。 */ function changed(label: string, path: string) { sceneManager.markDirty(); pushHistory(label, `scene-settings:${active.value.uuid}:${path}`, `scene:${active.value.uuid}`) }
+/** 清理标签列表后保存并记录设置变更。 */ function setTags(value: string) { active.value.settings.tags = cleanList(value); changed('Set scene tags', 'settings.tags') }
+/** 设置继承来源成功后记录设置变更。 */ function setInheritance(value: string) { if (sceneManager.setInheritance(active.value.uuid, value || null)) changed('Set scene inheritance', 'settings.inheritanceSourceUuid') }
+/** 选用现有最大编号加一创建命名图层，并记录历史。 */ function addNamedLayer() { const id = Math.max(0, ...active.value.settings.namedLayers.map(/* 返回 layer.id 的当前值。 */ layer => layer.id)) + 1; active.value.settings.namedLayers.push({ id, name: `Layer ${id}`, visible: true, locked: false }); changed('Add named layer', 'settings.namedLayers') }
+/** 规范化图层名称并同步同层实体显示名，再记录修改。 */ function renameLayer(id: number, name: string) { const layer = active.value.settings.namedLayers.find(/* 比较 candidate.id 与 id，返回严格相等的判断结果。 */ candidate => candidate.id === id); if (!layer) return; layer.name = name.trim().slice(0, 80) || `Layer ${id}`; for (const entity of physicsState.world.entities.filter(/* 比较 entity.layer 与 id，返回严格相等的判断结果。 */ entity => entity.layer === id)) entity.namedLayer = layer.name; changed('Rename named layer', `settings.namedLayers.${id}.name`) }
+/** 创建指定模板场景并添加所需相机或界面层对象，记录历史并关闭菜单。 */ function createFromTemplate(id: typeof templates[number]['id']) {
+  if (!createScene(t(templates.find(/* 比较 template.id 与 id，返回严格相等的判断结果。 */ template => template.id === id)?.label ?? 'newScene'))) return
   active.value.settings.templateId = id
   if (id === 'gameplay-2d') { createAuthoringObject('Camera', { x: 0, y: 0 }, false); createAuthoringObject('Empty', { x: 0, y: 0 }, false) }
   if (id === 'ui-overlay') createAuthoringObject('CanvasLayer', { x: 0, y: 0 }, false)
   if (id === 'camera-stage') createAuthoringObject('Camera', { x: 0, y: 0 }, false)
   pushHistory('Create scene from template', `scene:${active.value.uuid}`); createMenu.value?.removeAttribute('open')
 }
-watch(() => physicsState.world.entities.map(entity => `${entity.uuid}:${entity.components.map(component => component.kind).join(',')}:${Object.keys(entity.prefabOverrides).length}`), () => {
+watch(/** 收集实体标识、组件种类和预制体覆盖数量作为校验监听依赖。 */ () => physicsState.world.entities.map(/** 组合单个实体的标识、组件和覆盖数量为变化标记。 */ entity => `${entity.uuid}:${entity.components.map(/* 返回 component.kind 的当前值。 */ component => component.kind).join(',')}:${Object.keys(entity.prefabOverrides).length}`), /** 重新校验场景对象并更新场景错误等级及预制体状态。 */ () => {
   const issues = validateSceneAuthoring(physicsState.world.entities)
-  sceneManager.setValidationState(active.value.uuid, issues.some(issue => issue.severity === 'error') ? 'error' : issues.length ? 'warning' : 'valid')
-  sceneManager.setPrefabState(active.value.uuid, physicsState.world.entities.some(entity => Object.keys(entity.prefabOverrides).length) ? 'overridden' : physicsState.world.entities.some(entity => entity.prefabAsset) ? 'instance' : 'none')
+  sceneManager.setValidationState(active.value.uuid, issues.some(/* 比较 issue.severity 与 'error'，返回严格相等的判断结果。 */ issue => issue.severity === 'error') ? 'error' : issues.length ? 'warning' : 'valid')
+  sceneManager.setPrefabState(active.value.uuid, physicsState.world.entities.some(/* 返回 Object.keys(entity.prefabOverrides).length 的当前值。 */ entity => Object.keys(entity.prefabOverrides).length) ? 'overridden' : physicsState.world.entities.some(/* 返回 entity.prefabAsset 的当前值。 */ entity => entity.prefabAsset) ? 'instance' : 'none')
 }, { immediate: true })
 </script>
 

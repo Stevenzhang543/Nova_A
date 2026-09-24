@@ -1,3 +1,4 @@
+/** 版本6.0.1：组织教学步骤与示例说明，生成版本教程和用户操作文档。 */
 import { readFile, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -93,11 +94,11 @@ const manuals = {
   }
 }
 
-const escapeHtml = value => String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;')
-const inlineHtml = value => escapeHtml(value).replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>').replace(/`([^`]+)`/g, '<code>$1</code>')
-const stripMarker = source => source.replace(new RegExp(`${START}[\\s\\S]*?${END}\\s*`, 'm'), '')
+const escapeHtml = /* 调用 String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;') 并返回调用结果。 */ value => String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;')
+const inlineHtml = /** 转义文本后转换粗体和行内代码标记。 */ value => escapeHtml(value).replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>').replace(/`([^`]+)`/g, '<code>$1</code>')
+const stripMarker = /* 调用 source.replace(new RegExp(`${START}[\\s\\S]*?${END}\\s*`, 'm'), '') 并返回调用结果。 */ source => source.replace(new RegExp(`${START}[\\s\\S]*?${END}\\s*`, 'm'), '')
 
-function markdownFor(locale) {
+/** 按语言生成6.0.1Markdown课程，包含段落、步骤、列表和Rhai代码块。 */ function markdownFor(locale) {
   const manual = manuals[locale]
   const lines = [START, '', `## Nova_A 6.0.1 — ${manual.title}`, '', manual.intro, '', `### ${manual.capabilityTitle}`, '']
   for (const paragraph of manual.capability) lines.push(paragraph, '')
@@ -114,18 +115,18 @@ function markdownFor(locale) {
   return lines.join('\n')
 }
 
-function htmlFor(locale) {
+/** 按语言生成6.0.1网页手册的能力说明与各任务章节。 */ function htmlFor(locale) {
   const manual = manuals[locale]
-  const sections = manual.sections.map(section => {
+  const sections = manual.sections.map(/** 把课程章节的段落、步骤、要点和代码组合为网页区块。 */ section => {
     const body = [
-      ...(section.paragraphs ?? []).map(value => `<p>${inlineHtml(value)}</p>`),
-      section.steps?.length ? `<ol>${section.steps.map(value => `<li>${inlineHtml(value)}</li>`).join('')}</ol>` : '',
-      section.bullets?.length ? `<ul>${section.bullets.map(value => `<li>${inlineHtml(value)}</li>`).join('')}</ul>` : '',
-      ...(section.codes ?? []).map(value => `<pre><code>${escapeHtml(value)}</code></pre>`)
+      ...(section.paragraphs ?? []).map(/** 将行内格式化文本转换为网页段落。 */ value => `<p>${inlineHtml(value)}</p>`),
+      section.steps?.length ? `<ol>${section.steps.map(/** 将行内格式化文本转换为网页列表项。 */ value => `<li>${inlineHtml(value)}</li>`).join('')}</ol>` : '',
+      section.bullets?.length ? `<ul>${section.bullets.map(/** 将行内格式化文本转换为网页列表项。 */ value => `<li>${inlineHtml(value)}</li>`).join('')}</ul>` : '',
+      ...(section.codes ?? []).map(/** 把转义后的源码转换为预格式代码块。 */ value => `<pre><code>${escapeHtml(value)}</code></pre>`)
     ].join('')
     return `<section id="${locale}-v601-${section.id}" class="v601-task"><h2>${escapeHtml(section.title)}</h2>${body}</section>`
   }).join('')
-  return `<article data-lang="${locale}"${locale === 'en' ? '' : ' hidden'} class="v601-teaching"><section id="${locale}-v601"><div class="hero"><span class="eyebrow">Nova_A 6.0.1 · complete playable project · world-space pointer physics</span><h1>${escapeHtml(manual.title)}</h1><p>${inlineHtml(manual.intro)}</p></div><div class="v601-answer"><h2>${escapeHtml(manual.capabilityTitle)}</h2>${manual.capability.map(value => `<p>${inlineHtml(value)}</p>`).join('')}</div></section>${sections}</article>`
+  return `<article data-lang="${locale}"${locale === 'en' ? '' : ' hidden'} class="v601-teaching"><section id="${locale}-v601"><div class="hero"><span class="eyebrow">Nova_A 6.0.1 · complete playable project · world-space pointer physics</span><h1>${escapeHtml(manual.title)}</h1><p>${inlineHtml(manual.intro)}</p></div><div class="v601-answer"><h2>${escapeHtml(manual.capabilityTitle)}</h2>${manual.capability.map(/** 将行内格式化文本转换为网页段落。 */ value => `<p>${inlineHtml(value)}</p>`).join('')}</div></section>${sections}</article>`
 }
 
 const runtimeScript = `<script>

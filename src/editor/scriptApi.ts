@@ -1,3 +1,4 @@
+/** 脚本 API 编辑资料：定义引擎调用信息，提供查询、补全及可导出的接口说明。 */
 export const SCRIPT_API_VERSION = 2 as const
 export const SCRIPT_API_MINIMUM_VERSION = 1 as const
 
@@ -216,7 +217,7 @@ const SPECS: readonly Spec[] = [
   ['expect', 'expect(condition, message) -> bool', 'testing', 'Records a test assertion without corrupting another instance.', 'expect(2 + 2 == 4, "math");']
 ] as const
 
-export const SCRIPT_API: readonly ScriptApiEntry[] = SPECS.map(([name, signature, namespace, detail, example, replacement]) => ({
+export const SCRIPT_API: readonly ScriptApiEntry[] = SPECS.map(/** 把基础 API 元组展开为文档记录，附加分类、引入版本、弃用信息及手册锚点。 */ ([name, signature, namespace, detail, example, replacement]) => ({
   name, signature, namespace, category: namespace[0].toUpperCase() + namespace.slice(1), detail, example, since: '1.0',
   deprecated: replacement ? { replacement, removal: 'API v3', reason: 'API v2 keeps the API v1 adapter while directing new code to the typed canonical binding.' } : undefined,
   documentation: `manual/index.html#api-${name.replace(/_/g, '-')}`
@@ -232,7 +233,7 @@ export const SCRIPT_API_V2_MANIFEST: ScriptApiV2Manifest = {
   minimumCompatibleVersion: 1,
   errorModel: 'Result values are explicit; queued host mutations fail through diagnostics and never expose host exceptions.',
   handleModel: 'Handles are typed, versioned, copied values whose validity must be checked at each callback boundary.',
-  entries: SCRIPT_API.map(entry => ({
+  entries: SCRIPT_API.map(/** 按 API 分类与专用集合补充返回约定、生命周期、线程要求、确定性和权限元信息。 */ entry => ({
     ...entry,
     id: `${entry.namespace}.${entry.name}`,
     module: entry.namespace,
@@ -250,26 +251,26 @@ export const SCRIPT_API_V2_MANIFEST: ScriptApiV2Manifest = {
 }
 
 export const SCRIPT_API_V1_TO_V2 = Object.freeze(Object.fromEntries(
-  SCRIPT_API.filter(entry => entry.deprecated).map(entry => [entry.name, entry.deprecated!.replacement])
+  SCRIPT_API.filter(/* 返回 entry.deprecated 的当前值。 */ entry => entry.deprecated).map(/* 返回按声明顺序构造的数组 [entry.name, entry.deprecated!.replacement]。 */ entry => [entry.name, entry.deprecated!.replacement])
 )) as Readonly<Record<string, string>>
 
-export function scriptApiManifestJson(): string { return `${JSON.stringify(SCRIPT_API_V2_MANIFEST, null, 2)}\n` }
+/** 按模板 `${JSON.stringify(SCRIPT_API_V2_MANIFEST, null, 2)}\n` 生成并返回字符串。 */ export function scriptApiManifestJson(): string { return `${JSON.stringify(SCRIPT_API_V2_MANIFEST, null, 2)}\n` }
 
 // Compatibility markers retained for archived static release audits:
 // name: 'entity_handle'; name: 'find_entity_handle'; name: 'component_handle';
 // name: 'animator_handle'; name: 'audio_source_handle'; name: 'task_wait';
 // name: 'task_cancel'; name: 'signal_emit'; name: 'signal_emit_to'; name: 'expect'
 
-export function apiEntry(name: string): ScriptApiEntry | undefined { return SCRIPT_API.find(entry => entry.name === name) }
+/** 按脚本可调用名称查找公开 API 元信息。 */ export function apiEntry(name: string): ScriptApiEntry | undefined { return SCRIPT_API.find(/* 比较 entry.name 与 name，返回严格相等的判断结果。 */ entry => entry.name === name) }
 
-export function apiByNamespace(): ReadonlyMap<ScriptApiNamespace, readonly ScriptApiEntry[]> {
+/** 按命名空间分组公开 API，保留登记顺序。 */ export function apiByNamespace(): ReadonlyMap<ScriptApiNamespace, readonly ScriptApiEntry[]> {
   const groups = new Map<ScriptApiNamespace, ScriptApiEntry[]>()
   for (const entry of SCRIPT_API) groups.set(entry.namespace, [...(groups.get(entry.namespace) ?? []), entry])
   return groups
 }
 
-export function generatedApiMarkdown(): string {
-  return [...apiByNamespace()].map(([namespace, entries]) => `## ${namespace}\n\n${entries.map(entry => {
+/** 从 API 登记表生成分命名空间的 Markdown，包含签名、说明、弃用迁移提示及转义后的示例。 */ export function generatedApiMarkdown(): string {
+  return [...apiByNamespace()].map(/** 生成单个命名空间标题及其中所有 API 条目。 */ ([namespace, entries]) => `## ${namespace}\n\n${entries.map(/** 将一个 API 渲染为包含弃用替代项和代码示例的 Markdown 条目。 */ entry => {
     const warning = entry.deprecated ? ` **Deprecated:** use \`${entry.deprecated.replacement}\`; removal ${entry.deprecated.removal}.` : ''
     return `- \`${entry.signature}\` — ${entry.detail}${warning}\n\n  Example: \`${entry.example.replace(/`/g, '\\`')}\``
   }).join('\n')}`).join('\n\n')

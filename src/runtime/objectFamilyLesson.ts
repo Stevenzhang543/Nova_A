@@ -1,3 +1,4 @@
+/** 对象家族教学配置：为蓝图、继承及实例工作流提供学习资料。 */
 import type { LearningGuide, LocalizedLearningGuide } from './creatorLearning'
 import type { Locale } from '../store/preferences'
 
@@ -63,4 +64,4 @@ const lessons: Record<Locale, LocalizedLearningGuide> = {
     minimalExample: '@export(type="float") let move_speed = 6.0;\nfn update(dt) { if input_pressed("Jump") { set_position(move_speed, 0.0); } }', productionExample: '打开 reference-projects/projects/creator-v2614-enemy-family/project.nova。按 test-controls.json 检查碰撞、UI 重启、池复用、暂停热重载及保存重开。实际运行结果以审计报告为准。', relatedRhai: objectFamilyGuide.relatedRhai, relatedGraph: objectFamilyGuide.relatedGraph
   }
 }
-export function objectFamilyLesson(locale: Locale): LocalizedLearningGuide { return structuredClone(lessons[locale]) }
+/* 调用 structuredClone(lessons[locale]) 并返回调用结果。 */ export function objectFamilyLesson(locale: Locale): LocalizedLearningGuide { return structuredClone(lessons[locale]) }

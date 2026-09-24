@@ -1,3 +1,4 @@
+/** 事件表运行：规范条件与动作表，求值事件并将动作应用到游戏状态。 */
 import { validateEventSheetDraft } from '../editor/eventSheetDraftValidation'
 import { assetGuid, assetState, createTextAsset, readTextAsset, resolveAsset, updateTextAssetTransactional } from '../assets/AssetDatabase'
 import type { AssetRecord } from '../assets/types'
@@ -67,27 +68,27 @@ const CALLBACK_BY_EVENT: Record<ObjectEventKind, string> = {
   'trigger-enter': 'on_trigger_enter', 'trigger-stay': 'on_trigger_stay', 'trigger-exit': 'on_trigger_exit',
   ui: 'on_signal', animation: 'on_signal', network: 'on_signal'
 }
-export function eventCallbackFamily(kind: ObjectEventKind): string { return CALLBACK_BY_EVENT[kind] }
+/* 返回 CALLBACK_BY_EVENT[kind] 的当前值。 */ export function eventCallbackFamily(kind: ObjectEventKind): string { return CALLBACK_BY_EVENT[kind] }
 
-function cleanText(value: unknown, fallback = '', maximum = 160): string { return (typeof value === 'string' ? value : fallback).replace(/[\u0000-\u001f]/g, '').trim().slice(0, maximum) }
-function finiteInteger(value: unknown, fallback = 0, minimum = -1_000_000, maximum = 1_000_000): number { const number = Math.round(Number(value)); return Number.isFinite(number) ? Math.min(maximum, Math.max(minimum, number)) : fallback }
-function cleanReference(value: unknown): string | null { const reference = cleanText(value, '', 512); return reference ? reference : null }
+/* 调用 (typeof value === 'string' ? value : fallback).replace(/[\u0000-\u001f]/g, '').trim().slice(0, maximum) 并返回调用结果。 */ function cleanText(value: unknown, fallback = '', maximum = 160): string { return (typeof value === 'string' ? value : fallback).replace(/[\u0000-\u001f]/g, '').trim().slice(0, maximum) }
+/** 结构说明（自动提取）：finiteInteger；输入 value、fallback、minimum、maximum；直接调用 Math.round、Number、Number.isFinite、Math.min、Math.max。 */ function finiteInteger(value: unknown, fallback = 0, minimum = -1_000_000, maximum = 1_000_000): number { const number = Math.round(Number(value)); return Number.isFinite(number) ? Math.min(maximum, Math.max(minimum, number)) : fallback }
+/** 结构说明（自动提取）：cleanReference；输入 value；直接调用 cleanText。 */ function cleanReference(value: unknown): string | null { const reference = cleanText(value, '', 512); return reference ? reference : null }
 
-export function defaultEventHandler(kind: ObjectEventKind = 'start'): ObjectEventHandler {
+/** 构造并返回记录 { uuid: graphUuid(), kind, name: kind.replace(/-/g, ' '), selector: '', callback: CALLBACK_BY_EVENT[kind], enabled: true, priority: 0, overrideInherited: true }，字段按当前实参及捕获状态求值。 */ export function defaultEventHandler(kind: ObjectEventKind = 'start'): ObjectEventHandler {
   return { uuid: graphUuid(), kind, name: kind.replace(/-/g, ' '), selector: '', callback: CALLBACK_BY_EVENT[kind], enabled: true, priority: 0, overrideInherited: true }
 }
 
-export function defaultEventSheet(name = 'Object Events', logicAsset: string | null = null): EventSheetDocument {
+/** 结构说明（自动提取）：defaultEventSheet；输入 name、logicAsset；直接调用 graphUuid、cleanText、defaultEventHandler。 */ export function defaultEventSheet(name = 'Object Events', logicAsset: string | null = null): EventSheetDocument {
   return { format: EVENT_SHEET_FORMAT, version: EVENT_SHEET_VERSION, uuid: graphUuid(), name: cleanText(name, 'Object Events', 120), enabled: true, ownerComponent: 'Entity', logicAsset, baseSheetAsset: null, deterministicSeed: 1, handlers: [defaultEventHandler('awake'), defaultEventHandler('start'), defaultEventHandler('update')] }
 }
 
-export function normalizeEventSheet(source: unknown): EventSheetDocument {
+/** 结构说明（自动提取）：normalizeEventSheet；输入 source；直接调用 Error、Number、Array.isArray、MAX_EVENT_HANDLERS.toLocaleString、rawHandlers.map 等；包含显式抛错路径。 */ export function normalizeEventSheet(source: unknown): EventSheetDocument {
   if (!source || typeof source !== 'object') throw new Error('Event Sheet root must be an object.')
   const item = source as Record<string, unknown>
   if (item.format !== EVENT_SHEET_FORMAT || Number(item.version) !== EVENT_SHEET_VERSION) throw new Error('Unsupported Event Sheet format.')
   const rawHandlers = Array.isArray(item.handlers) ? item.handlers : []
   if (rawHandlers.length > MAX_EVENT_HANDLERS) throw new Error(`Event Sheet exceeds the ${MAX_EVENT_HANDLERS.toLocaleString('en-US')} handler limit.`)
-  const handlers = rawHandlers.map((entry): ObjectEventHandler => {
+  const handlers = rawHandlers.map(/** 结构说明（自动提取）：rawHandlers.map 回调；输入 entry；直接调用 OBJECT_EVENT_KINDS.includes、toLowerCase、cleanText、graphUuid、kind.replace 等。 */ (entry): ObjectEventHandler => {
     const handler = entry && typeof entry === 'object' ? entry as Record<string, unknown> : {}
     const kind = OBJECT_EVENT_KINDS.includes(handler.kind as ObjectEventKind) ? handler.kind as ObjectEventKind : 'start'
     return { uuid: cleanText(handler.uuid, graphUuid(), 128).toLowerCase(), kind, name: cleanText(handler.name, kind.replace(/-/g, ' '), 120), selector: cleanText(handler.selector, '', 256), callback: cleanText(handler.callback, CALLBACK_BY_EVENT[kind], 120).replace(/[^A-Za-z0-9_]/g, '_') || CALLBACK_BY_EVENT[kind], enabled: handler.enabled !== false, priority: finiteInteger(handler.priority), overrideInherited: handler.overrideInherited !== false }
@@ -95,31 +96,31 @@ export function normalizeEventSheet(source: unknown): EventSheetDocument {
   return { format: EVENT_SHEET_FORMAT, version: EVENT_SHEET_VERSION, uuid: cleanText(item.uuid, graphUuid(), 128).toLowerCase(), name: cleanText(item.name, 'Object Events', 120), enabled: item.enabled !== false, ownerComponent: cleanText(item.ownerComponent, 'Entity', 80), logicAsset: cleanReference(item.logicAsset), baseSheetAsset: cleanReference(item.baseSheetAsset), deterministicSeed: finiteInteger(item.deterministicSeed, 1, 1, 0x7fff_ffff), handlers }
 }
 
-export function parseEventSheet(source: string): EventSheetDocument { return normalizeEventSheet(JSON.parse(source)) }
-export function serializeEventSheet(document: EventSheetDocument): string { return `${JSON.stringify(normalizeEventSheet(document), null, 2)}\n` }
+/* 调用 normalizeEventSheet(JSON.parse(source)) 并返回调用结果。 */ export function parseEventSheet(source: string): EventSheetDocument { return normalizeEventSheet(JSON.parse(source)) }
+/** 按模板 `${JSON.stringify(normalizeEventSheet(document), null, 2)}\n` 生成并返回字符串。 */ export function serializeEventSheet(document: EventSheetDocument): string { return `${JSON.stringify(normalizeEventSheet(document), null, 2)}\n` }
 
-export function readEventSheet(reference: string | null | undefined): EventSheetDocument | null {
+/** 结构说明（自动提取）：readEventSheet；输入 reference；直接调用 resolveAsset、readTextAsset、parseEventSheet。 */ export function readEventSheet(reference: string | null | undefined): EventSheetDocument | null {
   const record = resolveAsset(reference), source = readTextAsset(reference)
   if (!record || record.assetType !== 'eventSheet' || !source) return null
   try { return parseEventSheet(source) } catch { return null }
 }
 
-export function createEventSheetAsset(name: string, logicAsset: string | null = null): AssetRecord {
+/** 结构说明（自动提取）：createEventSheetAsset；输入 name、logicAsset；直接调用 defaultEventSheet、createTextAsset、serializeEventSheet、synchronizeEventSheetDependencies；返回路径包含 record。 */ export function createEventSheetAsset(name: string, logicAsset: string | null = null): AssetRecord {
   const document = defaultEventSheet(name, logicAsset)
   const record = createTextAsset(document.name, 'eventSheet', serializeEventSheet(document), 'Assets/Event Sheets')
   synchronizeEventSheetDependencies(record, document)
   return record
 }
 
-function synchronizeEventSheetDependencies(record: AssetRecord, document: EventSheetDocument): void {
+/** 结构说明（自动提取）：synchronizeEventSheetDependencies；输入 record、document；直接调用 sort、Set、flatMap；写入 record.pipeline.dependencies。 */ function synchronizeEventSheetDependencies(record: AssetRecord, document: EventSheetDocument): void {
   if (!record.pipeline) return
-  record.pipeline.dependencies = [...new Set([document.logicAsset, document.baseSheetAsset].flatMap(reference => assetGuid(reference) ?? []))].sort()
+  record.pipeline.dependencies = [...new Set([document.logicAsset, document.baseSheetAsset].flatMap(/* 当 assetGuid(reference) 为 null 或 undefined 时返回 []，否则保留左侧值。 */ reference => assetGuid(reference) ?? []))].sort()
 }
 
-export function saveEventSheetAsset(assetUuid: string, document: EventSheetDocument): boolean {
+/** 结构说明（自动提取）：saveEventSheetAsset；输入 assetUuid、document；直接调用 resolveAsset、Array.isArray、document.handlers.some、validateEventSheetDraft、updateTextAssetTransactional 等。 */ export function saveEventSheetAsset(assetUuid: string, document: EventSheetDocument): boolean {
   const destination = resolveAsset(assetUuid)
   if (!destination || destination.assetType !== 'eventSheet' || !document || !Array.isArray(document.handlers)) return false
-  if (document.handlers.some(handler => !handler || !OBJECT_EVENT_KINDS.includes(handler.kind))) return false
+  if (document.handlers.some(/* 先计算 !handler；仅当其为假值时求右侧 !OBJECT_EVENT_KINDS.includes(handler.kind)，返回短路求值结果。 */ handler => !handler || !OBJECT_EVENT_KINDS.includes(handler.kind))) return false
   if (validateEventSheetDraft(document).length) return false
   if (!updateTextAssetTransactional(assetUuid, serializeEventSheet(document))) return false
   const record = resolveAsset(assetUuid)
@@ -127,11 +128,11 @@ export function saveEventSheetAsset(assetUuid: string, document: EventSheetDocum
   return true
 }
 
-export function logicSourceForEventSheet(document: EventSheetDocument): string {
+/** 结构说明（自动提取）：logicSourceForEventSheet；输入 document；直接调用 resolvedEventLogicSource。 */ export function logicSourceForEventSheet(document: EventSheetDocument): string {
   try { return resolvedEventLogicSource(document) } catch { return '' }
 }
 
-export function resolveEventSheetPrimaryLogic(document: EventSheetDocument): string | null {
+/** 结构说明（自动提取）：resolveEventSheetPrimaryLogic；输入 document；直接调用 Set、visited.has、visited.add、resolveAsset、readEventSheet；写入 current；包含循环处理。 */ export function resolveEventSheetPrimaryLogic(document: EventSheetDocument): string | null {
   const visited = new Set<string>(); let current: EventSheetDocument | null = document
   while (current && current.enabled && visited.size < 64 && !visited.has(current.uuid)) {
     visited.add(current.uuid)
@@ -140,20 +141,20 @@ export function resolveEventSheetPrimaryLogic(document: EventSheetDocument): str
   }
   return null
 }
-function resolvedEventLogicSource(document: EventSheetDocument): string {
+/** 结构说明（自动提取）：resolvedEventLogicSource；输入 document；直接调用 resolveAsset、resolveEventSheetPrimaryLogic、resolveProjectScriptBundle。 */ function resolvedEventLogicSource(document: EventSheetDocument): string {
   const record = resolveAsset(resolveEventSheetPrimaryLogic(document)); if (!record) return ''
   return resolveProjectScriptBundle(record.uuid, {
-    resolveAsset: reference => { const asset = resolveAsset(reference) ?? assetState.records.find(item => item.path === reference); return asset && (asset.assetType === 'script' || asset.assetType === 'visualScript') ? { uuid: asset.uuid, path: asset.path, assetType: asset.assetType } : null },
-    readSource: uuid => readTextAsset(uuid), compileVisual: executableGraphSource
+    resolveAsset: /** 结构说明（自动提取）：匿名回调；输入 reference；直接调用 resolveAsset、assetState.records.find。 */ reference => { const asset = resolveAsset(reference) ?? assetState.records.find(/* 比较 item.path 与 reference，返回严格相等的判断结果。 */ item => item.path === reference); return asset && (asset.assetType === 'script' || asset.assetType === 'visualScript') ? { uuid: asset.uuid, path: asset.path, assetType: asset.assetType } : null },
+    readSource: /* 调用 readTextAsset(uuid) 并返回调用结果。 */ uuid => readTextAsset(uuid), compileVisual: executableGraphSource
   }) ?? ''
 }
 
-export function callbackNamesInLogic(document: EventSheetDocument): Set<string> {
+/** 结构说明（自动提取）：callbackNamesInLogic；输入 document；直接调用 parseRhai、logicSourceForEventSheet、Set、program.body.flatMap。 */ export function callbackNamesInLogic(document: EventSheetDocument): Set<string> {
   const program = parseRhai(logicSourceForEventSheet(document), { moduleMode: 'host' })
-  return new Set(program.body.flatMap(node => node.kind === 'FunctionDeclaration' && !node.receiver ? [node.name] : []))
+  return new Set(program.body.flatMap(/* 根据 node.kind === 'FunctionDeclaration' && !node.receiver 的真假，分别返回 [node.name] 或 []。 */ node => node.kind === 'FunctionDeclaration' && !node.receiver ? [node.name] : []))
 }
 
-export function validateEventSheet(documentInput: EventSheetDocument, records: readonly AssetRecord[] = []): EventSheetDiagnostic[] {
+/** 结构说明（自动提取）：validateEventSheet；输入 documentInput、records；直接调用 normalizeEventSheet、Map、callbackNamesInLogic、resolveAsset、resolveEventSheetPrimaryLogic 等；写入 base；返回路径包含 diagnostics；包含循环处理。 */ export function validateEventSheet(documentInput: EventSheetDocument, records: readonly AssetRecord[] = []): EventSheetDiagnostic[] {
   const document = normalizeEventSheet(documentInput), diagnostics: EventSheetDiagnostic[] = [], seen = new Map<string, string>(), names = callbackNamesInLogic(document)
   const logic = resolveAsset(resolveEventSheetPrimaryLogic(document))
   if (!logic || (logic.assetType !== 'script' && logic.assetType !== 'visualScript')) diagnostics.push({ severity: 'error', code: 'EVENT-LOGIC-MISSING', message: 'Select a Rhai or Visual Graph logic asset.' })
@@ -166,7 +167,7 @@ export function validateEventSheet(documentInput: EventSheetDocument, records: r
     if (!names.has(handler.callback)) diagnostics.push({ severity: 'warning', code: 'EVENT-CALLBACK-MISSING', message: `Callback “${handler.callback}” is not present in the selected logic asset.`, handlerUuid: handler.uuid })
     if (['input-pressed', 'input-released', 'timer', 'task', 'signal', 'ui', 'animation', 'network'].includes(handler.kind) && !handler.selector) diagnostics.push({ severity: 'warning', code: 'EVENT-SELECTOR-MISSING', message: `${handler.kind} needs an action, timer, task, signal, control, animation, or RPC selector.`, handlerUuid: handler.uuid })
   }
-  if (availableRecords.length && document.baseSheetAsset && !availableRecords.some(record => record.assetType === 'eventSheet' && record.uuid === assetGuid(document.baseSheetAsset))) diagnostics.push({ severity: 'error', code: 'EVENT-BASE-MISSING', message: 'The inherited Event Sheet asset is missing.' })
+  if (availableRecords.length && document.baseSheetAsset && !availableRecords.some(/* 先计算 record.assetType === 'eventSheet'；仅当其为真值时求右侧 record.uuid === assetGuid(document.baseSheetAsset)，返回短路求值结果。 */ record => record.assetType === 'eventSheet' && record.uuid === assetGuid(document.baseSheetAsset))) diagnostics.push({ severity: 'error', code: 'EVENT-BASE-MISSING', message: 'The inherited Event Sheet asset is missing.' })
   const inherited = new Set<string>([document.uuid]); let base = document.baseSheetAsset
   while (base) {
     if (inherited.size >= 64) { diagnostics.push({ severity: 'error', code: 'EVENT-INHERIT-DEPTH', message: 'Event Sheet inheritance exceeds 64 sheets.' }); break }
@@ -178,20 +179,20 @@ export function validateEventSheet(documentInput: EventSheetDocument, records: r
   return diagnostics
 }
 
-export function attachEventSheet(entity: Entity, eventSheetReference: string): Script2D | null {
+/** 结构说明（自动提取）：attachEventSheet；输入 entity、eventSheetReference；直接调用 readEventSheet、resolveEventSheetPrimaryLogic、some、validateEventSheet、entity.addComponent 等；写入 script.eventSheetAsset、script.scriptAsset；返回路径包含 script。 */ export function attachEventSheet(entity: Entity, eventSheetReference: string): Script2D | null {
   const document = readEventSheet(eventSheetReference)
   if (!document) return null
   const logic = resolveEventSheetPrimaryLogic(document)
-  if (!logic || validateEventSheet(document).some(diagnostic => diagnostic.severity === 'error')) return null
+  if (!logic || validateEventSheet(document).some(/* 比较 diagnostic.severity 与 'error'，返回严格相等的判断结果。 */ diagnostic => diagnostic.severity === 'error')) return null
   const script = entity.script2D ?? entity.addComponent(new Script2D())
   script.eventSheetAsset = eventSheetReference
   script.scriptAsset = logic
   return script
 }
 
-export function eventHandlerKey(handler: ObjectEventHandler): string { return JSON.stringify([handler.kind, handler.selector, handler.callback]) }
+/* 调用 JSON.stringify([handler.kind, handler.selector, handler.callback]) 并返回调用结果。 */ export function eventHandlerKey(handler: ObjectEventHandler): string { return JSON.stringify([handler.kind, handler.selector, handler.callback]) }
 
-export function resolveEventHandlers(reference: string | null | undefined, visited = new Set<string>()): ResolvedObjectEventHandler[] {
+/** 结构说明（自动提取）：resolveEventHandlers；输入 reference、visited；直接调用 Set、assetGuid、readEventSheet、seen.has、seen.add 等；写入 cursor；包含循环处理。 */ export function resolveEventHandlers(reference: string | null | undefined, visited = new Set<string>()): ResolvedObjectEventHandler[] {
   const chain: Array<{ asset: string; document: EventSheetDocument }> = []
   const seen = new Set(visited)
   let cursor = reference
@@ -215,27 +216,27 @@ export function resolveEventHandlers(reference: string | null | undefined, visit
       if (resolved.size > MAX_EVENT_HANDLERS) return []
     }
   }
-  return [...resolved.values()].filter(handler => handler.enabled).sort((a, b) => b.priority - a.priority || a.sourceSheetAsset.localeCompare(b.sourceSheetAsset) || a.uuid.localeCompare(b.uuid))
+  return [...resolved.values()].filter(/* 返回 handler.enabled 的当前值。 */ handler => handler.enabled).sort(/* 先计算 b.priority - a.priority || a.sourceSheetAsset.localeCompare(b.sourceSheetAsset)；仅当其为假值时求右侧 a.uuid.localeCompare(b.uuid)，返回短路求值结果。 */ (a, b) => b.priority - a.priority || a.sourceSheetAsset.localeCompare(b.sourceSheetAsset) || a.uuid.localeCompare(b.uuid))
 }
 
 /** Deterministic bounded dispatch planner used by editor audit and runtime bridges. */
-export function scheduleObjectEvents(entities: readonly Entity[], kind: ObjectEventKind, selector = ''): ScheduledObjectEvent[] {
+/** 结构说明（自动提取）：scheduleObjectEvents；输入 entities、kind、selector；直接调用 sort、readEventSheet、resolveEventHandlers、scheduled.push、scheduled.sort；包含循环处理。 */ export function scheduleObjectEvents(entities: readonly Entity[], kind: ObjectEventKind, selector = ''): ScheduledObjectEvent[] {
   const scheduled: ScheduledObjectEvent[] = []
-  for (const entity of [...entities].sort((a, b) => a.uuid.localeCompare(b.uuid))) {
+  for (const entity of [...entities].sort(/* 调用 a.uuid.localeCompare(b.uuid) 并返回调用结果。 */ (a, b) => a.uuid.localeCompare(b.uuid))) {
     if (!entity.enabled || !entity.script2D?.enabled || !entity.script2D.eventSheetAsset) continue
     const sheet = readEventSheet(entity.script2D.eventSheetAsset)
     if (!sheet?.enabled) continue
     for (const handler of resolveEventHandlers(entity.script2D.eventSheetAsset)) {
       if (handler.kind !== kind || (handler.selector && handler.selector !== selector)) continue
       scheduled.push({ sheetUuid: handler.sourceSheetUuid, sourceSheetAsset: handler.sourceSheetAsset, logicAsset: handler.logicAsset, handlerUuid: handler.uuid, entityUuid: entity.uuid, callback: handler.callback, priority: handler.priority, order: scheduled.length })
-      if (scheduled.length >= MAX_EVENT_HANDLERS) return scheduled.sort((a, b) => b.priority - a.priority || a.entityUuid.localeCompare(b.entityUuid) || a.handlerUuid.localeCompare(b.handlerUuid))
+      if (scheduled.length >= MAX_EVENT_HANDLERS) return scheduled.sort(/* 先计算 b.priority - a.priority || a.entityUuid.localeCompare(b.entityUuid)；仅当其为假值时求右侧 a.handlerUuid.localeCompare(b.handlerUuid)，返回短路求值结果。 */ (a, b) => b.priority - a.priority || a.entityUuid.localeCompare(b.entityUuid) || a.handlerUuid.localeCompare(b.handlerUuid))
     }
   }
-  return scheduled.sort((a, b) => b.priority - a.priority || a.entityUuid.localeCompare(b.entityUuid) || a.handlerUuid.localeCompare(b.handlerUuid))
+  return scheduled.sort(/* 先计算 b.priority - a.priority || a.entityUuid.localeCompare(b.entityUuid)；仅当其为假值时求右侧 a.handlerUuid.localeCompare(b.handlerUuid)，返回短路求值结果。 */ (a, b) => b.priority - a.priority || a.entityUuid.localeCompare(b.entityUuid) || a.handlerUuid.localeCompare(b.handlerUuid))
 }
 
 /** Stable per-sheet random stream; save/load and hot reload reproduce the same sequence. */
-export function createEventRandomStream(seed: number): () => number {
+/** 结构说明（自动提取）：createEventRandomStream；输入 seed；直接调用 finiteInteger。 */ export function createEventRandomStream(seed: number): () => number {
   let state = (finiteInteger(seed, 1, 1, 0x7fff_ffff) >>> 0) || 1
-  return () => { state ^= state << 13; state ^= state >>> 17; state ^= state << 5; return (state >>> 0) / 0x1_0000_0000 }
+  return /** 结构说明（自动提取）：匿名回调；无显式参数；写入 state。 */ () => { state ^= state << 13; state ^= state >>> 17; state ^= state << 5; return (state >>> 0) / 0x1_0000_0000 }
 }

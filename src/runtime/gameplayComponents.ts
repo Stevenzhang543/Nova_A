@@ -1,3 +1,4 @@
+/** 常用游戏组件行为：更新控制器、生命值、生成及其他通用玩法状态。 */
 import { reactive } from 'vue'
 import type { Entity } from '../world/Entity'
 import type {
@@ -18,10 +19,10 @@ export const gameplayComponentDiagnostics = reactive({ controllers: 0, spawns: 0
 const verticalVelocity = new Map<string, number>()
 const hitCooldowns = new Map<string, number>()
 
-function approach(value: number, target: number, maximumDelta: number): number { return value < target ? Math.min(target, value + maximumDelta) : Math.max(target, value - maximumDelta) }
-function normalized(x: number, y: number): { x: number; y: number } { const length = Math.hypot(x, y); return length > 1e-9 ? { x: x / length, y: y / length } : { x: 0, y: 0 } }
+/* 根据 value < target 的真假，分别返回 Math.min(target, value + maximumDelta) 或 Math.max(target, value - maximumDelta)。 */ function approach(value: number, target: number, maximumDelta: number): number { return value < target ? Math.min(target, value + maximumDelta) : Math.max(target, value - maximumDelta) }
+/** 结构说明（自动提取）：normalized；输入 x、y；直接调用 Math.hypot。 */ function normalized(x: number, y: number): { x: number; y: number } { const length = Math.hypot(x, y); return length > 1e-9 ? { x: x / length, y: y / length } : { x: 0, y: 0 } }
 
-export function initializeGameplayEntities(entities: readonly Entity[]): void {
+/** 结构说明（自动提取）：initializeGameplayEntities；输入 entities；直接调用 entity.getComponent、Math.min、Math.max、finiteNumber、normalized；写入 health.current、health.runtimeInvulnerability、cooldown.runtimeRemaining、cooldown.runtimeReady 等；包含循环处理。 */ export function initializeGameplayEntities(entities: readonly Entity[]): void {
   for (const entity of entities) {
     const health = entity.getComponent<Health2D>('Health2D'); if (health) { health.current = Math.min(health.maximum, Math.max(0, finiteNumber(health.current, health.maximum))); health.runtimeInvulnerability = 0 }
     const cooldown = entity.getComponent<Cooldown2D>('Cooldown2D'); if (cooldown) { cooldown.runtimeRemaining = cooldown.autoStart ? cooldown.duration : 0; cooldown.runtimeReady = !cooldown.autoStart }
@@ -31,12 +32,12 @@ export function initializeGameplayEntities(entities: readonly Entity[]): void {
   }
 }
 
-export function beginGameplayComponents(entities: readonly Entity[]): void {
+/** 结构说明（自动提取）：beginGameplayComponents；输入 entities；直接调用 verticalVelocity.clear、hitCooldowns.clear、initializeGameplayEntities；写入 gameplayComponentDiagnostics.controllers、gameplayComponentDiagnostics.spawns、gameplayComponentDiagnostics.damageEvents、gameplayComponentDiagnostics.collections 等。 */ export function beginGameplayComponents(entities: readonly Entity[]): void {
   verticalVelocity.clear(); hitCooldowns.clear(); gameplayComponentDiagnostics.controllers = 0; gameplayComponentDiagnostics.spawns = 0; gameplayComponentDiagnostics.damageEvents = 0; gameplayComponentDiagnostics.collections = 0; gameplayComponentDiagnostics.expired = 0; gameplayComponentDiagnostics.lastError = ''
   initializeGameplayEntities(entities)
 }
 
-export function updateGameplayComponents(entities: readonly Entity[], input: InputSnapshot, fixedDelta: number, emit: Emit, spawn: Spawn, remove: Remove): void {
+/** 结构说明（自动提取）：updateGameplayComponents；输入 entities、input、fixedDelta、emit、spawn、remove；直接调用 Math.min、Math.max、finiteNumber、hitCooldowns.delete、hitCooldowns.set 等；写入 gameplayComponentDiagnostics.controllers、health.runtimeInvulnerability、entity.velocity、velocity 等；包含循环处理。 */ export function updateGameplayComponents(entities: readonly Entity[], input: InputSnapshot, fixedDelta: number, emit: Emit, spawn: Spawn, remove: Remove): void {
   const dt = Math.min(.25, Math.max(0, finiteNumber(fixedDelta)))
   gameplayComponentDiagnostics.controllers = 0
   for (const [key, remaining] of [...hitCooldowns]) if (remaining <= dt) hitCooldowns.delete(key); else hitCooldowns.set(key, remaining - dt)
@@ -102,7 +103,7 @@ export function updateGameplayComponents(entities: readonly Entity[], input: Inp
     if (lifetime?.enabled) { lifetime.runtimeRemaining -= dt; if (lifetime.runtimeRemaining <= 0) { remove(entity, lifetime.useDespawn); gameplayComponentDiagnostics.expired++; continue } }
     const spawner = entity.getComponent<Spawner2D>('Spawner2D')
     if (spawner?.enabled && spawner.runtimeStarted && spawner.prefabAsset) {
-      spawner.runtimeSpawned = spawner.runtimeSpawned.filter(uuid => entities.some(candidate => candidate.uuid === uuid && candidate.enabled))
+      spawner.runtimeSpawned = spawner.runtimeSpawned.filter(/* 调用 entities.some(candidate => candidate.uuid === uuid && candidate.enabled) 并返回调用结果。 */ uuid => entities.some(/* 先计算 candidate.uuid === uuid；仅当其为真值时求右侧 candidate.enabled，返回短路求值结果。 */ candidate => candidate.uuid === uuid && candidate.enabled))
       spawner.runtimeRemaining -= dt
       if (spawner.runtimeRemaining <= 0 && spawner.runtimeSpawned.length < spawner.maximumAlive) {
         const count = Math.min(spawner.burst, spawner.maximumAlive - spawner.runtimeSpawned.length)
@@ -112,7 +113,7 @@ export function updateGameplayComponents(entities: readonly Entity[], input: Inp
     }
     const follow = entity.getComponent<CameraFollow2D>('CameraFollow2D')
     if (follow?.enabled && entity.camera2D) {
-      const target = entities.find(candidate => candidate.uuid === follow.targetUuid) ?? entities.find(candidate => candidate.tags.includes(follow.targetTag)); if (!target) continue
+      const target = entities.find(/* 比较 candidate.uuid 与 follow.targetUuid，返回严格相等的判断结果。 */ candidate => candidate.uuid === follow.targetUuid) ?? entities.find(/* 调用 candidate.tags.includes(follow.targetTag) 并返回调用结果。 */ candidate => candidate.tags.includes(follow.targetTag)); if (!target) continue
       const transform = worldTransform(entity, entities), targetTransform = worldTransform(target, entities), desired = { x: targetTransform.position.x + follow.offset.x, y: targetTransform.position.y + follow.offset.y }, difference = { x: desired.x - transform.position.x, y: desired.y - transform.position.y }, alpha = follow.smoothing <= 0 ? 1 : 1 - Math.exp(-follow.smoothing * dt)
       const next = { x: follow.followX && Math.abs(difference.x) > follow.deadZone.x ? transform.position.x + difference.x * alpha : transform.position.x, y: follow.followY && Math.abs(difference.y) > follow.deadZone.y ? transform.position.y + difference.y * alpha : transform.position.y }
       setWorldTransform(entity, { ...transform, position: next }, entities)
@@ -120,7 +121,7 @@ export function updateGameplayComponents(entities: readonly Entity[], input: Inp
   }
 }
 
-function applyDamage(source: Entity, target: Entity, damage: number, knockback: number, signal: string, cooldown: number, emit: Emit, remove: Remove, destroySource: boolean): boolean {
+/** 结构说明（自动提取）：applyDamage；输入 source、target、damage、knockback、signal、cooldown、emit、remove、destroySource；直接调用 target.getComponent、hitCooldowns.has、hitCooldowns.set、Math.max、worldTransform 等；写入 health.current、health.runtimeInvulnerability、target.velocity.x、target.velocity.y。 */ function applyDamage(source: Entity, target: Entity, damage: number, knockback: number, signal: string, cooldown: number, emit: Emit, remove: Remove, destroySource: boolean): boolean {
   const health = target.getComponent<Health2D>('Health2D'); if (!health?.enabled || health.runtimeInvulnerability > 0 || damage <= 0) return false
   const key = `${source.uuid}:${target.uuid}`; if (hitCooldowns.has(key)) return false; hitCooldowns.set(key, Math.max(0, cooldown))
   health.current = Math.max(0, health.current - damage); health.runtimeInvulnerability = health.invulnerabilitySeconds; gameplayComponentDiagnostics.damageEvents++
@@ -134,10 +135,10 @@ function applyDamage(source: Entity, target: Entity, damage: number, knockback: 
   return true
 }
 
-export function processGameplayContacts(events: readonly RuntimePhysicsEvent[], entities: readonly Entity[], emit: Emit, remove: Remove): void {
+/** 结构说明（自动提取）：processGameplayContacts；输入 events、entities、emit、remove；直接调用 includes、entities.find、source.getComponent、target.tags.includes、applyDamage 等；包含循环处理。 */ export function processGameplayContacts(events: readonly RuntimePhysicsEvent[], entities: readonly Entity[], emit: Emit, remove: Remove): void {
   for (const event of events) {
     if (!['collisionStarted', 'triggerEntered'].includes(event.type) || !event.firstEntityUuid || !event.secondEntityUuid) continue
-    const first = entities.find(entity => entity.uuid === event.firstEntityUuid), second = entities.find(entity => entity.uuid === event.secondEntityUuid); if (!first || !second) continue
+    const first = entities.find(/* 比较 entity.uuid 与 event.firstEntityUuid，返回严格相等的判断结果。 */ entity => entity.uuid === event.firstEntityUuid), second = entities.find(/* 比较 entity.uuid 与 event.secondEntityUuid，返回严格相等的判断结果。 */ entity => entity.uuid === event.secondEntityUuid); if (!first || !second) continue
     for (const [source, target] of [[first, second], [second, first]] as const) {
       const hitbox = source.getComponent<DamageHitbox2D>('DamageHitbox2D'), projectile = source.getComponent<Projectile2D>('Projectile2D')
       if (hitbox?.enabled && (!hitbox.targetTag || target.tags.includes(hitbox.targetTag))) applyDamage(source, target, hitbox.damage, hitbox.knockback, hitbox.hitSignal, hitbox.hitCooldown, emit, remove, hitbox.destroyOnHit)

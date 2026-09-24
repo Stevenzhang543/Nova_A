@@ -1,3 +1,4 @@
+/** 功能回归脚本：执行 verify-v26.14-focus.mjs 对应场景，保留断言和证据输出。 */
 import assert from 'node:assert/strict'
 import {readFile,readdir,stat,writeFile} from 'node:fs/promises'
 import {createHash} from 'node:crypto'
@@ -19,7 +20,7 @@ for(const [script,args,reports] of [
  ['generate-v26.14-release-references.mjs',['--verify-only'],[]],
  ['audit-v26.13-panels.mjs',[],['panel-source-inventory.json']],
 ]){
- const execution=await runAudit(root,'scripts/'+script,args);execution.reports=reports.map(name=>'release-audits/'+name)
+ const execution=await runAudit(root,'scripts/'+script,args);execution.reports=reports.map(/* 计算表达式 'release-audits/'+name 并返回结果，沿用操作数的原有类型规则。 */ name=>'release-audits/'+name)
  if(script==='verify-v26.14-native-tests.mjs'){
   const directory=join(root,'release-audits/v26.14-native-test-fixtures'),files=[]
   for(const name of(await readdir(directory)).sort()){assert.match(name,/^[a-z0-9-]+\.(rhai|json)$/);const path=join(directory,name),bytes=await readFile(path);assert.ok(bytes.length<1024*1024);assert.ok((await stat(path)).mtimeMs>=execution.startedAt-1000);files.push({name,bytes:bytes.length,sha256:createHash('sha256').update(bytes).digest('hex'),text:bytes.toString()})}

@@ -1,3 +1,4 @@
+/** 稳定创作者平台资料：组织兼容边界、功能状态和创作验证信息。 */
 import { CREATOR_LEARNING_GUIDES, type LearningGuide } from './creatorLearning'
 import { PLATFORM_GAP_REGISTER, PLATFORM_GAP_SUMMARY } from './platformGapRegister'
 import { NOVA_FEATURE_FREEZE, NOVA_STABLE_CONTRACTS } from './stableContracts'
@@ -36,19 +37,19 @@ const RELEASE = NOVA_RELEASE_NAME
 const MACHINE_VERSION = NOVA_ENGINE_VERSION
 const SCOPE_DOCUMENT = 'docs/STABLE_CREATOR_PLATFORM_26_10.md'
 
-function evidence(status: ReadinessStatus, authority: EvidenceAuthority, source: string, route: string, detail: string, gapId?: string): ReadinessEvidence {
+/* 调用 Object.freeze({ status, authority, source, route, detail, ...(gapId ? { gapId } : {}) }) 并返回调用结果。 */ function evidence(status: ReadinessStatus, authority: EvidenceAuthority, source: string, route: string, detail: string, gapId?: string): ReadinessEvidence {
   return Object.freeze({ status, authority, source, route, detail, ...(gapId ? { gapId } : {}) })
 }
 
-function local(authority: Exclude<EvidenceAuthority, 'scope-contract' | 'external-evidence'>, source: string, route: string, detail: string): ReadinessEvidence {
+/* 调用 evidence('covered', authority, source, route, detail) 并返回调用结果。 */ function local(authority: Exclude<EvidenceAuthority, 'scope-contract' | 'external-evidence'>, source: string, route: string, detail: string): ReadinessEvidence {
   return evidence('covered', authority, source, route, detail)
 }
 
-function excluded(detail: string): ReadinessEvidence {
+/* 调用 evidence('not-applicable', 'scope-contract', SCOPE_DOCUMENT, 'scope:26.10/{id}', detail) 并返回调用结果。 */ function excluded(detail: string): ReadinessEvidence {
   return evidence('not-applicable', 'scope-contract', SCOPE_DOCUMENT, 'scope:26.10/{id}', detail)
 }
 
-function documentation(): ReadinessEvidence {
+/** 结构说明（自动提取）：documentation；无显式参数；直接调用 local。 */ function documentation(): ReadinessEvidence {
   return local('documentation', 'manual/MANUAL.en.md', 'manual:EN/DE/ZH#{id}', 'The operation has a stable manual anchor in each bundled locale; manual parity and link audits are separate release gates.')
 }
 
@@ -64,7 +65,7 @@ interface AuthoredPolicyOptions {
   undo?: string
 }
 
-function authoredPolicy(options: AuthoredPolicyOptions): CreatorReadinessPolicy {
+/** 结构说明（自动提取）：authoredPolicy；输入 options；直接调用 Object.freeze、local、documentation。 */ function authoredPolicy(options: AuthoredPolicyOptions): CreatorReadinessPolicy {
   return Object.freeze({
     catalogPrefix: options.prefix,
     owner: options.owner,
@@ -91,7 +92,7 @@ interface EditorPolicyOptions {
   mutatesWorkspace?: boolean
 }
 
-function editorPolicy(options: EditorPolicyOptions): CreatorReadinessPolicy {
+/** 结构说明（自动提取）：editorPolicy；输入 options；直接调用 Object.freeze、local、excluded、documentation。 */ function editorPolicy(options: EditorPolicyOptions): CreatorReadinessPolicy {
   const mutatesWorkspace = options.mutatesWorkspace ?? true
   return Object.freeze({
     catalogPrefix: options.prefix,
@@ -112,7 +113,7 @@ function editorPolicy(options: EditorPolicyOptions): CreatorReadinessPolicy {
   })
 }
 
-function projectManagerPolicy(): CreatorReadinessPolicy {
+/** 结构说明（自动提取）：projectManagerPolicy；无显式参数；直接调用 Object.freeze、local、excluded、documentation。 */ function projectManagerPolicy(): CreatorReadinessPolicy {
   return Object.freeze({
     catalogPrefix: 'project-manager', owner: 'Project Manager',
     dimensions: Object.freeze({
@@ -127,7 +128,7 @@ function projectManagerPolicy(): CreatorReadinessPolicy {
   })
 }
 
-function taskPolicy(prefix: string, fixture: string): CreatorReadinessPolicy {
+/** 结构说明（自动提取）：taskPolicy；输入 prefix、fixture；直接调用 authoredPolicy。 */ function taskPolicy(prefix: string, fixture: string): CreatorReadinessPolicy {
   return authoredPolicy({
     prefix, owner: 'Guided Project', binding: 'src/runtime/creatorLearning.ts', validation: 'src/runtime/productionValidation.ts',
     persistence: `${fixture}/project.nova`, runtime: 'src/runtime/productionRuntime.ts', tests: `${fixture}/test-controls.json`, family: `guided-project/${prefix}`
@@ -176,17 +177,17 @@ export const CREATOR_READINESS_POLICIES: readonly CreatorReadinessPolicy[] = Obj
   taskPolicy('task-object-family', 'reference-projects/projects/creator-v2614-enemy-family')
 ])
 
-function materialize(template: ReadinessEvidence, guide: LearningGuide): ReadinessEvidence {
+/* 调用 Object.freeze({ ...template, route: template.route.split('{id}').join(guide.id) }) 并返回调用结果。 */ function materialize(template: ReadinessEvidence, guide: LearningGuide): ReadinessEvidence {
   return Object.freeze({ ...template, route: template.route.split('{id}').join(guide.id) })
 }
 
 export const CREATOR_READINESS_DIMENSIONS: readonly ReadinessDimension[] = Object.freeze(['binding', 'validation', 'undo', 'persistence', 'runtimeExport', 'documentation', 'tests'])
 
-function readinessFor(guide: LearningGuide): CreatorFeatureReadiness {
-  const matches = CREATOR_READINESS_POLICIES.filter(policy => guide.id === policy.catalogPrefix || guide.id.startsWith(`${policy.catalogPrefix}-`))
+/** 结构说明（自动提取）：readinessFor；输入 guide；直接调用 CREATOR_READINESS_POLICIES.filter、Error、Object.fromEntries、CREATOR_READINESS_DIMENSIONS.map、Object.freeze 等；包含显式抛错路径。 */ function readinessFor(guide: LearningGuide): CreatorFeatureReadiness {
+  const matches = CREATOR_READINESS_POLICIES.filter(/* 先计算 guide.id === policy.catalogPrefix；仅当其为假值时求右侧 guide.id.startsWith(`${policy.catalogPrefix}-`)，返回短路求值结果。 */ policy => guide.id === policy.catalogPrefix || guide.id.startsWith(`${policy.catalogPrefix}-`))
   if (matches.length !== 1) throw new Error(`Readiness policy invariant failed for ${guide.id}: expected one exact prefix policy, found ${matches.length}.`)
   const policy = matches[0]
-  const dimensions = Object.fromEntries(CREATOR_READINESS_DIMENSIONS.map(dimension => [dimension, materialize(policy.dimensions[dimension], guide)])) as Record<ReadinessDimension, ReadinessEvidence>
+  const dimensions = Object.fromEntries(CREATOR_READINESS_DIMENSIONS.map(/* 返回按声明顺序构造的数组 [dimension, materialize(policy.dimensions[dimension], guide)]。 */ dimension => [dimension, materialize(policy.dimensions[dimension], guide)])) as Record<ReadinessDimension, ReadinessEvidence>
   return Object.freeze({ id: guide.id, feature: guide.feature, panel: guide.panel, workspace: guide.workspace, taskProject: Boolean(guide.taskProject), policy: policy.catalogPrefix, dimensions: Object.freeze(dimensions) })
 }
 
@@ -198,10 +199,10 @@ export const CREATOR_PLATFORM_SUMMARY = Object.freeze({
   features: CREATOR_PLATFORM_READINESS.length,
   policies: CREATOR_READINESS_POLICIES.length,
   dimensions: CREATOR_READINESS_DIMENSIONS.length,
-  covered: CREATOR_PLATFORM_READINESS.reduce((count, item) => count + CREATOR_READINESS_DIMENSIONS.filter(dimension => item.dimensions[dimension].status === 'covered').length, 0),
-  notApplicable: CREATOR_PLATFORM_READINESS.reduce((count, item) => count + CREATOR_READINESS_DIMENSIONS.filter(dimension => item.dimensions[dimension].status === 'not-applicable').length, 0),
-  external: CREATOR_PLATFORM_READINESS.reduce((count, item) => count + CREATOR_READINESS_DIMENSIONS.filter(dimension => item.dimensions[dimension].status === 'external').length, 0),
-  uncovered: CREATOR_PLATFORM_READINESS.reduce((count, item) => count + CREATOR_READINESS_DIMENSIONS.filter(dimension => !item.dimensions[dimension]).length, 0),
+  covered: CREATOR_PLATFORM_READINESS.reduce(/** 结构说明（自动提取）：CREATOR_PLATFORM_READINESS.reduce 回调；输入 count、item；直接调用 CREATOR_READINESS_DIMENSIONS.filter；返回表达式求值结果。 */ (count, item) => count + CREATOR_READINESS_DIMENSIONS.filter(/* 比较 item.dimensions[dimension].status 与 'covered'，返回严格相等的判断结果。 */ dimension => item.dimensions[dimension].status === 'covered').length, 0),
+  notApplicable: CREATOR_PLATFORM_READINESS.reduce(/** 结构说明（自动提取）：CREATOR_PLATFORM_READINESS.reduce 回调；输入 count、item；直接调用 CREATOR_READINESS_DIMENSIONS.filter；返回表达式求值结果。 */ (count, item) => count + CREATOR_READINESS_DIMENSIONS.filter(/* 比较 item.dimensions[dimension].status 与 'not-applicable'，返回严格相等的判断结果。 */ dimension => item.dimensions[dimension].status === 'not-applicable').length, 0),
+  external: CREATOR_PLATFORM_READINESS.reduce(/** 结构说明（自动提取）：CREATOR_PLATFORM_READINESS.reduce 回调；输入 count、item；直接调用 CREATOR_READINESS_DIMENSIONS.filter；返回表达式求值结果。 */ (count, item) => count + CREATOR_READINESS_DIMENSIONS.filter(/* 比较 item.dimensions[dimension].status 与 'external'，返回严格相等的判断结果。 */ dimension => item.dimensions[dimension].status === 'external').length, 0),
+  uncovered: CREATOR_PLATFORM_READINESS.reduce(/** 结构说明（自动提取）：CREATOR_PLATFORM_READINESS.reduce 回调；输入 count、item；直接调用 CREATOR_READINESS_DIMENSIONS.filter；返回表达式求值结果。 */ (count, item) => count + CREATOR_READINESS_DIMENSIONS.filter(/* 返回 item.dimensions[dimension] 的逻辑取反结果。 */ dimension => !item.dimensions[dimension]).length, 0),
   openBlockingGaps: PLATFORM_GAP_SUMMARY.openBlocking,
   deferredExternalGaps: PLATFORM_GAP_SUMMARY.deferredExternal
 })
@@ -210,7 +211,7 @@ export const CREATOR_CONTRACT_REVIEW = Object.freeze({
   release: RELEASE,
   machineVersion: MACHINE_VERSION,
   reviewedContracts: NOVA_STABLE_CONTRACTS.length,
-  currentContractsFrozen: NOVA_STABLE_CONTRACTS.every(contract => contract.frozen),
+  currentContractsFrozen: NOVA_STABLE_CONTRACTS.every(/* 返回 contract.frozen 的当前值。 */ contract => contract.frozen),
   schemaChangeApproved: false,
   breakingChangesApproved: 0,
   nextContractDecision: 'deferred' as const,

@@ -1,3 +1,4 @@
+/** 发布资格执行器：验证门禁计划、执行结果、冻结源码和打包证据，禁止用未执行状态冒充通过。 */
 import { createHash, randomUUID } from 'node:crypto'
 import { spawn } from 'node:child_process'
 import { createWriteStream } from 'node:fs'
@@ -14,14 +15,17 @@ export const reportTargets = {
 }
 export const artifactNames = ['web-editor', 'web-player', 'windows-editor', 'windows-nsis', 'windows-msi', 'windows-headless-authority']
 const userGates = new Set(['browser-layout', 'user-interactions', 'windows', 'headless'])
-const sha256 = bytes => createHash('sha256').update(bytes).digest('hex')
-export const writeJson = (path, value) => writeFile(path, `${JSON.stringify(value, null, 2)}\n`)
+const sha256 = /* 调用 createHash('sha256').update(bytes).digest('hex') 并返回调用结果。 */ bytes => createHash('sha256').update(bytes).digest('hex')
+/** 写入完整的紧凑 JSON；避免嵌套布局证据的缩进膨胀超过 Node 字符串上限。字段及数组顺序保持不变。 */
+export const writeJson = /* 调用 writeFile(path, `${JSON.stringify(value)}\n`) 并返回调用结果。 */ (path, value) => writeFile(path, `${JSON.stringify(value)}\n`)
+/** 拒绝空路径、绝对路径、盘符和点段，再核对解析结果仍位于根目录内；返回可使用的绝对路径。 */
 export function confinedPath(root, path) {
-  if (typeof path !== 'string' || !path || isAbsolute(path) || /^[a-z]:/i.test(path) || path.replaceAll('\\', '/').split('/').some(part => !part || part === '.' || part === '..')) throw new Error(`Unsafe release input path: ${path}`)
+  if (typeof path !== 'string' || !path || isAbsolute(path) || /^[a-z]:/i.test(path) || path.replaceAll('\\', '/').split('/').some(/* 先计算 !part || part === '.'；仅当其为假值时求右侧 part === '..'，返回短路求值结果。 */ part => !part || part === '.' || part === '..')) throw new Error(`Unsafe release input path: ${path}`)
   const result = resolve(root, path), back = relative(root, result)
   if (back.startsWith('..') || isAbsolute(back)) throw new Error(`Release input escapes its root: ${path}`)
   return result
 }
+/** 限定路径后拒绝符号链接和非普通文件，读取实际字节并返回规范路径、长度和 SHA-256。 */
 export async function fileRecord(root, path) {
   const full = confinedPath(root, path)
   const info = await lstat(full)
@@ -29,6 +33,7 @@ export async function fileRecord(root, path) {
   const bytes = await readFile(full)
   return { path: path.replaceAll('\\', '/'), bytes: bytes.length, sha256: sha256(bytes) }
 }
+/** 递归枚举证据目录的普通文件，遇到链接即失败；排序输出用于逐文件完整性核对。 */
 export async function filesBelow(root, prefix = '') {
   const files = []
   for (const item of await readdir(join(root, prefix), { withFileTypes: true })) {
@@ -39,6 +44,7 @@ export async function filesBelow(root, prefix = '') {
   }
   return files.sort()
 }
+/** 检查发布身份、全部必需门禁、报告目标和六项产物是否齐全且唯一；执行上下文和阻塞原因必须明确。 */
 export function validateQualificationPlan(plan) {
   if (plan.format !== 'nova-release-qualification-plan' || plan.version !== 1 || releaseVersion(plan.release) !== plan.machineVersion || Number(plan.release.replace('.', '')) < 2612) throw new Error('Expected an explicit qualification plan for release 26.12 or later.')
   if (!Array.isArray(plan.gates)) throw new Error('Qualification plan has no gates.')
@@ -47,26 +53,27 @@ export function validateQualificationPlan(plan) {
     if (!/^[a-z][a-z0-9-]*$/.test(gate.id) || ids.has(gate.id)) throw new Error(`Duplicate/unsafe gate: ${gate.id}`)
     ids.add(gate.id)
     if (!['programmer', 'user', 'environment'].includes(gate.category) || (userGates.has(gate.id) && gate.category !== 'user') || typeof gate.context !== 'string' || !gate.context.trim()) throw new Error(`Gate ${gate.id} requires an honest category and execution context.`)
-    if (!gate.blockedReason && (!gate.command || typeof gate.command.file !== 'string' || !Array.isArray(gate.command.args) || gate.command.args.some(arg => typeof arg !== 'string'))) throw new Error(`Gate ${gate.id} needs an explicit command/argument array or blocking reason.`)
+    if (!gate.blockedReason && (!gate.command || typeof gate.command.file !== 'string' || !Array.isArray(gate.command.args) || gate.command.args.some(/* 比较 typeof arg 与 'string'，返回严格不等的判断结果。 */ arg => typeof arg !== 'string'))) throw new Error(`Gate ${gate.id} needs an explicit command/argument array or blocking reason.`)
     for (const report of gate.reports ?? []) {
       confinedPath('/qualification', report.path); confinedPath('/qualification', report.target)
       if (targets.has(report.target) || !report.format || !Number.isInteger(report.version) || typeof report.requireRelease !== 'boolean' || typeof report.requireEngine !== 'boolean') throw new Error(`Gate ${gate.id} has a duplicate target or incomplete report schema.`)
       targets.add(report.target)
     }
-    if (reportTargets[gate.id] && !(gate.reports ?? []).some(report => report.target === reportTargets[gate.id])) throw new Error(`Gate ${gate.id} must provide ${reportTargets[gate.id]} with its actual report schema.`)
+    if (reportTargets[gate.id] && !(gate.reports ?? []).some(/* 比较 report.target 与 reportTargets[gate.id]，返回严格相等的判断结果。 */ report => report.target === reportTargets[gate.id])) throw new Error(`Gate ${gate.id} must provide ${reportTargets[gate.id]} with its actual report schema.`)
     for (const artifact of gate.artifacts ?? []) {
       confinedPath('/qualification', artifact.path)
       if (!artifactNames.includes(artifact.name) || artifacts.has(artifact.name)) throw new Error(`Unknown/duplicate build artifact: ${artifact.name}`)
       artifacts.add(artifact.name)
     }
   }
-  const missing = requiredGateIds.filter(id => !ids.has(id))
+  const missing = requiredGateIds.filter(/* 返回 ids.has(id) 的逻辑取反结果。 */ id => !ids.has(id))
   if (missing.length) throw new Error(`Qualification plan omits required gates: ${missing.join(', ')}`)
-  if (artifactNames.some(name => !artifacts.has(name))) throw new Error('Qualification plan must bind all six actual local build artifacts to executed gates.')
+  if (artifactNames.some(/* 返回 artifacts.has(name) 的逻辑取反结果。 */ name => !artifacts.has(name))) throw new Error('Qualification plan must bind all six actual local build artifacts to executed gates.')
   for (const path of [plan.releaseNotes, plan.editLedger, ...(plan.documentation ?? [])]) confinedPath('/qualification', path)
   if (plan.sourceSnapshot) confinedPath('/qualification', plan.sourceSnapshot)
   return plan
 }
+/** 核对报告格式、通过状态、发布版本及生成时间属于本次门禁；拒绝未解决的严重问题，再返回文件摘要记录。 */
 export async function validateGateReport(root, specification, identity, startedAt) {
   const record = await fileRecord(root, specification.path), report = JSON.parse(await readFile(confinedPath(root, specification.path), 'utf8'))
   if (report.format !== specification.format || report.version !== specification.version || report.status !== 'passed') throw new Error(`${specification.path}: report schema/status did not pass.`)
@@ -78,16 +85,18 @@ export async function validateGateReport(root, specification, identity, startedA
   if (Number(report.severity0Open ?? 0) !== 0 || Number(report.severity1Open ?? 0) !== 0) throw new Error(`${specification.path}: unresolved severity 0/1 findings.`)
   return { ...record, target: specification.target, format: report.format, version: report.version }
 }
+/** 不经 shell 启动指定程序，将标准输出和错误写入独占日志；关闭日志后返回退出码、信号和启动错误。 */
 async function runCommand(command, root, logPath) {
   const log = createWriteStream(logPath, { flags: 'wx' })
-  return new Promise(resolveResult => {
+  return new Promise(/** 等待子进程关闭，并在日志刷新完成后交付执行结果。 */ resolveResult => {
     const child = spawn(command.file, command.args, { cwd: root, shell: false, windowsHide: true, env: process.env, stdio: ['ignore', 'pipe', 'pipe'] })
     let spawnError
-    child.stdout.on('data', chunk => log.write(chunk)); child.stderr.on('data', chunk => log.write(chunk))
-    child.on('error', error => { spawnError = error.message; log.write(`\nSPAWN ERROR: ${error.message}\n`) })
-    child.on('close', (code, signal) => log.end(() => resolveResult({ exitCode: code, signal, ...(spawnError ? { error: spawnError } : {}) })))
+    child.stdout.on('data', /* 调用 log.write(chunk) 并返回调用结果。 */ chunk => log.write(chunk)); child.stderr.on('data', /* 调用 log.write(chunk) 并返回调用结果。 */ chunk => log.write(chunk))
+    child.on('error', /** 记录无法启动等进程错误；最终结果仍由关闭事件统一提交。 */ error => { spawnError = error.message; log.write(`\nSPAWN ERROR: ${error.message}\n`) })
+    child.on('close', /* 调用 log.end(() => resolveResult({ exitCode: code, signal, ...(spawnError ? { error: spawnError } : {}) })) 并返回调用结果。 */ (code, signal) => log.end(/* 调用 resolveResult({ exitCode: code, signal, ...(spawnError ? { error: spawnError } : {}) }) 并返回调用结果。 */ () => resolveResult({ exitCode: code, signal, ...(spawnError ? { error: spawnError } : {}) })))
   })
 }
+/** 绑定冻结源码依次执行门禁，每次执行前后核对源码；保存报告和产物摘要，首个未通过项停止后续门禁并保留已有证据。 */
 export async function executeReleasePlan(root, planPath) {
   const plan = validateQualificationPlan(JSON.parse(await readFile(planPath, 'utf8')))
   const snapshotPath = confinedPath(root, plan.sourceSnapshot ?? `.cache/release-snapshots/v${plan.release}/snapshot.json`), snapshot = await verifyReleaseSnapshot(snapshotPath, root)
@@ -116,21 +125,22 @@ export async function executeReleasePlan(root, planPath) {
           execution.reports.push(record)
         }
         for (const artifact of gate.artifacts ?? []) execution.artifacts.push({ ...await fileRecord(root, artifact.path), name: artifact.name, status: 'passed' })
-        if ((gate.artifacts ?? []).some(artifact => artifact.name === 'web-editor')) execution.webFiles = await Promise.all((await filesBelow(join(root, 'dist'))).map(path => fileRecord(root, `dist/${path}`)))
+        if ((gate.artifacts ?? []).some(/* 比较 artifact.name 与 'web-editor'，返回严格相等的判断结果。 */ artifact => artifact.name === 'web-editor')) execution.webFiles = await Promise.all((await filesBelow(join(root, 'dist'))).map(/* 调用 fileRecord(root, `dist/${path}`) 并返回调用结果。 */ path => fileRecord(root, `dist/${path}`)))
         execution.status = 'passed'
       } catch (error) { execution.status = 'failed'; execution.reason = error.message }
     }
     execution.generatedAt = new Date().toISOString()
     await writeJson(join(runRoot, 'executed-gates.json'), result)
-    // Preserve the failed command and every prior result. Never invent results for unrun gates.
+    // 保留失败命令及此前全部结果；未执行的门禁不生成虚假的通过记录。
     if (execution.status !== 'passed') break
   }
   result.generatedAt = new Date().toISOString()
-  result.status = result.gates.length === plan.gates.length && result.gates.every(gate => gate.status === 'passed') ? 'passed' : 'incomplete'
+  result.status = result.gates.length === plan.gates.length && result.gates.every(/* 比较 gate.status 与 'passed'，返回严格相等的判断结果。 */ gate => gate.status === 'passed') ? 'passed' : 'incomplete'
   await writeJson(join(runRoot, 'executed-gates.json'), result)
   console.log(JSON.stringify({ runRoot, status: result.status, executed: result.gates.length, required: plan.gates.length }))
   return { runRoot, result, plan }
 }
+/** 重新核对完整执行记录与声明计划、冻结源码及当前产物；检查日志、报告和 Web 文件未被替换或改动。 */
 export async function verifyExecutedGates(root, runRoot) {
   const plan = validateQualificationPlan(JSON.parse(await readFile(join(runRoot, 'plan.json'), 'utf8')))
   const result = JSON.parse(await readFile(join(runRoot, 'executed-gates.json'), 'utf8'))
@@ -153,13 +163,14 @@ export async function verifyExecutedGates(root, runRoot) {
       const current = await fileRecord(root, record.path)
       if (record.name !== specification.name || record.path !== specification.path || current.sha256 !== record.sha256 || current.bytes !== record.bytes) throw new Error(`Qualified artifact changed: ${record.name}`)
     }
-    if ((expected.artifacts ?? []).some(artifact => artifact.name === 'web-editor')) {
-      const current = await Promise.all((await filesBelow(join(root, 'dist'))).map(path => fileRecord(root, `dist/${path}`)))
+    if ((expected.artifacts ?? []).some(/* 比较 artifact.name 与 'web-editor'，返回严格相等的判断结果。 */ artifact => artifact.name === 'web-editor')) {
+      const current = await Promise.all((await filesBelow(join(root, 'dist'))).map(/* 调用 fileRecord(root, `dist/${path}`) 并返回调用结果。 */ path => fileRecord(root, `dist/${path}`)))
       if (JSON.stringify(current) !== JSON.stringify(gate.webFiles)) throw new Error('Qualified web assets changed after the web build gate.')
     }
   }
   return { plan, result, snapshot }
 }
+/** 从解包目录独立验证源码、门禁日志、报告和 Web 产物；只允许列明的发布附属文件，要求本机构建清单与执行记录一致。 */
 export async function verifyPackagedQualification(evidenceRoot, sourceRoot, webRoot) {
   const plan = validateQualificationPlan(JSON.parse(await readFile(join(evidenceRoot, 'qualification/plan.json'), 'utf8')))
   const result = JSON.parse(await readFile(join(evidenceRoot, 'qualification/executed-gates.json'), 'utf8'))
@@ -184,11 +195,15 @@ export async function verifyPackagedQualification(evidenceRoot, sourceRoot, webR
       if (record.name !== specification.name || record.path !== specification.path) throw new Error(`Packaged artifact identity changed: ${record.name}`)
       qualifiedArtifacts.push(record)
     }
-    if ((expected.artifacts ?? []).some(artifact => artifact.name === 'web-editor')) {
+    if ((expected.artifacts ?? []).some(/* 比较 artifact.name 与 'web-editor'，返回严格相等的判断结果。 */ artifact => artifact.name === 'web-editor')) {
       if (!Array.isArray(gate.webFiles) || !gate.webFiles.length) throw new Error('Packaged qualification has no web asset inventory.')
       const allowed = new Set(['README.md', 'LICENSE.md', 'release-metadata.json', 'SHA256SUMS.txt', 'FONT_LICENSES/Nunito-Sans-OFL-1.1.txt', 'FONT_LICENSES/Noto-Sans-SC-OFL-1.1.txt', 'FONT_LICENSES/JetBrains-Mono-OFL-1.1.txt'])
+      // 与发布打包器使用同一版本分界：26.24 起必须携带本版部署说明，旧版保持兼容。
+      const [releaseYear, releaseSequence] = plan.release.split('.').map(Number)
+      const requiresCurrentHostingGuide = releaseYear > 26 || (releaseYear === 26 && releaseSequence >= 24)
+      const hostingPath = requiresCurrentHostingGuide ? `docs/WEB_HOSTING_${plan.release.replaceAll('.', '_')}.md` : 'docs/WEB_HOSTING_26_23.md'
       let hostingSource = null
-      try { hostingSource = await readFile(join(sourceRoot, 'docs/WEB_HOSTING_26_23.md')) } catch (error) { if (error.code !== 'ENOENT') throw error }
+      try { hostingSource = await readFile(join(sourceRoot, hostingPath)) } catch (error) { if (requiresCurrentHostingGuide || error.code !== 'ENOENT') throw error }
       if (hostingSource !== null) {
         const hostedGuide = await readFile(join(webRoot, 'HOSTING.md'))
         if (!hostingSource.equals(hostedGuide)) throw new Error('Packaged hosting guide differs from the frozen source documentation.')
@@ -206,7 +221,7 @@ export async function verifyPackagedQualification(evidenceRoot, sourceRoot, webR
   return { release: plan.release, sourceInputDigest: snapshot.sourceInputDigest, status: 'passed' }
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const option = name => process.argv.find(arg => arg.startsWith(`--${name}=`))?.slice(name.length + 3)
+  const option = /* 调用 process.argv.find(arg => arg.startsWith(`--${name}=`))?.slice(name.length + 3) 并返回调用结果。 */ name => process.argv.find(/* 调用 arg.startsWith(`--${name}=`) 并返回调用结果。 */ arg => arg.startsWith(`--${name}=`))?.slice(name.length + 3)
   const root = resolve(option('root') ?? dirname(dirname(fileURLToPath(import.meta.url))))
   const run = option('verify')
   const packaged = option('packaged-evidence')

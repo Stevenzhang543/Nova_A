@@ -1,3 +1,4 @@
+/** 仓库工具模块 stability-v3.mjs：供构建、资料生成或验证流程调用。 */
 import { createHash } from 'node:crypto'
 import { readFile, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
@@ -5,13 +6,13 @@ import { fileURLToPath } from 'node:url'
 import { performance } from 'node:perf_hooks'
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)))
-const value = name => process.argv.find(argument => argument.startsWith(`--${name}=`))?.split('=').slice(1).join('=')
+const value = /* 调用 process.argv.find(argument => argument.startsWith(`--${name}=`))?.split('=').slice(1).join('=') 并返回调用结果。 */ name => process.argv.find(/* 调用 argument.startsWith(`--${name}=`) 并返回调用结果。 */ argument => argument.startsWith(`--${name}=`))?.split('=').slice(1).join('=')
 const engineVersion = value('engine-version') || '3.9.0'
 const requestedHours = Math.max(0, Number(value('duration-hours') ?? 0))
 const requestedCycles = Math.max(1, Math.min(100_000, Number(value('cycles') ?? 500)))
 const output = value('output') || join(root, 'release-audits', 'v3.9.0-stability-smoke.json')
 const projects = ['empty', 'platformer', 'top-down', 'physics-sandbox', 'ui-showcase', 'networked-optional']
-const loaded = await Promise.all(projects.map(name => readFile(join(root, 'reference-projects', 'projects', `${name}.nova`), 'utf8').then(JSON.parse)))
+const loaded = await Promise.all(projects.map(/* 调用 readFile(join(root, 'reference-projects', 'projects', `${name}.nova`), 'utf8').then(JSON.parse) 并返回调用结果。 */ name => readFile(join(root, 'reference-projects', 'projects', `${name}.nova`), 'utf8').then(JSON.parse)))
 const goodPlugin = await readFile(join(root, 'reference-projects', 'plugins', 'hello-plugin', 'hello-plugin.wasm'))
 const deadline = requestedHours ? performance.now() + requestedHours * 3_600_000 : Number.POSITIVE_INFINITY
 const started = performance.now()
@@ -58,7 +59,7 @@ do {
 
   cycles++
   peakHeapBytes = Math.max(peakHeapBytes, process.memoryUsage().heapUsed)
-  if (cycles % 100 === 0) await new Promise(resolve => setImmediate(resolve))
+  if (cycles % 100 === 0) await new Promise(/* 调用 setImmediate(resolve) 并返回调用结果。 */ resolve => setImmediate(resolve))
 } while (requestedHours ? performance.now() < deadline : cycles < requestedCycles)
 
 const elapsedHours = (performance.now() - started) / 3_600_000

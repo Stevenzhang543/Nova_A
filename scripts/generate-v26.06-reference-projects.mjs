@@ -1,3 +1,4 @@
+/** 版本26.06：生成参考项目与对应资源，供功能演示和版本验证使用。 */
 import { createHash } from 'node:crypto'
 import { cp, mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
@@ -9,11 +10,11 @@ const id = 'simulation-v2606-physics-navigation-ai'
 const output = join(projects, id)
 const sourcePhysics = join(projects, 'creator-v650-physics-renderer')
 const sourceAi = join(projects, 'ai-v57-perception-utility')
-const uuid = seed => {
+const uuid = /** 用26.06命名空间种子散列生成确定性标识。 */ seed => {
   const value = createHash('sha256').update(`nova-26.06:${seed}`).digest('hex')
   return `${value.slice(0, 8)}-${value.slice(8, 12)}-4${value.slice(13, 16)}-8${value.slice(17, 20)}-${value.slice(20, 32)}`
 }
-const component = (seed, kind, data) => ({ uuid: uuid(`${seed}:${kind}`), kind, enabled: true, removed: false, data })
+const component = /** 创建带稳定标识和数据的启用组件记录。 */ (seed, kind, data) => ({ uuid: uuid(`${seed}:${kind}`), kind, enabled: true, removed: false, data })
 
 await mkdir(output, { recursive: true })
 await cp(sourcePhysics, output, { recursive: true, force: true })
@@ -22,9 +23,9 @@ const projectPath = join(output, 'project.nova')
 const project = JSON.parse(await readFile(projectPath, 'utf8'))
 const aiProject = JSON.parse(await readFile(join(sourceAi, 'project.nova'), 'utf8'))
 const scene = project.scenes[0]
-const byName = name => scene.entities.find(entity => entity.name === name)
-const transform = entity => entity.components.find(item => item.kind === 'Transform2D')?.data
-const collider = entity => entity.components.find(item => item.kind.endsWith('Collider2D'))?.data
+const byName = /** 按名称查找场景实体。 */ name => scene.entities.find(/* 比较 entity.name 与 name，返回严格相等的判断结果。 */ entity => entity.name === name)
+const transform = /* 返回 entity.components.find(item => item.kind === 'Transform2D')?.data 的当前值。 */ entity => entity.components.find(/* 比较 item.kind 与 'Transform2D'，返回严格相等的判断结果。 */ item => item.kind === 'Transform2D')?.data
+const collider = /* 返回 entity.components.find(item => item.kind.endsWith('Collider2D'))?.data 的当前值。 */ entity => entity.components.find(/* 调用 item.kind.endsWith('Collider2D') 并返回调用结果。 */ item => item.kind.endsWith('Collider2D'))?.data
 
 project.engineVersion = '26.6.0'
 project.projectMetadata.name = 'Simulation Production 26.06'
@@ -51,23 +52,23 @@ collider(compound).shapes = [
   { id: 'cross-horizontal', kind: 'Box', offset: { x: 0, y: 0 }, rotation: 0, size: { x: 3.2, y: .65 }, radius: .325, points: [], enabled: true, sensor: false, physicsLayer: 0, collisionMask: 0xffffffff, oneWay: false, oneWayNormal: { x: 0, y: 1 } },
   { id: 'cross-vertical', kind: 'Box', offset: { x: 0, y: 0 }, rotation: 0, size: { x: .65, y: 3.2 }, radius: .325, points: [], enabled: true, sensor: false, physicsLayer: 0, collisionMask: 0xffffffff, oneWay: false, oneWayNormal: { x: 0, y: 1 } }
 ]
-const joint = compound.components.find(item => item.kind === 'DistanceJoint2D')
+const joint = compound.components.find(/* 比较 item.kind 与 'DistanceJoint2D'，返回严格相等的判断结果。 */ item => item.kind === 'DistanceJoint2D')
 Object.assign(joint.data, { limitsEnabled: true, lowerLimit: 2.5, upperLimit: 3.4, motorEnabled: true, motorSpeed: .7, maxMotorForce: 220, breakForce: 980, breakTorque: 420 })
 
 const ropeEnd = byName('Rope End')
 const ropeBall = byName('Rope Ball')
-const third = structuredClone(aiProject.scenes[0].entities.find(entity => entity.name === 'Enemy'))
+const third = structuredClone(aiProject.scenes[0].entities.find(/* 比较 entity.name 与 'Enemy'，返回严格相等的判断结果。 */ entity => entity.name === 'Enemy'))
 third.uuid = uuid('entity:rope-collider')
 third.name = 'Rope Collision Body'
 third.tags = ['rope-obstacle']
-third.components = third.components.filter(item => ['Transform2D', 'ShapeRenderer2D', 'RigidBody2D', 'BoxCollider2D'].includes(item.kind)).map(item => ({ ...item, uuid: uuid(`rope-collider:${item.kind}`) }))
+third.components = third.components.filter(/* 调用 ['Transform2D', 'ShapeRenderer2D', 'RigidBody2D', 'BoxCollider2D'].includes(item.kind) 并返回调用结果。 */ item => ['Transform2D', 'ShapeRenderer2D', 'RigidBody2D', 'BoxCollider2D'].includes(item.kind)).map(/** 复制绳索碰撞组件并重新分配稳定标识。 */ item => ({ ...item, uuid: uuid(`rope-collider:${item.kind}`) }))
 Object.assign(transform(third), { position: { x: 3, y: -1.65 } })
 scene.entities.push(third)
 
 const ropeDefaults = { type: 'rope', componentType: 'Rope2D', route: 'manual', manualSegments: [], restLengths: [], stretchable: true, bendable: true, stiffness: 120, damping: 24, maxStretch: .18, maxStretchRatio: 1.18, bendTolerance: 120, stretchTolerance: 180, collisionEnabled: true, thickness: .18, segmentCount: 16, ropeNodes: [], breakState: 'intact', breakLink: -1, tension: 0, strain: 0 }
-const anchor = entityUuid => ({ entityUuid, mode: 'center', localPoint: { x: 0, y: 0 }, index: 0, sideT: .5 })
-const rope = (seed, first, second, points) => {
-  const authoredLength = points.slice(1).reduce((total, point, index) => total + Math.hypot(point.x - points[index].x, point.y - points[index].y), 0)
+const anchor = /** 创建实体中心模式的默认连接锚点。 */ entityUuid => ({ entityUuid, mode: 'center', localPoint: { x: 0, y: 0 }, index: 0, sideT: .5 })
+const rope = /** 累加路径段长度，创建带实体中心锚点和手绘路径的绳索连接。 */ (seed, first, second, points) => {
+  const authoredLength = points.slice(1).reduce(/* 计算表达式 total + Math.hypot(point.x - points[index].x, point.y - points[index].y) 并返回结果，沿用操作数的原有类型规则。 */ (total, point, index) => total + Math.hypot(point.x - points[index].x, point.y - points[index].y), 0)
   return { uuid: uuid(`connection:${seed}`), name: seed, ...ropeDefaults, restLengths: [authoredLength], anchors: [anchor(first.uuid), anchor(second.uuid)], manualPoints: points }
 }
 scene.connections = [
@@ -76,11 +77,11 @@ scene.connections = [
   rope('Lattice C-A', third, ropeEnd, [{ x: 3, y: -1.65 }, { x: 2, y: -3.25 }, { x: 1, y: -2 }])
 ]
 
-const region = structuredClone(aiProject.scenes[0].entities.find(entity => entity.name === 'World Navigation'))
+const region = structuredClone(aiProject.scenes[0].entities.find(/* 比较 entity.name 与 'World Navigation'，返回严格相等的判断结果。 */ entity => entity.name === 'World Navigation'))
 region.uuid = uuid('entity:navigation-region')
 region.name = 'Manual Navigation Region'
-region.components = region.components.map(item => ({ ...item, uuid: uuid(`navigation-region:${item.kind}`) }))
-Object.assign(region.components.find(item => item.kind === 'NavigationRegion2D').data, {
+region.components = region.components.map(/** 复制导航区域组件并分配确定性标识。 */ item => ({ ...item, uuid: uuid(`navigation-region:${item.kind}`) }))
+Object.assign(region.components.find(/* 比较 item.kind 与 'NavigationRegion2D'，返回严格相等的判断结果。 */ item => item.kind === 'NavigationRegion2D').data, {
   polygon: [{ x: -9, y: -4 }, { x: 9, y: -4 }, { x: 9, y: 4 }, { x: -9, y: 4 }], navigationMode: 'Polygon', algorithm: 'HierarchicalAStar', source: 'Manual', sourceEntityUuid: null,
   cellSize: .5, clusterSize: 8, traversalCost: 1, agentRadius: .45, navigationLayer: 1, navigationMask: 1,
   links: [{ id: 'bridge-link', start: { x: -1, y: 0 }, end: { x: 1, y: 0 }, bidirectional: true, cost: 1, enabled: true }],
@@ -88,7 +89,7 @@ Object.assign(region.components.find(item => item.kind === 'NavigationRegion2D')
 })
 scene.entities.push(region)
 
-const behaviorAsset = structuredClone(aiProject.assets.find(asset => asset.assetType === 'behaviorTree'))
+const behaviorAsset = structuredClone(aiProject.assets.find(/* 比较 asset.assetType 与 'behaviorTree'，返回严格相等的判断结果。 */ asset => asset.assetType === 'behaviorTree'))
 behaviorAsset.uuid = uuid('asset:simulation-behavior')
 behaviorAsset.name = 'SimulationEnemy.nova-behavior'
 behaviorAsset.path = 'Assets/AI/SimulationEnemy.nova-behavior'
@@ -106,11 +107,11 @@ const contentHash = createHash('sha256').update(machineSource).digest('hex')
 Object.assign(machineAsset.pipeline, { sourceHash: contentHash, artifactHash: contentHash, contentHash, cacheKey: contentHash, lastValidSource: machineSource })
 project.assets.push(machineAsset)
 
-const enemy = structuredClone(aiProject.scenes[0].entities.find(entity => entity.name === 'Enemy'))
+const enemy = structuredClone(aiProject.scenes[0].entities.find(/* 比较 entity.name 与 'Enemy'，返回严格相等的判断结果。 */ entity => entity.name === 'Enemy'))
 enemy.uuid = uuid('entity:navigation-enemy')
 enemy.name = 'Navigating Enemy'
 enemy.tags = ['enemy', 'ai-agent']
-enemy.components = enemy.components.filter(item => ['Transform2D', 'ShapeRenderer2D', 'RigidBody2D', 'BoxCollider2D'].includes(item.kind)).map(item => ({ ...item, uuid: uuid(`navigation-enemy:${item.kind}`) }))
+enemy.components = enemy.components.filter(/* 调用 ['Transform2D', 'ShapeRenderer2D', 'RigidBody2D', 'BoxCollider2D'].includes(item.kind) 并返回调用结果。 */ item => ['Transform2D', 'ShapeRenderer2D', 'RigidBody2D', 'BoxCollider2D'].includes(item.kind)).map(/** 复制导航敌人组件并分配确定性标识。 */ item => ({ ...item, uuid: uuid(`navigation-enemy:${item.kind}`) }))
 Object.assign(transform(enemy), { position: { x: 7, y: 2.5 } })
 enemy.components.push(
   component('navigation-enemy', 'NavigationAgent2D', { targetEntityUuid: ropeEnd.uuid, targetPosition: { x: 1, y: -2 }, speed: 4, acceleration: 20, radius: .45, stoppingDistance: .2, avoidance: true, avoidanceRadius: 1.2, avoidancePriority: .5, maximumAvoidanceNeighbors: 16, pathSmoothing: true, repathInterval: .25, navigationLayer: 1, navigationMask: 1, path: [], pathIndex: 0, velocity: { x: 0, y: 0 }, pathStatus: 'Idle' }),

@@ -1,3 +1,4 @@
+/** 功能回归脚本：执行 verify-v5.0.mjs 对应场景，保留断言和证据输出。 */
 import { mkdir, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -6,10 +7,10 @@ import { createServer } from 'vite'
 const root = dirname(dirname(fileURLToPath(import.meta.url)))
 const output = join(root, 'release-audits')
 const checks = []
-const check = (id, passed, detail, metrics = {}) => checks.push({ id, status: passed ? 'passed' : 'failed', detail, metrics })
-Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { platform: 'Win32', hardwareConcurrency: 8, userAgent: 'Nova_A v5.0 verification', mediaDevices: { addEventListener(){}, removeEventListener(){}, async enumerateDevices(){ return [] } } } })
-globalThis.window ??= { setTimeout, clearTimeout, setInterval, clearInterval, addEventListener(){}, removeEventListener(){}, dispatchEvent(){} }
-globalThis.localStorage ??= { getItem(){ return null }, setItem(){}, removeItem(){} }
+const check = /* 调用 checks.push({ id, status: passed ? 'passed' : 'failed', detail, metrics }) 并返回调用结果。 */ (id, passed, detail, metrics = {}) => checks.push({ id, status: passed ? 'passed' : 'failed', detail, metrics })
+Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { platform: 'Win32', hardwareConcurrency: 8, userAgent: 'Nova_A v5.0 verification', mediaDevices: { /** 提供不注册监听器的测试事件接口。 */ addEventListener(){}, /** 提供无需移除监听器的测试事件接口。 */ removeEventListener(){}, /* 返回按声明顺序构造的数组 []。 */ async enumerateDevices(){ return [] } } } })
+globalThis.window ??= { setTimeout, clearTimeout, setInterval, clearInterval, /** 提供不注册监听器的测试事件接口。 */ addEventListener(){}, /** 提供无需移除监听器的测试事件接口。 */ removeEventListener(){}, /** 生成器环境桩忽略事件派发。 */ dispatchEvent(){} }
+globalThis.localStorage ??= { /* 返回固定值 null。 */ getItem(){ return null }, /** 隔离存储桩忽略写入，不持久化生成过程数据。 */ setItem(){}, /** 隔离存储桩忽略删除请求。 */ removeItem(){} }
 await mkdir(output, { recursive: true })
 
 const server = await createServer({ root, appType: 'custom', logLevel: 'silent', server: { middlewareMode: true } })
@@ -26,14 +27,14 @@ try {
   const team = await server.ssrLoadModule('/src/runtime/teamWorkflow.ts')
 
   const windows = platform.platformSupport('windows'), web = platform.platformSupport('web'), linux = platform.platformSupport('linux'), android = platform.platformSupport('android')
-  check('BLD-TIER-POLICY', windows.tier === 'tier-1' && web.tier === 'tier-1' && linux.tier === 'experimental' && linux.availability === 'ci-only' && android.availability === 'unavailable' && !platform.selectableBuildPlatforms().some(item => item.id === 'android'), 'Only evidence-backed targets are selectable and every other target is explicit.', { windows, web, linux, android })
+  check('BLD-TIER-POLICY', windows.tier === 'tier-1' && web.tier === 'tier-1' && linux.tier === 'experimental' && linux.availability === 'ci-only' && android.availability === 'unavailable' && !platform.selectableBuildPlatforms().some(/* 比较 item.id 与 'android'，返回严格相等的判断结果。 */ item => item.id === 'android'), 'Only evidence-backed targets are selectable and every other target is explicit.', { windows, web, linux, android })
 
   const webSettings = build.normalizeBuildSettings({ gameName: 'Fixture', target: 'web', profile: 'release', developmentBuild: false, sceneOrder: ['scene'], startupSceneUuid: 'scene', platform: { identifier: 'top.whitelists.fixture', version: '1.0.0' }, delivery: { releaseChannel: 'stable', exportTemplate: 'web-es2022-v1', provenance: true, sbom: true, webHeaders: true, deterministic: true, include: ['Assets/**'], deploymentMode: 'local' } }, ['scene'])
-  check('BLD-WEB-VALID', !build.validateBuildSettings(webSettings, { host: 'windows', architecture: 'x86_64', androidAvailable: false, androidReason: '' }).some(issue => issue.severity === 'error'), 'A complete Tier-1 web release preset validates without a blocking issue.', { issues: build.validateBuildSettings(webSettings) })
+  check('BLD-WEB-VALID', !build.validateBuildSettings(webSettings, { host: 'windows', architecture: 'x86_64', androidAvailable: false, androidReason: '' }).some(/* 比较 issue.severity 与 'error'，返回严格相等的判断结果。 */ issue => issue.severity === 'error'), 'A complete Tier-1 web release preset validates without a blocking issue.', { issues: build.validateBuildSettings(webSettings) })
   const invalidTarget = build.normalizeBuildSettings({ ...webSettings, target: 'android' }, ['scene'])
-  check('BLD-UNAVAILABLE-CLOSED', build.validateBuildSettings(invalidTarget).some(issue => issue.code === 'platform-unavailable'), 'Unavailable targets fail closed.')
+  check('BLD-UNAVAILABLE-CLOSED', build.validateBuildSettings(invalidTarget).some(/* 比较 issue.code 与 'platform-unavailable'，返回严格相等的判断结果。 */ issue => issue.code === 'platform-unavailable'), 'Unavailable targets fail closed.')
   const unsignedRemote = build.normalizeBuildSettings({ ...webSettings, delivery: { ...webSettings.delivery, deploymentMode: 'remote-hook', deploymentDestination: 'http://unsafe.example' } }, ['scene'])
-  check('BLD-REMOTE-EXPLICIT', build.validateBuildSettings(unsignedRemote).some(issue => issue.code === 'remote-deploy'), 'Remote deployment requires an explicit HTTPS destination and is never implicit.')
+  check('BLD-REMOTE-EXPLICIT', build.validateBuildSettings(unsignedRemote).some(/* 比较 issue.code 与 'remote-deploy'，返回严格相等的判断结果。 */ issue => issue.code === 'remote-deploy'), 'Remote deployment requires an explicit HTTPS destination and is never implicit.')
 
   const input = { engineVersion: '5.0.0', projectId: 'fixture', target: 'web', architecture: 'x86_64', profile: 'release', releaseChannel: 'stable', settings: webSettings, packages: [], deterministic: true, files: [{ path: 'player.js', sha256: 'a'.repeat(64), bytes: 12 }] }
   const first = release.createBuildProvenance({ ...input, buildId: 'first' }), second = release.createBuildProvenance({ ...input, buildId: 'second' })
@@ -50,21 +51,21 @@ try {
   check('PKG-UNTRUSTED-CLOSED', !packages.packageInstallReview(missingPermissionManifest).executionAllowed, 'Untrusted provenance/license/signature packages cannot execute.')
   packages.packageState.offlineCache.push(missingPermissionManifest)
   const cacheProblems = packages.verifyPackageCache()
-  check('PKG-CACHE', cacheProblems.some(problem => problem.includes(missingPermissionManifest.id)) && packages.packageState.quarantine.some(item => item.id === missingPermissionManifest.id) && packages.packageState.lastCacheVerification.length > 0, 'Offline cache verification quarantines an untrusted cached manifest.', { cacheProblems })
+  check('PKG-CACHE', cacheProblems.some(/* 调用 problem.includes(missingPermissionManifest.id) 并返回调用结果。 */ problem => problem.includes(missingPermissionManifest.id)) && packages.packageState.quarantine.some(/* 比较 item.id 与 missingPermissionManifest.id，返回严格相等的判断结果。 */ item => item.id === missingPermissionManifest.id) && packages.packageState.lastCacheVerification.length > 0, 'Offline cache verification quarantines an untrusted cached manifest.', { cacheProblems })
 
   packages.packageState.installed.splice(0)
   const installed = packages.installRegistryPackage(official.id)
   const update = packages.normalizePackageManifest({ ...official, version: '5.0.1', sha256: 'e'.repeat(64), signature: `nova-official-v1:${'e'.repeat(64)}`, permissions: [...official.permissions, 'filesystem.write'] })
   packages.packageState.registryCatalog.push(update)
   packages.packageState.offlineCache.push(update)
-  const deniedBeforeReview = !packages.applyPackageUpdate(installed.manifest.id) && packages.packageState.errors.some(error => error.includes('permission review'))
+  const deniedBeforeReview = !packages.applyPackageUpdate(installed.manifest.id) && packages.packageState.errors.some(/* 调用 error.includes('permission review') 并返回调用结果。 */ error => error.includes('permission review'))
   const approvedAndApplied = packages.approvePackageUpdatePermissions(installed.manifest.id, ['filesystem.write'])
-  const rolledBack = packages.rollbackPackage(installed.manifest.id) && packages.packageState.installed.find(item => item.manifest.id === installed.manifest.id)?.manifest.version === official.version
+  const rolledBack = packages.rollbackPackage(installed.manifest.id) && packages.packageState.installed.find(/* 比较 item.manifest.id 与 installed.manifest.id，返回严格相等的判断结果。 */ item => item.manifest.id === installed.manifest.id)?.manifest.version === official.version
   check('PKG-PERMISSION-ROLLBACK', deniedBeforeReview && approvedAndApplied && rolledBack, 'An update with a new permission is denied before review, succeeds after explicit approval, and rolls back to the pinned package.', { deniedBeforeReview, approvedAndApplied, rolledBack })
 
   const cycleA = packages.normalizePackageManifest({ ...official, id: 'com.example.cycle-a', name: 'Cycle A', version: '5.0.0', sha256: 'a'.repeat(64), signature: `nova-official-v1:${'a'.repeat(64)}`, dependencies: { 'com.example.cycle-b': '^5.0.0' }, dependencyHashes: { 'com.example.cycle-b': 'b'.repeat(64) } })
   const cycleB = packages.normalizePackageManifest({ ...official, id: 'com.example.cycle-b', name: 'Cycle B', version: '5.0.0', sha256: 'b'.repeat(64), signature: `nova-official-v1:${'b'.repeat(64)}`, dependencies: { 'com.example.cycle-a': '^5.0.0' }, dependencyHashes: { 'com.example.cycle-a': 'a'.repeat(64) } })
-  const installedFixture = manifest => ({ manifest, source: { kind: 'local', location: 'verification fixture' }, enabled: false, project: true, installedAt: 0, securityStatus: 'unverified', grantedPermissions: [], deprecations: [] })
+  const installedFixture = /** 结构说明（自动提取）：installedFixture；输入 manifest；返回表达式求值结果。 */ manifest => ({ manifest, source: { kind: 'local', location: 'verification fixture' }, enabled: false, project: true, installedAt: 0, securityStatus: 'unverified', grantedPermissions: [], deprecations: [] })
   packages.packageState.installed.splice(0, packages.packageState.installed.length, installedFixture(cycleA), installedFixture(cycleB))
   let cycleRejected = false
   try { packages.resolvePackageLockfile() } catch (error) { cycleRejected = error instanceof Error && error.message.includes('Circular package dependency') }
@@ -89,13 +90,13 @@ try {
 
   const freezeStart = Date.parse(release.RELEASE_CANDIDATE_FREEZE.openedAt), freezeEnd = Date.parse(release.RELEASE_CANDIDATE_FREEZE.earliestApprovalAt)
   check('REL-RC-FREEZE', release.RELEASE_CANDIDATE_FREEZE.active && release.RELEASE_CANDIDATE_FREEZE.minimumDays === 14 && freezeEnd - freezeStart >= 14 * 86_400_000 && release.NOVA_RELEASE_PIPELINE.length === 8, 'The 5.0 feature/API/artifact freeze and minimum observation are machine-readable.')
-  check('REL-PRIVACY', release.diagnosticPrivacyChecklist().length >= 5 && release.diagnosticPrivacyChecklist().some(item => item.includes('never included')), 'Diagnostic privacy exclusions are explicit.')
+  check('REL-PRIVACY', release.diagnosticPrivacyChecklist().length >= 5 && release.diagnosticPrivacyChecklist().some(/* 调用 item.includes('never included') 并返回调用结果。 */ item => item.includes('never included')), 'Diagnostic privacy exclusions are explicit.')
 } finally {
   console.log('v5.0 verification: closing isolated module host')
-  await Promise.race([server.close(), new Promise(resolve => setTimeout(resolve, 2_000))])
+  await Promise.race([server.close(), new Promise(/* 调用 setTimeout(resolve, 2_000) 并返回调用结果。 */ resolve => setTimeout(resolve, 2_000))])
 }
 
-const failed = checks.filter(item => item.status === 'failed')
+const failed = checks.filter(/* 比较 item.status 与 'failed'，返回严格相等的判断结果。 */ item => item.status === 'failed')
 const report = { format: 'nova-v5.0-runtime-verification', version: 1, engineVersion: '5.0.0', generatedAt: new Date().toISOString(), catalogs: ['BLD','PKG','HLT'], checks, severity0Open: 0, severity1Open: failed.length, status: failed.length ? 'failed' : 'passed' }
 await writeFile(join(output, 'v5.0.0-verification.json'), `${JSON.stringify(report, null, 2)}\n`)
 if (failed.length) { console.error(failed); process.exit(1) }

@@ -1,3 +1,4 @@
+<!-- 虚拟输入覆盖层：处理触摸和键盘按钮或摇杆输入，合并动作并负责释放。 -->
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, reactive } from 'vue'
 import { gameplayRuntime } from '../runtime/GameplayRuntime'
@@ -7,13 +8,13 @@ import { physicsState } from '../store/physics'
 type VectorValue = { x: number; y: number }
 const controlValues = reactive<Record<string, VectorValue>>({})
 const pointerOwners = new Map<string, number>()
-const visible = computed(() => deviceInputSettings.virtualControlsEnabled && deviceInputSettings.virtualControls.length > 0 && (deviceInputSettings.showVirtualControls === 'always' || deviceRuntimeState.capabilities.touch))
-const actionKinds = computed(() => new Map(physicsState.inputMap.map(action => [action.name, action.kind])))
+const visible = computed(/** 检查虚拟输入开关、控件数量与当前设备显示策略。 */ () => deviceInputSettings.virtualControlsEnabled && deviceInputSettings.virtualControls.length > 0 && (deviceInputSettings.showVirtualControls === 'always' || deviceRuntimeState.capabilities.touch))
+const actionKinds = computed(/** 将输入映射转换为动作名称到类型的查找表。 */ () => new Map(physicsState.inputMap.map(/** 提取动作名称和类型作为映射条目。 */ action => [action.name, action.kind])))
 
-function safeInsets() {
+/** 根据自定义、关闭或自动模式返回安全区边距。 */ function safeInsets() {
   return deviceInputSettings.safeAreaMode === 'custom' ? deviceInputSettings.customSafeArea : deviceInputSettings.safeAreaMode === 'off' ? { left: 0, top: 0, right: 0, bottom: 0 } : deviceRuntimeState.capabilities.safeArea
 }
-function controlStyle(control: VirtualControlSettings): Record<string, string> {
+/** 根据尺寸、透明度、锚点和安全区生成控件定位样式。 */ function controlStyle(control: VirtualControlSettings): Record<string, string> {
   const safe = safeInsets(), style: Record<string, string> = { width: `${control.size}px`, height: `${control.size}px`, opacity: String(control.opacity) }
   if (control.anchor.endsWith('left')) style.left = `${safe.left + control.offsetX}px`
   else style.right = `${safe.right + control.offsetX}px`
@@ -21,8 +22,8 @@ function controlStyle(control: VirtualControlSettings): Record<string, string> {
   else style.bottom = `${safe.bottom + control.offsetY}px`
   return style
 }
-function current(control: VirtualControlSettings): VectorValue { return controlValues[control.id] ?? { x: 0, y: 0 } }
-function recomputeAction(action: string): void {
+/** 读取控件当前向量，未记录时返回零向量。 */ function current(control: VirtualControlSettings): VectorValue { return controlValues[control.id] ?? { x: 0, y: 0 } }
+/** 累加同动作控件输入并限幅，近零时释放动作，否则按向量或标量类型提交。 */ function recomputeAction(action: string): void {
   let x = 0, y = 0
   for (const control of deviceInputSettings.virtualControls) {
     if (control.action !== action) continue
@@ -34,11 +35,11 @@ function recomputeAction(action: string): void {
   else if (kind === 'vector2') gameplayRuntime.input.setVirtualAction(action, [x, y])
   else gameplayRuntime.input.setVirtualAction(action, Math.abs(x) >= Math.abs(y) ? x : y)
 }
-function setValue(control: VirtualControlSettings, value: VectorValue): void {
+/** 记录控件值并重新计算关联动作。 */ function setValue(control: VirtualControlSettings, value: VectorValue): void {
   controlValues[control.id] = value
   recomputeAction(control.action)
 }
-function pointerValue(control: VirtualControlSettings, event: PointerEvent): VectorValue {
+/** 按钮返回配置值；摇杆从指针位置计算方向及死区缩放值并反转纵轴。 */ function pointerValue(control: VirtualControlSettings, event: PointerEvent): VectorValue {
   if (control.kind === 'button') return { x: control.value, y: 0 }
   const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
   const radius = Math.max(1, Math.min(rect.width, rect.height) / 2)
@@ -50,7 +51,7 @@ function pointerValue(control: VirtualControlSettings, event: PointerEvent): Vec
   const scaled = Math.min(1, (magnitude - control.deadzone) / Math.max(1e-6, 1 - control.deadzone))
   return { x: x / Math.max(magnitude, 1e-6) * scaled, y: -y / Math.max(magnitude, 1e-6) * scaled }
 }
-function begin(control: VirtualControlSettings, event: PointerEvent): void {
+/** 未占用控件捕获指针、设置初始输入并触发触觉反馈。 */ function begin(control: VirtualControlSettings, event: PointerEvent): void {
   if (pointerOwners.has(control.id)) return
   event.preventDefault()
   ;(event.currentTarget as HTMLElement).setPointerCapture(event.pointerId)
@@ -58,15 +59,15 @@ function begin(control: VirtualControlSettings, event: PointerEvent): void {
   setValue(control, pointerValue(control, event))
   performHaptic(control.hapticMs)
 }
-function move(control: VirtualControlSettings, event: PointerEvent): void {
+/** 仅更新所属指针操纵的非按钮控件。 */ function move(control: VirtualControlSettings, event: PointerEvent): void {
   if (pointerOwners.get(control.id) !== event.pointerId || control.kind === 'button') return
   event.preventDefault(); setValue(control, pointerValue(control, event))
 }
-function end(control: VirtualControlSettings, event?: PointerEvent): void {
+/** 所属指针结束或主动释放时清除占用并将输入归零。 */ function end(control: VirtualControlSettings, event?: PointerEvent): void {
   if (event && pointerOwners.get(control.id) !== event.pointerId) return
   pointerOwners.delete(control.id); setValue(control, { x: 0, y: 0 })
 }
-function keyboard(control: VirtualControlSettings, event: KeyboardEvent, down: boolean): void {
+/** 把空格、回车或方向键映射为控件输入，并按规则触发触觉反馈。 */ function keyboard(control: VirtualControlSettings, event: KeyboardEvent, down: boolean): void {
   const key = event.key
   if (control.kind === 'button' && (key === ' ' || key === 'Enter')) { event.preventDefault(); setValue(control, down ? { x: control.value, y: 0 } : { x: 0, y: 0 }); if (down && !event.repeat) performHaptic(control.hapticMs); return }
   if (control.kind !== 'button' && ['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(key)) {
@@ -75,14 +76,14 @@ function keyboard(control: VirtualControlSettings, event: KeyboardEvent, down: b
     setValue(control, value)
   }
 }
-function releaseAll(): void {
+/** 归零全部控件并释放运行时虚拟动作。 */ function releaseAll(): void {
   for (const control of deviceInputSettings.virtualControls) end(control)
   gameplayRuntime.input.releaseAllVirtualActions()
 }
-function refresh(): void { refreshDeviceCapabilities() }
+/** 刷新设备能力与安全区信息。 */ function refresh(): void { refreshDeviceCapabilities() }
 
-onMounted(() => { refresh(); window.addEventListener('resize', refresh, { passive: true }); window.addEventListener('orientationchange', refresh, { passive: true }) })
-onBeforeUnmount(() => { releaseAll(); window.removeEventListener('resize', refresh); window.removeEventListener('orientationchange', refresh) })
+onMounted(/** 挂载时刷新能力并监听尺寸及方向变化。 */ () => { refresh(); window.addEventListener('resize', refresh, { passive: true }); window.addEventListener('orientationchange', refresh, { passive: true }) })
+onBeforeUnmount(/** 卸载时释放输入并移除设备变化监听。 */ () => { releaseAll(); window.removeEventListener('resize', refresh); window.removeEventListener('orientationchange', refresh) })
 </script>
 
 <template>

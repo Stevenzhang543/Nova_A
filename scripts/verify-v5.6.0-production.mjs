@@ -1,18 +1,19 @@
+/** 功能回归脚本：执行 verify-v5.6.0-production.mjs 对应场景，保留断言和证据输出。 */
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createServer } from 'vite'
 
 const root = dirname(dirname(fileURLToPath(import.meta.url))), checks = []
-const check = (id, passed, detail, metrics = {}) => { checks.push({ id, status: passed ? 'passed' : 'failed', detail, metrics }); if (!passed) console.error(`${id}: ${detail}`) }
-Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { platform: 'Win32', hardwareConcurrency: 8, userAgent: 'Nova_A v5.6 production verifier', mediaDevices: { addEventListener() {}, removeEventListener() {} } } })
-globalThis.window ??= { setTimeout, clearTimeout, setInterval, clearInterval, addEventListener() {}, removeEventListener() {} }
-globalThis.localStorage ??= { getItem() { return null }, setItem() {}, removeItem() {} }
-globalThis.performance ??= { now: () => Date.now() }
+const check = /** 记录检查结果、详情和指标，失败时同步输出错误信息。 */ (id, passed, detail, metrics = {}) => { checks.push({ id, status: passed ? 'passed' : 'failed', detail, metrics }); if (!passed) console.error(`${id}: ${detail}`) }
+Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { platform: 'Win32', hardwareConcurrency: 8, userAgent: 'Nova_A v5.6 production verifier', mediaDevices: { /** 提供不注册监听器的测试事件接口。 */ addEventListener() {}, /** 提供无需移除监听器的测试事件接口。 */ removeEventListener() {} } } })
+globalThis.window ??= { setTimeout, clearTimeout, setInterval, clearInterval, /** 提供不注册监听器的测试事件接口。 */ addEventListener() {}, /** 提供无需移除监听器的测试事件接口。 */ removeEventListener() {} }
+globalThis.localStorage ??= { /* 返回固定值 null。 */ getItem() { return null }, /** 隔离存储桩忽略写入，不持久化生成过程数据。 */ setItem() {}, /** 隔离存储桩忽略删除请求。 */ removeItem() {} }
+globalThis.performance ??= { now: /* 调用 Date.now() 并返回调用结果。 */ () => Date.now() }
 
 const referenceIds = ['animation-v56-blend-runtime', 'cinematic-v56-nested-subtitles', 'audio-v56-waveform-mixer', 'animation-v56-interop-recording']
-const projects = Object.fromEntries(await Promise.all(referenceIds.map(async id => [id, JSON.parse(await readFile(join(root, `reference-projects/projects/${id}/project.nova`), 'utf8'))])))
-check('V560-REFERENCES', referenceIds.every(id => projects[id].engineVersion === '5.6.0' && projects[id].projectFormatMajor === 2 && projects[id].formatVersion === 29), 'Four v5.6 references retain Project Format 2/schema 29.', { references: referenceIds })
+const projects = Object.fromEntries(await Promise.all(referenceIds.map(/* 返回按声明顺序构造的数组 [id, JSON.parse(await readFile(join(root, `reference-projects/projects/${id}/project.nova`), 'utf8'))]。 */ async id => [id, JSON.parse(await readFile(join(root, `reference-projects/projects/${id}/project.nova`), 'utf8'))])))
+check('V560-REFERENCES', referenceIds.every(/* 先计算 projects[id].engineVersion === '5.6.0' && projects[id].projectFormatMajor === 2；仅当其为真值时求右侧 projects[id].formatVersion === 29，返回短路求值结果。 */ id => projects[id].engineVersion === '5.6.0' && projects[id].projectFormatMajor === 2 && projects[id].formatVersion === 29), 'Four v5.6 references retain Project Format 2/schema 29.', { references: referenceIds })
 
 const server = await createServer({ root, appType: 'custom', logLevel: 'silent', server: { middlewareMode: true } }); await server.watcher.close()
 try {
@@ -23,22 +24,22 @@ try {
   check('V560-BLEND-LAYERS', blend.states[0].blendTree?.type === '2D' && blend.states[0].blendTree?.parameterY === 'Y' && blend.states[0].blendTree?.children[0].positionY === 2, '2D blend positions, normalized-time option and synchronized layer fields survive normalization.')
   const clip = animation.normalizeAnimationClip({ version: 4, name: 'Order', loop: false, tracks: [{ property: 'Transform.position.x', keyframes: [{ time: 0, value: 0 }, { time: 1, value: 1 }] }], events: [{ time: .5, signal: 'event', payload: '' }], commandTracks: [{ kind: 'Audio', commands: [{ time: .5, value: 'asset://audio', payload: '' }] }, { kind: 'VisualGraph', commands: [{ time: .5, value: 'graph.start', payload: '' }] }] })
   const dispatch = animation.animationDispatchesBetween(clip, 0, 1)
-  check('V560-EVENT-ORDER', dispatch.map(item => item.kind).join(',') === 'event,command,command' && dispatch.every(item => item.crossed === .5), 'Same-time events execute before authored command tracks in stable track order.', { order: dispatch.map(item => item.kind === 'event' ? item.event.signal : item.track.kind) })
+  check('V560-EVENT-ORDER', dispatch.map(/* 返回 item.kind 的当前值。 */ item => item.kind).join(',') === 'event,command,command' && dispatch.every(/* 比较 item.crossed 与 .5，返回严格相等的判断结果。 */ item => item.crossed === .5), 'Same-time events execute before authored command tracks in stable track order.', { order: dispatch.map(/* 根据 item.kind === 'event' 的真假，分别返回 item.event.signal 或 item.track.kind。 */ item => item.kind === 'event' ? item.event.signal : item.track.kind) })
   const migratedTimeline = timeline.normalizeTimeline({ version: 1, name: 'Legacy', duration: 5, tracks: [{ id: 'events', name: 'Events', type: 'Event', clips: [{ id: 'start', start: 0, duration: 1, value: 'go' }] }] })
   check('V560-TIMELINE-MIGRATION', migratedTimeline.version === 2 && migratedTimeline.tracks[0].clips[0].safeArea === 'TitleSafe' && migratedTimeline.tracks[0].clips[0].skippable, 'Timeline v1 data receives safe v2 subtitle/skip defaults.')
-  const clips = Array.from({ length: 10_000 }, (_, index) => ({ id: `c${index}`, start: index / 120, duration: 1, offset: 0, playbackRate: 1, blendIn: 0, blendOut: 0, asset: null, targetEntityUuid: null, value: '', payload: '', locale: '', safeArea: 'TitleSafe', skippable: true }))
+  const clips = Array.from({ length: 10_000 }, /** 结构说明（自动提取）：Array.from 回调；输入 _、index；返回表达式求值结果。 */ (_, index) => ({ id: `c${index}`, start: index / 120, duration: 1, offset: 0, playbackRate: 1, blendIn: 0, blendOut: 0, asset: null, targetEntityUuid: null, value: '', payload: '', locale: '', safeArea: 'TitleSafe', skippable: true }))
   const longTimeline = timeline.normalizeTimeline({ version: 2, name: 'Long', duration: 100, frameRate: 60, markers: [], tracks: [{ id: 'long', name: 'Long', type: 'Animation', muted: false, clips }] }), before = performance.now(), estimate = cinematic.estimateTimelinePerformance(longTimeline), elapsedMs = performance.now() - before
   check('V560-LONG-TIMELINE', estimate.clips === 10_000 && estimate.peakActiveClips > 0 && elapsedMs < 1_000, 'A 10,000-clip timeline is bounded, finite and analyzed within the verifier budget.', { ...estimate, elapsedMs })
   const mixer = audio.normalizeAudioSettings({ mixer: { snapshotTransitionSeconds: 99, buses: [{ id: 'Master', gain: 1 }, { id: 'Voice', gain: 1, parent: 'Master', sends: [{ target: 'Music', gain: .4, enabled: true }] }, { id: 'Music', gain: 1, parent: 'Master' }], ducking: [{ id: 'voice', triggerBus: 'Voice', targetBus: 'Music', reductionDb: -9, attack: .04, release: .3, enabled: true }] } })
-  check('V560-AUDIO-MIXER', mixer.mixer.snapshotTransitionSeconds === 30 && mixer.mixer.ducking.length === 1 && mixer.mixer.buses.find(bus => bus.id === 'Voice')?.sends.length === 1, 'Snapshot crossfades clamp safely while valid sends and ducking persist.')
-  const [animationSource, audioSource, timelineSource, canvasSource] = await Promise.all(['src/runtime/animation.ts', 'src/runtime/audio.ts', 'src/runtime/timeline.ts', 'src/components/WorldCanvas.vue'].map(path => readFile(join(root, path), 'utf8')))
+  check('V560-AUDIO-MIXER', mixer.mixer.snapshotTransitionSeconds === 30 && mixer.mixer.ducking.length === 1 && mixer.mixer.buses.find(/* 比较 bus.id 与 'Voice'，返回严格相等的判断结果。 */ bus => bus.id === 'Voice')?.sends.length === 1, 'Snapshot crossfades clamp safely while valid sends and ducking persist.')
+  const [animationSource, audioSource, timelineSource, canvasSource] = await Promise.all(['src/runtime/animation.ts', 'src/runtime/audio.ts', 'src/runtime/timeline.ts', 'src/components/WorldCanvas.vue'].map(/* 调用 readFile(join(root, path), 'utf8') 并返回调用结果。 */ path => readFile(join(root, path), 'utf8')))
   const crossfadeController = animation.normalizeAnimatorController({ version: 3, states: [{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }], transitions: [{ id: 'fade', from: 'a', to: 'b', duration: .4 }], layers: [{ id: 'base', name: 'Base', defaultState: 'a', weight: 1 }] }), crossfadeMixer = audio.normalizeAudioSettings({ mixer: { snapshotTransitionSeconds: .6 } })
   check('V560-CROSSFADES', crossfadeController.transitions[0].duration === .4 && crossfadeMixer.mixer.snapshotTransitionSeconds === .6 && animationSource.includes('blendTime / layerState.blendDuration') && animationSource.includes('(next.value - previous.value) * ratio') && audioSource.includes('setTargetAtTime') && audioSource.includes('snapshotTransitionSeconds / 3'), 'Animator transitions interpolate by bounded blend ratio and mixer snapshots use time-based AudioParam crossfades.')
-  check('V560-DEVICE-RECOVERY', ['devicechange', 'recover', 'recoveryCount'].every(marker => audioSource.includes(marker)), 'Audio runtime retains device-change recovery and visible recovery counts.')
-  check('V560-SUBTITLE-SAFE', ['TitleSafe', 'ActionSafe', 'FullFrame'].every(marker => timelineSource.includes(marker) && canvasSource.includes(marker)), 'All three subtitle-safe-area policies are runtime and renderer bound.')
-} finally { await Promise.race([server.close(), new Promise(resolve => setTimeout(resolve, 2_000))]) }
+  check('V560-DEVICE-RECOVERY', ['devicechange', 'recover', 'recoveryCount'].every(/* 调用 audioSource.includes(marker) 并返回调用结果。 */ marker => audioSource.includes(marker)), 'Audio runtime retains device-change recovery and visible recovery counts.')
+  check('V560-SUBTITLE-SAFE', ['TitleSafe', 'ActionSafe', 'FullFrame'].every(/* 先计算 timelineSource.includes(marker)；仅当其为真值时求右侧 canvasSource.includes(marker)，返回短路求值结果。 */ marker => timelineSource.includes(marker) && canvasSource.includes(marker)), 'All three subtitle-safe-area policies are runtime and renderer bound.')
+} finally { await Promise.race([server.close(), new Promise(/* 调用 setTimeout(resolve, 2_000) 并返回调用结果。 */ resolve => setTimeout(resolve, 2_000))]) }
 
-const failed = checks.filter(item => item.status === 'failed'), report = { format: 'nova-v5.6.0-production-verification', version: 1, engineVersion: '5.6.0', generatedAt: new Date().toISOString(), checks, severity0Open: 0, severity1Open: failed.length, status: failed.length ? 'failed' : 'passed' }
+const failed = checks.filter(/* 比较 item.status 与 'failed'，返回严格相等的判断结果。 */ item => item.status === 'failed'), report = { format: 'nova-v5.6.0-production-verification', version: 1, engineVersion: '5.6.0', generatedAt: new Date().toISOString(), checks, severity0Open: 0, severity1Open: failed.length, status: failed.length ? 'failed' : 'passed' }
 await mkdir(join(root, 'release-audits'), { recursive: true }); await writeFile(join(root, 'release-audits/v5.6.0-production-verification.json'), `${JSON.stringify(report, null, 2)}\n`)
 if (failed.length) process.exit(1)
 console.log(`Nova_A v5.6.0 production verification passed: ${checks.length} checks.`)

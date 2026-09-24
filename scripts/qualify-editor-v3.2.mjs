@@ -1,3 +1,4 @@
+/** 历史编辑器交互检查：启动实际浏览器，通过调试协议发送键鼠操作并收集界面和异常证据。 */
 import { spawn } from 'node:child_process'
 import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { createServer as createNetServer } from 'node:net'
@@ -28,8 +29,8 @@ let client
 try {
   const target = await waitForTarget(debugPort)
   client = await connectCdp(target.webSocketDebuggerUrl)
-  client.on('Runtime.exceptionThrown', event => consoleErrors.push(event.exceptionDetails?.exception?.description || event.exceptionDetails?.text || 'Runtime exception'))
-  client.on('Log.entryAdded', event => { if (event.entry?.level === 'error') consoleErrors.push(event.entry.text) })
+  client.on('Runtime.exceptionThrown', /** 记录运行时异常详情，缺少描述时保留异常文本或默认提示。 */ event => consoleErrors.push(event.exceptionDetails?.exception?.description || event.exceptionDetails?.text || 'Runtime exception'))
+  client.on('Log.entryAdded', /** 仅收集日志事件中的错误级别消息。 */ event => { if (event.entry?.level === 'error') consoleErrors.push(event.entry.text) })
   await client.send('Runtime.enable'); await client.send('Log.enable'); await client.send('Page.enable')
   const browser = await client.send('Browser.getVersion')
   results.push({ name: 'Browser engine', status: 'passed', detail: `${browser.product}; ${browser.userAgent}` })
@@ -68,10 +69,10 @@ try {
 
   for (const [width, height] of [[1366, 768], [1920, 1080], [2560, 1440], [3840, 2160]]) {
     await client.send('Emulation.setDeviceMetricsOverride', { width, height, screenWidth: width, screenHeight: height, deviceScaleFactor: 1, mobile: false })
-    await new Promise(resolve => setTimeout(resolve, 250))
+    await new Promise(/* 调用 setTimeout(resolve, 250) 并返回调用结果。 */ resolve => setTimeout(resolve, 250))
     const layout = await evaluate(client, `(() => { const selectors=['.editor-root','.workspace-bar','.sidebar-container','.config-wrapper','.editor-workspace','.status-bar']; const items=selectors.map(selector=>{const node=document.querySelector(selector);if(!node)return{selector,visible:false};const rect=node.getBoundingClientRect();return{selector,visible:rect.width>0&&rect.height>0,left:rect.left,right:rect.right,top:rect.top,bottom:rect.bottom,width:rect.width,height:rect.height}});return{viewport:{width:innerWidth,height:innerHeight},scrollWidth:document.documentElement.scrollWidth,items,focusable:[...document.querySelectorAll('button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),a[href]')].filter(node=>{const r=node.getBoundingClientRect();return r.width>0&&r.height>0}).length}})()`)
-    const required = layout.items.filter(item => ['.editor-root','.workspace-bar','.sidebar-container','.config-wrapper','.editor-workspace','.status-bar'].includes(item.selector))
-    const contained = layout.scrollWidth <= width + 1 && required.every(item => item.visible && item.left >= -1 && item.right <= width + 1 && item.top >= -1 && item.bottom <= height + 1)
+    const required = layout.items.filter(/** 筛选编辑器主要外壳容器的布局测量记录。 */ item => ['.editor-root','.workspace-bar','.sidebar-container','.config-wrapper','.editor-workspace','.status-bar'].includes(item.selector))
+    const contained = layout.scrollWidth <= width + 1 && required.every(/* 先计算 item.visible && item.left >= -1 && item.right <= width + 1 && item.top >= -1；仅当其为真值时求右侧 item.bottom <= height + 1，返回短路求值结果。 */ item => item.visible && item.left >= -1 && item.right <= width + 1 && item.top >= -1 && item.bottom <= height + 1)
     results.push({ name: `Layout ${width}x${height}`, status: contained ? 'passed' : 'failed', detail: JSON.stringify(layout) })
     const capture = await client.send('Page.captureScreenshot', { format: 'png', fromSurface: true, captureBeyondViewport: false })
     const name = `editor-design-${width}x${height}.png`
@@ -81,42 +82,42 @@ try {
 
   const fatalSurface = await evaluate(client, "Boolean(document.querySelector('.error-recovery,[data-fatal=true]'))")
   results.push({ name: 'Browser console and fatal surface', status: !fatalSurface && consoleErrors.length === 0 ? 'passed' : 'failed', detail: JSON.stringify({ fatalSurface, consoleErrors }) })
-  const report = { format: 'nova-editor-browser-qualification', version: 1, engineVersion: '3.2.0', generatedAt: new Date().toISOString(), browser: browser.product, status: results.every(item => item.status === 'passed') ? 'passed' : 'failed', resolutions: screenshots, results, consoleErrors }
+  const report = { format: 'nova-editor-browser-qualification', version: 1, engineVersion: '3.2.0', generatedAt: new Date().toISOString(), browser: browser.product, status: results.every(/* 比较 item.status 与 'passed'，返回严格相等的判断结果。 */ item => item.status === 'passed') ? 'passed' : 'failed', resolutions: screenshots, results, consoleErrors }
   await writeFile(join(evidenceRoot, 'v3.2.0-layout-keyboard-browser.json'), `${JSON.stringify(report, null, 2)}\n`, 'utf8')
-  if (report.status !== 'passed') throw new Error(`Browser qualification failed: ${results.filter(item => item.status !== 'passed').map(item => item.name).join(', ')}`)
+  if (report.status !== 'passed') throw new Error(`Browser qualification failed: ${results.filter(/* 比较 item.status 与 'passed'，返回严格不等的判断结果。 */ item => item.status !== 'passed').map(/* 返回 item.name 的当前值。 */ item => item.name).join(', ')}`)
   console.log(`Nova_A v3.2 browser qualification passed; ${screenshots.length} layout captures written to ${screenshotRoot}`)
 } finally {
   try { await client?.send('Browser.close') } catch { /* process cleanup below */ }
-  await new Promise(resolve => setTimeout(resolve, 300))
+  await new Promise(/* 调用 setTimeout(resolve, 300) 并返回调用结果。 */ resolve => setTimeout(resolve, 300))
   if (!edge.killed) edge.kill()
-  await new Promise(resolve => previewServer.httpServer.close(resolve))
+  await new Promise(/* 调用 previewServer.httpServer.close(resolve) 并返回调用结果。 */ resolve => previewServer.httpServer.close(resolve))
   // Edge can hold a transient lock on profile files for a few hundred milliseconds
   // after Browser.close. Let Node retry those Windows EBUSY/EPERM failures so a
   // successful product qualification is not reported as a cleanup failure.
   await rm(profile, { recursive: true, force: true, maxRetries: 10, retryDelay: 150 })
 }
 
-async function freePort() {
+/** 临时绑定回环动态端口，取得端口号后关闭监听器。 */ async function freePort() {
   const server = createNetServer()
-  await new Promise((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve) })
+  await new Promise(/** 等待回环端口监听完成，启动失败则拒绝。 */ (resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve) })
   const address = server.address(); const port = typeof address === 'object' && address ? address.port : 0
-  await new Promise(resolve => server.close(resolve)); return port
+  await new Promise(/* 调用 server.close(resolve) 并返回调用结果。 */ resolve => server.close(resolve)); return port
 }
-async function waitForTarget(port) {
+/** 在十五秒期限内等待 Edge 页面调试目标，启动期间短暂失败允许重试。 */ async function waitForTarget(port) {
   const deadline = Date.now() + 15_000
   while (Date.now() < deadline) {
-    try { const targets = await fetch(`http://127.0.0.1:${port}/json/list`).then(response => response.json()); const target = targets.find(item => item.type === 'page'); if (target) return target } catch { /* browser is starting */ }
-    await new Promise(resolve => setTimeout(resolve, 100))
+    try { const targets = await fetch(`http://127.0.0.1:${port}/json/list`).then(/* 调用 response.json() 并返回调用结果。 */ response => response.json()); const target = targets.find(/* 比较 item.type 与 'page'，返回严格相等的判断结果。 */ item => item.type === 'page'); if (target) return target } catch { /* browser is starting */ }
+    await new Promise(/* 调用 setTimeout(resolve, 100) 并返回调用结果。 */ resolve => setTimeout(resolve, 100))
   }
   throw new Error('Timed out connecting to Edge DevTools.')
 }
-async function connectCdp(url) {
+/** 连接浏览器调试套接字，通过递增请求标识关联响应并分发事件。 */ async function connectCdp(url) {
   const socket = new WebSocket(url), pending = new Map(), listeners = new Map(); let nextId = 1
-  await new Promise((resolve, reject) => { socket.addEventListener('open', resolve, { once: true }); socket.addEventListener('error', reject, { once: true }) })
-  socket.addEventListener('message', message => { const value = JSON.parse(message.data); if (value.id) { const item = pending.get(value.id); if (!item) return; pending.delete(value.id); if (value.error) item.reject(new Error(value.error.message)); else item.resolve(value.result) } else for (const listener of listeners.get(value.method) || []) listener(value.params || {}) })
-  return { send(method, params = {}) { return new Promise((resolve, reject) => { const id = nextId++; pending.set(id, { resolve, reject }); socket.send(JSON.stringify({ id, method, params })) }) }, on(method, listener) { listeners.set(method, [...(listeners.get(method) || []), listener]) } }
+  await new Promise(/** 等待调试套接字连接成功或失败。 */ (resolve, reject) => { socket.addEventListener('open', resolve, { once: true }); socket.addEventListener('error', reject, { once: true }) })
+  socket.addEventListener('message', /** 按请求标识完成或拒绝等待，非响应消息分发给对应事件监听器。 */ message => { const value = JSON.parse(message.data); if (value.id) { const item = pending.get(value.id); if (!item) return; pending.delete(value.id); if (value.error) item.reject(new Error(value.error.message)); else item.resolve(value.result) } else for (const listener of listeners.get(value.method) || []) listener(value.params || {}) })
+  return { /** 登记等待响应的请求并发送带标识的调试命令。 */ send(method, params = {}) { return new Promise(/** 分配请求标识、保存完成回调并发送序列化命令。 */ (resolve, reject) => { const id = nextId++; pending.set(id, { resolve, reject }); socket.send(JSON.stringify({ id, method, params })) }) }, /** 按事件名称追加监听器，保留已注册监听器。 */ on(method, listener) { listeners.set(method, [...(listeners.get(method) || []), listener]) } }
 }
-async function evaluate(client, expression) { const result = await client.send('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true }); if (result.exceptionDetails) throw new Error(result.exceptionDetails.text); return result.result.value }
-async function waitForExpression(client, expression, timeout, throwOnTimeout = true) { const deadline = Date.now() + timeout; while (Date.now() < deadline) { try { if (await evaluate(client, expression)) return true } catch { /* page may still be navigating */ } await new Promise(resolve => setTimeout(resolve, 100)) } if (throwOnTimeout) throw new Error(`Timed out waiting for ${expression}`); return false }
-async function key(client, keyValue, code, modifiers = 0) { const virtualKey = keyValue.length === 1 ? keyValue.toUpperCase().charCodeAt(0) : keyValue === 'Enter' ? 13 : keyValue === 'Tab' ? 9 : keyValue === 'Escape' ? 27 : keyValue === 'F11' ? 122 : 0; const text = keyValue === 'Enter' ? '\r' : keyValue.length === 1 && modifiers === 0 ? keyValue : undefined; await client.send('Input.dispatchKeyEvent', { type: 'keyDown', key: keyValue, code, modifiers, windowsVirtualKeyCode: virtualKey, ...(text ? { text, unmodifiedText: text } : {}) }); await client.send('Input.dispatchKeyEvent', { type: 'keyUp', key: keyValue, code, modifiers, windowsVirtualKeyCode: virtualKey }) }
-async function combo(client, keyValue, code, modifiers) { await key(client, keyValue, code, modifiers) }
+/** 执行页面表达式并按值取回异步结果，页面异常转为检查失败。 */ async function evaluate(client, expression) { const result = await client.send('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true }); if (result.exceptionDetails) throw new Error(result.exceptionDetails.text); return result.result.value }
+/** 在截止时间内轮询条件，可选择超时时抛错或返回 false。 */ async function waitForExpression(client, expression, timeout, throwOnTimeout = true) { const deadline = Date.now() + timeout; while (Date.now() < deadline) { try { if (await evaluate(client, expression)) return true } catch { /* page may still be navigating */ } await new Promise(/* 调用 setTimeout(resolve, 100) 并返回调用结果。 */ resolve => setTimeout(resolve, 100)) } if (throwOnTimeout) throw new Error(`Timed out waiting for ${expression}`); return false }
+/** 映射虚拟键码并发送按下及释放，符合条件时附带输入文本。 */ async function key(client, keyValue, code, modifiers = 0) { const virtualKey = keyValue.length === 1 ? keyValue.toUpperCase().charCodeAt(0) : keyValue === 'Enter' ? 13 : keyValue === 'Tab' ? 9 : keyValue === 'Escape' ? 27 : keyValue === 'F11' ? 122 : 0; const text = keyValue === 'Enter' ? '\r' : keyValue.length === 1 && modifiers === 0 ? keyValue : undefined; await client.send('Input.dispatchKeyEvent', { type: 'keyDown', key: keyValue, code, modifiers, windowsVirtualKeyCode: virtualKey, ...(text ? { text, unmodifiedText: text } : {}) }); await client.send('Input.dispatchKeyEvent', { type: 'keyUp', key: keyValue, code, modifiers, windowsVirtualKeyCode: virtualKey }) }
+/** 将组合键修饰符交给统一按键发送函数。 */ async function combo(client, keyValue, code, modifiers) { await key(client, keyValue, code, modifiers) }

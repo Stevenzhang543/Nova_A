@@ -1,3 +1,4 @@
+<!-- 游戏存档设置：查看数据与存档槽，执行可取消读写、恢复和工作值清空。 -->
 <template>
   <section class="save-settings">
     <p>{{ t('saveDataDescription') }}</p>
@@ -23,13 +24,13 @@ const slot = ref(saveGameState.slot)
 const message = ref('')
 const refresh = ref(0)
 let controller: AbortController | null = null
-const preview = computed(() => JSON.stringify(saveGameState.values, null, 2))
-const slots = computed(() => { void refresh.value; return listSaveSlots() })
-async function load(): Promise<void> { controller?.abort(); controller = new AbortController(); try { message.value = await loadSaveSlotAsync(slot.value, { signal: controller.signal }) ? t('saveLoaded') : t('emptySaveLoaded') } catch (error) { if (!(error instanceof DOMException && error.name === 'AbortError')) message.value = String(error) } finally { controller = null; refresh.value++ } }
-async function commit(): Promise<void> { controller?.abort(); controller = new AbortController(); try { message.value = await commitSaveSlotAsync(slot.value, { signal: controller.signal }) ? t('saveCommitted') : '' } catch (error) { if (!(error instanceof DOMException && error.name === 'AbortError')) message.value = String(error) } finally { controller = null; refresh.value++ } }
-function cancel(): void { controller?.abort() }
-function recover(): void { message.value = recoverSaveSlot(slot.value) ? t('saveLoaded') : ''; refresh.value++ }
-function clear(): void { clearSaveValues(); message.value = t('workingSaveCleared') }
+const preview = computed(/** 将工作存档值格式化为 JSON。 */ () => JSON.stringify(saveGameState.values, null, 2))
+const slots = computed(/** 依赖刷新计数重新列出存档槽。 */ () => { void refresh.value; return listSaveSlots() })
+/** 取消旧请求后读取槽，显示结果或非取消错误，结束时刷新槽列表。 */ async function load(): Promise<void> { controller?.abort(); controller = new AbortController(); try { message.value = await loadSaveSlotAsync(slot.value, { signal: controller.signal }) ? t('saveLoaded') : t('emptySaveLoaded') } catch (error) { if (!(error instanceof DOMException && error.name === 'AbortError')) message.value = String(error) } finally { controller = null; refresh.value++ } }
+/** 取消旧请求后保存槽，显示结果或非取消错误，结束时刷新槽列表。 */ async function commit(): Promise<void> { controller?.abort(); controller = new AbortController(); try { message.value = await commitSaveSlotAsync(slot.value, { signal: controller.signal }) ? t('saveCommitted') : '' } catch (error) { if (!(error instanceof DOMException && error.name === 'AbortError')) message.value = String(error) } finally { controller = null; refresh.value++ } }
+/** 中止当前异步存档操作。 */ function cancel(): void { controller?.abort() }
+/** 恢复所选槽并刷新列表，成功时显示载入提示。 */ function recover(): void { message.value = recoverSaveSlot(slot.value) ? t('saveLoaded') : ''; refresh.value++ }
+/** 清空工作存档值并显示提示。 */ function clear(): void { clearSaveValues(); message.value = t('workingSaveCleared') }
 </script>
 
 <style scoped>

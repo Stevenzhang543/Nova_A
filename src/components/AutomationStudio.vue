@@ -1,3 +1,4 @@
+<!-- 自动化工作室：选择模板及权限，预览和执行可取消计划，支持回滚。 -->
 <template>
   <section class="automation-studio" data-control-scope="automation-studio">
     <header class="studio-header"><div><span>{{ t('automationStudio') }}</span><h2>{{ t('automationStudioTitle') }}</h2><p>{{ t('automationStudioHint') }}</p></div><span class="sandbox">{{ t('automationSandbox') }}</span></header>
@@ -38,13 +39,13 @@ const templates:ReadonlyArray<{id:string;label:TranslationKey;source:string}>=[
   {id:'asset',label:'automationTemplateAsset',source:`// @nova-editor-automation assets.write\nfn run() {\n  editor_create_text_asset("Assets/Scripts/Generated/Hello.rhai", "script", "fn start() { log_info(\\\"Hello from automation\\\"); }");\n}\n`}
 ]
 const template=ref('selection'),plan=ref<AutomationPlan|null>(null);let controller:AbortController|null=null
-function invalidate(){plan.value=null;if(state.phase==='previewed')state.phase='idle'}
-function applyTemplate(){const item=templates.find(candidate=>candidate.id===template.value);if(!item)return;state.source=item.source;const requested=item.source.match(/@nova-editor-automation ([^\n]+)/)?.[1].split(/\s+/)??[];state.granted.splice(0,state.granted.length,...permissions.filter(permission=>requested.includes(permission)));invalidate()}
-async function preview(){controller?.abort();controller=new AbortController();try{plan.value=await planEditorAutomation(state.source,state.granted,controller.signal)}catch(error){addEditorLog(error instanceof Error?error.message:String(error),'Editor','error')}finally{controller=null}}
-async function apply(){if(!plan.value)return;controller?.abort();controller=new AbortController();try{await applyEditorAutomation(plan.value,controller.signal);plan.value=null}catch(error){addEditorLog(error instanceof Error?error.message:String(error),'Editor','error')}finally{controller=null}}
-function cancel(){controller?.abort()}
-function rollback(){rollbackLastAutomation()}
-function glyph(action:string){return action==='create'?'+':action==='delete'?'×':action==='rename'?'Aa':action==='select'?'◎':'↺'}
+/** 清空旧计划，并将已预览状态退回空闲。 */ function invalidate(){plan.value=null;if(state.phase==='previewed')state.phase='idle'}
+/** 载入所选模板，筛选其声明的支持权限并使旧计划失效。 */ function applyTemplate(){const item=templates.find(/* 比较 candidate.id 与 template.value，返回严格相等的判断结果。 */ candidate=>candidate.id===template.value);if(!item)return;state.source=item.source;const requested=item.source.match(/@nova-editor-automation ([^\n]+)/)?.[1].split(/\s+/)??[];state.granted.splice(0,state.granted.length,...permissions.filter(/** 仅保留模板声明中请求的权限。 */ permission=>requested.includes(permission)));invalidate()}
+/** 中止旧请求后生成可取消预览；失败记录日志，结束释放控制器引用。 */ async function preview(){controller?.abort();controller=new AbortController();try{plan.value=await planEditorAutomation(state.source,state.granted,controller.signal)}catch(error){addEditorLog(error instanceof Error?error.message:String(error),'Editor','error')}finally{controller=null}}
+/** 执行已预览计划；成功清空计划，失败记录日志，结束释放控制器引用。 */ async function apply(){if(!plan.value)return;controller?.abort();controller=new AbortController();try{await applyEditorAutomation(plan.value,controller.signal);plan.value=null}catch(error){addEditorLog(error instanceof Error?error.message:String(error),'Editor','error')}finally{controller=null}}
+/** 中止当前预览或执行请求。 */ function cancel(){controller?.abort()}
+/** 回滚最近一次自动化操作。 */ function rollback(){rollbackLastAutomation()}
+/** 按创建、删除、重命名、选择等动作返回展示符号。 */ function glyph(action:string){return action==='create'?'+':action==='delete'?'×':action==='rename'?'Aa':action==='select'?'◎':'↺'}
 </script>
 
 <style scoped>

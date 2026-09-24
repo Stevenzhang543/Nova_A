@@ -1,3 +1,4 @@
+/** 功能回归脚本：执行 verify-v5.2.0-graphs.mjs 对应场景，保留断言和证据输出。 */
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
 import { dirname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -6,7 +7,7 @@ import { createServer } from 'vite'
 const root = dirname(dirname(fileURLToPath(import.meta.url)))
 const excludedDirectories = new Set(['.git', 'dist', 'node_modules', 'release', 'target'])
 
-async function graphFilesUnder(directory) {
+/** 结构说明（自动提取）：graphFilesUnder；输入 directory；直接调用 readdir、entry.isDirectory、excludedDirectories.has、files.push、graphFilesUnder 等；返回路径包含 files；包含循环处理；等待异步结果。 */ async function graphFilesUnder(directory) {
   const files = []
   for (const entry of await readdir(directory, { withFileTypes: true })) {
     if (entry.isDirectory()) {
@@ -24,11 +25,11 @@ Object.defineProperty(globalThis, 'navigator', {
     platform: 'Win32',
     hardwareConcurrency: 8,
     userAgent: 'Nova_A v5.2.0 graph verifier',
-    mediaDevices: { addEventListener() {}, removeEventListener() {}, async enumerateDevices() { return [] } },
+    mediaDevices: { /** 提供不注册监听器的测试事件接口。 */ addEventListener() {}, /** 提供无需移除监听器的测试事件接口。 */ removeEventListener() {}, /* 返回按声明顺序构造的数组 []。 */ async enumerateDevices() { return [] } },
   },
 })
-globalThis.window ??= { setTimeout, clearTimeout, setInterval, clearInterval, addEventListener() {}, removeEventListener() {}, dispatchEvent() {} }
-globalThis.localStorage ??= { getItem() { return null }, setItem() {}, removeItem() {} }
+globalThis.window ??= { setTimeout, clearTimeout, setInterval, clearInterval, /** 提供不注册监听器的测试事件接口。 */ addEventListener() {}, /** 提供无需移除监听器的测试事件接口。 */ removeEventListener() {}, /** 生成器环境桩忽略事件派发。 */ dispatchEvent() {} }
+globalThis.localStorage ??= { /* 返回固定值 null。 */ getItem() { return null }, /** 隔离存储桩忽略写入，不持久化生成过程数据。 */ setItem() {}, /** 隔离存储桩忽略删除请求。 */ removeItem() {} }
 
 const server = await createServer({ root, appType: 'custom', logLevel: 'silent', server: { middlewareMode: true } })
 await server.watcher.close()
@@ -37,7 +38,7 @@ try {
   const types = await server.ssrLoadModule('/src/visual/graphTypes.ts')
   const compiler = await server.ssrLoadModule('/src/visual/graphCompiler.ts')
   const language = await server.ssrLoadModule('/src/editor/scriptLanguage.ts')
-  const graphFiles = (await graphFilesUnder(root)).sort((left, right) => left < right ? -1 : left > right ? 1 : 0)
+  const graphFiles = (await graphFilesUnder(root)).sort(/* 根据 left < right 的真假，分别返回 -1 或 left > right ? 1 : 0。 */ (left, right) => left < right ? -1 : left > right ? 1 : 0)
   if (graphFiles.length === 0) throw new Error('No .nova-graph assets were found to verify.')
 
   for (const path of graphFiles) {
@@ -49,7 +50,7 @@ try {
       const roundTrip = types.serializeGraphDocument(types.parseGraphDocument(canonical))
       const compiled = compiler.compileGraphSource(canonical)
       const scriptErrors = compiled.valid
-        ? language.analyzeScript(compiled.source, graph.apiVersion).diagnostics.filter(diagnostic => diagnostic.severity === 'error')
+        ? language.analyzeScript(compiled.source, graph.apiVersion).diagnostics.filter(/* 比较 diagnostic.severity 与 'error'，返回严格相等的判断结果。 */ diagnostic => diagnostic.severity === 'error')
         : []
       const valid = canonical === roundTrip && compiled.valid && scriptErrors.length === 0
       results.push({
@@ -68,10 +69,10 @@ try {
     }
   }
 } finally {
-  await Promise.race([server.close(), new Promise(resolve => setTimeout(resolve, 2_000))])
+  await Promise.race([server.close(), new Promise(/* 调用 setTimeout(resolve, 2_000) 并返回调用结果。 */ resolve => setTimeout(resolve, 2_000))])
 }
 
-const failed = results.filter(result => result.status === 'failed')
+const failed = results.filter(/* 比较 result.status 与 'failed'，返回严格相等的判断结果。 */ result => result.status === 'failed')
 const report = {
   format: 'nova-v5.2.0-graph-asset-verification',
   version: 1,

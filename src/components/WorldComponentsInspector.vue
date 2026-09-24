@@ -1,3 +1,4 @@
+<!-- 世界组件检查器：编辑导航、路径等场景世界组件。 -->
 <template>
   <SimulationStatusPanel17 v-if="region || chunk" />
   <p v-if="form17.error.value" class="form-error17" role="alert">{{ form17.error.value }}</p>
@@ -45,27 +46,27 @@ import { OFFICIAL_AI_PACKAGE_ID, OFFICIAL_OBJECT_POOL_PACKAGE_ID, enableOfficial
 import { worldStreamingState } from '../runtime/worldStreaming'
 import { objectPoolDiagnostics } from '../runtime/objectPool'
 
-const form17 = useSimulationFormGuard17(() => pushHistory('Edit world component'))
+const form17 = useSimulationFormGuard17(/* 调用 pushHistory('Edit world component') 并返回调用结果。 */ () => pushHistory('Edit world component'))
 const props = defineProps<{ entity: Entity }>()
-const region = computed(() => props.entity.getComponent<NavigationRegion2D>('NavigationRegion2D'))
-const agent = computed(() => props.entity.getComponent<NavigationAgent2D>('NavigationAgent2D'))
-const obstacle = computed(() => props.entity.getComponent<NavigationObstacle2D>('NavigationObstacle2D'))
-const chunk = computed(() => props.entity.getComponent<WorldChunk2D>('WorldChunk2D'))
-const behavior = computed(() => props.entity.getComponent<BehaviorTree2D>('BehaviorTree2D'))
-const pool = computed(() => props.entity.getComponent<ObjectPool2D>('ObjectPool2D'))
-const emitter = computed(() => props.entity.getComponent<ParticleEmitter2D>('ParticleEmitter2D'))
-const profile = computed(() => navigationProfileSnapshot())
-const streamCell = computed(() => worldStreamingState.cells.find(cell => cell.entityUuid === props.entity.uuid))
-const poolStats = computed(() => objectPoolDiagnostics().find(item => item.ownerUuid === props.entity.uuid))
-const aiEnabled = computed(() => packageEnabled(OFFICIAL_AI_PACKAGE_ID)), poolEnabled = computed(() => packageEnabled(OFFICIAL_OBJECT_POOL_PACKAGE_ID))
+const region = computed(/* 调用 props.entity.getComponent<NavigationRegion2D>('NavigationRegion2D') 并返回调用结果。 */ () => props.entity.getComponent<NavigationRegion2D>('NavigationRegion2D'))
+const agent = computed(/* 调用 props.entity.getComponent<NavigationAgent2D>('NavigationAgent2D') 并返回调用结果。 */ () => props.entity.getComponent<NavigationAgent2D>('NavigationAgent2D'))
+const obstacle = computed(/* 调用 props.entity.getComponent<NavigationObstacle2D>('NavigationObstacle2D') 并返回调用结果。 */ () => props.entity.getComponent<NavigationObstacle2D>('NavigationObstacle2D'))
+const chunk = computed(/* 调用 props.entity.getComponent<WorldChunk2D>('WorldChunk2D') 并返回调用结果。 */ () => props.entity.getComponent<WorldChunk2D>('WorldChunk2D'))
+const behavior = computed(/* 调用 props.entity.getComponent<BehaviorTree2D>('BehaviorTree2D') 并返回调用结果。 */ () => props.entity.getComponent<BehaviorTree2D>('BehaviorTree2D'))
+const pool = computed(/* 调用 props.entity.getComponent<ObjectPool2D>('ObjectPool2D') 并返回调用结果。 */ () => props.entity.getComponent<ObjectPool2D>('ObjectPool2D'))
+const emitter = computed(/* 调用 props.entity.getComponent<ParticleEmitter2D>('ParticleEmitter2D') 并返回调用结果。 */ () => props.entity.getComponent<ParticleEmitter2D>('ParticleEmitter2D'))
+const profile = computed(/* 调用 navigationProfileSnapshot() 并返回调用结果。 */ () => navigationProfileSnapshot())
+const streamCell = computed(/** 查找当前实体对应的世界流送单元。 */ () => worldStreamingState.cells.find(/* 比较 cell.entityUuid 与 props.entity.uuid，返回严格相等的判断结果。 */ cell => cell.entityUuid === props.entity.uuid))
+const poolStats = computed(/** 查找当前实体拥有的对象池诊断。 */ () => objectPoolDiagnostics().find(/* 比较 item.ownerUuid 与 props.entity.uuid，返回严格相等的判断结果。 */ item => item.ownerUuid === props.entity.uuid))
+const aiEnabled = computed(/* 调用 packageEnabled(OFFICIAL_AI_PACKAGE_ID) 并返回调用结果。 */ () => packageEnabled(OFFICIAL_AI_PACKAGE_ID)), poolEnabled = computed(/* 调用 packageEnabled(OFFICIAL_OBJECT_POOL_PACKAGE_ID) 并返回调用结果。 */ () => packageEnabled(OFFICIAL_OBJECT_POOL_PACKAGE_ID))
 const bakeMessage = ref('')
-async function bake() { try { const result = await requestNavigationBake(physicsState.world.entities); bakeMessage.value = `${result.baked} / ${result.cells} · ${result.milliseconds.toFixed(2)} ms` } catch (error) { bakeMessage.value = String(error) } }
-function clearBake() { clearNavigationData(region.value ? props.entity.uuid : undefined); bakeMessage.value = t('cleared'); pushHistory('Clear navigation bake') }
-function removeLink(index: number) { region.value?.links.splice(index, 1); pushHistory('Remove navigation link') }
-function addLink() { region.value?.links.push({ id: crypto.randomUUID(), start: { x: 0, y: 0 }, end: { x: 1, y: 0 }, bidirectional: true, cost: 1, enabled: true }); pushHistory('Add navigation link') }
-function setDependencies(event: Event) { if (chunk.value) chunk.value.dependencies = (event.target as HTMLTextAreaElement).value.split(/\r?\n/).map(value => value.trim()).filter(Boolean).slice(0, 128) }
-function enableAi() { enableOfficialPackage(OFFICIAL_AI_PACKAGE_ID); pushHistory('Enable AI Tools package') }
-function enablePool() { enableOfficialPackage(OFFICIAL_OBJECT_POOL_PACKAGE_ID); pushHistory('Enable Object Pool package') }
+/** 请求世界导航烘焙并显示烘焙数、单元数及耗时，失败显示错误。 */ async function bake() { try { const result = await requestNavigationBake(physicsState.world.entities); bakeMessage.value = `${result.baked} / ${result.cells} · ${result.milliseconds.toFixed(2)} ms` } catch (error) { bakeMessage.value = String(error) } }
+/** 清除当前区域或全部导航数据，更新提示并记录历史。 */ function clearBake() { clearNavigationData(region.value ? props.entity.uuid : undefined); bakeMessage.value = t('cleared'); pushHistory('Clear navigation bake') }
+/** 移除指定导航链接并记录历史。 */ function removeLink(index: number) { region.value?.links.splice(index, 1); pushHistory('Remove navigation link') }
+/** 增加默认双向导航链接并记录历史。 */ function addLink() { region.value?.links.push({ id: crypto.randomUUID(), start: { x: 0, y: 0 }, end: { x: 1, y: 0 }, bidirectional: true, cost: 1, enabled: true }); pushHistory('Add navigation link') }
+/** 按行清理流送依赖，去空白及空项并限制为一百二十八项。 */ function setDependencies(event: Event) { if (chunk.value) chunk.value.dependencies = (event.target as HTMLTextAreaElement).value.split(/\r?\n/).map(/* 调用 value.trim() 并返回调用结果。 */ value => value.trim()).filter(Boolean).slice(0, 128) }
+/** 启用官方 AI 工具包并记录历史。 */ function enableAi() { enableOfficialPackage(OFFICIAL_AI_PACKAGE_ID); pushHistory('Enable AI Tools package') }
+/** 启用官方对象池包并记录历史。 */ function enablePool() { enableOfficialPackage(OFFICIAL_OBJECT_POOL_PACKAGE_ID); pushHistory('Enable Object Pool package') }
 </script>
 
 <style scoped>

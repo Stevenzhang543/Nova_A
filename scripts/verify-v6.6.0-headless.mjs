@@ -1,3 +1,4 @@
+/** 功能回归脚本：执行 verify-v6.6.0-headless.mjs 对应场景，保留断言和证据输出。 */
 import { createHash } from 'node:crypto'
 import { spawn, spawnSync } from 'node:child_process'
 import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
@@ -32,11 +33,11 @@ await writeFile(join(root, 'release-audits/v6.6.0-headless-smoke.json'), `${JSON
 if (report.status !== 'passed') throw new Error('Exported headless server did not remain alive during the native smoke interval.')
 console.log('Nova_A v6.6.0 headless Windows export and launch smoke passed.')
 
-async function launchSmoke(path, duration) {
+/** 结构说明（自动提取）：launchSmoke；输入 path、duration；直接调用 spawn、dirname、Date.now、child.once、Promise 等；等待异步结果。 */ async function launchSmoke(path, duration) {
   const child = spawn(path, [], { cwd: dirname(path), windowsHide: true, stdio: 'ignore' }), startedAt = Date.now()
-  let exit = null, error = ''; child.once('exit', (code, signal) => { exit = { code, signal } }); child.once('error', value => { error = value instanceof Error ? value.message : String(value) })
-  await new Promise(resolve => setTimeout(resolve, duration)); const stayedAlive = exit === null && !error
-  if (stayedAlive) { child.kill(); await new Promise(resolve => { child.once('exit', resolve); setTimeout(resolve, 2_000) }) }
+  let exit = null, error = ''; child.once('exit', /** 结构说明（自动提取）：child.once 回调；输入 code、signal；写入 exit。 */ (code, signal) => { exit = { code, signal } }); child.once('error', /** 结构说明（自动提取）：child.once 回调；输入 value；直接调用 String；写入 error。 */ value => { error = value instanceof Error ? value.message : String(value) })
+  await new Promise(/* 调用 setTimeout(resolve, duration) 并返回调用结果。 */ resolve => setTimeout(resolve, duration)); const stayedAlive = exit === null && !error
+  if (stayedAlive) { child.kill(); await new Promise(/** 结构说明（自动提取）：匿名回调；输入 resolve；直接调用 child.once、setTimeout。 */ resolve => { child.once('exit', resolve); setTimeout(resolve, 2_000) }) }
   return { path, durationMs: Date.now() - startedAt, stayedAlive, exit, error, status: stayedAlive ? 'passed' : 'failed' }
 }
-async function exists(path) { try { await stat(path); return true } catch { return false } }
+/** 读取文件状态判断路径存在性，失败时返回假。 */ async function exists(path) { try { await stat(path); return true } catch { return false } }

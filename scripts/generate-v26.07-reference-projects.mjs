@@ -1,3 +1,4 @@
+/** 版本26.07：生成参考项目与对应资源，供功能演示和版本验证使用。 */
 import { cp, mkdir, readFile, writeFile } from 'node:fs/promises'
 import { createHash } from 'node:crypto'
 import { dirname, join } from 'node:path'
@@ -37,7 +38,7 @@ const references = [
   }
 ]
 
-function updateProject(project, reference) {
+/** 升级网络参考项目身份与Windows构建设置，配置指定角色的原生UDP会话并同步客户端脚本和散列。 */ function updateProject(project, reference) {
   const build = project.projectSettings.build
   const network = project.projectSettings.production.networking
   project.engineVersion = engineVersion

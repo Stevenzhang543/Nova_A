@@ -1,19 +1,20 @@
+/** 版本26.15：组织教学步骤与示例说明，生成版本教程和用户操作文档。 */
 import assert from 'node:assert/strict'
 import {readFile,writeFile,mkdtemp,rm} from 'node:fs/promises'
 import {existsSync} from 'node:fs'
 import {dirname,join,resolve,relative,isAbsolute} from 'node:path'
 import {fileURLToPath,pathToFileURL} from 'node:url'
 import {build} from 'vite'
-const home=dirname(dirname(fileURLToPath(import.meta.url))),repository=existsSync(join(home,'package.json'))?home:resolve(home,'../..'),option=name=>process.argv.find(v=>v.startsWith('--'+name+'='))?.slice(name.length+3)
+const home=dirname(dirname(fileURLToPath(import.meta.url))),repository=existsSync(join(home,'package.json'))?home:resolve(home,'../..'),option=/* 调用 process.argv.find(v=>v.startsWith('--'+name+'='))?.slice(name.length+3) 并返回调用结果。 */ name=>process.argv.find(/* 调用 v.startsWith('--'+name+'=') 并返回调用结果。 */ v=>v.startsWith('--'+name+'='))?.slice(name.length+3)
 const source=resolve(option('source-root')||repository),output=resolve(option('output-root')||source),development=process.argv.includes('--development'),engine=JSON.parse(await readFile(join(output,'package.json'),'utf8')).version
 if(development)assert.notEqual(output,repository,'Development teaching must stay in an isolated output root');else assert.equal(engine,'26.15.0')
-const temporary=await mkdtemp(join(repository,'.cache','teaching-v2615-')),escape=value=>value.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;')
-const inline=value=>escape(value).replace(/`([^`]+)`/g,'<code>$1</code>').replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>')
-function markdown(text){return text.trim().split(/\n\s*\n/).map(block=>{const heading=block.match(/^(#{1,4}) (.+)$/);if(heading){const level=Math.min(heading[1].length+1,5);return '<h'+level+'>'+inline(heading[2])+'</h'+level+'>'}return '<p>'+inline(block).replaceAll('\n','<br>')+'</p>'}).join('\n')}
+const temporary=await mkdtemp(join(repository,'.cache','teaching-v2615-')),escape=/* 调用 value.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;') 并返回调用结果。 */ value=>value.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;')
+const inline=/** 先转义文本，再转换行内代码和粗体标记。 */ value=>escape(value).replace(/`([^`]+)`/g,'<code>$1</code>').replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>')
+/** 将简单Markdown段落和一至四级标题转换为网页内容。 */ function markdown(text){return text.trim().split(/\n\s*\n/).map(/** 识别标题并提升一级，否则渲染带换行的普通段落。 */ block=>{const heading=block.match(/^(#{1,4}) (.+)$/);if(heading){const level=Math.min(heading[1].length+1,5);return '<h'+level+'>'+inline(heading[2])+'</h'+level+'>'}return '<p>'+inline(block).replaceAll('\n','<br>')+'</p>'}).join('\n')}
 try{
  await build({configFile:false,root:source,logLevel:'error',ssr:{noExternal:true},build:{ssr:true,outDir:temporary,emptyOutDir:false,rollupOptions:{input:{templates:join(source,'src/projects/templates.ts'),guides:join(source,'src/projects/templateGuides.ts')},output:{entryFileNames:'[name].mjs'}}}})
- const [{PROJECT_TEMPLATES},{templateGuide}]=await Promise.all(['templates','guides'].map(name=>import(pathToFileURL(join(temporary,name+'.mjs')).href)))
- assert.equal(PROJECT_TEMPLATES.length,40);assert.equal(new Set(PROJECT_TEMPLATES.map(v=>v.id)).size,40)
+ const [{PROJECT_TEMPLATES},{templateGuide}]=await Promise.all(['templates','guides'].map(/* 调用 import(pathToFileURL(join(temporary,name+'.mjs')).href) 并返回调用结果。 */ name=>import(pathToFileURL(join(temporary,name+'.mjs')).href)))
+ assert.equal(PROJECT_TEMPLATES.length,40);assert.equal(new Set(PROJECT_TEMPLATES.map(/* 返回 v.id 的当前值。 */ v=>v.id)).size,40)
  let html=await readFile(join(output,'manual/index.html'),'utf8'),supplement='<!-- NOVA_V2615_START -->\n<div class="release-supplement">',sections=0
  const copy={en:{title:'26.15 — production assets, rendering and all forty starters',controls:'Controls and setup',expected:'Expected result',requires:'Requirements',foundation:'Shared foundation',checks:'After following these controls, stop and confirm authored state is restored. Save and reopen the project, repeat the result, then compare its exported player. A successful start alone does not certify all game behavior.'},de:{title:'26.15 — Produktionsressourcen, Rendering und alle vierzig Starter',controls:'Steuerung und Einrichtung',expected:'Erwartetes Ergebnis',requires:'Voraussetzungen',foundation:'Gemeinsame Grundlage',checks:'Danach Stop ausführen und die wiederhergestellte Ausgangsszene prüfen. Projekt speichern, erneut öffnen und das Ergebnis wiederholen; anschließend den exportierten Player vergleichen. Ein erfolgreicher Start allein bestätigt nicht jedes Spielverhalten.'},zh:{title:'26.15 — 生产资源、渲染与全部四十个模板',controls:'控制与设置',expected:'预期结果',requires:'要求',foundation:'复用基础',checks:'按上述操作后停止并确认编辑场景恢复。保存、重新打开并重复结果，再比较导出播放器。仅成功启动不能证明全部游戏行为。'}}
  for(const locale of ['en','de','zh']){

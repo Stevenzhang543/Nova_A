@@ -1,3 +1,4 @@
+<!-- 物理连接编辑器：创建、选择和配置实体之间的连接。 -->
 <template>
   <Teleport to="body">
     <div class="modal-scrim" @mousedown.self="emit('close')">
@@ -138,13 +139,13 @@ import { worldTransform } from '../world/hierarchy'
 type Stage = 'objects' | 'path' | 'simulation'
 type VisiblePath = 'straight' | 'manual'
 
-const form17 = useSimulationFormGuard17(() => {})
+const form17 = useSimulationFormGuard17(/** 为表单守卫提供空提交回调，实际连接提交由保存动作处理。 */ () => {})
 const props = defineProps<{ selectedId: number; connectionId: number | null }>()
 const emit = defineEmits<{ close: [] }>()
 const world = physicsState.world
-const existing = props.connectionId === null ? null : world.connections.find(connection => connection.id === props.connectionId) ?? null
-const selectedEntity = computed(() => world.entities.find(entity => entity.id === props.selectedId) ?? null)
-const existingPartner = existing?.anchors.find(anchor => anchor.entityId !== props.selectedId)?.entityId ?? null
+const existing = props.connectionId === null ? null : world.connections.find(/* 比较 connection.id 与 props.connectionId，返回严格相等的判断结果。 */ connection => connection.id === props.connectionId) ?? null
+const selectedEntity = computed(/** 查找当前选中端点实体。 */ () => world.entities.find(/* 比较 entity.id 与 props.selectedId，返回严格相等的判断结果。 */ entity => entity.id === props.selectedId) ?? null)
+const existingPartner = existing?.anchors.find(/* 比较 anchor.entityId 与 props.selectedId，返回严格不等的判断结果。 */ anchor => anchor.entityId !== props.selectedId)?.entityId ?? null
 const partnerId = ref<number | null>(existingPartner)
 const stage = ref<Stage>(existingPartner === null ? 'objects' : 'path')
 const selectedStyle = ref<VisiblePath>(existing?.style === 'manual' ? 'manual' : 'straight')
@@ -166,17 +167,17 @@ const collisionRadius = ref(existing?.collisionRadius ?? 0.2)
 const linearDensity = ref(existing?.linearDensity ?? 0.08)
 const segmentCount = ref(existing?.segmentCount ?? 12)
 const collideConnected = ref(existing?.collideConnected ?? false)
-const availableEntities = computed(() => world.entities.filter(entity => entity.id !== props.selectedId && entity.getCollider()?.physicsLayer === selectedEntity.value?.getCollider()?.physicsLayer))
-const partnerEntity = computed(() => partnerId.value === null ? null : world.entities.find(entity => entity.id === partnerId.value) ?? null)
-const overlapping = computed(() => Boolean(selectedEntity.value && partnerEntity.value && entitiesOverlap(selectedEntity.value, partnerEntity.value, world.entities)))
-const drawingComplete = computed(() => drawnAnchors.value !== null && drawnPoints.value.length >= 2)
+const availableEntities = computed(/** 筛选其他且物理图层相同的连接对象。 */ () => world.entities.filter(/** 判断候选不是当前实体且双方碰撞体物理层相同。 */ entity => entity.id !== props.selectedId && entity.getCollider()?.physicsLayer === selectedEntity.value?.getCollider()?.physicsLayer))
+const partnerEntity = computed(/** 根据伙伴编号查找实体，未选择时返回空值。 */ () => partnerId.value === null ? null : world.entities.find(/* 比较 entity.id 与 partnerId.value，返回严格相等的判断结果。 */ entity => entity.id === partnerId.value) ?? null)
+const overlapping = computed(/** 检查当前两个端点实体是否都存在且相互重叠。 */ () => Boolean(selectedEntity.value && partnerEntity.value && entitiesOverlap(selectedEntity.value, partnerEntity.value, world.entities)))
+const drawingComplete = computed(/* 先计算 drawnAnchors.value !== null；仅当其为真值时求右侧 drawnPoints.value.length >= 2，返回短路求值结果。 */ () => drawnAnchors.value !== null && drawnPoints.value.length >= 2)
 
 let resizeObserver: ResizeObserver | null = null
 let previewResizeRaf = 0
 
-function schedulePreviewResize() {
+/** 将多次预览尺寸请求合并为一个动画帧。 */ function schedulePreviewResize() {
   if (previewResizeRaf) return
-  previewResizeRaf = requestAnimationFrame(() => {
+  previewResizeRaf = requestAnimationFrame(/** 清除尺寸帧标识并调整预览画布。 */ () => {
     previewResizeRaf = 0
     resizePreview()
   })
@@ -188,32 +189,32 @@ let startAnchor: ConnectionAnchor | null = null
 let startEntityId: number | null = null
 let rawPoints: Vec2[] = []
 
-function entityName(id: number) {
-  const entity = world.entities.find(candidate => candidate.id === id)
+/** 显示实体名称加编号，缺失时仅显示编号。 */ function entityName(id: number) {
+  const entity = world.entities.find(/* 比较 candidate.id 与 id，返回严格相等的判断结果。 */ candidate => candidate.id === id)
   return entity ? `${entity.name}_${entity.id}` : String(id)
 }
-function shapeGlyph(type?: string) { return type === 'Circle' ? '○' : type === 'Triangle' ? '△' : '□' }
+/* 根据 type === 'Circle' 的真假，分别返回 '○' 或 type === 'Triangle' ? '△' : '□'。 */ function shapeGlyph(type?: string) { return type === 'Circle' ? '○' : type === 'Triangle' ? '△' : '□' }
 
-function selectPartner(id: number) {
+/** 选择伙伴后清空绘制并进入路径选择阶段。 */ function selectPartner(id: number) {
   partnerId.value = id
   clearDrawing()
   stage.value = 'path'
 }
 
-function choosePath(style: VisiblePath) {
+/** 选择路径样式后清空绘制，进入仿真阶段并待 DOM 更新后调整画布。 */ function choosePath(style: VisiblePath) {
   selectedStyle.value = style
   clearDrawing()
   stage.value = 'simulation'
   void nextTick(resizePreview)
 }
 
-function goBack() {
+/** 清除提示并退回路径或对象选择阶段。 */ function goBack() {
   drawMessage.value = ''
   if (stage.value === 'simulation') stage.value = 'path'
   else stage.value = 'objects'
 }
 
-function copyHiddenPhysics(target: Connection): void {
+/** 保留现有连接未显示的字段，再用当前控件值覆盖物理参数并限制分段数。 */ function copyHiddenPhysics(target: Connection): void {
   if (existing) Object.assign(target, JSON.parse(JSON.stringify(existing)) as Connection)
   target.stretchable = stretchable.value
   target.bendable = bendable.value
@@ -229,7 +230,7 @@ function copyHiddenPhysics(target: Connection): void {
   target.collideConnected = collideConnected.value
 }
 
-function createDraftConnection(): Connection | null {
+/** 有伙伴时创建新或现有编号的连接模型，并复制保留的物理参数。 */ function createDraftConnection(): Connection | null {
   if (partnerId.value === null) return null
   const id = existing?.id ?? world.allocateConnectionId()
   const connection = createConnectionModel(id, world.entities, [props.selectedId, partnerId.value], ['surface', 'surface'])
@@ -237,8 +238,8 @@ function createDraftConnection(): Connection | null {
   return connection
 }
 
-function commitConnection(connection: Connection, statusKey: 'connectionCreated' | 'connectionUpdated' | 'bindingCreated') {
-  const index = existing ? world.connections.findIndex(candidate => candidate.id === existing.id) : -1
+/** 插入或替换世界连接，记录历史、设置本地化状态并关闭编辑器。 */ function commitConnection(connection: Connection, statusKey: 'connectionCreated' | 'connectionUpdated' | 'bindingCreated') {
+  const index = existing ? world.connections.findIndex(/* 比较 candidate.id 与 existing.id，返回严格相等的判断结果。 */ candidate => candidate.id === existing.id) : -1
   if (index === -1) world.connections.push(connection)
   else world.connections.splice(index, 1, connection)
   pushHistory()
@@ -246,7 +247,7 @@ function commitConnection(connection: Connection, statusKey: 'connectionCreated'
   emit('close')
 }
 
-function saveBinding() {
+/** 先提交所有编辑草稿，再配置绑定连接，必要时命名并提交。 */ function saveBinding() {
   if (!settleEditorDrafts()) return
   const connection = createDraftConnection()
   if (!connection || !configureBinding(connection, world.entities)) return
@@ -254,7 +255,7 @@ function saveBinding() {
   commitConnection(connection, 'bindingCreated')
 }
 
-function saveConnection() {
+/** 要求已绘制有效锚点，创建连接并复制路径，重置断裂状态，按需初始化绳节点，归一化通过后提交。 */ function saveConnection() {
   if (!settleEditorDrafts()) return
   if (!drawnAnchors.value || drawnPoints.value.length < 2) return
   const connection = createDraftConnection()
@@ -263,7 +264,7 @@ function saveConnection() {
   connection.bindOffset = { x: 0, y: 0 }
   connection.bindAngle = 0
   connection.style = selectedStyle.value
-  connection.anchors = drawnAnchors.value.map(anchor => ({ ...anchor, localPoint: { ...anchor.localPoint } }))
+  connection.anchors = drawnAnchors.value.map(/** 复制锚点及局部位置，避免共享可变坐标对象。 */ anchor => ({ ...anchor, localPoint: { ...anchor.localPoint } }))
   const start = resolveAnchor(connection.anchors[0], world.entities)!
   const end = resolveAnchor(connection.anchors[1], world.entities)!
   connection.restLengths = [Math.max(1e-6, Math.hypot(end.x - start.x, end.y - start.y))]
@@ -282,12 +283,12 @@ function saveConnection() {
   commitConnection(connection, existing ? 'connectionUpdated' : 'connectionCreated')
 }
 
-function cssColor(name: string, fallback: string): string {
+/** 读取根元素 CSS 颜色变量，缺失时使用备用色。 */ function cssColor(name: string, fallback: string): string {
   const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim()
   return value || fallback
 }
 
-function resizePreview() {
+/** 按可见画布尺寸和最高两倍像素比设置像素大小并重绘。 */ function resizePreview() {
   const canvas = previewCanvas.value
   if (!canvas) return
   const rect = canvas.getBoundingClientRect()
@@ -298,12 +299,12 @@ function resizePreview() {
   renderPreview()
 }
 
-function calculatePreviewTransform(width: number, height: number) {
-  const entities = [selectedEntity.value, partnerEntity.value].filter((entity): entity is Entity => Boolean(entity))
-  const points = entities.flatMap(entity => entityBoundaryPoints(entity, 64, world.entities))
+/** 根据两个实体的边界计算带内边距的居中预览变换。 */ function calculatePreviewTransform(width: number, height: number) {
+  const entities = [selectedEntity.value, partnerEntity.value].filter(/* 调用 Boolean(entity) 并返回调用结果。 */ (entity): entity is Entity => Boolean(entity))
+  const points = entities.flatMap(/* 调用 entityBoundaryPoints(entity, 64, world.entities) 并返回调用结果。 */ entity => entityBoundaryPoints(entity, 64, world.entities))
   if (!points.length) return { scale: 1, offsetX: width / 2, offsetY: height / 2 }
-  const xs = points.map(point => point.x)
-  const ys = points.map(point => point.y)
+  const xs = points.map(/* 返回 point.x 的当前值。 */ point => point.x)
+  const ys = points.map(/* 返回 point.y 的当前值。 */ point => point.y)
   const minimumX = Math.min(...xs), maximumX = Math.max(...xs)
   const minimumY = Math.min(...ys), maximumY = Math.max(...ys)
   const rangeX = Math.max(1e-6, maximumX - minimumX)
@@ -314,15 +315,15 @@ function calculatePreviewTransform(width: number, height: number) {
   return { scale, offsetX: width / 2 - centerX * scale, offsetY: height / 2 + centerY * scale }
 }
 
-function worldToPreview(point: Vec2): Vec2 {
+/** 将世界坐标转换为预览坐标并翻转纵轴。 */ function worldToPreview(point: Vec2): Vec2 {
   return { x: previewTransform.offsetX + point.x * previewTransform.scale, y: previewTransform.offsetY - point.y * previewTransform.scale }
 }
 
-function previewToWorld(point: Vec2): Vec2 {
+/** 将预览坐标逆变换为世界坐标。 */ function previewToWorld(point: Vec2): Vec2 {
   return { x: (point.x - previewTransform.offsetX) / previewTransform.scale, y: -(point.y - previewTransform.offsetY) / previewTransform.scale }
 }
 
-function drawEntity(context: CanvasRenderingContext2D, entity: Entity, selected: boolean) {
+/** 绘制实体边界、选中描边及名称编号。 */ function drawEntity(context: CanvasRenderingContext2D, entity: Entity, selected: boolean) {
   const points = entityBoundaryPoints(entity, 64, world.entities).map(worldToPreview)
   if (points.length < 3) return
   context.beginPath()
@@ -340,7 +341,7 @@ function drawEntity(context: CanvasRenderingContext2D, entity: Entity, selected:
   context.fillText(`${entity.name}_${entity.id}`, center.x, center.y - 17)
 }
 
-function drawAnchor(context: CanvasRenderingContext2D, point: Vec2) {
+/** 在指定世界点绘制预览锚点标记。 */ function drawAnchor(context: CanvasRenderingContext2D, point: Vec2) {
   const screen = worldToPreview(point)
   context.beginPath(); context.arc(screen.x, screen.y, 8, 0, Math.PI * 2)
   context.fillStyle = '#ffffff'; context.fill()
@@ -349,7 +350,7 @@ function drawAnchor(context: CanvasRenderingContext2D, point: Vec2) {
   context.fillStyle = '#2f80ff'; context.fill()
 }
 
-function drawPath(context: CanvasRenderingContext2D, points: Vec2[], style: VisiblePath) {
+/** 把世界路径绘为直线或平滑手绘曲线，并绘制双层描边。 */ function drawPath(context: CanvasRenderingContext2D, points: Vec2[], style: VisiblePath) {
   if (points.length < 2) return
   const screen = points.map(worldToPreview)
   context.beginPath(); context.moveTo(screen[0].x, screen[0].y)
@@ -364,7 +365,7 @@ function drawPath(context: CanvasRenderingContext2D, points: Vec2[], style: Visi
   context.strokeStyle = 'rgba(255,255,255,.82)'; context.lineWidth = 1.2; context.stroke()
 }
 
-function renderPreview() {
+/** 清空并重建预览背景、实体、当前路径及可选中心和锚点标记。 */ function renderPreview() {
   const canvas = previewCanvas.value
   const context = canvas?.getContext('2d')
   if (!canvas || !context) return
@@ -392,14 +393,14 @@ function renderPreview() {
   }
 }
 
-function canvasPoint(event: PointerEvent): Vec2 {
+/** 将指针客户区坐标转换为画布局部坐标。 */ function canvasPoint(event: PointerEvent): Vec2 {
   const rect = previewCanvas.value!.getBoundingClientRect()
   return { x: event.clientX - rect.left, y: event.clientY - rect.top }
 }
 
-function anchorNearPointer(screenPoint: Vec2, requiredEntityId?: number): { entity: Entity; anchor: ConnectionAnchor; point: Vec2 } | null {
+/** 在允许的端点实体上寻找距离阈值内最近的中心或表面锚点。 */ function anchorNearPointer(screenPoint: Vec2, requiredEntityId?: number): { entity: Entity; anchor: ConnectionAnchor; point: Vec2 } | null {
   const worldPoint = previewToWorld(screenPoint)
-  const candidates = [selectedEntity.value, partnerEntity.value].filter((entity): entity is Entity => Boolean(entity) && (requiredEntityId === undefined || entity!.id === requiredEntityId))
+  const candidates = [selectedEntity.value, partnerEntity.value].filter(/* 先计算 Boolean(entity)；仅当其为真值时求右侧 (requiredEntityId === undefined || entity!.id === requiredEntityId)，返回短路求值结果。 */ (entity): entity is Entity => Boolean(entity) && (requiredEntityId === undefined || entity!.id === requiredEntityId))
   let best: { entity: Entity; anchor: ConnectionAnchor; point: Vec2; distance: number } | null = null
   for (const entity of candidates) {
     if (displayCenters.value) {
@@ -421,7 +422,7 @@ function anchorNearPointer(screenPoint: Vec2, requiredEntityId?: number): { enti
   return best
 }
 
-function onPreviewPointerDown(event: PointerEvent) {
+/** 仅在仿真阶段左键命中锚点时开始捕获绘制，记录初始端点并重绘。 */ function onPreviewPointerDown(event: PointerEvent) {
   if (event.button !== 0 || stage.value !== 'simulation') return
   const picked = anchorNearPointer(canvasPoint(event))
   if (!picked) { drawMessage.value = t('startOnAnchor'); return }
@@ -436,7 +437,7 @@ function onPreviewPointerDown(event: PointerEvent) {
   renderPreview()
 }
 
-function onPreviewPointerMove(event: PointerEvent) {
+/** 所属指针移动时更新直线路径，手绘模式仅在移动足够距离后添加采样点。 */ function onPreviewPointerMove(event: PointerEvent) {
   if (!isDrawing.value || event.pointerId !== activePointerId) return
   const point = previewToWorld(canvasPoint(event))
   if (selectedStyle.value !== 'manual') rawPoints.splice(1, rawPoints.length - 1, point)
@@ -447,7 +448,7 @@ function onPreviewPointerMove(event: PointerEvent) {
   renderPreview()
 }
 
-function onPreviewPointerUp(event: PointerEvent) {
+/** 要求在另一实体锚点结束，整理端点方向并平滑手绘路径，再清理捕获状态并重绘。 */ function onPreviewPointerUp(event: PointerEvent) {
   if (!isDrawing.value || event.pointerId !== activePointerId || startEntityId === null || !startAnchor) return
   const requiredEntityId = startEntityId === props.selectedId ? partnerId.value : props.selectedId
   const picked = requiredEntityId === null ? null : anchorNearPointer(canvasPoint(event), requiredEntityId)
@@ -475,7 +476,7 @@ function onPreviewPointerUp(event: PointerEvent) {
   renderPreview()
 }
 
-function cancelPreviewDrawing() {
+/** 取消当前绘制指针状态和临时点并重绘。 */ function cancelPreviewDrawing() {
   isDrawing.value = false
   activePointerId = null
   startAnchor = null
@@ -484,19 +485,19 @@ function cancelPreviewDrawing() {
   renderPreview()
 }
 
-function clearDrawing() {
+/** 清除已完成锚点、路径及提示，再取消临时绘制。 */ function clearDrawing() {
   drawnAnchors.value = null
   drawnPoints.value = []
   drawMessage.value = ''
   cancelPreviewDrawing()
 }
 
-watch(displayCenters, visible => {
-  if (!visible && drawnAnchors.value?.some(anchor => anchor.mode === 'center')) clearDrawing()
+watch(displayCenters, /** 关闭中心显示且路径使用中心锚点时清空路径，否则仅重绘。 */ visible => {
+  if (!visible && drawnAnchors.value?.some(/* 比较 anchor.mode 与 'center'，返回严格相等的判断结果。 */ anchor => anchor.mode === 'center')) clearDrawing()
   else renderPreview()
 })
-watch(() => [selectedEntity.value?.transform.position.x, selectedEntity.value?.transform.position.y, partnerEntity.value?.transform.position.x, partnerEntity.value?.transform.position.y], renderPreview)
-watch(previewCanvas, canvas => {
+watch(/** 监听两个端点实体的位置变化。 */ () => [selectedEntity.value?.transform.position.x, selectedEntity.value?.transform.position.y, partnerEntity.value?.transform.position.x, partnerEntity.value?.transform.position.y], renderPreview)
+watch(previewCanvas, /** 画布引用变化时切换尺寸观察对象，并等待 DOM 后安排尺寸更新。 */ canvas => {
   resizeObserver?.disconnect()
   if (!canvas) return
   resizeObserver ??= new ResizeObserver(schedulePreviewResize)
@@ -504,22 +505,22 @@ watch(previewCanvas, canvas => {
   void nextTick(schedulePreviewResize)
 })
 
-onMounted(() => {
+onMounted(/** 挂载时观察画布，并从已有非绑定连接恢复端点及正向路径进入仿真阶段。 */ () => {
   resizeObserver ??= new ResizeObserver(schedulePreviewResize)
   if (previewCanvas.value) resizeObserver.observe(previewCanvas.value)
   if (existing && !existing.binding && existing.anchors.length >= 2) {
-    const selectedAnchor = existing.anchors.find(anchor => anchor.entityId === props.selectedId)
-    const partnerAnchor = existing.anchors.find(anchor => anchor.entityId === partnerId.value)
+    const selectedAnchor = existing.anchors.find(/* 比较 anchor.entityId 与 props.selectedId，返回严格相等的判断结果。 */ anchor => anchor.entityId === props.selectedId)
+    const partnerAnchor = existing.anchors.find(/* 比较 anchor.entityId 与 partnerId.value，返回严格相等的判断结果。 */ anchor => anchor.entityId === partnerId.value)
     const existingRoute = routePoints(existing, world.entities)[0]
     if (selectedAnchor && partnerAnchor && existingRoute?.length >= 2) {
       const selectedFirst = existing.anchors[0].entityId === props.selectedId
       drawnAnchors.value = [{ ...selectedAnchor, localPoint: { ...selectedAnchor.localPoint } }, { ...partnerAnchor, localPoint: { ...partnerAnchor.localPoint } }]
-      drawnPoints.value = selectedFirst ? existingRoute.map(point => ({ ...point })) : existingRoute.map(point => ({ ...point })).reverse()
+      drawnPoints.value = selectedFirst ? existingRoute.map(/** 复制现有路径坐标，防止编辑共享原坐标对象。 */ point => ({ ...point })) : existingRoute.map(/** 复制反向路径坐标，随后由外层逆序匹配端点方向。 */ point => ({ ...point })).reverse()
       stage.value = 'simulation'
     }
   }
 })
-onBeforeUnmount(() => {
+onBeforeUnmount(/** 卸载时解除尺寸观察并取消待执行尺寸帧。 */ () => {
   resizeObserver?.disconnect()
   if (previewResizeRaf) cancelAnimationFrame(previewResizeRaf)
 })

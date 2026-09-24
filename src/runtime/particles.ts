@@ -1,3 +1,4 @@
+/** 粒子运行：生成和更新粒子，维护发射器状态及可提交给渲染器的数据。 */
 import { resolveTexture } from '../assets/AssetDatabase'
 import type { Renderer2D } from '../renderer'
 import type { ParticleEmitter2D } from '../world/components'
@@ -29,11 +30,11 @@ interface EmitterState {
 const states = new Map<string, EmitterState>()
 export const particleDiagnostics = reactive({ activeParticles: 0, emitterCount: 0, updateMs: 0, budget: 10_000, budgetExceeded: false, subemissions: 0, collisions: 0, cpuSimulated: 0, gpuRendered: 0, events: [] as Array<{ time: number; emitterUuid: string; kind: 'collision' | 'death' | 'subemit'; signal: string }> })
 
-function clamp(value: unknown, fallback: number, minimum: number, maximum: number): number {
+/* 调用 Math.min(maximum, Math.max(minimum, finiteNumber(value, fallback))) 并返回调用结果。 */ function clamp(value: unknown, fallback: number, minimum: number, maximum: number): number {
   return Math.min(maximum, Math.max(minimum, finiteNumber(value, fallback)))
 }
 
-export function normalizeParticleEmitter(component: ParticleEmitter2D): void {
+/** 结构说明（自动提取）：normalizeParticleEmitter；输入 component；直接调用 includes、clamp、Math.round、safeVector、finiteNumber 等；写入 component.textureAsset、component.simulationBackend、component.emissionRate、component.burst 等；包含循环处理。 */ export function normalizeParticleEmitter(component: ParticleEmitter2D): void {
   component.textureAsset = typeof component.textureAsset === 'string' ? component.textureAsset : null
   if (!['Auto', 'CPU', 'GPU'].includes(component.simulationBackend)) component.simulationBackend = 'Auto'
   component.emissionRate = clamp(component.emissionRate, 20, 0, 100_000)
@@ -75,67 +76,67 @@ export function normalizeParticleEmitter(component: ParticleEmitter2D): void {
   }
 }
 
-function safeCurve(value: unknown, fallback: Array<{ time: number; value: number }>) {
+/** 结构说明（自动提取）：safeCurve；输入 value、fallback；直接调用 Array.isArray、sort、flatMap、value.slice；返回路径包含 fallback。 */ function safeCurve(value: unknown, fallback: Array<{ time: number; value: number }>) {
   if (!Array.isArray(value)) return fallback
-  const points = value.slice(0, 16).flatMap(item => item && typeof item === 'object' ? [{ time: clamp((item as { time?: unknown }).time, 0, 0, 1), value: clamp((item as { value?: unknown }).value, 1, -100, 100) }] : []).sort((a, b) => a.time - b.time)
+  const points = value.slice(0, 16).flatMap(/** 结构说明（自动提取）：flatMap 回调；输入 item；直接调用 clamp；返回表达式求值结果。 */ item => item && typeof item === 'object' ? [{ time: clamp((item as { time?: unknown }).time, 0, 0, 1), value: clamp((item as { value?: unknown }).value, 1, -100, 100) }] : []).sort(/* 计算表达式 a.time - b.time 并返回结果，沿用操作数的原有类型规则。 */ (a, b) => a.time - b.time)
   return points.length >= 2 ? points : fallback
 }
-function safeGradient(value: unknown) {
+/** 结构说明（自动提取）：safeGradient；输入 value；直接调用 Array.isArray、sort、flatMap、value.slice。 */ function safeGradient(value: unknown) {
   if (!Array.isArray(value)) return []
-  return value.slice(0, 16).flatMap(item => {
+  return value.slice(0, 16).flatMap(/** 结构说明（自动提取）：flatMap 回调；输入 item；直接调用 clamp、Math.round。 */ item => {
     if (!item || typeof item !== 'object') return []
     const source = item as { time?: unknown; color?: { r?: unknown; g?: unknown; b?: unknown }; opacity?: unknown }, color = source.color ?? {}
     return [{ time: clamp(source.time, 0, 0, 1), color: { r: Math.round(clamp(color.r, 255, 0, 255)), g: Math.round(clamp(color.g, 255, 0, 255)), b: Math.round(clamp(color.b, 255, 0, 255)) }, opacity: clamp(source.opacity, 100, 0, 100) }]
-  }).sort((a, b) => a.time - b.time)
+  }).sort(/* 计算表达式 a.time - b.time 并返回结果，沿用操作数的原有类型规则。 */ (a, b) => a.time - b.time)
 }
-function sampleCurve(points: Array<{ time: number; value: number }>, time: number): number {
+/** 结构说明（自动提取）：sampleCurve；输入 points、time；直接调用 Math.max；返回路径包含 points[…].value；包含循环处理。 */ function sampleCurve(points: Array<{ time: number; value: number }>, time: number): number {
   if (!points.length) return 1; if (time <= points[0].time) return points[0].value
   for (let index = 1; index < points.length; index++) if (time <= points[index].time) { const first = points[index - 1], second = points[index], amount = (time - first.time) / Math.max(1e-9, second.time - first.time); return first.value + (second.value - first.value) * amount }
   return points[points.length - 1].value
 }
-function sampleGradient(component: ParticleEmitter2D, time: number) {
+/** 结构说明（自动提取）：sampleGradient；输入 component、time；直接调用 Math.max；返回路径包含 points[…]；包含循环处理。 */ function sampleGradient(component: ParticleEmitter2D, time: number) {
   const points = component.colorGradient.length ? component.colorGradient : [{ time: 0, color: component.startColor, opacity: component.startOpacity }, { time: 1, color: component.endColor, opacity: component.endOpacity }]
   if (time <= points[0].time) return points[0]
   for (let index = 1; index < points.length; index++) if (time <= points[index].time) { const first = points[index - 1], second = points[index], amount = (time - first.time) / Math.max(1e-9, second.time - first.time); return { time, color: { r: first.color.r + (second.color.r - first.color.r) * amount, g: first.color.g + (second.color.g - first.color.g) * amount, b: first.color.b + (second.color.b - first.color.b) * amount }, opacity: first.opacity + (second.opacity - first.opacity) * amount } }
   return points[points.length - 1]
 }
 
-function safeVector(value: unknown, fallback: Vec2): Vec2 {
+/** 结构说明（自动提取）：safeVector；输入 value、fallback；直接调用 finiteNumber。 */ function safeVector(value: unknown, fallback: Vec2): Vec2 {
   const source = value && typeof value === 'object' ? value as Record<string, unknown> : {}
   return { x: finiteNumber(source.x, fallback.x), y: finiteNumber(source.y, fallback.y) }
 }
 
-function random(state: EmitterState): number {
+/** 结构说明（自动提取）：random；输入 state；直接调用 Math.imul；写入 state.seed。 */ function random(state: EmitterState): number {
   state.seed = (Math.imul(state.seed, 1_664_525) + 1_013_904_223) >>> 0
   return state.seed / 0x1_0000_0000
 }
 
-function between(state: EmitterState, minimum: number, maximum: number): number {
+/** 结构说明（自动提取）：between；输入 state、minimum、maximum；直接调用 Math.min、Math.max、random。 */ function between(state: EmitterState, minimum: number, maximum: number): number {
   const low = Math.min(minimum, maximum), high = Math.max(minimum, maximum)
   return low + (high - low) * random(state)
 }
 
-function emitterState(component: ParticleEmitter2D): EmitterState {
+/** 结构说明（自动提取）：emitterState；输入 component；直接调用 states.get、reduce、component.uuid.split、states.set；写入 state；返回路径包含 state。 */ function emitterState(component: ParticleEmitter2D): EmitterState {
   let state = states.get(component.uuid)
   if (!state) {
-    state = { particles: [], emissionAccumulator: 0, burstEmitted: false, seed: component.uuid.split('').reduce((value, character) => Math.imul(value ^ character.charCodeAt(0), 16_777_619), 2_166_136_261) >>> 0 }
+    state = { particles: [], emissionAccumulator: 0, burstEmitted: false, seed: component.uuid.split('').reduce(/* 调用 Math.imul(value ^ character.charCodeAt(0), 16_777_619) 并返回调用结果。 */ (value, character) => Math.imul(value ^ character.charCodeAt(0), 16_777_619), 2_166_136_261) >>> 0 }
     states.set(component.uuid, state)
   }
   return state
 }
 
-function rotate(point: Vec2, angle: number): Vec2 {
+/** 结构说明（自动提取）：rotate；输入 point、angle；直接调用 Math.cos、Math.sin。 */ function rotate(point: Vec2, angle: number): Vec2 {
   const cosine = Math.cos(angle), sine = Math.sin(angle)
   return { x: point.x * cosine - point.y * sine, y: point.x * sine + point.y * cosine }
 }
 
-function emissionOffset(component: ParticleEmitter2D, state: EmitterState): Vec2 {
+/** 结构说明（自动提取）：emissionOffset；输入 component、state；直接调用 random、Math.sqrt、Math.cos、Math.sin、between 等。 */ function emissionOffset(component: ParticleEmitter2D, state: EmitterState): Vec2 {
   if (component.emissionShape === 'Circle') { const angle = random(state) * Math.PI * 2, radius = Math.sqrt(random(state)) * component.shapeRadius; return { x: Math.cos(angle) * radius, y: Math.sin(angle) * radius } }
   if (component.emissionShape === 'Box') return { x: between(state, -component.shapeSize.x * .5, component.shapeSize.x * .5), y: between(state, -component.shapeSize.y * .5, component.shapeSize.y * .5) }
   if (component.emissionShape === 'Edge') { const horizontal = random(state) < component.shapeSize.x / Math.max(1e-9, component.shapeSize.x + component.shapeSize.y); return horizontal ? { x: between(state, -component.shapeSize.x * .5, component.shapeSize.x * .5), y: (random(state) < .5 ? -1 : 1) * component.shapeSize.y * .5 } : { x: (random(state) < .5 ? -1 : 1) * component.shapeSize.x * .5, y: between(state, -component.shapeSize.y * .5, component.shapeSize.y * .5) } }
   return { x: 0, y: 0 }
 }
-function emit(entity: Entity, component: ParticleEmitter2D, state: EmitterState, count: number, entities: Entity[], globalCapacity = Number.POSITIVE_INFINITY, worldOrigin?: Vec2): number {
+/** 结构说明（自动提取）：emit；输入 entity、component、state、count、entities、globalCapacity、worldOrigin；直接调用 Math.max、Math.min、worldTransform、emissionOffset、between 等；返回路径包含 emitted；包含循环处理。 */ function emit(entity: Entity, component: ParticleEmitter2D, state: EmitterState, count: number, entities: Entity[], globalCapacity = Number.POSITIVE_INFINITY, worldOrigin?: Vec2): number {
   const capacity = Math.max(0, Math.min(globalCapacity, component.maxParticles - state.particles.length))
   const transform = worldTransform(entity, entities)
   const emitted = Math.min(capacity, count)
@@ -159,7 +160,7 @@ function emit(entity: Entity, component: ParticleEmitter2D, state: EmitterState,
   return emitted
 }
 
-function collideParticle(particle: Particle, component: ParticleEmitter2D, owner: Entity, entities: Entity[]): number {
+/** 结构说明（自动提取）：collideParticle；输入 particle、component、owner、entities；直接调用 target.getCollider、worldTransform、localPointToWorld、rotate、Math.max 等；写入 normalLocal、corrected、halfX、halfY 等；包含循环处理。 */ function collideParticle(particle: Particle, component: ParticleEmitter2D, owner: Entity, entities: Entity[]): number {
   for (const target of entities) {
     if (target === owner || !target.enabled) continue
     const collider = target.getCollider()
@@ -175,7 +176,7 @@ function collideParticle(particle: Particle, component: ParticleEmitter2D, owner
       else { const factor = 1 / Math.sqrt(normalized); corrected = { x: relative.x * factor, y: relative.y * factor }; const nx = corrected.x / (radiusX * radiusX), ny = corrected.y / (radiusY * radiusY), length = Math.hypot(nx, ny) || 1; normalLocal = { x: nx / length, y: ny / length } }
     } else {
       let halfX = Math.max(1e-6, Math.abs(collider.size.x * transform.scale.x) * .5), halfY = Math.max(1e-6, Math.abs(collider.size.y * transform.scale.y) * .5)
-      if (collider.shapeModel === 'ConvexPolygon' && collider.vertices.length) { halfX = Math.max(halfX, ...collider.vertices.map(point => Math.abs(point.x * transform.scale.x))); halfY = Math.max(halfY, ...collider.vertices.map(point => Math.abs(point.y * transform.scale.y))) }
+      if (collider.shapeModel === 'ConvexPolygon' && collider.vertices.length) { halfX = Math.max(halfX, ...collider.vertices.map(/* 调用 Math.abs(point.x * transform.scale.x) 并返回调用结果。 */ point => Math.abs(point.x * transform.scale.x))); halfY = Math.max(halfY, ...collider.vertices.map(/* 调用 Math.abs(point.y * transform.scale.y) 并返回调用结果。 */ point => Math.abs(point.y * transform.scale.y))) }
       if (Math.abs(relative.x) >= halfX || Math.abs(relative.y) >= halfY) continue
       const penetrationX = halfX - Math.abs(relative.x), penetrationY = halfY - Math.abs(relative.y)
       if (penetrationX < penetrationY) { normalLocal = { x: relative.x < 0 ? -1 : 1, y: 0 }; corrected = { x: normalLocal.x * halfX, y: relative.y } }
@@ -191,11 +192,11 @@ function collideParticle(particle: Particle, component: ParticleEmitter2D, owner
 }
 
 export class ParticleRuntime {
-  update(entities: Entity[], delta: number, playing: boolean): void {
+  /** 结构说明（自动提取）：update；输入 entities、delta、playing；直接调用 performance.now、clamp、Set、reduce、states.values 等；写入 cpuSimulated、activeParticles、state.burstEmitted、state.emissionAccumulator 等；包含循环处理。 */ update(entities: Entity[], delta: number, playing: boolean): void {
     const started = performance.now()
     const dt = clamp(delta, 0, 0, .25)
     const live = new Set<string>()
-    let activeParticles = [...states.values()].reduce((total, state) => total + state.particles.length, 0), emitterCount = 0, subemissions = 0, collisions = 0, cpuSimulated = 0
+    let activeParticles = [...states.values()].reduce(/* 计算表达式 total + state.particles.length 并返回结果，沿用操作数的原有类型规则。 */ (total, state) => total + state.particles.length, 0), emitterCount = 0, subemissions = 0, collisions = 0, cpuSimulated = 0
     const globalBudget = Math.max(100, Math.floor(activeRenderQuality.particleBudget * performanceRuntimeState.adaptiveParticleScale))
     const emitterIndices = performanceComponentScheduler.count === entities.length ? performanceComponentScheduler.indices('ParticleEmitter2D') : null
     for (let sourceIndex = 0; sourceIndex < (emitterIndices?.length ?? entities.length); sourceIndex++) {
@@ -224,20 +225,20 @@ export class ParticleRuntime {
         particle.rotation += particle.angularVelocity * dt
         if (component.trailEnabled && (particle.trail.length === 0 || Math.hypot(particle.position.x - particle.trail[particle.trail.length - 1].x, particle.position.y - particle.trail[particle.trail.length - 1].y) > .01)) { particle.trail.push({ ...particle.position }); if (particle.trail.length > component.trailLength) particle.trail.splice(0, particle.trail.length - component.trailLength) }
       }
-      const expired = state.particles.filter(particle => particle.age >= particle.lifetime)
+      const expired = state.particles.filter(/* 比较 particle.age 与 particle.lifetime，返回大于或等于的判断结果。 */ particle => particle.age >= particle.lifetime)
       if (expired.length) this.noteEvent(component, 'death')
-      state.particles = state.particles.filter(particle => particle.age < particle.lifetime)
+      state.particles = state.particles.filter(/* 比较 particle.age 与 particle.lifetime，返回小于的判断结果。 */ particle => particle.age < particle.lifetime)
       activeParticles = Math.max(0, activeParticles - expired.length)
-      const target = component.subEmitterUuid ? entities.flatMap(candidate => { const emitter = candidate.getComponent<ParticleEmitter2D>('ParticleEmitter2D'); return emitter?.uuid === component.subEmitterUuid ? [{ entity: candidate, component: emitter }] : [] })[0] : null
+      const target = component.subEmitterUuid ? entities.flatMap(/** 结构说明（自动提取）：entities.flatMap 回调；输入 candidate；直接调用 candidate.getComponent。 */ candidate => { const emitter = candidate.getComponent<ParticleEmitter2D>('ParticleEmitter2D'); return emitter?.uuid === component.subEmitterUuid ? [{ entity: candidate, component: emitter }] : [] })[0] : null
       if (target && expired.length && activeParticles < globalBudget) { const targetState = emitterState(target.component); normalizeParticleEmitter(target.component); for (const particle of expired) { const amount = emit(target.entity, target.component, targetState, component.subEmitterCount, entities, globalBudget - activeParticles, component.worldSpace ? particle.position : localPointToWorld(entity, particle.position, entities)); activeParticles += amount; subemissions += amount; if (amount) this.noteEvent(component, 'subemit'); if (activeParticles >= globalBudget) break } }
       if (!component.looping && state.burstEmitted) component.autoplay = false
     }
     for (const uuid of [...states.keys()]) if (!live.has(uuid)) states.delete(uuid)
-    activeParticles = [...states.values()].reduce((total, state) => total + state.particles.length, 0)
+    activeParticles = [...states.values()].reduce(/* 计算表达式 total + state.particles.length 并返回结果，沿用操作数的原有类型规则。 */ (total, state) => total + state.particles.length, 0)
     Object.assign(particleDiagnostics, { activeParticles, emitterCount, updateMs: performance.now() - started, budget: globalBudget, budgetExceeded: activeParticles >= globalBudget, subemissions, collisions, cpuSimulated, gpuRendered: 0 })
   }
 
-  submit(renderer: Renderer2D, entities: Entity[]): void {
+  /** 结构说明（自动提取）：submit；输入 renderer、entities；直接调用 entity.getComponent、states.get、resolveTexture、worldTransform、Math.min 等；写入 particleDiagnostics.gpuRendered；包含循环处理。 */ submit(renderer: Renderer2D, entities: Entity[]): void {
     particleDiagnostics.gpuRendered = renderer.stats.backend === 'WebGL2' ? particleDiagnostics.activeParticles : 0
     for (const entity of entities) {
       const component = entity.getComponent<ParticleEmitter2D>('ParticleEmitter2D')
@@ -253,7 +254,7 @@ export class ParticleRuntime {
         const position = component.worldSpace ? particle.position : localPointToWorld(entity, particle.position, entities)
         const rotation = particle.rotation + (component.worldSpace ? 0 : transform.rotation)
         if (component.trailEnabled && particle.trail.length > 1) {
-          const points = component.worldSpace ? particle.trail : particle.trail.map(point => localPointToWorld(entity, point, entities))
+          const points = component.worldSpace ? particle.trail : particle.trail.map(/* 调用 localPointToWorld(entity, point, entities) 并返回调用结果。 */ point => localPointToWorld(entity, point, entities))
           for (let index = 1; index < points.length; index++) renderer.submitShape({ shape: 'Line', position: { x: 0, y: 0 }, rotation: 0, scale: { x: 1, y: 1 }, vertices: [points[index - 1], points[index]], radiusX: 0, radiusY: 0, fill: { ...color, a: 0 }, stroke: { ...color, a: color.a * index / points.length }, strokeWidth: component.trailWidth * index / points.length, sortingLayer: component.sortingLayer, orderInLayer: component.orderInLayer - .001, material: component.material, blendMode: component.blendMode })
         }
         if (texture) renderer.submitSprite({
@@ -270,9 +271,9 @@ export class ParticleRuntime {
     }
   }
 
-  reset(): void { states.clear() }
+  /** 执行时调用 states.clear()；不显式返回调用结果。 */ reset(): void { states.clear() }
 
-  private noteEvent(component: ParticleEmitter2D, kind: 'collision' | 'death' | 'subemit'): void {
+  /** 结构说明（自动提取）：noteEvent；输入 component、kind；直接调用 particleDiagnostics.events.unshift、performance.now、particleDiagnostics.events.splice。 */ private noteEvent(component: ParticleEmitter2D, kind: 'collision' | 'death' | 'subemit'): void {
     particleDiagnostics.events.unshift({ time: performance.now(), emitterUuid: component.uuid, kind, signal: component.eventSignal })
     particleDiagnostics.events.splice(128)
   }
@@ -281,7 +282,7 @@ export class ParticleRuntime {
 export const particleRuntime = new ParticleRuntime()
 
 /** A frame translation preserves live world-space particles and trail history. */
-export function shiftParticleOrigin(offset: Vec2, entities: Entity[]): void {
+/** 结构说明（自动提取）：shiftParticleOrigin；输入 offset、entities；直接调用 entity.getComponent、states.get；写入 particle.position.x、particle.position.y、point.x、point.y；包含循环处理。 */ export function shiftParticleOrigin(offset: Vec2, entities: Entity[]): void {
   for (const entity of entities) {
     const component = entity.getComponent<ParticleEmitter2D>('ParticleEmitter2D', true)
     if (!component?.worldSpace) continue

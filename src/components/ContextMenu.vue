@@ -1,3 +1,4 @@
+<!-- 场景上下文菜单：提供对象及图层操作，检查编辑状态并按设置确认删除。 -->
 <template>
   <Transition name="context">
     <div v-if="state.contextMenu.visible" class="context-menu" :style="position" @contextmenu.prevent @click.stop>
@@ -41,16 +42,16 @@ import { selectionRoots } from '../editor/selection'
 import { setParent } from '../world/hierarchy'
 import { authoringState, groupSelection, requestViewport, toggleIsolateSelection } from '../editor/authoring2d'
 
-const position = computed(() => ({ top: `${Math.min(state.contextMenu.y, window.innerHeight - 390)}px`, left: `${Math.min(state.contextMenu.x, window.innerWidth - 220)}px` }))
-const targetEntity = computed(() => physicsState.world.entities.find(entity => entity.id === state.contextMenu.targetId) ?? null)
-const canEdit = computed(() => physicsState.playMode === 'editing')
+const position = computed(/** 根据鼠标位置和预留菜单尺寸限制菜单的右侧与底部坐标。 */ () => ({ top: `${Math.min(state.contextMenu.y, window.innerHeight - 390)}px`, left: `${Math.min(state.contextMenu.x, window.innerWidth - 220)}px` }))
+const targetEntity = computed(/** 按上下文菜单目标编号查找当前实体，找不到时返回空值。 */ () => physicsState.world.entities.find(/* 比较 entity.id 与 state.contextMenu.targetId，返回严格相等的判断结果。 */ entity => entity.id === state.contextMenu.targetId) ?? null)
+const canEdit = computed(/* 比较 physicsState.playMode 与 'editing'，返回严格相等的判断结果。 */ () => physicsState.playMode === 'editing')
 
-function ensureTargetSelection() {
+/** 目标尚未处于选择集中时，以该目标替换当前选择。 */ function ensureTargetSelection() {
   const id = state.contextMenu.targetId
   if (id !== null && !physicsState.selectedEntityIds.includes(id)) selectEntities([id], 'replace', id)
 }
 
-async function handleEntity(action: string) {
+/** 按对象菜单动作执行选择、编辑或视图操作；删除遵循确认设置，相关变更写入历史后关闭菜单。 */ async function handleEntity(action: string) {
   const entity = targetEntity.value
   if (!entity) return
   ensureTargetSelection()
@@ -76,7 +77,7 @@ async function handleEntity(action: string) {
   closeContextMenu()
 }
 
-async function handleLayer(action: string) {
+/** 分派图层聚焦、复制、删除和排序动作；编辑操作要求编辑模式，删除遵循确认设置。 */ async function handleLayer(action: string) {
   const layer = state.contextMenu.targetId
   if (layer === null) return
   if (action === 'show') setActiveLayer(layer)

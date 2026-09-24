@@ -1,3 +1,4 @@
+/** 版本资格入口：配置对应发布检查并调用保留的执行流程。 */
 process.env.NOVA_LAYOUT_VERSION = '26.09'
 process.env.NOVA_LAYOUT_ENGINE_VERSION = '26.9.0'
 process.env.NOVA_LAYOUT_REQUIRED_VIEWPORTS = '1024x640,1366x768,1920x1080,2560x1440'

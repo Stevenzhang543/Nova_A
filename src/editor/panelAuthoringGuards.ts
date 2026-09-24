@@ -1,3 +1,4 @@
+/** 面板编辑守卫：识别可编辑键盘目标，并保护事件表切换时的草稿提交边界。 */
 /** A panel shortcut must not consume ordinary editing inside a native or custom text field. */
 export function isEditableKeyboardTarget(target: EventTarget | null): boolean {
   const node = target as (EventTarget & { isContentEditable?: boolean; closest?: (selector: string) => unknown; parentElement?: Element | null }) | null
@@ -14,10 +15,10 @@ export interface EventSheetTransitionHost {
 }
 
 /** Serializes transitions, and never mutates a draft before a successful decision/save. */
-export function createEventSheetTransitionGuard(host: EventSheetTransitionHost): { run(operation: () => boolean | void | Promise<boolean | void>): Promise<boolean> } {
+/** 创建串行事件表切换入口，等待保存或丢弃决定期间保持原草稿。 */ export function createEventSheetTransitionGuard(host: EventSheetTransitionHost): { run(operation: () => boolean | void | Promise<boolean | void>): Promise<boolean> } {
   let pending = false
-  const same = (first: EventSheetDraftSnapshot, second: EventSheetDraftSnapshot) => first.identity === second.identity && first.source === second.source && first.dirty === second.dirty
-  return { async run(operation) {
+  const same = /* 先计算 first.identity === second.identity && first.source === second.source；仅当其为真值时求右侧 first.dirty === second.dirty，返回短路求值结果。 */ (first: EventSheetDraftSnapshot, second: EventSheetDraftSnapshot) => first.identity === second.identity && first.source === second.source && first.dirty === second.dirty
+  return { /** 检查确认前后草稿一致性，保存成功且没有新编辑后才执行切换；异常转为面板错误并释放重入锁。 */ async run(operation) {
     if (pending) return false
     pending = true
     try {

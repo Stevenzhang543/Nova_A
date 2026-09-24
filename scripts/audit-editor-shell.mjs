@@ -1,8 +1,9 @@
+/* 检查编辑器工作区、布局、命令、检查器和模板发现等外壳源码契约。 */
 import { readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 
 const root = process.cwd()
-const read = path => readFile(resolve(root, path), 'utf8')
+const read = /* 调用 readFile(resolve(root, path), 'utf8') 并返回调用结果。 */ path => readFile(resolve(root, path), 'utf8')
 const [state, workspaces, layout, actionBar, palette, inspector, runtimeInspector, i18n, templates, camera, bottomPanel] = await Promise.all([
   read('src/store/editor.ts'), read('src/editor/workspaces.ts'), read('src/layout/EditorLayout.vue'),
   read('src/components/ActionBar.vue'), read('src/components/CommandPalette.vue'), read('src/components/ConfigPanel.vue'),
@@ -10,6 +11,7 @@ const [state, workspaces, layout, actionBar, palette, inspector, runtimeInspecto
   read('src/world/Camera.ts'), read('src/components/EditorBottomPanel.vue')
 ])
 
+/* 条件不满足时抛出指定错误，使当前审计立即失败。 */
 function assert(condition, message) { if (!condition) throw new Error(message) }
 
 for (const workspace of ['design', 'script', 'animation', 'ui', 'debug', 'manage']) {
@@ -26,7 +28,7 @@ for (const tab of ['assets', 'packages', 'console', 'animation', 'profiler', 're
 }
 assert(palette.includes("id: 'tool-tilemap'") && palette.includes("openEditorTool('tilemap')"), 'Command palette cannot select a map and open contextual Tilemap')
 assert(workspaces.includes("'rendering'"), 'Rendering panel cannot be restored from saved workspace state')
-assert(palette.includes('shortcutMatches') && ['commandPalette','quickOpen','globalSearch','contextSearch'].every(command => palette.includes(`'${command}'`)), 'Command palette shortcuts are incomplete')
+assert(palette.includes('shortcutMatches') && ['commandPalette','quickOpen','globalSearch','contextSearch'].every(/* 调用 palette.includes(`'${command}'`) 并返回调用结果。 */ command => palette.includes(`'${command}'`)), 'Command palette shortcuts are incomplete')
 assert(workspaces.includes('nova-a-editor-layout-v1') && workspaces.includes('try {') && workspaces.includes('localStorage'), 'Layout persistence is not guarded')
 assert(inspector.includes('searchInspector') && inspector.includes('inspectorCategories') && inspector.includes('filteredAddableComponents'), 'Inspector discovery controls are incomplete')
 assert(!inspector.includes('class="add-components"'), 'Legacy bottom-of-inspector component pile still exists')
@@ -36,7 +38,7 @@ assert(templates.includes("opacity: 100") && templates.includes("type === 'Box'"
 assert(bottomPanel.includes('flex-wrap: wrap') && bottomPanel.includes('minmax(205px,25%)'), 'bottom-panel tools do not have the audited responsive layout')
 for (const localeBlock of ['Object.assign(en', 'Object.assign(de', 'Object.assign(zh']) {
   const blocks = i18n.split(localeBlock).slice(1)
-  assert(blocks.some(block => block.slice(0, 4_000).includes('commandPalette')), `${localeBlock} lacks editor-shell translations`)
+  assert(blocks.some(/* 调用 block.slice(0, 4_000).includes('commandPalette') 并返回调用结果。 */ block => block.slice(0, 4_000).includes('commandPalette')), `${localeBlock} lacks editor-shell translations`)
 }
 
 const versions = await Promise.all([

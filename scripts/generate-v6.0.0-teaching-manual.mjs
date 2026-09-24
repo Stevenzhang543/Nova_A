@@ -1,10 +1,11 @@
+/** 版本6.0.0：组织教学步骤与示例说明，生成版本教程和用户操作文档。 */
 import { readFile, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createServer } from 'vite'
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)))
-const engineVersion = process.argv.find(argument => argument.startsWith('--engine-version='))?.split('=')[1] || '6.0.0'
+const engineVersion = process.argv.find(/* 调用 argument.startsWith('--engine-version=') 并返回调用结果。 */ argument => argument.startsWith('--engine-version='))?.split('=')[1] || '6.0.0'
 const publicRelease = new Map([['26.8.0', '26.08'], ['26.9.0', '26.09'], ['26.10.0', '26.10']]).get(engineVersion) ?? engineVersion
 const server = await createServer({
   root,
@@ -15,14 +16,14 @@ const server = await createServer({
   // lived server closes after the manuals have been written.
   optimizeDeps: { noDiscovery: true },
 })
-const escapeHtml = value => String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;')
+const escapeHtml = /* 调用 String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;') 并返回调用结果。 */ value => String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;')
 const legacyTeachingStyle = `.v6-manual{padding:0 24px 40px}.v6-panel{margin:24px 0}.v6-guide{border:1px solid var(--line);border-radius:14px;margin:8px 0;background:var(--panel)}.v6-guide summary{display:flex;justify-content:space-between;gap:16px;padding:14px;cursor:pointer}.v6-guide summary span{font-size:12px;color:var(--muted);text-align:end}.v6-guide>div{padding:0 16px 16px}.v6-guide h3{font-size:14px;margin:16px 0 6px}@media(max-width:760px){.v6-manual{padding:0 12px 28px}.v6-guide summary{align-items:flex-start;flex-direction:column}}@media(prefers-reduced-motion:reduce){.v6-guide{scroll-behavior:auto}}`
 const teachingStyle = `/* NOVA_V6_TEACHING_STYLE_START */${legacyTeachingStyle}/* NOVA_V6_TEACHING_STYLE_END */`
-async function writeReliable(path, value) {
+/** 最多五次重试写入教学文件，逐次延长等待，失败抛出最后错误。 */ async function writeReliable(path, value) {
   let lastError
   for (let attempt = 0; attempt < 5; attempt++) {
     try { await writeFile(path, value, 'utf8'); return }
-    catch (error) { lastError = error; await new Promise(resolve => setTimeout(resolve, 150 * (attempt + 1))) }
+    catch (error) { lastError = error; await new Promise(/* 调用 setTimeout(resolve, 150 * (attempt + 1)) 并返回调用结果。 */ resolve => setTimeout(resolve, 150 * (attempt + 1))) }
   }
   throw lastError
 }
@@ -190,7 +191,7 @@ const v70 = {
   ], recovery: '若预览不符合预期，请取消迁移或恢复备份；文档编辑使用撤销，中断保存使用恢复浏览器，故障包／插件应停用，并保留最后一次有效构建。按症状恢复请查 docs/TROUBLESHOOTING_7_0.md。签名、干净机器生命周期、匹配主机构建、独立观察和真实长测在取得证据前仍属于外部工作。' }
 }
 
-function releaseLessonFor(version, locale) {
+/** 按引擎版本选取本地化课程，日历版本更新引用并追加触控笔或团队合并步骤。 */ function releaseLessonFor(version, locale) {
   let lesson = version === '6.5.0' ? { id: 'v65-physics-renderer', ...v65[locale] }
     : version === '6.6.0' ? { id: 'v66-multiplayer', ...v66[locale] }
     : version === '26.7.0' ? { id: 'v2607-multiplayer', ...v2607[locale] }
@@ -204,7 +205,7 @@ function releaseLessonFor(version, locale) {
     : version === '26.9.0'
       ? [[/v6\.8/g, '26.09'], [/6\.8/g, '26.09'], [/creator-v680-large-world/g, 'performance-v2609-large-world']]
       : [[/Nova_A 7/g, 'Nova_A 26.10'], [/v7\b/g, '26.10'], [/7\.0/g, '26.10'], [/<8\.0\.0/g, '<27.0.0'], [/<8\.0/g, '<27.0.0'], [/creator-v700-stable-platform/g, 'creator-v2610-mixed-game'], [/docs\/API_REFERENCE_7_0\.md/g, 'docs/API_SDK_26_10.md'], [/docs\/TROUBLESHOOTING_7_0\.md/g, 'docs/TROUBLESHOOTING_26_10.md']]
-  const update = value => replacements.reduce((result, [pattern, replacement]) => result.replace(pattern, replacement), value)
+  const update = /* 调用 replacements.reduce((result, [pattern, replacement]) => result.replace(pattern, replacement), value) 并返回调用结果。 */ value => replacements.reduce(/* 调用 result.replace(pattern, replacement) 并返回调用结果。 */ (result, [pattern, replacement]) => result.replace(pattern, replacement), value)
   lesson = { ...lesson, title: update(lesson.title), intro: update(lesson.intro), recovery: update(lesson.recovery), steps: lesson.steps.map(update) }
   if (version === '26.8.0') lesson.steps.splice(2, 0, locale === 'de'
     ? 'Einen Stift an Druck, Neigung X/Y, Drehung, Spitze, Seitentaste und Radierer binden. Im Eingabe-Test jede Achse prüfen; bei Zeigerabbruch, Fokusverlust und ausgeblendeter Seite müssen alle gehaltenen Stiftzustände freigegeben werden.'
@@ -219,42 +220,42 @@ function releaseLessonFor(version, locale) {
   return lesson
 }
 
-function releaseLessons(locale) {
+/** 按当前版本组合累计课程并过滤不存在的课程。 */ function releaseLessons(locale) {
   const versions = engineVersion === '26.10.0' ? ['26.8.0', '26.9.0', '26.10.0'] : engineVersion === '26.9.0' ? ['26.8.0', '26.9.0'] : [engineVersion]
-  return versions.map(version => releaseLessonFor(version, locale)).filter(Boolean)
+  return versions.map(/* 调用 releaseLessonFor(version, locale) 并返回调用结果。 */ version => releaseLessonFor(version, locale)).filter(Boolean)
 }
 
-function replaceMarked(source, start, end, contents) {
+/** 替换指定标记间内容，缺少标记时在末尾追加完整块。 */ function replaceMarked(source, start, end, contents) {
   const expression = new RegExp(`${start}[\\s\\S]*?${end}`, 'm')
   const block = `${start}\n${contents}\n${end}`
   return expression.test(source) ? source.replace(expression, block) : `${source.trimEnd()}\n\n${block}\n`
 }
 
-function markdownFor(locale, guides, localizedLearningGuide) {
-  const l = labels[locale], appLocale = locale === 'zh-CN' ? 'zh' : locale, grouped = Map.groupBy(guides, guide => guide.panel)
+/** 按面板组织本地化学习指南，生成用途、前提、步骤、恢复及版本课程的Markdown手册。 */ function markdownFor(locale, guides, localizedLearningGuide) {
+  const l = labels[locale], appLocale = locale === 'zh-CN' ? 'zh' : locale, grouped = Map.groupBy(guides, /* 返回 guide.panel 的当前值。 */ guide => guide.panel)
   const lines = [`# ${l.heading}`, '', l.intro, '', `- Engine: **${engineVersion}**`, '- Stable contracts: Project Format 2/schema 29; Rhai API 2; Graph Format 1; Plugin API 2; Package Manifest 1; Build CLI 1; workspace document 3.', '- External signing, independent clean-machine evidence, two-machine reproduction, matching-host builds and a real 72-hour soak remain pending until independently captured.', '', `## ${l.guided}`, '']
-  for (const guide of guides.filter(guide => guide.taskProject)) lines.push(`- [${localizedLearningGuide(guide, appLocale).title}](#${guide.id})`)
+  for (const guide of guides.filter(/* 返回 guide.taskProject 的当前值。 */ guide => guide.taskProject)) lines.push(`- [${localizedLearningGuide(guide, appLocale).title}](#${guide.id})`)
   for (const [panel, panelGuides] of grouped) {
     lines.push('', `## ${panel}`, '')
     for (const guide of panelGuides) {
       const text = localizedLearningGuide(guide, appLocale)
-      lines.push(`<a id="${guide.id}"></a>`, '', `### ${text.title}`, '', `**${l.class}:** ${guide.classifications.join(' · ')}`, '', `**${l.purpose}:** ${text.purpose} ${text.whenToUse}`, '', `**${l.pre}:**`, '', ...text.prerequisites.map(item => `- ${item}`), '', `**${l.steps}:**`, '', ...text.steps.map((step, index) => `${index + 1}. ${step}`), '', `**${l.result}:** ${text.expectedResult}`, '', `**${l.persist}:** ${text.persistence}`, '', `**${l.undo}:** ${text.undoRecovery}`, '', `**${l.mistakes}:**`, '', ...text.mistakes.map(item => `- ${item}`), '', `**${l.a11y}:** ${text.accessibility}`, '', `**${l.minimal}:** ${text.minimalExample}`, '', `**${l.production}:** ${text.productionExample}`, '', `**${l.rhai}:** ${text.relatedRhai.length ? text.relatedRhai.map(value => `\`${value}\``).join(', ') : 'N/A'}`, '', `**${l.graph}:** ${text.relatedGraph.length ? text.relatedGraph.map(value => `\`${value}\``).join(', ') : 'N/A'}`, '')
+      lines.push(`<a id="${guide.id}"></a>`, '', `### ${text.title}`, '', `**${l.class}:** ${guide.classifications.join(' · ')}`, '', `**${l.purpose}:** ${text.purpose} ${text.whenToUse}`, '', `**${l.pre}:**`, '', ...text.prerequisites.map(/** 将文本转为Markdown列表项。 */ item => `- ${item}`), '', `**${l.steps}:**`, '', ...text.steps.map(/** 为操作步骤加上一基顺序编号。 */ (step, index) => `${index + 1}. ${step}`), '', `**${l.result}:** ${text.expectedResult}`, '', `**${l.persist}:** ${text.persistence}`, '', `**${l.undo}:** ${text.undoRecovery}`, '', `**${l.mistakes}:**`, '', ...text.mistakes.map(/** 将文本转为Markdown列表项。 */ item => `- ${item}`), '', `**${l.a11y}:** ${text.accessibility}`, '', `**${l.minimal}:** ${text.minimalExample}`, '', `**${l.production}:** ${text.productionExample}`, '', `**${l.rhai}:** ${text.relatedRhai.length ? text.relatedRhai.map(/** 将文本包裹为Markdown行内代码。 */ value => `\`${value}\``).join(', ') : 'N/A'}`, '', `**${l.graph}:** ${text.relatedGraph.length ? text.relatedGraph.map(/** 将文本包裹为Markdown行内代码。 */ value => `\`${value}\``).join(', ') : 'N/A'}`, '')
     }
   }
-  for (const lesson of releaseLessons(locale)) lines.push('', `<a id="${lesson.id}"></a>`, '', `## ${lesson.title}`, '', lesson.intro, '', ...lesson.steps.map((step, index) => `${index + 1}. ${step}`), '', `**${l.undo}:** ${lesson.recovery}`, '')
+  for (const lesson of releaseLessons(locale)) lines.push('', `<a id="${lesson.id}"></a>`, '', `## ${lesson.title}`, '', lesson.intro, '', ...lesson.steps.map(/** 为操作步骤加上一基顺序编号。 */ (step, index) => `${index + 1}. ${step}`), '', `**${l.undo}:** ${lesson.recovery}`, '')
   return lines.join('\n')
 }
 
-function htmlFor(locale, guides, localizedLearningGuide) {
-  const l = labels[locale], appLocale = locale === 'zh-CN' ? 'zh' : locale, grouped = Map.groupBy(guides, guide => guide.panel)
-  const toc = guides.filter(guide => guide.taskProject).map(guide => `<a href="#${locale}-v6-${guide.id}">${escapeHtml(localizedLearningGuide(guide, appLocale).title)}</a>`).join('')
-  const panels = [...grouped].map(([panel, panelGuides]) => `<section class="v6-panel"><h2>${escapeHtml(panel)}</h2>${panelGuides.map(guide => {
+/** 按语言生成网页学习指南目录、折叠面板和累计版本课程，转义动态文本。 */ function htmlFor(locale, guides, localizedLearningGuide) {
+  const l = labels[locale], appLocale = locale === 'zh-CN' ? 'zh' : locale, grouped = Map.groupBy(guides, /* 返回 guide.panel 的当前值。 */ guide => guide.panel)
+  const toc = guides.filter(/* 返回 guide.taskProject 的当前值。 */ guide => guide.taskProject).map(/** 生成指向本地化教学任务锚点的目录链接。 */ guide => `<a href="#${locale}-v6-${guide.id}">${escapeHtml(localizedLearningGuide(guide, appLocale).title)}</a>`).join('')
+  const panels = [...grouped].map(/** 把同一面板的指南组合成标题和折叠课程区。 */ ([panel, panelGuides]) => `<section class="v6-panel"><h2>${escapeHtml(panel)}</h2>${panelGuides.map(/** 将本地化指南用途、步骤、恢复及接口关联转换为折叠网页课程。 */ guide => {
     const text = localizedLearningGuide(guide, appLocale)
-    const list = values => `<ul>${values.map(value => `<li>${escapeHtml(value)}</li>`).join('')}</ul>`
-    const ordered = values => `<ol>${values.map(value => `<li>${escapeHtml(value)}</li>`).join('')}</ol>`
+    const list = /** 将已转义列表项包裹为无序列表。 */ values => `<ul>${values.map(/** 将转义文本转换为网页列表项。 */ value => `<li>${escapeHtml(value)}</li>`).join('')}</ul>`
+    const ordered = /** 将已转义列表项包裹为有序列表。 */ values => `<ol>${values.map(/** 将转义文本转换为网页列表项。 */ value => `<li>${escapeHtml(value)}</li>`).join('')}</ol>`
     return `<details id="${locale}-v6-${guide.id}" class="v6-guide"${guide.taskProject ? ' open' : ''}><summary><strong>${escapeHtml(text.title)}</strong><span>${escapeHtml(guide.classifications.join(' · '))}</span></summary><div><h3>${escapeHtml(l.purpose)}</h3><p>${escapeHtml(text.purpose)} ${escapeHtml(text.whenToUse)}</p><h3>${escapeHtml(l.pre)}</h3>${list(text.prerequisites)}<h3>${escapeHtml(l.steps)}</h3>${ordered(text.steps)}<h3>${escapeHtml(l.result)}</h3><p>${escapeHtml(text.expectedResult)}</p><h3>${escapeHtml(l.persist)}</h3><p>${escapeHtml(text.persistence)}</p><h3>${escapeHtml(l.undo)}</h3><p>${escapeHtml(text.undoRecovery)}</p><h3>${escapeHtml(l.mistakes)}</h3>${list(text.mistakes)}<h3>${escapeHtml(l.a11y)}</h3><p>${escapeHtml(text.accessibility)}</p><h3>${escapeHtml(l.minimal)}</h3><p>${escapeHtml(text.minimalExample)}</p><h3>${escapeHtml(l.production)}</h3><p>${escapeHtml(text.productionExample)}</p><h3>${escapeHtml(l.rhai)} / ${escapeHtml(l.graph)}</h3><p><code>${escapeHtml(text.relatedRhai.join(', ') || 'N/A')}</code> · <code>${escapeHtml(text.relatedGraph.join(', ') || 'N/A')}</code></p></div></details>`
   }).join('')}</section>`).join('')
-  const release = releaseLessons(locale).map(lesson => `<section class="v6-panel" id="${locale}-${lesson.id}"><h2>${escapeHtml(lesson.title)}</h2><p>${escapeHtml(lesson.intro)}</p><ol>${lesson.steps.map(step => `<li>${escapeHtml(step)}</li>`).join('')}</ol><h3>${escapeHtml(l.undo)}</h3><p>${escapeHtml(lesson.recovery)}</p></section>`).join('')
+  const release = releaseLessons(locale).map(/** 生成包含简介、步骤和恢复提示的版本课程网页区。 */ lesson => `<section class="v6-panel" id="${locale}-${lesson.id}"><h2>${escapeHtml(lesson.title)}</h2><p>${escapeHtml(lesson.intro)}</p><ol>${lesson.steps.map(/** 把转义后的课程步骤转换为列表项。 */ step => `<li>${escapeHtml(step)}</li>`).join('')}</ol><h3>${escapeHtml(l.undo)}</h3><p>${escapeHtml(lesson.recovery)}</p></section>`).join('')
   return `<article data-lang="${locale}"${locale === 'en' ? '' : ' hidden'} class="v6-teaching"><section id="${locale}-v60"><div class="hero"><span class="eyebrow">Nova_A ${publicRelease} · Engine ${engineVersion} · Project Format 2/schema 29 · external certification honestly pending</span><h1>${escapeHtml(l.heading)}</h1><p>${escapeHtml(l.intro)}</p><div class="links">${toc}</div></div>${release}${panels}</section></article>`
 }
 
@@ -274,7 +275,7 @@ try {
     .replace(/<meta name="description" content="[^"]*">/, `<meta name="description" content="Complete Nova_A ${publicRelease} (engine ${engineVersion}) English, German and Chinese teaching manual for every editor, runtime, migration, recovery and release workflow.">`)
     .replace(/<footer>Nova_A [^<]+ · Whitelist · Open-source 2D game engine<\/footer>/, `<footer>Nova_A ${publicRelease} · Engine ${engineVersion} · Whitelist · Open-source 2D game engine</footer>`)
     .replaceAll('Nova_A 5.9 Manual', `Nova_A ${publicRelease} Manual`).replaceAll('Nova_A 6.0 Manual', `Nova_A ${publicRelease} Manual`).replaceAll('5.9.0 Offline Documentation', `${publicRelease} Offline Teaching Manual`).replaceAll('6.0.0 Offline Teaching Manual', `${publicRelease} Offline Teaching Manual`).replaceAll('Engine 5.9.0', `Engine ${engineVersion}`).replaceAll('Engine 6.0.0', `Engine ${engineVersion}`)
-  const supplement = `<!-- NOVA_V6_TEACHING_START -->\n<div class="release-supplement v6-manual" aria-label="Nova_A ${publicRelease} task-oriented teaching manual">${['en', 'de', 'zh-CN'].map(locale => htmlFor(locale, CREATOR_LEARNING_GUIDES, localizedLearningGuide)).join('')}</div>\n<!-- NOVA_V6_TEACHING_END -->`
+  const supplement = `<!-- NOVA_V6_TEACHING_START -->\n<div class="release-supplement v6-manual" aria-label="Nova_A ${publicRelease} task-oriented teaching manual">${['en', 'de', 'zh-CN'].map(/* 调用 htmlFor(locale, CREATOR_LEARNING_GUIDES, localizedLearningGuide) 并返回调用结果。 */ locale => htmlFor(locale, CREATOR_LEARNING_GUIDES, localizedLearningGuide)).join('')}</div>\n<!-- NOVA_V6_TEACHING_END -->`
   html = replaceMarked(html, '<!-- NOVA_V6_TEACHING_START -->', '<!-- NOVA_V6_TEACHING_END -->', supplement.replace('<!-- NOVA_V6_TEACHING_START -->\n', '').replace('\n<!-- NOVA_V6_TEACHING_END -->', ''))
   html = html
     .replace(/\/\* NOVA_V6_TEACHING_STYLE_START \*\/[\s\S]*?\/\* NOVA_V6_TEACHING_STYLE_END \*\//g, '')

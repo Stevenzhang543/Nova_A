@@ -1,3 +1,4 @@
+/** 验证脚本（v26.12-code-game）：组织对应功能与边界场景检查，断言行为并汇总验证结果。 */
 import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
 import { createHash } from 'node:crypto'
@@ -12,72 +13,72 @@ const root = dirname(dirname(fileURLToPath(import.meta.url)))
 const evidence = join(root, 'release-audits'), checks = [], errors = [], captures = [], observations = []
 const source = 'fn update(dt) {\n  if input_pressed("Jump") {\n    set_position(2.0, 0.0);\n  }\n}\n'
 const positionSelector = '[data-property-path="Transform.position"] input'
-const wait = ms => new Promise(resolve => setTimeout(resolve, ms))
+const wait = /** 等待指定毫秒数后完成。 */ ms => new Promise(/* 调用 setTimeout(resolve, ms) 并返回调用结果。 */ resolve => setTimeout(resolve, ms))
 let client, edge, server, profile, failure
 
 // Browser evaluation reads rendered DOM, or focuses/selects/scrolls a real control.
 // All content changes, selection, clicks and gameplay input use CDP mouse/keyboard events.
-async function evaluate(expression) {
+/** 通过调试接口执行浏览器表达式并等待结果，遇远程异常时抛出错误。 */ async function evaluate(expression) {
   const result = await client.send('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true })
   if (result.exceptionDetails) throw Error(result.exceptionDetails.exception?.description || result.exceptionDetails.text)
   return result.result.value
 }
-async function until(expression, timeout = 20000) {
+/** 按间隔等待浏览器条件成立，超过期限则报告表达式超时。 */ async function until(expression, timeout = 20000) {
   const deadline = Date.now() + timeout
   while (Date.now() < deadline) { if (await evaluate(expression)) return; await wait(100) }
   throw Error('Timed out: ' + expression)
 }
-async function click(selector, index = 0) {
+/** 将目标元素滚动到可见中心，检查存在、启用和尺寸后发送鼠标点击。 */ async function click(selector, index = 0) {
   const point = await evaluate(`(()=>{const el=document.querySelectorAll(${JSON.stringify(selector)})[${index}];if(!el)throw Error('Missing '+${JSON.stringify(selector)});if(el.disabled)throw Error('Disabled '+el.textContent);el.scrollIntoView({block:'center',inline:'nearest'});const r=el.getBoundingClientRect();if(!r.width||!r.height)throw Error('Hidden '+${JSON.stringify(selector)});return{x:r.left+r.width/2,y:r.top+r.height/2}})()`)
   await client.send('Input.dispatchMouseEvent', { type: 'mousePressed', ...point, button: 'left', clickCount: 1 })
   await client.send('Input.dispatchMouseEvent', { type: 'mouseReleased', ...point, button: 'left', clickCount: 1 })
   await wait(100)
 }
-async function clickText(selector, text) {
+/** 查找包含指定文本的首个匹配元素并点击。 */ async function clickText(selector, text) {
   const index = await evaluate(`[...document.querySelectorAll(${JSON.stringify(selector)})].findIndex(el=>el.textContent.toLowerCase().includes(${JSON.stringify(text.toLowerCase())}))`)
   assert.ok(index >= 0, `Missing ${selector} text ${text}`); await click(selector, index)
 }
-async function fill(selector, value, index = 0) {
+/** 全选指定输入框内容并插入新值，失焦后等待变更提交。 */ async function fill(selector, value, index = 0) {
   await evaluate(`(()=>{const el=document.querySelectorAll(${JSON.stringify(selector)})[${index}];if(!el)throw Error('Missing input');el.focus();el.select()})()`)
   await client.send('Input.insertText', { text: value }); await evaluate('document.activeElement.blur()'); await wait(180)
 }
-async function press(code, modifiers = 0, hold = 0) {
+/** 发送键盘按下与释放事件，支持修饰键及指定按住时长。 */ async function press(code, modifiers = 0, hold = 0) {
   const key = code === 'Space' ? ' ' : code
   const windowsVirtualKeyCode = { Home: 36, End: 35, ArrowLeft: 37, ArrowUp: 38, ArrowRight: 39, ArrowDown: 40, Enter: 13, Escape: 27, Space: 32, Tab: 9 }[code]
   await client.send('Input.dispatchKeyEvent', { type: 'keyDown', key, code, modifiers, windowsVirtualKeyCode })
   if (hold) await wait(hold)
   await client.send('Input.dispatchKeyEvent', { type: 'keyUp', key, code, modifiers, windowsVirtualKeyCode })
 }
-async function selectIndex(selector, index) {
+/** 用键盘选择下拉框指定序号，失焦提交并校验结果。 */ async function selectIndex(selector, index) {
   await evaluate(`document.querySelector(${JSON.stringify(selector)}).focus()`)
   await press('Home'); for (let i = 0; i < index; i++) await press('ArrowDown'); await press('Enter'); await press('Tab'); await wait(100)
   assert.equal(await evaluate(`document.querySelector(${JSON.stringify(selector)}).selectedIndex`), index)
 }
-async function position(label) {
+/** 从检查器读取两个实时位置坐标并记录带标签的观察值。 */ async function position(label) {
   const value = await evaluate(`[...document.querySelectorAll(${JSON.stringify(positionSelector)})].map(el=>Number(el.value))`)
   assert.equal(value.length, 2, 'Inspector must expose both live transform coordinates')
   observations.push({ label, position: value }); return value
 }
-async function capture(name) {
+/** 保存当前视口的PNG截图并登记游戏审计证据文件。 */ async function capture(name) {
   const result = await client.send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false })
   const file = `v26.12-code-game-${name}.png`; await writeFile(join(evidence, file), Buffer.from(result.data, 'base64')); captures.push(file)
 }
-async function check(name, action) { await action(); checks.push({ name, status: 'passed' }); console.log('PASS ' + name) }
-async function freePort() {
-  const server = createServer(); await new Promise(resolve => server.listen(0, '127.0.0.1', resolve))
-  const port = server.address().port; await new Promise(resolve => server.close(resolve)); return port
+/** 执行异步界面检查，成功后登记并输出通过信息。 */ async function check(name, action) { await action(); checks.push({ name, status: 'passed' }); console.log('PASS ' + name) }
+/** 申请并释放本机随机TCP端口，将端口号用于后续测试连接。 */ async function freePort() {
+  const server = createServer(); await new Promise(/* 调用 server.listen(0, '127.0.0.1', resolve) 并返回调用结果。 */ resolve => server.listen(0, '127.0.0.1', resolve))
+  const port = server.address().port; await new Promise(/* 调用 server.close(resolve) 并返回调用结果。 */ resolve => server.close(resolve)); return port
 }
-async function connect(url) {
+/** 建立调试WebSocket连接，提供请求响应关联及事件订阅接口。 */ async function connect(url) {
   const socket = new WebSocket(url), pending = new Map(), listeners = new Map(); let id = 0
-  await new Promise((resolve, reject) => { socket.addEventListener('open', resolve, { once: true }); socket.addEventListener('error', reject, { once: true }) })
-  socket.addEventListener('message', event => {
+  await new Promise(/** 等待WebSocket首次连接成功或首次连接错误。 */ (resolve, reject) => { socket.addEventListener('open', resolve, { once: true }); socket.addEventListener('error', reject, { once: true }) })
+  socket.addEventListener('message', /** 分派调试响应到对应等待请求，或转发无标识协议事件。 */ event => {
     const message = JSON.parse(event.data)
     if (message.id) { const item = pending.get(message.id); if (!item) return; pending.delete(message.id); message.error ? item.reject(Error(message.error.message)) : item.resolve(message.result) }
     else for (const handler of listeners.get(message.method) ?? []) handler(message.params)
   })
   return {
-    send(method, params = {}) { return new Promise((resolve, reject) => { const key = ++id; pending.set(key, { resolve, reject }); socket.send(JSON.stringify({ id: key, method, params })) }) },
-    on(method, handler) { listeners.set(method, [...(listeners.get(method) ?? []), handler]) },
+    /** 发送带新请求标识的调试命令并等待结果。 */ send(method, params = {}) { return new Promise(/** 登记调试命令处理器并发送JSON消息。 */ (resolve, reject) => { const key = ++id; pending.set(key, { resolve, reject }); socket.send(JSON.stringify({ id: key, method, params })) }) },
+    /** 为指定调试协议事件追加处理器。 */ on(method, handler) { listeners.set(method, [...(listeners.get(method) ?? []), handler]) },
   }
 }
 
@@ -94,15 +95,15 @@ try {
   // OPFS remains available; no application objects or browser functions are monkey-patched.
   edge = spawn(executable, ['--headless=new', '--no-first-run', '--disable-extensions', '--disable-blink-features=FileSystemAccessLocal', '--use-angle=swiftshader', `--remote-debugging-port=${debug}`, `--user-data-dir=${profile}`, `http://127.0.0.1:${port}/`], { stdio: 'ignore', windowsHide: true })
   let target; const deadline = Date.now() + 20000
-  while (Date.now() < deadline && !target) { try { target = (await fetch(`http://127.0.0.1:${debug}/json/list`).then(response => response.json())).find(item => item.type === 'page') } catch {} if (!target) await wait(100) }
+  while (Date.now() < deadline && !target) { try { target = (await fetch(`http://127.0.0.1:${debug}/json/list`).then(/* 调用 response.json() 并返回调用结果。 */ response => response.json())).find(/* 比较 item.type 与 'page'，返回严格相等的判断结果。 */ item => item.type === 'page') } catch {} if (!target) await wait(100) }
   if (!target) throw Error('Edge DevTools did not start')
   client = await connect(target.webSocketDebuggerUrl)
-  client.on('Runtime.exceptionThrown', event => errors.push(event.exceptionDetails?.exception?.description ?? event.exceptionDetails?.text))
+  client.on('Runtime.exceptionThrown', /* 调用 errors.push(event.exceptionDetails?.exception?.description ?? event.exceptionDetails?.text) 并返回调用结果。 */ event => errors.push(event.exceptionDetails?.exception?.description ?? event.exceptionDetails?.text))
   await client.send('Runtime.enable'); await client.send('Page.enable')
   await client.send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false })
   await until("!!document.querySelector('.project-manager')")
   assert.equal(await evaluate("'showSaveFilePicker' in window || 'showOpenFilePicker' in window"), false, 'The browser must expose the download/file-input fallback capability profile')
-  await check('Create a fresh blank project and a Rectangle through the object palette', async () => {
+  await check('Create a fresh blank project and a Rectangle through the object palette', /** 创建空项目和矩形实体，将位置归零并设为运动学刚体以准备脚本游戏测试。 */ async () => {
     await fill('.creation-card header input', '26.12 Code Microgame'); await click('[data-template-id="empty"]'); await click('.create-button')
     await until("!!document.querySelector('.editor-root')", 30000)
     await wait(300) // Let the first-run dialog finish its documented entrance animation before clicking.
@@ -118,7 +119,7 @@ try {
     assert.equal(await evaluate(`document.querySelector(${JSON.stringify(bodyType)}).value`), 'Kinematic')
     assert.deepEqual(await position('authored'), [0, 0])
   })
-  await check('Author and save the Jump action game in the Rhai editor', async () => {
+  await check('Author and save the Jump action game in the Rhai editor', /** 在脚本工作区创建并保存示例源码，验证无诊断错误并记录资源路径。 */ async () => {
     await clickText('.workspace-list button', 'Script'); await until("!!document.querySelector('.script-studio')")
     await clickText('.studio-toolbar button', 'New Script'); await until("!!document.querySelector('.editor-shell textarea')")
     await fill('.editor-shell textarea', source); await clickText('.studio-toolbar button', 'Save Script')
@@ -126,7 +127,7 @@ try {
     assert.equal(await evaluate("document.querySelector('.editor-shell textarea').value"), source)
     observations.push({ label: 'saved-script', path: await evaluate("document.querySelector('.project-scripts .script-list button.active small').textContent") })
   })
-  await check('Add Script2D and attach the saved Rhai asset using the Inspector picker', async () => {
+  await check('Add Script2D and attach the saved Rhai asset using the Inspector picker', /** 给矩形添加脚本组件并选择已保存资源，验证绑定成功且没有脚本错误。 */ async () => {
     await clickText('.workspace-list button', 'Design'); await until("!!document.querySelector('.toolbar .create-object')")
     await click('.add-component-trigger'); await fill('.component-picker>input', 'Script')
     await clickText('.component-main', 'Script'); await until("!document.querySelector('.component-picker')")
@@ -142,7 +143,7 @@ try {
     assert.equal(await evaluate("!!document.querySelector('.script-error')"), false)
     await capture('attached')
   })
-  await check('Play runs without changing position until the actual Space key is pressed', async () => {
+  await check('Play runs without changing position until the actual Space key is pressed', /** 进入运行模式并发送空格输入，验证脚本将实体从原点移动到指定位置。 */ async () => {
     await click('.actionbar button', 0); await until("document.querySelector('.actionbar button')?.classList.contains('active')")
     await wait(350); assert.deepEqual(await position('playing-before-input'), [0, 0])
     // A non-editable status label clears button focus so Space does not activate Play again.
@@ -154,7 +155,7 @@ try {
     assert.equal(await evaluate("!!document.querySelector('.script-error')"), false)
     await capture('moved')
   })
-  await check('Stop restores the authored scene and a second Play run receives fresh input', async () => {
+  await check('Stop restores the authored scene and a second Play run receives fresh input', /** 验证停止恢复编辑位置，第二次运行仍可响应输入且再次停止恢复。 */ async () => {
     await click('.actionbar button', 3); await until("document.querySelectorAll('.actionbar button')[3].disabled")
     assert.deepEqual(await position('stopped-restored'), [0, 0])
     await click('.actionbar button', 0); await click('.actionbar .mode-label'); await wait(250); assert.deepEqual(await position('second-run-before-input'), [0, 0])
@@ -163,7 +164,7 @@ try {
     await click('.actionbar button', 3); await until("document.querySelectorAll('.actionbar button')[3].disabled")
     assert.deepEqual(await position('second-stop-restored'), [0, 0]); await capture('restored')
   })
-  await check('Save Project downloads a real .nova file containing the authored game', async () => {
+  await check('Save Project downloads a real .nova file containing the authored game', /** 通过文件菜单下载项目，校验内嵌脚本原文并保存带散列的下载证据。 */ async () => {
     const downloads = join(profile, 'downloads'); await mkdir(downloads, { recursive: true })
     await client.send('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath: downloads })
     await clickText('.menu-container>.menu-item>button', 'File'); await clickText('.dropdown button', 'Save Project')
@@ -171,16 +172,16 @@ try {
     while (Date.now() < deadline && !downloaded) { try { const candidate = await readFile(join(downloads, 'project.nova')); JSON.parse(candidate.toString()); downloaded = candidate } catch {} if (!downloaded) await wait(100) }
     assert.ok(downloaded, 'Save Project must finish a parseable file download')
     const artifact = 'v26.12-code-game.nova'; await writeFile(join(evidence, artifact), downloaded)
-    const document = JSON.parse(downloaded.toString()), scriptPath = observations.find(item => item.label === 'saved-script').path
-    const asset = document.assets.find(item => item.assetType === 'script' && item.path === scriptPath)
+    const document = JSON.parse(downloaded.toString()), scriptPath = observations.find(/* 比较 item.label 与 'saved-script'，返回严格相等的判断结果。 */ item => item.label === 'saved-script').path
+    const asset = document.assets.find(/* 先计算 item.assetType === 'script'；仅当其为真值时求右侧 item.path === scriptPath，返回短路求值结果。 */ item => item.assetType === 'script' && item.path === scriptPath)
     assert.ok(asset?.source?.startsWith('data:text/x-rhai;charset=utf-8,'), 'The project must embed the saved script asset')
     assert.equal(decodeURIComponent(asset.source.slice(asset.source.indexOf(',') + 1)), source, 'The downloaded asset must preserve the exact authored source')
     observations.push({ label: 'downloaded-project', artifact, bytes: downloaded.length, sha256: createHash('sha256').update(downloaded).digest('hex') })
     await until("!document.querySelector('.top-bar .dirty-pill')")
   })
-  await check('Reload, open the downloaded .nova through Open Project, and play the saved game', async () => {
+  await check('Reload, open the downloaded .nova through Open Project, and play the saved game', /** 重新加载编辑器并通过文件选择器打开下载项目，验证组件、脚本绑定、运行行为和停止恢复。 */ async () => {
     await client.send('Page.reload', { ignoreCache: true }); await until("!!document.querySelector('.project-manager')", 30000)
-    let chooser; client.on('Page.fileChooserOpened', event => { chooser = event })
+    let chooser; client.on('Page.fileChooserOpened', /** 保存浏览器打开文件选择器的事件信息。 */ event => { chooser = event })
     await client.send('Page.setInterceptFileChooserDialog', { enabled: true })
     await clickText('.project-manager .quick-actions button', 'Open Project')
     const deadline = Date.now() + 5000; while (!chooser && Date.now() < deadline) await wait(50)
@@ -213,6 +214,6 @@ try {
   await writeFile(join(evidence, 'v26.12-code-game.json'), JSON.stringify({ format: 'nova-v26.12-code-game-user-audit', version: 1, release: '26.12', status: failure ? 'failed' : 'passed', generatedAt: new Date().toISOString(), checks, observations, captures, consoleErrors: errors, source, error: failure?.stack, scope: 'Actual headless Edge mouse/keyboard creation, scripting, asset attachment, Play, Jump input, live Inspector coordinates, Stop restoration, real .nova download and file-input reopening in a fresh disposable profile against current dist. FileSystemAccessLocal disabled using a browser capability flag to exercise the existing download fallback; native OS file-picker behavior is a separate gate. No application or VM state injection. Separate visual authoring audit compares the same game behavior.' }, null, 2) + '\n')
   try { await client?.send('Browser.close') } catch {}
   if (edge && !edge.killed) edge.kill()
-  if (server) await new Promise(resolve => server.httpServer.close(resolve))
+  if (server) await new Promise(/* 调用 server.httpServer.close(resolve) 并返回调用结果。 */ resolve => server.httpServer.close(resolve))
   if (profile) { await wait(200); await rm(profile, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }) }
 }

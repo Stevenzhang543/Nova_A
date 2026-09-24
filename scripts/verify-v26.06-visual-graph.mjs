@@ -1,3 +1,4 @@
+/** 验证脚本（v26.06-visual-graph）：组织对应功能与边界场景检查，断言行为并汇总验证结果。 */
 import { spawn } from 'node:child_process'
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { createServer as createNetServer } from 'node:net'
@@ -8,8 +9,8 @@ import { build, createServer as createViteServer } from 'vite'
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)))
 const checks = []
-const check = (id, passed, detail, metrics = {}) => checks.push({ id, status: passed ? 'passed' : 'failed', detail, metrics })
-const pause = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds))
+const check = /* 调用 checks.push({ id, status: passed ? 'passed' : 'failed', detail, metrics }) 并返回调用结果。 */ (id, passed, detail, metrics = {}) => checks.push({ id, status: passed ? 'passed' : 'failed', detail, metrics })
+const pause = /** 返回在指定毫秒数后完成的等待任务。 */ milliseconds => new Promise(/* 调用 setTimeout(resolve, milliseconds) 并返回调用结果。 */ resolve => setTimeout(resolve, milliseconds))
 const pageReadyTimeout = Math.max(30_000, Number(process.env.NOVA_GRAPH_PAGE_TIMEOUT_MS) || 60_000)
 const compiled = await mkdtemp(join(tmpdir(), 'nova-v2606-graph-'))
 const profile = await mkdtemp(join(tmpdir(), 'nova-v2606-graph-edge-'))
@@ -27,10 +28,10 @@ try {
   check('VG-PAN-MATH', panned.x === 91 && panned.y === 4 && panned.zoom === 1, 'Background pan changes only viewport translation.', panned)
   check('VG-DRAG-MATH', dragged.x === 70 && dragged.y === 40, 'Node movement converts pointer pixels through current zoom.', dragged)
 
-  const pin = (uuid, direction) => ({ uuid, key: direction === 'output' ? 'next' : 'exec', name: direction, direction, kind: 'execution', valueType: null, required: false, defaultValue: null })
-  const node = (index, type = index ? 'flow.sequence' : 'event.start', height = 82) => ({ uuid: `node-${index}`, type, title: `Node ${index}`, category: index ? 'Flow' : 'Events', position: { x: 0, y: 0 }, size: { width: index === 2 ? 360 : 224, height }, collapsed: false, pins: [pin(`in-${index}`, 'input'), pin(`out-${index}`, 'output')], config: type === 'code.statement' ? { source: 'let value = 1;' } : {} })
+  const pin = /** 创建执行引脚，根据输入输出方向选择exec或next键。 */ (uuid, direction) => ({ uuid, key: direction === 'output' ? 'next' : 'exec', name: direction, direction, kind: 'execution', valueType: null, required: false, defaultValue: null })
+  const node = /** 创建用于布局验证的图节点，配置不同宽度、执行引脚和可选源码。 */ (index, type = index ? 'flow.sequence' : 'event.start', height = 82) => ({ uuid: `node-${index}`, type, title: `Node ${index}`, category: index ? 'Flow' : 'Events', position: { x: 0, y: 0 }, size: { width: index === 2 ? 360 : 224, height }, collapsed: false, pins: [pin(`in-${index}`, 'input'), pin(`out-${index}`, 'output')], config: type === 'code.statement' ? { source: 'let value = 1;' } : {} })
   const nodes = [node(0), node(1), node(2, 'code.statement', 82), node(3), node(4)]
-  const edges = [0, 1, 2].map(index => ({ uuid: `edge-${index}`, from: { nodeUuid: nodes[index].uuid, pinUuid: `out-${index}` }, to: { nodeUuid: nodes[index + 1].uuid, pinUuid: `in-${index + 1}` } }))
+  const edges = [0, 1, 2].map(/** 建立相邻节点之间的执行引脚连接。 */ index => ({ uuid: `edge-${index}`, from: { nodeUuid: nodes[index].uuid, pinUuid: `out-${index}` }, to: { nodeUuid: nodes[index + 1].uuid, pinUuid: `in-${index + 1}` } }))
   const scope = { nodes, edges, comments: [], viewport: { x: 0, y: 0, zoom: 1 } }
   const arranged = graph.arrangeExecutionBlocks(scope), overlap = graph.graphLayoutOverlaps(scope.nodes, 8)
   const inserted = graph.availableGraphPosition(scope.nodes, { ...scope.nodes[0].position }, { width: 224, height: 100 })
@@ -120,7 +121,7 @@ try {
     await pause(120)
     panelGeometry.push(await evaluate(client, `(() => { const editor=[...document.querySelectorAll('.graph-editor')].find(item=>{const r=item.getBoundingClientRect();return r.width>0&&r.height>0}),root=editor?.querySelector('.graph-details');if(!root)return{missing:true};const rr=root.getBoundingClientRect(),visible=node=>{const style=getComputedStyle(node),r=node.getBoundingClientRect();return style.display!=='none'&&style.visibility!=='hidden'&&r.width>0&&r.height>0&&r.bottom>rr.top&&r.top<rr.bottom},controls=[...root.querySelectorAll('input,select,textarea,button')].filter(visible),outside=controls.filter(node=>{const r=node.getBoundingClientRect();return r.left<rr.left-1||r.right>rr.right+1}).map(node=>(node.textContent||node.getAttribute('placeholder')||node.tagName).trim().slice(0,50)),describe=node=>{const r=node.getBoundingClientRect();return[(node.textContent||node.getAttribute('placeholder')||node.getAttribute('aria-label')||node.tagName).trim().slice(0,28),node.className||'',Math.round(r.left),Math.round(r.top),Math.round(r.width),Math.round(r.height)]},pairs=[];for(let i=0;i<controls.length;i++)for(let j=i+1;j<controls.length;j++){if(controls[i].contains(controls[j])||controls[j].contains(controls[i]))continue;const a=controls[i].getBoundingClientRect(),b=controls[j].getBoundingClientRect(),dx=Math.min(a.right,b.right)-Math.max(a.left,b.left),dy=Math.min(a.bottom,b.bottom)-Math.max(a.top,b.top);if(dx>1&&dy>1)pairs.push([describe(controls[i]),describe(controls[j]),Math.round(dx*dy)])}return{width:innerWidth,root:[rr.left,rr.right,rr.width],controls:controls.length,outside,pairs:pairs.slice(0,20)} })()`))
   }
-  check('VG-DOM-DETAILS-BOUNDS', panelGeometry.every(item => !item.missing && item.controls > 0 && item.outside.length === 0 && item.pairs.length === 0), 'The real right inspector contains every visible field/button without pairwise overlap at desktop and compact widths.', { panelGeometry })
+  check('VG-DOM-DETAILS-BOUNDS', panelGeometry.every(/* 先计算 !item.missing && item.controls > 0 && item.outside.length === 0；仅当其为真值时求右侧 item.pairs.length === 0，返回短路求值结果。 */ item => !item.missing && item.controls > 0 && item.outside.length === 0 && item.pairs.length === 0), 'The real right inspector contains every visible field/button without pairwise overlap at desktop and compact widths.', { panelGeometry })
 } finally {
   if (vite) await vite.waitForRequestsIdle()
   try { await client?.send('Browser.close') } catch { /* Process cleanup below. */ }
@@ -130,7 +131,7 @@ try {
   await rm(profile, { recursive: true, force: true, maxRetries: 8, retryDelay: 100 })
 }
 
-const failed = checks.filter(item => item.status === 'failed')
+const failed = checks.filter(/* 比较 item.status 与 'failed'，返回严格相等的判断结果。 */ item => item.status === 'failed')
 const report = {
   format: 'nova-v26.06-visual-graph-verification',
   version: 1,
@@ -138,7 +139,7 @@ const report = {
   engineVersion: '26.6.0',
   generatedAt: new Date().toISOString(),
   status: failed.length ? 'failed' : 'passed',
-  failures: failed.map(item => ({ id: item.id, detail: item.detail, metrics: item.metrics })),
+  failures: failed.map(/** 提取检查标识、详情和指标用于报告。 */ item => ({ id: item.id, detail: item.detail, metrics: item.metrics })),
   checks
 }
 await mkdir(join(root, 'release-audits'), { recursive: true })
@@ -146,9 +147,9 @@ await writeFile(join(root, 'release-audits/v26.06-visual-graph.json'), `${JSON.s
 if (failed.length) { console.error(JSON.stringify({ status: 'failed', checks }, null, 2)); process.exit(1) }
 console.log(`Nova_A 26.06 Visual Graph verification passed: ${checks.length} focused checks.`)
 
-async function freePort() { const server=createNetServer();await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(0,'127.0.0.1',resolve)});const address=server.address(),port=typeof address==='object'&&address?address.port:0;await new Promise(resolve=>server.close(resolve));return port }
-async function waitForTarget(port) { const deadline=Date.now()+20_000;while(Date.now()<deadline){try{const targets=await fetch(`http://127.0.0.1:${port}/json/list`).then(response=>response.json()),target=targets.find(item=>item.type==='page');if(target)return target}catch{}await pause(100)}throw new Error('Timed out connecting to Edge DevTools.') }
-async function connectCdp(url) { const socket=new WebSocket(url),pending=new Map(),listeners=new Map();let nextId=1;await new Promise((resolve,reject)=>{socket.addEventListener('open',resolve,{once:true});socket.addEventListener('error',reject,{once:true})});socket.addEventListener('message',message=>{const value=JSON.parse(message.data);if(value.id){const item=pending.get(value.id);if(!item)return;pending.delete(value.id);value.error?item.reject(new Error(value.error.message)):item.resolve(value.result)}else for(const listener of listeners.get(value.method)||[])listener(value.params||{})});return{send(method,params={}){return new Promise((resolve,reject)=>{const id=nextId++;pending.set(id,{resolve,reject});socket.send(JSON.stringify({id,method,params}))})},on(method,listener){listeners.set(method,[...(listeners.get(method)||[]),listener])}} }
-async function evaluate(cdp, expression) { const result=await cdp.send('Runtime.evaluate',{expression,awaitPromise:true,returnByValue:true});if(result.exceptionDetails)throw new Error(result.exceptionDetails.exception?.description||result.exceptionDetails.text);return result.result.value }
-async function waitForExpression(cdp, expression, timeout) { const deadline=Date.now()+timeout;while(Date.now()<deadline){try{if(await evaluate(cdp,expression))return}catch{}await pause(100)}throw new Error(`Timed out waiting for ${expression}`) }
-async function setViewport(cdp, width, height) { await cdp.send('Emulation.setDeviceMetricsOverride',{width,height,screenWidth:width,screenHeight:height,deviceScaleFactor:1,mobile:false});await cdp.send('Emulation.setVisibleSize',{width,height});await evaluate(cdp,"window.dispatchEvent(new Event('resize')); true");await pause(300) }
+/** 临时监听本机随机端口，读取分配结果并关闭监听后返回端口。 */ async function freePort() { const server=createNetServer();await new Promise(/** 监听本机随机端口，监听错误时拒绝等待，准备完成时结束等待。 */ (resolve,reject)=>{server.once('error',reject);server.listen(0,'127.0.0.1',resolve)});const address=server.address(),port=typeof address==='object'&&address?address.port:0;await new Promise(/* 调用 server.close(resolve) 并返回调用结果。 */ resolve=>server.close(resolve));return port }
+/** 在二十秒内轮询浏览器调试目标并返回首个页面，超时报错。 */ async function waitForTarget(port) { const deadline=Date.now()+20_000;while(Date.now()<deadline){try{const targets=await fetch(`http://127.0.0.1:${port}/json/list`).then(/* 调用 response.json() 并返回调用结果。 */ response=>response.json()),target=targets.find(/* 比较 item.type 与 'page'，返回严格相等的判断结果。 */ item=>item.type==='page');if(target)return target}catch{}await pause(100)}throw new Error('Timed out connecting to Edge DevTools.') }
+/** 建立浏览器调试WebSocket连接，关联请求响应并分发协议事件。 */ async function connectCdp(url) { const socket=new WebSocket(url),pending=new Map(),listeners=new Map();let nextId=1;await new Promise(/** 等待WebSocket首次连接成功或首次连接错误。 */ (resolve,reject)=>{socket.addEventListener('open',resolve,{once:true});socket.addEventListener('error',reject,{once:true})});socket.addEventListener('message',/** 将调试响应分配到待处理请求，并把无请求标识的消息分发给事件监听者。 */ message=>{const value=JSON.parse(message.data);if(value.id){const item=pending.get(value.id);if(!item)return;pending.delete(value.id);value.error?item.reject(new Error(value.error.message)):item.resolve(value.result)}else for(const listener of listeners.get(value.method)||[])listener(value.params||{})});return{/** 发送带递增标识的调试协议请求，并返回等待响应的任务。 */ send(method,params={}){return new Promise(/** 登记调试请求的完成处理器并经WebSocket发送请求。 */ (resolve,reject)=>{const id=nextId++;pending.set(id,{resolve,reject});socket.send(JSON.stringify({id,method,params}))})},/** 向指定调试事件的监听器列表追加回调。 */ on(method,listener){listeners.set(method,[...(listeners.get(method)||[]),listener])}} }
+/** 在浏览器内求值并等待异步结果，将远程异常转为本地错误。 */ async function evaluate(cdp, expression) { const result=await cdp.send('Runtime.evaluate',{expression,awaitPromise:true,returnByValue:true});if(result.exceptionDetails)throw new Error(result.exceptionDetails.exception?.description||result.exceptionDetails.text);return result.result.value }
+/** 按间隔轮询浏览器表达式，成功时返回，达到期限时报告超时。 */ async function waitForExpression(cdp, expression, timeout) { const deadline=Date.now()+timeout;while(Date.now()<deadline){try{if(await evaluate(cdp,expression))return}catch{}await pause(100)}throw new Error(`Timed out waiting for ${expression}`) }
+/** 设置浏览器视口与可见尺寸，派发尺寸变化事件后等待布局稳定。 */ async function setViewport(cdp, width, height) { await cdp.send('Emulation.setDeviceMetricsOverride',{width,height,screenWidth:width,screenHeight:height,deviceScaleFactor:1,mobile:false});await cdp.send('Emulation.setVisibleSize',{width,height});await evaluate(cdp,"window.dispatchEvent(new Event('resize')); true");await pause(300) }

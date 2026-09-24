@@ -1,3 +1,4 @@
+/** 功能回归脚本：执行 verify-v26.10-headless.mjs 对应场景，保留断言和证据输出。 */
 process.env.NOVA_HEADLESS_RELEASE = '26.10'
 process.env.NOVA_HEADLESS_ENGINE_VERSION = '26.10.0'
 process.env.NOVA_HEADLESS_REFERENCE = 'server-v2610-headless-authority'

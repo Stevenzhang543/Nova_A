@@ -1,3 +1,4 @@
+/** 版本6.9.0：生成参考项目与对应资源，供功能演示和版本验证使用。 */
 import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -24,7 +25,7 @@ for (const reference of references) {
   } else {
     const fixture = join(target, 'merge-fixtures'); await mkdir(fixture, { recursive: true }); const base = structuredClone(project), ours = structuredClone(project), theirs = structuredClone(project)
     base.scenes[0].name = 'Shared Arena'; ours.scenes[0].name = 'Ours Arena'; theirs.scenes[0].name = 'Theirs Arena'; ours.projectMetadata.description = 'Independent ours metadata change.'; theirs.projectSettings.build.gameName = 'Theirs Release Candidate'
-    await Promise.all([['base.nova', base], ['ours.nova', ours], ['theirs.nova', theirs]].map(([name, value]) => writeFile(join(fixture, name), `${JSON.stringify(value, null, 2)}\n`)))
+    await Promise.all([['base.nova', base], ['ours.nova', ours], ['theirs.nova', theirs]].map(/* 调用 writeFile(join(fixture, name), `${JSON.stringify(value, null, 2)}\n`) 并返回调用结果。 */ ([name, value]) => writeFile(join(fixture, name), `${JSON.stringify(value, null, 2)}\n`)))
   }
 }
 console.log(`Generated ${references.length} Nova_A v6.9 package/shipping and semantic-collaboration references.`)

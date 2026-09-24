@@ -1,3 +1,4 @@
+/** 模板教学资料：保存各模板的目标、操作步骤及使用提示。 */
 import type { ProjectTemplateId } from './templates'
 
 export type TemplateGuideLocale = 'en' | 'de' | 'zh'
@@ -662,12 +663,12 @@ const guides: readonly TemplateGuideRecord[] = [
 const requirementText: Record<TemplateRequirement, Localized> = {
  offline: ['Ready offline', 'Offline bereit', '离线可用'], keyboard: ['Keyboard', 'Tastatur', '键盘'], pointer: ['Pointer', 'Zeiger', '指针'], audio: ['Audio included', 'Audio enthalten', '包含音频'], twoPlayers: ['Two local players', 'Zwei lokale Spieler', '本地双人'], optionalServer: ['Server optional', 'Server optional', '服务器可选']
 }
-const index = (locale: TemplateGuideLocale): 0 | 1 | 2 => locale === 'de' ? 1 : locale === 'zh' ? 2 : 0
-const byId = new Map(guides.map(guide => [guide.id, guide]))
+const index = /* 根据 locale === 'de' 的真假，分别返回 1 或 locale === 'zh' ? 2 : 0。 */ (locale: TemplateGuideLocale): 0 | 1 | 2 => locale === 'de' ? 1 : locale === 'zh' ? 2 : 0
+const byId = new Map(guides.map(/* 返回按声明顺序构造的数组 [guide.id, guide]。 */ guide => [guide.id, guide]))
 /** Instructions describe the actual supplied foundation; no external downloads are needed for Play. */
-export function templateGuide(id: ProjectTemplateId, locale: TemplateGuideLocale = 'en'): TemplateGuide {
+/** 要求模板指南存在，按语言选择操作、预期结果和依赖提示并返回手册定位信息。 */ export function templateGuide(id: ProjectTemplateId, locale: TemplateGuideLocale = 'en'): TemplateGuide {
  const guide = byId.get(id)
  if (!guide) throw new Error(`Missing template instructions: ${id}`)
  const at = index(locale)
- return { controls: controls[guide.control][at], expected: guide.expected[at], requirements: guide.requirements.map(requirement => requirementText[requirement][at]), manualSection: guide.manualSection, taskSection: 'v2615-template-' + id, foundation: guide.foundation }
+ return { controls: controls[guide.control][at], expected: guide.expected[at], requirements: guide.requirements.map(/* 返回 requirementText[requirement][at] 的当前值。 */ requirement => requirementText[requirement][at]), manualSection: guide.manualSection, taskSection: 'v2615-template-' + id, foundation: guide.foundation }
 }

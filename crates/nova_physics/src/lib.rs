@@ -1,3 +1,4 @@
+// 物理模块公开入口：组合内部求解器并导出稳定句柄、材质、关节及查询类型。
 //! Nova_A's platform-independent 2D physics engine.
 //!
 //! The numerical solver is split by responsibility while the public API exposes
@@ -96,6 +97,7 @@ pub mod material {
     }
 
     impl Default for PhysicsMaterial {
+        // 创建零恢复系数和零摩擦的默认物理材质。
         fn default() -> Self {
             Self {
                 restitution: 0.0,
@@ -138,6 +140,7 @@ pub mod solver {
     }
 
     impl Default for SolverSettings {
+        // 将默认速度与位置迭代次数均设为二十。
         fn default() -> Self {
             Self {
                 velocity_iterations: 20,

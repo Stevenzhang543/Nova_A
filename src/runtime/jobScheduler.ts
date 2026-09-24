@@ -1,3 +1,4 @@
+/** 运行任务调度：管理异步计算队列、取消及工作线程结果回传。 */
 import { reactive } from 'vue'
 import { productionSettings } from './production'
 import { recordStaleWorkerResult, recordWorkerPerformance } from './largeWorldPerformance'
@@ -19,28 +20,29 @@ let nextLease = 1
 let fallbackBusy = false
 let fallbackLease = 0
 
-function parseCsv(source: string): string[][] {
+/** 逐字符解析带双引号转义的 CSV，输出限制行列数量并忽略完全空行。 */ function parseCsv(source: string): string[][] {
   const rows: string[][] = []; let row: string[] = [], field = '', quoted = false
   for (let index = 0; index <= source.length; index++) {
     const character = source[index] ?? '\n'
     if (quoted && character === '"' && source[index + 1] === '"') { field += '"'; index++; continue }
     if (character === '"') { quoted = !quoted; continue }
-    if (!quoted && (character === ',' || character === '\n' || character === '\r')) { if (character === '\r' && source[index + 1] === '\n') index++; row.push(field); field = ''; if (character !== ',') { if (row.some(value => value.length)) rows.push(row); row = [] }; continue }
+    if (!quoted && (character === ',' || character === '\n' || character === '\r')) { if (character === '\r' && source[index + 1] === '\n') index++; row.push(field); field = ''; if (character !== ',') { if (row.some(/* 返回 value.length 的当前值。 */ value => value.length)) rows.push(row); row = [] }; continue }
     field += character
   }
-  return rows.slice(0, 100_001).map(columns => columns.slice(0, 512))
+  return rows.slice(0, 100_001).map(/* 调用 columns.slice(0, 512) 并返回调用结果。 */ columns => columns.slice(0, 512))
 }
 
-export function runJobLocally(kind: JobKind, payload: unknown): unknown {
+/** 在主线程执行解析、比较、动画采样、粒子推进、空间分桶或快速摘要任务，供工作线程不可用时回退。 */ export function runJobLocally(kind: JobKind, payload: unknown): unknown {
   if (kind === 'parseJson') return JSON.parse(String(payload))
   if (kind === 'parseCsv') return parseCsv(String(payload))
   if (kind === 'compare') return JSON.stringify((payload as { first?: unknown }).first) === JSON.stringify((payload as { second?: unknown }).second)
   if (kind === 'sampleAnimation') {
     const source = payload && typeof payload === 'object' ? payload as { time?: number; keys?: Array<{ time?: number; value?: number }> } : {}
-    const keys = (Array.isArray(source.keys) ? source.keys : []).flatMap(key => Number.isFinite(key?.time) && Number.isFinite(key?.value) ? [{ time: Number(key.time), value: Number(key.value) }] : []).sort((a, b) => a.time - b.time).slice(0, 100_000)
+    const keys = (Array.isArray(source.keys) ? source.keys : []).flatMap(/* 根据 Number.isFinite(key?.time) && Number.isFinite(key?.value) 的真假，分别返回 [{ time: Number(key.time), value: Number(key.value) }] 或 []。 */ key => Number.isFinite(key?.time) && Number.isFinite(key?.value) ? [{ time: Number(key.time), value: Number(key.value) }] : []).sort(/* 计算表达式 a.time - b.time 并返回结果，沿用操作数的原有类型规则。 */ (a, b) => a.time - b.time).slice(0, 100_000)
     if (!keys.length) return 0
-    const time = Number.isFinite(source.time) ? Number(source.time) : 0, nextIndex = keys.findIndex(key => key.time >= time)
-    if (nextIndex <= 0) return keys[Math.max(0, nextIndex)].value
+    const time = Number.isFinite(source.time) ? Number(source.time) : 0, nextIndex = keys.findIndex(/* 比较 key.time 与 time，返回大于或等于的判断结果。 */ key => key.time >= time)
+    // 首帧之前保持首值；超过末帧的 -1 留给下方末值分支。
+    if (nextIndex === 0) return keys[0].value
     if (nextIndex < 0) return keys[keys.length - 1].value
     const previous = keys[nextIndex - 1], next = keys[nextIndex], factor = Math.min(1, Math.max(0, (time - previous.time) / Math.max(1e-12, next.time - previous.time)))
     return previous.value + (next.value - previous.value) * factor
@@ -48,21 +50,21 @@ export function runJobLocally(kind: JobKind, payload: unknown): unknown {
   if (kind === 'advanceParticles') {
     const source = payload && typeof payload === 'object' ? payload as { dt?: number; gravity?: number; particles?: Array<{ x?: number; y?: number; vx?: number; vy?: number }> } : {}
     const dt = Math.min(1, Math.max(0, Number(source.dt) || 0)), gravity = Math.min(1e6, Math.max(-1e6, Number(source.gravity) || 0))
-    return (Array.isArray(source.particles) ? source.particles : []).slice(0, 100_000).map(item => { const x = Number(item.x) || 0, y = Number(item.y) || 0, vx = Number(item.vx) || 0, vy = (Number(item.vy) || 0) + gravity * dt; return { x: x + vx * dt, y: y + vy * dt, vx, vy } })
+    return (Array.isArray(source.particles) ? source.particles : []).slice(0, 100_000).map(/** 对单个粒子施加重力并按步长积分速度与位置。 */ item => { const x = Number(item.x) || 0, y = Number(item.y) || 0, vx = Number(item.vx) || 0, vy = (Number(item.vy) || 0) + gravity * dt; return { x: x + vx * dt, y: y + vy * dt, vx, vy } })
   }
   if (kind === 'buildSpatialGrid') {
     const source = payload && typeof payload === 'object' ? payload as { cellSize?: number; entries?: Array<{ id?: string; x?: number; y?: number }> } : {}
     const cellSize = Math.min(1e6, Math.max(.01, Number(source.cellSize) || 16)), buckets: Record<string, string[]> = {}
     for (const entry of (Array.isArray(source.entries) ? source.entries : []).slice(0, 100_000)) { const id = String(entry.id ?? '').slice(0, 128); if (!id) continue; const key = `${Math.floor((Number(entry.x) || 0) / cellSize)}:${Math.floor((Number(entry.y) || 0) / cellSize)}`; (buckets[key] ??= []).push(id) }
     for (const values of Object.values(buckets)) values.sort()
-    return Object.fromEntries(Object.entries(buckets).sort(([a], [b]) => a.localeCompare(b)))
+    return Object.fromEntries(Object.entries(buckets).sort(/* 调用 a.localeCompare(b) 并返回调用结果。 */ ([a], [b]) => a.localeCompare(b)))
   }
   let first = 0x811c9dc5, second = 0x9e3779b9, value = String(payload)
   for (let index = 0; index < value.length; index++) { const code = value.charCodeAt(index); first = Math.imul(first ^ code, 0x01000193) >>> 0; second = Math.imul(second ^ (code + index), 0x85ebca6b) >>> 0 }
   return `${first.toString(16).padStart(8, '0')}${second.toString(16).padStart(8, '0')}`
 }
 
-function settle(active: ActiveJob, result: unknown, error?: string): void {
+/** 幂等结算任务，清除超时并更新耗时，按取消、过期、失败或成功完成对应 Promise。 */ function settle(active: ActiveJob, result: unknown, error?: string): void {
   const { job } = active
   if (job.settled) return
   job.settled = true
@@ -82,7 +84,7 @@ function settle(active: ActiveJob, result: unknown, error?: string): void {
   if (!stale) recordWorkerPerformance(elapsed, queueWaitMs, !active.slot, false)
 }
 
-function releaseSlot(active: ActiveJob): void {
+/** 仅在任务身份和租约匹配时释放工作线程或主线程回退执行槽。 */ function releaseSlot(active: ActiveJob): void {
   if (active.slot && active.slot.jobId === active.job.id && active.slot.lease === active.lease) {
     active.slot.busy = false; active.slot.jobId = null; active.slot.lease = 0
   } else if (!active.slot && fallbackLease === active.lease) {
@@ -90,7 +92,7 @@ function releaseSlot(active: ActiveJob): void {
   }
 }
 
-function complete(id: number, lease: number, result: unknown, error?: string): void {
+/** 拒绝迟到或租约不匹配的结果，合法结果释放执行槽、结算任务并继续派发。 */ function complete(id: number, lease: number, result: unknown, error?: string): void {
   const active = pending.get(id)
   if (!active || active.lease !== lease) {
     // A retired worker is allowed to finish, but its reply must never settle a
@@ -105,7 +107,7 @@ function complete(id: number, lease: number, result: unknown, error?: string): v
   dispatch()
 }
 
-function retireWorker(slot: WorkerSlot): void {
+/** 清除回调并终止工作线程，从池中移除执行槽并清空租约。 */ function retireWorker(slot: WorkerSlot): void {
   slot.worker.onmessage = null
   slot.worker.onerror = null
   slot.worker.terminate()
@@ -114,7 +116,7 @@ function retireWorker(slot: WorkerSlot): void {
   slot.busy = false; slot.jobId = null; slot.lease = 0
 }
 
-function cancelActive(active: ActiveJob, reason: string): void {
+/** 移除活动任务并标记取消，终止其工作线程以隔离迟到结果，再结算并派发后续任务。 */ function cancelActive(active: ActiveJob, reason: string): void {
   if (active.job.settled) return
   active.job.cancelled = true
   pending.delete(active.job.id)
@@ -125,7 +127,7 @@ function cancelActive(active: ActiveJob, reason: string): void {
   dispatch()
 }
 
-function rejectQueued(job: QueueJob, reason: string, stale = false): void {
+/** 幂等拒绝尚未开始的任务，并分别统计过期丢弃或取消。 */ function rejectQueued(job: QueueJob, reason: string, stale = false): void {
   if (job.settled) return
   job.settled = true
   if (stale) { jobSchedulerState.stale++; recordWorkerPerformance(0, 0, false, true) }
@@ -133,13 +135,13 @@ function rejectQueued(job: QueueJob, reason: string, stale = false): void {
   job.reject(new Error(reason))
 }
 
-function createWorker(): WorkerSlot | null {
+/** 尝试创建模块工作线程及消息错误处理，失败切换为主线程回退模式。 */ function createWorker(): WorkerSlot | null {
   if (!jobSchedulerState.workerAvailable) return null
   try {
     const worker = new Worker(new URL('./jobScheduler.worker.ts', import.meta.url), { type: 'module', name: 'nova-job-worker' })
     const slot: WorkerSlot = { worker, busy: false, jobId: null, lease: 0 }
-    worker.onmessage = event => complete(Number(event.data?.id), Number(event.data?.lease), event.data?.result, typeof event.data?.error === 'string' ? event.data.error : undefined)
-    worker.onerror = event => {
+    worker.onmessage = /** 从线程消息提取任务身份、租约和结果或错误，交给统一结算入口。 */ event => complete(Number(event.data?.id), Number(event.data?.lease), event.data?.result, typeof event.data?.error === 'string' ? event.data.error : undefined)
+    worker.onerror = /** 线程错误时禁用后续线程创建，退役当前槽并仅结算相同租约的活动任务。 */ event => {
       const lease = slot.lease, active = slot.jobId === null ? null : pending.get(slot.jobId)
       jobSchedulerState.workerAvailable = false; jobSchedulerState.usingFallback = true
       retireWorker(slot)
@@ -149,10 +151,10 @@ function createWorker(): WorkerSlot | null {
   } catch { jobSchedulerState.workerAvailable = false; jobSchedulerState.usingFallback = true; return null }
 }
 
-function dispatch(): void {
+/** 在并发与回退槽限制内派发队列，过滤取消和过期任务，安排超时并以独立租约隔离异步结果。 */ function dispatch(): void {
   jobSchedulerState.queued = queue.length
   while (queue.length) {
-    let slot = workers.find(candidate => !candidate.busy) ?? null
+    let slot = workers.find(/* 返回 candidate.busy 的逻辑取反结果。 */ candidate => !candidate.busy) ?? null
     if (!slot && workers.length < productionSettings.jobs.maxWorkers) slot = createWorker()
     if (!slot && jobSchedulerState.workerAvailable && workers.length >= productionSettings.jobs.maxWorkers) break
     if (!slot && fallbackBusy) break
@@ -162,7 +164,7 @@ function dispatch(): void {
     const started = performance.now(), lease = nextLease++
     const active: ActiveJob = { job, started, slot, lease }
     pending.set(job.id, active); jobSchedulerState.active = pending.size
-    job.timer = globalThis.setTimeout(() => { const current = pending.get(job.id); if (current?.lease === lease) cancelActive(current, `Job timed out after ${job.timeoutMs} ms`) }, job.timeoutMs)
+    job.timer = globalThis.setTimeout(/** 仅对仍占用该租约的任务执行超时取消。 */ () => { const current = pending.get(job.id); if (current?.lease === lease) cancelActive(current, `Job timed out after ${job.timeoutMs} ms`) }, job.timeoutMs)
     if (slot) {
       slot.busy = true; slot.jobId = job.id; slot.lease = lease
       try { slot.worker.postMessage({ id: job.id, lease, kind: job.kind, payload: job.payload }) }
@@ -174,7 +176,7 @@ function dispatch(): void {
     fallbackBusy = true; fallbackLease = lease
     // A task boundary lets input, paint and cancellation run before an
     // unavoidable single-thread fallback begins.
-    globalThis.setTimeout(() => {
+    globalThis.setTimeout(/** 在主线程任务边界后再次检查租约，执行本地计算或释放已失效回退槽。 */ () => {
       const current = pending.get(job.id)
       if (!current || current.lease !== lease || job.settled) {
         if (fallbackLease === lease) { fallbackBusy = false; fallbackLease = 0; dispatch() }
@@ -186,25 +188,25 @@ function dispatch(): void {
   }
 }
 
-export function scheduleJob<T = unknown>(kind: JobKind, payload: unknown, options: JobScheduleOptions = {}): { id: number; generation: number; promise: Promise<T>; cancel: () => void } {
+/** 验证队列容量，登记资源代次和有界超时，返回任务 Promise 与可取消句柄。 */ export function scheduleJob<T = unknown>(kind: JobKind, payload: unknown, options: JobScheduleOptions = {}): { id: number; generation: number; promise: Promise<T>; cancel: () => void } {
   if (queue.length + pending.size >= productionSettings.jobs.maxQueued) throw new Error(`Job queue is limited to ${productionSettings.jobs.maxQueued} items`)
   const id = nextId++
   const key = options.key?.trim().slice(0, 160) ?? '', generation = options.generation ?? (key ? (latestGenerations.get(key) ?? 0) + 1 : 0)
   if (key) latestGenerations.set(key, generation)
   let queued!: QueueJob
-  const promise = new Promise<T>((resolve, reject) => { queued = { id, kind, payload, resolve: value => resolve(value as T), reject, timer: null, cancelled: false, settled: false, queuedAt: performance.now(), key, generation, timeoutMs: Math.min(120_000, Math.max(100, options.timeoutMs ?? productionSettings.jobs.timeoutMs)) }; queue.push(queued); dispatch() })
-  return { id, generation, promise, cancel: () => {
+  const promise = new Promise<T>(/** 建立任务记录与完成回调，加入队列并立即尝试派发。 */ (resolve, reject) => { queued = { id, kind, payload, resolve: /* 调用 resolve(value as T) 并返回调用结果。 */ value => resolve(value as T), reject, timer: null, cancelled: false, settled: false, queuedAt: performance.now(), key, generation, timeoutMs: Math.min(120_000, Math.max(100, options.timeoutMs ?? productionSettings.jobs.timeoutMs)) }; queue.push(queued); dispatch() })
+  return { id, generation, promise, cancel: /** 取消尚未结算的任务并失效资源代次，分别处理活动任务或队列项。 */ () => {
     if (queued.settled) return
     queued.cancelled = true
     if (key && latestGenerations.get(key) === generation) latestGenerations.set(key, generation + 1)
     const active = pending.get(id)
     if (active) { cancelActive(active, 'Job cancelled'); return }
-    const index = queue.findIndex(job => job.id === id)
+    const index = queue.findIndex(/* 比较 job.id 与 id，返回严格相等的判断结果。 */ job => job.id === id)
     if (index >= 0) { queue.splice(index, 1); jobSchedulerState.queued = queue.length; rejectQueued(queued, 'Job cancelled'); dispatch() }
   } }
 }
 
-export function shutdownJobScheduler(): void {
+/** 终止全部工作线程并拒绝活动及排队任务，释放超时、代次和回退占用状态。 */ export function shutdownJobScheduler(): void {
   for (const slot of [...workers]) retireWorker(slot)
   for (const active of pending.values()) { if (active.job.timer !== null) clearTimeout(active.job.timer); active.job.timer = null; active.job.settled = true; active.job.reject(new Error('Job scheduler stopped')) }
   pending.clear()

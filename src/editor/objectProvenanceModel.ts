@@ -1,3 +1,4 @@
+/** 对象来源模型：比较字段归属与覆盖值，构建蓝图或实例的属性来源信息。 */
 /** Read-only ownership projection. Inputs are detached authored/runtime snapshots. */
 export type ObjectValueOrigin = 'local' | 'inherited' | 'overridden' | 'unresolved'
 export interface OwnershipAsset { uuid: string; name: string; path: string; assetType: string }
@@ -32,15 +33,15 @@ export interface ObjectProvenance {
   composition: NonNullable<ObjectProvenanceInput['composition']>
 }
 type Fields = Map<string, { label: string; component: string; value: unknown }>
-const object = (value: unknown): Record<string, unknown> => value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {}
-export function ownershipValuesEqual(left: unknown, right: unknown): boolean {
+const object = /* 根据 value && typeof value === 'object' && !Array.isArray(value) 的真假，分别返回 value as Record<string, unknown> 或 {}。 */ (value: unknown): Record<string, unknown> => value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {}
+/** 递归比较数组与对象的自有字段，使用 Object.is 判断基本值及相同引用。 */ export function ownershipValuesEqual(left: unknown, right: unknown): boolean {
   if (Object.is(left, right)) return true
-  if (Array.isArray(left) || Array.isArray(right)) return Array.isArray(left) && Array.isArray(right) && left.length === right.length && left.every((item, index) => ownershipValuesEqual(item, right[index]))
+  if (Array.isArray(left) || Array.isArray(right)) return Array.isArray(left) && Array.isArray(right) && left.length === right.length && left.every(/* 调用 ownershipValuesEqual(item, right[index]) 并返回调用结果。 */ (item, index) => ownershipValuesEqual(item, right[index]))
   if (!left || !right || typeof left !== 'object' || typeof right !== 'object') return false
   const a = object(left), b = object(right), keys = Object.keys(a)
-  return keys.length === Object.keys(b).length && keys.every(key => Object.prototype.hasOwnProperty.call(b, key) && ownershipValuesEqual(a[key], b[key]))
+  return keys.length === Object.keys(b).length && keys.every(/* 先计算 Object.prototype.hasOwnProperty.call(b, key)；仅当其为真值时求右侧 ownershipValuesEqual(a[key], b[key])，返回短路求值结果。 */ key => Object.prototype.hasOwnProperty.call(b, key) && ownershipValuesEqual(a[key], b[key]))
 }
-function fields(record: Record<string, unknown>): Fields {
+/** 把可编辑实体和活动组件字段展开为稳定属性路径，脚本导出属性单独标记且排除临时错误。 */ function fields(record: Record<string, unknown>): Fields {
   const rows: Fields = new Map()
   for (const key of ['name', 'enabled', 'tags', 'groups', 'namedLayer', 'ownership', 'editorOnly', 'runtimePersistence', 'persistentAcrossScenes']) if (Object.prototype.hasOwnProperty.call(record, key)) rows.set(`Entity.${key}`, { label: key, component: 'Entity', value: record[key] })
   for (const component of Array.isArray(record.components) ? record.components : []) {
@@ -57,14 +58,14 @@ function fields(record: Record<string, unknown>): Fields {
   return rows
 }
 /** Arrays in prefabOverrides describe a serialization patch, not individual property ownership. */
-export function buildObjectProvenance(input: ObjectProvenanceInput): ObjectProvenance {
+/** 对齐用户编辑值、声明或预制基线及实时值，生成属性归属和运行期变更信息，保留未解析来源诊断。 */ export function buildObjectProvenance(input: ObjectProvenanceInput): ObjectProvenance {
   const authored = fields(input.authored), baseline = input.prefab?.entity ? fields(input.prefab.entity) : new Map(), current = fields(input.current)
-  const primary = input.runtime.behaviors.find(behavior => behavior.primary)
+  const primary = input.runtime.behaviors.find(/* 返回 behavior.primary 的当前值。 */ behavior => behavior.primary)
   if (input.runtime.active && primary) {
     for (const [name, value] of Object.entries(primary.authoredProperties)) authored.set(`Script.${name}`, { label: name, component: 'Script2D', value })
     for (const [name, value] of Object.entries(primary.properties)) current.set(`Script.${name}`, { label: name, component: 'Script2D', value })
   }
-  const properties = [...authored].map(([path, field]): ObjectPropertyOwnership => {
+  const properties = [...authored].map(/** 根据声明或预制基线判断继承、覆盖及本地来源，并独立标记运行值是否偏离用户编辑值。 */ ([path, field]): ObjectPropertyOwnership => {
     const declaration = input.declaredBaselines?.[path], source = declaration ? { value: declaration.value } : baseline.get(path), live = current.get(path), hasBaseline = Boolean(declaration) || baseline.has(path)
     const origin: ObjectValueOrigin = hasBaseline ? ownershipValuesEqual(field.value, source!.value) ? 'inherited' : 'overridden' : input.hasPrefabReference && !input.prefab?.entity ? 'unresolved' : 'local'
     return { path, label: field.label, component: field.component, authored: field.value, baseline: source?.value, hasBaseline, origin, owner: declaration?.owner ?? (hasBaseline ? input.prefab!.asset : null), runtime: live?.value, hasRuntime: input.runtime.active && current.has(path), runtimeChanged: input.runtime.active && current.has(path) && !ownershipValuesEqual(field.value, live!.value) }

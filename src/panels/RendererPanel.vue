@@ -1,3 +1,4 @@
+<!-- 渲染视图容器：以可伸缩裁剪区域承载世界画布。 -->
 <template>
   <div class="renderer-panel"><div class="viewport-wrapper"><WorldCanvas class="readonly-canvas" /></div></div>
 </template>

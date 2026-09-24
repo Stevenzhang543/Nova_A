@@ -1,11 +1,12 @@
+/** 界面图像着色：生成和缓存带颜色调制的控件图像。 */
 import type { UiRect } from './uiLayout'
 export interface TintedUiImage { source: HTMLCanvasElement; rect: UiRect }
 /** Tint only isolated source pixels: destination-in must never touch the scene canvas. */
 export class UiImageTintCache {
   private entries = new Map<string, TintedUiImage & { original: CanvasImageSource; bytes: number }>()
   private bytes = 0
-  constructor(private readonly maximumBytes = 16 * 1024 * 1024) {}
-  resolve(key: string, source: CanvasImageSource, rect: UiRect, tint: { r: number; g: number; b: number }): TintedUiImage {
+  /** 保存色调纹理缓存的最大像素内存预算。 */ constructor(private readonly maximumBytes = 16 * 1024 * 1024) {}
+  /** 按源区域与色调复用最近使用缓存，超预算逐出旧项，以乘色加透明遮罩生成染色画布。 */ resolve(key: string, source: CanvasImageSource, rect: UiRect, tint: { r: number; g: number; b: number }): TintedUiImage {
     const cacheKey = `${key}:${rect.x}:${rect.y}:${rect.width}:${rect.height}:${tint.r}:${tint.g}:${tint.b}`, prior = this.entries.get(cacheKey)
     if (prior?.original === source) { this.entries.delete(cacheKey); this.entries.set(cacheKey, prior); return prior }
     if (prior) { this.bytes -= prior.bytes; this.entries.delete(cacheKey) }
@@ -21,6 +22,6 @@ export class UiImageTintCache {
     const result = { source: canvas, rect: { x: 0, y: 0, width, height }, original: source, bytes }
     this.entries.set(cacheKey, result); this.bytes += bytes; return result
   }
-  clear(): void { this.entries.clear(); this.bytes = 0 }
-  inspect(): { entries: number; bytes: number } { return { entries: this.entries.size, bytes: this.bytes } }
+  /** 释放所有染色缓存引用并清零统计字节数。 */ clear(): void { this.entries.clear(); this.bytes = 0 }
+  /* 返回具有所列字段的新对象 { entries: this.entries.size, bytes: this.bytes }。 */ inspect(): { entries: number; bytes: number } { return { entries: this.entries.size, bytes: this.bytes } }
 }

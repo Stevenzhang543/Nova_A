@@ -1,3 +1,4 @@
+/** 工作区保存边界：检查所有受保护草稿已保存，避免导出或切换漏掉编辑。 */
 import { assetState } from '../assets/AssetDatabase'
 import { projectSessionState } from '../projects/projectSession'
 import { preferencesState } from '../store/preferences'
@@ -9,7 +10,7 @@ const instructions = {
 } as const
 /** Recovery payloads are not necessarily asset source (materials include raw JSON).
  * Asset owners validate and commit them; never silently publish older sources. */
-export function assertStudioDraftsSaved(): void {
+/** 检查当前项目所有保留草稿；仍有未保存资源时抛出包含资源名的本地化提示。 */ export function assertStudioDraftsSaved(): void {
   const pending = listPendingAuthoringDrafts(projectSessionState.id, assetState.records)
-  if (pending.length) throw new Error(`${instructions[preferencesState.locale]}\n\n${pending.map(draft => draft.name).join('\n')}`)
+  if (pending.length) throw new Error(`${instructions[preferencesState.locale]}\n\n${pending.map(/* 返回 draft.name 的当前值。 */ draft => draft.name).join('\n')}`)
 }

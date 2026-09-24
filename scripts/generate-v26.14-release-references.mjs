@@ -1,3 +1,4 @@
+/** 版本26.14：生成参考项目与对应资源，供功能演示和版本验证使用。 */
 import assert from 'node:assert/strict'
 import {readFile,readdir} from 'node:fs/promises'
 import {join} from 'node:path'

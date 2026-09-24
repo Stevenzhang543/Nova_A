@@ -1,3 +1,4 @@
+/** 资源持久化类型：声明资源记录、导入元数据与配置结构，并提供各类型默认设置。 */
 import type { TextureFilter, TextureRegion } from '../renderer'
 import type { ContentInterchangeMetadata } from './contentInteroperability'
 
@@ -198,14 +199,14 @@ export interface AssetRecord {
   unknownFields?: Record<string, unknown>
 }
 
-export function defaultScriptMetadata(): ScriptAssetMetadata {
+/** 创建独立的脚本调试、包依赖、热重载和关联图表元信息默认记录。 */ export function defaultScriptMetadata(): ScriptAssetMetadata {
   return {
     version: 2, apiVersion: 2, breakpoints: [], breakpointDetails: [], tests: [], packageDependencies: [],
     packageName: '', reloadPolicy: 'preserve', signalConnections: [], recoverySource: '', lastSavedHash: '', linkedGraphUuid: ''
   }
 }
 
-export function defaultAnimationImportMetadata(): AnimationImportMetadata {
+/** 构造并返回记录 { version: 2, sourceAsset: null, sourceFrameRate: 60, sampleRate: 60, trackMappings: [], compressionTolerance: .0001, preserveEvents: true, lastImportedAt: 0 }，字段按当前实参及捕获状态求值。 */ export function defaultAnimationImportMetadata(): AnimationImportMetadata {
   return { version: 2, sourceAsset: null, sourceFrameRate: 60, sampleRate: 60, trackMappings: [], compressionTolerance: .0001, preserveEvents: true, lastImportedAt: 0 }
 }
 
@@ -227,7 +228,7 @@ export const DEFAULT_ASSET_FOLDERS = [
   '.nova/cache', '.nova/imported', '.nova/user'
 ] as const
 
-export function defaultImportSettings(): AssetImportSettings {
+/** 为图像、图集、音频、字体、瓦片、脚本、着色器及本地化创建完整导入默认设置。 */ export function defaultImportSettings(): AssetImportSettings {
   return {
     textureProfile: 'General', filterMode: 'Linear', compression: 'Lossless', pixelsPerUnit: 100,
     spriteRegion: null, pivot: { x: .5, y: .5 }, atlas: true, colorSpace: 'sRGB', generateMipmaps: false, transparency: 'Preserve', platformVariants: {}, platformOverrides: {},

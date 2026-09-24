@@ -1,3 +1,4 @@
+/** 测试夹具：为 v26.22-runtime-dispositions.mjs 提供受控数据或执行环境，限定于对应验证场景。 */
 /** Named runtime dispositions; a persistence case does not imply an executable hook. */
 export const runtimeFieldDispositions22={
  'projectSettings.production.testing.tests.[*].setup':{status:'unsupported',consumer:'src/runtime/testRunner.ts#runOne',gap:'TEST-HOOKS-22',detail:'Stored by normalizeProductionSettings but not invoked by the project test runner.'},

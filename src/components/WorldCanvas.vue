@@ -1,3 +1,4 @@
+<!-- 场景与游戏画布：持有渲染器、输入和单一帧循环，页面切换保留实例，项目退出释放资源。 -->
 <script setup lang="ts">
 import { boundedFrame } from '../renderer/surfaceLimits'
 import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
@@ -60,8 +61,8 @@ const focusedUiInput = ref<{ entity: Entity; rect: { x: number; y: number; width
 const accessibilityNodes = ref<UiAccessibilityNode[]>([])
 let accessibilitySignature = ''
 let touchPointer: number | null = null
-const captionTick = ref(0), visibleCaptions = computed(() => { void captionTick.value; return activeRuntimeCaptions() })
-const inputBridge = new UiNativeInputBridge((uuid, value) => gameUiRuntime.commitTextInput(uuid, value))
+const captionTick = ref(0), visibleCaptions = computed(/** 随字幕刷新计数变化获取当前有效的运行时字幕。 */ () => { void captionTick.value; return activeRuntimeCaptions() })
+const inputBridge = new UiNativeInputBridge(/* 调用 gameUiRuntime.commitTextInput(uuid, value) 并返回调用结果。 */ (uuid, value) => gameUiRuntime.commitTextInput(uuid, value))
 let ctx: CanvasRenderingContext2D | null = null
 let renderer: Renderer2D | null = null
 let canvasPixelRatio = 1
@@ -104,26 +105,26 @@ let tileHover: { x: number; y: number } | null = null
 let savedCameraState: { scale: number, offset: Vec2 } | null = null;
 let hasMovedEntity = false;
 
-watch(() => authoringState.viewportRequest?.id, () => {
+watch(/* 返回 authoringState.viewportRequest?.id 的当前值。 */ () => authoringState.viewportRequest?.id, /** 按聚焦选择或摄像机请求计算目标边界，使其居中并适应画布。 */ () => {
   const request = authoringState.viewportRequest
   if (!request || editorState.currentPage !== 'scene') return
-  const selected = world.entities.filter(entity => state.selectedEntityIds.includes(entity.id))
+  const selected = world.entities.filter(/* 调用 state.selectedEntityIds.includes(entity.id) 并返回调用结果。 */ entity => state.selectedEntityIds.includes(entity.id))
   const cameraEntity = request.action === 'focus-camera'
-    ? selected.find(entity => entity.camera2D) ?? world.entities.find(entity => entity.camera2D?.active)
+    ? selected.find(/* 返回 entity.camera2D 的当前值。 */ entity => entity.camera2D) ?? world.entities.find(/* 返回 entity.camera2D?.active 的当前值。 */ entity => entity.camera2D?.active)
     : null
   const targets = cameraEntity ? [cameraEntity] : selected
   if (!targets.length) return
-  const points = targets.flatMap(entity => entityBoundaryPoints(entity, 64, world.entities))
-  if (!points.length) points.push(...targets.map(entity => worldTransform(entity, world.entities).position))
-  const minX = Math.min(...points.map(point => point.x)), maxX = Math.max(...points.map(point => point.x))
-  const minY = Math.min(...points.map(point => point.y)), maxY = Math.max(...points.map(point => point.y))
+  const points = targets.flatMap(/* 调用 entityBoundaryPoints(entity, 64, world.entities) 并返回调用结果。 */ entity => entityBoundaryPoints(entity, 64, world.entities))
+  if (!points.length) points.push(...targets.map(/* 返回 worldTransform(entity, world.entities).position 的当前值。 */ entity => worldTransform(entity, world.entities).position))
+  const minX = Math.min(...points.map(/* 返回 point.x 的当前值。 */ point => point.x)), maxX = Math.max(...points.map(/* 返回 point.x 的当前值。 */ point => point.x))
+  const minY = Math.min(...points.map(/* 返回 point.y 的当前值。 */ point => point.y)), maxY = Math.max(...points.map(/* 返回 point.y 的当前值。 */ point => point.y))
   const width = canvasRef.value?.clientWidth ?? 800, height = canvasRef.value?.clientHeight ?? 600
   const scale = Math.min(width * .72 / Math.max(maxX - minX, 1), height * .72 / Math.max(maxY - minY, 1))
   camera.targetScale = Math.min(1000, Math.max(.05, scale))
   camera.targetOffset = { x: width / 2 - (minX + maxX) / 2 * camera.targetScale, y: height / 2 + (minY + maxY) / 2 * camera.targetScale }
 })
 
-watch(() => state.focusEntityID, (newId) => {
+watch(/* 返回 state.focusEntityID 的当前值。 */ () => state.focusEntityID, /** 编辑目标切换时保存并聚焦相机，结束编辑后恢复原视角。 */ (newId) => {
   if (editorState.currentPage !== 'scene') return;
 
   if (newId !== null) {
@@ -131,10 +132,10 @@ watch(() => state.focusEntityID, (newId) => {
       savedCameraState = { scale: camera.targetScale ?? camera.scale, offset: { x: camera.targetOffset?.x ?? camera.offset.x, y: camera.targetOffset?.y ?? camera.offset.y } };
     }
     
-    const ent = world.entities.find(e => e.id === newId); if (!ent) return;
+    const ent = world.entities.find(/* 比较 e.id 与 newId，返回严格相等的判断结果。 */ e => e.id === newId); if (!ent) return;
     
     const boundary = entityBoundaryPoints(ent, 64, world.entities)
-    const xs = boundary.map(point => point.x); const ys = boundary.map(point => point.y)
+    const xs = boundary.map(/* 返回 point.x 的当前值。 */ point => point.x); const ys = boundary.map(/* 返回 point.y 的当前值。 */ point => point.y)
     const maxDim = boundary.length ? Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys), 1) : 1
     
     const canvasW = canvasRef.value?.clientWidth || 800; const canvasH = canvasRef.value?.clientHeight || 600; const usableW = canvasW - 300; 
@@ -151,9 +152,9 @@ watch(() => state.focusEntityID, (newId) => {
   }
 });
 
-function readPalette() {
+/** 读取主题画布调色板，缺少颜色变量时沿用原值。 */ function readPalette() {
   const styles = getComputedStyle(document.documentElement)
-  const value = (name: string, fallback: string) => styles.getPropertyValue(name).trim() || fallback
+  const value = /* 先计算 styles.getPropertyValue(name).trim()；仅当其为假值时求右侧 fallback，返回短路求值结果。 */ (name: string, fallback: string) => styles.getPropertyValue(name).trim() || fallback
   palette = {
     canvas: value('--bg-canvas', palette.canvas), grid: value('--canvas-grid', palette.grid), label: value('--canvas-grid-label', palette.label),
     xAxis: value('--canvas-x-axis', palette.xAxis), yAxis: value('--canvas-y-axis', palette.yAxis), selection: value('--canvas-selection', palette.selection),
@@ -162,39 +163,46 @@ function readPalette() {
   }
 }
 
-watch(() => [prefs.theme, prefs.highContrast, prefs.maxPixelRatio], () => { readPalette(); scheduleResize() })
-watch(() => editorState.currentPage, page => {
+watch(/* 返回按声明顺序构造的数组 [prefs.theme, prefs.highContrast, prefs.maxPixelRatio]。 */ () => [prefs.theme, prefs.highContrast, prefs.maxPixelRatio], /** 主题变化后更新调色板并安排尺寸同步。 */ () => { readPalette(); scheduleResize() })
+/** 页面 DOM 更新后同步调整保留的画布，避免网格使用上一面板尺寸闪现一帧；不创建额外渲染循环。 */
+watch(/* 返回按声明顺序构造的数组 [editorState.currentPage, editorState.activeWorkspace]。 */ () => [editorState.currentPage, editorState.activeWorkspace], /** 进入场景或游戏画布时取消旧尺寸任务并立即调整尺寸。 */ () => {
+  if ((editorState.currentPage === 'scene' || editorState.currentPage === 'game') && editorState.activeWorkspace !== 'ui') {
+    if (resizeRaf) { cancelAnimationFrame(resizeRaf); resizeRaf = 0 }
+    resize()
+  }
+}, { flush: 'post' })
+watch(/* 返回 editorState.currentPage 的当前值。 */ () => editorState.currentPage, /** 离开游戏视图时结束文本输入并取消触摸控件交互。 */ page => {
   if (page !== 'game') {
     closeNativeInput(); gameUiRuntime.pointerCancel(); touchPointer = null
   }
 })
 
-function synchronizeNativeInput(focus = false) {
+/** 同步游戏文本控件与原生输入桥接，按需恢复焦点。 */ function synchronizeNativeInput(focus = false) {
   const active = gameUiRuntime.focusedTextInput(), changed = active?.entity.uuid !== focusedUiInput.value?.entity.uuid
   focusedUiInput.value = active
   if (!active) { inputBridge.reset(); return }
-  void nextTick(() => {
+  void nextTick(/** 确认焦点目标未变化后绑定输入值，并按请求聚焦。 */ () => {
     const input = nativeInputRef.value
     if (!input || gameUiRuntime.focusedTextInput()?.entity.uuid !== active.entity.uuid) return
     inputBridge.bind(input, active.entity.uuid, active.input.value)
     if (focus || changed) input.focus({ preventScroll: true })
   })
 }
-function nativeInputStyle() {
+/** 由游戏文本控件矩形和样式计算原生输入框定位。 */ function nativeInputStyle() {
   const active = focusedUiInput.value
   if (!active) return {}
   const style = gameUiRuntime.focusedTextInputStyle()
   return { left: `${active.rect.x}px`, top: `${active.rect.y}px`, width: `${active.rect.width}px`, height: `${active.rect.height}px`, ...style }
 }
-function onNativeInput(event: Event) { const active = focusedUiInput.value; if (active) inputBridge.input(event.target as HTMLInputElement, active.input.maxLength, (event as InputEvent).isComposing) }
-function onCompositionEnd(event: CompositionEvent) { const active = focusedUiInput.value; if (active) inputBridge.compositionEnd(event.target as HTMLInputElement, active.input.maxLength) }
-function onNativeKey(event: KeyboardEvent) {
+/** 转发原生输入事件，保留输入法组合状态及长度约束。 */ function onNativeInput(event: Event) { const active = focusedUiInput.value; if (active) inputBridge.input(event.target as HTMLInputElement, active.input.maxLength, (event as InputEvent).isComposing) }
+/** 输入法组合结束时提交文本并应用长度限制。 */ function onCompositionEnd(event: CompositionEvent) { const active = focusedUiInput.value; if (active) inputBridge.compositionEnd(event.target as HTMLInputElement, active.input.maxLength) }
+/** 隔离原生输入按键，处理控件跳转及确认取消，同时保护输入法按键。 */ function onNativeKey(event: KeyboardEvent) {
   event.stopPropagation()
   if (inputBridge.ownsCompositionKey(event)) return
   if (event.key === 'Tab') { event.preventDefault(); const active = focusedUiInput.value; if (active && nativeInputRef.value) inputBridge.flush(nativeInputRef.value, active.input.maxLength); gameUiRuntime.keyDown(event); synchronizeNativeInput(true); synchronizeAccessibleFocus(); return }
   if (event.key === 'Enter' || event.key === 'Escape') { event.preventDefault(); closeNativeInput(); canvasRef.value?.focus({ preventScroll: true }) }
 }
-function closeNativeInput() {
+/** 提交未完成输入后清除游戏文本焦点并重置桥接器。 */ function closeNativeInput() {
   const active = focusedUiInput.value
   if (active && nativeInputRef.value) {
     if (inputBridge.isComposing) inputBridge.compositionEnd(nativeInputRef.value, active.input.maxLength)
@@ -202,32 +210,32 @@ function closeNativeInput() {
   }
   gameUiRuntime.blurTextInput(); focusedUiInput.value = null; inputBridge.reset()
 }
-function synchronizeAccessibleFocus() {
+/** 没有文本编辑时将 DOM 焦点同步到选中的无障碍控件。 */ function synchronizeAccessibleFocus() {
   if (gameUiRuntime.focusedTextInput()) return
-  const focused = gameUiRuntime.accessibilityNodes().find(node => node.focused)
-  if (focused) void nextTick(() => gameSurfaceRef.value?.querySelector<HTMLElement>(`[data-ui-uuid="${focused.uuid}"]`)?.focus({ preventScroll: true }))
+  const focused = gameUiRuntime.accessibilityNodes().find(/* 返回 node.focused 的当前值。 */ node => node.focused)
+  if (focused) void nextTick(/* 调用 gameSurfaceRef.value?.querySelector<HTMLElement>(`[data-ui-uuid="${focused.uuid}"]`)?.focus({ preventScroll: true }) 并返回调用结果。 */ () => gameSurfaceRef.value?.querySelector<HTMLElement>(`[data-ui-uuid="${focused.uuid}"]`)?.focus({ preventScroll: true }))
 }
-function onAccessibleFocus(uuid: string) { gameUiRuntime.focusByUuid(uuid); synchronizeNativeInput(true) }
-function onAccessibleActivate(uuid: string, event: MouseEvent) { event.stopPropagation(); event.preventDefault(); gameUiRuntime.activateByUuid(uuid); synchronizeNativeInput(true) }
-function onUiPointerDown(event: PointerEvent) {
+/** 按无障碍控件标识更新运行时焦点及原生输入。 */ function onAccessibleFocus(uuid: string) { gameUiRuntime.focusByUuid(uuid); synchronizeNativeInput(true) }
+/** 阻止点击传播并激活无障碍控件，再同步文本焦点。 */ function onAccessibleActivate(uuid: string, event: MouseEvent) { event.stopPropagation(); event.preventDefault(); gameUiRuntime.activateByUuid(uuid); synchronizeNativeInput(true) }
+/** 接管游戏视图单个触摸或手写笔按下，捕获指针并同步输入方式。 */ function onUiPointerDown(event: PointerEvent) {
   if (event.pointerType === 'mouse' || editorState.currentPage !== 'game' || touchPointer !== null) return
   if (!gameUiRuntime.pointerDown(screenPos(event))) return
   touchPointer = event.pointerId; event.preventDefault(); event.stopPropagation(); canvasRef.value?.setPointerCapture(event.pointerId)
   setInputModality(event.pointerType === 'pen' ? 'pen' : 'touch'); synchronizeNativeInput(true)
 }
-function onUiPointerMove(event: PointerEvent) { if (event.pointerId === touchPointer) { event.preventDefault(); event.stopPropagation(); gameUiRuntime.pointerMove(screenPos(event)) } }
-function onUiPointerUp(event: PointerEvent) {
+/** 仅转发当前捕获指针的移动。 */ function onUiPointerMove(event: PointerEvent) { if (event.pointerId === touchPointer) { event.preventDefault(); event.stopPropagation(); gameUiRuntime.pointerMove(screenPos(event)) } }
+/** 结束触摸控件交互并释放指针捕获。 */ function onUiPointerUp(event: PointerEvent) {
   if (event.pointerId !== touchPointer) return
   event.preventDefault(); event.stopPropagation(); gameUiRuntime.pointerUp(screenPos(event)); touchPointer = null
   if (canvasRef.value?.hasPointerCapture(event.pointerId)) canvasRef.value.releasePointerCapture(event.pointerId)
 }
-function onUiPointerCancel(event: PointerEvent) { if (event.pointerId === touchPointer) { gameUiRuntime.pointerCancel(); touchPointer = null } }
+/** 当前指针取消时终止交互并清空触摸状态。 */ function onUiPointerCancel(event: PointerEvent) { if (event.pointerId === touchPointer) { gameUiRuntime.pointerCancel(); touchPointer = null } }
 
 let canvasLogicalWidth = 0, canvasLogicalHeight = 0
-function desiredCanvasPixelRatio(width: number, height: number) {
+/** 综合设备像素比、画质上限、自适应比例和分辨率缩放计算有界像素比。 */ function desiredCanvasPixelRatio(width: number, height: number) {
   return boundedFrame({width, height, pixelRatio: Math.max(.5, Math.min(window.devicePixelRatio || 1, prefs.maxPixelRatio, activeRenderQuality.maximumPixelRatio) * performanceRuntimeState.adaptivePixelRatioScale * (Number.isFinite(renderingSettings.resolutionScale) ? Math.min(2, Math.max(.5, renderingSettings.resolutionScale)) : 1)), clearColor: {r:0,g:0,b:0,a:1}}).pixelRatio
 }
-function resize() {
+/** 同步逻辑尺寸、后备像素及渲染视口，保持相机中心并重新绘制。 */ function resize() {
   const canvas = canvasRef.value; if (!canvas) return
   const r = canvas.getBoundingClientRect()
   if (r.width <= 0 || r.height <= 0) return
@@ -255,15 +263,15 @@ function resize() {
   render()
 }
 
-function scheduleResize() {
+/** 将多次尺寸变化合并为下一显示帧的一次更新。 */ function scheduleResize() {
   if (resizeRaf) return
-  resizeRaf = requestAnimationFrame(() => {
+  resizeRaf = requestAnimationFrame(/** 清除排队任务标识并实际调整画布尺寸。 */ () => {
     resizeRaf = 0
     resize()
   })
 }
 
-function runFrame(time?: number) {
+/** 逐帧合并输入、更新相机与玩法、同步连接并渲染，按频率采集性能诊断。 */ function runFrame(time?: number) {
   const now = time || performance.now(); const dt = (now - lastTime) / 1000; lastTime = now
   const frameStarted = performance.now()
   beginPerformanceFrame(frameStarted)
@@ -305,7 +313,7 @@ function runFrame(time?: number) {
   const measured = timings.physicsMs + timings.scriptsMs + timings.animationMs + timings.audioMs + timings.assetsMs + renderingMs
   const memory = (performance as Performance & { memory?: { usedJSHeapSize: number } }).memory
   const sampleInterval = state.simulationRunning || editorState.currentPage === 'game' || prefs.performanceProfile === 'quality' ? 3 : prefs.performanceProfile === 'low-end' ? 30 : 12
-  if (performanceSampleCounter++ % sampleInterval === 0) cachedPerformanceSample = samplePerformanceTools(profilerState.current.frame + 1, world.entities.map(entity => entity.uuid), editorState.rendererStats)
+  if (performanceSampleCounter++ % sampleInterval === 0) cachedPerformanceSample = samplePerformanceTools(profilerState.current.frame + 1, world.entities.map(/* 返回 entity.uuid 的当前值。 */ entity => entity.uuid), editorState.rendererStats)
   const performanceSample = cachedPerformanceSample
   const profileInterval = profilerState.overheadMode === 'Full' ? 1 : profilerState.overheadMode === 'Low overhead' ? 4 : Number.POSITIVE_INFINITY
   if (Number.isFinite(profileInterval) && profileFrameCounter++ % profileInterval === 0) {
@@ -315,7 +323,7 @@ function runFrame(time?: number) {
       otherMs: Math.max(0, Math.min(performance.now() - frameStarted, frameMs || Number.POSITIVE_INFINITY) - measured),
       fps: dt > 0 ? 1 / dt : 0, memoryMb: memory ? memory.usedJSHeapSize / (1024 * 1024) : null,
       inputMs: timings.inputMs, allocations: performanceSample.allocations,
-      gpuPasses: renderGraphState.passes.filter(pass => pass.enabled).length, assetJobs: performanceSample.assetJobs,
+      gpuPasses: renderGraphState.passes.filter(/* 返回 pass.enabled 的当前值。 */ pass => pass.enabled).length, assetJobs: performanceSample.assetJobs,
       mainThreadMs: performanceRuntimeState.mainThreadMs, workerMs: performanceRuntimeState.workerMs,
       queueWaitMs: performanceRuntimeState.queueWaitMs, cacheHitRate: performanceRuntimeState.cacheHitRate,
       worstFrameMs: performanceRuntimeState.worstFrameMs, onePercentLowFps: performanceRuntimeState.onePercentLowFps,
@@ -325,7 +333,7 @@ function runFrame(time?: number) {
   completePerformanceFrame()
 }
 
-function loop(time?: number) {
+/** 低端空闲编辑时限制帧率，运行帧失败则报告并停止调度。 */ function loop(time?: number) {
   const timestamp=time??performance.now()
   if(prefs.performanceProfile==='low-end'&&editorState.currentPage==='scene'&&!state.simulationRunning&&camera.targetScale===null&&camera.targetOffset===null&&!isDragging&&!isPanning&&!isVertexDragging&&timestamp-lastLowEndEditorFrame<1000/30){raf=requestAnimationFrame(loop);return}
   lastLowEndEditorFrame=timestamp
@@ -334,31 +342,31 @@ function loop(time?: number) {
   raf = requestAnimationFrame(loop)
 }
 
-onMounted(() => {
+onMounted(/** 挂载时连接运行时输入、创建渲染器并启动帧循环及窗口监听。 */ () => {
   readPalette()
-  gameUiRuntime.setCallback((entity, functionName) => gameplayRuntime.invokeUiCallback(entity, functionName))
+  gameUiRuntime.setCallback(/* 调用 gameplayRuntime.invokeUiCallback(entity, functionName) 并返回调用结果。 */ (entity, functionName) => gameplayRuntime.invokeUiCallback(entity, functionName))
   gameUiRuntime.setInputActions(physicsState.inputMap)
-  gameUiRuntime.setRemapCallback((action, bindingIndex, binding) => {
+  gameUiRuntime.setRemapCallback(/** 运行时改键成功后记录输入映射历史。 */ (action, bindingIndex, binding) => {
     if (rebindInputAction(physicsState.inputMap, action, bindingIndex, binding)) pushHistory('Remap runtime input')
   })
   void resetRenderer()
   window.addEventListener('nova-renderer-reset-request', resetRenderer)
-  world.connections.filter(connection => connection.breakState !== 'intact').forEach(connection => knownBrokenConnections.add(connection.id))
+  world.connections.filter(/* 比较 connection.breakState 与 'intact'，返回严格不等的判断结果。 */ connection => connection.breakState !== 'intact').forEach(/* 调用 knownBrokenConnections.add(connection.id) 并返回调用结果。 */ connection => knownBrokenConnections.add(connection.id))
   resize()
   if (canvasRef.value) {
     const r = canvasRef.value.getBoundingClientRect(); camera.offset.x = r.width / 2; camera.offset.y = r.height / 2
     resizeObserver = new ResizeObserver(scheduleResize); resizeObserver.observe(canvasRef.value.parentElement!)
   }
   lastTime = performance.now(); loop(); window.addEventListener('resize', scheduleResize); window.addEventListener('mouseup', onMouseUp); window.addEventListener('keydown', onKeyDown, true)
-  void world.wasmReady.then(() => {
+  void world.wasmReady.then(/** 物理模块就绪后将初始化失败信息显示在状态栏。 */ () => {
     if (world.wasmError) editorState.statusText = t('physicsUnavailable', { message: world.wasmError.message })
-  }).catch(error => { editorState.statusText = t('physicsUnavailable', { message: error instanceof Error ? error.message : String(error) }); reportRecoverableError(error, 'Physics WebAssembly initialization', 'Physics') })
+  }).catch(/** 物理初始化拒绝时显示状态并记录可恢复错误。 */ error => { editorState.statusText = t('physicsUnavailable', { message: error instanceof Error ? error.message : String(error) }); reportRecoverableError(error, 'Physics WebAssembly initialization', 'Physics') })
 })
-onBeforeUnmount(() => { canvasDisposed = true; rendererInitialization++; pendingMouseMove = null; if (raf) cancelAnimationFrame(raf); if (resizeRaf) cancelAnimationFrame(resizeRaf); window.removeEventListener('resize', scheduleResize); window.removeEventListener('mouseup', onMouseUp); window.removeEventListener('keydown', onKeyDown, true); window.removeEventListener('nova-renderer-reset-request', resetRenderer); if (resizeObserver) resizeObserver.disconnect(); gameUiRuntime.reset(); renderer?.destroy(); renderer = null })
+onBeforeUnmount(/** 卸载时失效初始化、取消帧与监听并销毁运行时及渲染器。 */ () => { canvasDisposed = true; rendererInitialization++; pendingMouseMove = null; if (raf) cancelAnimationFrame(raf); if (resizeRaf) cancelAnimationFrame(resizeRaf); window.removeEventListener('resize', scheduleResize); window.removeEventListener('mouseup', onMouseUp); window.removeEventListener('keydown', onKeyDown, true); window.removeEventListener('nova-renderer-reset-request', resetRenderer); if (resizeObserver) resizeObserver.disconnect(); gameUiRuntime.reset(); renderer?.destroy(); renderer = null })
 
 let rendererContextAntialias: boolean | null = null
-watch(() => renderingSettings.antiAliasing === 'Off', () => { void resetRenderer() })
-async function resetRenderer() {
+watch(/* 比较 renderingSettings.antiAliasing 与 'Off'，返回严格相等的判断结果。 */ () => renderingSettings.antiAliasing === 'Off', /** 渲染设置变化后异步重建渲染器。 */ () => { void resetRenderer() })
+/** 按抗锯齿要求重建画布上下文，以初始化代数阻止过期结果生效。 */ async function resetRenderer() {
   if (!renderCanvasRef.value || canvasDisposed) return
   const generation = ++rendererInitialization
   const contextAntialias = renderingSettings.antiAliasing !== 'Off'
@@ -382,10 +390,10 @@ async function resetRenderer() {
   } catch (error) { reportRecoverableError(error, 'Renderer initialization', 'Renderer') }
 }
 
-function screenPos(e: MouseEvent): Vec2 { const r = canvasRef.value!.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top } }
-function onWheel(e: WheelEvent) { markPerformanceInput(); e.preventDefault(); if (editorState.currentPage === 'game') { gameUiRuntime.wheel(screenPos(e), e.deltaX, e.deltaY); return } const factor = Math.pow(1.1, prefs.zoomSensitivity); camera.zoomAt(screenPos(e), e.deltaY < 0 ? factor : 1 / factor) }
-function onAssetDragOver(event: DragEvent) { if (state.playMode === 'editing' && event.dataTransfer?.types.includes('application/x-nova-asset-guid')) event.preventDefault() }
-function onAssetDrop(event: DragEvent) {
+/** 将鼠标窗口坐标转换为画布逻辑坐标。 */ function screenPos(e: MouseEvent): Vec2 { const r = canvasRef.value!.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top } }
+/** 游戏视图转发滚轮到控件，编辑视图以指针为中心缩放。 */ function onWheel(e: WheelEvent) { markPerformanceInput(); e.preventDefault(); if (editorState.currentPage === 'game') { gameUiRuntime.wheel(screenPos(e), e.deltaX, e.deltaY); return } const factor = Math.pow(1.1, prefs.zoomSensitivity); camera.zoomAt(screenPos(e), e.deltaY < 0 ? factor : 1 / factor) }
+/** 仅在编辑状态接受携带资源标识的拖放。 */ function onAssetDragOver(event: DragEvent) { if (state.playMode === 'editing' && event.dataTransfer?.types.includes('application/x-nova-asset-guid')) event.preventDefault() }
+/** 在落点实例化预制体，或按导入尺寸、轴心和过滤设置创建精灵并记录历史。 */ function onAssetDrop(event: DragEvent) {
   if (state.playMode !== 'editing') return
   const guid = event.dataTransfer?.getData('application/x-nova-asset-guid')
   const asset = resolveAsset(guid)
@@ -411,14 +419,14 @@ function onAssetDrop(event: DragEvent) {
   sprite.size = { x: width, y: height }
   sprite.pivot = { ...asset.settings.pivot }
   sprite.filterMode = asset.settings.filterMode
-  sprite.nineSlice = { enabled: Object.values(asset.settings.borders).some(value => value > 0), ...asset.settings.borders }
+  sprite.nineSlice = { enabled: Object.values(asset.settings.borders).some(/* 比较 value 与 0，返回大于的判断结果。 */ value => value > 0), ...asset.settings.borders }
   sprite.sortingLayer = editorState.activeLayer
   entity.layer = editorState.activeLayer
   selectEntities([entity.id], 'replace')
   pushHistory('Create sprite from asset')
   addEditorLog(t('assetDropped', { name: asset.name }), 'Assets')
 }
-function snapPoint(point: Vec2): Vec2 {
+/** 应用网格和像素吸附，再寻找未选对象的顶点、边、中心或对齐位置。 */ function snapPoint(point: Vec2): Vec2 {
   let result = { ...point }
   if (prefs.snapToGrid && authoringState.snap.grid) {
     const step = Math.max(0.000001, prefs.gridSize)
@@ -428,9 +436,9 @@ function snapPoint(point: Vec2): Vec2 {
   if (!authoringState.snap.vertex && !authoringState.snap.edge && !authoringState.snap.center && !authoringState.snap.object) return result
   const threshold = 10 / Math.max(camera.scale, 1e-9)
   const selected = new Set(state.selectedEntityIds)
-  const candidates = (authoringState.performanceMode ? world.entities.slice(0, 5_000) : world.entities).filter(entity => !selected.has(entity.id) && entity.editorVisible && entity.layer === editorState.activeLayer)
+  const candidates = (authoringState.performanceMode ? world.entities.slice(0, 5_000) : world.entities).filter(/* 先计算 !selected.has(entity.id) && entity.editorVisible；仅当其为真值时求右侧 entity.layer === editorState.activeLayer，返回短路求值结果。 */ entity => !selected.has(entity.id) && entity.editorVisible && entity.layer === editorState.activeLayer)
   let nearest = threshold
-  const consider = (candidate: Vec2) => { const distance = Math.hypot(candidate.x - point.x, candidate.y - point.y); if (distance < nearest) { nearest = distance; result = { ...candidate } } }
+  const consider = /** 候选点更靠近原指针时更新最近吸附结果。 */ (candidate: Vec2) => { const distance = Math.hypot(candidate.x - point.x, candidate.y - point.y); if (distance < nearest) { nearest = distance; result = { ...candidate } } }
   for (const entity of candidates) {
     const center = worldTransform(entity, world.entities).position
     if (authoringState.snap.center) consider(center)
@@ -450,28 +458,28 @@ function snapPoint(point: Vec2): Vec2 {
   return result
 }
 
-function editorBoundaryPoints(entity: Entity, samples = 48): Vec2[] {
+/** 按精灵、路径、多边形或文本计算可视编辑边界，否则采用实体边界。 */ function editorBoundaryPoints(entity: Entity, samples = 48): Vec2[] {
   const sprite = entity.spriteRenderer
   if (sprite) {
     const left = -sprite.pivot.x * sprite.size.x, right = (1 - sprite.pivot.x) * sprite.size.x
     const bottom = -(1 - sprite.pivot.y) * sprite.size.y, top = sprite.pivot.y * sprite.size.y
-    return [{ x: left, y: bottom }, { x: right, y: bottom }, { x: right, y: top }, { x: left, y: top }].map(point => localPointToWorld(entity, point, world.entities))
+    return [{ x: left, y: bottom }, { x: right, y: bottom }, { x: right, y: top }, { x: left, y: top }].map(/* 调用 localPointToWorld(entity, point, world.entities) 并返回调用结果。 */ point => localPointToWorld(entity, point, world.entities))
   }
-  if ((entity.renderer.shape === 'Line' || entity.authoring.kind === 'Path' || entity.authoring.kind === 'Polygon') && entity.hasComponent('ShapeRenderer2D')) return entity.renderer.vertices.map(point => localPointToWorld(entity, point, world.entities))
+  if ((entity.renderer.shape === 'Line' || entity.authoring.kind === 'Path' || entity.authoring.kind === 'Polygon') && entity.hasComponent('ShapeRenderer2D')) return entity.renderer.vertices.map(/* 调用 localPointToWorld(entity, point, world.entities) 并返回调用结果。 */ point => localPointToWorld(entity, point, world.entities))
   if (entity.textRenderer) {
     const width = Math.max(entity.textRenderer.maxWidth || entity.textRenderer.text.length * entity.textRenderer.fontSize * .58, .2), height = entity.textRenderer.fontSize * entity.textRenderer.lineHeight
-    return [{ x: -width / 2, y: -height / 2 }, { x: width / 2, y: -height / 2 }, { x: width / 2, y: height / 2 }, { x: -width / 2, y: height / 2 }].map(point => localPointToWorld(entity, point, world.entities))
+    return [{ x: -width / 2, y: -height / 2 }, { x: width / 2, y: -height / 2 }, { x: width / 2, y: height / 2 }, { x: -width / 2, y: height / 2 }].map(/* 调用 localPointToWorld(entity, point, world.entities) 并返回调用结果。 */ point => localPointToWorld(entity, point, world.entities))
   }
   return entityBoundaryPoints(entity, samples, world.entities)
 }
 
-function onKeyDown(event: KeyboardEvent) {
+/** 跳过输入法及外部控件按键，转发游戏输入或处理顶点删除和取消编辑。 */ function onKeyDown(event: KeyboardEvent) {
   markPerformanceInput()
   if (event.isComposing || event.keyCode === 229 || event.target === nativeInputRef.value || isExternalUiControl(event.target, gameSurfaceRef.value) || isExternalUiControl(document.activeElement, gameSurfaceRef.value)) return
   if (editorState.currentPage === 'game' && gameUiRuntime.keyDown(event)) { event.preventDefault(); event.stopPropagation(); synchronizeNativeInput(true); synchronizeAccessibleFocus(); return }
   if ((event.key === 'Delete' || event.key === 'Backspace') && hoveredVertex && (hoveredVertex.target === 'renderer')) {
-    const entity = world.entities.find(candidate => candidate.id === hoveredVertex!.entityId), minimum = entity?.renderer.shape === 'Line' ? 2 : 3
-    if (entity && entity.renderer.vertices.length > minimum) { entity.renderer.vertices.splice(hoveredVertex.index, 1); entity.authoring.path.points = entity.renderer.vertices.map(point => ({ ...point })); pushHistory('Delete shape point', `vertices:${entity.uuid}`); hoveredVertex = null; event.preventDefault() }
+    const entity = world.entities.find(/* 比较 candidate.id 与 hoveredVertex!.entityId，返回严格相等的判断结果。 */ candidate => candidate.id === hoveredVertex!.entityId), minimum = entity?.renderer.shape === 'Line' ? 2 : 3
+    if (entity && entity.renderer.vertices.length > minimum) { entity.renderer.vertices.splice(hoveredVertex.index, 1); entity.authoring.path.points = entity.renderer.vertices.map(/** 复制形状顶点以生成独立的作者路径点。 */ point => ({ ...point })); pushHistory('Delete shape point', `vertices:${entity.uuid}`); hoveredVertex = null; event.preventDefault() }
     return
   }
   if (event.key !== 'Escape') return
@@ -485,7 +493,7 @@ function onKeyDown(event: KeyboardEvent) {
   canvasDragMode = 'none'
 }
 
-function syncEditableConnections(repatchChanged: boolean) {
+/** 比较连接几何签名，按需重新修补并清理已删除连接缓存。 */ function syncEditableConnections(repatchChanged: boolean) {
   const currentIds = new Set<number>()
   for (const connection of world.connections) {
     currentIds.add(connection.id)
@@ -501,7 +509,7 @@ function syncEditableConnections(repatchChanged: boolean) {
   }
 }
 
-function strokeSmoothPath(context: CanvasRenderingContext2D, points: Vec2[]) {
+/** 用直线或二次曲线绘制平滑路径。 */ function strokeSmoothPath(context: CanvasRenderingContext2D, points: Vec2[]) {
   context.beginPath()
   context.moveTo(points[0].x, points[0].y)
   if (points.length === 2) {
@@ -522,21 +530,21 @@ function strokeSmoothPath(context: CanvasRenderingContext2D, points: Vec2[]) {
 }
 
 const drawTools = new Set(['rectangle', 'circle', 'triangle'])
-function isDrawTool(): boolean { return drawTools.has(state.activeTool) }
-function selectionMode(event: MouseEvent): 'replace' | 'add' | 'toggle' { return event.ctrlKey || event.metaKey ? 'toggle' : event.shiftKey ? 'add' : 'replace' }
-function rotateVector(vector: Vec2, angle: number): Vec2 { const cosine = Math.cos(angle); const sine = Math.sin(angle); return { x: vector.x * cosine - vector.y * sine, y: vector.x * sine + vector.y * cosine } }
-function distanceToSegment(point: Vec2, start: Vec2, end: Vec2): number {
+/* 调用 drawTools.has(state.activeTool) 并返回调用结果。 */ function isDrawTool(): boolean { return drawTools.has(state.activeTool) }
+/* 根据 event.ctrlKey || event.metaKey 的真假，分别返回 'toggle' 或 event.shiftKey ? 'add' : 'replace'。 */ function selectionMode(event: MouseEvent): 'replace' | 'add' | 'toggle' { return event.ctrlKey || event.metaKey ? 'toggle' : event.shiftKey ? 'add' : 'replace' }
+/** 按弧度旋转二维向量。 */ function rotateVector(vector: Vec2, angle: number): Vec2 { const cosine = Math.cos(angle); const sine = Math.sin(angle); return { x: vector.x * cosine - vector.y * sine, y: vector.x * sine + vector.y * cosine } }
+/** 将点投影到有限线段并求最近距离，兼容零长度线段。 */ function distanceToSegment(point: Vec2, start: Vec2, end: Vec2): number {
   const dx = end.x - start.x; const dy = end.y - start.y
   const lengthSquared = dx * dx + dy * dy
   const amount = lengthSquared > 0 ? Math.min(1, Math.max(0, ((point.x - start.x) * dx + (point.y - start.y) * dy) / lengthSquared)) : 0
   return Math.hypot(point.x - start.x - dx * amount, point.y - start.y - dy * amount)
 }
-function transformSelectionIds(): number[] {
+/** 扩展选择到绑定复合体成员并排除锁定实体。 */ function transformSelectionIds(): number[] {
   const ids = new Set<number>()
   for (const id of state.selectedEntityIds) for (const member of boundCompoundEntityIds(id, world.connections, world.entities)) ids.add(member)
-  return [...ids].filter(id => !world.entities.find(entity => entity.id === id)?.editorLocked)
+  return [...ids].filter(/* 返回 world.entities.find(entity => entity.id === id)?.editorLocked 的逻辑取反结果。 */ id => !world.entities.find(/* 比较 entity.id 与 id，返回严格相等的判断结果。 */ entity => entity.id === id)?.editorLocked)
 }
-function currentGizmo() {
+/** 由有效选择计算主实体、操作轴心和局部或世界旋转。 */ function currentGizmo() {
   const ids = transformSelectionIds()
   if (!ids.length) return null
   const primaryId = ids.includes(state.selectedEntityId ?? -1) ? state.selectedEntityId : ids[ids.length - 1] ?? null
@@ -547,7 +555,7 @@ function currentGizmo() {
     rotation: gizmoRotation(primaryId, editorState.transformSpace, world.entities)
   }
 }
-function hitGizmo(point: Vec2): GizmoAxis | null {
+/** 按当前工具在固定屏幕容差内命中移动、旋转或缩放轴。 */ function hitGizmo(point: Vec2): GizmoAxis | null {
   const gizmo = currentGizmo()
   if (!gizmo || state.activeTool === 'select' || isDrawTool() || ['pivot', 'path', 'polygon', 'collider', 'measure'].includes(state.activeTool)) return null
   const unit = 1 / camera.scale
@@ -566,7 +574,7 @@ function hitGizmo(point: Vec2): GizmoAxis | null {
   if (distanceToSegment(point, gizmo.pivot, yEnd) <= 7 * unit) return 'y'
   return null
 }
-function beginGizmoDrag(axis: GizmoAxis, point: Vec2) {
+/** 开始变换拖动时保存轴心、初始指针与实体变换快照。 */ function beginGizmoDrag(axis: GizmoAxis, point: Vec2) {
   const gizmo = currentGizmo()
   const tool = state.activeTool
   if (!gizmo || (tool !== 'move' && tool !== 'rotate' && tool !== 'scale' && tool !== 'rect')) return
@@ -584,8 +592,8 @@ function beginGizmoDrag(axis: GizmoAxis, point: Vec2) {
   hasMovedEntity = false
 }
 
-function beginVertexDrag(entityId: number, point: Vec2, button: number): boolean {
-  const entity = world.entities.find(candidate => candidate.id === entityId)
+/** 仅允许编辑状态未锁定实体开始顶点拖动，并保存初始比例及距离。 */ function beginVertexDrag(entityId: number, point: Vec2, button: number): boolean {
+  const entity = world.entities.find(/* 比较 candidate.id 与 entityId，返回严格相等的判断结果。 */ candidate => candidate.id === entityId)
   if (!entity || entity.editorLocked || state.playMode !== 'editing') return false
   dragEntityId = entityId
   dragButton = button
@@ -599,14 +607,14 @@ function beginVertexDrag(entityId: number, point: Vec2, button: number): boolean
   return true
 }
 
-function onMouseDown(e: MouseEvent) {
+/** 按控件、瓦片、连接、测量、轴心、顶点及变换优先级分派按下，必要时开始绘图或框选。 */ function onMouseDown(e: MouseEvent) {
   markPerformanceInput()
   const sPos = screenPos(e); const wPos = camera.screenToWorld(sPos); dragButton = e.button; hasMovedEntity = false
   if (editorState.currentPage === 'game') {
     if (e.button === 0) { canvasRef.value?.focus({ preventScroll: true }); if (gameUiRuntime.pointerDown(sPos)) { e.preventDefault(); e.stopPropagation() }; synchronizeNativeInput(true) }
     return
   }
-  const tileEntity = tilemapEditorState.active ? world.entities.find(entity => entity.uuid === tilemapEditorState.selectedEntityUuid) ?? null : null
+  const tileEntity = tilemapEditorState.active ? world.entities.find(/* 比较 entity.uuid 与 tilemapEditorState.selectedEntityUuid，返回严格相等的判断结果。 */ entity => entity.uuid === tilemapEditorState.selectedEntityUuid) ?? null : null
   const tileMap = tileEntity?.getComponent<TileMap2D>('TileMap2D') ?? null
   if (e.button === 0 && tileEntity && tileMap && state.playMode === 'editing') {
     const cell = worldToTile(tileEntity, tileMap, wPos, world.entities)
@@ -624,7 +632,7 @@ function onMouseDown(e: MouseEvent) {
     const point = snapPoint(wPos); authoringState.measurement = { active: true, start: point, end: point }; return
   }
   if (state.activeTool === 'pivot' && e.button === 0 && state.playMode === 'editing') {
-    const entity = world.entities.find(candidate => candidate.id === state.selectedEntityId)
+    const entity = world.entities.find(/* 比较 candidate.id 与 state.selectedEntityId，返回严格相等的判断结果。 */ candidate => candidate.id === state.selectedEntityId)
     if (entity && !entity.editorLocked) {
       const local = worldPointToLocal(entity, snapPoint(wPos), world.entities)
       const sprite = entity.spriteRenderer
@@ -659,7 +667,7 @@ function onMouseDown(e: MouseEvent) {
 
   const hitId = hitTest(wPos)
   if (hitId !== null) {
-    const entity = world.entities.find(candidate => candidate.id === hitId)
+    const entity = world.entities.find(/* 比较 candidate.id 与 hitId，返回严格相等的判断结果。 */ candidate => candidate.id === hitId)
     if (!state.selectedEntityIds.includes(hitId) || e.ctrlKey || e.metaKey || e.shiftKey) selectEntities([hitId], selectionMode(e), hitId)
     if (state.playMode === 'editing' && state.activeTool === 'move' && entity && !entity.editorLocked && state.selectedEntityIds.includes(hitId)) beginGizmoDrag('xy', wPos)
     return
@@ -670,9 +678,9 @@ function onMouseDown(e: MouseEvent) {
   canvasDragMode = 'marquee'; isDragging = true; dragStart = wPos; dragNow = wPos
 }
 
-function onDoubleClick(event: MouseEvent) {
+/** 在路径或多边形最近线段后插入吸附顶点并记录历史。 */ function onDoubleClick(event: MouseEvent) {
   if (!['path', 'polygon'].includes(state.activeTool) || state.selectedEntityId === null || state.playMode !== 'editing') return
-  const entity = world.entities.find(candidate => candidate.id === state.selectedEntityId)
+  const entity = world.entities.find(/* 比较 candidate.id 与 state.selectedEntityId，返回严格相等的判断结果。 */ candidate => candidate.id === state.selectedEntityId)
   if (!entity?.hasComponent('ShapeRenderer2D') || entity.editorLocked) return
   const point = worldPointToLocal(entity, snapPoint(camera.screenToWorld(screenPos(event))), world.entities), vertices = entity.renderer.vertices
   let insertion = vertices.length
@@ -680,10 +688,10 @@ function onDoubleClick(event: MouseEvent) {
     let nearest = Number.POSITIVE_INFINITY, segmentCount = entity.renderer.shape === 'Line' ? vertices.length - 1 : vertices.length
     for (let index = 0; index < segmentCount; index++) { const distance = distanceToSegment(point, vertices[index], vertices[(index + 1) % vertices.length]); if (distance < nearest) { nearest = distance; insertion = index + 1 } }
   }
-  vertices.splice(insertion, 0, point); entity.authoring.path.points = vertices.map(vertex => ({ ...vertex })); pushHistory('Add shape point', `vertices:${entity.uuid}`)
+  vertices.splice(insertion, 0, point); entity.authoring.path.points = vertices.map(/** 复制插入后的顶点以同步作者路径。 */ vertex => ({ ...vertex })); pushHistory('Add shape point', `vertices:${entity.uuid}`)
 }
 
-function onMouseMove(e: MouseEvent) {
+/** 仅保留最新鼠标移动样本，避免高频事件积压编辑操作。 */ function onMouseMove(e: MouseEvent) {
   markPerformanceInput()
   // Browser mouse events can arrive much faster than the display can present
   // them. Retaining only the newest sample prevents an expensive drag or snap
@@ -691,19 +699,19 @@ function onMouseMove(e: MouseEvent) {
   pendingMouseMove = e
 }
 
-function flushPendingMouseMove() {
+/** 取出并清空最新样本，再执行本帧移动逻辑。 */ function flushPendingMouseMove() {
   const event = pendingMouseMove
   if (!event) return
   pendingMouseMove = null
   processMouseMove(event)
 }
 
-function processMouseMove(e: MouseEvent) {
+/** 处理画笔、测量、平移和变换拖动；顶点编辑转换到局部坐标并校验凸多边形。 */ function processMouseMove(e: MouseEvent) {
   const sPos = screenPos(e); const wPos = camera.screenToWorld(sPos)
   editorState.lastCanvasWorldPoint = { ...wPos }
   if (editorState.currentPage === 'game') { gameUiRuntime.pointerMove(sPos); return }
   if (tilemapEditorState.active) {
-    const tileEntity = tileStroke?.entity ?? world.entities.find(entity => entity.uuid === tilemapEditorState.selectedEntityUuid) ?? null
+    const tileEntity = tileStroke?.entity ?? world.entities.find(/* 比较 entity.uuid 与 tilemapEditorState.selectedEntityUuid，返回严格相等的判断结果。 */ entity => entity.uuid === tilemapEditorState.selectedEntityUuid) ?? null
     const tileMap = tileStroke?.component ?? tileEntity?.getComponent<TileMap2D>('TileMap2D') ?? null
     const cell = tileEntity && tileMap ? worldToTile(tileEntity, tileMap, wPos, world.entities) : null
     tileHover = cell
@@ -741,20 +749,20 @@ function processMouseMove(e: MouseEvent) {
   if (!isDragging && !isVertexDragging && vertexToolActive()) checkHoverVertex(wPos)
   if (isVertexDragging && dragEntityId && dragMeta) {
     hasMovedEntity = true
-    const entity = world.entities.find(candidate => candidate.id === dragEntityId); if (!entity || !hoveredVertex || entity.editorLocked) return
+    const entity = world.entities.find(/* 比较 candidate.id 与 dragEntityId，返回严格相等的判断结果。 */ candidate => candidate.id === dragEntityId); if (!entity || !hoveredVertex || entity.editorLocked) return
     const transform = worldTransform(entity, world.entities)
     if (dragButton === 2) { const scaleFactor = Math.hypot(wPos.x - transform.position.x, wPos.y - transform.position.y) / dragMeta.initialDist; entity.transform.scale.x = Math.max(MIN_SIZE, dragMeta.initialScaleX * scaleFactor); entity.transform.scale.y = Math.max(MIN_SIZE, dragMeta.initialScaleY * scaleFactor) }
     else {
       const local = worldPointToLocal(entity, snapPoint(wPos), world.entities)
       if (hoveredVertex.target === 'renderer') {
-        const candidate = entity.renderer.vertices.map(vertex => ({ ...vertex })); candidate[hoveredVertex.index] = local
-        if (entity.renderer.shape === 'Line' || isValidConvexPolygon(candidate)) { entity.renderer.vertices = candidate; entity.authoring.path.points = candidate.map(point => ({ ...point })) }
+        const candidate = entity.renderer.vertices.map(/** 复制渲染顶点用于候选编辑，避免验证前覆盖原几何。 */ vertex => ({ ...vertex })); candidate[hoveredVertex.index] = local
+        if (entity.renderer.shape === 'Line' || isValidConvexPolygon(candidate)) { entity.renderer.vertices = candidate; entity.authoring.path.points = candidate.map(/** 复制已验证顶点以同步作者路径。 */ point => ({ ...point })) }
       } else if (hoveredVertex.target === 'collider') {
         const collider = entity.getCollider(); if (!collider) return
         if (collider.kind === 'EllipseCollider2D') { collider.radiusX = Math.max(.01, Math.abs(local.x - collider.offset.x)); collider.radiusY = Math.max(.01, Math.abs(local.y - collider.offset.y)) }
-        else { const candidate = collider.vertices.map(vertex => ({ ...vertex })); candidate[hoveredVertex.index] = { x: local.x - collider.offset.x, y: local.y - collider.offset.y }; if (isValidConvexPolygon(candidate)) collider.vertices = candidate }
+        else { const candidate = collider.vertices.map(/** 复制碰撞顶点用于候选几何检查。 */ vertex => ({ ...vertex })); candidate[hoveredVertex.index] = { x: local.x - collider.offset.x, y: local.y - collider.offset.y }; if (isValidConvexPolygon(candidate)) collider.vertices = candidate }
       } else if (entity instanceof BoxEntity || entity instanceof TriangleEntity) {
-        const candidate = entity.vertices.map(vertex => ({ ...vertex })); candidate[hoveredVertex.index] = local; if (isValidConvexPolygon(candidate)) entity.vertices = candidate
+        const candidate = entity.vertices.map(/** 复制基础实体顶点用于候选几何检查。 */ vertex => ({ ...vertex })); candidate[hoveredVertex.index] = local; if (isValidConvexPolygon(candidate)) entity.vertices = candidate
       } else if (entity instanceof CircleEntity) { entity.radiusX = Math.max(0.1, Math.abs(local.x)); entity.radiusY = Math.max(0.1, Math.abs(local.y)) }
     }
     return
@@ -762,24 +770,24 @@ function processMouseMove(e: MouseEvent) {
   if (isDragging && dragStart) dragNow = wPos
 }
 
-function selectMarqueeEntities(start: Vec2, end: Vec2) {
+/** 按拖动矩形筛选实体边界并依框选模式更新选择。 */ function selectMarqueeEntities(start: Vec2, end: Vec2) {
   const left = Math.min(start.x, end.x); const right = Math.max(start.x, end.x); const bottom = Math.min(start.y, end.y); const top = Math.max(start.y, end.y)
-  const ids = world.entities.flatMap(entity => {
+  const ids = world.entities.flatMap(/** 排除不可编辑及不符合筛选条件的实体，返回与框选相交的标识。 */ entity => {
     if (!entity.enabled || !entity.editorVisible || entity.editorLocked || entity.layer !== editorState.activeLayer || entity.hasComponent('RectTransform') || !matchesSelectionFilter(entity)) return []
     const boundary = editorBoundaryPoints(entity, 48)
     if (!boundary.length) return []
-    const xs = boundary.map(point => point.x); const ys = boundary.map(point => point.y)
+    const xs = boundary.map(/* 返回 point.x 的当前值。 */ point => point.x); const ys = boundary.map(/* 返回 point.y 的当前值。 */ point => point.y)
     return Math.max(...xs) >= left && Math.min(...xs) <= right && Math.max(...ys) >= bottom && Math.min(...ys) <= top ? [entity.id] : []
   })
   selectEntities(ids, marqueeSelectionMode)
 }
 
-function finishCanvasDrag() {
+/** 结束全部画布拖动并清空指针、几何及变换快照。 */ function finishCanvasDrag() {
   isDragging = isPanning = isVertexDragging = false
   canvasDragMode = 'none'; dragStart = dragNow = lastMouseScreen = null; dragMeta = null; dragEntityId = null; gizmoDrag = null
 }
 
-function onMouseUp(event?: MouseEvent) {
+/** 释放前处理最后移动样本，完成瓦片、连接、变换或创建操作并记录历史。 */ function onMouseUp(event?: MouseEvent) {
   markPerformanceInput()
   flushPendingMouseMove()
   if (editorState.currentPage === 'game') {
@@ -795,19 +803,19 @@ function onMouseUp(event?: MouseEvent) {
     tileStroke = null
     return
   }
-  if (isManualDrawing) { const connection = world.connections.find(candidate => candidate.id === editorState.manualConnectionId); if (connection && editorState.manualConnectionPoints.length >= 2) { setManualRoute(connection, editorState.manualConnectionPoints, world.entities); pushHistory('Draw connection'); editorState.statusText = t('connectionUpdated') } editorState.manualConnectionId = null; editorState.manualConnectionPoints.splice(0); isManualDrawing = false; return }
+  if (isManualDrawing) { const connection = world.connections.find(/* 比较 candidate.id 与 editorState.manualConnectionId，返回严格相等的判断结果。 */ candidate => candidate.id === editorState.manualConnectionId); if (connection && editorState.manualConnectionPoints.length >= 2) { setManualRoute(connection, editorState.manualConnectionPoints, world.entities); pushHistory('Draw connection'); editorState.statusText = t('connectionUpdated') } editorState.manualConnectionId = null; editorState.manualConnectionPoints.splice(0); isManualDrawing = false; return }
 
   if (gizmoDrag) {
     if (hasMovedEntity) {
       for (const snapshot of gizmoDrag.snapshots) { normalizeEntity(snapshot.entity); if (snapshot.entity.rigidBody.massMode === 'Automatic') syncMassFromDensity(snapshot.entity) }
-      recordEntityProperties(gizmoDrag.snapshots.map(snapshot => snapshot.entity))
+      recordEntityProperties(gizmoDrag.snapshots.map(/* 返回 snapshot.entity 的当前值。 */ snapshot => snapshot.entity))
       pushHistory(`${gizmoDrag.tool[0].toUpperCase()}${gizmoDrag.tool.slice(1)} entities`, `transform:${gizmoDrag.tool}`)
     }
     finishCanvasDrag(); return
   }
 
   if (isVertexDragging && dragEntityId !== null) {
-    const entity = world.entities.find(candidate => candidate.id === dragEntityId)
+    const entity = world.entities.find(/* 比较 candidate.id 与 dragEntityId，返回严格相等的判断结果。 */ candidate => candidate.id === dragEntityId)
     if (entity && hasMovedEntity) { normalizeEntity(entity); if (entity.rigidBody.massMode === 'Automatic') syncMassFromDensity(entity); pushHistory('Edit shape vertices', `vertices:${entity.uuid}`) }
     finishCanvasDrag(); return
   }
@@ -829,10 +837,10 @@ function onMouseUp(event?: MouseEvent) {
   finishCanvasDrag()
 }
 
-function vertexToolActive(): boolean { return state.activeTool === 'select' || state.activeTool === 'path' || state.activeTool === 'polygon' || state.activeTool === 'collider' }
-function checkHoverVertex(p: Vec2) {
+/** 判断当前工具是否支持顶点悬停及拖动。 */ function vertexToolActive(): boolean { return state.activeTool === 'select' || state.activeTool === 'path' || state.activeTool === 'polygon' || state.activeTool === 'collider' }
+/** 在当前对象的渲染、碰撞顶点或椭圆边缘寻找控制点并更新光标。 */ function checkHoverVertex(p: Vec2) {
   if (!state.selectedEntityId) { hoveredVertex = null; document.body.style.cursor = 'default'; return }
-  const ent = world.entities.find(e => e.id === state.selectedEntityId)
+  const ent = world.entities.find(/* 比较 e.id 与 state.selectedEntityId，返回严格相等的判断结果。 */ e => e.id === state.selectedEntityId)
   if (!ent || ent.editorLocked || ent.hasComponent('RectTransform')) { hoveredVertex = null; document.body.style.cursor = 'default'; return }
   const threshold = 12 / camera.scale 
   
@@ -889,9 +897,9 @@ function checkHoverVertex(p: Vec2) {
   hoveredVertex = null; document.body.style.cursor = 'default'
 }
 
-function hitTest(p: Vec2): number | null {
-  const sourceOrder=new Map(world.entities.map((entity,index)=>[entity.id,index]))
-  const ordered = [...world.entities].sort((a, b) => a.layer - b.layer || a.renderer.orderInLayer - b.renderer.orderInLayer || (sourceOrder.get(a.id)??0) - (sourceOrder.get(b.id)??0))
+/** 按绘制层级从前向后，用线段距离或多边形包含判断命中实体。 */ function hitTest(p: Vec2): number | null {
+  const sourceOrder=new Map(world.entities.map(/* 返回按声明顺序构造的数组 [entity.id,index]。 */ (entity,index)=>[entity.id,index]))
+  const ordered = [...world.entities].sort(/** 依次按层、层内顺序和原实体顺序排列命中候选。 */ (a, b) => a.layer - b.layer || a.renderer.orderInLayer - b.renderer.orderInLayer || (sourceOrder.get(a.id)??0) - (sourceOrder.get(b.id)??0))
   for (let i = ordered.length - 1; i >= 0; i--) {
     const e = ordered[i]
     const selectable = e.spriteRenderer || e.textRenderer || e.camera2D || e.hasComponent('ShapeRenderer2D') && e.renderer.enabled
@@ -899,7 +907,7 @@ function hitTest(p: Vec2): number | null {
     if (editorState.currentPage === 'scene' && (!e.editorVisible || e.editorLocked)) continue
     if (editorState.currentPage === 'scene' && e.layer !== editorState.activeLayer) continue;
     const polygon = editorBoundaryPoints(e, 64)
-    if (e.renderer.shape === 'Line' && polygon.some((point, index) => index > 0 && distanceToSegment(p, polygon[index - 1], point) < 7 / camera.scale)) return e.id
+    if (e.renderer.shape === 'Line' && polygon.some(/* 先计算 index > 0；仅当其为真值时求右侧 distanceToSegment(p, polygon[index - 1], point) < 7 / camera.scale，返回短路求值结果。 */ (point, index) => index > 0 && distanceToSegment(p, polygon[index - 1], point) < 7 / camera.scale)) return e.id
     let inside = false
     for (let j = 0, k = polygon.length - 1; j < polygon.length; k = j++) {
       const a = polygon[j]; const b = polygon[k]
@@ -910,20 +918,20 @@ function hitTest(p: Vec2): number | null {
   return null
 }
 
-function matchesSelectionFilter(entity: Entity): boolean {
+/** 按可见、未锁定、精灵、摄像机或物理类别判断实体是否可选。 */ function matchesSelectionFilter(entity: Entity): boolean {
   const filter = authoringState.selectionFilter
   return filter === 'All' || filter === 'Visible' && entity.editorVisible || filter === 'Unlocked' && !entity.editorLocked || filter === 'Sprites' && Boolean(entity.spriteRenderer) || filter === 'Cameras' && Boolean(entity.camera2D) || filter === 'Physics' && entity.hasComponent('RigidBody2D')
 }
 
-function renderTransformGizmo(context: CanvasRenderingContext2D) {
+/** 在编辑视图绘制保持屏幕尺寸的变换手柄。 */ function renderTransformGizmo(context: CanvasRenderingContext2D) {
   if (editorState.currentPage !== 'scene' || state.playMode !== 'editing' || state.activeTool === 'select' || isDrawTool()) return
   const gizmo = currentGizmo()
   if (!gizmo) return
   const unit = 1 / camera.scale
   const xAxis = axisVector('x', gizmo.rotation)
   const yAxis = axisVector('y', gizmo.rotation)
-  const endpoint = (axis: Vec2, length: number) => ({ x: gizmo.pivot.x + axis.x * length * unit, y: gizmo.pivot.y + axis.y * length * unit })
-  const drawAxis = (axis: Vec2, color: string) => {
+  const endpoint = /** 由轴心沿指定轴计算固定屏幕长度的世界端点。 */ (axis: Vec2, length: number) => ({ x: gizmo.pivot.x + axis.x * length * unit, y: gizmo.pivot.y + axis.y * length * unit })
+  const drawAxis = /** 绘制变换轴线及移动箭头或缩放方形端点。 */ (axis: Vec2, color: string) => {
     const start = endpoint(axis, 8); const end = endpoint(axis, 72)
     context.beginPath(); context.moveTo(start.x, start.y); context.lineTo(end.x, end.y)
     context.lineWidth = 2.4 * unit; context.strokeStyle = color; context.stroke()
@@ -954,17 +962,17 @@ function renderTransformGizmo(context: CanvasRenderingContext2D) {
   context.restore()
 }
 
-function renderPointGizmo(context: CanvasRenderingContext2D) {
+/** 显示路径、碰撞或轴心控制点并突出悬停顶点。 */ function renderPointGizmo(context: CanvasRenderingContext2D) {
   if (!['path', 'polygon', 'collider', 'pivot'].includes(state.activeTool) || state.selectedEntityId === null) return
-  const entity = world.entities.find(candidate => candidate.id === state.selectedEntityId)
+  const entity = world.entities.find(/* 比较 candidate.id 与 state.selectedEntityId，返回严格相等的判断结果。 */ candidate => candidate.id === state.selectedEntityId)
   if (!entity) return
   const unit = 1 / camera.scale
   let points: Vec2[] = []
-  if (state.activeTool === 'path' || state.activeTool === 'polygon') points = entity.renderer.vertices.map(point => localPointToWorld(entity, point, world.entities))
+  if (state.activeTool === 'path' || state.activeTool === 'polygon') points = entity.renderer.vertices.map(/* 调用 localPointToWorld(entity, point, world.entities) 并返回调用结果。 */ point => localPointToWorld(entity, point, world.entities))
   else if (state.activeTool === 'collider') {
     const collider = entity.getCollider()
-    if (collider?.kind === 'EllipseCollider2D') points = [{ x: collider.offset.x + collider.radiusX, y: collider.offset.y }, { x: collider.offset.x, y: collider.offset.y + collider.radiusY }, { x: collider.offset.x - collider.radiusX, y: collider.offset.y }, { x: collider.offset.x, y: collider.offset.y - collider.radiusY }].map(point => localPointToWorld(entity, point, world.entities))
-    else points = (collider?.vertices ?? []).map(point => localPointToWorld(entity, { x: point.x + (collider?.offset.x ?? 0), y: point.y + (collider?.offset.y ?? 0) }, world.entities))
+    if (collider?.kind === 'EllipseCollider2D') points = [{ x: collider.offset.x + collider.radiusX, y: collider.offset.y }, { x: collider.offset.x, y: collider.offset.y + collider.radiusY }, { x: collider.offset.x - collider.radiusX, y: collider.offset.y }, { x: collider.offset.x, y: collider.offset.y - collider.radiusY }].map(/* 调用 localPointToWorld(entity, point, world.entities) 并返回调用结果。 */ point => localPointToWorld(entity, point, world.entities))
+    else points = (collider?.vertices ?? []).map(/** 为局部碰撞顶点加上偏移后转换到世界空间。 */ point => localPointToWorld(entity, { x: point.x + (collider?.offset.x ?? 0), y: point.y + (collider?.offset.y ?? 0) }, world.entities))
   }
   else {
     const sprite = entity.spriteRenderer
@@ -981,14 +989,14 @@ function renderPointGizmo(context: CanvasRenderingContext2D) {
   context.restore()
 }
 
-function cameraAspectRatio(): number | null {
+/** 根据关闭、自定义分辨率或预设取得摄像机覆盖框比例。 */ function cameraAspectRatio(): number | null {
   if (authoringState.cameraOverlay === 'Off') return null
   if (authoringState.cameraOverlay === 'Custom') return Math.max(1, authoringState.cameraResolution.width) / Math.max(1, authoringState.cameraResolution.height)
   const [width, height] = authoringState.cameraOverlay.split(':').map(Number)
   return width / height
 }
 
-function renderAuthoringOverlays(context: CanvasRenderingContext2D, width: number, height: number) {
+/** 绘制参考线、摄像机取景范围和测量距离覆盖层。 */ function renderAuthoringOverlays(context: CanvasRenderingContext2D, width: number, height: number) {
   const unit = 1 / camera.scale
   if (authoringState.guidesVisible) {
     const left = -camera.offset.x / camera.scale, right = left + width / camera.scale
@@ -1023,7 +1031,7 @@ function renderAuthoringOverlays(context: CanvasRenderingContext2D, width: numbe
   }
 }
 
-function renderScreenRulers(context: CanvasRenderingContext2D, width: number, height: number): void {
+/** 按缩放选择刻度密度，在画布顶部与左侧绘制标尺。 */ function renderScreenRulers(context: CanvasRenderingContext2D, width: number, height: number): void {
   if (!authoringState.rulersVisible || editorState.currentPage === 'game') return
   const size = 18, step = Math.max(.000001, prefs.gridSize), worldLeft = -camera.offset.x / camera.scale, worldTop = camera.offset.y / camera.scale
   let tick = step
@@ -1035,49 +1043,49 @@ function renderScreenRulers(context: CanvasRenderingContext2D, width: number, he
   context.restore()
 }
 
-function rotateLocal(point: Vec2, angle: number): Vec2 {
+/** 按角度旋转碰撞形状局部点。 */ function rotateLocal(point: Vec2, angle: number): Vec2 {
   const cosine = Math.cos(angle), sine = Math.sin(angle)
   return { x: point.x * cosine - point.y * sine, y: point.x * sine + point.y * cosine }
 }
 
-function colliderOutlines(entity: Entity) {
+/** 准备有效碰撞形状并生成带标识、传感器及物理层信息的世界轮廓。 */ function colliderOutlines(entity: Entity) {
   const collider = entity.getCollider()
   if (!collider?.enabled) return []
   const prepared = prepareColliderSet(collider, !entity.isStatic && !entity.isKinematic)
-  return prepared.shapes.map(shape => {
+  return prepared.shapes.map(/** 补齐圆或矩形轮廓、闭合顶点并转换到世界空间。 */ shape => {
     let authored = shape.points
-    if (!authored.length && shape.kind === 'Circle') authored = Array.from({ length: 49 }, (_, index) => { const angle = index / 48 * Math.PI * 2; return { x: Math.cos(angle) * shape.size.x * .5, y: Math.sin(angle) * shape.size.y * .5 } })
+    if (!authored.length && shape.kind === 'Circle') authored = Array.from({ length: 49 }, /** 沿四十八段圆周采样局部椭圆边界。 */ (_, index) => { const angle = index / 48 * Math.PI * 2; return { x: Math.cos(angle) * shape.size.x * .5, y: Math.sin(angle) * shape.size.y * .5 } })
     else if (!authored.length) authored = [{x:-shape.size.x*.5,y:-shape.size.y*.5},{x:shape.size.x*.5,y:-shape.size.y*.5},{x:shape.size.x*.5,y:shape.size.y*.5},{x:-shape.size.x*.5,y:shape.size.y*.5},{x:-shape.size.x*.5,y:-shape.size.y*.5}]
     else authored = [...authored, authored[0]]
-    const points = authored.map(vertex => { const rotated=rotateLocal(vertex,shape.rotation); return localPointToWorld(entity,{x:shape.offset.x+rotated.x,y:shape.offset.y+rotated.y},world.entities) })
+    const points = authored.map(/** 先旋转平移形状顶点，再应用实体层级变换。 */ vertex => { const rotated=rotateLocal(vertex,shape.rotation); return localPointToWorld(entity,{x:shape.offset.x+rotated.x,y:shape.offset.y+rotated.y},world.entities) })
     return { points, id: shape.id, sensor: shape.sensor, physicsLayer: shape.physicsLayer }
   })
 }
 
-function drawPhysicsDebug(context: CanvasRenderingContext2D) {
+/** 按物理调试开关绘制轮廓、包围盒、质心、力速度、关节和接触信息。 */ function drawPhysicsDebug(context: CanvasRenderingContext2D) {
   if (!physicsDebugState.enabled) return
   context.save()
   context.lineWidth = 1.5 / camera.scale
   for (const entity of world.entities) {
     if (!entity.enabled || (editorState.currentPage === 'scene' && entity.layer !== editorState.activeLayer)) continue
     const outlines = colliderOutlines(entity)
-    const allPoints = outlines.flatMap(outline => outline.points)
+    const allPoints = outlines.flatMap(/* 返回 outline.points 的当前值。 */ outline => outline.points)
     if (!allPoints.length) continue
     if (physicsDebugState.showSleepingBodies && entity.rigidBody.sleeping) {
       context.fillStyle = 'rgba(92,156,255,.13)'
-      for (const { points } of outlines) { if(points.length<2)continue; context.beginPath(); context.moveTo(points[0].x, points[0].y); points.slice(1).forEach(point => context.lineTo(point.x, point.y)); context.closePath(); context.fill() }
+      for (const { points } of outlines) { if(points.length<2)continue; context.beginPath(); context.moveTo(points[0].x, points[0].y); points.slice(1).forEach(/* 调用 context.lineTo(point.x, point.y) 并返回调用结果。 */ point => context.lineTo(point.x, point.y)); context.closePath(); context.fill() }
     }
     if (physicsDebugState.showColliders) {
       for (const outline of outlines) {
         const { points } = outline
         if(points.length<2)continue
         context.strokeStyle = physicsDebugState.colorByPhysicsLayer ? (state.globalSettings.layers[outline.physicsLayer]?.color ?? '#62d8a0') : outline.sensor ? '#f2b45f' : entity.rigidBody.sleeping ? '#669ce8' : '#62d8a0'
-        context.beginPath(); context.moveTo(points[0].x, points[0].y); points.slice(1).forEach(point => context.lineTo(point.x, point.y)); context.stroke()
-        if (outlines.length > 1) { const center = points.reduce((sum, point) => ({ x: sum.x + point.x / points.length, y: sum.y + point.y / points.length }), { x: 0, y: 0 }); context.fillStyle = context.strokeStyle; context.font = `${10 / camera.scale}px ui-monospace, monospace`; context.fillText(`#${String(outline.id).slice(-5)}`, center.x + 3 / camera.scale, center.y - 3 / camera.scale) }
+        context.beginPath(); context.moveTo(points[0].x, points[0].y); points.slice(1).forEach(/* 调用 context.lineTo(point.x, point.y) 并返回调用结果。 */ point => context.lineTo(point.x, point.y)); context.stroke()
+        if (outlines.length > 1) { const center = points.reduce(/** 累加各点平均贡献以计算调试标签中心。 */ (sum, point) => ({ x: sum.x + point.x / points.length, y: sum.y + point.y / points.length }), { x: 0, y: 0 }); context.fillStyle = context.strokeStyle; context.font = `${10 / camera.scale}px ui-monospace, monospace`; context.fillText(`#${String(outline.id).slice(-5)}`, center.x + 3 / camera.scale, center.y - 3 / camera.scale) }
       }
     }
     if (physicsDebugState.showAabbs) {
-      const xs = allPoints.map(point => point.x), ys = allPoints.map(point => point.y)
+      const xs = allPoints.map(/* 返回 point.x 的当前值。 */ point => point.x), ys = allPoints.map(/* 返回 point.y 的当前值。 */ point => point.y)
       const left = Math.min(...xs), right = Math.max(...xs), bottom = Math.min(...ys), top = Math.max(...ys)
       context.setLineDash([4 / camera.scale, 4 / camera.scale]); context.strokeStyle = '#b786f5'; context.strokeRect(left, bottom, right - left, top - bottom); context.setLineDash([])
     }
@@ -1103,7 +1111,7 @@ function drawPhysicsDebug(context: CanvasRenderingContext2D) {
     context.strokeStyle = '#e6b35a'; context.setLineDash([5 / camera.scale, 3 / camera.scale])
     for (const entity of world.entities) for (const kind of jointKinds) {
       const joint = entity.getComponent<Joint2D>(kind)
-      const target = joint?.targetEntityUuid ? world.entities.find(candidate => candidate.uuid === joint.targetEntityUuid) : null
+      const target = joint?.targetEntityUuid ? world.entities.find(/* 比较 candidate.uuid 与 joint.targetEntityUuid，返回严格相等的判断结果。 */ candidate => candidate.uuid === joint.targetEntityUuid) : null
       if (!joint?.enabled || !target) continue
       const first = localPointToWorld(entity, joint.anchor, world.entities), second = localPointToWorld(target, joint.connectedAnchor, world.entities)
       context.beginPath(); context.moveTo(first.x, first.y); context.lineTo(second.x, second.y); context.stroke()
@@ -1139,7 +1147,7 @@ function drawPhysicsDebug(context: CanvasRenderingContext2D) {
   context.restore()
 }
 
-function render(deltaSeconds = 0) {
+/** 绘制世界、光照、后处理、编辑覆盖层与界面，同步统计、纹理捕获和输入。 */ function render(deltaSeconds = 0) {
   if (!ctx || !canvasRef.value) return
   const desiredPixelRatio = desiredCanvasPixelRatio(canvasLogicalWidth, canvasLogicalHeight)
   if (Math.abs(desiredPixelRatio - canvasPixelRatio) > .001) resize()
@@ -1199,7 +1207,7 @@ function render(deltaSeconds = 0) {
   }
 
   const lwNormal = 1 / camera.scale; const lwSelected = 3 / camera.scale
-  const compounds = !isGameView && selectedIds.size > 0 && world.connections.some(connection => connection.binding)
+  const compounds = !isGameView && selectedIds.size > 0 && world.connections.some(/* 返回 connection.binding 的当前值。 */ connection => connection.binding)
     ? compoundGeometries(world.entities, world.connections)
     : []
   const compoundByMember = new Map<number, (typeof compounds)[number]>()
@@ -1210,12 +1218,12 @@ function render(deltaSeconds = 0) {
     if (!isGameView && !e.editorVisible) continue
     if (editorState.currentPage === 'scene' && e.layer !== editorState.activeLayer) continue;
     const compound = compoundByMember.get(e.id)
-    const isSelected = !isGameView && (compound ? [...compound.memberIds].some(id => selectedIds.has(id)) : selectedIds.has(e.id))
+    const isSelected = !isGameView && (compound ? [...compound.memberIds].some(/* 调用 selectedIds.has(id) 并返回调用结果。 */ id => selectedIds.has(id)) : selectedIds.has(e.id))
     if (!isSelected) continue
     const transform = worldTransform(e, world.entities)
     const pos = transform.position
     const selectionBoundary = editorBoundaryPoints(e, 48)
-    const maxRadius = selectionBoundary.length ? Math.max(...selectionBoundary.map(point => Math.hypot(point.x - pos.x, point.y - pos.y)), MIN_SIZE) : MIN_SIZE
+    const maxRadius = selectionBoundary.length ? Math.max(...selectionBoundary.map(/* 调用 Math.hypot(point.x - pos.x, point.y - pos.y) 并返回调用结果。 */ point => Math.hypot(point.x - pos.x, point.y - pos.y)), MIN_SIZE) : MIN_SIZE
     if (pos.x + maxRadius < viewL || pos.x - maxRadius > viewR || pos.y + maxRadius < viewB || pos.y - maxRadius > viewT) continue; 
     
     ctx.lineWidth = isSelected ? lwSelected : lwNormal
@@ -1249,7 +1257,7 @@ function render(deltaSeconds = 0) {
   if (!isGameView && prefs.showConnections) {
     for (const connection of world.connections) {
       if (connection.binding || !connectionSharesLayer(connection, world.entities)) continue
-      const connectedLayer = world.entities.find(entity => entity.id === connection.anchors[0]?.entityId)?.layer
+      const connectedLayer = world.entities.find(/* 比较 entity.id 与 connection.anchors[0]?.entityId，返回严格相等的判断结果。 */ entity => entity.id === connection.anchors[0]?.entityId)?.layer
       const visible = connectedLayer !== undefined && connectedLayer === editorState.activeLayer
       if (!visible) continue
       ctx.save()
@@ -1290,7 +1298,7 @@ function render(deltaSeconds = 0) {
   for (const compound of compounds) {
     if (compound.members.length < 2 || compound.boundary.length === 0) continue
     const styleEntity = compound.members[0]
-    const isSelected = !isGameView && [...compound.memberIds].some(id => selectedIds.has(id))
+    const isSelected = !isGameView && [...compound.memberIds].some(/* 调用 selectedIds.has(id) 并返回调用结果。 */ id => selectedIds.has(id))
     const visible = isSelected && styleEntity.layer === editorState.activeLayer
     if (!visible) continue
     ctx.beginPath()
@@ -1330,7 +1338,7 @@ function render(deltaSeconds = 0) {
   drawWorldGameplayDebug(ctx)
   ctx.restore()
   passStarted = recordRenderPass('EditorOverlay', passStarted, !isGameView, 1)
-  const uiEntities = isGameView ? world.entities : world.entities.filter(entity => entity.layer === editorState.activeLayer)
+  const uiEntities = isGameView ? world.entities : world.entities.filter(/* 比较 entity.layer 与 editorState.activeLayer，返回严格相等的判断结果。 */ entity => entity.layer === editorState.activeLayer)
   gameUiRuntime.render(ctx, width, height, uiEntities, { editor: !isGameView, selectedEntityIds: selectedIds })
   renderScreenRulers(ctx, width, height)
   const nodes = isGameView ? gameUiRuntime.accessibilityNodes() : []
@@ -1341,8 +1349,8 @@ function render(deltaSeconds = 0) {
   editorState.rendererStats.passes = 5
   if (renderCanvasRef.value) {
     captureRenderSurface(renderCanvasRef.value, canvasRef.value, worldPostProcessFilter())
-    const renderTextureCameras = isGameView ? activeGameCameras(world.entities, width, height).filter(camera => camera.component.renderTexture) : []
-    editorState.rendererStats.renderTargets += new Set(renderTextureCameras.map(camera => camera.component.renderTexture)).size
+    const renderTextureCameras = isGameView ? activeGameCameras(world.entities, width, height).filter(/* 返回 camera.component.renderTexture 的当前值。 */ camera => camera.component.renderTexture) : []
+    editorState.rendererStats.renderTargets += new Set(renderTextureCameras.map(/* 返回 camera.component.renderTexture 的当前值。 */ camera => camera.component.renderTexture)).size
     for (const activeCamera of renderTextureCameras) {
       if (activeCamera.component.renderTexture) captureRenderTexture(activeCamera.component.renderTexture, renderCanvasRef.value, activeCamera.component.viewport, renderGraphState.frame)
     }
@@ -1350,7 +1358,7 @@ function render(deltaSeconds = 0) {
   if (isGameView) { synchronizeNativeInput(); if (runtimeCaptions.length) captionTick.value++ }
 }
 
-function drawWorldDebugLabel(context: CanvasRenderingContext2D, point: Vec2, text: string, color: string, yOffset = 0): void {
+/** 在世界位置绘制保持屏幕字号的调试标签及背景。 */ function drawWorldDebugLabel(context: CanvasRenderingContext2D, point: Vec2, text: string, color: string, yOffset = 0): void {
   context.save(); context.translate(point.x, point.y); context.scale(1 / camera.scale, -1 / camera.scale)
   context.font = '500 11px ui-rounded, "SF Pro Rounded", system-ui, sans-serif'; context.textBaseline = 'middle'
   const width = Math.min(320, context.measureText(text).width + 10), y = -14 - yOffset
@@ -1359,7 +1367,7 @@ function drawWorldDebugLabel(context: CanvasRenderingContext2D, point: Vec2, tex
   context.restore()
 }
 
-function drawWorldDebugVector(context: CanvasRenderingContext2D, start: Vec2, vector: Vec2, color: string): void {
+/** 绘制具有最大屏幕长度限制的向量箭头，忽略近零向量。 */ function drawWorldDebugVector(context: CanvasRenderingContext2D, start: Vec2, vector: Vec2, color: string): void {
   const length = Math.hypot(vector.x, vector.y); if (length <= 1e-9) return
   const maximum = 64 / camera.scale, scale = Math.min(maximum / length, 1), end = { x: start.x + vector.x * scale, y: start.y + vector.y * scale }
   const angle = Math.atan2(end.y - start.y, end.x - start.x), head = 6 / camera.scale
@@ -1367,19 +1375,19 @@ function drawWorldDebugVector(context: CanvasRenderingContext2D, start: Vec2, ve
   context.strokeStyle = color; context.stroke()
 }
 
-function drawWorldGameplayDebug(context: CanvasRenderingContext2D): void {
+/** 按开关绘制导航、人工智能、模拟、区域和分块信息，并限制调试标签数量。 */ function drawWorldGameplayDebug(context: CanvasRenderingContext2D): void {
   if (!worldGameplayState.navigationDebug && !worldGameplayState.aiDebug && !worldGameplayState.simulationDebug && !worldGameplayState.areaDebug && !worldGameplayState.chunkDebug) return
   context.save(); context.lineWidth = 2 / camera.scale
   if (worldGameplayState.navigationDebug) {
     context.strokeStyle = '#5ea6ff'; context.fillStyle = '#5ea6ff'
     for (const path of navigationPaths()) {
       if (!path.points.length) continue
-      context.beginPath(); context.moveTo(path.points[0].x, path.points[0].y); path.points.slice(1).forEach(point => context.lineTo(point.x, point.y)); context.stroke()
+      context.beginPath(); context.moveTo(path.points[0].x, path.points[0].y); path.points.slice(1).forEach(/* 调用 context.lineTo(point.x, point.y) 并返回调用结果。 */ point => context.lineTo(point.x, point.y)); context.stroke()
       for (const point of path.points) { context.beginPath(); context.arc(point.x, point.y, 2.5 / camera.scale, 0, Math.PI * 2); context.fill() }
     }
   }
-  const aiByEntity = worldGameplayState.aiDebug ? new Map(aiDebugState.agents.map(item => [item.entityUuid, item])) : null
-  const machineByEntity = worldGameplayState.aiDebug ? new Map(aiDebugState.machines.map(item => [item.entityUuid, item])) : null
+  const aiByEntity = worldGameplayState.aiDebug ? new Map(aiDebugState.agents.map(/* 返回按声明顺序构造的数组 [item.entityUuid, item]。 */ item => [item.entityUuid, item])) : null
+  const machineByEntity = worldGameplayState.aiDebug ? new Map(aiDebugState.machines.map(/* 返回按声明顺序构造的数组 [item.entityUuid, item]。 */ item => [item.entityUuid, item])) : null
   let aiLabels = 0, simulationLabels = 0
   for (const entity of world.entities) {
     if (!entity.enabled || (editorState.currentPage === 'scene' && entity.layer !== editorState.activeLayer)) continue
@@ -1389,7 +1397,7 @@ function drawWorldGameplayDebug(context: CanvasRenderingContext2D): void {
       const behaviorDebug = aiByEntity?.get(entity.uuid), machineDebug = machineByEntity?.get(entity.uuid)
       if (behavior?.enabled || machine?.enabled || agent?.enabled) {
         if (agent?.enabled) {
-          const target = agent.targetEntityUuid ? world.entities.find(candidate => candidate.uuid === agent.targetEntityUuid) : null
+          const target = agent.targetEntityUuid ? world.entities.find(/* 比较 candidate.uuid 与 agent.targetEntityUuid，返回严格相等的判断结果。 */ candidate => candidate.uuid === agent.targetEntityUuid) : null
           const targetPoint = target ? worldTransform(target, world.entities).position : agent.targetPosition
           context.save(); context.setLineDash([5 / camera.scale, 4 / camera.scale]); context.strokeStyle = '#77c8ff'; context.beginPath(); context.moveTo(transform.position.x, transform.position.y); context.lineTo(targetPoint.x, targetPoint.y); context.stroke(); context.setLineDash([]); drawWorldDebugVector(context, transform.position, agent.velocity, '#52e0bb'); context.restore()
         }
@@ -1414,7 +1422,7 @@ function drawWorldGameplayDebug(context: CanvasRenderingContext2D): void {
     }
     const chunk = entity.getComponent<import('../world/components').WorldChunk2D>('WorldChunk2D')
     if (worldGameplayState.chunkDebug && chunk?.enabled) {
-      const snapshot = worldStreamingState.cells.find(cell => cell.entityUuid === entity.uuid), status = snapshot?.status ?? (chunk.initiallyLoaded ? 'Active' : 'Unloaded')
+      const snapshot = worldStreamingState.cells.find(/* 比较 cell.entityUuid 与 entity.uuid，返回严格相等的判断结果。 */ cell => cell.entityUuid === entity.uuid), status = snapshot?.status ?? (chunk.initiallyLoaded ? 'Active' : 'Unloaded')
       const active = status === 'Active', pending = ['Loading', 'Activating', 'Deactivating', 'Unloading'].includes(status)
       context.strokeStyle = active ? '#63d6a3' : pending ? '#ffd166' : '#c28cff'; context.fillStyle = active ? 'rgba(99,214,163,.08)' : pending ? 'rgba(255,209,102,.08)' : 'rgba(194,140,255,.06)'
       context.setLineDash(pending ? [5 / camera.scale, 4 / camera.scale] : []); context.fillRect(transform.position.x - chunk.size.x / 2, transform.position.y - chunk.size.y / 2, chunk.size.x, chunk.size.y); context.strokeRect(transform.position.x - chunk.size.x / 2, transform.position.y - chunk.size.y / 2, chunk.size.x, chunk.size.y); context.setLineDash([])
@@ -1433,8 +1441,8 @@ function drawWorldGameplayDebug(context: CanvasRenderingContext2D): void {
   context.restore()
 }
 
-function drawTilemapOverlay(context: CanvasRenderingContext2D, view: { minX: number; maxX: number; minY: number; maxY: number }) {
-  const entity = world.entities.find(candidate => candidate.uuid === tilemapEditorState.selectedEntityUuid)
+/** 转换可见范围到瓦片局部空间，按缩放抽稀网格并绘制选区或悬停单元。 */ function drawTilemapOverlay(context: CanvasRenderingContext2D, view: { minX: number; maxX: number; minY: number; maxY: number }) {
+  const entity = world.entities.find(/* 比较 candidate.uuid 与 tilemapEditorState.selectedEntityUuid，返回严格相等的判断结果。 */ candidate => candidate.uuid === tilemapEditorState.selectedEntityUuid)
   const component = entity?.getComponent<TileMap2D>('TileMap2D')
   if (!entity || !component) return
   const halfWidth = component.width * component.tileSize.x * .5
@@ -1449,8 +1457,8 @@ function drawTilemapOverlay(context: CanvasRenderingContext2D, view: { minX: num
     worldPointToLocal(entity, { x: view.maxX, y: view.maxY }, world.entities),
     worldPointToLocal(entity, { x: view.minX, y: view.maxY }, world.entities)
   ]
-  const minimumLocalX = Math.min(...localView.map(point => point.x)), maximumLocalX = Math.max(...localView.map(point => point.x))
-  const minimumLocalY = Math.min(...localView.map(point => point.y)), maximumLocalY = Math.max(...localView.map(point => point.y))
+  const minimumLocalX = Math.min(...localView.map(/* 返回 point.x 的当前值。 */ point => point.x)), maximumLocalX = Math.max(...localView.map(/* 返回 point.x 的当前值。 */ point => point.x))
+  const minimumLocalY = Math.min(...localView.map(/* 返回 point.y 的当前值。 */ point => point.y)), maximumLocalY = Math.max(...localView.map(/* 返回 point.y 的当前值。 */ point => point.y))
   const firstX = Math.max(0, Math.floor((minimumLocalX + halfWidth) / component.tileSize.x))
   const lastX = Math.min(component.width, Math.ceil((maximumLocalX + halfWidth) / component.tileSize.x))
   const firstY = Math.max(0, Math.floor((minimumLocalY + halfHeight) / component.tileSize.y))
@@ -1480,8 +1488,8 @@ function drawTilemapOverlay(context: CanvasRenderingContext2D, view: { minX: num
       { x: right * component.tileSize.x - halfWidth, y: bottom * component.tileSize.y - halfHeight },
       { x: right * component.tileSize.x - halfWidth, y: top * component.tileSize.y - halfHeight },
       { x: left * component.tileSize.x - halfWidth, y: top * component.tileSize.y - halfHeight }
-    ].map(point => localPointToWorld(entity, point, world.entities))
-    context.beginPath(); context.moveTo(corners[0].x, corners[0].y); corners.slice(1).forEach(point => context.lineTo(point.x, point.y)); context.closePath()
+    ].map(/* 调用 localPointToWorld(entity, point, world.entities) 并返回调用结果。 */ point => localPointToWorld(entity, point, world.entities))
+    context.beginPath(); context.moveTo(corners[0].x, corners[0].y); corners.slice(1).forEach(/* 调用 context.lineTo(point.x, point.y) 并返回调用结果。 */ point => context.lineTo(point.x, point.y)); context.closePath()
     context.globalAlpha = .22; context.fillStyle = palette.selection; context.fill()
     context.globalAlpha = 1; context.lineWidth = 2 / camera.scale; context.stroke()
   }

@@ -1,3 +1,4 @@
+/** 版本5.1.0：生成参考项目与对应资源，供功能演示和版本验证使用。 */
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -6,8 +7,8 @@ import { createServer } from 'vite'
 const root = dirname(dirname(fileURLToPath(import.meta.url)))
 const output = join(root, 'reference-projects/projects/snake-v51-playable')
 Object.defineProperty(globalThis, 'navigator', { configurable:true, value:{ platform:'Win32', hardwareConcurrency:8 } })
-globalThis.window ??= { addEventListener(){}, removeEventListener(){}, dispatchEvent(){} }
-globalThis.localStorage ??= { getItem(){ return null }, setItem(){}, removeItem(){} }
+globalThis.window ??= { /** 生成器环境桩不注册全局事件。 */ addEventListener(){}, /** 生成器环境桩不执行事件移除。 */ removeEventListener(){}, /** 生成器环境桩忽略事件派发。 */ dispatchEvent(){} }
+globalThis.localStorage ??= { /* 返回固定值 null。 */ getItem(){ return null }, /** 隔离存储桩忽略写入，不持久化生成过程数据。 */ setItem(){}, /** 隔离存储桩忽略删除请求。 */ removeItem(){} }
 const server = await createServer({ root, appType:'custom', logLevel:'silent', server:{ middlewareMode:true } })
 await server.watcher.close()
 try {
@@ -21,7 +22,7 @@ try {
   await writeFile(join(output, 'test-controls.json'), `${JSON.stringify({ version:1, engineVersion:'5.1.0', actions:[{ action:'Play', expected:'Runtime starts without script errors' },{ action:'Arrow/WASD/D-pad', expected:'Direction changes without reversing into the next segment' },{ action:'Collect food', expected:'Food relocates and score increments' },{ action:'Build portable', expected:'One executable launches in player mode' }] }, null, 2)}\n`)
   await writeFile(join(output, 'expected-output.json'), `${JSON.stringify({ engineVersion:'5.1.0', template:'snake', scripts:6, bodySegments:3, inputActions:4, portableDefault:true, status:'passed' }, null, 2)}\n`)
 } finally {
-  await Promise.race([server.close(), new Promise(resolve => setTimeout(resolve, 2_000))])
+  await Promise.race([server.close(), new Promise(/* 调用 setTimeout(resolve, 2_000) 并返回调用结果。 */ resolve => setTimeout(resolve, 2_000))])
 }
 
 // Release archives carry old focused fixtures forward. Keep their machine and

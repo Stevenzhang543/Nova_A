@@ -1,3 +1,4 @@
+/** 版本发布工程资料：组织发布目标、检查项和生成产物的元信息。 */
 import { reactive } from 'vue'
 import { NOVA_ENGINE_VERSION, NOVA_RELEASE_NAME } from '../projects/projectFormat'
 
@@ -94,7 +95,7 @@ export const releaseEngineeringState = reactive({
   changeNotes: [] as Array<{ id: string; task: string; owner: string; note: string; createdAt: string }>
 })
 
-function normalized(value: unknown): unknown {
+/** 结构说明（自动提取）：normalized；输入 value；直接调用 Array.isArray、value.map、sort、Object.keys、normalized；写入 output[…]；返回路径包含 value、output；包含循环处理。 */ function normalized(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(normalized)
   if (!value || typeof value !== 'object') return value
   const output: Record<string, unknown> = {}
@@ -102,12 +103,12 @@ function normalized(value: unknown): unknown {
   return output
 }
 
-export function canonicalReleaseJson(value: unknown): string {
+/** 按模板 `${JSON.stringify(normalized(value), null, 2)}\n` 生成并返回字符串。 */ export function canonicalReleaseJson(value: unknown): string {
   return `${JSON.stringify(normalized(value), null, 2)}\n`
 }
 
 /** Stable non-cryptographic identity used for immediate editor comparisons. Packagers replace file hashes with SHA-256. */
-export function stableReleaseFingerprint(value: unknown): string {
+/** 结构说明（自动提取）：stableReleaseFingerprint；输入 value；直接调用 JSON.stringify、normalized、source.charCodeAt、Math.imul、padStart 等；写入 first、second；包含循环处理。 */ export function stableReleaseFingerprint(value: unknown): string {
   const source = JSON.stringify(normalized(value))
   let first = 0x811c9dc5, second = 0x9e3779b9
   for (let index = 0; index < source.length; index++) {
@@ -118,7 +119,7 @@ export function stableReleaseFingerprint(value: unknown): string {
   return `${first.toString(16).padStart(8, '0')}${second.toString(16).padStart(8, '0')}`
 }
 
-export function createBuildProvenance(input: {
+/** 结构说明（自动提取）：createBuildProvenance；输入 input；直接调用 sort、input.files.map、stableReleaseFingerprint、slice、input.sourceCommit.trim 等；写入 releaseEngineeringState.previousManifest、releaseEngineeringState.lastManifest、releaseEngineeringState.lastComparison；返回路径包含 manifest。 */ export function createBuildProvenance(input: {
   engineVersion: string
   buildId: string
   projectId: string
@@ -133,7 +134,7 @@ export function createBuildProvenance(input: {
   deterministic: boolean
   toolchain?: Record<string, string>
 }): BuildProvenance {
-  const files = input.files.map(file => ({ path: file.path.replace(/\\/g, '/'), sha256: file.sha256.toLowerCase(), bytes: Math.max(0, Math.round(file.bytes)) })).sort((a, b) => a.path.localeCompare(b.path))
+  const files = input.files.map(/** 构造并返回记录 { path: file.path.replace(/\\/g, '/'), sha256: file.sha256.toLowerCase(), bytes: Math.max(0, Math.round(file.bytes)) }，字段按当前实参及捕获状态求值。 */ file => ({ path: file.path.replace(/\\/g, '/'), sha256: file.sha256.toLowerCase(), bytes: Math.max(0, Math.round(file.bytes)) })).sort(/* 调用 a.path.localeCompare(b.path) 并返回调用结果。 */ (a, b) => a.path.localeCompare(b.path))
   const inputsHash = stableReleaseFingerprint({ settings: input.settings, packages: input.packages })
   const outputsHash = stableReleaseFingerprint(files)
   const manifest: BuildProvenance = {
@@ -151,11 +152,11 @@ export function createBuildProvenance(input: {
   return manifest
 }
 
-export function compareBuildProvenance(first: BuildProvenance, second: BuildProvenance): BuildComparison {
-  const before = new Map(first.files.map(file => [file.path, file.sha256])), after = new Map(second.files.map(file => [file.path, file.sha256]))
-  const added = [...after.keys()].filter(path => !before.has(path)).sort()
-  const removed = [...before.keys()].filter(path => !after.has(path)).sort()
-  const changed = [...after.keys()].filter(path => before.has(path) && before.get(path) !== after.get(path)).sort()
+/** 结构说明（自动提取）：compareBuildProvenance；输入 first、second；直接调用 Map、first.files.map、second.files.map、sort、filter 等；写入 releaseEngineeringState.lastComparison；返回路径包含 comparison。 */ export function compareBuildProvenance(first: BuildProvenance, second: BuildProvenance): BuildComparison {
+  const before = new Map(first.files.map(/* 返回按声明顺序构造的数组 [file.path, file.sha256]。 */ file => [file.path, file.sha256])), after = new Map(second.files.map(/* 返回按声明顺序构造的数组 [file.path, file.sha256]。 */ file => [file.path, file.sha256]))
+  const added = [...after.keys()].filter(/* 返回 before.has(path) 的逻辑取反结果。 */ path => !before.has(path)).sort()
+  const removed = [...before.keys()].filter(/* 返回 after.has(path) 的逻辑取反结果。 */ path => !after.has(path)).sort()
+  const changed = [...after.keys()].filter(/* 先计算 before.has(path)；仅当其为真值时求右侧 before.get(path) !== after.get(path)，返回短路求值结果。 */ path => before.has(path) && before.get(path) !== after.get(path)).sort()
   const comparison = {
     reproducible: first.inputsHash === second.inputsHash && first.outputsHash === second.outputsHash && !added.length && !removed.length && !changed.length,
     inputMatch: first.inputsHash === second.inputsHash, outputMatch: first.outputsHash === second.outputsHash,
@@ -165,7 +166,7 @@ export function compareBuildProvenance(first: BuildProvenance, second: BuildProv
   return comparison
 }
 
-export function webDeploymentHeaders(): string {
+/** 结构说明（自动提取）：webDeploymentHeaders；无显式参数；直接调用 join。 */ export function webDeploymentHeaders(): string {
   return [
     '/*',
     '  X-Content-Type-Options: nosniff',
@@ -183,15 +184,15 @@ export function webDeploymentHeaders(): string {
   ].join('\n') + '\n'
 }
 
-export function releaseGateSummary(gates: readonly ReleaseEvidenceGate[]): { status: ReleaseGateStatus; blockers: number; warnings: number; external: number; passed: number } {
-  const blockers = gates.filter(gate => gate.status === 'blocked').length
-  const warnings = gates.filter(gate => gate.status === 'warning').length
-  const external = gates.filter(gate => gate.status === 'external').length
-  const passed = gates.filter(gate => gate.status === 'passed').length
+/** 结构说明（自动提取）：releaseGateSummary；输入 gates；直接调用 gates.filter。 */ export function releaseGateSummary(gates: readonly ReleaseEvidenceGate[]): { status: ReleaseGateStatus; blockers: number; warnings: number; external: number; passed: number } {
+  const blockers = gates.filter(/* 比较 gate.status 与 'blocked'，返回严格相等的判断结果。 */ gate => gate.status === 'blocked').length
+  const warnings = gates.filter(/* 比较 gate.status 与 'warning'，返回严格相等的判断结果。 */ gate => gate.status === 'warning').length
+  const external = gates.filter(/* 比较 gate.status 与 'external'，返回严格相等的判断结果。 */ gate => gate.status === 'external').length
+  const passed = gates.filter(/* 比较 gate.status 与 'passed'，返回严格相等的判断结果。 */ gate => gate.status === 'passed').length
   return { status: blockers ? 'blocked' : warnings || external ? 'warning' : 'passed', blockers, warnings, external, passed }
 }
 
-export function addReleaseChangeNote(task: string, note: string, owner = releaseEngineeringState.signOffOwner): boolean {
+/** 结构说明（自动提取）：addReleaseChangeNote；输入 task、note、owner；直接调用 slice、task.trim、note.trim、owner.trim、releaseEngineeringState.changeNotes.unshift 等。 */ export function addReleaseChangeNote(task: string, note: string, owner = releaseEngineeringState.signOffOwner): boolean {
   const cleanTask = task.trim().slice(0, 120), cleanNote = note.trim().slice(0, 1_000), cleanOwner = owner.trim().slice(0, 120)
   if (!cleanTask || !cleanNote || !cleanOwner) return false
   releaseEngineeringState.changeNotes.unshift({ id: crypto.randomUUID(), task: cleanTask, owner: cleanOwner, note: cleanNote, createdAt: new Date().toISOString() })
@@ -199,7 +200,7 @@ export function addReleaseChangeNote(task: string, note: string, owner = release
   return true
 }
 
-export function diagnosticPrivacyChecklist(): readonly string[] {
+/** 结构说明（自动提取）：diagnosticPrivacyChecklist；无显式参数；直接调用 Object.freeze。 */ export function diagnosticPrivacyChecklist(): readonly string[] {
   return Object.freeze([
     'Project names and identifiers are excluded unless the user opts in.',
     'Absolute file paths are redacted unless the user opts in.',

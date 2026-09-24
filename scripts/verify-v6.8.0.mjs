@@ -1,3 +1,4 @@
+/** 功能回归脚本：执行 verify-v6.8.0.mjs 对应场景，保留断言和证据输出。 */
 import { webcrypto } from 'node:crypto'
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
@@ -10,10 +11,10 @@ const version = '6.8.0'
 const root = dirname(dirname(fileURLToPath(import.meta.url)))
 const compiled = await mkdtemp(join(tmpdir(), 'nova-v680-verify-'))
 const checks = [], measurements = {}
-const check = (id, passed, detail, metrics = {}) => checks.push({ id, status: passed ? 'passed' : 'failed', detail, metrics })
-const source = path => readFile(join(root, path), 'utf8')
+const check = /* 调用 checks.push({ id, status: passed ? 'passed' : 'failed', detail, metrics }) 并返回调用结果。 */ (id, passed, detail, metrics = {}) => checks.push({ id, status: passed ? 'passed' : 'failed', detail, metrics })
+const source = /* 调用 readFile(join(root, path), 'utf8') 并返回调用结果。 */ path => readFile(join(root, path), 'utf8')
 
-function generatedFixture(count, seed) {
+/** 结构说明（自动提取）：generatedFixture；输入 count、seed；直接调用 Array、Math.imul、padStart、String、Map 等；写入 state、hash、records[…]；包含循环处理。 */ function generatedFixture(count, seed) {
   const records = new Array(count); let hash = 0x811c9dc5, state = seed >>> 0
   for (let index = 0; index < count; index++) {
     state = (Math.imul(state, 1664525) + 1013904223) >>> 0; const x = (state & 0xffff) - 32768
@@ -27,7 +28,7 @@ function generatedFixture(count, seed) {
 
 try {
   await build({ configFile: false, root, logLevel: 'warn', ssr: { noExternal: true }, build: { ssr: true, outDir: compiled, emptyOutDir: false, rollupOptions: { input: { performance: join(root, 'src/runtime/largeWorldPerformance.ts'), jobs: join(root, 'src/runtime/jobScheduler.ts'), format: join(root, 'src/projects/projectFormat.ts') }, output: { entryFileNames: '[name].mjs', chunkFileNames: 'chunks/[name]-[hash].mjs' } } } })
-  const load = name => import(`${pathToFileURL(join(compiled, `${name}.mjs`)).href}?v=${Date.now()}`)
+  const load = /* 调用 import(`${pathToFileURL(join(compiled, `${name}.mjs`)).href}?v=${Date.now()}`) 并返回调用结果。 */ name => import(`${pathToFileURL(join(compiled, `${name}.mjs`)).href}?v=${Date.now()}`)
   const [runtime, jobs, format] = await Promise.all(['performance', 'jobs', 'format'].map(load))
   check('V680-AUTHORITY', format.NOVA_ENGINE_VERSION === version && format.NOVA_PROJECT_FORMAT_MAJOR === 2 && format.NOVA_PROJECT_SCHEMA_VERSION === 29, 'Engine authority is 6.8.0 while Project Format 2/schema 29 remain frozen.')
 
@@ -48,20 +49,20 @@ try {
     const heapDeltaMb = Math.max(0, process.memoryUsage().heapUsed - beforeMemory) / 1048576
     const metrics = { count, fingerprint: fixture.fingerprint, generatedMs, syncMs, warmMs, spatialMs, heapDeltaMb, queryCount: firstQuery.length, allocations: first.allocations }
     fixtureMetrics.push(metrics)
-    check(`V680-FIXTURE-${count}`, fixture.fingerprint === manifest.expectedFingerprint && scheduler.count === count && scheduler.indices('Transform2D').length === count && first.dirty === count && warm.dirty === 0 && warm.allocations === 0 && dirty.dirty === 1 && firstQuery.join('|') === secondQuery.join('|') && firstQuery.every((value, index, all) => index === 0 || all[index - 1].localeCompare(value) <= 0) && generatedMs < 5_000 && syncMs < 5_000 && spatialMs < 15_000 && heapDeltaMb < 768, `${count.toLocaleString()} objects retain deterministic fingerprints, bounded typed columns, one-item dirty detection, stable spatial order and local qualification thresholds.`, metrics)
+    check(`V680-FIXTURE-${count}`, fixture.fingerprint === manifest.expectedFingerprint && scheduler.count === count && scheduler.indices('Transform2D').length === count && first.dirty === count && warm.dirty === 0 && warm.allocations === 0 && dirty.dirty === 1 && firstQuery.join('|') === secondQuery.join('|') && firstQuery.every(/* 先计算 index === 0；仅当其为假值时求右侧 all[index - 1].localeCompare(value) <= 0，返回短路求值结果。 */ (value, index, all) => index === 0 || all[index - 1].localeCompare(value) <= 0) && generatedMs < 5_000 && syncMs < 5_000 && spatialMs < 15_000 && heapDeltaMb < 768, `${count.toLocaleString()} objects retain deterministic fingerprints, bounded typed columns, one-item dirty detection, stable spatial order and local qualification thresholds.`, metrics)
   }
   measurements.fixtures = fixtureMetrics
 
   const commands = new runtime.BatchedCommandQueue(), applied = []
-  commands.enqueue('selection', () => applied.push('stale'))
-  commands.enqueue('selection', () => applied.push('current'))
-  commands.enqueue('other', () => applied.push('other'))
+  commands.enqueue('selection', /* 调用 applied.push('stale') 并返回调用结果。 */ () => applied.push('stale'))
+  commands.enqueue('selection', /* 调用 applied.push('current') 并返回调用结果。 */ () => applied.push('current'))
+  commands.enqueue('other', /* 调用 applied.push('other') 并返回调用结果。 */ () => applied.push('other'))
   const commandResult = commands.flush(32, 20)
   check('V680-BATCHED-COMMANDS', applied.join(',') === 'current,other' && commandResult.stale === 1 && commandResult.deferred === 0, 'Batched commands retain deterministic sequence and reject superseded generations.', { ...commandResult, applied })
 
   const background = new runtime.FrameBudgetQueue(), backgroundApplied = []
-  background.enqueue({ id: 'old-bake', priority: 1, run: () => backgroundApplied.push('old') }); background.cancel('old-bake')
-  background.enqueue({ id: 'new-bake', priority: 2, run: () => backgroundApplied.push('new') })
+  background.enqueue({ id: 'old-bake', priority: 1, run: /* 调用 backgroundApplied.push('old') 并返回调用结果。 */ () => backgroundApplied.push('old') }); background.cancel('old-bake')
+  background.enqueue({ id: 'new-bake', priority: 2, run: /* 调用 backgroundApplied.push('new') 并返回调用结果。 */ () => backgroundApplied.push('new') })
   const backgroundResult = await background.drain(20)
   check('V680-CANCELLATION', backgroundApplied.join(',') === 'new' && backgroundResult.stale === 1 && backgroundResult.deferred === 0, 'Cancelled background generations cannot apply and current priority work completes.', backgroundResult)
 
@@ -77,7 +78,7 @@ try {
   check('V680-RUNTIME-CONNECTION', hierarchy.includes('prepareHierarchyIndex') && navigation.includes('new SpatialHash2D') && animation.includes("indices('Animator')") && particlesSource.includes("indices('ParticleEmitter2D')") && gameplay.includes('synchronizePerformanceWorld') && canvas.includes('prepareHierarchyIndex'), 'Prepared hierarchy lookup, spatial navigation and stable animation/particle component schedules are connected inside gameplay and refreshed before rendering.')
   check('V680-STREAMING', streaming.includes('streamingBudgetMs') && streaming.includes('deferredThisFrame') && streaming.includes('desiredTargets') && navigation.includes('frameWorkBudgetMs') && navigation.includes('controller.signal.aborted'), 'Streaming and navigation background work are frame-budgeted, cancellable and retain desired work for later frames.')
   check('V680-WORKER-SAFETY', workerSource.includes('sampleAnimation') && workerSource.includes('advanceParticles') && workerSource.includes('buildSpatialGrid') && performanceSource.includes('generation') && performanceSource.includes('cancel'), 'Worker-safe pure operations, local fallback, generation checking and cancellation are present.')
-  check('V680-METRICS', ['mainThreadMs','workerMs','queueWaitMs','cacheHitRate','allocations','worstFrameMs','onePercentLowFps','inputToPixelMs','coldStartupMs','warmStartupMs'].every(field => performanceSource.includes(field) && (profiler.includes(field) || panel.includes(field))) && panel.includes("t('warmStartup')"), 'Profiler exposes main/worker/queue/cache/allocation/worst/1%-low/input-latency/cold/warm startup evidence.')
+  check('V680-METRICS', ['mainThreadMs','workerMs','queueWaitMs','cacheHitRate','allocations','worstFrameMs','onePercentLowFps','inputToPixelMs','coldStartupMs','warmStartupMs'].every(/* 先计算 performanceSource.includes(field)；仅当其为真值时求右侧 (profiler.includes(field) || panel.includes(field))，返回短路求值结果。 */ field => performanceSource.includes(field) && (profiler.includes(field) || panel.includes(field))) && panel.includes("t('warmStartup')"), 'Profiler exposes main/worker/queue/cache/allocation/worst/1%-low/input-latency/cold/warm startup evidence.')
   check('V680-ADAPTIVE-SAFETY', canvas.includes('adaptivePixelRatioScale') && particlesSource.includes('adaptiveParticleScale') && !performanceSource.includes('tickRate =') && !performanceSource.includes('fixedDelta =') && guide.includes('never changes physics tick rate'), 'Adaptive quality is restricted to presentation budgets and cannot rewrite fixed-step, scripts, animations or authored values.')
   check('V680-PERSISTENCE-UI', production.includes('adaptiveQuality') && production.includes('streamingBudgetMs') && panel.includes("t('adaptivePresentationQuality')") && panel.includes('runtimePerformance'), 'Normalized project settings and localized Profiler controls persist every v6.8 budget and expose runtime evidence.')
   check('V680-DOCUMENTATION', roadmap.includes('## 6.8.0 — large-world') && instructions.includes('## 6.8.0 implementation checkpoint') && manualEn.includes('Large-world and low-end performance workflow') && manualDe.includes('Großwelt- und Low-End-Leistungsablauf') && manualZh.includes('大型世界与低端设备性能流程'), 'Roadmap, implementation checkpoint, guide and all three manuals teach the complete v6.8 workflow.')
@@ -85,7 +86,7 @@ try {
   check('V680-REFERENCE', project.engineVersion === version && project.projectSettings.production.performance.adaptiveQuality === true && project.projectSettings.production.performance.maximumCommandsPerFrame === 2048, 'Playable reference freezes the v6.8 performance settings and remains compatible with schema 29.')
 } finally { await rm(compiled, { recursive: true, force: true }) }
 
-const failed = checks.filter(item => item.status === 'failed')
+const failed = checks.filter(/* 比较 item.status 与 'failed'，返回严格相等的判断结果。 */ item => item.status === 'failed')
 const report = { format: 'nova-v6.8.0-verification', version: 1, engineVersion: version, generatedAt: new Date().toISOString(), perspectives: ['compatibility', 'determinism', 'data-oriented-runtime', 'worker-race-cancel-fallback', 'streaming', 'large-world', 'low-end', 'latency', 'documentation', 'user'], thresholds: { generationMs100k: 5_000, componentSyncMs100k: 5_000, spatialMs100k: 15_000, fixtureHeapDeltaMb: 768 }, measurements, checks, severity0Open: failed.length, severity1Open: 0, status: failed.length ? 'failed' : 'passed' }
 await mkdir(join(root, 'release-audits'), { recursive: true })
 await writeFile(join(root, 'release-audits/v6.8.0-verification.json'), `${JSON.stringify(report, null, 2)}\n`)

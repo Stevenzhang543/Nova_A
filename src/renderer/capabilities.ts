@@ -1,3 +1,4 @@
+/** 渲染能力检测与状态：查询平台支持，记录上下文丢失恢复并请求渲染器重建。 */
 import { reactive } from 'vue'
 
 export type RendererBackendName = 'WebGL2' | 'Canvas2D'
@@ -44,8 +45,9 @@ export const rendererCapabilityState = reactive({
   lastEvent: 'Not initialized'
 })
 
-function target(): 'native-windows' | 'web' { return '__TAURI_INTERNALS__' in globalThis ? 'native-windows' : 'web' }
+/* 根据 '__TAURI_INTERNALS__' in globalThis 的真假，分别返回 'native-windows' 或 'web'。 */ function target(): 'native-windows' | 'web' { return '__TAURI_INTERNALS__' in globalThis ? 'native-windows' : 'web' }
 
+/* 探测可用渲染上下文、扩展与硬件限制，生成能力和回退报告并释放探测上下文。 */
 export function queryRendererCapabilities(preferred?: RendererBackendName, requestedPath: 'Auto' | 'Native' | 'Compatibility' = 'Auto'): RendererCapabilityReport {
   if (typeof document === 'undefined') return { backend: preferred ?? 'Canvas2D', target: 'web', path: 'Diagnostic fallback', fallbackReason: 'DOM canvas is unavailable.', device: 'Unavailable', driver: 'Unavailable', apiVersion: 'Unavailable', shadingLanguage: 'Unavailable', webgl2: false, canvas2d: false, maximumTextureSize: 0, textureUnits: 0, floatRenderTargets: false, gpuTimers: false, contextRecovery: false, antialiasing: false, enabledExtensions: [], limits: {}, matrix: [{ id: 'canvas', label: 'Canvas output', support: 'unsupported', detail: 'DOM canvas is unavailable.', fix: 'Run Nova_A in a supported browser or desktop WebView.' }], features: [], unsupported: ['DOM canvas unavailable'], fallbackRules }
   const canvas = document.createElement('canvas')
@@ -56,9 +58,9 @@ export function queryRendererCapabilities(preferred?: RendererBackendName, reque
   const device = gl ? String(gl.getParameter(debug?.UNMASKED_RENDERER_WEBGL ?? gl.RENDERER)) : 'Canvas2D software path'
   const driver = gl ? String(gl.getParameter(debug?.UNMASKED_VENDOR_WEBGL ?? gl.VENDOR)) : navigator.userAgent
   const native = target() === 'native-windows'
-  const supported = (id: string, label: string, detail: string): RendererFeatureSupport => ({ id, label, support: 'supported', detail, fix: 'No action required.' })
-  const limited = (id: string, label: string, detail: string, fix: string): RendererFeatureSupport => ({ id, label, support: 'limited', detail, fix })
-  const unsupported = (id: string, label: string, detail: string, fix: string): RendererFeatureSupport => ({ id, label, support: 'unsupported', detail, fix })
+  const supported = /** 构造并返回记录 { id, label, support: 'supported', detail, fix: 'No action required.' }，字段按当前实参及捕获状态求值。 */ (id: string, label: string, detail: string): RendererFeatureSupport => ({ id, label, support: 'supported', detail, fix: 'No action required.' })
+  const limited = /** 构造并返回记录 { id, label, support: 'limited', detail, fix }，字段按当前实参及捕获状态求值。 */ (id: string, label: string, detail: string, fix: string): RendererFeatureSupport => ({ id, label, support: 'limited', detail, fix })
+  const unsupported = /** 构造并返回记录 { id, label, support: 'unsupported', detail, fix }，字段按当前实参及捕获状态求值。 */ (id: string, label: string, detail: string, fix: string): RendererFeatureSupport => ({ id, label, support: 'unsupported', detail, fix })
   const matrix: RendererFeatureSupport[] = backend === 'WebGL2' ? [
     supported('sprites', 'Sprites, atlases, cameras and render targets', 'Batched WebGL2 path with stable layer/order sorting.'),
     supported('materials', 'Typed materials and shaders', 'GLSL ES 3.00 safe subset with reflection, includes and hot reload.'),
@@ -100,16 +102,21 @@ export function queryRendererCapabilities(preferred?: RendererBackendName, reque
   return report
 }
 
+/* 记录实际创建的后端能力并清除上下文丢失状态。 */
 export function reportRendererCreated(backend: RendererBackendName, requestedPath: 'Auto' | 'Native' | 'Compatibility' = 'Auto'): void {
   rendererCapabilityState.report = queryRendererCapabilities(backend, requestedPath)
   rendererCapabilityState.contextLost = false
   rendererCapabilityState.lastEvent = `${rendererCapabilityState.report.path} ${backend} ready`
 }
+/* 记录上下文丢失事件与次数，供界面说明暂停绘制原因。 */
 export function reportRendererContextLost(): void {
   rendererCapabilityState.contextLost = true; rendererCapabilityState.contextLosses++; rendererCapabilityState.lastEvent = 'WebGL context lost; drawing suspended safely'
 }
+/* 记录上下文恢复事件与恢复次数，提示等待渲染器重建。 */
 export function reportRendererContextRestored(): void {
   rendererCapabilityState.contextLost = false; rendererCapabilityState.recoveries++; rendererCapabilityState.lastEvent = 'WebGL context restored; renderer rebuild requested'
 }
+/* 累计渲染器重置次数并更新最近事件说明。 */
 export function reportRendererReset(): void { rendererCapabilityState.resetCount++; rendererCapabilityState.lastEvent = 'Renderer reset completed' }
+/* 在浏览器环境派发渲染器重置请求，由持有画布的上层执行重建。 */
 export function requestRendererReset(): void { if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('nova-renderer-reset-request')) }

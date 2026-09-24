@@ -1,3 +1,4 @@
+/** 版本26.05：生成参考项目与对应资源，供功能演示和版本验证使用。 */
 import { cp, mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -15,8 +16,8 @@ const companions = await Promise.all([
   'animation-v56-interop-recording',
   'audio-v56-waveform-mixer',
   'cinematic-v56-nested-subtitles'
-].map(async name => JSON.parse(await readFile(join(projects, name, 'project.nova'), 'utf8'))))
-const assets = new Map(project.assets.map(asset => [asset.uuid, asset]))
+].map(/* 调用 JSON.parse(await readFile(join(projects, name, 'project.nova'), 'utf8')) 并返回调用结果。 */ async name => JSON.parse(await readFile(join(projects, name, 'project.nova'), 'utf8'))))
+const assets = new Map(project.assets.map(/* 返回按声明顺序构造的数组 [asset.uuid, asset]。 */ asset => [asset.uuid, asset]))
 for (const companion of companions) for (const asset of companion.assets) if (!assets.has(asset.uuid)) assets.set(asset.uuid, structuredClone(asset))
 project.assets = [...assets.values()]
 project.assetFolders = [...new Set([...project.assetFolders, 'Assets/Animations', 'Assets/Controllers', 'Assets/Timelines'])]

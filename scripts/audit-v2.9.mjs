@@ -1,12 +1,13 @@
+/* 审计 2.9 的构建导出、包、协作、升级与发布版本契约。 */
 import { readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 
 const root = process.cwd()
-const read = path => readFile(resolve(root, path), 'utf8')
+const read = /* 调用 readFile(resolve(root, path), 'utf8') 并返回调用结果。 */ path => readFile(resolve(root, path), 'utf8')
 const [settings, panel, exporter, pack, cli, tauri, shipping, crash, team, teamPanel, packages, packagePanel, upgrade, manager, templates, format, project, bottom, i18n, manualEn, manualDe, manualZh, manualHtml, readme, readmeZh, packageJson, cargo, tauriCargo, tauriConfig] = await Promise.all([
   read('src/runtime/buildSettings.ts'), read('src/components/BuildSettingsPanel.vue'), read('src/runtime/gameExporter.ts'), read('src/runtime/novaPak.ts'), read('scripts/nova-export.mjs'), read('src-tauri/src/lib.rs'), read('src/runtime/shipping.ts'), read('src/runtime/crashReporter.ts'), read('src/runtime/teamWorkflow.ts'), read('src/components/TeamWorkflowPanel.vue'), read('src/runtime/packages.ts'), read('src/components/PackageManagerPanel.vue'), read('src/runtime/projectUpgrade.ts'), read('src/components/ProjectManager.vue'), read('src/projects/templates.ts'), read('crates/nova_format/src/lib.rs'), read('src/projects/projectFormat.ts'), read('src/components/EditorBottomPanel.vue'), read('src/i18n.ts'), read('manual/MANUAL.en.md'), read('manual/MANUAL.de.md'), read('manual/MANUAL.zh-CN.md'), read('manual/index.html'), read('README.md'), read('README.zh-CN.md'), read('package.json'), read('Cargo.toml'), read('src-tauri/Cargo.toml'), read('src-tauri/tauri.conf.json')
 ])
-const assert = (condition, message) => { if (!condition) throw new Error(message) }
+const assert = /* 条件不满足时抛出指定错误，使当前审计立即失败。 */ (condition, message) => { if (!condition) throw new Error(message) }
 
 for (const target of ["'windows'", "'linux'", "'macos'", "'web'", "'android'"]) assert(settings.includes(target), `platform model lacks ${target}`)
 for (const property of ['profile', 'architecture', 'iconAsset', 'splashAsset', 'orientation', 'permissions', 'signingMode', 'signingIdentity', 'notarizationProfile']) assert(settings.includes(property) && panel.includes(property), `platform option ${property} is not modeled and editable`)
@@ -37,7 +38,7 @@ assert(templates.includes('auditTemplateProject') && templates.includes('Respons
 
 assert(bottom.includes('compact-tab-select') && bottom.includes('@container(max-width:760px)'), 'narrow bottom-toolbar layout does not collapse safely')
 assert(panel.includes('@container(max-width:720px)') && teamPanel.includes('@container(max-width:620px)'), 'shipping/team layouts are not panel-responsive')
-for (const locale of ['Object.assign(en', 'Object.assign(de', 'Object.assign(zh']) assert(i18n.split(locale).slice(1).some(block => block.slice(0, 24_000).includes('sourceControl') && block.slice(0, 24_000).includes('optInTelemetry')), `${locale} lacks v2.9 shipping/team localization`)
+for (const locale of ['Object.assign(en', 'Object.assign(de', 'Object.assign(zh']) assert(i18n.split(locale).slice(1).some(/* 先计算 block.slice(0, 24_000).includes('sourceControl')；仅当其为真值时求右侧 block.slice(0, 24_000).includes('optInTelemetry')，返回短路求值结果。 */ block => block.slice(0, 24_000).includes('sourceControl') && block.slice(0, 24_000).includes('optInTelemetry')), `${locale} lacks v2.9 shipping/team localization`)
 
 assert(format.includes('CURRENT_FORMAT_VERSION: u32 = 29') && format.includes('CURRENT_ENGINE_VERSION: &str = "4.0.0"'), 'Rust format authority is not frozen schema 29 / engine 4.0')
 assert(project.includes('NOVA_PROJECT_SCHEMA_VERSION = 29') && project.includes("NOVA_ENGINE_VERSION = '4.0.0'"), 'frontend format authority is not frozen schema 29 / engine 4.0')

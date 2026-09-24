@@ -1,3 +1,4 @@
+<!-- 语义无障碍证据面板：展示运行时语义树、桥接能力与问题，并允许导出快照。 -->
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
 import { createSemanticEvidence, detectNativeAccessibilityCapabilities, downloadSemanticEvidence, nativeAccessibilityState } from '../runtime/accessibilityEvidence'
@@ -7,10 +8,10 @@ import { runtimeAccessibilitySettings } from '../runtime/presentation'
 import { preferencesState } from '../store/preferences'
 
 const words={en:{title:'Semantic evidence',subtitle:'Inspect the accessibility tree exported by the player.',bridge:'Native bridge',provider:'Provider',nodes:'Semantic nodes',issues:'Issues',refresh:'Refresh bridge',download:'Export snapshot',empty:'Run the Game view once to populate current runtime bounds.',honest:'Custom native adapters are not claimed unless the host reports them.'},de:{title:'Semantischer Nachweis',subtitle:'Barrierefreiheitsbaum des Players prüfen.',bridge:'Native Brücke',provider:'Anbieter',nodes:'Semantische Knoten',issues:'Probleme',refresh:'Brücke aktualisieren',download:'Snapshot exportieren',empty:'Game-Ansicht einmal starten, um aktuelle Laufzeitgrenzen zu erfassen.',honest:'Eigene native Adapter werden nur bei Bestätigung durch den Host angegeben.'},zh:{title:'语义无障碍证据',subtitle:'检查播放器导出的无障碍树。',bridge:'原生桥接',provider:'提供者',nodes:'语义节点',issues:'问题',refresh:'刷新桥接',download:'导出快照',empty:'请先运行一次游戏视图，以生成当前运行时边界。',honest:'仅当主机确认时才声明自定义原生适配器。'}}as const
-function l(key:keyof typeof words.en):string{return(words[preferencesState.locale]??words.en)[key]}
-const snapshot=computed(()=>createSemanticEvidence(gameUiRuntime.accessibilityNodes(),{locale:localizationSettings.previewLocale,direction:activeTextDirection(),textScale:runtimeAccessibilitySettings.textScale}))
-function download():void{downloadSemanticEvidence(snapshot.value,`nova-accessibility-${localizationSettings.previewLocale}.json`)}
-onMounted(()=>void detectNativeAccessibilityCapabilities())
+/** 按编辑器语言选择本面板文案，未知语言回退到英文。 */ function l(key:keyof typeof words.en):string{return(words[preferencesState.locale]??words.en)[key]}
+const snapshot=computed(/** 使用当前游戏语义节点、预览语言、阅读方向与文字缩放生成证据快照。 */ ()=>createSemanticEvidence(gameUiRuntime.accessibilityNodes(),{locale:localizationSettings.previewLocale,direction:activeTextDirection(),textScale:runtimeAccessibilitySettings.textScale}))
+/** 将当前语义证据下载为带预览语言标识的 JSON 文件。 */ function download():void{downloadSemanticEvidence(snapshot.value,`nova-accessibility-${localizationSettings.previewLocale}.json`)}
+onMounted(/** 面板挂载后启动原生无障碍桥接能力检测。 */ ()=>void detectNativeAccessibilityCapabilities())
 </script>
 
 <template>

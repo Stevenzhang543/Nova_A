@@ -1,3 +1,4 @@
+<!-- 撤销历史面板：展示编辑记录及内存使用，提供撤销、重做和经确认的历史清空。 -->
 <template>
   <Teleport to="body">
     <aside v-if="state.undoHistoryOpen" class="history-panel" role="dialog" aria-modal="false" :aria-label="t('undoHistory')">
@@ -19,10 +20,10 @@ import { t } from '../i18n'
 import { editorState as state } from '../store/editor'
 import { clearEditorHistory, historyState as history, redo, undo } from '../store/physics'
 import { requestConfirmation } from '../store/dialog'
-const reversed = computed(() => [...history.entries].reverse())
-function formatTime(value: string): string { const date = new Date(value); return Number.isFinite(date.getTime()) ? date.toLocaleTimeString() : value }
-function formatBytes(value: number): string { return value < 1024 ? `${value} B` : value < 1_048_576 ? `${(value/1024).toFixed(1)} KB` : `${(value/1_048_576).toFixed(1)} MB` }
-async function clear(): Promise<void> { if (await requestConfirmation({ title:t('clearHistory'), message:t('clearHistoryConfirm',{count:history.length}), confirmLabel:t('clearHistory'), cancelLabel:t('cancel'), destructive:false })) clearEditorHistory('user-cleared-history', undefined, false) }
+const reversed = computed(/** 复制历史条目后逆序展示，避免修改共享历史数组。 */ () => [...history.entries].reverse())
+/** 将有效时间转换为本地时间格式，无法解析时保留原始字符串。 */ function formatTime(value: string): string { const date = new Date(value); return Number.isFinite(date.getTime()) ? date.toLocaleTimeString() : value }
+/** 按字节、千字节或兆字节格式显示历史占用量。 */ function formatBytes(value: number): string { return value < 1024 ? `${value} B` : value < 1_048_576 ? `${(value/1024).toFixed(1)} KB` : `${(value/1_048_576).toFixed(1)} MB` }
+/** 请求用户确认清空历史，获同意后以用户主动清空原因重置历史记录。 */ async function clear(): Promise<void> { if (await requestConfirmation({ title:t('clearHistory'), message:t('clearHistoryConfirm',{count:history.length}), confirmLabel:t('clearHistory'), cancelLabel:t('cancel'), destructive:false })) clearEditorHistory('user-cleared-history', undefined, false) }
 </script>
 <style scoped>
 .history-panel{position:fixed;z-index:760;top:48px;right:10px;width:min(390px,calc(100vw - 20px));max-height:calc(100vh - 70px);display:flex;flex-direction:column;overflow:hidden;border:1px solid var(--border-strong);border-radius:var(--radius-dialog);background:var(--surface-1);box-shadow:var(--shadow-lg)}header{min-height:54px;padding:8px 10px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border-subtle)}header div{display:grid}header small,li small,li time,footer span{color:var(--text-muted)}header button{width:30px;height:30px;border:0;border-radius:var(--radius-input);background:var(--surface-3)}.history-actions{padding:7px;display:flex;gap:6px;border-bottom:1px solid var(--border-subtle)}.history-actions button{min-height:32px;padding:0 10px;border:1px solid var(--border-subtle);border-radius:var(--radius-input);background:var(--surface-2)}ol{min-height:0;margin:0;padding:6px;overflow:auto;list-style:none}li{min-height:54px;padding:6px;display:grid;grid-template-columns:18px minmax(0,1fr);gap:6px;border-bottom:1px solid var(--border-subtle)}li.future{opacity:.58}li>span{color:var(--accent)}li>div{min-width:0;display:grid;gap:1px}li strong,li small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}li time{font-size:var(--type-caption)}.empty{min-height:180px;display:grid;place-content:center;text-align:center;color:var(--text-muted)}.empty>span{font-size:30px}footer{padding:8px 10px;display:flex;justify-content:space-between;gap:8px;border-top:1px solid var(--border-subtle)}footer b{color:var(--success)}footer b.dirty{color:var(--warning)}

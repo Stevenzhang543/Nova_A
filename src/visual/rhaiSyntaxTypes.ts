@@ -1,3 +1,4 @@
+/** Rhai 语法数据约定：声明源码范围、节点、声明绑定与诊断的结构类型。 */
 /** Nova_A language IR 1. Spans are UTF-16, half-open; lines/columns are 1-based. */
 export interface RhaiSpan { start: number; end: number; line: number; column: number; endLine: number; endColumn: number }
 export interface RhaiDiagnostic { code: string; severity: 'error' | 'warning' | 'info'; message: string; span: RhaiSpan; nodeId?: string; related?: Array<{ message: string; span: RhaiSpan }> }

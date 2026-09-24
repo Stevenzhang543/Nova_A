@@ -1,8 +1,9 @@
+/** 功能回归脚本：执行 verify-v26.03-interactions.mjs 对应场景，保留断言和证据输出。 */
 import { readFile,writeFile,mkdir } from 'node:fs/promises'
 import { dirname,join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-const root=dirname(dirname(fileURLToPath(import.meta.url))),read=path=>readFile(join(root,path),'utf8'),checks=[]
-const check=(id,passed,detail)=>checks.push({id,status:passed?'passed':'failed',detail})
+const root=dirname(dirname(fileURLToPath(import.meta.url))),read=/* 调用 readFile(join(root,path),'utf8') 并返回调用结果。 */ path=>readFile(join(root,path),'utf8'),checks=[]
+const check=/* 调用 checks.push({id,status:passed?'passed':'failed',detail}) 并返回调用结果。 */ (id,passed,detail)=>checks.push({id,status:passed?'passed':'failed',detail})
 const [studio,runtime,language,visual,panel,sync,production,debugSource,lsp]=await Promise.all(['src/components/ScriptStudio.vue','src/runtime/GameplayRuntime.ts','src/editor/scriptLanguage.ts','src/components/VisualGraphEditor.vue','src/components/GraphProductionPanel.vue','src/visual/graphCodeSync.ts','src/visual/graphProduction.ts','src/runtime/scriptDebug.ts','scripts/nova-rhai-language-server.mjs'].map(read))
 check('V2603-USER-DIAGNOSE',studio.includes("inspectorTab === 'problems'")&&studio.includes("inspectorTab === 'types'")&&studio.includes('applyCodeAction')&&language.includes('scriptCodeActions'),'A user can read diagnostics, inspect inferred types/statements, focus a source line, and apply bounded repairs.')
 check('V2603-USER-RENAME',studio.includes('confirmRenameSymbol')&&studio.includes('requestConfirmation')&&studio.includes('validateModuleSource')&&language.includes('renameScriptSymbol'),'Project-wide rename previews intent, validates every changed module, and commits only valid sources.')
@@ -14,5 +15,5 @@ check('V2603-USER-CONVERSION',panel.includes('conversionCoverage')&&panel.includ
 check('V2603-USER-MERGE',panel.includes('captureBase')&&panel.includes('performMerge')&&panel.includes("resolveConflict(conflict.id,'ours')")&&panel.includes("resolveConflict(conflict.id,'theirs')")&&production.includes('mergeGraphs'),'Users can compare, choose each semantic conflict, and apply only after no conflict remains unresolved.')
 check('V2603-EXTERNAL-EDITOR',lsp.includes('textDocument/didOpen')&&lsp.includes('textDocument/didChange')&&lsp.includes('textDocument/definition')&&lsp.includes('textDocument/rename'),'External editors receive the same document sync, navigation, rename, diagnostics, and assistance model.')
 check('V2603-RESPONSIVE',studio.includes('@media(max-width:620px)')&&visual.includes('@media(max-width:760px)')&&panel.includes('@media(max-width:1100px)'),'New controls retain desktop, narrow, and compact containment rules.')
-const failed=checks.filter(item=>item.status==='failed'),report={format:'nova-v26.03-user-interactions',version:1,release:'26.03',engineVersion:'26.3.0',generatedAt:new Date().toISOString(),checks,severity0Open:failed.length,severity1Open:0,status:failed.length?'failed':'passed'}
+const failed=checks.filter(/* 比较 item.status 与 'failed'，返回严格相等的判断结果。 */ item=>item.status==='failed'),report={format:'nova-v26.03-user-interactions',version:1,release:'26.03',engineVersion:'26.3.0',generatedAt:new Date().toISOString(),checks,severity0Open:failed.length,severity1Open:0,status:failed.length?'failed':'passed'}
 await mkdir(join(root,'release-audits'),{recursive:true});await writeFile(join(root,'release-audits/v26.03-user-interactions.json'),`${JSON.stringify(report,null,2)}\n`);if(failed.length){console.error(failed);process.exit(1)}console.log(`Nova_A 26.03 interaction audit passed: ${checks.length} checks.`)

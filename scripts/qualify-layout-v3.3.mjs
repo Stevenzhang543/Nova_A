@@ -1,3 +1,4 @@
+/** 历史浏览器布局检查：测量稳定界面的溢出、重叠、主要容器范围并记录截图和控制项。 */
 import { spawn } from 'node:child_process'
 import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { createServer as createNetServer } from 'node:net'
@@ -14,11 +15,11 @@ const [qualificationMajor, qualificationMinor] = qualificationVersion.split('.')
 const isV41 = qualificationMajor > 4 || (qualificationMajor === 4 && qualificationMinor >= 1)
 const evidenceRoot = join(root, 'release-audits')
 const screenshotRoot = join(evidenceRoot, 'screenshots', `v${qualificationVersion}`)
-const requiredViewports = String(process.env.NOVA_LAYOUT_REQUIRED_VIEWPORTS ?? '').split(',').map(value => {
+const requiredViewports = String(process.env.NOVA_LAYOUT_REQUIRED_VIEWPORTS ?? '').split(',').map(/** 解析宽高配置，仅接受两个有限数值。 */ value => {
   const [width, height] = value.split('x').map(Number)
   return Number.isFinite(width) && Number.isFinite(height) ? [width, height] : null
 }).filter(Boolean)
-const requiredScales = String(process.env.NOVA_LAYOUT_REQUIRED_SCALES ?? '1').split(',').map(Number).filter(value => Number.isFinite(value) && value >= 0.8 && value <= 2)
+const requiredScales = String(process.env.NOVA_LAYOUT_REQUIRED_SCALES ?? '1').split(',').map(Number).filter(/* 先计算 Number.isFinite(value) && value >= 0.8；仅当其为真值时求右侧 value <= 2，返回短路求值结果。 */ value => Number.isFinite(value) && value >= 0.8 && value <= 2)
 const requiredTextPattern = process.env.NOVA_LAYOUT_REQUIRED_TEXT ? new RegExp(process.env.NOVA_LAYOUT_REQUIRED_TEXT, 'i') : null
 const requiredManageIndex = Math.max(0, Number.parseInt(process.env.NOVA_LAYOUT_REQUIRED_MANAGE_INDEX ?? '2', 10) || 0)
 const requiredWorkspaceIndex = process.env.NOVA_LAYOUT_REQUIRED_WORKSPACE_INDEX === undefined ? null : Math.max(0, Number.parseInt(process.env.NOVA_LAYOUT_REQUIRED_WORKSPACE_INDEX, 10) || 0)
@@ -44,8 +45,8 @@ let client
 try {
   const target = await waitForTarget(debugPort)
   client = await connectCdp(target.webSocketDebuggerUrl)
-  client.on('Runtime.exceptionThrown', event => consoleErrors.push(event.exceptionDetails?.exception?.description || event.exceptionDetails?.text || 'Runtime exception'))
-  client.on('Log.entryAdded', event => { if (event.entry?.level === 'error') consoleErrors.push(event.entry.text) })
+  client.on('Runtime.exceptionThrown', /** 保存运行时异常详情或备用错误描述。 */ event => consoleErrors.push(event.exceptionDetails?.exception?.description || event.exceptionDetails?.text || 'Runtime exception'))
+  client.on('Log.entryAdded', /** 收集浏览器日志中的错误级别条目。 */ event => { if (event.entry?.level === 'error') consoleErrors.push(event.entry.text) })
   await client.send('Runtime.enable'); await client.send('Log.enable'); await client.send('Page.enable')
   const browser = await client.send('Browser.getVersion')
   await waitForExpression(client, "document.readyState === 'complete' && Boolean(document.querySelector('.project-manager,.editor-root'))", 20_000)
@@ -210,33 +211,33 @@ try {
     await clickIndex(client, '.sidebar button', 0)
   }
 
-  const seriousConsoleErrors = consoleErrors.filter(message => !/favicon|ResizeObserver loop/i.test(message))
+  const seriousConsoleErrors = consoleErrors.filter(/* 返回 /favicon|ResizeObserver loop/i.test(message) 的逻辑取反结果。 */ message => !/favicon|ResizeObserver loop/i.test(message))
   const stableControls = isV41 ? [...stableControlsById.values()] : []
-  const controlIds = new Set(stableControls.map(item=>item.testId))
-  const controlsPassed = !isV41 || stableControls.length > 0 && controlIds.size === stableControls.length && stableControls.every(item => item.testId && item.surface && item.label && (!item.disabled || item.disabledReason))
+  const controlIds = new Set(stableControls.map(/* 返回 item.testId 的当前值。 */ item=>item.testId))
+  const controlsPassed = !isV41 || stableControls.length > 0 && controlIds.size === stableControls.length && stableControls.every(/* 先计算 item.testId && item.surface && item.label；仅当其为真值时求右侧 (!item.disabled || item.disabledReason)，返回短路求值结果。 */ item => item.testId && item.surface && item.label && (!item.disabled || item.disabledReason))
   results.push({name:'Stable control inventory',status:controlsPassed?'passed':'failed',detail:{count:stableControls.length,unique:controlIds.size}})
   results.push({ name: 'Browser console and fatal surface', status: seriousConsoleErrors.length === 0 && !await evaluate(client, "Boolean(document.querySelector('.error-recovery,[data-fatal=true]'))") ? 'passed' : 'failed', detail: JSON.stringify(seriousConsoleErrors) })
   const report = { format: `nova-v${qualificationVersion}-layout-qualification`, version: 1, release: qualificationVersion, engineVersion: qualificationEngineVersion, generatedAt: new Date().toISOString(), browser: browser.product, languages: ['en','de','zh'], matrix:requiredMatrix.length?requiredMatrix:isV41?{viewports:['1366x768','1920x1080','2560x1440','3840x2160'],scales:[100,125,150,175,200],catalogs:['SHELL','LCH','HLT','BLD']}:undefined,requiredTextResults,stableControls,screenshots,results,consoleErrors: seriousConsoleErrors }
-  report.status = results.every(result => result.status === 'passed') ? 'passed' : 'failed'
-  if (requiredMatrix.length && !requiredMatrix.every(result => result.status === 'passed')) report.status = 'failed'
-  if (requiredTextResults.some(result => result.status !== 'passed')) report.status = 'failed'
+  report.status = results.every(/* 比较 result.status 与 'passed'，返回严格相等的判断结果。 */ result => result.status === 'passed') ? 'passed' : 'failed'
+  if (requiredMatrix.length && !requiredMatrix.every(/* 比较 result.status 与 'passed'，返回严格相等的判断结果。 */ result => result.status === 'passed')) report.status = 'failed'
+  if (requiredTextResults.some(/* 比较 result.status 与 'passed'，返回严格不等的判断结果。 */ result => result.status !== 'passed')) report.status = 'failed'
   report.severity0Open = 0
   report.severity1Open = report.status === 'passed' ? 0 : 1
   await writeFile(join(evidenceRoot, `v${qualificationVersion}-layout-browser.json`), `${JSON.stringify(report, null, 2)}\n`, 'utf8')
-  if (report.status !== 'passed') throw new Error(`Layout qualification failed: ${[...results, ...requiredMatrix, ...requiredTextResults].filter(result => result.status !== 'passed').map(result => result.name ?? `${result.locale}: ${result.pattern}`).join(', ')}`)
+  if (report.status !== 'passed') throw new Error(`Layout qualification failed: ${[...results, ...requiredMatrix, ...requiredTextResults].filter(/* 比较 result.status 与 'passed'，返回严格不等的判断结果。 */ result => result.status !== 'passed').map(/* 当 result.name 为 null 或 undefined 时返回 `${result.locale}: ${result.pattern}`，否则保留左侧值。 */ result => result.name ?? `${result.locale}: ${result.pattern}`).join(', ')}`)
   console.log(`Nova_A v${qualificationVersion} layout qualification passed: ${results.length - 1} panel/viewport states in three languages; ${screenshots.length} captures.`)
 } finally {
   try { await client?.send('Browser.close') } catch { /* process cleanup below */ }
-  await new Promise(resolve => setTimeout(resolve, 300))
+  await new Promise(/* 调用 setTimeout(resolve, 300) 并返回调用结果。 */ resolve => setTimeout(resolve, 300))
   if (!edge.killed) edge.kill()
-  await new Promise(resolve => previewServer.httpServer.close(resolve))
+  await new Promise(/* 调用 previewServer.httpServer.close(resolve) 并返回调用结果。 */ resolve => previewServer.httpServer.close(resolve))
   await rm(profile, { recursive: true, force: true, maxRetries: 10, retryDelay: 150 })
 }
 
-async function recordLayout(cdp, collection, name) {
+/** 等待面板过渡稳定，再测量可见控件溢出和重叠、外壳边界及工具栏；保存真实结果和稳定控件标识。 */ async function recordLayout(cdp, collection, name) {
   // Qualification observes the settled surface, not an intentional panel
   // transition half-way through its compositor animation.
-  await new Promise(resolve => setTimeout(resolve, Number(process.env.NOVA_LAYOUT_SETTLE_MS || 320)))
+  await new Promise(/* 调用 setTimeout(resolve, Number(process.env.NOVA_LAYOUT_SETTLE_MS || 320)) 并返回调用结果。 */ resolve => setTimeout(resolve, Number(process.env.NOVA_LAYOUT_SETTLE_MS || 320)))
   const detail = await evaluate(cdp, `(() => {
     const visible = node => { const style=getComputedStyle(node),rect=node.getBoundingClientRect(); return style.display!=='none'&&style.visibility!=='hidden'&&rect.width>0&&rect.height>0 }
     const description = node => node.className && typeof node.className==='string' ? '.'+node.className.trim().replace(/\\s+/g,'.') : node.tagName.toLowerCase()
@@ -259,7 +260,7 @@ async function recordLayout(cdp, collection, name) {
   const passed = detail.contained && detail.overflow.length === 0 && detail.overlap.length === 0 && detail.verticalText.length === 0 && (!detail.toolbarState || detail.toolbarState.childOverflows === 0)
   collection.push({ name, status: passed ? 'passed' : 'failed', detail })
 }
-async function setViewport(cdp, width, height, deviceScaleFactor = 1) {
+/** 同步浏览器窗口、设备指标和可见区域，在限定时间等待布局尺寸稳定。 */ async function setViewport(cdp, width, height, deviceScaleFactor = 1) {
   // Replace the active override directly. Clearing first briefly restores the
   // host's physical surface and can leave viewport-unit layout cached at that
   // unrelated size in headless Chromium.
@@ -279,18 +280,18 @@ async function setViewport(cdp, width, height, deviceScaleFactor = 1) {
     if (viewport.width === width && viewport.height === height && Math.abs(viewport.scale - deviceScaleFactor) < 0.01) {
       // Chromium updates viewport metrics before repainting vw-sized app roots.
       // Leave one bounded repaint window before recording shell containment.
-      await new Promise(resolve => setTimeout(resolve, 480))
+      await new Promise(/* 调用 setTimeout(resolve, 480) 并返回调用结果。 */ resolve => setTimeout(resolve, 480))
       return
     }
-    await new Promise(resolve => setTimeout(resolve, 80))
+    await new Promise(/* 调用 setTimeout(resolve, 80) 并返回调用结果。 */ resolve => setTimeout(resolve, 80))
   }
   throw new Error(`Viewport did not settle at ${width}x${height} @ ${Math.round(deviceScaleFactor * 100)}%`)
 }
-async function captureSurface(cdp, directory, collection, name, locale, width, height) { await setViewport(cdp,width,height); const capture=await cdp.send('Page.captureScreenshot',{format:'png',fromSurface:true,captureBeyondViewport:false}); await writeFile(join(directory,name),Buffer.from(capture.data,'base64')); collection.push({name,locale,width,height}) }
-async function clickIndex(cdp, selector, index) { await evaluate(cdp, `(() => { const node=document.querySelectorAll(${JSON.stringify(selector)})[${index}]; if(!node)return false; node.click(); return true })()`); await new Promise(resolve => setTimeout(resolve, 120)) }
-async function reloadEditorAtViewport(cdp, width, height) { await setViewport(cdp,width,height); await evaluate(cdp,'location.reload(); true'); await waitForExpression(cdp,"document.readyState === 'complete' && Boolean(document.querySelector('.project-manager,.editor-root'))",20_000); if(await evaluate(cdp,"Boolean(document.querySelector('.project-manager'))")){await evaluate(cdp,"document.querySelector('.create-button')?.click(); true");await waitForExpression(cdp,"Boolean(document.querySelector('.editor-root'))",25_000)} }
-async function freePort() { const server=createNetServer(); await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(0,'127.0.0.1',resolve)}); const address=server.address(),port=typeof address==='object'&&address?address.port:0; await new Promise(resolve=>server.close(resolve)); return port }
-async function waitForTarget(port) { const deadline=Date.now()+15_000; while(Date.now()<deadline){try{const targets=await fetch(`http://127.0.0.1:${port}/json/list`).then(response=>response.json()),target=targets.find(item=>item.type==='page');if(target)return target}catch{}await new Promise(resolve=>setTimeout(resolve,100))}throw new Error('Timed out connecting to Edge DevTools.') }
-async function connectCdp(url) { const socket=new WebSocket(url),pending=new Map(),listeners=new Map();let nextId=1;await new Promise((resolve,reject)=>{socket.addEventListener('open',resolve,{once:true});socket.addEventListener('error',reject,{once:true})});socket.addEventListener('message',message=>{const value=JSON.parse(message.data);if(value.id){const item=pending.get(value.id);if(!item)return;pending.delete(value.id);if(value.error)item.reject(new Error(value.error.message));else item.resolve(value.result)}else for(const listener of listeners.get(value.method)||[])listener(value.params||{})});return{send(method,params={}){return new Promise((resolve,reject)=>{const id=nextId++;pending.set(id,{resolve,reject});socket.send(JSON.stringify({id,method,params}))})},on(method,listener){listeners.set(method,[...(listeners.get(method)||[]),listener])}} }
-async function evaluate(cdp, expression) { const result=await cdp.send('Runtime.evaluate',{expression,awaitPromise:true,returnByValue:true});if(result.exceptionDetails)throw new Error(result.exceptionDetails.text);return result.result.value }
-async function waitForExpression(cdp, expression, timeout) { const deadline=Date.now()+timeout;while(Date.now()<deadline){try{if(await evaluate(cdp,expression))return true}catch{}await new Promise(resolve=>setTimeout(resolve,100))}throw new Error(`Timed out waiting for ${expression}`) }
+/** 设置目标视口并保存实际浏览器截图，登记语言及尺寸。 */ async function captureSurface(cdp, directory, collection, name, locale, width, height) { await setViewport(cdp,width,height); const capture=await cdp.send('Page.captureScreenshot',{format:'png',fromSurface:true,captureBeyondViewport:false}); await writeFile(join(directory,name),Buffer.from(capture.data,'base64')); collection.push({name,locale,width,height}) }
+/** 在页面中激活指定索引的匹配节点，随后等待界面更新。 */ async function clickIndex(cdp, selector, index) { await evaluate(cdp, `(() => { const node=document.querySelectorAll(${JSON.stringify(selector)})[${index}]; if(!node)return false; node.click(); return true })()`); await new Promise(/* 调用 setTimeout(resolve, 120) 并返回调用结果。 */ resolve => setTimeout(resolve, 120)) }
+/** 按指定尺寸重新载入，等待启动页或编辑器；若停留启动页则创建项目进入编辑器。 */ async function reloadEditorAtViewport(cdp, width, height) { await setViewport(cdp,width,height); await evaluate(cdp,'location.reload(); true'); await waitForExpression(cdp,"document.readyState === 'complete' && Boolean(document.querySelector('.project-manager,.editor-root'))",20_000); if(await evaluate(cdp,"Boolean(document.querySelector('.project-manager'))")){await evaluate(cdp,"document.querySelector('.create-button')?.click(); true");await waitForExpression(cdp,"Boolean(document.querySelector('.editor-root'))",25_000)} }
+/** 临时监听回环动态端口，读取端口后关闭监听器。 */ async function freePort() { const server=createNetServer(); await new Promise(/** 等待回环端口监听完成，监听错误则拒绝。 */ (resolve,reject)=>{server.once('error',reject);server.listen(0,'127.0.0.1',resolve)}); const address=server.address(),port=typeof address==='object'&&address?address.port:0; await new Promise(/* 调用 server.close(resolve) 并返回调用结果。 */ resolve=>server.close(resolve)); return port }
+/** 在十五秒期限内查询 Edge 页面调试目标，超时则失败。 */ async function waitForTarget(port) { const deadline=Date.now()+15_000; while(Date.now()<deadline){try{const targets=await fetch(`http://127.0.0.1:${port}/json/list`).then(/* 调用 response.json() 并返回调用结果。 */ response=>response.json()),target=targets.find(/* 比较 item.type 与 'page'，返回严格相等的判断结果。 */ item=>item.type==='page');if(target)return target}catch{}await new Promise(/* 调用 setTimeout(resolve,100) 并返回调用结果。 */ resolve=>setTimeout(resolve,100))}throw new Error('Timed out connecting to Edge DevTools.') }
+/** 建立调试协议连接，按标识匹配响应并分派事件监听器。 */ async function connectCdp(url) { const socket=new WebSocket(url),pending=new Map(),listeners=new Map();let nextId=1;await new Promise(/** 等待调试套接字连接成功或失败。 */ (resolve,reject)=>{socket.addEventListener('open',resolve,{once:true});socket.addEventListener('error',reject,{once:true})});socket.addEventListener('message',/** 完成对应请求并清理等待记录，或向注册监听器分发事件。 */ message=>{const value=JSON.parse(message.data);if(value.id){const item=pending.get(value.id);if(!item)return;pending.delete(value.id);if(value.error)item.reject(new Error(value.error.message));else item.resolve(value.result)}else for(const listener of listeners.get(value.method)||[])listener(value.params||{})});return{/** 登记待响应命令并发送含递增标识的协议消息。 */ send(method,params={}){return new Promise(/** 分配请求标识并保存完成回调，然后发送协议命令。 */ (resolve,reject)=>{const id=nextId++;pending.set(id,{resolve,reject});socket.send(JSON.stringify({id,method,params}))})},/** 按事件名追加监听器，保留之前的监听器。 */ on(method,listener){listeners.set(method,[...(listeners.get(method)||[]),listener])}} }
+/** 执行页面表达式并读取异步结果，页面异常使检查失败。 */ async function evaluate(cdp, expression) { const result=await cdp.send('Runtime.evaluate',{expression,awaitPromise:true,returnByValue:true});if(result.exceptionDetails)throw new Error(result.exceptionDetails.text);return result.result.value }
+/** 限时轮询页面条件，忽略导航期间短暂失败，超时抛出说明性错误。 */ async function waitForExpression(cdp, expression, timeout) { const deadline=Date.now()+timeout;while(Date.now()<deadline){try{if(await evaluate(cdp,expression))return true}catch{}await new Promise(/* 调用 setTimeout(resolve,100) 并返回调用结果。 */ resolve=>setTimeout(resolve,100))}throw new Error(`Timed out waiting for ${expression}`) }

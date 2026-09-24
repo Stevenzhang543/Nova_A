@@ -1,3 +1,4 @@
+/** 功能回归脚本：执行 verify-v7.0.0-windows.mjs 对应场景，保留断言和证据输出。 */
 process.env.NOVA_WINDOWS_VERSION = '7.0.0'
 process.env.NOVA_WINDOWS_REFERENCE = 'creator-v700-stable-platform'
 process.env.NOVA_WINDOWS_GAME_NAME = 'Nova 7 Stable Creator Platform'

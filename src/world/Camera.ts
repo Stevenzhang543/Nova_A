@@ -1,3 +1,4 @@
+/** 编辑器相机：维护屏幕像素与世界单位的转换，以及以鼠标位置为中心的缩放目标。 */
 import type { Vec2 } from './types'
 import { finiteNumber } from './geometry'
 
@@ -15,7 +16,7 @@ export class Camera {
   targetScale: number | null = null
   targetOffset: Vec2 | null = null
 
-  screenToWorld(p: Vec2): Vec2 {
+  /** 将屏幕坐标减去视图偏移并除以受限缩放；反转纵轴得到世界坐标。 */ screenToWorld(p: Vec2): Vec2 {
     const scale = Math.min(Math.max(finiteNumber(this.scale, EDITOR_DEFAULT_SCALE), EDITOR_MIN_SCALE), EDITOR_MAX_SCALE)
     return {
       x: (finiteNumber(p.x) - finiteNumber(this.offset.x)) / scale,
@@ -23,7 +24,7 @@ export class Camera {
     }
   }
 
-  zoomAt(screen: Vec2, factor: number) {
+  /** 手动缩放时取消平滑动画目标，限制缩放范围，并调整偏移以保持鼠标对应的世界点不动。 */ zoomAt(screen: Vec2, factor: number) {
     // Clear animation targets if user manually zooms
     this.targetScale = null
     this.targetOffset = null

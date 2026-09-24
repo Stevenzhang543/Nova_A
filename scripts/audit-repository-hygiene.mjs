@@ -1,3 +1,4 @@
+/* 解析仓库忽略规则并验证生成物、缓存及应保留源码的包含边界。 */
 import { existsSync } from 'node:fs'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { spawnSync } from 'node:child_process'
@@ -6,9 +7,10 @@ import { fileURLToPath } from 'node:url'
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)))
 const source = await readFile(join(root, '.gitignore'), 'utf8')
-const rules = source.split(/\r?\n/).map(line => line.trim()).filter(line => line && !line.startsWith('#'))
-const activeRules = new Set(rules.filter(rule => !rule.startsWith('!')))
+const rules = source.split(/\r?\n/).map(/* 调用 line.trim() 并返回调用结果。 */ line => line.trim()).filter(/* 先计算 line；仅当其为真值时求右侧 !line.startsWith('#')，返回短路求值结果。 */ line => line && !line.startsWith('#'))
+const activeRules = new Set(rules.filter(/* 返回 rule.startsWith('!') 的逻辑取反结果。 */ rule => !rule.startsWith('!')))
 
+/* 条件不满足时抛出指定错误，阻止仓库忽略规则检查继续通过。 */
 function assert(condition, message) {
   if (!condition) throw new Error(message)
 }
@@ -23,10 +25,11 @@ const requiredRules = [
 for (const rule of requiredRules) assert(activeRules.has(rule), '.gitignore is missing required transient/private rule: ' + rule)
 assert(rules.includes('!.env.example'), '.gitignore must retain the documented environment example')
 
-function regexEscape(character) {
+/* 根据 /[\^$+?.()|{}\[\]]/.test(character) 的真假，分别返回 '\\' + character 或 character。 */ function regexEscape(character) {
   return /[\^$+?.()|{}\[\]]/.test(character) ? '\\' + character : character
 }
 
+/* 将忽略模式转换为带否定标记的正则规则，处理锚定、目录和通配符语义。 */
 function matcher(rawPattern) {
   let pattern = rawPattern.replaceAll('\\', '/')
   const negative = pattern.startsWith('!')
@@ -49,6 +52,7 @@ function matcher(rawPattern) {
 }
 
 const matchers = rules.map(matcher)
+/* 按规则顺序判断归一化路径是否被忽略，后续否定规则可恢复包含。 */
 function isIgnored(path) {
   const normalized = path.replaceAll('\\', '/').replace(/^\/+/, '')
   let ignored = false
@@ -94,7 +98,7 @@ if (existsSync(join(root, '.git'))) {
   const candidates = [...protectedPaths, ...ignoredExamples]
   const result = spawnSync('git', ['-C', root, 'check-ignore', '--no-index', '--stdin'], { input: candidates.join('\n') + '\n', encoding: 'utf8' })
   if (result.error || ![0, 1].includes(result.status)) throw result.error ?? new Error('git check-ignore failed: ' + result.stderr.trim())
-  const ignored = new Set(result.stdout.split(/\r?\n/).filter(Boolean).map(path => path.replaceAll('\\', '/')))
+  const ignored = new Set(result.stdout.split(/\r?\n/).filter(Boolean).map(/* 调用 path.replaceAll('\\', '/') 并返回调用结果。 */ path => path.replaceAll('\\', '/')))
   for (const path of protectedPaths) assert(!ignored.has(path), 'Git confirms that a required source/documentation path is ignored: ' + path)
   for (const path of ignoredExamples) assert(ignored.has(path), 'Git does not ignore expected generated/private path: ' + path)
   authority = 'portable matcher + git check-ignore'

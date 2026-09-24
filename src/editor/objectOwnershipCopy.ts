@@ -1,3 +1,4 @@
+/** 对象所有权及继承关系界面的多语言说明。 */
 export const objectOwnershipCopy = {
   en: {
     otherChoices:'Other choices',prefabLayer:'Prefab layer',baseEvents:'Base Event Sheet',logicSource:'Behavior source',

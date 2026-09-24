@@ -1,3 +1,4 @@
+<!-- 网络工作室：配置会话、传输及运行诊断，管理联网测试与授权。 -->
 <template>
   <section class="network-studio" @change.capture="guardNetworkNumber18">
     <header class="studio-header">
@@ -282,15 +283,15 @@ const replayA = ref(''), replayB = ref(''), saveAsset = ref(''), interestX = ref
 const peerCountPresets = [2, 4, 8] as const
 const builtInChannels = ['state', 'input', 'events'], payloadSchemas: NetworkPayloadSchema[] = ['any', 'boolean', 'number', 'integer', 'string', 'vec2', 'object', 'array']
 const nativeInstanceControls = '__TAURI_INTERNALS__' in window
-const networkPackageEnabled = computed(() => packageEnabled(OFFICIAL_NETWORKING_PACKAGE_ID)), selectedEntity = computed(() => physicsState.world.entities.find(entity => entity.id === physicsState.selectedEntityId) ?? null), replicatedSelected = computed(() => Boolean(selectedEntity.value && settings.networking.replicatedEntities.some(item => item.entityUuid === selectedEntity.value?.uuid)))
-const canConnect = computed(() => settings.networking.enabled && settings.networking.permissionGranted && networkState.value?.status !== 'connected')
-const reviewedAdapters = computed(() => reviewedNetworkTransports()), authenticationProviders = computed(() => networkAuthenticationProviders())
-const identityServices = computed(() => reviewedNetworkServices('identity')), lobbyServices = computed(() => reviewedNetworkServices('lobby')), relayServices = computed(() => reviewedNetworkServices('relay'))
-const selectedInstance = computed(() => launchedInstances.value.find(instance => instance.id === selectedInstanceId.value) ?? null)
-const filteredInstanceEvents = computed(() => { const instance = selectedInstance.value; if (!instance) return []; const terms = [instance.id, instance.playerName, instance.logScope].filter(Boolean).map(value => value.toLowerCase()); return (networkState.value?.events ?? []).filter(event => terms.some(term => event.message.toLowerCase().includes(term))).slice(-40).reverse() })
-const securityGuidance = computed(() => networkEncryptionGuidance(settings.networking, reviewedAdapters.value.find(adapter => adapter.id === settings.networking.transportAdapterId)?.encrypted === true))
-const networkingPackage = computed(() => packageState.installed.find(item => item.manifest.id === OFFICIAL_NETWORKING_PACKAGE_ID && item.project && item.enabled) ?? null)
-const multiInstanceLaunchIssue = computed<Parameters<typeof t>[0] | null>(() => {
+const networkPackageEnabled = computed(/* 调用 packageEnabled(OFFICIAL_NETWORKING_PACKAGE_ID) 并返回调用结果。 */ () => packageEnabled(OFFICIAL_NETWORKING_PACKAGE_ID)), selectedEntity = computed(/** 查找当前选中实体，缺失返回空值。 */ () => physicsState.world.entities.find(/* 比较 entity.id 与 physicsState.selectedEntityId，返回严格相等的判断结果。 */ entity => entity.id === physicsState.selectedEntityId) ?? null), replicatedSelected = computed(/** 检查所选实体是否已存在复制配置。 */ () => Boolean(selectedEntity.value && settings.networking.replicatedEntities.some(/* 比较 item.entityUuid 与 selectedEntity.value?.uuid，返回严格相等的判断结果。 */ item => item.entityUuid === selectedEntity.value?.uuid)))
+const canConnect = computed(/* 先计算 settings.networking.enabled && settings.networking.permissionGranted；仅当其为真值时求右侧 networkState.value?.status !== 'connected'，返回短路求值结果。 */ () => settings.networking.enabled && settings.networking.permissionGranted && networkState.value?.status !== 'connected')
+const reviewedAdapters = computed(/* 调用 reviewedNetworkTransports() 并返回调用结果。 */ () => reviewedNetworkTransports()), authenticationProviders = computed(/* 调用 networkAuthenticationProviders() 并返回调用结果。 */ () => networkAuthenticationProviders())
+const identityServices = computed(/* 调用 reviewedNetworkServices('identity') 并返回调用结果。 */ () => reviewedNetworkServices('identity')), lobbyServices = computed(/* 调用 reviewedNetworkServices('lobby') 并返回调用结果。 */ () => reviewedNetworkServices('lobby')), relayServices = computed(/* 调用 reviewedNetworkServices('relay') 并返回调用结果。 */ () => reviewedNetworkServices('relay'))
+const selectedInstance = computed(/** 查找当前选中的已启动网络实例。 */ () => launchedInstances.value.find(/* 比较 instance.id 与 selectedInstanceId.value，返回严格相等的判断结果。 */ instance => instance.id === selectedInstanceId.value) ?? null)
+const filteredInstanceEvents = computed(/** 以实例编号、玩家名和日志范围筛选相关网络事件，取最近四十条逆序显示。 */ () => { const instance = selectedInstance.value; if (!instance) return []; const terms = [instance.id, instance.playerName, instance.logScope].filter(Boolean).map(/* 调用 value.toLowerCase() 并返回调用结果。 */ value => value.toLowerCase()); return (networkState.value?.events ?? []).filter(/* 调用 terms.some(term => event.message.toLowerCase().includes(term)) 并返回调用结果。 */ event => terms.some(/* 调用 event.message.toLowerCase().includes(term) 并返回调用结果。 */ term => event.message.toLowerCase().includes(term))).slice(-40).reverse() })
+const securityGuidance = computed(/** 根据网络设置及已审核适配器的加密能力生成指导说明。 */ () => networkEncryptionGuidance(settings.networking, reviewedAdapters.value.find(/* 比较 adapter.id 与 settings.networking.transportAdapterId，返回严格相等的判断结果。 */ adapter => adapter.id === settings.networking.transportAdapterId)?.encrypted === true))
+const networkingPackage = computed(/** 查找项目中已启用的官方联网包。 */ () => packageState.installed.find(/* 先计算 item.manifest.id === OFFICIAL_NETWORKING_PACKAGE_ID && item.project；仅当其为真值时求右侧 item.enabled，返回短路求值结果。 */ item => item.manifest.id === OFFICIAL_NETWORKING_PACKAGE_ID && item.project && item.enabled) ?? null)
+const multiInstanceLaunchIssue = computed<Parameters<typeof t>[0] | null>(/** 依序检查桌面、授权、主机角色、原生 UDP、内置服务及 Windows 单文件构建等多实例先决条件。 */ () => {
   if (!nativeInstanceControls) return 'multiInstanceRequiresDesktop'
   if (!networkPackageEnabled.value) return 'multiInstanceRequiresPackage'
   if (!settings.networking.enabled) return 'multiInstanceRequiresNetworking'
@@ -306,56 +307,56 @@ const multiInstanceLaunchIssue = computed<Parameters<typeof t>[0] | null>(() => 
   if (!buildSettings.packageIntoExecutable) return 'multiInstanceRequiresPackagedExecutable'
   return null
 })
-const multiInstancePrerequisiteReason = computed(() => multiInstanceLaunchIssue.value ? t(multiInstanceLaunchIssue.value) : '')
-const canLaunchInstances = computed(() => multiInstanceLaunchIssue.value === null)
-const networkStatusLabel = computed(() => t(({ disabled: 'disabled', 'permission-required': 'permissionRequired', connecting: 'connecting', connected: 'connected', reconnecting: 'reconnecting', error: 'networkError' } as const)[networkState.value?.status ?? 'disabled']))
-const multiplayerReplayAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'replay' && readTextAsset(asset.uuid)?.includes('nova-multiplayer-replay')))
-const multiplayerSaveAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'replay' && readTextAsset(asset.uuid)?.includes('nova-multiplayer-save')))
+const multiInstancePrerequisiteReason = computed(/* 根据 multiInstanceLaunchIssue.value 的真假，分别返回 t(multiInstanceLaunchIssue.value) 或 ''。 */ () => multiInstanceLaunchIssue.value ? t(multiInstanceLaunchIssue.value) : '')
+const canLaunchInstances = computed(/* 比较 multiInstanceLaunchIssue.value 与 null，返回严格相等的判断结果。 */ () => multiInstanceLaunchIssue.value === null)
+const networkStatusLabel = computed(/** 把连接状态转换为本地化标签。 */ () => t(({ disabled: 'disabled', 'permission-required': 'permissionRequired', connecting: 'connecting', connected: 'connected', reconnecting: 'reconnecting', error: 'networkError' } as const)[networkState.value?.status ?? 'disabled']))
+const multiplayerReplayAssets = computed(/** 筛选包含多人重放格式标记的重放资源。 */ () => assetState.records.filter(/* 先计算 asset.assetType === 'replay'；仅当其为真值时求右侧 readTextAsset(asset.uuid)?.includes('nova-multiplayer-replay')，返回短路求值结果。 */ asset => asset.assetType === 'replay' && readTextAsset(asset.uuid)?.includes('nova-multiplayer-replay')))
+const multiplayerSaveAssets = computed(/** 筛选包含多人存档格式标记的重放资源。 */ () => assetState.records.filter(/* 先计算 asset.assetType === 'replay'；仅当其为真值时求右侧 readTextAsset(asset.uuid)?.includes('nova-multiplayer-save')，返回短路求值结果。 */ asset => asset.assetType === 'replay' && readTextAsset(asset.uuid)?.includes('nova-multiplayer-save')))
 
-async function loadModule() { moduleRef.value = await networkingModule(); networkState.value = moduleRef.value.networkingState; return moduleRef.value }
-async function safelyLoadModule() { try { return await loadModule() } catch (error) { reportRecoverableError(error, 'Load optional networking studio', 'Runtime'); return null } }
-function handleTabKeydown(event: KeyboardEvent) {
+/** 加载联网模块并绑定其状态，返回模块实例。 */ async function loadModule() { moduleRef.value = await networkingModule(); networkState.value = moduleRef.value.networkingState; return moduleRef.value }
+/** 安全加载联网模块，失败报告可恢复错误并返回空值。 */ async function safelyLoadModule() { try { return await loadModule() } catch (error) { reportRecoverableError(error, 'Load optional networking studio', 'Runtime'); return null } }
+/** 用左右键、Home 和 End 切换网络标签，下一帧聚焦对应按钮。 */ function handleTabKeydown(event: KeyboardEvent) {
   const supported = ['ArrowLeft', 'ArrowRight', 'Home', 'End']
   if (!supported.includes(event.key)) return
   event.preventDefault()
-  const current = tabs.findIndex(tab => tab.id === activeTab.value)
+  const current = tabs.findIndex(/* 比较 tab.id 与 activeTab.value，返回严格相等的判断结果。 */ tab => tab.id === activeTab.value)
   const next = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : (current + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length
   activeTab.value = tabs[next].id
-  requestAnimationFrame(() => document.getElementById(`network-studio-tab-${tabs[next].id}`)?.focus())
+  requestAnimationFrame(/* 调用 document.getElementById(`network-studio-tab-${tabs[next].id}`)?.focus() 并返回调用结果。 */ () => document.getElementById(`network-studio-tab-${tabs[next].id}`)?.focus())
 }
-function commit() { void nextTick(() => { loadProductionSettings(serializeProductionSettings()); pushHistory('Edit networking settings', 'project:networking') }) }
-function setPeerCount(count: typeof peerCountPresets[number]) { settings.networking.multiInstance.peerCount = count; commit() }
-function instanceStatus(instance: LaunchedNetworkInstance): 'running' | 'exited' | 'stopped' | 'unknown' { return instance.status === 'stopped' ? 'stopped' : instance.status === 'exited' || instance.running === false ? 'exited' : instance.status === 'running' || instance.running === true || !instance.status ? 'running' : 'unknown' }
-function instanceStatusLabel(instance: LaunchedNetworkInstance) { return t(({ running: 'instanceRunning', exited: 'instanceExited', stopped: 'instanceStopped', unknown: 'instanceUnknown' } as const)[instanceStatus(instance)]) }
-function installNetworking() { if (enableOfficialPackage(OFFICIAL_NETWORKING_PACKAGE_ID)) { pushHistory('Install Nova Networking package', 'project:packages'); void safelyLoadModule() } }
-async function grantPermission() { if (!await requestConfirmation({ title: t('grantNetworkPermission'), message: t('networkPermissionPrompt'), confirmLabel: t('grant'), cancelLabel: t('cancel'), destructive: false })) return; settings.networking.permissionGranted = true; settings.networking.enabled = true; commit() }
-async function revokePermission() { if (!await requestConfirmation({ title: t('revokeNetworkPermission'), message: t('revokeNetworkPermissionPrompt'), confirmLabel: t('revoke'), cancelLabel: t('cancel'), destructive: true })) return; await disconnect(); settings.networking.permissionGranted = false; settings.networking.autoStart = false; commit() }
-async function connect() { connectionEdited18.value = false; networkBusy.value = true; try { moduleRef.value = await startProductionNetworking(); networkState.value = moduleRef.value.networkingState } catch (error) { if (networkState.value) networkState.value.lastError = error instanceof Error ? error.message : String(error) } finally { networkBusy.value = false } }
-async function reconnect18() { await disconnect(); await connect() }
-async function disconnect() { networkBusy.value = true; try { await stopProductionNetworking(); stopLocalLobbyAdvertisement() } finally { networkBusy.value = false; if (moduleRef.value) networkState.value = moduleRef.value.networkingState } }
-function addChannel() { settings.networking.channels.push({ id: `channel-${settings.networking.channels.length + 1}`, delivery: 'reliable-ordered', maximumPayloadBytes: 8192, messagesPerSecond: 60, priority: 0 }); commit() }
-function removeChannel(id: string) { if (builtInChannels.includes(id)) return; settings.networking.channels = settings.networking.channels.filter(item => item.id !== id); for (const rpc of settings.networking.rpcContracts) if (rpc.channelId === id) rpc.channelId = 'events'; commit() }
-function addRpc() { settings.networking.rpcContracts.push({ name: `rpc-${settings.networking.rpcContracts.length + 1}`, channelId: settings.networking.channels.find(item => item.delivery === 'reliable-ordered')?.id ?? settings.networking.channels[0].id, direction: 'client-to-server', authority: 'any', payloadSchema: 'any', maximumPayloadBytes: 8192, callsPerSecond: 30 }); commit() }
-function removeRpc(name: string) { settings.networking.rpcContracts = settings.networking.rpcContracts.filter(item => item.name !== name); commit() }
-function replicateSelected() { const entity = selectedEntity.value; if (!entity || replicatedSelected.value) return; settings.networking.replicatedEntities.push({ entityUuid: entity.uuid, authority: 'server', properties: ['transform', 'rotation', 'velocity'], interpolate: true, predict: false, ownerPeerId: '', alwaysRelevant: false, interestRadius: settings.networking.interest.defaultRadius, sceneUuid: sceneManager.activeSceneUuid }); commit() }
-function removeReplication(uuid: string) { settings.networking.replicatedEntities = settings.networking.replicatedEntities.filter(item => item.entityUuid !== uuid); commit() }
-function entityName(uuid: string) { return physicsState.world.entities.find(entity => entity.uuid === uuid)?.name ?? uuid }
-function recordReplay() { beginMultiplayerReplayRecording(networkState.value?.peerDetails.map(peer => peer.id) ?? []) }
-function finishReplay() { const document = stopMultiplayerReplayRecording(physicsState.globalSettings.tickRate), asset = createTextAsset(`Multiplayer Replay ${new Date().toISOString().replace(/[:.]/g, '-')}`, 'replay', JSON.stringify(document, null, 2), 'Assets/Replays'); replayA.value ||= asset.uuid; replayB.value = asset.uuid; pushHistory('Record multiplayer replay') }
-function compareReplays() { try { const first = readTextAsset(replayA.value), second = readTextAsset(replayB.value); if (first && second) compareMultiplayerReplays(normalizeMultiplayerReplay(JSON.parse(first)), normalizeMultiplayerReplay(JSON.parse(second))) } catch (error) { reportRecoverableError(error, 'Compare multiplayer replays', 'Runtime') } }
-async function captureSessionSave() { try { const module = await loadModule(), document = module.multiplayerSave(), asset = createTextAsset(`Multiplayer Save ${new Date().toISOString().replace(/[:.]/g, '-')}`, 'replay', JSON.stringify(document, null, 2), 'Assets/Replays'); saveAsset.value = asset.uuid; pushHistory('Capture multiplayer session state') } catch (error) { reportRecoverableError(error, 'Capture multiplayer session state', 'Runtime') } }
-async function restoreSessionSave() { try { const source = readTextAsset(saveAsset.value); if (!source) return; const module = await loadModule(), result = module.restoreMultiplayerSave(JSON.parse(source)); pushHistory(`Restore multiplayer session state (${result.restored})`) } catch (error) { reportRecoverableError(error, 'Restore multiplayer session state', 'Runtime') } }
-function download(name: string, source: string) { const url = URL.createObjectURL(new Blob([source], { type: 'application/json' })), anchor = document.createElement('a'); anchor.href = url; anchor.download = name; anchor.click(); setTimeout(() => URL.revokeObjectURL(url), 0) }
-async function downloadDiagnostics() { try { const module = await loadModule(); download(`nova-network-diagnostics-${Date.now()}.json`, module.captureNetworkDiagnostics()) } catch (error) { reportRecoverableError(error, 'Export network diagnostics', 'Runtime') } }
-function discoverLocalLobbies() { try { startLocalLobbyDirectory() } catch (error) { reportRecoverableError(error, 'Discover local lobbies', 'Runtime') } }
-async function hostLocalLobby() { settings.networking.sessionMode = 'local'; settings.networking.role = 'host'; commit(); advertiseLocalLobby({ sessionName: settings.networking.sessionName, hostName: settings.networking.playerName, peers: networkState.value?.peers ?? 0, maximumPeers: settings.networking.maxPeers, schemaVersion: settings.networking.schemaVersion }); await connect() }
-async function joinLocalLobby(sessionName: string) { settings.networking.sessionMode = 'local'; settings.networking.role = 'client'; settings.networking.sessionName = sessionName; commit(); await connect() }
-async function publishInterest() { const module = await loadModule(); if (!module.setNetworkInterest([interestX.value, interestY.value], settings.networking.interest.defaultRadius, sceneManager.activeSceneUuid)) multiInstanceError.value = t('invalidInterest') }
-async function transferAuthority() { const module = await loadModule(); if (!module.transferNetworkAuthority(authorityEntity.value, authorityPeer.value)) multiInstanceError.value = t('authorityTransferRejected') }
-async function handoffSceneToPeer() { const module = await loadModule(); if (!module.handoffNetworkScene(handoffPeer.value, handoffScene.value, handoffSpawnTag.value)) multiInstanceError.value = t('sceneHandoffRejected') }
-function openInstanceLogs(instance: LaunchedNetworkInstance) { selectedInstanceId.value = instance.id; instanceDetailMode.value = 'logs' }
-function openInstanceInspector(instance: LaunchedNetworkInstance) { selectedInstanceId.value = instance.id; instanceDetailMode.value = 'inspector' }
-async function stopNetworkInstance(instance: LaunchedNetworkInstance) {
+/** 等待模型更新后归一化网络设置并记录项目范围历史。 */ function commit() { void nextTick(/** 重新载入序列化生产设置并记录网络历史。 */ () => { loadProductionSettings(serializeProductionSettings()); pushHistory('Edit networking settings', 'project:networking') }) }
+/** 设置多实例对等端数量并保存配置。 */ function setPeerCount(count: typeof peerCountPresets[number]) { settings.networking.multiInstance.peerCount = count; commit() }
+/** 结合状态字段与运行标志判断实例为运行、退出、已停止或未知。 */ function instanceStatus(instance: LaunchedNetworkInstance): 'running' | 'exited' | 'stopped' | 'unknown' { return instance.status === 'stopped' ? 'stopped' : instance.status === 'exited' || instance.running === false ? 'exited' : instance.status === 'running' || instance.running === true || !instance.status ? 'running' : 'unknown' }
+/** 将实例状态映射为本地化标签。 */ function instanceStatusLabel(instance: LaunchedNetworkInstance) { return t(({ running: 'instanceRunning', exited: 'instanceExited', stopped: 'instanceStopped', unknown: 'instanceUnknown' } as const)[instanceStatus(instance)]) }
+/** 启用官方联网包，成功记录安装历史并加载模块。 */ function installNetworking() { if (enableOfficialPackage(OFFICIAL_NETWORKING_PACKAGE_ID)) { pushHistory('Install Nova Networking package', 'project:packages'); void safelyLoadModule() } }
+/** 确认后授予网络权限并启用联网，保存配置。 */ async function grantPermission() { if (!await requestConfirmation({ title: t('grantNetworkPermission'), message: t('networkPermissionPrompt'), confirmLabel: t('grant'), cancelLabel: t('cancel'), destructive: false })) return; settings.networking.permissionGranted = true; settings.networking.enabled = true; commit() }
+/** 确认后断开联网、撤销权限并关闭自动启动，保存配置。 */ async function revokePermission() { if (!await requestConfirmation({ title: t('revokeNetworkPermission'), message: t('revokeNetworkPermissionPrompt'), confirmLabel: t('revoke'), cancelLabel: t('cancel'), destructive: true })) return; await disconnect(); settings.networking.permissionGranted = false; settings.networking.autoStart = false; commit() }
+/** 清除待重连标记并启动联网，捕获连接错误且始终清理忙碌状态。 */ async function connect() { connectionEdited18.value = false; networkBusy.value = true; try { moduleRef.value = await startProductionNetworking(); networkState.value = moduleRef.value.networkingState } catch (error) { if (networkState.value) networkState.value.lastError = error instanceof Error ? error.message : String(error) } finally { networkBusy.value = false } }
+/** 先断开再重新连接。 */ async function reconnect18() { await disconnect(); await connect() }
+/** 停止联网及本地大厅广播，结束后同步模块状态并清除忙碌标记。 */ async function disconnect() { networkBusy.value = true; try { await stopProductionNetworking(); stopLocalLobbyAdvertisement() } finally { networkBusy.value = false; if (moduleRef.value) networkState.value = moduleRef.value.networkingState } }
+/** 添加默认可靠有序通道并保存。 */ function addChannel() { settings.networking.channels.push({ id: `channel-${settings.networking.channels.length + 1}`, delivery: 'reliable-ordered', maximumPayloadBytes: 8192, messagesPerSecond: 60, priority: 0 }); commit() }
+/** 禁止删除内置通道；删除自定义通道后把引用它的 RPC 迁至 events 通道并保存。 */ function removeChannel(id: string) { if (builtInChannels.includes(id)) return; settings.networking.channels = settings.networking.channels.filter(/* 比较 item.id 与 id，返回严格不等的判断结果。 */ item => item.id !== id); for (const rpc of settings.networking.rpcContracts) if (rpc.channelId === id) rpc.channelId = 'events'; commit() }
+/** 为首个可靠有序或首通道添加默认客户端到服务端 RPC 契约并保存。 */ function addRpc() { settings.networking.rpcContracts.push({ name: `rpc-${settings.networking.rpcContracts.length + 1}`, channelId: settings.networking.channels.find(/* 比较 item.delivery 与 'reliable-ordered'，返回严格相等的判断结果。 */ item => item.delivery === 'reliable-ordered')?.id ?? settings.networking.channels[0].id, direction: 'client-to-server', authority: 'any', payloadSchema: 'any', maximumPayloadBytes: 8192, callsPerSecond: 30 }); commit() }
+/** 按名称删除 RPC 契约并保存。 */ function removeRpc(name: string) { settings.networking.rpcContracts = settings.networking.rpcContracts.filter(/* 比较 item.name 与 name，返回严格不等的判断结果。 */ item => item.name !== name); commit() }
+/** 未被复制的选中实体添加服务端权威位置、旋转和速度复制设置并保存。 */ function replicateSelected() { const entity = selectedEntity.value; if (!entity || replicatedSelected.value) return; settings.networking.replicatedEntities.push({ entityUuid: entity.uuid, authority: 'server', properties: ['transform', 'rotation', 'velocity'], interpolate: true, predict: false, ownerPeerId: '', alwaysRelevant: false, interestRadius: settings.networking.interest.defaultRadius, sceneUuid: sceneManager.activeSceneUuid }); commit() }
+/** 按实体标识移除复制配置并保存。 */ function removeReplication(uuid: string) { settings.networking.replicatedEntities = settings.networking.replicatedEntities.filter(/* 比较 item.entityUuid 与 uuid，返回严格不等的判断结果。 */ item => item.entityUuid !== uuid); commit() }
+/** 查找实体名称，缺失显示标识。 */ function entityName(uuid: string) { return physicsState.world.entities.find(/* 比较 entity.uuid 与 uuid，返回严格相等的判断结果。 */ entity => entity.uuid === uuid)?.name ?? uuid }
+/** 以当前对等端编号启动多人重放录制。 */ function recordReplay() { beginMultiplayerReplayRecording(networkState.value?.peerDetails.map(/* 返回 peer.id 的当前值。 */ peer => peer.id) ?? []) }
+/** 停止录制并生成重放资源，更新比较选择并记录历史。 */ function finishReplay() { const document = stopMultiplayerReplayRecording(physicsState.globalSettings.tickRate), asset = createTextAsset(`Multiplayer Replay ${new Date().toISOString().replace(/[:.]/g, '-')}`, 'replay', JSON.stringify(document, null, 2), 'Assets/Replays'); replayA.value ||= asset.uuid; replayB.value = asset.uuid; pushHistory('Record multiplayer replay') }
+/** 读取并规范化两份重放后比较，异常报告可恢复错误。 */ function compareReplays() { try { const first = readTextAsset(replayA.value), second = readTextAsset(replayB.value); if (first && second) compareMultiplayerReplays(normalizeMultiplayerReplay(JSON.parse(first)), normalizeMultiplayerReplay(JSON.parse(second))) } catch (error) { reportRecoverableError(error, 'Compare multiplayer replays', 'Runtime') } }
+/** 捕获多人会话存档为资源，选中并记录历史，失败报告错误。 */ async function captureSessionSave() { try { const module = await loadModule(), document = module.multiplayerSave(), asset = createTextAsset(`Multiplayer Save ${new Date().toISOString().replace(/[:.]/g, '-')}`, 'replay', JSON.stringify(document, null, 2), 'Assets/Replays'); saveAsset.value = asset.uuid; pushHistory('Capture multiplayer session state') } catch (error) { reportRecoverableError(error, 'Capture multiplayer session state', 'Runtime') } }
+/** 读取并恢复多人存档，记录恢复实体数量，失败报告错误。 */ async function restoreSessionSave() { try { const source = readTextAsset(saveAsset.value); if (!source) return; const module = await loadModule(), result = module.restoreMultiplayerSave(JSON.parse(source)); pushHistory(`Restore multiplayer session state (${result.restored})`) } catch (error) { reportRecoverableError(error, 'Restore multiplayer session state', 'Runtime') } }
+/** 下载 JSON 内容，稍后释放临时对象地址。 */ function download(name: string, source: string) { const url = URL.createObjectURL(new Blob([source], { type: 'application/json' })), anchor = document.createElement('a'); anchor.href = url; anchor.download = name; anchor.click(); setTimeout(/* 调用 URL.revokeObjectURL(url) 并返回调用结果。 */ () => URL.revokeObjectURL(url), 0) }
+/** 加载模块并下载网络诊断，异常报告可恢复错误。 */ async function downloadDiagnostics() { try { const module = await loadModule(); download(`nova-network-diagnostics-${Date.now()}.json`, module.captureNetworkDiagnostics()) } catch (error) { reportRecoverableError(error, 'Export network diagnostics', 'Runtime') } }
+/** 启动本地大厅发现，失败报告可恢复错误。 */ function discoverLocalLobbies() { try { startLocalLobbyDirectory() } catch (error) { reportRecoverableError(error, 'Discover local lobbies', 'Runtime') } }
+/** 设置本地主机模式并保存，广播大厅信息后连接。 */ async function hostLocalLobby() { settings.networking.sessionMode = 'local'; settings.networking.role = 'host'; commit(); advertiseLocalLobby({ sessionName: settings.networking.sessionName, hostName: settings.networking.playerName, peers: networkState.value?.peers ?? 0, maximumPeers: settings.networking.maxPeers, schemaVersion: settings.networking.schemaVersion }); await connect() }
+/** 设置本地客户端及目标会话名称，保存后连接。 */ async function joinLocalLobby(sessionName: string) { settings.networking.sessionMode = 'local'; settings.networking.role = 'client'; settings.networking.sessionName = sessionName; commit(); await connect() }
+/** 发布指定兴趣位置、半径及场景，拒绝时显示无效兴趣提示。 */ async function publishInterest() { const module = await loadModule(); if (!module.setNetworkInterest([interestX.value, interestY.value], settings.networking.interest.defaultRadius, sceneManager.activeSceneUuid)) multiInstanceError.value = t('invalidInterest') }
+/** 转移指定实体权威，拒绝时显示提示。 */ async function transferAuthority() { const module = await loadModule(); if (!module.transferNetworkAuthority(authorityEntity.value, authorityPeer.value)) multiInstanceError.value = t('authorityTransferRejected') }
+/** 向指定端转交场景及出生标签，拒绝时显示提示。 */ async function handoffSceneToPeer() { const module = await loadModule(); if (!module.handoffNetworkScene(handoffPeer.value, handoffScene.value, handoffSpawnTag.value)) multiInstanceError.value = t('sceneHandoffRejected') }
+/** 选中实例并打开其日志详情。 */ function openInstanceLogs(instance: LaunchedNetworkInstance) { selectedInstanceId.value = instance.id; instanceDetailMode.value = 'logs' }
+/** 选中实例并打开其检查器详情。 */ function openInstanceInspector(instance: LaunchedNetworkInstance) { selectedInstanceId.value = instance.id; instanceDetailMode.value = 'inspector' }
+/** 确认后停止指定原生实例，刷新状态并显示结果；失败报告可恢复错误，结束清除忙碌标记。 */ async function stopNetworkInstance(instance: LaunchedNetworkInstance) {
   if (!nativeInstanceControls) return
   if (!await requestConfirmation({ title: t('stopInstanceLabel', { name: instance.playerName }), message: t('stopInstancePrompt', { name: instance.playerName }), confirmLabel: t('stop'), cancelLabel: t('cancel'), destructive: true })) return
   multiInstanceError.value = ''; multiInstanceNotice.value = ''; networkBusy.value = true
@@ -367,7 +368,7 @@ async function stopNetworkInstance(instance: LaunchedNetworkInstance) {
     multiInstanceNotice.value = stopped ? t('networkInstanceStopped', { name: instance.playerName }) : t('networkInstanceNotFound', { name: instance.playerName })
   } catch (error) { multiInstanceError.value = error instanceof Error ? error.message : String(error); reportRecoverableError(error, 'Stop network peer', 'Runtime') } finally { networkBusy.value = false }
 }
-async function refreshLaunchedInstances() {
+/** 查询原生网络实例状态并显示数量，失败记录错误，始终清除忙碌标记。 */ async function refreshLaunchedInstances() {
   if (!nativeInstanceControls) return
   multiInstanceError.value = ''; multiInstanceNotice.value = ''; networkBusy.value = true
   try {
@@ -376,7 +377,7 @@ async function refreshLaunchedInstances() {
     multiInstanceNotice.value = t('networkInstancesRefreshed', { count: launchedInstances.value.length })
   } catch (error) { multiInstanceError.value = error instanceof Error ? error.message : String(error); reportRecoverableError(error, 'Refresh network peer status', 'Runtime') } finally { networkBusy.value = false }
 }
-async function stopLaunchedInstances() {
+/** 确认后停止全部原生实例并清空列表，失败记录错误，始终清除忙碌标记。 */ async function stopLaunchedInstances() {
   if (!nativeInstanceControls || !launchedInstances.value.length) return
   if (!await requestConfirmation({ title: t('stopAllInstances'), message: t('stopAllInstancesPrompt'), confirmLabel: t('stopAllInstances'), cancelLabel: t('cancel'), destructive: true })) return
   multiInstanceError.value = ''; multiInstanceNotice.value = ''; networkBusy.value = true
@@ -387,12 +388,12 @@ async function stopLaunchedInstances() {
     multiInstanceNotice.value = t('networkInstancesStopped')
   } catch (error) { multiInstanceError.value = error instanceof Error ? error.message : String(error); reportRecoverableError(error, 'Stop network peers', 'Runtime') } finally { networkBusy.value = false }
 }
-async function buildAndLaunchInstances() {
+/** 检查先决条件后构建游戏，查找单文件可执行产物并通过原生命令启动计划数量实例，记录结果或错误。 */ async function buildAndLaunchInstances() {
   multiInstanceError.value = ''; multiInstanceNotice.value = ''; networkBusy.value = true
   try {
     if (!canLaunchInstances.value) throw new Error(multiInstancePrerequisiteReason.value || t('multiInstancePrerequisites'))
     const plan = createNetworkPlayPlan(settings.networking.multiInstance.peerCount, settings.networking.sessionName), result = await buildGame(false)
-    const executableName = result.files.find(file => /^[^/\\]+\.exe$/i.test(file))
+    const executableName = result.files.find(/* 调用 /^[^/\\]+\.exe$/i.test(file) 并返回调用结果。 */ file => /^[^/\\]+\.exe$/i.test(file))
     if (!executableName) throw new Error(t('multiInstanceExecutableMissing'))
     const executable = `${result.outputPath.replace(/[\\/]+$/, '')}\\${executableName}`
     const { invoke } = await import('@tauri-apps/api/core')
@@ -401,15 +402,15 @@ async function buildAndLaunchInstances() {
   } catch (error) { multiInstanceError.value = error instanceof Error ? error.message : String(error); reportRecoverableError(error, 'Build and launch network peers', 'Runtime') } finally { networkBusy.value = false }
 }
 
-const connectionIdentity18 = () => JSON.stringify([settings.networking.role, settings.networking.sessionMode, settings.networking.sessionName, settings.networking.schemaVersion, settings.networking.transport, settings.networking.transportAdapterId, settings.networking.endpoint, settings.networking.bindAddress, settings.networking.authentication, settings.networking.services, settings.networking.channels.map(channel => [channel.id, channel.delivery])])
-watch(connectionIdentity18, async (next, previous) => {
+const connectionIdentity18 = /** 序列化连接角色、会话、版本、传输、认证、服务及通道配置作为变化签名。 */ () => JSON.stringify([settings.networking.role, settings.networking.sessionMode, settings.networking.sessionName, settings.networking.schemaVersion, settings.networking.transport, settings.networking.transportAdapterId, settings.networking.endpoint, settings.networking.bindAddress, settings.networking.authentication, settings.networking.services, settings.networking.channels.map(/* 返回按声明顺序构造的数组 [channel.id, channel.delivery]。 */ channel => [channel.id, channel.delivery])])
+watch(connectionIdentity18, /** 活动连接参数变化时标记需要重新连接并断开，禁用或待授权状态不处理。 */ async (next, previous) => {
   if (next === previous || !networkState.value || networkState.value.status === 'disabled' || networkState.value.status === 'permission-required') return
   connectionEdited18.value = true
   await disconnect()
 })
-watch(networkPackageEnabled, enabled => { if (enabled) void safelyLoadModule() })
-onMounted(() => { if (networkPackageEnabled.value) void safelyLoadModule() })
-onBeforeUnmount(() => stopLocalLobbyDirectory())
+watch(networkPackageEnabled, /** 联网包启用时安全加载模块。 */ enabled => { if (enabled) void safelyLoadModule() })
+onMounted(/** 挂载时若联网包启用则加载模块。 */ () => { if (networkPackageEnabled.value) void safelyLoadModule() })
+onBeforeUnmount(/* 调用 stopLocalLobbyDirectory() 并返回调用结果。 */ () => stopLocalLobbyDirectory())
 </script>
 
 <style scoped>

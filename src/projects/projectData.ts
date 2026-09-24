@@ -1,3 +1,4 @@
+/** 项目文档模型：规范持久化数据，区分用户数据与生成数据，计算语义差异并校验和修复引用。 */
 import { NOVA_ENGINE_VERSION, NOVA_PROJECT_FORMAT, NOVA_PROJECT_FORMAT_MAJOR, NOVA_PROJECT_SCHEMA_VERSION } from './projectFormat'
 import { manifestCompatibility, normalizeProjectManifest } from './projectManifest'
 import { assetSourceBytes, sha256Bytes } from '../assets/contentHash'
@@ -20,7 +21,7 @@ const MAX_PROJECT_SCENES = 4_096
 const MAX_PROJECT_ENTITIES = 100_000
 const MAX_PROJECT_ASSETS = 100_000
 
-function projectResourceBudgetIssue(project: Record<string, unknown>): string | null {
+/** 迭代检查场景、资源、实体、结构节点和嵌套深度预算，超限时返回首个问题。 */ function projectResourceBudgetIssue(project: Record<string, unknown>): string | null {
   const scenes = Array.isArray(project.scenes) ? project.scenes : []
   const assets = Array.isArray(project.assets) ? project.assets : []
   if (scenes.length > MAX_PROJECT_SCENES) return `Project contains more than ${MAX_PROJECT_SCENES.toLocaleString()} scenes.`
@@ -47,13 +48,13 @@ function projectResourceBudgetIssue(project: Record<string, unknown>): string | 
   return null
 }
 
-function clone<T>(value: T): T { return JSON.parse(JSON.stringify(value)) as T }
-function normalizedNumber(value: number): number { return Object.is(value, -0) ? 0 : value }
+/** 经 JSON 序列化复制项目可保存值，避免修改输入对象。 */ function clone<T>(value: T): T { return JSON.parse(JSON.stringify(value)) as T }
+/* 根据 Object.is(value, -0) 的真假，分别返回 0 或 value。 */ function normalizedNumber(value: number): number { return Object.is(value, -0) ? 0 : value }
 
 const UUID_FIELD = /(?:^uuid$|Uuid$|UUID$|^projectUuid$)/
 const UUID_VALUE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
-function canonicalString(value: string, key: string): string {
+/** 将身份字段及已识别资源 URI 中的 UUID 和协议名统一为小写，其余字符串保持不变。 */ function canonicalString(value: string, key: string): string {
   if (UUID_FIELD.test(key) && UUID_VALUE.test(value)) return value.toLowerCase()
   if (/^(?:asset|scene|prefab|resource):\/\/[0-9a-f-]{36}$/i.test(value)) {
     const [scheme, identity] = value.split('://')
@@ -62,27 +63,27 @@ function canonicalString(value: string, key: string): string {
   return value
 }
 
-function canonicalValue(value: unknown, path: string, key = ''): unknown {
+/** 递归拒绝非有限数值并规范化对象键、身份字符串与指定集合顺序，保留有语义的数组顺序。 */ function canonicalValue(value: unknown, path: string, key = ''): unknown {
   if (typeof value === 'number') {
     if (!Number.isFinite(value)) throw new Error(`Non-finite number at ${path || '<root>'}`)
     return normalizedNumber(value)
   }
   if (Array.isArray(value)) {
-    const items = value.map((item, index) => canonicalValue(item, `${path}[${index}]`))
-    if (path === 'assets') return items.sort((a, b) => String((a as Record<string, unknown>)?.path ?? '').localeCompare(String((b as Record<string, unknown>)?.path ?? '')) || String((a as Record<string, unknown>)?.uuid ?? '').localeCompare(String((b as Record<string, unknown>)?.uuid ?? '')))
-    if (path === 'assetFolders' || path.endsWith('.buildPresets')) return [...new Set(items.map(String))].sort((a, b) => a.localeCompare(b))
-    if (path.endsWith('.dependencies') || path.endsWith('.reverseDependencies')) return [...new Set(items.map(String))].sort((a, b) => a.localeCompare(b))
+    const items = value.map(/* 调用 canonicalValue(item, `${path}[${index}]`) 并返回调用结果。 */ (item, index) => canonicalValue(item, `${path}[${index}]`))
+    if (path === 'assets') return items.sort(/** 先按资源路径排序，路径相同时按 UUID 稳定比较。 */ (a, b) => String((a as Record<string, unknown>)?.path ?? '').localeCompare(String((b as Record<string, unknown>)?.path ?? '')) || String((a as Record<string, unknown>)?.uuid ?? '').localeCompare(String((b as Record<string, unknown>)?.uuid ?? '')))
+    if (path === 'assetFolders' || path.endsWith('.buildPresets')) return [...new Set(items.map(String))].sort(/* 调用 a.localeCompare(b) 并返回调用结果。 */ (a, b) => a.localeCompare(b))
+    if (path.endsWith('.dependencies') || path.endsWith('.reverseDependencies')) return [...new Set(items.map(String))].sort(/* 调用 a.localeCompare(b) 并返回调用结果。 */ (a, b) => a.localeCompare(b))
     return items
   }
   if (typeof value === 'string') return canonicalString(value, key)
   if (!value || typeof value !== 'object') return value
   const source = value as Record<string, unknown>, output: Record<string, unknown> = Object.create(null)
-  for (const childKey of Object.keys(source).sort((a, b) => a.localeCompare(b))) output[childKey] = canonicalValue(source[childKey], path ? `${path}.${childKey}` : childKey, childKey)
+  for (const childKey of Object.keys(source).sort(/* 调用 a.localeCompare(b) 并返回调用结果。 */ (a, b) => a.localeCompare(b))) output[childKey] = canonicalValue(source[childKey], path ? `${path}.${childKey}` : childKey, childKey)
   return output
 }
 
 /** Canonical project JSON is UTF-8 text, LF terminated, two-space indented, and lexicographically keyed. */
-export function canonicalProjectText(source: string | unknown): string {
+/** 检查项目文本与结构预算后输出规范排序、缩进及末尾换行的 JSON。 */ export function canonicalProjectText(source: string | unknown): string {
   if (typeof source === 'string' && source.length > MAX_PROJECT_DOCUMENT_CHARACTERS) throw new Error('Project text exceeds the safe size limit.')
   const value = typeof source === 'string' ? JSON.parse(source) : source
   if (value && typeof value === 'object') { const issue = projectResourceBudgetIssue(value as Record<string, unknown>); if (issue) throw new Error(issue) }
@@ -103,7 +104,7 @@ export interface ProjectDataSeparation {
  * The portable project document remains self-contained, while transaction and
  * folder exporters can write `generated` below `.nova/imported/` and rebuild it.
  */
-export function separateAuthoredAndGeneratedProjectData(source: string | unknown): ProjectDataSeparation {
+/** 复制项目并提取资源导入运行状态，作者数据保留稳定导入信息，生成数据另按路径排序。 */ export function separateAuthoredAndGeneratedProjectData(source: string | unknown): ProjectDataSeparation {
   const project = (typeof source === 'string' ? JSON.parse(source) : clone(source)) as Record<string, unknown>
   const authored = clone(project)
   const authoredAssets = Array.isArray(authored.assets) ? authored.assets as Array<Record<string, unknown>> : []
@@ -120,18 +121,18 @@ export function separateAuthoredAndGeneratedProjectData(source: string | unknown
         status: pipeline.status ?? 'ready'
       }
     })
-    asset.pipeline = Object.fromEntries(Object.entries(pipeline).filter(([field]) => !['cacheHit', 'error', 'lastValidSource', 'status'].includes(field)))
+    asset.pipeline = Object.fromEntries(Object.entries(pipeline).filter(/* 返回 ['cacheHit', 'error', 'lastValidSource', 'status'].includes(field) 的逻辑取反结果。 */ ([field]) => !['cacheHit', 'error', 'lastValidSource', 'status'].includes(field)))
   }
   return {
     authored: canonicalValue(authored, '') as Record<string, unknown>,
-    generated: { format: 'nova-generated-import-data', version: 1, assets: generatedAssets.sort((a, b) => a.path.localeCompare(b.path) || a.uuid.localeCompare(b.uuid)) }
+    generated: { format: 'nova-generated-import-data', version: 1, assets: generatedAssets.sort(/* 先计算 a.path.localeCompare(b.path)；仅当其为假值时求右侧 a.uuid.localeCompare(b.uuid)，返回短路求值结果。 */ (a, b) => a.path.localeCompare(b.path) || a.uuid.localeCompare(b.uuid)) }
   }
 }
 
 export type SemanticChangeKind = 'added' | 'removed' | 'modified'
 export interface SemanticProjectChange { kind: SemanticChangeKind; resourceType: 'scene' | 'prefab' | 'resource'; uuid: string; path: string; beforeChecksum: string; afterChecksum: string }
 
-function semanticChecksum(value: unknown): string {
+/** 对规范化项目值计算双通道稳定摘要，用于语义变更比较而非安全认证。 */ function semanticChecksum(value: unknown): string {
   const source = JSON.stringify(canonicalValue(value, ''))
   let first = 0x811c9dc5, second = 0x9e3779b9
   for (let index = 0; index < source.length; index++) {
@@ -142,7 +143,7 @@ function semanticChecksum(value: unknown): string {
   return `${first.toString(16).padStart(8, '0')}${second.toString(16).padStart(8, '0')}`
 }
 
-function semanticResources(project: Record<string, unknown>): Map<string, { resourceType: SemanticProjectChange['resourceType']; uuid: string; path: string; value: unknown }> {
+/** 按稳定 UUID 收集场景及受支持结构化资源，生成语义差异比较条目。 */ function semanticResources(project: Record<string, unknown>): Map<string, { resourceType: SemanticProjectChange['resourceType']; uuid: string; path: string; value: unknown }> {
   const output = new Map<string, { resourceType: SemanticProjectChange['resourceType']; uuid: string; path: string; value: unknown }>()
   for (const raw of Array.isArray(project.scenes) ? project.scenes : []) {
     if (!raw || typeof raw !== 'object') continue
@@ -160,7 +161,7 @@ function semanticResources(project: Record<string, unknown>): Map<string, { reso
 }
 
 /** Stable, identity-based metadata for scene/prefab/resource review and recovery previews. */
-export function semanticProjectDiff(before: string | unknown, after: string | unknown): SemanticProjectChange[] {
+/** 比较前后资源集合及规范摘要，输出新增、修改、删除并按路径排序。 */ export function semanticProjectDiff(before: string | unknown, after: string | unknown): SemanticProjectChange[] {
   const left = semanticResources((typeof before === 'string' ? JSON.parse(before) : before) as Record<string, unknown>)
   const right = semanticResources((typeof after === 'string' ? JSON.parse(after) : after) as Record<string, unknown>)
   const changes: SemanticProjectChange[] = []
@@ -169,17 +170,17 @@ export function semanticProjectDiff(before: string | unknown, after: string | un
     if (!previous || beforeChecksum !== afterChecksum) changes.push({ kind: previous ? 'modified' : 'added', resourceType: current.resourceType, uuid: current.uuid, path: current.path, beforeChecksum, afterChecksum })
   }
   for (const [key, previous] of left) if (!right.has(key)) changes.push({ kind: 'removed', resourceType: previous.resourceType, uuid: previous.uuid, path: previous.path, beforeChecksum: semanticChecksum(previous.value), afterChecksum: '' })
-  return changes.sort((a, b) => a.path.localeCompare(b.path) || a.kind.localeCompare(b.kind))
+  return changes.sort(/* 先计算 a.path.localeCompare(b.path)；仅当其为假值时求右侧 a.kind.localeCompare(b.kind)，返回短路求值结果。 */ (a, b) => a.path.localeCompare(b.path) || a.kind.localeCompare(b.kind))
 }
 
-function references(value: unknown, output = new Set<string>()): Set<string> {
+/** 递归收集字符串内的资源引用 UUID，统一小写并去重。 */ function references(value: unknown, output = new Set<string>()): Set<string> {
   if (typeof value === 'string') for (const match of value.matchAll(ASSET_REFERENCE)) output.add(match[1].toLowerCase())
-  else if (Array.isArray(value)) value.forEach(item => references(item, output))
-  else if (value && typeof value === 'object') Object.values(value as Record<string, unknown>).forEach(item => references(item, output))
+  else if (Array.isArray(value)) value.forEach(/* 调用 references(item, output) 并返回调用结果。 */ item => references(item, output))
+  else if (value && typeof value === 'object') Object.values(value as Record<string, unknown>).forEach(/* 调用 references(item, output) 并返回调用结果。 */ item => references(item, output))
   return output
 }
 
-export function validateProjectDocument(source: string | unknown): ProjectValidationReport {
+/** 校验项目格式、清单、身份、依赖、继承层级及预制引用，返回有界问题列表和资源数量。 */ export function validateProjectDocument(source: string | unknown): ProjectValidationReport {
   let project: Record<string, unknown>
   const issues: ProjectIssue[] = []
   if (typeof source === 'string' && source.length > MAX_PROJECT_DOCUMENT_CHARACTERS) {
@@ -189,7 +190,9 @@ export function validateProjectDocument(source: string | unknown): ProjectValida
   catch (error) {
     return { valid: false, generatedAt: new Date().toISOString(), issues: [{ severity: 'error', code: 'invalid-json', path: '', message: error instanceof Error ? error.message : String(error), repairable: false }], sceneCount: 0, entityCount: 0, assetCount: 0 }
   }
-  const add = (severity: ProjectIssueSeverity, code: string, path: string, message: string, repairable = false) => issues.push({ severity, code, path, message, repairable })
+  // JSON 的 null、数组和原始值都不是项目对象；先返回诊断，避免预算检查直接读取 null 的字段。
+  if (!project || typeof project !== 'object' || Array.isArray(project)) return { valid: false, generatedAt: new Date().toISOString(), issues: [{ severity: 'error', code: 'invalid-root', path: '', message: 'Project document root must be an object.', repairable: false }], sceneCount: 0, entityCount: 0, assetCount: 0 }
+  const add = /* 调用 issues.push({ severity, code, path, message, repairable }) 并返回调用结果。 */ (severity: ProjectIssueSeverity, code: string, path: string, message: string, repairable = false) => issues.push({ severity, code, path, message, repairable })
   const resourceBudgetIssue = projectResourceBudgetIssue(project)
   if (resourceBudgetIssue) return { valid: false, generatedAt: new Date().toISOString(), issues: [{ severity: 'error', code: 'resource-budget', path: '', message: resourceBudgetIssue, repairable: false }], sceneCount: 0, entityCount: 0, assetCount: 0 }
   if (project.projectFormat !== NOVA_PROJECT_FORMAT || Number(project.projectFormatMajor) !== NOVA_PROJECT_FORMAT_MAJOR) add('error', 'format', 'projectFormat', 'Project format identity is missing or unsupported.', true)
@@ -206,14 +209,14 @@ export function validateProjectDocument(source: string | unknown): ProjectValida
     const directories = rawManifest.directories && typeof rawManifest.directories === 'object' ? rawManifest.directories as Record<string, unknown> : null
     for (const key of ['source', 'shared', 'generated', 'cache', 'userLocal']) {
       const value = String(directories?.[key] ?? '')
-      if (!value || value.split(/[\\/]/).some(part => part === '..')) add('error', 'manifest-directory', `manifest.directories.${key}`, 'Manifest directory is empty or unsafe.', true)
+      if (!value || value.split(/[\\/]/).some(/* 比较 part 与 '..'，返回严格相等的判断结果。 */ part => part === '..')) add('error', 'manifest-directory', `manifest.directories.${key}`, 'Manifest directory is empty or unsafe.', true)
     }
   }
   const manifest = normalizeProjectManifest(project.manifest, { id: metadataId, name: String(metadata.name ?? 'Untitled Project'), createdAt: String(metadata.createdAt ?? ''), updatedAt: String(metadata.updatedAt ?? ''), format: NOVA_PROJECT_FORMAT, template: String(metadata.template ?? 'imported') })
   if (!UUID.test(manifest.projectUuid)) add('error', 'project-uuid', 'manifest.projectUuid', 'Project UUID is invalid.', true)
   for (const reason of manifestCompatibility(manifest).reasons) add('error', 'engine-compatibility', 'manifest.engineCompatibility', reason, false)
-  const assets = Array.isArray(project.assets) ? project.assets.filter(item => item && typeof item === 'object') as Array<Record<string, unknown>> : []
-  const scenes = Array.isArray(project.scenes) ? project.scenes.filter(item => item && typeof item === 'object') as Array<Record<string, unknown>> : []
+  const assets = Array.isArray(project.assets) ? project.assets.filter(/* 先计算 item；仅当其为真值时求右侧 typeof item === 'object'，返回短路求值结果。 */ item => item && typeof item === 'object') as Array<Record<string, unknown>> : []
+  const scenes = Array.isArray(project.scenes) ? project.scenes.filter(/* 先计算 item；仅当其为真值时求右侧 typeof item === 'object'，返回短路求值结果。 */ item => item && typeof item === 'object') as Array<Record<string, unknown>> : []
   const knownAssets = new Set<string>(), identities = new Set<string>(UUID.test(metadataId) ? [metadataId] : [])
   for (const [index, asset] of assets.entries()) {
     const id = String(asset.uuid ?? '').toLowerCase(), path = `assets[${index}]`
@@ -228,7 +231,7 @@ export function validateProjectDocument(source: string | unknown): ProjectValida
     if (!CONTENT_HASH.test(String(pipeline?.artifactHash ?? pipeline?.cacheKey ?? ''))) add('error', 'asset-metadata', `${path}.pipeline.artifactHash`, 'Imported artifact SHA-256 is missing or invalid.', true)
   }
   const stableComponentKinds = new Set<string>(STABLE_COMPONENT_KINDS)
-  const sceneIds = new Set(scenes.map(scene => String(scene.uuid ?? '').toLowerCase()).filter(value => UUID.test(value)))
+  const sceneIds = new Set(scenes.map(/* 调用 String(scene.uuid ?? '').toLowerCase() 并返回调用结果。 */ scene => String(scene.uuid ?? '').toLowerCase()).filter(/* 调用 UUID.test(value) 并返回调用结果。 */ value => UUID.test(value)))
   const inheritance = new Map<string, string>()
   let entityCount = 0
   for (const [sceneIndex, scene] of scenes.entries()) {
@@ -241,22 +244,22 @@ export function validateProjectDocument(source: string | unknown): ProjectValida
       if (!sceneIds.has(settings.inheritanceSourceUuid)) add('error', 'scene-inheritance-source', `${path}.authoringSettings.inheritanceSourceUuid`, 'Inherited scene source does not exist.', true)
       else inheritance.set(sceneId, settings.inheritanceSourceUuid)
     }
-    if (new Set(settings.namedLayers.map(layer => layer.id)).size !== settings.namedLayers.length) add('error', 'named-layer-identity', `${path}.authoringSettings.namedLayers`, 'Named scene layer IDs must be unique.', true)
-    const entities = Array.isArray(scene.entities) ? scene.entities.filter(item => item && typeof item === 'object') as Array<Record<string, unknown>> : []
-    const sceneEntityIds = new Set(entities.map(entity => String(entity.uuid ?? '').toLowerCase()).filter(value => UUID.test(value)))
+    if (new Set(settings.namedLayers.map(/* 返回 layer.id 的当前值。 */ layer => layer.id)).size !== settings.namedLayers.length) add('error', 'named-layer-identity', `${path}.authoringSettings.namedLayers`, 'Named scene layer IDs must be unique.', true)
+    const entities = Array.isArray(scene.entities) ? scene.entities.filter(/* 先计算 item；仅当其为真值时求右侧 typeof item === 'object'，返回短路求值结果。 */ item => item && typeof item === 'object') as Array<Record<string, unknown>> : []
+    const sceneEntityIds = new Set(entities.map(/* 调用 String(entity.uuid ?? '').toLowerCase() 并返回调用结果。 */ entity => String(entity.uuid ?? '').toLowerCase()).filter(/* 调用 UUID.test(value) 并返回调用结果。 */ value => UUID.test(value)))
     entityCount += entities.length
     for (const [entityIndex, entity] of entities.entries()) {
       const entityPath = `${path}.entities[${entityIndex}]`, entityId = String(entity.uuid ?? '').toLowerCase()
       if (!UUID.test(entityId) || identities.has(entityId)) add('error', 'entity-uuid', `${entityPath}.uuid`, 'Object-local UUID is invalid or duplicated.', true)
       else identities.add(entityId)
-      if (!Array.isArray(entity.tags) || entity.tags.some(item => typeof item !== 'string')) add('warning', 'entity-tags', `${entityPath}.tags`, 'Tags must be a string list.', true)
-      if (!Array.isArray(entity.groups) || entity.groups.some(item => typeof item !== 'string')) add('warning', 'entity-groups', `${entityPath}.groups`, 'Groups must be a string list.', true)
+      if (!Array.isArray(entity.tags) || entity.tags.some(/* 比较 typeof item 与 'string'，返回严格不等的判断结果。 */ item => typeof item !== 'string')) add('warning', 'entity-tags', `${entityPath}.tags`, 'Tags must be a string list.', true)
+      if (!Array.isArray(entity.groups) || entity.groups.some(/* 比较 typeof item 与 'string'，返回严格不等的判断结果。 */ item => typeof item !== 'string')) add('warning', 'entity-groups', `${entityPath}.groups`, 'Groups must be a string list.', true)
       if (!['Scene', 'Prefab', 'Runtime'].includes(String(entity.ownership ?? 'Scene'))) add('error', 'entity-ownership', `${entityPath}.ownership`, 'Ownership policy is invalid.', true)
       if (!['Scene', 'Session', 'SaveGame', 'Transient'].includes(String(entity.runtimePersistence ?? 'Scene'))) add('error', 'runtime-persistence', `${entityPath}.runtimePersistence`, 'Runtime persistence policy is invalid.', true)
       if (entity.editorOnly === true && entity.runtimePersistence === 'SaveGame') add('warning', 'editor-only-persistence', `${entityPath}.runtimePersistence`, 'Editor-only objects cannot be written to player saves.', true)
       if (typeof entity.ownerUuid === 'string' && !sceneEntityIds.has(entity.ownerUuid.toLowerCase())) add('error', 'missing-owner', `${entityPath}.ownerUuid`, 'Owner entity does not exist in this scene.', true)
-      const components = Array.isArray(entity.components) ? entity.components.filter(item => item && typeof item === 'object') as Array<Record<string, unknown>> : []
-      const kinds = new Set(components.filter(component => component.removed !== true).map(component => String(component.kind ?? '')))
+      const components = Array.isArray(entity.components) ? entity.components.filter(/* 先计算 item；仅当其为真值时求右侧 typeof item === 'object'，返回短路求值结果。 */ item => item && typeof item === 'object') as Array<Record<string, unknown>> : []
+      const kinds = new Set(components.filter(/* 比较 component.removed 与 true，返回严格不等的判断结果。 */ component => component.removed !== true).map(/* 调用 String(component.kind ?? '') 并返回调用结果。 */ component => String(component.kind ?? '')))
       if (!kinds.has('Transform2D')) add('error', 'component-dependency', `${entityPath}.components`, 'Every entity requires Transform2D.', true)
       for (const [componentIndex, component] of components.entries()) {
         const componentPath = `${entityPath}.components[${componentIndex}]`, componentUuid = String(component.uuid ?? '').toLowerCase(), kind = String(component.kind ?? '')
@@ -270,15 +273,15 @@ export function validateProjectDocument(source: string | unknown): ProjectValida
         }
         if (component.enabled !== undefined && typeof component.enabled !== 'boolean') add('warning', 'component-enabled', `${componentPath}.enabled`, 'Component enabled state must be boolean.', true)
       }
-      if (kinds.has('Area2D') && ![...kinds].some(kind => kind.endsWith('Collider2D'))) add('error', 'component-dependency', `${entityPath}.components`, 'Area2D requires a Collider2D component.', true)
-      const transform = components.find(component => component.kind === 'Transform2D')?.data as Record<string, unknown> | undefined
+      if (kinds.has('Area2D') && ![...kinds].some(/* 调用 kind.endsWith('Collider2D') 并返回调用结果。 */ kind => kind.endsWith('Collider2D'))) add('error', 'component-dependency', `${entityPath}.components`, 'Area2D requires a Collider2D component.', true)
+      const transform = components.find(/* 比较 component.kind 与 'Transform2D'，返回严格相等的判断结果。 */ component => component.kind === 'Transform2D')?.data as Record<string, unknown> | undefined
       if (typeof transform?.parentUuid === 'string' && !sceneEntityIds.has(transform.parentUuid.toLowerCase())) add('error', 'missing-parent', `${entityPath}.components.Transform2D.parentUuid`, 'Hierarchy parent does not exist in this scene.', true)
       if (entity.ownership === 'Prefab' && typeof entity.prefabAsset !== 'string') add('error', 'prefab-ownership', `${entityPath}.prefabAsset`, 'Prefab-owned object has no prefab source.', true)
     }
     const parents = new Map<string, string>()
     for (const entity of entities) {
       const components = Array.isArray(entity.components) ? entity.components as Array<Record<string, unknown>> : []
-      const transform = components.find(component => component.kind === 'Transform2D')?.data as Record<string, unknown> | undefined
+      const transform = components.find(/* 比较 component.kind 与 'Transform2D'，返回严格相等的判断结果。 */ component => component.kind === 'Transform2D')?.data as Record<string, unknown> | undefined
       if (typeof entity.uuid === 'string' && typeof transform?.parentUuid === 'string') parents.set(entity.uuid.toLowerCase(), transform.parentUuid.toLowerCase())
     }
     for (const entityId of parents.keys()) {
@@ -310,10 +313,10 @@ export function validateProjectDocument(source: string | unknown): ProjectValida
     } catch { add('error', 'prefab-json', `assets[${assetIndex}].source`, 'Prefab source is not valid JSON.', false) }
   }
   for (const reference of references(project)) if (!knownAssets.has(reference)) add('error', 'missing-reference', 'asset://', `Missing asset ${reference}.`, false)
-  return { valid: !issues.some(issue => issue.severity === 'error'), generatedAt: new Date().toISOString(), issues: issues.slice(0, 10_000), sceneCount: scenes.length, entityCount, assetCount: assets.length }
+  return { valid: !issues.some(/* 比较 issue.severity 与 'error'，返回严格相等的判断结果。 */ issue => issue.severity === 'error'), generatedAt: new Date().toISOString(), issues: issues.slice(0, 10_000), sceneCount: scenes.length, entityCount, assetCount: assets.length }
 }
 
-export function repairProjectDocument(source: string | unknown): ProjectRepairReport {
+/** 在副本上补齐格式清单、路径、导入摘要与基础组件依赖，保留歧义问题并返回修复后诊断。 */ export function repairProjectDocument(source: string | unknown): ProjectRepairReport {
   const project = (typeof source === 'string' ? JSON.parse(source) : clone(source)) as Record<string, unknown>
   const changes: string[] = []
   const metadata = project.projectMetadata && typeof project.projectMetadata === 'object' ? project.projectMetadata as Record<string, unknown> : {}
@@ -325,7 +328,7 @@ export function repairProjectDocument(source: string | unknown): ProjectRepairRe
   project.manifest = normalizeProjectManifest(project.manifest, { id: projectUuid, name: String(metadata.name ?? 'Untitled Project'), createdAt: String(metadata.createdAt ?? new Date().toISOString()), updatedAt: String(metadata.updatedAt ?? new Date().toISOString()), format: NOVA_PROJECT_FORMAT, template: String(metadata.template ?? 'imported') })
   changes.push('Normalized project identity, schema, engine metadata, and manifest.')
   for (const asset of Array.isArray(project.assets) ? project.assets as Array<Record<string, unknown>> : []) {
-    asset.path = String(asset.path ?? 'Assets/Recovered.asset').replace(/\\/g, '/').split('/').filter(part => part && part !== '.' && part !== '..').join('/') || 'Assets/Recovered.asset'
+    asset.path = String(asset.path ?? 'Assets/Recovered.asset').replace(/\\/g, '/').split('/').filter(/* 先计算 part && part !== '.'；仅当其为真值时求右侧 part !== '..'，返回短路求值结果。 */ part => part && part !== '.' && part !== '..').join('/') || 'Assets/Recovered.asset'
     const source = String(asset.source ?? ''), hash = sha256Bytes(assetSourceBytes(source))
     const previous = asset.pipeline && typeof asset.pipeline === 'object' ? asset.pipeline as Record<string, unknown> : {}
     asset.pipeline = {
@@ -347,16 +350,16 @@ export function repairProjectDocument(source: string | unknown): ProjectRepairRe
   for (const scene of Array.isArray(project.scenes) ? project.scenes as Array<Record<string, unknown>> : []) {
     scene.authoringSettings = normalizeSceneAuthoringSettings(scene.authoringSettings)
     for (const entity of Array.isArray(scene.entities) ? scene.entities as Array<Record<string, unknown>> : []) {
-      entity.tags = Array.isArray(entity.tags) ? [...new Set(entity.tags.filter(item => typeof item === 'string').map(item => String(item).trim()).filter(Boolean))].slice(0, 64) : []
-      entity.groups = Array.isArray(entity.groups) ? [...new Set(entity.groups.filter(item => typeof item === 'string').map(item => String(item).trim()).filter(Boolean))].slice(0, 64) : []
+      entity.tags = Array.isArray(entity.tags) ? [...new Set(entity.tags.filter(/* 比较 typeof item 与 'string'，返回严格相等的判断结果。 */ item => typeof item === 'string').map(/* 调用 String(item).trim() 并返回调用结果。 */ item => String(item).trim()).filter(Boolean))].slice(0, 64) : []
+      entity.groups = Array.isArray(entity.groups) ? [...new Set(entity.groups.filter(/* 比较 typeof item 与 'string'，返回严格相等的判断结果。 */ item => typeof item === 'string').map(/* 调用 String(item).trim() 并返回调用结果。 */ item => String(item).trim()).filter(Boolean))].slice(0, 64) : []
       entity.ownership = ['Scene', 'Prefab', 'Runtime'].includes(String(entity.ownership)) ? entity.ownership : 'Scene'
       entity.runtimePersistence = ['Scene', 'Session', 'SaveGame', 'Transient'].includes(String(entity.runtimePersistence)) ? entity.runtimePersistence : 'Scene'
       entity.editorOnly = entity.editorOnly === true
       if (entity.editorOnly && entity.runtimePersistence === 'SaveGame') entity.runtimePersistence = 'Transient'
       const components = Array.isArray(entity.components) ? entity.components as Array<Record<string, unknown>> : (entity.components = []) as Array<Record<string, unknown>>
-      if (!components.some(component => component.kind === 'Transform2D')) components.unshift({ uuid: crypto.randomUUID(), kind: 'Transform2D', enabled: true, removed: false, data: { position: { x: 0, y: 0 }, scale: { x: 1, y: 1 }, rotation: 0, parentUuid: null } })
-      if (components.some(component => component.kind === 'CharacterBody2D') && !components.some(component => component.kind === 'RigidBody2D')) components.push({ uuid: crypto.randomUUID(), kind: 'RigidBody2D', enabled: true, removed: false, data: {} })
-      if (components.some(component => component.kind === 'Area2D') && !components.some(component => String(component.kind ?? '').endsWith('Collider2D'))) components.push({ uuid: crypto.randomUUID(), kind: 'BoxCollider2D', enabled: true, removed: false, data: {} })
+      if (!components.some(/* 比较 component.kind 与 'Transform2D'，返回严格相等的判断结果。 */ component => component.kind === 'Transform2D')) components.unshift({ uuid: crypto.randomUUID(), kind: 'Transform2D', enabled: true, removed: false, data: { position: { x: 0, y: 0 }, scale: { x: 1, y: 1 }, rotation: 0, parentUuid: null } })
+      if (components.some(/* 比较 component.kind 与 'CharacterBody2D'，返回严格相等的判断结果。 */ component => component.kind === 'CharacterBody2D') && !components.some(/* 比较 component.kind 与 'RigidBody2D'，返回严格相等的判断结果。 */ component => component.kind === 'RigidBody2D')) components.push({ uuid: crypto.randomUUID(), kind: 'RigidBody2D', enabled: true, removed: false, data: {} })
+      if (components.some(/* 比较 component.kind 与 'Area2D'，返回严格相等的判断结果。 */ component => component.kind === 'Area2D') && !components.some(/* 调用 String(component.kind ?? '').endsWith('Collider2D') 并返回调用结果。 */ component => String(component.kind ?? '').endsWith('Collider2D'))) components.push({ uuid: crypto.randomUUID(), kind: 'BoxCollider2D', enabled: true, removed: false, data: {} })
     }
   }
   changes.push('Repaired unsafe paths and mandatory Transform2D, RigidBody2D, and Collider2D dependencies. Ambiguous identity/reference problems remain explicit for manual resolution.')
@@ -366,18 +369,18 @@ export function repairProjectDocument(source: string | unknown): ProjectRepairRe
 
 export interface SceneDependencyNode { sceneUuid: string; name: string; dependencies: string[]; reverseDependencies: string[] }
 
-export function buildSceneDependencyGraph(source: string | unknown): SceneDependencyNode[] {
+/** 从场景数据收集指向场景资源的引用，构建排序后的依赖和可匹配反向依赖。 */ export function buildSceneDependencyGraph(source: string | unknown): SceneDependencyNode[] {
   const project = (typeof source === 'string' ? JSON.parse(source) : source) as Record<string, unknown>
-  const scenes = Array.isArray(project?.scenes) ? project.scenes.filter(item => item && typeof item === 'object') as Array<Record<string, unknown>> : []
-  const sceneAssets = new Map((Array.isArray(project?.assets) ? project.assets : []).flatMap(raw => raw && typeof raw === 'object' && (raw as Record<string, unknown>).assetType === 'scene' ? [[String((raw as Record<string, unknown>).uuid).toLowerCase(), raw as Record<string, unknown>] as const] : []))
-  const nodes = scenes.map(scene => {
-    const found = [...references(scene)].filter(id => sceneAssets.has(id))
+  const scenes = Array.isArray(project?.scenes) ? project.scenes.filter(/* 先计算 item；仅当其为真值时求右侧 typeof item === 'object'，返回短路求值结果。 */ item => item && typeof item === 'object') as Array<Record<string, unknown>> : []
+  const sceneAssets = new Map((Array.isArray(project?.assets) ? project.assets : []).flatMap(/** 只将场景类型资源加入小写 UUID 到资源记录的映射。 */ raw => raw && typeof raw === 'object' && (raw as Record<string, unknown>).assetType === 'scene' ? [[String((raw as Record<string, unknown>).uuid).toLowerCase(), raw as Record<string, unknown>] as const] : []))
+  const nodes = scenes.map(/** 收集单个场景指向已登记场景资源的引用，去重排序并初始化反向依赖。 */ scene => {
+    const found = [...references(scene)].filter(/* 调用 sceneAssets.has(id) 并返回调用结果。 */ id => sceneAssets.has(id))
     return { sceneUuid: String(scene.uuid ?? ''), name: String(scene.name ?? 'Scene'), dependencies: [...new Set(found)].sort(), reverseDependencies: [] as string[] }
   })
   for (const node of nodes) for (const dependency of node.dependencies) {
-    const targetScene = nodes.find(candidate => candidate.sceneUuid.toLowerCase() === dependency)
+    const targetScene = nodes.find(/* 比较 candidate.sceneUuid.toLowerCase() 与 dependency，返回严格相等的判断结果。 */ candidate => candidate.sceneUuid.toLowerCase() === dependency)
     if (targetScene) targetScene.reverseDependencies.push(node.sceneUuid)
   }
-  nodes.forEach(node => node.reverseDependencies.sort())
+  nodes.forEach(/* 调用 node.reverseDependencies.sort() 并返回调用结果。 */ node => node.reverseDependencies.sort())
   return nodes
 }

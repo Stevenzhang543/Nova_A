@@ -1,3 +1,4 @@
+/** 功能回归脚本：执行 verify-v6.8.0-windows.mjs 对应场景，保留断言和证据输出。 */
 process.env.NOVA_WINDOWS_VERSION = '6.8.0'
 process.env.NOVA_WINDOWS_REFERENCE = 'creator-v680-large-world'
 process.env.NOVA_WINDOWS_GAME_NAME = 'Nova 6.8 Large-world Playground'

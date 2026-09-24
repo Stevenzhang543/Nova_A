@@ -1,3 +1,4 @@
+<!-- 音频系统面板：提供项目音频配置和运行相关界面。 -->
 <template>
   <section class="audio-system-panel">
     <PresentationPanel initial-tab="audio" />

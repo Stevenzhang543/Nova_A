@@ -1,8 +1,9 @@
+/* 审计 2.8 的性能记录、回放、测试、任务和生产工具集成。 */
 import { readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 
 const root = process.cwd()
-const read = path => readFile(resolve(root, path), 'utf8')
+const read = /* 调用 readFile(resolve(root, path), 'utf8') 并返回调用结果。 */ path => readFile(resolve(root, path), 'utf8')
 const [
   panel, profiler, performance, replay, tests, data, jobs, worker, networking, production,
   productionRuntime, gameplay, scripts, scriptApi, saveGame, buildSettings, buildPanel, exporter,
@@ -23,7 +24,7 @@ const [
   read('manual/MANUAL.en.md'), read('manual/MANUAL.de.md'), read('manual/MANUAL.zh-CN.md'),
   read('manual/index.html'), read('README.md'), read('README.zh-CN.md'),
 ])
-const assert = (condition, message) => { if (!condition) throw new Error(message) }
+const assert = /* 条件不满足时抛出指定错误，使当前审计立即失败。 */ (condition, message) => { if (!condition) throw new Error(message) }
 
 for (const stage of ['inputMs', 'scriptsMs', 'animationMs', 'physicsMs', 'audioMs', 'renderingMs', 'assetsMs', 'allocations', 'gpuPasses']) {
   assert(`${profiler}${canvas}${performance}`.includes(stage), `frame trace is missing ${stage}`)

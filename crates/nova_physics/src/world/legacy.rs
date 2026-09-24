@@ -1,3 +1,5 @@
+// 根据运动速度、形状尺寸和连续碰撞设置确定有界子步数。
+// 兼容扁平数据的物理世界：装载记录、构建碰撞对、分步求解并写回状态。
 fn determine_sub_steps(
     bodies: &[Body],
     dt: f64,
@@ -24,6 +26,7 @@ fn determine_sub_steps(
     required.clamp(minimum_substeps.clamp(1, MAX_SUB_STEPS), MAX_SUB_STEPS)
 }
 
+// 清零扁平刚体记录中的本步接触诊断字段。
 fn reset_contact_diagnostics(data: &mut [f64], body_count: usize) {
     for body_index in 0..body_count {
         let index = body_index * STRIDE;
@@ -31,12 +34,14 @@ fn reset_contact_diagnostics(data: &mut [f64], body_count: usize) {
     }
 }
 
+// 从固定步长的扁平数组读取内部刚体列表。
 fn read_bodies(data: &[f64], body_count: usize) -> Vec<Body> {
     (0..body_count)
-        .map(|body_index| Body::from_data(data, body_index * STRIDE))
+        .map(/* 计算并返回 Body :: from_data (data , body_index * STRIDE)，用于当前 read_bodies 流程。 */ |body_index| Body::from_data(data, body_index * STRIDE))
         .collect()
 }
 
+// 解析连接记录，并排除不存在或不合法的刚体引用。
 fn read_constraints(
     connection_data: &[f64],
     body_count: usize,
@@ -44,21 +49,23 @@ fn read_constraints(
 ) -> Vec<ConnectionConstraint> {
     let connection_count = connection_data.len() / CONNECTION_STRIDE;
     (0..connection_count)
-        .filter_map(|connection_index| {
+        .filter_map(/* 计算并返回 ConnectionConstraint :: from_data (connection_data , connection_index * CONNECTION_STRIDE , body_count ,)，用于当前 read_constraints 流程。 */ |connection_index| {
             ConnectionConstraint::from_data(
                 connection_data,
                 connection_index * CONNECTION_STRIDE,
                 body_count,
             )
         })
-        .filter(|constraint| bodies[constraint.body_a].layer == bodies[constraint.body_b].layer)
+        .filter(/* 判断 bodies [constraint . body_a] . layer == bodies [constraint . body_b] . layer 是否成立，供过滤或有效性检查使用。 */ |constraint| bodies[constraint.body_a].layer == bodies[constraint.body_b].layer)
         .collect()
 }
 
+// 用并查集收集刚性绑定组及禁止内部碰撞的刚体对。
 fn active_bound_pairs(
     constraints: &[ConnectionConstraint],
     body_count: usize,
 ) -> HashSet<(usize, usize)> {
+    // 沿父索引寻找并压缩并查集路径。
     fn root(parents: &mut [usize], index: usize) -> usize {
         let mut current = index;
         while parents[current] != current {
@@ -67,6 +74,7 @@ fn active_bound_pairs(
         }
         current
     }
+    // 按秩合并两个并查集集合，保持查找深度有界。
     fn union(parents: &mut [usize], ranks: &mut [u8], first: usize, second: usize) {
         let first_root = root(parents, first);
         let second_root = root(parents, second);
@@ -85,7 +93,7 @@ fn active_bound_pairs(
 
     let mut parents: Vec<usize> = (0..body_count).collect();
     let mut ranks = vec![0_u8; body_count];
-    for constraint in constraints.iter().filter(|constraint| {
+    for constraint in constraints.iter().filter(/* 计算并返回 constraint . active && ! constraint . collide_connected && constraint . binding，用于当前 active_bound_pairs 流程。 */ |constraint| {
         constraint.active && !constraint.collide_connected && constraint.binding
     }) {
         union(
@@ -114,7 +122,7 @@ fn active_bound_pairs(
     // chains, but each endpoint represents its complete binding component.
     // Suppress the Cartesian product so A bound to B and B jointed to C also
     // correctly suppresses A-C, without turning A-B-C joint chains compound.
-    for constraint in constraints.iter().filter(|constraint| {
+    for constraint in constraints.iter().filter(/* 判断 constraint . active && ! constraint . collide_connected && ! constraint . binding && constraint . joint_kind > 0 是否成立，供过滤或有效性检查使用。 */ |constraint| {
         constraint.active
             && !constraint.collide_connected
             && !constraint.binding
@@ -141,6 +149,7 @@ fn active_bound_pairs(
     pairs
 }
 
+// 将流形信息累加到两端刚体的接触诊断记录。
 fn record_contact_diagnostics(data: &mut [f64], body_a: &Body, body_b: &Body, manifold: &Manifold) {
     let data_a = body_a.data_index;
     let data_b = body_b.data_index;
@@ -168,6 +177,7 @@ struct ContactSource {
     position_weight: f64,
 }
 
+// 由碰撞流形和两端材质构造求解接触约束。
 fn contact_from_manifold(
     bodies: &[Body],
     body_a_view: &Body,
@@ -194,7 +204,7 @@ fn contact_from_manifold(
     let threshold = body_a_view
         .restitution_threshold
         .max(body_b_view.restitution_threshold);
-    let combine = |first: f64, second: f64, first_mode: u8, second_mode: u8| {
+    let combine = /* 按两端优先级更高的材质模式选择最小、相乘、最大或平均混合。 */ |first: f64, second: f64, first_mode: u8, second_mode: u8| {
         // Mode priority mirrors the editor contract: Maximum > Multiply >
         // Minimum > Average. Mixed material pairs therefore remain stable.
         match first_mode.max(second_mode) {
@@ -251,6 +261,7 @@ fn contact_from_manifold(
     }
 }
 
+// 筛选碰撞候选并生成含子形状身份、材质和缓存的接触集合。
 fn collect_contacts(
     bodies: &[Body],
     bound_pairs: &HashSet<(usize, usize)>,
@@ -260,9 +271,9 @@ fn collect_contacts(
     let mut broad_phase: Vec<(usize, Aabb)> = bodies
         .iter()
         .enumerate()
-        .map(|(index, body)| (index, body.compound_aabb()))
+        .map(/* 计算并返回 (index , body . compound_aabb ())，用于当前 collect_contacts 流程。 */ |(index, body)| (index, body.compound_aabb()))
         .collect();
-    broad_phase.sort_by(|a, b| a.1.min_x.total_cmp(&b.1.min_x));
+    broad_phase.sort_by(/* 按 a . 1 . min_x . total_cmp (& b . 1 . min_x) 比较顺序，供稳定排序使用。 */ |a, b| a.1.min_x.total_cmp(&b.1.min_x));
 
     let mut contacts = Vec::new();
     for sorted_a in 0..broad_phase.len() {
@@ -336,6 +347,7 @@ struct SubStepContext {
     record_diagnostics: bool,
 }
 
+// 执行一次子步的积分、接触与连接速度求解及位置修正。
 #[allow(clippy::too_many_arguments)]
 fn simulate_sub_step(
     bodies: &mut [Body],
@@ -381,7 +393,7 @@ fn simulate_sub_step(
     // Anchor reprojection updates residual separation without regenerating collision manifolds.
     let anchors: Vec<_> = contacts
         .iter()
-        .map(|contact| {
+        .map(/* 将两端接触偏移转换到各自局部空间，供位置修正后重建接触点。 */ |contact| {
             (
                 inverse_rotate(contact.radius_a, bodies[contact.body_a].angle),
                 inverse_rotate(contact.radius_b, bodies[contact.body_b].angle),
@@ -435,7 +447,7 @@ fn simulate_sub_step(
     }
     contacts
         .iter()
-        .map(|contact| {
+        .map(/* 将接触约束转换为世界空间快照，保留两端子体身份及求解冲量。 */ |contact| {
             let body_a = &bodies[contact.body_a];
             let body_b = &bodies[contact.body_b];
             let point_a = body_a.position.add(contact.radius_a);
@@ -462,6 +474,7 @@ fn simulate_sub_step(
         .collect()
 }
 
+// 把内部刚体位置、速度和休眠状态写回扁平输出。
 fn write_bodies(data: &mut [f64], bodies: &[Body]) {
     for body in bodies {
         let index = body.data_index;
@@ -478,6 +491,7 @@ fn write_bodies(data: &mut [f64], bodies: &[Body]) {
     }
 }
 
+// 把连接、断裂与绳索节点状态写回扁平输出。
 fn write_constraints(connection_data: &mut [f64], constraints: &[ConnectionConstraint]) {
     for constraint in constraints {
         let index = constraint.data_index;
@@ -486,7 +500,7 @@ fn write_constraints(connection_data: &mut [f64], constraints: &[ConnectionConst
         connection_data[index + 18] = finite_or(constraint.tension, 0.0).max(0.0);
         connection_data[index + 19] = finite_or(constraint.strain, 0.0).max(0.0);
         connection_data[index + 27] = constraint.rope_nodes.len() as f64;
-        connection_data[index + 28] = constraint.break_link.map_or(-1.0, |link| link as f64);
+        connection_data[index + 28] = constraint.break_link.map_or(-1.0, /* 返回当前快照值 link as f64。 */ |link| link as f64);
         for (node_index, node) in constraint
             .rope_nodes
             .iter()
@@ -523,6 +537,7 @@ struct SolverQuality {
 }
 
 impl Default for SolverQuality {
+    // 建立默认子步、迭代、休眠阈值及连续碰撞配置。
     fn default() -> Self {
         Self {
             minimum_substeps: BASE_SUB_STEPS,
@@ -536,6 +551,7 @@ impl Default for SolverQuality {
 }
 
 impl SolverQuality {
+    // 把求解迭代次数、子步数及阈值限制在支持范围。
     fn normalized(self) -> Self {
         Self {
             minimum_substeps: self.minimum_substeps.clamp(1, MAX_SUB_STEPS),
@@ -568,6 +584,7 @@ struct SolverContactSnapshot {
     sensor: bool,
 }
 
+// 将相连动态刚体的休眠与唤醒状态同步到同一物理岛。
 fn synchronize_sleep_islands(
     bodies: &mut [Body],
     contacts: &[SolverContactSnapshot],
@@ -575,11 +592,11 @@ fn synchronize_sleep_islands(
     quality: SolverQuality,
 ) {
     let mut adjacency = vec![Vec::<usize>::new(); bodies.len()];
-    for contact in contacts.iter().filter(|contact| !contact.sensor) {
+    for contact in contacts.iter().filter(/* 计算并返回 ! contact . sensor，用于当前 synchronize_sleep_islands 流程。 */ |contact| !contact.sensor) {
         adjacency[contact.body_a].push(contact.body_b);
         adjacency[contact.body_b].push(contact.body_a);
     }
-    for constraint in constraints.iter().filter(|constraint| constraint.active) {
+    for constraint in constraints.iter().filter(/* 返回当前快照值 constraint . active。 */ |constraint| constraint.active) {
         adjacency[constraint.body_a].push(constraint.body_b);
         adjacency[constraint.body_b].push(constraint.body_a);
     }
@@ -602,7 +619,7 @@ fn synchronize_sleep_islands(
                 }
             }
         }
-        let slow = island.iter().all(|&index| {
+        let slow = island.iter().all(/* 检查物理岛中的刚体是否允许休眠且线速度、角速度均低于阈值。 */ |&index| {
             let body = &bodies[index];
             body.sleeping_allowed
                 && body.velocity.length_squared()
@@ -618,7 +635,7 @@ fn synchronize_sleep_islands(
         }
         let shared_timer = island
             .iter()
-            .map(|&index| bodies[index].sleep_timer)
+            .map(/* 计算并返回 bodies [index] . sleep_timer，用于当前 synchronize_sleep_islands 流程。 */ |&index| bodies[index].sleep_timer)
             .fold(f64::INFINITY, f64::min);
         let should_sleep = shared_timer >= quality.time_to_sleep;
         for &index in &island {
@@ -633,10 +650,12 @@ fn synchronize_sleep_islands(
 }
 
 impl SolverWorld {
+    // 从刚体与连接记录构造无额外子形状的求解世界。
     fn new(input: &[f64], connection_input: &[f64], quality: SolverQuality) -> Self {
         Self::new_with_children(input, connection_input, quality, &[])
     }
 
+    // 从刚体、连接和子碰撞体数据构造保留求解状态的世界。
     fn new_with_children(
         input: &[f64],
         connection_input: &[f64],
@@ -663,6 +682,7 @@ impl SolverWorld {
         }
     }
 
+    // 推进物理世界一个时间步，更新求解状态、缓存和事件。
     fn step(&mut self, dt: f64, global_gravity: f64, air_friction: f64) {
         let body_count = self.bodies.len();
         reset_contact_diagnostics(&mut self.data, body_count);
@@ -729,6 +749,7 @@ impl SolverWorld {
         write_constraints(&mut self.connection_data, &self.constraints);
     }
 
+    // 将当前模拟状态复制到调用方提供的输出缓冲区。
     fn copy_state(&self, bodies: &mut Vec<f64>, connections: &mut Vec<f64>) {
         bodies.clear();
         bodies.extend_from_slice(&self.data);
@@ -736,10 +757,12 @@ impl SolverWorld {
         connections.extend_from_slice(&self.connection_data);
     }
 
+    // 借用本步求解器的接触快照切片。
     fn contacts(&self) -> &[SolverContactSnapshot] {
         &self.contacts
     }
 
+    // 取出并合并模拟后的刚体与连接输出数据。
     fn into_output(self) -> Vec<f64> {
         let mut output = self.data;
         output.extend(self.connection_data);
@@ -747,10 +770,12 @@ impl SolverWorld {
     }
 }
 
+// 通过兼容接口推进不含外部连接记录的物理数据。
 pub fn step_physics(input: &[f64], dt: f64, global_gravity: f64, air_friction: f64) -> Vec<f64> {
     step_physics_with_connections(input, &[], dt, global_gravity, air_friction)
 }
 
+// 通过兼容接口同时推进刚体和连接记录。
 pub fn step_physics_with_connections(
     input: &[f64],
     connection_input: &[f64],

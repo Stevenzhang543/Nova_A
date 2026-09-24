@@ -1,3 +1,4 @@
+/** 脚本调试工具：求值受控调试表达式，维护断点及观察值相关状态。 */
 import { reactive } from 'vue'
 import { snapshotPath, snapshotPreview, snapshotValueType, snapshotComparison } from './dynamicInspection'
 
@@ -63,7 +64,7 @@ export const scriptDebugState = reactive({
 
 let nextWatchId = 1
 
-export function normalizeDebugSourceMap(value: unknown): DebugSourceMap {
+/** 验证有数量上限的调试映射，拒绝非法坐标与绝对或父级路径，排序有效结果并限制诊断数量。 */ export function normalizeDebugSourceMap(value: unknown): DebugSourceMap {
   const diagnostics: string[] = [], mappings: DebugSourceMapping[] = []
   const source = value && typeof value === 'object' ? value as { mappings?: unknown } : null
   if (!Array.isArray(source?.mappings)) return { mappings, diagnostics: ['NOVA-DEBUG-SOURCEMAP: mappings must be an array.'] }
@@ -75,12 +76,12 @@ export function normalizeDebugSourceMap(value: unknown): DebugSourceMap {
     mappings.push({ generatedLine: Math.round(generatedLine), generatedColumn: Math.round(generatedColumn), sourcePath, sourceLine: Math.round(sourceLine), sourceColumn: Math.round(sourceColumn) })
   }
   if (source.mappings.length > 50_000) diagnostics.push('NOVA-DEBUG-SOURCEMAP: mapping limit exceeded; excess entries were ignored.')
-  mappings.sort((first, second) => first.generatedLine - second.generatedLine || first.generatedColumn - second.generatedColumn || first.sourcePath.localeCompare(second.sourcePath))
+  mappings.sort(/** 按生成行、列及来源路径依次稳定排序调试位置。 */ (first, second) => first.generatedLine - second.generatedLine || first.generatedColumn - second.generatedColumn || first.sourcePath.localeCompare(second.sourcePath))
   return { mappings, diagnostics: diagnostics.slice(0, 1_000) }
 }
 
 
-function scalar(value: string, root: unknown): unknown {
+/** 解析布尔、空值、数值及简单引号字符串，否则按快照属性路径读取，不执行脚本。 */ function scalar(value: string, root: unknown): unknown {
   const clean = value.trim()
   if (clean === 'true') return true
   if (clean === 'false') return false
@@ -90,7 +91,7 @@ function scalar(value: string, root: unknown): unknown {
   return snapshotPath(root, clean)
 }
 
-export function evaluateDebugExpression(expression: string, root: unknown = scriptDebugState.locals): unknown {
+/** 限制表达式长度并支持只读快照标量比较，相等比较统一严格语义，有序比较仅接受有限数值。 */ export function evaluateDebugExpression(expression: string, root: unknown = scriptDebugState.locals): unknown {
   if (expression.length > 512) throw new Error('Snapshot expressions are limited to 512 characters')
   const clean = expression.trim()
   const comparison = snapshotComparison(clean)
@@ -98,7 +99,7 @@ export function evaluateDebugExpression(expression: string, root: unknown = scri
   const left = scalar(comparison[0], root), right = scalar(comparison[2], root)
   if (comparison[1] === '===' || comparison[1] === '==') return left === right
   if (comparison[1] === '!==' || comparison[1] === '!=') return left !== right
-  if ([left, right].some(value => value !== null && ['object', 'function', 'symbol'].includes(typeof value))) throw new Error('Ordered comparisons require scalar values')
+  if ([left, right].some(/* 先计算 value !== null；仅当其为真值时求右侧 ['object', 'function', 'symbol'].includes(typeof value)，返回短路求值结果。 */ value => value !== null && ['object', 'function', 'symbol'].includes(typeof value))) throw new Error('Ordered comparisons require scalar values')
   const first = Number(left), second = Number(right)
   if (!Number.isFinite(first) || !Number.isFinite(second)) throw new Error('Ordered comparisons require finite numbers')
   if (comparison[1] === '>=') return first >= second
@@ -107,7 +108,7 @@ export function evaluateDebugExpression(expression: string, root: unknown = scri
   return first < second
 }
 
-export function inspectDebugObject(path: string): void {
+/** 保存受限属性路径并生成类型与有界预览，求值失败显示原因。 */ export function inspectDebugObject(path: string): void {
   scriptDebugState.inspectedPath = path.trim().slice(0, 160)
   try {
     const value = evaluateDebugExpression(scriptDebugState.inspectedPath)
@@ -115,19 +116,19 @@ export function inspectDebugObject(path: string): void {
   } catch (error) { scriptDebugState.inspectedValue = error instanceof Error ? error.message : String(error) }
 }
 
-export function addDebugWatch(expression: string): void {
+/** 去重新增非空观察表达式并立即刷新全部观察值。 */ export function addDebugWatch(expression: string): void {
   const clean = expression.trim().slice(0, 160)
-  if (!clean || scriptDebugState.watches.some(watch => watch.expression === clean)) return
+  if (!clean || scriptDebugState.watches.some(/* 比较 watch.expression 与 clean，返回严格相等的判断结果。 */ watch => watch.expression === clean)) return
   scriptDebugState.watches.push({ id: nextWatchId++, expression: clean, value: '—', error: null })
   evaluateDebugWatches()
 }
 
-export function removeDebugWatch(id: number): void {
-  const index = scriptDebugState.watches.findIndex(watch => watch.id === id)
+/** 按观察项身份移除对应表达式。 */ export function removeDebugWatch(id: number): void {
+  const index = scriptDebugState.watches.findIndex(/* 比较 watch.id 与 id，返回严格相等的判断结果。 */ watch => watch.id === id)
   if (index >= 0) scriptDebugState.watches.splice(index, 1)
 }
 
-export function evaluateDebugWatches(): void {
+/** 逐项只读求值，限制字符串或结构预览长度，并记录类型及独立错误。 */ export function evaluateDebugWatches(): void {
   for (const watch of scriptDebugState.watches) {
     try {
       const value = evaluateDebugExpression(watch.expression)
@@ -142,10 +143,10 @@ export function evaluateDebugWatches(): void {
   }
 }
 
-export function pauseScriptDebugger(frame: DebugFrame, locals: Record<string, unknown>, reason: string): void {
+/** 记录暂停原因、当前栈帧和局部变量，限制去重栈列表并刷新观察表达式。 */ export function pauseScriptDebugger(frame: DebugFrame, locals: Record<string, unknown>, reason: string): void {
   scriptDebugState.paused = true
   scriptDebugState.reason = reason
-  scriptDebugState.callStack.splice(0, scriptDebugState.callStack.length, frame, ...scriptDebugState.callStack.filter(item => item.entityUuid !== frame.entityUuid || item.functionName !== frame.functionName).slice(0, 31))
+  scriptDebugState.callStack.splice(0, scriptDebugState.callStack.length, frame, ...scriptDebugState.callStack.filter(/* 先计算 item.entityUuid !== frame.entityUuid；仅当其为假值时求右侧 item.functionName !== frame.functionName，返回短路求值结果。 */ item => item.entityUuid !== frame.entityUuid || item.functionName !== frame.functionName).slice(0, 31))
   scriptDebugState.locals = locals
   scriptDebugState.selectedFrame = 0
   scriptDebugState.pauseCount++
@@ -153,7 +154,7 @@ export function pauseScriptDebugger(frame: DebugFrame, locals: Record<string, un
   evaluateDebugWatches()
 }
 
-export function clearScriptDebugger(): void {
+/** 清空暂停、调用栈和局部快照，恢复继续模式并重新计算观察项。 */ export function clearScriptDebugger(): void {
   scriptDebugState.paused = false
   scriptDebugState.reason = ''
   scriptDebugState.callStack.splice(0)
@@ -164,30 +165,30 @@ export function clearScriptDebugger(): void {
   evaluateDebugWatches()
 }
 
-export function beginDebugSession(): void { scriptDebugState.sessionRevision++; scriptDebugState.pauseCount = 0; clearScriptDebugger() }
-export function requestDebugStep(mode: DebugStepMode): void { scriptDebugState.stepMode = mode; scriptDebugState.revision++ }
+/** 开启新的调试会话代次、重置暂停计数并清理旧调试状态。 */ export function beginDebugSession(): void { scriptDebugState.sessionRevision++; scriptDebugState.pauseCount = 0; clearScriptDebugger() }
+/** 记录请求的步进模式并递增状态版本，供执行宿主消费。 */ export function requestDebugStep(mode: DebugStepMode): void { scriptDebugState.stepMode = mode; scriptDebugState.revision++ }
 
-export function selectDebugFrame(index: number): void {
+/** 把选择索引限制到现有调用栈范围并更新状态版本。 */ export function selectDebugFrame(index: number): void {
   scriptDebugState.selectedFrame = Math.min(Math.max(0, Math.round(index)), Math.max(0, scriptDebugState.callStack.length - 1))
   scriptDebugState.revision++
 }
 
-export function updateDebugTask(task: DebugTask): void {
+/** 限制任务描述文本后按身份更新或插入调试任务，保留最多五百一十二项。 */ export function updateDebugTask(task: DebugTask): void {
   const normalized = { ...task, id: task.id.slice(0, 128), name: task.name.slice(0, 160), entityUuid: task.entityUuid.slice(0, 128), detail: task.detail.slice(0, 1_024) }
-  const index = scriptDebugState.tasks.findIndex(item => item.id === normalized.id)
+  const index = scriptDebugState.tasks.findIndex(/* 比较 item.id 与 normalized.id，返回严格相等的判断结果。 */ item => item.id === normalized.id)
   if (index >= 0) scriptDebugState.tasks[index] = normalized
   else scriptDebugState.tasks.unshift(normalized)
   if (scriptDebugState.tasks.length > 512) scriptDebugState.tasks.splice(512)
 }
 
-export function markDebugTaskCancelled(taskId: string, detail = 'Cancellation requested by debugger'): DebugTask | null {
-  const task = scriptDebugState.tasks.find(item => item.id === taskId)
+/** 仅允许排队、运行或等待任务转为取消状态，其他状态返回 null。 */ export function markDebugTaskCancelled(taskId: string, detail = 'Cancellation requested by debugger'): DebugTask | null {
+  const task = scriptDebugState.tasks.find(/* 比较 item.id 与 taskId，返回严格相等的判断结果。 */ item => item.id === taskId)
   if (!task || !['queued', 'running', 'waiting'].includes(task.state)) return null
   updateDebugTask({ ...task, state: 'cancelled', detail: detail.slice(0, 1_024) })
   return task
 }
 
-function secureTokenMatch(received: string, expected: string): boolean {
+/** 规范化十六进制摘要后逐位累计差异，要求期望摘要至少三十二字符且完全相同。 */ function secureTokenMatch(received: string, expected: string): boolean {
   const first = received.toLowerCase().replace(/[^a-f0-9]/g, '').slice(0, 128), second = expected.toLowerCase().replace(/[^a-f0-9]/g, '').slice(0, 128)
   let mismatch = first.length ^ second.length
   const length = Math.max(first.length, second.length)
@@ -195,7 +196,7 @@ function secureTokenMatch(received: string, expected: string): boolean {
   return second.length >= 32 && mismatch === 0
 }
 
-export function handleDebugProtocol(request: DebugProtocolRequest, policy: { enabled: boolean; expectedTokenHash: string; allowExportedPlayers: boolean }): { id: string; result?: unknown; error?: { code: string; message: string } } {
+/** 校验显式启用的本地播放器令牌会话后处理线程、栈、变量、只读求值、任务取消和步进协议请求。 */ export function handleDebugProtocol(request: DebugProtocolRequest, policy: { enabled: boolean; expectedTokenHash: string; allowExportedPlayers: boolean }): { id: string; result?: unknown; error?: { code: string; message: string } } {
   if (request.method === 'initialize') {
     const local = request.address === '127.0.0.1' || request.address === '::1' || request.address === 'localhost'
     const accepted = policy.enabled && policy.allowExportedPlayers && local && secureTokenMatch(request.tokenHash, policy.expectedTokenHash)
@@ -206,8 +207,8 @@ export function handleDebugProtocol(request: DebugProtocolRequest, policy: { ena
     return { id: request.id, result: { protocol: 'nova-rhai-debug', version: 3, capabilities: ['statementMaps', 'statementStepping', 'breakpoints', 'conditionalBreakpoints', 'hitCounts', 'logpoints', 'stackTrace', 'scopes', 'evaluate', 'tasks', 'taskCancellation', 'hotReload'] } }
   }
   if (!scriptDebugState.remotePeer?.authenticated) return { id: request.id, error: { code: 'NOVA-DEBUG-NOT-AUTHENTICATED', message: 'Initialize an authenticated local session first.' } }
-  if (request.method === 'threads') return { id: request.id, result: [{ id: 1, name: 'Main callbacks' }, ...scriptDebugState.tasks.map((task, index) => ({ id: index + 2, name: `${task.name} · ${task.state}` }))] }
-  if (request.method === 'stackTrace') return { id: request.id, result: scriptDebugState.callStack.map((frame, index) => ({ id: index, ...frame })) }
+  if (request.method === 'threads') return { id: request.id, result: [{ id: 1, name: 'Main callbacks' }, ...scriptDebugState.tasks.map(/** 构造并返回记录 { id: index + 2, name: `${task.name} · ${task.state}` }，字段按当前实参及捕获状态求值。 */ (task, index) => ({ id: index + 2, name: `${task.name} · ${task.state}` }))] }
+  if (request.method === 'stackTrace') return { id: request.id, result: scriptDebugState.callStack.map(/** 构造并返回记录 { id: index, ...frame }，字段按当前实参及捕获状态求值。 */ (frame, index) => ({ id: index, ...frame })) }
   if (request.method === 'scopes') return { id: request.id, result: [{ name: 'Locals', variables: scriptDebugState.locals }, { name: 'Watches', variables: scriptDebugState.watches }] }
   if (request.method === 'evaluate') {
     try { return { id: request.id, result: evaluateDebugExpression(request.expression) } } catch (error) { return { id: request.id, error: { code: 'NOVA-DEBUG-EVALUATE', message: error instanceof Error ? error.message : String(error) } } }
@@ -221,7 +222,7 @@ export function handleDebugProtocol(request: DebugProtocolRequest, policy: { ena
   return { id: request.id, result: { accepted: true, mode } }
 }
 
-export function disconnectRemoteDebugger(reason = 'Session closed'): void {
+/** 记录远程调试断开原因并清除已认证端点。 */ export function disconnectRemoteDebugger(reason = 'Session closed'): void {
   if (scriptDebugState.remotePeer) scriptDebugState.remoteAudit.unshift({ at: new Date().toISOString(), event: 'disconnect', accepted: true, detail: reason.slice(0, 256) })
   scriptDebugState.remotePeer = null
 }

@@ -1,3 +1,4 @@
+// 窄相碰撞：通过 GJK/EPA 和多边形裁剪产生接触流形。
 #[derive(Clone, Copy, Debug)]
 struct SupportPoint {
     point: Vec2,
@@ -5,6 +6,7 @@ struct SupportPoint {
     point_b: Vec2,
 }
 
+// 取得两个形状在相反方向的支撑点，组成闵可夫斯基差支撑点。
 fn minkowski_support(body_a: &Body, body_b: &Body, direction: Vec2) -> SupportPoint {
     let direction = direction.normalized_or(Vec2::new(1.0, 0.0));
     let point_a = body_a
@@ -20,6 +22,7 @@ fn minkowski_support(body_a: &Body, body_b: &Body, direction: Vec2) -> SupportPo
     }
 }
 
+// 缩减 GJK 单纯形并更新搜索方向，判断是否包围原点。
 fn handle_simplex(simplex: &mut Vec<SupportPoint>, direction: &mut Vec2) -> bool {
     let a = simplex[simplex.len() - 1];
     let ao = a.point.neg();
@@ -66,6 +69,7 @@ fn handle_simplex(simplex: &mut Vec<SupportPoint>, direction: &mut Vec2) -> bool
     true
 }
 
+// 迭代支撑点检测凸形状相交，退化或未相交时返回空值。
 fn gjk(body_a: &Body, body_b: &Body) -> Option<Vec<SupportPoint>> {
     let mut direction = body_b
         .collider_position()
@@ -82,7 +86,7 @@ fn gjk(body_a: &Body, body_b: &Body) -> Option<Vec<SupportPoint>> {
         }
         if simplex
             .iter()
-            .any(|existing| existing.point.sub(point.point).length_squared() <= EPSILON * EPSILON)
+            .any(/* 判断 existing . point . sub (point . point) . length_squared () <= EPSILON * EPSILON 是否成立，供过滤或有效性检查使用。 */ |existing| existing.point.sub(point.point).length_squared() <= EPSILON * EPSILON)
         {
             return None;
         }
@@ -102,6 +106,7 @@ struct Manifold {
     point: Vec2,
 }
 
+// 从最接近原点的边插值得到接触点、法线和穿透深度。
 fn manifold_from_edge(
     edge_start: SupportPoint,
     edge_end: SupportPoint,
@@ -133,6 +138,7 @@ fn manifold_from_edge(
     }
 }
 
+// 扩展相交多面体以估计最小穿透方向和接触流形。
 fn epa(body_a: &Body, body_b: &Body, mut polytope: Vec<SupportPoint>) -> Option<Manifold> {
     if polytope.len() != 3 {
         return None;
@@ -186,7 +192,7 @@ fn epa(body_a: &Body, body_b: &Body, mut polytope: Vec<SupportPoint>) -> Option<
         let support_distance = minimum_normal.dot(support.point);
 
         if support_distance - minimum_distance <= tolerance
-            || polytope.iter().any(|existing| {
+            || polytope.iter().any(/* 判断 existing . point . sub (support . point) . length_squared () <= EPSILON * EPSILON 是否成立，供过滤或有效性检查使用。 */ |existing| {
                 existing.point.sub(support.point).length_squared() <= EPSILON * EPSILON
             })
         {
@@ -202,11 +208,12 @@ fn epa(body_a: &Body, body_b: &Body, mut polytope: Vec<SupportPoint>) -> Option<
         polytope.insert(next_index, support);
     }
 
-    best_edge.map(|(start, end, normal, depth)| {
+    best_edge.map(/* 计算并返回 manifold_from_edge (start , end , normal , depth , center_direction)，用于当前 epa 流程。 */ |(start, end, normal, depth)| {
         manifold_from_edge(start, end, normal, depth, center_direction)
     })
 }
 
+// 组合 GJK 与 EPA，为一般凸形状生成接触结果。
 fn collide_gjk(body_a: &Body, body_b: &Body) -> Option<Manifold> {
     let simplex = gjk(body_a, body_b)?;
     let manifold = epa(body_a, body_b, simplex)?;
@@ -217,6 +224,7 @@ fn collide_gjk(body_a: &Body, body_b: &Body) -> Option<Manifold> {
     }
 }
 
+// 将多边形局部顶点转换到世界空间；非多边形返回空值。
 fn world_polygon_vertices(body: &Body) -> Option<Vec<Vec2>> {
     let Shape::Polygon { vertices } = &body.shape else {
         return None;
@@ -224,11 +232,12 @@ fn world_polygon_vertices(body: &Body) -> Option<Vec<Vec2>> {
     Some(
         vertices
             .iter()
-            .map(|vertex| body.collider_position().add(rotate(*vertex, body.collider_angle())))
+            .map(/* 计算并返回 body . collider_position () . add (rotate (* vertex , body . collider_angle ()))，用于当前 world_polygon_vertices 流程。 */ |vertex| body.collider_position().add(rotate(*vertex, body.collider_angle())))
             .collect(),
     )
 }
 
+// 把全部顶点投影到给定轴，返回投影最小值与最大值。
 fn project_polygon(vertices: &[Vec2], axis: Vec2) -> (f64, f64) {
     let mut minimum = vertices[0].dot(axis);
     let mut maximum = minimum;
@@ -240,11 +249,13 @@ fn project_polygon(vertices: &[Vec2], axis: Vec2) -> (f64, f64) {
     (minimum, maximum)
 }
 
+// 计算多边形指定边的外法线。
 fn outward_edge_normal(vertices: &[Vec2], index: usize) -> Vec2 {
     let edge = vertices[(index + 1) % vertices.len()].sub(vertices[index]);
     Vec2::new(edge.y, -edge.x).normalized_or(Vec2::new(1.0, 0.0))
 }
 
+// 根据半平面裁剪线段，保留内部端点并插入交点。
 fn clip_segment_to_plane(points: &[Vec2], normal: Vec2, offset: f64) -> Vec<Vec2> {
     if points.len() < 2 {
         return Vec::new();
@@ -266,6 +277,7 @@ fn clip_segment_to_plane(points: &[Vec2], normal: Vec2, offset: f64) -> Vec<Vec2
     clipped
 }
 
+// 使用分离轴和参考边裁剪产生多边形接触点集合。
 fn polygon_manifolds(body_a: &Body, body_b: &Body) -> Option<Vec<Manifold>> {
     let vertices_a = world_polygon_vertices(body_a)?;
     let vertices_b = world_polygon_vertices(body_b)?;
@@ -300,12 +312,12 @@ fn polygon_manifolds(body_a: &Body, body_b: &Body) -> Option<Vec<Manifold>> {
         (&vertices_b, &vertices_a, collision_normal.neg())
     };
 
-    let reference_edge_index = (0..reference_vertices.len()).max_by(|left, right| {
+    let reference_edge_index = (0..reference_vertices.len()).max_by(/* 比较参考多边形各边法线在接触法线上的投影，选择参考边。 */ |left, right| {
         outward_edge_normal(reference_vertices, *left)
             .dot(reference_normal)
             .total_cmp(&outward_edge_normal(reference_vertices, *right).dot(reference_normal))
     })?;
-    let incident_edge_index = (0..incident_vertices.len()).min_by(|left, right| {
+    let incident_edge_index = (0..incident_vertices.len()).min_by(/* 比较入射多边形各边法线在接触法线上的投影，选择入射边。 */ |left, right| {
         outward_edge_normal(incident_vertices, *left)
             .dot(reference_normal)
             .total_cmp(&outward_edge_normal(incident_vertices, *right).dot(reference_normal))
@@ -347,6 +359,7 @@ fn polygon_manifolds(body_a: &Body, body_b: &Body) -> Option<Vec<Manifold>> {
     }
 }
 
+// 优先采用多边形流形路径，否则使用通用凸形状碰撞路径。
 fn collide(body_a: &Body, body_b: &Body) -> Vec<Manifold> {
     if let Some(manifolds) = polygon_manifolds(body_a, body_b) {
         return manifolds;

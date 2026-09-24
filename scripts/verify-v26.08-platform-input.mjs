@@ -1,3 +1,4 @@
+/** 验证脚本（v26.08-platform-input）：组织对应功能与边界场景检查，断言行为并汇总验证结果。 */
 import { webcrypto } from 'node:crypto'
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
@@ -14,12 +15,12 @@ const release = '26.08'
 const root = dirname(dirname(fileURLToPath(import.meta.url)))
 const compiled = await mkdtemp(join(tmpdir(), 'nova-v2608-platform-input-'))
 const checks = []
-const check = (id, passed, detail, metrics = {}) => checks.push({ id, status: passed ? 'passed' : 'failed', detail, metrics })
+const check = /* 调用 checks.push({ id, status: passed ? 'passed' : 'failed', detail, metrics }) 并返回调用结果。 */ (id, passed, detail, metrics = {}) => checks.push({ id, status: passed ? 'passed' : 'failed', detail, metrics })
 
 let gamepads = [], gamepadReads = 0
 Object.defineProperty(globalThis, 'navigator', {
   configurable: true,
-  value: { getGamepads: () => { gamepadReads += 1; return gamepads }, maxTouchPoints: 0 }
+  value: { getGamepads: /** 记录手柄读取次数并返回当前模拟手柄列表。 */ () => { gamepadReads += 1; return gamepads }, maxTouchPoints: 0 }
 })
 
 try {
@@ -33,7 +34,7 @@ try {
       }
     }
   })
-  const load = name => import(`${pathToFileURL(join(compiled, `${name}.mjs`)).href}?v=${Date.now()}`)
+  const load = /* 调用 import(`${pathToFileURL(join(compiled, `${name}.mjs`)).href}?v=${Date.now()}`) 并返回调用结果。 */ name => import(`${pathToFileURL(join(compiled, `${name}.mjs`)).href}?v=${Date.now()}`)
   const [input, device] = await Promise.all(['input', 'device'].map(load))
 
   const penMap = input.normalizeInputMap([{ name: 'Pen', kind: 'axis', bindings: [
@@ -43,7 +44,7 @@ try {
     input.createInputBinding('pen-button', 'eraser'),
     input.createInputBinding('pen-button', 'button-99')
   ] }])
-  check('V2608-PEN-NORMALIZATION', penMap[0].bindings.map(item => `${item.device}:${item.code}`).join('|') === 'pen-pressure:pressure|pen-tilt:y|pen-twist:twist|pen-button:eraser|pen-button:tip', 'Pen bindings normalize pressure, tilt, twist and bounded button codes without changing the action schema.')
+  check('V2608-PEN-NORMALIZATION', penMap[0].bindings.map(/** 将设备类型和输入代码组合成便于比较的绑定键。 */ item => `${item.device}:${item.code}`).join('|') === 'pen-pressure:pressure|pen-tilt:y|pen-twist:twist|pen-button:eraser|pen-button:tip', 'Pen bindings normalize pressure, tilt, twist and bounded button codes without changing the action schema.')
 
   const penManager = new input.InputManager()
   const penActions = [
@@ -54,7 +55,7 @@ try {
   ]
   penManager.onPointerDown({ pointerType: 'pen', pointerId: 17, clientX: 120, clientY: 80, pressure: .6, tiltX: 45, tiltY: -45, twist: 180, buttons: 32, button: 5 })
   const penDown = penManager.sample(penActions)
-  const penIdentity = penDown.devices.find(item => item.kind === 'pen')
+  const penIdentity = penDown.devices.find(/* 比较 item.kind 与 'pen'，返回严格相等的判断结果。 */ item => item.kind === 'pen')
   check('V2608-PEN-BEHAVIOR', Math.abs(penDown.axes.Pressure - .6) < 1e-9 && Math.abs(penDown.vectors.Tilt[0] - .5) < 1e-9 && Math.abs(penDown.vectors.Tilt[1] + .5) < 1e-9 && Math.abs(penDown.axes.Twist - 180 / 359) < 1e-9 && penDown.down.Erase && penIdentity?.id === 'pen:0' && penIdentity.mapping === 'pointer' && input.inputPromptState.modality === 'pen', 'A real pen event drives pressure, normalized 2D tilt, twist, eraser, identity and prompt modality.', { pressure: penDown.axes.Pressure, tilt: penDown.vectors.Tilt, twist: penDown.axes.Twist })
   penManager.onPointerCancel({ pointerType: 'pen', pointerId: 17, clientX: 120, clientY: 80 })
   const penReleased = penManager.sample(penActions)
@@ -83,7 +84,7 @@ try {
     { ...input.createInputBinding('gamepad-axis', '1'), deadzone: 0 },
     input.createInputBinding('gamepad-button', '0')
   ])
-  const pad = (axis) => ({ id: 'Xbox Test Pad', index: 0, connected: true, mapping: 'standard', axes: [axis, 0], buttons: [{ pressed: false, touched: false, value: 0 }], timestamp: 1, vibrationActuator: null })
+  const pad = /** 构造具有指定水平轴值的标准映射Xbox测试手柄。 */ (axis) => ({ id: 'Xbox Test Pad', index: 0, connected: true, mapping: 'standard', axes: [axis, 0], buttons: [{ pressed: false, touched: false, value: 0 }], timestamp: 1, vibrationActuator: null })
   input.setInputModality('mouse')
   gamepads = [null, pad(.08)]; gamepadReads = 0
   gamepadManager.sample([gamepadAction])
@@ -116,10 +117,10 @@ try {
   await rm(compiled, { recursive: true, force: true })
 }
 
-const failed = checks.filter(item => item.status === 'failed')
+const failed = checks.filter(/* 比较 item.status 与 'failed'，返回严格相等的判断结果。 */ item => item.status === 'failed')
 const machineVersion = JSON.parse(await readFile(join(root, 'package.json'), 'utf8')).version
 check('V2608-MACHINE-AUTHORITY', machineVersion === '26.8.0', 'The focused input evidence belongs to the 26.08 machine authority rather than a stale build.')
-const finalFailed = checks.filter(item => item.status === 'failed')
+const finalFailed = checks.filter(/* 比较 item.status 与 'failed'，返回严格相等的判断结果。 */ item => item.status === 'failed')
 const report = { format: 'nova-v26.08-platform-input-verification', version: 1, release, engineVersion: machineVersion, generatedAt: new Date().toISOString(), checks, severity0Open: finalFailed.length, severity1Open: 0, status: finalFailed.length ? 'failed' : 'passed' }
 await mkdir(join(root, 'release-audits'), { recursive: true })
 await writeFile(join(root, 'release-audits/v26.08-platform-input.json'), `${JSON.stringify(report, null, 2)}\n`)

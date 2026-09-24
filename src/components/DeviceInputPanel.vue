@@ -1,3 +1,4 @@
+<!-- 设备输入面板：配置虚拟控件、设备能力和传感器输入。 -->
 <script setup lang="ts">
 import NumericExpressionInput from './NumericExpressionInput.vue'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
@@ -22,78 +23,78 @@ const words = {
   de: { title:'Geräte & mobile Eingabe', subtitle:'Laufzeitsteuerung exakt ansehen, neu belegen und testen.', preview:'Vorschau', virtual:'Virtuelle Steuerung', gamepad:'Gamepad', sensors:'Sensoren', rotate:'Drehen', safe:'Sicherer Bereich', dpi:'Referenz-DPI', enableVirtual:'Virtuelle Steuerung aktivieren', visibility:'Sichtbarkeit', touchOnly:'Touch-Geräte', always:'Immer anzeigen', addControl:'Steuerung hinzufügen', noControls:'Noch keine virtuelle Steuerung.', label:'Beschriftung', accessibleLabel:'Barrierefreier Name', action:'Aktion', kind:'Steuerung', anchor:'Anker', size:'Größe', opacity:'Deckkraft', haptic:'Haptik', offsetXY:'Versatz X / Y', remove:'Entfernen', connected:'Verbundene Controller', none:'Kein Controller erkannt.', remap:'Belegung erfassen', chooseAction:'Neu zu belegende Aktion', inputSource:'Eingabequelle', logicalKeyboard:'Logische Taste (Layout)', physicalKeyboard:'Physische Tastenposition', waiting:'Ausgewählte Taste oder Gamepad-Steuerung drücken…', calibration:'Achsenkalibrierung', addCalibration:'Achsenkalibrierung hinzufügen', axis:'Achse', deviceId:'Geräte-ID', minimum:'Minimum', center:'Mitte', maximum:'Maximum', deadzone:'Totzone', invert:'Umkehren', penBindings:'Stiftbelegungen', penTip:'Stiftspitze', penBarrel:'Seitentaste', penEraser:'Radierer', penPressure:'Druck', penTiltX:'Neigung X', penTiltY:'Neigung Y', penTwist:'Drehung', orientation:'Ausrichtung', auto:'Automatisch', portrait:'Hochformat', landscape:'Querformat', applyOrientation:'Ausrichtung anwenden', enableSensors:'Bewegungssensoren aktivieren', sensorFrequency:'Abtastrate (Hz)', requestPermission:'Sensorberechtigung anfragen', permission:'Berechtigung', liveValues:'Live-Werte', orientationValues:'Ausrichtung β/γ/α', acceleration:'Beschleunigung', rotation:'Drehrate', testHaptic:'Haptik testen', saveHint:'Änderungen werden im Projekt gespeichert.', button:'Taste', stick:'Stick', dpad:'Steuerkreuz', bottomLeft:'Unten links', bottomRight:'Unten rechts', topLeft:'Oben links', topRight:'Oben rechts', captured:'Belegung erfasst', timeout:'Erfassung abgelaufen', capability:'Host-Fähigkeit' },
   zh: { title:'设备与移动输入', subtitle:'预览、重新绑定并测试实际运行时控制。', preview:'设备预览', virtual:'虚拟控制', gamepad:'手柄', sensors:'传感器', rotate:'旋转', safe:'安全区域', dpi:'参考 DPI', enableVirtual:'启用虚拟控制', visibility:'显示条件', touchOnly:'仅触控设备', always:'始终预览', addControl:'添加控制', noControls:'尚无虚拟控制。', label:'标签', accessibleLabel:'无障碍名称', action:'动作', kind:'控件', anchor:'锚点', size:'大小', opacity:'不透明度', haptic:'触觉反馈', offsetXY:'X / Y 偏移', remove:'移除', connected:'已连接控制器', none:'未检测到控制器。', remap:'捕获绑定', chooseAction:'要重新绑定的动作', inputSource:'输入来源', logicalKeyboard:'逻辑按键（跟随布局）', physicalKeyboard:'物理按键位置', waiting:'请按下所选键盘或手柄控件…', calibration:'摇杆轴校准', addCalibration:'添加轴校准', axis:'轴', deviceId:'设备 ID', minimum:'最小值', center:'中心', maximum:'最大值', deadzone:'死区', invert:'反转', penBindings:'触控笔绑定', penTip:'笔尖', penBarrel:'侧键', penEraser:'橡皮擦', penPressure:'压力', penTiltX:'X 倾斜', penTiltY:'Y 倾斜', penTwist:'旋转', orientation:'方向', auto:'自动', portrait:'竖屏', landscape:'横屏', applyOrientation:'应用方向', enableSensors:'启用运动传感器', sensorFrequency:'采样频率（Hz）', requestPermission:'请求传感器权限', permission:'权限', liveValues:'实时数值', orientationValues:'方向 β/γ/α', acceleration:'加速度', rotation:'旋转速率', testHaptic:'测试触觉反馈', saveHint:'更改会随项目保存。', button:'按钮', stick:'摇杆', dpad:'方向键', bottomLeft:'左下', bottomRight:'右下', topLeft:'左上', topRight:'右上', captured:'已捕获绑定', timeout:'捕获已超时', capability:'主机能力' }
 } as const
-function l(key: keyof typeof words.en): string { return (words[preferencesState.locale] ?? words.en)[key] }
+/* 返回 (words[preferencesState.locale] ?? words.en)[key] 的当前值。 */ function l(key: keyof typeof words.en): string { return (words[preferencesState.locale] ?? words.en)[key] }
 
-const tabs = computed(() => [{ id:'preview' as const,label:l('preview') },{ id:'virtual' as const,label:l('virtual') },{ id:'gamepad' as const,label:l('gamepad') },{ id:'sensors' as const,label:l('sensors') }])
-const preset = computed(() => UI_DEVICE_PRESETS[presetIndex.value] ?? UI_DEVICE_PRESETS[4])
-const previewWidth = computed(() => rotated.value ? preset.value.height : preset.value.width)
-const previewHeight = computed(() => rotated.value ? preset.value.width : preset.value.height)
-const previewSafe = computed(() => rotated.value ? { left:preset.value.safeArea.top, top:preset.value.safeArea.right, right:preset.value.safeArea.bottom, bottom:preset.value.safeArea.left } : preset.value.safeArea)
-const previewStyle = computed(() => ({ aspectRatio:`${previewWidth.value}/${previewHeight.value}`, width: previewWidth.value > previewHeight.value ? 'min(100%,560px)' : 'min(62%,300px)' }))
+const tabs = computed(/** 按当前语言生成预览、虚拟控件、手柄和传感器标签。 */ () => [{ id:'preview' as const,label:l('preview') },{ id:'virtual' as const,label:l('virtual') },{ id:'gamepad' as const,label:l('gamepad') },{ id:'sensors' as const,label:l('sensors') }])
+const preset = computed(/* 当 UI_DEVICE_PRESETS[presetIndex.value] 为 null 或 undefined 时返回 UI_DEVICE_PRESETS[4]，否则保留左侧值。 */ () => UI_DEVICE_PRESETS[presetIndex.value] ?? UI_DEVICE_PRESETS[4])
+const previewWidth = computed(/* 根据 rotated.value 的真假，分别返回 preset.value.height 或 preset.value.width。 */ () => rotated.value ? preset.value.height : preset.value.width)
+const previewHeight = computed(/* 根据 rotated.value 的真假，分别返回 preset.value.width 或 preset.value.height。 */ () => rotated.value ? preset.value.width : preset.value.height)
+const previewSafe = computed(/** 旋转预览时将安全区四边对应旋转，否则保留原预设。 */ () => rotated.value ? { left:preset.value.safeArea.top, top:preset.value.safeArea.right, right:preset.value.safeArea.bottom, bottom:preset.value.safeArea.left } : preset.value.safeArea)
+const previewStyle = computed(/** 根据预览宽高生成比例和横竖屏显示宽度样式。 */ () => ({ aspectRatio:`${previewWidth.value}/${previewHeight.value}`, width: previewWidth.value > previewHeight.value ? 'min(100%,560px)' : 'min(62%,300px)' }))
 const controlKinds: VirtualControlKind[] = ['button','stick','dpad']
 const anchors = ['bottom-left','bottom-right','top-left','top-right'] as const
-function anchorLabel(anchor: typeof anchors[number]): string { return l(({ 'bottom-left':'bottomLeft', 'bottom-right':'bottomRight', 'top-left':'topLeft', 'top-right':'topRight' } as const)[anchor]) }
-const calibrationDefaults = (): GamepadAxisCalibration => ({ deviceId:'*', axis:0, minimum:-1, center:0, maximum:1, deadzone:.12, invert:false })
+/** 将四角锚点映射为本地化名称。 */ function anchorLabel(anchor: typeof anchors[number]): string { return l(({ 'bottom-left':'bottomLeft', 'bottom-right':'bottomRight', 'top-left':'topLeft', 'top-right':'topRight' } as const)[anchor]) }
+const calibrationDefaults = /** 构造通用设备轴零号的默认校准参数。 */ (): GamepadAxisCalibration => ({ deviceId:'*', axis:0, minimum:-1, center:0, maximum:1, deadzone:.12, invert:false })
 
-function commit(label = 'Edit device input'): void { pushHistory(label) }
-function addControl(): void { const action = physicsState.inputMap.find(item => item.kind === 'vector2')?.name ?? physicsState.inputMap[0]?.name ?? 'Move'; deviceInputSettings.virtualControls.push(createVirtualControl(action, physicsState.inputMap.find(item => item.name === action)?.kind === 'vector2' ? 'stick' : 'button', deviceInputSettings.virtualControls.length)); deviceInputSettings.virtualControlsEnabled = true; commit('Add virtual control') }
-function removeControl(index: number): void { const control = deviceInputSettings.virtualControls[index]; if (control) gameplayRuntime.input.releaseVirtualAction(control.action); deviceInputSettings.virtualControls.splice(index,1); commit('Remove virtual control') }
-function commitControl(control:VirtualControlSettings): void { control.accessibleLabel=control.accessibleLabel.trim().slice(0,160)||control.label.trim().slice(0,80)||control.action; commit() }
-function addCalibration(): void { if (deviceInputSettings.gamepadCalibrations.length >= 128) return; deviceInputSettings.gamepadCalibrations.push(calibrationDefaults()); commit('Add gamepad calibration') }
-function removeCalibration(index:number): void { deviceInputSettings.gamepadCalibrations.splice(index,1); commit('Remove gamepad calibration') }
-function availableGamepads(): Gamepad[] { try { return typeof navigator !== 'undefined' && navigator.getGamepads ? Array.from(navigator.getGamepads()).filter((item):item is Gamepad => Boolean(item && item.connected !== false)).slice(0,16) : [] } catch { return [] } }
-function refreshDevices(force=false): void {
+/** 用传入标签记录设备输入配置历史。 */ function commit(label = 'Edit device input'): void { pushHistory(label) }
+/** 优先选择向量动作创建摇杆，否则创建按钮，启用虚拟输入并记录历史。 */ function addControl(): void { const action = physicsState.inputMap.find(/* 比较 item.kind 与 'vector2'，返回严格相等的判断结果。 */ item => item.kind === 'vector2')?.name ?? physicsState.inputMap[0]?.name ?? 'Move'; deviceInputSettings.virtualControls.push(createVirtualControl(action, physicsState.inputMap.find(/* 比较 item.name 与 action，返回严格相等的判断结果。 */ item => item.name === action)?.kind === 'vector2' ? 'stick' : 'button', deviceInputSettings.virtualControls.length)); deviceInputSettings.virtualControlsEnabled = true; commit('Add virtual control') }
+/** 移除控件前释放其关联虚拟动作，再记录历史。 */ function removeControl(index: number): void { const control = deviceInputSettings.virtualControls[index]; if (control) gameplayRuntime.input.releaseVirtualAction(control.action); deviceInputSettings.virtualControls.splice(index,1); commit('Remove virtual control') }
+/** 清理无障碍标签并限制长度，空值回退控件标签或动作名称后记录历史。 */ function commitControl(control:VirtualControlSettings): void { control.accessibleLabel=control.accessibleLabel.trim().slice(0,160)||control.label.trim().slice(0,80)||control.action; commit() }
+/** 未达到一百二十八项上限时添加默认手柄校准。 */ function addCalibration(): void { if (deviceInputSettings.gamepadCalibrations.length >= 128) return; deviceInputSettings.gamepadCalibrations.push(calibrationDefaults()); commit('Add gamepad calibration') }
+/** 删除指定手柄校准项并记录历史。 */ function removeCalibration(index:number): void { deviceInputSettings.gamepadCalibrations.splice(index,1); commit('Remove gamepad calibration') }
+/** 安全查询已连接手柄，最多返回十六项，接口缺失或异常返回空列表。 */ function availableGamepads(): Gamepad[] { try { return typeof navigator !== 'undefined' && navigator.getGamepads ? Array.from(navigator.getGamepads()).filter(/* 调用 Boolean(item && item.connected !== false) 并返回调用结果。 */ (item):item is Gamepad => Boolean(item && item.connected !== false)).slice(0,16) : [] } catch { return [] } }
+/** 刷新设备能力，只有强制刷新或设备签名变化时更新响应式手柄列表。 */ function refreshDevices(force=false): void {
   refreshDeviceCapabilities()
-  const next = availableGamepads(), signature = next.map(pad=>`${pad.index}:${pad.id}:${pad.mapping}:${pad.connected}`).join('|')
+  const next = availableGamepads(), signature = next.map(/** 组合手柄索引、标识、映射和连接状态生成变化签名。 */ pad=>`${pad.index}:${pad.id}:${pad.mapping}:${pad.connected}`).join('|')
   if (force || signature !== gamepadSignature) { gamepadSignature = signature; connectedGamepads.value = next }
 }
-function scheduleDeviceRefresh(): void { if (refreshFrame) return; refreshFrame=requestAnimationFrame(()=>{ refreshFrame=0; refreshDevices() }) }
-const onGamepadChange = (): void => scheduleDeviceRefresh()
-const onViewportChange = (): void => scheduleDeviceRefresh()
-const onPanelVisibility = (): void => { if (!document.hidden) scheduleDeviceRefresh(); else stopCapture(false) }
-function bindingCaptured(device:InputDevice, code:string, appendDistinct=false): void {
-  const action = physicsState.inputMap.find(item => item.name === captureAction.value)
+/** 合并多次刷新请求为一个动画帧。 */ function scheduleDeviceRefresh(): void { if (refreshFrame) return; refreshFrame=requestAnimationFrame(/** 清除待执行帧标记并刷新设备信息。 */ ()=>{ refreshFrame=0; refreshDevices() }) }
+const onGamepadChange = /* 调用 scheduleDeviceRefresh() 并返回调用结果。 */ (): void => scheduleDeviceRefresh()
+const onViewportChange = /* 调用 scheduleDeviceRefresh() 并返回调用结果。 */ (): void => scheduleDeviceRefresh()
+const onPanelVisibility = /** 页面可见时请求刷新，隐藏时停止捕获但保留状态提示。 */ (): void => { if (!document.hidden) scheduleDeviceRefresh(); else stopCapture(false) }
+/** 将捕获设备与代码写入当前动作，按模式替换或追加绑定，归一化输入映射并记录历史后结束捕获。 */ function bindingCaptured(device:InputDevice, code:string, appendDistinct=false): void {
+  const action = physicsState.inputMap.find(/* 比较 item.name 与 captureAction.value，返回严格相等的判断结果。 */ item => item.name === captureAction.value)
   if (!action) return stopCapture()
-  const index = action.bindings.findIndex(binding => binding.device === device && (!appendDistinct || binding.code === code))
+  const index = action.bindings.findIndex(/* 先计算 binding.device === device；仅当其为真值时求右侧 (!appendDistinct || binding.code === code)，返回短路求值结果。 */ binding => binding.device === device && (!appendDistinct || binding.code === code))
   const binding = createInputBinding(device, code)
   if (index >= 0) action.bindings.splice(index,1,binding); else action.bindings.push(binding)
   const normalized = normalizeInputMap(physicsState.inputMap); physicsState.inputMap.splice(0,physicsState.inputMap.length,...normalized)
   pushHistory('Remap input action'); captureStatus.value = `${l('captured')}: ${device} ${code}`; stopCapture(false)
 }
-function captureKey(event:KeyboardEvent): void {
+/** Escape 取消捕获；键盘模式分别记录逻辑键名或物理键码，手柄模式忽略普通键。 */ function captureKey(event:KeyboardEvent): void {
   if (event.key === 'Escape') { event.preventDefault(); stopCapture(); return }
   if (captureMode.value === 'gamepad') return
   event.preventDefault()
   if (captureMode.value === 'logical-keyboard') bindingCaptured('keyboard', event.key)
   else if (captureMode.value === 'physical-keyboard') bindingCaptured('physical-key', event.code)
 }
-function pollGamepad(): void {
+/** 在截止期限内逐帧查找超过阈值的手柄按钮或轴，捕获后结束，超时显示提示。 */ function pollGamepad(): void {
   if (!captureDeadline.value || captureMode.value !== 'gamepad') return
   if (performance.now() >= captureDeadline.value) { captureStatus.value = l('timeout'); stopCapture(false); return }
   for (const pad of availableGamepads()) {
-    const button = pad.buttons.findIndex(value => value.pressed || value.value > .65); if (button >= 0) { bindingCaptured('gamepad-button', String(button)); return }
-    const axis = pad.axes.findIndex(value => Math.abs(value) > .7); if (axis >= 0) { bindingCaptured('gamepad-axis', String(axis)); return }
+    const button = pad.buttons.findIndex(/* 先计算 value.pressed；仅当其为假值时求右侧 value.value > .65，返回短路求值结果。 */ value => value.pressed || value.value > .65); if (button >= 0) { bindingCaptured('gamepad-button', String(button)); return }
+    const axis = pad.axes.findIndex(/* 比较 Math.abs(value) 与 .7，返回大于的判断结果。 */ value => Math.abs(value) > .7); if (axis >= 0) { bindingCaptured('gamepad-axis', String(axis)); return }
   }
   captureFrame = requestAnimationFrame(pollGamepad)
 }
-function beginCapture(): void { stopCapture(); captureStatus.value = l('waiting'); captureDeadline.value = performance.now()+10_000; window.addEventListener('keydown',captureKey,true); if(captureMode.value==='gamepad')captureFrame=requestAnimationFrame(pollGamepad) }
-function stopCapture(clear=true): void { window.removeEventListener('keydown',captureKey,true); if(captureFrame)cancelAnimationFrame(captureFrame); captureFrame=0; captureDeadline.value=0; if(clear)captureStatus.value='' }
-function bindPen(device:'pen-button'|'pen-pressure'|'pen-tilt'|'pen-twist',code:string): void { bindingCaptured(device,code,true) }
-async function sensorPermission(): Promise<void> { await requestDeviceSensorPermission() }
-async function orient(): Promise<void> { await applyOrientationPolicy() }
-function sensorsChanged(): void { if(!deviceInputSettings.motionSensorsEnabled)detachDeviceSensors(); commit() }
+/** 停止旧捕获，设十秒期限并监听按键，手柄模式同时启动轮询。 */ function beginCapture(): void { stopCapture(); captureStatus.value = l('waiting'); captureDeadline.value = performance.now()+10_000; window.addEventListener('keydown',captureKey,true); if(captureMode.value==='gamepad')captureFrame=requestAnimationFrame(pollGamepad) }
+/** 移除捕获监听及待执行帧，重置期限并按参数决定是否清除提示。 */ function stopCapture(clear=true): void { window.removeEventListener('keydown',captureKey,true); if(captureFrame)cancelAnimationFrame(captureFrame); captureFrame=0; captureDeadline.value=0; if(clear)captureStatus.value='' }
+/** 捕获笔设备绑定，保留不同代码的已有同类绑定。 */ function bindPen(device:'pen-button'|'pen-pressure'|'pen-tilt'|'pen-twist',code:string): void { bindingCaptured(device,code,true) }
+/** 请求设备传感器权限。 */ async function sensorPermission(): Promise<void> { await requestDeviceSensorPermission() }
+/** 尝试应用当前方向策略。 */ async function orient(): Promise<void> { await applyOrientationPolicy() }
+/** 关闭运动传感器时解除监听，并记录配置历史。 */ function sensorsChanged(): void { if(!deviceInputSettings.motionSensorsEnabled)detachDeviceSensors(); commit() }
 
-watch(activeTab,tab=>{ if(tab==='gamepad')scheduleDeviceRefresh() })
-onMounted(() => {
+watch(activeTab,/** 进入手柄标签时安排一次设备刷新。 */ tab=>{ if(tab==='gamepad')scheduleDeviceRefresh() })
+onMounted(/** 挂载时初次检测设备，注册手柄、视口和可见性监听，并建立低频刷新计时器。 */ () => {
   refreshDevices(true)
   window.addEventListener('gamepadconnected',onGamepadChange)
   window.addEventListener('gamepaddisconnected',onGamepadChange)
   window.addEventListener('resize',onViewportChange,{passive:true})
   window.addEventListener('orientationchange',onViewportChange,{passive:true})
   document.addEventListener('visibilitychange',onPanelVisibility)
-  refreshTimer=window.setInterval(()=>{ if(activeTab.value==='gamepad'&&!document.hidden)refreshDevices() },5_000)
+  refreshTimer=window.setInterval(/** 仅在手柄标签且页面可见时执行周期设备刷新。 */ ()=>{ if(activeTab.value==='gamepad'&&!document.hidden)refreshDevices() },5_000)
 })
-onBeforeUnmount(() => {
+onBeforeUnmount(/** 卸载时清除计时器、帧和设备监听，停止捕获并释放虚拟动作。 */ () => {
   window.clearInterval(refreshTimer)
   if(refreshFrame)cancelAnimationFrame(refreshFrame)
   window.removeEventListener('gamepadconnected',onGamepadChange)
@@ -136,7 +137,7 @@ onBeforeUnmount(() => {
       <div class="setting-line"><span>{{ l('orientation') }}</span><select v-model="deviceInputSettings.orientation" @change="commit()"><option value="auto">{{ l('auto') }}</option><option value="portrait">{{ l('portrait') }}</option><option value="landscape">{{ l('landscape') }}</option></select><button @click="orient">{{ l('applyOrientation') }}</button></div>
       <div class="setting-line"><span>{{ l('enableSensors') }}</span><input v-model="deviceInputSettings.motionSensorsEnabled" type="checkbox" @change="sensorsChanged"><button :disabled="!deviceInputSettings.motionSensorsEnabled" @click="sensorPermission">{{ l('requestPermission') }}</button></div>
       <label class="frequency">{{ l('sensorFrequency') }}<NumericExpressionInput v-model="deviceInputSettings.sensorFrequency" :minimum="1" :maximum="120" :step="1" @change="commit()" :resource-key="'device:deviceInputSettings.sensorFrequency'" /></label>
-      <dl><div><dt>{{ l('permission') }}</dt><dd>{{ deviceSensorState.permission }}</dd></div><div><dt>{{ l('capability') }}</dt><dd>{{ deviceRuntimeState.capabilities.motionSensors?'✓':'—' }}</dd></div><div><dt>{{ l('orientationValues') }}</dt><dd>{{ deviceSensorState.orientation.map(v=>v.toFixed(1)).join(' / ') }}</dd></div><div><dt>{{ l('acceleration') }}</dt><dd>{{ deviceSensorState.acceleration.map(v=>v.toFixed(2)).join(' / ') }}</dd></div><div><dt>{{ l('rotation') }}</dt><dd>{{ deviceSensorState.rotationRate.map(v=>v.toFixed(1)).join(' / ') }}</dd></div></dl>
+<!-- 传感器数值格式化回调分别将方向和旋转显示为一位小数、加速度显示为两位小数。 -->      <dl><div><dt>{{ l('permission') }}</dt><dd>{{ deviceSensorState.permission }}</dd></div><div><dt>{{ l('capability') }}</dt><dd>{{ deviceRuntimeState.capabilities.motionSensors?'✓':'—' }}</dd></div><div><dt>{{ l('orientationValues') }}</dt><dd>{{ deviceSensorState.orientation.map(v=>v.toFixed(1)).join(' / ') }}</dd></div><div><dt>{{ l('acceleration') }}</dt><dd>{{ deviceSensorState.acceleration.map(v=>v.toFixed(2)).join(' / ') }}</dd></div><div><dt>{{ l('rotation') }}</dt><dd>{{ deviceSensorState.rotationRate.map(v=>v.toFixed(1)).join(' / ') }}</dd></div></dl>
       <button @click="performHaptic(18)">⌁ {{ l('testHaptic') }}</button><p class="hint">{{ l('saveHint') }}</p><p v-if="deviceRuntimeState.lastError" class="error" role="alert">{{ deviceRuntimeState.lastError }}</p>
     </div>
   </section>

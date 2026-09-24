@@ -1,3 +1,4 @@
+/** 代码与图转换的公共显示契约：用精确文档快照、UTF-16 位置和保存门禁保护跨面板编辑。 */
 import type { SourceConversionAssessment } from '../visual/graphCodeSync'
 
 export type ConversionSpan = SourceConversionAssessment['regions'][number]['span']
@@ -12,11 +13,13 @@ export interface ConversionSnapshot {
   assetUuid: string
   assessment: SourceConversionAssessment
 }
+/** 只接受同一资源且源码逐字相同的审查快照，拒绝用户确认期间已过期的转换。 */
 export function acceptsConversionReview(latest: ConversionSnapshot | null | undefined, preview: ConversionSnapshot | null): boolean {
   return !!latest && !!preview && latest.assetUuid === preview.assetUuid && latest.source === preview.source
 }
 
 /** Rhai uses UTF-16, half-open offsets. Keep CRLF intact until the DOM boundary. */
+/** 按一基行列定位原始 UTF-16 偏移；保留 CRLF，在缺失行或越界列处截到有效范围。 */
 export function offsetAt(source: string, line: number, column: number): number {
   let start = 0, currentLine = 1
   const breaks = /\r\n|\r|\n/g
@@ -29,18 +32,21 @@ export function offsetAt(source: string, line: number, column: number): number {
   return Math.min(end < 0 ? source.length : start + end, start + Math.max(0, column - 1))
 }
 
+/** 构造起止源范围，确保结束位置不会早于起点。 */
 export function spanAt(source: string, line: number, column = 1, endLine = line, endColumn = column): ConversionSpan {
   const start = offsetAt(source, line, column), end = Math.max(start, offsetAt(source, endLine, endColumn))
   return { start, end, line, column, endLine, endColumn }
 }
 
+/** 将原始源码范围转换为浏览器换行规范化后的选区，避免 CRLF 导致选错字符。 */
 export function textareaSelection(source: string, span: Pick<ConversionSpan, 'start' | 'end'>): [number, number] {
   const start = Math.max(0, Math.min(source.length, span.start)), end = Math.max(start, Math.min(source.length, span.end))
-  const normalizedLength = (offset: number) => source.slice(0, offset).replace(/\r\n|\r/g, '\n').length
+  const normalizedLength = /** 按浏览器规则合并每个 CRLF，仅计算选区前缀长度。 */ (offset: number) => source.slice(0, offset).replace(/\r\n|\r/g, '\n').length
   return [normalizedLength(start), normalizedLength(end)]
 }
 
 /** Convert an LF-normalized textarea caret back to the original UTF-16 source. */
+/** 把 textarea 的 LF 偏移映射回原始源码中的 UTF-16 偏移，成对跨过 CRLF。 */
 export function sourceOffsetFromTextarea(source:string,offset:number):number {
   const target=Math.max(0,Math.floor(Number.isFinite(offset)?offset:0))
   let normalized=0,index=0
@@ -49,17 +55,20 @@ export function sourceOffsetFromTextarea(source:string,offset:number):number {
 }
 
 /** Prefer the smallest containing region; a nested expression is more useful than its entire function. */
+/** 选择包含目标源范围的最小已关联图节点区域，优先定位具体表达式而不是整段函数。 */
 export function regionAt(assessment: SourceConversionAssessment, span: ConversionSpan) {
-  const candidates = assessment.regions.filter(region => region.nodeUuid && region.span.start <= span.start && region.span.end >= span.end)
-  return candidates.sort((a, b) => (a.span.end - a.span.start) - (b.span.end - b.span.start))[0]
+  const candidates = assessment.regions.filter(/** 仅考虑有节点身份且完整包含目标的区域。 */ region => region.nodeUuid && region.span.start <= span.start && region.span.end >= span.end)
+  return candidates.sort(/** 区间更短者排前，相同长度维持原始次序。 */ (a, b) => (a.span.end - a.span.start) - (b.span.end - b.span.start))[0]
 }
 
+/** 语法错误或不可保留区域阻止转换；仅源码保留区域须审查同意；其余允许继续。 */
 export function conversionGate(assessment: SourceConversionAssessment, acceptedSourceBacked = false): 'blocked' | 'review' | 'ready' {
-  if (!assessment.valid || assessment.unpreservable > 0 || assessment.diagnostics.some(item => item.severity === 'error')) return 'blocked'
+  if (!assessment.valid || assessment.unpreservable > 0 || assessment.diagnostics.some(/** 任一错误级诊断足以阻止转换。 */ item => item.severity === 'error')) return 'blocked'
   return assessment.sourceBacked > 0 && !acceptedSourceBacked ? 'review' : 'ready'
 }
 
 /** The destination must never unmount an editor whose dirty save failed or was cancelled. */
+/** 未修改可直接离开；已修改必须由保存函数确认成功，失败或取消时禁止卸载编辑器。 */
 export async function saveBeforeNavigation(dirty: boolean, save: null | (() => boolean | Promise<boolean>)): Promise<boolean> {
   return !dirty || !!save && await save()
 }

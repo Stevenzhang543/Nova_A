@@ -1,3 +1,4 @@
+/** 功能回归脚本：执行 verify-v26.22-component-history.mjs 对应场景，保留断言和证据输出。 */
 import assert from 'node:assert/strict'
 import {readFile} from 'node:fs/promises'
 import {propertyAudit22} from './lib/propertyAudit22.mjs'
@@ -14,12 +15,12 @@ try{
   if(name==='ShapeRenderer2D'&&field==='texture')component.textureAsset='asset://00009999-0000-4000-8000-000000000000'
   if(name==='RigidBody2D'&&field==='inertia')component.autoInertia=false
   if(name==='TileMap2D'&&field==='activeLayer')t.addTileLayer(component,'Audit layer')
-  const snapshot=()=>{const owner=p.physicsState.world.entities.find(e=>e.uuid===entity.uuid);assert.ok(owner);return p.serializeEntity(owner).components.find(row=>row.uuid===component.uuid)},read=()=>{const row=snapshot();return field==='enabled'?row.enabled:row.data[field]},before=JSON.parse(JSON.stringify(snapshot())),previous=JSON.parse(JSON.stringify(read()));p.clearEditorHistory('component-history');assert.ok(p.beginHistoryTransaction('Edit '+name+'.'+field,null,entity.uuid+':'+component.uuid+':'+field))
+  const snapshot=/** 结构说明（自动提取）：snapshot；无显式参数；直接调用 p.physicsState.world.entities.find、assert.ok、components.find、p.serializeEntity。 */ ()=>{const owner=p.physicsState.world.entities.find(/* 比较 e.uuid 与 entity.uuid，返回严格相等的判断结果。 */ e=>e.uuid===entity.uuid);assert.ok(owner);return p.serializeEntity(owner).components.find(/* 比较 row.uuid 与 component.uuid，返回严格相等的判断结果。 */ row=>row.uuid===component.uuid)},read=/** 结构说明（自动提取）：read；无显式参数；直接调用 snapshot。 */ ()=>{const row=snapshot();return field==='enabled'?row.enabled:row.data[field]},before=JSON.parse(JSON.stringify(snapshot())),previous=JSON.parse(JSON.stringify(read()));p.clearEditorHistory('component-history');assert.ok(p.beginHistoryTransaction('Edit '+name+'.'+field,null,entity.uuid+':'+component.uuid+':'+field))
   if(name==='TileMap2D'&&(field==='width'||field==='height'))t.resizeTileMap(component,field==='width'?value:component.width,field==='height'?value:component.height)
   else if(name==='TileMap2D'&&field==='tiles'){t.tilemapEditorState.tool='brush';t.tilemapEditorState.tileIndex=value[0];const stroke=t.beginTileStroke(component,{x:0,y:0});t.endTileStroke(component,stroke,{x:0,y:0})}
   else component[field]=structuredClone(value)
   p.commitHistoryTransaction();assert.deepEqual(JSON.parse(JSON.stringify(read())),value,name+'.'+field+' committed');if(JSON.stringify(previous)!==JSON.stringify(value)){p.undo();assert.deepEqual(JSON.parse(JSON.stringify(snapshot())),before,name+'.'+field+' undo whole component');p.redo();assert.deepEqual(JSON.parse(JSON.stringify(read())),value,name+'.'+field+' redo')}
   cases.push({index,component:name,field:item.field,status:'passed'});if(index%100===0)console.log('Component history '+index)
  }
- await audit.write([{name:'Canonical component values undo and redo through named document transactions',status:'passed',cases:cases.filter(row=>row.status==='passed').length}], 'Real component instances and document history. Constructor identities explicitly excluded from in-place editing; physical effects and GUI handlers remain separately qualified.',{cases});console.log('PASS '+cases.filter(row=>row.status==='passed').length+' component history cases')
+ await audit.write([{name:'Canonical component values undo and redo through named document transactions',status:'passed',cases:cases.filter(/* 比较 row.status 与 'passed'，返回严格相等的判断结果。 */ row=>row.status==='passed').length}], 'Real component instances and document history. Constructor identities explicitly excluded from in-place editing; physical effects and GUI handlers remain separately qualified.',{cases});console.log('PASS '+cases.filter(/* 比较 row.status 与 'passed'，返回严格相等的判断结果。 */ row=>row.status==='passed').length+' component history cases')
 }finally{await opened.close()}

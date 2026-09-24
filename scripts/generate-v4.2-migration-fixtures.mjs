@@ -1,3 +1,4 @@
+/** 版本4.2：生成项目格式迁移所需的版本化测试样本。 */
 import { spawnSync } from 'node:child_process'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
@@ -8,11 +9,11 @@ const fixture = JSON.parse(await readFile(join(root, 'tests/fixtures/migrations/
 const outputRoot = join(root, 'reference-projects', 'migrations')
 await mkdir(outputRoot, { recursive: true })
 const results = []
-async function resilientWrite(path, contents) {
+/** 最多重试八次写入，逐次延长等待，仍失败则抛出最后错误。 */ async function resilientWrite(path, contents) {
   let lastError
   for (let attempt = 0; attempt < 8; attempt++) {
     try { await writeFile(path, contents, 'utf8'); return }
-    catch (error) { lastError = error; await new Promise(resolve => setTimeout(resolve, 75 * (attempt + 1))) }
+    catch (error) { lastError = error; await new Promise(/* 调用 setTimeout(resolve, 75 * (attempt + 1)) 并返回调用结果。 */ resolve => setTimeout(resolve, 75 * (attempt + 1))) }
   }
   throw lastError
 }

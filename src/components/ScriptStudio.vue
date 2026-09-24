@@ -1,3 +1,4 @@
+<!-- 脚本工作室：管理源码草稿、分析、断点、转换和保存，成功提交后才更新历史与运行时。 -->
 <template>
   <section class="script-studio" :class="{'compact-toolbar':scriptStudioState.layout.compactToolbar}" @keydown.ctrl.s.prevent="saveActive" @keydown.meta.s.prevent="saveActive">
     <header class="studio-toolbar">
@@ -74,7 +75,7 @@
         <div v-else class="empty-editor"><span>{ }</span><h2>{{ t('openScriptPrompt') }}</h2><p>{{ t('openScriptDescription') }}</p><button class="primary" @click="createScript">{{ t('createFirstScript') }}</button></div>
 
         <footer class="editor-status">
-          <span :class="scriptHasErrors ? 'status-error' : 'status-ok'">{{ scriptHasErrors ? t('errorsCount', { count: analysis.diagnostics.filter(item => item.severity === 'error').length || 1 }) : t('scriptValid') }}</span>
+<!-- 错误计数过滤回调仅统计严重程度为 error 的诊断。 -->          <span :class="scriptHasErrors ? 'status-error' : 'status-ok'">{{ scriptHasErrors ? t('errorsCount', { count: analysis.diagnostics.filter(item => item.severity === 'error').length || 1 }) : t('scriptValid') }}</span>
           <span v-if="linkedGraphUuid" class="linked-graph-status">↔ {{ t('linkedVisualGraph') }}</span>
           <span :class="scriptIndexState.status === 'error' ? 'status-error' : 'status-ok'">Index {{ scriptIndexState.documentCount }} / {{ scriptIndexState.symbolCount }}</span>
           <span>{{ t('lineColumn', { line: cursor.line, column: cursor.column }) }}</span>
@@ -113,9 +114,9 @@
           <button v-for="item in analysis.types" :key="`${item.name}:${item.line}`" class="symbol type-symbol" @click="focusLine(item.line)"><i>{{ item.declared ? 'T' : '≈' }}</i><span><b>{{ item.name }}</b><small>{{ item.confidence }} · {{ item.source }}</small></span><code>{{ item.type }}</code></button>
           <p v-if="!analysis.types.length" class="empty-pane">{{ t('noTypeInformation') }}</p>
           <h3>{{ t('dataStructures') }}</h3>
-          <article v-for="structure in analysis.structures" :key="`${structure.name}:${structure.line}`" class="type-structure"><strong>{{ structure.name }}</strong><small>{{ structure.fields.map(field => `${field.name}${field.optional ? '?' : ''}: ${field.type}`).join(' · ') }}</small></article>
+<!-- 结构字段映射回调组合字段名、可选标记与类型。 -->          <article v-for="structure in analysis.structures" :key="`${structure.name}:${structure.line}`" class="type-structure"><strong>{{ structure.name }}</strong><small>{{ structure.fields.map(field => `${field.name}${field.optional ? '?' : ''}: ${field.type}`).join(' · ') }}</small></article>
           <h3>{{ t('genericHelpers') }}</h3>
-          <article v-for="helper in analysis.genericHelpers" :key="`${helper.functionName}:${helper.line}`" class="type-structure"><strong>{{ helper.functionName }}&lt;{{ helper.parameters.join(', ') }}&gt;</strong><small>{{ Object.entries(helper.constraints).map(([name, values]) => `${name}: ${values.join(' | ')}`).join(' · ') }}</small></article>
+<!-- 泛型约束映射回调将参数名与允许类型集合组合为摘要。 -->          <article v-for="helper in analysis.genericHelpers" :key="`${helper.functionName}:${helper.line}`" class="type-structure"><strong>{{ helper.functionName }}&lt;{{ helper.parameters.join(', ') }}&gt;</strong><small>{{ Object.entries(helper.constraints).map(([name, values]) => `${name}: ${values.join(' | ')}`).join(' · ') }}</small></article>
           <h3>{{ t('statementMap') }}</h3>
           <button v-for="statement in analysis.statements.slice(0, 500)" :key="statement.id" class="symbol statement" @click="focusLine(statement.line,statement.column)"><i>{{ statement.kind.slice(0,1).toUpperCase() }}</i><span><b>{{ statement.functionName || t('moduleScope') }}</b><small>{{ statement.normalized }}</small></span><code>{{ statement.line }}</code></button>
         </div>
@@ -205,7 +206,7 @@
 <script setup lang="ts">
 import { NOVA_RELEASE_NAME } from '../projects/projectFormat'
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
-import { createTextAsset, readTextAsset, updateTextAsset, assetState } from '../assets/AssetDatabase'
+import { createTextAsset, readTextAsset, assetState } from '../assets/AssetDatabase'
 import { defaultScriptMetadata, type ScriptBreakpointMetadata } from '../assets/types'
 import { t } from '../i18n'
 import { addEditorLog } from '../store/editor'
@@ -225,7 +226,7 @@ import { snapshotPreview } from '../runtime/dynamicInspection'
 import { hotReloadHistory, scriptHotReloadState } from '../runtime/scriptHotReload'
 import { scriptCoverageReport, scriptCoverageState } from '../runtime/scriptCoverage'
 import { markScriptIndexApiChanged, rebuildAndPersistScriptIndex, restoreScriptIndex, scriptIndexState } from '../editor/scriptIndexPersistence'
-import { assessRhaiConversion, ensureLinkedGraphForScript, linkedScriptGraphUuid } from '../visual/graphCodeSync'
+import { assessRhaiConversion, commitLinkedScriptAsset, linkedScriptGraphUuid } from '../visual/graphCodeSync'
 import { parseGraphDocument } from '../visual/graphTypes'
 import { preferencesState } from '../store/preferences'
 import ScriptConversionPanel from './ScriptConversionPanel.vue'
@@ -246,23 +247,23 @@ import {pendingObjectAuthorNavigation,objectCallbackSpan} from '../editor/object
 const service = new ScriptLanguageService()
 const studioGrid=ref<HTMLElement|null>(null),studioSize=reactive({width:1200,height:600})
 let studioResizeObserver:ResizeObserver|null=null
-const layoutLabels=computed(()=>studioLayoutCopy[preferencesState.locale])
-const detailBottom=computed(()=>scriptStudioState.layout.detailDock==='bottom'&&studioSize.width>=640&&studioSize.height>=360)
-const paneLayout=computed(()=>studioPaneLayout({width:studioSize.width,primaryOpen:scriptStudioState.layout.explorerVisible,secondaryOpen:scriptStudioState.layout.detailVisible&&!detailBottom.value,primaryWidth:scriptStudioState.layout.explorerWidth,secondaryWidth:Math.max(320,scriptStudioState.layout.detailWidth),activePanel:scriptStudioState.layout.activePanel==='explorer'?'primary':'secondary',focused:scriptStudioState.layout.codeFocused}))
-const detailVisible=computed(()=>detailBottom.value?scriptStudioState.layout.detailVisible&&!scriptStudioState.layout.codeFocused:paneLayout.value.secondaryVisible)
-const detailHeight=computed(()=>Math.max(140,Math.min(scriptStudioState.layout.detailHeight,studioSize.height-220)))
-const gridStyle=computed(()=>({gridTemplateColumns:paneLayout.value.columns,gridTemplateRows:detailBottom.value&&detailVisible.value?`minmax(0,1fr) ${detailHeight.value}px`:'minmax(0,1fr)'}))
-const inspectorStyle=computed(()=>({width:detailBottom.value?'auto':paneLayout.value.secondaryWidth+'px',height:detailBottom.value?detailHeight.value+'px':'auto'}))
-function toggleExplorer(){if(paneLayout.value.primaryVisible){scriptStudioState.layout.explorerVisible=false;return}scriptStudioState.layout.codeFocused=false;scriptStudioState.layout.explorerVisible=true;scriptStudioState.layout.activePanel='explorer'}
-function toggleDetails(){if(detailVisible.value){scriptStudioState.layout.detailVisible=false;return}scriptStudioState.layout.codeFocused=false;scriptStudioState.layout.detailVisible=true;scriptStudioState.layout.activePanel='detail'}
+const layoutLabels=computed(/* 返回 studioLayoutCopy[preferencesState.locale] 的当前值。 */ ()=>studioLayoutCopy[preferencesState.locale])
+const detailBottom=computed(/* 先计算 scriptStudioState.layout.detailDock==='bottom'&&studioSize.width>=640；仅当其为真值时求右侧 studioSize.height>=360，返回短路求值结果。 */ ()=>scriptStudioState.layout.detailDock==='bottom'&&studioSize.width>=640&&studioSize.height>=360)
+const paneLayout=computed(/** 根据工作区尺寸、资源树和详情栏状态计算脚本编辑器的分栏布局。 */ ()=>studioPaneLayout({width:studioSize.width,primaryOpen:scriptStudioState.layout.explorerVisible,secondaryOpen:scriptStudioState.layout.detailVisible&&!detailBottom.value,primaryWidth:scriptStudioState.layout.explorerWidth,secondaryWidth:Math.max(320,scriptStudioState.layout.detailWidth),activePanel:scriptStudioState.layout.activePanel==='explorer'?'primary':'secondary',focused:scriptStudioState.layout.codeFocused}))
+const detailVisible=computed(/** 按详情栏停靠方向与专注模式判断详情区域是否可见。 */ ()=>detailBottom.value?scriptStudioState.layout.detailVisible&&!scriptStudioState.layout.codeFocused:paneLayout.value.secondaryVisible)
+const detailHeight=computed(/* 调用 Math.max(140,Math.min(scriptStudioState.layout.detailHeight,studioSize.height-220)) 并返回调用结果。 */ ()=>Math.max(140,Math.min(scriptStudioState.layout.detailHeight,studioSize.height-220)))
+const gridStyle=computed(/** 把分栏计算结果转换为网格列宽和底部详情栏行高。 */ ()=>({gridTemplateColumns:paneLayout.value.columns,gridTemplateRows:detailBottom.value&&detailVisible.value?`minmax(0,1fr) ${detailHeight.value}px`:'minmax(0,1fr)'}))
+const inspectorStyle=computed(/** 按底部或侧面停靠方式设置详情面板的实际宽高。 */ ()=>({width:detailBottom.value?'auto':paneLayout.value.secondaryWidth+'px',height:detailBottom.value?detailHeight.value+'px':'auto'}))
+/** 切换资源树；重新显示时退出代码专注模式并激活资源树面板。 */ function toggleExplorer(){if(paneLayout.value.primaryVisible){scriptStudioState.layout.explorerVisible=false;return}scriptStudioState.layout.codeFocused=false;scriptStudioState.layout.explorerVisible=true;scriptStudioState.layout.activePanel='explorer'}
+/** 切换详情区域；重新显示时退出代码专注模式并激活详情面板。 */ function toggleDetails(){if(detailVisible.value){scriptStudioState.layout.detailVisible=false;return}scriptStudioState.layout.codeFocused=false;scriptStudioState.layout.detailVisible=true;scriptStudioState.layout.activePanel='detail'}
 const emit = defineEmits<{ navigate: [request: ConversionNavigation] }>()
-const conversionLabels = computed(() => conversionCopy[preferencesState.locale])
+const conversionLabels = computed(/* 返回 conversionCopy[preferencesState.locale] 的当前值。 */ () => conversionCopy[preferencesState.locale])
 const editor = ref<HTMLTextAreaElement | null>(null), findInput = ref<HTMLInputElement | null>(null), renameInput = ref<HTMLInputElement | null>(null)
 const drafts = reactive<Record<string, string>>({}), dirtyUuids = reactive(new Set<string>())
-const draft = computed({ get: () => activeAsset.value ? drafts[activeAsset.value.uuid] ?? '' : '', set: value => { if (activeAsset.value) drafts[activeAsset.value.uuid] = value } })
-const emptyAnalysis = (): ScriptAnalysis => ({ apiVersion: 2, revision: 0, elapsedMs: 0, diagnostics: [], symbols: [], dependencies: [], functions: {}, references: [], tests: [], semanticTokens: [], apiUsage: [], types: [], structures: [], genericHelpers: [], statements: [] })
+const draft = computed({ get: /* 根据 activeAsset.value 的真假，分别返回 drafts[activeAsset.value.uuid] ?? '' 或 ''。 */ () => activeAsset.value ? drafts[activeAsset.value.uuid] ?? '' : '', set: /** 将编辑文本写入当前脚本对应的内存草稿。 */ value => { if (activeAsset.value) drafts[activeAsset.value.uuid] = value } })
+const emptyAnalysis = /** 创建没有诊断、符号或引用的初始脚本分析结果。 */ (): ScriptAnalysis => ({ apiVersion: 2, revision: 0, elapsedMs: 0, diagnostics: [], symbols: [], dependencies: [], functions: {}, references: [], tests: [], semanticTokens: [], apiUsage: [], types: [], structures: [], genericHelpers: [], statements: [] })
 const analysis = ref<ScriptAnalysis>(emptyAnalysis()), validationError = ref('')
-const scriptHasErrors = computed(() => !!validationError.value || analysis.value.diagnostics.some(item=>item.severity==='error'))
+const scriptHasErrors = computed(/** 检查当前保存错误及分析诊断中是否存在错误级别条目。 */ () => !!validationError.value || analysis.value.diagnostics.some(/* 比较 item.severity 与 'error'，返回严格相等的判断结果。 */ item=>item.severity==='error'))
 const projectQuery = ref(''), findOpen = ref(false), findText = ref(''), replaceText = ref(''), completionOpen = ref(false)
 const templateId = ref<ScriptTemplateId>('component')
 const cursor = reactive({ line: 1, column: 1 }), inspectorTab = ref<'conversion' | 'problems' | 'symbols' | 'types' | 'modules' | 'contract' | 'debug' | 'tests' | 'signals' | 'api'>('problems')
@@ -276,65 +277,65 @@ const inspectorTabs = [
   { id: 'problems' as const, label: 'problems' }, { id: 'symbols' as const, label: 'symbols' }, { id: 'types' as const, label: 'types' }, { id: 'modules' as const, label: 'modules' }, { id: 'contract' as const, label: 'behaviorContract' },
   { id: 'debug' as const, label: 'debug' }, { id: 'tests' as const, label: 'tests' }, { id: 'signals' as const, label: 'signals' }, { id: 'api' as const, label: 'api' }
 ]
-const scripts = computed(() => { void assetState.generation; return assetState.records.filter(asset => asset.assetType === 'script').sort((a, b) => a.path.localeCompare(b.path)) })
-const activeAsset = computed(() => scripts.value.find(asset => asset.uuid === scriptStudioState.activeUuid) ?? null)
+const scripts = computed(/** 随资源代数更新获取全部脚本，并按路径排序。 */ () => { void assetState.generation; return assetState.records.filter(/* 比较 asset.assetType 与 'script'，返回严格相等的判断结果。 */ asset => asset.assetType === 'script').sort(/* 调用 a.path.localeCompare(b.path) 并返回调用结果。 */ (a, b) => a.path.localeCompare(b.path)) })
+const activeAsset = computed(/** 按脚本工作区的活动标识查找当前脚本资源。 */ () => scripts.value.find(/* 比较 asset.uuid 与 scriptStudioState.activeUuid，返回严格相等的判断结果。 */ asset => asset.uuid === scriptStudioState.activeUuid) ?? null)
 const draftProjectId=projectSessionState.id,baseSources=reactive<Record<string,string|null>>({})
-const currentSavedSource=computed(()=>{void assetState.generation;return activeAsset.value?readTextAsset(activeAsset.value.uuid):null})
-const sourceDraftConflict=computed(()=>!!activeAsset.value&&dirtyUuids.has(activeAsset.value.uuid)&&baseSources[activeAsset.value.uuid]!==currentSavedSource.value)
-function sourceDraftCandidate():StudioDraftCandidate|null {const asset=activeAsset.value;return asset&&dirtyUuids.has(asset.uuid)?{record:asset,projectId:draftProjectId,kind:'code',source:draft.value,baseSource:baseSources[asset.uuid]??null}:null}
+const currentSavedSource=computed(/** 随资源变化读取当前脚本已经保存的源代码。 */ ()=>{void assetState.generation;return activeAsset.value?readTextAsset(activeAsset.value.uuid):null})
+const sourceDraftConflict=computed(/** 判断未保存草稿的原始基线是否已被外部保存内容替换。 */ ()=>!!activeAsset.value&&dirtyUuids.has(activeAsset.value.uuid)&&baseSources[activeAsset.value.uuid]!==currentSavedSource.value)
+/** 为当前脏脚本组合项目、资源、草稿和基线，供恢复系统保存。 */ function sourceDraftCandidate():StudioDraftCandidate|null {const asset=activeAsset.value;return asset&&dirtyUuids.has(asset.uuid)?{record:asset,projectId:draftProjectId,kind:'code',source:draft.value,baseSource:baseSources[asset.uuid]??null}:null}
 const unregisterDraftOwner=registerStudioDraftOwner({read:sourceDraftCandidate,discard:discardSourceDraft})
-function retainSourceDraft(){const candidate=sourceDraftCandidate();if(candidate)retainStudioDraft(candidate)}
-function acceptSourceDraftBase(){if(!activeAsset.value)return;baseSources[activeAsset.value.uuid]=currentSavedSource.value;validationError.value='';retainSourceDraft()}
-function discardSourceDraft(){const asset=activeAsset.value;if(!asset)return;const saved=readTextAsset(asset.uuid);drafts[asset.uuid]=saved??'';baseSources[asset.uuid]=saved;dirtyUuids.delete(asset.uuid);if(asset.script)asset.script.recoverySource='';clearStudioDraft(asset,draftProjectId);scriptStudioState.activeDirty=false;validationError.value='';void analyzeCurrent()}
-const activeDirty = computed(() => !!activeAsset.value && dirtyUuids.has(activeAsset.value.uuid))
-const contractReport = computed(() => parseScriptContract(draft.value))
-const linkedGraphUuid = computed(() => activeAsset.value ? linkedScriptGraphUuid(activeAsset.value.uuid) : '')
-const linkedGraph = computed(() => {
+/** 存在有效草稿时将其交给编辑恢复系统保留。 */ function retainSourceDraft(){const candidate=sourceDraftCandidate();if(candidate)retainStudioDraft(candidate)}
+/** 接受当前保存内容作为新的冲突基线，清除错误并保留草稿。 */ function acceptSourceDraftBase(){if(!activeAsset.value)return;baseSources[activeAsset.value.uuid]=currentSavedSource.value;validationError.value='';retainSourceDraft()}
+/** 放弃当前草稿并恢复保存内容，清除恢复标记后重新分析。 */ function discardSourceDraft(){const asset=activeAsset.value;if(!asset)return;const saved=readTextAsset(asset.uuid);drafts[asset.uuid]=saved??'';baseSources[asset.uuid]=saved;dirtyUuids.delete(asset.uuid);if(asset.script)asset.script.recoverySource='';clearStudioDraft(asset,draftProjectId);scriptStudioState.activeDirty=false;validationError.value='';void analyzeCurrent()}
+const activeDirty = computed(/* 先计算 !!activeAsset.value；仅当其为真值时求右侧 dirtyUuids.has(activeAsset.value.uuid)，返回短路求值结果。 */ () => !!activeAsset.value && dirtyUuids.has(activeAsset.value.uuid))
+const contractReport = computed(/* 调用 parseScriptContract(draft.value) 并返回调用结果。 */ () => parseScriptContract(draft.value))
+const linkedGraphUuid = computed(/* 根据 activeAsset.value 的真假，分别返回 linkedScriptGraphUuid(activeAsset.value.uuid) 或 ''。 */ () => activeAsset.value ? linkedScriptGraphUuid(activeAsset.value.uuid) : '')
+const linkedGraph = computed(/** 按关联图标识查找可视脚本资源；跳过无法解析的图文档。 */ () => {
   void assetState.generation
   if (!linkedGraphUuid.value) return undefined
-  for (const asset of assetState.records.filter(item => item.assetType === 'visualScript')) {
+  for (const asset of assetState.records.filter(/* 比较 item.assetType 与 'visualScript'，返回严格相等的判断结果。 */ item => item.assetType === 'visualScript')) {
     try { const document = parseGraphDocument(readTextAsset(asset.uuid) ?? ''); if (document.uuid === linkedGraphUuid.value) return document } catch { /* A malformed linked graph is reported by its editor. */ }
   }
   return undefined
 })
-const conversionAssessment = computed(() => assessRhaiConversion(draft.value, activeAsset.value?.name, linkedGraph.value))
-function getConversionSnapshot(): ConversionSnapshot | null { return activeAsset.value ? { source: draft.value, assetUuid: activeAsset.value.uuid, assessment: conversionAssessment.value } : null }
-function navigateConversion(request: ConversionNavigation) { if (request.target === 'code') focusSourceRange(request.span); else emit('navigate', request) }
+const conversionAssessment = computed(/* 调用 assessRhaiConversion(draft.value, activeAsset.value?.name, linkedGraph.value) 并返回调用结果。 */ () => assessRhaiConversion(draft.value, activeAsset.value?.name, linkedGraph.value))
+/** 为当前脚本生成源码与转换评估快照；没有资源时返回空值。 */ function getConversionSnapshot(): ConversionSnapshot | null { return activeAsset.value ? { source: draft.value, assetUuid: activeAsset.value.uuid, assessment: conversionAssessment.value } : null }
+/** 源码定位请求直接选择文本范围，其余导航请求交给父级。 */ function navigateConversion(request: ConversionNavigation) { if (request.target === 'code') focusSourceRange(request.span); else emit('navigate', request) }
 defineExpose({ getConversionSnapshot, focusSourceRange })
-const openAssets = computed(() => scriptStudioState.openTabs.flatMap(uuid => scripts.value.find(asset => asset.uuid === uuid) ?? []))
-const filteredScripts = computed(() => { const q = projectQuery.value.trim().toLowerCase(); return q ? scripts.value.filter(asset => `${asset.name} ${asset.path}`.toLowerCase().includes(q)) : scripts.value })
-const projectMatches = computed(() => {
+const openAssets = computed(/** 把打开的脚本标识解析为仍然存在的资源列表。 */ () => scriptStudioState.openTabs.flatMap(/** 为标签页查找脚本资源；资源已经删除时不产生标签项。 */ uuid => scripts.value.find(/* 比较 asset.uuid 与 uuid，返回严格相等的判断结果。 */ asset => asset.uuid === uuid) ?? []))
+const filteredScripts = computed(/** 按搜索词匹配脚本名称和路径，空搜索词保留全部脚本。 */ () => { const q = projectQuery.value.trim().toLowerCase(); return q ? scripts.value.filter(/* 调用 `${asset.name} ${asset.path}`.toLowerCase().includes(q) 并返回调用结果。 */ asset => `${asset.name} ${asset.path}`.toLowerCase().includes(q)) : scripts.value })
+const projectMatches = computed(/** 搜索各脚本草稿或保存内容中的文本行，并限制为一百项。 */ () => {
   const q = projectQuery.value.trim().toLowerCase(); if (!q) return []
-  return scripts.value.flatMap(asset => (drafts[asset.uuid] ?? readTextAsset(asset.uuid) ?? '').split(/\r?\n/).flatMap((line, index) => line.toLowerCase().includes(q) ? [{ uuid: asset.uuid, name: asset.name, line: index + 1, preview: line.trim().slice(0, 120) }] : [])).slice(0, 100)
+  return scripts.value.flatMap(/** 逐行扫描单个脚本并生成符合项目搜索条件的结果。 */ asset => (drafts[asset.uuid] ?? readTextAsset(asset.uuid) ?? '').split(/\r?\n/).flatMap(/** 将匹配行转换为脚本标识、行号和截断后的预览文本。 */ (line, index) => line.toLowerCase().includes(q) ? [{ uuid: asset.uuid, name: asset.name, line: index + 1, preview: line.trim().slice(0, 120) }] : [])).slice(0, 100)
 })
-const lineCount = computed(() => Math.max(1, draft.value.split(/\r?\n/).length))
-const breakpoints = computed(() => activeAsset.value?.script?.breakpoints ?? [])
-const breakpointDetails = computed(() => activeAsset.value?.script?.breakpointDetails ?? [])
-const diagnosticLines = computed(() => new Set(analysis.value.diagnostics.filter(item => item.severity === 'error').map(item => item.line)))
-const packageDependencies = computed(() => activeAsset.value?.script?.packageDependencies ?? [])
-const signals = computed(() => scriptProjectSettings.customSignals)
-const signalConnections = computed(() => activeAsset.value?.script?.signalConnections ?? [])
-const completions = computed(() => completionItems(wordBeforeCursor.value, analysis.value))
-const codeActions = computed(() => scriptCodeActions(analysis.value))
-const wordBeforeCursor = computed(() => { const pos = editor.value?.selectionStart ?? 0; return draft.value.slice(0, pos).match(/[A-Za-z_][A-Za-z0-9_]*$/)?.[0] ?? '' })
-const selectedIdentifier = computed(() => { void cursor.line;void cursor.column;const el = editor.value; if (!el) return ''; const start=sourceOffsetFromTextarea(draft.value,el.selectionStart),end=sourceOffsetFromTextarea(draft.value,el.selectionEnd),selected = draft.value.slice(start,end); if (/^[A-Za-z_][A-Za-z0-9_]*$/.test(selected)) return selected; const before = draft.value.slice(0,start).match(/[A-Za-z_][A-Za-z0-9_]*$/)?.[0] ?? ''; const after = draft.value.slice(start).match(/^[A-Za-z0-9_]*/)?.[0] ?? ''; return `${before}${after}` })
-const contextApi = computed(() => apiEntry(selectedIdentifier.value || wordBeforeCursor.value))
-const findCount = computed(() => findText.value ? (draft.value.match(new RegExp(escapeRegex(findText.value), 'gi')) ?? []).length : 0)
-const runtimeCopy = computed(() => ({
+const lineCount = computed(/* 调用 Math.max(1, draft.value.split(/\r?\n/).length) 并返回调用结果。 */ () => Math.max(1, draft.value.split(/\r?\n/).length))
+const breakpoints = computed(/* 当 activeAsset.value?.script?.breakpoints 为 null 或 undefined 时返回 []，否则保留左侧值。 */ () => activeAsset.value?.script?.breakpoints ?? [])
+const breakpointDetails = computed(/* 当 activeAsset.value?.script?.breakpointDetails 为 null 或 undefined 时返回 []，否则保留左侧值。 */ () => activeAsset.value?.script?.breakpointDetails ?? [])
+const diagnosticLines = computed(/** 收集错误诊断所在行，供代码行错误标记查询。 */ () => new Set(analysis.value.diagnostics.filter(/* 比较 item.severity 与 'error'，返回严格相等的判断结果。 */ item => item.severity === 'error').map(/* 返回 item.line 的当前值。 */ item => item.line)))
+const packageDependencies = computed(/* 当 activeAsset.value?.script?.packageDependencies 为 null 或 undefined 时返回 []，否则保留左侧值。 */ () => activeAsset.value?.script?.packageDependencies ?? [])
+const signals = computed(/* 返回 scriptProjectSettings.customSignals 的当前值。 */ () => scriptProjectSettings.customSignals)
+const signalConnections = computed(/* 当 activeAsset.value?.script?.signalConnections 为 null 或 undefined 时返回 []，否则保留左侧值。 */ () => activeAsset.value?.script?.signalConnections ?? [])
+const completions = computed(/* 调用 completionItems(wordBeforeCursor.value, analysis.value) 并返回调用结果。 */ () => completionItems(wordBeforeCursor.value, analysis.value))
+const codeActions = computed(/* 调用 scriptCodeActions(analysis.value) 并返回调用结果。 */ () => scriptCodeActions(analysis.value))
+const wordBeforeCursor = computed(/** 提取光标之前紧邻的标识符片段，作为补全前缀。 */ () => { const pos = editor.value?.selectionStart ?? 0; return draft.value.slice(0, pos).match(/[A-Za-z_][A-Za-z0-9_]*$/)?.[0] ?? '' })
+const selectedIdentifier = computed(/** 优先返回有效选中标识符，否则拼接光标两侧的标识符片段。 */ () => { void cursor.line;void cursor.column;const el = editor.value; if (!el) return ''; const start=sourceOffsetFromTextarea(draft.value,el.selectionStart),end=sourceOffsetFromTextarea(draft.value,el.selectionEnd),selected = draft.value.slice(start,end); if (/^[A-Za-z_][A-Za-z0-9_]*$/.test(selected)) return selected; const before = draft.value.slice(0,start).match(/[A-Za-z_][A-Za-z0-9_]*$/)?.[0] ?? ''; const after = draft.value.slice(start).match(/^[A-Za-z0-9_]*/)?.[0] ?? ''; return `${before}${after}` })
+const contextApi = computed(/* 调用 apiEntry(selectedIdentifier.value || wordBeforeCursor.value) 并返回调用结果。 */ () => apiEntry(selectedIdentifier.value || wordBeforeCursor.value))
+const findCount = computed(/* 根据 findText.value 的真假，分别返回 (draft.value.match(new RegExp(escapeRegex(findText.value), 'gi')) ?? []).length 或 0。 */ () => findText.value ? (draft.value.match(new RegExp(escapeRegex(findText.value), 'gi')) ?? []).length : 0)
+const runtimeCopy = computed(/** 按当前语言提供受限运行时快照与热重载状态的说明文字。 */ () => ({
   en: { snapshot: 'Authorized host snapshot. Values are bounded previews; unavailable VM locals are not inferred.', rejected: 'Request rejected. No running program was replaced.', pending: 'Reload queued. Running code stays unchanged until the transaction validates.', applied: 'Reload transaction applied.', disabled: 'Hot reload is disabled.', idle: 'No reload request.', path: 'Reload source', hint: 'Inspect a property, items[0], or bag["item name"]. Calls and accessors are not evaluated.' },
   de: { snapshot: 'Freigegebener Host-Zustand. Werte werden begrenzt angezeigt; nicht verfügbare VM-Variablen werden nicht ergänzt.', rejected: 'Anfrage abgelehnt. Kein laufendes Programm wurde ersetzt.', pending: 'Neuladen vorgemerkt. Laufender Code bleibt bis zur erfolgreichen Prüfung unverändert.', applied: 'Neuladen als Transaktion angewendet.', disabled: 'Neuladen im Betrieb ist deaktiviert.', idle: 'Keine Anfrage zum Neuladen.', path: 'Quelle zum Neuladen', hint: 'Eigenschaft, items[0] oder bag["item name"] prüfen. Aufrufe und Getter werden nicht ausgeführt.' },
   zh: { snapshot: '已授权的宿主状态快照。值使用有界预览；不会推测不可用的虚拟机局部变量。', rejected: '请求已拒绝，未替换任何正在运行的程序。', pending: '重载已排队；事务通过验证前，运行代码保持不变。', applied: '重载事务已应用。', disabled: '热重载已禁用。', idle: '暂无重载请求。', path: '重载源文件', hint: '可检查属性、items[0] 或 bag["item name"]。不会执行函数调用或访问器。' }
 }[preferencesState.locale]))
-const reloadSourcePath = computed(() => assetState.records.find(asset => asset.uuid === debug.hotReload.scriptUuid)?.path ?? debug.hotReload.scriptUuid)
-const formattedLocals = computed(() => snapshotPreview(debug.locals))
-const filteredApi = computed(() => { const q = apiQuery.value.toLowerCase(); return q ? SCRIPT_API.filter(entry => `${entry.name} ${entry.category} ${entry.detail}`.toLowerCase().includes(q)) : SCRIPT_API })
-const deprecatedCount = computed(() => analysis.value.diagnostics.filter(item => item.code === 'NOVA-COMPAT-001').length)
-const reloadHistory = computed(() => hotReloadHistory(activeAsset.value?.uuid))
-const canRollbackReload = computed(() => Boolean(activeAsset.value && Object.prototype.hasOwnProperty.call(scriptHotReloadState.rollbackSources, activeAsset.value.uuid)))
-const coverage = computed(() => { void scriptCoverageState.revision; return scriptCoverageReport() })
-const projectModuleDiagnostics = computed(() => analyzeModuleGraph(scripts.value.map(asset => ({ uri: asset.path, dependencies: analyzeScript(drafts[asset.uuid] ?? readTextAsset(asset.uuid) ?? '').dependencies }))))
+const reloadSourcePath = computed(/** 将热重载记录的脚本标识解析为资源路径，找不到时保留标识。 */ () => assetState.records.find(/* 比较 asset.uuid 与 debug.hotReload.scriptUuid，返回严格相等的判断结果。 */ asset => asset.uuid === debug.hotReload.scriptUuid)?.path ?? debug.hotReload.scriptUuid)
+const formattedLocals = computed(/* 调用 snapshotPreview(debug.locals) 并返回调用结果。 */ () => snapshotPreview(debug.locals))
+const filteredApi = computed(/** 按名称、分类和详情筛选脚本接口列表。 */ () => { const q = apiQuery.value.toLowerCase(); return q ? SCRIPT_API.filter(/* 调用 `${entry.name} ${entry.category} ${entry.detail}`.toLowerCase().includes(q) 并返回调用结果。 */ entry => `${entry.name} ${entry.category} ${entry.detail}`.toLowerCase().includes(q)) : SCRIPT_API })
+const deprecatedCount = computed(/* 返回 analysis.value.diagnostics.filter(item => item.code === 'NOVA-COMPAT-001').length 的当前值。 */ () => analysis.value.diagnostics.filter(/* 比较 item.code 与 'NOVA-COMPAT-001'，返回严格相等的判断结果。 */ item => item.code === 'NOVA-COMPAT-001').length)
+const reloadHistory = computed(/* 调用 hotReloadHistory(activeAsset.value?.uuid) 并返回调用结果。 */ () => hotReloadHistory(activeAsset.value?.uuid))
+const canRollbackReload = computed(/** 检查当前脚本是否具有可供回滚的先前源代码。 */ () => Boolean(activeAsset.value && Object.prototype.hasOwnProperty.call(scriptHotReloadState.rollbackSources, activeAsset.value.uuid)))
+const coverage = computed(/** 在覆盖率修订变化时重新生成脚本覆盖率报告。 */ () => { void scriptCoverageState.revision; return scriptCoverageReport() })
+const projectModuleDiagnostics = computed(/** 分析所有脚本当前草稿的依赖关系并建立模块图。 */ () => analyzeModuleGraph(scripts.value.map(/** 为模块分析生成脚本路径及其依赖列表。 */ asset => ({ uri: asset.path, dependencies: analyzeScript(drafts[asset.uuid] ?? readTextAsset(asset.uuid) ?? '').dependencies }))))
 
-watch(activeAsset,asset=>{
+watch(activeAsset,/** 切换活动脚本时恢复草稿或保存内容，同步脏状态并重新分析。 */ asset=>{
   if(!asset){analysis.value=emptyAnalysis();scriptStudioState.activeDirty=false;return}
   if(!(asset.uuid in drafts)){
     const saved=readTextAsset(asset.uuid),retained=readStudioDraft(asset,draftProjectId,'code',saved),recovery=asset.script?.recoverySource??''
@@ -344,7 +345,7 @@ watch(activeAsset,asset=>{
   if(!dirtyUuids.has(asset.uuid)){const saved=readTextAsset(asset.uuid);drafts[asset.uuid]=saved??'';baseSources[asset.uuid]=saved}
   scriptStudioState.activeDirty=dirtyUuids.has(asset.uuid);void analyzeCurrent()
 },{immediate:true})
-watch([activeAsset,pendingObjectAuthorNavigation],async()=>{
+watch([activeAsset,pendingObjectAuthorNavigation],/** 等待对象作者导航目标就绪，校验项目与请求身份后定位回调范围。 */ async()=>{
   const request=pendingObjectAuthorNavigation.value
   if(!request||request.projectId!==projectSessionState.id||request.record!==activeAsset.value)return
   await nextTick()
@@ -354,64 +355,67 @@ watch([activeAsset,pendingObjectAuthorNavigation],async()=>{
   if(span)focusSourceRange(span)
   else{validationError.value=objectOwnershipCopy[preferencesState.locale].callbackLocationFailed+' · '+request.callback;inspectorTab.value='problems'}
 },{immediate:true,flush:'post'})
-watch(activeDirty, value => { scriptStudioState.activeDirty = value })
-watch(()=>assetState.generation,()=>{const asset=activeAsset.value;if(!asset)return;if(!dirtyUuids.has(asset.uuid)){const saved=readTextAsset(asset.uuid);drafts[asset.uuid]=saved??'';baseSources[asset.uuid]=saved}void analyzeCurrent()})
-watch(findOpen, open => { if (open) void nextTick(() => findInput.value?.focus()) })
-onMounted(() => { studioResizeObserver=new ResizeObserver(entries=>{const bounds=entries[0]?.contentRect;if(bounds){studioSize.width=Math.max(1,bounds.width);studioSize.height=Math.max(1,bounds.height)}});if(studioGrid.value)studioResizeObserver.observe(studioGrid.value);scriptStudioState.saveActiveDraft = saveActive; restoreScriptIndex(); rebuildProjectIndex(); const selected = assetState.records.find(asset => asset.uuid === assetState.selectedGuid && asset.assetType === 'script'); if (selected) open(selected.uuid); else if (!activeAsset.value && scripts.value[0]) open(scripts.value[0].uuid) })
-onBeforeUnmount(() => { for(const uuid of dirtyUuids){const record=scripts.value.find(asset=>asset.uuid===uuid);if(record)retainStudioDraft({record,projectId:draftProjectId,kind:'code',source:drafts[uuid],baseSource:baseSources[uuid]??null})}unregisterDraftOwner();studioResizeObserver?.disconnect();if (scriptStudioState.saveActiveDraft === saveActive) scriptStudioState.saveActiveDraft = null; service.dispose() })
+watch(activeDirty, /** 把当前草稿脏状态同步到脚本工作区共享状态。 */ value => { scriptStudioState.activeDirty = value })
+watch(/* 返回 assetState.generation 的当前值。 */ ()=>assetState.generation,/** 保存内容变化时仅刷新干净草稿，并重新运行源码分析。 */ ()=>{const asset=activeAsset.value;if(!asset)return;if(!dirtyUuids.has(asset.uuid)){const saved=readTextAsset(asset.uuid);drafts[asset.uuid]=saved??'';baseSources[asset.uuid]=saved}void analyzeCurrent()})
+watch(findOpen, /** 搜索框展开后等待界面更新，再将输入焦点移入搜索框。 */ open => { if (open) void nextTick(/* 调用 findInput.value?.focus() 并返回调用结果。 */ () => findInput.value?.focus()) })
+onMounted(/** 挂载时监听工作区尺寸、注册保存入口、恢复项目索引并打开初始脚本。 */ () => { studioResizeObserver=new ResizeObserver(/** 读取观测到的工作区边界，并把宽高限制为至少一个像素。 */ entries=>{const bounds=entries[0]?.contentRect;if(bounds){studioSize.width=Math.max(1,bounds.width);studioSize.height=Math.max(1,bounds.height)}});if(studioGrid.value)studioResizeObserver.observe(studioGrid.value);scriptStudioState.saveActiveDraft = saveActive; restoreScriptIndex(); rebuildProjectIndex(); const selected = assetState.records.find(/* 先计算 asset.uuid === assetState.selectedGuid；仅当其为真值时求右侧 asset.assetType === 'script'，返回短路求值结果。 */ asset => asset.uuid === assetState.selectedGuid && asset.assetType === 'script'); if (selected) open(selected.uuid); else if (!activeAsset.value && scripts.value[0]) open(scripts.value[0].uuid) })
+onBeforeUnmount(/** 卸载前保留所有脏草稿，解除保存与尺寸监听并销毁分析服务。 */ () => { for(const uuid of dirtyUuids){const record=scripts.value.find(/* 比较 asset.uuid 与 uuid，返回严格相等的判断结果。 */ asset=>asset.uuid===uuid);if(record)retainStudioDraft({record,projectId:draftProjectId,kind:'code',source:drafts[uuid],baseSource:baseSources[uuid]??null})}unregisterDraftOwner();studioResizeObserver?.disconnect();if (scriptStudioState.saveActiveDraft === saveActive) scriptStudioState.saveActiveDraft = null; service.dispose() })
 
-function open(uuid: string) { openScriptAsset(uuid) }
-function close(uuid: string) { if (dirtyUuids.has(uuid)) { scriptStudioState.activeUuid = uuid; return }; closeScriptAsset(uuid) }
-function closeAll() { for (const uuid of [...scriptStudioState.openTabs]) close(uuid) }
-function openAt(uuid: string, line: number) { open(uuid); void nextTick(() => focusLine(line, 1)) }
-function createScript() { const template = scriptTemplate(templateId.value), asset = createTextAsset(`${template.name} ${t('newScriptName')}`, 'script', template.source, 'Assets/Scripts'); pushHistory('Create script asset'); open(asset.uuid); assetState.selectedGuid = asset.uuid; addEditorLog(t('scriptCreated', { name: asset.name }), 'Script') }
-function rebuildProjectIndex() { rebuildAndPersistScriptIndex(scripts.value.map(asset => ({ uri: asset.path, source: drafts[asset.uuid] ?? readTextAsset(asset.uuid) ?? '', apiVersion: asset.script?.apiVersion ?? scriptProjectSettings.apiVersion, revision: Math.max(0, Math.round(asset.sourceModified || 0)) }))) }
-async function analyzeCurrent() {
+/** 通过共享脚本工作区打开指定脚本标识。 */ function open(uuid: string) { openScriptAsset(uuid) }
+/** 脏脚本关闭请求仅激活该脚本；干净脚本才直接关闭标签。 */ function close(uuid: string) { if (dirtyUuids.has(uuid)) { scriptStudioState.activeUuid = uuid; return }; closeScriptAsset(uuid) }
+/** 遍历打开标签的副本，逐一执行保留脏草稿的关闭逻辑。 */ function closeAll() { for (const uuid of [...scriptStudioState.openTabs]) close(uuid) }
+/** 打开指定脚本后等待编辑器更新，再定位目标行。 */ function openAt(uuid: string, line: number) { open(uuid); void nextTick(/* 调用 focusLine(line, 1) 并返回调用结果。 */ () => focusLine(line, 1)) }
+/** 从选定模板创建脚本资源，记录历史并选中和打开新资源。 */ function createScript() { const template = scriptTemplate(templateId.value), asset = createTextAsset(`${template.name} ${t('newScriptName')}`, 'script', template.source, 'Assets/Scripts'); pushHistory('Create script asset'); open(asset.uuid); assetState.selectedGuid = asset.uuid; addEditorLog(t('scriptCreated', { name: asset.name }), 'Script') }
+/** 为所有脚本构建当前源码索引，重建后持久化项目索引。 */ function rebuildProjectIndex() { rebuildAndPersistScriptIndex(scripts.value.map(/** 组合单个脚本的路径、草稿源码、接口版本和非负修订号。 */ asset => ({ uri: asset.path, source: drafts[asset.uuid] ?? readTextAsset(asset.uuid) ?? '', apiVersion: asset.script?.apiVersion ?? scriptProjectSettings.apiVersion, revision: Math.max(0, Math.round(asset.sourceModified || 0)) }))) }
+/** 递增分析修订并解析模块和宿主约束，仅将最新请求的诊断应用到界面。 */ async function analyzeCurrent() {
   const revision=++analysisRevision,asset=activeAsset.value,source=draft.value
   const bundled=asset?runtime.resolveModuleSource(asset.uuid,source):{source:null,error:null}
   const program=bundled.source?parseRhai(bundled.source,{moduleMode:'host',limits:{maxSourceLength:1_000_000}}):null
-  const externalFunctions=program?.body.filter(node=>node.kind==='FunctionDeclaration').map(node=>node.name) ?? []
+  const externalFunctions=program?.body.filter(/* 比较 node.kind 与 'FunctionDeclaration'，返回严格相等的判断结果。 */ node=>node.kind==='FunctionDeclaration').map(/* 返回 node.name 的当前值。 */ node=>node.name) ?? []
   const next=await service.analyze(source,{apiVersion:asset?.script?.apiVersion??scriptProjectSettings.apiVersion,revision,externalFunctions})
-  const moduleError=bundled.error??program?.diagnostics.find(item=>item.code.startsWith('RHAI-LIMIT-'))?.message
+  const moduleError=bundled.error??program?.diagnostics.find(/* 调用 item.code.startsWith('RHAI-LIMIT-') 并返回调用结果。 */ item=>item.code.startsWith('RHAI-LIMIT-'))?.message
   if(moduleError){const match=asset&&moduleError.startsWith(asset.path+':')?/^(\d+):(\d+):/.exec(moduleError.slice(asset.path.length+1)):null,line=Number(match?.[1]??1),column=Number(match?.[2]??1),endColumn=Math.max(column,(source.split(/\r?\n/)[line-1]?.length??0)+1);next.diagnostics.push({code:'NOVA-MODULE-RESOLUTION',severity:'error',phase:'semantic',message:moduleError,line,column,endLine:line,endColumn,range:{start:{line,column},end:{line,column:endColumn}},source:'Nova Rhai',documentation:'manual/index.html#script-modules'})}
   if(revision===analysisRevision)analysis.value=applyScriptLintPolicy(next,scriptProjectSettings.lint)
 }
-function sourceChanged() { const asset = activeAsset.value; if (!asset) return; asset.script ??= defaultScriptMetadata(); asset.script.recoverySource = draft.value.slice(0, 1_000_000); dirtyUuids.add(asset.uuid);retainSourceDraft(); validationError.value = ''; void analyzeCurrent(); cursorChanged(); void nextTick(() => { completionOpen.value = wordBeforeCursor.value.length >= 2 && completions.value.length > 0 }) }
-function cursorChanged() { const pos = editor.value?.selectionStart ?? 0; const before = draft.value.slice(0, pos); const lines = before.split(/\r?\n/); cursor.line = lines.length; cursor.column = (lines[lines.length - 1]?.length ?? 0) + 1 }
-function syncScroll() { const gutter = document.querySelector<HTMLElement>('.script-studio .gutter'); if (gutter && editor.value) gutter.scrollTop = editor.value.scrollTop }
-function insertTab() { replaceSelection('  ') }
-function replaceSelection(value: string) { const el = editor.value; if (!el) return; const start = el.selectionStart, end = el.selectionEnd; draft.value = `${draft.value.slice(0, start)}${value}${draft.value.slice(end)}`; dirtyUuids.add(activeAsset.value!.uuid); void nextTick(() => { el.selectionStart = el.selectionEnd = start + value.length; el.focus(); sourceChanged() }) }
-function requestCompletions() { completionOpen.value = true; editor.value?.focus() }
-function insertCompletion(name: string) { const prefix = wordBeforeCursor.value; const el = editor.value; if (!el) return; el.selectionStart -= prefix.length; replaceSelection(name); completionOpen.value = false }
-function focusSourceRange(span: ConversionSpan) { const el = editor.value; if (!el) return; const [start,end] = textareaSelection(draft.value,span); el.focus(); el.setSelectionRange(start,end); const height = Number.parseFloat(getComputedStyle(el).lineHeight) || 22; el.scrollTop = Math.max(0,(span.line-4)*height); cursorChanged(); syncScroll() }
-function focusLine(line: number, column = 1) { focusSourceRange(spanAt(draft.value,line,column)) }
-function toggleBreakpoint(line: number) { const asset = activeAsset.value; if (!asset) return; asset.script ??= defaultScriptMetadata(); const index = asset.script.breakpoints.indexOf(line); if (index >= 0) { asset.script.breakpoints.splice(index, 1); asset.script.breakpointDetails = asset.script.breakpointDetails.filter(point => point.line !== line || point.functionName) } else { asset.script.breakpoints.push(line); asset.script.breakpointDetails.push({ id: `line-${line}-${Date.now()}`, line, functionName: '', condition: '', hitCondition: 0, logMessage: '', enabled: true, hitCount: 0 }) } asset.script.breakpoints.sort((a, b) => a - b); pushHistory('Toggle script breakpoint', `script-breakpoint:${asset.uuid}`); assetState.generation++ }
-async function saveActive(): Promise<boolean> {
+/** 源码编辑后保存恢复信息、标记脏状态并更新诊断、光标与补全显示。 */ function sourceChanged() { const asset = activeAsset.value; if (!asset) return; asset.script ??= defaultScriptMetadata(); asset.script.recoverySource = draft.value.slice(0, 1_000_000); dirtyUuids.add(asset.uuid);retainSourceDraft(); validationError.value = ''; void analyzeCurrent(); cursorChanged(); void nextTick(/** 编辑器更新后仅在前缀足够长且有候选项时显示自动补全。 */ () => { completionOpen.value = wordBeforeCursor.value.length >= 2 && completions.value.length > 0 }) }
+/** 根据光标前的源码计算当前行号和列号。 */ function cursorChanged() { const pos = editor.value?.selectionStart ?? 0; const before = draft.value.slice(0, pos); const lines = before.split(/\r?\n/); cursor.line = lines.length; cursor.column = (lines[lines.length - 1]?.length ?? 0) + 1 }
+/** 让代码行号栏的垂直滚动位置与文本编辑器保持一致。 */ function syncScroll() { const gutter = document.querySelector<HTMLElement>('.script-studio .gutter'); if (gutter && editor.value) gutter.scrollTop = editor.value.scrollTop }
+/** 用两个空格替换当前选区，实现编辑器的缩进输入。 */ function insertTab() { replaceSelection('  ') }
+/** 替换文本选区并标记草稿，更新后恢复插入点与焦点。 */ function replaceSelection(value: string) { const el = editor.value; if (!el) return; const start = el.selectionStart, end = el.selectionEnd; draft.value = `${draft.value.slice(0, start)}${value}${draft.value.slice(end)}`; dirtyUuids.add(activeAsset.value!.uuid); void nextTick(/** 文本更新后把光标放到插入内容末尾，并触发源码变更处理。 */ () => { el.selectionStart = el.selectionEnd = start + value.length; el.focus(); sourceChanged() }) }
+/** 显示补全列表并将焦点交还代码编辑器。 */ function requestCompletions() { completionOpen.value = true; editor.value?.focus() }
+/** 选中当前补全前缀并替换为候选名称，然后关闭补全列表。 */ function insertCompletion(name: string) { const prefix = wordBeforeCursor.value; const el = editor.value; if (!el) return; el.selectionStart -= prefix.length; replaceSelection(name); completionOpen.value = false }
+/** 把源码范围转换为文本选区，定位滚动位置并同步光标和行号栏。 */ function focusSourceRange(span: ConversionSpan) { const el = editor.value; if (!el) return; const [start,end] = textareaSelection(draft.value,span); el.focus(); el.setSelectionRange(start,end); const height = Number.parseFloat(getComputedStyle(el).lineHeight) || 22; el.scrollTop = Math.max(0,(span.line-4)*height); cursorChanged(); syncScroll() }
+/** 将目标行转换为源码范围后执行统一的编辑器定位。 */ function focusLine(line: number, column = 1) { focusSourceRange(spanAt(draft.value,line,column)) }
+/** 切换指定行的断点及详细配置，保留函数断点并记录修改。 */ function toggleBreakpoint(line: number) { const asset = activeAsset.value; if (!asset) return; asset.script ??= defaultScriptMetadata(); const index = asset.script.breakpoints.indexOf(line); if (index >= 0) { asset.script.breakpoints.splice(index, 1); asset.script.breakpointDetails = asset.script.breakpointDetails.filter(/* 先计算 point.line !== line；仅当其为假值时求右侧 point.functionName，返回短路求值结果。 */ point => point.line !== line || point.functionName) } else { asset.script.breakpoints.push(line); asset.script.breakpointDetails.push({ id: `line-${line}-${Date.now()}`, line, functionName: '', condition: '', hitCondition: 0, logMessage: '', enabled: true, hitCount: 0 }) } asset.script.breakpoints.sort(/* 计算表达式 a - b 并返回结果，沿用操作数的原有类型规则。 */ (a, b) => a - b); pushHistory('Toggle script breakpoint', `script-breakpoint:${asset.uuid}`); assetState.generation++ }
+/** 验证草稿冲突与模块后原子保存关联脚本和图，迁移断点并排队热重载、清理恢复状态及更新索引。 */ async function saveActive(): Promise<boolean> {
   const asset=activeAsset.value;if(!asset)return false
   if(sourceDraftConflict.value){validationError.value=layoutLabels.value.resolveDraftConflict;return false}
   const result=runtime.validateModuleSource(asset.uuid,draft.value);validationError.value=result.error?runtimeCopy.value.rejected+' '+result.error:''
   if(result.error){addEditorLog(result.error,'Script','error',asset.uuid);inspectorTab.value='problems';return false}
-  const previousScript=readTextAsset(asset.uuid)??'',previousGraphs=new Map(assetState.records.filter(item=>item.assetType==='visualScript').map(item=>[item.uuid,readTextAsset(item.uuid)??''])),previousMetadata=asset.script?JSON.parse(JSON.stringify(asset.script)) as typeof asset.script:undefined
-  asset.script??=defaultScriptMetadata();const remapped=remapStatementLines(analyzeScript(previousScript).statements,analysis.value.statements,asset.script.breakpoints);const lineMap=new Map(remapped.map(item=>[item.from,item.to]));asset.script.breakpoints=remapped.map(item=>item.to).sort((a,b)=>a-b);asset.script.breakpointDetails=asset.script.breakpointDetails.map(point=>({...point,line:lineMap.get(point.line)??point.line}));asset.script.tests=analysis.value.tests.map(test=>test.name);asset.script.recoverySource='';asset.script.lastSavedHash=sourceHash(draft.value)
-  if(!updateTextAsset(asset.uuid,draft.value)){asset.script=previousMetadata;return false}
-  try{
-    const synchronized=ensureLinkedGraphForScript(asset.uuid,draft.value)
-    if(synchronized){if(synchronized.created){const created=assetState.records.find(record=>record.uuid===synchronized.graphAssetUuid);if(created)queueInitialGraphLayout(created)}const graphSource=readTextAsset(synchronized.graphAssetUuid)??'';runtime.queueGraphHotReload(synchronized.graphAssetUuid,graphSource,previousGraphs.get(synchronized.graphAssetUuid)??'');window.dispatchEvent(new CustomEvent('nova-linked-graph-synchronized',{detail:{graphAssetUuid:synchronized.graphAssetUuid,scriptUuid:asset.uuid}}));addEditorLog(t(synchronized.created?'linkedGraphCreatedFromCode':'linkedGraphUpdatedFromCode'),'Script','info',synchronized.graphAssetUuid)}
-  }catch(error){updateTextAsset(asset.uuid,previousScript);asset.script=previousMetadata;validationError.value=error instanceof Error?error.message:String(error);addEditorLog(validationError.value,'Script','error',asset.uuid);inspectorTab.value='problems';return false}
+  const previousScript=readTextAsset(asset.uuid)??'',previousGraphs=new Map(assetState.records.filter(/* 比较 item.assetType 与 'visualScript'，返回严格相等的判断结果。 */ item=>item.assetType==='visualScript').map(/* 返回按声明顺序构造的数组 [item.uuid,readTextAsset(item.uuid)??'']。 */ item=>[item.uuid,readTextAsset(item.uuid)??'']))
+  // 先在独立副本计算断点迁移；资源事务成功前不清空草稿恢复信息。
+  const metadata=JSON.parse(JSON.stringify(asset.script??defaultScriptMetadata())) as NonNullable<typeof asset.script>
+  const remapped=remapStatementLines(analyzeScript(previousScript).statements,analysis.value.statements,metadata.breakpoints),lineMap=new Map(remapped.map(/* 返回按声明顺序构造的数组 [item.from,item.to]。 */ item=>[item.from,item.to]))
+  metadata.breakpoints=remapped.map(/* 返回 item.to 的当前值。 */ item=>item.to).sort(/* 计算表达式 a-b 并返回结果，沿用操作数的原有类型规则。 */ (a,b)=>a-b);metadata.breakpointDetails=metadata.breakpointDetails.map(/** 复制详细断点，并按源码映射更新其行号，缺少映射时保留原行。 */ point=>({...point,line:lineMap.get(point.line)??point.line}));metadata.tests=analysis.value.tests.map(/* 返回 test.name 的当前值。 */ test=>test.name);metadata.recoverySource='';metadata.lastSavedHash=sourceHash(draft.value)
+  let synchronized: ReturnType<typeof commitLinkedScriptAsset>
+  try { synchronized=commitLinkedScriptAsset(asset.uuid,draft.value,metadata) }
+  catch(error){validationError.value=error instanceof Error?error.message:String(error);addEditorLog(validationError.value,'Script','error',asset.uuid);inspectorTab.value='problems';return false}
+    if(synchronized){if(synchronized.created){const created=assetState.records.find(/* 比较 record.uuid 与 synchronized.graphAssetUuid，返回严格相等的判断结果。 */ record=>record.uuid===synchronized.graphAssetUuid);if(created)queueInitialGraphLayout(created)}const graphSource=readTextAsset(synchronized.graphAssetUuid)??'';runtime.queueGraphHotReload(synchronized.graphAssetUuid,graphSource,previousGraphs.get(synchronized.graphAssetUuid)??'');window.dispatchEvent(new CustomEvent('nova-linked-graph-synchronized',{detail:{graphAssetUuid:synchronized.graphAssetUuid,scriptUuid:asset.uuid}}));addEditorLog(t(synchronized.created?'linkedGraphCreatedFromCode':'linkedGraphUpdatedFromCode'),'Script','info',synchronized.graphAssetUuid)}
+
   runtime.queueHotReload(asset.uuid,draft.value);baseSources[asset.uuid]=draft.value;clearStudioDraft(asset,draftProjectId);dirtyUuids.delete(asset.uuid);scriptStudioState.activeDirty=false;rebuildProjectIndex();pushHistory('Edit script asset',`script:${asset.uuid}`);addEditorLog(t('scriptSaved',{name:asset.name}),'Script','info',asset.uuid);return true
 }
-function openModuleDiagnostic(uri:string){const asset=scripts.value.find(item=>item.path===uri);if(asset)openAt(asset.uuid,1)}
-function findNext() { const el = editor.value; if (!el || !findText.value) return; const lower = draft.value.toLowerCase(), needle = findText.value.toLowerCase(); let index = lower.indexOf(needle, el.selectionEnd); if (index < 0) index = lower.indexOf(needle); if (index >= 0) { el.focus(); el.setSelectionRange(index, index + needle.length); cursorChanged() } }
-function replaceOne() { const el = editor.value; if (!el) return; if (draft.value.slice(el.selectionStart, el.selectionEnd).toLowerCase() !== findText.value.toLowerCase()) { findNext(); return }; replaceSelection(replaceText.value) }
-function replaceAll() { if (!findText.value) return; draft.value = draft.value.replace(new RegExp(escapeRegex(findText.value), 'gi'), replaceText.value); sourceChanged() }
-function beginRenameSymbol() { cursorChanged();const name = selectedIdentifier.value,asset=activeAsset.value; if (!name||!asset||!editor.value) return; renameSelection={uuid:asset.uuid,source:draft.value,offset:sourceOffsetFromTextarea(draft.value,editor.value.selectionStart)};renameSource.value = name; renameDraft.value = name; renameOpen.value = true; void nextTick(() => renameInput.value?.select()) }
-async function confirmRenameSymbol() {
+/** 按模块诊断路径找到脚本资源，并打开其第一行。 */ function openModuleDiagnostic(uri:string){const asset=scripts.value.find(/* 比较 item.path 与 uri，返回严格相等的判断结果。 */ item=>item.path===uri);if(asset)openAt(asset.uuid,1)}
+/** 从当前选区末尾查找下一个忽略大小写的匹配，必要时回绕源码开头。 */ function findNext() { const el = editor.value; if (!el || !findText.value) return; const lower = draft.value.toLowerCase(), needle = findText.value.toLowerCase(); let index = lower.indexOf(needle, el.selectionEnd); if (index < 0) index = lower.indexOf(needle); if (index >= 0) { el.focus(); el.setSelectionRange(index, index + needle.length); cursorChanged() } }
+/** 当前选区匹配查找词时替换该处，否则先定位下一个匹配。 */ function replaceOne() { const el = editor.value; if (!el) return; if (draft.value.slice(el.selectionStart, el.selectionEnd).toLowerCase() !== findText.value.toLowerCase()) { findNext(); return }; replaceSelection(replaceText.value) }
+/** 将查找词转义为字面量正则后，忽略大小写替换全部匹配。 */ function replaceAll() { if (!findText.value) return; draft.value = draft.value.replace(new RegExp(escapeRegex(findText.value), 'gi'), replaceText.value); sourceChanged() }
+/** 记录重命名前的脚本、源码和光标身份，打开名称输入框。 */ function beginRenameSymbol() { cursorChanged();const name = selectedIdentifier.value,asset=activeAsset.value; if (!name||!asset||!editor.value) return; renameSelection={uuid:asset.uuid,source:draft.value,offset:sourceOffsetFromTextarea(draft.value,editor.value.selectionStart)};renameSource.value = name; renameDraft.value = name; renameOpen.value = true; void nextTick(/* 调用 renameInput.value?.select() 并返回调用结果。 */ () => renameInput.value?.select()) }
+/** 验证新标识符和源码身份，分析重命名结果并确认后保存；期间源码变化则拒绝覆盖。 */ async function confirmRenameSymbol() {
   const name=renameSource.value,replacement=renameDraft.value.trim(),selection=renameSelection
   if(!selection||!replacement||replacement===name||!/^[A-Za-z_][A-Za-z0-9_]*$/.test(replacement))return
   renameOpen.value=false
   try{
     if(activeAsset.value?.uuid!==selection.uuid||draft.value!==selection.source)throw Error(conversionLabels.value.renameChanged)
-    const renamed=renameScriptSymbol(selection.source,name,replacement,{offset:selection.offset,externalSources:scripts.value.filter(asset=>asset.uuid!==selection.uuid).map(asset=>drafts[asset.uuid]??readTextAsset(asset.uuid)??'')})
+    const renamed=renameScriptSymbol(selection.source,name,replacement,{offset:selection.offset,externalSources:scripts.value.filter(/* 比较 asset.uuid 与 selection.uuid，返回严格不等的判断结果。 */ asset=>asset.uuid!==selection.uuid).map(/* 当 drafts[asset.uuid]??readTextAsset(asset.uuid) 为 null 或 undefined 时返回 ''，否则保留左侧值。 */ asset=>drafts[asset.uuid]??readTextAsset(asset.uuid)??'')})
     const validation=runtime.validateModuleSource(selection.uuid,renamed);if(validation.error)throw Error(validation.error)
     const approved=await requestConfirmation({title:t('renameSymbol'),message:conversionLabels.value.renameConfirm.replace('{name}',name).replace('{replacement}',replacement),confirmLabel:t('rename'),cancelLabel:t('cancel'),destructive:false})
     if(!approved)return
@@ -420,36 +424,36 @@ async function confirmRenameSymbol() {
     if(await saveActive())addEditorLog(t('symbolRenamed',{name,replacement}),'Script')
   }catch(error){validationError.value=error instanceof Error?error.message:String(error);inspectorTab.value='problems';addEditorLog(validationError.value,'Script','error',selection.uuid)}
 }
-function goToDefinition() { const name = selectedIdentifier.value; if (!name) return; for (const asset of scripts.value) { const source = drafts[asset.uuid] ?? readTextAsset(asset.uuid) ?? ''; const symbol = analyzeScript(source).symbols.find(candidate => candidate.name === name); if (symbol) { openAt(asset.uuid, symbol.line); return } } }
-function showReferences() { const name = selectedIdentifier.value; if (!name) return; referenceResults.value = scripts.value.flatMap(asset => findScriptReferences(drafts[asset.uuid] ?? readTextAsset(asset.uuid) ?? '', name).map(reference => ({ uuid: asset.uuid, name: asset.name, line: reference.line, column: reference.column }))); inspectorTab.value = 'symbols' }
-function formatActive() { if (!activeAsset.value) return; try{const formatted = formatScript(draft.value, scriptProjectSettings.formatting); if (formatted !== draft.value) { draft.value = formatted; sourceChanged(); pushHistory('Format script', `script-format:${activeAsset.value.uuid}`) }}catch(error){validationError.value=error instanceof Error?error.message:String(error);inspectorTab.value='problems'} }
-function applyCodeAction(action: ScriptCodeAction) { if (action.code === 'NOVA-COMPAT-001') { focusLine(action.line); const deprecated = analysis.value.diagnostics.find(item => item.line === action.line && item.code === action.code)?.message.match(/“([^”]+)”/)?.[1]; if (deprecated) { draft.value = draft.value.replace(new RegExp(`\\b${escapeRegex(deprecated)}\\b`, 'g'), action.replacement); sourceChanged() } } else if (action.code === 'NOVA-PARSE-003') { draft.value = `${draft.value.replace(/\s*$/, '')}\n${action.replacement}\n`; sourceChanged() } }
-function addPackage() { const asset = activeAsset.value, name = packageDraft.value.trim().slice(0, 256); if (!asset?.script || !name || asset.script.packageDependencies.includes(name)) return; asset.script.packageDependencies.push(name); packageDraft.value = ''; assetState.generation++; pushHistory('Add script package dependency') }
-function removePackage(name: string) { const asset = activeAsset.value; if (!asset?.script) return; asset.script.packageDependencies = asset.script.packageDependencies.filter(value => value !== name); assetState.generation++; pushHistory('Remove script package dependency') }
-function setPackageName(value: string) { const asset = activeAsset.value; if (!asset) return; asset.script ??= defaultScriptMetadata(); asset.script.packageName = value.trim().slice(0, 128); assetState.generation++; pushHistory('Set script package') }
-function setReloadPolicy(value: string) { const asset = activeAsset.value; if (!asset || !['preserve', 'recreate', 'disabled'].includes(value)) return; asset.script ??= defaultScriptMetadata(); asset.script.reloadPolicy = value as 'preserve' | 'recreate' | 'disabled'; assetState.generation++; pushHistory('Set hot reload policy') }
-function setApiVersion(value: number) { const asset = activeAsset.value; if (!asset) return; asset.script ??= defaultScriptMetadata(); asset.script.apiVersion = value === 2 ? 2 : asset.script.apiVersion === 1 ? 1 : 2; assetState.generation++; markScriptIndexApiChanged(); rebuildProjectIndex(); pushHistory('Set script API version'); void analyzeCurrent() }
-function insertContractHeader() { if (!activeAsset.value || /^\s*\/\/\s*@nova\b/m.test(draft.value)) { inspectorTab.value = 'contract'; return }; draft.value = `${scriptContractHeader()}\n\n${draft.value}`; sourceChanged(); inspectorTab.value = 'contract'; pushHistory('Add script behavior contract') }
-function rollbackReload() { if (activeAsset.value && runtime.rollbackHotReload(activeAsset.value.uuid)) addEditorLog(t('hotReloadRollbackQueued'), 'Script', 'warning', activeAsset.value.uuid) }
-function addFunctionBreakpoint() { const asset = activeAsset.value; if (!asset) return; asset.script ??= defaultScriptMetadata(); const point: ScriptBreakpointMetadata = { id: `function-${Date.now()}`, line: cursor.line, functionName: analysis.value.symbols.find(symbol => symbol.kind === 'function' && symbol.line <= cursor.line && symbol.endLine >= cursor.line)?.name ?? '', condition: '', hitCondition: 0, logMessage: '', enabled: true, hitCount: 0 }; asset.script.breakpointDetails.push(point); assetState.generation++; pushHistory('Add function breakpoint') }
-function removeDetailedBreakpoint(id: string) { const asset = activeAsset.value; if (!asset?.script) return; const point = asset.script.breakpointDetails.find(item => item.id === id); asset.script.breakpointDetails = asset.script.breakpointDetails.filter(item => item.id !== id); if (point && !asset.script.breakpointDetails.some(item => item.line === point.line)) asset.script.breakpoints = asset.script.breakpoints.filter(line => line !== point.line); assetState.generation++; pushHistory('Remove script breakpoint') }
-function addWatch() { addDebugWatch(watchDraft.value); watchDraft.value = '' }
-function addSignal() { const name = signalDraft.value.trim().slice(0, 128); if (!name || signals.value.includes(name)) return; signals.value.push(name); signalDraft.value = ''; pushHistory('Add custom signal') }
-function removeSignal(name: string) { const index = signals.value.indexOf(name); if (index >= 0) { signals.value.splice(index, 1); pushHistory('Remove custom signal') } }
-function addSignalConnection() { const asset = activeAsset.value, signal = connectionSignalDraft.value.trim().slice(0, 128), callback = connectionCallbackDraft.value.trim().slice(0, 80); if (!asset || !signal || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(callback)) return; asset.script ??= defaultScriptMetadata(); asset.script.signalConnections.push({ signal, callback, source: '', target: '', enabled: true }); connectionSignalDraft.value = ''; connectionCallbackDraft.value = ''; assetState.generation++; pushHistory('Connect script signal') }
-function removeSignalConnection(index: number) { const asset = activeAsset.value; if (!asset?.script) return; asset.script.signalConnections.splice(index, 1); assetState.generation++; pushHistory('Disconnect script signal') }
-async function runTests() {
+/** 在项目脚本符号中查找当前标识符的首个定义并打开其位置。 */ function goToDefinition() { const name = selectedIdentifier.value; if (!name) return; for (const asset of scripts.value) { const source = drafts[asset.uuid] ?? readTextAsset(asset.uuid) ?? ''; const symbol = analyzeScript(source).symbols.find(/* 比较 candidate.name 与 name，返回严格相等的判断结果。 */ candidate => candidate.name === name); if (symbol) { openAt(asset.uuid, symbol.line); return } } }
+/** 跨项目脚本查找当前标识符的引用，并切换到符号结果面板。 */ function showReferences() { const name = selectedIdentifier.value; if (!name) return; referenceResults.value = scripts.value.flatMap(/** 查找单个脚本中的目标引用，并附上该资源的信息。 */ asset => findScriptReferences(drafts[asset.uuid] ?? readTextAsset(asset.uuid) ?? '', name).map(/** 将符号引用转换为可导航的脚本标识、名称、行号和列号。 */ reference => ({ uuid: asset.uuid, name: asset.name, line: reference.line, column: reference.column }))); inspectorTab.value = 'symbols' }
+/** 按格式设置整理当前脚本，内容变化时标记草稿并记录历史；失败则显示诊断。 */ function formatActive() { if (!activeAsset.value) return; try{const formatted = formatScript(draft.value, scriptProjectSettings.formatting); if (formatted !== draft.value) { draft.value = formatted; sourceChanged(); pushHistory('Format script', `script-format:${activeAsset.value.uuid}`) }}catch(error){validationError.value=error instanceof Error?error.message:String(error);inspectorTab.value='problems'} }
+/** 应用废弃接口替换或缺失语法追加等诊断修复，并重新分析修改后的草稿。 */ function applyCodeAction(action: ScriptCodeAction) { if (action.code === 'NOVA-COMPAT-001') { focusLine(action.line); const deprecated = analysis.value.diagnostics.find(/* 先计算 item.line === action.line；仅当其为真值时求右侧 item.code === action.code，返回短路求值结果。 */ item => item.line === action.line && item.code === action.code)?.message.match(/“([^”]+)”/)?.[1]; if (deprecated) { draft.value = draft.value.replace(new RegExp(`\\b${escapeRegex(deprecated)}\\b`, 'g'), action.replacement); sourceChanged() } } else if (action.code === 'NOVA-PARSE-003') { draft.value = `${draft.value.replace(/\s*$/, '')}\n${action.replacement}\n`; sourceChanged() } }
+/** 为当前脚本添加经过长度限制且不重复的包依赖。 */ function addPackage() { const asset = activeAsset.value, name = packageDraft.value.trim().slice(0, 256); if (!asset?.script || !name || asset.script.packageDependencies.includes(name)) return; asset.script.packageDependencies.push(name); packageDraft.value = ''; assetState.generation++; pushHistory('Add script package dependency') }
+/** 从当前脚本移除指定包依赖，并更新资源代数和历史。 */ function removePackage(name: string) { const asset = activeAsset.value; if (!asset?.script) return; asset.script.packageDependencies = asset.script.packageDependencies.filter(/* 比较 value 与 name，返回严格不等的判断结果。 */ value => value !== name); assetState.generation++; pushHistory('Remove script package dependency') }
+/** 设置经过长度限制的脚本包名称并记录资源修改。 */ function setPackageName(value: string) { const asset = activeAsset.value; if (!asset) return; asset.script ??= defaultScriptMetadata(); asset.script.packageName = value.trim().slice(0, 128); assetState.generation++; pushHistory('Set script package') }
+/** 仅接受保留、重建或禁用三种热重载策略并保存到脚本元数据。 */ function setReloadPolicy(value: string) { const asset = activeAsset.value; if (!asset || !['preserve', 'recreate', 'disabled'].includes(value)) return; asset.script ??= defaultScriptMetadata(); asset.script.reloadPolicy = value as 'preserve' | 'recreate' | 'disabled'; assetState.generation++; pushHistory('Set hot reload policy') }
+/** 更新允许的脚本接口版本，同时失效并重建索引，再重新分析。 */ function setApiVersion(value: number) { const asset = activeAsset.value; if (!asset) return; asset.script ??= defaultScriptMetadata(); asset.script.apiVersion = value === 2 ? 2 : asset.script.apiVersion === 1 ? 1 : 2; assetState.generation++; markScriptIndexApiChanged(); rebuildProjectIndex(); pushHistory('Set script API version'); void analyzeCurrent() }
+/** 没有契约头时插入契约模板并记录草稿；已有契约时直接显示契约面板。 */ function insertContractHeader() { if (!activeAsset.value || /^\s*\/\/\s*@nova\b/m.test(draft.value)) { inspectorTab.value = 'contract'; return }; draft.value = `${scriptContractHeader()}\n\n${draft.value}`; sourceChanged(); inspectorTab.value = 'contract'; pushHistory('Add script behavior contract') }
+/** 请求运行时回滚脚本热重载，并在请求成功时记录排队提示。 */ function rollbackReload() { if (activeAsset.value && runtime.rollbackHotReload(activeAsset.value.uuid)) addEditorLog(t('hotReloadRollbackQueued'), 'Script', 'warning', activeAsset.value.uuid) }
+/** 在光标所在函数上添加默认函数断点，并记录资源变化。 */ function addFunctionBreakpoint() { const asset = activeAsset.value; if (!asset) return; asset.script ??= defaultScriptMetadata(); const point: ScriptBreakpointMetadata = { id: `function-${Date.now()}`, line: cursor.line, functionName: analysis.value.symbols.find(/* 先计算 symbol.kind === 'function' && symbol.line <= cursor.line；仅当其为真值时求右侧 symbol.endLine >= cursor.line，返回短路求值结果。 */ symbol => symbol.kind === 'function' && symbol.line <= cursor.line && symbol.endLine >= cursor.line)?.name ?? '', condition: '', hitCondition: 0, logMessage: '', enabled: true, hitCount: 0 }; asset.script.breakpointDetails.push(point); assetState.generation++; pushHistory('Add function breakpoint') }
+/** 移除指定详细断点；只有该行没有其他配置时才移除普通行断点。 */ function removeDetailedBreakpoint(id: string) { const asset = activeAsset.value; if (!asset?.script) return; const point = asset.script.breakpointDetails.find(/* 比较 item.id 与 id，返回严格相等的判断结果。 */ item => item.id === id); asset.script.breakpointDetails = asset.script.breakpointDetails.filter(/* 比较 item.id 与 id，返回严格不等的判断结果。 */ item => item.id !== id); if (point && !asset.script.breakpointDetails.some(/* 比较 item.line 与 point.line，返回严格相等的判断结果。 */ item => item.line === point.line)) asset.script.breakpoints = asset.script.breakpoints.filter(/* 比较 line 与 point.line，返回严格不等的判断结果。 */ line => line !== point.line); assetState.generation++; pushHistory('Remove script breakpoint') }
+/** 把输入表达式加入调试监视列表后清空输入。 */ function addWatch() { addDebugWatch(watchDraft.value); watchDraft.value = '' }
+/** 添加经过长度限制且不重复的信号名称，并记录历史。 */ function addSignal() { const name = signalDraft.value.trim().slice(0, 128); if (!name || signals.value.includes(name)) return; signals.value.push(name); signalDraft.value = ''; pushHistory('Add custom signal') }
+/** 按有效索引删除信号并记录历史。 */ function removeSignal(name: string) { const index = signals.value.indexOf(name); if (index >= 0) { signals.value.splice(index, 1); pushHistory('Remove custom signal') } }
+/** 验证信号名称和回调标识符后创建默认启用的信号连接，并清空输入。 */ function addSignalConnection() { const asset = activeAsset.value, signal = connectionSignalDraft.value.trim().slice(0, 128), callback = connectionCallbackDraft.value.trim().slice(0, 80); if (!asset || !signal || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(callback)) return; asset.script ??= defaultScriptMetadata(); asset.script.signalConnections.push({ signal, callback, source: '', target: '', enabled: true }); connectionSignalDraft.value = ''; connectionCallbackDraft.value = ''; assetState.generation++; pushHistory('Connect script signal') }
+/** 按索引移除信号连接并更新资源代数和历史。 */ function removeSignalConnection(index: number) { const asset = activeAsset.value; if (!asset?.script) return; asset.script.signalConnections.splice(index, 1); assetState.generation++; pushHistory('Disconnect script signal') }
+/** 无界面模式复制测试命令；其余模式按文件、标签或失败用例筛选后运行测试。 */ async function runTests() {
   if (testScope.value === 'headless') { const command = `pnpm nova script-test Assets/Scripts --format json --output reports/rhai-tests.json --coverage-output reports/rhai-coverage.json${testTags.value.trim() ? ` --tag ${testTags.value.trim().split(/[,\s]+/).filter(Boolean)[0]}` : ''}`; await navigator.clipboard?.writeText(command); addEditorLog(t('headlessCommandCopied'), 'Script'); return }
   const tags = testTags.value.trim().split(/[,\s]+/).filter(Boolean)
   const target = testScope.value === 'file' ? activeAsset.value?.uuid : undefined
-  const failed = testScope.value === 'failed' ? [...new Set(debug.testResults.filter(result => !result.passed && !result.skipped).map(result => result.test))] : undefined
+  const failed = testScope.value === 'failed' ? [...new Set(debug.testResults.filter(/* 先计算 !result.passed；仅当其为真值时求右侧 !result.skipped，返回短路求值结果。 */ result => !result.passed && !result.skipped).map(/* 返回 result.test 的当前值。 */ result => result.test))] : undefined
   runtime.runScriptTests(target, { tags: testScope.value === 'tags' ? tags : undefined, testNames: failed })
   inspectorTab.value = 'tests'
 }
-function selectFrame(index: number, uuid: string, line: number) { selectDebugFrame(index); openAt(uuid, line) }
-function percent(value: number) { return `${(Math.max(0, Math.min(1, value)) * 100).toFixed(1)}%` }
-function escapeRegex(value: string) { return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') }
-function sourceHash(value: string) { let hash = 2166136261; for (const character of value) hash = Math.imul(hash ^ character.charCodeAt(0), 16777619) >>> 0; return hash.toString(16).padStart(8, '0') }
+/** 选中调试栈帧，并打开该帧对应脚本与源码行。 */ function selectFrame(index: number, uuid: string, line: number) { selectDebugFrame(index); openAt(uuid, line) }
+/** 将输入限制到零至一之间，转换为保留一位小数的百分比。 */ function percent(value: number) { return `${(Math.max(0, Math.min(1, value)) * 100).toFixed(1)}%` }
+/* 调用 value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') 并返回调用结果。 */ function escapeRegex(value: string) { return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') }
+/** 逐字符执行异或和整数乘法，生成用于源码变化识别的八位十六进制散列。 */ function sourceHash(value: string) { let hash = 2166136261; for (const character of value) hash = Math.imul(hash ^ character.charCodeAt(0), 16777619) >>> 0; return hash.toString(16).padStart(8, '0') }
 </script>
 
 <style scoped>

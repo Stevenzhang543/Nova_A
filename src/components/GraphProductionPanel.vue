@@ -1,3 +1,4 @@
+<!-- 图生产工具：管理接口、迁移、差异与关联脚本；用户操作失败在本面板日志中保留。 -->
 <template>
   <section class="production-panel">
     <nav class="production-tabs" :aria-label="t('graphProductionTools')">
@@ -72,7 +73,7 @@
       <p v-if="mergeError" class="merge-error">{{ mergeError }}</p>
       <button v-for="change in diff.slice(0,100)" :key="`${change.identity}:${change.path}`" class="trace-row"><strong>{{ change.kind }}</strong><small>{{ change.path }}</small></button>
       <article v-for="conflict in mergeResult?.conflicts" :key="conflict.id" class="conflict-card"><strong>{{ conflict.path }}</strong><small>{{ t('mergeConflict') }}</small><div><button :class="{ active: conflict.resolution === 'ours' }" @click="resolveConflict(conflict.id,'ours')">{{ t('keepOurs') }}</button><button :class="{ active: conflict.resolution === 'theirs' }" @click="resolveConflict(conflict.id,'theirs')">{{ t('keepTheirs') }}</button></div></article>
-      <button v-if="mergeResult" :disabled="mergeResult.conflicts.some(item=>item.resolution==='unresolved')" class="primary" @click="applyMerge">{{ t('applyResolvedMerge') }}</button>
+<!-- 合并冲突检查回调在存在未解决项时禁用应用按钮。 -->      <button v-if="mergeResult" :disabled="mergeResult.conflicts.some(item=>item.resolution==='unresolved')" class="primary" @click="applyMerge">{{ t('applyResolvedMerge') }}</button>
     </div>
 
     <div v-else class="production-content code-view">
@@ -81,7 +82,7 @@
       <div class="conversion-coverage"><strong>{{ Math.round(conversionCoverage.percent * 100) }}%</strong><span>{{ t('structuralConversionCoverage') }}</span><small>{{ conversionCoverage.native }} {{ t('nativeBlocks') }} · {{ conversionCoverage.escaped }} {{ t('executeRhaiBlocks') }}</small></div>
       <p class="hint">{{ t('executeRhaiSafetyHint') }}</p>
       <article v-for="item in conversionCoverage.escapeBlocks" :key="item.nodeUuid" class="escape-block"><strong>{{ item.title }}</strong><small>{{ item.kind }} · {{ item.scopeUuid.slice(0,8) }}</small><code>{{ item.source || t('moduleScope') }}</code></article>
-      <p v-if="linkedScripts.length" class="link-status">↔ {{ linkedScripts.map(asset => asset.name).join(', ') }}</p>
+<!-- 关联脚本映射回调提取资源名称用于连接状态显示。 -->      <p v-if="linkedScripts.length" class="link-status">↔ {{ linkedScripts.map(asset => asset.name).join(', ') }}</p>
       <button :disabled="!linkedSource" @click="generateRhaiAsset">{{ t('generateNewRhaiAsset') }}</button>
       <pre>{{ linkedSource }}</pre>
     </div>
@@ -90,7 +91,7 @@
 
 <script setup lang="ts">
 import { computed, ref, shallowRef } from 'vue'
-import { assetState, createTextAsset } from '../assets/AssetDatabase'
+import { assetState } from '../assets/AssetDatabase'
 import { t } from '../i18n'
 import { panelControlLabel } from '../editor/panelControlCopy'
 import { gameplayRuntime } from '../runtime/GameplayRuntime'
@@ -99,7 +100,7 @@ import { requestConfirmation } from '../store/dialog'
 import { addEditorLog } from '../store/editor'
 import { pushHistory } from '../store/physics'
 import { graphCoverage, graphDebugState } from '../visual/graphDebugger'
-import { createLinkedRhaiSource, createLinkedScriptName, graphConversionCoverage, linkedScriptGraphUuid, linkScriptToGraph, synchronizeLinkedScriptsForGraph } from '../visual/graphCodeSync'
+import { createLinkedRhaiSource, ensureLinkedScriptForGraph, graphConversionCoverage, linkedScriptGraphUuid } from '../visual/graphCodeSync'
 import { addRoutineParameter, applyGraphConflict, createGraphCustomEvent, createGraphInterface, createGraphRoutine, extractGraphFunction, findGraphReferences, mergeGraphs, migrateDeprecatedGraphNodes, renameGraphSymbol, replaceGraphNodeType, semanticGraphDiff, synchronizeGraphSignatures, type GraphMergeResult, type GraphSemanticChange } from '../visual/graphProduction'
 import { defaultGraphValue, graphUuid, parseGraphDocument, serializeGraphDocument, type GraphCustomEvent, type GraphInterface, type GraphInterfaceMethod, type GraphParameter, type GraphRoutine, type GraphRoutineKind, type GraphValueType, type GraphVariable, type NovaGraphDocument } from '../visual/graphTypes'
 
@@ -108,76 +109,110 @@ const emit = defineEmits<{ dirty: []; scope: [uuid: string]; replaceGraph: [grap
 const tabs = [{id:'structure',label:'graphStructure'},{id:'debug',label:'debug'},{id:'refactor',label:'refactor'},{id:'merge',label:'diffAndMerge'},{id:'code',label:'generatedRhai'}] as const
 const tab = ref<(typeof tabs)[number]['id']>('structure'), libraryCandidate = ref(''), symbolUuid = ref(''), renameValue = ref(''), extractName = ref('extracted_function'), replacementType = ref(''), baseSource = ref(''), theirsSource = ref(''), mergeError = ref(''), diff = ref<GraphSemanticChange[]>([]), mergeResult = shallowRef<GraphMergeResult | null>(null)
 const valueTypes: GraphValueType[] = ['Boolean','Number','String','Vec2','Entity','Resource','Data']
-const availableLibraries = computed(() => packageState.installed.filter(item => item.enabled && item.project && item.manifest.visualNodes.length && !props.graph.libraries.some(library => library.packageId === item.manifest.id)))
-const allNodes = computed(() => [props.graph.nodes,...props.graph.routines.map(item=>item.nodes)].flat())
-const graphTrace = computed(() => graphDebugState.trace.filter(item => item.graphUuid === props.graph.uuid))
-const graphErrors = computed(() => graphDebugState.errors.filter(item => item.graphUuid === props.graph.uuid))
-const linkedSource = computed(() => createLinkedRhaiSource(props.graph))
-const linkedScripts = computed(() => {
+const availableLibraries = computed(/** 筛选当前图尚未引用的可用项目节点库。 */ () => packageState.installed.filter(/** 只接受启用且属于项目、包含节点并且尚未引用的库。 */ item => item.enabled && item.project && item.manifest.visualNodes.length && !props.graph.libraries.some(/* 比较 library.packageId 与 item.manifest.id，返回严格相等的判断结果。 */ library => library.packageId === item.manifest.id)))
+const allNodes = computed(/** 汇总主图和例程节点，供名称、计时和调试查询。 */ () => [props.graph.nodes,...props.graph.routines.map(/* 返回 item.nodes 的当前值。 */ item=>item.nodes)].flat())
+const graphTrace = computed(/** 只显示当前图的执行轨迹。 */ () => graphDebugState.trace.filter(/* 比较 item.graphUuid 与 props.graph.uuid，返回严格相等的判断结果。 */ item => item.graphUuid === props.graph.uuid))
+const graphErrors = computed(/** 只显示当前图的运行错误。 */ () => graphDebugState.errors.filter(/* 比较 item.graphUuid 与 props.graph.uuid，返回严格相等的判断结果。 */ item => item.graphUuid === props.graph.uuid))
+const linkedSource = computed(/** 生成当前草稿图对应的 Rhai 源码预览。 */ () => createLinkedRhaiSource(props.graph))
+const linkedScripts = computed(/** 跟踪资源代次，查找准确关联到当前图的脚本。 */ () => {
   void assetState.generation
-  return assetState.records.filter(asset => asset.assetType === 'script' && linkedScriptGraphUuid(asset.uuid) === props.graph.uuid)
+  return assetState.records.filter(/** 筛选准确关联当前图的脚本资源。 */ asset => asset.assetType === 'script' && linkedScriptGraphUuid(asset.uuid) === props.graph.uuid)
 })
-const graphTimings = computed(() => Object.values(graphDebugState.timings).filter(item => allNodes.value.some(node=>node.uuid===item.nodeUuid)).sort((a,b)=>b.totalMicros-a.totalMicros))
-const coverage = computed(() => graphCoverage(props.graph))
-const conversionCoverage = computed(() => graphConversionCoverage(props.graph))
-const symbols = computed(() => [
-  ...props.graph.variables.map(item=>({uuid:item.uuid,name:item.name,kind:'variable'})),
-  ...props.graph.routines.map(item=>({uuid:item.uuid,name:item.name,kind:item.kind})),
-  ...props.graph.routines.flatMap(routine=>routine.locals.map(item=>({uuid:item.uuid,name:`${routine.name}.${item.name}`,kind:'local'}))),
-  ...props.graph.customEvents.map(item=>({uuid:item.uuid,name:item.name,kind:'event'})),
-  ...props.graph.interfaces.map(item=>({uuid:item.uuid,name:item.name,kind:'interface'}))
+const graphTimings = computed(/** 筛选当前图节点的运行计时并按总耗时降序。 */ () => Object.values(graphDebugState.timings).filter(/** 只保留属于当前图节点的计时记录。 */ item => allNodes.value.some(/* 比较 node.uuid 与 item.nodeUuid，返回严格相等的判断结果。 */ node=>node.uuid===item.nodeUuid)).sort(/** 按累计微秒数降序排列。 */ (a,b)=>b.totalMicros-a.totalMicros))
+const coverage = computed(/** 计算实际图运行覆盖率。 */ () => graphCoverage(props.graph))
+const conversionCoverage = computed(/** 区分结构化节点与显式源码保留节点。 */ () => graphConversionCoverage(props.graph))
+const symbols = computed(/** 组合变量、例程、局部变量、事件和接口用于重构选择。 */ () => [
+  ...props.graph.variables.map(/** 构造变量的重构选择项。 */ item=>({uuid:item.uuid,name:item.name,kind:'variable'})),
+  ...props.graph.routines.map(/** 构造例程的重构选择项。 */ item=>({uuid:item.uuid,name:item.name,kind:item.kind})),
+  ...props.graph.routines.flatMap(/** 汇总各例程的局部变量选择项。 */ routine=>routine.locals.map(/** 用例程限定名称区分同名局部变量。 */ item=>({uuid:item.uuid,name:`${routine.name}.${item.name}`,kind:'local'}))),
+  ...props.graph.customEvents.map(/** 构造事件的重构选择项。 */ item=>({uuid:item.uuid,name:item.name,kind:'event'})),
+  ...props.graph.interfaces.map(/** 构造接口的重构选择项。 */ item=>({uuid:item.uuid,name:item.name,kind:'interface'}))
 ])
-const references = computed(() => symbolUuid.value ? findGraphReferences(props.graph,symbolUuid.value) : [])
+const references = computed(/** 按选中符号查找引用，未选择时返回空列表。 */ () => symbolUuid.value ? findGraphReferences(props.graph,symbolUuid.value) : [])
 
+/** 向父图编辑器报告草稿已修改，保存与历史由父级统一处理。 */
 function changed(){emit('dirty')}
+/** 同步函数、事件及接口端口签名，再标记草稿已修改。 */
 function signaturesChanged(){synchronizeGraphSignatures(props.graph);changed()}
+/** 创建指定类型的例程并切换到新作用域。 */
 function addRoutine(kind:GraphRoutineKind){const routine=createGraphRoutine(kind,`${kind}_${props.graph.routines.length+1}`);props.graph.routines.push(routine);emit('scope',routine.uuid);changed()}
-async function removeRoutine(routine:GraphRoutine){if(!await requestConfirmation({title:t('removeRoutine'),message:t('removeRoutineConfirm',{name:routine.name}),confirmLabel:t('remove'),cancelLabel:t('cancel'),destructive:true}))return;props.graph.routines=props.graph.routines.filter(item=>item.uuid!==routine.uuid);for(const scope of [props.graph,...props.graph.routines]){const removed=new Set(scope.nodes.filter(node=>node.type===`routine.call.${routine.uuid}`).map(node=>node.uuid));scope.nodes=scope.nodes.filter(node=>!removed.has(node.uuid));scope.edges=scope.edges.filter(edge=>!removed.has(edge.from.nodeUuid)&&!removed.has(edge.to.nodeUuid))}emit('scope','main');changed()}
+/** 确认后删除例程及所有调用节点和关联边，返回主图。 */
+async function removeRoutine(routine:GraphRoutine){if(!await requestConfirmation({title:t('removeRoutine'),message:t('removeRoutineConfirm',{name:routine.name}),confirmLabel:t('remove'),cancelLabel:t('cancel'),destructive:true}))return;props.graph.routines=props.graph.routines.filter(/* 比较 item.uuid 与 routine.uuid，返回严格不等的判断结果。 */ item=>item.uuid!==routine.uuid);for(const scope of [props.graph,...props.graph.routines]){const removed=new Set(scope.nodes.filter(/* 比较 node.type 与 `routine.call.${routine.uuid}`，返回严格相等的判断结果。 */ node=>node.type===`routine.call.${routine.uuid}`).map(/* 返回 node.uuid 的当前值。 */ node=>node.uuid));scope.nodes=scope.nodes.filter(/* 返回 removed.has(node.uuid) 的逻辑取反结果。 */ node=>!removed.has(node.uuid));scope.edges=scope.edges.filter(/** 保留两端均未被删除的边。 */ edge=>!removed.has(edge.from.nodeUuid)&&!removed.has(edge.to.nodeUuid))}emit('scope','main');changed()}
+/** 为例程添加数字参数，并同步所有调用端口。 */
 function addParameter(routine:GraphRoutine,direction:'input'|'output'){addRoutineParameter(routine,direction,`${direction}_${routine[direction==='input'?'inputs':'outputs'].length+1}`,'Number');signaturesChanged()}
-function removeParameter(routine:GraphRoutine,uuid:string){routine.inputs=routine.inputs.filter(item=>item.uuid!==uuid);routine.outputs=routine.outputs.filter(item=>item.uuid!==uuid);signaturesChanged()}
+/** 按身份删除输入或输出参数，并同步签名。 */
+function removeParameter(routine:GraphRoutine,uuid:string){routine.inputs=routine.inputs.filter(/* 比较 item.uuid 与 uuid，返回严格不等的判断结果。 */ item=>item.uuid!==uuid);routine.outputs=routine.outputs.filter(/* 比较 item.uuid 与 uuid，返回严格不等的判断结果。 */ item=>item.uuid!==uuid);signaturesChanged()}
+/** 按新类型重置参数默认值并同步相关端口。 */
 function parameterTypeChanged(parameter:GraphParameter){parameter.defaultValue=defaultGraphValue(parameter.valueType);signaturesChanged()}
+/** 创建未暴露且不序列化的数字局部变量。 */
 function addLocal(routine:GraphRoutine){routine.locals.push({uuid:graphUuid(),name:`local_${routine.locals.length+1}`,valueType:'Number',defaultValue:0,exposed:false,serialized:false,group:'Locals',tooltip:'',minimum:null,maximum:null,step:.01,resourceType:null});signaturesChanged()}
-function removeLocal(routine:GraphRoutine,uuid:string){routine.locals=routine.locals.filter(item=>item.uuid!==uuid);const removed=new Set(routine.nodes.filter(node=>node.config.localUuid===uuid).map(node=>node.uuid));routine.nodes=routine.nodes.filter(node=>!removed.has(node.uuid));routine.edges=routine.edges.filter(edge=>!removed.has(edge.from.nodeUuid)&&!removed.has(edge.to.nodeUuid));changed()}
-function localTypeChanged(local:GraphVariable){local.defaultValue=defaultGraphValue(local.valueType);for(const routine of props.graph.routines)for(const node of routine.nodes.filter(item=>item.config.localUuid===local.uuid))for(const pin of node.pins.filter(item=>item.kind==='data')){pin.valueType=local.valueType;pin.defaultValue=local.defaultValue}changed()}
+/** 删除局部变量、对应读写节点及悬空边。 */
+function removeLocal(routine:GraphRoutine,uuid:string){routine.locals=routine.locals.filter(/* 比较 item.uuid 与 uuid，返回严格不等的判断结果。 */ item=>item.uuid!==uuid);const removed=new Set(routine.nodes.filter(/* 比较 node.config.localUuid 与 uuid，返回严格相等的判断结果。 */ node=>node.config.localUuid===uuid).map(/* 返回 node.uuid 的当前值。 */ node=>node.uuid));routine.nodes=routine.nodes.filter(/* 返回 removed.has(node.uuid) 的逻辑取反结果。 */ node=>!removed.has(node.uuid));routine.edges=routine.edges.filter(/** 移除局部变量节点后清除悬空边。 */ edge=>!removed.has(edge.from.nodeUuid)&&!removed.has(edge.to.nodeUuid));changed()}
+/** 更新局部变量默认值与引用节点的数据端口类型。 */
+function localTypeChanged(local:GraphVariable){local.defaultValue=defaultGraphValue(local.valueType);for(const routine of props.graph.routines)for(const node of routine.nodes.filter(/* 比较 item.config.localUuid 与 local.uuid，返回严格相等的判断结果。 */ item=>item.config.localUuid===local.uuid))for(const pin of node.pins.filter(/* 比较 item.kind 与 'data'，返回严格相等的判断结果。 */ item=>item.kind==='data')){pin.valueType=local.valueType;pin.defaultValue=local.defaultValue}changed()}
+/** 添加自定义事件并同步事件节点签名。 */
 function addEvent(){props.graph.customEvents.push(createGraphCustomEvent(`custom_event_${props.graph.customEvents.length+1}`));signaturesChanged()}
+/** 为自定义事件添加动态数据参数。 */
 function addEventParameter(event:GraphCustomEvent){event.parameters.push({uuid:graphUuid(),name:`value_${event.parameters.length+1}`,valueType:'Data',defaultValue:null,tooltip:''});signaturesChanged()}
-function removeEventParameter(event:GraphCustomEvent,uuid:string){event.parameters=event.parameters.filter(item=>item.uuid!==uuid);signaturesChanged()}
-function removeEvent(uuid:string){props.graph.customEvents=props.graph.customEvents.filter(item=>item.uuid!==uuid);for(const scope of [props.graph,...props.graph.routines]){const removed=new Set(scope.nodes.filter(node=>node.type.endsWith(uuid)).map(node=>node.uuid));scope.nodes=scope.nodes.filter(node=>!removed.has(node.uuid));scope.edges=scope.edges.filter(edge=>!removed.has(edge.from.nodeUuid)&&!removed.has(edge.to.nodeUuid))}changed()}
+/** 删除指定事件参数并同步签名。 */
+function removeEventParameter(event:GraphCustomEvent,uuid:string){event.parameters=event.parameters.filter(/* 比较 item.uuid 与 uuid，返回严格不等的判断结果。 */ item=>item.uuid!==uuid);signaturesChanged()}
+/** 移除事件及引用它的节点和关联边。 */
+function removeEvent(uuid:string){props.graph.customEvents=props.graph.customEvents.filter(/* 比较 item.uuid 与 uuid，返回严格不等的判断结果。 */ item=>item.uuid!==uuid);for(const scope of [props.graph,...props.graph.routines]){const removed=new Set(scope.nodes.filter(/** 查找对应自定义事件的节点。 */ node=>node.type.endsWith(uuid)).map(/* 返回 node.uuid 的当前值。 */ node=>node.uuid));scope.nodes=scope.nodes.filter(/* 返回 removed.has(node.uuid) 的逻辑取反结果。 */ node=>!removed.has(node.uuid));scope.edges=scope.edges.filter(/** 移除事件节点后清除悬空边。 */ edge=>!removed.has(edge.from.nodeUuid)&&!removed.has(edge.to.nodeUuid))}changed()}
+/** 创建空接口契约并标记草稿。 */
 function addInterface(){props.graph.interfaces.push(createGraphInterface(`interface_${props.graph.interfaces.length+1}`));changed()}
+/** 为接口创建无参数方法声明。 */
 function addInterfaceMethod(contract:GraphInterface){contract.methods.push({uuid:graphUuid(),name:`method_${contract.methods.length+1}`,inputs:[],outputs:[]});changed()}
+/** 给接口方法添加指定方向的数据参数。 */
 function addInterfaceParameter(method:GraphInterfaceMethod,direction:'input'|'output'){const target=method[direction==='input'?'inputs':'outputs'];target.push({uuid:graphUuid(),name:`${direction}_${target.length+1}`,valueType:'Data',defaultValue:null,tooltip:''});changed()}
-function removeInterfaceMethod(contract:GraphInterface,uuid:string){contract.methods=contract.methods.filter(item=>item.uuid!==uuid);changed()}
-function removeInterfaceParameter(method:GraphInterfaceMethod,uuid:string){method.inputs=method.inputs.filter(item=>item.uuid!==uuid);method.outputs=method.outputs.filter(item=>item.uuid!==uuid);changed()}
-function removeInterface(uuid:string){props.graph.interfaces=props.graph.interfaces.filter(item=>item.uuid!==uuid);for(const routine of props.graph.routines)if(routine.interfaceUuid===uuid)routine.interfaceUuid=null;changed()}
-function addLibrary(){const item=availableLibraries.value.find(candidate=>candidate.manifest.id===libraryCandidate.value);if(!item)return;props.graph.libraries.push({uuid:graphUuid(),packageId:item.manifest.id,libraryId:'visual-nodes',version:item.manifest.version,enabled:true});libraryCandidate.value='';changed()}
-function removeLibrary(uuid:string){props.graph.libraries=props.graph.libraries.filter(item=>item.uuid!==uuid);changed()}
+/** 按身份删除接口方法。 */
+function removeInterfaceMethod(contract:GraphInterface,uuid:string){contract.methods=contract.methods.filter(/* 比较 item.uuid 与 uuid，返回严格不等的判断结果。 */ item=>item.uuid!==uuid);changed()}
+/** 从方法输入和输出中移除指定参数。 */
+function removeInterfaceParameter(method:GraphInterfaceMethod,uuid:string){method.inputs=method.inputs.filter(/* 比较 item.uuid 与 uuid，返回严格不等的判断结果。 */ item=>item.uuid!==uuid);method.outputs=method.outputs.filter(/* 比较 item.uuid 与 uuid，返回严格不等的判断结果。 */ item=>item.uuid!==uuid);changed()}
+/** 删除接口并清除例程对该接口的绑定。 */
+function removeInterface(uuid:string){props.graph.interfaces=props.graph.interfaces.filter(/* 比较 item.uuid 与 uuid，返回严格不等的判断结果。 */ item=>item.uuid!==uuid);for(const routine of props.graph.routines)if(routine.interfaceUuid===uuid)routine.interfaceUuid=null;changed()}
+/** 将已启用且包含可视节点的项目包添加为图依赖。 */
+function addLibrary(){const item=availableLibraries.value.find(/* 比较 candidate.manifest.id 与 libraryCandidate.value，返回严格相等的判断结果。 */ candidate=>candidate.manifest.id===libraryCandidate.value);if(!item)return;props.graph.libraries.push({uuid:graphUuid(),packageId:item.manifest.id,libraryId:'visual-nodes',version:item.manifest.version,enabled:true});libraryCandidate.value='';changed()}
+/** 移除指定图依赖库引用。 */
+function removeLibrary(uuid:string){props.graph.libraries=props.graph.libraries.filter(/* 比较 item.uuid 与 uuid，返回严格不等的判断结果。 */ item=>item.uuid!==uuid);changed()}
+/** 在 128 项上限内添加默认监视表达式。 */
 function addWatch(){if(props.graph.debug.watches.length>=128)return;props.graph.debug.watches.push('time.frame');changed()}
+/** 保存监视表达式并限制其长度为 512 字符。 */
 function updateWatch(index:number,event:Event){props.graph.debug.watches[index]=(event.target as HTMLInputElement).value.slice(0,512);changed()}
-function nodeName(uuid:string){return allNodes.value.find(item=>item.uuid===uuid)?.title??uuid.slice(0,8)}
-function scopeName(uuid:string){return uuid===props.graph.uuid?t('mainGraph'):props.graph.routines.find(item=>item.uuid===uuid)?.name??uuid.slice(0,8)}
-function focusNode(uuid:string){const routine=props.graph.routines.find(item=>item.nodes.some(node=>node.uuid===uuid));emit('scope',routine?.uuid??'main')}
+/** 取得节点显示名称，缺失时使用身份前缀。 */
+function nodeName(uuid:string){return allNodes.value.find(/* 比较 item.uuid 与 uuid，返回严格相等的判断结果。 */ item=>item.uuid===uuid)?.title??uuid.slice(0,8)}
+/** 取得主图或例程名称，缺失时使用身份前缀。 */
+function scopeName(uuid:string){return uuid===props.graph.uuid?t('mainGraph'):props.graph.routines.find(/* 比较 item.uuid 与 uuid，返回严格相等的判断结果。 */ item=>item.uuid===uuid)?.name??uuid.slice(0,8)}
+/** 查找节点所属例程并请求切换作用域。 */
+function focusNode(uuid:string){const routine=props.graph.routines.find(/** 查找包含指定节点的例程。 */ item=>item.nodes.some(/* 比较 node.uuid 与 uuid，返回严格相等的判断结果。 */ node=>node.uuid===uuid));emit('scope',routine?.uuid??'main')}
+/** 重命名图符号并同步签名，错误只在本地日志显示。 */
 function renameSymbol(){try{renameGraphSymbol(props.graph,symbolUuid.value,renameValue.value);synchronizeGraphSignatures(props.graph);renameValue.value='';changed()}catch(error){addEditorLog(error instanceof Error?error.message:String(error),'Script','error')}}
+/** 将选中节点提取为函数并切换到新函数。 */
 function extractFunction(){try{const routine=extractGraphFunction(props.graph,new Set(props.selectedNodeUuids),extractName.value);emit('scope',routine.uuid);changed()}catch(error){addEditorLog(error instanceof Error?error.message:String(error),'Script','error')}}
+/** 替换选中节点类型，错误保留在局部日志。 */
 function replaceNode(){try{replaceGraphNodeType(props.graph,props.selectedNodeUuids[0],replacementType.value);changed()}catch(error){addEditorLog(error instanceof Error?error.message:String(error),'Script','error')}}
+/** 迁移弃用节点并报告数量，实际变化时才标脏。 */
 function migrateDeprecated(){const count=migrateDeprecatedGraphNodes(props.graph);addEditorLog(t('nodesMigrated',{count}),'Script');if(count)changed()}
+/** 保存当前图为合并基线并清空旧差异和错误。 */
 function captureBase(){baseSource.value=serializeGraphDocument(props.graph);diff.value=[];mergeResult.value=null;mergeError.value=''}
+/** 计算基线与当前图的语义差异，保留解析错误说明。 */
 function refreshDiff(){try{diff.value=semanticGraphDiff(parseGraphDocument(baseSource.value),props.graph);mergeError.value=''}catch(error){mergeError.value=error instanceof Error?error.message:String(error)}}
+/** 执行基线、当前图和传入图的三方合并预览。 */
 function performMerge(){try{mergeResult.value=mergeGraphs(baseSource.value,serializeGraphDocument(props.graph),theirsSource.value);diff.value=mergeResult.value.changes;mergeError.value=''}catch(error){mergeResult.value=null;mergeError.value=error instanceof Error?error.message:String(error)}}
+/** 按用户选择解决指定合并冲突。 */
 function resolveConflict(id:string,resolution:'ours'|'theirs'){if(mergeResult.value)mergeResult.value=applyGraphConflict(mergeResult.value,id,resolution)}
-function applyMerge(){if(!mergeResult.value||mergeResult.value.conflicts.some(item=>item.resolution==='unresolved'))return;emit('replaceGraph',mergeResult.value.graph);mergeResult.value=null}
+/** 仅在全部冲突已解决时请求父级应用合并图。 */
+function applyMerge(){if(!mergeResult.value||mergeResult.value.conflicts.some(/* 比较 item.resolution 与 'unresolved'，返回严格相等的判断结果。 */ item=>item.resolution==='unresolved'))return;emit('replaceGraph',mergeResult.value.graph);mergeResult.value=null}
+/** 生成关联脚本；同步失败时记录局部错误，不写入成功历史或触发全局崩溃界面。 */
 function generateRhaiAsset(){
+  try {
   if(!linkedSource.value)return
-  const existing=linkedScripts.value[0]
-  if(existing){
-    synchronizeLinkedScriptsForGraph(props.graph)
-    pushHistory('Synchronize linked Rhai from visual graph')
-    addEditorLog(t('generatedRhaiAsset',{name:existing.name}),'Script','info',existing.uuid)
-    return
-  }
-  const asset=createTextAsset(createLinkedScriptName(props.graph),'script',linkedSource.value,'Assets/Scripts/Generated')
-  linkScriptToGraph(asset.uuid,props.graph)
-  pushHistory('Create linked Rhai for visual graph')
+  const result=ensureLinkedScriptForGraph(props.graph)
+  if(!result)return
+  const asset=assetState.records.find(/** 查找已验证提交的伙伴，用于成功提示。 */ item=>item.uuid===result.scriptUuid)
+  if(!asset)return
+  pushHistory(result.created?'Create linked Rhai for visual graph':'Synchronize linked Rhai from visual graph')
   addEditorLog(t('generatedRhaiAsset',{name:asset.name}),'Script','info',asset.uuid)
+  } catch(error) { addEditorLog(error instanceof Error?error.message:String(error),'Script','error') }
 }
 </script>
 

@@ -1,6 +1,8 @@
+/** 运行相机坐标换算：计算可见世界范围，并把游戏屏幕点转换到世界空间。 */
 import type { CameraRenderView } from './types'
 
 /** Axis-aligned world bounds of the pixels owned by one camera viewport. */
+/* 按相机缩放、旋转及视口尺寸计算世界空间可见区域的轴对齐包围盒。 */
 export function visibleWorldBounds(view: CameraRenderView, width: number, height: number) {
   const center = view.position ?? { x: (width * .5 - view.offset.x) / view.scale, y: (view.offset.y - height * .5) / view.scale }
   const viewport = view.viewport ?? { x: 0, y: 0, width: 1, height: 1 }
@@ -13,6 +15,7 @@ export function visibleWorldBounds(view: CameraRenderView, width: number, height
 }
 
 /** Exact inverse of the renderer camera transform for a screen-local pointer. */
+/* 将游戏视口像素坐标逆变换到世界坐标，兼容偏移式编辑相机与带旋转的游戏相机。 */
 export function gameScreenToWorld(point: { x: number; y: number }, view: CameraRenderView, width: number, height: number): { x: number; y: number } {
   if (!view.position) return { x: (point.x - view.offset.x) / Math.max(1e-9, view.scale), y: -(point.y - view.offset.y) / Math.max(1e-9, view.scale) }
   const viewport = view.viewport ?? { x: 0, y: 0, width: 1, height: 1 }

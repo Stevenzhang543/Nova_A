@@ -1,3 +1,4 @@
+/** 编辑工作区布局：规范、保存及切换面板配置，管理导航历史、停靠、最大化和安全布局。 */
 import { reactive, watch } from 'vue'
 import { editorState, reconfigureLayout, type BottomPanelTab, type EditorPage, type EditorWorkspace, type ManageSection } from '../store/editor'
 import { preferencesState } from '../store/preferences'
@@ -89,24 +90,24 @@ const BOTTOM_TABS = new Set<BottomPanelTab>(['assets', 'packages', 'console', 'a
 let initialized = false
 const rememberedLayouts = new Map<EditorWorkspace, WorkspaceLayout>()
 
-function scopedStorageKey(base: string): string { return preferencesState.workspaceLayoutScope === 'project' ? `${base}:project:${projectSessionState.id}` : base }
-function storageKey(): string { return scopedStorageKey(USER_STORAGE_KEY) }
+/* 根据 preferencesState.workspaceLayoutScope === 'project' 的真假，分别返回 `${base}:project:${projectSessionState.id}` 或 base。 */ function scopedStorageKey(base: string): string { return preferencesState.workspaceLayoutScope === 'project' ? `${base}:project:${projectSessionState.id}` : base }
+/* 调用 scopedStorageKey(USER_STORAGE_KEY) 并返回调用结果。 */ function storageKey(): string { return scopedStorageKey(USER_STORAGE_KEY) }
 
-function flags(): URLSearchParams { return typeof location === 'undefined' ? new URLSearchParams() : new URLSearchParams(location.search) }
-function clamp(value: unknown, fallback: number, minimum: number, maximum: number): number { return typeof value === 'number' && Number.isFinite(value) ? Math.min(maximum, Math.max(minimum, value)) : fallback }
+/* 根据 typeof location === 'undefined' 的真假，分别返回 new URLSearchParams() 或 new URLSearchParams(location.search)。 */ function flags(): URLSearchParams { return typeof location === 'undefined' ? new URLSearchParams() : new URLSearchParams(location.search) }
+/* 根据 typeof value === 'number' && Number.isFinite(value) 的真假，分别返回 Math.min(maximum, Math.max(minimum, value)) 或 fallback。 */ function clamp(value: unknown, fallback: number, minimum: number, maximum: number): number { return typeof value === 'number' && Number.isFinite(value) ? Math.min(maximum, Math.max(minimum, value)) : fallback }
 
-function normalizeLayout(value: unknown, fallback: WorkspaceLayout = safeDesignLayout): WorkspaceLayout {
+/** 校验工作区页面、停靠位置、尺寸及标签顺序，迁移旧标签并补齐受支持布局默认值。 */ function normalizeLayout(value: unknown, fallback: WorkspaceLayout = safeDesignLayout): WorkspaceLayout {
   const source = value && typeof value === 'object' ? value as Partial<WorkspaceLayout> : {}
   const page = typeof source.page === 'string' && PAGES.has(source.page as EditorPage) ? source.page as EditorPage : fallback.page
   const legacyTab = (source as { bottomPanelTab?: string }).bottomPanelTab
   let tab = legacyTab === 'world' ? 'project' : typeof source.bottomPanelTab === 'string' && BOTTOM_TABS.has(source.bottomPanelTab as BottomPanelTab) ? source.bottomPanelTab as BottomPanelTab : fallback.bottomPanelTab
   if (['presentation', 'packages', 'rendering', 'project', 'build'].includes(tab)) tab = 'assets'
   const panelOrder = Array.isArray(source.panelOrder)
-    ? [...new Set(source.panelOrder.filter(value => value === 'hierarchy' || value === 'inspector'))] as Array<'hierarchy' | 'inspector'>
+    ? [...new Set(source.panelOrder.filter(/* 先计算 value === 'hierarchy'；仅当其为假值时求右侧 value === 'inspector'，返回短路求值结果。 */ value => value === 'hierarchy' || value === 'inspector'))] as Array<'hierarchy' | 'inspector'>
     : []
   for (const panel of fallback.panelOrder) if (!panelOrder.includes(panel)) panelOrder.push(panel)
   const bottomTabOrder = Array.isArray(source.bottomTabOrder)
-    ? [...new Set(source.bottomTabOrder.filter(value => BOTTOM_TABS.has(value as BottomPanelTab) && !['packages', 'rendering', 'project', 'build', 'presentation'].includes(value as string)) as BottomPanelTab[])]
+    ? [...new Set(source.bottomTabOrder.filter(/** 只保留受支持且仍属于底部工具栏的标签，排除迁移到整页管理的分区。 */ value => BOTTOM_TABS.has(value as BottomPanelTab) && !['packages', 'rendering', 'project', 'build', 'presentation'].includes(value as string)) as BottomPanelTab[])]
     : []
   for (const bottomTab of fallback.bottomTabOrder) if (!bottomTabOrder.includes(bottomTab)) bottomTabOrder.push(bottomTab)
   return {
@@ -126,12 +127,12 @@ function normalizeLayout(value: unknown, fallback: WorkspaceLayout = safeDesignL
     bottomPanelPinned: typeof source.bottomPanelPinned === 'boolean' ? source.bottomPanelPinned : fallback.bottomPanelPinned,
     panelOrder,
     bottomTabOrder,
-    floatingPanels: Array.isArray(source.floatingPanels) ? [...new Set(source.floatingPanels.filter(value => value === 'hierarchy' || value === 'inspector') as Array<'hierarchy' | 'inspector'>)] : [...fallback.floatingPanels],
+    floatingPanels: Array.isArray(source.floatingPanels) ? [...new Set(source.floatingPanels.filter(/* 先计算 value === 'hierarchy'；仅当其为假值时求右侧 value === 'inspector'，返回短路求值结果。 */ value => value === 'hierarchy' || value === 'inspector') as Array<'hierarchy' | 'inspector'>)] : [...fallback.floatingPanels],
     splitDocking: typeof source.splitDocking === 'boolean' ? source.splitDocking : fallback.splitDocking
   }
 }
 
-export function captureWorkspaceLayout(): WorkspaceLayout {
+/** 从当前编辑器和工作区状态提取布局快照，再规范化为可持久化结构。 */ export function captureWorkspaceLayout(): WorkspaceLayout {
   return normalizeLayout({
     page: editorState.currentPage, hierarchyVisible: editorState.hierarchyVisible, inspectorVisible: editorState.inspectorVisible,
     bottomPanelVisible: editorState.bottomPanelVisible, bottomPanelOpen: editorState.bottomPanelOpen,
@@ -145,12 +146,12 @@ export function captureWorkspaceLayout(): WorkspaceLayout {
   })
 }
 
-function notifyLayoutChanged(): void {
+/** 重新计算布局并在下一绘制帧通知窗口尺寸变化，使依赖画布同步刷新。 */ function notifyLayoutChanged(): void {
   reconfigureLayout()
-  if (typeof window !== 'undefined') window.requestAnimationFrame(() => window.dispatchEvent(new Event('resize')))
+  if (typeof window !== 'undefined') window.requestAnimationFrame(/* 调用 window.dispatchEvent(new Event('resize')) 并返回调用结果。 */ () => window.dispatchEvent(new Event('resize')))
 }
 
-function applyLayout(layout: WorkspaceLayout): void {
+/** 退出面板最大化并应用规范布局，替换排序和悬浮状态后通知布局变化。 */ function applyLayout(layout: WorkspaceLayout): void {
   workspaceState.maximizedPanel = ''
   const value = normalizeLayout(layout)
   Object.assign(editorState, {
@@ -171,10 +172,10 @@ function applyLayout(layout: WorkspaceLayout): void {
   notifyLayoutChanged()
 }
 
-function normalizeCustomList(value: unknown): CustomWorkspace[] {
+/** 限制自定义工作区数量，清理名称与布局并为重复标识分配新身份。 */ function normalizeCustomList(value: unknown): CustomWorkspace[] {
   if (!Array.isArray(value)) return []
   const ids = new Set<string>()
-  return value.slice(0, MAX_CUSTOM_WORKSPACES).flatMap((item, index) => {
+  return value.slice(0, MAX_CUSTOM_WORKSPACES).flatMap(/** 清理单个自定义工作区名称和身份，修复重复标识并规范化布局。 */ (item, index) => {
     if (!item || typeof item !== 'object') return []
     const source = item as Partial<CustomWorkspace>
     const name = typeof source.name === 'string' ? source.name.trim().slice(0, 48) : ''
@@ -185,7 +186,7 @@ function normalizeCustomList(value: unknown): CustomWorkspace[] {
   })
 }
 
-function readStored(): void {
+/** 按存储作用域恢复布局和自定义工作区，迁移旧格式；安全模式或无效存储时使用安全设计布局。 */ function readStored(): void {
   if (typeof localStorage === 'undefined') return
   rememberedLayouts.clear()
   workspaceState.custom.splice(0)
@@ -203,7 +204,7 @@ function readStored(): void {
         }
       }
       const rawWorkspace = parsed.activeWorkspace === 'interface' ? 'ui' : parsed.activeWorkspace
-      editorState.activeWorkspace = WORKSPACE_PRESETS.some(item => item.id === rawWorkspace) ? rawWorkspace as EditorWorkspace : 'design'
+      editorState.activeWorkspace = WORKSPACE_PRESETS.some(/* 比较 item.id 与 rawWorkspace，返回严格相等的判断结果。 */ item => item.id === rawWorkspace) ? rawWorkspace as EditorWorkspace : 'design'
       workspaceState.selectedCustomId = typeof parsed.selectedCustomId === 'string' ? parsed.selectedCustomId : ''
       workspaceState.custom.splice(0, workspaceState.custom.length, ...normalizeCustomList(parsed.custom))
       applyLayout(normalizeLayout(parsed.layout))
@@ -220,7 +221,7 @@ function readStored(): void {
   } catch { editorState.activeWorkspace = 'design'; applyLayout(safeDesignLayout) }
 }
 
-function persist(): void {
+/** 非安全模式下保存当前布局、各预设记忆及自定义工作区，存储异常不阻断编辑。 */ function persist(): void {
   if (typeof localStorage === 'undefined' || workspaceState.safeLayout) return
   try {
     const layout = captureWorkspaceLayout()
@@ -229,12 +230,12 @@ function persist(): void {
   } catch { /* Layout persistence is optional; editor operation is not. */ }
 }
 
-export function initializeEditorWorkspaces(): void {
+/** 单次恢复工作区并安装导航和持久化观察器，限制后退历史并响应存储作用域变化。 */ export function initializeEditorWorkspaces(): void {
   if (initialized) return
   initialized = true
   readStored()
   let last = { page: editorState.currentPage, workspace: editorState.activeWorkspace }
-  watch(() => ({ page: editorState.currentPage, workspace: editorState.activeWorkspace }), current => {
+  watch(/** 构造并返回记录 { page: editorState.currentPage, workspace: editorState.activeWorkspace }，字段按当前实参及捕获状态求值。 */ () => ({ page: editorState.currentPage, workspace: editorState.activeWorkspace }), /** 页面或工作区变化时退出最大化，记录有界后退历史并清空前进栈。 */ current => {
     workspaceState.maximizedPanel = ''
     if (!workspaceState.restoringNavigation && (current.page !== last.page || current.workspace !== last.workspace)) {
       workspaceState.navigationBack.push(last)
@@ -244,53 +245,53 @@ export function initializeEditorWorkspaces(): void {
     last = current
   })
   watch(storageKey, readStored)
-  watch(() => ({ ...captureWorkspaceLayout(), workspace: editorState.activeWorkspace, custom: workspaceState.custom.map(item => ({ ...item })), selected: workspaceState.selectedCustomId, scope: preferencesState.workspaceLayoutScope }), persist, { deep: true })
+  watch(/** 采集当前布局、自定义工作区与作用域作为持久化观察依赖。 */ () => ({ ...captureWorkspaceLayout(), workspace: editorState.activeWorkspace, custom: workspaceState.custom.map(/** 构造并返回记录 { ...item }，字段按当前实参及捕获状态求值。 */ item => ({ ...item })), selected: workspaceState.selectedCustomId, scope: preferencesState.workspaceLayoutScope }), persist, { deep: true })
 }
 
-export function applyEditorWorkspace(workspace: EditorWorkspace): void {
+/** 记住离开的预设布局，再选择自定义工作区或恢复目标预设的记忆布局。 */ export function applyEditorWorkspace(workspace: EditorWorkspace): void {
   if (!workspaceState.safeLayout && editorState.activeWorkspace !== 'custom') rememberedLayouts.set(editorState.activeWorkspace, captureWorkspaceLayout())
-  let preset = WORKSPACE_PRESETS.find(candidate => candidate.id === workspace)
+  let preset = WORKSPACE_PRESETS.find(/* 比较 candidate.id 与 workspace，返回严格相等的判断结果。 */ candidate => candidate.id === workspace)
   if (workspace === 'custom') {
-    const custom = workspaceState.custom.find(item => item.id === workspaceState.selectedCustomId) ?? workspaceState.custom[0]
+    const custom = workspaceState.custom.find(/* 比较 item.id 与 workspaceState.selectedCustomId，返回严格相等的判断结果。 */ item => item.id === workspaceState.selectedCustomId) ?? workspaceState.custom[0]
     if (custom) { editorState.activeWorkspace = 'custom'; workspaceState.selectedCustomId = custom.id; applyLayout(custom); return }
-    preset = WORKSPACE_PRESETS.find(candidate => candidate.id === 'custom')
+    preset = WORKSPACE_PRESETS.find(/* 比较 candidate.id 与 'custom'，返回严格相等的判断结果。 */ candidate => candidate.id === 'custom')
   }
   if (!preset) return
   editorState.activeWorkspace = preset.id
   applyLayout(rememberedLayouts.get(preset.id) ?? preset)
 }
 
-export function applyWorkspaceProfile(id: string): boolean {
-  const profile = WORKSPACE_PROFILE_PRESETS.find(item => item.id === id)
+/** 按配置 ID 应用命名工作区配置及其布局，未知配置返回 false。 */ export function applyWorkspaceProfile(id: string): boolean {
+  const profile = WORKSPACE_PROFILE_PRESETS.find(/* 比较 item.id 与 id，返回严格相等的判断结果。 */ item => item.id === id)
   if (!profile) return false
   editorState.activeWorkspace = profile.workspace
   applyLayout(normalizeLayout(profile.layout, safeDesignLayout))
   return true
 }
 
-export function applyNamedWorkspace(id: string): boolean {
-  const custom = workspaceState.custom.find(item => item.id === id)
+/** 优先按 ID 打开自定义工作区，否则匹配内置非自定义预设。 */ export function applyNamedWorkspace(id: string): boolean {
+  const custom = workspaceState.custom.find(/* 比较 item.id 与 id，返回严格相等的判断结果。 */ item => item.id === id)
   if (custom) {
     workspaceState.selectedCustomId = custom.id
     applyEditorWorkspace('custom')
     return true
   }
-  const preset = WORKSPACE_PRESETS.find(item => item.id === id && item.id !== 'custom')
+  const preset = WORKSPACE_PRESETS.find(/* 先计算 item.id === id；仅当其为真值时求右侧 item.id !== 'custom'，返回短路求值结果。 */ item => item.id === id && item.id !== 'custom')
   if (!preset) return false
   applyEditorWorkspace(preset.id)
   return true
 }
 
-export function saveCurrentWorkspace(name?: string): CustomWorkspace {
-  const existing = workspaceState.custom.find(item => item.id === workspaceState.selectedCustomId)
+/** 无新名称时覆盖当前自定义布局，否则检查容量后以新身份保存当前布局。 */ export function saveCurrentWorkspace(name?: string): CustomWorkspace {
+  const existing = workspaceState.custom.find(/* 比较 item.id 与 workspaceState.selectedCustomId，返回严格相等的判断结果。 */ item => item.id === workspaceState.selectedCustomId)
   if (existing && !name) { Object.assign(existing, captureWorkspaceLayout()); editorState.activeWorkspace = 'custom'; return existing }
   requireCustomCapacity(1)
   const workspace: CustomWorkspace = { id: crypto.randomUUID?.() ?? `custom-${Date.now()}`, name: (name?.trim() || `Custom ${workspaceState.custom.length + 1}`).slice(0, 48), ...captureWorkspaceLayout() }
   workspaceState.custom.push(workspace); workspaceState.selectedCustomId = workspace.id; editorState.activeWorkspace = 'custom'; return workspace
 }
 
-export function duplicateWorkspace(id: string, name?: string): CustomWorkspace | null {
-  const source = workspaceState.custom.find(item => item.id === id) ?? WORKSPACE_PRESETS.find(item => item.id === id)
+/** 复制已有自定义或内置工作区，检查容量、分配新身份并立即应用副本。 */ export function duplicateWorkspace(id: string, name?: string): CustomWorkspace | null {
+  const source = workspaceState.custom.find(/* 比较 item.id 与 id，返回严格相等的判断结果。 */ item => item.id === id) ?? WORKSPACE_PRESETS.find(/* 比较 item.id 与 id，返回严格相等的判断结果。 */ item => item.id === id)
   if (!source) return null
   requireCustomCapacity(1)
   const sourceName = 'name' in source ? source.name : source.label
@@ -298,9 +299,9 @@ export function duplicateWorkspace(id: string, name?: string): CustomWorkspace |
   workspaceState.custom.push(duplicate); workspaceState.selectedCustomId = duplicate.id; editorState.activeWorkspace = 'custom'; applyLayout(duplicate); return duplicate
 }
 
-export function renameWorkspace(id: string, name: string): boolean { const item = workspaceState.custom.find(candidate => candidate.id === id); const safe = name.trim().slice(0, 48); if (!item || !safe) return false; item.name = safe; return true }
-export function removeWorkspace(id: string): boolean {
-  const index = workspaceState.custom.findIndex(item => item.id === id)
+/** 为存在的自定义工作区设置截断后的非空名称。 */ export function renameWorkspace(id: string, name: string): boolean { const item = workspaceState.custom.find(/* 比较 candidate.id 与 id，返回严格相等的判断结果。 */ candidate => candidate.id === id); const safe = name.trim().slice(0, 48); if (!item || !safe) return false; item.name = safe; return true }
+/** 删除自定义工作区，若删除的是当前选择则切换到剩余项或设计预设。 */ export function removeWorkspace(id: string): boolean {
+  const index = workspaceState.custom.findIndex(/* 比较 item.id 与 id，返回严格相等的判断结果。 */ item => item.id === id)
   if (index < 0) return false
   workspaceState.custom.splice(index, 1)
   if (workspaceState.selectedCustomId === id) {
@@ -309,33 +310,33 @@ export function removeWorkspace(id: string): boolean {
   }
   return true
 }
-export function exportWorkspaces(): string { return JSON.stringify({ format: 'nova-workspaces', version: 3, engineLine: '6.x', workspaces: workspaceState.custom }, null, 2) }
-function requireCustomCapacity(additional: number): void { if (workspaceState.custom.length + additional > MAX_CUSTOM_WORKSPACES) throw new Error(`A maximum of ${MAX_CUSTOM_WORKSPACES} custom workspaces can be stored. Delete an unused workspace before adding more.`) }
-export function importWorkspaces(source: string): number {
+/* 调用 JSON.stringify({ format: 'nova-workspaces', version: 3, engineLine: '6.x', workspaces: workspaceState.custom }, null, 2) 并返回调用结果。 */ export function exportWorkspaces(): string { return JSON.stringify({ format: 'nova-workspaces', version: 3, engineLine: '6.x', workspaces: workspaceState.custom }, null, 2) }
+/** 检查新增数量是否超出自定义工作区上限，超限时抛出可操作提示。 */ function requireCustomCapacity(additional: number): void { if (workspaceState.custom.length + additional > MAX_CUSTOM_WORKSPACES) throw new Error(`A maximum of ${MAX_CUSTOM_WORKSPACES} custom workspaces can be stored. Delete an unused workspace before adding more.`) }
+/** 验证导入格式和数量，规范化布局并解决标识冲突后追加自定义工作区。 */ export function importWorkspaces(source: string): number {
   const parsed = JSON.parse(source) as Record<string, unknown>
   if (!parsed || parsed.format !== 'nova-workspaces' || (parsed.version !== 2 && parsed.version !== 3)) throw new Error('Unsupported Nova_A workspace document.')
   if (Array.isArray(parsed.workspaces) && parsed.workspaces.length > MAX_CUSTOM_WORKSPACES) throw new Error(`A maximum of ${MAX_CUSTOM_WORKSPACES} custom workspaces can be imported at once.`)
   const imported = normalizeCustomList(parsed.workspaces); requireCustomCapacity(imported.length)
-  const ids = new Set(workspaceState.custom.map(item => item.id))
+  const ids = new Set(workspaceState.custom.map(/* 返回 item.id 的当前值。 */ item => item.id))
   for (const item of imported) { if (ids.has(item.id)) item.id = crypto.randomUUID?.() ?? `custom-${Date.now()}-${ids.size}`; ids.add(item.id); workspaceState.custom.push(item) }
   return imported.length
 }
 
-export function navigateHistory(direction: 'back' | 'forward'): boolean {
+/** 从前进或后退栈恢复工作区与页面，在微任务结束前阻止导航观察器重复入栈。 */ export function navigateHistory(direction: 'back' | 'forward'): boolean {
   const source = direction === 'back' ? workspaceState.navigationBack : workspaceState.navigationForward
   const destination = direction === 'back' ? workspaceState.navigationForward : workspaceState.navigationBack
   const target = source.pop(); if (!target) return false
   destination.push({ page: editorState.currentPage, workspace: editorState.activeWorkspace })
   workspaceState.restoringNavigation = true
   applyEditorWorkspace(target.workspace); editorState.currentPage = target.page
-  queueMicrotask(() => { workspaceState.restoringNavigation = false })
+  queueMicrotask(/** 将 false 赋给 workspaceState.restoringNavigation，不显式返回值。 */ () => { workspaceState.restoringNavigation = false })
   notifyLayoutChanged(); return true
 }
 
-export function toggleEditorPanel(panel: PanelName): void { workspaceState.maximizedPanel = ''; if (panel === 'hierarchy') editorState.hierarchyVisible = !editorState.hierarchyVisible; else if (panel === 'inspector') editorState.inspectorVisible = !editorState.inspectorVisible; else editorState.bottomPanelVisible = !editorState.bottomPanelVisible; notifyLayoutChanged() }
-export function togglePanelMaximize(panel: PanelName): void { workspaceState.maximizedPanel = workspaceState.maximizedPanel === panel ? '' : panel; notifyLayoutChanged() }
-export function restorePanelLayout(): void { if (workspaceState.maximizedPanel) { workspaceState.maximizedPanel = ''; notifyLayoutChanged() } }
-export function dockEditorPanel(panel: 'hierarchy' | 'inspector', destination: 'left' | 'right' | 'floating'): void {
+/** 退出最大化后切换指定侧栏或底栏可见性并刷新布局。 */ export function toggleEditorPanel(panel: PanelName): void { workspaceState.maximizedPanel = ''; if (panel === 'hierarchy') editorState.hierarchyVisible = !editorState.hierarchyVisible; else if (panel === 'inspector') editorState.inspectorVisible = !editorState.inspectorVisible; else editorState.bottomPanelVisible = !editorState.bottomPanelVisible; notifyLayoutChanged() }
+/** 切换指定面板最大化状态，再次选择同一面板时恢复。 */ export function togglePanelMaximize(panel: PanelName): void { workspaceState.maximizedPanel = workspaceState.maximizedPanel === panel ? '' : panel; notifyLayoutChanged() }
+/** 存在最大化面板时恢复正常布局并通知刷新。 */ export function restorePanelLayout(): void { if (workspaceState.maximizedPanel) { workspaceState.maximizedPanel = ''; notifyLayoutChanged() } }
+/** 将侧栏加入悬浮集合，或从悬浮移除并设置左、右停靠位置。 */ export function dockEditorPanel(panel: 'hierarchy' | 'inspector', destination: 'left' | 'right' | 'floating'): void {
   const floating = workspaceState.floatingPanels
   const index = floating.indexOf(panel)
   if (destination === 'floating') { if (index < 0) floating.push(panel) }
@@ -346,24 +347,24 @@ export function dockEditorPanel(panel: 'hierarchy' | 'inspector', destination: '
   }
   notifyLayoutChanged()
 }
-export function setPanelPinned(panel: 'hierarchy' | 'inspector' | 'bottom', pinned: boolean): void {
+/** 更新指定面板固定状态并触发布局刷新。 */ export function setPanelPinned(panel: 'hierarchy' | 'inspector' | 'bottom', pinned: boolean): void {
   if (panel === 'hierarchy') workspaceState.hierarchyPinned = pinned
   else if (panel === 'inspector') workspaceState.inspectorPinned = pinned
   else editorState.bottomPanelPinned = pinned
   notifyLayoutChanged()
 }
-export function toggleFocusMode(): void { workspaceState.maximizedPanel = ''; editorState.distractionFree = !editorState.distractionFree; notifyLayoutChanged() }
+/** 退出单面板最大化并切换专注模式。 */ export function toggleFocusMode(): void { workspaceState.maximizedPanel = ''; editorState.distractionFree = !editorState.distractionFree; notifyLayoutChanged() }
 const MANAGE_TABS: Partial<Record<BottomPanelTab, ManageSection>> = { packages: 'packages', project: 'project', rendering: 'rendering', build: 'build' }
-export function openManageSection(section: ManageSection): void { editorState.activeWorkspace = 'manage'; editorState.currentPage = 'manage'; editorState.manageSection = section; editorState.bottomPanelOpen = false; notifyLayoutChanged() }
-export function openEditorTool(tab: BottomPanelTab): void {
+/** 进入管理工作区的指定整页分区并收起底部工具面板。 */ export function openManageSection(section: ManageSection): void { editorState.activeWorkspace = 'manage'; editorState.currentPage = 'manage'; editorState.manageSection = section; editorState.bottomPanelOpen = false; notifyLayoutChanged() }
+/** 管理类工具转到整页管理分区，其余工具恢复适当页面并展开对应底栏标签。 */ export function openEditorTool(tab: BottomPanelTab): void {
   const manage = MANAGE_TABS[tab]
   if (manage) { openManageSection(manage); return }
   if (editorState.currentPage === 'settings' || editorState.currentPage === 'manage') editorState.currentPage = editorState.activeWorkspace === 'debug' ? 'game' : 'scene'
   editorState.bottomPanelVisible = true; editorState.bottomPanelOpen = true; editorState.bottomPanelTab = tab === 'presentation' ? 'assets' : tab; notifyLayoutChanged()
 }
-export function reorderBottomTab(source: BottomPanelTab, target: BottomPanelTab): void { const order = workspaceState.bottomTabOrder; const from = order.indexOf(source), to = order.indexOf(target); if (from < 0 || to < 0 || from === to) return; order.splice(to, 0, order.splice(from, 1)[0]); notifyLayoutChanged() }
-export function resetEditorLayout(): void {
+/** 将存在的底栏标签移动到目标标签位置，忽略缺失或相同项。 */ export function reorderBottomTab(source: BottomPanelTab, target: BottomPanelTab): void { const order = workspaceState.bottomTabOrder; const from = order.indexOf(source), to = order.indexOf(target); if (from < 0 || to < 0 || from === to) return; order.splice(to, 0, order.splice(from, 1)[0]); notifyLayoutChanged() }
+/** 清理当前作用域布局存储及适用旧格式，退出安全布局并恢复设计默认值。 */ export function resetEditorLayout(): void {
   try { if (typeof localStorage !== 'undefined') { localStorage.removeItem(storageKey()); localStorage.removeItem(scopedStorageKey(V4_STORAGE_KEY)); if (preferencesState.workspaceLayoutScope === 'user') localStorage.removeItem(LEGACY_STORAGE_KEY) } } catch { /* Reset must remain usable when browser storage is unavailable. */ }
   rememberedLayouts.clear(); workspaceState.safeLayout = false; editorState.activeWorkspace = 'design'; applyLayout(safeDesignLayout)
 }
-export function enableSafeLayout(): void { workspaceState.safeLayout = true; editorState.activeWorkspace = 'design'; applyLayout(safeDesignLayout) }
+/** 启用不持久化的安全设计布局，供异常恢复使用。 */ export function enableSafeLayout(): void { workspaceState.safeLayout = true; editorState.activeWorkspace = 'design'; applyLayout(safeDesignLayout) }

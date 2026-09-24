@@ -1,3 +1,4 @@
+/** 功能回归脚本：执行 verify-v26.21-authoring.mjs 对应场景，保留断言和证据输出。 */
 // Retained 26.20 regression implementation, executed against actual 26.21 source.
 import assert from 'node:assert/strict'
 import {readFile} from 'node:fs/promises'

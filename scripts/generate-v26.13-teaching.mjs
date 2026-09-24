@@ -1,3 +1,4 @@
+/** 版本26.13：组织教学步骤与示例说明，生成版本教程和用户操作文档。 */
 import { readFile, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -35,14 +36,14 @@ const lessons={
     '在英语、德语、中文，浅色/深色和100/150/200%缩放下重复。字段应可读且可访问，需要时使用面板最大化或滚动。在动画文本框中输入或删除只能编辑文本。在事件表切换时选择取消，确认未保存草稿保留。'
   ],expected:'布局、选区布局、修改转折点、撤销/重做、保存重开与导出前后均应输出18。选区外手动位置不变。恢复面板返回原尺寸，应用命名布局返回该布局的保存尺寸。记录真正的故障，不能用语法正确或页面没有溢出来代替可用性测试。',limits:'大图性能取决于硬件与图形结构；发布证据记录100/1,000/10,000节点实测以及工作线程、回退和取消测试。固定障碍或指定转折点可能使线路无解，编辑器必须明确说明。浏览器焦点和无障碍树测试不能证明物理辅助技术兼容。继续使用Project Format2/schema29与Graph Format1；有数量边界的转折点属于可选附加数据。'}
 }
-const escape=value=>value.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;')
+const escape=/* 调用 value.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;') 并返回调用结果。 */ value=>value.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;')
 let html=await readFile(join(root,'manual/index.html'),'utf8'),supplement='<!-- NOVA_V2613_START -->\n<div class="release-supplement">'
 for(const [language,lesson]of Object.entries(lessons)){
   const path=join(root,'manual','MANUAL.'+language+'.md'),before=await readFile(path,'utf8')
-  const chapter='<!-- NOVA_V2613_START -->\n## '+lesson.title+'\n\nEngine: **26.13.0** · Project Format2/schema29 · Graph Format1.\n\n'+lesson.intro+'\n\n'+lesson.steps.map((step,index)=>(index+1)+'. '+step).join('\n\n')+'\n\n```rhai\n'+sample+'\n```\n\n'+lesson.expected+'\n\n'+lesson.limits+'\n<!-- NOVA_V2613_END -->\n'
+  const chapter='<!-- NOVA_V2613_START -->\n## '+lesson.title+'\n\nEngine: **26.13.0** · Project Format2/schema29 · Graph Format1.\n\n'+lesson.intro+'\n\n'+lesson.steps.map(/* 计算表达式 (index+1)+'. '+step 并返回结果，沿用操作数的原有类型规则。 */ (step,index)=>(index+1)+'. '+step).join('\n\n')+'\n\n```rhai\n'+sample+'\n```\n\n'+lesson.expected+'\n\n'+lesson.limits+'\n<!-- NOVA_V2613_END -->\n'
   const updated=before.replace(/^# Nova_A 26\.\d+/,'# Nova_A 26.13').replace(/<!-- NOVA_V2613_START -->[\s\S]*?<!-- NOVA_V2613_END -->\r?\n?/,'')
   const split=updated.indexOf('\n');await writeFile(path,updated.slice(0,split)+'\n\n'+chapter+'\n'+updated.slice(split+1).replace(/^\s*\n/,''))
-  supplement+='<article data-lang="'+language+'"><section id="'+language+'-v2613-layout"><h2>'+escape(lesson.title)+'</h2><p>Engine 26.13.0 · Project Format 2/schema 29 · Graph Format 1.</p><p>'+escape(lesson.intro)+'</p><ol>'+lesson.steps.map(step=>'<li>'+escape(step)+'</li>').join('')+'</ol><pre><code>'+escape(sample)+'</code></pre><p>'+escape(lesson.expected)+'</p><p>'+escape(lesson.limits)+'</p></section></article>'
+  supplement+='<article data-lang="'+language+'"><section id="'+language+'-v2613-layout"><h2>'+escape(lesson.title)+'</h2><p>Engine 26.13.0 · Project Format 2/schema 29 · Graph Format 1.</p><p>'+escape(lesson.intro)+'</p><ol>'+lesson.steps.map(/* 计算表达式 '<li>'+escape(step)+'</li>' 并返回结果，沿用操作数的原有类型规则。 */ step=>'<li>'+escape(step)+'</li>').join('')+'</ol><pre><code>'+escape(sample)+'</code></pre><p>'+escape(lesson.expected)+'</p><p>'+escape(lesson.limits)+'</p></section></article>'
 }
 supplement+='</div>\n<!-- NOVA_V2613_END -->\n'
 html=html.replace(/<!-- NOVA_V2613_START -->[\s\S]*?<!-- NOVA_V2613_END -->\r?\n?/,'').replace(/<title>Nova_A 26\.\d+ Manual<\/title>/,'<title>Nova_A 26.13 Manual</title>').replace(/26\.\d+ Offline Teaching Manual/g,'26.13 Offline Teaching Manual').replace(/(<meta name="description" content="Complete Nova_A )26\.\d+( \(engine )26\.\d+\.0/,'$126.13$226.13.0')

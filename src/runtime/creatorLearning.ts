@@ -1,3 +1,4 @@
+/** 创作者学习资源：组织教程、练习与进度资料，并检查学习内容的依赖。 */
 import { OBJECT_FAMILY_LESSON_ID, objectFamilyGuide, objectFamilyLesson } from './objectFamilyLesson'
 import { computed, reactive } from 'vue'
 import { preferencesState, type PerformanceProfile } from '../store/preferences'
@@ -86,56 +87,56 @@ const taskSpecs: readonly PanelSpec[] = [
   { id: 'task-web', panel: 'Guided Project', workspace: 'Manage', features: ['Web deployment'], classifications: ['Assisted', 'Project-wide'], prerequisites: ['Passing Project Health and Web template', 'An explicit external HTTP(S) host'] }
 ] as const
 
-function slug(value: string): string { return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 100) }
-function expand(spec: PanelSpec, taskProject = false): LearningGuide[] {
+/* 调用 value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 100) 并返回调用结果。 */ function slug(value: string): string { return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 100) }
+/** 结构说明（自动提取）：expand；输入 spec、taskProject；直接调用 spec.features.map。 */ function expand(spec: PanelSpec, taskProject = false): LearningGuide[] {
   // Keep published manual anchors and saved learning progress stable while the
   // library grows; its visible title must not advertise an obsolete count.
-  return spec.features.map(feature => ({ id: `${spec.id}-${slug(feature)}`, panel: spec.panel, workspace: spec.workspace, feature: feature === '20-template library' ? 'Template library' : feature, classifications: [...spec.classifications], prerequisites: [...spec.prerequisites], relatedRhai: [...(spec.rhai ?? [])], relatedGraph: [...(spec.graph ?? [])], taskProject }))
+  return spec.features.map(/** 结构说明（自动提取）：spec.features.map 回调；输入 feature；直接调用 slug；返回表达式求值结果。 */ feature => ({ id: `${spec.id}-${slug(feature)}`, panel: spec.panel, workspace: spec.workspace, feature: feature === '20-template library' ? 'Template library' : feature, classifications: [...spec.classifications], prerequisites: [...spec.prerequisites], relatedRhai: [...(spec.rhai ?? [])], relatedGraph: [...(spec.graph ?? [])], taskProject }))
 }
 
-export const CREATOR_LEARNING_GUIDES: readonly LearningGuide[] = Object.freeze([...panelSpecs.flatMap(spec => expand(spec)), ...taskSpecs.flatMap(spec => expand(spec, true)), objectFamilyGuide])
-export const CREATOR_TASK_GUIDES: readonly LearningGuide[] = Object.freeze(CREATOR_LEARNING_GUIDES.filter(guide => guide.taskProject))
+export const CREATOR_LEARNING_GUIDES: readonly LearningGuide[] = Object.freeze([...panelSpecs.flatMap(/* 调用 expand(spec) 并返回调用结果。 */ spec => expand(spec)), ...taskSpecs.flatMap(/* 调用 expand(spec, true) 并返回调用结果。 */ spec => expand(spec, true)), objectFamilyGuide])
+export const CREATOR_TASK_GUIDES: readonly LearningGuide[] = Object.freeze(CREATOR_LEARNING_GUIDES.filter(/* 返回 guide.taskProject 的当前值。 */ guide => guide.taskProject))
 
 const localeText = {
   en: {
-    purpose: (guide: LearningGuide) => `Use ${guide.feature} in ${guide.panel} to complete its supported authoring or runtime job without leaving the ${guide.workspace} workflow.`,
-    when: (guide: LearningGuide) => `Use it when the project needs ${guide.feature.toLowerCase()}; keep unrelated settings in their owning workspace.`,
-    steps: (guide: LearningGuide) => [`Open ${guide.workspace}, then open ${guide.panel}.`, `Choose ${guide.feature}; read its visible validation and permission state before editing.`, 'Select the target project, asset or object and enter only finite, supported values.', 'Apply or save the change, then inspect the visible result and Problems/Console output.', 'Run Play or Preview when the feature has runtime behavior; use Pause/Step for deterministic inspection.', 'Save, reload the project and confirm the authored value is unchanged.', 'Run Project Health and the relevant test, then build the standalone player and repeat the observable check.'],
-    expected: (guide: LearningGuide) => `${guide.feature} is visible in the editor, survives reload and reaches Preview/Play and exported players where applicable.`,
-    persistence: (guide: LearningGuide) => `${guide.feature} is stored in the owning project, scene, component, asset, workspace preference or build manifest. Editor-only state is excluded from players.`,
+    purpose: /** 按模板 `Use ${guide.feature} in ${guide.panel} to complete its supported authoring or runtime job without leaving the ${guide.workspace} workflow.` 生成并返回字符串。 */ (guide: LearningGuide) => `Use ${guide.feature} in ${guide.panel} to complete its supported authoring or runtime job without leaving the ${guide.workspace} workflow.`,
+    when: /** 按模板 `Use it when the project needs ${guide.feature.toLowerCase()}; keep unrelated settings in their owning workspace.` 生成并返回字符串。 */ (guide: LearningGuide) => `Use it when the project needs ${guide.feature.toLowerCase()}; keep unrelated settings in their owning workspace.`,
+    steps: /** 结构说明（自动提取）：匿名回调；输入 guide；返回表达式求值结果。 */ (guide: LearningGuide) => [`Open ${guide.workspace}, then open ${guide.panel}.`, `Choose ${guide.feature}; read its visible validation and permission state before editing.`, 'Select the target project, asset or object and enter only finite, supported values.', 'Apply or save the change, then inspect the visible result and Problems/Console output.', 'Run Play or Preview when the feature has runtime behavior; use Pause/Step for deterministic inspection.', 'Save, reload the project and confirm the authored value is unchanged.', 'Run Project Health and the relevant test, then build the standalone player and repeat the observable check.'],
+    expected: /** 按模板 `${guide.feature} is visible in the editor, survives reload and reaches Preview/Play and exported players where applicable.` 生成并返回字符串。 */ (guide: LearningGuide) => `${guide.feature} is visible in the editor, survives reload and reaches Preview/Play and exported players where applicable.`,
+    persistence: /** 按模板 `${guide.feature} is stored in the owning project, scene, component, asset, workspace preference or build manifest. Editor-only state is excluded from players.` 生成并返回字符串。 */ (guide: LearningGuide) => `${guide.feature} is stored in the owning project, scene, component, asset, workspace preference or build manifest. Editor-only state is excluded from players.`,
     recovery: 'Use Undo/Redo for document edits, Revert/rollback for imports or packages, Recovery Browser for interrupted saves, and source control or the migration backup for project-wide recovery.',
-    mistakes: (guide: LearningGuide) => [`Editing ${guide.feature} on the wrong selection or workspace.`, 'Ignoring a permission, validation, missing-reference or host-template warning.', 'Checking only the editor preview and not save/reload plus the standalone player.'],
+    mistakes: /** 结构说明（自动提取）：匿名回调；输入 guide；返回表达式求值结果。 */ (guide: LearningGuide) => [`Editing ${guide.feature} on the wrong selection or workspace.`, 'Ignoring a permission, validation, missing-reference or host-template warning.', 'Checking only the editor preview and not save/reload plus the standalone player.'],
     accessibility: 'Use Command Palette or keyboard focus instead of pointer-only navigation. Every dialog exposes a named control, visible focus, Escape/cancel path and reduced-motion behavior.',
-    minimal: (guide: LearningGuide) => `Minimal: create one valid target, configure ${guide.feature}, save and verify one visible result in Play.`,
-    production: (guide: LearningGuide) => `Production: add validation, localization/accessibility, deterministic tests, budgets, recovery evidence and both development and release builds for ${guide.feature}.`
+    minimal: /** 按模板 `Minimal: create one valid target, configure ${guide.feature}, save and verify one visible result in Play.` 生成并返回字符串。 */ (guide: LearningGuide) => `Minimal: create one valid target, configure ${guide.feature}, save and verify one visible result in Play.`,
+    production: /** 按模板 `Production: add validation, localization/accessibility, deterministic tests, budgets, recovery evidence and both development and release builds for ${guide.feature}.` 生成并返回字符串。 */ (guide: LearningGuide) => `Production: add validation, localization/accessibility, deterministic tests, budgets, recovery evidence and both development and release builds for ${guide.feature}.`
   },
   de: {
-    purpose: (guide: LearningGuide) => `${guide.feature} im Bereich ${guide.panel} erledigt die unterstützte Autoren- oder Laufzeitaufgabe direkt im Arbeitsbereich ${guide.workspace}.`,
-    when: (guide: LearningGuide) => `Verwenden, wenn das Projekt ${guide.feature} benötigt; nicht zugehörige Einstellungen bleiben in ihrem zuständigen Arbeitsbereich.`,
-    steps: (guide: LearningGuide) => [`${guide.workspace} und danach ${guide.panel} öffnen.`, `${guide.feature} wählen und vor der Bearbeitung sichtbare Validierung und Berechtigungen prüfen.`, 'Zielprojekt, Asset oder Objekt wählen und nur endliche, unterstützte Werte eingeben.', 'Änderung anwenden oder speichern und sichtbares Ergebnis sowie Probleme/Konsole prüfen.', 'Bei Laufzeitverhalten Play oder Vorschau starten; Pause/Einzelschritt für deterministische Prüfung verwenden.', 'Projekt speichern, neu laden und den unveränderten Autorenwert bestätigen.', 'Project Health und den passenden Test ausführen, Standalone-Player bauen und die sichtbare Prüfung wiederholen.'],
-    expected: (guide: LearningGuide) => `${guide.feature} ist im Editor sichtbar, bleibt nach dem Neuladen erhalten und erreicht gegebenenfalls Vorschau, Play und exportierte Player.`,
-    persistence: (guide: LearningGuide) => `${guide.feature} wird im zuständigen Projekt, in Szene, Komponente, Asset, Arbeitsbereichseinstellung oder Build-Manifest gespeichert. Reine Editor-Daten gelangen nicht in Player.`,
+    purpose: /** 按模板 `${guide.feature} im Bereich ${guide.panel} erledigt die unterstützte Autoren- oder Laufzeitaufgabe direkt im Arbeitsbereich ${guide.workspace}.` 生成并返回字符串。 */ (guide: LearningGuide) => `${guide.feature} im Bereich ${guide.panel} erledigt die unterstützte Autoren- oder Laufzeitaufgabe direkt im Arbeitsbereich ${guide.workspace}.`,
+    when: /** 按模板 `Verwenden, wenn das Projekt ${guide.feature} benötigt; nicht zugehörige Einstellungen bleiben in ihrem zuständigen Arbeitsbereich.` 生成并返回字符串。 */ (guide: LearningGuide) => `Verwenden, wenn das Projekt ${guide.feature} benötigt; nicht zugehörige Einstellungen bleiben in ihrem zuständigen Arbeitsbereich.`,
+    steps: /** 结构说明（自动提取）：匿名回调；输入 guide；返回表达式求值结果。 */ (guide: LearningGuide) => [`${guide.workspace} und danach ${guide.panel} öffnen.`, `${guide.feature} wählen und vor der Bearbeitung sichtbare Validierung und Berechtigungen prüfen.`, 'Zielprojekt, Asset oder Objekt wählen und nur endliche, unterstützte Werte eingeben.', 'Änderung anwenden oder speichern und sichtbares Ergebnis sowie Probleme/Konsole prüfen.', 'Bei Laufzeitverhalten Play oder Vorschau starten; Pause/Einzelschritt für deterministische Prüfung verwenden.', 'Projekt speichern, neu laden und den unveränderten Autorenwert bestätigen.', 'Project Health und den passenden Test ausführen, Standalone-Player bauen und die sichtbare Prüfung wiederholen.'],
+    expected: /** 按模板 `${guide.feature} ist im Editor sichtbar, bleibt nach dem Neuladen erhalten und erreicht gegebenenfalls Vorschau, Play und exportierte Player.` 生成并返回字符串。 */ (guide: LearningGuide) => `${guide.feature} ist im Editor sichtbar, bleibt nach dem Neuladen erhalten und erreicht gegebenenfalls Vorschau, Play und exportierte Player.`,
+    persistence: /** 结构说明（自动提取）：匿名回调；输入 guide；返回表达式求值结果。 */ (guide: LearningGuide) => `${guide.feature} wird im zuständigen Projekt, in Szene, Komponente, Asset, Arbeitsbereichseinstellung oder Build-Manifest gespeichert. Reine Editor-Daten gelangen nicht in Player.`,
     recovery: 'Für Dokumentänderungen Rückgängig/Wiederholen, für Importe oder Pakete Zurücksetzen/Rollback, bei unterbrochenen Speicherungen Recovery Browser und für projektweite Wiederherstellung Quellverwaltung oder Migrations-Backup verwenden.',
-    mistakes: (guide: LearningGuide) => [`${guide.feature} mit falscher Auswahl oder im falschen Arbeitsbereich bearbeiten.`, 'Berechtigungs-, Validierungs-, Referenz- oder Hostvorlagenwarnung ignorieren.', 'Nur die Editorvorschau prüfen, nicht Speichern/Neuladen und Standalone-Player.'],
+    mistakes: /** 结构说明（自动提取）：匿名回调；输入 guide；返回表达式求值结果。 */ (guide: LearningGuide) => [`${guide.feature} mit falscher Auswahl oder im falschen Arbeitsbereich bearbeiten.`, 'Berechtigungs-, Validierungs-, Referenz- oder Hostvorlagenwarnung ignorieren.', 'Nur die Editorvorschau prüfen, nicht Speichern/Neuladen und Standalone-Player.'],
     accessibility: 'Command Palette oder Tastaturfokus statt reiner Zeigerbedienung verwenden. Dialoge besitzen Namen, sichtbaren Fokus, Escape/Abbrechen und reduzierte Bewegung.',
-    minimal: (guide: LearningGuide) => `Minimal: ein gültiges Ziel erstellen, ${guide.feature} konfigurieren, speichern und ein sichtbares Play-Ergebnis prüfen.`,
-    production: (guide: LearningGuide) => `Produktion: Validierung, Lokalisierung/Barrierefreiheit, deterministische Tests, Budgets, Wiederherstellung und Entwicklungs-/Release-Builds für ${guide.feature} ergänzen.`
+    minimal: /** 按模板 `Minimal: ein gültiges Ziel erstellen, ${guide.feature} konfigurieren, speichern und ein sichtbares Play-Ergebnis prüfen.` 生成并返回字符串。 */ (guide: LearningGuide) => `Minimal: ein gültiges Ziel erstellen, ${guide.feature} konfigurieren, speichern und ein sichtbares Play-Ergebnis prüfen.`,
+    production: /** 按模板 `Produktion: Validierung, Lokalisierung/Barrierefreiheit, deterministische Tests, Budgets, Wiederherstellung und Entwicklungs-/Release-Builds für ${guide.feature} ergänzen.` 生成并返回字符串。 */ (guide: LearningGuide) => `Produktion: Validierung, Lokalisierung/Barrierefreiheit, deterministische Tests, Budgets, Wiederherstellung und Entwicklungs-/Release-Builds für ${guide.feature} ergänzen.`
   },
   zh: {
-    purpose: (guide: LearningGuide) => `在“${guide.panel}”中使用“${guide.feature}”，可在“${guide.workspace}”工作流内完成对应的创作或运行任务。`,
-    when: (guide: LearningGuide) => `项目需要“${guide.feature}”时使用；无关设置应保留在其所属工作区。`,
-    steps: (guide: LearningGuide) => [`打开“${guide.workspace}”，再打开“${guide.panel}”。`, `选择“${guide.feature}”；编辑前先阅读可见的验证与权限状态。`, '选择目标项目、资源或对象，只输入有限且受支持的数值。', '应用或保存更改，检查可见结果以及“问题/控制台”输出。', '若该功能具有运行行为，启动“播放”或“预览”；使用“暂停/单步”进行确定性检查。', '保存并重新载入项目，确认创作值保持不变。', '运行“项目健康”和对应测试，构建独立播放器后重复可观察检查。'],
-    expected: (guide: LearningGuide) => `“${guide.feature}”会在编辑器中可见，重新载入后保持，并在适用时进入预览、播放和导出的播放器。`,
-    persistence: (guide: LearningGuide) => `“${guide.feature}”保存在所属的项目、场景、组件、资源、工作区偏好或构建清单中；仅编辑器状态不会进入播放器。`,
+    purpose: /** 按模板 `在“${guide.panel}”中使用“${guide.feature}”，可在“${guide.workspace}”工作流内完成对应的创作或运行任务。` 生成并返回字符串。 */ (guide: LearningGuide) => `在“${guide.panel}”中使用“${guide.feature}”，可在“${guide.workspace}”工作流内完成对应的创作或运行任务。`,
+    when: /** 按模板 `项目需要“${guide.feature}”时使用；无关设置应保留在其所属工作区。` 生成并返回字符串。 */ (guide: LearningGuide) => `项目需要“${guide.feature}”时使用；无关设置应保留在其所属工作区。`,
+    steps: /** 结构说明（自动提取）：匿名回调；输入 guide；返回表达式求值结果。 */ (guide: LearningGuide) => [`打开“${guide.workspace}”，再打开“${guide.panel}”。`, `选择“${guide.feature}”；编辑前先阅读可见的验证与权限状态。`, '选择目标项目、资源或对象，只输入有限且受支持的数值。', '应用或保存更改，检查可见结果以及“问题/控制台”输出。', '若该功能具有运行行为，启动“播放”或“预览”；使用“暂停/单步”进行确定性检查。', '保存并重新载入项目，确认创作值保持不变。', '运行“项目健康”和对应测试，构建独立播放器后重复可观察检查。'],
+    expected: /** 按模板 `“${guide.feature}”会在编辑器中可见，重新载入后保持，并在适用时进入预览、播放和导出的播放器。` 生成并返回字符串。 */ (guide: LearningGuide) => `“${guide.feature}”会在编辑器中可见，重新载入后保持，并在适用时进入预览、播放和导出的播放器。`,
+    persistence: /** 按模板 `“${guide.feature}”保存在所属的项目、场景、组件、资源、工作区偏好或构建清单中；仅编辑器状态不会进入播放器。` 生成并返回字符串。 */ (guide: LearningGuide) => `“${guide.feature}”保存在所属的项目、场景、组件、资源、工作区偏好或构建清单中；仅编辑器状态不会进入播放器。`,
     recovery: '文档编辑使用撤销/重做；导入或软件包使用还原/回滚；中断保存使用恢复浏览器；项目级恢复使用源代码管理或迁移备份。',
-    mistakes: (guide: LearningGuide) => [`在错误的选择或工作区上编辑“${guide.feature}”。`, '忽略权限、验证、缺失引用或宿主模板警告。', '只检查编辑器预览，而未验证保存/重载与独立播放器。'],
+    mistakes: /* 返回按声明顺序构造的数组 [`在错误的选择或工作区上编辑“${guide.feature}”。`, '忽略权限、验证、缺失引用或宿主模板警告。', '只检查编辑器预览，而未验证保存/重载与独立播放器。']。 */ (guide: LearningGuide) => [`在错误的选择或工作区上编辑“${guide.feature}”。`, '忽略权限、验证、缺失引用或宿主模板警告。', '只检查编辑器预览，而未验证保存/重载与独立播放器。'],
     accessibility: '可使用命令面板或键盘焦点替代纯指针操作。所有对话框均有可访问名称、可见焦点、Escape/取消路径和减少动态效果。',
-    minimal: (guide: LearningGuide) => `最小示例：创建一个有效目标，配置“${guide.feature}”，保存，并在播放模式确认一个可见结果。`,
-    production: (guide: LearningGuide) => `生产示例：为“${guide.feature}”加入验证、本地化/无障碍、确定性测试、预算、恢复证据以及开发与发布构建。`
+    minimal: /** 按模板 `最小示例：创建一个有效目标，配置“${guide.feature}”，保存，并在播放模式确认一个可见结果。` 生成并返回字符串。 */ (guide: LearningGuide) => `最小示例：创建一个有效目标，配置“${guide.feature}”，保存，并在播放模式确认一个可见结果。`,
+    production: /** 按模板 `生产示例：为“${guide.feature}”加入验证、本地化/无障碍、确定性测试、预算、恢复证据以及开发与发布构建。` 生成并返回字符串。 */ (guide: LearningGuide) => `生产示例：为“${guide.feature}”加入验证、本地化/无障碍、确定性测试、预算、恢复证据以及开发与发布构建。`
   }
 } as const
 
-export function localizedLearningGuide(guide: LearningGuide, locale: Locale): LocalizedLearningGuide {
+/** 结构说明（自动提取）：localizedLearningGuide；输入 guide、locale；直接调用 objectFamilyLesson、localizedUiLabel、copy.purpose、copy.when、copy.steps 等。 */ export function localizedLearningGuide(guide: LearningGuide, locale: Locale): LocalizedLearningGuide {
   if (guide.id === OBJECT_FAMILY_LESSON_ID) return objectFamilyLesson(locale)
   const copy = localeText[locale]
   return { title: localizedUiLabel(guide.feature, locale), purpose: copy.purpose(guide), whenToUse: copy.when(guide), prerequisites: [...guide.prerequisites], steps: copy.steps(guide), expectedResult: copy.expected(guide), persistence: copy.persistence(guide), undoRecovery: copy.recovery, mistakes: copy.mistakes(guide), accessibility: copy.accessibility, minimalExample: copy.minimal(guide), productionExample: copy.production(guide), relatedRhai: [...guide.relatedRhai], relatedGraph: [...guide.relatedGraph] }
@@ -148,20 +149,20 @@ export const CREATOR_PERFORMANCE_PROFILES = Object.freeze({
 })
 
 const STORAGE_KEY = 'nova_a.creator-learning.v6'
-function loadedState(): { completed: string[]; onboardingComplete: boolean } {
+/** 结构说明（自动提取）：loadedState；无显式参数；直接调用 JSON.parse、localStorage.getItem、Array.isArray、slice、Set 等。 */ function loadedState(): { completed: string[]; onboardingComplete: boolean } {
   if (typeof localStorage === 'undefined') return { completed: [], onboardingComplete: false }
-  try { const value = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}') as Record<string, unknown>; return { completed: Array.isArray(value.completed) ? [...new Set(value.completed.filter(item => typeof item === 'string'))].slice(0, CREATOR_LEARNING_GUIDES.length) : [], onboardingComplete: value.onboardingComplete === true } } catch { return { completed: [], onboardingComplete: false } }
+  try { const value = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}') as Record<string, unknown>; return { completed: Array.isArray(value.completed) ? [...new Set(value.completed.filter(/* 比较 typeof item 与 'string'，返回严格相等的判断结果。 */ item => typeof item === 'string'))].slice(0, CREATOR_LEARNING_GUIDES.length) : [], onboardingComplete: value.onboardingComplete === true } } catch { return { completed: [], onboardingComplete: false } }
 }
 const loaded = loadedState()
 export const creatorLearningState = reactive({ onboardingVisible: !loaded.onboardingComplete, onboardingStep: 0, onboardingComplete: loaded.onboardingComplete, activeGuideId: CREATOR_TASK_GUIDES[0]?.id ?? CREATOR_LEARNING_GUIDES[0].id, query: '', panel: 'all', taskProjectsOnly: false, completed: loaded.completed })
-export const creatorLearningProgress = computed(() => ({ completed: creatorLearningState.completed.length, total: CREATOR_LEARNING_GUIDES.length, ratio: creatorLearningState.completed.length / Math.max(1, CREATOR_LEARNING_GUIDES.length) }))
-export const filteredCreatorGuides = computed(() => { const needle = creatorLearningState.query.trim().toLocaleLowerCase(); return CREATOR_LEARNING_GUIDES.filter(guide => (!creatorLearningState.taskProjectsOnly || guide.taskProject) && (creatorLearningState.panel === 'all' || guide.panel === creatorLearningState.panel) && (!needle || `${guide.feature} ${guide.panel} ${guide.workspace} ${guide.classifications.join(' ')}`.toLocaleLowerCase().includes(needle))) })
+export const creatorLearningProgress = computed(/** 结构说明（自动提取）：computed 回调；无显式参数；直接调用 Math.max；返回表达式求值结果。 */ () => ({ completed: creatorLearningState.completed.length, total: CREATOR_LEARNING_GUIDES.length, ratio: creatorLearningState.completed.length / Math.max(1, CREATOR_LEARNING_GUIDES.length) }))
+export const filteredCreatorGuides = computed(/** 结构说明（自动提取）：computed 回调；无显式参数；直接调用 toLocaleLowerCase、creatorLearningState.query.trim、CREATOR_LEARNING_GUIDES.filter。 */ () => { const needle = creatorLearningState.query.trim().toLocaleLowerCase(); return CREATOR_LEARNING_GUIDES.filter(/** 结构说明（自动提取）：CREATOR_LEARNING_GUIDES.filter 回调；输入 guide；直接调用 includes、toLocaleLowerCase、guide.classifications.join；返回表达式求值结果。 */ guide => (!creatorLearningState.taskProjectsOnly || guide.taskProject) && (creatorLearningState.panel === 'all' || guide.panel === creatorLearningState.panel) && (!needle || `${guide.feature} ${guide.panel} ${guide.workspace} ${guide.classifications.join(' ')}`.toLocaleLowerCase().includes(needle))) })
 
-function persist(): void { if (typeof localStorage === 'undefined') return; try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 1, completed: creatorLearningState.completed, onboardingComplete: creatorLearningState.onboardingComplete })) } catch { /* Learning progress remains usable for the session. */ } }
-export function completeLearningGuide(id: string, complete = true): void { if (!CREATOR_LEARNING_GUIDES.some(guide => guide.id === id)) return; const values = new Set(creatorLearningState.completed); complete ? values.add(id) : values.delete(id); creatorLearningState.completed.splice(0, creatorLearningState.completed.length, ...values); persist() }
-export function finishCreatorOnboarding(): void { creatorLearningState.onboardingComplete = true; creatorLearningState.onboardingVisible = false; creatorLearningState.onboardingStep = 0; persist() }
-export function restartCreatorOnboarding(): void { creatorLearningState.onboardingVisible = true; creatorLearningState.onboardingStep = 0 }
-export async function applyCreatorPerformanceProfile(profile: PerformanceProfile): Promise<void> {
+/** 结构说明（自动提取）：persist；无显式参数；直接调用 localStorage.setItem、JSON.stringify。 */ function persist(): void { if (typeof localStorage === 'undefined') return; try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 1, completed: creatorLearningState.completed, onboardingComplete: creatorLearningState.onboardingComplete })) } catch { /* Learning progress remains usable for the session. */ } }
+/** 结构说明（自动提取）：completeLearningGuide；输入 id、complete；直接调用 CREATOR_LEARNING_GUIDES.some、Set、values.add、values.delete、creatorLearningState.completed.splice 等。 */ export function completeLearningGuide(id: string, complete = true): void { if (!CREATOR_LEARNING_GUIDES.some(/* 比较 guide.id 与 id，返回严格相等的判断结果。 */ guide => guide.id === id)) return; const values = new Set(creatorLearningState.completed); complete ? values.add(id) : values.delete(id); creatorLearningState.completed.splice(0, creatorLearningState.completed.length, ...values); persist() }
+/** 结构说明（自动提取）：finishCreatorOnboarding；无显式参数；直接调用 persist；写入 creatorLearningState.onboardingComplete、creatorLearningState.onboardingVisible、creatorLearningState.onboardingStep。 */ export function finishCreatorOnboarding(): void { creatorLearningState.onboardingComplete = true; creatorLearningState.onboardingVisible = false; creatorLearningState.onboardingStep = 0; persist() }
+/** 结构说明（自动提取）：restartCreatorOnboarding；无显式参数；写入 creatorLearningState.onboardingVisible、creatorLearningState.onboardingStep。 */ export function restartCreatorOnboarding(): void { creatorLearningState.onboardingVisible = true; creatorLearningState.onboardingStep = 0 }
+/** 结构说明（自动提取）：applyCreatorPerformanceProfile；输入 profile；写入 preferencesState.performanceProfile、preferencesState.maxPixelRatio、authoringState.performanceMode；等待异步结果。 */ export async function applyCreatorPerformanceProfile(profile: PerformanceProfile): Promise<void> {
   const selected = CREATOR_PERFORMANCE_PROFILES[profile]
   preferencesState.performanceProfile = profile
   preferencesState.maxPixelRatio = selected.maximumPixelRatio
@@ -169,4 +170,4 @@ export async function applyCreatorPerformanceProfile(profile: PerformanceProfile
   const { authoringState } = await import('../editor/authoring2d')
   authoringState.performanceMode = selected.hierarchyPerformanceMode
 }
-export function resetLearningProgress(): void { creatorLearningState.completed.splice(0); persist() }
+/** 结构说明（自动提取）：resetLearningProgress；无显式参数；直接调用 creatorLearningState.completed.splice、persist。 */ export function resetLearningProgress(): void { creatorLearningState.completed.splice(0); persist() }

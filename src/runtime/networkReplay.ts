@@ -1,3 +1,4 @@
+/** 网络回放资料：记录同步事件与状态，支持重放、比较及诊断。 */
 import { reactive } from 'vue'
 import type { Entity } from '../world/Entity'
 import { finiteNumber } from '../world/geometry'
@@ -63,22 +64,22 @@ export const multiplayerReplayState = reactive({
   lastError: ''
 })
 
-function safeText(value: unknown, maximum: number, fallback = ''): string { return typeof value === 'string' ? (value.trim().slice(0, maximum) || fallback) : fallback }
-function integer(value: unknown, fallback: number, minimum: number, maximum: number): number { const number = Number(value); return Number.isSafeInteger(number) ? Math.min(maximum, Math.max(minimum, number)) : fallback }
-function boundedNumber(value: unknown, maximum: number, positive = false): value is number { return typeof value === 'number' && Number.isFinite(value) && value <= maximum && (positive ? value > 0 : value >= -maximum) }
-function boundedTuple(value: unknown, maximum: number, positive = false): value is [number, number] { return Array.isArray(value) && value.length === 2 && value.every(item => boundedNumber(item, maximum, positive)) }
-function machineVersion(value: unknown): [number, number, number] | null {
+/* 根据 typeof value === 'string' 的真假，分别返回 (value.trim().slice(0, maximum) || fallback) 或 fallback。 */ function safeText(value: unknown, maximum: number, fallback = ''): string { return typeof value === 'string' ? (value.trim().slice(0, maximum) || fallback) : fallback }
+/** 结构说明（自动提取）：integer；输入 value、fallback、minimum、maximum；直接调用 Number、Number.isSafeInteger、Math.min、Math.max。 */ function integer(value: unknown, fallback: number, minimum: number, maximum: number): number { const number = Number(value); return Number.isSafeInteger(number) ? Math.min(maximum, Math.max(minimum, number)) : fallback }
+/* 先计算 typeof value === 'number' && Number.isFinite(value) && value <= maximum；仅当其为真值时求右侧 (positive ? value > 0 : value >= -maximum)，返回短路求值结果。 */ function boundedNumber(value: unknown, maximum: number, positive = false): value is number { return typeof value === 'number' && Number.isFinite(value) && value <= maximum && (positive ? value > 0 : value >= -maximum) }
+/* 先计算 Array.isArray(value) && value.length === 2；仅当其为真值时求右侧 value.every(item => boundedNumber(item, maximum, positive))，返回短路求值结果。 */ function boundedTuple(value: unknown, maximum: number, positive = false): value is [number, number] { return Array.isArray(value) && value.length === 2 && value.every(/* 调用 boundedNumber(item, maximum, positive) 并返回调用结果。 */ item => boundedNumber(item, maximum, positive)) }
+/** 结构说明（自动提取）：machineVersion；输入 value；直接调用 exec、value.trim、map、match.slice、version.every。 */ function machineVersion(value: unknown): [number, number, number] | null {
   if (typeof value !== 'string') return null
   const match = /^(\d+)\.(\d+)\.(\d+)(?:[-+][0-9A-Za-z.-]+)?$/.exec(value.trim())
   if (!match) return null
   const version = match.slice(1, 4).map(Number) as [number, number, number]
-  return version.every(item => Number.isSafeInteger(item) && item >= 0 && item <= 65_535) ? version : null
+  return version.every(/* 先计算 Number.isSafeInteger(item) && item >= 0；仅当其为真值时求右侧 item <= 65_535，返回短路求值结果。 */ item => Number.isSafeInteger(item) && item >= 0 && item <= 65_535) ? version : null
 }
-function compareMachineVersions(first: readonly number[], second: readonly number[]): number {
+/** 结构说明（自动提取）：compareMachineVersions；输入 first、second；包含循环处理。 */ function compareMachineVersions(first: readonly number[], second: readonly number[]): number {
   for (let index = 0; index < 3; index++) if (first[index] !== second[index]) return first[index] < second[index] ? -1 : 1
   return 0
 }
-function requireMultiplayerCompatibility(source: Partial<MultiplayerReplayDocument | MultiplayerSaveDocument>, label: string, activeSession = false): { engineVersion: string; schemaVersion: number; sessionName: string } {
+/** 结构说明（自动提取）：requireMultiplayerCompatibility；输入 source、label、activeSession；直接调用 machineVersion、compareMachineVersions、Error、Number.isSafeInteger、Number 等；包含显式抛错路径。 */ function requireMultiplayerCompatibility(source: Partial<MultiplayerReplayDocument | MultiplayerSaveDocument>, label: string, activeSession = false): { engineVersion: string; schemaVersion: number; sessionName: string } {
   const parsed = machineVersion(source.engineVersion), current = machineVersion(NOVA_ENGINE_VERSION)!
   if (!parsed || compareMachineVersions(parsed, MINIMUM_MULTIPLAYER_ENGINE_VERSION) < 0 || compareMachineVersions(parsed, current) > 0) throw new Error(`${label} engine version is unsupported.`)
   if (!Number.isSafeInteger(source.schemaVersion) || Number(source.schemaVersion) < 1 || Number(source.schemaVersion) > 65_535) throw new Error(`${label} schema version is invalid.`)
@@ -89,7 +90,7 @@ function requireMultiplayerCompatibility(source: Partial<MultiplayerReplayDocume
   return { engineVersion: String(source.engineVersion).trim(), schemaVersion: Number(source.schemaVersion), sessionName }
 }
 
-function validateMultiplayerSaveState(value: Omit<MultiplayerSaveStage, 'entity'>, label: string): void {
+/** 结构说明（自动提取）：validateMultiplayerSaveState；输入 value、label；直接调用 boundedTuple、Error、boundedNumber；包含显式抛错路径。 */ function validateMultiplayerSaveState(value: Omit<MultiplayerSaveStage, 'entity'>, label: string): void {
   if (!boundedTuple(value.position, SAVE_POSITION_LIMIT)) throw new Error(`Multiplayer save position for ${label} exceeds the ±1e9 bound.`)
   if (!boundedNumber(value.rotation, SAVE_ROTATION_LIMIT)) throw new Error(`Multiplayer save rotation for ${label} exceeds the ±1e12 bound.`)
   if (!boundedTuple(value.scale, SAVE_SCALE_LIMIT, true)) throw new Error(`Multiplayer save scale for ${label} must be positive and no larger than 1e6.`)
@@ -97,38 +98,38 @@ function validateMultiplayerSaveState(value: Omit<MultiplayerSaveStage, 'entity'
   if (!boundedNumber(value.angularVelocity, SAVE_ROTATION_LIMIT)) throw new Error(`Multiplayer save angular velocity for ${label} exceeds the ±1e12 bound.`)
 }
 
-function parentFirstSaveStages(staged: MultiplayerSaveStage[]): MultiplayerSaveStage[] {
-  const byUuid = new Map(staged.map(item => [item.entity.uuid, item])), children = new Map<string, MultiplayerSaveStage[]>(), indegree = new Map<string, number>()
+/** 结构说明（自动提取）：parentFirstSaveStages；输入 staged；直接调用 Map、staged.map、Boolean、byUuid.has、indegree.set 等；返回路径包含 ordered；包含循环处理；包含显式抛错路径。 */ function parentFirstSaveStages(staged: MultiplayerSaveStage[]): MultiplayerSaveStage[] {
+  const byUuid = new Map(staged.map(/* 返回按声明顺序构造的数组 [item.entity.uuid, item]。 */ item => [item.entity.uuid, item])), children = new Map<string, MultiplayerSaveStage[]>(), indegree = new Map<string, number>()
   for (const item of staged) {
     const parentUuid = item.entity.parentUuid
     const hasStagedParent = Boolean(parentUuid && byUuid.has(parentUuid))
     indegree.set(item.entity.uuid, hasStagedParent ? 1 : 0)
     if (hasStagedParent) children.set(parentUuid!, [...(children.get(parentUuid!) ?? []), item])
   }
-  const ready = staged.filter(item => indegree.get(item.entity.uuid) === 0).sort((a, b) => a.entity.uuid.localeCompare(b.entity.uuid)), ordered: MultiplayerSaveStage[] = []
+  const ready = staged.filter(/* 比较 indegree.get(item.entity.uuid) 与 0，返回严格相等的判断结果。 */ item => indegree.get(item.entity.uuid) === 0).sort(/* 调用 a.entity.uuid.localeCompare(b.entity.uuid) 并返回调用结果。 */ (a, b) => a.entity.uuid.localeCompare(b.entity.uuid)), ordered: MultiplayerSaveStage[] = []
   while (ready.length) {
     const item = ready.shift()!
     ordered.push(item)
-    for (const child of (children.get(item.entity.uuid) ?? []).sort((a, b) => a.entity.uuid.localeCompare(b.entity.uuid))) {
+    for (const child of (children.get(item.entity.uuid) ?? []).sort(/* 调用 a.entity.uuid.localeCompare(b.entity.uuid) 并返回调用结果。 */ (a, b) => a.entity.uuid.localeCompare(b.entity.uuid))) {
       indegree.set(child.entity.uuid, 0)
       ready.push(child)
     }
-    ready.sort((a, b) => a.entity.uuid.localeCompare(b.entity.uuid))
+    ready.sort(/* 调用 a.entity.uuid.localeCompare(b.entity.uuid) 并返回调用结果。 */ (a, b) => a.entity.uuid.localeCompare(b.entity.uuid))
   }
   if (ordered.length !== staged.length) throw new Error('Multiplayer save restore cannot apply to a cyclic entity hierarchy.')
   return ordered
 }
 
-export function beginMultiplayerReplayRecording(peers: string[] = []): void {
+/** 结构说明（自动提取）：beginMultiplayerReplayRecording；输入 peers；直接调用 multiplayerReplayState.frames.splice、multiplayerReplayState.peers.splice、sort、slice、Set 等；写入 multiplayerReplayState.recording、multiplayerReplayState.tick、multiplayerReplayState.lastError。 */ export function beginMultiplayerReplayRecording(peers: string[] = []): void {
   multiplayerReplayState.recording = true; multiplayerReplayState.tick = 0; multiplayerReplayState.frames.splice(0); multiplayerReplayState.lastError = ''
-  multiplayerReplayState.peers.splice(0, multiplayerReplayState.peers.length, ...[...new Set(peers.map(peer => safeText(peer, 80)).filter(Boolean))].slice(0, 64).sort())
+  multiplayerReplayState.peers.splice(0, multiplayerReplayState.peers.length, ...[...new Set(peers.map(/* 调用 safeText(peer, 80) 并返回调用结果。 */ peer => safeText(peer, 80)).filter(Boolean))].slice(0, 64).sort())
 }
 
-export function recordMultiplayerReplayFrame(tick: number, inputs: MultiplayerInputFrame[], authoritativeChecksum: string, packetSummary: unknown): void {
+/** 结构说明（自动提取）：recordMultiplayerReplayFrame；输入 tick、inputs、authoritativeChecksum、packetSummary；直接调用 sort、map、inputs.slice、multiplayerReplayState.peers.includes、multiplayerReplayState.peers.push 等；写入 multiplayerReplayState.tick；包含循环处理。 */ export function recordMultiplayerReplayFrame(tick: number, inputs: MultiplayerInputFrame[], authoritativeChecksum: string, packetSummary: unknown): void {
   if (!multiplayerReplayState.recording) return
-  const normalizedInputs = inputs.slice(0, 64).map(item => ({ peerId: safeText(item.peerId, 80, 'peer'), input: cloneNetworkInput(item.input) })).sort((a, b) => a.peerId.localeCompare(b.peerId))
+  const normalizedInputs = inputs.slice(0, 64).map(/** 构造并返回记录 { peerId: safeText(item.peerId, 80, 'peer'), input: cloneNetworkInput(item.input) }，字段按当前实参及捕获状态求值。 */ item => ({ peerId: safeText(item.peerId, 80, 'peer'), input: cloneNetworkInput(item.input) })).sort(/* 调用 a.peerId.localeCompare(b.peerId) 并返回调用结果。 */ (a, b) => a.peerId.localeCompare(b.peerId))
   for (const item of normalizedInputs) if (!multiplayerReplayState.peers.includes(item.peerId) && multiplayerReplayState.peers.length < 64) multiplayerReplayState.peers.push(item.peerId)
-  const deterministicPackets = Array.isArray(packetSummary) ? packetSummary.slice(-256).map(item => {
+  const deterministicPackets = Array.isArray(packetSummary) ? packetSummary.slice(-256).map(/** 结构说明（自动提取）：map 回调；输入 item；直接调用 Array.isArray、safeText、integer。 */ item => {
     if (!item || typeof item !== 'object' || Array.isArray(item)) return null
     const packet = item as Record<string, unknown>
     return { direction: packet.direction === 'in' ? 'in' : 'out', channel: safeText(packet.channel, 80), kind: safeText(packet.kind, 40), sequence: integer(packet.sequence, 0, 0, 0x7fff_ffff), bytes: integer(packet.bytes, 0, 0, 65_507), accepted: packet.accepted === true }
@@ -138,25 +139,25 @@ export function recordMultiplayerReplayFrame(tick: number, inputs: MultiplayerIn
   if (multiplayerReplayState.frames.length > productionSettings.replay.capacity) multiplayerReplayState.frames.splice(0, multiplayerReplayState.frames.length - productionSettings.replay.capacity)
 }
 
-export function stopMultiplayerReplayRecording(tickRate: number): MultiplayerReplayDocument {
+/** 结构说明（自动提取）：stopMultiplayerReplayRecording；输入 tickRate；直接调用 Math.min、Math.max、Math.round、Number、sort 等；写入 multiplayerReplayState.recording。 */ export function stopMultiplayerReplayRecording(tickRate: number): MultiplayerReplayDocument {
   multiplayerReplayState.recording = false
-  return { format: 'nova-multiplayer-replay', version: 1, engineVersion: NOVA_ENGINE_VERSION, protocolVersion: 2, schemaVersion: productionSettings.networking.schemaVersion, sessionName: productionSettings.networking.sessionName, tickRate: Math.min(1_000, Math.max(1, Math.round(Number(tickRate) || 60))), peers: [...multiplayerReplayState.peers].sort(), frames: multiplayerReplayState.frames.map(frame => ({ ...frame, inputs: frame.inputs.map(item => ({ peerId: item.peerId, input: cloneNetworkInput(item.input) })) })) }
+  return { format: 'nova-multiplayer-replay', version: 1, engineVersion: NOVA_ENGINE_VERSION, protocolVersion: 2, schemaVersion: productionSettings.networking.schemaVersion, sessionName: productionSettings.networking.sessionName, tickRate: Math.min(1_000, Math.max(1, Math.round(Number(tickRate) || 60))), peers: [...multiplayerReplayState.peers].sort(), frames: multiplayerReplayState.frames.map(/** 构造并返回记录 { ...frame, inputs: frame.inputs.map(item => ({ peerId: item.peerId, input: cloneNetworkInput(item.input) })) }，字段按当前实参及捕获状态求值。 */ frame => ({ ...frame, inputs: frame.inputs.map(/** 构造并返回记录 { peerId: item.peerId, input: cloneNetworkInput(item.input) }，字段按当前实参及捕获状态求值。 */ item => ({ peerId: item.peerId, input: cloneNetworkInput(item.input) })) })) }
 }
 
-export function normalizeMultiplayerReplay(value: unknown): MultiplayerReplayDocument {
+/** 结构说明（自动提取）：normalizeMultiplayerReplay；输入 value；直接调用 Array.isArray、Error、requireMultiplayerCompatibility、map、slice 等；包含显式抛错路径。 */ export function normalizeMultiplayerReplay(value: unknown): MultiplayerReplayDocument {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Multiplayer replay must be an object.')
   const source = value as Partial<MultiplayerReplayDocument>
   if (source.format !== 'nova-multiplayer-replay' || source.version !== 1 || source.protocolVersion !== 2) throw new Error('Unsupported multiplayer replay format or protocol.')
   const compatibility = requireMultiplayerCompatibility(source, 'Multiplayer replay')
-  const frames = (Array.isArray(source.frames) ? source.frames : []).slice(0, 60_000).map((raw, index) => {
+  const frames = (Array.isArray(source.frames) ? source.frames : []).slice(0, 60_000).map(/** 结构说明（自动提取）：map 回调；输入 raw、index；直接调用 sort、map、slice、Array.isArray、integer 等。 */ (raw, index) => {
     const frame = raw && typeof raw === 'object' ? raw as Partial<MultiplayerReplayFrame> : {}
-    const inputs = (Array.isArray(frame.inputs) ? frame.inputs : []).slice(0, 64).map(item => ({ peerId: safeText(item?.peerId, 80, 'peer'), input: normalizeNetworkInput(item?.input) ?? emptyNetworkInput() })).sort((a, b) => a.peerId.localeCompare(b.peerId))
+    const inputs = (Array.isArray(frame.inputs) ? frame.inputs : []).slice(0, 64).map(/** 构造并返回记录 { peerId: safeText(item?.peerId, 80, 'peer'), input: normalizeNetworkInput(item?.input) ?? emptyNetworkInput() }，字段按当前实参及捕获状态求值。 */ item => ({ peerId: safeText(item?.peerId, 80, 'peer'), input: normalizeNetworkInput(item?.input) ?? emptyNetworkInput() })).sort(/* 调用 a.peerId.localeCompare(b.peerId) 并返回调用结果。 */ (a, b) => a.peerId.localeCompare(b.peerId))
     return { tick: integer(frame.tick, index, 0, 0x7fff_ffff), inputs, authoritativeChecksum: safeText(frame.authoritativeChecksum, 64), packetChecksum: safeText(frame.packetChecksum, 64) }
   })
-  return { format: 'nova-multiplayer-replay', version: 1, engineVersion: compatibility.engineVersion, protocolVersion: 2, schemaVersion: compatibility.schemaVersion, sessionName: compatibility.sessionName, tickRate: integer(source.tickRate, 60, 1, 1_000), peers: [...new Set((Array.isArray(source.peers) ? source.peers : []).map(peer => safeText(peer, 80)).filter(Boolean))].slice(0, 64).sort(), frames }
+  return { format: 'nova-multiplayer-replay', version: 1, engineVersion: compatibility.engineVersion, protocolVersion: 2, schemaVersion: compatibility.schemaVersion, sessionName: compatibility.sessionName, tickRate: integer(source.tickRate, 60, 1, 1_000), peers: [...new Set((Array.isArray(source.peers) ? source.peers : []).map(/* 调用 safeText(peer, 80) 并返回调用结果。 */ peer => safeText(peer, 80)).filter(Boolean))].slice(0, 64).sort(), frames }
 }
 
-export function compareMultiplayerReplays(firstValue: unknown, secondValue: unknown): MultiplayerReplayComparison {
+/** 结构说明（自动提取）：compareMultiplayerReplays；输入 firstValue、secondValue；直接调用 normalizeMultiplayerReplay、Math.min、Error、networkChecksum、divergences.push；写入 multiplayerReplayState.lastComparison；返回路径包含 result；包含循环处理；包含显式抛错路径。 */ export function compareMultiplayerReplays(firstValue: unknown, secondValue: unknown): MultiplayerReplayComparison {
   const first = normalizeMultiplayerReplay(firstValue), second = normalizeMultiplayerReplay(secondValue), comparedFrames = Math.min(first.frames.length, second.frames.length), divergences: MultiplayerReplayComparison['divergences'] = []
   if (first.schemaVersion !== second.schemaVersion || first.sessionName !== second.sessionName) throw new Error('Multiplayer replays belong to incompatible schemas or sessions.')
   for (let index = 0; index < comparedFrames && divergences.length < 256; index++) {
@@ -168,39 +169,39 @@ export function compareMultiplayerReplays(firstValue: unknown, secondValue: unkn
   multiplayerReplayState.lastComparison = result; return result
 }
 
-export function playbackMultiplayerReplay(value: unknown, applyFrame: (frame: Readonly<MultiplayerReplayFrame>) => void): MultiplayerReplayPlayback {
+/** 结构说明（自动提取）：playbackMultiplayerReplay；输入 value、applyFrame；直接调用 normalizeMultiplayerReplay、requireMultiplayerCompatibility、Error、applyFrame、Object.freeze 等；写入 previousTick；包含循环处理；包含显式抛错路径。 */ export function playbackMultiplayerReplay(value: unknown, applyFrame: (frame: Readonly<MultiplayerReplayFrame>) => void): MultiplayerReplayPlayback {
   const replay = normalizeMultiplayerReplay(value)
   requireMultiplayerCompatibility(replay, 'Multiplayer replay', true)
   let previousTick = -1
   for (const frame of replay.frames) {
     if (frame.tick <= previousTick) throw new Error('Multiplayer replay ticks must be strictly increasing.')
-    applyFrame(Object.freeze({ ...frame, inputs: frame.inputs.map(item => ({ peerId: item.peerId, input: cloneNetworkInput(item.input) })) }))
+    applyFrame(Object.freeze({ ...frame, inputs: frame.inputs.map(/** 构造并返回记录 { peerId: item.peerId, input: cloneNetworkInput(item.input) }，字段按当前实参及捕获状态求值。 */ item => ({ peerId: item.peerId, input: cloneNetworkInput(item.input) })) }))
     previousTick = frame.tick
   }
   return { frames: replay.frames.length, firstTick: replay.frames[0]?.tick ?? null, lastTick: replay.frames[replay.frames.length - 1]?.tick ?? null, checksum: networkChecksum(replay.frames) }
 }
 
-function multiplayerSavePayload(document: Omit<MultiplayerSaveDocument, 'checksum'> | MultiplayerSaveDocument): unknown {
+/** 结构说明（自动提取）：multiplayerSavePayload；输入 document。 */ function multiplayerSavePayload(document: Omit<MultiplayerSaveDocument, 'checksum'> | MultiplayerSaveDocument): unknown {
   return { format: document.format, version: document.version, engineVersion: document.engineVersion, protocolVersion: document.protocolVersion, schemaVersion: document.schemaVersion, sessionName: document.sessionName, tick: document.tick, entities: document.entities }
 }
 
-function legacyMultiplayerSavePayload(document: MultiplayerSaveDocument): unknown {
+/** 结构说明（自动提取）：legacyMultiplayerSavePayload；输入 document。 */ function legacyMultiplayerSavePayload(document: MultiplayerSaveDocument): unknown {
   return { format: document.format, version: document.version, engineVersion: document.engineVersion, protocolVersion: document.protocolVersion, schemaVersion: document.schemaVersion, sessionName: document.sessionName, tick: document.tick, savedAt: document.savedAt, entities: document.entities }
 }
 
-export function exportMultiplayerSave(entities: Entity[], tick: number): MultiplayerSaveDocument {
-  const definitions = new Set(productionSettings.networking.replicatedEntities.map(item => item.entityUuid)), source = entities.filter(entity => definitions.has(entity.uuid)).slice(0, 2_000).map(entity => {
+/** 结构说明（自动提取）：exportMultiplayerSave；输入 entities、tick；直接调用 Set、productionSettings.networking.replicatedEntities.map、sort、map、slice 等。 */ export function exportMultiplayerSave(entities: Entity[], tick: number): MultiplayerSaveDocument {
+  const definitions = new Set(productionSettings.networking.replicatedEntities.map(/* 返回 item.entityUuid 的当前值。 */ item => item.entityUuid)), source = entities.filter(/* 调用 definitions.has(entity.uuid) 并返回调用结果。 */ entity => definitions.has(entity.uuid)).slice(0, 2_000).map(/** 结构说明（自动提取）：map 回调；输入 entity；直接调用 worldTransform、finiteNumber、validateMultiplayerSaveState。 */ entity => {
     const transform = worldTransform(entity, entities)
     const state = { enabled: entity.enabled, position: [finiteNumber(transform.position.x), finiteNumber(transform.position.y)] as [number, number], rotation: finiteNumber(transform.rotation), scale: [finiteNumber(transform.scale.x, 1), finiteNumber(transform.scale.y, 1)] as [number, number], velocity: [finiteNumber(entity.velocity.x), finiteNumber(entity.velocity.y)] as [number, number], angularVelocity: finiteNumber(entity.angularVelocity) }
     validateMultiplayerSaveState(state, entity.uuid)
     return { uuid: entity.uuid, ...state }
-  }).sort((a, b) => a.uuid.localeCompare(b.uuid))
+  }).sort(/* 调用 a.uuid.localeCompare(b.uuid) 并返回调用结果。 */ (a, b) => a.uuid.localeCompare(b.uuid))
   const deterministicTick = integer(tick, 0, 0, 0x7fff_ffff)
   const base = { format: 'nova-multiplayer-save' as const, version: 1 as const, engineVersion: NOVA_ENGINE_VERSION, protocolVersion: 2 as const, schemaVersion: productionSettings.networking.schemaVersion, sessionName: productionSettings.networking.sessionName, tick: deterministicTick, savedAt: new Date(deterministicTick * 1_000).toISOString(), entities: source }
   return { ...base, checksum: networkChecksum(multiplayerSavePayload(base)) }
 }
 
-export function importMultiplayerSave(value: unknown, entities: Entity[], propertyMasks?: ReadonlyMap<string, readonly string[]>): { tick: number; restored: number } {
+/** 结构说明（自动提取）：importMultiplayerSave；输入 value、entities、propertyMasks；直接调用 Array.isArray、Error、test、requireMultiplayerCompatibility、Number.isSafeInteger 等；写入 item.position、item.rotation、item.velocity、item.enabled 等；包含循环处理；包含显式抛错路径。 */ export function importMultiplayerSave(value: unknown, entities: Entity[], propertyMasks?: ReadonlyMap<string, readonly string[]>): { tick: number; restored: number } {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Multiplayer save must be an object.')
   const source = value as Partial<MultiplayerSaveDocument>
   if (source.format !== 'nova-multiplayer-save' || source.version !== 1 || source.protocolVersion !== 2 || typeof source.checksum !== 'string' || !/^[a-f0-9]{24}$/i.test(source.checksum) || !Array.isArray(source.entities)) throw new Error('Unsupported multiplayer save format or protocol.')
@@ -216,12 +217,12 @@ export function importMultiplayerSave(value: unknown, entities: Entity[], proper
     seen.add(raw.uuid)
     if (typeof raw.enabled !== 'boolean') throw new Error(`Multiplayer save state for ${raw.uuid.slice(0, 128)} is invalid.`)
     validateMultiplayerSaveState(raw, raw.uuid.slice(0, 128))
-    const entity = entities.find(candidate => candidate.uuid === raw.uuid); if (!entity) continue
+    const entity = entities.find(/* 比较 candidate.uuid 与 raw.uuid，返回严格相等的判断结果。 */ candidate => candidate.uuid === raw.uuid); if (!entity) continue
     staged.push({ entity, enabled: raw.enabled, position: [raw.position[0], raw.position[1]], rotation: raw.rotation, scale: [raw.scale[0], raw.scale[1]], velocity: [raw.velocity[0], raw.velocity[1]], angularVelocity: raw.angularVelocity })
   }
   const ordered = parentFirstSaveStages(staged)
-  const backupByUuid = new Map(staged.map(item => { const transform = worldTransform(item.entity, entities); return [item.entity.uuid, { entity: item.entity, enabled: item.entity.enabled, position: [transform.position.x, transform.position.y] as [number, number], rotation: transform.rotation, scale: [transform.scale.x, transform.scale.y] as [number, number], velocity: [item.entity.velocity.x, item.entity.velocity.y] as [number, number], angularVelocity: item.entity.angularVelocity }] as const }))
-  const backup = ordered.map(item => backupByUuid.get(item.entity.uuid)!)
+  const backupByUuid = new Map(staged.map(/** 结构说明（自动提取）：staged.map 回调；输入 item；直接调用 worldTransform。 */ item => { const transform = worldTransform(item.entity, entities); return [item.entity.uuid, { entity: item.entity, enabled: item.entity.enabled, position: [transform.position.x, transform.position.y] as [number, number], rotation: transform.rotation, scale: [transform.scale.x, transform.scale.y] as [number, number], velocity: [item.entity.velocity.x, item.entity.velocity.y] as [number, number], angularVelocity: item.entity.angularVelocity }] as const }))
+  const backup = ordered.map(/** 结构说明（自动提取）：ordered.map 回调；输入 item；直接调用 backupByUuid.get；返回表达式求值结果。 */ item => backupByUuid.get(item.entity.uuid)!)
   // Network baselines obey the same authored fields as live snapshots. Manual saves remain complete.
   if (propertyMasks) for (const item of ordered) {
     const previous = backupByUuid.get(item.entity.uuid)!, properties = propertyMasks.get(item.entity.uuid) ?? []
@@ -235,10 +236,10 @@ export function importMultiplayerSave(value: unknown, entities: Entity[], proper
   return { tick: integer(source.tick, 0, 0, 0x7fff_ffff), restored: staged.length }
 }
 
-export function networkDiagnosticCapture(state: Record<string, unknown>, events: unknown[], packetSummaries: unknown[]): string {
+/** 结构说明（自动提取）：networkDiagnosticCapture；输入 state、events、packetSummaries；直接调用 WeakSet、sanitize、toISOString、Date、productionSettings.networking.channels.map 等；包含显式抛错路径。 */ export function networkDiagnosticCapture(state: Record<string, unknown>, events: unknown[], packetSummaries: unknown[]): string {
   const SENSITIVE_DIAGNOSTIC_KEY = /(?:endpoint|bind.?address|password|passphrase|secret|(?:^|[_-])token|access[_-]?token|api[_-]?key|private[_-]?key|authorization|cookie|session[_-]?key)/i
   const seen = new WeakSet<object>(), budget = { remaining: 24_000 }
-  const sanitize = (value: unknown, depth = 0): unknown => {
+  const sanitize = /** 结构说明（自动提取）：sanitize；输入 value、depth；直接调用 Number.isFinite、value.slice、seen.has、seen.add、Array.isArray 等；写入 entries；返回路径包含 value。 */ (value: unknown, depth = 0): unknown => {
     if (budget.remaining-- <= 0 || depth > 10) return null
     if (value === null || typeof value === 'boolean') return value
     if (typeof value === 'number') return Number.isFinite(value) ? value : null
@@ -246,16 +247,16 @@ export function networkDiagnosticCapture(state: Record<string, unknown>, events:
     if (typeof value !== 'object') return null
     if (seen.has(value)) return null
     seen.add(value)
-    if (Array.isArray(value)) return value.slice(-1_000).map(item => sanitize(item, depth + 1))
+    if (Array.isArray(value)) return value.slice(-1_000).map(/* 调用 sanitize(item, depth + 1) 并返回调用结果。 */ item => sanitize(item, depth + 1))
     let entries: Array<[string, unknown]> = []
     try { entries = Object.entries(value as Record<string, unknown>) } catch { return null }
     return Object.fromEntries(entries
-      .filter(([key]) => key.length > 0 && utf8Bytes(key) <= 128 && !SENSITIVE_DIAGNOSTIC_KEY.test(key) && key !== 'events' && key !== 'packetSummaries')
+      .filter(/** 结构说明（自动提取）：entries.filter 回调；输入 [key]；直接调用 utf8Bytes、SENSITIVE_DIAGNOSTIC_KEY.test；返回表达式求值结果。 */ ([key]) => key.length > 0 && utf8Bytes(key) <= 128 && !SENSITIVE_DIAGNOSTIC_KEY.test(key) && key !== 'events' && key !== 'packetSummaries')
       .slice(0, 1_000)
-      .map(([key, item]) => [key, sanitize(item, depth + 1)]))
+      .map(/* 返回按声明顺序构造的数组 [key, sanitize(item, depth + 1)]。 */ ([key, item]) => [key, sanitize(item, depth + 1)]))
   }
   const safeState = sanitize(state) as Record<string, unknown>
-  const document = { format: 'nova-network-diagnostics', version: 1, engineVersion: NOVA_ENGINE_VERSION, protocolVersion: 2, capturedAt: new Date().toISOString(), session: { mode: productionSettings.networking.sessionMode, role: productionSettings.networking.role, schemaVersion: productionSettings.networking.schemaVersion, channelIds: productionSettings.networking.channels.map(channel => channel.id) }, state: safeState, events: events.slice(-500).map(item => sanitize(item)), packets: packetSummaries.slice(-1_000).map(item => sanitize(item)) }
+  const document = { format: 'nova-network-diagnostics', version: 1, engineVersion: NOVA_ENGINE_VERSION, protocolVersion: 2, capturedAt: new Date().toISOString(), session: { mode: productionSettings.networking.sessionMode, role: productionSettings.networking.role, schemaVersion: productionSettings.networking.schemaVersion, channelIds: productionSettings.networking.channels.map(/* 返回 channel.id 的当前值。 */ channel => channel.id) }, state: safeState, events: events.slice(-500).map(/* 调用 sanitize(item) 并返回调用结果。 */ item => sanitize(item)), packets: packetSummaries.slice(-1_000).map(/* 调用 sanitize(item) 并返回调用结果。 */ item => sanitize(item)) }
   const error = validateNetworkValue(document)
   if (error) throw new Error(error)
   return `${stableNetworkJson(document)}\n`

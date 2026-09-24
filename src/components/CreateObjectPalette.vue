@@ -1,3 +1,4 @@
+<!-- 对象创建面板：搜索分类、收藏和最近对象，并在画布位置创建对象。 -->
 <template>
   <Teleport to="body">
     <div v-if="estate.createObjectPaletteOpen" class="authoring-scrim" @mousedown.self="close">
@@ -47,33 +48,33 @@ import type { AuthoringObjectKind } from '../world/Entity'
 const categories: Array<AuthoringCategory | 'All'> = ['All', 'Core', '2D', 'Physics', 'UI', 'Audio', 'Camera', 'Navigation', 'Script', 'Packages']
 const searchInput = ref<HTMLInputElement | null>(null)
 const activeKind = ref<AuthoringObjectKind>('Sprite')
-const objectLabel = (kind: AuthoringObjectKind) => t(`object${kind}`)
-const objectSummary = (kind: AuthoringObjectKind, fallback: string) => { const value = t(`object${kind}Summary`); return value === `object${kind}Summary` ? fallback : value }
-const statusLabel = (status: 'Stable' | 'Experimental' | 'Package') => t(`compatibility${status}`)
-const filtered = computed(() => {
+const objectLabel = /** 按对象种类返回本地化名称。 */ (kind: AuthoringObjectKind) => t(`object${kind}`)
+const objectSummary = /** 优先使用种类专用说明，缺少翻译时使用传入摘要。 */ (kind: AuthoringObjectKind, fallback: string) => { const value = t(`object${kind}Summary`); return value === `object${kind}Summary` ? fallback : value }
+const statusLabel = /** 返回稳定、实验或资源包状态的本地化标签。 */ (status: 'Stable' | 'Experimental' | 'Package') => t(`compatibility${status}`)
+const filtered = computed(/** 根据类别与规范化搜索词筛选可创建对象。 */ () => {
   const needle = authoringState.query.trim().toLocaleLowerCase()
-  return AUTHORING_OBJECTS.filter(item => (authoringState.category === 'All' || item.category === authoringState.category) && (!needle || `${objectLabel(item.kind)} ${item.kind} ${item.category} ${item.required.join(' ')} ${objectSummary(item.kind, item.summary)}`.toLocaleLowerCase().includes(needle)))
+  return AUTHORING_OBJECTS.filter(/** 匹配类别及对象名称、种类、依赖或摘要搜索文本。 */ item => (authoringState.category === 'All' || item.category === authoringState.category) && (!needle || `${objectLabel(item.kind)} ${item.kind} ${item.category} ${item.required.join(' ')} ${objectSummary(item.kind, item.summary)}`.toLocaleLowerCase().includes(needle)))
 })
-const groups = computed(() => {
+const groups = computed(/** 组装收藏、最近使用和类别分组，仅加入具有可见条目的分组。 */ () => {
   const result: Array<{ name: string; items: typeof AUTHORING_OBJECTS[number][] }> = []
-  const append = (name: string, kinds: AuthoringObjectKind[]) => {
-    const items = kinds.flatMap(kind => filtered.value.find(item => item.kind === kind) ?? [])
+  const append = /** 从指定种类列表提取可见对象并添加非空分组。 */ (name: string, kinds: AuthoringObjectKind[]) => {
+    const items = kinds.flatMap(/** 查找指定种类对应的可见对象，找不到则不产生条目。 */ kind => filtered.value.find(/* 比较 item.kind 与 kind，返回严格相等的判断结果。 */ item => item.kind === kind) ?? [])
     if (items.length) result.push({ name, items })
   }
   if (authoringState.category === 'All' && !authoringState.query) {
     append(t('favorites'), authoringState.favorites)
-    append(t('recentlyUsed'), authoringState.recent.filter(kind => !authoringState.favorites.includes(kind)))
+    append(t('recentlyUsed'), authoringState.recent.filter(/* 返回 authoringState.favorites.includes(kind) 的逻辑取反结果。 */ kind => !authoringState.favorites.includes(kind)))
   }
   for (const category of categories.slice(1)) {
-    const items = filtered.value.filter(item => item.category === category)
+    const items = filtered.value.filter(/* 比较 item.category 与 category，返回严格相等的判断结果。 */ item => item.category === category)
     if (items.length) result.push({ name: category, items: [...items] })
   }
   return result
 })
-const selected = computed(() => filtered.value.find(item => item.kind === activeKind.value) ?? filtered.value[0])
-function close() { estate.createObjectPaletteOpen = false }
-function choose(kind: AuthoringObjectKind) { createAuthoringObject(kind, estate.lastCanvasWorldPoint); close() }
-watch(() => estate.createObjectPaletteOpen, open => { if (!open) return; authoringState.query = ''; authoringState.category = 'All'; void nextTick(() => searchInput.value?.focus()) })
+const selected = computed(/** 取得当前高亮对象，缺失时回退筛选结果首项。 */ () => filtered.value.find(/* 比较 item.kind 与 activeKind.value，返回严格相等的判断结果。 */ item => item.kind === activeKind.value) ?? filtered.value[0])
+/** 关闭对象创建面板。 */ function close() { estate.createObjectPaletteOpen = false }
+/** 在最近画布世界坐标创建所选对象后关闭面板。 */ function choose(kind: AuthoringObjectKind) { createAuthoringObject(kind, estate.lastCanvasWorldPoint); close() }
+watch(/* 返回 estate.createObjectPaletteOpen 的当前值。 */ () => estate.createObjectPaletteOpen, /** 面板打开时清空搜索及分类，等待 DOM 更新后聚焦搜索框。 */ open => { if (!open) return; authoringState.query = ''; authoringState.category = 'All'; void nextTick(/** 搜索框仍存在时设置其焦点。 */ () => searchInput.value?.focus()) })
 </script>
 
 <style scoped>

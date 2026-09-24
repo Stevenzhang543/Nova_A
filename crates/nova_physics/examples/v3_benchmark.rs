@@ -1,7 +1,9 @@
+// 物理基准示例：重复运行刚体场景并输出耗时与状态校验信息。
 use std::time::Instant;
 
 use nova_physics::{step_physics, STRIDE};
 
+// 构造两千刚体并连续推进二百四十步，输出基准结果。
 fn main() {
     let body_count = 2_000_usize;
     let steps = 240_usize;
@@ -30,7 +32,10 @@ fn main() {
         bodies = step_physics(&bodies, 1.0 / 60.0, 9.80665, 0.01);
     }
     let elapsed = started.elapsed();
-    let finite = bodies.iter().all(|value| value.is_finite());
+    let finite = bodies.iter().all(
+        /* 判断 value . is_finite () 是否成立，供过滤或有效性检查使用。 */
+        |value| value.is_finite(),
+    );
     let body_steps = body_count * steps;
     println!(
         "{{\"bodyCount\":{body_count},\"steps\":{steps},\"bodySteps\":{body_steps},\"elapsedMs\":{:.3},\"bodyStepsPerSecond\":{:.0},\"finite\":{finite}}}",

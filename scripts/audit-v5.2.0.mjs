@@ -1,3 +1,4 @@
+/* 审计 5.2.0 的可视图资源、运行时绑定、编译一致性、类型端口及大图契约。 */
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -5,24 +6,24 @@ import { createServer } from 'vite'
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)))
 const checks = []
-const check = (id, passed, detail, metrics = {}) => checks.push({ id, status: passed ? 'passed' : 'failed', detail, metrics })
-Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { platform: 'Win32', hardwareConcurrency: 8, userAgent: 'Nova_A v5.2.0 audit', mediaDevices: { addEventListener(){}, removeEventListener(){}, async enumerateDevices(){ return [] } } } })
-globalThis.window ??= { setTimeout, clearTimeout, setInterval, clearInterval, addEventListener(){}, removeEventListener(){}, dispatchEvent(){} }
-globalThis.localStorage ??= { getItem(){ return null }, setItem(){}, removeItem(){} }
+const check = /* 调用 checks.push({ id, status: passed ? 'passed' : 'failed', detail, metrics }) 并返回调用结果。 */ (id, passed, detail, metrics = {}) => checks.push({ id, status: passed ? 'passed' : 'failed', detail, metrics })
+Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { platform: 'Win32', hardwareConcurrency: 8, userAgent: 'Nova_A v5.2.0 audit', mediaDevices: { /* 为无浏览器审计环境提供不注册真实监听器的事件监听占位方法。 */ addEventListener(){}, /* 为无浏览器审计环境提供不操作真实监听器的移除监听占位方法。 */ removeEventListener(){}, /* 返回按声明顺序构造的数组 []。 */ async enumerateDevices(){ return [] } } } })
+globalThis.window ??= { setTimeout, clearTimeout, setInterval, clearInterval, /* 为无浏览器审计环境提供不注册真实监听器的事件监听占位方法。 */ addEventListener(){}, /* 为无浏览器审计环境提供不操作真实监听器的移除监听占位方法。 */ removeEventListener(){}, /* 为无浏览器审计环境提供不派发真实事件的占位方法。 */ dispatchEvent(){} }
+globalThis.localStorage ??= { /* 返回固定值 null。 */ getItem(){ return null }, /* 为审计环境提供不写入真实存储的 localStorage 占位方法。 */ setItem(){}, /* 为审计环境提供不删除真实存储的 localStorage 占位方法。 */ removeItem(){} }
 
-const files = await Promise.all(['package.json','src-tauri/tauri.conf.json','instructions.txt','src/components/VisualGraphEditor.vue','src/visual/graphCatalog.ts','src/components/ConfigPanel.vue','src/components/EditorBottomPanel.vue','src/runtime/GameplayRuntime.ts','src/assets/AssetDatabase.ts','src/i18n.ts','crates/nova_format/src/lib.rs','docs/VISUAL_SCRIPTING_5_2.md','docs/NOVA_GRAPH_FORMAT_5_2.md','scripts/verify-v5.2.0-graphs.mjs'].map(path => readFile(join(root, path), 'utf8')))
+const files = await Promise.all(['package.json','src-tauri/tauri.conf.json','instructions.txt','src/components/VisualGraphEditor.vue','src/visual/graphCatalog.ts','src/components/ConfigPanel.vue','src/components/EditorBottomPanel.vue','src/runtime/GameplayRuntime.ts','src/assets/AssetDatabase.ts','src/i18n.ts','crates/nova_format/src/lib.rs','docs/VISUAL_SCRIPTING_5_2.md','docs/NOVA_GRAPH_FORMAT_5_2.md','scripts/verify-v5.2.0-graphs.mjs'].map(/* 调用 readFile(join(root, path), 'utf8') 并返回调用结果。 */ path => readFile(join(root, path), 'utf8')))
 const [packageSource, tauriSource, instructions, editor, catalogSource, inspector, assetsPanel, runtime, database, i18n, formatRust, guide, formatGuide, graphVerifier] = files
 const pkg = JSON.parse(packageSource), tauri = JSON.parse(tauriSource)
 check('V520-VERSION', pkg.version === '5.2.0' && tauri.version === '5.2.0', 'Web and native package authorities identify 5.2.0.')
 check('V520-ROADMAP', instructions.includes('## 5.2.0 — Visual scripting foundation') && instructions.includes('Implementation status (5.2.0 candidate)'), 'The authoritative roadmap and candidate status retain the complete 5.2 contract.')
-check('V520-ASSET', ['.nova-graph','visualScript','application/x-nova-graph+json'].every(marker => database.includes(marker)) && formatRust.includes('&["script", "visualScript"]'), 'Visual graphs are first-class assets and valid Script2D references.')
-check('V520-EDITOR', ['minimap','zoom','selectionBox','alignSelected','distributeSelected','comment','collapsed','duplicateSelected','undo','redo','onKeydown',"event.key===' '"].every(marker => editor.includes(marker)) && ['reroute.execution','reroute.data'].every(marker => catalogSource.includes(marker)), 'Graph Editor exposes every specified foundation interaction.')
+check('V520-ASSET', ['.nova-graph','visualScript','application/x-nova-graph+json'].every(/* 调用 database.includes(marker) 并返回调用结果。 */ marker => database.includes(marker)) && formatRust.includes('&["script", "visualScript"]'), 'Visual graphs are first-class assets and valid Script2D references.')
+check('V520-EDITOR', ['minimap','zoom','selectionBox','alignSelected','distributeSelected','comment','collapsed','duplicateSelected','undo','redo','onKeydown',"event.key===' '"].every(/* 调用 editor.includes(marker) 并返回调用结果。 */ marker => editor.includes(marker)) && ['reroute.execution','reroute.data'].every(/* 调用 catalogSource.includes(marker) 并返回调用结果。 */ marker => catalogSource.includes(marker)), 'Graph Editor exposes every specified foundation interaction.')
 check('V520-ATTACH', inspector.includes("asset.assetType === 'visualScript'") && inspector.includes('isScriptVec2') && inspector.includes('setScriptDataProperty'), 'Script2D accepts graphs and edits typed Boolean/number/String/Vec2/Entity/Resource/Data overrides.')
 check('V520-ASSET-UX', assetsPanel.includes('createVisualGraphAsset') && assetsPanel.includes('openInGraphStudio'), 'Assets can create, inspect and open visual graphs.')
 check('V520-RUNTIME', runtime.includes("asset.assetType !== 'script' && asset.assetType !== 'visualScript'") && runtime.includes('executableGraphSource'), 'Visual graphs compile before entering the existing gameplay sandbox and command model.')
-check('V520-I18N', ['en','de','zh'].every(locale => i18n.includes(`Object.assign(${locale}, {`) && i18n.includes(`visualGraph:`)) && ['nodePalette','validation','graphVariables','minimap'].every(key => i18n.includes(`${key}:`)), 'Graph editor chrome is present in English, German and Chinese.')
+check('V520-I18N', ['en','de','zh'].every(/* 先计算 i18n.includes(`Object.assign(${locale}, {`)；仅当其为真值时求右侧 i18n.includes(`visualGraph:`)，返回短路求值结果。 */ locale => i18n.includes(`Object.assign(${locale}, {`) && i18n.includes(`visualGraph:`)) && ['nodePalette','validation','graphVariables','minimap'].every(/* 调用 i18n.includes(`${key}:`) 并返回调用结果。 */ key => i18n.includes(`${key}:`)), 'Graph editor chrome is present in English, German and Chinese.')
 check('V520-DOCS', guide.includes('## Create and attach a graph') && guide.includes('## Graph Editor controls') && guide.includes('## Node families') && formatGuide.includes('Canonical encoding'), 'User workflow and stable asset format are documented.')
-check('V520-VERIFY', packageSource.includes('verify:v5.2.0') && ['graphFilesUnder','parseGraphDocument','serializeGraphDocument','compileGraphSource','analyzeScript'].every(marker => graphVerifier.includes(marker)), 'The published graph verification command exists and checks every graph through parse, canonical round-trip, compile and static script validation.')
+check('V520-VERIFY', packageSource.includes('verify:v5.2.0') && ['graphFilesUnder','parseGraphDocument','serializeGraphDocument','compileGraphSource','analyzeScript'].every(/* 调用 graphVerifier.includes(marker) 并返回调用结果。 */ marker => graphVerifier.includes(marker)), 'The published graph verification command exists and checks every graph through parse, canonical round-trip, compile and static script validation.')
 
 const server = await createServer({ root, appType: 'custom', logLevel: 'silent', server: { middlewareMode: true } })
 await server.watcher.close()
@@ -36,25 +37,25 @@ try {
   const canonical1 = types.serializeGraphDocument(graph)
   const canonical2 = types.serializeGraphDocument(types.parseGraphDocument(canonical1))
   const compiled = compiler.compileGraphSource(canonical1)
-  const scriptErrors = language.analyzeScript(compiled.source, 2).diagnostics.filter(diagnostic => diagnostic.severity === 'error')
+  const scriptErrors = language.analyzeScript(compiled.source, 2).diagnostics.filter(/* 比较 diagnostic.severity 与 'error'，返回严格相等的判断结果。 */ diagnostic => diagnostic.severity === 'error')
   check('V520-CANONICAL', canonical1 === canonical2 && canonical1.endsWith('\n'), 'Graph serialization is canonical and round-trips byte-for-byte.', { bytes: canonical1.length })
   check('V520-COMPILE', compiled.valid && compiled.source.includes('fn start()') && compiled.source.includes('log_info(') && scriptErrors.length === 0, 'A graph compiles into statically valid Rhai API v2 source.', { diagnostics: compiled.diagnostics, scriptErrors })
 
-  const apiDefinitions = catalog.GRAPH_NODE_CATALOG.filter(node => node.api)
-  const missing = api.SCRIPT_API_V2_MANIFEST.entries.filter(entry => !apiDefinitions.some(node => node.api.callable === entry.callable)).map(entry => entry.callable)
-  const malformed = apiDefinitions.filter(node => node.api.signature.includes('->') ? !node.pins.some(pin => pin.kind === 'data' && pin.direction === 'output') : node.api.resultConvention === 'queued-command' && !node.pins.some(pin => pin.kind === 'execution' && pin.direction === 'input')).map(node => node.type)
+  const apiDefinitions = catalog.GRAPH_NODE_CATALOG.filter(/* 返回 node.api 的当前值。 */ node => node.api)
+  const missing = api.SCRIPT_API_V2_MANIFEST.entries.filter(/* 返回 apiDefinitions.some(node => node.api.callable === entry.callable) 的逻辑取反结果。 */ entry => !apiDefinitions.some(/* 比较 node.api.callable 与 entry.callable，返回严格相等的判断结果。 */ node => node.api.callable === entry.callable)).map(/* 返回 entry.callable 的当前值。 */ entry => entry.callable)
+  const malformed = apiDefinitions.filter(/* 找出返回值节点缺少数据输出或排队命令缺少执行输入的目录项。 */ node => node.api.signature.includes('->') ? !node.pins.some(/* 先计算 pin.kind === 'data'；仅当其为真值时求右侧 pin.direction === 'output'，返回短路求值结果。 */ pin => pin.kind === 'data' && pin.direction === 'output') : node.api.resultConvention === 'queued-command' && !node.pins.some(/* 先计算 pin.kind === 'execution'；仅当其为真值时求右侧 pin.direction === 'input'，返回短路求值结果。 */ pin => pin.kind === 'execution' && pin.direction === 'input')).map(/* 返回 node.type 的当前值。 */ node => node.type)
   check('V520-PARITY', missing.length === 0 && malformed.length === 0 && apiDefinitions.length === api.SCRIPT_API_V2_MANIFEST.entries.length, 'Every Rhai API v2 entry generates one structurally correct graph node.', { apiEntries: api.SCRIPT_API_V2_MANIFEST.entries.length, graphApiNodes: apiDefinitions.length, missing, malformed })
-  check('V520-TYPES', ['Boolean','Number','String','Vec2','Entity','Resource','Data'].every(type => catalog.GRAPH_NODE_CATALOG.some(node => node.type === `literal.${type.toLowerCase()}`)) && ['flow.branch','flow.repeat','convert.number_to_string','reroute.execution'].every(type => catalog.graphNodeDefinition(type)), 'Typed values, explicit conversions, branching, bounded loops and reroutes are cataloged.')
+  check('V520-TYPES', ['Boolean','Number','String','Vec2','Entity','Resource','Data'].every(/* 检查图节点目录中是否包含指定类型的小写字面量节点。 */ type => catalog.GRAPH_NODE_CATALOG.some(/* 比较 node.type 与 `literal.${type.toLowerCase()}`，返回严格相等的判断结果。 */ node => node.type === `literal.${type.toLowerCase()}`)) && ['flow.branch','flow.repeat','convert.number_to_string','reroute.execution'].every(/* 调用 catalog.graphNodeDefinition(type) 并返回调用结果。 */ type => catalog.graphNodeDefinition(type)), 'Typed values, explicit conversions, branching, bounded loops and reroutes are cataloged.')
 
   const wrongType = types.parseGraphDocument(canonical1)
-  const number = catalog.createGraphNode('literal.number', 0, 0, wrongType), log = wrongType.nodes.find(node => node.type === 'api.log_info')
+  const number = catalog.createGraphNode('literal.number', 0, 0, wrongType), log = wrongType.nodes.find(/* 比较 node.type 与 'api.log_info'，返回严格相等的判断结果。 */ node => node.type === 'api.log_info')
   wrongType.nodes.push(number)
-  wrongType.edges.push({ uuid: types.graphUuid(), from: { nodeUuid: number.uuid, pinUuid: number.pins.find(pin => pin.key === 'value').uuid }, to: { nodeUuid: log.uuid, pinUuid: log.pins.find(pin => pin.key === 'message').uuid } })
+  wrongType.edges.push({ uuid: types.graphUuid(), from: { nodeUuid: number.uuid, pinUuid: number.pins.find(/* 比较 pin.key 与 'value'，返回严格相等的判断结果。 */ pin => pin.key === 'value').uuid }, to: { nodeUuid: log.uuid, pinUuid: log.pins.find(/* 比较 pin.key 与 'message'，返回严格相等的判断结果。 */ pin => pin.key === 'message').uuid } })
   const typeResult = compiler.validateGraph(wrongType)
-  const cycle = types.parseGraphDocument(canonical1), cycleLog = cycle.nodes.find(node => node.type === 'api.log_info')
-  cycle.edges.push({ uuid: types.graphUuid(), from: { nodeUuid: cycleLog.uuid, pinUuid: cycleLog.pins.find(pin => pin.key === 'next').uuid }, to: { nodeUuid: cycleLog.uuid, pinUuid: cycleLog.pins.find(pin => pin.key === 'exec').uuid } })
+  const cycle = types.parseGraphDocument(canonical1), cycleLog = cycle.nodes.find(/* 比较 node.type 与 'api.log_info'，返回严格相等的判断结果。 */ node => node.type === 'api.log_info')
+  cycle.edges.push({ uuid: types.graphUuid(), from: { nodeUuid: cycleLog.uuid, pinUuid: cycleLog.pins.find(/* 比较 pin.key 与 'next'，返回严格相等的判断结果。 */ pin => pin.key === 'next').uuid }, to: { nodeUuid: cycleLog.uuid, pinUuid: cycleLog.pins.find(/* 比较 pin.key 与 'exec'，返回严格相等的判断结果。 */ pin => pin.key === 'exec').uuid } })
   const cycleResult = compiler.validateGraph(cycle)
-  check('V520-PREPLAY', typeResult.diagnostics.some(item => item.code === 'GRAPH-EDGE-TYPE') && cycleResult.diagnostics.some(item => item.code === 'GRAPH-CYCLE'), 'Invalid type and unbounded cycle graphs are rejected before play.', { typeCodes: typeResult.diagnostics.map(item => item.code), cycleCodes: cycleResult.diagnostics.map(item => item.code) })
+  check('V520-PREPLAY', typeResult.diagnostics.some(/* 比较 item.code 与 'GRAPH-EDGE-TYPE'，返回严格相等的判断结果。 */ item => item.code === 'GRAPH-EDGE-TYPE') && cycleResult.diagnostics.some(/* 比较 item.code 与 'GRAPH-CYCLE'，返回严格相等的判断结果。 */ item => item.code === 'GRAPH-CYCLE'), 'Invalid type and unbounded cycle graphs are rejected before play.', { typeCodes: typeResult.diagnostics.map(/* 返回 item.code 的当前值。 */ item => item.code), cycleCodes: cycleResult.diagnostics.map(/* 返回 item.code 的当前值。 */ item => item.code) })
 
   const scale = catalog.defaultVisualGraph('1,000 node scale')
   while (scale.nodes.length < 1_000) scale.nodes.push(catalog.createGraphNode('literal.number', (scale.nodes.length % 40) * 250, Math.floor(scale.nodes.length / 40) * 120, scale))
@@ -66,12 +67,12 @@ try {
   localized.nodes[0].title = '开始 Ereignis'
   localized.nodes[0].config = { '中': 1, 'ä': 2, z: 3 }
   const localeBytes = types.serializeGraphDocument(localized)
-  check('V520-LOCALE-IDS', localized.nodes.every(node => /^[0-9a-f-]{36}$/.test(node.uuid)) && localeBytes.includes('开始 Ereignis'), 'Localized presentation text does not alter stable UUID identity or prevent canonical serialization.')
+  check('V520-LOCALE-IDS', localized.nodes.every(/* 调用 /^[0-9a-f-]{36}$/.test(node.uuid) 并返回调用结果。 */ node => /^[0-9a-f-]{36}$/.test(node.uuid)) && localeBytes.includes('开始 Ereignis'), 'Localized presentation text does not alter stable UUID identity or prevent canonical serialization.')
 } finally {
-  await Promise.race([server.close(), new Promise(resolve => setTimeout(resolve, 2_000))])
+  await Promise.race([server.close(), new Promise(/* 调用 setTimeout(resolve, 2_000) 并返回调用结果。 */ resolve => setTimeout(resolve, 2_000))])
 }
 
-const failed = checks.filter(item => item.status === 'failed')
+const failed = checks.filter(/* 比较 item.status 与 'failed'，返回严格相等的判断结果。 */ item => item.status === 'failed')
 const report = { format: 'nova-v5.2.0-product-audit', version: 1, engineVersion: '5.2.0', generatedAt: new Date().toISOString(), catalogs: ['FORMAT','CATALOG','COMPILER','RUNTIME','EDITOR','INSPECTOR','I18N','RESPONSIVENESS'], checks, severity0Open: 0, severity1Open: failed.length, status: failed.length ? 'failed' : 'passed' }
 await mkdir(join(root, 'release-audits'), { recursive: true })
 await writeFile(join(root, 'release-audits/v5.2.0-product-audit.json'), `${JSON.stringify(report, null, 2)}\n`)

@@ -1,12 +1,13 @@
+/* 审计 2.7 的游戏 UI、本地化、主题、音频与演示面板契约。 */
 import { readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 
 const root = process.cwd()
-const read = path => readFile(resolve(root, path), 'utf8')
+const read = /* 调用 readFile(resolve(root, path), 'utf8') 并返回调用结果。 */ path => readFile(resolve(root, path), 'utf8')
 const [components, inspector, panel, gameUi, localization, themes, audio, assets, database, build, presentation, physics, editor, workspaces, bottom, palette, i18n, manualViewer, manualOpen, app, capability, format, project, manualEn, manualDe, manualZh, manualHtml] = await Promise.all([
   read('src/world/components.ts'), read('src/components/RuntimeComponentsInspector.vue'), read('src/components/PresentationPanel.vue'), read('src/runtime/gameUi.ts'), read('src/runtime/localization.ts'), read('src/runtime/uiTheme.ts'), read('src/runtime/audio.ts'), read('src/assets/types.ts'), read('src/assets/AssetDatabase.ts'), read('src/runtime/novaPak.ts'), read('src/runtime/presentation.ts'), read('src/store/physics.ts'), read('src/store/editor.ts'), read('src/editor/workspaces.ts'), read('src/components/EditorBottomPanel.vue'), read('src/components/CommandPalette.vue'), read('src/i18n.ts'), read('src/components/ManualViewer.vue'), read('src/runtime/openManual.ts'), read('src/App.vue'), read('src-tauri/capabilities/default.json'), read('crates/nova_format/src/lib.rs'), read('src/projects/projectFormat.ts'), read('manual/MANUAL.en.md'), read('manual/MANUAL.de.md'), read('manual/MANUAL.zh-CN.md'), read('manual/index.html')
 ])
-const assert = (condition, message) => { if (!condition) throw new Error(message) }
+const assert = /* 条件不满足时抛出指定错误，使当前审计立即失败。 */ (condition, message) => { if (!condition) throw new Error(message) }
 
 for (const feature of ['anchorPreset', 'horizontalPolicy', 'verticalPolicy', 'safeArea', 'aspectConstraint', 'breakpoints', 'layout', 'clipChildren', 'maskChildren', 'scrollHorizontal', 'scrollVertical']) {
   assert(components.includes(feature) && inspector.includes(feature) && gameUi.includes(feature), `responsive UI property ${feature} is not modeled, editable, and rendered`)
@@ -29,7 +30,7 @@ for (const feature of ['waveform', 'loopStart', 'loopEnd', 'normalizationGain', 
 assert(audio.includes('effect.wet') && audio.includes('effect.feedback'), 'visible effect wet/feedback settings are not applied')
 
 assert(editor.includes("'presentation'") && workspaces.includes("id: 'ui'") && workspaces.includes("tab === 'presentation'") && !bottom.includes('PresentationPanel') && palette.includes("workspaceCommand('ui'"), 'Presentation tools were not safely migrated into the UI workspace')
-for (const locale of ['Object.assign(en', 'Object.assign(de', 'Object.assign(zh']) assert(i18n.split(locale).slice(1).some(block => block.slice(0, 18_000).includes('presentationStudio') && block.slice(0, 18_000).includes('audioMixer')), `${locale} lacks v2.7 editor localization`)
+for (const locale of ['Object.assign(en', 'Object.assign(de', 'Object.assign(zh']) assert(i18n.split(locale).slice(1).some(/* 先计算 block.slice(0, 18_000).includes('presentationStudio')；仅当其为真值时求右侧 block.slice(0, 18_000).includes('audioMixer')，返回短路求值结果。 */ block => block.slice(0, 18_000).includes('presentationStudio') && block.slice(0, 18_000).includes('audioMixer')), `${locale} lacks v2.7 editor localization`)
 
 assert(manualOpen.includes('manualViewerState.visible = true') && !manualOpen.includes('WebviewWindow') && !manualOpen.includes('openUrl('), 'manual still uses a Tauri URL-opening path')
 assert(manualViewer.includes('./manual/index.html') && app.includes('<ManualViewer'), 'same-origin bundled manual viewer is not mounted')

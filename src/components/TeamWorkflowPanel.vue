@@ -1,3 +1,4 @@
+<!-- 团队工作流面板：配置协作规则、代码所有权与项目审核。 -->
 <template>
   <section class="team-workflow" data-doc="manual/source-control">
     <header><div><strong>{{ t('sourceControl') }}</strong><small>{{ t('sourceControlHint') }}</small></div><label class="workflow-toggle"><input v-model="team.enabled" type="checkbox" @change="persistTeamWorkflowSettings"><span>{{ t('optionalTeamWorkflow') }}</span></label><span :class="['status-pill', changes.length ? 'dirty' : 'clean']">{{ changes.length ? t('changesCount', { count: changes.length }) : t('workingTreeClean') }}</span></header>
@@ -48,7 +49,7 @@
       <section class="metadata-card">
         <strong>{{ t('ownershipAndTasks') }}</strong>
         <div class="metadata-row"><input v-model="ownershipPath" placeholder="Assets/Scenes/**"><input v-model="ownershipOwners" placeholder="owner, reviewer"><button @click="addOwnership">{{ t('add') }}</button></div>
-        <ul><li v-for="rule in team.ownership" :key="rule.path"><code>{{ rule.path }}</code><span>{{ rule.owners.map(owner => `@${owner}`).join(' ') }}</span></li></ul>
+<!-- 拥有者映射回调为每个名称添加 @ 前缀用于规则展示。 -->        <ul><li v-for="rule in team.ownership" :key="rule.path"><code>{{ rule.path }}</code><span>{{ rule.owners.map(owner => `@${owner}`).join(' ') }}</span></li></ul>
         <button :disabled="!team.ownership.length" @click="downloadCodeOwnersFile">{{ t('downloadCodeOwners') }}</button>
         <div class="metadata-row"><input v-model="taskId" placeholder="NOVA-123"><input v-model="taskUrl" placeholder="https://…"><button @click="addTask">{{ t('addTaskLink') }}</button></div>
         <div class="metadata-row"><input v-model="changeOwner" :placeholder="t('lockOwner')"><input v-model="changeNote" :placeholder="t('changeNote')"><button @click="addNote">{{ t('add') }}</button></div>
@@ -74,35 +75,35 @@ const incomingInput = ref<HTMLInputElement | null>(null)
 const selectedChange = ref(''), repositoryPath = ref(''), repositoryStatus = ref('')
 const ownershipPath = ref('Assets/**'), ownershipOwners = ref('Whitelist'), taskId = ref(''), taskUrl = ref(''), changeOwner = ref('Whitelist'), changeNote = ref(''), binaryPath = ref(''), binaryOwner = ref('Whitelist')
 const changeListName = ref('Release candidate'), changeListOwner = ref('Whitelist')
-const changes = computed(() => team.changes)
-const unresolvedConflicts = computed(() => team.semanticMerge?.conflicts.filter(conflict => conflict.resolution === 'unresolved').length ?? 0)
-const selectedDiff = computed(() => selectedChange.value ? sourceDiffFor(selectedChange.value, getSceneJSON()) : null)
-const lockSummary = computed(() => team.lockToken ? `${t('lockedUntil')} ${new Date(team.lockExpiresAt).toLocaleTimeString()}` : t('unlocked'))
-function refresh(): void { refreshSourceStatus(getSceneJSON()) }
-async function openDiff(): Promise<void> { try { await openExternalDiff(getSceneJSON()) } catch (error) { team.status = error instanceof Error ? error.message : String(error) } }
-async function openMerge(): Promise<void> { try { await openExternalMerge(getSceneJSON()) } catch (error) { team.status = error instanceof Error ? error.message : String(error) } }
-function readIncoming(event: Event): void {
+const changes = computed(/* 返回 team.changes 的当前值。 */ () => team.changes)
+const unresolvedConflicts = computed(/** 统计语义合并中尚未解决的冲突，无合并计划时返回零。 */ () => team.semanticMerge?.conflicts.filter(/* 比较 conflict.resolution 与 'unresolved'，返回严格相等的判断结果。 */ conflict => conflict.resolution === 'unresolved').length ?? 0)
+const selectedDiff = computed(/* 根据 selectedChange.value 的真假，分别返回 sourceDiffFor(selectedChange.value, getSceneJSON()) 或 null。 */ () => selectedChange.value ? sourceDiffFor(selectedChange.value, getSceneJSON()) : null)
+const lockSummary = computed(/* 根据 team.lockToken 的真假，分别返回 `${t('lockedUntil')} ${new Date(team.lockExpiresAt).toLocaleTimeString()}` 或 t('unlocked')。 */ () => team.lockToken ? `${t('lockedUntil')} ${new Date(team.lockExpiresAt).toLocaleTimeString()}` : t('unlocked'))
+/** 用当前场景序列化结果刷新源码状态。 */ function refresh(): void { refreshSourceStatus(getSceneJSON()) }
+/** 打开外部差异工具，失败显示状态错误。 */ async function openDiff(): Promise<void> { try { await openExternalDiff(getSceneJSON()) } catch (error) { team.status = error instanceof Error ? error.message : String(error) } }
+/** 打开外部合并工具，失败显示状态错误。 */ async function openMerge(): Promise<void> { try { await openExternalMerge(getSceneJSON()) } catch (error) { team.status = error instanceof Error ? error.message : String(error) } }
+/** 读取用户选中的传入项目文件，并安装成功与失败回调后清空选择输入。 */ function readIncoming(event: Event): void {
   const input = event.target as HTMLInputElement, file = input.files?.[0]
   if (!file) return
   const reader = new FileReader()
-  reader.onload = () => {
+  reader.onload = /** 文件读成文本后登记传入版本，并以基线或当前版本创建语义合并计划。 */ () => {
     try { if (typeof reader.result === 'string') { const current = getSceneJSON(); setIncomingProject(current, reader.result, file.name); createSemanticMergePlan(team.baseline || current, current, reader.result) } }
     catch (error) { team.status = error instanceof Error ? error.message : String(error) }
   }
-  reader.onerror = () => { team.status = reader.error?.message ?? 'Unable to read incoming project.' }
+  reader.onerror = /** 文件读取失败时将具体错误或默认提示写入状态。 */ () => { team.status = reader.error?.message ?? 'Unable to read incoming project.' }
   reader.readAsText(file); input.value = ''
 }
-function acquireLock(): void { acquireProjectLock(project.id, lockOwner.value) }
-function releaseLock(): void { releaseProjectLock(project.id) }
-function reloadIncoming(): void { const source = incomingProjectSource(); if (source && loadProject(source)) { team.incomingSource = ''; team.incomingFileName = ''; refresh() } }
-async function initializeRepository(): Promise<void> { try { repositoryStatus.value = await initializeGitRepository(repositoryPath.value) } catch (error) { repositoryStatus.value = error instanceof Error ? error.message : String(error) } }
-function addOwnership(): void { if (addOwnershipRule(ownershipPath.value, ownershipOwners.value)) ownershipPath.value = '' }
-function addTask(): void { if (addTeamTaskLink(taskId.value, taskUrl.value, '')) { taskId.value = ''; taskUrl.value = '' } }
-function addNote(): void { if (addTeamChangeNote(changeOwner.value, changeNote.value)) changeNote.value = '' }
-function lockBinary(): void { if (acquireBinaryAssetLock(binaryPath.value, binaryOwner.value)) binaryPath.value = '' }
-function createChangeList(): void { const list = createTeamChangeList(changeListName.value, changeListOwner.value, changes.value.map(change => change.id), getSceneJSON()); if (list) changeListName.value = '' }
-function chooseConflict(id: string, side: 'ours' | 'theirs'): void { try { resolveSemanticMergeConflict(id, side) } catch (error) { team.status = error instanceof Error ? error.message : String(error) } }
-function applySemanticMerge(): void {
+/** 以当前项目标识和输入拥有者申请项目锁。 */ function acquireLock(): void { acquireProjectLock(project.id, lockOwner.value) }
+/** 释放当前项目锁。 */ function releaseLock(): void { releaseProjectLock(project.id) }
+/** 载入传入项目成功后清除传入记录并刷新状态。 */ function reloadIncoming(): void { const source = incomingProjectSource(); if (source && loadProject(source)) { team.incomingSource = ''; team.incomingFileName = ''; refresh() } }
+/** 尝试初始化指定路径的 Git 仓库，显示返回结果或错误。 */ async function initializeRepository(): Promise<void> { try { repositoryStatus.value = await initializeGitRepository(repositoryPath.value) } catch (error) { repositoryStatus.value = error instanceof Error ? error.message : String(error) } }
+/** 添加所有权规则成功后清空路径输入。 */ function addOwnership(): void { if (addOwnershipRule(ownershipPath.value, ownershipOwners.value)) ownershipPath.value = '' }
+/** 添加任务链接成功后清空任务编号和地址。 */ function addTask(): void { if (addTeamTaskLink(taskId.value, taskUrl.value, '')) { taskId.value = ''; taskUrl.value = '' } }
+/** 添加团队变更说明成功后清空说明文本。 */ function addNote(): void { if (addTeamChangeNote(changeOwner.value, changeNote.value)) changeNote.value = '' }
+/** 申请二进制资源锁成功后清空路径输入。 */ function lockBinary(): void { if (acquireBinaryAssetLock(binaryPath.value, binaryOwner.value)) binaryPath.value = '' }
+/** 以当前变更标识和项目源创建变更清单，成功后清空名称。 */ function createChangeList(): void { const list = createTeamChangeList(changeListName.value, changeListOwner.value, changes.value.map(/* 返回 change.id 的当前值。 */ change => change.id), getSceneJSON()); if (list) changeListName.value = '' }
+/** 选择冲突一侧，失败显示状态错误。 */ function chooseConflict(id: string, side: 'ours' | 'theirs'): void { try { resolveSemanticMergeConflict(id, side) } catch (error) { team.status = error instanceof Error ? error.message : String(error) } }
+/** 应用已审核项目合并，成功清空传入内容与计划并刷新，失败显示状态错误。 */ function applySemanticMerge(): void {
   try {
     applyReviewedProjectMerge()
     team.incomingSource = ''; team.incomingFileName = ''; team.semanticMerge = null; refresh()

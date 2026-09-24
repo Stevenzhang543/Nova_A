@@ -1,3 +1,4 @@
+<!-- 播放器入口：读取游戏包，限制运行参数并启动游戏或无界面服务器。 -->
 <template>
   <main class="player-root">
     <WorldCanvas v-if="ready && !headless" />
@@ -83,17 +84,17 @@ interface RuntimeInstance {
   transport: 'websocket' | 'native-udp'
 }
 const runtimeInstance = ref<RuntimeInstance | null>(null)
-const playerNetworkStatusLabel = computed(() => t(({ disabled: 'disabled', 'permission-required': 'permissionRequired', connecting: 'connecting', connected: 'connected', reconnecting: 'reconnecting', error: 'networkError' } as const)[networkState.value?.status ?? 'connecting']))
-const instanceLogs = computed(() => editorState.logs.slice(-40).reverse())
+const playerNetworkStatusLabel = computed(/** 将网络状态映射为本地化标签，缺失状态时显示连接中。 */ () => t(({ disabled: 'disabled', 'permission-required': 'permissionRequired', connecting: 'connecting', connected: 'connected', reconnecting: 'reconnecting', error: 'networkError' } as const)[networkState.value?.status ?? 'connecting']))
+const instanceLogs = computed(/** 复制最近四十条日志并逆序展示。 */ () => editorState.logs.slice(-40).reverse())
 
-function boundedRuntimeText(value: string | null, maximumLength: number): string {
+/** 规范化文本并拒绝过长、空或含控制字符的运行参数。 */ function boundedRuntimeText(value: string | null, maximumLength: number): string {
   if (typeof value !== 'string') return ''
   const normalized = value.trim()
   return normalized && normalized.length <= maximumLength && !/[\u0000-\u001f\u007f]/.test(normalized) ? normalized : ''
 }
 
-function udpAddressScopeMatches(configuredValue: string, requestedValue: string): boolean {
-  const host = (value: string) => {
+/** 比较 UDP 主机范围，允许相同主机及已配置回环或未指定地址对应的回环请求。 */ function udpAddressScopeMatches(configuredValue: string, requestedValue: string): boolean {
+  const host = /** 从普通或 IPv6 UDP 地址中提取规范化主机。 */ (value: string) => {
     const clean = value.replace(/^udp:\/\//i, '').trim()
     if (clean.startsWith('[')) return clean.slice(1, clean.indexOf(']')).toLowerCase()
     return clean.slice(0, clean.lastIndexOf(':')).toLowerCase()
@@ -102,7 +103,7 @@ function udpAddressScopeMatches(configuredValue: string, requestedValue: string)
   return Boolean(configured && requested && (configured === requested || (loopback.has(requested) && (loopback.has(configured) || unspecified.has(configured)))))
 }
 
-async function applyRuntimeOverrides(): Promise<boolean> {
+/** 仅在项目允许联网并自动启动时应用合法原生参数，限制角色提升、传输切换与 UDP 地址范围。 */ async function applyRuntimeOverrides(): Promise<boolean> {
   if (!('__TAURI_INTERNALS__' in window)) return false
   const { invoke } = await import('@tauri-apps/api/core'), overrides = await invoke<RuntimeOverrides>('runtime_overrides')
   if (!overrides.instanceId) return false
@@ -130,19 +131,19 @@ async function applyRuntimeOverrides(): Promise<boolean> {
   return true
 }
 
-async function closePlayer(): Promise<void> {
+/** 原生环境关闭当前窗口，否则请求浏览器关闭窗口。 */ async function closePlayer(): Promise<void> {
   if ('__TAURI_INTERNALS__' in window) {
     const { getCurrentWindow } = await import('@tauri-apps/api/window')
     await getCurrentWindow().close()
   } else window.close()
 }
 
-function decodeBase64(value: string): Uint8Array {
+/** 将 Base64 游戏包解码为字节数组。 */ function decodeBase64(value: string): Uint8Array {
   const binary = atob(value)
-  return Uint8Array.from(binary, character => character.charCodeAt(0))
+  return Uint8Array.from(binary, /** 把单个解码字符转换为字节值。 */ character => character.charCodeAt(0))
 }
 
-async function loadPackageBytes(): Promise<Uint8Array> {
+/** 从原生命令或同目录 Web 文件读取包，缺失或 HTTP 失败抛出错误。 */ async function loadPackageBytes(): Promise<Uint8Array> {
   if ('__TAURI_INTERNALS__' in window) {
     const { invoke } = await import('@tauri-apps/api/core')
     const encoded = await invoke<string | null>('runtime_package')
@@ -154,7 +155,7 @@ async function loadPackageBytes(): Promise<Uint8Array> {
   return new Uint8Array(await response.arrayBuffer())
 }
 
-onMounted(async () => {
+onMounted(/** 挂载时加载项目和受限参数，等待物理模块并启动会话；服务器模式设置计时器，失败显示加载错误。 */ async () => {
   window.addEventListener('nova-player-quit', closePlayer)
   try {
     const project = await projectJsonFromNovaPak(await loadPackageBytes())
@@ -172,7 +173,7 @@ onMounted(async () => {
     headless.value = buildSettings.runtimeMode === 'headless-server'
     if (headless.value) {
       const tickRate = Math.max(1, Math.min(1_000, physicsState.globalSettings.tickRate))
-      headlessTimer = window.setInterval(() => gameplayRuntime.frame(1 / tickRate), 1_000 / tickRate)
+      headlessTimer = window.setInterval(/** 按服务器 tick 频率推进一帧运行时。 */ () => gameplayRuntime.frame(1 / tickRate), 1_000 / tickRate)
     }
     document.title = headless.value ? `${buildSettings.gameName} · Server` : buildSettings.gameName
     ready.value = true
@@ -180,7 +181,7 @@ onMounted(async () => {
     errorMessage.value = error instanceof Error ? error.message : String(error)
   }
 })
-onBeforeUnmount(() => { window.removeEventListener('nova-player-quit', closePlayer); if (headlessTimer !== null) window.clearInterval(headlessTimer); gameplayRuntime.stopSession(false) })
+onBeforeUnmount(/** 卸载时移除退出监听、清除服务器计时器并停止会话。 */ () => { window.removeEventListener('nova-player-quit', closePlayer); if (headlessTimer !== null) window.clearInterval(headlessTimer); gameplayRuntime.stopSession(false) })
 </script>
 
 <style scoped>

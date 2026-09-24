@@ -1,3 +1,4 @@
+<!-- 工作区导航栏：展示当前位置、未保存状态并提供工作区和命令入口。 -->
 <template>
   <nav class="workspace-bar" role="toolbar" :aria-label="t('workspaces')">
     <div class="workspace-list">
@@ -49,22 +50,22 @@ import { projectSessionState } from '../projects/projectSession'
 import { physicsState } from '../store/physics'
 import { projectScopeDirty } from '../runtime/projectTransactions'
 
-const visiblePresets = computed(() => WORKSPACE_PRESETS.filter(preset => preset.id !== 'custom'))
-const contextTitle = computed(() => {
-  const selected = physicsState.world.entities.find(entity => entity.id === physicsState.selectedEntityId)
+const visiblePresets = computed(/** 过滤自定义占位项，返回可展示的预设工作区。 */ () => WORKSPACE_PRESETS.filter(/* 比较 preset.id 与 'custom'，返回严格不等的判断结果。 */ preset => preset.id !== 'custom'))
+const contextTitle = computed(/** 生成项目与当前栏目、选中实体或工作区名称组成的位置文本。 */ () => {
+  const selected = physicsState.world.entities.find(/* 比较 entity.id 与 physicsState.selectedEntityId，返回严格相等的判断结果。 */ entity => entity.id === physicsState.selectedEntityId)
   if (state.activeWorkspace === 'manage') return `${projectSessionState.name} / ${t(state.manageSection === 'project' ? 'projectHealth' : state.manageSection === 'build' ? 'buildPanel' : state.manageSection === 'rendering' ? 'renderingStudio' : state.manageSection === 'packages' ? 'packages' : 'projectSettings')}`
-  return `${projectSessionState.name} / ${selected?.name ?? t(WORKSPACE_PRESETS.find(item => item.id === state.activeWorkspace)?.label ?? 'workspaceDesign')}`
+  return `${projectSessionState.name} / ${selected?.name ?? t(WORKSPACE_PRESETS.find(/* 比较 item.id 与 state.activeWorkspace，返回严格相等的判断结果。 */ item => item.id === state.activeWorkspace)?.label ?? 'workspaceDesign')}`
 })
 
-function workspaceIcon(workspace: EditorWorkspace): string {
+/** 按工作区返回对应展示符号。 */ function workspaceIcon(workspace: EditorWorkspace): string {
   return ({ design: '◇', script: '</>', animation: '◆', ui: '▣', debug: '◎', manage: '⚙', custom: '✦' })[workspace]
 }
-function workspaceDirty(workspace: EditorWorkspace): boolean { const scopes = workspace==='script'?['script']:workspace==='animation'?['animation']:workspace==='ui'?['ui']:workspace==='manage'?['settings','packages','build','project']:workspace==='design'?['scene','asset']:[]; return scopes.some(scope=>projectScopeDirty(scope as Parameters<typeof projectScopeDirty>[0])) }
-function openPalette(mode: 'commands' | 'quick'): void { state.commandPaletteMode = mode; state.commandPaletteOpen = true }
+/** 将工作区映射至项目修改范围，任一相关范围未保存即标脏。 */ function workspaceDirty(workspace: EditorWorkspace): boolean { const scopes = workspace==='script'?['script']:workspace==='animation'?['animation']:workspace==='ui'?['ui']:workspace==='manage'?['settings','packages','build','project']:workspace==='design'?['scene','asset']:[]; return scopes.some(/** 检查指定项目范围是否未保存。 */ scope=>projectScopeDirty(scope as Parameters<typeof projectScopeDirty>[0])) }
+/** 设置命令面板模式并打开面板。 */ function openPalette(mode: 'commands' | 'quick'): void { state.commandPaletteMode = mode; state.commandPaletteOpen = true }
 
-function selectWorkspace(workspace: EditorWorkspace): void {
+/** 应用所选工作区并更新本地化状态提示。 */ function selectWorkspace(workspace: EditorWorkspace): void {
   applyEditorWorkspace(workspace)
-  state.statusText = t('workspaceActivated', { workspace: t(WORKSPACE_PRESETS.find(preset => preset.id === workspace)!.label) })
+  state.statusText = t('workspaceActivated', { workspace: t(WORKSPACE_PRESETS.find(/* 比较 preset.id 与 workspace，返回严格相等的判断结果。 */ preset => preset.id === workspace)!.label) })
 }
 </script>
 

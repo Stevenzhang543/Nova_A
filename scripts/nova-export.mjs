@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/** 确定性命令行导出器：筛选项目资产、构造资源包并输出 Web 或匹配平台播放器及构建证据。 */
 import { createHash } from 'node:crypto'
 import { lstat, mkdir, readFile, realpath, writeFile, stat, unlink } from 'node:fs/promises'
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path'
@@ -17,7 +18,7 @@ const OFFICIAL_NETWORKING_PACKAGE_ID = 'top.whitelists.novaa.networking'
 const OFFICIAL_NAVIGATION_PACKAGE_ID = 'top.whitelists.novaa.navigation'
 const OFFICIAL_AI_PACKAGE_ID = 'top.whitelists.novaa.ai'
 
-function argumentsMap(values) {
+/** 解析双横线选项和值，无值选项记为布尔开关。 */ function argumentsMap(values) {
   const output = new Map()
   for (let index = 0; index < values.length; index++) if (values[index].startsWith('--')) output.set(values[index].slice(2), values[index + 1]?.startsWith('--') ? true : values[++index] ?? true)
   return output
@@ -51,33 +52,33 @@ const hostTarget = process.platform === 'win32' ? 'windows' : process.platform =
 if (target !== 'web' && target !== hostTarget) throw new Error(`${target} export requires a matching ${target} host or CI runner; Nova_A does not create mislabeled cross-target bundles`)
 if (target !== 'web' && !args.has('player') && ((process.arch === 'arm64' ? 'aarch64' : 'x86_64') !== architecture)) throw new Error(`${architecture} native export requires an explicit matching player template`)
 
-function stable(value) {
+/** 递归排序对象键，保留数组顺序和标量值，保证输出序列化稳定。 */ function stable(value) {
   if (Array.isArray(value)) return value.map(stable)
   if (!value || typeof value !== 'object') return value
-  return Object.fromEntries(Object.keys(value).sort().map(key => [key, stable(value[key])]))
+  return Object.fromEntries(Object.keys(value).sort().map(/* 返回按声明顺序构造的数组 [key, stable(value[key])]。 */ key => [key, stable(value[key])]))
 }
-function sha(bytes) { return createHash('sha256').update(bytes).digest('hex') }
-function publicDeploymentDestination(value) {
+/* 调用 createHash('sha256').update(bytes).digest('hex') 并返回调用结果。 */ function sha(bytes) { return createHash('sha256').update(bytes).digest('hex') }
+/** 仅公开 HTTPS 目标的源信息；空值为本地，其他配置用脱敏标记表示。 */ function publicDeploymentDestination(value) {
   if (!value) return 'local'
   try { const parsed = new URL(String(value)); return parsed.protocol === 'https:' ? parsed.origin : 'configured-external' } catch { return 'configured-external' }
 }
-function redactPackageSource(entry) {
+/** 保留无凭据的注册表标签，其余包来源位置替换为脱敏标记。 */ function redactPackageSource(entry) {
   if (!entry?.source || typeof entry.source !== 'object') return
   const kind = String(entry.source.kind ?? 'unknown').slice(0, 40), location = String(entry.source.location ?? '')
   const safeRegistryLabel = kind === 'registry' && location && !/[\\/:@]/.test(location) && !/(?:token|secret|password|key)\s*=/i.test(location)
   entry.source = { ...entry.source, kind, location: safeRegistryLabel ? location.slice(0, 160) : `${kind || 'unknown'}-source-redacted` }
 }
-function safeRelative(path) {
+/** 统一路径分隔符，拒绝绝对路径、父级跳转、空路径段和空字符。 */ function safeRelative(path) {
   const normalized = String(path).replaceAll('\\', '/')
-  if (!normalized || isAbsolute(path) || normalized.startsWith('/') || /^[a-z]:/i.test(normalized) || normalized.includes('\0') || normalized.split('/').some(part => part === '..' || part === '')) throw new Error(`Unsafe output path ${path}`)
+  if (!normalized || isAbsolute(path) || normalized.startsWith('/') || /^[a-z]:/i.test(normalized) || normalized.includes('\0') || normalized.split('/').some(/* 先计算 part === '..'；仅当其为假值时求右侧 part === ''，返回短路求值结果。 */ part => part === '..' || part === '')) throw new Error(`Unsafe output path ${path}`)
   return normalized
 }
-function embedPackage(player, packageBytes) {
+/** 检查资源包大小后追加到播放器，写入魔数、长度和 SHA-256 尾部。 */ function embedPackage(player, packageBytes) {
   if (!packageBytes.length || packageBytes.length > MAX_PACKAGE_BYTES) throw new Error('Embedded Nova packages must contain 1 byte to 1 GiB')
   const length = Buffer.alloc(8); length.writeBigUInt64LE(BigInt(packageBytes.length))
   return Buffer.concat([player, packageBytes, EMBEDDED_MAGIC, length, createHash('sha256').update(packageBytes).digest()])
 }
-function hasEmbeddedNovaPackage(player) {
+/** 检查末尾包标记，拒绝带旧包或损坏包尾的播放器模板。 */ function hasEmbeddedNovaPackage(player) {
   if (player.length < 48) return false
   const footerStart = player.length - 48
   // Any terminal NOVAPK marker means this is not a clean player template.
@@ -85,26 +86,26 @@ function hasEmbeddedNovaPackage(player) {
   // package after stale or attacker-controlled embedded project data.
   return player.subarray(footerStart, footerStart + EMBEDDED_MAGIC.length).equals(EMBEDDED_MAGIC)
 }
-function globMatches(path, pattern) {
+/** 把双星、单星和问号通配模式转换为正则，忽略大小写匹配标准化路径。 */ function globMatches(path, pattern) {
   const expression = pattern.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*\*/g, '\u0000').replace(/\*/g, '[^/]*').replace(/\?/g, '[^/]').replace(/\u0000/g, '.*')
   return new RegExp(`^${expression}$`, 'i').test(path.replaceAll('\\', '/'))
 }
-function projectPackageEnabled(project, id) {
+/** 只接受在当前项目中明确安装并启用的指定包。 */ function projectPackageEnabled(project, id) {
   return Array.isArray(project?.packages?.installed)
-    && project.packages.installed.some(item => item?.manifest?.id === id && item.project === true && item.enabled === true)
+    && project.packages.installed.some(/* 先计算 item?.manifest?.id === id && item.project === true；仅当其为真值时求右侧 item.enabled === true，返回短路求值结果。 */ item => item?.manifest?.id === id && item.project === true && item.enabled === true)
 }
-function isTauriManifestEntry(key) {
+/** 标准化清单路径并识别 Tauri 专用依赖。 */ function isTauriManifestEntry(key) {
   const normalized = String(key).replaceAll('\\', '/').toLowerCase()
   return normalized.includes('/@tauri-apps/') || normalized.includes('/@tauri-apps+')
 }
-function includeWebDynamicEntry(project, key) {
+/** 排除原生依赖，按项目包及网络设置选择可选运行时，保留其他动态入口。 */ function includeWebDynamicEntry(project, key) {
   if (isTauriManifestEntry(key)) return false
   if (key.endsWith('/networking.ts') || key === 'src/runtime/networking.ts') return project?.projectSettings?.production?.networking?.enabled === true && projectPackageEnabled(project, OFFICIAL_NETWORKING_PACKAGE_ID)
   if (key.endsWith('/navigation2d.ts') || key === 'src/runtime/navigation2d.ts') return projectPackageEnabled(project, OFFICIAL_NAVIGATION_PACKAGE_ID)
   if (key.endsWith('/aiTools.ts') || key === 'src/runtime/aiTools.ts') return projectPackageEnabled(project, OFFICIAL_AI_PACKAGE_ID)
   return true
 }
-function validateHeadlessNetworkExport(project, requestedRuntimeMode) {
+/** 为无渲染服务器逐项检查网络角色、传输、锁定包和显式权限，拒绝未经支持的提供器或加密声明。 */ function validateHeadlessNetworkExport(project, requestedRuntimeMode) {
   if (requestedRuntimeMode !== 'headless-server') return
   const networkPackageId = OFFICIAL_NETWORKING_PACKAGE_ID
   const networking = project?.projectSettings?.production?.networking
@@ -117,10 +118,10 @@ function validateHeadlessNetworkExport(project, requestedRuntimeMode) {
   if (Number(networking.protocolVersion) !== 2) throw new Error('Headless server export requires Nova Network Protocol 2.')
   if (networking.security?.requireEncryption === true) throw new Error('Native UDP is not encrypted. Disable the encryption claim for localhost qualification or select a reviewed encrypted transport when one is available.')
   const installed = Array.isArray(project?.packages?.installed)
-    ? project.packages.installed.find(entry => entry?.manifest?.id === networkPackageId && entry.enabled === true && entry.project === true)
+    ? project.packages.installed.find(/* 先计算 entry?.manifest?.id === networkPackageId && entry.enabled === true；仅当其为真值时求右侧 entry.project === true，返回短路求值结果。 */ entry => entry?.manifest?.id === networkPackageId && entry.enabled === true && entry.project === true)
     : null
   const locked = Array.isArray(project?.packages?.lockfile)
-    ? project.packages.lockfile.find(entry => entry?.id === networkPackageId)
+    ? project.packages.lockfile.find(/* 比较 entry?.id 与 networkPackageId，返回严格相等的判断结果。 */ entry => entry?.id === networkPackageId)
     : null
   if (!installed || !locked) throw new Error(`Headless server export requires the enabled and locked ${networkPackageId} package.`)
   const manifest = installed.manifest ?? {}
@@ -131,11 +132,11 @@ function validateHeadlessNetworkExport(project, requestedRuntimeMode) {
   if (networking.authentication?.mode === 'hook' || networking.transportAdapterId || Object.values(networking.services ?? {}).some(Boolean)) throw new Error('Headless CLI export cannot prove editor-registered authentication, transport, identity, lobby, or relay providers. Package and statically register the provider before enabling it in a headless build.')
 }
 const INLINE_TEXT_ASSET_TYPES = new Set(['script', 'prefab', 'scene', 'material', 'animation', 'controller', 'animationMask', 'rig', 'skin', 'timeline', 'tileset', 'atlas', 'shader', 'localization', 'uiTheme', 'behaviorTree', 'stateMachine', 'tilePalette', 'brushPreset', 'terrainRules', 'dataSchema', 'dataTable', 'replay', 'resource'])
-async function writeIncremental(path, bytes) {
+/** 启用增量时复用哈希相同的文件；否则创建父目录并写入字节，返回是否写入。 */ async function writeIncremental(path, bytes) {
   try { if (incremental && sha(await readFile(path)) === sha(bytes)) return false } catch { /* New file. */ }
   await mkdir(dirname(path), { recursive: true }); await writeFile(path, bytes); return true
 }
-async function assetBytes(asset) {
+/** 优先读取内嵌资产；文件资产解析真实路径并限制在项目目录内，读取失败时提供修复信息。 */ async function assetBytes(asset) {
   const source = String(asset.source ?? '')
   if (source.startsWith('data:')) return Buffer.from(source.slice(source.indexOf(',') + 1), source.slice(0, source.indexOf(',')).includes(';base64') ? 'base64' : 'utf8')
   const embeddedText = INLINE_TEXT_ASSET_TYPES.has(String(asset.assetType))
@@ -176,10 +177,10 @@ let requestedTemplateId = String(args.get('template') ?? storedTemplateId)
 // unknown/custom ID still fails visibly and is never silently replaced.
 if (!args.has('template') && (args.has('target') || args.has('architecture') || args.has('runtime'))) {
   const storedValidation = validateExportTemplate({ id: storedTemplateId, target, architecture, runtimeMode, host: process.platform, explicitPlayer: args.has('player') })
-  if (storedValidation.template && storedValidation.errors.some(issue => issue.code === 'EXPORT_TEMPLATE_TUPLE_MISMATCH')) requestedTemplateId = defaultExportTemplateId(target, architecture, runtimeMode, process.platform)
+  if (storedValidation.template && storedValidation.errors.some(/* 比较 issue.code 与 'EXPORT_TEMPLATE_TUPLE_MISMATCH'，返回严格相等的判断结果。 */ issue => issue.code === 'EXPORT_TEMPLATE_TUPLE_MISMATCH')) requestedTemplateId = defaultExportTemplateId(target, architecture, runtimeMode, process.platform)
 }
 const templateValidation = validateExportTemplate({ id: requestedTemplateId, target, architecture, runtimeMode, host: process.platform, explicitPlayer: args.has('player') })
-if (templateValidation.errors.length) throw new Error(templateValidation.errors.map(issue => `[${issue.code}] ${issue.message}`).join(' '))
+if (templateValidation.errors.length) throw new Error(templateValidation.errors.map(/** 将诊断编码和消息组合为导出错误详情。 */ issue => `[${issue.code}] ${issue.message}`).join(' '))
 build.delivery.exportTemplate = templateValidation.resolvedId
 build.delivery.provenance = String(args.get('provenance') ?? build.delivery.provenance ?? 'true') !== 'false'
 build.delivery.sbom = String(args.get('sbom') ?? build.delivery.sbom ?? 'true') !== 'false'
@@ -190,9 +191,9 @@ if (build.delivery.deploymentMode === 'remote-hook' && !/^https:\/\//i.test(buil
 const signingHookConfigured = Boolean(build.delivery.signingHook), notarizationHookConfigured = Boolean(build.delivery.notarizationHook)
 const deploymentDestination = publicDeploymentDestination(build.delivery.deploymentDestination)
 project.projectSettings ??= {}; project.projectSettings.build = build
-const sceneIds = new Set(project.scenes.map(scene => String(scene?.uuid ?? '')).filter(Boolean))
+const sceneIds = new Set(project.scenes.map(/* 调用 String(scene?.uuid ?? '') 并返回调用结果。 */ scene => String(scene?.uuid ?? '')).filter(Boolean))
 const requestedSceneOrder = Array.isArray(build.sceneOrder) ? build.sceneOrder.map(String).filter(Boolean) : []
-const invalidSceneOrder = requestedSceneOrder.filter(uuid => !sceneIds.has(uuid))
+const invalidSceneOrder = requestedSceneOrder.filter(/* 返回 sceneIds.has(uuid) 的逻辑取反结果。 */ uuid => !sceneIds.has(uuid))
 if (invalidSceneOrder.length) throw new Error(`Build scene order contains missing scene UUIDs: ${invalidSceneOrder.join(', ')}. Remove them in Build Settings or restore those scenes.`)
 build.sceneOrder = [...new Set([...requestedSceneOrder, ...sceneIds])]
 const requestedStartup = String(build.startupSceneUuid ?? '')
@@ -200,15 +201,15 @@ if (requestedStartup && !sceneIds.has(requestedStartup)) throw new Error(`Startu
 const activeScene = String(project.activeSceneUuid ?? '')
 build.startupSceneUuid = requestedStartup || (sceneIds.has(activeScene) ? activeScene : build.sceneOrder[0])
 const entries = [{ path: 'project.nova', bytes: null, mimeType: 'application/x-nova-project' }]
-const includePatterns = String(args.get('include') ?? '').split(',').map(value => value.trim()).filter(Boolean).concat(Array.isArray(build.delivery.include) ? build.delivery.include : [])
-const excludePatterns = String(args.get('exclude') ?? '').split(',').map(value => value.trim()).filter(Boolean).concat(Array.isArray(build.delivery.exclude) ? build.delivery.exclude : [])
+const includePatterns = String(args.get('include') ?? '').split(',').map(/* 调用 value.trim() 并返回调用结果。 */ value => value.trim()).filter(Boolean).concat(Array.isArray(build.delivery.include) ? build.delivery.include : [])
+const excludePatterns = String(args.get('exclude') ?? '').split(',').map(/* 调用 value.trim() 并返回调用结果。 */ value => value.trim()).filter(Boolean).concat(Array.isArray(build.delivery.exclude) ? build.delivery.exclude : [])
 const stripUnused = args.has('strip-unused') || build.delivery.stripUnusedAssets === true
-const allAssets = Array.isArray(project.assets) ? project.assets : [], referencedText = JSON.stringify({ ...project, assets: [] }), includedIds = new Set(allAssets.filter(asset => !stripUnused || referencedText.includes(String(asset.uuid))).map(asset => String(asset.uuid)))
+const allAssets = Array.isArray(project.assets) ? project.assets : [], referencedText = JSON.stringify({ ...project, assets: [] }), includedIds = new Set(allAssets.filter(/* 先计算 !stripUnused；仅当其为假值时求右侧 referencedText.includes(String(asset.uuid))，返回短路求值结果。 */ asset => !stripUnused || referencedText.includes(String(asset.uuid))).map(/* 调用 String(asset.uuid) 并返回调用结果。 */ asset => String(asset.uuid)))
 let closureChanged = true
 while (closureChanged) { closureChanged = false; for (const asset of allAssets) if (includedIds.has(String(asset.uuid))) for (const dependency of asset.pipeline?.dependencies ?? []) if (!includedIds.has(String(dependency))) { includedIds.add(String(dependency)); closureChanged = true } }
-const selectedAssets = allAssets.filter(asset => {
+const selectedAssets = allAssets.filter(/** 按依赖引用、包含模式和排除模式筛选待打包资产。 */ asset => {
   const path = String(asset.path ?? '').replaceAll('\\', '/')
-  return (!stripUnused || includedIds.has(String(asset.uuid))) && (!includePatterns.length || includePatterns.some(pattern => globMatches(path, pattern))) && !excludePatterns.some(pattern => globMatches(path, pattern))
+  return (!stripUnused || includedIds.has(String(asset.uuid))) && (!includePatterns.length || includePatterns.some(/* 调用 globMatches(path, pattern) 并返回调用结果。 */ pattern => globMatches(path, pattern))) && !excludePatterns.some(/* 调用 globMatches(path, pattern) 并返回调用结果。 */ pattern => globMatches(path, pattern))
 })
 project.assets = selectedAssets
 build.platform = { ...(build.platform ?? {}), signingIdentity: '', notarizationProfile: '' }
@@ -227,25 +228,25 @@ for (const asset of selectedAssets) {
   if (profile === 'release' && asset.assetType === 'script') delete asset.script
 }
 entries[0].bytes = Buffer.from(`${JSON.stringify(stable(project))}\n`)
-entries.sort((a, b) => a.path.localeCompare(b.path))
+entries.sort(/* 调用 a.path.localeCompare(b.path) 并返回调用结果。 */ (a, b) => a.path.localeCompare(b.path))
 for (const entry of entries) entry.packedBytes = compression === 'store' ? entry.bytes : gzipSync(entry.bytes, { level: compression === 'maximum' ? 9 : 6, mtime: 0 })
 let offset = 0
-const indexEntries = entries.map(entry => { const result = { path: entry.path, offset, length: entry.packedBytes.length, originalLength: entry.bytes.length, codec: compression === 'store' ? 'store' : 'gzip', mimeType: entry.mimeType, sha256: sha(entry.bytes), assetUuid: entry.asset?.uuid, assetType: entry.asset?.assetType }; offset += entry.packedBytes.length; return result })
+const indexEntries = entries.map(/** 生成资源索引并累计压缩后的字节偏移，记录原始内容哈希。 */ entry => { const result = { path: entry.path, offset, length: entry.packedBytes.length, originalLength: entry.bytes.length, codec: compression === 'store' ? 'store' : 'gzip', mimeType: entry.mimeType, sha256: sha(entry.bytes), assetUuid: entry.asset?.uuid, assetType: entry.asset?.assetType }; offset += entry.packedBytes.length; return result })
 const index = Buffer.from(JSON.stringify({ format: 'nova-pak', version: 1, engineVersion: ENGINE_VERSION, createdAt: '1970-01-01T00:00:00.000Z', startupSceneUuid: String(build.startupSceneUuid || project.activeSceneUuid || project.scenes[0].uuid), entries: indexEntries }))
 const header = Buffer.alloc(HEADER_BYTES); header.write('NOVAPAK\0'); header.writeUInt32LE(1, 8); header.writeUInt32LE(index.length, 12)
-const pack = Buffer.concat([header, index, ...entries.map(entry => entry.packedBytes)])
+const pack = Buffer.concat([header, index, ...entries.map(/* 返回 entry.packedBytes 的当前值。 */ entry => entry.packedBytes)])
 if (pack.length > MAX_PACKAGE_BYTES) throw new Error('game.nova-pak exceeds the 1 GiB player safety limit')
 const buildId = sha(pack)
 await mkdir(output, { recursive: true })
 let changedFiles = 0, cacheHits = 0
 const outputs = []
 let playerTemplateEvidence = null
-async function emit(relativePath, bytes) { const normalized = safeRelative(relativePath); if (await writeIncremental(join(output, normalized), bytes)) changedFiles++; else cacheHits++; outputs.push(normalized) }
+/** 验证相对路径并写入或复用输出，累计改动和缓存命中数量，登记产物路径。 */ async function emit(relativePath, bytes) { const normalized = safeRelative(relativePath); if (await writeIncremental(join(output, normalized), bytes)) changedFiles++; else cacheHits++; outputs.push(normalized) }
 
 if (target === 'web') {
   const dist = resolve(String(args.get('dist') ?? join(process.cwd(), 'dist')))
   const manifest = JSON.parse(await readFile(join(dist, '.vite', 'manifest.json'), 'utf8'))
-  const playerKey = Object.keys(manifest).find(key => key === 'player.html' || key.endsWith('/player.ts') || key.endsWith('player.ts'))
+  const playerKey = Object.keys(manifest).find(/* 先计算 key === 'player.html' || key.endsWith('/player.ts')；仅当其为假值时求右侧 key.endsWith('player.ts')，返回短路求值结果。 */ key => key === 'player.html' || key.endsWith('/player.ts') || key.endsWith('player.ts'))
   if (!playerKey) throw new Error('Production dist has no Nova Player entry; run pnpm build first')
   const selected = new Set(), visitedEntries = new Set(), pendingEntries = [playerKey]
   while (pendingEntries.length) {
@@ -294,14 +295,14 @@ const ownedFiles = [...new Set([
 ])].sort()
 let previous = null
 try { previous = JSON.parse(await readFile(join(output, 'nova-build-report.json'), 'utf8')) } catch { /* First build. */ }
-const before = new Map((previous?.files ?? []).map(file => [file.path, file.sha256])), after = new Map(records.map(file => [file.path, file.sha256]))
-const patch = { format: 'nova-patch-manifest', version: 1, fromBuild: previous?.buildId ?? null, toBuild: buildId, added: [...after.keys()].filter(path => !before.has(path)), changed: [...after].filter(([path, hash]) => before.has(path) && before.get(path) !== hash).map(([path]) => path), removed: [...before.keys()].filter(path => !after.has(path)), files: records }
+const before = new Map((previous?.files ?? []).map(/* 返回按声明顺序构造的数组 [file.path, file.sha256]。 */ file => [file.path, file.sha256])), after = new Map(records.map(/* 返回按声明顺序构造的数组 [file.path, file.sha256]。 */ file => [file.path, file.sha256]))
+const patch = { format: 'nova-patch-manifest', version: 1, fromBuild: previous?.buildId ?? null, toBuild: buildId, added: [...after.keys()].filter(/* 返回 before.has(path) 的逻辑取反结果。 */ path => !before.has(path)), changed: [...after].filter(/* 先计算 before.has(path)；仅当其为真值时求右侧 before.get(path) !== hash，返回短路求值结果。 */ ([path, hash]) => before.has(path) && before.get(path) !== hash).map(/* 返回 path 的当前值。 */ ([path]) => path), removed: [...before.keys()].filter(/* 返回 after.has(path) 的逻辑取反结果。 */ path => !after.has(path)), files: records }
 let removedOwnedFiles = 0
 if (cacheMode === 'clean' && previous?.format === 'nova-build-report' && (Array.isArray(previous.ownedFiles) || Array.isArray(previous.files))) {
   const outputRoot = await realpath(output)
   const outputPrefix = `${outputRoot.toLowerCase()}${outputRoot.endsWith('/') || outputRoot.endsWith('\\') ? '' : process.platform === 'win32' ? '\\' : '/'}`
-  const currentPaths = new Set(ownedFiles.map(path => path.toLowerCase()))
-  const previousOwnedFiles = Array.isArray(previous.ownedFiles) ? previous.ownedFiles : previous.files.map(file => file.path)
+  const currentPaths = new Set(ownedFiles.map(/* 调用 path.toLowerCase() 并返回调用结果。 */ path => path.toLowerCase()))
+  const previousOwnedFiles = Array.isArray(previous.ownedFiles) ? previous.ownedFiles : previous.files.map(/* 返回 file.path 的当前值。 */ file => file.path)
   for (const previousFile of previousOwnedFiles) {
     const previousPath = safeRelative(String(typeof previousFile === 'string' ? previousFile : previousFile?.path ?? ''))
     if (currentPaths.has(previousPath.toLowerCase())) continue
@@ -325,7 +326,7 @@ const cacheSemantics = cacheMode === 'clean'
   : cacheMode === 'validate'
     ? 'validate-and-reuse-identical-owned-outputs'
     : 'reuse-identical-owned-outputs'
-const report = { format: 'nova-build-report', version: 2, engineVersion: ENGINE_VERSION, buildId, createdAt: 0, target, architecture, profile, runtimeMode, exportTemplate: templateValidation.resolvedId, exportTemplateVersion: templateValidation.template?.id.endsWith('-v1') ? 1 : null, templateMigratedFrom: templateValidation.migratedFrom, playerTemplate: playerTemplateEvidence, cacheMode, cacheSemantics, removedOwnedFiles, ownedFiles, projectId: String(project.projectMetadata?.id ?? ''), totalBytes: records.reduce((sum, file) => sum + file.bytes, 0), files: records }
+const report = { format: 'nova-build-report', version: 2, engineVersion: ENGINE_VERSION, buildId, createdAt: 0, target, architecture, profile, runtimeMode, exportTemplate: templateValidation.resolvedId, exportTemplateVersion: templateValidation.template?.id.endsWith('-v1') ? 1 : null, templateMigratedFrom: templateValidation.migratedFrom, playerTemplate: playerTemplateEvidence, cacheMode, cacheSemantics, removedOwnedFiles, ownedFiles, projectId: String(project.projectMetadata?.id ?? ''), totalBytes: records.reduce(/* 计算表达式 sum + file.bytes 并返回结果，沿用操作数的原有类型规则。 */ (sum, file) => sum + file.bytes, 0), files: records }
 await emit('nova-build-report.json', Buffer.from(`${JSON.stringify(report, null, 2)}\n`))
 const contentManifest = { format: 'nova-content-manifest', version: 1, engineVersion: ENGINE_VERSION, buildId, include: includePatterns, exclude: excludePatterns, stripUnusedAssets: stripUnused, compression, files: records }
 await emit('nova-content-manifest.json', Buffer.from(`${JSON.stringify(contentManifest, null, 2)}\n`))
@@ -336,7 +337,7 @@ if (build.delivery.provenance) {
   await emit('nova-build-provenance.json', Buffer.from(`${JSON.stringify(provenance, null, 2)}\n`))
 }
 if (build.delivery.sbom) {
-  const components = (project.packages?.lockfile ?? []).map(entry => ({ type: 'library', 'bom-ref': `${entry.id}@${entry.version}`, name: entry.id, version: entry.version, hashes: [{ alg: 'SHA-256', content: entry.sha256 }], properties: [{ name: 'nova.source', value: `${entry.source?.kind ?? 'unknown'}:${entry.source?.location ?? ''}` }] }))
+  const components = (project.packages?.lockfile ?? []).map(/** 将锁定包映射为 CycloneDX 组件及来源属性。 */ entry => ({ type: 'library', 'bom-ref': `${entry.id}@${entry.version}`, name: entry.id, version: entry.version, hashes: [{ alg: 'SHA-256', content: entry.sha256 }], properties: [{ name: 'nova.source', value: `${entry.source?.kind ?? 'unknown'}:${entry.source?.location ?? ''}` }] }))
   const sbom = { bomFormat: 'CycloneDX', specVersion: '1.5', serialNumber: `urn:sha256:${buildId}`, version: 1, metadata: { component: { type: 'application', name: String(build.gameName ?? 'MyGame'), version: String(build.platform?.version ?? '1.0.0') }, properties: [{ name: 'nova.engine', value: ENGINE_VERSION }, { name: 'nova.build', value: buildId }] }, components }
   await emit('nova-sbom.cdx.json', Buffer.from(`${JSON.stringify(sbom, null, 2)}\n`))
 }
@@ -344,6 +345,6 @@ const deployment = { format: 'nova-deployment-manifest', version: 1, engineVersi
 await emit('nova-deployment-manifest.json', Buffer.from(`${JSON.stringify(deployment, null, 2)}\n`))
 if (target === 'web' && build.delivery.webHeaders) await emit('_headers', Buffer.from('/*\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: strict-origin-when-cross-origin\n  Permissions-Policy: camera=(), microphone=(), geolocation=()\n\n/assets/*\n  Cache-Control: public, max-age=31536000, immutable\n\n/index.html\n  Cache-Control: no-cache\n/player.html\n  Cache-Control: no-cache\n'))
 if (target !== 'web' && (build.delivery.debugSymbols !== false || build.delivery.crashSymbols !== false)) await emit('symbols/nova-symbol-map.json', Buffer.from(`${JSON.stringify({ format: 'nova-symbol-map', version: 1, engineVersion: ENGINE_VERSION, buildId, workflow: 'Archive matching PDB, dSYM, or unstripped ELF symbols under this build ID.' }, null, 2)}\n`))
-if (build.delivery?.sizeReport !== false) await emit('nova-build-size-report.json', Buffer.from(`${JSON.stringify({ format: 'nova-build-size-report', version: 1, engineVersion: ENGINE_VERSION, totalBytes: report.totalBytes, files: [...records].sort((a, b) => b.bytes - a.bytes) }, null, 2)}\n`))
-if (build.delivery?.dependencyReport !== false) await emit('nova-dependency-report.json', Buffer.from(`${JSON.stringify({ format: 'nova-dependency-report', version: 1, engineVersion: ENGINE_VERSION, packages: project.packages?.lockfile ?? [], assets: entries.filter(entry => entry.asset).map(entry => ({ uuid: entry.asset.uuid, path: entry.path, type: entry.asset.assetType })) }, null, 2)}\n`))
+if (build.delivery?.sizeReport !== false) await emit('nova-build-size-report.json', Buffer.from(`${JSON.stringify({ format: 'nova-build-size-report', version: 1, engineVersion: ENGINE_VERSION, totalBytes: report.totalBytes, files: [...records].sort(/* 计算表达式 b.bytes - a.bytes 并返回结果，沿用操作数的原有类型规则。 */ (a, b) => b.bytes - a.bytes) }, null, 2)}\n`))
+if (build.delivery?.dependencyReport !== false) await emit('nova-dependency-report.json', Buffer.from(`${JSON.stringify({ format: 'nova-dependency-report', version: 1, engineVersion: ENGINE_VERSION, packages: project.packages?.lockfile ?? [], assets: entries.filter(/* 返回 entry.asset 的当前值。 */ entry => entry.asset).map(/** 提取已打包资产的标识、路径和类型，写入依赖报告。 */ entry => ({ uuid: entry.asset.uuid, path: entry.path, type: entry.asset.assetType })) }, null, 2)}\n`))
 console.log(JSON.stringify({ output, buildId, changedFiles, cacheHits, files: new Set(outputs).size, packageIntoExecutable, exportTemplate: templateValidation.resolvedId, templateMigratedFrom: templateValidation.migratedFrom, diagnostics: [] }, null, 2))

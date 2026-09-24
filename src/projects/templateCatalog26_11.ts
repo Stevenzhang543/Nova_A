@@ -1,3 +1,4 @@
+/** 内置模板目录数据：声明模板分类、检索字段和发现界面使用的元信息。 */
 /** Additive 26.11 starters. Each ID has its own authored scene recipe. */
 export const TEMPLATE_ADDITIONS_26_11 = [
   { id: 'coin-trail', category: 'game', name: 'Coin Trail', description: 'Collect six checkpoints in order. A gentle keyboard game with scoring, completion, and restart.', de: ['Münzpfad', 'Sammle sechs Wegpunkte der Reihe nach. Tastaturspiel mit Punkten, Abschluss und Neustart.'], zh: ['金币小径', '按顺序收集六个目标。包含键盘移动、计分、通关和重新开始。'], tags: ['collect', 'keyboard', 'score'], features: ['Rhai', 'Input map', 'Score', 'Restart'], difficulty: 'beginner', setupMinutes: 5 },

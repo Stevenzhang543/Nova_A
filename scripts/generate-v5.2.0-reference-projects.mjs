@@ -1,3 +1,4 @@
+/** 版本5.2.0：生成参考项目与对应资源，供功能演示和版本验证使用。 */
 import { createHash } from 'node:crypto'
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
@@ -7,12 +8,12 @@ import { createServer } from 'vite'
 const root = dirname(dirname(fileURLToPath(import.meta.url)))
 const output = join(root, 'reference-projects/projects/visual-scripting-v52-foundation')
 Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { platform: 'Win32', hardwareConcurrency: 8 } })
-globalThis.window ??= { addEventListener(){}, removeEventListener(){}, dispatchEvent(){} }
-globalThis.localStorage ??= { getItem(){ return null }, setItem(){}, removeItem(){} }
+globalThis.window ??= { /** 生成器环境桩不注册全局事件。 */ addEventListener(){}, /** 生成器环境桩不执行事件移除。 */ removeEventListener(){}, /** 生成器环境桩忽略事件派发。 */ dispatchEvent(){} }
+globalThis.localStorage ??= { /* 返回固定值 null。 */ getItem(){ return null }, /** 隔离存储桩忽略写入，不持久化生成过程数据。 */ setItem(){}, /** 隔离存储桩忽略删除请求。 */ removeItem(){} }
 const server = await createServer({ root, appType: 'custom', logLevel: 'silent', server: { middlewareMode: true } })
 await server.watcher.close()
 
-const fixedUuid = number => `52000000-0000-4000-8000-${number.toString(16).padStart(12, '0')}`
+const fixedUuid = /** 将数字编码为5.2参考使用的固定格式标识。 */ number => `52000000-0000-4000-8000-${number.toString(16).padStart(12, '0')}`
 try {
   const templates = await server.ssrLoadModule('/src/projects/templates.ts')
   const catalog = await server.ssrLoadModule('/src/visual/graphCatalog.ts')
@@ -27,9 +28,9 @@ try {
   graph.variables.push({ uuid: fixedUuid(1), name: 'startup_message', valueType: 'String', defaultValue: 'Visual graph runtime ready', exposed: true, serialized: true, group: 'Startup', tooltip: 'Message logged when this graph starts.', minimum: null, maximum: null, step: null, resourceType: null })
   const getter = catalog.createGraphNode('variable.get', 370, 310, graph)
   getter.config.variableUuid = graph.variables[0].uuid
-  const getterValue = getter.pins.find(pin => pin.key === 'value')
-  const log = graph.nodes.find(node => node.type === 'api.log_info')
-  const logMessage = log?.pins.find(pin => pin.key === 'message')
+  const getterValue = getter.pins.find(/* 比较 pin.key 与 'value'，返回严格相等的判断结果。 */ pin => pin.key === 'value')
+  const log = graph.nodes.find(/* 比较 node.type 与 'api.log_info'，返回严格相等的判断结果。 */ node => node.type === 'api.log_info')
+  const logMessage = log?.pins.find(/* 比较 pin.key 与 'message'，返回严格相等的判断结果。 */ pin => pin.key === 'message')
   if (!getterValue || !log || !logMessage) throw new Error('Unable to create the visual graph reference data wire.')
   graph.nodes.push(getter)
   graph.edges.push({ uuid: fixedUuid(2001), from: { nodeUuid: getter.uuid, pinUuid: getterValue.uuid }, to: { nodeUuid: log.uuid, pinUuid: logMessage.uuid } })
@@ -37,13 +38,13 @@ try {
 
   const nodeIds = new Map(), pinIds = new Map()
   graph.uuid = fixedUuid(0)
-  graph.nodes.forEach((node, nodeIndex) => { const next = fixedUuid(100 + nodeIndex); nodeIds.set(node.uuid, next); node.uuid = next; node.pins.forEach((pin, pinIndex) => { const pinId = fixedUuid(1_000 + nodeIndex * 128 + pinIndex); pinIds.set(pin.uuid, pinId); pin.uuid = pinId }) })
-  graph.edges.forEach((edge, edgeIndex) => { edge.uuid = fixedUuid(2_000 + edgeIndex); edge.from.nodeUuid = nodeIds.get(edge.from.nodeUuid); edge.from.pinUuid = pinIds.get(edge.from.pinUuid); edge.to.nodeUuid = nodeIds.get(edge.to.nodeUuid); edge.to.pinUuid = pinIds.get(edge.to.pinUuid) })
+  graph.nodes.forEach(/** 为节点及端口分配确定性标识，并保留旧新映射。 */ (node, nodeIndex) => { const next = fixedUuid(100 + nodeIndex); nodeIds.set(node.uuid, next); node.uuid = next; node.pins.forEach(/** 按节点和端口索引生成端口标识并登记映射。 */ (pin, pinIndex) => { const pinId = fixedUuid(1_000 + nodeIndex * 128 + pinIndex); pinIds.set(pin.uuid, pinId); pin.uuid = pinId }) })
+  graph.edges.forEach(/** 为连线分配固定标识并按旧新映射修复两端引用。 */ (edge, edgeIndex) => { edge.uuid = fixedUuid(2_000 + edgeIndex); edge.from.nodeUuid = nodeIds.get(edge.from.nodeUuid); edge.from.pinUuid = pinIds.get(edge.from.pinUuid); edge.to.nodeUuid = nodeIds.get(edge.to.nodeUuid); edge.to.pinUuid = pinIds.get(edge.to.pinUuid) })
   const source = types.serializeGraphDocument(graph)
   const result = compiler.compileGraphSource(source)
   if (!result.valid || !result.source.includes('fn start()') || !result.source.includes('log_info(startup_message)')) throw new Error(`Reference graph did not compile: ${JSON.stringify(result.diagnostics)}`)
 
-  const templateAsset = project.assets.find(asset => asset.assetType === 'script')
+  const templateAsset = project.assets.find(/* 比较 asset.assetType 与 'script'，返回严格相等的判断结果。 */ asset => asset.assetType === 'script')
   if (!templateAsset) throw new Error('Snake template did not provide an asset record to normalize.')
   const hash = createHash('sha256').update(source).digest('hex')
   const assetUuid = fixedUuid(9_001)
@@ -71,7 +72,7 @@ try {
   await writeFile(join(output, 'test-controls.json'), `${JSON.stringify({ version: 1, engineVersion: '5.2.0', actions: [{ action: 'Open graph', expected: 'Three nodes, two wires, one comment and one exposed String variable appear' }, { action: 'Change Inspector value', expected: 'Script2D stores a per-object typed override' }, { action: 'Play', expected: 'The graph emits one Info message through the shared runtime' }, { action: 'Edit invalid wire', expected: 'Pre-play validation blocks type or cycle errors' }] }, null, 2)}\n`)
   await writeFile(join(output, 'expected-output.json'), `${JSON.stringify({ engineVersion: '5.2.0', format: 'nova-graph', graphVersion: 1, apiVersion: 2, nodes: graph.nodes.length, edges: graph.edges.length, exposedVariables: 1, generatedLifecycle: ['start'], status: 'passed' }, null, 2)}\n`)
 } finally {
-  await Promise.race([server.close(), new Promise(resolve => setTimeout(resolve, 2_000))])
+  await Promise.race([server.close(), new Promise(/* 调用 setTimeout(resolve, 2_000) 并返回调用结果。 */ resolve => setTimeout(resolve, 2_000))])
 }
 
 const projects = join(root, 'reference-projects/projects')

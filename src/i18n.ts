@@ -1,3 +1,4 @@
+/** 编辑器语言字典及查询：按用户语言选择界面标签，并提供缺失翻译的后备行为。 */
 import { preferencesState } from './store/preferences'
 
 const en = {
@@ -1362,8 +1363,8 @@ Object.assign(zh, {
 })
 
 Object.assign(en, {
-  releaseLabel: 'Nova_A v26.23',
-  version: 'Nova_A v26.23',
+  releaseLabel: 'Nova_A v26.24',
+  version: 'Nova_A v26.24',
   quickPeerCounts: 'Quick instance-count presets',
   refreshInstances: 'Refresh status',
   stopAllInstances: 'Stop all',
@@ -1423,8 +1424,8 @@ Object.assign(en, {
 })
 
 Object.assign(de, {
-  releaseLabel: 'Nova_A v26.23',
-  version: 'Nova_A v26.23',
+  releaseLabel: 'Nova_A v26.24',
+  version: 'Nova_A v26.24',
   quickPeerCounts: 'Voreinstellungen für die Instanzanzahl',
   refreshInstances: 'Status aktualisieren',
   stopAllInstances: 'Alle stoppen',
@@ -1484,8 +1485,8 @@ Object.assign(de, {
 })
 
 Object.assign(zh, {
-  releaseLabel: 'Nova_A v26.23',
-  version: 'Nova_A v26.23',
+  releaseLabel: 'Nova_A v26.24',
+  version: 'Nova_A v26.24',
   quickPeerCounts: '快速选择实例数量',
   refreshInstances: '刷新状态',
   stopAllInstances: '全部停止',
@@ -1551,12 +1552,12 @@ Object.assign(zh, { growingTemplateLibrary: '模板库' })
 const dictionaries: Record<'en' | 'de' | 'zh', Dictionary> = { en, de, zh }
 
 /** Returns the localized value for an exact canonical English UI label when one exists. */
-export function localizedUiLabel(english: string, locale: 'en' | 'de' | 'zh'): string {
-  const key = Object.keys(en).find(candidate => String((en as Dictionary)[candidate]) === english)
+/** 从英文原文反查字典键并读取指定语言译文，未匹配或缺译文时保留英文。 */ export function localizedUiLabel(english: string, locale: 'en' | 'de' | 'zh'): string {
+  const key = Object.keys(en).find(/* 比较 String((en as Dictionary)[candidate]) 与 english，返回严格相等的判断结果。 */ candidate => String((en as Dictionary)[candidate]) === english)
   return key ? dictionaries[locale][key] ?? english : english
 }
 
-export function t(key: Key, params: Record<string, string | number> = {}): string {
+/** 按当前语言、英文和键名顺序读取文案，再替换所有命名占位符。 */ export function t(key: Key, params: Record<string, string | number> = {}): string {
   let value: string = dictionaries[preferencesState.locale][key] ?? (en as Dictionary)[key] ?? key
   for (const [name, replacement] of Object.entries(params)) {
     value = value.split(`{${name}}`).join(String(replacement))

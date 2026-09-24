@@ -1,3 +1,4 @@
+/* 依赖审计 v6.8.0：核对本地包声明、锁文件和完整性记录，输出带锁文件哈希的证据；在线安全公告资格单独保留。 */
 import { createHash } from 'node:crypto'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
@@ -11,14 +12,14 @@ const [packageSource, lockSource] = await Promise.all([
 ])
 const pkg = JSON.parse(packageSource)
 const declared = Object.keys({ ...(pkg.dependencies ?? {}), ...(pkg.devDependencies ?? {}), ...(pkg.optionalDependencies ?? {}) }).sort()
-const missing = declared.filter(name => !lockSource.includes(`  ${name}:`) && !lockSource.includes(`'${name}':`) && !lockSource.includes(`/${name}@`))
+const missing = declared.filter(/* 先计算 !lockSource.includes(`  ${name}:`) && !lockSource.includes(`'${name}':`)；仅当其为真值时求右侧 !lockSource.includes(`/${name}@`)，返回短路求值结果。 */ name => !lockSource.includes(`  ${name}:`) && !lockSource.includes(`'${name}':`) && !lockSource.includes(`/${name}@`))
 const checks = [
   { id: 'DEPENDENCY-VERSION', status: pkg.version === version ? 'passed' : 'failed', detail: `Package authority is ${pkg.version}.` },
   { id: 'DEPENDENCY-LOCKFILE', status: /^lockfileVersion:/m.test(lockSource) && /^importers:/m.test(lockSource) ? 'passed' : 'failed', detail: 'Frozen pnpm lockfile contains a version and importer graph.' },
   { id: 'DEPENDENCY-COVERAGE', status: missing.length === 0 ? 'passed' : 'failed', detail: missing.length ? `Direct declarations missing from lock text: ${missing.join(', ')}` : `${declared.length} direct declarations are represented in the lockfile.` },
   { id: 'DEPENDENCY-INTEGRITY', status: /integrity: sha(256|512)-/m.test(lockSource) ? 'passed' : 'failed', detail: 'Registry packages retain cryptographic integrity records.' }
 ]
-const failed = checks.filter(item => item.status === 'failed')
+const failed = checks.filter(/* 比较 item.status 与 'failed'，返回严格相等的判断结果。 */ item => item.status === 'failed')
 const report = {
   format: `nova-v${version}-dependency-lock-audit`, version: 1, engineVersion: version,
   generatedAt: new Date().toISOString(), packageManager: pkg.packageManager,

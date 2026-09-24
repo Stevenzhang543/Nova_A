@@ -1,3 +1,4 @@
+/** 功能回归脚本：执行 verify-v26.08-windows.mjs 对应场景，保留断言和证据输出。 */
 import { copyFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'

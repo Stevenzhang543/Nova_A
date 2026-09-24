@@ -1,3 +1,4 @@
+/** 执行指定版本的一项发布检查，记录实际命令和新鲜报告；不将本地证据扩展为全部平台或无缺陷证明。 */
 import { spawn } from 'node:child_process'
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises'
 import { delimiter, dirname, join, resolve } from 'node:path'
@@ -6,7 +7,7 @@ import { assertReleaseSourceVersions, releaseVersion } from './release-source-sn
 import { confinedPath, fileRecord, filesBelow, writeJson } from './release-qualification.mjs'
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)))
-const option = name => process.argv.find(arg => arg.startsWith(`--${name}=`))?.slice(name.length + 3)
+const option = /* 调用 process.argv.find(arg => arg.startsWith(`--${name}=`))?.slice(name.length + 3) 并返回调用结果。 */ name => process.argv.find(/* 调用 arg.startsWith(`--${name}=`) 并返回调用结果。 */ arg => arg.startsWith(`--${name}=`))?.slice(name.length + 3)
 export const FOCUS_26_12 = [
   ['scripts/verify-v26.12-language.mjs', ['--report=release-audits/v26.12-language.json'], 'release-audits/v26.12-language.json'],
   ['scripts/verify-v26.12-language-editor.mjs', ['--report=release-audits/v26.12-language-editor.json'], 'release-audits/v26.12-language-editor.json'],
@@ -18,39 +19,39 @@ export const FOCUS_26_12 = [
   ['scripts/verify-v26.11-visual-roundtrip.mjs', [`--runtime=target/debug/examples/nova_script_test${process.platform === 'win32' ? '.exe' : ''}`], 'release-audits/v26.11-visual-roundtrip.json'],
   ['scripts/verify-v26.12-release-tooling.mjs', [], null]
 ]
-export function summarizeProductEvidence(evidence) {
-  if (!evidence.length || evidence.some(item => item.report?.status !== 'passed')) throw new Error('Product evidence includes missing or failed gate results.')
+/** 要求输入报告全部通过，并返回已检查路径；明确整体缺陷数量仍未知。 */ export function summarizeProductEvidence(evidence) {
+  if (!evidence.length || evidence.some(/* 比较 item.report?.status 与 'passed'，返回严格不等的判断结果。 */ item => item.report?.status !== 'passed')) throw new Error('Product evidence includes missing or failed gate results.')
   return {
-    evaluatedGateReports: evidence.map(item => ({ path: item.path, status: item.report.status })),
+    evaluatedGateReports: evidence.map(/** 提取已检查报告路径及通过状态，不推断其他功能结果。 */ item => ({ path: item.path, status: item.report.status })),
     globalDefectCount: null,
     globalDefectAssessment: 'Unknown: evaluated gate results do not constitute an exhaustive issue inventory or prove that all code and user workflows are free of errors.'
   }
 }
-export async function executeMilestoneGate(release, gate, settings = {}) {
+/** 验证源码版本后分派构建、运行、布局或证据检查，只收集本轮成功结果并保留外部验证边界。 */ export async function executeMilestoneGate(release, gate, settings = {}) {
   const machineVersion = releaseVersion(release)
   if (Number(release.replace('.', '')) < 2612) throw new Error('Use this runner only for release 26.12 or later.')
   await assertReleaseSourceVersions(root, release)
   const audits = join(root, 'release-audits'); await mkdir(audits, { recursive: true })
   const commands = [], childReports = [], startedAt = new Date().toISOString()
-  const run = async (file, args, environment = {}) => {
+  const run = /** 无 shell 启动指定命令，规范 Windows 环境路径键并记录起止及退出状态；失败立即中止。 */ async (file, args, environment = {}) => {
     const command = { file, args, startedAt: new Date().toISOString() }; commands.push(command)
     console.log(`Execute ${file} ${args.join(' ')}`)
     const env = { ...process.env, ...environment }
     if (environment.PATH) for (const key of Object.keys(env)) if (key !== 'PATH' && key.toLowerCase() === 'path') delete env[key]
     const child = spawn(file, args, { cwd: root, shell: false, windowsHide: true, env, stdio: ['ignore', 'inherit', 'inherit'] })
-    const status = await new Promise((resolveResult, reject) => { child.once('error', reject); child.once('exit', (exitCode, signal) => resolveResult({ exitCode, signal })) })
+    const status = await new Promise(/** 等待子进程启动错误或退出事件，并记录退出码与信号。 */ (resolveResult, reject) => { child.once('error', reject); child.once('exit', /* 调用 resolveResult({ exitCode, signal }) 并返回调用结果。 */ (exitCode, signal) => resolveResult({ exitCode, signal })) })
     Object.assign(command, status, { generatedAt: new Date().toISOString() })
     if (status.exitCode !== 0) throw new Error(`${file} failed with exit ${status.exitCode}, signal ${status.signal}.`)
   }
-  const node = (script, args = [], environment = {}) => run(process.execPath, [confinedPath(root, script), ...args], environment)
-  const takeReport = async (path, after) => {
+  const node = /* 调用 run(process.execPath, [confinedPath(root, script), ...args], environment) 并返回调用结果。 */ (script, args = [], environment = {}) => run(process.execPath, [confinedPath(root, script), ...args], environment)
+  const takeReport = /** 限制报告路径在仓库内，要求修改时间新于执行开始且状态通过，保存其哈希和内容。 */ async (path, after) => {
     const full = confinedPath(root, path), info = await stat(full), value = JSON.parse(await readFile(full, 'utf8'))
     if (info.mtimeMs + 1000 < Date.parse(after) || value.status !== 'passed') throw new Error(`Child report did not pass freshly: ${path}`)
     childReports.push({ ...await fileRecord(root, path), capturedAt: new Date().toISOString(), report: value })
     return value
   }
-  const runReport = async (script, path, args = [], environment = {}) => { const before = new Date().toISOString(); await node(script, args, environment); return takeReport(path, before) }
-  const write = async (suffix, format, details = {}) => {
+  const runReport = /** 运行报告生成脚本，再按本轮开始时间检查输出新鲜性。 */ async (script, path, args = [], environment = {}) => { const before = new Date().toISOString(); await node(script, args, environment); return takeReport(path, before) }
+  const write = /** 将版本身份、执行命令和子报告连同检查详情写入对应发布证据文件。 */ async (suffix, format, details = {}) => {
     const report = { format, version: 1, release, engineVersion: machineVersion, generatedAt: new Date().toISOString(), startedAt, status: 'passed', commands, childReports, ...details }
     await writeJson(join(audits, `v${release}-${suffix}.json`), report)
     return report
@@ -83,7 +84,7 @@ export async function executeMilestoneGate(release, gate, settings = {}) {
       const vm = new wasm.WasmScriptRuntime()
       try {
         const execution = JSON.parse(vm.execute_json('fn start() { set_position(2.0, 3.0); print("release-vm"); }', 'start', JSON.stringify({ entity: 'release-qualification' })))
-        if (!execution.commands.some(command => command.type === 'setPosition' && command.x === 2 && command.y === 3) || !execution.logs.some(log => log.message === 'release-vm')) throw new Error('Built WASM did not execute the actual host command/log probe.')
+        if (!execution.commands.some(/* 先计算 command.type === 'setPosition' && command.x === 2；仅当其为真值时求右侧 command.y === 3，返回短路求值结果。 */ command => command.type === 'setPosition' && command.x === 2 && command.y === 3) || !execution.logs.some(/* 比较 log.message 与 'release-vm'，返回严格相等的判断结果。 */ log => log.message === 'release-vm')) throw new Error('Built WASM did not execute the actual host command/log probe.')
         for (const body of ['sleep(0);', 'sleep(0.0);', 'Fn("sleep").call(0);', 'Fn("sleep").call(0.0);']) {
           let rejected = false; try { vm.execute_json(`fn start(){ ${body} }`, 'start', JSON.stringify({ entity: 'release-qualification' })) } catch (error) { rejected = /sleep/i.test(String(error)) && !/panic|unreachable/i.test(String(error)) }
           if (!rejected) throw new Error('Built WASM blocking-sleep guard is missing or trapped instead of returning an error.')
@@ -92,14 +93,14 @@ export async function executeMilestoneGate(release, gate, settings = {}) {
       return write('wasm', 'nova-release-wasm-verification', { scope: 'Actual compiled WASM engine identity, host commands/logs, direct and indirect nonblocking sleep rejection.', artifact: await fileRecord(root, 'nova_core/pkg/nova_core_bg.wasm') })
     }
     case 'web': {
-      const inventory = await Promise.all((await filesBelow(join(root, 'dist'))).map(path => fileRecord(root, `dist/${path}`)))
-      if (!inventory.some(file => file.path === 'dist/index.html') || !inventory.some(file => file.path === 'dist/player.html') || !inventory.some(file => file.path.endsWith('.wasm'))) throw new Error('Production web editor/player/WASM output is incomplete.')
+      const inventory = await Promise.all((await filesBelow(join(root, 'dist'))).map(/* 调用 fileRecord(root, `dist/${path}`) 并返回调用结果。 */ path => fileRecord(root, `dist/${path}`)))
+      if (!inventory.some(/* 比较 file.path 与 'dist/index.html'，返回严格相等的判断结果。 */ file => file.path === 'dist/index.html') || !inventory.some(/* 比较 file.path 与 'dist/player.html'，返回严格相等的判断结果。 */ file => file.path === 'dist/player.html') || !inventory.some(/* 调用 file.path.endsWith('.wasm') 并返回调用结果。 */ file => file.path.endsWith('.wasm'))) throw new Error('Production web editor/player/WASM output is incomplete.')
       return write('web', 'nova-release-web-build-verification', { scope: 'Exact production web asset inventory from the preceding Tauri build; browser execution is separately qualified.', inventory })
     }
     case 'focus': {
-      const focus = settings.focus?.length ? settings.focus.map(path => [path, [], null]) : release === '26.12' ? FOCUS_26_12 : []
+      const focus = settings.focus?.length ? settings.focus.map(/* 返回按声明顺序构造的数组 [path, [], null]。 */ path => [path, [], null]) : release === '26.12' ? FOCUS_26_12 : []
       if (!focus.length) throw new Error(`No implemented focused behavior suite selected for ${release}; supply --focus=<comma-separated authored scripts>.`)
-      if (focus.some(([script]) => script === 'scripts/verify-v26.11-visual-roundtrip.mjs')) {
+      if (focus.some(/* 比较 script 与 'scripts/verify-v26.11-visual-roundtrip.mjs'，返回严格相等的判断结果。 */ ([script]) => script === 'scripts/verify-v26.11-visual-roundtrip.mjs')) {
         // Build the exact current source instead of accidentally exercising an old native test executable.
         await run('cargo', ['build', '-p', 'nova_script', '--example', 'nova_script_test', '--target-dir', join(root, 'target')])
       }
@@ -109,7 +110,7 @@ export async function executeMilestoneGate(release, gate, settings = {}) {
     case 'history': return runReport('scripts/verify-calendar-history.mjs', `release-audits/v${release}-history-verification.json`, [`--release=${release}`, `--engine=${machineVersion}`])
     case 'templates': return runReport('scripts/verify-template-catalog.mjs', 'release-audits/template-catalog-verification.json')
     case 'layout-contract': return runReport('scripts/verify-calendar-layout-contract.mjs', `release-audits/v${release}-layout-contract.json`, [`--release=${release}`, `--engine=${machineVersion}`])
-    case 'browser-layout': return runReport(['26.20','26.21','26.22','26.23'].includes(release) ? `scripts/qualify-layout-v${release}.mjs` : 'scripts/qualify-layout-v3.3.mjs', `release-audits/v${release}-layout-browser.json`, [], { NOVA_LAYOUT_VERSION: release, NOVA_LAYOUT_ENGINE_VERSION: machineVersion, NOVA_LAYOUT_REQUIRED_VIEWPORTS: '1024x640,1366x768,1920x1080', NOVA_LAYOUT_REQUIRED_SCALES: '1,1.5,2' })
+    case 'browser-layout': return runReport(['26.20','26.21','26.22','26.23','26.24'].includes(release) ? `scripts/qualify-layout-v${release}.mjs` : 'scripts/qualify-layout-v3.3.mjs', `release-audits/v${release}-layout-browser.json`, [], { NOVA_LAYOUT_VERSION: release, NOVA_LAYOUT_ENGINE_VERSION: machineVersion, NOVA_LAYOUT_REQUIRED_VIEWPORTS: '1024x640,1366x768,1920x1080', NOVA_LAYOUT_REQUIRED_SCALES: '1,1.5,2' })
     case 'user-interactions': {
       const report = await runReport('scripts/verify-v6.0.2-interactions.mjs', `release-audits/v${release}-user-interactions.json`, [], { NOVA_INTERACTION_VERSION: release, NOVA_INTERACTION_ENGINE_VERSION: machineVersion, NOVA_INTERACTION_OUTPUT: `v${release}-user-interactions.json` })
       const authoring = settings.authoring ?? (release === '26.12' ? 'scripts/verify-v26.12-authoring.mjs' : '')
@@ -126,7 +127,7 @@ export async function executeMilestoneGate(release, gate, settings = {}) {
           authoringReports.push(path)
         }
       }
-      const combined = { ...report, generatedAt: new Date().toISOString(), additionalBehaviorReports: childReports.filter(item => authoringReports.includes(item.path)), qualificationCommands: commands }
+      const combined = { ...report, generatedAt: new Date().toISOString(), additionalBehaviorReports: childReports.filter(/* 调用 authoringReports.includes(item.path) 并返回调用结果。 */ item => authoringReports.includes(item.path)), qualificationCommands: commands }
       await writeJson(join(audits, `v${release}-user-interactions.json`), combined)
       return combined
     }
@@ -153,7 +154,7 @@ export async function executeMilestoneGate(release, gate, settings = {}) {
       for (const path of ['release-audits/template-catalog-verification.json', 'release-audits/repository-hygiene.json']) {
         const report = JSON.parse(await readFile(join(root, path), 'utf8')); if (report.status !== 'passed' || report.engineVersion !== undefined && report.engineVersion !== machineVersion) throw new Error(`Product prerequisite failed: ${path}`); childReports.push({ ...await fileRecord(root, path), report })
       }
-      const vueFiles = (await filesBelow(join(root, 'src'))).filter(path => path.endsWith('.vue'))
+      const vueFiles = (await filesBelow(join(root, 'src'))).filter(/* 调用 path.endsWith('.vue') 并返回调用结果。 */ path => path.endsWith('.vue'))
       if (vueFiles.length < 65) throw new Error('Active Vue panel inventory is unexpectedly incomplete.')
       for (const reference of [currentReference, settings.headlessReference ?? `server-v${release.replace('.', '')}-headless-authority`]) for (const file of ['project.nova', 'README.md', 'expected-output.json', 'test-controls.json']) { const record = await fileRecord(root, `reference-projects/projects/${reference}/${file}`); if (!record.bytes) throw new Error(`Empty current reference file: ${record.path}`) }
       const pkg = JSON.parse(await readFile(join(root, 'package.json'), 'utf8')), roadmap = await readFile(join(root, Number(release.split('.')[1]) >= 21 ? 'docs/ROADMAP_26_21_TO_26_30.md' : 'docs/ROADMAP_26_11_TO_26_20.md'), 'utf8')

@@ -1,3 +1,4 @@
+/** 光照属性检查器的多语言字段及操作说明。 */
 /** Renderer capability copy; changing a light type never erases its stored shadow preferences. */
 export const directionalShadowHint = {
   en: 'Directional lights do not cast shadows. Stored shadow settings apply when you choose another light type.',

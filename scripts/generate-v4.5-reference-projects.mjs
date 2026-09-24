@@ -1,3 +1,4 @@
+/** 版本4.5：生成参考项目与对应资源，供功能演示和版本验证使用。 */
 import { cp, mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
 import { createHash } from 'node:crypto'
 import { join, resolve } from 'node:path'
@@ -13,7 +14,7 @@ const fixtures = [
   { slug: 'physics-v45-diagnostics', source: 'stacking-test', name: 'Nova_A 4.5 Physics Diagnostics', demonstrates: ['virtual body monitor, sorting, pins and sparklines', 'collision and constraint timelines', 'capture export and snapshot comparison'], ids: ['PHY-DIAG-001', 'PHY-DIAG-004'] }
 ]
 
-function uuidFor(slug) {
+/** 使用4.5参考命名空间散列生成稳定项目标识。 */ function uuidFor(slug) {
   const hex = createHash('sha256').update(`Nova_A/v4.5/${slug}`).digest('hex')
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-a${hex.slice(17, 20)}-${hex.slice(20, 32)}`
 }
@@ -34,10 +35,10 @@ for (const fixture of fixtures) {
     scene.globalSettings = { ...scene.globalSettings, tickRate: profile.tickRate, maxCatchUpSteps: profile.maxCatchUpSteps, interpolation: profile.interpolation, profile }
   }
   await writeFile(projectPath, `${JSON.stringify(project, null, 2)}\n`, 'utf8')
-  const entityCount = (project.scenes ?? []).reduce((total, scene) => total + (scene.entities?.length ?? 0), 0)
+  const entityCount = (project.scenes ?? []).reduce(/* 计算表达式 total + (scene.entities?.length ?? 0) 并返回结果，沿用操作数的原有类型规则。 */ (total, scene) => total + (scene.entities?.length ?? 0), 0)
   await writeFile(join(outputDirectory, 'expected-output.json'), `${JSON.stringify({ engineVersion: '4.5.0', schema: 29, projectName: fixture.name, minimumScenes: project.scenes?.length ?? 0, minimumEntities: entityCount, expectedValidation: 'pass', demonstrates: fixture.demonstrates, testIds: fixture.ids }, null, 2)}\n`, 'utf8')
   await writeFile(join(outputDirectory, 'test-controls.json'), `${JSON.stringify({ open: 'Project Manager > Open Project > project.nova', run: 'Top action bar > Play; Pause; Step; Stop', monitor: 'Debug > Physics Monitor', profile: 'Manage > Project Settings > Physics > Quality profile', capture: 'Physics Monitor > Captures > Capture', testIds: fixture.ids, command: `pnpm nova export --project ./reference-projects/projects/${fixture.slug}/project.nova --target web --profile release --output ./Builds/reference-${fixture.slug} --cache validate --jsonl` }, null, 2)}\n`, 'utf8')
-  await writeFile(join(outputDirectory, 'README.md'), `# ${fixture.name}\n\nEngine **4.5.0**, Project Format 2, schema 29.\n\n## Expected behavior\n\n${fixture.demonstrates.map(item => `- ${item}`).join('\n')}\n\n## Test procedure and IDs\n\n1. Open \`project.nova\` and confirm Project Health has no blocking format error.\n2. Run Play, Pause, single Step, and Stop using the stable controls in \`test-controls.json\`.\n3. Select Balanced, then Accurate and Fast; repeat the test IDs: ${fixture.ids.join(', ')}.\n4. Inspect Physics Monitor/API values and compare them with \`expected-output.json\`.\n5. Export Windows x64 and web using the command recorded in \`test-controls.json\`.\n\n## Requirements\n\n- Required packages: none; Nova_A core only.\n- Target platforms: Windows x86-64 and the documented Chromium web runtime.\n- The project, expected output, test controls, and test IDs are version pinned.\n\n## Known limitations\n\nThis focused fixture proves only its listed behavior. External clean-machine, browser-matrix, signing, real wall-clock 24-hour soak, and physical accessibility gates remain release-environment evidence.\n`, 'utf8')
+  await writeFile(join(outputDirectory, 'README.md'), `# ${fixture.name}\n\nEngine **4.5.0**, Project Format 2, schema 29.\n\n## Expected behavior\n\n${fixture.demonstrates.map(/** 将文本转为Markdown列表项。 */ item => `- ${item}`).join('\n')}\n\n## Test procedure and IDs\n\n1. Open \`project.nova\` and confirm Project Health has no blocking format error.\n2. Run Play, Pause, single Step, and Stop using the stable controls in \`test-controls.json\`.\n3. Select Balanced, then Accurate and Fast; repeat the test IDs: ${fixture.ids.join(', ')}.\n4. Inspect Physics Monitor/API values and compare them with \`expected-output.json\`.\n5. Export Windows x64 and web using the command recorded in \`test-controls.json\`.\n\n## Requirements\n\n- Required packages: none; Nova_A core only.\n- Target platforms: Windows x86-64 and the documented Chromium web runtime.\n- The project, expected output, test controls, and test IDs are version pinned.\n\n## Known limitations\n\nThis focused fixture proves only its listed behavior. External clean-machine, browser-matrix, signing, real wall-clock 24-hour soak, and physical accessibility gates remain release-environment evidence.\n`, 'utf8')
 }
 
 // Keep retained 4.3/4.4 focused fixtures executable under the current engine

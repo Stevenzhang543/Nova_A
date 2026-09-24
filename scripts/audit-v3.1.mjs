@@ -1,3 +1,4 @@
+/* 汇总 3.1 版本的界面源码与发布必需文件检查，收集全部失败原因。 */
 import { existsSync } from 'node:fs'
 import { readFile, readdir } from 'node:fs/promises'
 import { dirname, join, relative } from 'node:path'
@@ -5,8 +6,8 @@ import { fileURLToPath } from 'node:url'
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)))
 const failures = []
-const assert = (condition, message) => { if (!condition) failures.push(message) }
-const read = path => readFile(join(root, path), 'utf8')
+const assert = /* 条件不满足时将错误追加到失败集合，使审计可以继续汇总其他问题。 */ (condition, message) => { if (!condition) failures.push(message) }
+const read = /* 调用 readFile(join(root, path), 'utf8') 并返回调用结果。 */ path => readFile(join(root, path), 'utf8')
 
 const [pkg, tauri, capability, workspaces, windowing, recovery, feedback, palette, settings, bottom, profiler, layout, workspaceBar, history, translations, references] = await Promise.all([
   read('package.json').then(JSON.parse), read('src-tauri/tauri.conf.json').then(JSON.parse), read('src-tauri/capabilities/default.json'), read('src/editor/workspaces.ts'), read('src/runtime/editorWindow.ts'),
@@ -32,13 +33,14 @@ assert(!/>H<|>I<|>B</.test(workspaceBar) && workspaceBar.includes('data-doc=') &
 for (const value of ['beginHistoryTransaction', 'commitHistoryTransaction', 'cancelHistoryTransaction', 'new CommandHistory(100)']) assert(history.includes(value), `Transactional 100-step history is missing ${value}.`)
 for (const key of ['workspaceUi', 'manageWorkspaces', 'shortcutEditor', 'statusCenter', 'crashRecovery', 'searchSettings', 'projectHealth', 'readOnlyRecoveryBanner']) assert((translations.match(new RegExp(`${key}:`, 'g')) ?? []).length >= 3, `Localization key ${key} is not complete in EN/DE/ZH.`)
 assert(references.includes('workspace-recovery-validation') && references.includes('nova-workspaces'), 'Workspace/recovery reference project generation is missing.')
-const allSources = (await collectSources(join(root, 'src'))).map(item => item.source).join('\n')
+const allSources = (await collectSources(join(root, 'src'))).map(/* 返回 item.source 的当前值。 */ item => item.source).join('\n')
 assert(!/\b(?:window\.)?(?:confirm|prompt|alert)\s*\(/.test(allSources), 'Browser confirm/prompt/alert remains in the application.')
 assert(existsSync(join(root, 'reference-projects', 'projects', 'workspace-recovery-validation.nova')), 'Generated workspace/recovery reference project is missing.')
 
 if (failures.length) { console.error(`Nova_A v3.1 audit failed (${failures.length}):\n- ${failures.join('\n- ')}`); process.exit(1) }
 console.log('Nova_A v3.1 audit passed: fullscreen recovery, workspace management/docking, global navigation/search/shortcuts, transactional history, task feedback, relocated tools, optional capability hiding, and tri-lingual editor foundations.')
 
+/* 递归读取 TypeScript、Vue 和 CSS 源码，并以仓库相对路径返回。 */
 async function collectSources(directory) {
   const result = []
   for (const entry of await readdir(directory, { withFileTypes: true })) {

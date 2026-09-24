@@ -1,3 +1,4 @@
+<!-- 顶部菜单栏：执行项目和编辑命令，管理短暂弹出菜单、焦点及全局快捷键。 -->
 <template>
   <header ref="topBar" class="top-bar" :style="{ '--menu-left': `${menuLeft}px` }">
     <a class="brand" href="https://whitelists.top" target="_blank" rel="noreferrer" aria-label="Nova_A by Whitelist">
@@ -121,14 +122,14 @@ const menuLeft = ref(0)
 const fileInput = ref<HTMLInputElement | null>(null)
 let disposeMenu: (() => void) | undefined
 const projectUrl = 'https://github.com/Stevenzhang543/Nova_A/'
-const isEditing = computed(() => physicsState.playMode === 'editing' && !recoveryState.readOnly)
+const isEditing = computed(/** 只有编辑模式且非只读恢复会话才允许项目编辑。 */ () => physicsState.playMode === 'editing' && !recoveryState.readOnly)
 
-function confirmDestructive(title: string, message: string): Promise<boolean> {
+/** 按偏好决定直接允许或显示破坏性确认对话框。 */ function confirmDestructive(title: string, message: string): Promise<boolean> {
   if (!preferencesState.confirmDestructiveActions) return Promise.resolve(true)
   return requestConfirmation({ title, message, confirmLabel: t('confirmAction'), cancelLabel: t('cancel'), destructive: true })
 }
 
-async function handleSave() {
+/** 编辑模式执行保存任务，报告成功或取消，成功记入最近项目和日志，最后关闭菜单。 */ async function handleSave() {
   if (!isEditing.value) { editorState.statusText = t('runtimeIsolation'); return }
   const task = startTask(t('saveProject'), { detail: t('atomicSaveInProgress'), progress: null })
   let saved = false
@@ -138,58 +139,58 @@ async function handleSave() {
   if (saved) { void rememberCurrentProject(); addEditorLog(t('saved'), 'Project') }
   activeMenu.value = null
 }
-function triggerLoad() { fileInput.value?.click(); activeMenu.value = null }
-async function handleClearScene() {
+/** 触发项目文件选择并关闭菜单。 */ function triggerLoad() { fileInput.value?.click(); activeMenu.value = null }
+/** 编辑模式确认清空对象及连接后清空场景、记录历史并关闭菜单。 */ async function handleClearScene() {
   if (!isEditing.value) return
   if (!await confirmDestructive(t('clearSceneTitle'), t('confirmClearCount', { objects: physicsState.world.entities.length, connections: physicsState.world.connections.length }))) return
   clearScene(); pushHistory(); activeMenu.value = null
 }
-async function handleDelete() { if (!isEditing.value || !physicsState.selectedEntityIds.length) return; if (!await confirmDestructive(t('deleteObjectTitle'), t('confirmDeleteObjectCount', { count: physicsState.selectedEntityIds.length }))) return; deleteSelected(); pushHistory('Delete entities'); activeMenu.value = null }
-function handleDeleteAll() { void handleClearScene() }
-function handleDeselect() { selectEntities([], 'replace'); activeMenu.value = null }
-function handleCopy() { const count = copySelectedEntities(); if (count) addEditorLog(`Copied ${count} ${count === 1 ? 'entity' : 'entities'}`); activeMenu.value = null }
-function handlePaste() { if (!isEditing.value) return; const pasted = pasteEntities(); if (pasted.length) addEditorLog(`Pasted ${pasted.length} ${pasted.length === 1 ? 'entity' : 'entities'}`); activeMenu.value = null }
-function handleDuplicate() { if (!isEditing.value) return; const duplicated = duplicateSelectedEntities(); if (duplicated.length) addEditorLog(`Duplicated ${duplicated.length} ${duplicated.length === 1 ? 'entity' : 'entities'}`); activeMenu.value = null }
-function handleRename() { if (physicsState.selectedEntityId !== null) editorState.renameRequestId = physicsState.selectedEntityId; activeMenu.value = null }
-function openBottomPanel(tab: 'console' | 'profiler' | 'project' | 'build') {
+/** 编辑模式有选择时确认删除，成功删除并记录历史及关闭菜单。 */ async function handleDelete() { if (!isEditing.value || !physicsState.selectedEntityIds.length) return; if (!await confirmDestructive(t('deleteObjectTitle'), t('confirmDeleteObjectCount', { count: physicsState.selectedEntityIds.length }))) return; deleteSelected(); pushHistory('Delete entities'); activeMenu.value = null }
+/** 异步执行清空场景操作。 */ function handleDeleteAll() { void handleClearScene() }
+/** 清空实体选择并关闭菜单。 */ function handleDeselect() { selectEntities([], 'replace'); activeMenu.value = null }
+/** 复制选中实体，非空结果记录数量并关闭菜单。 */ function handleCopy() { const count = copySelectedEntities(); if (count) addEditorLog(`Copied ${count} ${count === 1 ? 'entity' : 'entities'}`); activeMenu.value = null }
+/** 编辑模式粘贴实体，记录非空结果数量并关闭菜单。 */ function handlePaste() { if (!isEditing.value) return; const pasted = pasteEntities(); if (pasted.length) addEditorLog(`Pasted ${pasted.length} ${pasted.length === 1 ? 'entity' : 'entities'}`); activeMenu.value = null }
+/** 编辑模式创建选择副本，记录非空结果数量并关闭菜单。 */ function handleDuplicate() { if (!isEditing.value) return; const duplicated = duplicateSelectedEntities(); if (duplicated.length) addEditorLog(`Duplicated ${duplicated.length} ${duplicated.length === 1 ? 'entity' : 'entities'}`); activeMenu.value = null }
+/** 存在主选择时发出重命名请求，然后关闭菜单。 */ function handleRename() { if (physicsState.selectedEntityId !== null) editorState.renameRequestId = physicsState.selectedEntityId; activeMenu.value = null }
+/** 打开指定底部工具并关闭菜单。 */ function openBottomPanel(tab: 'console' | 'profiler' | 'project' | 'build') {
   openEditorTool(tab)
   activeMenu.value = null
 }
-function handleToggleGrid() { editorState.showGrid = !editorState.showGrid; activeMenu.value = null }
-function toggleAxis(axis: 'x' | 'y') {
+/** 切换网格可见性并关闭菜单。 */ function handleToggleGrid() { editorState.showGrid = !editorState.showGrid; activeMenu.value = null }
+/** 切换指定坐标轴可见性。 */ function toggleAxis(axis: 'x' | 'y') {
   if (axis === 'x') editorState.showXAxis = !editorState.showXAxis
   else editorState.showYAxis = !editorState.showYAxis
 }
-function handleToggleAllAxes() {
+/** 任一坐标轴显示时关闭全部，否则开启全部，并关闭菜单。 */ function handleToggleAllAxes() {
   const visible = !(editorState.showXAxis || editorState.showYAxis)
   editorState.showXAxis = visible; editorState.showYAxis = visible; activeMenu.value = null
 }
-function handleResetCamera() { resetCamera(); activeMenu.value = null }
-function handleTogglePanel(panel: 'hierarchy' | 'inspector' | 'bottom') { toggleEditorPanel(panel); activeMenu.value = null }
-function handleFocusMode() { toggleFocusMode(); activeMenu.value = null }
-function handleResetLayout() { resetEditorLayout(); activeMenu.value = null }
-function handleWorkspaceManager() { editorState.workspaceManagerOpen = true; activeMenu.value = null }
-function handleShortcutEditor() { editorState.shortcutEditorOpen = true; activeMenu.value = null }
-function handleStatusCenter() { editorState.statusCenterOpen = true; activeMenu.value = null }
-function handleUndoHistory() { editorState.undoHistoryOpen = true; activeMenu.value = null }
-function handleCommandPalette() { editorState.commandPaletteOpen = true; activeMenu.value = null }
-function handleFullscreen() { activeMenu.value = null; void toggleEditorFullscreen() }
-async function handleAbout() {
+/** 重置相机并关闭菜单。 */ function handleResetCamera() { resetCamera(); activeMenu.value = null }
+/** 切换指定布局面板并关闭菜单。 */ function handleTogglePanel(panel: 'hierarchy' | 'inspector' | 'bottom') { toggleEditorPanel(panel); activeMenu.value = null }
+/** 切换专注模式并关闭菜单。 */ function handleFocusMode() { toggleFocusMode(); activeMenu.value = null }
+/** 恢复默认布局并关闭菜单。 */ function handleResetLayout() { resetEditorLayout(); activeMenu.value = null }
+/** 打开工作区管理器并关闭菜单。 */ function handleWorkspaceManager() { editorState.workspaceManagerOpen = true; activeMenu.value = null }
+/** 打开快捷键设置并关闭菜单。 */ function handleShortcutEditor() { editorState.shortcutEditorOpen = true; activeMenu.value = null }
+/** 打开任务状态中心并关闭菜单。 */ function handleStatusCenter() { editorState.statusCenterOpen = true; activeMenu.value = null }
+/** 打开撤销历史并关闭菜单。 */ function handleUndoHistory() { editorState.undoHistoryOpen = true; activeMenu.value = null }
+/** 打开命令面板并关闭菜单。 */ function handleCommandPalette() { editorState.commandPaletteOpen = true; activeMenu.value = null }
+/** 关闭菜单后异步切换全屏。 */ function handleFullscreen() { activeMenu.value = null; void toggleEditorFullscreen() }
+/** 关闭菜单后使用统一外部链接入口打开项目网站。 */ async function handleAbout() {
   activeMenu.value = null
   await openExternalUrl(projectUrl)
 }
-function handleManual() { activeMenu.value = null; void openBundledManual() }
-function handleManualSection(section: string) { activeMenu.value = null; void openBundledManual(section) }
-function handleStudioStatus() { activeMenu.value = null; openStudioStatus() }
+/** 关闭菜单后异步打开手册。 */ function handleManual() { activeMenu.value = null; void openBundledManual() }
+/** 关闭菜单后打开指定手册章节。 */ function handleManualSection(section: string) { activeMenu.value = null; void openBundledManual(section) }
+/** 关闭菜单后打开工作室状态。 */ function handleStudioStatus() { activeMenu.value = null; openStudioStatus() }
 // Keep the menu mounted through the activating click. The entire TopBar unmounts when
 // the manager appears; clearing it first can expose the workspace strip to pointer-up.
-function handleProjectManager() { showProjectManager() }
-function handleUndo() { if (isEditing.value) undo(); activeMenu.value = null }
-function handleRedo() { if (isEditing.value) redo(); activeMenu.value = null }
-function toggleMenu(menu: string) {
+/** 显示项目管理启动页。 */ function handleProjectManager() { showProjectManager() }
+/** 编辑模式执行撤销，然后关闭菜单。 */ function handleUndo() { if (isEditing.value) undo(); activeMenu.value = null }
+/** 编辑模式执行重做，然后关闭菜单。 */ function handleRedo() { if (isEditing.value) redo(); activeMenu.value = null }
+/** 点击同一菜单时关闭，否则切换到指定菜单。 */ function toggleMenu(menu: string) {
   activeMenu.value = activeMenu.value === menu ? null : menu
 }
-function positionMenu(element: Element) {
+/** 根据活动按钮及下拉宽度计算菜单横向位置，限制在栏内边距范围。 */ function positionMenu(element: Element) {
   const dropdown = element as HTMLElement
   const bar = topBar.value, button = bar?.querySelector<HTMLElement>('.menu-item > button.active')
   if (!bar || !button) return
@@ -197,27 +198,27 @@ function positionMenu(element: Element) {
   const preferred = dropdown.classList.contains('dropdown-right') ? buttonRect.right - dropdown.offsetWidth : buttonRect.left
   menuLeft.value = Math.max(8, Math.min(preferred - barRect.left, barRect.width - dropdown.offsetWidth - 8))
 }
-function deactivateMenu(element: Element) { (element as HTMLElement).inert = true }
-function closeMenu() { activeMenu.value = null }
+/** 将离场菜单设为 inert，避免动画期间继续接受操作。 */ function deactivateMenu(element: Element) { (element as HTMLElement).inert = true }
+/** 清空活动菜单。 */ function closeMenu() { activeMenu.value = null }
 
-function handleFileSelected(event: Event) {
+/** 读取用户选择的项目文件，安装加载及错误回调，开始读取后清空输入。 */ function handleFileSelected(event: Event) {
   const target = event.target as HTMLInputElement
   const file = target.files?.[0]
   if (!file) return
   const reader = new FileReader()
-  reader.onload = async event => {
+  reader.onload = /** 文件文本打开成功后记录历史及载入状态日志。 */ async event => {
     if (typeof event.target?.result === 'string' && await openProjectDocument(event.target.result, file.name)) {
       pushHistory()
       editorState.statusText = t('loaded')
       addEditorLog(t('loaded'), 'Project')
     }
   }
-  reader.onerror = () => { editorState.statusText = t('loadFailed', { message: reader.error?.message ?? t('fileReadFailed') }) }
+  reader.onerror = /** 文件读取失败时显示带具体原因的本地化状态。 */ () => { editorState.statusText = t('loadFailed', { message: reader.error?.message ?? t('fileReadFailed') }) }
   reader.readAsText(file)
   target.value = ''
 }
 
-function handleKeyDown(event: KeyboardEvent) {
+/** 优先处理保存并使失焦字段提交；避开文本输入的原生快捷键，处理撤销、复制、删除等编辑命令。 */ function handleKeyDown(event: KeyboardEvent) {
   if (event.defaultPrevented) return
   if (confirmDialogState.visible) return
   const commandKey = event.ctrlKey || event.metaKey
@@ -242,8 +243,8 @@ function handleKeyDown(event: KeyboardEvent) {
   else if (event.key === 'Escape') { selectEntities([], 'replace'); activeMenu.value = null }
 }
 
-onMounted(() => { disposeMenu = installTransientPopover({ isOpen: () => activeMenu.value !== null, regions: () => Array.from(topBar.value?.querySelectorAll<HTMLElement>('.menu-container, .dropdown:not([inert])') ?? []), close: restoreFocus => { const button = topBar.value?.querySelector<HTMLElement>('.menu-item > button.active'); closeMenu(); if (restoreFocus) button?.focus() } }); window.addEventListener('keydown', handleKeyDown); window.addEventListener('resize', closeMenu); pushHistory() })
-onUnmounted(() => { window.removeEventListener('keydown', handleKeyDown); window.removeEventListener('resize', closeMenu); disposeMenu?.() })
+onMounted(/** 挂载时注册具有容错区域的短暂弹出菜单行为及全局监听，并记录初始历史。 */ () => { disposeMenu = installTransientPopover({ isOpen: /* 比较 activeMenu.value 与 null，返回严格不等的判断结果。 */ () => activeMenu.value !== null, regions: /** 返回菜单容器及尚可交互的下拉区域作为指针容错范围。 */ () => Array.from(topBar.value?.querySelectorAll<HTMLElement>('.menu-container, .dropdown:not([inert])') ?? []), close: /** 关闭弹出菜单，按请求把焦点还给原活动菜单按钮。 */ restoreFocus => { const button = topBar.value?.querySelector<HTMLElement>('.menu-item > button.active'); closeMenu(); if (restoreFocus) button?.focus() } }); window.addEventListener('keydown', handleKeyDown); window.addEventListener('resize', closeMenu); pushHistory() })
+onUnmounted(/** 卸载时移除键盘和尺寸监听并释放弹出菜单行为。 */ () => { window.removeEventListener('keydown', handleKeyDown); window.removeEventListener('resize', closeMenu); disposeMenu?.() })
 </script>
 
 <style scoped>

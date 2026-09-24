@@ -1,3 +1,4 @@
+<!-- 仿真操作栏：管理物理加载、场景预检和播放会话。 -->
 <template>
   <div class="actionbar" role="toolbar">
     <button :class="{ active: state.playMode === 'playing' }" :title="t('play')" @click="playSimulation">
@@ -23,7 +24,7 @@ import { physicsState as state, stopPlayMode, toggleSimulation } from '../store/
 import { gameplayRuntime } from '../runtime/GameplayRuntime'
 import { simulationPreflight as inspectSimulationPreflight } from '../runtime/simulationAuthoring26'
 
-async function ensurePhysics(): Promise<boolean> {
+/** 等待物理 WASM 初始化并显示状态；失败时报告原因并阻止启动。 */ async function ensurePhysics(): Promise<boolean> {
   editorState.statusText = t('physicsLoading')
   await state.world.wasmReady
   if (!state.world.wasmError) return true
@@ -31,19 +32,19 @@ async function ensurePhysics(): Promise<boolean> {
   return false
 }
 
-function simulationPreflight(): boolean {
+/** 检查仿真就绪情况，阻断问题禁止启动，需复核问题写入日志。 */ function simulationPreflight(): boolean {
   const { blocked, reviews } = inspectSimulationPreflight(state.world.entities, state.world.connections, state.globalSettings)
   if (blocked.length) {
-    const summary = `${t('simulationReadiness')}: ${t('blocked')} (${blocked.length}) · ${blocked.map(issue => issue.code).join(', ')}`
+    const summary = `${t('simulationReadiness')}: ${t('blocked')} (${blocked.length}) · ${blocked.map(/* 返回 issue.code 的当前值。 */ issue => issue.code).join(', ')}`
     editorState.statusText = summary
     addEditorLog(summary, 'Physics')
     return false
   }
-  if (reviews.length) addEditorLog(`${t('simulationReadiness')}: ${t('mediaStatus_review')} (${reviews.length}) · ${reviews.map(issue => issue.code).join(', ')}`, 'Physics')
+  if (reviews.length) addEditorLog(`${t('simulationReadiness')}: ${t('mediaStatus_review')} (${reviews.length}) · ${reviews.map(/* 返回 issue.code 的当前值。 */ issue => issue.code).join(', ')}`, 'Physics')
   return true
 }
 
-async function playSimulation() {
+/** 加载与预检通过后启动仿真和游戏会话，并更新状态日志。 */ async function playSimulation() {
   if (!await ensurePhysics()) return
   if (!simulationPreflight()) return
   if (!toggleSimulation(true)) return
@@ -52,13 +53,13 @@ async function playSimulation() {
   addEditorLog(t('physicsRunning'), 'Physics')
 }
 
-function pauseSimulation() {
+/** 暂停仿真并记录状态。 */ function pauseSimulation() {
   toggleSimulation(false)
   editorState.statusText = t('physicsPaused')
   addEditorLog(t('runtimePaused'), 'Physics')
 }
 
-async function stepSimulation() {
+/** 加载与预检通过后创建必要的暂停会话并执行一次游戏单步。 */ async function stepSimulation() {
   if (!await ensurePhysics()) return
   if (!simulationPreflight()) return
   if (state.playMode === 'editing') { if (!toggleSimulation(true)) return; toggleSimulation(false) }
@@ -67,7 +68,7 @@ async function stepSimulation() {
   addEditorLog(t('physicsStepped'), 'Physics')
 }
 
-function restoreSimulation() {
+/** 停止会话、退出播放模式并记录场景恢复状态。 */ function restoreSimulation() {
   gameplayRuntime.stopSession()
   stopPlayMode()
   editorState.statusText = t('simulationRestored')

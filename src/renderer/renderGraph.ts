@@ -1,3 +1,4 @@
+/** 渲染流程描述：组织渲染通道与依赖，检查顺序并提供执行所需信息。 */
 import { reactive } from 'vue'
 import type { RendererStats } from './types'
 import { advancedRenderingActive, renderingSettings } from './renderSettings'
@@ -22,21 +23,25 @@ export const renderGraphState = reactive({
 
 let framePasses: RenderPassSample[] = []
 
+/* 开始新渲染图帧，清空临时通道记录并返回计时起点。 */
 export function beginRenderGraph(): number { renderGraphState.frame++; framePasses = []; return performance.now() }
+/* 记录一个渲染通道的启用状态、耗时和绘制调用数，并返回结束时间。 */
 export function recordRenderPass(name: RenderPassName, startedAt: number, enabled = true, drawCalls = 0): number {
   const ended = performance.now()
   framePasses.push({ name, enabled, durationMs: enabled ? Math.max(0, ended - startedAt) : 0, drawCalls })
   return ended
 }
+/* 补齐未显式记录的默认渲染通道，再提交本帧通道列表。 */
 export function completeRenderGraph(worldStarted: number, stats: RendererStats, uiStarted: number, overlayStarted: number): void {
-  if (!framePasses.some(pass => pass.name === 'World')) recordRenderPass('World', worldStarted, true, stats.drawCalls)
-  if (!framePasses.some(pass => pass.name === 'Lighting')) framePasses.push({ name: 'Lighting', enabled: renderingSettings.lightingEnabled, durationMs: 0, drawCalls: 0 })
-  if (!framePasses.some(pass => pass.name === 'UI')) recordRenderPass('UI', uiStarted, true, 1)
-  if (!framePasses.some(pass => pass.name === 'EditorOverlay')) recordRenderPass('EditorOverlay', overlayStarted, true, 1)
-  if (!framePasses.some(pass => pass.name === 'PostProcess')) framePasses.push({ name: 'PostProcess', enabled: renderingSettings.postProcessing.enabled, durationMs: 0, drawCalls: 0 })
+  if (!framePasses.some(/* 比较 pass.name 与 'World'，返回严格相等的判断结果。 */ pass => pass.name === 'World')) recordRenderPass('World', worldStarted, true, stats.drawCalls)
+  if (!framePasses.some(/* 比较 pass.name 与 'Lighting'，返回严格相等的判断结果。 */ pass => pass.name === 'Lighting')) framePasses.push({ name: 'Lighting', enabled: renderingSettings.lightingEnabled, durationMs: 0, drawCalls: 0 })
+  if (!framePasses.some(/* 比较 pass.name 与 'UI'，返回严格相等的判断结果。 */ pass => pass.name === 'UI')) recordRenderPass('UI', uiStarted, true, 1)
+  if (!framePasses.some(/* 比较 pass.name 与 'EditorOverlay'，返回严格相等的判断结果。 */ pass => pass.name === 'EditorOverlay')) recordRenderPass('EditorOverlay', overlayStarted, true, 1)
+  if (!framePasses.some(/* 比较 pass.name 与 'PostProcess'，返回严格相等的判断结果。 */ pass => pass.name === 'PostProcess')) framePasses.push({ name: 'PostProcess', enabled: renderingSettings.postProcessing.enabled, durationMs: 0, drawCalls: 0 })
   renderGraphState.passes.splice(0, renderGraphState.passes.length, ...framePasses)
 }
-export function requestRenderCapture(): void { renderGraphState.captureRequested = true }
+/** 将 true 赋给 renderGraphState.captureRequested，不显式返回值。 */ export function requestRenderCapture(): void { renderGraphState.captureRequested = true }
+/* 归一化捕获频率、帧数和内存预算，初始化确定性捕获序列并清空旧帧。 */
 export function startDeterministicCapture(options: DeterministicCaptureOptions = {}): void {
   const defaults = renderingSettings.deterministicCapture
   const frameRate = Math.min(240, Math.max(1, Math.round(Number(options.frameRate ?? defaults.frameRate) || defaults.frameRate)))
@@ -57,8 +62,11 @@ export function startDeterministicCapture(options: DeterministicCaptureOptions =
   })
   renderGraphState.sequence.frames.splice(0)
 }
+/* 停止确定性捕获并保存有长度上限的停止原因。 */
 export function stopDeterministicCapture(reason = 'Stopped by user'): void { renderGraphState.sequence.active = false; renderGraphState.sequence.stoppedReason = reason.slice(0, 160) }
+/* 停止捕获、移除已录制帧并清零捕获字节统计。 */
 export function clearDeterministicCapture(): void { stopDeterministicCapture(''); renderGraphState.sequence.frames.splice(0); renderGraphState.sequence.capturedBytes = 0 }
+/* 按请求捕获渲染表面及可选覆盖层，遵守序列帧数和内存预算并隔离画布读取失败。 */
 export function captureRenderSurface(canvas: HTMLCanvasElement, overlay?: HTMLCanvasElement | null, filter = 'none'): void {
   const sequence = renderGraphState.sequence
   const sequenceCapture = sequence.active
@@ -84,12 +92,13 @@ export function captureRenderSurface(canvas: HTMLCanvasElement, overlay?: HTMLCa
     if (renderGraphState.captures.length > 12) renderGraphState.captures.length = 12
   } catch { /* A tainted imported image must not break the render loop. */ }
 }
-export function renderGraphAllocatesEffects(): boolean { return advancedRenderingActive() }
+/* 调用 advancedRenderingActive() 并返回调用结果。 */ export function renderGraphAllocatesEffects(): boolean { return advancedRenderingActive() }
 
+/* 加载两次捕获并计算归一化像素绝对差，将结果保存到有上限的比较历史。 */
 export async function compareRenderCaptures(firstId: number, secondId: number): Promise<number | null> {
-  const first = renderGraphState.captures.find(item => item.id === firstId), second = renderGraphState.captures.find(item => item.id === secondId)
+  const first = renderGraphState.captures.find(/* 比较 item.id 与 firstId，返回严格相等的判断结果。 */ item => item.id === firstId), second = renderGraphState.captures.find(/* 比较 item.id 与 secondId，返回严格相等的判断结果。 */ item => item.id === secondId)
   if (!first || !second || typeof document === 'undefined') return null
-  const load = (source: string) => new Promise<HTMLImageElement>((resolve, reject) => { const image = new Image(); image.onload = () => resolve(image); image.onerror = reject; image.src = source })
+  const load = /* 将图像数据地址异步加载为 HTML 图像对象，供捕获比较读取像素。 */ (source: string) => new Promise<HTMLImageElement>(/* 绑定图像加载成功与失败处理，然后设置图像来源以启动加载。 */ (resolve, reject) => { const image = new Image(); image.onload = /* 调用 resolve(image) 并返回调用结果。 */ () => resolve(image); image.onerror = reject; image.src = source })
   const [a, b] = await Promise.all([load(first.dataUrl), load(second.dataUrl)]), width = Math.min(a.width, b.width), height = Math.min(a.height, b.height)
   const canvas = document.createElement('canvas'); canvas.width = width; canvas.height = height; const context = canvas.getContext('2d', { willReadFrequently: true })
   if (!context || width * height > 16_777_216) return null

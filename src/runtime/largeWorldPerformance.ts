@@ -1,3 +1,4 @@
+/** 大世界性能工具：计算工作集与预算，提供分块场景的性能观察和优化资料。 */
 import { reactive } from 'vue'
 import type { Entity } from '../world/Entity'
 import type { Component2D, ComponentKind } from '../world/components'
@@ -68,12 +69,12 @@ let frameStarted = performance.now(), startupStarted = performance.now(), firstF
 let publishedCacheHits = 0, publishedCacheMisses = 0, pendingAllocations = 0
 let adaptiveGoodFrames = 0, adaptiveBadFrames = 0
 
-function finite(value: unknown, fallback: number, minimum: number, maximum: number): number {
+/** 结构说明（自动提取）：finite；输入 value、fallback、minimum、maximum；直接调用 Number.isFinite、Math.min、Math.max。 */ function finite(value: unknown, fallback: number, minimum: number, maximum: number): number {
   const number = typeof value === 'number' && Number.isFinite(value) ? value : fallback
   return Math.min(maximum, Math.max(minimum, number))
 }
 
-export function normalizePerformanceRuntimeSettings(value: unknown): PerformanceRuntimeSettings {
+/** 结构说明（自动提取）：normalizePerformanceRuntimeSettings；输入 value；直接调用 finite、Math.round。 */ export function normalizePerformanceRuntimeSettings(value: unknown): PerformanceRuntimeSettings {
   const source = value && typeof value === 'object' ? value as Record<string, unknown> : {}
   return {
     enabled: source.enabled !== false,
@@ -87,16 +88,16 @@ export function normalizePerformanceRuntimeSettings(value: unknown): Performance
   }
 }
 
-export function loadPerformanceRuntimeSettings(value: unknown): void { Object.assign(performanceRuntimeSettings, normalizePerformanceRuntimeSettings(value)) }
-export function serializePerformanceRuntimeSettings(): PerformanceRuntimeSettings { return { ...normalizePerformanceRuntimeSettings(performanceRuntimeSettings) } }
+/** 执行时调用 Object.assign(performanceRuntimeSettings, normalizePerformanceRuntimeSettings(value))；不显式返回调用结果。 */ export function loadPerformanceRuntimeSettings(value: unknown): void { Object.assign(performanceRuntimeSettings, normalizePerformanceRuntimeSettings(value)) }
+/* 返回具有所列字段的新对象 { ...normalizePerformanceRuntimeSettings(performanceRuntimeSettings) }。 */ export function serializePerformanceRuntimeSettings(): PerformanceRuntimeSettings { return { ...normalizePerformanceRuntimeSettings(performanceRuntimeSettings) } }
 
-function percentile(values: Float64Array, count: number, percentileValue: number): number {
+/** 结构说明（自动提取）：percentile；输入 values、count、percentileValue；直接调用 sort、Array.from、values.slice、Math.min、Math.max 等；返回路径包含 copy[…]。 */ function percentile(values: Float64Array, count: number, percentileValue: number): number {
   if (!count) return 0
-  const copy = Array.from(values.slice(0, count)).sort((a, b) => a - b)
+  const copy = Array.from(values.slice(0, count)).sort(/* 计算表达式 a - b 并返回结果，沿用操作数的原有类型规则。 */ (a, b) => a - b)
   return copy[Math.min(copy.length - 1, Math.max(0, Math.floor((copy.length - 1) * percentileValue)))]
 }
 
-function updateAdaptiveQuality(frameMs: number): void {
+/** 结构说明（自动提取）：updateAdaptiveQuality；输入 frameMs；直接调用 Math.max；写入 performanceRuntimeState.adaptiveTier、performanceRuntimeState.adaptivePixelRatioScale、performanceRuntimeState.adaptiveParticleScale、adaptiveGoodFrames 等。 */ function updateAdaptiveQuality(frameMs: number): void {
   if (!performanceRuntimeSettings.adaptiveQuality) {
     performanceRuntimeState.adaptiveTier = 0
     performanceRuntimeState.adaptivePixelRatioScale = 1
@@ -118,20 +119,20 @@ function updateAdaptiveQuality(frameMs: number): void {
   performanceRuntimeState.adaptiveParticleScale = tier === 2 ? .65 : tier === 1 ? .82 : 1
 }
 
-export function beginPerformanceFrame(now = performance.now()): void { frameStarted = now }
-export function markPerformanceInput(now = performance.now()): void { pendingInputAt = now }
-export function recordWorkerPerformance(workerMs: number, queueWaitMs: number, fallback = false, stale = false): void {
+/** 将 now 赋给 frameStarted，不显式返回值。 */ export function beginPerformanceFrame(now = performance.now()): void { frameStarted = now }
+/** 将 now 赋给 pendingInputAt，不显式返回值。 */ export function markPerformanceInput(now = performance.now()): void { pendingInputAt = now }
+/** 结构说明（自动提取）：recordWorkerPerformance；输入 workerMs、queueWaitMs、fallback、stale；直接调用 Math.max、finite；写入 performanceRuntimeState.workerMs、performanceRuntimeState.queueWaitMs。 */ export function recordWorkerPerformance(workerMs: number, queueWaitMs: number, fallback = false, stale = false): void {
   performanceRuntimeState.workerMs = Math.max(0, finite(workerMs, 0, 0, 60_000))
   performanceRuntimeState.queueWaitMs = Math.max(0, finite(queueWaitMs, 0, 0, 60_000))
   if (fallback) performanceRuntimeState.workerFallbacks++
   if (stale) performanceRuntimeState.staleWorkerResults++
 }
-export function recordStaleWorkerResult(): void { performanceRuntimeState.staleWorkerResults++ }
-export function recordCachePerformance(hits: number, misses: number, allocations = 0): void {
+/** 执行 performanceRuntimeState.staleWorkerResults++ 更新对应状态；不显式返回值。 */ export function recordStaleWorkerResult(): void { performanceRuntimeState.staleWorkerResults++ }
+/** 结构说明（自动提取）：recordCachePerformance；输入 hits、misses、allocations；直接调用 Math.max、Math.round；写入 publishedCacheHits、publishedCacheMisses、pendingAllocations。 */ export function recordCachePerformance(hits: number, misses: number, allocations = 0): void {
   publishedCacheHits += Math.max(0, Math.round(hits)); publishedCacheMisses += Math.max(0, Math.round(misses)); pendingAllocations += Math.max(0, Math.round(allocations))
 }
 
-export function completePerformanceFrame(now = performance.now()): void {
+/** 结构说明（自动提取）：completePerformanceFrame；输入 now；直接调用 Math.max、Math.min、updateAdaptiveQuality、Array.from、frameSamples.slice 等；写入 frameSamples[…]、frameSampleCursor、frameSampleCount、pendingInputAt 等。 */ export function completePerformanceFrame(now = performance.now()): void {
   const frameMs = Math.max(0, now - frameStarted)
   frameSamples[frameSampleCursor] = frameMs; frameSampleCursor = (frameSampleCursor + 1) % frameSamples.length; frameSampleCount = Math.min(frameSamples.length, frameSampleCount + 1)
   if (pendingInputAt > 0) {
@@ -155,8 +156,8 @@ export function completePerformanceFrame(now = performance.now()): void {
   performanceRuntimeState.reactivePublications++
 }
 
-export function recordWarmStartup(startedAt: number, now = performance.now()): void { performanceRuntimeState.warmStartupMs = Math.max(0, now - startedAt) }
-export function performanceLatencyPercentile(percentileValue = .95): number { return percentile(inputSamples, inputSampleCount, finite(percentileValue, .95, 0, 1)) }
+/** 将 Math.max(0, now - startedAt) 赋给 performanceRuntimeState.warmStartupMs，不显式返回值。 */ export function recordWarmStartup(startedAt: number, now = performance.now()): void { performanceRuntimeState.warmStartupMs = Math.max(0, now - startedAt) }
+/* 调用 percentile(inputSamples, inputSampleCount, finite(percentileValue, .95, 0, 1)) 并返回调用结果。 */ export function performanceLatencyPercentile(percentileValue = .95): number { return percentile(inputSamples, inputSampleCount, finite(percentileValue, .95, 0, 1)) }
 
 /** Reused typed component columns keep stable entity order and avoid allocating
  * per-frame wrapper objects. They are observational: gameplay components stay
@@ -174,7 +175,7 @@ export class StableComponentScheduler {
   private componentCache = new WeakMap<Entity, { map: Entity['componentMap']; size: number; records: Array<{ kind: ComponentKind; component: Component2D; removed: boolean }> }>()
   count = 0
 
-  private refreshComponentCache(entity: Entity): boolean {
+  /** 结构说明（自动提取）：refreshComponentCache；输入 entity；直接调用 componentCache.get、map.get、map、map.values、componentCache.set；写入 changed；包含循环处理。 */ private refreshComponentCache(entity: Entity): boolean {
     const map = entity.componentMap, previous = this.componentCache.get(entity)
     let changed = !previous || previous.map !== map || previous.size !== map.size
     if (!changed && previous) {
@@ -186,12 +187,12 @@ export class StableComponentScheduler {
       }
     }
     if (!changed && previous) return false
-    const records = [...map.values()].map(component => ({ kind: component.kind, component, removed: component.removed }))
+    const records = [...map.values()].map(/** 构造并返回记录 { kind: component.kind, component, removed: component.removed }，字段按当前实参及捕获状态求值。 */ component => ({ kind: component.kind, component, removed: component.removed }))
     this.componentCache.set(entity, { map, size: map.size, records })
     return true
   }
 
-  synchronize(entities: readonly Entity[]): { dirty: number; allocations: number; componentCount: number } {
+  /** 结构说明（自动提取）：synchronize；输入 entities；直接调用 Math.max、Math.ceil、Math.log2、Float64Array、Uint8Array 等；写入 capacity、positions、rotations、scales 等；包含循环处理。 */ synchronize(entities: readonly Entity[]): { dirty: number; allocations: number; componentCount: number } {
     let allocations = 0
     if (entities.length > this.capacity) {
       this.capacity = Math.max(64, 2 ** Math.ceil(Math.log2(entities.length)))
@@ -226,67 +227,67 @@ export class StableComponentScheduler {
     return { dirty, allocations, componentCount }
   }
 
-  indices(kind: string): Uint32Array { return this.buckets.get(kind) ?? this.emptyIndices }
-  position(index: number): Vec2 { return { x: this.positions[index * 2] ?? 0, y: this.positions[index * 2 + 1] ?? 0 } }
+  /* 当 this.buckets.get(kind) 为 null 或 undefined 时返回 this.emptyIndices，否则保留左侧值。 */ indices(kind: string): Uint32Array { return this.buckets.get(kind) ?? this.emptyIndices }
+  /* 返回具有所列字段的新对象 { x: this.positions[index * 2] ?? 0, y: this.positions[index * 2 + 1] ?? 0 }。 */ position(index: number): Vec2 { return { x: this.positions[index * 2] ?? 0, y: this.positions[index * 2 + 1] ?? 0 } }
 }
 
 export class SpatialHash2D {
   private readonly buckets = new Map<string, Set<string>>()
   private readonly entries = new Map<string, SpatialBounds2D>()
   private readonly occupied = new Map<string, string[]>()
-  constructor(public cellSize = performanceRuntimeSettings.spatialCellSize) { this.cellSize = finite(cellSize, 16, .01, 1_000_000) }
-  private keys(bounds: SpatialBounds2D): string[] {
+  /** 将 finite(cellSize, 16, .01, 1_000_000) 赋给 this.cellSize，不显式返回值。 */ constructor(public cellSize = performanceRuntimeSettings.spatialCellSize) { this.cellSize = finite(cellSize, 16, .01, 1_000_000) }
+  /** 结构说明（自动提取）：keys；输入 bounds；直接调用 Math.floor、keys.push；返回路径包含 keys；包含循环处理。 */ private keys(bounds: SpatialBounds2D): string[] {
     const minX = Math.floor(bounds.minX / this.cellSize), maxX = Math.floor(bounds.maxX / this.cellSize), minY = Math.floor(bounds.minY / this.cellSize), maxY = Math.floor(bounds.maxY / this.cellSize), keys: string[] = []
     const maximumCells = 16_384
     for (let y = minY; y <= maxY && keys.length < maximumCells; y++) for (let x = minX; x <= maxX && keys.length < maximumCells; x++) keys.push(`${x}:${y}`)
     return keys
   }
-  upsert(entry: SpatialEntry2D): void {
+  /** 结构说明（自动提取）：upsert；输入 entry；直接调用 remove、Math.min、Math.max、keys、entries.set 等；包含循环处理。 */ upsert(entry: SpatialEntry2D): void {
     this.remove(entry.id)
     const bounds = { minX: Math.min(entry.bounds.minX, entry.bounds.maxX), minY: Math.min(entry.bounds.minY, entry.bounds.maxY), maxX: Math.max(entry.bounds.minX, entry.bounds.maxX), maxY: Math.max(entry.bounds.minY, entry.bounds.maxY) }
     const keys = this.keys(bounds); this.entries.set(entry.id, bounds); this.occupied.set(entry.id, keys)
     for (const key of keys) { const bucket = this.buckets.get(key) ?? new Set<string>(); bucket.add(entry.id); this.buckets.set(key, bucket) }
   }
-  remove(id: string): void { for (const key of this.occupied.get(id) ?? []) { const bucket = this.buckets.get(key); bucket?.delete(id); if (!bucket?.size) this.buckets.delete(key) }; this.occupied.delete(id); this.entries.delete(id) }
-  query(bounds: SpatialBounds2D): string[] {
+  /** 结构说明（自动提取）：remove；输入 id；直接调用 occupied.get、buckets.get、bucket.delete、buckets.delete、occupied.delete 等；包含循环处理。 */ remove(id: string): void { for (const key of this.occupied.get(id) ?? []) { const bucket = this.buckets.get(key); bucket?.delete(id); if (!bucket?.size) this.buckets.delete(key) }; this.occupied.delete(id); this.entries.delete(id) }
+  /** 结构说明（自动提取）：query；输入 bounds；直接调用 Set、keys、buckets.get、ids.add、sort 等；返回路径包含 result；包含循环处理。 */ query(bounds: SpatialBounds2D): string[] {
     const ids = new Set<string>(); for (const key of this.keys(bounds)) for (const id of this.buckets.get(key) ?? []) ids.add(id)
-    const result = [...ids].filter(id => { const value = this.entries.get(id)!; return value.maxX >= bounds.minX && value.minX <= bounds.maxX && value.maxY >= bounds.minY && value.minY <= bounds.maxY }).sort()
+    const result = [...ids].filter(/** 结构说明（自动提取）：filter 回调；输入 id；直接调用 entries.get。 */ id => { const value = this.entries.get(id)!; return value.maxX >= bounds.minX && value.minX <= bounds.maxX && value.maxY >= bounds.minY && value.minY <= bounds.maxY }).sort()
     recordCachePerformance(result.length, Math.max(0, ids.size - result.length)); return result
   }
-  clear(): void { this.buckets.clear(); this.entries.clear(); this.occupied.clear() }
-  get size(): number { return this.entries.size }
+  /** 结构说明（自动提取）：clear；无显式参数；直接调用 buckets.clear、entries.clear、occupied.clear。 */ clear(): void { this.buckets.clear(); this.entries.clear(); this.occupied.clear() }
+  /* 返回 this.entries.size 的当前值。 */ get size(): number { return this.entries.size }
 }
 
 export class BatchedCommandQueue {
   private queue: BatchedCommand[] = []
   private generations = new Map<string, number>()
   private nextSequence = 1
-  enqueue(key: string, run: () => void, generation = (this.generations.get(key) ?? 0) + 1): number { this.generations.set(key, generation); const sequence = this.nextSequence++; this.queue.push({ sequence, key, generation, run }); performanceRuntimeState.queuedCommands = this.queue.length; return sequence }
-  invalidate(key: string): void { this.generations.set(key, (this.generations.get(key) ?? 0) + 1) }
-  flush(maximum = performanceRuntimeSettings.maximumCommandsPerFrame, budgetMs = performanceRuntimeSettings.frameWorkBudgetMs): { processed: number; deferred: number; stale: number } {
+  /** 结构说明（自动提取）：enqueue；输入 key、run、generation；直接调用 generations.set、queue.push；写入 performanceRuntimeState.queuedCommands；返回路径包含 sequence。 */ enqueue(key: string, run: () => void, generation = (this.generations.get(key) ?? 0) + 1): number { this.generations.set(key, generation); const sequence = this.nextSequence++; this.queue.push({ sequence, key, generation, run }); performanceRuntimeState.queuedCommands = this.queue.length; return sequence }
+  /** 执行时调用 this.generations.set(key, (this.generations.get(key) ?? 0) + 1)；不显式返回调用结果。 */ invalidate(key: string): void { this.generations.set(key, (this.generations.get(key) ?? 0) + 1) }
+  /** 结构说明（自动提取）：flush；输入 maximum、budgetMs；直接调用 performance.now、queue.shift、generations.get、command.run；写入 performanceRuntimeState.queuedCommands、performanceRuntimeState.deferredCommands；包含循环处理。 */ flush(maximum = performanceRuntimeSettings.maximumCommandsPerFrame, budgetMs = performanceRuntimeSettings.frameWorkBudgetMs): { processed: number; deferred: number; stale: number } {
     const started = performance.now(); let processed = 0, stale = 0
     while (this.queue.length && processed < maximum && performance.now() - started <= budgetMs) { const command = this.queue.shift()!; if (this.generations.get(command.key) !== command.generation) { stale++; continue }; command.run(); processed++ }
     performanceRuntimeState.queuedCommands = this.queue.length; performanceRuntimeState.deferredCommands = this.queue.length
     return { processed, deferred: this.queue.length, stale }
   }
-  clear(): void { this.queue.splice(0); this.generations.clear(); performanceRuntimeState.queuedCommands = performanceRuntimeState.deferredCommands = 0 }
+  /** 结构说明（自动提取）：clear；无显式参数；直接调用 queue.splice、generations.clear；写入 performanceRuntimeState.queuedCommands、performanceRuntimeState.deferredCommands。 */ clear(): void { this.queue.splice(0); this.generations.clear(); performanceRuntimeState.queuedCommands = performanceRuntimeState.deferredCommands = 0 }
 }
 
 export class FrameBudgetQueue {
   private tasks: FrameBudgetTask[] = []
   private generations = new Map<string, number>()
-  enqueue(task: Omit<FrameBudgetTask, 'generation'> & { generation?: number }): number { const generation = task.generation ?? (this.generations.get(task.id) ?? 0) + 1; this.generations.set(task.id, generation); this.tasks.push({ ...task, generation }); this.tasks.sort((a, b) => b.priority - a.priority || a.id.localeCompare(b.id)); return generation }
-  cancel(id: string): void { this.generations.set(id, (this.generations.get(id) ?? 0) + 1); for (const task of this.tasks) if (task.id === id) task.cancelled = true }
-  async drain(budgetMs = performanceRuntimeSettings.frameWorkBudgetMs): Promise<{ processed: number; deferred: number; stale: number }> { const started = performance.now(); let processed = 0, stale = 0; while (this.tasks.length && performance.now() - started <= budgetMs) { const task = this.tasks.shift()!; if (task.cancelled || this.generations.get(task.id) !== task.generation) { stale++; continue }; await task.run(); processed++ }; return { processed, deferred: this.tasks.length, stale } }
-  clear(): void { this.tasks.splice(0); this.generations.clear() }
-  get pending(): number { return this.tasks.length }
+  /** 结构说明（自动提取）：enqueue；输入 task；直接调用 generations.get、generations.set、tasks.push、tasks.sort；返回路径包含 generation。 */ enqueue(task: Omit<FrameBudgetTask, 'generation'> & { generation?: number }): number { const generation = task.generation ?? (this.generations.get(task.id) ?? 0) + 1; this.generations.set(task.id, generation); this.tasks.push({ ...task, generation }); this.tasks.sort(/* 先计算 b.priority - a.priority；仅当其为假值时求右侧 a.id.localeCompare(b.id)，返回短路求值结果。 */ (a, b) => b.priority - a.priority || a.id.localeCompare(b.id)); return generation }
+  /** 结构说明（自动提取）：cancel；输入 id；直接调用 generations.set、generations.get；写入 task.cancelled；包含循环处理。 */ cancel(id: string): void { this.generations.set(id, (this.generations.get(id) ?? 0) + 1); for (const task of this.tasks) if (task.id === id) task.cancelled = true }
+  /** 结构说明（自动提取）：drain；输入 budgetMs；直接调用 performance.now、tasks.shift、generations.get、task.run；包含循环处理；等待异步结果。 */ async drain(budgetMs = performanceRuntimeSettings.frameWorkBudgetMs): Promise<{ processed: number; deferred: number; stale: number }> { const started = performance.now(); let processed = 0, stale = 0; while (this.tasks.length && performance.now() - started <= budgetMs) { const task = this.tasks.shift()!; if (task.cancelled || this.generations.get(task.id) !== task.generation) { stale++; continue }; await task.run(); processed++ }; return { processed, deferred: this.tasks.length, stale } }
+  /** 结构说明（自动提取）：clear；无显式参数；直接调用 tasks.splice、generations.clear。 */ clear(): void { this.tasks.splice(0); this.generations.clear() }
+  /* 返回 this.tasks.length 的当前值。 */ get pending(): number { return this.tasks.length }
 }
 
 export const performanceComponentScheduler = new StableComponentScheduler()
 export const performanceCommandQueue = new BatchedCommandQueue()
 export const performanceBackgroundQueue = new FrameBudgetQueue()
 
-export function synchronizePerformanceWorld(entities: readonly Entity[]): void {
+/** 结构说明（自动提取）：synchronizePerformanceWorld；输入 entities；直接调用 performanceComponentScheduler.synchronize、recordCachePerformance、Math.max、performanceCommandQueue.flush；写入 performanceRuntimeState.dirtyTransforms。 */ export function synchronizePerformanceWorld(entities: readonly Entity[]): void {
   if (!performanceRuntimeSettings.enabled) return
   const result = performanceComponentScheduler.synchronize(entities)
   performanceRuntimeState.dirtyTransforms = result.dirty
@@ -294,7 +295,7 @@ export function synchronizePerformanceWorld(entities: readonly Entity[]): void {
   performanceCommandQueue.flush()
 }
 
-export function resetPerformanceRuntime(): void {
+/** 结构说明（自动提取）：resetPerformanceRuntime；无显式参数；直接调用 frameSamples.fill、inputSamples.fill、performance.now、performanceCommandQueue.clear、performanceBackgroundQueue.clear 等；写入 frameSampleCount、frameSampleCursor、inputSampleCount、inputSampleCursor 等。 */ export function resetPerformanceRuntime(): void {
   frameSamples.fill(0); inputSamples.fill(0); frameSampleCount = frameSampleCursor = inputSampleCount = inputSampleCursor = 0
   startupStarted = performance.now(); firstFrameAt = pendingInputAt = 0; publishedCacheHits = publishedCacheMisses = pendingAllocations = 0; adaptiveGoodFrames = adaptiveBadFrames = 0
   performanceCommandQueue.clear(); performanceBackgroundQueue.clear()

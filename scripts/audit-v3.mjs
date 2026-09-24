@@ -1,3 +1,4 @@
+/* 收集 3.x 里程碑的源码和必需文件证据，汇总失败项而非遇首错即退出。 */
 import { existsSync } from 'node:fs'
 import { readFile, readdir } from 'node:fs/promises'
 import { dirname, join, relative } from 'node:path'
@@ -5,8 +6,8 @@ import { fileURLToPath } from 'node:url'
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)))
 const failures = []
-const assert = (condition, message) => { if (!condition) failures.push(message) }
-const read = path => readFile(join(root, path), 'utf8')
+const assert = /* 条件不满足时将错误追加到失败集合，使审计可以继续汇总其他问题。 */ (condition, message) => { if (!condition) failures.push(message) }
+const read = /* 调用 readFile(join(root, path), 'utf8') 并返回调用结果。 */ path => readFile(join(root, path), 'utf8')
 
 const [pkg, projectFormat, rustFormat, tauri, contracts, app, crash, faults, translations, packages, templates, cli] = await Promise.all([
   read('package.json').then(JSON.parse), read('src/projects/projectFormat.ts'), read('crates/nova_format/src/lib.rs'), read('src-tauri/tauri.conf.json').then(JSON.parse),
@@ -25,11 +26,11 @@ for (const value of ['recent.length > 64', 'isExpectedCancellation', 'reportReco
 
 const newKeys = ['studioStatus', 'compatibilityPromise', 'fatalErrorTitle', 'copyDiagnostics', 'restartSafeMode', 'atlasRebuildFailed']
 for (const key of newKeys) assert((translations.match(new RegExp(`${key}:`, 'g')) ?? []).length >= 3, `Localization key ${key} is not present in EN/DE/ZH.`)
-assert(!/\b(?:window\.)?(?:confirm|prompt|alert)\s*\(/.test((await collectSources(join(root, 'src'))).map(item => item.source).join('\n')), 'A browser confirm/prompt/alert call remains in the application.')
+assert(!/\b(?:window\.)?(?:confirm|prompt|alert)\s*\(/.test((await collectSources(join(root, 'src'))).map(/* 返回 item.source 的当前值。 */ item => item.source).join('\n')), 'A browser confirm/prompt/alert call remains in the application.')
 
 const inputs = JSON.parse(await read('tests/fixtures/migrations/public-schema-inputs.json'))
 const expected = JSON.parse(await read('tests/fixtures/migrations/public-schema-expected.json'))
-assert(JSON.stringify(inputs.publicSchemas) === JSON.stringify(Array.from({ length: 25 }, (_, index) => index + 5)), 'Migration golden inputs do not cover every schema 5–29.')
+assert(JSON.stringify(inputs.publicSchemas) === JSON.stringify(Array.from({ length: 25 }, /* 计算表达式 index + 5 并返回结果，沿用操作数的原有类型规则。 */ (_, index) => index + 5)), 'Migration golden inputs do not cover every schema 5–29.')
 assert(expected.targetSchema === 29 && expected.targetEngine === '4.0.0', 'Migration golden output is not frozen schema 29 / engine 4.0.0.')
 assert(rustFormat.includes('every_public_schema_matches_the_v3_golden_projection') && rustFormat.includes('corrupted_input_fuzz_cases_never_panic'), 'Rust golden migration/corruption tests are missing.')
 
@@ -42,7 +43,7 @@ for (const document of ['STABLE_CONTRACTS.md', 'COMPATIBILITY.md', 'BENCHMARKS.m
 for (const workflow of ['release-matrix.yml', 'stability-24h.yml']) assert(existsSync(join(root, '.github', 'workflows', workflow)), `Qualification workflow ${workflow} is missing.`)
 for (const command of ['audit:typography', 'benchmark:v3', 'stability:v3', 'references']) assert(typeof pkg.scripts[command] === 'string', `Package command ${command} is missing.`)
 
-const vueSources = (await collectSources(join(root, 'src'))).filter(item => item.path.endsWith('.vue'))
+const vueSources = (await collectSources(join(root, 'src'))).filter(/* 调用 item.path.endsWith('.vue') 并返回调用结果。 */ item => item.path.endsWith('.vue'))
 let controls = 0
 for (const { path, source } of vueSources) {
   for (const match of source.matchAll(/<(button|input|select|textarea)\b([^>]*)>/g)) {
@@ -60,6 +61,7 @@ if (failures.length) {
 }
 console.log(`Nova_A v3 audit passed: frozen contracts, all public migration goldens, fault containment, ${controls} visible controls, tri-lingual v3 UI, references, evidence tooling, limitations, and platform workflows.`)
 
+/* 递归读取 TypeScript、Vue 和 CSS 源文件并保留原路径。 */
 async function collectSources(directory) {
   const result = []
   for (const entry of await readdir(directory, { withFileTypes: true })) {

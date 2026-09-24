@@ -1,3 +1,4 @@
+<!-- 瓦片地图工作室：编辑图集、笔刷、地图层及烘焙结果。 -->
 <template>
   <section class="tilemap-panel">
     <header class="tilemap-toolbar">
@@ -116,85 +117,85 @@ const sourceImageUuid = ref('')
 const tilePixels = reactive({ x: 32, y: 32 })
 const paletteRef = ref(''), brushRef = ref(''), terrainRef = ref(''), bakeResult = ref(''), tileSearch = ref('')
 const diagnostics = ref<TilemapDiagnostic[]>([])
-const selectedEntity = computed(() => physicsState.world.entities.find(entity => entity.id === physicsState.selectedEntityId) ?? null)
-const tileMap = computed(() => selectedEntity.value?.getComponent<TileMap2D>('TileMap2D') ?? null)
-const images = computed(() => assetState.records.filter(asset => asset.assetType === 'image'))
-const tileSets = computed(() => assetState.records.filter(asset => asset.assetType === 'tileset'))
-const palettes = computed(() => assetState.records.filter(asset => asset.assetType === 'tilePalette'))
-const brushes = computed(() => assetState.records.filter(asset => asset.assetType === 'brushPreset'))
-const terrains = computed(() => assetState.records.filter(asset => asset.assetType === 'terrainRules'))
-const sceneAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'scene'))
-const prefabAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'prefab'))
-const sourceImage = computed(() => images.value.find(asset => asset.uuid === sourceImageUuid.value) ?? null)
-const tileSetAsset = computed(() => tileSets.value.find(asset => assetReference(asset.uuid) === tileMap.value?.tileSetAsset) ?? null)
-const tileSet = computed(() => readTileSet(tileMap.value?.tileSetAsset))
-const importedMap = computed(() => !!tileSetAsset.value && isTiledMapAsset(tileSetAsset.value))
+const selectedEntity = computed(/** 查找当前选中实体。 */ () => physicsState.world.entities.find(/* 比较 entity.id 与 physicsState.selectedEntityId，返回严格相等的判断结果。 */ entity => entity.id === physicsState.selectedEntityId) ?? null)
+const tileMap = computed(/* 当 selectedEntity.value?.getComponent<TileMap2D>('TileMap2D') 为 null 或 undefined 时返回 null，否则保留左侧值。 */ () => selectedEntity.value?.getComponent<TileMap2D>('TileMap2D') ?? null)
+const images = computed(/** 筛选图片资源。 */ () => assetState.records.filter(/* 比较 asset.assetType 与 'image'，返回严格相等的判断结果。 */ asset => asset.assetType === 'image'))
+const tileSets = computed(/** 筛选图集资源。 */ () => assetState.records.filter(/* 比较 asset.assetType 与 'tileset'，返回严格相等的判断结果。 */ asset => asset.assetType === 'tileset'))
+const palettes = computed(/** 筛选瓦片调色板资源。 */ () => assetState.records.filter(/* 比较 asset.assetType 与 'tilePalette'，返回严格相等的判断结果。 */ asset => asset.assetType === 'tilePalette'))
+const brushes = computed(/** 筛选笔刷预设资源。 */ () => assetState.records.filter(/* 比较 asset.assetType 与 'brushPreset'，返回严格相等的判断结果。 */ asset => asset.assetType === 'brushPreset'))
+const terrains = computed(/** 筛选地形规则资源。 */ () => assetState.records.filter(/* 比较 asset.assetType 与 'terrainRules'，返回严格相等的判断结果。 */ asset => asset.assetType === 'terrainRules'))
+const sceneAssets = computed(/** 筛选场景资源。 */ () => assetState.records.filter(/* 比较 asset.assetType 与 'scene'，返回严格相等的判断结果。 */ asset => asset.assetType === 'scene'))
+const prefabAssets = computed(/** 筛选预制体资源。 */ () => assetState.records.filter(/* 比较 asset.assetType 与 'prefab'，返回严格相等的判断结果。 */ asset => asset.assetType === 'prefab'))
+const sourceImage = computed(/** 查找当前选中的源图片。 */ () => images.value.find(/* 比较 asset.uuid 与 sourceImageUuid.value，返回严格相等的判断结果。 */ asset => asset.uuid === sourceImageUuid.value) ?? null)
+const tileSetAsset = computed(/** 按当前地图图集引用查找对应资源。 */ () => tileSets.value.find(/* 比较 assetReference(asset.uuid) 与 tileMap.value?.tileSetAsset，返回严格相等的判断结果。 */ asset => assetReference(asset.uuid) === tileMap.value?.tileSetAsset) ?? null)
+const tileSet = computed(/* 调用 readTileSet(tileMap.value?.tileSetAsset) 并返回调用结果。 */ () => readTileSet(tileMap.value?.tileSetAsset))
+const importedMap = computed(/* 先计算 !!tileSetAsset.value；仅当其为真值时求右侧 isTiledMapAsset(tileSetAsset.value)，返回短路求值结果。 */ () => !!tileSetAsset.value && isTiledMapAsset(tileSetAsset.value))
 const tileSetError = ref('')
-const selectedDefinition = computed(() => tileSet.value?.tiles[tilemapEditorState.tileIndex] ?? null)
+const selectedDefinition = computed(/* 当 tileSet.value?.tiles[tilemapEditorState.tileIndex] 为 null 或 undefined 时返回 null，否则保留左侧值。 */ () => tileSet.value?.tiles[tilemapEditorState.tileIndex] ?? null)
 const activeSourceId = ref('primary')
-watch(tileSet, value => { if (value && !value.sources.some(source => source.id === activeSourceId.value)) activeSourceId.value = value.sources[0]?.id ?? '' }, { immediate: true })
-const activeSource = computed(() => tileSet.value?.sources.find(source => source.id === activeSourceId.value) ?? tileSet.value?.sources[0] ?? null)
-const activeLayer = computed(() => tileMap.value?.layers[tileMap.value.activeLayer] ?? null)
-const polygonText = computed(() => selectedDefinition.value?.polygon.map(point => `${point.x},${point.y}`).join(' ') ?? '')
-const navigationPolygonText = computed(() => selectedDefinition.value?.navigationPolygon.map(point => `${point.x},${point.y}`).join(' ') ?? '')
-const occlusionPolygonText = computed(() => selectedDefinition.value?.occlusionPolygon.map(point => `${point.x},${point.y}`).join(' ') ?? '')
-const metadataText = computed(() => JSON.stringify(selectedDefinition.value?.metadata ?? {}, null, 2))
-const animationFrames = computed(() => selectedDefinition.value?.animation?.frames.join(',') ?? '')
-const variantsText = computed(() => selectedDefinition.value?.variants.map(variant => `${variant.tile}:${variant.weight}`).join(', ') ?? '')
-const visibleTiles = computed(() => {
+watch(tileSet, /** 图集变化后，当前来源不存在则回退第一个来源。 */ value => { if (value && !value.sources.some(/* 比较 source.id 与 activeSourceId.value，返回严格相等的判断结果。 */ source => source.id === activeSourceId.value)) activeSourceId.value = value.sources[0]?.id ?? '' }, { immediate: true })
+const activeSource = computed(/** 查找当前图集来源，缺失回退首项。 */ () => tileSet.value?.sources.find(/* 比较 source.id 与 activeSourceId.value，返回严格相等的判断结果。 */ source => source.id === activeSourceId.value) ?? tileSet.value?.sources[0] ?? null)
+const activeLayer = computed(/* 当 tileMap.value?.layers[tileMap.value.activeLayer] 为 null 或 undefined 时返回 null，否则保留左侧值。 */ () => tileMap.value?.layers[tileMap.value.activeLayer] ?? null)
+const polygonText = computed(/* 当 selectedDefinition.value?.polygon.map(point => `${point.x},${point.y}`).join(' ') 为 null 或 undefined 时返回 ''，否则保留左侧值。 */ () => selectedDefinition.value?.polygon.map(/** 将碰撞多边形点格式化为二维坐标文本。 */ point => `${point.x},${point.y}`).join(' ') ?? '')
+const navigationPolygonText = computed(/* 当 selectedDefinition.value?.navigationPolygon.map(point => `${point.x},${point.y}`).join(' ') 为 null 或 undefined 时返回 ''，否则保留左侧值。 */ () => selectedDefinition.value?.navigationPolygon.map(/** 将导航多边形点格式化为二维坐标文本。 */ point => `${point.x},${point.y}`).join(' ') ?? '')
+const occlusionPolygonText = computed(/* 当 selectedDefinition.value?.occlusionPolygon.map(point => `${point.x},${point.y}`).join(' ') 为 null 或 undefined 时返回 ''，否则保留左侧值。 */ () => selectedDefinition.value?.occlusionPolygon.map(/** 将遮挡多边形点格式化为二维坐标文本。 */ point => `${point.x},${point.y}`).join(' ') ?? '')
+const metadataText = computed(/* 调用 JSON.stringify(selectedDefinition.value?.metadata ?? {}, null, 2) 并返回调用结果。 */ () => JSON.stringify(selectedDefinition.value?.metadata ?? {}, null, 2))
+const animationFrames = computed(/* 当 selectedDefinition.value?.animation?.frames.join(',') 为 null 或 undefined 时返回 ''，否则保留左侧值。 */ () => selectedDefinition.value?.animation?.frames.join(',') ?? '')
+const variantsText = computed(/* 当 selectedDefinition.value?.variants.map(variant => `${variant.tile}:${variant.weight}`).join(', ') 为 null 或 undefined 时返回 ''，否则保留左侧值。 */ () => selectedDefinition.value?.variants.map(/** 将随机变体格式化为瓦片编号和权重。 */ variant => `${variant.tile}:${variant.weight}`).join(', ') ?? '')
+const visibleTiles = computed(/** 先按调色板限定候选，再按瓦片名、编号或地形搜索。 */ () => {
   const palette = readTilePalette(paletteRef.value), query = tileSearch.value.trim().toLocaleLowerCase()
-  const candidates = palette ? tileSet.value?.tiles.filter(tile => palette.tiles.includes(tile.index)) ?? [] : tileSet.value?.tiles ?? []
-  return query ? candidates.filter(tile => tile.name.toLocaleLowerCase().includes(query) || String(tile.index).includes(query) || tile.terrain.toLocaleLowerCase().includes(query)) : candidates
+  const candidates = palette ? tileSet.value?.tiles.filter(/* 调用 palette.tiles.includes(tile.index) 并返回调用结果。 */ tile => palette.tiles.includes(tile.index)) ?? [] : tileSet.value?.tiles ?? []
+  return query ? candidates.filter(/** 匹配瓦片名称、编号或地形中的查询文本。 */ tile => tile.name.toLocaleLowerCase().includes(query) || String(tile.index).includes(query) || tile.terrain.toLocaleLowerCase().includes(query)) : candidates
 })
-const brushRotation = computed(() => tilemapEditorState.transform & 3)
-const brushMirrorX = computed(() => (tilemapEditorState.transform & 4) !== 0)
-const brushMirrorY = computed(() => (tilemapEditorState.transform & 8) !== 0)
-const autoRegion = computed(() => ({ x: (tilemapEditorState.tileIndex % (tileSet.value?.columns ?? 1)) * (tileSet.value?.tileWidth ?? 1), y: Math.floor(tilemapEditorState.tileIndex / (tileSet.value?.columns ?? 1)) * (tileSet.value?.tileHeight ?? 1) }))
-const terrainPreview = computed(() => selectedDefinition.value?.terrain ? `${selectedDefinition.value.terrain} · ${diagnostics.value.some(issue => issue.code === 'invalid-terrain') ? t('terrainRulesInvalid') : t('terrainRulesReady')}` : t('noTerrainRules'))
-const selectionWorld = computed(() => selectedEntity.value && tileMap.value && tilemapEditorState.selection
+const brushRotation = computed(/** 读取笔刷变换低两位作为旋转状态。 */ () => tilemapEditorState.transform & 3)
+const brushMirrorX = computed(/* 比较 (tilemapEditorState.transform & 4) 与 0，返回严格不等的判断结果。 */ () => (tilemapEditorState.transform & 4) !== 0)
+const brushMirrorY = computed(/* 比较 (tilemapEditorState.transform & 8) 与 0，返回严格不等的判断结果。 */ () => (tilemapEditorState.transform & 8) !== 0)
+const autoRegion = computed(/** 根据选中瓦片编号、列数及瓦片尺寸计算默认图像区域位置。 */ () => ({ x: (tilemapEditorState.tileIndex % (tileSet.value?.columns ?? 1)) * (tileSet.value?.tileWidth ?? 1), y: Math.floor(tilemapEditorState.tileIndex / (tileSet.value?.columns ?? 1)) * (tileSet.value?.tileHeight ?? 1) }))
+const terrainPreview = computed(/** 按所选瓦片地形及诊断返回规则就绪、无效或未配置说明。 */ () => selectedDefinition.value?.terrain ? `${selectedDefinition.value.terrain} · ${diagnostics.value.some(/* 比较 issue.code 与 'invalid-terrain'，返回严格相等的判断结果。 */ issue => issue.code === 'invalid-terrain') ? t('terrainRulesInvalid') : t('terrainRulesReady')}` : t('noTerrainRules'))
+const selectionWorld = computed(/** 存在地图和选择时计算选择起点的世界坐标。 */ () => selectedEntity.value && tileMap.value && tilemapEditorState.selection
   ? tileWorldCoordinate(selectedEntity.value, tileMap.value, tilemapEditorState.selection.start, physicsState.world.entities)
   : null)
-const streamingBoundaryCount = computed(() => tileMap.value ? tileStreamingBoundaries(tileMap.value).length : 0)
+const streamingBoundaryCount = computed(/* 根据 tileMap.value 的真假，分别返回 tileStreamingBoundaries(tileMap.value).length 或 0。 */ () => tileMap.value ? tileStreamingBoundaries(tileMap.value).length : 0)
 
-watch(selectedEntity, entity => {
+watch(selectedEntity, /** 实体选择变化时仅为瓦片地图设置编辑目标并启用编辑器。 */ entity => {
   tilemapEditorState.selectedEntityUuid = entity?.getComponent<TileMap2D>('TileMap2D') ? entity.uuid : null
   tilemapEditorState.active = Boolean(tilemapEditorState.selectedEntityUuid)
 }, { immediate: true })
 
-function createMap() { createTileMapEntity(); tilemapEditorState.active = true }
-function createSet() {
+/** 创建瓦片地图实体并启用编辑器。 */ function createMap() { createTileMapEntity(); tilemapEditorState.active = true }
+/** 从源图片创建图集，按需绑定地图并使缓存失效，记录历史。 */ function createSet() {
   if (!sourceImage.value) return
   const asset = createTileSet(sourceImage.value, tilePixels.x, tilePixels.y)
   if (tileMap.value) { tileMap.value.tileSetAsset = assetReference(asset.uuid); tileMap.value.revision++; invalidateTileMap(tileMap.value) }
   pushHistory('Create TileSet')
 }
-function createPalette() { if (!tileMap.value) return; const asset = createTilePalette(tileMap.value.tileSetAsset, [tilemapEditorState.tileIndex]); paletteRef.value = assetReference(asset.uuid); pushHistory('Create tile palette') }
-function createBrush() { const asset = createBrushPreset(); brushRef.value = assetReference(asset.uuid); pushHistory('Create brush preset') }
-function createTerrain() { const asset = createTerrainRules(); terrainRef.value = assetReference(asset.uuid); pushHistory('Create terrain rules') }
-function applyPalette() { const palette = readTilePalette(paletteRef.value); if (palette?.tiles.length) tilemapEditorState.tileIndex = palette.tiles[0] }
-function applyBrush() { tilemapEditorState.brushPresetAsset = brushRef.value || null }
-function applyTerrain() { tilemapEditorState.terrainRulesAsset = terrainRef.value || null }
-function activateLayer(index: number) { if (tileMap.value && setActiveTileLayer(tileMap.value, index)) pushHistory('Switch tile layer') }
-function addLayer() { if (!tileMap.value) return; addTileLayer(tileMap.value); pushHistory('Add tile layer') }
-function duplicateLayer() { if (!tileMap.value) return; duplicateTileLayer(tileMap.value); pushHistory('Duplicate tile layer') }
-function removeLayer() { if (tileMap.value && removeTileLayer(tileMap.value)) pushHistory('Remove tile layer') }
-function changedLayer() { if (!tileMap.value) return; tileMap.value.revision++; invalidateTileMap(tileMap.value); pushHistory('Edit tile layer') }
-async function bake() { if (!tileMap.value) return; const result = await requestTileMapBake(tileMap.value); bakeResult.value = result.cancelled ? t('cancelled') : `${result.collision} collision · ${result.navigation} navigation · ${result.occluders} occluders · ${result.chunks} chunks` }
-async function copyDeterministicStorage() { if (!tileMap.value) return; const text = deterministicTileMapStorage(tileMap.value); try { await navigator.clipboard.writeText(text); bakeResult.value = t('deterministicStorageCopied') } catch { bakeResult.value = text } }
-function selectTileSet(event: Event) {
+/** 为当前地图及选中瓦片创建调色板，选中并记录历史。 */ function createPalette() { if (!tileMap.value) return; const asset = createTilePalette(tileMap.value.tileSetAsset, [tilemapEditorState.tileIndex]); paletteRef.value = assetReference(asset.uuid); pushHistory('Create tile palette') }
+/** 创建笔刷预设，选中并记录历史。 */ function createBrush() { const asset = createBrushPreset(); brushRef.value = assetReference(asset.uuid); pushHistory('Create brush preset') }
+/** 创建地形规则，选中并记录历史。 */ function createTerrain() { const asset = createTerrainRules(); terrainRef.value = assetReference(asset.uuid); pushHistory('Create terrain rules') }
+/** 调色板有瓦片时选中首项。 */ function applyPalette() { const palette = readTilePalette(paletteRef.value); if (palette?.tiles.length) tilemapEditorState.tileIndex = palette.tiles[0] }
+/** 设置当前笔刷预设资源引用或空值。 */ function applyBrush() { tilemapEditorState.brushPresetAsset = brushRef.value || null }
+/** 设置当前地形规则引用或空值。 */ function applyTerrain() { tilemapEditorState.terrainRulesAsset = terrainRef.value || null }
+/** 激活指定瓦片层成功后记录历史。 */ function activateLayer(index: number) { if (tileMap.value && setActiveTileLayer(tileMap.value, index)) pushHistory('Switch tile layer') }
+/** 向地图添加瓦片层并记录历史。 */ function addLayer() { if (!tileMap.value) return; addTileLayer(tileMap.value); pushHistory('Add tile layer') }
+/** 复制当前瓦片层并记录历史。 */ function duplicateLayer() { if (!tileMap.value) return; duplicateTileLayer(tileMap.value); pushHistory('Duplicate tile layer') }
+/** 删除当前瓦片层成功后记录历史。 */ function removeLayer() { if (tileMap.value && removeTileLayer(tileMap.value)) pushHistory('Remove tile layer') }
+/** 层属性变化时递增地图修订、失效缓存并记录历史。 */ function changedLayer() { if (!tileMap.value) return; tileMap.value.revision++; invalidateTileMap(tileMap.value); pushHistory('Edit tile layer') }
+/** 烘焙当前地图，显示取消或碰撞、导航、遮挡和分块数量。 */ async function bake() { if (!tileMap.value) return; const result = await requestTileMapBake(tileMap.value); bakeResult.value = result.cancelled ? t('cancelled') : `${result.collision} collision · ${result.navigation} navigation · ${result.occluders} occluders · ${result.chunks} chunks` }
+/** 复制确定性存储文本，剪贴板失败时直接在结果区显示文本。 */ async function copyDeterministicStorage() { if (!tileMap.value) return; const text = deterministicTileMapStorage(tileMap.value); try { await navigator.clipboard.writeText(text); bakeResult.value = t('deterministicStorageCopied') } catch { bakeResult.value = text } }
+/** 切换图集绑定，递增修订、失效缓存并记录历史。 */ function selectTileSet(event: Event) {
   if (!tileMap.value) return
   tileMap.value.tileSetAsset = (event.target as HTMLSelectElement).value || null
   tileMap.value.revision++
   invalidateTileMap(tileMap.value)
   pushHistory('Assign TileSet')
 }
-function activateTool(tool: TileTool) { tilemapEditorState.tool = tool; tilemapEditorState.active = true }
-function rotateBrush() { tilemapEditorState.transform = (((tilemapEditorState.transform & 12) | ((tilemapEditorState.transform + 1) & 3)) & 15) as typeof tilemapEditorState.transform }
-function toggleBrushMirror(bit: 4 | 8) { tilemapEditorState.transform = (tilemapEditorState.transform ^ bit) as typeof tilemapEditorState.transform }
-function copySelection() { if (tileMap.value && copyTileSelection(tileMap.value)) pushHistory('Copy tile selection') }
-function transformSelection(operation: 'rotate' | 'mirrorX' | 'mirrorY') { if (tileMap.value && transformTileSelection(tileMap.value, operation)) { tileMap.value.revision++; invalidateTileMap(tileMap.value); pushHistory(`Transform tile selection: ${operation}`) } }
-function runDiagnostics() { diagnostics.value = tileMap.value ? diagnoseTileMap(tileMap.value) : [] }
-function makeEditableCopy() {
+/** 选择瓦片工具并启用编辑器。 */ function activateTool(tool: TileTool) { tilemapEditorState.tool = tool; tilemapEditorState.active = true }
+/** 保留镜像位，循环递增两位旋转状态。 */ function rotateBrush() { tilemapEditorState.transform = (((tilemapEditorState.transform & 12) | ((tilemapEditorState.transform + 1) & 3)) & 15) as typeof tilemapEditorState.transform }
+/** 按指定镜像位翻转笔刷变换状态。 */ function toggleBrushMirror(bit: 4 | 8) { tilemapEditorState.transform = (tilemapEditorState.transform ^ bit) as typeof tilemapEditorState.transform }
+/** 复制地图选区成功后记录历史。 */ function copySelection() { if (tileMap.value && copyTileSelection(tileMap.value)) pushHistory('Copy tile selection') }
+/** 旋转或镜像选区成功后更新修订及缓存并记录历史。 */ function transformSelection(operation: 'rotate' | 'mirrorX' | 'mirrorY') { if (tileMap.value && transformTileSelection(tileMap.value, operation)) { tileMap.value.revision++; invalidateTileMap(tileMap.value); pushHistory(`Transform tile selection: ${operation}`) } }
+/** 重新生成地图诊断，无地图时清空。 */ function runDiagnostics() { diagnostics.value = tileMap.value ? diagnoseTileMap(tileMap.value) : [] }
+/** 复制图集为可编辑资源并重新绑定地图，更新缓存和历史，失败显示错误。 */ function makeEditableCopy() {
   if (!tileMap.value || !tileSetAsset.value) return
   try {
     const asset = copyEditableTileSet(tileSetAsset.value.uuid)
@@ -203,44 +204,44 @@ function makeEditableCopy() {
     tileSetError.value = ''; pushHistory('Make editable TileSet copy')
   } catch (error) { tileSetError.value = error instanceof Error ? error.message : String(error) }
 }
-function saveSet() {
+/** 仅保存可编辑图集，成功更新地图修订及历史，失败显示操作错误。 */ function saveSet() {
   if (importedMap.value || !tileSetAsset.value || !tileSet.value) return
   if (saveTileSet(tileSetAsset.value.uuid, tileSet.value)) {
     tileSetError.value = ''; if (tileMap.value) { tileMap.value.revision++; invalidateTileMap(tileMap.value) }
     pushHistory('Edit TileSet')
   } else tileSetError.value = ac('operationFailed')
 }
-function addAtlasSource() { if (!tileSet.value || !sourceImage.value) return; const id = `atlas-${crypto.randomUUID().slice(0, 8)}`; tileSet.value.sources.push({ id, name: sourceImage.value.name, textureAsset: assetReference(sourceImage.value.uuid), margin: 0, spacing: 0 }); activeSourceId.value = id; saveSet() }
-function updateRegion(field: 'x' | 'y' | 'width' | 'height', event: Event) { if (!selectedDefinition.value || !tileSet.value) return; const current = selectedDefinition.value.region ?? { x: autoRegion.value.x, y: autoRegion.value.y, width: tileSet.value.tileWidth, height: tileSet.value.tileHeight }; current[field] = Math.max(field === 'width' || field === 'height' ? 1 : 0, Math.round(Number((event.target as HTMLInputElement).value) || 0)); selectedDefinition.value.region = current; saveSet() }
-function collisionChanged() {
+/** 从选中图片添加新图集来源，选中并保存图集。 */ function addAtlasSource() { if (!tileSet.value || !sourceImage.value) return; const id = `atlas-${crypto.randomUUID().slice(0, 8)}`; tileSet.value.sources.push({ id, name: sourceImage.value.name, textureAsset: assetReference(sourceImage.value.uuid), margin: 0, spacing: 0 }); activeSourceId.value = id; saveSet() }
+/** 读取区域输入并归一化为非负整数，宽高至少一，更新后保存。 */ function updateRegion(field: 'x' | 'y' | 'width' | 'height', event: Event) { if (!selectedDefinition.value || !tileSet.value) return; const current = selectedDefinition.value.region ?? { x: autoRegion.value.x, y: autoRegion.value.y, width: tileSet.value.tileWidth, height: tileSet.value.tileHeight }; current[field] = Math.max(field === 'width' || field === 'height' ? 1 : 0, Math.round(Number((event.target as HTMLInputElement).value) || 0)); selectedDefinition.value.region = current; saveSet() }
+/** 多边形碰撞点不足时创建默认矩形，保存图集并使地图缓存失效。 */ function collisionChanged() {
   if (selectedDefinition.value?.collision === 'Polygon' && selectedDefinition.value.polygon.length < 3) selectedDefinition.value.polygon = [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 }, { x: 0, y: 1 }]
   saveSet()
   if (tileMap.value) { tileMap.value.revision++; invalidateTileMap(tileMap.value) }
 }
-function updatePolygon(event: Event) {
+/** 解析并限制最多四个归一化点，至少三个才替换碰撞多边形，再刷新碰撞设置。 */ function updatePolygon(event: Event) {
   if (!selectedDefinition.value) return
-  const points = (event.target as HTMLTextAreaElement).value.trim().split(/\s+/).flatMap(pair => {
+  const points = (event.target as HTMLTextAreaElement).value.trim().split(/\s+/).flatMap(/** 解析单个有限坐标对并钳制至零到一，无效忽略。 */ pair => {
     const [x, y] = pair.split(',').map(Number)
     return Number.isFinite(x) && Number.isFinite(y) ? [{ x: Math.min(1, Math.max(0, x)), y: Math.min(1, Math.max(0, y)) }] : []
   }).slice(0, 4)
   if (points.length >= 3) selectedDefinition.value.polygon = points
   collisionChanged()
 }
-function updateTypedPolygon(field: 'navigationPolygon' | 'occlusionPolygon', event: Event) { if (!selectedDefinition.value) return; const points = parsePolygon((event.target as HTMLTextAreaElement).value); selectedDefinition.value[field] = points.length >= 3 ? points : []; saveSet() }
-function parsePolygon(value: string) { return value.trim().split(/\s+/).flatMap(pair => { const [x, y] = pair.split(',').map(Number); return Number.isFinite(x) && Number.isFinite(y) ? [{ x: Math.min(1, Math.max(0, x)), y: Math.min(1, Math.max(0, y)) }] : [] }).slice(0, 4) }
-function updateMetadata(event: Event) { if (!selectedDefinition.value) return; try { const value = JSON.parse((event.target as HTMLTextAreaElement).value) as unknown; if (value && typeof value === 'object' && !Array.isArray(value)) selectedDefinition.value.metadata = Object.fromEntries(Object.entries(value as Record<string, unknown>).filter(([,item]) => ['boolean','number','string'].includes(typeof item)).slice(0,64)) as Record<string, boolean | number | string>; saveSet() } catch { runDiagnostics() } }
-function updateAnimationFrames(event: Event) { if (!selectedDefinition.value || !tileSet.value) return; const frames = (event.target as HTMLInputElement).value.split(',').map(Number).filter(value => Number.isInteger(value) && value >= 0 && value < tileSet.value!.tiles.length).slice(0,256); selectedDefinition.value.animation = frames.length ? { frames, framesPerSecond: selectedDefinition.value.animation?.framesPerSecond ?? 8, mode: selectedDefinition.value.animation?.mode ?? 'Loop' } : null; saveSet() }
-function updateVariants(event: Event) { if (!selectedDefinition.value || !tileSet.value) return; selectedDefinition.value.variants = (event.target as HTMLTextAreaElement).value.split(',').flatMap(pair => { const [tile,weight] = pair.trim().split(':').map(Number); return Number.isInteger(tile) && tile >= 0 && tile < tileSet.value!.tiles.length && Number.isFinite(weight) && weight > 0 ? [{ tile, weight }] : [] }).slice(0,64); saveSet() }
-function tileStyle(index: number) {
+/** 解析导航或遮挡多边形，少于三个有效点时清空，然后保存。 */ function updateTypedPolygon(field: 'navigationPolygon' | 'occlusionPolygon', event: Event) { if (!selectedDefinition.value) return; const points = parsePolygon((event.target as HTMLTextAreaElement).value); selectedDefinition.value[field] = points.length >= 3 ? points : []; saveSet() }
+/** 解析空白分隔坐标文本并限制最多四点。 */ function parsePolygon(value: string) { return value.trim().split(/\s+/).flatMap(/** 将单个有限坐标对钳制至零到一，无效忽略。 */ pair => { const [x, y] = pair.split(',').map(Number); return Number.isFinite(x) && Number.isFinite(y) ? [{ x: Math.min(1, Math.max(0, x)), y: Math.min(1, Math.max(0, y)) }] : [] }).slice(0, 4) }
+/** 解析对象元数据，仅保留基础值最多六十四项后保存，JSON 异常则运行诊断。 */ function updateMetadata(event: Event) { if (!selectedDefinition.value) return; try { const value = JSON.parse((event.target as HTMLTextAreaElement).value) as unknown; if (value && typeof value === 'object' && !Array.isArray(value)) selectedDefinition.value.metadata = Object.fromEntries(Object.entries(value as Record<string, unknown>).filter(/* 调用 ['boolean','number','string'].includes(typeof item) 并返回调用结果。 */ ([,item]) => ['boolean','number','string'].includes(typeof item)).slice(0,64)) as Record<string, boolean | number | string>; saveSet() } catch { runDiagnostics() } }
+/** 解析合法图集瓦片索引作为最多二百五十六帧的动画，空列表删除动画，再保存。 */ function updateAnimationFrames(event: Event) { if (!selectedDefinition.value || !tileSet.value) return; const frames = (event.target as HTMLInputElement).value.split(',').map(Number).filter(/* 先计算 Number.isInteger(value) && value >= 0；仅当其为真值时求右侧 value < tileSet.value!.tiles.length，返回短路求值结果。 */ value => Number.isInteger(value) && value >= 0 && value < tileSet.value!.tiles.length).slice(0,256); selectedDefinition.value.animation = frames.length ? { frames, framesPerSecond: selectedDefinition.value.animation?.framesPerSecond ?? 8, mode: selectedDefinition.value.animation?.mode ?? 'Loop' } : null; saveSet() }
+/** 解析有效正权重瓦片变体，最多六十四项后保存。 */ function updateVariants(event: Event) { if (!selectedDefinition.value || !tileSet.value) return; selectedDefinition.value.variants = (event.target as HTMLTextAreaElement).value.split(',').flatMap(/** 校验瓦片索引在图集范围且权重有限为正，合法返回变体。 */ pair => { const [tile,weight] = pair.trim().split(':').map(Number); return Number.isInteger(tile) && tile >= 0 && tile < tileSet.value!.tiles.length && Number.isFinite(weight) && weight > 0 ? [{ tile, weight }] : [] }).slice(0,64); saveSet() }
+/** 查找瓦片来源图片和区域，计算背景图、缩放和位置样式，缺失资源返回空样式。 */ function tileStyle(index: number) {
   const set = tileSet.value, tile = set?.tiles[index]
   if (!set || !tile) return {}
-  const source = set.sources.find(value => value.id === tile.sourceId), reference = source?.textureAsset ?? set.textureAsset
-  const image = images.value.find(asset => reference === assetReference(asset.uuid) || reference === asset.uuid)
+  const source = set.sources.find(/* 比较 value.id 与 tile.sourceId，返回严格相等的判断结果。 */ value => value.id === tile.sourceId), reference = source?.textureAsset ?? set.textureAsset
+  const image = images.value.find(/* 先计算 reference === assetReference(asset.uuid)；仅当其为假值时求右侧 reference === asset.uuid，返回短路求值结果。 */ asset => reference === assetReference(asset.uuid) || reference === asset.uuid)
   if (!image) return {}
   const region = tile.region ?? { x: (source?.margin ?? 0) + index % set.columns * (set.tileWidth + (source?.spacing ?? 0)), y: (source?.margin ?? 0) + Math.floor(index / set.columns) * (set.tileHeight + (source?.spacing ?? 0)), width: set.tileWidth, height: set.tileHeight }
   return { backgroundImage: 'url(' + image.source + ')', backgroundSize: (image.width / region.width * 100) + '% ' + (image.height / region.height * 100) + '%', backgroundPosition: (image.width === region.width ? 0 : region.x / (image.width - region.width) * 100) + '% ' + (image.height === region.height ? 0 : region.y / (image.height - region.height) * 100) + '%' }
 }
-onBeforeUnmount(() => { tilemapEditorState.active = false })
+onBeforeUnmount(/** 卸载时停用瓦片编辑器。 */ () => { tilemapEditorState.active = false })
 </script>
 
 <style scoped>

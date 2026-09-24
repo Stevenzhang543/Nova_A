@@ -1,3 +1,4 @@
+/** 游戏界面主题：规范主题令牌、继承及变体，解析样式并检查资源文档。 */
 import { assetReference, createTextAsset, readTextAsset, resolveAsset, updateTextAsset } from '../assets/AssetDatabase'
 
 export interface UiThemeStyle {
@@ -45,7 +46,7 @@ const MAX_CLASSES = 512
 const MAX_VARIABLES = 512
 const TOKEN_GROUPS = ['colors', 'typography', 'spacing', 'radii', 'states', 'icons', 'sounds', 'animation'] as const
 
-function defaultTokens(): UiThemeTokens {
+/** 结构说明（自动提取）：defaultTokens；无显式参数。 */ function defaultTokens(): UiThemeTokens {
   return {
     colors: { accent: '#4f96ff', surface: '#232934', text: '#f5f7fb', muted: '#8d98aa', danger: '#f05d77', focus: '#ffffff' },
     typography: { bodyFamily: 'Nunito Sans', bodySize: 16, bodyWeight: 500, titleSize: 24, titleWeight: 700 },
@@ -55,7 +56,7 @@ function defaultTokens(): UiThemeTokens {
   }
 }
 
-export function defaultUiTheme(): UiThemeDocument {
+/** 结构说明（自动提取）：defaultUiTheme；无显式参数；直接调用 defaultTokens。 */ export function defaultUiTheme(): UiThemeDocument {
   return {
     version: 3,
     name: 'Nova UI',
@@ -77,7 +78,7 @@ export function defaultUiTheme(): UiThemeDocument {
   }
 }
 
-function cleanStyle(value: unknown): UiThemeStyle {
+/** 结构说明（自动提取）：cleanStyle；输入 value；直接调用 Array.isArray、source[…].slice、Number.isFinite、Math.min、Math.max 等；写入 style[…]；返回路径包含 style；包含循环处理。 */ function cleanStyle(value: unknown): UiThemeStyle {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return {}
   const source = value as Record<string, unknown>, style: UiThemeStyle = {}
   for (const key of ['background', 'foreground', 'border'] as const) if (typeof source[key] === 'string') style[key] = source[key].slice(0, 80)
@@ -85,17 +86,17 @@ function cleanStyle(value: unknown): UiThemeStyle {
   return style
 }
 
-function cleanTokens(value: unknown): UiThemeTokens {
+/** 结构说明（自动提取）：cleanTokens；输入 value；直接调用 defaultTokens、Array.isArray、Object.fromEntries、flatMap、slice 等；写入 result[…]；返回路径包含 result；包含循环处理。 */ function cleanTokens(value: unknown): UiThemeTokens {
   const defaults = defaultTokens(), source = value && typeof value === 'object' && !Array.isArray(value) ? value as Partial<UiThemeTokens> : {}
   const result = {} as UiThemeTokens
   for (const group of TOKEN_GROUPS) {
     const values = source[group] && typeof source[group] === 'object' && !Array.isArray(source[group]) ? source[group] as Record<string, unknown> : {}
-    result[group] = { ...defaults[group], ...Object.fromEntries(Object.entries(values).slice(0, MAX_VARIABLES).flatMap(([key, raw]) => typeof raw === 'string' || typeof raw === 'number' && Number.isFinite(raw) ? [[key.slice(0, 80), typeof raw === 'string' ? raw.slice(0, 240) : raw]] : [])) }
+    result[group] = { ...defaults[group], ...Object.fromEntries(Object.entries(values).slice(0, MAX_VARIABLES).flatMap(/** 结构说明（自动提取）：flatMap 回调；输入 [key, raw]；直接调用 Number.isFinite、key.slice、raw.slice；返回表达式求值结果。 */ ([key, raw]) => typeof raw === 'string' || typeof raw === 'number' && Number.isFinite(raw) ? [[key.slice(0, 80), typeof raw === 'string' ? raw.slice(0, 240) : raw]] : [])) }
   }
   return result
 }
 
-export function normalizeUiTheme(source: unknown): UiThemeDocument {
+/** 结构说明（自动提取）：normalizeUiTheme；输入 source；直接调用 slice、Object.entries、Number.isFinite、key.slice、value.slice 等；写入 variables[…]、classes[…]、variants[…]；包含循环处理。 */ export function normalizeUiTheme(source: unknown): UiThemeDocument {
   const item = source && typeof source === 'object' ? source as Partial<UiThemeDocument> : {}
   const variables: Record<string, string | number> = {}
   if (item.variables && typeof item.variables === 'object') for (const [key, value] of Object.entries(item.variables).slice(0, MAX_VARIABLES)) {
@@ -110,7 +111,7 @@ export function normalizeUiTheme(source: unknown): UiThemeDocument {
   const defaults = defaultUiTheme()
   const tokens = cleanTokens(item.tokens)
   const variants: Record<string, Record<string, string | number>> = {}
-  if (item.variants && typeof item.variants === 'object') for (const [name, raw] of Object.entries(item.variants).slice(0, 64)) if (raw && typeof raw === 'object' && !Array.isArray(raw)) variants[name.slice(0, 80)] = Object.fromEntries(Object.entries(raw).slice(0, MAX_VARIABLES).flatMap(([key, value]) => typeof value === 'string' || typeof value === 'number' && Number.isFinite(value) ? [[key.slice(0, 80), typeof value === 'string' ? value.slice(0, 120) : value]] : []))
+  if (item.variants && typeof item.variants === 'object') for (const [name, raw] of Object.entries(item.variants).slice(0, 64)) if (raw && typeof raw === 'object' && !Array.isArray(raw)) variants[name.slice(0, 80)] = Object.fromEntries(Object.entries(raw).slice(0, MAX_VARIABLES).flatMap(/** 结构说明（自动提取）：flatMap 回调；输入 [key, value]；直接调用 Number.isFinite、key.slice、value.slice；返回表达式求值结果。 */ ([key, value]) => typeof value === 'string' || typeof value === 'number' && Number.isFinite(value) ? [[key.slice(0, 80), typeof value === 'string' ? value.slice(0, 120) : value]] : []))
   return {
     version: 3, name: typeof item.name === 'string' ? item.name.slice(0, 120) : defaults.name,
     parentTheme: typeof item.parentTheme === 'string' ? item.parentTheme.slice(0, 160) : null,
@@ -120,25 +121,25 @@ export function normalizeUiTheme(source: unknown): UiThemeDocument {
 }
 
 /** Editable authored values only. Inheritance is resolved separately and must never be baked into a child save. */
-export function normalizeUiThemeSource(source: unknown): UiThemeDocument {
+/** 结构说明（自动提取）：normalizeUiThemeSource；输入 source；直接调用 Array.isArray、normalizeUiTheme、own、Object.fromEntries、TOKEN_GROUPS.map。 */ export function normalizeUiThemeSource(source: unknown): UiThemeDocument {
   const raw = source && typeof source === 'object' && !Array.isArray(source) ? source as Partial<UiThemeDocument> : {}, normalized = normalizeUiTheme(raw)
-  const own = <T>(values: Record<string, T>, authored: unknown): Record<string, T> => Object.fromEntries(Object.keys(authored && typeof authored === 'object' && !Array.isArray(authored) ? authored : {}).filter(key => Object.prototype.hasOwnProperty.call(values, key)).map(key => [key, values[key]]))
-  return { ...normalized, variables: own(normalized.variables, raw.variables), variants: own(normalized.variants, raw.variants), classes: own(normalized.classes, raw.classes), tokens: Object.fromEntries(TOKEN_GROUPS.map(group => [group, own(normalized.tokens[group], raw.tokens?.[group])])) as unknown as UiThemeTokens }
+  const own = /** 结构说明（自动提取）：own；输入 values、authored；直接调用 Object.fromEntries、map、filter、Object.keys、Array.isArray；返回表达式求值结果。 */ <T>(values: Record<string, T>, authored: unknown): Record<string, T> => Object.fromEntries(Object.keys(authored && typeof authored === 'object' && !Array.isArray(authored) ? authored : {}).filter(/* 调用 Object.prototype.hasOwnProperty.call(values, key) 并返回调用结果。 */ key => Object.prototype.hasOwnProperty.call(values, key)).map(/* 返回按声明顺序构造的数组 [key, values[key]]。 */ key => [key, values[key]]))
+  return { ...normalized, variables: own(normalized.variables, raw.variables), variants: own(normalized.variants, raw.variants), classes: own(normalized.classes, raw.classes), tokens: Object.fromEntries(TOKEN_GROUPS.map(/* 返回按声明顺序构造的数组 [group, own(normalized.tokens[group], raw.tokens?.[group])]。 */ group => [group, own(normalized.tokens[group], raw.tokens?.[group])])) as unknown as UiThemeTokens }
 }
-export function readUiThemeSource(reference: string | null | undefined): UiThemeDocument | null {
+/** 结构说明（自动提取）：readUiThemeSource；输入 reference；直接调用 resolveAsset、readTextAsset、normalizeUiThemeSource、JSON.parse。 */ export function readUiThemeSource(reference: string | null | undefined): UiThemeDocument | null {
   const asset = resolveAsset(reference), text = readTextAsset(reference)
   if (!asset || asset.assetType !== 'uiTheme' || text === null || text.length > 2 * 1024 * 1024) return null
   try { return normalizeUiThemeSource(JSON.parse(text)) } catch { return null }
 }
 
-export function createUiTheme(name = 'Nova UI'): string {
+/** 结构说明（自动提取）：createUiTheme；输入 name；直接调用 defaultUiTheme、name.slice、createTextAsset、JSON.stringify、assetReference；写入 theme.name。 */ export function createUiTheme(name = 'Nova UI'): string {
   const theme = defaultUiTheme(); theme.name = name.slice(0, 120)
   const asset = createTextAsset(theme.name, 'uiTheme', JSON.stringify(theme, null, 2), 'Assets/UI Themes')
   return assetReference(asset.uuid)
 }
 
 /** Merge explicit child fields before defaults; omitted child values cannot erase parent states/tokens. */
-export function mergeUiTheme(parent: UiThemeDocument | null, source: unknown): UiThemeDocument {
+/** 结构说明（自动提取）：mergeUiTheme；输入 parent、source；直接调用 Array.isArray、normalizeUiTheme、slice、Object.entries、Object.fromEntries 等；写入 classes[…]、classes[…][…]；包含循环处理。 */ export function mergeUiTheme(parent: UiThemeDocument | null, source: unknown): UiThemeDocument {
   const raw = source && typeof source === 'object' && !Array.isArray(source) ? source as Partial<UiThemeDocument> : {}
   if (!parent) return normalizeUiTheme(raw)
   const classes: Record<string, UiThemeClass> = { ...parent.classes }
@@ -148,9 +149,9 @@ export function mergeUiTheme(parent: UiThemeDocument | null, source: unknown): U
     classes[name] = { normal: { ...inherited?.normal, ...value.normal } }
     for (const state of ['hovered', 'pressed', 'disabled', 'focused'] as const) classes[name][state] = { ...inherited?.[state], ...value[state] }
   }
-  return normalizeUiTheme({ ...parent, ...raw, tokens: Object.fromEntries(TOKEN_GROUPS.map(group => [group, { ...parent.tokens[group], ...raw.tokens?.[group] }])), variables: { ...parent.variables, ...raw.variables }, variants: Object.fromEntries([...new Set([...Object.keys(parent.variants), ...Object.keys(raw.variants ?? {})])].map(name => [name, { ...parent.variants[name], ...raw.variants?.[name] }])), classes })
+  return normalizeUiTheme({ ...parent, ...raw, tokens: Object.fromEntries(TOKEN_GROUPS.map(/* 返回按声明顺序构造的数组 [group, { ...parent.tokens[group], ...raw.tokens?.[group] }]。 */ group => [group, { ...parent.tokens[group], ...raw.tokens?.[group] }])), variables: { ...parent.variables, ...raw.variables }, variants: Object.fromEntries([...new Set([...Object.keys(parent.variants), ...Object.keys(raw.variants ?? {})])].map(/* 返回按声明顺序构造的数组 [name, { ...parent.variants[name], ...raw.variants?.[name] }]。 */ name => [name, { ...parent.variants[name], ...raw.variants?.[name] }])), classes })
 }
-export function readUiTheme(reference: string | null | undefined, visited = new Set<string>()): UiThemeDocument | null {
+/** 结构说明（自动提取）：readUiTheme；输入 reference、visited；直接调用 resolveAsset、readTextAsset、visited.has、visited.add、JSON.parse 等。 */ export function readUiTheme(reference: string | null | undefined, visited = new Set<string>()): UiThemeDocument | null {
   const asset = resolveAsset(reference), text = readTextAsset(reference)
   if (!asset || asset.assetType !== 'uiTheme' || text === null || text.length > 2 * 1024 * 1024 || visited.has(asset.uuid) || visited.size >= 32) return null
   visited.add(asset.uuid)
@@ -162,7 +163,7 @@ export function readUiTheme(reference: string | null | undefined, visited = new 
   } catch { return null }
 }
 
-export function validateUiThemeDocument(theme: UiThemeDocument): string[] {
+/** 结构说明（自动提取）：validateUiThemeDocument；输入 theme；直接调用 JSON.stringify、Object.keys、errors.push、Object.entries、includes 等；返回路径包含 errors；包含循环处理。 */ export function validateUiThemeDocument(theme: UiThemeDocument): string[] {
   const errors: string[] = []
   if (JSON.stringify(theme).length > 2 * 1024 * 1024 || Object.keys(theme.classes).length > MAX_CLASSES || Object.keys(theme.variables).length > MAX_VARIABLES || Object.keys(theme.variants).length > 64) errors.push('Theme exceeds supported document/class/variable limits.')
   for (const [name, styleClass] of Object.entries(theme.classes)) for (const [state, style] of Object.entries(styleClass)) {
@@ -176,17 +177,17 @@ export function validateUiThemeDocument(theme: UiThemeDocument): string[] {
   }
   return errors
 }
-export function writeUiTheme(reference: string, theme: UiThemeDocument): boolean {
+/** 结构说明（自动提取）：writeUiTheme；输入 reference、theme；直接调用 resolveAsset、validateUiThemeDocument、Error、errors.join、themeInheritanceChain 等；包含显式抛错路径。 */ export function writeUiTheme(reference: string, theme: UiThemeDocument): boolean {
   const asset = resolveAsset(reference)
   const errors = validateUiThemeDocument(theme); if (errors.length) throw new Error(errors.join('\n'))
   if (theme.parentTheme) { const chain = themeInheritanceChain(theme.parentTheme); if (chain.cycle || chain.missing.length || chain.references.includes(asset?.uuid ?? '')) throw new Error('Theme parent is missing, cyclic or exceeds the inheritance limit.') }
   return Boolean(asset?.assetType === 'uiTheme' && updateTextAsset(asset.uuid, JSON.stringify(normalizeUiThemeSource(theme), null, 2)))
 }
 
-export function themeStyle(theme: UiThemeDocument | null, className: string, state = 'normal', overrides: Record<string, string | number> = {}): UiThemeStyle {
+/** 结构说明（自动提取）：themeStyle；输入 theme、className、state、overrides；直接调用 className.split、cleanStyle、Object.fromEntries、map、Object.entries。 */ export function themeStyle(theme: UiThemeDocument | null, className: string, state = 'normal', overrides: Record<string, string | number> = {}): UiThemeStyle {
   const styleClass = theme?.classes[className] ?? theme?.classes[className.split('.')[0]]
   const raw = { ...(styleClass?.normal ?? {}), ...(styleClass?.[state as keyof UiThemeClass] ?? {}), ...cleanStyle(overrides) }
-  const resolve = (input: string | number | undefined): string | number | undefined => {
+  const resolve = /** 结构说明（自动提取）：resolve；输入 input；直接调用 Set、value.startsWith、seen.has、seen.add、value.slice 等；写入 value；返回路径包含 undefined、value；包含循环处理。 */ (input: string | number | undefined): string | number | undefined => {
     let value = input
     const seen = new Set<string>()
     while (typeof value === 'string' && value.startsWith('$')) {
@@ -197,12 +198,12 @@ export function themeStyle(theme: UiThemeDocument | null, className: string, sta
     }
     return value
   }
-  return cleanStyle(Object.fromEntries(Object.entries(raw).map(([key, value]) => [key, resolve(value)])))
+  return cleanStyle(Object.fromEntries(Object.entries(raw).map(/* 返回按声明顺序构造的数组 [key, resolve(value)]。 */ ([key, value]) => [key, resolve(value)])))
 }
 
-export function themeVariant(theme: UiThemeDocument | null, variant = 'default'): UiThemeDocument | null { return theme ? { ...theme, variables: { ...theme.variables, ...(theme.variants[variant] ?? {}) } } : null }
+/* 根据 theme 的真假，分别返回 { ...theme, variables: { ...theme.variables, ...(theme.variants[variant] ?? {}) } } 或 null。 */ export function themeVariant(theme: UiThemeDocument | null, variant = 'default'): UiThemeDocument | null { return theme ? { ...theme, variables: { ...theme.variables, ...(theme.variants[variant] ?? {}) } } : null }
 
-export function themeInheritanceChain(reference: string | null | undefined): { references: string[]; cycle: boolean; missing: string[] } {
+/** 结构说明（自动提取）：themeInheritanceChain；输入 reference；直接调用 Set、resolveAsset、readTextAsset、missing.push、visited.has 等；写入 current；包含循环处理。 */ export function themeInheritanceChain(reference: string | null | undefined): { references: string[]; cycle: boolean; missing: string[] } {
   const references: string[] = [], missing: string[] = [], visited = new Set<string>()
   let current = reference ?? null
   while (current && references.length < 32) {
@@ -216,7 +217,7 @@ export function themeInheritanceChain(reference: string | null | undefined): { r
   return { references, cycle: false, missing }
 }
 
-export function themeUnusedTokens(theme: UiThemeDocument): string[] {
+/** 结构说明（自动提取）：themeUnusedTokens；输入 theme；直接调用 JSON.stringify、Object.keys、serialized.includes、result.push、result.sort；包含循环处理。 */ export function themeUnusedTokens(theme: UiThemeDocument): string[] {
   const serialized = JSON.stringify({ classes: theme.classes, variants: theme.variants })
   const result: string[] = []
   for (const group of TOKEN_GROUPS) for (const key of Object.keys(theme.tokens[group])) {
@@ -225,11 +226,11 @@ export function themeUnusedTokens(theme: UiThemeDocument): string[] {
   return result.sort()
 }
 
-export function compareUiThemes(first: UiThemeDocument, second: UiThemeDocument): Array<{ path: string; first: UiThemeTokenValue | null; second: UiThemeTokenValue | null }> {
+/** 结构说明（自动提取）：compareUiThemes；输入 first、second；直接调用 Set、Object.keys、differences.push、differences.sort；包含循环处理。 */ export function compareUiThemes(first: UiThemeDocument, second: UiThemeDocument): Array<{ path: string; first: UiThemeTokenValue | null; second: UiThemeTokenValue | null }> {
   const differences: Array<{ path: string; first: UiThemeTokenValue | null; second: UiThemeTokenValue | null }> = []
   for (const group of TOKEN_GROUPS) for (const key of new Set([...Object.keys(first.tokens[group]), ...Object.keys(second.tokens[group])])) {
     const left = first.tokens[group][key] ?? null, right = second.tokens[group][key] ?? null
     if (left !== right) differences.push({ path: `${group}.${key}`, first: left, second: right })
   }
-  return differences.sort((a, b) => a.path.localeCompare(b.path))
+  return differences.sort(/* 调用 a.path.localeCompare(b.path) 并返回调用结果。 */ (a, b) => a.path.localeCompare(b.path))
 }

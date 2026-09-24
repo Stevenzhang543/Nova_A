@@ -1,4 +1,6 @@
+# 共享发布策略：公开版本转换和 Windows 产物版本核验；加载本文件无发布副作用。
 # Shared release-label and native artifact checks. Loading this file has no side effects.
+# 解析公开日历版本标签并生成对应三段机器版本。
 function Get-CalendarReleaseInfo {
   param([Parameter(Mandatory = $true)][string]$Label)
   $match = [regex]::Match($Label, '^(\d{2})\.(\d{2})$')
@@ -9,6 +11,7 @@ function Get-CalendarReleaseInfo {
   return [pscustomobject]@{ Year = $year; Sequence = $sequence; MachineVersion = "$year.$sequence.0" }
 }
 
+# 从三段机器版本生成规范的两段公开版本标签。
 function Get-CanonicalCalendarLabel {
   param([string]$MachineVersion)
   $match = [regex]::Match($MachineVersion, '^(\d{2})\.(\d{1,2})\.0$')
@@ -18,6 +21,7 @@ function Get-CanonicalCalendarLabel {
   return '{0}.{1:00}' -f [int]$match.Groups[1].Value, $sequence
 }
 
+# 要求产物版本与指定机器版本完全匹配，拒绝相似前缀版本。
 function Assert-ExactProductVersion {
   param([string]$Actual, [Parameter(Mandatory = $true)][string]$Expected, [string]$Artifact = 'artifact')
   if ($Actual -notmatch "^$([regex]::Escape($Expected))(?:\.0)?(?:\+[0-9A-Za-z.-]+)?$") {
@@ -25,6 +29,7 @@ function Assert-ExactProductVersion {
   }
 }
 
+# 只读打开 MSI 数据库，读取 ProductVersion 并释放全部 COM 对象。
 function Get-MsiProductVersion {
   param([Parameter(Mandatory = $true)][string]$LiteralPath)
   $installer = $null; $database = $null; $view = $null; $record = $null
@@ -42,6 +47,7 @@ function Get-MsiProductVersion {
   }
 }
 
+# 同时核验便携程序、安装程序及 MSI 的产品版本。
 function Assert-WindowsReleaseArtifactVersions {
   param([string]$Portable, [string]$Setup, [string]$Msi, [string]$MachineVersion)
   foreach ($path in @($Portable, $Setup)) {

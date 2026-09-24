@@ -1,20 +1,21 @@
+/** 功能回归脚本：执行 verify-v4.8.mjs 对应场景，保留断言和证据输出。 */
 import { mkdir, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createServer } from 'vite'
 
 const root = dirname(dirname(fileURLToPath(import.meta.url))), output = join(root, 'release-audits'), generatedAt = new Date().toISOString(), checks = []
-const check = (id, passed, detail, metrics = {}) => checks.push({ id, status: passed ? 'passed' : 'failed', detail, metrics })
-globalThis.navigator ??= { hardwareConcurrency: 4, userAgent: 'Nova_A v4.8 verification', mediaDevices: { addEventListener(){}, removeEventListener(){}, async enumerateDevices(){ return [] } } }
-globalThis.window ??= { setTimeout, clearTimeout, setInterval, clearInterval, addEventListener(){}, removeEventListener(){}, dispatchEvent(){} }
-globalThis.localStorage ??= { getItem(){ return null }, setItem(){}, removeItem(){} }
+const check = /* 调用 checks.push({ id, status: passed ? 'passed' : 'failed', detail, metrics }) 并返回调用结果。 */ (id, passed, detail, metrics = {}) => checks.push({ id, status: passed ? 'passed' : 'failed', detail, metrics })
+globalThis.navigator ??= { hardwareConcurrency: 4, userAgent: 'Nova_A v4.8 verification', mediaDevices: { /** 提供不注册监听器的测试事件接口。 */ addEventListener(){}, /** 提供无需移除监听器的测试事件接口。 */ removeEventListener(){}, /* 返回按声明顺序构造的数组 []。 */ async enumerateDevices(){ return [] } } }
+globalThis.window ??= { setTimeout, clearTimeout, setInterval, clearInterval, /** 提供不注册监听器的测试事件接口。 */ addEventListener(){}, /** 提供无需移除监听器的测试事件接口。 */ removeEventListener(){}, /** 生成器环境桩忽略事件派发。 */ dispatchEvent(){} }
+globalThis.localStorage ??= { /* 返回固定值 null。 */ getItem(){ return null }, /** 隔离存储桩忽略写入，不持久化生成过程数据。 */ setItem(){}, /** 隔离存储桩忽略删除请求。 */ removeItem(){} }
 await mkdir(output, { recursive: true })
 console.log('v4.8 verification: starting isolated module host')
 const assetDatabaseStub = '\0nova-v48-asset-database-stub'
 const server = await createServer({ root, appType: 'custom', logLevel: 'silent', server: { middlewareMode: true }, plugins: [{
   name: 'nova-v48-isolated-asset-database', enforce: 'pre',
-  resolveId(id) { return id.endsWith('/assets/AssetDatabase') || id === '../assets/AssetDatabase' ? assetDatabaseStub : null },
-  load(id) { return id === assetDatabaseStub ? 'export const assetState={records:[]}; export function resolveAsset(){return null}; export function readTextAsset(){return null}; export function resolveTexture(){return null}' : null }
+  /* 根据 id.endsWith('/assets/AssetDatabase') || id === '../assets/AssetDatabase' 的真假，分别返回 assetDatabaseStub 或 null。 */ resolveId(id) { return id.endsWith('/assets/AssetDatabase') || id === '../assets/AssetDatabase' ? assetDatabaseStub : null },
+  /** 结构说明（自动提取）：load；输入 id。 */ load(id) { return id === assetDatabaseStub ? 'export const assetState={records:[]}; export function resolveAsset(){return null}; export function readTextAsset(){return null}; export function resolveTexture(){return null}' : null }
 }] })
 // The deterministic fixture loader does not need a filesystem watcher; closing
 // it prevents cloud-synchronized workspaces from waiting on watcher shutdown.
@@ -46,12 +47,12 @@ try {
   const fallbackBefore = materials.materialRuntimeDiagnostics.fallbackCount
   materials.reportMaterialFallback('fixture-invalid', 'Unsupported recursive/platform shader fixture')
   const platformDiagnostics = materials.validateMaterialForPlatform(invalid, 'web', 'Canvas2D')
-  check('REN-SHADER-DIAGNOSTICS', validDiagnostics.every(item => item.severity !== 'error') && invalidDiagnostics.some(item => item.severity === 'error') && platformDiagnostics.some(item => item.severity === 'error') && materials.materialRuntimeDiagnostics.fallbackCount === fallbackBefore + 1, 'Valid shaders pass; invalid/platform-divergent shaders fail visibly and fallback is recorded.', { validDiagnostics, invalidDiagnostics, platformDiagnostics })
+  check('REN-SHADER-DIAGNOSTICS', validDiagnostics.every(/* 比较 item.severity 与 'error'，返回严格不等的判断结果。 */ item => item.severity !== 'error') && invalidDiagnostics.some(/* 比较 item.severity 与 'error'，返回严格相等的判断结果。 */ item => item.severity === 'error') && platformDiagnostics.some(/* 比较 item.severity 与 'error'，返回严格相等的判断结果。 */ item => item.severity === 'error') && materials.materialRuntimeDiagnostics.fallbackCount === fallbackBefore + 1, 'Valid shaders pass; invalid/platform-divergent shaders fail visibly and fallback is recorded.', { validDiagnostics, invalidDiagnostics, platformDiagnostics })
   for (let index = 0; index < 80; index++) materials.reportMaterialFallback(`fixture-${index}`, 'bounded diagnostic')
   check('REN-FALLBACK-BOUNDED', materials.materialRuntimeDiagnostics.fallbackEvents.length <= 64, 'Shader fallback history is bounded.', { events: materials.materialRuntimeDiagnostics.fallbackEvents.length })
 
   const normalizedAudio = audio.normalizeAudioSettings({ sampleRate: 47_000, mixer: { outputDeviceId: 'fixture', limiterEnabled: true, limiterCeilingDb: 3, masterVoiceLimit: 9999, buses: [{ id: 'Master', parent: null, automation: [{ time: 4, gain: 2 }, { time: 1, gain: -.5 }] }, { id: 'Loop', parent: 'Loop', sends: [{ target: 'Loop', gain: 1 }] }] } })
-  const loopBus = normalizedAudio.mixer.buses.find(bus => bus.id === 'Loop')
+  const loopBus = normalizedAudio.mixer.buses.find(/* 比较 bus.id 与 'Loop'，返回严格相等的判断结果。 */ bus => bus.id === 'Loop')
   check('AUD-GRAPH-NORMALIZATION', normalizedAudio.sampleRate === 48000 && normalizedAudio.mixer.limiterCeilingDb === 0 && normalizedAudio.mixer.masterVoiceLimit === 1024 && loopBus?.parent === 'Master' && loopBus.sends.length === 0 && normalizedAudio.mixer.buses[0].automation[0].time === 1, 'Audio device, limiter, graph-cycle and automation inputs normalize deterministically.', normalizedAudio.mixer)
 
   const emitter = new components.ParticleEmitter2D(); Object.assign(emitter, { emissionRate: Infinity, lifetime: -4, collisionMode: 'Invalid', collisionRestitution: 9, collisionLayerMask: -1 })
@@ -66,9 +67,9 @@ try {
   const captureA = performanceTools.capturePerformance('baseline', rendererStats), captureB = performanceTools.capturePerformance('candidate', { ...rendererStats, drawCalls: 3 })
   const comparison = performanceTools.comparePerformanceCaptures(captureA.id, captureB.id), serialized = JSON.parse(performanceTools.serializePerformanceCapture(captureA)), ci = performanceTools.performanceCaptureCiReport(captureA)
   check('PRF-CAPTURE-CI', serialized.engineVersion === '4.8.0' && serialized.version === 2 && ci.status === 'passed' && comparison?.drawCallDelta === 1 && Array.isArray(captureA.markers) && Array.isArray(captureA.counters) && Array.isArray(captureA.annotations), 'Captures save, compare and export deterministic CI budget results.', { ci, comparison })
-} finally { console.log('v4.8 verification: closing isolated module host'); await Promise.race([server.close(), new Promise(resolve => setTimeout(resolve, 2_000))]) }
+} finally { console.log('v4.8 verification: closing isolated module host'); await Promise.race([server.close(), new Promise(/* 调用 setTimeout(resolve, 2_000) 并返回调用结果。 */ resolve => setTimeout(resolve, 2_000))]) }
 
-const failed = checks.filter(item => item.status === 'failed')
+const failed = checks.filter(/* 比较 item.status 与 'failed'，返回严格相等的判断结果。 */ item => item.status === 'failed')
 const report = { format: 'nova-v4.8-renderer-audio-verification', version: 1, engineVersion: '4.8.0', generatedAt, checks, severity0Open: 0, severity1Open: failed.length, status: failed.length ? 'failed' : 'passed' }
 await writeFile(join(output, 'v4.8.0-verification.json'), `${JSON.stringify(report, null, 2)}\n`)
 if (failed.length) console.error(failed)

@@ -1,3 +1,4 @@
+/** 版本4.8：生成参考项目与对应资源，供功能演示和版本验证使用。 */
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -12,8 +13,8 @@ const fixtures = [
   ['audio-v48-spatial-streaming','audio-positional','Audio 4.8 Spatial and Streaming',['listener','attenuation','pan','streaming','preload','loop markers','fades','playlists','voice stealing']],
   ['performance-v48-capture','authoring-5000-stress','Performance 4.8 Capture',['frame timeline','flame view','markers','counters','annotations','budget CI','capture comparison','remote-player field']]
 ]
-const json = value => `${JSON.stringify(value, null, 2)}\n`
-function ensure(project, slug, title) {
+const json = /** 将对象序列化为带末尾换行的格式化JSON。 */ value => `${JSON.stringify(value, null, 2)}\n`
+/** 升级4.8参考身份，补齐渲染、音频、性能和粒子及音源组件默认设置。 */ function ensure(project, slug, title) {
   project.engineVersion = '4.8.0'; project.formatVersion = 29
   project.projectMetadata.name = title; project.projectMetadata.template = slug; project.manifest.name = title
   project.projectSettings ??= {}; project.projectSettings.rendering = { rendererPath: 'Auto', unsupportedPolicy: 'WarnAndFallback', qualityPreset: 'Balanced', lightingEnabled: true, ambientColor: { r: 255, g: 255, b: 255 }, ambientIntensity: 1, shadowQuality: 'Soft', colorSpace: 'sRGB', postProcessing: { enabled: false, exposure: 0, contrast: 1, saturation: 1, vignette: 0, bloom: 0, blur: 0, userMaterial: null }, debugView: 'None', pixelSnap: false, maximumPixelRatio: 2, particleBudget: 10000, budgets: { drawCalls: 500, textureMemoryMb: 256, overdraw: 4, gpuMs: 8, particleMs: 2 }, ...(project.projectSettings.rendering ?? {}) }

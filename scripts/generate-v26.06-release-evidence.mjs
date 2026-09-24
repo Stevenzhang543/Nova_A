@@ -1,3 +1,4 @@
+/** 版本26.06：汇集发布报告与产物文件，生成带来源记录的发布证据。 */
 import { createHash } from 'node:crypto'
 import { execFileSync } from 'node:child_process'
 import { arch, platform, versions } from 'node:process'
@@ -7,9 +8,9 @@ import { fileURLToPath } from 'node:url'
 
 const release = '26.06', machineVersion = '26.6.0'
 const root = dirname(dirname(fileURLToPath(import.meta.url))), audits = join(root, 'release-audits'), evidence = join(audits, `evidence-v${release}`), generatedAt = new Date().toISOString()
-const sha256 = value => createHash('sha256').update(value).digest('hex')
-const readJson = async name => JSON.parse(await readFile(join(audits, name), 'utf8'))
-const writeJson = (path, value) => writeFile(path, `${JSON.stringify(value, null, 2)}\n`)
+const sha256 = /* 调用 createHash('sha256').update(value).digest('hex') 并返回调用结果。 */ value => createHash('sha256').update(value).digest('hex')
+const readJson = /* 调用 JSON.parse(await readFile(join(audits, name), 'utf8')) 并返回调用结果。 */ async name => JSON.parse(await readFile(join(audits, name), 'utf8'))
+const writeJson = /* 调用 writeFile(path, `${JSON.stringify(value, null, 2)}\n`) 并返回调用结果。 */ (path, value) => writeFile(path, `${JSON.stringify(value, null, 2)}\n`)
 await rm(evidence, { recursive: true, force: true })
 for (const folder of ['runtime','layout','build','manual','documentation','performance','external']) await mkdir(join(evidence, folder), { recursive: true })
 const reports = {
@@ -18,7 +19,7 @@ const reports = {
   templateOutput: await readJson('v26.06-template-output.json'), visualGraph: await readJson('v26.06-visual-graph.json'), history: await readJson('v26.06-history-verification.json'), security: await readJson('v26.06-dependency-audit.json'),
   windows: await readJson('v26.06-windows-smoke.json'), performance: await readJson('v26.06-benchmarks.json'), stability: await readJson('v26.06-stability-smoke.json')
 }
-const reportAuthorityIssues = Object.entries(reports).flatMap(([name, report]) => {
+const reportAuthorityIssues = Object.entries(reports).flatMap(/** 核对报告通过状态及存在的引擎和发布版本字段，收集不匹配项。 */ ([name, report]) => {
   const issues = []
   if (report.status !== 'passed') issues.push(`${name}: status=${String(report.status)}`)
   if (report.engineVersion && report.engineVersion !== machineVersion) issues.push(`${name}: engineVersion=${report.engineVersion}`)
@@ -35,11 +36,11 @@ for (const [source, target] of [
 for (const name of ['MANUAL.en.md','MANUAL.de.md','MANUAL.zh-CN.md','index.html']) await cp(join(root, 'manual', name), join(evidence, 'manual', name))
 for (const name of ['VERSIONING_2026.md','FEATURE_INVENTORY_26_06.md','COMPETITIVE_REVIEW_26_01.md','ROADMAP_26_01_TO_26_10.md','TEMPLATE_LIBRARY_26_01.md','VISUAL_SCRIPTING_26_01.md','SIMULATION_AUTHORING_26_06.md','OUTPUT_BUILD_RELIABILITY_26_06.md','UI_LAYOUT_AUDIT_26_06.md','RELEASE_NOTES_26_06.md','COMPATIBILITY.md','STABLE_CONTRACTS.md','KNOWN_LIMITATIONS.md']) await cp(join(root, 'docs', name), join(evidence, 'documentation', name))
 const artifactInputs = [['web-editor','dist/index.html'],['web-player','dist/player.html'],['windows-editor','src-tauri/target/release/nova_a.exe'],['windows-nsis',`src-tauri/target/release/bundle/nsis/Nova_A_${machineVersion}_x64-setup.exe`],['windows-msi',`src-tauri/target/release/bundle/msi/Nova_A_${machineVersion}_x64_en-US.msi`]]
-const artifacts = await Promise.all(artifactInputs.map(async ([name,path]) => { try { const bytes = await readFile(join(root,path)); return { name,path,bytes:bytes.length,sha256:sha256(bytes),status:'passed' } } catch { return { name,path,status:'missing' } } }))
-const buildsPassed = artifacts.every(item => item.status === 'passed')
+const artifacts = await Promise.all(artifactInputs.map(/** 读取指定产物并记录字节数及散列，读取失败时标记缺失。 */ async ([name,path]) => { try { const bytes = await readFile(join(root,path)); return { name,path,bytes:bytes.length,sha256:sha256(bytes),status:'passed' } } catch { return { name,path,status:'missing' } } }))
+const buildsPassed = artifacts.every(/* 比较 item.status 与 'passed'，返回严格相等的判断结果。 */ item => item.status === 'passed')
 await writeJson(join(evidence,'build/local-builds.json'), { format:'nova-local-build-evidence',version:1,release,engineVersion:machineVersion,generatedAt,artifacts,status:buildsPassed?'passed':'incomplete' })
 const externalGates = { publisherSigning:'pending-external', cleanMachineLifecycle:'pending-external', secondMachineReproducibility:'pending-external', matchingHostLinuxMacos:'pending-external', androidIosHardwareStore:'pending-external', independentUsability:'pending-external', independentAccessibilitySecurity:'pending-external', soak72Hours:'pending-external' }
-await writeJson(join(evidence,'external/gates.json'), { format:'nova-external-certification-gates',version:1,release,generatedAt,gates:Object.entries(externalGates).map(([name,status])=>({name,status,claimed:false})) })
+await writeJson(join(evidence,'external/gates.json'), { format:'nova-external-certification-gates',version:1,release,generatedAt,gates:Object.entries(externalGates).map(/** 将外部检查状态转为未声称通过的证据条目。 */ ([name,status])=>({name,status,claimed:false})) })
 const commit = safeExec('git',['-c',`safe.directory=${root.replaceAll('\\','/')}`,'rev-parse','HEAD'])
 const gitWorkingTree = safeExec('git',['-c',`safe.directory=${root.replaceAll('\\','/')}`,'status','--porcelain'])
 const sourceHasCommit = /^[a-f0-9]{40,64}$/.test(commit)
@@ -47,13 +48,13 @@ const sourceState = sourceHasCommit ? (gitWorkingTree && gitWorkingTree !== 'una
 const sourceCommit = sourceHasCommit ? commit : 'unavailable-source-snapshot'
 const environment = { id:`${platform}-${arch}-${versions.node}`,platform,architecture:arch,node:versions.node,rust:safeExec('rustc',['--version']),cargo:safeExec('cargo',['--version']) }
 const localQualificationComplete = reportAuthorityIssues.length === 0 && buildsPassed
-const entries = await Promise.all((await filesUnder(evidence)).sort().filter(path => !path.endsWith('evidence-manifest.json')).map(async path => { const contents=await readFile(path); return { path:relative(evidence,path).replaceAll('\\','/'),sha256:sha256(contents),bytes:contents.length,source:sourceCommit,tool:'generate-v26.06-release-evidence.mjs',environment:environment.id } }))
+const entries = await Promise.all((await filesUnder(evidence)).sort().filter(/* 返回 path.endsWith('evidence-manifest.json') 的逻辑取反结果。 */ path => !path.endsWith('evidence-manifest.json')).map(/** 记录证据文件相对路径、散列、字节数及源码身份。 */ async path => { const contents=await readFile(path); return { path:relative(evidence,path).replaceAll('\\','/'),sha256:sha256(contents),bytes:contents.length,source:sourceCommit,tool:'generate-v26.06-release-evidence.mjs',environment:environment.id } }))
 await writeJson(join(evidence,'evidence-manifest.json'), { format:'nova-release-evidence-manifest',version:1,release,machineVersion,engineVersion:machineVersion,generatedAt,source:{commit:sourceCommit,state:sourceState,dirty:sourceState!=='git-commit',note:sourceState==='git-working-tree'?'Working-tree source snapshot, based on the recorded commit and including the packaged uncommitted changes; an exact signed tag remains external.':sourceState==='git-commit'?'Clean Git commit; an exact signed tag remains external.':'Filesystem source snapshot without an available Git commit; an exact signed tag remains external.'},environment,localQualificationComplete,localReportAuthorities:{ status:reportAuthorityIssues.length===0?'passed':'failed',issues:reportAuthorityIssues },externalCertificationComplete:false,externalGates,entries })
 if (!localQualificationComplete) {
-  const detail = [...reportAuthorityIssues, ...artifacts.filter(item => item.status !== 'passed').map(item => `missing build artifact: ${item.path}`)]
+  const detail = [...reportAuthorityIssues, ...artifacts.filter(/* 比较 item.status 与 'passed'，返回严格不等的判断结果。 */ item => item.status !== 'passed').map(/** 将缺失构建产物转为错误说明。 */ item => `missing build artifact: ${item.path}`)]
   throw new Error(`The Nova_A 26.06 local evidence tree is incomplete; release packaging is blocked. ${detail.join('; ')}`)
 }
 console.log(`Nova_A ${release} evidence generated with ${entries.length} hashed entries; external certification remains pending.`)
 
-function safeExec(command,args){ try { return execFileSync(command,args,{cwd:root,encoding:'utf8',windowsHide:true,stdio:['ignore','pipe','ignore']}).trim() } catch { return 'unavailable' } }
-async function filesUnder(directory){ const files=[]; for(const entry of await readdir(directory,{withFileTypes:true})){ const path=join(directory,entry.name); entry.isDirectory()?files.push(...await filesUnder(path)):files.push(path) } return files }
+/** 隐藏窗口执行外部工具并读取结果，失败时返回不可用标记。 */ function safeExec(command,args){ try { return execFileSync(command,args,{cwd:root,encoding:'utf8',windowsHide:true,stdio:['ignore','pipe','ignore']}).trim() } catch { return 'unavailable' } }
+/** 递归收集目录中的文件路径。 */ async function filesUnder(directory){ const files=[]; for(const entry of await readdir(directory,{withFileTypes:true})){ const path=join(directory,entry.name); entry.isDirectory()?files.push(...await filesUnder(path)):files.push(path) } return files }

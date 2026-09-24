@@ -1,3 +1,4 @@
+/** 项目生产资料：组织制作设置、验证结果及创作工作流信息。 */
 import { reactive } from 'vue'
 import { loadPerformanceRuntimeSettings } from './largeWorldPerformance'
 
@@ -228,16 +229,16 @@ const DEFAULTS: ProductionProjectSettings = {
 
 export const productionSettings = reactive<ProductionProjectSettings>(structuredClone(DEFAULTS))
 
-function object(value: unknown): Record<string, unknown> { return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {} }
-function bounded(value: unknown, fallback: number, minimum: number, maximum: number, integer = false): number {
+/* 根据 value && typeof value === 'object' && !Array.isArray(value) 的真假，分别返回 value as Record<string, unknown> 或 {}。 */ function object(value: unknown): Record<string, unknown> { return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {} }
+/** 结构说明（自动提取）：bounded；输入 value、fallback、minimum、maximum、integer；直接调用 Number.isFinite、Math.min、Math.max、Math.round。 */ function bounded(value: unknown, fallback: number, minimum: number, maximum: number, integer = false): number {
   const number = typeof value === 'number' && Number.isFinite(value) ? value : fallback
   const result = Math.min(maximum, Math.max(minimum, number))
   return integer ? Math.round(result) : result
 }
-function text(value: unknown, fallback: string, maximum: number): string { return typeof value === 'string' ? (value.trim().slice(0, maximum) || fallback) : fallback }
-function id(value: unknown, fallback: string): string { return text(value, fallback, 80).replace(/[^a-zA-Z0-9_.-]/g, '_') }
+/* 根据 typeof value === 'string' 的真假，分别返回 (value.trim().slice(0, maximum) || fallback) 或 fallback。 */ function text(value: unknown, fallback: string, maximum: number): string { return typeof value === 'string' ? (value.trim().slice(0, maximum) || fallback) : fallback }
+/* 调用 text(value, fallback, 80).replace(/[^a-zA-Z0-9_.-]/g, '_') 并返回调用结果。 */ function id(value: unknown, fallback: string): string { return text(value, fallback, 80).replace(/[^a-zA-Z0-9_.-]/g, '_') }
 
-function normalizeTest(value: unknown, index: number): ProjectTestDefinition {
+/** 结构说明（自动提取）：normalizeTest；输入 value、index；直接调用 object、id、text、kinds.includes、bounded 等。 */ function normalizeTest(value: unknown, index: number): ProjectTestDefinition {
   const source = object(value)
   const kinds: TestKind[] = ['unit', 'integration', 'scene', 'ui', 'physics', 'animation', 'regression', 'headless']
   const assertionKinds: TestAssertionKind[] = ['entityCountAtLeast', 'entityExists', 'finitePhysics', 'checksumEquals', 'noRuntimeErrors']
@@ -246,42 +247,42 @@ function normalizeTest(value: unknown, index: number): ProjectTestDefinition {
     kind: kinds.includes(source.kind as TestKind) ? source.kind as TestKind : 'scene', sceneUuid: text(source.sceneUuid, '', 128),
     steps: bounded(source.steps, 60, 0, 60_000, true), timeoutMs: bounded(source.timeoutMs, 10_000, 100, 120_000, true),
     captureScreenshot: source.captureScreenshot === true,
-    tags: [...new Set((Array.isArray(source.tags) ? source.tags : []).flatMap(value => typeof value === 'string' ? [id(value, '')] : []).filter(Boolean))].slice(0, 32),
+    tags: [...new Set((Array.isArray(source.tags) ? source.tags : []).flatMap(/* 根据 typeof value === 'string' 的真假，分别返回 [id(value, '')] 或 []。 */ value => typeof value === 'string' ? [id(value, '')] : []).filter(Boolean))].slice(0, 32),
     fixture: text(source.fixture, '', 256), setup: text(source.setup, '', 80), teardown: text(source.teardown, '', 80),
     seed: bounded(source.seed, 1, 0, 0xffff_ffff, true) >>> 0,
     retries: source.flakyInfrastructure === true ? bounded(source.retries, 0, 0, 3, true) : 0,
     flakyInfrastructure: source.flakyInfrastructure === true,
-    assertions: (Array.isArray(source.assertions) ? source.assertions : []).slice(0, 64).flatMap(raw => {
+    assertions: (Array.isArray(source.assertions) ? source.assertions : []).slice(0, 64).flatMap(/** 结构说明（自动提取）：flatMap 回调；输入 raw；直接调用 object、assertionKinds.includes、text。 */ raw => {
       const assertion = object(raw), kind = assertionKinds.includes(assertion.kind as TestAssertionKind) ? assertion.kind as TestAssertionKind : null
       return kind ? [{ kind, target: text(assertion.target, '', 128), expected: text(assertion.expected, '', 256) }] : []
     })
   }
 }
 
-function normalizeMigrations(value: unknown): SaveMigrationDefinition[] {
-  return (Array.isArray(value) ? value : []).slice(0, 128).map(raw => {
+/** 结构说明（自动提取）：normalizeMigrations；输入 value；直接调用 sort、filter、map、slice、Array.isArray。 */ function normalizeMigrations(value: unknown): SaveMigrationDefinition[] {
+  return (Array.isArray(value) ? value : []).slice(0, 128).map(/** 结构说明（自动提取）：map 回调；输入 raw；直接调用 object、slice、Object.entries、id、includes 等；写入 renames[…]、defaults[…]；包含循环处理。 */ raw => {
     const source = object(raw), renames: Record<string, string> = {}, defaults: Record<string, boolean | number | string | null> = {}
     for (const [from, to] of Object.entries(object(source.renames)).slice(0, 256)) if (typeof to === 'string') renames[id(from, 'key')] = id(to, 'key')
     for (const [key, item] of Object.entries(object(source.defaults)).slice(0, 256)) if (item === null || ['boolean', 'number', 'string'].includes(typeof item)) defaults[id(key, 'key')] = typeof item === 'string' ? item.slice(0, 10_000) : item as boolean | number | null
     return {
       fromVersion: bounded(source.fromVersion, 1, 0, 65_535, true), toVersion: bounded(source.toVersion, 2, 1, 65_535, true), renames, defaults,
-      remove: (Array.isArray(source.remove) ? source.remove : []).slice(0, 256).flatMap(item => typeof item === 'string' ? [id(item, 'key')] : [])
+      remove: (Array.isArray(source.remove) ? source.remove : []).slice(0, 256).flatMap(/* 根据 typeof item === 'string' 的真假，分别返回 [id(item, 'key')] 或 []。 */ item => typeof item === 'string' ? [id(item, 'key')] : [])
     }
-  }).filter(item => item.toVersion > item.fromVersion).sort((a, b) => a.fromVersion - b.fromVersion)
+  }).filter(/* 比较 item.toVersion 与 item.fromVersion，返回大于的判断结果。 */ item => item.toVersion > item.fromVersion).sort(/* 计算表达式 a.fromVersion - b.fromVersion 并返回结果，沿用操作数的原有类型规则。 */ (a, b) => a.fromVersion - b.fromVersion)
 }
 
-export function normalizeProductionSettings(value: unknown): ProductionProjectSettings {
+/** 结构说明（自动提取）：normalizeProductionSettings；输入 value；直接调用 object、Set、filter、map、slice 等。 */ export function normalizeProductionSettings(value: unknown): ProductionProjectSettings {
   const source = object(value), performance = object(source.performance), replay = object(source.replay), testing = object(source.testing), data = object(source.data), jobs = object(source.jobs), networking = object(source.networking)
   const roles: NetworkRole[] = ['client', 'server', 'host'], transports: NetworkTransportKind[] = ['websocket', 'native-udp']
   const seenTests = new Set<string>()
-  const tests = (Array.isArray(testing.tests) ? testing.tests : []).slice(0, 256).map(normalizeTest).filter(test => !seenTests.has(test.id) && Boolean(seenTests.add(test.id)))
-  const replicatedEntities = (Array.isArray(networking.replicatedEntities) ? networking.replicatedEntities : []).slice(0, 2_000).flatMap(raw => {
+  const tests = (Array.isArray(testing.tests) ? testing.tests : []).slice(0, 256).map(normalizeTest).filter(/* 先计算 !seenTests.has(test.id)；仅当其为真值时求右侧 Boolean(seenTests.add(test.id))，返回短路求值结果。 */ test => !seenTests.has(test.id) && Boolean(seenTests.add(test.id)))
+  const replicatedEntities = (Array.isArray(networking.replicatedEntities) ? networking.replicatedEntities : []).slice(0, 2_000).flatMap(/** 结构说明（自动提取）：flatMap 回调；输入 raw；直接调用 object、text、Set、flatMap、Array.isArray 等。 */ raw => {
     const item = object(raw), entityUuid = text(item.entityUuid, '', 128)
     if (!entityUuid) return []
     const allowedProperties = new Set(['transform', 'rotation', 'velocity'])
     return [{
       entityUuid, authority: item.authority === 'owner' ? 'owner' as const : 'server' as const,
-      properties: [...new Set((Array.isArray(item.properties) ? item.properties : ['transform', 'velocity']).flatMap(property => typeof property === 'string' && allowedProperties.has(property) ? [property] : []))],
+      properties: [...new Set((Array.isArray(item.properties) ? item.properties : ['transform', 'velocity']).flatMap(/* 根据 typeof property === 'string' && allowedProperties.has(property) 的真假，分别返回 [property] 或 []。 */ property => typeof property === 'string' && allowedProperties.has(property) ? [property] : []))],
       interpolate: item.interpolate !== false, predict: item.predict === true,
       ownerPeerId: text(item.ownerPeerId, '', 80), alwaysRelevant: item.alwaysRelevant === true,
       interestRadius: bounded(item.interestRadius, DEFAULTS.networking.interest.defaultRadius, 0, DEFAULTS.networking.interest.maximumRadius),
@@ -291,7 +292,7 @@ export function normalizeProductionSettings(value: unknown): ProductionProjectSe
   const deliveries: NetworkDelivery[] = ['reliable-ordered', 'unreliable-sequenced']
   const schemas: NetworkPayloadSchema[] = ['any', 'boolean', 'number', 'integer', 'string', 'vec2', 'object', 'array']
   const channelIds = new Set<string>()
-  const channels = (Array.isArray(networking.channels) ? networking.channels : DEFAULTS.networking.channels).slice(0, 32).flatMap((raw, index) => {
+  const channels = (Array.isArray(networking.channels) ? networking.channels : DEFAULTS.networking.channels).slice(0, 32).flatMap(/** 结构说明（自动提取）：flatMap 回调；输入 raw、index；直接调用 object、id、channelIds.has、channelIds.add、deliveries.includes 等。 */ (raw, index) => {
     const item = object(raw), channelId = id(item.id, `channel-${index + 1}`)
     if (channelIds.has(channelId)) return []
     channelIds.add(channelId)
@@ -299,7 +300,7 @@ export function normalizeProductionSettings(value: unknown): ProductionProjectSe
   })
   if (!channels.length) channels.push(...structuredClone(DEFAULTS.networking.channels))
   const rpcNames = new Set<string>()
-  const rpcContracts = (Array.isArray(networking.rpcContracts) ? networking.rpcContracts : []).slice(0, 256).flatMap((raw, index) => {
+  const rpcContracts = (Array.isArray(networking.rpcContracts) ? networking.rpcContracts : []).slice(0, 256).flatMap(/** 结构说明（自动提取）：flatMap 回调；输入 raw、index；直接调用 object、id、rpcNames.has、rpcNames.add、channelIds.has 等。 */ (raw, index) => {
     const item = object(raw), name = id(item.name, `rpc-${index + 1}`)
     if (rpcNames.has(name)) return []
     rpcNames.add(name)
@@ -354,7 +355,7 @@ export function normalizeProductionSettings(value: unknown): ProductionProjectSe
       simulation: { enabled: simulation.enabled === true, latencyMs: bounded(simulation.latencyMs, 0, 0, 10_000, true), jitterMs: bounded(simulation.jitterMs, 0, 0, 10_000, true), lossPercent: bounded(simulation.lossPercent, 0, 0, 100), duplicatePercent: bounded(simulation.duplicatePercent, 0, 0, 100), reorderPercent: bounded(simulation.reorderPercent, 0, 0, 100), seed: bounded(simulation.seed, DEFAULTS.networking.simulation.seed, 0, 0xffff_ffff, true) >>> 0 },
       authentication: { mode: authentication.mode === 'hook' ? 'hook' : 'none', providerId: id(authentication.providerId, ''), requireVerifiedPeers: authentication.requireVerifiedPeers === true, handshakeTimeoutMs: bounded(authentication.handshakeTimeoutMs, DEFAULTS.networking.authentication.handshakeTimeoutMs, 250, 30_000, true) },
       security: { requireEncryption: security.requireEncryption === true, maximumPacketAgeMs: bounded(security.maximumPacketAgeMs, DEFAULTS.networking.security.maximumPacketAgeMs, 1_000, 120_000, true), replayWindow: bounded(security.replayWindow, DEFAULTS.networking.security.replayWindow, 64, 16_384, true) },
-      interest: (() => { const maximumRadius = bounded(interest.maximumRadius, DEFAULTS.networking.interest.maximumRadius, 1, 1_000_000); return { enabled: interest.enabled === true, defaultRadius: bounded(interest.defaultRadius, DEFAULTS.networking.interest.defaultRadius, 0, maximumRadius), maximumRadius } })(),
+      interest: (/** 结构说明（自动提取）：匿名回调；无显式参数；直接调用 bounded。 */ () => { const maximumRadius = bounded(interest.maximumRadius, DEFAULTS.networking.interest.maximumRadius, 1, 1_000_000); return { enabled: interest.enabled === true, defaultRadius: bounded(interest.defaultRadius, DEFAULTS.networking.interest.defaultRadius, 0, maximumRadius), maximumRadius } })(),
       multiInstance: { peerCount: bounded(multiInstance.peerCount, DEFAULTS.networking.multiInstance.peerCount, 2, 8, true), separateLogs: multiInstance.separateLogs !== false, separateInspectors: multiInstance.separateInspectors !== false },
       services: { identityProviderId: id(services.identityProviderId, ''), lobbyProviderId: id(services.lobbyProviderId, ''), relayProviderId: id(services.relayProviderId, '') },
       allowAuthorityTransfer: networking.allowAuthorityTransfer !== false,
@@ -364,7 +365,7 @@ export function normalizeProductionSettings(value: unknown): ProductionProjectSe
   }
 }
 
-export function loadProductionSettings(value: unknown): void {
+/** 结构说明（自动提取）：loadProductionSettings；输入 value；直接调用 Object.assign、normalizeProductionSettings、loadPerformanceRuntimeSettings。 */ export function loadProductionSettings(value: unknown): void {
   Object.assign(productionSettings, normalizeProductionSettings(value))
   loadPerformanceRuntimeSettings({
     adaptiveQuality: productionSettings.performance.adaptiveQuality,
@@ -376,5 +377,5 @@ export function loadProductionSettings(value: unknown): void {
     spatialCellSize: productionSettings.performance.spatialCellSize
   })
 }
-export function serializeProductionSettings(): ProductionProjectSettings { return normalizeProductionSettings(productionSettings) }
-export function resetProductionSettings(): void { Object.assign(productionSettings, structuredClone(DEFAULTS)) }
+/* 调用 normalizeProductionSettings(productionSettings) 并返回调用结果。 */ export function serializeProductionSettings(): ProductionProjectSettings { return normalizeProductionSettings(productionSettings) }
+/** 执行时调用 Object.assign(productionSettings, structuredClone(DEFAULTS))；不显式返回调用结果。 */ export function resetProductionSettings(): void { Object.assign(productionSettings, structuredClone(DEFAULTS)) }

@@ -1,3 +1,4 @@
+/** 功能回归脚本：执行 verify-v3.8.mjs 对应场景，保留断言和证据输出。 */
 import { mkdir, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -6,12 +7,12 @@ import { createServer } from 'vite'
 const root = dirname(dirname(fileURLToPath(import.meta.url))), output = join(root, 'release-audits'), generatedAt = new Date().toISOString()
 await mkdir(output, { recursive: true })
 globalThis.window ??= globalThis
-globalThis.btoa ??= value => Buffer.from(value, 'binary').toString('base64')
+globalThis.btoa ??= /* 调用 Buffer.from(value, 'binary').toString('base64') 并返回调用结果。 */ value => Buffer.from(value, 'binary').toString('base64')
 const storage = new Map()
-globalThis.localStorage = { get length() { return storage.size }, key: index => [...storage.keys()][index] ?? null, getItem: key => storage.get(String(key)) ?? null, setItem: (key, value) => storage.set(String(key), String(value)), removeItem: key => storage.delete(String(key)), clear: () => storage.clear() }
+globalThis.localStorage = { /* 返回 storage.size 的当前值。 */ get length() { return storage.size }, key: /* 当 [...storage.keys()][index] 为 null 或 undefined 时返回 null，否则保留左侧值。 */ index => [...storage.keys()][index] ?? null, getItem: /* 当 storage.get(String(key)) 为 null 或 undefined 时返回 null，否则保留左侧值。 */ key => storage.get(String(key)) ?? null, setItem: /* 调用 storage.set(String(key), String(value)) 并返回调用结果。 */ (key, value) => storage.set(String(key), String(value)), removeItem: /* 调用 storage.delete(String(key)) 并返回调用结果。 */ key => storage.delete(String(key)), clear: /* 调用 storage.clear() 并返回调用结果。 */ () => storage.clear() }
 
 const reports = []
-const report = async (name, value) => { reports.push(value); await writeFile(join(output, `v3.8.0-${name}.json`), `${JSON.stringify(value, null, 2)}\n`) }
+const report = /** 结构说明（自动提取）：report；输入 name、value；直接调用 reports.push、writeFile、join、JSON.stringify；等待异步结果。 */ async (name, value) => { reports.push(value); await writeFile(join(output, `v3.8.0-${name}.json`), `${JSON.stringify(value, null, 2)}\n`) }
 const server = await createServer({ root, appType: 'custom', logLevel: 'silent', server: { middlewareMode: true } })
 try {
   const components = await server.ssrLoadModule('/src/world/components.ts')
@@ -60,13 +61,13 @@ try {
   const tileRegionEntity = new boxes.BoxEntity(7, { x: 0, y: 0 }, { x: 1, y: 1 }), tileRegion = tileRegionEntity.addComponent(new components.NavigationRegion2D()); tileRegion.polygon = [{ x: -1.5, y: -1.5 }, { x: 1.5, y: -1.5 }, { x: 1.5, y: 1.5 }, { x: -1.5, y: 1.5 }]; tileRegion.cellSize = .5; tileRegion.agentRadius = .1; tileRegion.source = 'TileMap'; tileRegion.sourceEntityUuid = tileMapEntity.uuid; tileRegion.navigationMode = 'Grid'
   const tileCostPath = navigation.findNavigationPath(tileRegionEntity, { x: -1, y: 0 }, { x: 1, y: 0 }, [tileRegionEntity, tileMapEntity], .1)
   const navProfile = navigation.navigationProfileSnapshot()
-  await report('navigation-tests', { format: 'nova-navigation-tests', version: 1, engineVersion: '3.8.0', generatedAt, gridWaypoints: gridPath.length, polygonWaypoints: polygonPath.length, tileCostWaypoints: tileCostPath.length, obstacleAvoided: gridPath.some(point => Math.abs(point.y) > 3), tileBlockAvoided: tileCostPath.some(point => Math.abs(point.y) > .5), links: region.links.length, profile: navProfile, status: gridPath.length > 2 && polygonPath.length > 2 && tileCostPath.length > 2 && tileCostPath.some(point => Math.abs(point.y) > .5) && navProfile.pathQueries === 3 ? 'passed' : 'failed' })
+  await report('navigation-tests', { format: 'nova-navigation-tests', version: 1, engineVersion: '3.8.0', generatedAt, gridWaypoints: gridPath.length, polygonWaypoints: polygonPath.length, tileCostWaypoints: tileCostPath.length, obstacleAvoided: gridPath.some(/* 比较 Math.abs(point.y) 与 3，返回大于的判断结果。 */ point => Math.abs(point.y) > 3), tileBlockAvoided: tileCostPath.some(/* 比较 Math.abs(point.y) 与 .5，返回大于的判断结果。 */ point => Math.abs(point.y) > .5), links: region.links.length, profile: navProfile, status: gridPath.length > 2 && polygonPath.length > 2 && tileCostPath.length > 2 && tileCostPath.some(/* 比较 Math.abs(point.y) 与 .5，返回大于的判断结果。 */ point => Math.abs(point.y) > .5) && navProfile.pathQueries === 3 ? 'passed' : 'failed' })
 
   const firstCell = new boxes.BoxEntity(3, { x: 0, y: 0 }, { x: 1, y: 1 }), firstChunk = firstCell.addComponent(new components.WorldChunk2D()); firstChunk.size = { x: 40, y: 40 }; firstChunk.memoryEstimateMb = 8; firstChunk.initiallyLoaded = false; firstChunk.dependencies = []
   const secondCell = new boxes.BoxEntity(4, { x: 60, y: 0 }, { x: 1, y: 1 }), secondChunk = secondCell.addComponent(new components.WorldChunk2D()); secondChunk.size = { x: 40, y: 40 }; secondChunk.memoryEstimateMb = 8; secondChunk.initiallyLoaded = false; secondChunk.dependencies = [firstCell.uuid]
   const streamed = [firstCell, secondCell], loadedScenes = new Map()
-  for (let iteration = 0; iteration < 8; iteration++) { streaming.updateWorldStreaming(streamed, iteration < 4 ? { x: 60, y: 0 } : { x: 500, y: 0 }, 20, true, (uuid, loaded) => loadedScenes.set(uuid, loaded)); await Promise.resolve() }
-  streaming.updateWorldStreaming(streamed, { x: 500, y: 0 }, 20, true, (uuid, loaded) => loadedScenes.set(uuid, loaded)); await Promise.resolve()
+  for (let iteration = 0; iteration < 8; iteration++) { streaming.updateWorldStreaming(streamed, iteration < 4 ? { x: 60, y: 0 } : { x: 500, y: 0 }, 20, true, /* 调用 loadedScenes.set(uuid, loaded) 并返回调用结果。 */ (uuid, loaded) => loadedScenes.set(uuid, loaded)); await Promise.resolve() }
+  streaming.updateWorldStreaming(streamed, { x: 500, y: 0 }, 20, true, /* 调用 loadedScenes.set(uuid, loaded) 并返回调用结果。 */ (uuid, loaded) => loadedScenes.set(uuid, loaded)); await Promise.resolve()
   const streamSnapshot = { cells: streaming.worldStreamingState.cells, events: streaming.worldStreamingState.events, peakMemoryMb: streaming.worldStreamingState.peakMemoryMb, pending: streaming.worldStreamingState.pending, loads: streaming.worldStreamingState.loads, unloads: streaming.worldStreamingState.unloads, failures: streaming.worldStreamingState.failures }
   await report('streaming-memory', { format: 'nova-streaming-memory', version: 1, engineVersion: '3.8.0', generatedAt, budgetMb: 20, ...streamSnapshot, status: streamSnapshot.peakMemoryMb <= 20 && streamSnapshot.loads >= 2 && streamSnapshot.unloads >= 2 && streamSnapshot.failures === 0 && streamSnapshot.events.length > 0 ? 'passed' : 'failed' })
 
@@ -77,14 +78,14 @@ try {
   await report('save-corruption-recovery', { format: 'nova-save-corruption-recovery', version: 1, engineVersion: '3.8.0', generatedAt, firstCommit, secondCommit, corruptedRejected, backupRecovered: recovered, recoveredValues: snapshot, cancellationSafe, slotMetadata: saves.listSaveSlots(projects.projectSessionState.id), status: firstCommit && secondCommit && corruptedRejected && recovered && snapshot.points === 10 && cancellationSafe ? 'passed' : 'failed' })
 
   packages.packageState.installed.splice(0); packages.packageState.lockfile.splice(0); packages.packageState.offlineCache.splice(0); packages.enableOfficialPackage(packages.OFFICIAL_OBJECT_POOL_PACKAGE_ID)
-  const installedPoolPackage = packages.packageState.installed.find(item => item.manifest.id === packages.OFFICIAL_OBJECT_POOL_PACKAGE_ID), enabled = packages.packageEnabled(packages.OFFICIAL_OBJECT_POOL_PACKAGE_ID)
+  const installedPoolPackage = packages.packageState.installed.find(/* 比较 item.manifest.id 与 packages.OFFICIAL_OBJECT_POOL_PACKAGE_ID，返回严格相等的判断结果。 */ item => item.manifest.id === packages.OFFICIAL_OBJECT_POOL_PACKAGE_ID), enabled = packages.packageEnabled(packages.OFFICIAL_OBJECT_POOL_PACKAGE_ID)
   if (installedPoolPackage) installedPoolPackage.enabled = false
   const disabled = !packages.packageEnabled(packages.OFFICIAL_OBJECT_POOL_PACKAGE_ID); packages.enableOfficialPackage(packages.OFFICIAL_OBJECT_POOL_PACKAGE_ID)
   if (installedPoolPackage) {
     const packageIndex = packages.packageState.installed.indexOf(installedPoolPackage)
     packages.packageState.installed.splice(packageIndex, 1, { ...installedPoolPackage, manifest: { ...installedPoolPackage.manifest, version: '3.7.0' } })
   }
-  const upgraded = packages.applyPackageUpdate(packages.OFFICIAL_OBJECT_POOL_PACKAGE_ID) && packages.packageState.installed.some(item => item.manifest.id === packages.OFFICIAL_OBJECT_POOL_PACKAGE_ID && item.manifest.version === '3.8.0')
+  const upgraded = packages.applyPackageUpdate(packages.OFFICIAL_OBJECT_POOL_PACKAGE_ID) && packages.packageState.installed.some(/* 先计算 item.manifest.id === packages.OFFICIAL_OBJECT_POOL_PACKAGE_ID；仅当其为真值时求右侧 item.manifest.version === '3.8.0'，返回短路求值结果。 */ item => item.manifest.id === packages.OFFICIAL_OBJECT_POOL_PACKAGE_ID && item.manifest.version === '3.8.0')
 
   physics.physicsState.world.entities.splice(0); objectPools.resetObjectPools()
   const prefabSource = physics.physicsState.world.addBox({ x: 0, y: 0 }, { x: 1, y: 1 }), prefabReference = prefabs.createPrefabFromEntities([prefabSource.id], 'Pool reset evidence')
@@ -104,7 +105,7 @@ try {
   await report('world-data-soak', { format: 'nova-world-data-accelerated-soak', version: 1, engineVersion: '3.8.0', generatedAt, iterations: 2_000, navigationQueries: 20, checksum, milliseconds: soakMs, crashes: 0, wallClockQualification: 'external', status: Number.isFinite(checksum) && soakMs < 5_000 ? 'passed' : 'failed' })
 } finally { await server.close() }
 
-await writeFile(join(output, 'v3.8.0-benchmarks.json'), `${JSON.stringify({ format: 'nova-v3.8-benchmarks', version: 1, engineVersion: '3.8.0', generatedAt, measurements: reports.filter(item => ['nova-million-tile-benchmark', 'nova-streaming-memory', 'nova-world-data-accelerated-soak'].includes(item.format)), status: reports.every(item => item.status === 'passed') ? 'passed' : 'failed' }, null, 2)}\n`)
-await writeFile(join(output, 'v3.8.0-stability-smoke.json'), `${JSON.stringify({ format: 'nova-stability-report', version: 1, engineVersion: '3.8.0', generatedAt, scope: 'accelerated world-data regression plus retained Rust/frontend audit chain', wallClock24Hour: 'external', crashes: 0, severity0Open: 0, severity1Open: reports.some(item => item.status !== 'passed') ? 1 : 0, status: reports.every(item => item.status === 'passed') ? 'passed' : 'failed' }, null, 2)}\n`)
-if (reports.some(item => item.status !== 'passed')) { console.error('Nova_A v3.8 verification failed.', reports.filter(item => item.status !== 'passed')); process.exit(1) }
+await writeFile(join(output, 'v3.8.0-benchmarks.json'), `${JSON.stringify({ format: 'nova-v3.8-benchmarks', version: 1, engineVersion: '3.8.0', generatedAt, measurements: reports.filter(/* 调用 ['nova-million-tile-benchmark', 'nova-streaming-memory', 'nova-world-data-accelerated-soak'].includes(item.format) 并返回调用结果。 */ item => ['nova-million-tile-benchmark', 'nova-streaming-memory', 'nova-world-data-accelerated-soak'].includes(item.format)), status: reports.every(/* 比较 item.status 与 'passed'，返回严格相等的判断结果。 */ item => item.status === 'passed') ? 'passed' : 'failed' }, null, 2)}\n`)
+await writeFile(join(output, 'v3.8.0-stability-smoke.json'), `${JSON.stringify({ format: 'nova-stability-report', version: 1, engineVersion: '3.8.0', generatedAt, scope: 'accelerated world-data regression plus retained Rust/frontend audit chain', wallClock24Hour: 'external', crashes: 0, severity0Open: 0, severity1Open: reports.some(/* 比较 item.status 与 'passed'，返回严格不等的判断结果。 */ item => item.status !== 'passed') ? 1 : 0, status: reports.every(/* 比较 item.status 与 'passed'，返回严格相等的判断结果。 */ item => item.status === 'passed') ? 'passed' : 'failed' }, null, 2)}\n`)
+if (reports.some(/* 比较 item.status 与 'passed'，返回严格不等的判断结果。 */ item => item.status !== 'passed')) { console.error('Nova_A v3.8 verification failed.', reports.filter(/* 比较 item.status 与 'passed'，返回严格不等的判断结果。 */ item => item.status !== 'passed')); process.exit(1) }
 console.log(`Nova_A v3.8 verification passed: ${reports.length} world-data reports, including million-tile, navigation, streaming, recovery, package-removal and soak evidence.`)

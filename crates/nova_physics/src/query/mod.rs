@@ -1,3 +1,4 @@
+// 射线、重叠、形状扫掠及角色移动查询；包含坡面、台阶与复合碰撞回归。
 #[derive(Clone, Copy, Debug, PartialEq, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PhysicsQueryHit {
@@ -23,10 +24,12 @@ pub struct CharacterMoveResult {
     pub slide_count: u32,
 }
 
+// 检查刚体层是否命中查询掩码。
 fn query_enabled(mask: u32, body: &Body) -> bool {
     mask & (1_u32 << body.layer) != 0
 }
 
+// 按边方向检查点是否位于凸多边形内。
 fn polygon_contains(vertices: &[Vec2], point: Vec2) -> bool {
     if vertices.len() < 3 {
         return false;
@@ -48,6 +51,7 @@ fn polygon_contains(vertices: &[Vec2], point: Vec2) -> bool {
     true
 }
 
+// 把世界点转换到碰撞体局部空间后执行形状包含测试。
 fn point_in_body(body: &Body, point: Vec2) -> bool {
     let local = inverse_rotate(point.sub(body.collider_position()), body.collider_angle());
     match &body.shape {
@@ -58,6 +62,7 @@ fn point_in_body(body: &Body, point: Vec2) -> bool {
     }
 }
 
+// 求射线与具体形状的精确交点、法线和距离。
 fn ray_body(body: &Body, origin: Vec2, direction: Vec2, distance: f64) -> Option<PhysicsQueryHit> {
     let direction = direction.normalized_or(Vec2::new(1.0, 0.0));
     if point_in_body(body, origin) {
@@ -85,7 +90,7 @@ fn ray_body(body: &Body, origin: Vec2, direction: Vec2, distance: f64) -> Option
             let root = discriminant.sqrt();
             let t = [(-b - root) / (2.0 * a), (-b + root) / (2.0 * a)]
                 .into_iter()
-                .filter(|value| *value >= 0.0 && *value <= distance)
+                .filter(/* 判断 * value >= 0.0 && * value <= distance 是否成立，供过滤或有效性检查使用。 */ |value| *value >= 0.0 && *value <= distance)
                 .min_by(f64::total_cmp)?;
             let local_point = local_origin.add(local_direction.mul(t));
             let local_normal = Vec2::new(
@@ -105,13 +110,13 @@ fn ray_body(body: &Body, origin: Vec2, direction: Vec2, distance: f64) -> Option
         Shape::Polygon { vertices } => {
             let world_vertices: Vec<Vec2> = vertices
                 .iter()
-                .map(|vertex| {
+                .map(/* 计算并返回 body . collider_position () . add (rotate (* vertex , body . collider_angle ()))，用于当前 ray_body 流程。 */ |vertex| {
                     body.collider_position()
                         .add(rotate(*vertex, body.collider_angle()))
                 })
                 .collect();
             let signed_area: f64 = (0..world_vertices.len())
-                .map(|index| {
+                .map(/* 计算并返回 world_vertices [index] . cross (world_vertices [(index + 1) % world_vertices . len ()])，用于当前 ray_body 流程。 */ |index| {
                     world_vertices[index].cross(world_vertices[(index + 1) % world_vertices.len()])
                 })
                 .sum();
@@ -137,11 +142,11 @@ fn ray_body(body: &Body, origin: Vec2, direction: Vec2, distance: f64) -> Option
                     Vec2::new(-edge.y, edge.x)
                 };
                 let normal = raw.normalized_or(direction.neg());
-                if closest.map_or(true, |value| ray_t < value.0) {
+                if closest.map_or(true, /* 判断 ray_t < value . 0 是否成立，供过滤或有效性检查使用。 */ |value| ray_t < value.0) {
                     closest = Some((ray_t, normal));
                 }
             }
-            closest.map(|(t, normal)| {
+            closest.map(/* 由射线距离计算交点，并保存法线及距离到命中记录。 */ |(t, normal)| {
                 let point = origin.add(direction.mul(t));
                 PhysicsQueryHit {
                     handle: 0,
@@ -154,6 +159,7 @@ fn ray_body(body: &Body, origin: Vec2, direction: Vec2, distance: f64) -> Option
     }
 }
 
+// 将查询形状包装为不参与动力学的临时刚体。
 fn query_shape(shape: Shape, position: Vec2, angle: f64) -> Body {
     Body {
         data_index: usize::MAX,
@@ -198,6 +204,7 @@ fn query_shape(shape: Shape, position: Vec2, angle: f64) -> Body {
     }
 }
 
+// 根据半宽和半高构造矩形凸多边形。
 fn box_shape(half_width: f64, half_height: f64) -> Shape {
     Shape::Polygon {
         vertices: vec![
@@ -209,6 +216,7 @@ fn box_shape(half_width: f64, half_height: f64) -> Shape {
     }
 }
 
+// 计算射线穿越轴对齐边界盒的有效距离区间。
 fn ray_aabb_interval(
     origin: Vec2,
     direction: Vec2,
@@ -239,13 +247,15 @@ fn ray_aabb_interval(
 }
 
 impl PhysicsWorld {
+    // 读取当前持久刚体数据并展开可查询的碰撞形状。
     fn query_records(&self) -> Vec<(u32, Body)> {
         self.query_records_with_identity()
             .into_iter()
-            .map(|(handle, _, body)| (handle, body))
+            .map(/* 计算并返回 (handle , body)，用于当前 query_records 流程。 */ |(handle, _, body)| (handle, body))
             .collect()
     }
 
+    // 按掩码执行射线查询，返回按距离稳定排序的全部命中。
     pub fn raycast_all(
         &self,
         origin: [f64; 2],
@@ -259,17 +269,17 @@ impl PhysicsWorld {
         let mut hits: Vec<_> = self
             .query_records()
             .into_iter()
-            .filter_map(|(handle, body)| {
+            .filter_map(/* 先检查查询掩码，再计算精确交点并补入所属刚体句柄。 */ |(handle, body)| {
                 if !query_enabled(mask, &body) {
                     return None;
                 }
-                ray_body(&body, origin, direction, distance).map(|mut hit| {
+                ray_body(&body, origin, direction, distance).map(/* 计算并返回 hit . handle = handle ; hit，用于当前 raycast_all 流程。 */ |mut hit| {
                     hit.handle = handle;
                     hit
                 })
             })
             .collect();
-        hits.sort_by(|first, second| {
+        hits.sort_by(/* 按 first . distance . total_cmp (& second . distance) . then (first . handle . cmp (& second . handle)) 比较顺序，供稳定排序使用。 */ |first, second| {
             first
                 .distance
                 .total_cmp(&second.distance)
@@ -278,10 +288,11 @@ impl PhysicsWorld {
         // The public query contract returns bodies, so retain the closest
         // child hit for each owner without reporting duplicates.
         let mut owners = HashSet::new();
-        hits.retain(|hit| owners.insert(hit.handle));
+        hits.retain(/* 计算并返回 owners . insert (hit . handle)，用于当前 raycast_all 流程。 */ |hit| owners.insert(hit.handle));
         hits
     }
 
+    // 返回射线查询中最近的合格命中。
     pub fn raycast(
         &self,
         origin: [f64; 2],
@@ -294,18 +305,20 @@ impl PhysicsWorld {
             .next()
     }
 
+    // 查询包含给定世界点且通过掩码的刚体。
     pub fn overlap_point(&self, point: [f64; 2], mask: u32) -> Vec<u32> {
         let point = Vec2::new(finite_or(point[0], 0.0), finite_or(point[1], 0.0));
         let mut owners = HashSet::new();
         self.query_records()
             .into_iter()
-            .filter_map(|(handle, body)| {
+            .filter_map(/* 判断 (query_enabled (mask , & body) && point_in_body (& body , point) && owners . insert (handle)) . then_some (handle) 是否成立，供过滤或有效性检查使用。 */ |(handle, body)| {
                 (query_enabled(mask, &body) && point_in_body(&body, point) && owners.insert(handle))
                     .then_some(handle)
             })
             .collect()
     }
 
+    // 构造圆形查询体并返回符合掩码的重叠刚体。
     pub fn overlap_circle(&self, center: [f64; 2], radius: f64, mask: u32) -> Vec<u32> {
         let query = query_shape(
             Shape::Ellipse {
@@ -318,6 +331,7 @@ impl PhysicsWorld {
         self.overlap_shape(&query, mask)
     }
 
+    // 构造可旋转矩形查询体并返回重叠刚体。
     pub fn overlap_box(&self, center: [f64; 2], size: [f64; 2], angle: f64, mask: u32) -> Vec<u32> {
         let query = query_shape(
             box_shape(
@@ -330,11 +344,12 @@ impl PhysicsWorld {
         self.overlap_shape(&query, mask)
     }
 
+    // 对候选刚体执行精确形状相交测试，收集重叠身份。
     fn overlap_shape(&self, query: &Body, mask: u32) -> Vec<u32> {
         let mut owners = HashSet::new();
         self.query_records()
             .into_iter()
-            .filter_map(|(handle, body)| {
+            .filter_map(/* 判断 (query_enabled (mask , & body) && ! collide (query , & body) . is_empty () && owners . insert (handle)) . then_some (handle) 是否成立，供过滤或有效性检查使用。 */ |(handle, body)| {
                 (query_enabled(mask, &body)
                     && !collide(query, &body).is_empty()
                     && owners.insert(handle))
@@ -343,6 +358,7 @@ impl PhysicsWorld {
             .collect()
     }
 
+    // 沿位移扫掠矩形形状，返回最先发生的合格接触。
     pub fn shape_cast(
         &self,
         center: [f64; 2],
@@ -355,6 +371,7 @@ impl PhysicsWorld {
         self.shape_cast_excluding(center, size, angle, direction, distance, mask, None)
     }
 
+    // 执行形状扫掠并排除指定刚体，避免角色与自身相撞。
     #[allow(clippy::too_many_arguments)]
     fn shape_cast_excluding(
         &self,
@@ -370,7 +387,7 @@ impl PhysicsWorld {
         let direction = Vec2::new(finite_or(direction[0], 1.0), finite_or(direction[1], 0.0));
         self.query_records()
             .into_iter()
-            .filter_map(|(handle, body)| {
+            .filter_map(/* 排除自身、不匹配掩码及角色查询中的传感器，再执行精确矩形扫掠。 */ |(handle, body)| {
                 if Some(handle) == excluded_handle
                     || !query_enabled(mask, &body)
                     || (excluded_handle.is_some() && body.is_sensor)
@@ -385,18 +402,19 @@ impl PhysicsWorld {
                     non_negative(distance, 0.0),
                     &body,
                 )
-                .map(|mut hit| {
+                .map(/* 计算并返回 hit . handle = handle ; hit，用于当前 shape_cast_excluding 流程。 */ |mut hit| {
                     hit.handle = handle;
                     hit
                 })
             })
-            .min_by(|a, b| {
+            .min_by(/* 按 a . distance . total_cmp (& b . distance) . then (a . handle . cmp (& b . handle)) 比较顺序，供稳定排序使用。 */ |a, b| {
                 a.distance
                     .total_cmp(&b.distance)
                     .then(a.handle.cmp(&b.handle))
             })
     }
 
+    // 求解角色矩形移动、滑动、坡面、台阶和地面吸附，并报告接触状态。
     #[allow(clippy::too_many_arguments)]
     pub fn move_character_box(
         &mut self,
@@ -499,7 +517,7 @@ impl PhysicsWorld {
                 if let Some(platform) = self
                     .bodies
                     .iter()
-                    .find(|record| record.handle == hit.handle)
+                    .find(/* 判断 record . handle == hit . handle 是否成立，供过滤或有效性检查使用。 */ |record| record.handle == hit.handle)
                 {
                     result.platform_velocity = [
                         finite_or(platform.values[4], 0.0),
@@ -573,7 +591,7 @@ impl PhysicsWorld {
                     if let Some(platform) = self
                         .bodies
                         .iter()
-                        .find(|record| record.handle == hit.handle)
+                        .find(/* 判断 record . handle == hit . handle 是否成立，供过滤或有效性检查使用。 */ |record| record.handle == hit.handle)
                     {
                         result.platform_velocity = [
                             finite_or(platform.values[4], 0.0),
@@ -597,6 +615,7 @@ impl PhysicsWorld {
 mod query_tests {
     use super::*;
 
+    // 构造矩形测试刚体的扁平记录。
     fn box_record(x: f64, y: f64, layer: u32) -> Vec<f64> {
         let mut record = vec![0.0; STRIDE];
         record[2] = x;
@@ -612,6 +631,7 @@ mod query_tests {
         record
     }
 
+    // 验证查询按掩码筛选并按距离稳定返回精确命中。
     #[test]
     fn queries_return_sorted_masked_precise_hits() {
         let mut world = PhysicsWorld::new();
@@ -619,7 +639,7 @@ mod query_tests {
         world.create_body(10, 0, &box_record(2.0, 0.0, 0)).unwrap();
         let hits = world.raycast_all([0.0, 0.0], [1.0, 0.0], 10.0, u32::MAX);
         assert_eq!(
-            hits.iter().map(|hit| hit.handle).collect::<Vec<_>>(),
+            hits.iter().map(/* 在当前宏表达式中计算 hit . handle，供查询映射、过滤或断言使用。 */ |hit| hit.handle).collect::<Vec<_>>(),
             vec![10, 20]
         );
         assert!((hits[0].distance - 1.0).abs() < 1.0e-10);
@@ -640,6 +660,7 @@ mod query_tests {
         assert!((cast.distance - 0.75).abs() < 1.0e-6);
     }
 
+    // 验证复合子形状使用自身偏移与碰撞层。
     #[test]
     fn compound_children_are_queried_at_their_exact_offsets_and_layers() {
         let mut world = PhysicsWorld::new();
@@ -677,6 +698,7 @@ mod query_tests {
         assert_eq!(world.raycast_all([0.0, 0.0], [1.0, 0.0], 10.0, 2).len(), 1);
     }
 
+    // 验证角色与复合实体碰撞，但不被传感器阻挡。
     #[test]
     fn characters_collide_with_compound_children_but_not_sensors() {
         let mut world = PhysicsWorld::new();
@@ -707,6 +729,7 @@ mod query_tests {
         assert_eq!(world.overlap_point([4.0, 0.0], 1), vec![2]);
     }
 
+    // 验证角色移动使用世界单位，并排除自身碰撞体。
     #[test]
     fn character_motion_uses_exact_units_and_excludes_its_own_collider() {
         let mut world = PhysicsWorld::new();
@@ -730,6 +753,7 @@ mod query_tests {
         assert!((moved.applied_motion[0] - 2.0).abs() < 1.0e-4);
     }
 
+    // 验证地面、天花板分类及移动平台速度报告。
     #[test]
     fn character_classifies_floor_ceiling_and_moving_platform_velocity() {
         let mut world = PhysicsWorld::new();
@@ -770,6 +794,7 @@ mod query_tests {
         assert!(up.on_ceiling && up.ceiling_normal[1] < -0.99);
     }
 
+    // 验证长距离连续扫掠仍命中薄旋转目标。
     #[test]
     fn continuous_polygon_sweeps_hit_thin_rotated_targets_over_long_travel() {
         let mut world = PhysicsWorld::new();
@@ -785,6 +810,7 @@ mod query_tests {
         assert_eq!(hit.handle, 9);
     }
 
+    // 验证跨台阶不会穿过低顶，静止吸附仍更新地面状态。
     #[test]
     fn step_up_cannot_teleport_through_a_low_ceiling_and_idle_snap_refreshes_floor() {
         let mut world = PhysicsWorld::new();
@@ -809,6 +835,7 @@ mod query_tests {
         assert!(!removed.on_floor);
     }
 
+    // 验证地面吸附距离和台阶高度使用世界单位。
     #[test]
     fn character_floor_snap_and_step_height_are_applied_in_world_units() {
         let mut snap_world = PhysicsWorld::new();
@@ -858,6 +885,7 @@ mod query_tests {
         assert!((stepped.position[1] - 3.0).abs() < 1.0e-4);
     }
 
+    // 验证坡度限制内的旋转表面可作为地面。
     #[test]
     fn character_accepts_a_rotated_surface_inside_the_slope_limit() {
         let mut world = PhysicsWorld::new();
@@ -882,6 +910,7 @@ mod query_tests {
     }
 }
 
+// 连续计算移动矩形与目标形状的首次接触，避免离散采样穿透。
 fn cast_box_against_body(
     start: Vec2,
     size: [f64; 2],
@@ -917,7 +946,7 @@ fn cast_box_against_body(
         max_y: target_bounds.max_y + query_half_height,
     };
     let (entry, exit) = ray_aabb_interval(start, direction, distance, expanded)?;
-    let collides_at = |travel: f64| {
+    let collides_at = /* 在给定扫掠距离构造查询体，并取其与目标的首个接触流形。 */ |travel: f64| {
         let query = query_shape(
             shape.clone(),
             start.add(direction.mul(travel)),
@@ -1002,7 +1031,7 @@ fn cast_box_against_body(
     if let Shape::Ellipse { radius_x, radius_y } = &body.shape {
         let center = body.collider_position();
         let target_angle = body.collider_angle();
-        let unit = |point: Vec2| {
+        let unit = /* 计算并返回 let local = inverse_rotate (point . sub (center) , target_angle) ; Vec2 :: new (local . x / radius_x , local . y / radius_y)，用于当前 cast_box_against_body 流程。 */ |point: Vec2| {
             let local = inverse_rotate(point.sub(center), target_angle);
             Vec2::new(local.x / radius_x, local.y / radius_y)
         };
@@ -1016,7 +1045,7 @@ fn cast_box_against_body(
             Vec2::new(half_x, half_y),
             Vec2::new(-half_x, half_y),
         ]
-        .map(|point| unit(start.add(rotate(point, angle))));
+        .map(/* 计算并返回 unit (start . add (rotate (point , angle)))，用于当前 cast_box_against_body 流程。 */ |point| unit(start.add(rotate(point, angle))));
         let mut candidates: Vec<(f64, Vec2)> = Vec::with_capacity(16);
         let a = velocity.length_squared();
         for vertex in vertices {
@@ -1057,8 +1086,8 @@ fn cast_box_against_body(
         }
         if let Some((travel, point)) = candidates
             .into_iter()
-            .filter(|(travel, _)| *travel <= distance)
-            .min_by(|a, b| a.0.total_cmp(&b.0))
+            .filter(/* 判断 * travel <= distance 是否成立，供过滤或有效性检查使用。 */ |(travel, _)| *travel <= distance)
+            .min_by(/* 按 a . 0 . total_cmp (& b . 0) 比较顺序，供稳定排序使用。 */ |a, b| a.0.total_cmp(&b.0))
         {
             let world_point = center.add(rotate(
                 Vec2::new(point.x * radius_x, point.y * radius_y),
@@ -1083,6 +1112,7 @@ fn cast_box_against_body(
 #[cfg(test)]
 mod sweep_binding_tests {
     use super::*;
+    // 验证椭圆连续查询不依赖离散采样也能命中细长旋转目标。
     #[test]
     fn ellipse_sweep_finds_a_thin_rotated_long_target_without_sampling() {
         let mut values = vec![0.0; STRIDE];
@@ -1118,6 +1148,7 @@ mod sweep_binding_tests {
         );
         assert!(miss.is_none());
     }
+    // 验证角色碰撞偏移与复合外包络不会改变刚体原点语义。
     #[test]
     fn character_offset_and_compound_envelope_keep_the_body_origin_separate() {
         let mut values = vec![0.0; STRIDE];

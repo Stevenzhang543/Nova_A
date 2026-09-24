@@ -1,3 +1,4 @@
+# 历史 5.0 发布流程：依次执行版本、构建、审计与发布步骤，失败立即停止。
 [CmdletBinding()]
 param(
   [switch]$SkipDependencyRestore,
@@ -11,6 +12,7 @@ $projectRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $releaseVersion = '5.0.0'
 $commands = [System.Collections.Generic.List[object]]::new()
 
+# 执行指定发布步骤，检查退出码并停止失败的发布链。
 function Invoke-ReleaseCommand {
   param([string]$Name, [string]$Program, [string[]]$Arguments)
   $started = [DateTime]::UtcNow

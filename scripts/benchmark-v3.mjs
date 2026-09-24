@@ -1,3 +1,4 @@
+/* 执行版本基准采集并统计构建资源原始和 gzip 大小，输出指定 JSON 报告。 */
 import { createHash } from 'node:crypto'
 import { mkdtemp, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
@@ -8,9 +9,9 @@ import { performance } from 'node:perf_hooks'
 import { createServer } from 'vite'
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)))
-const engineVersion = process.argv.find(value => value.startsWith('--engine-version='))?.slice(17) || '3.2.0'
-const output = process.argv.find(value => value.startsWith('--output='))?.slice(9) || join(root, 'release-audits', 'v3.2.0-benchmarks.json')
-const percentile = (values, fraction) => [...values].sort((a, b) => a - b)[Math.min(values.length - 1, Math.floor(values.length * fraction))]
+const engineVersion = process.argv.find(/* 调用 value.startsWith('--engine-version=') 并返回调用结果。 */ value => value.startsWith('--engine-version='))?.slice(17) || '3.2.0'
+const output = process.argv.find(/* 调用 value.startsWith('--output=') 并返回调用结果。 */ value => value.startsWith('--output='))?.slice(9) || join(root, 'release-audits', 'v3.2.0-benchmarks.json')
+const percentile = /* 返回 [...values].sort((a, b) => a - b)[Math.min(values.length - 1, Math.floor(values.length * fraction))] 的当前值。 */ (values, fraction) => [...values].sort(/* 计算表达式 a - b 并返回结果，沿用操作数的原有类型规则。 */ (a, b) => a - b)[Math.min(values.length - 1, Math.floor(values.length * fraction))]
 const result = {
   format: 'nova-benchmark-report', version: 1, engineVersion, generatedAt: new Date().toISOString(),
   machine: { platform: process.platform, architecture: process.arch, node: process.version, cpuCount: (await import('node:os')).cpus().length, totalMemoryBytes: (await import('node:os')).totalmem() },
@@ -75,15 +76,15 @@ for (const [name, path] of Object.entries({ nativeWindows: join(root, 'src-tauri
 try {
   const assetRoot = join(root, 'dist', 'assets')
   const assetNames = await readdir(assetRoot)
-  const javascript = assetNames.filter(name => name.endsWith('.js'))
-  const javascriptSizes = await Promise.all(javascript.map(async name => {
+  const javascript = assetNames.filter(/* 调用 name.endsWith('.js') 并返回调用结果。 */ name => name.endsWith('.js'))
+  const javascriptSizes = await Promise.all(javascript.map(/* 读取构建资源，返回原始字节数及固定参数 gzip 压缩后的字节数。 */ async name => {
     const contents = await readFile(join(assetRoot, name))
     return { name, bytes: contents.length, gzipBytes: gzipSync(contents, { level: 9, mtime: 0 }).length }
   }))
-  const largest = javascriptSizes.sort((first, second) => second.bytes - first.bytes)[0] ?? null
+  const largest = javascriptSizes.sort(/* 计算表达式 second.bytes - first.bytes 并返回结果，沿用操作数的原有类型规则。 */ (first, second) => second.bytes - first.bytes)[0] ?? null
   sizes.webJavascriptFiles = javascriptSizes.length
-  sizes.webJavascriptBytes = javascriptSizes.reduce((total, entry) => total + entry.bytes, 0)
-  sizes.webJavascriptGzipBytes = javascriptSizes.reduce((total, entry) => total + entry.gzipBytes, 0)
+  sizes.webJavascriptBytes = javascriptSizes.reduce(/* 计算表达式 total + entry.bytes 并返回结果，沿用操作数的原有类型规则。 */ (total, entry) => total + entry.bytes, 0)
+  sizes.webJavascriptGzipBytes = javascriptSizes.reduce(/* 计算表达式 total + entry.gzipBytes 并返回结果，沿用操作数的原有类型规则。 */ (total, entry) => total + entry.gzipBytes, 0)
   sizes.largestWebJavascript = largest
 } catch {
   sizes.webJavascriptFiles = null
@@ -97,6 +98,6 @@ for (const metric of ['editorColdStartMs', 'editorIdleWorkingSetBytes', 'frameTi
   result.exceptions.push({ metric, reason: 'Requires an instrumented interactive native/GPU session; the headless benchmark does not invent a result.', plan: 'Capture on the published reference machine and attach the JSON result to the release evidence.' })
 }
 result.qualificationScope = 'Pinned headless physics/script/import/export and artifact-size baselines; interactive native/GPU metrics remain explicit external exceptions.'
-result.status = ['physics', 'scriptReload', 'assetImportCore', 'export'].every(metric => result.measurements[metric]) ? 'passed' : 'failed'
+result.status = ['physics', 'scriptReload', 'assetImportCore', 'export'].every(/* 返回 result.measurements[metric] 的当前值。 */ metric => result.measurements[metric]) ? 'passed' : 'failed'
 await writeFile(output, `${JSON.stringify(result, null, 2)}\n`, 'utf8')
 console.log(`Wrote honest v3 benchmark evidence to ${output}`)

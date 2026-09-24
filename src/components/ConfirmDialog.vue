@@ -1,3 +1,4 @@
+<!-- 确认对话框：呈现共享确认请求，管理默认取消焦点、退出键和确认结果。 -->
 <template>
   <Teleport to="body">
     <Transition name="confirm">
@@ -27,18 +28,18 @@ const cancelButton = ref<HTMLButtonElement | null>(null)
 const titleId = 'nova-confirm-title'
 const messageId = 'nova-confirm-message'
 
-function finish(confirmed: boolean) { resolveConfirmation(confirmed) }
-function onKeyDown(event: KeyboardEvent) {
+/** 把确认或取消结果交回共享确认请求的等待方。 */ function finish(confirmed: boolean) { resolveConfirmation(confirmed) }
+/** 对话框打开时拦截 Escape，并按取消结束当前请求。 */ function onKeyDown(event: KeyboardEvent) {
   if (!state.visible) return
   if (event.key === 'Escape') { event.preventDefault(); finish(false) }
 }
 
-watch(() => state.visible, visible => {
-  if (visible) void nextTick(() => cancelButton.value?.focus())
+watch(/* 返回 state.visible 的当前值。 */ () => state.visible, /** 对话框显示后等待 DOM 更新，再将焦点放在取消按钮。 */ visible => {
+  if (visible) void nextTick(/** 取消按钮仍存在时为其设置键盘焦点。 */ () => cancelButton.value?.focus())
 })
 
 window.addEventListener('keydown', onKeyDown)
-onBeforeUnmount(() => window.removeEventListener('keydown', onKeyDown))
+onBeforeUnmount(/** 卸载时移除本组件注册的全局按键监听。 */ () => window.removeEventListener('keydown', onKeyDown))
 </script>
 
 <style scoped>

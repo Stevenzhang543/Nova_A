@@ -1,3 +1,4 @@
+/** 表单布局选项的多语言名称及说明。 */
 /** Editor preferences only; never serialized into game projects. */
 export const FORM_LAYOUT_COPY = {
   en: { label: 'Form labels', auto: 'Automatic', stacked: 'Above controls', hint: 'Automatic adapts labels to panel width and text size. Above controls keeps the full row available for editing.' },

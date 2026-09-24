@@ -1,3 +1,4 @@
+/** 版本5.6.0：生成参考项目与对应资源，供功能演示和版本验证使用。 */
 import { createHash } from 'node:crypto'
 import { cp, mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
@@ -12,21 +13,21 @@ const specs = [
   { id: 'animation-v56-interop-recording', source: 'visual-scripting-v53-production', name: 'Animation Graph Interoperability 5.6', kind: 'interop' }
 ]
 
-function uuid(seed) {
+/** 由5.6命名空间散列生成稳定标识。 */ function uuid(seed) {
   const value = createHash('sha256').update(`nova-v56:${seed}`).digest('hex').slice(0, 32).split('')
   value[12] = '4'; value[16] = '8'
   const text = value.join('')
   return `${text.slice(0, 8)}-${text.slice(8, 12)}-${text.slice(12, 16)}-${text.slice(16, 20)}-${text.slice(20)}`
 }
 
-function addTextAsset(project, spec, assetType, folder, filename, document) {
+/** 将文档序列化为指定资源类型并追加到项目，返回资源引用。 */ function addTextAsset(project, spec, assetType, folder, filename, document) {
   const id = uuid(`${spec.id}:${assetType}:${filename}`), source = JSON.stringify(document, null, 2), basis = project.assets[0] ?? {}
   project.assets.push({ ...structuredClone(basis), uuid: id, name: filename, path: `Assets/${folder}/${filename}`, assetType, mimeType: `application/x-nova-${assetType}`, byteLength: new TextEncoder().encode(source).byteLength, source, sourceModified: 0, importedAt: 0, width: 0, height: 0, duration: 0, fontFamily: '', script: undefined, unknownFields: undefined })
   return `asset://${id}`
 }
 
-const clip = name => ({ version: 4, name, loop: true, frameRate: 60, playbackSpeed: 1, onionSkin: false, spriteFrames: [], tracks: [{ property: 'Transform.position.x', targetEntityUuid: null, keyframes: [{ time: 0, value: 0, tangentMode: 'Linear', inTangent: 0, outTangent: 0, easing: 'Linear', interpolation: 'Linear' }, { time: 1, value: 2, tangentMode: 'Linear', inTangent: 0, outTangent: 0, easing: 'EaseInOut', interpolation: 'Cubic' }] }], events: [{ time: .5, signal: 'v56.step', payload: '{}' }], markers: [{ time: .5, name: 'Contact' }], commandTracks: [] })
-const timeline = name => ({ version: 2, name, duration: 8, frameRate: 60, markers: [{ id: 'skip', name: 'Skip', time: 6, color: '#6ea8ff' }, { id: 'resume', name: 'Resume', time: 2, color: '#74d3ae' }], skipMarker: 'skip', resumeMarker: 'resume', tracks: [{ id: 'subtitle', name: 'Subtitles', type: 'Subtitle', muted: false, clips: [{ id: 'caption', start: 1, duration: 3, offset: 0, playbackRate: 1, blendIn: .2, blendOut: .2, asset: null, targetEntityUuid: null, value: 'A localized Title Safe subtitle.', payload: '', locale: 'en', safeArea: 'TitleSafe', skippable: false }] }, { id: 'branch', name: 'Branch', type: 'Branch', muted: false, clips: [{ id: 'choice', start: 4, duration: .1, offset: 0, playbackRate: 1, blendIn: 0, blendOut: 0, asset: null, targetEntityUuid: null, value: 'skip', payload: '{"variable":"route","equals":"fast"}', locale: '', safeArea: 'TitleSafe', skippable: true }] }] })
+const clip = /** 创建带位置轨道、事件和标记的循环动画片段。 */ name => ({ version: 4, name, loop: true, frameRate: 60, playbackSpeed: 1, onionSkin: false, spriteFrames: [], tracks: [{ property: 'Transform.position.x', targetEntityUuid: null, keyframes: [{ time: 0, value: 0, tangentMode: 'Linear', inTangent: 0, outTangent: 0, easing: 'Linear', interpolation: 'Linear' }, { time: 1, value: 2, tangentMode: 'Linear', inTangent: 0, outTangent: 0, easing: 'EaseInOut', interpolation: 'Cubic' }] }], events: [{ time: .5, signal: 'v56.step', payload: '{}' }], markers: [{ time: .5, name: 'Contact' }], commandTracks: [] })
+const timeline = /** 创建带字幕、条件分支及跳过和恢复标记的时间线。 */ name => ({ version: 2, name, duration: 8, frameRate: 60, markers: [{ id: 'skip', name: 'Skip', time: 6, color: '#6ea8ff' }, { id: 'resume', name: 'Resume', time: 2, color: '#74d3ae' }], skipMarker: 'skip', resumeMarker: 'resume', tracks: [{ id: 'subtitle', name: 'Subtitles', type: 'Subtitle', muted: false, clips: [{ id: 'caption', start: 1, duration: 3, offset: 0, playbackRate: 1, blendIn: .2, blendOut: .2, asset: null, targetEntityUuid: null, value: 'A localized Title Safe subtitle.', payload: '', locale: 'en', safeArea: 'TitleSafe', skippable: false }] }, { id: 'branch', name: 'Branch', type: 'Branch', muted: false, clips: [{ id: 'choice', start: 4, duration: .1, offset: 0, playbackRate: 1, blendIn: 0, blendOut: 0, asset: null, targetEntityUuid: null, value: 'skip', payload: '{"variable":"route","equals":"fast"}', locale: '', safeArea: 'TitleSafe', skippable: true }] }] })
 
 for (const spec of specs) {
   const output = join(projectsRoot, spec.id)
@@ -40,7 +41,7 @@ for (const spec of specs) {
   if (spec.kind === 'cinematic' || spec.kind === 'interop') addTextAsset(project, spec, 'timeline', 'Timelines', 'BranchingSubtitle.nova-timeline', timeline('Branching Subtitle'))
   if (spec.kind === 'audio') {
     project.projectSettings.audio = { ...(project.projectSettings.audio ?? {}), mixer: { ...(project.projectSettings.audio?.mixer ?? {}), snapshotTransitionSeconds: .18, ducking: [{ id: 'voice-duck', enabled: true, triggerBus: 'Voice', targetBus: 'Music', reductionDb: -8, attack: .035, release: .24 }] } }
-    const audioAsset = project.assets.find(asset => asset.assetType === 'audio'); if (audioAsset) { audioAsset.settings ??= {}; audioAsset.settings.audioSettings = { ...(audioAsset.settings.audioSettings ?? {}), loopRegions: [{ id: 'intro-loop', name: 'Intro loop', start: .25, end: 1.5 }], activeLoopRegion: 'intro-loop' } }
+    const audioAsset = project.assets.find(/* 比较 asset.assetType 与 'audio'，返回严格相等的判断结果。 */ asset => asset.assetType === 'audio'); if (audioAsset) { audioAsset.settings ??= {}; audioAsset.settings.audioSettings = { ...(audioAsset.settings.audioSettings ?? {}), loopRegions: [{ id: 'intro-loop', name: 'Intro loop', start: .25, end: 1.5 }], activeLoopRegion: 'intro-loop' } }
   }
   await writeFile(path, `${JSON.stringify(project, null, 2)}\n`)
   await writeFile(join(output, 'README.md'), `# ${spec.name}\n\nEngine **5.6.0**, Project Format 2/schema 29. This ${spec.kind} reference audits authored data, deterministic runtime behavior, editor reachability and safe migration. Follow test-controls.json and compare expected-output.json. External signing and independent-device certification remain pending.\n`)

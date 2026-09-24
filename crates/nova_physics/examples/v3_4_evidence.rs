@@ -1,6 +1,8 @@
+// 物理证据示例：测量基准、确定性回放、连续碰撞、堆叠和加速长期运行。
 use nova_physics::{step_physics, PhysicsWorld, STRIDE};
 use std::time::Instant;
 
+// 构造指定身份、位置、尺寸及静态标志的基准刚体。
 fn body(id: u32, x: f64, y: f64, width: f64, height: f64, is_static: bool) -> Vec<f64> {
     let mut value = vec![0.0; STRIDE];
     value[0] = id as f64;
@@ -38,6 +40,7 @@ fn body(id: u32, x: f64, y: f64, width: f64, height: f64, is_static: bool) -> Ve
     value
 }
 
+// 基于通用刚体记录构造椭圆和连续碰撞参数。
 fn ellipse(id: u32, x: f64, radius: f64, continuous: bool) -> Vec<f64> {
     let mut value = body(id, x, 0.0, radius * 2.0, radius * 2.0, false);
     value[1] = 1.0;
@@ -47,6 +50,7 @@ fn ellipse(id: u32, x: f64, radius: f64, continuous: bool) -> Vec<f64> {
     value
 }
 
+// 重复推进指定数量的刚体，返回耗时及状态校验信息。
 fn benchmark(count: usize, steps: usize) -> (f64, f64, u64) {
     let mut world = PhysicsWorld::new();
     for index in 0..count {
@@ -70,7 +74,9 @@ fn benchmark(count: usize, steps: usize) -> (f64, f64, u64) {
     )
 }
 
+// 重复运行同一输入，比较物理校验值是否一致。
 fn deterministic_replay() -> (u64, u64, bool) {
+    // 构造同一初始场景并推进固定步数，返回用于回放对比的状态校验值。
     fn run() -> u64 {
         let mut world = PhysicsWorld::new();
         for index in 0..64 {
@@ -96,6 +102,7 @@ fn deterministic_replay() -> (u64, u64, bool) {
     (first, second, first == second)
 }
 
+// 运行高速穿墙场景，记录连续碰撞设置下的最终状态。
 fn tunneling_case(continuous: bool) -> (f64, f64) {
     let mut input = ellipse(1, -5.0, 0.1, continuous);
     input[4] = 1_000.0;
@@ -106,6 +113,7 @@ fn tunneling_case(continuous: bool) -> (f64, f64) {
     (output[2], output[4])
 }
 
+// 运行堆叠场景并测量残余运动和位置稳定性。
 fn stable_stack() -> (f64, f64) {
     let mut world = PhysicsWorld::new();
     world
@@ -140,6 +148,7 @@ fn stable_stack() -> (f64, f64) {
     (max_position_error, kinetic_proxy)
 }
 
+// 连续推进大量物理步，记录校验值、有限性和耗时。
 fn accelerated_soak() -> (u64, u64, bool, f64) {
     let mut world = PhysicsWorld::new();
     let mut dynamic = body(1, 0.0, 2.0, 1.0, 1.0, false);
@@ -153,7 +162,10 @@ fn accelerated_soak() -> (u64, u64, bool, f64) {
     for _ in 0..ticks {
         world.step(1.0 / 60.0, 9.80665, 0.01);
     }
-    let finite = world.state().iter().all(|value| value.is_finite());
+    let finite = world.state().iter().all(
+        /* 判断 value . is_finite () 是否成立，供过滤或有效性检查使用。 */
+        |value| value.is_finite(),
+    );
     (
         ticks,
         world.state_checksum(),
@@ -162,6 +174,7 @@ fn accelerated_soak() -> (u64, u64, bool, f64) {
     )
 }
 
+// 运行不同规模基准、回放、穿墙、堆叠和长期模拟并输出证据。
 fn main() {
     let (b100_ms, b100_hz, b100_hash) = benchmark(100, 30);
     let (b1000_ms, b1000_hz, b1000_hash) = benchmark(1_000, 20);

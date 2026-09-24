@@ -1,13 +1,14 @@
+/** 功能回归脚本：执行 verify-v3.1.mjs 对应场景，保留断言和证据输出。 */
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createServer } from 'vite'
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)))
-const output = process.argv.find(value => value.startsWith('--output='))?.slice(9) || join(root, 'release-audits', 'v3.1.0-editor-foundation.json')
+const output = process.argv.find(/* 调用 value.startsWith('--output=') 并返回调用结果。 */ value => value.startsWith('--output='))?.slice(9) || join(root, 'release-audits', 'v3.1.0-editor-foundation.json')
 const assertions = []
 const recoveryAssertions = []
-const verify = (name, condition, detail) => {
+const verify = /** 结构说明（自动提取）：verify；输入 name、condition、detail；直接调用 assertions.push、Error；包含显式抛错路径。 */ (name, condition, detail) => {
   assertions.push({ name, status: condition ? 'passed' : 'failed', detail })
   if (!condition) throw new Error(`${name}: ${detail}`)
 }
@@ -16,11 +17,11 @@ const server = await createServer({ root, appType: 'custom', logLevel: 'silent',
 try {
   const { CommandHistory, DocumentMutationCommand } = await server.ssrLoadModule('/src/editor/commands.ts')
   let document = JSON.stringify({ value: 0, objects: [] })
-  const apply = next => { document = next }
+  const apply = /** 结构说明（自动提取）：apply；输入 next；写入 document。 */ next => { document = next }
   const history = new CommandHistory(100)
   for (let index = 1; index <= 120; index++) {
     const before = document
-    const after = JSON.stringify({ value: index, objects: Array.from({ length: index % 11 }, (_, id) => ({ id, x: index + id })) })
+    const after = JSON.stringify({ value: index, objects: Array.from({ length: index % 11 }, /** 结构说明（自动提取）：Array.from 回调；输入 _、id；返回表达式求值结果。 */ (_, id) => ({ id, x: index + id })) })
     history.commit(new DocumentMutationCommand({ label: index % 3 === 0 ? 'Transform objects' : index % 3 === 1 ? 'Edit property' : 'Reorder hierarchy', before, after, apply, committedAt: index * 1_000 }))
   }
   verify('History stays bounded', history.length === 100 && history.index === 99, `length=${history.length}; index=${history.index}`)
@@ -42,13 +43,13 @@ try {
 
   class StorageMock {
     values = new Map()
-    getItem(key) { return this.values.has(key) ? this.values.get(key) : null }
-    setItem(key, value) { const text = String(value); this.values.set(key, text); Object.defineProperty(this, key, { value: text, configurable: true, enumerable: true, writable: true }) }
-    removeItem(key) { this.values.delete(key); delete this[key] }
+    /* 根据 this.values.has(key) 的真假，分别返回 this.values.get(key) 或 null。 */ getItem(key) { return this.values.has(key) ? this.values.get(key) : null }
+    /** 结构说明（自动提取）：setItem；输入 key、value；直接调用 String、values.set、Object.defineProperty。 */ setItem(key, value) { const text = String(value); this.values.set(key, text); Object.defineProperty(this, key, { value: text, configurable: true, enumerable: true, writable: true }) }
+    /** 结构说明（自动提取）：removeItem；输入 key；直接调用 values.delete。 */ removeItem(key) { this.values.delete(key); delete this[key] }
   }
   globalThis.localStorage = new StorageMock()
   globalThis.location = { search: '' }
-  globalThis.window = { addEventListener() {} }
+  globalThis.window = { /** 提供不注册监听器的测试事件接口。 */ addEventListener() {} }
   const recovery = await server.ssrLoadModule('/src/runtime/recovery.ts')
   const firstSource = JSON.stringify({ format: 'nova-project', project: 'Recovery verification', revision: 1 })
   const first = recovery.storeRecoverySnapshot(firstSource, 'autosave')
@@ -64,7 +65,7 @@ try {
   recoveryAssertions.push({ name: 'Corrupt latest snapshot is skipped', status: crashSelectionPassed ? 'passed' : 'failed', detail: `invalid=${recovery.recoveryState.invalidSnapshots}; valid=${recovery.recoveryState.snapshots.length}; visible=${recovery.recoveryState.visible}` })
   verify('Crash recovery selects a valid autosave', crashSelectionPassed, recoveryAssertions.at(-1).detail)
   for (let revision = 2; revision <= 18; revision++) recovery.storeRecoverySnapshot(JSON.stringify({ format: 'nova-project', project: 'Recovery verification', revision }), revision === 18 ? 'crash' : 'autosave')
-  const boundedPassed = recovery.recoveryState.snapshots.length === 12 && recovery.recoveryState.snapshots.every(item => JSON.parse(item.source).revision >= 7)
+  const boundedPassed = recovery.recoveryState.snapshots.length === 12 && recovery.recoveryState.snapshots.every(/* 比较 JSON.parse(item.source).revision 与 7，返回大于或等于的判断结果。 */ item => JSON.parse(item.source).revision >= 7)
   recoveryAssertions.push({ name: 'Snapshot storage remains bounded', status: boundedPassed ? 'passed' : 'failed', detail: `retained=${recovery.recoveryState.snapshots.length}; newest=${JSON.parse(recovery.recoveryState.snapshots[0].source).revision}` })
   verify('Bounded recovery snapshots', boundedPassed, recoveryAssertions.at(-1).detail)
   recovery.recordManualSave(); recovery.markRecoverySessionClean()
@@ -84,10 +85,10 @@ verify('Keyboard shortcut editor', /role="dialog"/.test(shortcutEditor) && /@key
 verify('Recovery selection semantics', /role="dialog"/.test(recoveryCenter) && /restoreSnapshot/.test(recoveryCenter) && /openReadOnly/.test(recoveryCenter), 'Recovery exposes verified selection, safe mode, and read-only actions.')
 verify('Visible keyboard focus', /focus-visible/.test(styles), 'Global stylesheet contains visible focus indicators.')
 verify('Maximized resizable first-launch configuration', tauri.app.windows[0].fullscreen === false && tauri.app.windows[0].maximized === true && tauri.app.windows[0].decorations === true && tauri.app.windows[0].resizable === true, JSON.stringify({ fullscreen: tauri.app.windows[0].fullscreen, maximized: tauri.app.windows[0].maximized, decorations: tauri.app.windows[0].decorations, resizable: tauri.app.windows[0].resizable }))
-verify('Windowed-state and monitor recovery implementation', ['availableMonitors', 'lastWindowedState', 'onMoved', 'onResized', 'monitorRecovered'].every(value => windowing.includes(value)), 'Window lifecycle persists and validates the previous monitor and bounds; F11 routes through the global shortcut audit.')
+verify('Windowed-state and monitor recovery implementation', ['availableMonitors', 'lastWindowedState', 'onMoved', 'onResized', 'monitorRecovered'].every(/* 调用 windowing.includes(value) 并返回调用结果。 */ value => windowing.includes(value)), 'Window lifecycle persists and validates the previous monitor and bounds; F11 routes through the global shortcut audit.')
 
-const report = { format: 'nova-editor-foundation-verification', version: 1, engineVersion: '3.1.0', generatedAt: new Date().toISOString(), status: assertions.every(item => item.status === 'passed') ? 'passed' : 'failed', assertions }
+const report = { format: 'nova-editor-foundation-verification', version: 1, engineVersion: '3.1.0', generatedAt: new Date().toISOString(), status: assertions.every(/* 比较 item.status 与 'passed'，返回严格相等的判断结果。 */ item => item.status === 'passed') ? 'passed' : 'failed', assertions }
 await mkdir(dirname(output), { recursive: true })
 await writeFile(output, `${JSON.stringify(report, null, 2)}\n`, 'utf8')
-await writeFile(join(dirname(output), 'v3.1.0-crash-recovery-automation.json'), `${JSON.stringify({ format: 'nova-crash-recovery-verification', version: 1, engineVersion: '3.1.0', generatedAt: report.generatedAt, status: recoveryAssertions.every(item => item.status === 'passed') ? 'passed' : 'failed', assertions: recoveryAssertions }, null, 2)}\n`, 'utf8')
+await writeFile(join(dirname(output), 'v3.1.0-crash-recovery-automation.json'), `${JSON.stringify({ format: 'nova-crash-recovery-verification', version: 1, engineVersion: '3.1.0', generatedAt: report.generatedAt, status: recoveryAssertions.every(/* 比较 item.status 与 'passed'，返回严格相等的判断结果。 */ item => item.status === 'passed') ? 'passed' : 'failed', assertions: recoveryAssertions }, null, 2)}\n`, 'utf8')
 console.log(`Nova_A v3.1 editor foundation verification passed (${assertions.length} assertions): ${output}`)

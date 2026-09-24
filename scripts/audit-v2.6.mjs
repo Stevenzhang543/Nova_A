@@ -1,12 +1,13 @@
+/* 审计 2.6 的世界玩法、导航、AI、对象池、瓦片及脚本组件集成。 */
 import { readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 
 const root = process.cwd()
-const read = path => readFile(resolve(root, path), 'utf8')
+const read = /* 调用 readFile(resolve(root, path), 'utf8') 并返回调用结果。 */ path => readFile(resolve(root, path), 'utf8')
 const [components, registry, worldTools, gameplay, navigation, ai, pools, tilemap, tilePanel, canvas, runtime, wasm, physics, script, scriptApi, assets, packages, format, project, editor, workspaces, bottom, palette, i18n, manualEn, manualDe, manualZh, templates] = await Promise.all([
   read('src/world/components.ts'), read('src/world/componentRegistry.ts'), read('src/components/WorldToolsPanel.vue'), read('src/runtime/worldGameplay.ts'), read('src/runtime/navigation2d.ts'), read('src/runtime/aiTools.ts'), read('src/runtime/objectPool.ts'), read('src/runtime/tilemap.ts'), read('src/components/TilemapPanel.vue'), read('src/components/WorldCanvas.vue'), read('crates/nova_runtime/src/lib.rs'), read('crates/nova_wasm/src/lib.rs'), read('crates/nova_physics/src/world/persistent.rs'), read('crates/nova_script/src/lib.rs'), read('src/editor/scriptApi.ts'), read('src/assets/types.ts'), read('src/runtime/packages.ts'), read('crates/nova_format/src/lib.rs'), read('src/projects/projectFormat.ts'), read('src/store/editor.ts'), read('src/editor/workspaces.ts'), read('src/components/EditorBottomPanel.vue'), read('src/components/CommandPalette.vue'), read('src/i18n.ts'), read('manual/MANUAL.en.md'), read('manual/MANUAL.de.md'), read('manual/MANUAL.zh-CN.md'), read('src/projects/templates.ts')
 ])
-const assert = (condition, message) => { if (!condition) throw new Error(message) }
+const assert = /* 条件不满足时抛出指定错误，使当前审计立即失败。 */ (condition, message) => { if (!condition) throw new Error(message) }
 
 for (const kind of ['CharacterBody2D', 'Area2D', 'AreaEffector2D', 'NavigationRegion2D', 'NavigationObstacle2D', 'NavigationAgent2D', 'BehaviorTree2D', 'StateMachine2D', 'WorldChunk2D', 'Portal2D', 'ObjectPool2D']) {
   assert(components.includes(`'${kind}'`) && registry.includes(`kind: '${kind}'`) && worldTools.includes(kind), `${kind} lacks model, registry, or editor entry`)
@@ -30,7 +31,7 @@ for (const type of ['behaviorTree', 'stateMachine', 'tilePalette', 'brushPreset'
 assert(packages.includes('OFFICIAL_NAVIGATION_PACKAGE_ID') && packages.includes('OFFICIAL_AI_PACKAGE_ID') && gameplay.includes("import * as navigationRuntime from './navigation2d'") && gameplay.includes("import('./aiTools')"), 'core navigation or optional lazy AI is not connected')
 assert(format.includes('CURRENT_FORMAT_VERSION: u32 = 29') && project.includes('NOVA_PROJECT_SCHEMA_VERSION = 29') && format.includes('projectSettings.world'), 'current-schema world settings are not authoritative')
 assert(workspaces.includes("legacyTab === 'world' ? 'project'") && !bottom.includes('WorldToolsPanel') && palette.includes("id: 'tool-tilemap'"), 'World Tools was not replaced by contextual Tilemap and component workflows or legacy layouts do not migrate')
-for (const locale of ['Object.assign(en', 'Object.assign(de', 'Object.assign(zh']) assert(i18n.split(locale).slice(1).some(block => block.slice(0, 14_000).includes('worldTools') && block.slice(0, 14_000).includes('tileBaking')), `${locale} lacks v2.6 localization`)
+for (const locale of ['Object.assign(en', 'Object.assign(de', 'Object.assign(zh']) assert(i18n.split(locale).slice(1).some(/* 先计算 block.slice(0, 14_000).includes('worldTools')；仅当其为真值时求右侧 block.slice(0, 14_000).includes('tileBaking')，返回短路求值结果。 */ block => block.slice(0, 14_000).includes('worldTools') && block.slice(0, 14_000).includes('tileBaking')), `${locale} lacks v2.6 localization`)
 for (const manual of [manualEn, manualDe, manualZh]) for (const topic of ['CharacterBody2D', 'Area2D']) assert(manual.includes(topic), `manual lacks ${topic}`)
 assert(manualEn.includes('Navigation') && manualDe.includes('Navigation') && manualZh.includes('导航'), 'localized manuals lack navigation')
 assert(manualEn.includes('ObjectPool2D') && manualDe.includes('Object Pool') && manualZh.includes('对象池'), 'localized manuals lack object pooling')

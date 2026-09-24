@@ -1,3 +1,4 @@
+/** 功能回归脚本：执行 verify-v5.0.1-reproducibility.mjs 对应场景，保留断言和证据输出。 */
 import { createHash } from 'node:crypto'
 import { spawnSync } from 'node:child_process'
 import { mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises'
@@ -8,8 +9,8 @@ import { fileURLToPath } from 'node:url'
 const root = dirname(dirname(fileURLToPath(import.meta.url)))
 const project = join(root, 'reference-projects', 'projects', 'first-game-v50-tier1', 'project.nova')
 const temporary = await mkdtemp(join(tmpdir(), 'nova-a-v50-clean-builds-'))
-const sha = bytes => createHash('sha256').update(bytes).digest('hex')
-const walk = async directory => {
+const sha = /* 调用 createHash('sha256').update(bytes).digest('hex') 并返回调用结果。 */ bytes => createHash('sha256').update(bytes).digest('hex')
+const walk = /** 结构说明（自动提取）：walk；输入 directory；直接调用 readdir、join、entry.isDirectory、files.push、walk；返回路径包含 files；包含循环处理；等待异步结果。 */ async directory => {
   const files = []
   for (const entry of await readdir(directory, { withFileTypes: true })) {
     const path = join(directory, entry.name)
@@ -17,7 +18,7 @@ const walk = async directory => {
   }
   return files
 }
-const hashTree = async directory => {
+const hashTree = /** 结构说明（自动提取）：hashTree；输入 directory；直接调用 sort、walk、stat、readFile、records.push 等；包含循环处理；等待异步结果。 */ async directory => {
   const records = []
   for (const path of (await walk(directory)).sort()) {
     const info = await stat(path), bytes = await readFile(path)
@@ -42,12 +43,12 @@ try {
 } finally {
   await rm(temporary, { recursive: true, force: true, maxRetries: 10, retryDelay: 150 })
 }
-const baselines = Object.fromEntries(runs[0].targets.map(target => [target.target, target.digest]))
-const mismatches = runs.flatMap(run => run.targets.filter(target => target.digest !== baselines[target.target]).map(target => ({ cycle: run.cycle, target: target.target, expected: baselines[target.target], actual: target.digest })))
+const baselines = Object.fromEntries(runs[0].targets.map(/* 返回按声明顺序构造的数组 [target.target, target.digest]。 */ target => [target.target, target.digest]))
+const mismatches = runs.flatMap(/** 结构说明（自动提取）：runs.flatMap 回调；输入 run；直接调用 map、run.targets.filter；返回表达式求值结果。 */ run => run.targets.filter(/* 比较 target.digest 与 baselines[target.target]，返回严格不等的判断结果。 */ target => target.digest !== baselines[target.target]).map(/** 结构说明（自动提取）：map 回调；输入 target；返回表达式求值结果。 */ target => ({ cycle: run.cycle, target: target.target, expected: baselines[target.target], actual: target.digest })))
 const report = {
   format: 'nova-v5.0.1-clean-build-reproducibility', version: 1, engineVersion: '5.0.1', generatedAt: new Date().toISOString(),
   sourceProject: 'reference-projects/projects/first-game-v50-tier1/project.nova', model: 'Ten fresh output directories per Tier-1 target; every unsigned payload and manifest byte is SHA-256 inventoried and the sorted inventory is hashed.',
-  cycles: runs.length, targets: ['windows', 'web'], baselines, runs: runs.map(run => ({ cycle: run.cycle, targets: run.targets.map(({ target, digest, records }) => ({ target, digest, files: records.length })) })),
+  cycles: runs.length, targets: ['windows', 'web'], baselines, runs: runs.map(/** 结构说明（自动提取）：runs.map 回调；输入 run；直接调用 run.targets.map；返回表达式求值结果。 */ run => ({ cycle: run.cycle, targets: run.targets.map(/** 结构说明（自动提取）：run.targets.map 回调；输入 { target, digest, records }；返回表达式求值结果。 */ ({ target, digest, records }) => ({ target, digest, files: records.length })) })),
   mismatches, qualificationScope: 'same-machine ten-build payload equality', independentMachineComparison: 'pending-external', status: mismatches.length ? 'failed' : 'passed'
 }
 await mkdir(join(root, 'release-audits'), { recursive: true })

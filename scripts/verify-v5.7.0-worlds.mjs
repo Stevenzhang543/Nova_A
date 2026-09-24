@@ -1,18 +1,19 @@
+/** 功能回归脚本：执行 verify-v5.7.0-worlds.mjs 对应场景，保留断言和证据输出。 */
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createServer } from 'vite'
 
 const root = dirname(dirname(fileURLToPath(import.meta.url))), checks = []
-const check = (id, passed, detail, metrics = {}) => { checks.push({ id, status: passed ? 'passed' : 'failed', detail, metrics }); if (!passed) console.error(`${id}: ${detail}`) }
+const check = /** 记录检查结果、详情和指标，失败时同步输出错误信息。 */ (id, passed, detail, metrics = {}) => { checks.push({ id, status: passed ? 'passed' : 'failed', detail, metrics }); if (!passed) console.error(`${id}: ${detail}`) }
 Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { platform: 'Win32', hardwareConcurrency: 8, userAgent: 'Nova_A v5.7 world verifier' } })
-globalThis.window ??= { setTimeout, clearTimeout, setInterval, clearInterval, addEventListener() {}, removeEventListener() {} }
-globalThis.localStorage ??= { getItem() { return null }, setItem() {}, removeItem() {} }
-globalThis.performance ??= { now: () => Date.now() }
+globalThis.window ??= { setTimeout, clearTimeout, setInterval, clearInterval, /** 提供不注册监听器的测试事件接口。 */ addEventListener() {}, /** 提供无需移除监听器的测试事件接口。 */ removeEventListener() {} }
+globalThis.localStorage ??= { /* 返回固定值 null。 */ getItem() { return null }, /** 隔离存储桩忽略写入，不持久化生成过程数据。 */ setItem() {}, /** 隔离存储桩忽略删除请求。 */ removeItem() {} }
+globalThis.performance ??= { now: /* 调用 Date.now() 并返回调用结果。 */ () => Date.now() }
 
 const referenceIds = ['navigation-v57-10000-agents', 'ai-v57-perception-utility', 'world-v57-streaming-handoff', 'tilemap-v57-background-bake']
-const projects = Object.fromEntries(await Promise.all(referenceIds.map(async id => [id, JSON.parse(await readFile(join(root, `reference-projects/projects/${id}/project.nova`), 'utf8'))])))
-check('V570-REFERENCES', referenceIds.every(id => projects[id].engineVersion === '5.7.0' && projects[id].projectFormatMajor === 2 && projects[id].formatVersion === 29), 'Four v5.7 references retain Project Format 2/schema 29.', { references: referenceIds })
+const projects = Object.fromEntries(await Promise.all(referenceIds.map(/* 返回按声明顺序构造的数组 [id, JSON.parse(await readFile(join(root, `reference-projects/projects/${id}/project.nova`), 'utf8'))]。 */ async id => [id, JSON.parse(await readFile(join(root, `reference-projects/projects/${id}/project.nova`), 'utf8'))])))
+check('V570-REFERENCES', referenceIds.every(/* 先计算 projects[id].engineVersion === '5.7.0' && projects[id].projectFormatMajor === 2；仅当其为真值时求右侧 projects[id].formatVersion === 29，返回短路求值结果。 */ id => projects[id].engineVersion === '5.7.0' && projects[id].projectFormatMajor === 2 && projects[id].formatVersion === 29), 'Four v5.7 references retain Project Format 2/schema 29.', { references: referenceIds })
 
 const server = await createServer({ root, appType: 'custom', logLevel: 'silent', server: { middlewareMode: true } }); await server.watcher.close()
 try {
@@ -35,7 +36,7 @@ try {
   const cancellation = navigation.requestNavigationBake([regionEntity, obstacleEntity]); const navCancelAccepted = navigation.cancelNavigationBake(); const cancelledBake = await cancellation
   check('V570-NAV-BAKE-CANCEL', navCancelAccepted && cancelledBake.cancelled && !navigation.navigationBakeState.active, 'Navigation baking accepts cancellation before the first bounded region and leaves the worker idle.', { progress: navigation.navigationBakeState.progress })
 
-  const navigationAgents = Array.from({ length: 10_001 }, (_, index) => { const entity = new BoxEntity(10_000 + index, { x: index % 100, y: Math.floor(index / 100) }, { x: .2, y: .2 }, `10000000-0000-4000-${String(8000 + Math.floor(index / 10_000)).padStart(4, '0')}-${String(index).padStart(12, '0')}`); const agent = entity.addComponent(new components.NavigationAgent2D()); agent.avoidance = false; return entity })
+  const navigationAgents = Array.from({ length: 10_001 }, /** 结构说明（自动提取）：Array.from 回调；输入 _、index；直接调用 BoxEntity、Math.floor、padStart、String、entity.addComponent 等；写入 agent.avoidance；返回路径包含 entity。 */ (_, index) => { const entity = new BoxEntity(10_000 + index, { x: index % 100, y: Math.floor(index / 100) }, { x: .2, y: .2 }, `10000000-0000-4000-${String(8000 + Math.floor(index / 10_000)).padStart(4, '0')}-${String(index).padStart(12, '0')}`); const agent = entity.addComponent(new components.NavigationAgent2D()); agent.avoidance = false; return entity })
   const navStarted = performance.now(); navigation.updateNavigation(navigationAgents, 1 / 60, 0); const navElapsedMs = performance.now() - navStarted; const navProfile = navigation.navigationProfileSnapshot()
   check('V570-NAV-10000-BOUND', navProfile.activeAgents === 10_000 && navProfile.droppedAgents === 1 && navProfile.maximumNeighbors <= navigation.MAX_NAVIGATION_AVOIDANCE_NEIGHBORS, 'Navigation processes at most 10,000 agents and enforces its local avoidance-neighbor cap.', { elapsedMs: navElapsedMs, activeAgents: navProfile.activeAgents, droppedAgents: navProfile.droppedAgents, maximumNeighbors: navProfile.maximumNeighbors })
 
@@ -59,9 +60,9 @@ try {
   check('V570-TILE-DETERMINISM', firstStorage === secondStorage && firstStorage.includes('tilesRle'), 'TileMap storage is byte-stable and run-length encoded for identical authored state.', { bytes: firstStorage.length })
   const tileCancellation = tilemap.requestTileMapBake(map); const tileCancelAccepted = tilemap.cancelTileMapBake(); const cancelledTileBake = await tileCancellation
   check('V570-TILE-BAKE-CANCEL', tileCancelAccepted && cancelledTileBake.cancelled && !tilemap.tileBakeState.active, 'Background TileMap baking cancels cleanly between bounded chunks.', { totalChunks: tilemap.tileBakeState.totalChunks })
-} finally { await Promise.race([server.close(), new Promise(resolve => setTimeout(resolve, 2_000))]) }
+} finally { await Promise.race([server.close(), new Promise(/* 调用 setTimeout(resolve, 2_000) 并返回调用结果。 */ resolve => setTimeout(resolve, 2_000))]) }
 
-const failed = checks.filter(item => item.status === 'failed'), report = { format: 'nova-v5.7.0-world-verification', version: 1, engineVersion: '5.7.0', generatedAt: new Date().toISOString(), checks, severity0Open: 0, severity1Open: failed.length, status: failed.length ? 'failed' : 'passed' }
+const failed = checks.filter(/* 比较 item.status 与 'failed'，返回严格相等的判断结果。 */ item => item.status === 'failed'), report = { format: 'nova-v5.7.0-world-verification', version: 1, engineVersion: '5.7.0', generatedAt: new Date().toISOString(), checks, severity0Open: 0, severity1Open: failed.length, status: failed.length ? 'failed' : 'passed' }
 await mkdir(join(root, 'release-audits'), { recursive: true }); await writeFile(join(root, 'release-audits/v5.7.0-world-verification.json'), `${JSON.stringify(report, null, 2)}\n`)
 if (failed.length) process.exit(1)
 console.log(`Nova_A v5.7.0 world verification passed: ${checks.length} checks.`)

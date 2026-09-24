@@ -1,3 +1,4 @@
+/** 功能回归脚本：执行 verify-v26.11-input-prompts.mjs 对应场景，保留断言和证据输出。 */
 import assert from 'node:assert/strict'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
@@ -13,7 +14,7 @@ try {
     rollupOptions: { input: join(root, 'src/runtime/inputModality.ts'), output: { entryFileNames: 'prompts.mjs' } }
   } })
   const { inputPromptForAction, setInputModality, formatInputPrompt } = await import(pathToFileURL(join(output, 'prompts.mjs')).href)
-  const action = (device, code) => [{ name: 'Jump', bindings: [{ device, code }] }]
+  const action = /* 返回按声明顺序构造的数组 [{ name: 'Jump', bindings: [{ device, code }] }]。 */ (device, code) => [{ name: 'Jump', bindings: [{ device, code }] }]
   const fallback = inputPromptForAction('Jump', action('physical-key', 'Space'), 'mouse')
   assert.equal(fallback.modality, 'keyboard')
   assert.equal(fallback.symbol, 'Space')

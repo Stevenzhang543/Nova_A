@@ -1,3 +1,4 @@
+/** 绘制几何生成：把精灵、九宫格、形状和描边转换为渲染器使用的顶点数据。 */
 import type { ShapeRenderCommand, SpriteRenderCommand } from './types'
 import type { Vec2 } from '../world/types'
 
@@ -7,6 +8,7 @@ export interface GeometryData {
   indices: number[]
 }
 
+/* 对局部点依次应用缩放、旋转和平移，得到世界坐标。 */
 function worldPoint(point: Vec2, position: Vec2, rotation: number, scale: Vec2): Vec2 {
   const x = point.x * scale.x
   const y = point.y * scale.y
@@ -15,16 +17,17 @@ function worldPoint(point: Vec2, position: Vec2, rotation: number, scale: Vec2):
   return { x: position.x + x * cosine - y * sine, y: position.y + x * sine + y * cosine }
 }
 
+/* 生成精灵矩形或蒙皮网格的世界顶点、图集 UV 与有效三角形索引。 */
 export function spriteGeometry(command: SpriteRenderCommand): GeometryData {
   if (command.mesh && command.mesh.positions.length >= 3 && command.mesh.positions.length === command.mesh.uvs.length) {
     const region = command.texture.uv
     return {
-      positions: command.mesh.positions.map(point => worldPoint(point, command.position, command.rotation, command.scale)),
-      uvs: command.mesh.uvs.map(point => ({
+      positions: command.mesh.positions.map(/* 调用 worldPoint(point, command.position, command.rotation, command.scale) 并返回调用结果。 */ point => worldPoint(point, command.position, command.rotation, command.scale)),
+      uvs: command.mesh.uvs.map(/* 将网格 UV 按精灵翻转方向映射到图集区域。 */ point => ({
         x: region.x + (command.flipX ? 1 - point.x : point.x) * region.width,
         y: region.y + (command.flipY ? 1 - point.y : point.y) * region.height
       })),
-      indices: command.mesh.indices.filter(index => index >= 0 && index < command.mesh!.positions.length)
+      indices: command.mesh.indices.filter(/* 先计算 index >= 0；仅当其为真值时求右侧 index < command.mesh!.positions.length，返回短路求值结果。 */ index => index >= 0 && index < command.mesh!.positions.length)
     }
   }
   const left = -command.pivot.x * command.size.x
@@ -41,12 +44,13 @@ export function spriteGeometry(command: SpriteRenderCommand): GeometryData {
   const v0 = command.flipY ? region.y : region.y + region.height
   const v1 = command.flipY ? region.y + region.height : region.y
   return {
-    positions: local.map(point => worldPoint(point, command.position, command.rotation, command.scale)),
+    positions: local.map(/* 调用 worldPoint(point, command.position, command.rotation, command.scale) 并返回调用结果。 */ point => worldPoint(point, command.position, command.rotation, command.scale)),
     uvs: [{ x: u0, y: v0 }, { x: u1, y: v0 }, { x: u1, y: v1 }, { x: u0, y: v1 }],
     indices: [0, 1, 2, 0, 2, 3]
   }
 }
 
+/* 生成九宫格的十六个顶点和九块三角形，缺少切片配置时回退普通精灵。 */
 export function nineSliceGeometry(command: SpriteRenderCommand): GeometryData {
   if (!command.nineSlice) return spriteGeometry(command)
   const region = command.texture.uv
@@ -76,10 +80,11 @@ export function nineSliceGeometry(command: SpriteRenderCommand): GeometryData {
   return { positions, uvs, indices }
 }
 
+/* 生成形状局部轮廓；椭圆按半径细分，缺少顶点时使用默认矩形。 */
 function shapeLocalPoints(command: ShapeRenderCommand): Vec2[] {
   if (command.shape === 'Ellipse') {
     const segments = Math.min(96, Math.max(24, Math.ceil(Math.max(command.radiusX, command.radiusY) * 12)))
-    return Array.from({ length: segments }, (_, index) => {
+    return Array.from({ length: segments }, /* 按均匀角度采样椭圆上的一个局部顶点。 */ (_, index) => {
       const angle = index / segments * Math.PI * 2
       return { x: Math.cos(angle) * command.radiusX, y: Math.sin(angle) * command.radiusY }
     })
@@ -88,16 +93,17 @@ function shapeLocalPoints(command: ShapeRenderCommand): Vec2[] {
   return [{ x: -.5, y: -.5 }, { x: .5, y: -.5 }, { x: .5, y: .5 }, { x: -.5, y: .5 }]
 }
 
+/* 将形状轮廓变换到世界坐标，并生成包围盒 UV 和扇形三角索引。 */
 export function shapeGeometry(command: ShapeRenderCommand): GeometryData {
   const local = shapeLocalPoints(command)
-  const xs = local.map(point => point.x)
-  const ys = local.map(point => point.y)
+  const xs = local.map(/* 返回 point.x 的当前值。 */ point => point.x)
+  const ys = local.map(/* 返回 point.y 的当前值。 */ point => point.y)
   const minX = Math.min(...xs), maxX = Math.max(...xs)
   const minY = Math.min(...ys), maxY = Math.max(...ys)
   const width = Math.max(1e-9, maxX - minX), height = Math.max(1e-9, maxY - minY)
   const region = command.texture?.uv ?? { x: 0, y: 0, width: 1, height: 1 }
-  const positions = local.map(point => worldPoint(point, command.position, command.rotation, command.scale))
-  const uvs = local.map(point => ({
+  const positions = local.map(/* 调用 worldPoint(point, command.position, command.rotation, command.scale) 并返回调用结果。 */ point => worldPoint(point, command.position, command.rotation, command.scale))
+  const uvs = local.map(/* 将轮廓点按局部包围盒归一化到纹理区域，并翻转纹理纵轴。 */ point => ({
     x: region.x + (point.x - minX) / width * region.width,
     y: region.y + (maxY - point.y) / height * region.height
   }))
@@ -106,13 +112,14 @@ export function shapeGeometry(command: ShapeRenderCommand): GeometryData {
   return { positions, uvs, indices }
 }
 
+/* 将有效折线或闭合轮廓构建为连续描边网格，过滤重复点并处理连接处。 */
 export function strokeGeometry(command: ShapeRenderCommand): GeometryData | null {
   if (command.strokeWidth <= 0 || command.stroke.a <= 0) return null
   const local = shapeLocalPoints(command)
   if (local.length < 2) return null
   const closed = command.shape !== 'Line'
-  const world = local.map(point => worldPoint(point, command.position, command.rotation, command.scale))
-  const points = world.filter((point, index) => index === 0 || Math.hypot(point.x - world[index - 1].x, point.y - world[index - 1].y) > 1e-9)
+  const world = local.map(/* 调用 worldPoint(point, command.position, command.rotation, command.scale) 并返回调用结果。 */ point => worldPoint(point, command.position, command.rotation, command.scale))
+  const points = world.filter(/* 先计算 index === 0；仅当其为假值时求右侧 Math.hypot(point.x - world[index - 1].x, point.y - world[index - 1].y) > 1e-9，返回短路求值结果。 */ (point, index) => index === 0 || Math.hypot(point.x - world[index - 1].x, point.y - world[index - 1].y) > 1e-9)
   if (closed && points.length > 2 && Math.hypot(points[0].x - points[points.length - 1].x, points[0].y - points[points.length - 1].y) <= 1e-9) points.pop()
   if (points.length < (closed ? 3 : 2)) return null
 
@@ -121,7 +128,7 @@ export function strokeGeometry(command: ShapeRenderCommand): GeometryData | null
   // outline seen around newly drawn primitives. A bounded miter keeps the
   // outside and inside edges continuous under rotation and non-uniform scale.
   const halfWidth = command.strokeWidth * .5
-  const normal = (start: Vec2, end: Vec2): Vec2 => {
+  const normal = /* 计算线段的单位左法向量，并对接近零长度的线段设置分母下限。 */ (start: Vec2, end: Vec2): Vec2 => {
     const dx = end.x - start.x, dy = end.y - start.y
     const length = Math.max(1e-9, Math.hypot(dx, dy))
     return { x: -dy / length, y: dx / length }

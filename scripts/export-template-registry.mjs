@@ -1,3 +1,4 @@
+/** 仓库工具模块 export-template-registry.mjs：供构建、资料生成或验证流程调用。 */
 /**
  * Headless mirror of the frozen Export Template 1 registry.
  *
@@ -16,23 +17,23 @@ export const REGISTERED_EXPORT_TEMPLATES = Object.freeze([
   Object.freeze({ id: 'android-aarch64-gated-v1', name: 'Android aarch64 gated template', target: 'android', architectures: ['aarch64'], runtimeModes: ['game'], hosts: [], bundled: false })
 ])
 
-function tuple(template, target, architecture, runtimeMode) {
+/** 检查模板是否同时匹配平台、架构和运行模式。 */ function tuple(template, target, architecture, runtimeMode) {
   return template.target === target && template.architectures.includes(architecture) && template.runtimeModes.includes(runtimeMode)
 }
 
-export function compatibleExportTemplates(target, architecture, runtimeMode) {
-  return REGISTERED_EXPORT_TEMPLATES.filter(template => tuple(template, target, architecture, runtimeMode))
+/* 调用 REGISTERED_EXPORT_TEMPLATES.filter(template => tuple(template, target, architecture, runtimeMode)) 并返回调用结果。 */ export function compatibleExportTemplates(target, architecture, runtimeMode) {
+  return REGISTERED_EXPORT_TEMPLATES.filter(/* 调用 tuple(template, target, architecture, runtimeMode) 并返回调用结果。 */ template => tuple(template, target, architecture, runtimeMode))
 }
 
-export function defaultExportTemplateId(target, architecture, runtimeMode, host = process.platform) {
+/** 优先选择当前宿主内置模板，其次其他内置或首个兼容模板。 */ export function defaultExportTemplateId(target, architecture, runtimeMode, host = process.platform) {
   const compatible = compatibleExportTemplates(target, architecture, runtimeMode)
-  return compatible.find(template => template.bundled && template.hosts.includes(host))?.id
-    ?? compatible.find(template => template.bundled)?.id
+  return compatible.find(/* 先计算 template.bundled；仅当其为真值时求右侧 template.hosts.includes(host)，返回短路求值结果。 */ template => template.bundled && template.hosts.includes(host))?.id
+    ?? compatible.find(/* 返回 template.bundled 的当前值。 */ template => template.bundled)?.id
     ?? compatible[0]?.id
     ?? ''
 }
 
-function isKnownLegacyId(id, target, architecture) {
+/** 识别空值与已知旧模板标识别名。 */ function isKnownLegacyId(id, target, architecture) {
   if (!id) return true
   const aliases = new Set([
     `${target}-${architecture}-v1`,
@@ -47,20 +48,20 @@ function isKnownLegacyId(id, target, architecture) {
  * Unknown IDs are intentionally preserved so missing third-party templates
  * fail visibly instead of being silently replaced by a bundled template.
  */
-export function resolveExportTemplateId(id, target, architecture, runtimeMode, host = process.platform) {
+/** 保留已注册或未知请求标识，仅将已知旧别名迁移到默认模板。 */ export function resolveExportTemplateId(id, target, architecture, runtimeMode, host = process.platform) {
   const requested = String(id ?? '').trim()
-  if (REGISTERED_EXPORT_TEMPLATES.some(template => template.id === requested)) return requested
+  if (REGISTERED_EXPORT_TEMPLATES.some(/* 比较 template.id 与 requested，返回严格相等的判断结果。 */ template => template.id === requested)) return requested
   return isKnownLegacyId(requested, target, architecture)
     ? defaultExportTemplateId(target, architecture, runtimeMode, host)
     : requested
 }
 
-export function validateExportTemplate({ id, target, architecture, runtimeMode, host = process.platform, explicitPlayer = false }) {
+/** 校验模板注册、目标组合及当前宿主安装条件，返回具体诊断和迁移信息。 */ export function validateExportTemplate({ id, target, architecture, runtimeMode, host = process.platform, explicitPlayer = false }) {
   const requested = String(id ?? '').trim()
   const resolvedId = resolveExportTemplateId(requested, target, architecture, runtimeMode, host)
-  const template = REGISTERED_EXPORT_TEMPLATES.find(candidate => candidate.id === resolvedId)
+  const template = REGISTERED_EXPORT_TEMPLATES.find(/* 比较 candidate.id 与 resolvedId，返回严格相等的判断结果。 */ candidate => candidate.id === resolvedId)
   const compatible = compatibleExportTemplates(target, architecture, runtimeMode)
-  const available = compatible.map(candidate => candidate.id)
+  const available = compatible.map(/* 返回 candidate.id 的当前值。 */ candidate => candidate.id)
   const errors = []
   if (!template) {
     errors.push({

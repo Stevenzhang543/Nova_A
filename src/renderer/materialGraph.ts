@@ -1,3 +1,4 @@
+/** 材质图编译：规范节点和图层，校验输入依赖并生成材质表达式及能力预览。 */
 import type { BlendMode2D } from './types'
 
 export type MaterialGraphTarget = 'Sprite' | 'UI' | 'Light'
@@ -66,33 +67,40 @@ const NODE_KINDS: readonly MaterialGraphNodeKind[] = ['SpriteTexture', 'UITextur
 const LAYER_KINDS: readonly MaterialLayerKind[] = ['Tint', 'Mask', 'Gradient', 'Palette', 'Outline', 'Dissolve', 'Distortion']
 const BLENDS: readonly BlendMode2D[] = ['Alpha', 'Additive', 'Multiply', 'Screen']
 
+/* 提取并裁剪字符串，空值或非字符串使用默认文案。 */
 function text(value: unknown, fallback: string, maximum = 80): string {
   const result = typeof value === 'string' ? value.trim().slice(0, maximum) : ''
   return result || fallback
 }
+/* 将未知输入归一化为指定范围内的有限数值。 */
 function finite(value: unknown, fallback: number, minimum: number, maximum: number): number {
   const number = typeof value === 'number' && Number.isFinite(value) ? value : fallback
   return Math.min(maximum, Math.max(minimum, number))
 }
+/* 清洗图节点和端口标识符，移除不允许的字符并提供回退值。 */
 function identifier(value: unknown, fallback: string): string {
   const result = text(value, fallback, 96).replace(/[^A-Za-z0-9_-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '')
   return result || fallback
 }
+/* 将数组归一化为指定长度的有限数值向量。 */
 function vector(value: unknown, fallback: number[], length: number): number[] {
   return Array.isArray(value) && value.length >= length
-    ? value.slice(0, length).map((item, index) => finite(item, fallback[index], -1_000_000, 1_000_000))
+    ? value.slice(0, length).map(/* 调用 finite(item, fallback[index], -1_000_000, 1_000_000) 并返回调用结果。 */ (item, index) => finite(item, fallback[index], -1_000_000, 1_000_000))
     : [...fallback]
 }
+/* 将有限数值格式化为 GLSL 浮点常量，并对非法输入使用默认值。 */
 function glslFloat(value: unknown, fallback = 0): string {
   const number = finite(value, fallback, -1_000_000, 1_000_000)
   const result = Number(number.toFixed(6)).toString()
   return result.includes('.') ? result : `${result}.0`
 }
+/* 将四通道颜色归一化并转换为 GLSL vec4 表达式。 */
 function glslColor(value: unknown, fallback = [1, 1, 1, 1]): string {
-  const color = vector(value, fallback, 4).map(item => glslFloat(item))
+  const color = vector(value, fallback, 4).map(/* 调用 glslFloat(item) 并返回调用结果。 */ item => glslFloat(item))
   return `vec4(${color.join(',')})`
 }
 
+/* 创建与目标类型对应的默认材质输入节点、输出节点及连接。 */
 export function defaultMaterialGraph(target: MaterialGraphTarget = 'Sprite'): MaterialGraphDocument {
   const inputKind: MaterialGraphNodeKind = target === 'UI' ? 'UITexture' : target === 'Light' ? 'LightColor' : 'SpriteTexture'
   return {
@@ -106,6 +114,7 @@ export function defaultMaterialGraph(target: MaterialGraphTarget = 'Sprite'): Ma
   }
 }
 
+/* 校验节点类型、标识符和位置，保留受限数量且类型合法的参数值。 */
 function normalizeNode(value: unknown, index: number): MaterialGraphNode | null {
   if (!value || typeof value !== 'object') return null
   const source = value as Record<string, unknown>, kind = NODE_KINDS.includes(source.kind as MaterialGraphNodeKind) ? source.kind as MaterialGraphNodeKind : null
@@ -119,19 +128,20 @@ function normalizeNode(value: unknown, index: number): MaterialGraphNode | null 
       if (typeof item === 'number' && Number.isFinite(item)) values[safeKey] = item
       else if (typeof item === 'string') values[safeKey] = item.slice(0, 512)
       else if (typeof item === 'boolean') values[safeKey] = item
-      else if (Array.isArray(item) && item.length <= 4 && item.every(entry => typeof entry === 'number' && Number.isFinite(entry))) values[safeKey] = item.slice()
+      else if (Array.isArray(item) && item.length <= 4 && item.every(/* 先计算 typeof entry === 'number'；仅当其为真值时求右侧 Number.isFinite(entry)，返回短路求值结果。 */ entry => typeof entry === 'number' && Number.isFinite(entry))) values[safeKey] = item.slice()
     }
   }
   const uuid = identifier(source.uuid, `node-${index + 1}`)
   return { uuid, kind, label: text(source.label, kind), position: { x: finite(position.x, index * 180, -100_000, 100_000), y: finite(position.y, 100, -100_000, 100_000) }, values }
 }
 
+/* 归一化材质图的目标、节点、连接与视口，去重并移除无效引用。 */
 export function normalizeMaterialGraph(value: unknown): MaterialGraphDocument {
   const source = value && typeof value === 'object' ? value as Record<string, unknown> : {}
   const target: MaterialGraphTarget = source.target === 'UI' || source.target === 'Light' ? source.target : 'Sprite'
-  const nodes = Array.isArray(source.nodes) ? source.nodes.slice(0, 256).map(normalizeNode).filter((node): node is MaterialGraphNode => Boolean(node)) : []
-  const uniqueNodes = [...new Map(nodes.map(node => [node.uuid, node])).values()]
-  const known = new Set(uniqueNodes.map(node => node.uuid))
+  const nodes = Array.isArray(source.nodes) ? source.nodes.slice(0, 256).map(normalizeNode).filter(/* 调用 Boolean(node) 并返回调用结果。 */ (node): node is MaterialGraphNode => Boolean(node)) : []
+  const uniqueNodes = [...new Map(nodes.map(/* 返回按声明顺序构造的数组 [node.uuid, node]。 */ node => [node.uuid, node])).values()]
+  const known = new Set(uniqueNodes.map(/* 返回 node.uuid 的当前值。 */ node => node.uuid))
   const edges: MaterialGraphEdge[] = []
   if (Array.isArray(source.edges)) for (const [index, item] of source.edges.slice(0, 512).entries()) {
     if (!item || typeof item !== 'object') continue
@@ -142,19 +152,21 @@ export function normalizeMaterialGraph(value: unknown): MaterialGraphDocument {
   const viewport = source.viewport && typeof source.viewport === 'object' ? source.viewport as Record<string, unknown> : {}
   return {
     format: 'nova-material-graph', version: 1, target,
-    nodes: uniqueNodes.sort((a, b) => a.uuid.localeCompare(b.uuid)),
-    edges: [...new Map(edges.map(edge => [edge.uuid, edge])).values()].sort((a, b) => a.uuid.localeCompare(b.uuid)),
+    nodes: uniqueNodes.sort(/* 调用 a.uuid.localeCompare(b.uuid) 并返回调用结果。 */ (a, b) => a.uuid.localeCompare(b.uuid)),
+    edges: [...new Map(edges.map(/* 返回按声明顺序构造的数组 [edge.uuid, edge]。 */ edge => [edge.uuid, edge])).values()].sort(/* 调用 a.uuid.localeCompare(b.uuid) 并返回调用结果。 */ (a, b) => a.uuid.localeCompare(b.uuid)),
     viewport: { x: finite(viewport.x, 0, -100_000, 100_000), y: finite(viewport.y, 0, -100_000, 100_000), zoom: finite(viewport.zoom, 1, .1, 8) }
   }
 }
 
+/* 为指定材质层类型创建默认颜色、混合和效果参数。 */
 export function defaultMaterialLayer(kind: MaterialLayerKind, index = 0): MaterialLayer2D {
   return { id: `layer-${index + 1}`, name: kind, enabled: true, kind, opacity: 1, blendMode: kind === 'Tint' ? 'Multiply' : 'Alpha', colorA: [1, 1, 1, 1], colorB: [0, 0, 0, 1], threshold: .5, softness: .05, strength: .25, texture: null }
 }
 
+/* 限制材质层数量并逐项清洗层参数，丢弃无法识别的类型。 */
 export function normalizeMaterialLayers(value: unknown): MaterialLayer2D[] {
   if (!Array.isArray(value)) return []
-  return value.slice(0, 16).flatMap((item, index) => {
+  return value.slice(0, 16).flatMap(/* 解析单个材质层的标识、颜色、纹理和效果强度，并限定数值范围。 */ (item, index) => {
     if (!item || typeof item !== 'object') return []
     const source = item as Record<string, unknown>, kind = LAYER_KINDS.includes(source.kind as MaterialLayerKind) ? source.kind as MaterialLayerKind : null
     if (!kind) return []
@@ -168,19 +180,21 @@ export function normalizeMaterialLayers(value: unknown): MaterialLayer2D[] {
   })
 }
 
+/* 查找节点指定输入端口的连接，没有匹配端口时回退到该节点首条输入连接。 */
 function incoming(graph: MaterialGraphDocument, nodeUuid: string, pin = 'color'): MaterialGraphEdge | undefined {
-  return graph.edges.find(edge => edge.toNode === nodeUuid && edge.toPin === pin) ?? graph.edges.find(edge => edge.toNode === nodeUuid)
+  return graph.edges.find(/* 先计算 edge.toNode === nodeUuid；仅当其为真值时求右侧 edge.toPin === pin，返回短路求值结果。 */ edge => edge.toNode === nodeUuid && edge.toPin === pin) ?? graph.edges.find(/* 比较 edge.toNode 与 nodeUuid，返回严格相等的判断结果。 */ edge => edge.toNode === nodeUuid)
 }
 
+/* 检查唯一输出、输出连接、数据环路及节点与材质目标的兼容性。 */
 export function validateMaterialGraph(input: unknown): MaterialGraphDiagnostic[] {
   const graph = normalizeMaterialGraph(input), diagnostics: MaterialGraphDiagnostic[] = []
-  const output = graph.nodes.filter(node => node.kind === 'Output')
+  const output = graph.nodes.filter(/* 比较 node.kind 与 'Output'，返回严格相等的判断结果。 */ node => node.kind === 'Output')
   if (output.length !== 1) diagnostics.push({ severity: 'error', nodeUuid: output[0]?.uuid ?? '', message: 'A material graph requires exactly one Output node.' })
   if (output[0] && !incoming(graph, output[0].uuid)) diagnostics.push({ severity: 'error', nodeUuid: output[0].uuid, message: 'Connect a color value to Output.' })
-  const adjacency = new Map(graph.nodes.map(node => [node.uuid, [] as string[]]))
+  const adjacency = new Map(graph.nodes.map(/* 返回按声明顺序构造的数组 [node.uuid, [] as string[]]。 */ node => [node.uuid, [] as string[]]))
   for (const edge of graph.edges) adjacency.get(edge.fromNode)?.push(edge.toNode)
   const visiting = new Set<string>(), visited = new Set<string>()
-  const visit = (uuid: string): boolean => {
+  const visit = /* 深度优先遍历材质连接，利用访问栈检测环路并缓存已完成节点。 */ (uuid: string): boolean => {
     if (visiting.has(uuid)) return true
     if (visited.has(uuid)) return false
     visiting.add(uuid)
@@ -196,13 +210,14 @@ export function validateMaterialGraph(input: unknown): MaterialGraphDiagnostic[]
   return diagnostics
 }
 
+/* 递归生成材质节点的 GLSL 表达式，缓存已编译节点并防止环路无限展开。 */
 function compileExpression(graph: MaterialGraphDocument, uuid: string, cache: Map<string, string>, stack: Set<string>): string {
   if (cache.has(uuid)) return cache.get(uuid)!
   if (stack.has(uuid)) return 'baseColor'
   stack.add(uuid)
-  const node = graph.nodes.find(candidate => candidate.uuid === uuid)
+  const node = graph.nodes.find(/* 比较 candidate.uuid 与 uuid，返回严格相等的判断结果。 */ candidate => candidate.uuid === uuid)
   if (!node) return 'baseColor'
-  const source = (pin = 'color', fallback = 'baseColor') => {
+  const source = /* 取得当前输入端口的上游表达式，无连接时返回指定回退表达式。 */ (pin = 'color', fallback = 'baseColor') => {
     const edge = incoming(graph, uuid, pin)
     return edge ? compileExpression(graph, edge.fromNode, cache, stack) : fallback
   }
@@ -225,14 +240,16 @@ function compileExpression(graph: MaterialGraphDocument, uuid: string, cache: Ma
   cache.set(uuid, expression); stack.delete(uuid); return expression
 }
 
+/* 将材质图编译为着色函数及所需噪声辅助代码，同时返回图诊断。 */
 export function compileMaterialGraph(input: unknown): { source: string; diagnostics: MaterialGraphDiagnostic[] } {
-  const graph = normalizeMaterialGraph(input), diagnostics = validateMaterialGraph(graph), output = graph.nodes.find(node => node.kind === 'Output')
+  const graph = normalizeMaterialGraph(input), diagnostics = validateMaterialGraph(graph), output = graph.nodes.find(/* 比较 node.kind 与 'Output'，返回严格相等的判断结果。 */ node => node.kind === 'Output')
   const expression = output ? compileExpression(graph, output.uuid, new Map(), new Set()) : 'baseColor'
-  const usesNoise = graph.nodes.some(node => node.kind === 'Dissolve' || node.kind === 'Distortion')
+  const usesNoise = graph.nodes.some(/* 先计算 node.kind === 'Dissolve'；仅当其为假值时求右侧 node.kind === 'Distortion'，返回短路求值结果。 */ node => node.kind === 'Dissolve' || node.kind === 'Distortion')
   const helpers = usesNoise ? 'float nova_hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453123);}\n' : ''
   return { source: `${helpers}uniform float u_nova_time;\nvec4 nova_material(vec4 baseColor, vec2 uv){return clamp(${expression},0.0,1.0);}`, diagnostics }
 }
 
+/* 按叠加、正片叠底、滤色或透明混合生成材质层合成表达式。 */
 function blendExpression(base: string, layer: string, blendMode: BlendMode2D, opacity: string): string {
   if (blendMode === 'Additive') return `mix(${base},clamp(${base}+${layer},0.0,1.0),${opacity})`
   if (blendMode === 'Multiply') return `mix(${base},${base}*${layer},${opacity})`
@@ -240,10 +257,11 @@ function blendExpression(base: string, layer: string, blendMode: BlendMode2D, op
   return `mix(${base},${layer},${opacity}*${layer}.a)`
 }
 
+/* 编译启用的材质层为顺序合成着色函数，并收集掩码纹理绑定。 */
 export function compileMaterialLayers(input: unknown): { source: string; textureBindings: Record<string, string | null> } {
-  const layers = normalizeMaterialLayers(input).filter(layer => layer.enabled), lines = ['vec4 result=baseColor;'], textureBindings: Record<string, string | null> = {}
+  const layers = normalizeMaterialLayers(input).filter(/* 返回 layer.enabled 的当前值。 */ layer => layer.enabled), lines = ['vec4 result=baseColor;'], textureBindings: Record<string, string | null> = {}
   let usesNoise = false
-  layers.forEach((layer, index) => {
+  layers.forEach(/* 生成单个材质层的效果表达式并追加混合语句，登记所需噪声和采样资源。 */ (layer, index) => {
     const opacity = glslFloat(layer.opacity, 1), strength = glslFloat(layer.strength, .25), threshold = glslFloat(layer.threshold, .5), softness = glslFloat(layer.softness, .05), colorA = glslColor(layer.colorA), colorB = glslColor(layer.colorB)
     let expression = 'result'
     if (layer.kind === 'Tint') expression = colorA
@@ -255,19 +273,20 @@ export function compileMaterialLayers(input: unknown): { source: string; texture
     else if (layer.kind === 'Mask') { const uniform = `nova_layer_tex_${index}`; textureBindings[uniform] = layer.texture; expression = `vec4(result.rgb,result.a*texture(${uniform},uv).r)` }
     lines.push(`result=${blendExpression('result', expression, layer.blendMode, opacity)};`)
   })
-  const uniforms = Object.keys(textureBindings).map(name => `uniform sampler2D ${name};`).join('\n')
+  const uniforms = Object.keys(textureBindings).map(/** 按模板 `uniform sampler2D ${name};` 生成并返回字符串。 */ name => `uniform sampler2D ${name};`).join('\n')
   const helpers = usesNoise ? 'float nova_layer_hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453123);}\n' : ''
   return { source: `${uniforms}\n${helpers}vec4 nova_material(vec4 baseColor, vec2 uv){${lines.join('')}return clamp(result,0.0,1.0);}`, textureBindings }
 }
 
+/* 估算图与材质层的采样和算术成本，并报告当前后端需要回退的效果。 */
 export function materialCapabilityPreview(graphInput: unknown, layersInput: unknown, backend: 'WebGL2' | 'Canvas2D'): MaterialCapabilityPreview {
-  const graph = normalizeMaterialGraph(graphInput), layers = normalizeMaterialLayers(layersInput).filter(layer => layer.enabled)
+  const graph = normalizeMaterialGraph(graphInput), layers = normalizeMaterialLayers(layersInput).filter(/* 返回 layer.enabled 的当前值。 */ layer => layer.enabled)
   const expensive = new Set<MaterialGraphNodeKind>(['Outline', 'Dissolve', 'Distortion', 'Mask'])
   const fallbackNodes = backend === 'Canvas2D'
-    ? [...graph.nodes.filter(node => expensive.has(node.kind)).map(node => node.label), ...layers.filter(layer => ['Mask', 'Outline', 'Dissolve', 'Distortion'].includes(layer.kind)).map(layer => layer.name)]
+    ? [...graph.nodes.filter(/* 调用 expensive.has(node.kind) 并返回调用结果。 */ node => expensive.has(node.kind)).map(/* 返回 node.label 的当前值。 */ node => node.label), ...layers.filter(/* 调用 ['Mask', 'Outline', 'Dissolve', 'Distortion'].includes(layer.kind) 并返回调用结果。 */ layer => ['Mask', 'Outline', 'Dissolve', 'Distortion'].includes(layer.kind)).map(/* 返回 layer.name 的当前值。 */ layer => layer.name)]
     : []
-  const textureReads = 1 + graph.nodes.filter(node => ['SpriteTexture', 'UITexture', 'Mask', 'Outline', 'Distortion'].includes(node.kind)).length + layers.filter(layer => ['Mask', 'Outline', 'Distortion'].includes(layer.kind)).length
-  const arithmeticOps = graph.nodes.length * 4 + layers.length * 7 + graph.nodes.filter(node => expensive.has(node.kind)).length * 8
+  const textureReads = 1 + graph.nodes.filter(/* 调用 ['SpriteTexture', 'UITexture', 'Mask', 'Outline', 'Distortion'].includes(node.kind) 并返回调用结果。 */ node => ['SpriteTexture', 'UITexture', 'Mask', 'Outline', 'Distortion'].includes(node.kind)).length + layers.filter(/* 调用 ['Mask', 'Outline', 'Distortion'].includes(layer.kind) 并返回调用结果。 */ layer => ['Mask', 'Outline', 'Distortion'].includes(layer.kind)).length
+  const arithmeticOps = graph.nodes.length * 4 + layers.length * 7 + graph.nodes.filter(/* 调用 expensive.has(node.kind) 并返回调用结果。 */ node => expensive.has(node.kind)).length * 8
   const score = textureReads * 3 + arithmeticOps / 8
   return { backend, supportedNodes: graph.nodes.length + layers.length - fallbackNodes.length, fallbackNodes, gpuCost: { score: Number(score.toFixed(2)), estimatedMsAt1080p: Number((score * .008).toFixed(3)), textureReads, arithmeticOps }, recommendation: fallbackNodes.length ? 'Canvas2D uses the base color for unsupported graph effects; select WebGL2 for full output.' : score > 24 ? 'Consider baking gradients/palettes into an atlas and reducing distortion/outline layers.' : 'Within the default material budget.' }
 }

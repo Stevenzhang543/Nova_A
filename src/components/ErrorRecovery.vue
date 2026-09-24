@@ -1,3 +1,4 @@
+<!-- 故障恢复提示：显示受控错误，提供诊断复制、下载和安全重启。 -->
 <template>
   <Teleport to="body">
     <section v-if="fault" class="fault-overlay" data-doc="manual/recovery" role="alertdialog" aria-modal="true" v-modal-focus :aria-label="t('fatalErrorTitle')" @keydown.esc="dismissActiveFault">
@@ -19,19 +20,19 @@ import { dismissActiveFault, faultCenterState, faultDiagnostics, reportRecoverab
 import { stableContractDiagnostics } from '../runtime/stableContracts'
 
 const copied = ref(false)
-const fault = computed(() => faultCenterState.activeFatal)
-const timestamp = computed(() => fault.value ? new Date(fault.value.timestamp).toLocaleString() : '')
-function diagnosticText(): string { return `${stableContractDiagnostics()}\n\n${faultDiagnostics()}` }
-async function copy(): Promise<void> {
-  try { await navigator.clipboard.writeText(diagnosticText()); copied.value = true; window.setTimeout(() => { copied.value = false }, 1_500) }
+const fault = computed(/* 返回 faultCenterState.activeFatal 的当前值。 */ () => faultCenterState.activeFatal)
+const timestamp = computed(/** 将当前故障时间转换为本地日期时间，无故障时返回空文本。 */ () => fault.value ? new Date(fault.value.timestamp).toLocaleString() : '')
+/** 合并稳定契约诊断和故障诊断作为统一导出内容。 */ function diagnosticText(): string { return `${stableContractDiagnostics()}\n\n${faultDiagnostics()}` }
+/** 复制诊断并短暂提示成功，剪贴板异常交给可恢复错误中心。 */ async function copy(): Promise<void> {
+  try { await navigator.clipboard.writeText(diagnosticText()); copied.value = true; window.setTimeout(/** 提示到期后恢复未复制状态。 */ () => { copied.value = false }, 1_500) }
   catch (error) { reportRecoverableError(error, 'Copy diagnostics') }
 }
-function download(): void {
+/** 生成诊断下载链接并触发下载，稍后释放对象地址。 */ function download(): void {
   const url = URL.createObjectURL(new Blob([diagnosticText()], { type: 'application/json' }))
   const anchor = document.createElement('a'); anchor.href = url; anchor.download = `nova-a-diagnostics-${Date.now()}.json`; anchor.click()
-  window.setTimeout(() => URL.revokeObjectURL(url), 0)
+  window.setTimeout(/** 下载触发后释放临时对象地址。 */ () => URL.revokeObjectURL(url), 0)
 }
-function safeRestart(): void {
+/** 保留当前地址，附加安全模式及安全布局参数后重启。 */ function safeRestart(): void {
   const url = new URL(location.href); url.searchParams.set('safe-mode', '1'); url.searchParams.set('safe-layout', '1'); location.assign(url.toString())
 }
 </script>

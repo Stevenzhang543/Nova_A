@@ -1,3 +1,4 @@
+/** 支持诊断资料：组织可导出的环境及问题信息，供定位用户反馈。 */
 import { reactive } from 'vue'
 import { buildHistory, buildSettings } from './buildSettings'
 import { feedbackDiagnostics } from './editorFeedback'
@@ -39,38 +40,38 @@ export const supportState = reactive({
   lastCrashExport: ''
 })
 
-function download(name: string, contents: string): void {
+/** 结构说明（自动提取）：download；输入 name、contents；直接调用 URL.createObjectURL、Blob、document.createElement、anchor.click、window.setTimeout；写入 anchor.href、anchor.download。 */ function download(name: string, contents: string): void {
   const url = URL.createObjectURL(new Blob([contents], { type: 'application/json' })), anchor = document.createElement('a')
-  anchor.href = url; anchor.download = name; anchor.click(); window.setTimeout(() => URL.revokeObjectURL(url), 0)
+  anchor.href = url; anchor.download = name; anchor.click(); window.setTimeout(/* 调用 URL.revokeObjectURL(url) 并返回调用结果。 */ () => URL.revokeObjectURL(url), 0)
 }
-export function diagnosticBundle(): Record<string, unknown> {
-  const sanitize = (source: string) => supportState.includeFilePaths ? JSON.parse(source) : JSON.parse(source.replace(/[A-Za-z]:\\[^"\n]+|\/(?:Users|home)\/[^"\n]+/g, '[redacted-path]'))
+/** 结构说明（自动提取）：diagnosticBundle；无显式参数；直接调用 toISOString、Date、diagnosticPrivacyChecklist、JSON.parse、stableContractDiagnostics 等。 */ export function diagnosticBundle(): Record<string, unknown> {
+  const sanitize = /** 结构说明（自动提取）：sanitize；输入 source；直接调用 JSON.parse、source.replace；返回表达式求值结果。 */ (source: string) => supportState.includeFilePaths ? JSON.parse(source) : JSON.parse(source.replace(/[A-Za-z]:\\[^"\n]+|\/(?:Users|home)\/[^"\n]+/g, '[redacted-path]'))
   return {
     format: 'nova-diagnostic-bundle', version: 3, engineVersion: NOVA_ENGINE_VERSION, releaseChannel: supportState.releaseChannel, generatedAt: new Date().toISOString(), privacy: { projectIdentifiers: supportState.includeProjectIdentifiers, filePaths: supportState.includeFilePaths, uploaded: false, checklist: diagnosticPrivacyChecklist() },
     contracts: JSON.parse(stableContractDiagnostics()), platforms: PLATFORM_SUPPORT_MATRIX,
-    build: { target: buildSettings.target, profile: buildSettings.profile, recent: buildHistory.slice(0, 10).map(item => ({ ...item, outputPath: supportState.includeFilePaths ? item.outputPath : '[redacted-path]' })) },
-    packages: { installed: packageState.installed.map(item => ({ id: item.manifest.id, version: item.manifest.version, securityStatus: item.securityStatus, enabled: item.enabled })), quarantine: packageState.quarantine },
+    build: { target: buildSettings.target, profile: buildSettings.profile, recent: buildHistory.slice(0, 10).map(/** 构造并返回记录 { ...item, outputPath: supportState.includeFilePaths ? item.outputPath : '[redacted-path]' }，字段按当前实参及捕获状态求值。 */ item => ({ ...item, outputPath: supportState.includeFilePaths ? item.outputPath : '[redacted-path]' })) },
+    packages: { installed: packageState.installed.map(/** 构造并返回记录 { id: item.manifest.id, version: item.manifest.version, securityStatus: item.securityStatus, enabled: item.enabled }，字段按当前实参及捕获状态求值。 */ item => ({ id: item.manifest.id, version: item.manifest.version, securityStatus: item.securityStatus, enabled: item.enabled })), quarantine: packageState.quarantine },
     faults: sanitize(faultDiagnostics()), tasks: sanitize(feedbackDiagnostics()), recovery: sanitize(recoveryDiagnostics()), transactions: sanitize(transactionDiagnostics()), externalChanges: sanitize(externalChangeDiagnostics()), migration: sanitize(JSON.stringify({lastDryRun:migrationState.lastDryRun&&{...migrationState.lastDryRun,output:''},lastReport:migrationState.lastReport,logs:migrationState.logs},null,2)), knownIssuesFeed: KNOWN_ISSUES_FEED, releaseCandidate: RELEASE_CANDIDATE_FREEZE
   }
 }
 
-export function exportDiagnosticBundle(): boolean {
+/** 结构说明（自动提取）：exportDiagnosticBundle；无显式参数；直接调用 JSON.stringify、diagnosticBundle、slice、toISOString、Date 等；写入 supportState.lastExport。 */ export function exportDiagnosticBundle(): boolean {
   if (!supportState.privacyReviewed) return false
   const source = `${JSON.stringify(diagnosticBundle(), null, 2)}\n`, name = `Nova_A-${NOVA_ENGINE_VERSION}-diagnostics-${new Date().toISOString().slice(0, 10)}.json`
   download(name, source); supportState.lastExport = name; return true
 }
 
-export function releaseHealthSnapshot(): Record<string, unknown> {
+/** 结构说明（自动提取）：releaseHealthSnapshot；无显式参数；直接调用 entries.filter、JSON.parse、faultDiagnostics、toISOString、Date 等。 */ export function releaseHealthSnapshot(): Record<string, unknown> {
   const quarantined = packageState.quarantine.length
-  const fatalFaults = (JSON.parse(faultDiagnostics()) as { entries?: Array<{ severity?: string }> }).entries?.filter(item => item.severity === 'fatal').length ?? 0
+  const fatalFaults = (JSON.parse(faultDiagnostics()) as { entries?: Array<{ severity?: string }> }).entries?.filter(/* 比较 item.severity 与 'fatal'，返回严格相等的判断结果。 */ item => item.severity === 'fatal').length ?? 0
   return {
     format: 'nova-release-health', version: 1, engineVersion: NOVA_ENGINE_VERSION, channel: supportState.releaseChannel,
-    generatedAt: new Date().toISOString(), openS0: 0, openS1: fatalFaults, openS2: KNOWN_ISSUES.filter(issue => issue.severity === 'S2').length,
+    generatedAt: new Date().toISOString(), openS0: 0, openS1: fatalFaults, openS2: KNOWN_ISSUES.filter(/* 比较 issue.severity 与 'S2'，返回严格相等的判断结果。 */ issue => issue.severity === 'S2').length,
     packageQuarantine: quarantined, recoveryAvailable: true, status: fatalFaults ? 'attention' : 'healthy'
   }
 }
 
-export function exportCrashReportPackage(): boolean {
+/** 结构说明（自动提取）：exportCrashReportPackage；无显式参数；直接调用 toISOString、Date、diagnosticBundle、releaseHealthSnapshot、replace 等；写入 supportState.lastCrashExport。 */ export function exportCrashReportPackage(): boolean {
   if (!supportState.crashReportingOptIn || !supportState.privacyReviewed) return false
   const report = {
     format: 'nova-crash-report-package', version: 1, engineVersion: NOVA_ENGINE_VERSION, createdAt: new Date().toISOString(),

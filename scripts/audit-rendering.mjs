@@ -1,7 +1,8 @@
+/* 检查渲染面板、世界画布、光照和后处理等源码中的功能连接契约。 */
 import { readFileSync } from 'node:fs'
 
-const read = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8')
-const assert = (condition, message) => { if (!condition) throw new Error(`Rendering audit failed: ${message}`) }
+const read = /* 调用 readFileSync(new URL(`../${path}`, import.meta.url), 'utf8') 并返回调用结果。 */ path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8')
+const assert = /* 条件不满足时抛出带渲染审计前缀的错误。 */ (condition, message) => { if (!condition) throw new Error(`Rendering audit failed: ${message}`) }
 
 const worldCanvas = read('src/components/WorldCanvas.vue')
 const panel = read('src/components/RenderingPanel.vue')

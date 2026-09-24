@@ -1,3 +1,4 @@
+/** 功能回归脚本：执行 verify-v3.7.mjs 对应场景，保留断言和证据输出。 */
 import { mkdir, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -5,7 +6,7 @@ import { createServer } from 'vite'
 
 const root = dirname(dirname(fileURLToPath(import.meta.url))), output = join(root, 'release-audits'), generatedAt = new Date().toISOString()
 await mkdir(output, { recursive: true })
-if (!globalThis.btoa) globalThis.btoa = value => Buffer.from(value, 'binary').toString('base64')
+if (!globalThis.btoa) globalThis.btoa = /* 调用 Buffer.from(value, 'binary').toString('base64') 并返回调用结果。 */ value => Buffer.from(value, 'binary').toString('base64')
 const server = await createServer({ root, appType: 'custom', logLevel: 'silent', server: { middlewareMode: true } })
 try {
   const materials = await server.ssrLoadModule('/src/renderer/materials.ts')
@@ -22,22 +23,22 @@ try {
   const material = materials.normalizeMaterial({ version: 2, name: 'Round trip', fragment: shader, uniforms: { gain: .75, mode: 1, enabled: true, tint: [.3, .6, 1, 1] }, includes: ['nova/color'], parentMaterial: null })
   const serialized = materials.serializeMaterial(material), restored = materials.normalizeMaterial(JSON.parse(serialized))
   const uniformRoundTrip = JSON.stringify(material.uniformSchema) === JSON.stringify(restored.uniformSchema) && JSON.stringify(material.uniforms) === JSON.stringify(restored.uniforms)
-  const materialReport = { format: 'nova-material-roundtrip', version: 1, engineVersion: '3.7.0', generatedAt, reflectedTypes: restored.uniformSchema.map(field => ({ name: field.name, type: field.type })), serializedBytes: Buffer.byteLength(serialized), uniformRoundTrip, status: uniformRoundTrip && restored.uniformSchema.length === 4 ? 'passed' : 'failed' }
+  const materialReport = { format: 'nova-material-roundtrip', version: 1, engineVersion: '3.7.0', generatedAt, reflectedTypes: restored.uniformSchema.map(/** 结构说明（自动提取）：restored.uniformSchema.map 回调；输入 field；返回表达式求值结果。 */ field => ({ name: field.name, type: field.type })), serializedBytes: Buffer.byteLength(serialized), uniformRoundTrip, status: uniformRoundTrip && restored.uniformSchema.length === 4 ? 'passed' : 'failed' }
   await writeFile(join(output, 'v3.7.0-material-roundtrip.json'), `${JSON.stringify(materialReport, null, 2)}\n`)
 
   let seed = 0x37a0cafe
-  const random = () => { seed = Math.imul(seed ^ seed >>> 15, 1 | seed); seed ^= seed + Math.imul(seed ^ seed >>> 7, 61 | seed); return ((seed ^ seed >>> 14) >>> 0) / 4294967296 }
+  const random = /** 结构说明（自动提取）：random；无显式参数；直接调用 Math.imul；写入 seed。 */ () => { seed = Math.imul(seed ^ seed >>> 15, 1 | seed); seed ^= seed + Math.imul(seed ^ seed >>> 7, 61 | seed); return ((seed ^ seed >>> 14) >>> 0) / 4294967296 }
   const forbidden = ['while(true){}', 'discard;', 'uniform samplerCube sky;', 'for(int i=0;i<999;i++){}', 'gl_FragDepth=1.0;']
-  const corpus = Array.from({ length: 512 }, (_, index) => index % 7 === 0 ? `vec4 nova_material(vec4 c, vec2 uv){${forbidden[index % forbidden.length]}return c;}` : `uniform float value_${index}; // @range(0, ${Math.max(1, Math.round(random() * 8))}, 0.1)\nvec4 nova_material(vec4 c, vec2 uv){return c * value_${index};}`)
-  const fuzzResults = corpus.map((source, index) => ({ index, diagnostics: materials.analyzeMaterialShader(source).length }))
-  const unsafeCount = fuzzResults.filter((item, index) => index % 7 === 0 && item.diagnostics > 0).length
-  const shaderFuzz = { format: 'nova-shader-fuzz', version: 1, engineVersion: '3.7.0', generatedAt, cases: corpus.length, unsafeCases: corpus.filter((_, index) => index % 7 === 0).length, unsafeRejected: unsafeCount, crashes: 0, sourceLinked: true, maximumSourceBytes: 32000, maximumLoopIterations: 64, status: unsafeCount === corpus.filter((_, index) => index % 7 === 0).length ? 'passed' : 'failed' }
+  const corpus = Array.from({ length: 512 }, /** 结构说明（自动提取）：Array.from 回调；输入 _、index；直接调用 Math.max、Math.round、random；返回表达式求值结果。 */ (_, index) => index % 7 === 0 ? `vec4 nova_material(vec4 c, vec2 uv){${forbidden[index % forbidden.length]}return c;}` : `uniform float value_${index}; // @range(0, ${Math.max(1, Math.round(random() * 8))}, 0.1)\nvec4 nova_material(vec4 c, vec2 uv){return c * value_${index};}`)
+  const fuzzResults = corpus.map(/** 结构说明（自动提取）：corpus.map 回调；输入 source、index；直接调用 materials.analyzeMaterialShader；返回表达式求值结果。 */ (source, index) => ({ index, diagnostics: materials.analyzeMaterialShader(source).length }))
+  const unsafeCount = fuzzResults.filter(/* 先计算 index % 7 === 0；仅当其为真值时求右侧 item.diagnostics > 0，返回短路求值结果。 */ (item, index) => index % 7 === 0 && item.diagnostics > 0).length
+  const shaderFuzz = { format: 'nova-shader-fuzz', version: 1, engineVersion: '3.7.0', generatedAt, cases: corpus.length, unsafeCases: corpus.filter(/* 比较 index % 7 与 0，返回严格相等的判断结果。 */ (_, index) => index % 7 === 0).length, unsafeRejected: unsafeCount, crashes: 0, sourceLinked: true, maximumSourceBytes: 32000, maximumLoopIterations: 64, status: unsafeCount === corpus.filter(/* 比较 index % 7 与 0，返回严格相等的判断结果。 */ (_, index) => index % 7 === 0).length ? 'passed' : 'failed' }
   await writeFile(join(output, 'v3.7.0-shader-fuzz.json'), `${JSON.stringify(shaderFuzz, null, 2)}\n`)
 
   const shape = new components.ShapeRenderer2D()
   const command = { shape: 'Rectangle', position: { x: 0, y: 0 }, rotation: 0, scale: { x: 1, y: 1 }, vertices: [{ x: -1, y: -1 }, { x: 1, y: -1 }, { x: 1, y: 1 }, { x: -1, y: 1 }], radiusX: 1, radiusY: 1, fill: { r: 60, g: 150, b: 255, a: 1 }, stroke: { r: 0, g: 90, b: 155, a: 1 }, strokeWidth: shape.strokeWidth, sortingLayer: 1, orderInLayer: 0, material: 'Default' }
   const joinedStroke = geometry.strokeGeometry(command)
-  const outerBounds = joinedStroke.positions.reduce((bounds, point) => ({ minX: Math.min(bounds.minX, point.x), maxX: Math.max(bounds.maxX, point.x), minY: Math.min(bounds.minY, point.y), maxY: Math.max(bounds.maxY, point.y) }), { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity })
+  const outerBounds = joinedStroke.positions.reduce(/** 结构说明（自动提取）：joinedStroke.positions.reduce 回调；输入 bounds、point；直接调用 Math.min、Math.max；返回表达式求值结果。 */ (bounds, point) => ({ minX: Math.min(bounds.minX, point.x), maxX: Math.max(bounds.maxX, point.x), minY: Math.min(bounds.minY, point.y), maxY: Math.max(bounds.maxY, point.y) }), { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity })
   const outlinePassed = shape.strokeWidth === .04 && joinedStroke.positions.length === 8 && joinedStroke.indices.length === 24 && outerBounds.maxX <= 1.021 && outerBounds.maxY <= 1.021
   const golden = { format: 'nova-golden-image-manifest', version: 1, engineVersion: '3.7.0', generatedAt, cases: ['rectangle joined outline','ellipse outline','pixel-art nearest filtering','light and shadow','particles','render texture','multilingual text'], outlineGeometry: { defaultWidth: shape.strokeWidth, positions: joinedStroke.positions.length, indices: joinedStroke.indices.length, bounds: outerBounds }, browserScreenshots: 'release-audits/screenshots/v3.7.0', tolerance: { rgbaPerChannel: 2, changedPixelRatio: .0025 }, status: outlinePassed ? 'passed' : 'failed' }
   await writeFile(join(output, 'v3.7.0-golden-images.json'), `${JSON.stringify(golden, null, 2)}\n`)
@@ -59,12 +60,12 @@ try {
   const lightStart = performance.now(); let lightChecksum = 0
   for (let index = 0; index < 10_000; index++) { const distance = Math.hypot(index % 100 - 50, Math.floor(index / 100) - 50); lightChecksum += Math.max(0, 1 - distance / 75) }
   const lightingMs = performance.now() - lightStart
-  const benchmarks = { format: 'nova-v3.7-render-benchmark', version: 1, engineVersion: '3.7.0', generatedAt, machine: { platform: process.platform, architecture: process.arch, node: process.version }, workload: 10000, sprites: { milliseconds: spriteMs, triangles }, particles: { milliseconds: particleMs, normalized: 10000 }, lighting: { milliseconds: lightingMs, checksum: lightChecksum }, budget: { headlessMillisecondsEach: 2000 }, status: [spriteMs, particleMs, lightingMs].every(value => value < 2000) ? 'passed' : 'failed' }
+  const benchmarks = { format: 'nova-v3.7-render-benchmark', version: 1, engineVersion: '3.7.0', generatedAt, machine: { platform: process.platform, architecture: process.arch, node: process.version }, workload: 10000, sprites: { milliseconds: spriteMs, triangles }, particles: { milliseconds: particleMs, normalized: 10000 }, lighting: { milliseconds: lightingMs, checksum: lightChecksum }, budget: { headlessMillisecondsEach: 2000 }, status: [spriteMs, particleMs, lightingMs].every(/* 比较 value 与 2000，返回小于的判断结果。 */ value => value < 2000) ? 'passed' : 'failed' }
   await writeFile(join(output, 'v3.7.0-benchmarks.json'), `${JSON.stringify(benchmarks, null, 2)}\n`)
   await writeFile(join(output, 'v3.7.0-performance-captures.json'), `${JSON.stringify({ format: 'nova-performance-captures', version: 1, engineVersion: '3.7.0', generatedAt, captures: benchmarks, batchDiagnostics: ['draw calls','batches','batch breaks','triangles','overdraw','atlas pages','render targets','pass timings'], status: benchmarks.status }, null, 2)}\n`)
 
   const audioSettings = audio.normalizeAudioSettings({ masterVolume: 3, sampleRate: 47990, mixer: { masterVoiceLimit: 12, buses: [{ id: 'Master', gain: 1, voiceLimit: 8 }, { id: 'SFX', parent: 'Master', gain: .8, voiceLimit: 4, effects: [{ id: 'delay', kind: 'Delay', wet: .2, time: .12, feedback: .25 }] }] } })
-  const audioPassed = audioSettings.masterVolume === 1 && audioSettings.sampleRate === 48000 && audioSettings.mixer.masterVoiceLimit === 12 && audioSettings.mixer.buses.find(bus => bus.id === 'SFX').effects[0].kind === 'Delay'
+  const audioPassed = audioSettings.masterVolume === 1 && audioSettings.sampleRate === 48000 && audioSettings.mixer.masterVoiceLimit === 12 && audioSettings.mixer.buses.find(/* 比较 bus.id 与 'SFX'，返回严格相等的判断结果。 */ bus => bus.id === 'SFX').effects[0].kind === 'Delay'
   const audioEvidence = { format: 'nova-audio-latency-underrun', version: 1, engineVersion: '3.7.0', generatedAt, normalizedMixer: audioSettings, referenceFixture: 'reference-projects/projects/audio-streaming/project.nova', loopGapBudgetsMs: { PCM: 8, Vorbis: 35, MP3: 80 }, measurementMethod: 'Runtime Profiler records AudioContext base/output latency and detected wall-clock/context-time stalls; codec loop limits are qualified in the browser reference project.', deterministicVoicePolicy: 'lowest numeric priority first; existing voice retained at component/bus/master cap', deviceChangeHandling: true, status: audioPassed ? 'passed' : 'failed' }
   await writeFile(join(output, 'v3.7.0-audio-latency-underrun.json'), `${JSON.stringify(audioEvidence, null, 2)}\n`)
 
@@ -77,7 +78,7 @@ try {
   const exportedState = JSON.parse(JSON.stringify(editorState))
   await writeFile(join(output, 'v3.7.0-editor-export-comparison.json'), `${JSON.stringify({ format: 'nova-editor-export-comparison', version: 1, engineVersion: '3.7.0', generatedAt, editorHash: JSON.stringify(editorState), exportHash: JSON.stringify(exportedState), equal: JSON.stringify(editorState) === JSON.stringify(exportedState), profilePassed, status: JSON.stringify(editorState) === JSON.stringify(exportedState) && profilePassed ? 'passed' : 'failed' }, null, 2)}\n`)
 
-  const failed = [materialReport.status, shaderFuzz.status, golden.status, benchmarks.status, audioEvidence.status, recoveryPassed ? 'passed' : 'failed', profilePassed ? 'passed' : 'failed'].filter(status => status !== 'passed')
+  const failed = [materialReport.status, shaderFuzz.status, golden.status, benchmarks.status, audioEvidence.status, recoveryPassed ? 'passed' : 'failed', profilePassed ? 'passed' : 'failed'].filter(/* 比较 status 与 'passed'，返回严格不等的判断结果。 */ status => status !== 'passed')
   console.log(`Nova_A v3.7 verification ${failed.length ? 'failed' : 'passed'}: shader/material, outline golden, profiles, 10k workloads, audio and recovery.`)
   if (failed.length) process.exitCode = 1
 } finally { await server.close() }

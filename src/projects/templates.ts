@@ -1,3 +1,4 @@
+/** 内置示例项目生成：组装实体、资源和场景，生成游戏及渲染模板并检查项目结构。 */
 import { templateGuide } from './templateGuides'
 import { defaultAudioSettings } from '../runtime/audio'
 import { defaultInputMap } from '../runtime/input'
@@ -53,12 +54,12 @@ export const PROJECT_TEMPLATES: readonly ProjectTemplateDescriptor[] = [
   { id: 'breakout', category: 'game', name: 'Breakout', description: 'A complete paddle-and-bricks game with continuous collision, destructible bricks, score, and completion UI.', features: ['Keyboard', 'CCD', 'Destruction', 'Score', 'Portable .exe'], difficulty: 'intermediate', setupMinutes: 6, tags: ['breakout', 'bricks', 'ccd'] },
   { id: 'physics-cleanup', category: 'game', name: 'Physics Cleanup', description: 'A complete pointer-controlled arena variation: push every spawned body outside the camera and clear the board.', features: ['Pointer control', 'Physics', 'Runtime spawn', 'Score', 'Win banner'], difficulty: 'beginner', setupMinutes: 4, tags: ['mouse', 'arena', 'physics'] },
   { id: 'grid-chase', category: 'game', name: 'Grid Chase', description: 'A complete deterministic grid-chase variation with keyboard/gamepad movement, pickups, growth, score, and fail state.', features: ['Keyboard & gamepad', 'Grid movement', 'Pickups', 'Score', 'Portable .exe'], difficulty: 'intermediate', setupMinutes: 5, tags: ['grid', 'chase', 'score'] },
-  ...TEMPLATE_ADDITIONS_26_11.map(({ de, zh, ...descriptor }) => ({ ...descriptor, features: [...descriptor.features], tags: [...descriptor.tags], introduced: '26.11', localized: { de: { name: de[0], description: de[1] }, zh: { name: zh[0], description: zh[1] } } }))
+  ...TEMPLATE_ADDITIONS_26_11.map(/** 复制模板功能和标签列表，并附加引入版本及德文、中文名称说明。 */ ({ de, zh, ...descriptor }) => ({ ...descriptor, features: [...descriptor.features], tags: [...descriptor.tags], introduced: '26.11', localized: { de: { name: de[0], description: de[1] }, zh: { name: zh[0], description: zh[1] } } }))
 ] as const
 
 type JsonRecord = Record<string, unknown>
 
-function stableUuid(seed: string): string {
+/** 从模板种子生成稳定的 UUID 形状标识，使重复生成时资源和实体引用保持一致。 */ function stableUuid(seed: string): string {
   let first = 0x811c9dc5
   let second = 0x9e3779b9
   for (const character of seed) {
@@ -70,11 +71,11 @@ function stableUuid(seed: string): string {
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-8${hex.slice(17, 20)}-${hex.slice(20, 32)}`
 }
 
-function component(seed: string, kind: string, data: JsonRecord = {}): JsonRecord {
+/* 返回具有所列字段的新对象 { uuid: stableUuid(`${seed}:${kind}`), kind, enabled: true, removed: false, data }。 */ function component(seed: string, kind: string, data: JsonRecord = {}): JsonRecord {
   return { uuid: stableUuid(`${seed}:${kind}`), kind, enabled: true, removed: false, data }
 }
 
-function entity(seed: string, name: string, position: [number, number], components: JsonRecord[], entityType = 'Box'): JsonRecord {
+/** 创建带稳定身份和基础变换的实体序列化记录，再附加指定组件。 */ function entity(seed: string, name: string, position: [number, number], components: JsonRecord[], entityType = 'Box'): JsonRecord {
   return {
     uuid: stableUuid(`entity:${seed}`), name, enabled: true, editorVisible: true, editorLocked: false,
     tags: [], groups: [], persistentAcrossScenes: false, prefabAsset: null, prefabInstanceUuid: null,
@@ -83,7 +84,7 @@ function entity(seed: string, name: string, position: [number, number], componen
   }
 }
 
-function shape(seed: string, name: string, position: [number, number], size: [number, number], options: {
+/** 按方形、圆或三角形组合渲染器、刚体及碰撞器，应用物理选项并附加脚本和额外组件。 */ function shape(seed: string, name: string, position: [number, number], size: [number, number], options: {
   type?: 'Box' | 'Circle' | 'Triangle'; color?: [number, number, number]; body?: 'Dynamic' | 'Kinematic' | 'Static';
   sensor?: boolean; restitution?: number; friction?: number; continuous?: boolean; scriptAsset?: string; extra?: JsonRecord[]
 } = {}): JsonRecord {
@@ -106,24 +107,24 @@ function shape(seed: string, name: string, position: [number, number], size: [nu
   return entity(seed, name, position, parts, type)
 }
 
-function camera(seed = 'camera'): JsonRecord {
+/** 创建具有完整视口、默认背景和正交尺寸的模板主摄像机。 */ function camera(seed = 'camera'): JsonRecord {
   return entity(seed, 'Main Camera', [0, 0], [component(seed, 'Camera2D', { active: true, orthographicSize: 10, zoom: 1, backgroundColor: { r: 20, g: 25, b: 34 }, pixelPerfect: false, viewport: { x: 0, y: 0, width: 1, height: 1 }, nearSortingLayer: -1000, farSortingLayer: 1000 })])
 }
 
-function cameraAtSize(seed: string, orthographicSize: number): JsonRecord {
+/** 创建模板摄像机并覆盖其正交可视尺寸。 */ function cameraAtSize(seed: string, orthographicSize: number): JsonRecord {
   const result = camera(seed)
-  const cameraData = (result.components as JsonRecord[]).find(value => value.kind === 'Camera2D')?.data as JsonRecord
+  const cameraData = (result.components as JsonRecord[]).find(/* 比较 value.kind 与 'Camera2D'，返回严格相等的判断结果。 */ value => value.kind === 'Camera2D')?.data as JsonRecord
   cameraData.orthographicSize = orthographicSize
   return result
 }
 
-function setInitialVelocity(value: JsonRecord, x: number, y: number): JsonRecord {
-  const rigidBody = (value.components as JsonRecord[]).find(item => item.kind === 'RigidBody2D')?.data as JsonRecord | undefined
+/** 若实体含刚体则设置其初始二维速度，返回原实体记录以支持组合构建。 */ function setInitialVelocity(value: JsonRecord, x: number, y: number): JsonRecord {
+  const rigidBody = (value.components as JsonRecord[]).find(/* 比较 item.kind 与 'RigidBody2D'，返回严格相等的判断结果。 */ item => item.kind === 'RigidBody2D')?.data as JsonRecord | undefined
   if (rigidBody) rigidBody.velocity = { x, y }
   return value
 }
 
-function canvasWithLabel(seed: string, text: string): JsonRecord[] {
+/** 创建全屏参考画布及居中标题，并保持矩形布局和实体父级引用一致。 */ function canvasWithLabel(seed: string, text: string): JsonRecord[] {
   const canvasUuid = stableUuid(`entity:${seed}:canvas`)
   const canvas = entity(`${seed}:canvas`, 'HUD Canvas', [0, 0], [
     component(`${seed}:canvas`, 'RectTransform', { parentUuid: null, anchorPreset: 'stretch', position: { x: 0, y: 0 }, size: { x: 1920, y: 1080 } }),
@@ -137,7 +138,7 @@ function canvasWithLabel(seed: string, text: string): JsonRecord[] {
   return [canvas, label]
 }
 
-function textAsset(seed: string, name: string, assetType: 'script' | 'animation' | 'controller' | 'prefab' | 'localization' | 'uiTheme' | 'tileset' | 'other', path: string, source: string, mimeType: string): JsonRecord {
+/** 将文本及其真实源字节摘要封装为可导入资源记录，附加默认导入设置和流水线元信息。 */ function textAsset(seed: string, name: string, assetType: 'script' | 'animation' | 'controller' | 'prefab' | 'localization' | 'uiTheme' | 'tileset' | 'other', path: string, source: string, mimeType: string): JsonRecord {
   const hash = sha256Bytes(assetSourceBytes(source))
   return {
     uuid: stableUuid(`asset:${seed}`), name, path, assetType,
@@ -148,11 +149,11 @@ function textAsset(seed: string, name: string, assetType: 'script' | 'animation'
   }
 }
 
-function scriptAsset(seed: string, name: string, source: string): JsonRecord {
+/** 在文本资源之上配置 Rhai API 版本、调试和热重载元信息。 */ function scriptAsset(seed: string, name: string, source: string): JsonRecord {
   return { ...textAsset(seed, `${name}.rhai`, 'script', `Assets/Scripts/${name}.rhai`, source, 'text/x-rhai'), script: { version: 1, apiVersion: 2, breakpoints: [], breakpointDetails: [], tests: [], packageDependencies: [], packageName: '', reloadPolicy: 'preserve', signalConnections: [], recoverySource: '', lastSavedHash: '' } }
 }
 
-function imageAsset(seed: string, name: string, color: string): JsonRecord {
+/** 生成自包含 SVG 示例图标，构造图像资源并开启图集导入设置。 */ function imageAsset(seed: string, name: string, color: string): JsonRecord {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="${color}"/><path d="M36 68l18 18 40-44" fill="none" stroke="#f8fbff" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/></svg>`
   return {
     ...textAsset(seed, `${name}.svg`, 'prefab', `Assets/Sprites/${name}.svg`, `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`, 'image/svg+xml'),
@@ -161,7 +162,7 @@ function imageAsset(seed: string, name: string, color: string): JsonRecord {
   }
 }
 
-function worldTileAssets(seed: string): JsonRecord[] {
+/** 生成地面、墙和水的图集及瓦片集，配置碰撞、导航、遮挡、变体与动画示例。 */ function worldTileAssets(seed: string): JsonRecord[] {
   const imageUuid = stableUuid(`asset:${seed}-atlas`), tileSetUuid = stableUuid(`asset:${seed}-tileset`)
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="96" height="32"><rect width="32" height="32" fill="#4f8d62"/><rect x="32" width="32" height="32" fill="#6b5642"/><rect x="64" width="32" height="32" fill="#6ba7d6"/><path d="M35 5h26v22H35z" fill="none" stroke="#9a8061" stroke-width="3"/></svg>`
   const image = { ...textAsset(`${seed}-atlas`, `${seed} Atlas.svg`, 'prefab', `Assets/Tiles/${seed}-atlas.svg`, `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`, 'image/svg+xml'), uuid: imageUuid, assetType: 'image', width: 96, height: 32 }
@@ -175,12 +176,12 @@ function worldTileAssets(seed: string): JsonRecord[] {
   return [image, tileSet]
 }
 
-function beepAsset(seed: string, name: string): JsonRecord {
+/** 生成八位单声道衰减正弦 WAV 短音，编码为内嵌数据 URI 音频资源。 */ function beepAsset(seed: string, name: string): JsonRecord {
   const sampleRate = 8_000
   const samples = 1_200
   const bytes = new Uint8Array(44 + samples)
   const view = new DataView(bytes.buffer)
-  const word = (offset: number, value: string) => { for (let index = 0; index < value.length; index++) bytes[offset + index] = value.charCodeAt(index) }
+  const word = /** 将 WAV 头部的 ASCII 标识逐字节写入指定偏移。 */ (offset: number, value: string) => { for (let index = 0; index < value.length; index++) bytes[offset + index] = value.charCodeAt(index) }
   word(0, 'RIFF'); view.setUint32(4, 36 + samples, true); word(8, 'WAVE'); word(12, 'fmt ')
   view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, 1, true)
   view.setUint32(24, sampleRate, true); view.setUint32(28, sampleRate, true); view.setUint16(32, 1, true); view.setUint16(34, 8, true)
@@ -194,7 +195,7 @@ function beepAsset(seed: string, name: string): JsonRecord {
   }
 }
 
-function scene(seed: string, name: string, entities: JsonRecord[], connections: JsonRecord[] = []): JsonRecord {
+/** 构造带稳定身份、默认层、作者配置和固定步进物理设置的模板场景。 */ function scene(seed: string, name: string, entities: JsonRecord[], connections: JsonRecord[] = []): JsonRecord {
   return {
     uuid: stableUuid(`scene:${seed}`), name, loaded: true, layers: [1], activeLayer: 1, renderLayer: 'all',
     authoringSettings: defaultSceneAuthoringSettings(1),
@@ -203,8 +204,8 @@ function scene(seed: string, name: string, entities: JsonRecord[], connections: 
   }
 }
 
-function project(name: string, template: ProjectTemplateId, scenes: JsonRecord[], assets: JsonRecord[] = [], tutorial?: string): JsonRecord {
-  const sceneIds = scenes.map(value => String(value.uuid))
+/** 组合模板场景和资源，创建新项目身份、教程、目录以及输入、音频、渲染、构建等默认配置。 */ function project(name: string, template: ProjectTemplateId, scenes: JsonRecord[], assets: JsonRecord[] = [], tutorial?: string): JsonRecord {
+  const sceneIds = scenes.map(/* 调用 String(value.uuid) 并返回调用结果。 */ value => String(value.uuid))
   const metadata = newProjectMetadata(name, template)
   return {
     projectFormat: NOVA_PROJECT_FORMAT,
@@ -242,11 +243,11 @@ function project(name: string, template: ProjectTemplateId, scenes: JsonRecord[]
   }
 }
 
-function emptyTemplate(name: string): JsonRecord {
+/* 调用 project(name, 'empty', [scene('main', 'Main Scene', [camera()])]) 并返回调用结果。 */ function emptyTemplate(name: string): JsonRecord {
   return project(name, 'empty', [scene('main', 'Main Scene', [camera()])])
 }
 
-function prefabAsset(seed: string, name: string, root: JsonRecord): JsonRecord {
+/** 将模板根实体封装为第二版预制体文档和对应文本资源。 */ function prefabAsset(seed: string, name: string, root: JsonRecord): JsonRecord {
   const document = {
     prefabVersion: 2,
     name,
@@ -258,7 +259,7 @@ function prefabAsset(seed: string, name: string, root: JsonRecord): JsonRecord {
   return textAsset(seed, `${name}.nova-prefab`, 'prefab', `Assets/Prefabs/${name}.nova-prefab`, JSON.stringify(document), 'application/x-nova-prefab')
 }
 
-function mouseKnockoutTemplate(name: string): JsonRecord {
+/** 构建鼠标推动方块游戏，配置八个动态预制目标、计分定时脚本、完成提示和可运行教程。 */ function mouseKnockoutTemplate(name: string): JsonRecord {
   const managerScriptId = stableUuid('asset:mouse-knockout-manager')
   const targetPrefabId = stableUuid('asset:mouse-knockout-target-prefab')
   const targetReference = `asset://${targetPrefabId}`
@@ -346,17 +347,17 @@ Open **Manage → Build Settings**, keep **Windows / x86_64 / Game / Package int
   ], tutorial)
 }
 
-function snakeTemplate(name: string): JsonRecord {
+/** 构建网格贪吃蛇游戏，配置定时移动、信号传递身体、拾取成长、自碰撞结束及键盘手柄输入。 */ function snakeTemplate(name: string): JsonRecord {
   const headScriptId = stableUuid('asset:snake-head-controller')
   const foodScriptId = stableUuid('asset:snake-food-controller')
   const scoreScriptId = stableUuid('asset:snake-score-controller')
-  const segmentScriptIds = Array.from({ length: 8 }, (_, index) => stableUuid(`asset:snake-segment-${index + 1}`))
+  const segmentScriptIds = Array.from({ length: 8 }, /* 调用 stableUuid(`asset:snake-segment-${index + 1}`) 并返回调用结果。 */ (_, index) => stableUuid(`asset:snake-segment-${index + 1}`))
   const headSource = `@export(type="float", min=-1, max=1, step=1, group="Runtime", tooltip="Current horizontal grid direction") let direction_x = 1.0;\n@export(type="float", min=-1, max=1, step=1, group="Runtime", tooltip="Current vertical grid direction") let direction_y = 0.0;\n@export(type="bool", group="Runtime", tooltip="Whether the snake is accepting movement") let running = true;\nfn start() { running = true; timer_start("snake-step", 0.16, true); }\nfn update(dt) {\n  if !running { return; }\n  if input_pressed("MoveUp") && direction_y != 1.0 { direction_x = 0.0; direction_y = -1.0; }\n  if input_pressed("MoveDown") && direction_y != -1.0 { direction_x = 0.0; direction_y = 1.0; }\n  if input_pressed("MoveLeft") && direction_x != 1.0 { direction_x = -1.0; direction_y = 0.0; }\n  if input_pressed("MoveRight") && direction_x != -1.0 { direction_x = 1.0; direction_y = 0.0; }\n}\nfn on_timer(name) {\n  if name != "snake-step" || !running { return; }\n  let pose = transform();\n  let next_x = pose.position_x + direction_x * 1.2;\n  let next_y = pose.position_y + direction_y * 1.2;\n  if next_x > 8.4 { next_x = -8.4; }\n  if next_x < -8.4 { next_x = 8.4; }\n  if next_y > 4.8 { next_y = -4.8; }\n  if next_y < -4.8 { next_y = 4.8; }\n  signal_emit("snake.segment.1", #{ x: pose.position_x, y: pose.position_y });\n  set_position(next_x, next_y);\n}\nfn on_signal(name, payload, source) {\n  if name == "snake.game.over" { running = false; timer_cancel("snake-step"); }\n}`
-  const segmentSource = (index: number) => `fn on_signal(name, payload, source) {\n  if name != "snake.segment.${index}" { return; }\n  let pose = transform();\n  let target_x = payload.x.to_float();\n  let target_y = payload.y.to_float();\n  set_position(target_x, target_y);${index < 8 ? `\n  signal_emit("snake.segment.${index + 1}", #{ x: pose.position_x, y: pose.position_y });` : ''}\n}\nfn on_trigger_enter(other, px, py, nx, ny, rvx, rvy) {\n  if other == find_entity("Snake Head") { signal_emit("snake.game.over", ${index}); }\n}`
+  const segmentSource = /** 为指定蛇身序号生成位置传递与头部触发检测脚本，末节不再向后发送信号。 */ (index: number) => `fn on_signal(name, payload, source) {\n  if name != "snake.segment.${index}" { return; }\n  let pose = transform();\n  let target_x = payload.x.to_float();\n  let target_y = payload.y.to_float();\n  set_position(target_x, target_y);${index < 8 ? `\n  signal_emit("snake.segment.${index + 1}", #{ x: pose.position_x, y: pose.position_y });` : ''}\n}\nfn on_trigger_enter(other, px, py, nx, ny, rvx, rvy) {\n  if other == find_entity("Snake Head") { signal_emit("snake.game.over", ${index}); }\n}`
   const foodSource = `@export(type="int", min=0, max=7, step=1, group="Runtime", tooltip="Next grid-safe food position") let food_index = 0;\nfn on_trigger_enter(other, px, py, nx, ny, rvx, rvy) {\n  if other != find_entity("Snake Head") { return; }\n  signal_emit("snake.scored", 1);\n  food_index = (food_index + 1) % 8;\n  if food_index == 0 { set_position(4.8, 1.2); }\n  else if food_index == 1 { set_position(-4.8, -2.4); }\n  else if food_index == 2 { set_position(7.2, 3.6); }\n  else if food_index == 3 { set_position(0.0, -4.8); }\n  else if food_index == 4 { set_position(-7.2, 4.8); }\n  else if food_index == 5 { set_position(3.6, -1.2); }\n  else if food_index == 6 { set_position(-2.4, 3.6); }\n  else { set_position(8.4, 0.0); }\n}`
   const scoreSource = `@export(type="int", min=0, max=999999, step=1, group="Game", tooltip="Collected food") let score = 0;\n@export(type="bool", group="Runtime", tooltip="Whether self-collision ended the run") let game_over = false;\nfn start() {\n  score = 0; game_over = false; ui_set_text("Score  0");\n  entity_set_enabled(find_entity_handle("Game Over Panel"), false);\n  entity_set_enabled(find_entity_handle("Game Over Text"), false);\n}\nfn on_signal(name, payload, source) {\n  if name == "snake.game.over" {\n    if game_over { return; }\n    game_over = true;\n    entity_set_enabled(find_entity_handle("Game Over Panel"), true);\n    entity_set_enabled(find_entity_handle("Game Over Text"), true);\n    return;\n  }\n  if name != "snake.scored" || game_over { return; }\n  score = score + 1;\n  ui_set_text(\`Score  \${score}\`);\n  if score == 1 { entity_set_enabled(find_entity_handle("Snake Segment 4"), true); }\n  else if score == 2 { entity_set_enabled(find_entity_handle("Snake Segment 5"), true); }\n  else if score == 3 { entity_set_enabled(find_entity_handle("Snake Segment 6"), true); }\n  else if score == 4 { entity_set_enabled(find_entity_handle("Snake Segment 7"), true); }\n  else if score == 5 { entity_set_enabled(find_entity_handle("Snake Segment 8"), true); }\n}`
   const head = shape('snake-head', 'Snake Head', [0, 0], [1, 1], { body: 'Kinematic', color: [94, 203, 181], scriptAsset: headScriptId })
-  const segments = segmentScriptIds.map((scriptId, offset) => {
+  const segments = segmentScriptIds.map(/** 创建对应序号的蛇身运动学传感实体，仅前三节初始启用，其余等待拾取解锁。 */ (scriptId, offset) => {
     const index = offset + 1
     const segment = shape(`snake-segment-${index}`, `Snake Segment ${index}`, [-1.2 * index, 0], [1, 1], { body: 'Kinematic', sensor: true, color: [67 + index * 6, 159 + index * 4, 143 + index * 3], scriptAsset: scriptId })
     if (index > 3) segment.enabled = false
@@ -387,7 +388,7 @@ function snakeTemplate(name: string): JsonRecord {
   ;(gameScene.globalSettings as JsonRecord).gravity = 0
   const result = project(name, 'snake', [gameScene], [
     scriptAsset('snake-head-controller', 'SnakeHead', headSource),
-    ...segmentScriptIds.map((_, index) => scriptAsset(`snake-segment-${index + 1}`, `SnakeSegment${index + 1}`, segmentSource(index + 1))),
+    ...segmentScriptIds.map(/* 调用 scriptAsset(`snake-segment-${index + 1}`, `SnakeSegment${index + 1}`, segmentSource(index + 1)) 并返回调用结果。 */ (_, index) => scriptAsset(`snake-segment-${index + 1}`, `SnakeSegment${index + 1}`, segmentSource(index + 1))),
     scriptAsset('snake-food-controller', 'SnakeFood', foodSource),
     scriptAsset('snake-score-controller', 'SnakeScore', scoreSource)
   ], `---\ndismissible: true\ntemplate: snake\n---\n# Snake\n\nPress **Play** and steer with **WASD**, **Arrow keys**, or a gamepad D-pad. Food always appears on the same 1.2-world-unit grid used by the head. Each of the first five pickups enables another linked body segment. Crossing the screen edge wraps to the opposite side; touching the snake's own body stops the timer and shows the game-over panel.`)
@@ -400,12 +401,12 @@ function snakeTemplate(name: string): JsonRecord {
   return result
 }
 
-function pongTemplate(name: string): JsonRecord {
+/** 构建双人弹球场景，配置独立球拍输入、连续碰撞、出界得分和七分获胜提示。 */ function pongTemplate(name: string): JsonRecord {
   const leftScriptId = stableUuid('asset:pong-left-paddle')
   const rightScriptId = stableUuid('asset:pong-right-paddle')
   const ballScriptId = stableUuid('asset:pong-ball')
   const managerScriptId = stableUuid('asset:pong-manager')
-  const paddleSource = (action: string) => `@export(type="float", min=1, max=20, step=0.1, group="Movement", tooltip="Paddle speed in world units per second") let speed = 10.0;
+  const paddleSource = /** 按指定输入轴生成球拍固定步移动脚本，并将纵坐标限制在场地范围。 */ (action: string) => `@export(type="float", min=1, max=20, step=0.1, group="Movement", tooltip="Paddle speed in world units per second") let speed = 10.0;
 fn fixed_update(dt) {
   let pose = transform();
   let next_y = pose.position_y + input_axis("${action}") * speed * dt;
@@ -489,7 +490,7 @@ fn on_signal(name, payload, source) {
   return result
 }
 
-function breakoutTemplate(name: string): JsonRecord {
+/** 构建二十四砖块打砖游戏，配置横向球拍、反弹球重置、碰撞计分及清场提示。 */ function breakoutTemplate(name: string): JsonRecord {
   const paddleScriptId = stableUuid('asset:breakout-paddle')
   const ballScriptId = stableUuid('asset:breakout-ball')
   const brickScriptId = stableUuid('asset:breakout-brick')
@@ -546,7 +547,7 @@ fn on_signal(name, payload, source) {
     shape('breakout-top-wall', 'Top Wall', [0, 5.72], [19.6, .35], { body: 'Static', color: [77, 91, 110], restitution: 1, friction: 0 })
   ]
   const palette: Array<[number, number, number]> = [[245, 113, 121], [244, 164, 92], [239, 204, 99]]
-  const bricks = Array.from({ length: 24 }, (_, index) => {
+  const bricks = Array.from({ length: 24 }, /** 按三行八列布置独立静态砖块，为每行应用配色并绑定碰撞计分脚本。 */ (_, index) => {
     const row = Math.floor(index / 8), column = index % 8
     return shape(`breakout-brick-${index}`, `Brick ${index + 1}`, [-7.7 + column * 2.2, 1.5 + row * 1.1], [1.85, .7], { body: 'Static', color: palette[row], restitution: 1, friction: 0, scriptAsset: brickScriptId })
   })
@@ -574,7 +575,7 @@ fn on_signal(name, payload, source) {
   return result
 }
 
-function platformerTemplate(name: string): JsonRecord {
+/** 构建平台角色示例，组合跳跃与土狼时间、动画、音效、瓦片地图、导航和灯光资源。 */ function platformerTemplate(name: string): JsonRecord {
   const scriptId = stableUuid('asset:platformer-controller')
   const spriteId = stableUuid('asset:platformer-player-sprite')
   const audioId = stableUuid('asset:platformer-jump-audio')
@@ -593,7 +594,7 @@ function platformerTemplate(name: string): JsonRecord {
   const ground = shape('platformer-ground', 'Ground', [0, -4], [18, 1], { body: 'Static', color: [87, 107, 94], friction: .8, extra: [component('platformer-ground', 'ShadowCaster2D', { layerMask: 0xffffffff, selfShadows: false, opacity: .82 })] })
   const platform = shape('platformer-platform', 'Platform', [3, -1], [5, .7], { body: 'Static', color: [112, 137, 120], friction: .8, extra: [component('platformer-platform', 'ShadowCaster2D', { layerMask: 0xffffffff, selfShadows: false, opacity: .82 })] })
   const light = entity('platformer-light', 'Level Light', [-2, -1], [component('platformer-light', 'Light2D', { lightType: 'Point', color: { r: 255, g: 226, b: 178 }, intensity: .9, range: 10, innerAngle: 30, outerAngle: 55, areaSize: { x: 4, y: 2 }, layerMask: 0xffffffff, castsShadows: true, shadowSoftness: .58 })])
-  const platformTiles = Array(32 * 18).fill(-1).map((_, index) => Math.floor(index / 32) < 2 ? 1 : index % 19 === 0 && Math.floor(index / 32) === 2 ? 0 : -1)
+  const platformTiles = Array(32 * 18).fill(-1).map(/* 根据 Math.floor(index / 32) < 2 的真假，分别返回 1 或 index % 19 === 0 && Math.floor(index / 32) === 2 ? 0 : -1。 */ (_, index) => Math.floor(index / 32) < 2 ? 1 : index % 19 === 0 && Math.floor(index / 32) === 2 ? 0 : -1)
   const tileMap = entity('platformer-tilemap', 'World TileMap', [0, 0], [component('platformer-tilemap', 'TileMap2D', { width: 32, height: 18, tileSize: { x: 1, y: 1 }, chunkSize: 16, tiles: platformTiles, tileSetAsset: `asset://${tileSetId}`, layers: [{ id: 'terrain', name: 'Terrain', visible: true, locked: false, opacity: 1, blendMode: 'Alpha', parallax: { x: 1, y: 1 }, zOrder: 0, collisionEnabled: true, navigationEnabled: true, occlusionEnabled: true, tiles: platformTiles, transforms: Array(32 * 18).fill(0) }], activeLayer: 0, streamingEnabled: true, streamingRadius: 3, bakeCollision: true, bakeNavigation: true, bakeOccluders: true })])
   const navigation = entity('platformer-navigation', 'Platform Navigation', [0, 0], [component('platformer-navigation', 'NavigationRegion2D', { polygon: [{ x: -16, y: -9 }, { x: 16, y: -9 }, { x: 16, y: 9 }, { x: -16, y: 9 }], navigationMode: 'Grid', source: 'TileMap', sourceEntityUuid: stableUuid('entity:platformer-tilemap'), cellSize: .5, agentRadius: .4, navigationLayer: 1, navigationMask: 1, traversalCost: 1 })])
   const tutorialScene = scene('platformer-main', 'Level 01', [camera('platformer-camera'), tileMap, navigation, light, ground, platform, player, ...canvasWithLabel('platformer-ui', 'Platformer')])
@@ -613,7 +614,7 @@ function platformerTemplate(name: string): JsonRecord {
   return result
 }
 
-function topDownTemplate(name: string): JsonRecord {
+/** 构建俯视移动世界，配置巡逻敌人、预制实例化、触发存档切换场景及瓦片导航。 */ function topDownTemplate(name: string): JsonRecord {
   const scriptId = stableUuid('asset:top-down-controller')
   const enemyScriptId = stableUuid('asset:top-down-enemy')
   const enemyPrefabId = stableUuid('asset:top-enemy-prefab')
@@ -623,7 +624,7 @@ function topDownTemplate(name: string): JsonRecord {
   const player = shape('top-player', 'Player', [0, 0], [1.2, 1.2], { type: 'Circle', color: [94, 203, 181], scriptAsset: scriptId, extra: [component('top-player', 'ParticleEmitter2D', { emissionRate: 12, burst: 0, lifetime: 1, maxParticles: 128, initialVelocityMin: { x: -.5, y: -.5 }, initialVelocityMax: { x: .5, y: .5 }, startColor: { r: 94, g: 203, b: 181 }, endColor: { r: 94, g: 203, b: 181 }, startOpacity: 70, endOpacity: 0 })] })
   const enemy = shape('top-enemy', 'Enemy', [5, 0], [1.4, 1.4], { color: [242, 118, 118], body: 'Kinematic', scriptAsset: enemyScriptId })
   const trigger = shape('top-trigger', 'Exit Trigger', [8, 0], [2, 4], { color: [239, 190, 92], body: 'Static', sensor: true })
-  const topTiles = Array(40 * 24).fill(0).map((value, index) => index % 40 === 0 || index % 40 === 39 || Math.floor(index / 40) === 0 || Math.floor(index / 40) === 23 ? 1 : value)
+  const topTiles = Array(40 * 24).fill(0).map(/* 根据 index % 40 === 0 || index % 40 === 39 || Math.floor(index / 40) === 0 || Math.floor(index / 40) === 23 的真假，分别返回 1 或 value。 */ (value, index) => index % 40 === 0 || index % 40 === 39 || Math.floor(index / 40) === 0 || Math.floor(index / 40) === 23 ? 1 : value)
   const topMap = entity('top-down-tilemap', 'World TileMap', [0, 0], [component('top-down-tilemap', 'TileMap2D', { width: 40, height: 24, tileSize: { x: 1, y: 1 }, chunkSize: 16, tiles: topTiles, tileSetAsset: `asset://${tileSetId}`, layers: [{ id: 'ground', name: 'Ground', visible: true, locked: false, opacity: 1, blendMode: 'Alpha', parallax: { x: 1, y: 1 }, zOrder: -10, collisionEnabled: true, navigationEnabled: true, occlusionEnabled: true, tiles: topTiles, transforms: Array(40 * 24).fill(0) }], activeLayer: 0, streamingEnabled: true, streamingRadius: 3, bakeCollision: true, bakeNavigation: true, bakeOccluders: true })])
   const topNavigation = entity('top-down-navigation', 'World Navigation', [0, 0], [component('top-down-navigation', 'NavigationRegion2D', { polygon: [{ x: -19, y: -11 }, { x: 19, y: -11 }, { x: 19, y: 11 }, { x: -19, y: 11 }], navigationMode: 'Grid', source: 'TileMap', sourceEntityUuid: stableUuid('entity:top-down-tilemap'), cellSize: .5, agentRadius: .5, navigationLayer: 1, navigationMask: 1, traversalCost: 1, links: [] })])
   const level = scene('top-level', 'World', [camera('top-camera'), topMap, topNavigation, player, enemy, trigger, ...canvasWithLabel('top-ui', 'Top-down')])
@@ -642,14 +643,14 @@ function topDownTemplate(name: string): JsonRecord {
   return result
 }
 
-function physicsTemplate(name: string): JsonRecord {
+/** 以相互独立的实体对展示距离关节和弹性绳，避免同一对物体被重复约束。 */ function physicsTemplate(name: string): JsonRecord {
   // Joint and rope examples use separate bodies. Coupling two independent
   // constraints across the same pair creates an over-constrained tutorial.
   const jointAnchor = shape('sandbox-joint-anchor', 'Joint Anchor', [-5, 0], [.8, .8], { body: 'Static', color: [132, 148, 166], friction: .8 })
   const jointedBox = shape('sandbox-box', 'Jointed Box', [-5, -3], [2, 2], { color: [103, 162, 255], restitution: .2, extra: [component('sandbox-box', 'DistanceJoint2D', { targetEntityUuid: stableUuid('entity:sandbox-joint-anchor'), distance: 3, stiffness: 240, damping: 28, collideConnected: false })] })
   const ropeEnd = shape('sandbox-rope-end', 'Rope End', [1, -2], [1.4, 1.4], { color: [120, 205, 176], restitution: .25 })
   const ropeBall = shape('sandbox-ball', 'Rope Ball', [5, -2], [1.8, 1.8], { type: 'Circle', color: [236, 154, 92], restitution: .7 })
-  const anchors = [ropeEnd, ropeBall].map(value => ({ entityUuid: value.uuid, mode: 'center', localPoint: { x: 0, y: 0 }, index: 0, sideT: .5 }))
+  const anchors = [ropeEnd, ropeBall].map(/** 构造并返回记录 { entityUuid: value.uuid, mode: 'center', localPoint: { x: 0, y: 0 }, index: 0, sideT: .5 }，字段按当前实参及捕获状态求值。 */ value => ({ entityUuid: value.uuid, mode: 'center', localPoint: { x: 0, y: 0 }, index: 0, sideT: .5 }))
   const rope = {
     uuid: stableUuid('connection:sandbox-rope'), name: 'Elastic Rope', type: 'rope', route: 'manual', anchors,
     manualPoints: [{ x: 1, y: -2 }, { x: 3, y: -.8 }, { x: 5, y: -2 }], manualSegments: [], restLengths: [],
@@ -659,13 +660,13 @@ function physicsTemplate(name: string): JsonRecord {
   return project(name, 'physics-sandbox', [scene('sandbox', 'Physics Playground', [camera('sandbox-camera'), shape('sandbox-ground', 'Ground', [0, -5], [20, 1], { body: 'Static', color: [89, 102, 116], friction: .85 }), jointAnchor, jointedBox, ropeEnd, ropeBall, ...canvasWithLabel('sandbox-ui', 'Physics Sandbox')], [rope])])
 }
 
-function collisionLabTemplate(name: string): JsonRecord {
+/** 构建薄墙高速连续碰撞、旋转斜坡、传感区及不同摩擦弹性物体的物理实验场景。 */ function collisionLabTemplate(name: string): JsonRecord {
   const ramp = shape('collision-lab-ramp', 'Rotated Ramp', [-3.4, -1.5], [6.5, .65], { body: 'Static', color: [104, 120, 139], friction: .9 })
-  const rampTransform = (ramp.components as JsonRecord[]).find(value => value.kind === 'Transform2D')?.data as JsonRecord
+  const rampTransform = (ramp.components as JsonRecord[]).find(/* 比较 value.kind 与 'Transform2D'，返回严格相等的判断结果。 */ value => value.kind === 'Transform2D')?.data as JsonRecord
   rampTransform.rotation = .24
   const bullet = setInitialVelocity(shape('collision-lab-bullet', 'CCD Bullet', [-8.5, 2.6], [.24, .24], { type: 'Circle', color: [255, 202, 91], restitution: .2, friction: .05, continuous: true }), 72, 0)
   const sensor = shape('collision-lab-sensor', 'Sensor Zone', [5.8, 0], [2.4, 3.2], { body: 'Static', sensor: true, color: [112, 207, 179] })
-  const sensorRenderer = (sensor.components as JsonRecord[]).find(value => value.kind === 'ShapeRenderer2D')?.data as JsonRecord
+  const sensorRenderer = (sensor.components as JsonRecord[]).find(/* 比较 value.kind 与 'ShapeRenderer2D'，返回严格相等的判断结果。 */ value => value.kind === 'ShapeRenderer2D')?.data as JsonRecord
   sensorRenderer.opacity = 28
   sensorRenderer.strokeOpacity = 100
   sensorRenderer.strokeWidth = .08
@@ -683,7 +684,7 @@ function collisionLabTemplate(name: string): JsonRecord {
   return project(name, 'collision-lab', [labScene], [], `---\ndismissible: true\ntemplate: collision-lab\n---\n# Collision & CCD Lab\n\nPress **Play** and open **Debug → Physics**. The yellow bullet uses continuous collision against a thin wall; the ramp exercises rotated contacts; the translucent green object is a sensor; the remaining bodies compare restitution and friction.`)
 }
 
-function renderingLabTemplate(name: string): JsonRecord {
+/** 构建形状、图像、世界文字、粒子和点光源组合场景，启用照明供设计与游戏视图比较。 */ function renderingLabTemplate(name: string): JsonRecord {
   const spriteId = stableUuid('asset:rendering-lab-sprite')
   const sprite = entity('rendering-lab-sprite', 'Sprite Sample', [4.6, 1.6], [component('rendering-lab-sprite', 'SpriteRenderer2D', {
     spriteAsset: `asset://${spriteId}`, tint: { r: 255, g: 255, b: 255 }, opacity: 100, size: { x: 2.3, y: 2.3 }, pivot: { x: .5, y: .5 }, flipX: false, flipY: false,
@@ -710,7 +711,7 @@ function renderingLabTemplate(name: string): JsonRecord {
   return result
 }
 
-function uiElement(seed: string, name: string, parentUuid: string, position: [number, number], size: [number, number], kind: string, data: JsonRecord): JsonRecord {
+/** 创建带矩形布局和无障碍元信息的 UI 实体，将按钮标题移到文字组件并同步父级。 */ function uiElement(seed: string, name: string, parentUuid: string, position: [number, number], size: [number, number], kind: string, data: JsonRecord): JsonRecord {
   const interactive = kind === 'Button' || kind === 'Slider' || kind === 'Checkbox' || kind === 'TextInput'
   const order = Number(data.readingOrder ?? data.tabIndex ?? 0)
   const inferredLabel = String(data.accessibilityLabel ?? (kind === 'Checkbox' ? data.label : kind === 'TextInput' ? data.placeholder : kind === 'Button' ? data.text : '') ?? '').trim()
@@ -729,7 +730,7 @@ function uiElement(seed: string, name: string, parentUuid: string, position: [nu
   return result
 }
 
-function uiShowcaseTemplate(name: string): JsonRecord {
+/** 构建响应画布与输入、按钮、复选框、进度、滚动容器，附加主题、本地化和导航配置。 */ function uiShowcaseTemplate(name: string): JsonRecord {
   const canvasUuid = stableUuid('entity:ui-showcase-canvas')
   const canvas = entity('ui-showcase-canvas', 'Responsive Canvas', [0, 0], [
     component('ui-showcase-canvas', 'RectTransform', { parentUuid: null, anchorPreset: 'stretch', position: { x: 0, y: 0 }, size: { x: 1920, y: 1080 }, minSize: { x: 320, y: 180 }, maxSize: { x: 7680, y: 4320 }, flexGrow: 1, flexShrink: 1 }),
@@ -754,7 +755,7 @@ function uiShowcaseTemplate(name: string): JsonRecord {
   return result
 }
 
-function networkedOptionalTemplate(name: string): JsonRecord {
+/** 构建两实体网络示例并登记可选离线网络包，预置复制和无头测试配置但默认关闭联网。 */ function networkedOptionalTemplate(name: string): JsonRecord {
   const first = shape('network-player-one', 'Server Player', [-3, 0], [1.4, 1.4], { type: 'Circle', color: [92, 181, 255], body: 'Kinematic' })
   const second = shape('network-player-two', 'Remote Player', [3, 0], [1.4, 1.4], { type: 'Circle', color: [242, 153, 92], body: 'Kinematic' })
   const result = project(name, 'networked-optional', [scene('network-arena', 'Network Arena', [camera('network-camera'), first, second, ...canvasWithLabel('network-ui', 'Network Arena')])])
@@ -765,18 +766,18 @@ function networkedOptionalTemplate(name: string): JsonRecord {
   ;((((result.packages as JsonRecord).installed as JsonRecord[])[0].manifest as JsonRecord).engine) = '>=2.9.0 <27.0.0'
   ;((result.projectSettings as JsonRecord).production as JsonRecord) = {
     performance: { traceCapacity: 600, memoryBudgetMb: 300, assetBudgetMb: 512, leakWindowFrames: 600, lifetimeCapacity: 2000 }, replay: { seed: 1313822273, capacity: 3600, strictChecksums: true }, testing: { defaultTimeoutMs: 10000, tests: [{ id: 'network-headless', name: 'Network headless smoke', kind: 'headless', sceneUuid: String((result.scenes as JsonRecord[])[0].uuid), steps: 120, timeoutMs: 10000, captureScreenshot: false, assertions: [{ kind: 'finitePhysics', target: '', expected: 'true' }, { kind: 'noRuntimeErrors', target: '', expected: 'true' }] }] }, data: { saveSchemaVersion: 1, saveMigrations: [] }, jobs: { maxWorkers: 2, maxQueued: 256, timeoutMs: 15000 },
-    networking: { enabled: false, role: 'host', transport: 'websocket', endpoint: 'ws://127.0.0.1:7777', bindAddress: '127.0.0.1:7777', snapshotRate: 20, interpolationMs: 100, rollbackFrames: 120, bandwidthKbps: 256, reconnect: true, replicatedEntities: [first, second].map(value => ({ entityUuid: value.uuid, authority: 'server', properties: ['transform', 'rotation', 'velocity'], interpolate: true, predict: true })) }
+    networking: { enabled: false, role: 'host', transport: 'websocket', endpoint: 'ws://127.0.0.1:7777', bindAddress: '127.0.0.1:7777', snapshotRate: 20, interpolationMs: 100, rollbackFrames: 120, bandwidthKbps: 256, reconnect: true, replicatedEntities: [first, second].map(/** 构造并返回记录 { entityUuid: value.uuid, authority: 'server', properties: ['transform', 'rotation', 'velocity'], interpolate: true, predict: true }，字段按当前实参及捕获状态求值。 */ value => ({ entityUuid: value.uuid, authority: 'server', properties: ['transform', 'rotation', 'velocity'], interpolate: true, predict: true })) }
   }
   return result
 }
 
-function templateVariant(name: string, id: ProjectTemplateId, basedOn: string, factory: (name: string) => JsonRecord): JsonRecord {
+/** 基于完整模板生成变体，替换模板身份和入门说明，并重算教程资源摘要。 */ function templateVariant(name: string, id: ProjectTemplateId, basedOn: string, factory: (name: string) => JsonRecord): JsonRecord {
   const result = factory(name)
   const metadata = result.projectMetadata as JsonRecord | undefined
   if (metadata) metadata.template = id
-  const tutorial = (result.assets as JsonRecord[] | undefined)?.find(asset => asset.path === 'Assets/Tutorials/Getting Started.md')
+  const tutorial = (result.assets as JsonRecord[] | undefined)?.find(/* 比较 asset.path 与 'Assets/Tutorials/Getting Started.md'，返回严格相等的判断结果。 */ asset => asset.path === 'Assets/Tutorials/Getting Started.md')
   if (tutorial) {
-    const descriptor = PROJECT_TEMPLATES.find(item => item.id === id)
+    const descriptor = PROJECT_TEMPLATES.find(/* 比较 item.id 与 id，返回严格相等的判断结果。 */ item => item.id === id)
     tutorial.source = `---\ndismissible: true\ntemplate: ${id}\nverifiedVariantOf: ${basedOn}\n---\n# ${descriptor?.name ?? name}\n\n${descriptor?.description ?? ''}\n\nThis verified template keeps the complete, playable ${basedOn} runtime foundation while presenting a focused ${id.replace(/-/g, ' ')} workflow. Press **Play**, inspect its configured Scene, Script, Debug, and Manage workspaces, then replace the sample art and rules without rebuilding project infrastructure.\n`
     tutorial.byteLength = String(tutorial.source).length
     const hash = sha256Bytes(assetSourceBytes(String(tutorial.source))), pipeline = tutorial.pipeline as JsonRecord | undefined
@@ -785,20 +786,20 @@ function templateVariant(name: string, id: ProjectTemplateId, basedOn: string, f
   return result
 }
 
-function decorativeShape(seed: string, name: string, position: [number, number], size: [number, number], color: [number, number, number], type: 'Box' | 'Circle' | 'Triangle' = 'Circle'): JsonRecord {
+/** 创建只保留变换和形状渲染的装饰实体，去除基础刚体与碰撞器。 */ function decorativeShape(seed: string, name: string, position: [number, number], size: [number, number], color: [number, number, number], type: 'Box' | 'Circle' | 'Triangle' = 'Circle'): JsonRecord {
   const result = shape(seed, name, position, size, { type, color, body: 'Static' })
-  result.components = (result.components as JsonRecord[]).filter(value => value.kind === 'Transform2D' || value.kind === 'ShapeRenderer2D')
+  result.components = (result.components as JsonRecord[]).filter(/* 先计算 value.kind === 'Transform2D'；仅当其为假值时求右侧 value.kind === 'ShapeRenderer2D'，返回短路求值结果。 */ value => value.kind === 'Transform2D' || value.kind === 'ShapeRenderer2D')
   return result
 }
 
-function authoredAddition(name: string, id: AddedTemplateId): JsonRecord {
-  const descriptor = PROJECT_TEMPLATES.find(value => value.id === id)!
+/** 按新增模板身份构建检查点游戏、物理实验或视觉场景，附加对应输入、脚本、教程和渲染设置。 */ function authoredAddition(name: string, id: AddedTemplateId): JsonRecord {
+  const descriptor = PROJECT_TEMPLATES.find(/* 比较 value.id 与 id，返回严格相等的判断结果。 */ value => value.id === id)!
   const bodies: JsonRecord[] = [], assets: JsonRecord[] = []
   const colors: [number, number, number][] = [[102, 178, 255], [120, 221, 187], [255, 182, 108], [200, 152, 255], [247, 133, 161], [238, 218, 129]]
-  const addBody = (suffix: string, position: [number, number], size: [number, number], options: Parameters<typeof shape>[4] = {}) => {
+  const addBody = /** 生成带物理配置的模板对象，加入待组装场景并返回其记录。 */ (suffix: string, position: [number, number], size: [number, number], options: Parameters<typeof shape>[4] = {}) => {
     const value = shape(`${id}-${suffix}`, suffix, position, size, options); bodies.push(value); return value
   }
-  const addArt = (suffix: string, position: [number, number], size: [number, number], color: [number, number, number], type: 'Box' | 'Circle' | 'Triangle' = 'Circle') => {
+  const addArt = /** 生成无物理装饰对象，加入待组装场景并返回其记录。 */ (suffix: string, position: [number, number], size: [number, number], color: [number, number, number], type: 'Box' | 'Circle' | 'Triangle' = 'Circle') => {
     const value = decorativeShape(`${id}-${suffix}`, suffix, position, size, color, type); bodies.push(value); return value
   }
   let gravity = descriptor.category === 'test' ? 9.80665 : 0
@@ -814,11 +815,11 @@ function authoredAddition(name: string, id: AddedTemplateId): JsonRecord {
     }
     const points = courses[id]!, timeLimit = id === 'checkpoint-sprint' ? 25 : id === 'target-circuit' ? 20 : 0
     const hazards: [number, number][] = id === 'slalom-run' ? [[-3, -.5], [0, .5], [3, -.5]] : id === 'orbit-dodge' ? [[3, 0], [-3, 0]] : id === 'hazard-crossing' ? [[-4, -2], [2, 0], [-1, 2]] : []
-    points.forEach((point, index) => {
+    points.forEach(/** 创建指定序号的检查点装饰，仅启用首个目标以匹配依次收集规则。 */ (point, index) => {
       const goal = addArt(`Checkpoint ${index + 1}`, point, [.8, .8], colors[1])
       goal.enabled = index === 0
     })
-    hazards.forEach((point, index) => addArt(`Hazard ${index + 1}`, point, [1.2, 1.2], colors[4]))
+    hazards.forEach(/* 调用 addArt(`Hazard ${index + 1}`, point, [1.2, 1.2], colors[4]) 并返回调用结果。 */ (point, index) => addArt(`Hazard ${index + 1}`, point, [1.2, 1.2], colors[4]))
     instructions = 'WASD / arrow keys move. Collect the green checkpoint; the next appears after collection. Avoid pink circles. R restarts, including after a win or loss.'
     // Rhai functions have their own scope. Lifecycle callbacks own the exported
     // state, so reset that state directly in each callback instead of a helper.
@@ -842,14 +843,14 @@ fn update(dt) {
   if x < -8.0 { x = -8.0; } else if x > 8.0 { x = 8.0; }
   if y < -4.5 { y = -4.5; } else if y > 4.5 { y = 4.5; }
   set_position(x, y);
-  ${hazards.map(([hx, hy], index) => {
+  ${hazards.map(/** 按关卡生成危险物运动与圆形命中检测源码，命中时结束游戏并显示重启提示。 */ ([hx, hy], index) => {
     const moving = id === 'orbit-dodge' || id === 'hazard-crossing'
     const x = id === 'orbit-dodge' ? `cos(elapsed * ${index ? '1.3' : '1.0'} + ${index ? '3.141592653589793' : '0.0'}) * ${index ? '5.0' : '3.0'}` : id === 'hazard-crossing' ? `sin(elapsed * ${1 + index * .3} + ${index.toFixed(1)}) * 6.0` : hx.toFixed(1)
     const y = id === 'orbit-dodge' ? `sin(elapsed * ${index ? '1.3' : '1.0'} + ${index ? '3.141592653589793' : '0.0'}) * 2.5` : hy.toFixed(1)
     return `let hx${index} = ${x}; let hy${index} = ${y};\n  ${moving ? `entity_set_position(find_entity_handle("Hazard ${index + 1}"), hx${index}, hy${index});` : ''}\n  if (x - hx${index}) * (x - hx${index}) + (y - hy${index}) * (y - hy${index}) < 0.81 { finished = true; ui_set_text_on(find_entity_handle("Scene Title"), "Hazard hit | R to restart"); return; }`
   }).join('\n  ')}
   ${timeLimit ? `if elapsed >= ${timeLimit}.0 { finished = true; ui_set_text_on(find_entity_handle("Scene Title"), "Time expired | R to restart"); return; }` : ''}
-  let xs = [${points.map(point => point[0].toFixed(1)).join(', ')}]; let ys = [${points.map(point => point[1].toFixed(1)).join(', ')}];
+  let xs = [${points.map(/* 调用 point[0].toFixed(1) 并返回调用结果。 */ point => point[0].toFixed(1)).join(', ')}]; let ys = [${points.map(/* 调用 point[1].toFixed(1) 并返回调用结果。 */ point => point[1].toFixed(1)).join(', ')}];
   let dx = x - xs[checkpoint]; let dy = y - ys[checkpoint];
   if dx * dx + dy * dy < 0.64 {
     entity_set_enabled(find_entity_handle("Checkpoint " + (checkpoint + 1)), false);
@@ -924,7 +925,7 @@ fn update(dt) {
     }
     if (rain) {
       const foreground = [addArt('Silhouette Base', [0, -4.3], [20, 1.2], [49, 58, 76], 'Box'), addArt('Shelter', [0, -1.5], [3.5, 4.6], [66, 79, 100], 'Box')]
-      for (const object of foreground) ((object.components as JsonRecord[]).find(part => part.kind === 'ShapeRenderer2D')!.data as JsonRecord).orderInLayer = 20
+      for (const object of foreground) ((object.components as JsonRecord[]).find(/* 比较 part.kind 与 'ShapeRenderer2D'，返回严格相等的判断结果。 */ part => part.kind === 'ShapeRenderer2D')!.data as JsonRecord).orderInLayer = 20
     }
   }
   const title = descriptor.category === 'game' ? `${descriptor.name} | WASD / arrows | R restart` : descriptor.name
@@ -932,7 +933,7 @@ fn update(dt) {
   ;(main.globalSettings as JsonRecord).gravity = gravity
   const result = project(name, id, [main], assets, `---\ndismissible: true\ntemplate: ${id}\n---\n# ${descriptor.name}\n\n${descriptor.description}\n\n${instructions}\n\n## Edit and verify\n\nSelect named objects in Scene and change one component at a time. Play checks runtime behavior; Stop restores authored values. Save, reopen, and use Manage → Build to verify persistence and export. ${descriptor.category === 'game' ? 'These are small complete checkpoint games; edit CheckpointGame.rhai to change course rules. All movement and hit tests use world units.' : 'Physics tests are teaching fixtures, not numerical certification. Particle renderings need Play to emit.'}\n`)
   if (descriptor.category === 'game') {
-    const bind = (code: string, scale: number) => ({ device: 'keyboard', code, scale, x: 0, y: 0, gamepad: 0, deadzone: .15 })
+    const bind = /** 构造并返回记录 { device: 'keyboard', code, scale, x: 0, y: 0, gamepad: 0, deadzone: .15 }，字段按当前实参及捕获状态求值。 */ (code: string, scale: number) => ({ device: 'keyboard', code, scale, x: 0, y: 0, gamepad: 0, deadzone: .15 })
     ;(result.projectSettings as JsonRecord).inputMap = [
       { name: 'MoveHorizontal', kind: 'axis', bindings: [bind('KeyA', -1), bind('ArrowLeft', -1), bind('KeyD', 1), bind('ArrowRight', 1)] },
       { name: 'MoveVertical', kind: 'axis', bindings: [bind('KeyW', 1), bind('ArrowUp', 1), bind('KeyS', -1), bind('ArrowDown', -1)] },
@@ -956,25 +957,25 @@ const TEMPLATE_FACTORIES: Record<Exclude<ProjectTemplateId, AddedTemplateId>, (n
   snake: snakeTemplate,
   pong: pongTemplate,
   breakout: breakoutTemplate,
-  'lighting-starter': name => templateVariant(name, 'lighting-starter', 'Rendering Lab', renderingLabTemplate),
-  'tile-world': name => templateVariant(name, 'tile-world', 'Top-down Scene', topDownTemplate),
-  'responsive-ui': name => templateVariant(name, 'responsive-ui', 'UI & Input Lab', uiShowcaseTemplate),
-  'particle-lab': name => templateVariant(name, 'particle-lab', 'Rendering Lab', renderingLabTemplate),
-  'audio-lab': name => templateVariant(name, 'audio-lab', 'UI & Input Lab', uiShowcaseTemplate),
-  'animation-lab': name => templateVariant(name, 'animation-lab', 'Platformer Scene', platformerTemplate),
-  'physics-cleanup': name => templateVariant(name, 'physics-cleanup', 'Mouse Knockout', mouseKnockoutTemplate),
-  'grid-chase': name => templateVariant(name, 'grid-chase', 'Snake', snakeTemplate)
+  'lighting-starter': /* 调用 templateVariant(name, 'lighting-starter', 'Rendering Lab', renderingLabTemplate) 并返回调用结果。 */ name => templateVariant(name, 'lighting-starter', 'Rendering Lab', renderingLabTemplate),
+  'tile-world': /* 调用 templateVariant(name, 'tile-world', 'Top-down Scene', topDownTemplate) 并返回调用结果。 */ name => templateVariant(name, 'tile-world', 'Top-down Scene', topDownTemplate),
+  'responsive-ui': /* 调用 templateVariant(name, 'responsive-ui', 'UI & Input Lab', uiShowcaseTemplate) 并返回调用结果。 */ name => templateVariant(name, 'responsive-ui', 'UI & Input Lab', uiShowcaseTemplate),
+  'particle-lab': /* 调用 templateVariant(name, 'particle-lab', 'Rendering Lab', renderingLabTemplate) 并返回调用结果。 */ name => templateVariant(name, 'particle-lab', 'Rendering Lab', renderingLabTemplate),
+  'audio-lab': /* 调用 templateVariant(name, 'audio-lab', 'UI & Input Lab', uiShowcaseTemplate) 并返回调用结果。 */ name => templateVariant(name, 'audio-lab', 'UI & Input Lab', uiShowcaseTemplate),
+  'animation-lab': /* 调用 templateVariant(name, 'animation-lab', 'Platformer Scene', platformerTemplate) 并返回调用结果。 */ name => templateVariant(name, 'animation-lab', 'Platformer Scene', platformerTemplate),
+  'physics-cleanup': /* 调用 templateVariant(name, 'physics-cleanup', 'Mouse Knockout', mouseKnockoutTemplate) 并返回调用结果。 */ name => templateVariant(name, 'physics-cleanup', 'Mouse Knockout', mouseKnockoutTemplate),
+  'grid-chase': /* 调用 templateVariant(name, 'grid-chase', 'Snake', snakeTemplate) 并返回调用结果。 */ name => templateVariant(name, 'grid-chase', 'Snake', snakeTemplate)
 }
 
-export function createTemplateProject(template: ProjectTemplateId, name: string): JsonRecord {
-  const factory = TEMPLATE_ADDITIONS_26_11.some(value => value.id === template)
-    ? (name: string) => authoredAddition(name, template as AddedTemplateId)
+/** 选择已登记模板生成器，补充三语操作指南并重算资源摘要，结构审计通过后返回项目。 */ export function createTemplateProject(template: ProjectTemplateId, name: string): JsonRecord {
+  const factory = TEMPLATE_ADDITIONS_26_11.some(/* 比较 value.id 与 template，返回严格相等的判断结果。 */ value => value.id === template)
+    ? /* 调用 authoredAddition(name, template as AddedTemplateId) 并返回调用结果。 */ (name: string) => authoredAddition(name, template as AddedTemplateId)
     : TEMPLATE_FACTORIES[template as keyof typeof TEMPLATE_FACTORIES]
   if (!factory) throw new Error(`Unknown project template: ${String(template).slice(0, 80)}`)
   const result = factory(name)
-  const tutorial = (result.assets as JsonRecord[] | undefined)?.find(asset => asset.path === 'Assets/Tutorials/Getting Started.md')
+  const tutorial = (result.assets as JsonRecord[] | undefined)?.find(/* 比较 asset.path 与 'Assets/Tutorials/Getting Started.md'，返回严格相等的判断结果。 */ asset => asset.path === 'Assets/Tutorials/Getting Started.md')
   if (tutorial) {
-    const instructions = (['en', 'de', 'zh'] as const).map(locale => {
+    const instructions = (['en', 'de', 'zh'] as const).map(/** 按语言读取模板指南，将操作、预期结果和使用要求渲染为教程 Markdown。 */ locale => {
       const guide = templateGuide(template, locale)
       const labels = locale === 'de' ? ['Steuerung und Einrichtung', 'Erwartetes Ergebnis', 'Voraussetzungen'] : locale === 'zh' ? ['操作与准备', '预期结果', '使用要求'] : ['Controls and setup', 'Expected result', 'Requirements']
       return `## ${labels[0]} (${locale})\n\n${guide.controls}\n\n### ${labels[1]}\n\n${guide.expected}\n\n${labels[2]}: ${guide.requirements.join(' · ')}\n`
@@ -990,30 +991,30 @@ export function createTemplateProject(template: ProjectTemplateId, name: string)
   return result
 }
 
-export function auditTemplateProject(project: JsonRecord, template: ProjectTemplateId): string[] {
+/** 检查模板场景、可见几何和登记信息，并按模板契约确认组件、资源、输入及脚本示例配置。 */ export function auditTemplateProject(project: JsonRecord, template: ProjectTemplateId): string[] {
   const scenes = Array.isArray(project.scenes) ? project.scenes as JsonRecord[] : []
-  const entities = scenes.flatMap(scene => Array.isArray(scene.entities) ? scene.entities as JsonRecord[] : [])
-  const components = new Set(entities.flatMap(entity => Array.isArray(entity.components) ? (entity.components as JsonRecord[]).map(item => String(item.kind)) : []))
+  const entities = scenes.flatMap(/* 根据 Array.isArray(scene.entities) 的真假，分别返回 scene.entities as JsonRecord[] 或 []。 */ scene => Array.isArray(scene.entities) ? scene.entities as JsonRecord[] : [])
+  const components = new Set(entities.flatMap(/* 根据 Array.isArray(entity.components) 的真假，分别返回 (entity.components as JsonRecord[]).map(item => String(item.kind)) 或 []。 */ entity => Array.isArray(entity.components) ? (entity.components as JsonRecord[]).map(/* 调用 String(item.kind) 并返回调用结果。 */ item => String(item.kind)) : []))
   const assets = Array.isArray(project.assets) ? project.assets as JsonRecord[] : []
-  const assetTypes = new Set(assets.map(asset => String(asset.assetType)))
-  const connections = scenes.flatMap(scene => Array.isArray(scene.connections) ? scene.connections as JsonRecord[] : [])
+  const assetTypes = new Set(assets.map(/* 调用 String(asset.assetType) 并返回调用结果。 */ asset => String(asset.assetType)))
+  const connections = scenes.flatMap(/* 根据 Array.isArray(scene.connections) 的真假，分别返回 scene.connections as JsonRecord[] 或 []。 */ scene => Array.isArray(scene.connections) ? scene.connections as JsonRecord[] : [])
   const failures: string[] = []
-  const requireComponents = (...kinds: string[]) => { for (const kind of kinds) if (!components.has(kind)) failures.push(`missing ${kind}`) }
-  const descriptor = PROJECT_TEMPLATES.find(value => value.id === template)
+  const requireComponents = /** 将缺失的必需组件种类追加到模板审计失败列表。 */ (...kinds: string[]) => { for (const kind of kinds) if (!components.has(kind)) failures.push(`missing ${kind}`) }
+  const descriptor = PROJECT_TEMPLATES.find(/* 比较 value.id 与 template，返回严格相等的判断结果。 */ value => value.id === template)
   const auditTemplate: ProjectTemplateId = ({
     'lighting-starter': 'rendering-lab', 'tile-world': 'top-down', 'responsive-ui': 'ui-showcase',
     'particle-lab': 'rendering-lab', 'audio-lab': 'ui-showcase', 'animation-lab': 'platformer',
     'physics-cleanup': 'mouse-knockout', 'grid-chase': 'snake'
   } as Partial<Record<ProjectTemplateId, ProjectTemplateId>>)[template] ?? template
   const inputMap = ((project.projectSettings as JsonRecord | undefined)?.inputMap as JsonRecord[] | undefined) ?? []
-  const scripts = assets.filter(asset => asset.assetType === 'script').map(asset => String(asset.source)).join('\n')
-  const componentData = (entityName: string, kind: string): JsonRecord | undefined => {
-    const sourceEntity = entities.find(item => item.name === entityName)
-    return Array.isArray(sourceEntity?.components) ? ((sourceEntity.components as JsonRecord[]).find(item => item.kind === kind)?.data as JsonRecord | undefined) : undefined
+  const scripts = assets.filter(/* 比较 asset.assetType 与 'script'，返回严格相等的判断结果。 */ asset => asset.assetType === 'script').map(/* 调用 String(asset.source) 并返回调用结果。 */ asset => String(asset.source)).join('\n')
+  const componentData = /** 按实体名称和组件种类读取模板组件数据，未找到时返回 undefined。 */ (entityName: string, kind: string): JsonRecord | undefined => {
+    const sourceEntity = entities.find(/* 比较 item.name 与 entityName，返回严格相等的判断结果。 */ item => item.name === entityName)
+    return Array.isArray(sourceEntity?.components) ? ((sourceEntity.components as JsonRecord[]).find(/* 比较 item.kind 与 kind，返回严格相等的判断结果。 */ item => item.kind === kind)?.data as JsonRecord | undefined) : undefined
   }
-  const entityY = (name: string): number => {
-    const sourceEntity = entities.find(item => item.name === name)
-    const transform = Array.isArray(sourceEntity?.components) ? (sourceEntity.components as JsonRecord[]).find(item => item.kind === 'Transform2D') : undefined
+  const entityY = /** 读取指定模板实体的变换纵坐标，缺失时转换为 NaN 供断言失败。 */ (name: string): number => {
+    const sourceEntity = entities.find(/* 比较 item.name 与 name，返回严格相等的判断结果。 */ item => item.name === name)
+    const transform = Array.isArray(sourceEntity?.components) ? (sourceEntity.components as JsonRecord[]).find(/* 比较 item.kind 与 'Transform2D'，返回严格相等的判断结果。 */ item => item.kind === 'Transform2D') : undefined
     return Number(((transform?.data as JsonRecord | undefined)?.position as JsonRecord | undefined)?.y)
   }
   if (!descriptor) failures.push('template is missing from the launcher catalog')
@@ -1025,7 +1026,7 @@ export function auditTemplateProject(project: JsonRecord, template: ProjectTempl
     for (const sourceEntity of sceneEntities) {
       if (!['Box', 'Circle', 'Triangle'].includes(String(sourceEntity.entityType))) failures.push(`${sourceEntity.name ?? 'entity'} uses an unsupported runtime shape`)
       const renderers = Array.isArray(sourceEntity.components)
-        ? (sourceEntity.components as JsonRecord[]).filter(item => ['ShapeRenderer2D', 'SpriteRenderer2D', 'TextRenderer2D', 'Panel', 'Image', 'Text', 'Button', 'Slider', 'ProgressBar', 'Checkbox', 'TextInput'].includes(String(item.kind)))
+        ? (sourceEntity.components as JsonRecord[]).filter(/** 筛选具有可见内容的渲染及 UI 组件，用于模板透明度、图层和几何检查。 */ item => ['ShapeRenderer2D', 'SpriteRenderer2D', 'TextRenderer2D', 'Panel', 'Image', 'Text', 'Button', 'Slider', 'ProgressBar', 'Checkbox', 'TextInput'].includes(String(item.kind)))
         : []
       for (const renderer of renderers) {
         const data = renderer.data as JsonRecord | undefined
@@ -1035,8 +1036,8 @@ export function auditTemplateProject(project: JsonRecord, template: ProjectTempl
         if (!layers.has(sortingLayer)) failures.push(`${sourceEntity.name ?? 'entity'} uses undeclared sorting layer ${sortingLayer}`)
         if (data?.shape === 'Rectangle') {
           const vertices = Array.isArray(data.vertices) ? data.vertices as JsonRecord[] : []
-          const xs = vertices.map(vertex => Number(vertex.x)).filter(Number.isFinite)
-          const ys = vertices.map(vertex => Number(vertex.y)).filter(Number.isFinite)
+          const xs = vertices.map(/* 调用 Number(vertex.x) 并返回调用结果。 */ vertex => Number(vertex.x)).filter(Number.isFinite)
+          const ys = vertices.map(/* 调用 Number(vertex.y) 并返回调用结果。 */ vertex => Number(vertex.y)).filter(Number.isFinite)
           const width = xs.length ? Math.max(...xs) - Math.min(...xs) : 0
           const height = ys.length ? Math.max(...ys) - Math.min(...ys) : 0
           if (vertices.length < 4 || width < .1 || height < .1) failures.push(`${sourceEntity.name ?? 'entity'} has no visible rectangle geometry`)
@@ -1047,7 +1048,7 @@ export function auditTemplateProject(project: JsonRecord, template: ProjectTempl
   if (auditTemplate === 'mouse-knockout') {
     requireComponents('RigidBody2D', 'BoxCollider2D', 'MouseFollower2D', 'Script2D', 'Canvas', 'Panel', 'Text')
     for (const api of ['view_min_x(', 'view_max_x(', 'spawn_at(', 'timer_start(', 'query_group(', 'entity_destroy(', 'score_add(', 'entity_set_enabled(', 'ui_set_text_on(']) if (!scripts.includes(api)) failures.push(`missing ${api} Mouse Knockout tutorial call`)
-    const prefab = assets.find(asset => asset.assetType === 'prefab' && asset.name === 'Knockout Target.nova-prefab')
+    const prefab = assets.find(/* 先计算 asset.assetType === 'prefab'；仅当其为真值时求右侧 asset.name === 'Knockout Target.nova-prefab'，返回短路求值结果。 */ asset => asset.assetType === 'prefab' && asset.name === 'Knockout Target.nova-prefab')
     try {
       const document = JSON.parse(String(prefab?.source ?? 'null')) as JsonRecord | null
       const bundle = document?.bundle as JsonRecord | undefined
@@ -1058,10 +1059,10 @@ export function auditTemplateProject(project: JsonRecord, template: ProjectTempl
     if (Number((scenes[0]?.globalSettings as JsonRecord | undefined)?.gravity) !== 0) failures.push('Mouse Knockout arena must use zero gravity')
   } else if (auditTemplate === 'snake') {
     requireComponents('RigidBody2D', 'BoxCollider2D', 'EllipseCollider2D', 'Script2D', 'Canvas', 'Text')
-    if (entities.filter(item => String(item.name).startsWith('Snake Segment')).length !== 8) failures.push('Snake requires three starting segments and five growth segments')
-    if (entities.filter(item => String(item.name).startsWith('Snake Segment') && item.enabled !== false).length !== 3) failures.push('Snake must start with exactly three enabled body segments')
+    if (entities.filter(/* 调用 String(item.name).startsWith('Snake Segment') 并返回调用结果。 */ item => String(item.name).startsWith('Snake Segment')).length !== 8) failures.push('Snake requires three starting segments and five growth segments')
+    if (entities.filter(/* 先计算 String(item.name).startsWith('Snake Segment')；仅当其为真值时求右侧 item.enabled !== false，返回短路求值结果。 */ item => String(item.name).startsWith('Snake Segment') && item.enabled !== false).length !== 3) failures.push('Snake must start with exactly three enabled body segments')
     for (const api of ['input_pressed(', 'timer_start(', 'timer_cancel(', 'signal_emit(', 'on_trigger_enter', 'ui_set_text(', 'entity_set_enabled(']) if (!scripts.includes(api)) failures.push(`missing ${api} Snake gameplay call`)
-    if (!entities.some(item => item.name === 'Game Over Panel' && item.enabled === false)) failures.push('Snake is missing its initially hidden game-over UI')
+    if (!entities.some(/* 先计算 item.name === 'Game Over Panel'；仅当其为真值时求右侧 item.enabled === false，返回短路求值结果。 */ item => item.name === 'Game Over Panel' && item.enabled === false)) failures.push('Snake is missing its initially hidden game-over UI')
     const settings = (project.projectSettings as JsonRecord | undefined)?.build as JsonRecord | undefined
     if (settings?.packageIntoExecutable !== true) failures.push('Snake must default to portable desktop packaging')
   } else if (auditTemplate === 'platformer') {
@@ -1074,7 +1075,7 @@ export function auditTemplateProject(project: JsonRecord, template: ProjectTempl
     if (scenes.length < 2) failures.push('missing scene transition target')
     for (const type of ['prefab', 'script']) if (!assetTypes.has(type)) failures.push(`missing ${type} asset`)
     for (const api of ['instantiate(', 'scene_load(', 'save_commit(']) if (!scripts.includes(api)) failures.push(`missing ${api} tutorial call`)
-    const prefab = assets.find(asset => asset.assetType === 'prefab')
+    const prefab = assets.find(/* 比较 asset.assetType 与 'prefab'，返回严格相等的判断结果。 */ asset => asset.assetType === 'prefab')
     try {
       const document = JSON.parse(String(prefab?.source ?? 'null')) as JsonRecord | null
       const bundle = document?.bundle as JsonRecord | undefined
@@ -1082,7 +1083,7 @@ export function auditTemplateProject(project: JsonRecord, template: ProjectTempl
     } catch { failures.push('top-down enemy prefab is invalid JSON') }
   } else if (auditTemplate === 'physics-sandbox') {
     requireComponents('RigidBody2D', 'DistanceJoint2D', 'BoxCollider2D', 'EllipseCollider2D')
-    if (!connections.some(connection => connection.type === 'rope')) failures.push('missing Rope2D connection')
+    if (!connections.some(/* 比较 connection.type 与 'rope'，返回严格相等的判断结果。 */ connection => connection.type === 'rope')) failures.push('missing Rope2D connection')
     if (!(entityY('Ground') < Math.min(entityY('Jointed Box'), entityY('Rope End'), entityY('Rope Ball')))) failures.push('sandbox bodies must start above the collision ground')
   } else if (auditTemplate === 'ui-showcase') {
     requireComponents('Canvas', 'Panel', 'Text', 'TextInput', 'Button', 'Checkbox', 'ProgressBar')
@@ -1090,7 +1091,7 @@ export function auditTemplateProject(project: JsonRecord, template: ProjectTempl
   } else if (auditTemplate === 'networked-optional') {
     const packages = project.packages as JsonRecord | undefined
     const installed = Array.isArray(packages?.installed) ? packages.installed as JsonRecord[] : []
-    if (!installed.some(item => (item.manifest as JsonRecord | undefined)?.id === 'top.whitelists.novaa.networking')) failures.push('missing optional networking package')
+    if (!installed.some(/* 比较 (item.manifest as JsonRecord | undefined)?.id 与 'top.whitelists.novaa.networking'，返回严格相等的判断结果。 */ item => (item.manifest as JsonRecord | undefined)?.id === 'top.whitelists.novaa.networking')) failures.push('missing optional networking package')
     const production = ((project.projectSettings as JsonRecord | undefined)?.production as JsonRecord | undefined)?.networking as JsonRecord | undefined
     if (production?.enabled !== false || !Array.isArray(production.replicatedEntities) || production.replicatedEntities.length !== 2) failures.push('optional networking must start offline with two replication descriptors')
   } else if (auditTemplate === 'collision-lab') {
@@ -1106,24 +1107,24 @@ export function auditTemplateProject(project: JsonRecord, template: ProjectTempl
     if (rendering?.lightingEnabled !== true) failures.push('rendering lab lighting is disabled')
   } else if (auditTemplate === 'pong') {
     requireComponents('RigidBody2D', 'BoxCollider2D', 'EllipseCollider2D', 'Script2D', 'Canvas', 'Panel', 'Text')
-    if (!['P1Vertical', 'P2Vertical'].every(action => inputMap.some(value => value.name === action))) failures.push('Pong two-player input actions are incomplete')
+    if (!['P1Vertical', 'P2Vertical'].every(/** 检查当前双人游戏动作是否已在输入映射中登记。 */ action => inputMap.some(/* 比较 value.name 与 action，返回严格相等的判断结果。 */ value => value.name === action))) failures.push('Pong two-player input actions are incomplete')
     if (componentData('Ball', 'RigidBody2D')?.continuousCollision !== 'Continuous') failures.push('Pong ball must use continuous collision detection')
     for (const contract of ['input_axis(', 'signal_emit("pong.point.', 'score_add(', 'ui_set_text_on(', 'winning_score = 7']) if (!scripts.includes(contract)) failures.push(`Pong is missing ${contract}`)
   } else if (auditTemplate === 'breakout') {
     requireComponents('RigidBody2D', 'BoxCollider2D', 'EllipseCollider2D', 'Script2D', 'Canvas', 'Panel', 'Text')
-    if (entities.filter(item => String(item.name).startsWith('Brick ')).length !== 24) failures.push('Breakout must contain exactly 24 authored bricks')
-    if (!inputMap.some(value => value.name === 'MoveHorizontal')) failures.push('Breakout movement action is missing')
+    if (entities.filter(/* 调用 String(item.name).startsWith('Brick ') 并返回调用结果。 */ item => String(item.name).startsWith('Brick ')).length !== 24) failures.push('Breakout must contain exactly 24 authored bricks')
+    if (!inputMap.some(/* 比较 value.name 与 'MoveHorizontal'，返回严格相等的判断结果。 */ value => value.name === 'MoveHorizontal')) failures.push('Breakout movement action is missing')
     if (componentData('Ball', 'RigidBody2D')?.continuousCollision !== 'Continuous') failures.push('Breakout ball must use continuous collision detection')
     for (const contract of ['on_collision_enter', 'destroy(', 'score_add(', 'signal_emit("breakout.brick"', 'score_get(', 'view_min_y(']) if (!scripts.includes(contract)) failures.push(`Breakout is missing ${contract}`)
   }
   if (descriptor?.category === 'game') {
     const settings = (project.projectSettings as JsonRecord | undefined)?.build as JsonRecord | undefined
     if (settings?.runtimeMode !== 'game' || settings?.packageIntoExecutable !== true || !settings.startupSceneUuid) failures.push('playable game must default to an executable startup scene')
-    if (!assets.some(asset => asset.assetType === 'script')) failures.push('playable game is missing gameplay scripts')
+    if (!assets.some(/* 比较 asset.assetType 与 'script'，返回严格相等的判断结果。 */ asset => asset.assetType === 'script')) failures.push('playable game is missing gameplay scripts')
   }
   return failures
 }
 
-export function createTemplateProjectJson(template: ProjectTemplateId, name: string): string {
+/* 调用 JSON.stringify(createTemplateProject(template, name)) 并返回调用结果。 */ export function createTemplateProjectJson(template: ProjectTemplateId, name: string): string {
   return JSON.stringify(createTemplateProject(template, name))
 }

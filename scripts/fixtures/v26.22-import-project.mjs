@@ -1,10 +1,11 @@
+/** 测试夹具：为 v26.22-import-project.mjs 提供受控数据或执行环境，限定于对应验证场景。 */
 import assert from 'node:assert/strict'
 import {readFile} from 'node:fs/promises'
 /** Populated import fixture shared by independent programmer and user audits. */
-export async function populateImportProject22(p,templates,assets,wasm){
+/** 结构说明（自动提取）：populateImportProject22；输入 p、templates、assets、wasm；直接调用 assert.ok、p.loadProject、wasm.module.migrate_project_json、templates.createTemplateProjectJson、create 等；写入 ids.font、image.settings.platformVariants[…]、image.settings.platformOverrides[…]、font.settings.fontSettings.fallbackAssetUuids 等；包含循环处理；等待异步结果。 */ export async function populateImportProject22(p,templates,assets,wasm){
  assert.ok(p.loadProject(wasm.module.migrate_project_json(templates.createTemplateProjectJson('empty','Import lifecycle'))))
  const ids={}
- function create(type,mime,bytes,extra={}){const record=assets.createTextAsset('Import '+type,'resource','{}','Assets');Object.assign(record,{assetType:type,mimeType:mime,source:'data:'+mime+';base64,'+bytes.toString('base64'),byteLength:bytes.length,...extra});ids[type]=record.uuid;return record}
+ /** 结构说明（自动提取）：create；输入 type、mime、bytes、extra；直接调用 assets.createTextAsset、Object.assign、bytes.toString；写入 ids[…]；返回路径包含 record。 */ function create(type,mime,bytes,extra={}){const record=assets.createTextAsset('Import '+type,'resource','{}','Assets');Object.assign(record,{assetType:type,mimeType:mime,source:'data:'+mime+';base64,'+bytes.toString('base64'),byteLength:bytes.length,...extra});ids[type]=record.uuid;return record}
  const image=create('image','image/svg+xml',Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><rect width="16" height="16" fill="#369"/></svg>'),{width:16,height:16})
  const wave=Buffer.alloc(96044);wave.write('RIFF');wave.writeUInt32LE(wave.length-8,4);wave.write('WAVEfmt ',8);wave.writeUInt32LE(16,16);wave.writeUInt16LE(1,20);wave.writeUInt16LE(1,22);wave.writeUInt32LE(48000,24);wave.writeUInt32LE(96000,28);wave.writeUInt16LE(2,32);wave.writeUInt16LE(16,34);wave.write('data',36);wave.writeUInt32LE(96000,40)
  const audio=create('audio','audio/wav',wave,{duration:1})

@@ -1,8 +1,9 @@
+/** 功能回归脚本：执行 verify-v26.04-interactions.mjs 对应场景，保留断言和证据输出。 */
 import { readFile,writeFile,mkdir } from 'node:fs/promises'
 import { dirname,join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-const root=dirname(dirname(fileURLToPath(import.meta.url))),read=path=>readFile(join(root,path),'utf8'),checks=[]
-const check=(id,passed,detail)=>checks.push({id,status:passed?'passed':'failed',detail})
+const root=dirname(dirname(fileURLToPath(import.meta.url))),read=/* 调用 readFile(join(root,path),'utf8') 并返回调用结果。 */ path=>readFile(join(root,path),'utf8'),checks=[]
+const check=/* 调用 checks.push({id,status:passed?'passed':'failed',detail}) 并返回调用结果。 */ (id,passed,detail)=>checks.push({id,status:passed?'passed':'failed',detail})
 const [bottom,inspector,database,interop,worker,production,resources,content,packageManager,build,pipeline]=await Promise.all(['src/components/EditorBottomPanel.vue','src/components/ContentAssetInspector.vue','src/assets/AssetDatabase.ts','src/assets/contentInteroperability.ts','src/assets/contentInteroperability.worker.ts','src/assets/assetProduction.ts','src/runtime/resources.ts','src/assets/contentLibrary26.ts','src/components/EcosystemStudioPanel.vue','src/components/BuildSettingsPanel.vue','src/assets/importPipeline.ts'].map(read))
 check('V2604-USER-IMPORT',bottom.includes('importAssetFiles')&&bottom.includes('import-queue')&&database.includes('importContentInterchangeAsync')&&pipeline.includes('validateImportSource'),'Import actions show queue state and reach format validation plus the worker/cache pipeline.')
 check('V2604-USER-REIMPORT',bottom.includes('reimportSelectedAsset')&&bottom.includes('compareSelectedImport')&&database.includes('reimportAsset')&&interop.includes('previousIds'),'Reimport compares provenance and preserves stable slice IDs before replacing the usable asset.')
@@ -15,5 +16,5 @@ check('V2604-WORKER-CACHE',interop.includes('resultCache')&&interop.includes("ty
 check('V2604-USER-OFFLINE',packageManager.includes('offline')&&packageManager.includes('provenance')&&packageManager.includes('permission'),'Offline packages expose provenance and permissions instead of loading silently.')
 check('V2604-USER-EXPORT',production.includes('buildContentClosure')&&production.includes('validateContentClosure')&&bottom.includes('selectedContentClosure')&&build.includes('contentCache'),'Build closure follows dependencies, strips editor-only data and reaches visible content/build controls.')
 check('V2604-RESPONSIVE',inspector.includes('@media(max-width:760px)')&&bottom.includes('minmax(0,1fr)')&&bottom.includes('overflow'),'New content controls retain narrow-layout containment and independent scrolling.')
-const failed=checks.filter(item=>item.status==='failed'),report={format:'nova-v26.04-user-interactions',version:1,release:'26.04',engineVersion:'26.4.0',generatedAt:new Date().toISOString(),checks,severity0Open:failed.length,severity1Open:0,status:failed.length?'failed':'passed'}
+const failed=checks.filter(/* 比较 item.status 与 'failed'，返回严格相等的判断结果。 */ item=>item.status==='failed'),report={format:'nova-v26.04-user-interactions',version:1,release:'26.04',engineVersion:'26.4.0',generatedAt:new Date().toISOString(),checks,severity0Open:failed.length,severity1Open:0,status:failed.length?'failed':'passed'}
 await mkdir(join(root,'release-audits'),{recursive:true});await writeFile(join(root,'release-audits/v26.04-user-interactions.json'),`${JSON.stringify(report,null,2)}\n`);if(failed.length){console.error(failed);process.exit(1)}console.log(`Nova_A 26.04 interaction audit passed: ${checks.length} checks.`)

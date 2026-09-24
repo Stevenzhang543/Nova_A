@@ -1,3 +1,4 @@
+/** 生成绑定版本、工具链和证据路径的二十一项发布检查计划；本文件不执行构建或发布。 */
 import { mkdir, readFile } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -5,13 +6,14 @@ import { releaseVersion } from './release-source-snapshot.mjs'
 import { validateQualificationPlan, writeJson } from './release-qualification.mjs'
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)))
+/** 校验目标版本并组合各项检查与产物要求；缺少工具链或本版检查脚本时明确阻塞。 */
 export function generateReleasePlan(release, settings = {}) {
   const machineVersion = releaseVersion(release)
   if (Number(release.replace('.', '')) < 2612) throw new Error('New milestone plans start at release 26.12.')
-  const command = id => ({ file: settings.node ?? process.execPath, args: [join(root, 'scripts/release-milestone-gates.mjs'), `--release=${release}`, `--gate=${id}`, ...Object.entries({ 'pnpm-entry': settings.pnpmEntry, 'pnpm-bin': settings.pnpmBin, powershell: settings.powershell, 'game-reference': settings.gameReference, 'headless-reference': settings.headlessReference, 'headless-name': settings.headlessName, focus: settings.focus?.join(','), authoring: settings.authoring, 'authoring-report': settings.authoringReport }).filter(([, value]) => value).map(([name, value]) => `--${name}=${value}`)] })
-  const report = (suffix, target, format, version = 1, requireRelease = true, requireEngine = true) => ({ path: `release-audits/v${release}-${suffix}.json`, target, format, version, requireRelease, requireEngine })
-  const gate = (id, category, context, reports = [], artifacts = []) => ({ id, category, context, command: command(id), reports, artifacts })
-  // Build first, then qualify those exact bytes. Product aggregation runs only after all prerequisite reports.
+  const command = /** 将检查标识和显式工具链设置转换为独立进程参数，不拼接命令行字符串。 */ id => ({ file: settings.node ?? process.execPath, args: [join(root, 'scripts/release-milestone-gates.mjs'), `--release=${release}`, `--gate=${id}`, ...Object.entries({ 'pnpm-entry': settings.pnpmEntry, 'pnpm-bin': settings.pnpmBin, powershell: settings.powershell, 'game-reference': settings.gameReference, 'headless-reference': settings.headlessReference, 'headless-name': settings.headlessName, focus: settings.focus?.join(','), authoring: settings.authoring, 'authoring-report': settings.authoringReport }).filter(/* 返回 value 的当前值。 */ ([, value]) => value).map(/** 将已提供的设置编码为对应命令行选项。 */ ([name, value]) => `--${name}=${value}`)] })
+  const report = /** 定义报告路径、格式及版本约束，供最终证据收集使用。 */ (suffix, target, format, version = 1, requireRelease = true, requireEngine = true) => ({ path: `release-audits/v${release}-${suffix}.json`, target, format, version, requireRelease, requireEngine })
+  const gate = /** 组合检查类别、执行命令、报告契约和产物清单。 */ (id, category, context, reports = [], artifacts = []) => ({ id, category, context, command: command(id), reports, artifacts })
+  // 先构建，再检查这些确切产物；全部前置报告完成后才聚合产品结果。
   const gates = [
     gate('native-build', 'environment', 'Windows Tauri build using pinned Node/pnpm, Rust/MSVC/Windows SDK and WiX/NSIS; beforeBuildCommand builds actual WASM/editor/player. Exact PE/MSI versions checked; no installation claim.', [report('native-build', 'build/native-build.json', 'nova-release-native-build-verification')], [
       { name: 'windows-editor', path: 'src-tauri/target/release/nova_a.exe' },
@@ -39,15 +41,15 @@ export function generateReleasePlan(release, settings = {}) {
     gate('manual', 'programmer', 'Complete three-language manual size/task/component/concept/anchor/HTML and cumulative/current release identity checks.', [report('manual-audit', 'manual/manual-audit.json', 'nova-release-manual-verification')]),
     gate('product', 'programmer', 'Aggregate actual preceding reports, current authority and authored panel/reference/roadmap presence; no invented global usability certification.', [report('product-audit', 'runtime/product-audit.json', 'nova-release-product-audit')])
   ]
-  if (!settings.pnpmEntry || !settings.pnpmBin) gates.find(gate => gate.id === 'native-build').blockedReason = 'Provide the pinned pnpm 10.30 JavaScript entry point, pnpm wrapper directory and Node 22 executable before a real build.'
-  if (release !== '26.12' && !settings.focus?.length) gates.find(gate => gate.id === 'focus').blockedReason = `The ${release} milestone implementation and focused suite must be authored before qualification; no earlier report is relabeled.`
-  if (release !== '26.12' && !settings.authoring) gates.find(gate => gate.id === 'user-interactions').blockedReason = `The ${release} milestone-specific real user-authoring script/report must be implemented before qualification.`
+  if (!settings.pnpmEntry || !settings.pnpmBin) gates.find(/* 比较 gate.id 与 'native-build'，返回严格相等的判断结果。 */ gate => gate.id === 'native-build').blockedReason = 'Provide the pinned pnpm 10.30 JavaScript entry point, pnpm wrapper directory and Node 22 executable before a real build.'
+  if (release !== '26.12' && !settings.focus?.length) gates.find(/* 比较 gate.id 与 'focus'，返回严格相等的判断结果。 */ gate => gate.id === 'focus').blockedReason = `The ${release} milestone implementation and focused suite must be authored before qualification; no earlier report is relabeled.`
+  if (release !== '26.12' && !settings.authoring) gates.find(/* 比较 gate.id 与 'user-interactions'，返回严格相等的判断结果。 */ gate => gate.id === 'user-interactions').blockedReason = `The ${release} milestone-specific real user-authoring script/report must be implemented before qualification.`
   return validateQualificationPlan({ format: 'nova-release-qualification-plan', version: 1, release, machineVersion, releaseNotes: `docs/RELEASE_NOTES_${release.replace('.', '_')}.md`, editLedger: `docs/EDIT_LEDGER_${release.replace('.', '_')}.md`, documentation: [Number(release.split('.')[1]) >= 21 ? 'docs/ROADMAP_26_21_TO_26_30.md' : 'docs/ROADMAP_26_11_TO_26_20.md', 'docs/VERSION_26_12_RELEASE_PLAN.md', `docs/RELEASE_NOTES_${release.replace('.', '_')}.md`, `docs/EDIT_LEDGER_${release.replace('.', '_')}.md`], ...(settings.sourceSnapshot ? { sourceSnapshot: settings.sourceSnapshot } : {}), gates })
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const option = name => process.argv.find(arg => arg.startsWith(`--${name}=`))?.slice(name.length + 3), release = option('release')
+  const option = /* 调用 process.argv.find(arg => arg.startsWith(`--${name}=`))?.slice(name.length + 3) 并返回调用结果。 */ name => process.argv.find(/* 调用 arg.startsWith(`--${name}=`) 并返回调用结果。 */ arg => arg.startsWith(`--${name}=`))?.slice(name.length + 3), release = option('release')
   const plan = generateReleasePlan(release, { node: option('node'), pnpmEntry: option('pnpm-entry'), pnpmBin: option('pnpm-bin'), powershell: option('powershell'), gameReference: option('game-reference'), headlessReference: option('headless-reference'), headlessName: option('headless-name'), focus: option('focus')?.split(','), authoring: option('authoring'), authoringReport: option('authoring-report'), sourceSnapshot: option('source-snapshot') })
   const output = resolve(option('output') ?? join(root, 'release-audits', `v${release}-qualification-plan.json`)); await mkdir(dirname(output), { recursive: true }); await writeJson(output, plan)
   const packageVersion = JSON.parse(await readFile(join(root, 'package.json'), 'utf8')).version
-  console.log(JSON.stringify({ output, release, currentPackageVersion: packageVersion, gates: plan.gates.length, blocked: plan.gates.filter(gate => gate.blockedReason).map(gate => ({ id: gate.id, reason: gate.blockedReason })), note: 'Executable plan only; no gate, version mutation, snapshot or packaging ran.' }, null, 2))
+  console.log(JSON.stringify({ output, release, currentPackageVersion: packageVersion, gates: plan.gates.length, blocked: plan.gates.filter(/* 返回 gate.blockedReason 的当前值。 */ gate => gate.blockedReason).map(/** 提取阻塞项标识和原因，供命令行摘要展示。 */ gate => ({ id: gate.id, reason: gate.blockedReason })), note: 'Executable plan only; no gate, version mutation, snapshot or packaging ran.' }, null, 2))
 }

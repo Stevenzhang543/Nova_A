@@ -1,3 +1,4 @@
+<!-- 项目恢复中心：预览快照并恢复版本、打开副本或安全重启。 -->
 <template>
   <Teleport to="body">
     <section v-if="recovery.visible" class="recovery-screen" role="dialog" aria-modal="true" v-modal-focus :aria-label="t('crashRecovery')">
@@ -30,18 +31,18 @@ import { discardRecoverySnapshot, dismissRecovery, previewRecoverySnapshot, reco
 import { notify } from '../runtime/editorFeedback'
 import { markProjectDirty, projectTransactionState } from '../runtime/projectTransactions'
 const openReadOnly = ref(false)
-const selected = computed(() => recovery.snapshots.find(item => item.id === recovery.selectedId) ?? null)
-const preview = computed(() => recovery.preview)
-function formatTime(value: string) { const date = new Date(value); return Number.isFinite(date.getTime()) ? date.toLocaleString() : value }
-function formatBytes(value: number) { return value < 1024 ? `${value} B` : value < 1_048_576 ? `${(value / 1024).toFixed(1)} KB` : `${(value / 1_048_576).toFixed(1)} MB` }
-function discard() { if (selected.value) discardRecoverySnapshot(selected.value.id) }
-function currentManualSource(): string { try { return projectTransactionState.manualBaseline || getSceneJSON() } catch { return projectTransactionState.manualBaseline } }
-function refreshPreview() { previewRecoverySnapshot(recovery.selectedId, currentManualSource()) }
-function loadRecovered(source: string, reason: string) { if (!loadProject(source)) { notify(t('recoveryFailed'), 'error'); return false } recovery.readOnly = openReadOnly.value; projectManagerState.visible = false; clearEditorHistory(reason, source, false); markProjectDirty('project'); dismissRecovery(); notify(t('recoveryRestored'), 'success'); return true }
-function restore() { const source = selectedRecoverySource(); if (source) loadRecovered(source, 'recovery-restore') }
-function openCopy() { const source = recoveryCopySource(); if (source) loadRecovered(source, 'recovery-open-copy') }
-function openSafe() { const source = selectedRecoverySource(); if (source) try { sessionStorage.setItem('nova-a-safe-recovery-source', source) } catch { /* URL mode remains available. */ }; const url = new URL(location.href); url.searchParams.set('safe-mode', '1'); url.searchParams.set('safe-layout', '1'); if (openReadOnly.value) url.searchParams.set('read-only', '1'); location.assign(url.toString()) }
-watch(() => recovery.selectedId, refreshPreview, { immediate: true })
+const selected = computed(/** 查找所选恢复快照，找不到时返回空值。 */ () => recovery.snapshots.find(/* 比较 item.id 与 recovery.selectedId，返回严格相等的判断结果。 */ item => item.id === recovery.selectedId) ?? null)
+const preview = computed(/* 返回 recovery.preview 的当前值。 */ () => recovery.preview)
+/** 有效时间按本地日期时间显示，否则保留原文。 */ function formatTime(value: string) { const date = new Date(value); return Number.isFinite(date.getTime()) ? date.toLocaleString() : value }
+/** 按字节、千字节或兆字节显示快照大小。 */ function formatBytes(value: number) { return value < 1024 ? `${value} B` : value < 1_048_576 ? `${(value / 1024).toFixed(1)} KB` : `${(value / 1_048_576).toFixed(1)} MB` }
+/** 存在选中项时删除该恢复快照。 */ function discard() { if (selected.value) discardRecoverySnapshot(selected.value.id) }
+/** 优先返回手动保存基线，否则序列化场景；失败时回退基线。 */ function currentManualSource(): string { try { return projectTransactionState.manualBaseline || getSceneJSON() } catch { return projectTransactionState.manualBaseline } }
+/** 以当前手动版本刷新恢复快照对比。 */ function refreshPreview() { previewRecoverySnapshot(recovery.selectedId, currentManualSource()) }
+/** 加载恢复源；成功设置只读状态、关闭启动页、重建历史、标脏并提示完成。 */ function loadRecovered(source: string, reason: string) { if (!loadProject(source)) { notify(t('recoveryFailed'), 'error'); return false } recovery.readOnly = openReadOnly.value; projectManagerState.visible = false; clearEditorHistory(reason, source, false); markProjectDirty('project'); dismissRecovery(); notify(t('recoveryRestored'), 'success'); return true }
+/** 读取所选快照源并以恢复原因加载。 */ function restore() { const source = selectedRecoverySource(); if (source) loadRecovered(source, 'recovery-restore') }
+/** 生成恢复副本并以副本原因加载。 */ function openCopy() { const source = recoveryCopySource(); if (source) loadRecovered(source, 'recovery-open-copy') }
+/** 尽可能缓存恢复源，并携安全模式、安全布局及可选只读参数重新打开应用。 */ function openSafe() { const source = selectedRecoverySource(); if (source) try { sessionStorage.setItem('nova-a-safe-recovery-source', source) } catch { /* URL mode remains available. */ }; const url = new URL(location.href); url.searchParams.set('safe-mode', '1'); url.searchParams.set('safe-layout', '1'); if (openReadOnly.value) url.searchParams.set('read-only', '1'); location.assign(url.toString()) }
+watch(/* 返回 recovery.selectedId 的当前值。 */ () => recovery.selectedId, refreshPreview, { immediate: true })
 </script>
 <style scoped>
 .recovery-screen{position:fixed;inset:0;z-index:9500;padding:20px;display:grid;place-items:center;background:linear-gradient(145deg,var(--bg-base),var(--surface-2))}article{width:min(860px,100%);max-height:94vh;overflow:hidden;border:1px solid var(--border-strong);border-radius:18px;background:var(--surface-1);box-shadow:var(--shadow-lg)}header{padding:18px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border-subtle)}header>span{width:42px;height:42px;display:grid;place-items:center;border-radius:12px;color:var(--accent);background:var(--accent-soft);font-size:22px}header div{display:grid;gap:3px}header strong{font-size:18px}header small,main p{color:var(--text-muted)}.warning{margin:10px 16px;color:var(--warning)}.recovery-layout{min-height:360px;display:grid;grid-template-columns:minmax(240px,34%) minmax(0,1fr)}nav{padding:8px;overflow:auto;border-right:1px solid var(--border-subtle)}nav button{width:100%;min-height:68px;margin-bottom:6px;padding:8px 10px;display:grid;gap:3px;border:1px solid transparent;border-radius:9px;background:transparent;text-align:left}nav button.active{border-color:var(--accent);background:var(--accent-soft)}nav span,nav small{color:var(--text-muted)}main{padding:20px;overflow:auto}dl{display:grid;gap:7px}dl div{padding:8px;display:grid;grid-template-columns:120px minmax(0,1fr);border-bottom:1px solid var(--border-subtle)}dt{color:var(--text-muted)}dd{margin:0}main label{margin-top:18px;display:flex;align-items:center;gap:8px}footer{padding:12px 16px;display:flex;justify-content:flex-end;flex-wrap:wrap;gap:7px;border-top:1px solid var(--border-subtle)}footer button{min-height:36px;padding:0 12px;border:1px solid var(--border-subtle);border-radius:8px;background:var(--surface-2)}footer button.primary{color:var(--accent-contrast);border-color:var(--accent);background:var(--accent)}footer button.danger{color:var(--danger)}@media(max-width:640px){.recovery-layout{display:flex;flex-direction:column}.recovery-layout nav{max-height:210px;border-right:0;border-bottom:1px solid var(--border-subtle)}}

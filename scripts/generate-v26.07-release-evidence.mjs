@@ -1,3 +1,4 @@
+/** 版本26.07：汇集发布报告与产物文件，生成带来源记录的发布证据。 */
 import { createHash } from 'node:crypto'
 import { execFileSync } from 'node:child_process'
 import { arch, platform, versions } from 'node:process'
@@ -7,9 +8,9 @@ import { fileURLToPath } from 'node:url'
 
 const release = '26.07', machineVersion = '26.7.0'
 const root = dirname(dirname(fileURLToPath(import.meta.url))), audits = join(root, 'release-audits'), evidence = join(audits, `evidence-v${release}`), generatedAt = new Date().toISOString()
-const sha256 = value => createHash('sha256').update(value).digest('hex')
-const readJson = async name => JSON.parse(await readFile(join(audits, name), 'utf8'))
-const writeJson = (path, value) => writeFile(path, `${JSON.stringify(value, null, 2)}\n`)
+const sha256 = /* 调用 createHash('sha256').update(value).digest('hex') 并返回调用结果。 */ value => createHash('sha256').update(value).digest('hex')
+const readJson = /* 调用 JSON.parse(await readFile(join(audits, name), 'utf8')) 并返回调用结果。 */ async name => JSON.parse(await readFile(join(audits, name), 'utf8'))
+const writeJson = /* 调用 writeFile(path, `${JSON.stringify(value, null, 2)}\n`) 并返回调用结果。 */ (path, value) => writeFile(path, `${JSON.stringify(value, null, 2)}\n`)
 
 await mkdir(audits, { recursive: true })
 await copyFile(join(root, 'docs/RELEASE_NOTES_26_07.md'), join(audits, 'v26.07-release-notes.md'))
@@ -45,8 +46,8 @@ const qualificationInputs = [
   'reference-projects/projects/multiplayer-v2607-coop-rollback/project.nova','reference-projects/projects/multiplayer-v2607-coop-rollback/README.md','reference-projects/projects/multiplayer-v2607-coop-rollback/expected-output.json','reference-projects/projects/multiplayer-v2607-coop-rollback/test-controls.json',
   'reference-projects/projects/multiplayer-v2607-headless-authority/project.nova','reference-projects/projects/multiplayer-v2607-headless-authority/README.md','reference-projects/projects/multiplayer-v2607-headless-authority/expected-output.json','reference-projects/projects/multiplayer-v2607-headless-authority/test-controls.json'
 ]
-const latestQualificationInputAt = Math.max(...await Promise.all(qualificationInputs.map(path => stat(join(root, path)).then(value => value.mtimeMs))))
-const authorityIssues = Object.entries(reports).flatMap(([name, report]) => {
+const latestQualificationInputAt = Math.max(...await Promise.all(qualificationInputs.map(/** 读取输入文件修改时间用于资格报告新鲜度检查。 */ path => stat(join(root, path)).then(/* 返回 value.mtimeMs 的当前值。 */ value => value.mtimeMs))))
+const authorityIssues = Object.entries(reports).flatMap(/** 检查26.07报告格式、版本、通过状态、新鲜度和严重问题，收集失败原因。 */ ([name, report]) => {
   const issues = [], specification = reportSpecifications[name]
   if (report.status !== 'passed') issues.push(`${name}: status=${String(report.status)}`)
   if (!specification || report.format !== specification.format || report.version !== (name === 'templates' ? 3 : 1)) issues.push(`${name}: format/version=${String(report.format)}/${String(report.version)}`)
@@ -72,11 +73,11 @@ const artifactInputs = [
   ['windows-nsis',`src-tauri/target/release/bundle/nsis/Nova_A_${machineVersion}_x64-setup.exe`], ['windows-msi',`src-tauri/target/release/bundle/msi/Nova_A_${machineVersion}_x64_en-US.msi`],
   ['windows-headless-authority','release-audits/headless-output-v26.07/Nova 26.07 Headless Authority.exe']
 ]
-const artifacts = await Promise.all(artifactInputs.map(async ([name, path]) => { try { const bytes = await readFile(join(root, path)); return { name, path, bytes: bytes.length, sha256: sha256(bytes), status: 'passed' } } catch { return { name, path, status: 'missing' } } }))
-const buildsPassed = artifacts.every(item => item.status === 'passed')
-const artifactByName = new Map(artifacts.map(item => [item.name, item]))
+const artifacts = await Promise.all(artifactInputs.map(/** 读取指定产物并记录字节数及散列，读取失败时标记缺失。 */ async ([name, path]) => { try { const bytes = await readFile(join(root, path)); return { name, path, bytes: bytes.length, sha256: sha256(bytes), status: 'passed' } } catch { return { name, path, status: 'missing' } } }))
+const buildsPassed = artifacts.every(/* 比较 item.status 与 'passed'，返回严格相等的判断结果。 */ item => item.status === 'passed')
+const artifactByName = new Map(artifacts.map(/* 返回按声明顺序构造的数组 [item.name, item]。 */ item => [item.name, item]))
 for (const [reportName, localName] of [['editor','windows-editor'], ['msi','windows-msi'], ['setup','windows-nsis']]) {
-  const qualified = reports.windows.artifacts?.filter(item => item?.name === reportName) ?? [], current = artifactByName.get(localName)
+  const qualified = reports.windows.artifacts?.filter(/* 比较 item?.name 与 reportName，返回严格相等的判断结果。 */ item => item?.name === reportName) ?? [], current = artifactByName.get(localName)
   if (qualified.length !== 1 || !current || current.status !== 'passed' || qualified[0].sha256 !== current.sha256 || Number(qualified[0].bytes) !== current.bytes) authorityIssues.push(`windows: ${reportName} artifact does not match the current local build`)
 }
 const currentHeadless = artifactByName.get('windows-headless-authority')
@@ -84,7 +85,7 @@ if (!currentHeadless || currentHeadless.status !== 'passed' || reports.headless.
 await writeJson(join(evidence, 'build/local-builds.json'), { format: 'nova-local-build-evidence', version: 1, release, engineVersion: machineVersion, generatedAt, artifacts, status: buildsPassed ? 'passed' : 'incomplete' })
 
 const externalGates = { publisherSigning: 'pending-external', cleanMachineLifecycle: 'pending-external', secondMachineReproducibility: 'pending-external', matchingHostLinuxMacos: 'pending-external', publicRelayNat: 'pending-external', encryptedPublicDeployment: 'pending-external', hostileNetworkReview: 'pending-external', independentUsabilityAccessibilitySecurity: 'pending-external', soak72Hours: 'pending-external' }
-await writeJson(join(evidence, 'external/gates.json'), { format: 'nova-external-certification-gates', version: 1, release, generatedAt, gates: Object.entries(externalGates).map(([name, status]) => ({ name, status, claimed: false })) })
+await writeJson(join(evidence, 'external/gates.json'), { format: 'nova-external-certification-gates', version: 1, release, generatedAt, gates: Object.entries(externalGates).map(/** 将外部检查状态转为未声称通过的证据条目。 */ ([name, status]) => ({ name, status, claimed: false })) })
 
 const commit = safeExec('git', ['-c', `safe.directory=${root.replaceAll('\\','/')}`, 'rev-parse', 'HEAD'])
 const gitWorkingTree = safeExec('git', ['-c', `safe.directory=${root.replaceAll('\\','/')}`, 'status', '--porcelain'])
@@ -93,17 +94,17 @@ const sourceState = sourceHasCommit ? (gitWorkingTree && gitWorkingTree !== 'una
 const sourceCommit = sourceHasCommit ? commit : 'unavailable-source-snapshot'
 const environment = { id: `${platform}-${arch}-${versions.node}`, platform, architecture: arch, node: versions.node, rust: safeExec('rustc',['--version']), cargo: safeExec('cargo',['--version']) }
 const localQualificationComplete = authorityIssues.length === 0 && buildsPassed
-const entries = await Promise.all((await filesUnder(evidence)).sort().filter(path => !path.endsWith('evidence-manifest.json')).map(async path => { const contents = await readFile(path); return { path: relative(evidence,path).replaceAll('\\','/'), sha256: sha256(contents), bytes: contents.length, source: sourceCommit, tool: 'generate-v26.07-release-evidence.mjs', environment: environment.id } }))
+const entries = await Promise.all((await filesUnder(evidence)).sort().filter(/* 返回 path.endsWith('evidence-manifest.json') 的逻辑取反结果。 */ path => !path.endsWith('evidence-manifest.json')).map(/** 记录证据文件身份及源码、工具、环境来源。 */ async path => { const contents = await readFile(path); return { path: relative(evidence,path).replaceAll('\\','/'), sha256: sha256(contents), bytes: contents.length, source: sourceCommit, tool: 'generate-v26.07-release-evidence.mjs', environment: environment.id } }))
 await writeJson(join(evidence, 'evidence-manifest.json'), { format: 'nova-release-evidence-manifest', version: 1, release, machineVersion, engineVersion: machineVersion, generatedAt, source: { commit: sourceCommit, state: sourceState, dirty: sourceState !== 'git-commit', note: sourceState === 'git-working-tree' ? 'Working-tree source snapshot, based on the recorded commit and including the packaged uncommitted changes; an exact signed tag remains external.' : sourceState === 'git-commit' ? 'Clean Git commit; an exact signed tag remains external.' : 'Filesystem source snapshot without an available Git commit; an exact signed tag remains external.' }, environment, localQualificationComplete, localReportAuthorities: { status: authorityIssues.length ? 'failed' : 'passed', issues: authorityIssues }, externalCertificationComplete: false, externalGates, entries })
 if (!localQualificationComplete) {
-  const detail = [...authorityIssues, ...artifacts.filter(item => item.status !== 'passed').map(item => `missing build artifact: ${item.path}`)]
+  const detail = [...authorityIssues, ...artifacts.filter(/* 比较 item.status 与 'passed'，返回严格不等的判断结果。 */ item => item.status !== 'passed').map(/** 将缺失构建产物转为错误说明。 */ item => `missing build artifact: ${item.path}`)]
   throw new Error(`The Nova_A ${release} local evidence tree is incomplete; release packaging is blocked. ${detail.join('; ')}`)
 }
 console.log(`Nova_A ${release} evidence generated with ${entries.length} hashed entries; external certification remains pending.`)
 
-function safeExec(command, args) { try { return execFileSync(command,args,{ cwd: root, encoding: 'utf8', windowsHide: true, stdio: ['ignore','pipe','ignore'] }).trim() } catch { return 'unavailable' } }
-async function filesUnder(directory) { const files = []; for (const entry of await readdir(directory,{withFileTypes:true})) { const path = join(directory,entry.name); entry.isDirectory() ? files.push(...await filesUnder(path)) : files.push(path) } return files }
-function editLedger() { return `# Nova_A 26.07 edit ledger
+/** 隐藏窗口执行外部工具并读取结果，失败时返回不可用标记。 */ function safeExec(command, args) { try { return execFileSync(command,args,{ cwd: root, encoding: 'utf8', windowsHide: true, stdio: ['ignore','pipe','ignore'] }).trim() } catch { return 'unavailable' } }
+/** 递归收集目录中的文件路径。 */ async function filesUnder(directory) { const files = []; for (const entry of await readdir(directory,{withFileTypes:true})) { const path = join(directory,entry.name); entry.isDirectory() ? files.push(...await filesUnder(path)) : files.push(path) } return files }
+/** 返回26.07网络与发布支持工作的固定逐路径台账文本。 */ function editLedger() { return `# Nova_A 26.07 edit ledger
 
 This ledger records the 26.07 multiplayer, service, replay, server-output, Network Studio, reference, audit and release-support work. No public feature, animation, format field, API, template, or historical compatibility path was removed.
 

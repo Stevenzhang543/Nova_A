@@ -1,3 +1,4 @@
+/* 全局主题与控件样式：颜色来自语义变量，保留默认动效与用户选择的减少动态设置。 */
 :root,
 :root[data-theme='dark'] {
   color-scheme: dark;
@@ -307,8 +308,14 @@ samp,
   font-feature-settings: "liga" 0, "tnum" 1;
 }
 
+/* 文本输入共用主题与状态；不影响滑块、复选框、色盘或文件选择控件。 */
 input[type='number'],
 input[type='text'],
+input[type='search'],
+input[type='email'],
+input[type='url'],
+input[type='password'],
+input:not([type]),
 select,
 textarea {
   min-height: var(--control-default);
@@ -325,6 +332,27 @@ input:hover,
 select:hover,
 textarea:hover {
   border-color: var(--border-strong);
+}
+
+/* 只读内容仍可选择复制；无效和待处理状态使用形状及边框辅助颜色区分。 */
+:is(input, textarea)[readonly] {
+  border-style: dashed;
+  cursor: text;
+  user-select: text;
+}
+:is(input, textarea, select):disabled {
+  cursor: not-allowed;
+  color: var(--text-muted);
+  background: var(--surface-2);
+}
+:is(input, textarea, select)[aria-invalid='true'] {
+  border-color: var(--danger);
+  box-shadow: inset 3px 0 0 var(--danger);
+}
+:is(input, textarea, select)[aria-busy='true'] {
+  border-style: dashed;
+  border-color: var(--accent);
+  cursor: progress;
 }
 
 img {

@@ -1,3 +1,4 @@
+<!-- 插件配置：导入验证后的 WASM 插件，管理启停、权限与贡献统计。 -->
 <template>
   <section class="plugin-settings">
     <p>{{ t('pluginDescription') }}</p>
@@ -28,21 +29,21 @@ const fileInput = ref<HTMLInputElement | null>(null)
 const message = ref('')
 const failed = ref(false)
 
-function commit(): void { pushHistory('Configure plugins') }
-async function toggle(id:string,enabled:boolean):Promise<void>{if(enabled)await pluginRuntime.reload(id);else pluginRuntime.unload(id);commit()}
-function remove(id: string): void { pluginRuntime.unload(id);const index = pluginState.manifests.findIndex(item => item.id === id); if (index !== -1) pluginState.manifests.splice(index, 1); commit() }
-async function approve(id:string,permission:PluginPermission,approved:boolean):Promise<void>{if(!setPluginPermission(id,permission,approved))return;await pluginRuntime.reload(id);commit()}
-function contributionCount(id:string){return pluginState.contributions.filter(item=>item.pluginId===id).length}
+/** 记录插件设置历史。 */ function commit(): void { pushHistory('Configure plugins') }
+/** 启用时等待重新加载，禁用时卸载插件，随后记录历史。 */ async function toggle(id:string,enabled:boolean):Promise<void>{if(enabled)await pluginRuntime.reload(id);else pluginRuntime.unload(id);commit()}
+/** 卸载插件并移除对应清单，再记录配置历史。 */ function remove(id: string): void { pluginRuntime.unload(id);const index = pluginState.manifests.findIndex(/* 比较 item.id 与 id，返回严格相等的判断结果。 */ item => item.id === id); if (index !== -1) pluginState.manifests.splice(index, 1); commit() }
+/** 权限变更成功后重载插件并记录历史。 */ async function approve(id:string,permission:PluginPermission,approved:boolean):Promise<void>{if(!setPluginPermission(id,permission,approved))return;await pluginRuntime.reload(id);commit()}
+/** 统计指定插件注册的贡献数量。 */ function contributionCount(id:string){return pluginState.contributions.filter(/* 比较 item.pluginId 与 id，返回严格相等的判断结果。 */ item=>item.pluginId===id).length}
 
-async function importBundle(event: Event): Promise<void> {
+/** 验证清单与 WASM 配对及入口名称，导入资源后以禁用和未授权状态注册，记录历史并提示待审核；失败显示错误。 */ async function importBundle(event: Event): Promise<void> {
   const input = event.target as HTMLInputElement
   const files = [...(input.files ?? [])]
   input.value = ''
   message.value = ''
   failed.value = false
   try {
-    const manifestFile = files.find(file => file.name.toLowerCase().endsWith('.json'))
-    const wasmFile = files.find(file => file.name.toLowerCase().endsWith('.wasm'))
+    const manifestFile = files.find(/** 查找文件名以 JSON 扩展名结尾的清单文件。 */ file => file.name.toLowerCase().endsWith('.json'))
+    const wasmFile = files.find(/** 查找文件名以 WASM 扩展名结尾的二进制文件。 */ file => file.name.toLowerCase().endsWith('.wasm'))
     if (!manifestFile || !wasmFile) throw new Error(t('pluginPairRequired'))
     const declared = normalizePluginManifest(JSON.parse(await manifestFile.text()))
     const manifest = await validateWasmPluginPackage(declared, await wasmFile.arrayBuffer())
@@ -50,7 +51,7 @@ async function importBundle(event: Event): Promise<void> {
     const [asset] = await importAssetFiles([wasmFile], 'Assets/Plugins')
     if (!asset) throw new Error(t('pluginAssetFailed'))
     const configured = attachPluginAsset({...manifest,approvedPermissions:[],enabled:false}, asset.uuid)
-    const existing = pluginState.manifests.findIndex(item => item.id === configured.id)
+    const existing = pluginState.manifests.findIndex(/* 比较 item.id 与 configured.id，返回严格相等的判断结果。 */ item => item.id === configured.id)
     if (existing === -1) pluginState.manifests.push(configured)
     else pluginState.manifests.splice(existing, 1, configured)
     pushHistory('Import WASM plugin')

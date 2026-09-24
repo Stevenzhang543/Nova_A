@@ -1,14 +1,19 @@
+<!-- 编辑器底栏：统一承载资源、日志与生产工具，标签切换不改变项目内容。 -->
 <template>
   <section class="bottom-panel" data-control-scope="transient-bottom-dock" :class="{ collapsed: !estate.bottomPanelOpen, unpinned: !estate.bottomPanelPinned, 'panel-maximized': workspaceState.maximizedPanel==='bottom' }" :style="panelStyle" @mouseleave="autoHide">
     <PanelResizeHandle v-if="estate.bottomPanelOpen" v-model="estate.bottomPanelHeight" orientation="horizontal" :minimum="120" :maximum="520" :reset-value="240" reverse :label="t('bottomPanel')" :disabled="workspaceState.maximizedPanel==='bottom'" />
     <header class="panel-tabs">
+      <!-- 标签与固定操作分区，长译文只滚动标签，不挤压展开、固定和关闭按钮。 -->
       <select v-model="estate.bottomPanelTab" class="compact-tab-select" :aria-label="t('tools')" @change="estate.bottomPanelOpen = true"><option v-for="tab in tabs" :key="tab.id" :value="tab.id">{{ t(tab.label) }}</option></select>
+      <div class="panel-tab-strip">
       <button v-for="tab in tabs" :key="tab.id" class="panel-tab" :class="{ active: estate.bottomPanelTab === tab.id }" draggable="true" :aria-pressed="estate.bottomPanelTab === tab.id" @dragstart="draggedTab = tab.id" @dragover.prevent @drop="dropTab(tab.id)" @click="openTab(tab.id)">{{ t(tab.label) }}<i v-if="tabDirty(tab.id)">●</i></button>
-      <span></span>
+      </div>
+      <div class="panel-controls">
       <PanelMaximizeButton v-if="estate.bottomPanelOpen" panel="bottom" />
       <button :class="{ active: estate.bottomPanelPinned }" :aria-pressed="estate.bottomPanelPinned" :title="t(estate.bottomPanelPinned ? 'unpinPanel' : 'pinPanel')" @click="estate.bottomPanelPinned = !estate.bottomPanelPinned">⌖</button>
       <button v-if="estate.bottomPanelTab === 'console' && estate.bottomPanelOpen" :title="t('clearConsole')" @click="estate.logs.splice(0)">⌫</button>
       <button :title="t(estate.bottomPanelOpen ? 'collapsePanel' : 'expandPanel')" @click="estate.bottomPanelOpen = !estate.bottomPanelOpen">{{ estate.bottomPanelOpen ? '⌄' : '⌃' }}</button>
+      </div>
     </header>
 
     <div v-if="estate.bottomPanelOpen" class="panel-content">
@@ -65,7 +70,7 @@
             <article v-for="change in externalChanges" :key="change.id"><span><strong>{{ t('externalAssetChanged') }}</strong><small>{{ change.name }}</small></span><button @click="resolveExternal(change.id, 'reimport')">{{ t('reimportAsset') }}</button><button @click="resolveExternal(change.id, 'keep')">{{ t('keepCurrent') }}</button><button @click="resolveExternal(change.id, 'duplicate')">{{ t('importAsCopy') }}</button></article>
           </section>
 
-          <details v-if="importJobs.length" class="import-queue" :open="importJobs.some(job=>!['complete','cancelled','failed'].includes(job.status))" aria-live="polite">
+<!-- 导入队列展开检查回调判断是否仍有未完成、未取消且未失败的作业。 -->          <details v-if="importJobs.length" class="import-queue" :open="importJobs.some(job=>!['complete','cancelled','failed'].includes(job.status))" aria-live="polite">
             <summary>{{ t('importLog') }} · {{ importJobs.length }}</summary>
             <article v-for="job in importJobs" :key="job.id">
               <span><strong>{{ job.name }}</strong><small>{{ t(`importStatus_${job.status}`) }}</small></span>
@@ -94,9 +99,11 @@
             <header><strong>{{ assetCopy('progress') }} {{ assetBatch.done }}/{{ assetBatch.total }}</strong><button v-if="assetBatch.active" type="button" @click="cancelAssetBatch">{{ assetCopy('cancel') }}</button></header>
             <progress :value="assetBatch.done" :max="assetBatch.total" :aria-label="assetCopy('progress')"></progress>
             <p role="status">{{ assetBatch.name }} · {{ assetCopy('completed') }} {{ assetBatch.completed }} · {{ assetCopy('failed') }} {{ assetBatch.failed }} · {{ assetCopy('cancelled') }} {{ assetBatch.cancelled }}</p>
-            <details v-if="assetBatch.failed"><summary>{{ assetCopy('failed') }}</summary><p v-for="(item,index) in assetBatch.results.filter(v=>v.status==='failed')" :key="index">{{ item.name }}: {{ item.message }}</p></details>
+<!-- 批处理结果过滤回调仅保留失败项以显示错误详情。 -->            <details v-if="assetBatch.failed"><summary>{{ assetCopy('failed') }}</summary><p v-for="(item,index) in assetBatch.results.filter(v=>v.status==='failed')" :key="index">{{ item.name }}: {{ item.message }}</p></details>
           </section>
-          <div ref="assetGrid" class="asset-grid" :class="`asset-${assets.viewMode}`" :style="assetGridStyle" @scroll.passive="updateAssetWindow">
+          <div ref="assetGrid" class="asset-grid" :class="`asset-${assets.viewMode}`" @scroll.passive="updateAssetWindow">
+            <!-- 占位间距属于内容，不属于被观察的滚动视口，避免虚拟高度反馈到可见行数。 -->
+            <div class="asset-grid-window" :style="assetGridStyle">
             <article
               v-for="asset in displayedAssets"
               :key="asset.uuid"
@@ -115,6 +122,7 @@
             </article>
             <p v-if="!displayedAssets.length" class="empty">{{ t('noAssets') }}</p>
             <p v-else-if="displayedAssets.length < filteredAssetCount" class="asset-window-status">{{ t('virtualizedAssets', { shown: displayedAssets.length, total: filteredAssetCount }) }}</p>
+            </div>
           </div>
         </section>
 
@@ -352,32 +360,32 @@ import { createResourceAsset, type ResourceKind } from '../runtime/resources'
 const assetOperationError = ref('')
 const assetBatch = ref(emptyAssetBatch()), assetDetailMode = ref(false)
 let assetBatchController: AbortController | null = null
-function cancelAssetBatch(){assetBatchController?.abort()}
+/** 向活动资源批处理发送取消信号。 */ function cancelAssetBatch(){assetBatchController?.abort()}
 onBeforeUnmount(cancelAssetBatch)
-watch(() => assets.selectedGuid, value => { if(value) assetDetailMode.value = true })
+watch(/* 返回 assets.selectedGuid 的当前值。 */ () => assets.selectedGuid, /** 选择资源时切换为资源详情模式。 */ value => { if(value) assetDetailMode.value = true })
 
 // Bottom tools are substantial, mutually exclusive workspaces. Loading the
 // inactive tools only when selected reduces cold-start parsing without changing
 // a control, animation, or persisted panel state.
-const AnimationPanel = defineAsyncComponent(() => import('./AnimationPanel.vue'))
-const AudioSystemPanel = defineAsyncComponent(() => import('./AudioSystemPanel.vue'))
-const ConsolePanel = defineAsyncComponent(() => import('./ConsolePanel.vue'))
-const ProfilerPanel = defineAsyncComponent(() => import('./ProfilerPanel.vue'))
-const NetworkStudioPanel = defineAsyncComponent(() => import('./NetworkStudioPanel.vue'))
-const EcosystemStudioPanel = defineAsyncComponent(() => import('./EcosystemStudioPanel.vue'))
-const TilemapPanel = defineAsyncComponent(() => import('./TilemapPanel.vue'))
-const WorldToolsPanel = defineAsyncComponent(() => import('./WorldToolsPanel.vue'))
+const AnimationPanel = defineAsyncComponent(/* 调用 import('./AnimationPanel.vue') 并返回调用结果。 */ () => import('./AnimationPanel.vue'))
+const AudioSystemPanel = defineAsyncComponent(/* 调用 import('./AudioSystemPanel.vue') 并返回调用结果。 */ () => import('./AudioSystemPanel.vue'))
+const ConsolePanel = defineAsyncComponent(/* 调用 import('./ConsolePanel.vue') 并返回调用结果。 */ () => import('./ConsolePanel.vue'))
+const ProfilerPanel = defineAsyncComponent(/* 调用 import('./ProfilerPanel.vue') 并返回调用结果。 */ () => import('./ProfilerPanel.vue'))
+const NetworkStudioPanel = defineAsyncComponent(/* 调用 import('./NetworkStudioPanel.vue') 并返回调用结果。 */ () => import('./NetworkStudioPanel.vue'))
+const EcosystemStudioPanel = defineAsyncComponent(/* 调用 import('./EcosystemStudioPanel.vue') 并返回调用结果。 */ () => import('./EcosystemStudioPanel.vue'))
+const TilemapPanel = defineAsyncComponent(/* 调用 import('./TilemapPanel.vue') 并返回调用结果。 */ () => import('./TilemapPanel.vue'))
+const WorldToolsPanel = defineAsyncComponent(/* 调用 import('./WorldToolsPanel.vue') 并返回调用结果。 */ () => import('./WorldToolsPanel.vue'))
 
 const permanentTabs = [
   { id: 'assets' as const, label: 'assets' as const }, { id: 'console' as const, label: 'console' as const },
   { id: 'animation' as const, label: 'animation' as const }, { id: 'audio' as const, label: 'audioMixer' as const }, { id: 'worldProduction' as const, label: 'worldStudio' as const }, { id: 'networkStudio' as const, label: 'networkStudio' as const }, { id: 'ecosystem' as const, label: 'ecosystemStudio' as const }, { id: 'profiler' as const, label: 'profiler' as const }
 ]
-const pluginAssetContributions = computed(() => pluginState.contributions.filter(item => item.kind === 'importers' || item.kind === 'assetEditors'))
-const tabs = computed(() => {
-  const selected = state.world.entities.find(entity => entity.id === state.selectedEntityId)
+const pluginAssetContributions = computed(/* 调用 pluginState.contributions.filter(item => item.kind === 'importers' || item.kind === 'assetEditors') 并返回调用结果。 */ () => pluginState.contributions.filter(/* 先计算 item.kind === 'importers'；仅当其为假值时求右侧 item.kind === 'assetEditors'，返回短路求值结果。 */ item => item.kind === 'importers' || item.kind === 'assetEditors'))
+const tabs = computed(/** 根据是否选中瓦片实体追加上下文标签，再按保存的标签顺序排列。 */ () => {
+  const selected = state.world.entities.find(/* 比较 entity.id 与 state.selectedEntityId，返回严格相等的判断结果。 */ entity => entity.id === state.selectedEntityId)
   const contextual = selected?.hasComponent('TileMap2D') ? [{ id: 'tilemap' as const, label: 'tilemap' as const }] : []
   const available = [...permanentTabs, ...contextual]
-  return [...available].sort((a, b) => workspaceState.bottomTabOrder.indexOf(a.id) - workspaceState.bottomTabOrder.indexOf(b.id))
+  return [...available].sort(/* 计算表达式 workspaceState.bottomTabOrder.indexOf(a.id) - workspaceState.bottomTabOrder.indexOf(b.id) 并返回结果，沿用操作数的原有类型规则。 */ (a, b) => workspaceState.bottomTabOrder.indexOf(a.id) - workspaceState.bottomTabOrder.indexOf(b.id))
 })
 const assetFilters: Array<{ type: AssetType | 'all'; label: Parameters<typeof t>[0] }> = [
   { type: 'all', label: 'allAssets' }, { type: 'image', label: 'images' }, { type: 'audio', label: 'audioAssets' },
@@ -396,40 +404,42 @@ const pivotPresets = [
   { id: 'left', label: 'pivotLeft', value: { x: 0, y: .5 } }, { id: 'center', label: 'center', value: { x: .5, y: .5 } }, { id: 'right', label: 'pivotRight', value: { x: 1, y: .5 } },
   { id: 'bottom-left', label: 'pivotBottomLeft', value: { x: 0, y: 1 } }, { id: 'bottom', label: 'pivotBottom', value: { x: .5, y: 1 } }, { id: 'bottom-right', label: 'pivotBottomRight', value: { x: 1, y: 1 } }
 ] as const
-const panelStyle = computed(() => ({ height: estate.bottomPanelOpen ? `min(${estate.bottomPanelHeight}px, 42vh)` : '34px' }))
+const panelStyle = computed(/** 面板展开时按像素和视口上限设置高度，收起时保留标签栏高度。 */ () => ({ height: estate.bottomPanelOpen ? `min(${estate.bottomPanelHeight}px, 42vh)` : '34px' }))
 const assetGrid = ref<HTMLElement | null>(null)
 const assetScrollTop = ref(0)
 const assetViewportHeight = ref(320)
 const assetViewportWidth = ref(800)
 const assetOverscanRows = 4
-const filteredAssetRecords = computed(() => { void assets.generation; return filteredAssets() })
-const filteredAssetCount = computed(() => filteredAssetRecords.value.length)
-const assetColumnCount = computed(() => assets.viewMode === 'list' ? 1 : Math.max(1, Math.floor((Math.max(118, assetViewportWidth.value - 18) + 7) / (Math.max(118, assets.thumbnailSize) + 7))))
-const assetRowStride = computed(() => assets.viewMode === 'list' ? 56 : 65)
-const assetStartRow = computed(() => Math.max(0, Math.floor(assetScrollTop.value / assetRowStride.value) - assetOverscanRows))
-const assetVisibleRows = computed(() => Math.max(1, Math.ceil(assetViewportHeight.value / assetRowStride.value) + assetOverscanRows * 2))
-const assetWindowStart = computed(() => Math.min(filteredAssetCount.value, assetStartRow.value * assetColumnCount.value))
-const assetWindowEnd = computed(() => Math.min(filteredAssetCount.value, assetWindowStart.value + assetVisibleRows.value * assetColumnCount.value))
-const displayedAssets = computed(() => filteredAssetRecords.value.slice(assetWindowStart.value, assetWindowEnd.value))
-const assetTotalRows = computed(() => Math.ceil(filteredAssetCount.value / assetColumnCount.value))
-const assetGridStyle = computed(() => ({
-  '--asset-size': `${assets.thumbnailSize}px`,
+const filteredAssetRecords = computed(/** 依赖资源代次重新计算资源筛选结果。 */ () => { void assets.generation; return filteredAssets() })
+const filteredAssetCount = computed(/* 返回 filteredAssetRecords.value.length 的当前值。 */ () => filteredAssetRecords.value.length)
+const assetColumnCount = computed(/** 列表模式固定一列，网格模式按视口和缩略图宽度计算列数。 */ () => assets.viewMode === 'list' ? 1 : Math.max(1, Math.floor((Math.max(118, assetViewportWidth.value - 18) + 7) / (Math.max(118, assets.thumbnailSize) + 7))))
+const assetRowStride = computed(/* 根据 assets.viewMode === 'list' 的真假，分别返回 56 或 65。 */ () => assets.viewMode === 'list' ? 56 : 65)
+const assetStartRow = computed(/* 调用 Math.max(0, Math.floor(assetScrollTop.value / assetRowStride.value) - assetOverscanRows) 并返回调用结果。 */ () => Math.max(0, Math.floor(assetScrollTop.value / assetRowStride.value) - assetOverscanRows))
+const assetVisibleRows = computed(/* 调用 Math.max(1, Math.ceil(assetViewportHeight.value / assetRowStride.value) + assetOverscanRows * 2) 并返回调用结果。 */ () => Math.max(1, Math.ceil(assetViewportHeight.value / assetRowStride.value) + assetOverscanRows * 2))
+const assetWindowStart = computed(/* 调用 Math.min(filteredAssetCount.value, assetStartRow.value * assetColumnCount.value) 并返回调用结果。 */ () => Math.min(filteredAssetCount.value, assetStartRow.value * assetColumnCount.value))
+const assetWindowEnd = computed(/* 调用 Math.min(filteredAssetCount.value, assetWindowStart.value + assetVisibleRows.value * assetColumnCount.value) 并返回调用结果。 */ () => Math.min(filteredAssetCount.value, assetWindowStart.value + assetVisibleRows.value * assetColumnCount.value))
+const displayedAssets = computed(/* 调用 filteredAssetRecords.value.slice(assetWindowStart.value, assetWindowEnd.value) 并返回调用结果。 */ () => filteredAssetRecords.value.slice(assetWindowStart.value, assetWindowEnd.value))
+const assetTotalRows = computed(/* 调用 Math.ceil(filteredAssetCount.value / assetColumnCount.value) 并返回调用结果。 */ () => Math.ceil(filteredAssetCount.value / assetColumnCount.value))
+const assetGridStyle = computed(/** 生成虚拟资源网格列数、行高、间距及未挂载行的上下占位。 */ () => ({
+  gridTemplateColumns: `repeat(${assetColumnCount.value}, minmax(0, 1fr))`,
+  gridAutoRows: assets.viewMode === 'list' ? '52px' : '58px',
+  gap: assets.viewMode === 'list' ? '4px' : '7px',
   paddingTop: `${9 + assetStartRow.value * assetRowStride.value}px`,
   paddingBottom: `${9 + Math.max(0, assetTotalRows.value - Math.ceil(assetWindowEnd.value / assetColumnCount.value)) * assetRowStride.value}px`
 }))
-const visibleFolders = computed(() => assets.folders.filter(folder => !folder.startsWith('.nova/')))
-const selectedAsset = computed(() => assets.records.find(asset => asset.uuid === assets.selectedGuid) ?? null)
-watch(() => selectedAsset.value?.uuid, () => { assetOperationError.value = '' })
-const projectSnapshot = computed(() => { void assets.generation; try { return JSON.parse(getSceneJSON()) as unknown } catch { return null } })
-const assetGraph = computed(() => buildAssetDependencyGraph(assets.records, projectSnapshot.value))
-const productionGraph = computed(() => buildProductionAssetGraph(assets.records, projectSnapshot.value))
-const selectedReferences = computed(() => selectedAsset.value ? findAssetReferences(selectedAsset.value.uuid, assets.records, projectSnapshot.value) : [])
-const selectedInclusion = computed(() => selectedAsset.value ? explainAssetBuildInclusion(selectedAsset.value.uuid, assets.records, projectSnapshot.value) : [])
-const selectedTextSource = computed(() => selectedAsset.value ? readTextAsset(selectedAsset.value.uuid) ?? '' : '')
-const importJobs = computed(() => importPipelineState.jobs)
-const externalChanges = computed(() => importPipelineState.externalChanges)
-const missingReferenceIds = computed(() => [...new Set(assetGraph.value.missingReferences.map(item => item.reference))])
-const animationSources = computed(() => assets.records.filter(asset => asset.assetType === 'animation' && asset.uuid !== selectedAsset.value?.uuid))
+const visibleFolders = computed(/** 隐藏内部 .nova 目录。 */ () => assets.folders.filter(/* 返回 folder.startsWith('.nova/') 的逻辑取反结果。 */ folder => !folder.startsWith('.nova/')))
+const selectedAsset = computed(/** 查找当前选中资源记录。 */ () => assets.records.find(/* 比较 asset.uuid 与 assets.selectedGuid，返回严格相等的判断结果。 */ asset => asset.uuid === assets.selectedGuid) ?? null)
+watch(/* 返回 selectedAsset.value?.uuid 的当前值。 */ () => selectedAsset.value?.uuid, /** 资源选择变化时清除上一次操作错误。 */ () => { assetOperationError.value = '' })
+const projectSnapshot = computed(/** 依赖资源代次解析项目快照，序列化或解析失败返回空值。 */ () => { void assets.generation; try { return JSON.parse(getSceneJSON()) as unknown } catch { return null } })
+const assetGraph = computed(/* 调用 buildAssetDependencyGraph(assets.records, projectSnapshot.value) 并返回调用结果。 */ () => buildAssetDependencyGraph(assets.records, projectSnapshot.value))
+const productionGraph = computed(/* 调用 buildProductionAssetGraph(assets.records, projectSnapshot.value) 并返回调用结果。 */ () => buildProductionAssetGraph(assets.records, projectSnapshot.value))
+const selectedReferences = computed(/* 根据 selectedAsset.value 的真假，分别返回 findAssetReferences(selectedAsset.value.uuid, assets.records, projectSnapshot.value) 或 []。 */ () => selectedAsset.value ? findAssetReferences(selectedAsset.value.uuid, assets.records, projectSnapshot.value) : [])
+const selectedInclusion = computed(/* 根据 selectedAsset.value 的真假，分别返回 explainAssetBuildInclusion(selectedAsset.value.uuid, assets.records, projectSnapshot.value) 或 []。 */ () => selectedAsset.value ? explainAssetBuildInclusion(selectedAsset.value.uuid, assets.records, projectSnapshot.value) : [])
+const selectedTextSource = computed(/* 根据 selectedAsset.value 的真假，分别返回 readTextAsset(selectedAsset.value.uuid) ?? '' 或 ''。 */ () => selectedAsset.value ? readTextAsset(selectedAsset.value.uuid) ?? '' : '')
+const importJobs = computed(/* 返回 importPipelineState.jobs 的当前值。 */ () => importPipelineState.jobs)
+const externalChanges = computed(/* 返回 importPipelineState.externalChanges 的当前值。 */ () => importPipelineState.externalChanges)
+const missingReferenceIds = computed(/** 收集并去重缺失资源引用。 */ () => [...new Set(assetGraph.value.missingReferences.map(/* 返回 item.reference 的当前值。 */ item => item.reference))])
+const animationSources = computed(/* 调用 assets.records.filter(asset => asset.assetType === 'animation' && asset.uuid !== selectedAsset.value?.uuid) 并返回调用结果。 */ () => assets.records.filter(/* 先计算 asset.assetType === 'animation'；仅当其为真值时求右侧 asset.uuid !== selectedAsset.value?.uuid，返回短路求值结果。 */ asset => asset.assetType === 'animation' && asset.uuid !== selectedAsset.value?.uuid))
 const assetInput = ref<HTMLInputElement | null>(null)
 const reimportInput = ref<HTMLInputElement | null>(null)
 const assetOverflow = ref<HTMLDetailsElement | null>(null)
@@ -441,77 +451,86 @@ const importerTabs = ['source', 'import', 'dependencies', 'provenance', 'platfor
 const inspectorTab = ref<(typeof importerTabs)[number]>('source')
 const previousPipeline = ref<AssetPipelineMetadata | null>(null), importComparisonText = ref('')
 const draggedTab = ref<(typeof permanentTabs)[number]['id'] | 'tilemap' | null>(null)
-const filteredTypeFilters = computed(() => assetFilters.filter(filter => t(filter.label).toLowerCase().includes(filterQuery.value.trim().toLowerCase())))
-const activeFilterLabel = computed(() => t(assetFilters.find(filter => filter.type === assets.typeFilter)?.label ?? 'allAssets'))
-const compatibleImportPresets = computed(() => selectedAsset.value ? assets.importPresets.filter(preset => preset.assetType === 'all' || preset.assetType === selectedAsset.value?.assetType) : [])
-const selectedAssetTags = computed({ get: () => selectedAsset.value?.tags?.join(', ') ?? '', set: value => { if (selectedAsset.value) selectedAsset.value.tags = [...new Set(value.split(',').map(tag => tag.trim()).filter(Boolean))].sort().slice(0, 64) } })
-const selectedProvenanceDiagnostics = computed(() => selectedAsset.value ? provenanceDiagnostics(selectedAsset.value) : [])
-const selectedGlyphReport = computed(() => selectedAsset.value?.assetType === 'font' ? fontGlyphCoverage(selectedAsset.value) : [])
-const selectedContentClosure = computed(() => selectedAsset.value ? buildContentClosure(assets.records, assets.contentGroups, [selectedAsset.value.uuid], projectSnapshot.value) : [])
-const selectedClosureIssues = computed(() => validateContentClosure(selectedContentClosure.value))
-const selectedAtlasReport = computed(() => {
+const filteredTypeFilters = computed(/* 调用 assetFilters.filter(filter => t(filter.label).toLowerCase().includes(filterQuery.value.trim().toLowerCase())) 并返回调用结果。 */ () => assetFilters.filter(/* 调用 t(filter.label).toLowerCase().includes(filterQuery.value.trim().toLowerCase()) 并返回调用结果。 */ filter => t(filter.label).toLowerCase().includes(filterQuery.value.trim().toLowerCase())))
+const activeFilterLabel = computed(/** 根据当前资源类型过滤项返回本地化标签。 */ () => t(assetFilters.find(/* 比较 filter.type 与 assets.typeFilter，返回严格相等的判断结果。 */ filter => filter.type === assets.typeFilter)?.label ?? 'allAssets'))
+const compatibleImportPresets = computed(/** 筛选适用于当前资源类型或全部资源的导入预设。 */ () => selectedAsset.value ? assets.importPresets.filter(/* 先计算 preset.assetType === 'all'；仅当其为假值时求右侧 preset.assetType === selectedAsset.value?.assetType，返回短路求值结果。 */ preset => preset.assetType === 'all' || preset.assetType === selectedAsset.value?.assetType) : [])
+const selectedAssetTags = computed({ get: /* 当 selectedAsset.value?.tags?.join(', ') 为 null 或 undefined 时返回 ''，否则保留左侧值。 */ () => selectedAsset.value?.tags?.join(', ') ?? '', set: /** 清理资源标签文本，去重排序并限制最多六十四项。 */ value => { if (selectedAsset.value) selectedAsset.value.tags = [...new Set(value.split(',').map(/* 调用 tag.trim() 并返回调用结果。 */ tag => tag.trim()).filter(Boolean))].sort().slice(0, 64) } })
+const selectedProvenanceDiagnostics = computed(/* 根据 selectedAsset.value 的真假，分别返回 provenanceDiagnostics(selectedAsset.value) 或 []。 */ () => selectedAsset.value ? provenanceDiagnostics(selectedAsset.value) : [])
+const selectedGlyphReport = computed(/* 根据 selectedAsset.value?.assetType === 'font' 的真假，分别返回 fontGlyphCoverage(selectedAsset.value) 或 []。 */ () => selectedAsset.value?.assetType === 'font' ? fontGlyphCoverage(selectedAsset.value) : [])
+const selectedContentClosure = computed(/** 为所选资源计算构建依赖闭包。 */ () => selectedAsset.value ? buildContentClosure(assets.records, assets.contentGroups, [selectedAsset.value.uuid], projectSnapshot.value) : [])
+const selectedClosureIssues = computed(/* 调用 validateContentClosure(selectedContentClosure.value) 并返回调用结果。 */ () => validateContentClosure(selectedContentClosure.value))
+const selectedAtlasReport = computed(/** 仅对图集资源，按同组已启用图片生成确定性图集布局预览。 */ () => {
   const asset = selectedAsset.value
   if (asset?.assetType !== 'atlas') return null
   const group = asset.settings.atlasSettings.group || 'default'
-  return packAtlasDeterministic(assets.records.filter(candidate => candidate.assetType === 'image' && candidate.settings.atlas && (candidate.settings.atlasSettings.group || 'default') === group).map(candidate => ({ uuid: candidate.uuid, width: candidate.width, height: candidate.height, group })), { maxSize: asset.settings.atlasSettings.maxSize, padding: asset.settings.atlasSettings.padding, rotationPolicy: asset.settings.atlasSettings.rotationPolicy })
+  return packAtlasDeterministic(assets.records.filter(/** 筛选启用图集合并且分组匹配的图片。 */ candidate => candidate.assetType === 'image' && candidate.settings.atlas && (candidate.settings.atlasSettings.group || 'default') === group).map(/** 提取图片标识、尺寸和分组用于图集装箱。 */ candidate => ({ uuid: candidate.uuid, width: candidate.width, height: candidate.height, group })), { maxSize: asset.settings.atlasSettings.maxSize, padding: asset.settings.atlasSettings.padding, rotationPolicy: asset.settings.atlasSettings.rotationPolicy })
 })
-watch(() => [assets.search, assets.currentFolder, assets.typeFilter, assets.tagFilter, assets.selectedCollectionId, assets.favoritesOnly, assets.viewMode, assets.thumbnailSize], () => {
+watch(/** 监听搜索、目录、类型、标签、收藏、集合和视图尺寸等资源过滤条件。 */ () => [assets.search, assets.currentFolder, assets.typeFilter, assets.tagFilter, assets.selectedCollectionId, assets.favoritesOnly, assets.viewMode, assets.thumbnailSize], /** 过滤条件变化时重置滚动记录和实际视口。 */ () => {
   assetScrollTop.value = 0
   if (assetGrid.value) assetGrid.value.scrollTop = 0
 })
 let assetResizeObserver: ResizeObserver | null = null
-onMounted(() => {
-  const update = () => {
-    if (!assetGrid.value) return
-    assetViewportHeight.value = Math.max(1, assetGrid.value.clientHeight)
-    assetViewportWidth.value = Math.max(1, assetGrid.value.clientWidth)
-  }
-  update()
-  if (typeof ResizeObserver !== 'undefined') { assetResizeObserver = new ResizeObserver(update); if (assetGrid.value) assetResizeObserver.observe(assetGrid.value) }
+/** 以当前列表元素的实际尺寸更新虚拟窗口，避免继续使用被卸载列表的缓存尺寸。 */
+function measureAssetViewport() {
+  if (!assetGrid.value) return
+  assetViewportHeight.value = Math.max(1, assetGrid.value.clientHeight)
+  assetViewportWidth.value = Math.max(1, assetGrid.value.clientWidth)
+}
+/** 标签切换重建列表时转移观察目标，并恢复该资源窗口已有的滚动位置。 */
+watch(assetGrid, /** 资源网格引用变化时解除旧观察，恢复滚动并测量新视口及注册尺寸观察。 */ (element, previous) => {
+  if (previous) assetResizeObserver?.unobserve(previous)
+  if (!element) return
+  element.scrollTop = assetScrollTop.value
+  measureAssetViewport()
+  assetResizeObserver?.observe(element)
+}, { flush:'post' })
+onMounted(/* 首次挂载连接当前元素；后续元素替换交给上面的引用监听处理。 */ () => {
+  measureAssetViewport()
+  if (typeof ResizeObserver !== 'undefined') { assetResizeObserver = new ResizeObserver(measureAssetViewport); if (assetGrid.value) assetResizeObserver.observe(assetGrid.value) }
 })
-onBeforeUnmount(() => assetResizeObserver?.disconnect())
-function clonePipelineMetadata(value: AssetPipelineMetadata | undefined): AssetPipelineMetadata | null {
+onBeforeUnmount(/* 关闭底栏组件时释放全部元素观察，避免保留旧 DOM。 */ () => assetResizeObserver?.disconnect())
+/* 根据 value 的真假，分别返回 JSON.parse(JSON.stringify(value)) as AssetPipelineMetadata 或 null。 */ function clonePipelineMetadata(value: AssetPipelineMetadata | undefined): AssetPipelineMetadata | null {
   // Asset records are exposed through Vue's reactive database. The import
   // metadata itself is JSON-owned project data, so clone it across that
   // boundary without handing a Proxy to the browser structured-clone API.
   return value ? JSON.parse(JSON.stringify(value)) as AssetPipelineMetadata : null
 }
-watch(() => selectedAsset.value?.uuid, () => { inspectorTab.value = 'source'; importComparisonText.value = ''; previousPipeline.value = clonePipelineMetadata(selectedAsset.value?.pipeline) })
-function openTab(id: (typeof permanentTabs)[number]['id'] | 'tilemap') { estate.bottomPanelTab = id; estate.bottomPanelOpen = true }
-function tabDirty(id:(typeof permanentTabs)[number]['id']|'tilemap'){return id==='assets'?projectScopeDirty('asset'):id==='animation'?projectScopeDirty('animation'):id==='audio'?projectScopeDirty('settings'):id==='tilemap'?projectScopeDirty('scene'):false}
-function dropTab(target: (typeof permanentTabs)[number]['id'] | 'tilemap') {
+watch(/* 返回 selectedAsset.value?.uuid 的当前值。 */ () => selectedAsset.value?.uuid, /** 选择变化时重置资源检查标签和导入比较，保存当前流水线基线。 */ () => { inspectorTab.value = 'source'; importComparisonText.value = ''; previousPipeline.value = clonePipelineMetadata(selectedAsset.value?.pipeline) })
+/** 切换指定底部标签并展开面板。 */ function openTab(id: (typeof permanentTabs)[number]['id'] | 'tilemap') { estate.bottomPanelTab = id; estate.bottomPanelOpen = true }
+/** 按资源、动画、音频或瓦片标签映射项目未保存范围。 */ function tabDirty(id:(typeof permanentTabs)[number]['id']|'tilemap'){return id==='assets'?projectScopeDirty('asset'):id==='animation'?projectScopeDirty('animation'):id==='audio'?projectScopeDirty('settings'):id==='tilemap'?projectScopeDirty('scene'):false}
+/** 有拖动标签时调整顺序，随后清除拖动状态。 */ function dropTab(target: (typeof permanentTabs)[number]['id'] | 'tilemap') {
   if (draggedTab.value) reorderBottomTab(draggedTab.value, target)
   draggedTab.value = null
 }
-function autoHide() {
+/** 未固定、未最大化且焦点不在底部面板时自动收起。 */ function autoHide() {
   if (!estate.bottomPanelPinned && workspaceState.maximizedPanel!=='bottom' && !document.activeElement?.closest('.bottom-panel')) estate.bottomPanelOpen = false
 }
-watch(() => estate.bottomPanelOpen, open => { if (!open && workspaceState.maximizedPanel==='bottom') workspaceState.maximizedPanel='' })
-async function importFiles(event: Event) {
+watch(/* 返回 estate.bottomPanelOpen 的当前值。 */ () => estate.bottomPanelOpen, /** 底部面板关闭时清除其最大化状态。 */ open => { if (!open && workspaceState.maximizedPanel==='bottom') workspaceState.maximizedPanel='' })
+/** 无批处理运行时导入选择文件，使用取消控制器和会话标识保护异步结果，成功选中新资源并记录历史。 */ async function importFiles(event: Event) {
   const input=event.target as HTMLInputElement,files=[...(input.files??[])];input.value=''
   if(!files.length||assetBatch.value.active)return
   const session=assetSessionVersion(),controller=new AbortController();assetBatchController=controller;assetOperationError.value=''
-  try{const result=await importAssetBatch(files,assets.currentFolder==='Assets'?undefined:assets.currentFolder,{signal:controller.signal,progress:value=>assetBatch.value=value})
+  try{const result=await importAssetBatch(files,assets.currentFolder==='Assets'?undefined:assets.currentFolder,{signal:controller.signal,progress:/** 将资源导入进度替换为界面批处理状态。 */ value=>assetBatch.value=value})
     if(session===assetSessionVersion() && result.assets.length){const latest=result.assets.at(-1)!;assets.selectedGuid=latest.uuid;assets.currentFolder=latest.path.slice(0,latest.path.lastIndexOf('/'));pushHistory('Import assets');addEditorLog(t('assetsImported',{count:result.assets.length}),'Assets')}
   }catch(error){assetOperationError.value=error instanceof Error?error.message:String(error)}finally{if(assetBatchController===controller)assetBatchController=null}
 }
 
-function dragAsset(event: DragEvent, guid: string) { event.dataTransfer?.setData('application/x-nova-asset-guid', guid); if (event.dataTransfer) event.dataTransfer.effectAllowed = 'copyMove' }
-async function dropOnFolder(event: DragEvent, folder: string) {
-  const guid = event.dataTransfer?.getData('application/x-nova-asset-guid'), asset = assets.records.find(record => record.uuid === guid)
+/** 设置资源拖拽标识和复制或移动许可。 */ function dragAsset(event: DragEvent, guid: string) { event.dataTransfer?.setData('application/x-nova-asset-guid', guid); if (event.dataTransfer) event.dataTransfer.effectAllowed = 'copyMove' }
+/** 确认资源移动预览及引用保留信息后移动，成功记录历史日志。 */ async function dropOnFolder(event: DragEvent, folder: string) {
+  const guid = event.dataTransfer?.getData('application/x-nova-asset-guid'), asset = assets.records.find(/* 比较 record.uuid 与 guid，返回严格相等的判断结果。 */ record => record.uuid === guid)
   if (!guid || !asset || asset.path.startsWith('.nova/')) return
   const references = findAssetReferences(guid, assets.records, projectSnapshot.value)
   const approved = await requestConfirmation({ title: t('moveAssetPreview'), message: `${asset.path}\n→ ${folder}/${asset.name}\n\n${t('referencesPreserved', { count: references.length })}\n${references.slice(0,8).map(referenceName).join('\n')}`, confirmLabel: t('moveAsset'), cancelLabel: t('cancel'), destructive: false })
   if (approved && moveAsset(guid, folder)) { pushHistory('Move asset'); addEditorLog(t('assetMoved'), 'Assets') }
 }
-function createFolder() { if (createAssetFolder(assets.currentFolder, newFolderName.value)) { addEditorLog(t('folderCreated'), 'Assets'); newFolderName.value = ''; creatingFolder.value = false; pushHistory('Create asset folder') } }
-function createScriptAsset() {
+/** 创建资源文件夹成功后清理输入并记录历史日志。 */ function createFolder() { if (createAssetFolder(assets.currentFolder, newFolderName.value)) { addEditorLog(t('folderCreated'), 'Assets'); newFolderName.value = ''; creatingFolder.value = false; pushHistory('Create asset folder') } }
+/** 创建默认 Rhai 脚本资源，选中并记录历史日志。 */ function createScriptAsset() {
   const asset = createTextAsset(t('newScriptName'), 'script', DEFAULT_SCRIPT_SOURCE, 'Assets/Scripts')
   assets.selectedGuid = asset.uuid
   pushHistory('Create script asset')
   addEditorLog(t('scriptCreated', { name: asset.name }), 'Assets')
 }
-function createVisualGraphAsset() {
+/** 创建默认可视图资源，选中、记录历史并打开图编辑器。 */ function createVisualGraphAsset() {
   const graph = defaultVisualGraph(t('newVisualGraph'))
   const asset = createTextAsset(t('newVisualGraph'), 'visualScript', serializeGraphDocument(graph), 'Assets/Visual Scripts')
   assets.selectedGuid = asset.uuid
@@ -519,21 +538,21 @@ function createVisualGraphAsset() {
   addEditorLog(t('visualGraphCreated', { name: asset.name }), 'Assets')
   openInGraphStudio(asset.uuid)
 }
-function createSceneAssetFromSelection() {
+/** 从已选实体创建场景资源，成功选中并定位场景目录。 */ function createSceneAssetFromSelection() {
   const reference = createSceneAssetFromEntities(state.selectedEntityIds, t('newSceneAssetName'))
   if (!reference) return
   assets.selectedGuid = reference.slice('asset://'.length)
   assets.currentFolder = 'Assets/Scenes'
   addEditorLog(t('sceneAssetCreated'), 'Assets')
 }
-function createSharedResource(kind:ResourceKind){const label=t(`resource_${kind}` as Parameters<typeof t>[0]),asset=createResourceAsset(kind,label);assets.selectedGuid=asset.uuid;assets.currentFolder=asset.path.slice(0,asset.path.lastIndexOf('/'));pushHistory('Create shared resource',`resource:${asset.uuid}`)}
-function closeAssetOverflow(){assetOverflow.value?.removeAttribute('open')}
-function openInScriptStudio(uuid: string) { openScriptAsset(uuid); applyEditorWorkspace('script') }
-function openInGraphStudio(uuid: string) { openGraphAsset(uuid); applyEditorWorkspace('script') }
-function openInEventSheetStudio(uuid: string) { openEventSheetAsset(uuid); applyEditorWorkspace('script') }
-function openAnimationAsset(uuid:string){assets.selectedGuid=uuid;estate.bottomPanelTab='animation';estate.bottomPanelOpen=true;applyEditorWorkspace('animation')}
-function openAssetEditor(uuid: string) {
-  const asset = assets.records.find(record => record.uuid === uuid); if (!asset) return
+/** 创建指定类型的共享资源，选中目录并记录资源历史。 */ function createSharedResource(kind:ResourceKind){const label=t(`resource_${kind}` as Parameters<typeof t>[0]),asset=createResourceAsset(kind,label);assets.selectedGuid=asset.uuid;assets.currentFolder=asset.path.slice(0,asset.path.lastIndexOf('/'));pushHistory('Create shared resource',`resource:${asset.uuid}`)}
+/** 关闭资源更多操作详情菜单。 */ function closeAssetOverflow(){assetOverflow.value?.removeAttribute('open')}
+/** 打开脚本资源并切换脚本工作区。 */ function openInScriptStudio(uuid: string) { openScriptAsset(uuid); applyEditorWorkspace('script') }
+/** 打开图资源并切换脚本工作区。 */ function openInGraphStudio(uuid: string) { openGraphAsset(uuid); applyEditorWorkspace('script') }
+/** 打开事件表并切换脚本工作区。 */ function openInEventSheetStudio(uuid: string) { openEventSheetAsset(uuid); applyEditorWorkspace('script') }
+/** 选中动画资源，展开动画面板并切换动画工作区。 */ function openAnimationAsset(uuid:string){assets.selectedGuid=uuid;estate.bottomPanelTab='animation';estate.bottomPanelOpen=true;applyEditorWorkspace('animation')}
+/** 按资源类型分派图、事件、代码、动画或音频编辑器，其他资源选择合适的导入或源标签。 */ function openAssetEditor(uuid: string) {
+  const asset = assets.records.find(/* 比较 record.uuid 与 uuid，返回严格相等的判断结果。 */ record => record.uuid === uuid); if (!asset) return
   assets.selectedGuid = uuid
   if (asset.assetType === 'visualScript') { openInGraphStudio(uuid); return }
   if (asset.assetType === 'eventSheet') { openInEventSheetStudio(uuid); return }
@@ -542,17 +561,17 @@ function openAssetEditor(uuid: string) {
   if (asset.assetType === 'audio') { estate.bottomPanelTab = 'audio'; return }
   inspectorTab.value = asset.assetType === 'image' || asset.assetType === 'font' || asset.assetType === 'atlas' || asset.assetType === 'tileset' ? 'import' : 'source'
 }
-function updateAssetWindow(event: Event) {
+/** 记录资源滚动位置及视口宽高供虚拟化计算。 */ function updateAssetWindow(event: Event) {
   const element = event.currentTarget as HTMLElement
   assetScrollTop.value = Math.max(0, element.scrollTop)
   assetViewportHeight.value = Math.max(1, element.clientHeight)
   assetViewportWidth.value = Math.max(1, element.clientWidth)
 }
-function createCollection() { const collection = createAssetCollection(collectionName.value); if (!collection) return; collectionName.value = ''; if (selectedAsset.value) toggleAssetInCollection(selectedAsset.value.uuid, collection.id); assets.generation++ }
-function toggleSelectedCollection(collectionId: string) { if (!selectedAsset.value) return; toggleAssetInCollection(selectedAsset.value.uuid, collectionId); assets.generation++ }
-function dismissTutorial() { const asset = selectedAsset.value; if (!asset || !asset.path.startsWith('Assets/Tutorials/')) return; deleteAsset(asset.uuid); assets.selectedGuid = null; addEditorLog(t('tutorialDismissed'), 'Project') }
-async function copyAssetDetail(value: string) { try { await navigator.clipboard.writeText(value); estate.statusText = t('copied') } catch { estate.statusText = value } }
-function instantiateSelectedPrefab() {
+/** 创建集合，按需加入所选资源并递增资源代次。 */ function createCollection() { const collection = createAssetCollection(collectionName.value); if (!collection) return; collectionName.value = ''; if (selectedAsset.value) toggleAssetInCollection(selectedAsset.value.uuid, collection.id); assets.generation++ }
+/** 切换选中资源的集合成员状态并递增代次。 */ function toggleSelectedCollection(collectionId: string) { if (!selectedAsset.value) return; toggleAssetInCollection(selectedAsset.value.uuid, collectionId); assets.generation++ }
+/** 只允许关闭教程目录资源，删除后清除选择并记录教程关闭日志。 */ function dismissTutorial() { const asset = selectedAsset.value; if (!asset || !asset.path.startsWith('Assets/Tutorials/')) return; deleteAsset(asset.uuid); assets.selectedGuid = null; addEditorLog(t('tutorialDismissed'), 'Project') }
+/** 复制资源详情，剪贴板失败则在状态栏展示原值。 */ async function copyAssetDetail(value: string) { try { await navigator.clipboard.writeText(value); estate.statusText = t('copied') } catch { estate.statusText = value } }
+/** 编辑模式将选中预制体实例化到画布中心或世界原点，成功记录历史日志。 */ function instantiateSelectedPrefab() {
   const asset = selectedAsset.value
   if (!asset || asset.assetType !== 'prefab' || state.playMode !== 'editing') return
   const canvas = document.querySelector<HTMLElement>('.canvas-container')
@@ -565,13 +584,13 @@ function instantiateSelectedPrefab() {
   pushHistory('Instantiate prefab')
   addEditorLog(t('prefabInstantiated', { name: asset.name }), 'Assets')
 }
-function replaceSelectionWithSelectedPrefab() {
+/** 编辑模式用选中预制体替换当前实体选择并记录数量。 */ function replaceSelectionWithSelectedPrefab() {
   const asset = selectedAsset.value
   if (!asset || asset.assetType !== 'prefab' || state.playMode !== 'editing' || !state.selectedEntityIds.length) return
   const replacements = replaceEntitiesWithPrefab([...state.selectedEntityIds], assetReference(asset.uuid))
   if (replacements.length) addEditorLog(t('selectionReplacedWithPrefab', { count: replacements.length }), 'Assets')
 }
-function instantiateSelectedScene() {
+/** 编辑模式将选中场景资源实例化到视口中心或原点，成功记录历史日志。 */ function instantiateSelectedScene() {
   const asset = selectedAsset.value
   if (!asset || asset.assetType !== 'scene' || state.playMode !== 'editing') return
   const canvas = document.querySelector<HTMLElement>('.canvas-container')
@@ -582,9 +601,9 @@ function instantiateSelectedScene() {
   pushHistory('Instantiate scene')
   addEditorLog(t('sceneInstantiated', { name: asset.name }), 'Assets')
 }
-function startRename(guid: string, name: string) { renamingGuid.value = guid; renameValue.value = name; void nextTick(() => document.querySelector<HTMLInputElement>('.asset-grid article input')?.select()) }
-async function commitRename() {
-  const guid = renamingGuid.value, asset = assets.records.find(record => record.uuid === guid)
+/** 开始资源重命名并等待 DOM 后选中输入文本。 */ function startRename(guid: string, name: string) { renamingGuid.value = guid; renameValue.value = name; void nextTick(/* 调用 document.querySelector<HTMLInputElement>('.asset-grid article input')?.select() 并返回调用结果。 */ () => document.querySelector<HTMLInputElement>('.asset-grid article input')?.select()) }
+/** 跳过内部资源和未变名称，确认引用保留预览后执行重命名并记录历史。 */ async function commitRename() {
+  const guid = renamingGuid.value, asset = assets.records.find(/* 比较 record.uuid 与 guid，返回严格相等的判断结果。 */ record => record.uuid === guid)
   if (!guid || !asset) return
   renamingGuid.value = null
   if (asset.path.startsWith('.nova/') || renameValue.value.trim() === asset.name) return
@@ -592,7 +611,7 @@ async function commitRename() {
   const approved = await requestConfirmation({ title: t('renameAssetPreview'), message: `${asset.name} → ${renameValue.value.trim()}\n\n${t('referencesPreserved', { count: references.length })}\n${references.slice(0,8).map(referenceName).join('\n')}`, confirmLabel: t('renameAsset'), cancelLabel: t('cancel'), destructive: false })
   if (approved && renameAsset(guid, renameValue.value)) { pushHistory('Rename asset'); addEditorLog(t('assetRenamed'), 'Assets') }
 }
-async function removeSelectedAsset() {
+/** 确认删除及引用影响后清理引用并移入项目回收站，成功记录历史和警告日志。 */ async function removeSelectedAsset() {
   const asset = selectedAsset.value
   if (!asset) return
   const referenceCount = countAssetReferences(asset.uuid)
@@ -603,19 +622,19 @@ async function removeSelectedAsset() {
   if (!moveAssetToProjectTrash(asset.uuid, referenceCount)) return
   pushHistory('Move asset to project trash', `asset:${asset.uuid}`, asset.path); addEditorLog(t('assetMovedToTrash'), 'Assets', 'warning')
 }
-function revealAsset() { const asset = selectedAsset.value; if (!asset) return; assets.currentFolder = asset.path.slice(0, asset.path.lastIndexOf('/')); estate.statusText = asset.path }
-function setPixelArtMode(event: Event) { if (selectedAsset.value?.assetType === 'image') selectedAsset.value.settings.filterMode = (event.target as HTMLInputElement).checked ? 'Nearest' : 'Linear' }
-function setTextureProfile(event: Event) { const asset = selectedAsset.value; if (asset?.assetType === 'image') applyTextureImportProfile(asset.settings, (event.target as HTMLSelectElement).value as TextureImportProfile) }
-function setAudioProfile(event: Event) { const asset = selectedAsset.value; if (asset?.assetType === 'audio') applyAudioImportProfile(asset.settings, (event.target as HTMLSelectElement).value as AudioImportProfile) }
-function setFontFallbacks(event: Event) { const asset = selectedAsset.value; if (asset?.assetType === 'font') asset.settings.fontSettings.fallbackFamilies = normalizedFontFallbacks((event.target as HTMLInputElement).value) }
-function setOpenTypeFeatures(event: Event) { const asset = selectedAsset.value; if (asset?.assetType === 'font') asset.settings.fontSettings.openTypeFeatures = [...new Set((event.target as HTMLInputElement).value.split(',').map(value => value.trim()).filter(value => /^[a-z0-9]{4}$/i.test(value)))].sort().slice(0, 64) }
-function setDeclaredLanguages(event: Event) { const asset = selectedAsset.value; if (asset?.assetType === 'font') asset.settings.fontSettings.declaredLanguages = [...new Set((event.target as HTMLInputElement).value.split(',').map(value => value.trim()).filter(Boolean))].sort().slice(0, 64) }
-function togglePlatformOverride(platform: typeof compressionPlatforms[number], event: Event) {
+/** 打开选中资源所在目录并在状态栏显示路径。 */ function revealAsset() { const asset = selectedAsset.value; if (!asset) return; assets.currentFolder = asset.path.slice(0, asset.path.lastIndexOf('/')); estate.statusText = asset.path }
+/** 按像素画开关把图片滤镜设为最近邻或线性。 */ function setPixelArtMode(event: Event) { if (selectedAsset.value?.assetType === 'image') selectedAsset.value.settings.filterMode = (event.target as HTMLInputElement).checked ? 'Nearest' : 'Linear' }
+/** 为图片应用所选纹理导入档。 */ function setTextureProfile(event: Event) { const asset = selectedAsset.value; if (asset?.assetType === 'image') applyTextureImportProfile(asset.settings, (event.target as HTMLSelectElement).value as TextureImportProfile) }
+/** 为音频应用所选音频导入档。 */ function setAudioProfile(event: Event) { const asset = selectedAsset.value; if (asset?.assetType === 'audio') applyAudioImportProfile(asset.settings, (event.target as HTMLSelectElement).value as AudioImportProfile) }
+/** 规范化字体回退家族列表。 */ function setFontFallbacks(event: Event) { const asset = selectedAsset.value; if (asset?.assetType === 'font') asset.settings.fontSettings.fallbackFamilies = normalizedFontFallbacks((event.target as HTMLInputElement).value) }
+/** 解析合法四字符 OpenType 标签，去重排序并限制六十四项。 */ function setOpenTypeFeatures(event: Event) { const asset = selectedAsset.value; if (asset?.assetType === 'font') asset.settings.fontSettings.openTypeFeatures = [...new Set((event.target as HTMLInputElement).value.split(',').map(/* 调用 value.trim() 并返回调用结果。 */ value => value.trim()).filter(/* 调用 /^[a-z0-9]{4}$/i.test(value) 并返回调用结果。 */ value => /^[a-z0-9]{4}$/i.test(value)))].sort().slice(0, 64) }
+/** 清理声明语言列表，去重排序并限制六十四项。 */ function setDeclaredLanguages(event: Event) { const asset = selectedAsset.value; if (asset?.assetType === 'font') asset.settings.fontSettings.declaredLanguages = [...new Set((event.target as HTMLInputElement).value.split(',').map(/* 调用 value.trim() 并返回调用结果。 */ value => value.trim()).filter(Boolean))].sort().slice(0, 64) }
+/** 启用时从当前压缩与图集设置创建平台覆盖，禁用时删除该覆盖。 */ function togglePlatformOverride(platform: typeof compressionPlatforms[number], event: Event) {
   const asset = selectedAsset.value; if (!asset) return
   if ((event.target as HTMLInputElement).checked) asset.settings.platformOverrides[platform] = { enabled: true, compression: asset.settings.platformVariants[platform] ?? asset.settings.compression, maxSize: asset.settings.atlasSettings.maxSize, format: 'Auto' }
   else delete asset.settings.platformOverrides[platform]
 }
-async function autoSliceSelectedImage() {
+/** 读取图片像素并检测不透明区域，提交前检查资源未变化，保存切片及首片轮廓并记录历史。 */ async function autoSliceSelectedImage() {
   const asset = selectedAsset.value; if (!asset || asset.assetType !== 'image') return
   try {
     assetOperationError.value = ''
@@ -628,14 +647,14 @@ async function autoSliceSelectedImage() {
     assets.generation++; pushHistory('Automatically slice sprite', `asset:${asset.uuid}`); addEditorLog(t('automaticSlicesCreated', { count: regions.length }), 'Assets', regions.length ? 'info' : 'warning')
   } catch (error) { assetOperationError.value = error instanceof Error ? error.message : String(error); addEditorLog(assetOperationError.value, 'Assets', 'error') }
 }
-function toggleSpriteRegion(event: Event) {
+/** 启用精灵区域时使用整张图片边界，否则清除区域。 */ function toggleSpriteRegion(event: Event) {
   const asset = selectedAsset.value
   if (!asset || asset.assetType !== 'image') return
   asset.settings.spriteRegion = (event.target as HTMLInputElement).checked
     ? { x: 0, y: 0, width: Math.max(1, asset.width), height: Math.max(1, asset.height) }
     : null
 }
-function assetSettingsChanged(event: Event) {
+/** 资源设置改变时排队重建图集，并按事件字段记录历史范围。 */ function assetSettingsChanged(event: Event) {
   const asset = selectedAsset.value
   if (!asset) return
   const target = event.target instanceof HTMLElement ? event.target : null
@@ -643,7 +662,7 @@ function assetSettingsChanged(event: Event) {
   queueTextureAtlasRebuild()
   pushHistory('Change import settings', field ? 'asset-field:' + field : null, field || 'asset:' + asset.uuid)
 }
-function reimportAnimation() {
+/** 重新导入带动画导入配置的资源，成功增加代次并记录历史日志。 */ function reimportAnimation() {
   const asset = selectedAsset.value
   if (!asset?.animationImport) return
   if (!reimportAnimationClip(asset)) { addEditorLog(t('animationReimportFailed'), 'Assets', 'error'); return }
@@ -651,11 +670,11 @@ function reimportAnimation() {
   pushHistory('Reimport animation', `asset:${asset.uuid}`)
   addEditorLog(t('animationReimported', { name: asset.name }), 'Assets')
 }
-function applyPivotPreset(id: string) { const asset = selectedAsset.value, preset = pivotPresets.find(candidate => candidate.id === id); if (!asset || !preset) return; asset.settings.pivot = { ...preset.value }; pushHistory('Set sprite pivot preset', `asset:${asset.uuid}`) }
-async function trimSelectedImage() { const asset = selectedAsset.value; if (!asset) return; assetOperationError.value = ''; try { if (await trimTransparentImage(asset)) { pushHistory('Trim transparent sprite', `asset:${asset.uuid}`); addEditorLog(t('transparentTrimApplied'), 'Assets') } } catch(error) { assetOperationError.value = error instanceof Error ? error.message : String(error) } }
-function animateSelectedFrames() { const asset = selectedAsset.value; if (!asset) return; assetOperationError.value = ''; try { const animation = createSpriteFrameAnimation(asset); pushHistory('Create sprite animation', `asset:${animation.uuid}`); openAnimationAsset(animation.uuid) } catch(error) { assetOperationError.value = error instanceof Error ? error.message : String(error) } }
-function sliceSelectedSheet() { const asset = selectedAsset.value; if (!asset) return; assetOperationError.value = ''; try { const generated = sliceSpriteSheet(asset); if (generated.length) { assets.selectedGuid = generated[0].uuid; pushHistory('Slice sprite sheet'); addEditorLog(t('spriteSlicesCreated', { count: generated.length }), 'Assets') } } catch (error) { assetOperationError.value = error instanceof Error ? error.message : String(error); addEditorLog(assetOperationError.value, 'Assets', 'error') } }
-async function reimportSelectedAsset(event: Event) {
+/** 复制所选枢轴预设到资源并记录历史。 */ function applyPivotPreset(id: string) { const asset = selectedAsset.value, preset = pivotPresets.find(/* 比较 candidate.id 与 id，返回严格相等的判断结果。 */ candidate => candidate.id === id); if (!asset || !preset) return; asset.settings.pivot = { ...preset.value }; pushHistory('Set sprite pivot preset', `asset:${asset.uuid}`) }
+/** 裁剪透明图片成功后记录历史，失败显示错误。 */ async function trimSelectedImage() { const asset = selectedAsset.value; if (!asset) return; assetOperationError.value = ''; try { if (await trimTransparentImage(asset)) { pushHistory('Trim transparent sprite', `asset:${asset.uuid}`); addEditorLog(t('transparentTrimApplied'), 'Assets') } } catch(error) { assetOperationError.value = error instanceof Error ? error.message : String(error) } }
+/** 从所选帧创建动画并打开，失败显示错误。 */ function animateSelectedFrames() { const asset = selectedAsset.value; if (!asset) return; assetOperationError.value = ''; try { const animation = createSpriteFrameAnimation(asset); pushHistory('Create sprite animation', `asset:${animation.uuid}`); openAnimationAsset(animation.uuid) } catch(error) { assetOperationError.value = error instanceof Error ? error.message : String(error) } }
+/** 切分精灵表，成功选中首片并记录数量，失败显示及记录错误。 */ function sliceSelectedSheet() { const asset = selectedAsset.value; if (!asset) return; assetOperationError.value = ''; try { const generated = sliceSpriteSheet(asset); if (generated.length) { assets.selectedGuid = generated[0].uuid; pushHistory('Slice sprite sheet'); addEditorLog(t('spriteSlicesCreated', { count: generated.length }), 'Assets') } } catch (error) { assetOperationError.value = error instanceof Error ? error.message : String(error); addEditorLog(assetOperationError.value, 'Assets', 'error') } }
+/** 重导入文件前保存流水线基线，结束显示结果并按成功记录历史。 */ async function reimportSelectedAsset(event: Event) {
   const input = event.target as HTMLInputElement, file = input.files?.[0]; input.value = ''
   const asset = selectedAsset.value
   if (!asset || !file) return
@@ -664,16 +683,16 @@ async function reimportSelectedAsset(event: Event) {
   addEditorLog(t(success ? 'assetReimported' : 'assetReimportFailed', { name: asset.name }), 'Assets', success ? 'info' : 'error')
   if (success) pushHistory('Reimport asset', `asset:${asset.uuid}`)
 }
-function compareSelectedImport() { const current = selectedAsset.value?.pipeline; importComparisonText.value = compareImportMetadata(previousPipeline.value, current).map(row => `${row.changed ? '●' : '○'} ${row.field}: ${row.before || '—'} → ${row.after || '—'}`).join('\n') }
-function revertSelectedImport() { const asset = selectedAsset.value; if (!asset || !revertToVerifiedArtifact(asset)) { addEditorLog(t('noVerifiedArtifact'), 'Assets', 'warning'); return } assets.generation++; importComparisonText.value = ''; addEditorLog(t('importReverted'), 'Assets') }
-async function batchReimportVisible() {
+/** 比较导入前后流水线元数据并格式化差异文本。 */ function compareSelectedImport() { const current = selectedAsset.value?.pipeline; importComparisonText.value = compareImportMetadata(previousPipeline.value, current).map(/** 为导入字段显示变化标记、字段名及前后值。 */ row => `${row.changed ? '●' : '○'} ${row.field}: ${row.before || '—'} → ${row.after || '—'}`).join('\n') }
+/** 恢复到验证过的产物，成功递增代次并清空比较；无可用产物显示警告。 */ function revertSelectedImport() { const asset = selectedAsset.value; if (!asset || !revertToVerifiedArtifact(asset)) { addEditorLog(t('noVerifiedArtifact'), 'Assets', 'warning'); return } assets.generation++; importComparisonText.value = ''; addEditorLog(t('importReverted'), 'Assets') }
+/** 对可见候选执行可取消批量重导入，使用会话校验后记录历史，并显示完成和失败数量。 */ async function batchReimportVisible() {
   if(assetBatch.value.active)return
   const session=assetSessionVersion(),candidates=reimportCandidates(filteredAssetRecords.value),controller=new AbortController();assetBatchController=controller;assetOperationError.value=''
-  try{const result=await reimportAssetBatch(candidates,{signal:controller.signal,progress:value=>assetBatch.value=value});if(session===assetSessionVersion() && result.completed)pushHistory('Batch reimport assets');addEditorLog(t('batchReimportComplete',{complete:result.completed,failed:result.failed}),'Assets',result.failed?'warning':'info')}
+  try{const result=await reimportAssetBatch(candidates,{signal:controller.signal,progress:/** 同步批量重导入进度状态。 */ value=>assetBatch.value=value});if(session===assetSessionVersion() && result.completed)pushHistory('Batch reimport assets');addEditorLog(t('batchReimportComplete',{complete:result.completed,failed:result.failed}),'Assets',result.failed?'warning':'info')}
   catch(error){assetOperationError.value=error instanceof Error?error.message:String(error)}finally{if(assetBatchController===controller)assetBatchController=null}
 }
 
-async function bulkApplyVisible() {
+/** 确认后把所选资源生产元数据批量应用到可见资源，递增代次并记录历史数量。 */ async function bulkApplyVisible() {
   const source = selectedAsset.value
   if (!source || !filteredAssetRecords.value.length) return
   const approved = await requestConfirmation({ title: t('bulkApplyVisible'), message: t('bulkApplyVisibleConfirm', { count: filteredAssetRecords.value.length }), confirmLabel: t('apply'), cancelLabel: t('cancel'), destructive: false })
@@ -681,18 +700,18 @@ async function bulkApplyVisible() {
   const count = applyBulkAssetSettings(filteredAssetRecords.value, { contentGroup: source.contentGroup, editorOnly: source.editorOnly, tags: source.tags, collectionIds: source.collectionIds })
   assets.generation++; pushHistory('Bulk edit asset production metadata'); addEditorLog(t('bulkApplyComplete', { count }), 'Assets')
 }
-function reportUnusedAssets() {
+/** 分析未使用资源并记录有限数量名称或无问题提示。 */ function reportUnusedAssets() {
   const unused = unusedAssetReport(assets.records, projectSnapshot.value)
-  addEditorLog(unused.length ? t('unusedAssetsFound', { count: unused.length, names: unused.slice(0, 12).map(asset => asset.name).join(', ') }) : t('noUnusedAssets'), 'Assets', unused.length ? 'warning' : 'info')
+  addEditorLog(unused.length ? t('unusedAssetsFound', { count: unused.length, names: unused.slice(0, 12).map(/* 返回 asset.name 的当前值。 */ asset => asset.name).join(', ') }) : t('noUnusedAssets'), 'Assets', unused.length ? 'warning' : 'info')
 }
-function openMissingRepair() {
+/** 进入缺失引用修复模式，初始化首项及替代选择并记录诊断数量。 */ function openMissingRepair() {
   const missing = assetGraph.value.missingReferences
   repairMode.value = missing.length > 0
   selectedMissingReference.value = missing[0]?.reference ?? ''
   replacementAssetGuid.value = ''
-  addEditorLog(missing.length ? t('missingReferencesFound', { count: missing.length, names: missing.slice(0, 12).map(item => item.reference).join(', ') }) : t('noMissingReferences'), 'Assets', missing.length ? 'error' : 'info')
+  addEditorLog(missing.length ? t('missingReferencesFound', { count: missing.length, names: missing.slice(0, 12).map(/* 返回 item.reference 的当前值。 */ item => item.reference).join(', ') }) : t('noMissingReferences'), 'Assets', missing.length ? 'error' : 'info')
 }
-function repairSelectedMissingReference() {
+/** 替换项目与资源中的缺失引用，按需递增代次，记录结果并推进下一项。 */ function repairSelectedMissingReference() {
   if (!selectedMissingReference.value || !replacementAssetGuid.value) return
   const projectChanges = replaceAssetReferences(selectedMissingReference.value, replacementAssetGuid.value)
   const assetChanges = repairMissingAssetReference(assets.records, selectedMissingReference.value, replacementAssetGuid.value)
@@ -704,16 +723,16 @@ function repairSelectedMissingReference() {
   replacementAssetGuid.value = ''
   repairMode.value = missingReferenceIds.value.length > 0
 }
-function referenceName(owner: string): string { return owner === 'project' ? t('project') : assets.records.find(asset => asset.uuid === owner)?.path ?? owner }
-function navigateAssetReference(guid: string) { const asset = assets.records.find(candidate => candidate.uuid === guid); if (!asset) return; assets.selectedGuid = asset.uuid; const separator = asset.path.lastIndexOf('/'); assets.currentFolder = separator > 0 ? asset.path.slice(0, separator) : 'Assets' }
-function saveFilter() { const saved = saveCurrentAssetFilter(savedFilterName.value); if (saved) { savedFilterName.value = ''; addEditorLog(t('filterSaved', { name: saved.name }), 'Assets') } }
-function applySavedFilter(id: string) { if (id) applyAssetFilter(id) }
-function saveSelectedPreset() { const asset = selectedAsset.value; if (!asset) return; const preset = saveImportPreset(presetName.value, asset.assetType, asset.settings); if (preset) { presetName.value = ''; addEditorLog(t('presetSaved', { name: preset.name }), 'Assets') } }
-function applySelectedPreset(id: string) { const asset = selectedAsset.value; if (asset && id && applyImportPreset(id, asset)) { pushHistory('Apply import preset', `asset:${asset.uuid}`); addEditorLog(t('presetApplied'), 'Assets') } }
-async function linkSelectedSource() { const asset = selectedAsset.value; if (!asset) return; const result = await linkAssetSource(asset.uuid); estate.statusText = t(result === 'linked' ? 'sourceLinked' : result === 'unsupported' ? 'sourceLinkUnsupported' : 'saveCancelled') }
-async function resolveExternal(id: string, choice: 'reimport' | 'keep' | 'duplicate') { if (await resolveExternalAssetChange(id, choice)) addEditorLog(t('externalChangeResolved'), 'Assets') }
-async function retryImport(id: number) { const asset = await retryFailedAssetImport(id, assets.currentFolder); addEditorLog(t(asset ? 'assetReimported' : 'assetReimportFailed', { name: asset?.name ?? '' }), 'Assets', asset ? 'info' : 'error') }
-async function exportFolder() {
+/** 项目拥有者显示本地化项目名，资源拥有者显示路径，缺失时保留标识。 */ function referenceName(owner: string): string { return owner === 'project' ? t('project') : assets.records.find(/* 比较 asset.uuid 与 owner，返回严格相等的判断结果。 */ asset => asset.uuid === owner)?.path ?? owner }
+/** 按标识选中引用资源并定位所属文件夹。 */ function navigateAssetReference(guid: string) { const asset = assets.records.find(/* 比较 candidate.uuid 与 guid，返回严格相等的判断结果。 */ candidate => candidate.uuid === guid); if (!asset) return; assets.selectedGuid = asset.uuid; const separator = asset.path.lastIndexOf('/'); assets.currentFolder = separator > 0 ? asset.path.slice(0, separator) : 'Assets' }
+/** 保存资源筛选器成功后清空名称并记录日志。 */ function saveFilter() { const saved = saveCurrentAssetFilter(savedFilterName.value); if (saved) { savedFilterName.value = ''; addEditorLog(t('filterSaved', { name: saved.name }), 'Assets') } }
+/** 非空标识时应用已保存资源筛选。 */ function applySavedFilter(id: string) { if (id) applyAssetFilter(id) }
+/** 以当前资源类型和设置保存导入预设，成功清空名称并记录日志。 */ function saveSelectedPreset() { const asset = selectedAsset.value; if (!asset) return; const preset = saveImportPreset(presetName.value, asset.assetType, asset.settings); if (preset) { presetName.value = ''; addEditorLog(t('presetSaved', { name: preset.name }), 'Assets') } }
+/** 应用有效导入预设成功后记录资源历史及日志。 */ function applySelectedPreset(id: string) { const asset = selectedAsset.value; if (asset && id && applyImportPreset(id, asset)) { pushHistory('Apply import preset', `asset:${asset.uuid}`); addEditorLog(t('presetApplied'), 'Assets') } }
+/** 为选中资源关联本地源文件，并按关联、不可用或取消结果显示状态。 */ async function linkSelectedSource() { const asset = selectedAsset.value; if (!asset) return; const result = await linkAssetSource(asset.uuid); estate.statusText = t(result === 'linked' ? 'sourceLinked' : result === 'unsupported' ? 'sourceLinkUnsupported' : 'saveCancelled') }
+/** 解决指定外部资源变更成功后记录日志。 */ async function resolveExternal(id: string, choice: 'reimport' | 'keep' | 'duplicate') { if (await resolveExternalAssetChange(id, choice)) addEditorLog(t('externalChangeResolved'), 'Assets') }
+/** 重试失败导入，并按结果记录成功或错误。 */ async function retryImport(id: number) { const asset = await retryFailedAssetImport(id, assets.currentFolder); addEditorLog(t(asset ? 'assetReimported' : 'assetReimportFailed', { name: asset?.name ?? '' }), 'Assets', asset ? 'info' : 'error') }
+/** 导出当前项目文件夹，显示保存、取消或不支持结果；失败记录本地化错误。 */ async function exportFolder() {
   try {
     const result = await exportProjectFolder(getSceneJSON(), assets.records, assets.folders)
     estate.statusText = t(result === 'saved' ? 'projectFolderExported' : result === 'unsupported' ? 'projectFolderUnsupported' : 'saveCancelled')
@@ -723,9 +742,9 @@ async function exportFolder() {
     addEditorLog(estate.statusText, 'Project', 'error')
   }
 }
-function assetIcon(type: AssetType): string { return type === 'audio' ? '♫' : type === 'font' ? 'Aa' : type === 'scene' ? '◇' : type === 'prefab' ? '⬡' : type === 'visualScript' ? '⌘' : type === 'animation' ? '▶' : type === 'controller' ? '⌘' : type === 'animationMask' ? '◐' : type === 'rig' ? '◍' : type === 'skin' ? '▧' : type === 'timeline' ? '⏱' : type === 'material' ? '◩' : '◆' }
-function formatBytes(value: number): string { return value < 1024 ? `${value} B` : value < 1024 ** 2 ? `${(value / 1024).toFixed(1)} KB` : `${(value / 1024 ** 2).toFixed(1)} MB` }
-function assetSourceStatus(uuid: string) { return sourceStatusFor(uuid) }
+/** 按资源类型返回展示符号。 */ function assetIcon(type: AssetType): string { return type === 'audio' ? '♫' : type === 'font' ? 'Aa' : type === 'scene' ? '◇' : type === 'prefab' ? '⬡' : type === 'visualScript' ? '⌘' : type === 'animation' ? '▶' : type === 'controller' ? '⌘' : type === 'animationMask' ? '◐' : type === 'rig' ? '◍' : type === 'skin' ? '▧' : type === 'timeline' ? '⏱' : type === 'material' ? '◩' : '◆' }
+/** 按字节、千字节或兆字节格式化资源大小。 */ function formatBytes(value: number): string { return value < 1024 ? `${value} B` : value < 1024 ** 2 ? `${(value / 1024).toFixed(1)} KB` : `${(value / 1024 ** 2).toFixed(1)} MB` }
+/* 调用 sourceStatusFor(uuid) 并返回调用结果。 */ function assetSourceStatus(uuid: string) { return sourceStatusFor(uuid) }
 
 </script>
 
@@ -737,8 +756,14 @@ function assetSourceStatus(uuid: string) { return sourceStatusFor(uuid) }
 .resize-handle { position: absolute; inset: 0 0 auto; height: 8px; cursor: ns-resize; z-index: 5; }
 .panel-tabs { min-height: 34px; flex: 0 0 auto; padding: 3px 5px; display: flex; align-items: center; flex-wrap: wrap; gap: 2px; overflow: hidden; border-bottom: 1px solid var(--border-subtle); }
 .panel-tabs span { min-width: 4px; flex: 1; }.panel-tabs button { height: 29px; padding: 0 clamp(7px, .9vw, 12px); flex: 0 1 auto; border: 0; border-radius: 7px; color: var(--text-muted); background: transparent; font-size: clamp(10px, .82vw, 12px); white-space: nowrap; word-break: keep-all; writing-mode: horizontal-tb; }.panel-tabs button:hover, .panel-tabs button.active { color: var(--text-primary); background: var(--surface-hover); }.panel-tabs button.active { color: var(--accent); }
-.compact-tab-select{display:none;width:min(240px,calc(100% - 76px));min-height:28px;height:28px;padding-block:2px}
-@container(max-width:760px){.panel-tabs{flex-wrap:nowrap}.panel-tabs .panel-tab{display:none}.compact-tab-select{display:block}.panel-tabs>span{display:block}}
+/* 按底栏实际宽度切换标签选择器；大文字缩放同样触发紧凑布局。 */
+.panel-tabs { flex-wrap: nowrap; overflow: visible; }
+.panel-tab-strip { display: flex; flex: 1 1 auto; min-width: 0; overflow-x: auto; align-items: center; gap: 2px; }
+.panel-tab-strip .panel-tab { flex: 0 0 auto; height: auto; min-height: var(--control-default); font-size: var(--type-caption); }
+.panel-controls { display: flex; flex: 0 0 auto; gap: 2px; align-items: center; }
+.panel-controls > button { flex: 0 0 auto; min-width: var(--control-default); height: auto; min-height: var(--control-default); }
+.compact-tab-select { display:none; flex:1 1 auto; width:0; min-width:0; min-height:var(--control-default); height:auto; padding-block:4px; }
+@container (max-width: 76em) { .panel-tab-strip { display:none; } .compact-tab-select { display:block; } }
 .panel-content { flex: 1; min-width: 0; min-height: 0; overflow: hidden; }.asset-browser { height: 100%; min-height: 120px; display: grid; grid-template-columns: minmax(145px,18%) minmax(180px,1fr); overflow: hidden; }.asset-browser.inspecting { grid-template-columns: minmax(145px,18%) minmax(160px,1fr) minmax(205px,25%); }.folder-tree, .asset-inspector { min-height: 0; padding: 9px; overflow: auto; background: var(--surface-2); }.folder-tree { border-right: 1px solid var(--border-subtle); }.folder-tree strong { display: block; padding: 3px 7px 8px; color: var(--text-muted); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }.folder-tree button { width: 100%; min-width:0; min-height: 29px; padding: 0 7px; display: flex; align-items: center; gap: 5px; overflow:hidden; border: 0; border-radius: 7px; color: var(--text-muted); background: transparent; font-size: 12px; text-align: left; text-overflow:ellipsis; white-space:nowrap; }.folder-tree button span{flex:0 0 auto}.folder-tree button.active, .folder-tree button:hover { color: var(--accent); background: var(--accent-soft); }
 .asset-workspace { position: relative; min-width: 0; overflow: hidden; display: flex; flex-direction: column; }.asset-toolbar { min-height: 86px; padding: 6px 8px; display: grid; grid-template-columns:minmax(0,1fr) auto; gap: 5px; overflow: visible; border-bottom: 1px solid var(--border-subtle); }.asset-actions-row, .asset-filters { min-width: 0; display: flex; align-items: center; flex-wrap: wrap; gap: 5px; }.asset-actions-row{grid-column:1/-1}.asset-toolbar button { height: 31px; padding: 0 8px; flex: 0 0 auto; border: 1px solid var(--border-subtle); border-radius: 7px; color: var(--text-secondary); background: var(--surface-2); font-size: 11px; white-space: nowrap; word-break: keep-all; writing-mode: horizontal-tb; }.asset-toolbar button.primary { color: var(--accent-contrast); border-color: var(--accent); background: var(--accent); }.asset-toolbar .path { min-width: 45px; flex: 1 1 80px; overflow: hidden; color: var(--text-muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }.asset-toolbar input { width: 140px; min-width: 100px; min-height: 31px; flex: 0 1 140px; font-size: 11px; }.asset-toolbar .folder-input { width: 105px; }.asset-filters button { height: 25px; padding-inline: 8px; border-radius: 999px; font-size: 11px; }.asset-filters button.active { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 65%, var(--border-subtle)); background: var(--accent-soft); }.asset-diagnostics{display:flex;align-items:center;gap:4px}.asset-diagnostics button{height:25px;font-size:11px}.asset-diagnostics span{color:var(--danger)}.asset-diagnostics .atlas-error{max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .import-queue{position:absolute;z-index:6;top:87px;right:8px;width:min(360px,calc(100% - 16px));padding:6px;display:grid;gap:4px;border:1px solid var(--border-strong);border-radius:9px;background:var(--surface-1);box-shadow:var(--shadow-md)}.import-queue article{min-width:0;display:grid;grid-template-columns:minmax(80px,1fr) 90px auto;align-items:center;gap:6px}.import-queue article>span{min-width:0;display:grid}.import-queue strong,.import-queue small,.import-queue em{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.import-queue small,.import-queue em{color:var(--text-muted);font-size:11px}.import-queue progress{width:100%;accent-color:var(--accent)}.import-queue button{min-height:25px}
@@ -795,4 +820,11 @@ function assetSourceStatus(uuid: string) { return sourceStatusFor(uuid) }
 .panel-content{container:nova-assets-dock/inline-size}.asset-detail-toggle,.asset-detail-back{display:none}.asset-batch{flex:0 0 auto;max-height:160px;overflow:auto;display:grid;gap:5px;padding:8px;border-bottom:1px solid var(--border-subtle)}.asset-batch header{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}.asset-batch progress{width:100%;height:8px}.asset-batch p{margin:0;overflow-wrap:anywhere}.asset-batch button{min-height:30px;white-space:normal}.asset-browser.inspecting{grid-template-columns:minmax(110px,16%) minmax(180px,1fr) minmax(280px,34%)}
 @container nova-assets-dock (max-width:800px){.asset-browser,.asset-browser.inspecting{position:relative;grid-template-columns:minmax(90px,22%) minmax(0,1fr)}.asset-detail-toggle,.asset-detail-back{display:block;min-height:32px;white-space:normal}.asset-inspector{display:none;position:static;inset:auto;width:auto;box-shadow:none}.asset-browser.details-visible{grid-template-columns:minmax(0,1fr)}.asset-browser.details-visible>.folder-tree,.asset-browser.details-visible>.asset-workspace{display:none}.asset-browser.details-visible>.asset-inspector{display:block;width:auto}.asset-inspector header strong{white-space:normal;overflow-wrap:anywhere}.asset-inspector>header{position:sticky;top:-6px;z-index:1;background:var(--surface-2)}}
 .asset-inspector label > div:has(.numeric-draft){flex-wrap:wrap;max-width:100%}.asset-inspector label:has(.numeric-draft){align-items:stretch;flex-wrap:wrap}.asset-inspector label > .numeric-draft{max-width:100%}.asset-inspector .numeric-draft :deep(input){width:100%;min-width:0}.asset-inspector label.region-field .numeric-draft{flex-basis:calc(10ch + 64px)}
+/* 大文字或低矮底栏使用完整工作区滚动；工具栏不能压缩到其子控件发生重叠。 */
+.asset-workspace { overflow:auto; overscroll-behavior:contain; }
+.asset-workspace > .asset-toolbar,.asset-workspace > .external-changes,.asset-workspace > .asset-batch,.asset-workspace > .repair-panel { flex-shrink:0; }
+.asset-workspace > .asset-grid { flex:1 0 160px; min-height:160px; }
+/* 视口尺寸稳定；内部网格独自携带虚拟行占位，列数与切片算法共用同一计算值。 */
+.asset-grid,.asset-grid.asset-list { display:block; padding:0; overflow-anchor:none; }
+.asset-grid-window { display:grid; padding-inline:9px; align-content:start; min-width:0; }
 </style>

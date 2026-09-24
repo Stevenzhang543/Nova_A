@@ -1,3 +1,4 @@
+<!-- 学习中心：展示学习指南及能力清单，并导航至对应工作区。 -->
 <template>
   <section class="learning-center" data-control-scope="creator-learning">
     <header class="learning-header">
@@ -39,7 +40,7 @@
     </div>
 
     <div v-else-if="activeTab === 'contracts'" class="contract-view">
-      <header><div><span>{{ t('stableContractFreeze') }}</span><h2>Nova_A 7.0</h2></div><strong>{{ contracts.every(item => item.frozen) ? t('allContractsFrozen') : t('attentionRequired') }}</strong></header>
+<!-- 契约检查回调读取各项冻结状态，所有契约冻结时显示完成标签。 -->      <header><div><span>{{ t('stableContractFreeze') }}</span><h2>Nova_A 7.0</h2></div><strong>{{ contracts.every(item => item.frozen) ? t('allContractsFrozen') : t('attentionRequired') }}</strong></header>
       <article v-for="contract in contracts" :key="contract.id"><div><span>{{ contract.id }}</span><strong>v{{ contract.version }}</strong></div><p>{{ contract.compatibility }}</p><small>{{ contract.migration }}</small><b>{{ contract.frozen ? t('frozen') : t('development') }}</b></article>
       <section class="migration-matrix"><h3>{{ t('migrationMatrix') }}</h3><p v-for="check in matrix" :key="check.contract"><span>{{ check.supported ? '✓' : '!' }}</span><strong>{{ check.contract }}</strong><small>{{ check.message }}</small></p></section>
     </div>
@@ -77,15 +78,15 @@ type TranslationKey = Parameters<typeof t>[0]
 const tabs: ReadonlyArray<{ id: 'guides' | 'contracts' | 'readiness' | 'profiles'; label: TranslationKey }> = [{ id: 'guides', label: 'featureGuides' }, { id: 'contracts', label: 'stableContracts' }, { id: 'readiness', label: 'platformReadiness' }, { id: 'profiles', label: 'performanceProfiles' }]
 const activeTab = ref<'guides' | 'contracts' | 'readiness' | 'profiles'>('guides')
 const progress = creatorLearningProgress, guides = filteredCreatorGuides, contracts = NOVA_STABLE_CONTRACTS, matrix = stableContractMatrix()
-const panels = [...new Set(CREATOR_LEARNING_GUIDES.map(guide => guide.panel))].sort()
+const panels = [...new Set(CREATOR_LEARNING_GUIDES.map(/* 返回 guide.panel 的当前值。 */ guide => guide.panel))].sort()
 const profiles = Object.values(CREATOR_PERFORMANCE_PROFILES)
 const readinessQuery = ref(''), readinessPanel = ref('all'), readinessSummary = CREATOR_PLATFORM_SUMMARY, readinessDimensions = CREATOR_READINESS_DIMENSIONS, contractReview = CREATOR_CONTRACT_REVIEW, supportMatrix = CREATOR_SUPPORT_MATRIX
 const readinessLabels: Record<ReadinessDimension, TranslationKey> = { binding:'bindingCoverage', validation:'validation', undo:'undo', persistence:'persistence', runtimeExport:'runtimeExport', documentation:'documentation', tests:'tests' }
-const filteredReadiness = computed(() => { const query = readinessQuery.value.trim().toLocaleLowerCase(); return CREATOR_PLATFORM_READINESS.filter(item => (readinessPanel.value === 'all' || item.panel === readinessPanel.value) && (!query || `${item.feature} ${item.panel} ${item.workspace}`.toLocaleLowerCase().includes(query))) })
-const activeGuide = computed(() => CREATOR_LEARNING_GUIDES.find(guide => guide.id === learning.activeGuideId) ?? guides.value[0] ?? null)
-const localized = computed(() => activeGuide.value ? localizedLearningGuide(activeGuide.value, prefs.locale) : null)
+const filteredReadiness = computed(/** 按面板和规范化搜索词筛选能力清单。 */ () => { const query = readinessQuery.value.trim().toLocaleLowerCase(); return CREATOR_PLATFORM_READINESS.filter(/** 匹配面板选择及功能、面板、工作区中的搜索词。 */ item => (readinessPanel.value === 'all' || item.panel === readinessPanel.value) && (!query || `${item.feature} ${item.panel} ${item.workspace}`.toLocaleLowerCase().includes(query))) })
+const activeGuide = computed(/** 优先使用已选指南，否则回退当前列表首项或空值。 */ () => CREATOR_LEARNING_GUIDES.find(/* 比较 guide.id 与 learning.activeGuideId，返回严格相等的判断结果。 */ guide => guide.id === learning.activeGuideId) ?? guides.value[0] ?? null)
+const localized = computed(/** 存在指南时返回当前语言的指南内容。 */ () => activeGuide.value ? localizedLearningGuide(activeGuide.value, prefs.locale) : null)
 
-function openGuideWorkspace(guide: LearningGuide): void {
+/** 根据指南工作区或面板线索切换管理、脚本、动画、界面、调试或设计工作区。 */ function openGuideWorkspace(guide: LearningGuide): void {
   const workspace = guide.workspace.toLocaleLowerCase()
   if (workspace.includes('manage') || guide.panel.includes('Settings') || guide.panel.includes('Build')) { editorState.activeWorkspace = 'manage'; editorState.currentPage = 'manage'; return }
   if (workspace.includes('script')) { editorState.activeWorkspace = 'script'; editorState.currentPage = 'script'; return }

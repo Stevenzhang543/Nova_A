@@ -1,3 +1,4 @@
+/** 版本6.8.0：生成固定规模和种子的场景测试样本及确定性指纹。 */
 import { mkdir, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -6,7 +7,7 @@ const root = dirname(dirname(fileURLToPath(import.meta.url)))
 const output = join(root, 'release-fixtures/v6.8.0')
 await mkdir(output, { recursive: true })
 
-function fingerprint(count, seed) {
+/** 以固定种子的伪随机坐标和FNV式混合计算大场景的八位十六进制确定性指纹。 */ function fingerprint(count, seed) {
   let hash = 0x811c9dc5, state = seed >>> 0
   for (let index = 0; index < count; index++) {
     state = (Math.imul(state, 1664525) + 1013904223) >>> 0

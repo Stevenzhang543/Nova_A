@@ -1,3 +1,4 @@
+/** 属性编辑元数据：为检查器提供字段类型、范围及编辑呈现信息。 */
 export interface PropertyMetadata {
   path: string
   unit?: string
@@ -34,4 +35,4 @@ export const PROPERTY_METADATA: Record<string, PropertyMetadata> = {
   'Camera.pixelPerfect': { path: 'Camera.pixelPerfect', defaults: [false], help: 'Quantizes camera scale and position to device pixels.' }
 }
 
-export function propertyMetadata(path: string): PropertyMetadata | undefined { return PROPERTY_METADATA[path] }
+/* 返回 PROPERTY_METADATA[path] 的当前值。 */ export function propertyMetadata(path: string): PropertyMetadata | undefined { return PROPERTY_METADATA[path] }

@@ -1,3 +1,4 @@
+/** 版本26.12：组织教学步骤与示例说明，生成版本教程和用户操作文档。 */
 import { readFile, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -38,14 +39,14 @@ const lessons={
     '从 reference-projects/projects 打开 creator-v2612-code-game、creator-v2612-blocks-game 和 creator-v2612-mixed-game。分别用 WASD/方向键按顺序收集六个检查点，用 R 重新开始。块版本直接绑定图资源，其他版本绑定 Rhai。保存、重新打开并导出同一场景，再次检查游戏流程。'
   ],expected:'核对修改前12、修改后18、撤销后12；连续切换三次不丢失注释或变量；Coin Trail获得六分、完成并能重新开始。语法错误应阻止保存/转换，同时保留草稿。扩展示例时比较实际命令、日志、状态以及运行错误。',limits:'源码图每模块最多64,000个UTF16字符、10,000个节点、每节点128个引脚。较长有序列表会分组；超限明确拒绝，不截断。Rhai整数与浮点数属于不同重载，浮点参数应写为0.0等形式。API面板说明真正注册的重载。原生import别名/命名空间、eval、await以及阻塞sleep不可用；项目内use按依赖拼接源码，延迟使用已支持的计时器和任务API。局部闭包与函数指针可以执行，但其身份不能序列化为已保存属性。语法覆盖率不能代替运行、导出和用户测试。',migration:'继续使用Project Format2/schema29与Graph Format1；附加语言元数据标识新的图结构。在旧编辑器打开新图前应保留备份。旧执行图仍可使用，并显示依赖原始代码的范围。完整语法、实际签名和审计范围见 VERSION_26_12_LANGUAGE.md、SCRIPT_SUPPORT_MATRIX_26_12.md 以及独立版本的发布证据。'}
 }
-const escape=value=>value.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;')
+const escape=/* 调用 value.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;') 并返回调用结果。 */ value=>value.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;')
 let html=await readFile(join(root,'manual/index.html'),'utf8')
 let supplement='<!-- NOVA_V2612_START -->\n<div class="release-supplement">'
 for(const [language,lesson]of Object.entries(lessons)){
-  const path=join(root,'manual','MANUAL.'+language+'.md'),before=await readFile(path,'utf8'),chapter='<!-- NOVA_V2612_START -->\n## '+lesson.title+'\n\nEngine: **26.12.0** · Project Format 2/schema 29 · Graph Format 1.\n\n'+lesson.intro+'\n\n'+lesson.steps.map((step,index)=>(index+1)+'. '+step).join('\n\n')+'\n\n```rhai\n'+sample+'\n```\n\n'+lesson.expected+'\n\n'+lesson.limits+'\n\n'+lesson.migration+'\n<!-- NOVA_V2612_END -->\n'
+  const path=join(root,'manual','MANUAL.'+language+'.md'),before=await readFile(path,'utf8'),chapter='<!-- NOVA_V2612_START -->\n## '+lesson.title+'\n\nEngine: **26.12.0** · Project Format 2/schema 29 · Graph Format 1.\n\n'+lesson.intro+'\n\n'+lesson.steps.map(/* 计算表达式 (index+1)+'. '+step 并返回结果，沿用操作数的原有类型规则。 */ (step,index)=>(index+1)+'. '+step).join('\n\n')+'\n\n```rhai\n'+sample+'\n```\n\n'+lesson.expected+'\n\n'+lesson.limits+'\n\n'+lesson.migration+'\n<!-- NOVA_V2612_END -->\n'
   const updated=before.replace(/^# Nova_A 26\.\d+/, '# Nova_A 26.12').replace(/<!-- NOVA_V2612_START -->[\s\S]*?<!-- NOVA_V2612_END -->\r?\n?/,'')
   const split=updated.indexOf('\n');await writeFile(path,updated.slice(0,split)+'\n\n'+chapter+'\n'+updated.slice(split+1).replace(/^\s*\n/,''))
-  supplement+='<article data-lang="'+language+'"><section id="'+language+'-v2612-language"><h2>'+escape(lesson.title)+'</h2><p>Engine 26.12.0 · Project Format 2/schema 29 · Graph Format 1.</p><p>'+escape(lesson.intro)+'</p><ol>'+lesson.steps.map(step=>'<li>'+escape(step)+'</li>').join('')+'</ol><pre><code>'+escape(sample)+'</code></pre><p>'+escape(lesson.expected)+'</p><p>'+escape(lesson.limits)+'</p><p>'+escape(lesson.migration)+'</p></section></article>'
+  supplement+='<article data-lang="'+language+'"><section id="'+language+'-v2612-language"><h2>'+escape(lesson.title)+'</h2><p>Engine 26.12.0 · Project Format 2/schema 29 · Graph Format 1.</p><p>'+escape(lesson.intro)+'</p><ol>'+lesson.steps.map(/* 计算表达式 '<li>'+escape(step)+'</li>' 并返回结果，沿用操作数的原有类型规则。 */ step=>'<li>'+escape(step)+'</li>').join('')+'</ol><pre><code>'+escape(sample)+'</code></pre><p>'+escape(lesson.expected)+'</p><p>'+escape(lesson.limits)+'</p><p>'+escape(lesson.migration)+'</p></section></article>'
 }
 supplement+='</div>\n<!-- NOVA_V2612_END -->\n'
 html=html.replace(/<!-- NOVA_V2612_START -->[\s\S]*?<!-- NOVA_V2612_END -->\r?\n?/,'').replace(/<title>Nova_A 26\.\d+ Manual<\/title>/,'<title>Nova_A26.12 Manual</title>').replace('Nova_A26.12 Manual','Nova_A 26.12 Manual')

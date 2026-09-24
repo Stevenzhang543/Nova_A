@@ -1,3 +1,4 @@
+/* 依赖审计 v4.9：通过当前固定包管理器查询高危及以上安全公告，解析结果并写入版本报告。 */
 import { spawnSync } from 'node:child_process'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'

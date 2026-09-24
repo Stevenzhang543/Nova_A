@@ -1,3 +1,4 @@
+/** 功能回归脚本：执行 verify-v26.23-focus.mjs 对应场景，保留断言和证据输出。 */
 import assert from 'node:assert/strict'
 import {readFile,readdir} from 'node:fs/promises'
 import {join} from 'node:path'
@@ -7,15 +8,15 @@ let current=0;for(const entry of await readdir('reference-projects/projects',{wi
 const tasks=[
  ['verify-v26.23-renderer.mjs',['--qualification','--report-dir=release-audits/v26.23-renderer'],['v26.23-renderer/renderer-staged.json']],['verify-v26.23-template-output.mjs',[],['v26.23-template-output.json']],
  ['verify-v26.23-language.mjs',[],['v26.23-language.json']],['verify-v26.23-runtime-regressions.mjs',[],['v26.23-runtime-regressions.json']],
- ...['delivery','lsp','save-recovery','reproducibility'].map(name=>['verify-v26.23-'+name+'.mjs',[],['v26.23-'+name+'.json']]),
+ ...['delivery','lsp','save-recovery','reproducibility'].map(/* 返回按声明顺序构造的数组 ['verify-v26.23-'+name+'.mjs',[],['v26.23-'+name+'.json']]。 */ name=>['verify-v26.23-'+name+'.mjs',[],['v26.23-'+name+'.json']]),
  ['verify-v26.22-foundations.mjs',['--qualification-release=26.23'],['v26.23-foundations-regressions.json']],
  ['verify-v26.14-runtime-stage.mjs',['--native'],['v26.14-runtime-native.json']],['verify-v26.14-runtime-stage.mjs',[],['v26.14-runtime-wasm.json']],['verify-v26.14-project-roundtrip.mjs',[],['v26.14-project-roundtrip.json']],
- ...['typed-graphs','syntax-slots','script-modules'].map(name=>['verify-v26.12-'+name+'.mjs',['--qualification-release=26.23'],['v26.12-'+name+'.json']]),
+ ...['typed-graphs','syntax-slots','script-modules'].map(/* 返回按声明顺序构造的数组 ['verify-v26.12-'+name+'.mjs',['--qualification-release=26.23'],['v26.12-'+name+'.json']]。 */ name=>['verify-v26.12-'+name+'.mjs',['--qualification-release=26.23'],['v26.12-'+name+'.json']]),
  ['verify-v26.12-language.mjs',['--qualification-release=26.23','--report=release-audits/v26.23-legacy-language.json'],['v26.23-legacy-language.json']],['verify-v26.12-api-signatures.mjs',['--qualification-release=26.23','--report=release-audits/v26.23-api-signatures.json'],['v26.23-api-signatures.json']],
- ...['references','inventory-reference','teaching'].map(name=>['generate-v26.23-'+name+'.mjs',['--verify-only'],[]]),
+ ...['references','inventory-reference','teaching'].map(/* 返回按声明顺序构造的数组 ['generate-v26.23-'+name+'.mjs',['--verify-only'],[]]。 */ name=>['generate-v26.23-'+name+'.mjs',['--verify-only'],[]]),
  ['verify-v26.11-templates.mjs',[],['v26.11-template-behavior.json']],['audit-v26.13-panels.mjs',[],['panel-source-inventory.json']]
 ]
 for(const [version,names] of [['26.16',['animation-audio','animation-authoring','animation-ui','audio-pcm','interface','media-roundtrip','timeline-actions','media-performance']],['26.17',['queries','navigation','world-streaming','bindings','world-roundtrip']],['26.18',['networking','network-process']]])for(const name of names)tasks.push(['verify-v'+version+'-'+name+'.mjs',['--qualification-release=26.23'],['v26.23-'+name+'.json']])
 for(const name of ['history-core','pending-drafts','control-order','numeric-expressions','entity-api','script-assets-corpus','package-lifecycle','tilemap-bake','component-history','media-history'])tasks.push(['verify-v26.22-'+name+'.mjs',['--qualification-release=26.23'],['v26.23-'+name+'.json']])
-for(const [script,args,reports]of tasks){const run=await runAudit(root,'scripts/'+script,args);run.reports=reports.map(name=>'release-audits/'+name);executions.push(run)}
+for(const [script,args,reports]of tasks){const run=await runAudit(root,'scripts/'+script,args);run.reports=reports.map(/* 计算表达式 'release-audits/'+name 并返回结果，沿用操作数的原有类型规则。 */ name=>'release-audits/'+name);executions.push(run)}
 await writeAuditBundle(root,'26.23','focus',executions)

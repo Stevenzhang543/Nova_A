@@ -1,3 +1,4 @@
+# 历史原生窗口审计：验证标题栏、全屏及 WebView 键盘消息路径。
 [CmdletBinding()]
 param()
 
@@ -11,32 +12,52 @@ Add-Type @'
 using System;
 using System.Runtime.InteropServices;
 public static class NovaWindowProbe {
+  // 声明子窗口枚举回调签名；返回值决定是否继续枚举。
   public delegate bool EnumWindowProc(IntPtr window, IntPtr parameter);
   [StructLayout(LayoutKind.Sequential)] public struct RECT { public int Left, Top, Right, Bottom; }
   [StructLayout(LayoutKind.Sequential, CharSet=CharSet.Auto)] public struct MONITORINFO { public int cbSize; public RECT rcMonitor; public RECT rcWork; public uint dwFlags; }
   [StructLayout(LayoutKind.Sequential)] public struct GUITHREADINFO { public int cbSize; public uint flags; public IntPtr hwndActive, hwndFocus, hwndCapture, hwndMenuOwner, hwndMoveSize, hwndCaret; public RECT rcCaret; }
+  // 读取原生窗口屏幕坐标边界。
   [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr hWnd, out RECT rect);
+  // 根据窗口位置取得对应显示器句柄。
   [DllImport("user32.dll")] public static extern IntPtr MonitorFromWindow(IntPtr hWnd, uint flags);
+  // 读取显示器完整范围及工作区范围。
   [DllImport("user32.dll", CharSet=CharSet.Auto)] public static extern bool GetMonitorInfo(IntPtr hMonitor, ref MONITORINFO info);
+  // 读取指针宽度的原生窗口样式字段。
   [DllImport("user32.dll", EntryPoint="GetWindowLongPtr")] public static extern IntPtr GetWindowLongPtr(IntPtr hWnd, int index);
+  // 查询窗口是否处于最大化状态。
   [DllImport("user32.dll")] public static extern bool IsZoomed(IntPtr hWnd);
+  // 请求把指定原生窗口切换到前台。
   [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd);
+  // 取得当前前台窗口句柄。
   [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
+  // 连接或解除两个线程的输入队列关联。
   [DllImport("user32.dll")] public static extern bool AttachThreadInput(uint attach, uint attachTo, bool value);
+  // 把指定窗口提升到窗口堆叠顶部。
   [DllImport("user32.dll")] public static extern bool BringWindowToTop(IntPtr hWnd);
+  // 按命令恢复或改变窗口展示状态。
   [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr hWnd, int command);
+  // 取得调用线程的原生线程编号。
   [DllImport("kernel32.dll")] public static extern uint GetCurrentThreadId();
+  // 取得窗口所属线程及可选进程编号。
   [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hWnd, IntPtr processId);
+  // 读取指定线程当前焦点、捕获和菜单等界面状态。
   [DllImport("user32.dll")] public static extern bool GetGUIThreadInfo(uint threadId, ref GUITHREADINFO info);
+  // 把键盘等原生消息异步投递到指定窗口。
   [DllImport("user32.dll")] public static extern bool PostMessage(IntPtr hWnd, uint message, IntPtr wParam, IntPtr lParam);
+  // 声明系统键盘事件注入入口，供历史窗口审计使用。
   [DllImport("user32.dll")] public static extern void keybd_event(byte virtualKey, byte scanCode, uint flags, UIntPtr extraInfo);
+  // 枚举父窗口下的子窗口并调用指定回调。
   [DllImport("user32.dll")] public static extern bool EnumChildWindows(IntPtr parent, EnumWindowProc callback, IntPtr parameter);
+  // 读取原生窗口类名，供识别 WebView 输入宿主。
   [DllImport("user32.dll", CharSet=CharSet.Auto)] public static extern int GetClassName(IntPtr window, System.Text.StringBuilder className, int maxCount);
+
+  // 枚举子窗口，优先选择 Chromium 渲染输入宿主，否则返回备用 Chrome 窗口。
 
   public static IntPtr FindWebViewInputWindow(IntPtr parent) {
     IntPtr renderHost = IntPtr.Zero;
     IntPtr chromeWindow = IntPtr.Zero;
-    EnumChildWindows(parent, delegate(IntPtr window, IntPtr parameter) {
+    EnumChildWindows(parent, /* 按类名记录渲染宿主和备用窗口，返回 true 继续枚举。 */ delegate(IntPtr window, IntPtr parameter) {
       System.Text.StringBuilder className = new System.Text.StringBuilder(256);
       GetClassName(window, className, className.Capacity);
       string name = className.ToString();
@@ -46,6 +67,8 @@ public static class NovaWindowProbe {
     }, IntPtr.Zero);
     return renderHost != IntPtr.Zero ? renderHost : chromeWindow;
   }
+
+  // 临时关联前台输入线程，恢复并激活目标窗口，最后解除关联。
 
   public static bool ForceForegroundWindow(IntPtr target) {
     IntPtr foreground = GetForegroundWindow();
@@ -62,6 +85,7 @@ public static class NovaWindowProbe {
 }
 '@
 
+# 读取窗口与显示器边界和样式，报告装饰、缩放及全屏覆盖状态。
 function Get-WindowSample([IntPtr]$Handle) {
   $rect = New-Object NovaWindowProbe+RECT
   if (-not [NovaWindowProbe]::GetWindowRect($Handle, [ref]$rect)) { throw 'GetWindowRect failed.' }
@@ -84,24 +108,27 @@ function Get-WindowSample([IntPtr]$Handle) {
   }
 }
 
+# 临时绑定本机回环地址零号端口，取得空闲端口后释放监听器。
 function Get-FreeTcpPort {
   $listener = [Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback, 0)
   $listener.Start()
   try { return ([Net.IPEndPoint]$listener.LocalEndpoint).Port } finally { $listener.Stop() }
 }
 
+# 在限定时间内轮询本机调试端点，返回可连接的页面目标。
 function Wait-DevToolsTarget([int]$Port) {
   $deadline = [DateTime]::UtcNow.AddSeconds(20)
   do {
     try {
       $targets = Invoke-RestMethod -Uri "http://127.0.0.1:$Port/json/list" -TimeoutSec 2
-      $target = @($targets | Where-Object { $_.type -eq 'page' -and $_.webSocketDebuggerUrl } | Select-Object -First 1)
+      $target = @($targets | Where-Object <# 筛选具有调试 WebSocket 地址的页面目标。 #> { $_.type -eq 'page' -and $_.webSocketDebuggerUrl } | Select-Object -First 1)
       if ($target.Count -gt 0) { return $target[0] }
     } catch { Start-Sleep -Milliseconds 120 }
   } while ([DateTime]::UtcNow -lt $deadline)
   throw 'Nova_A WebView2 DevTools target did not become available.'
 }
 
+# 通过调试 WebSocket 发送成对 F11 按下与释放事件，并关闭连接。
 function Send-CdpF11([string]$WebSocketUrl) {
   $socket = [Net.WebSockets.ClientWebSocket]::new()
   try {
@@ -118,6 +145,7 @@ function Send-CdpF11([string]$WebSocketUrl) {
   } finally { $socket.Dispose() }
 }
 
+# 定位 WebView 输入宿主，发送带扫描码与状态位的 F11 窗口消息。
 function Send-NativeF11([IntPtr]$Handle, [int]$ProcessId) {
   # WebView2 can reuse a pre-existing browser process and ignore a newly
   # requested debugging port. Deliver fully formed F11 messages to the exact

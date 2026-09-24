@@ -1,3 +1,4 @@
+<!-- 场景层级侧栏：搜索、选择和编辑实体层级，并维护资源关联。 -->
 <template>
   <aside class="sidebar-container" :style="{ width: isCollapsed ? '22px' : `${panelWidth}px` }" :class="[dock, { 'jelly-slide': !isDragging, 'no-transition': isDragging, 'panel-maximized': workspaceState.maximizedPanel==='hierarchy' }]">
     <button v-if="isCollapsed" class="expand" :title="t('expandPanel')" @click="expandPanel">›</button>
@@ -91,10 +92,10 @@ import PanelMaximizeButton from './PanelMaximizeButton.vue'
 import PanelResizeHandle from './PanelResizeHandle.vue'
 
 const props = withDefaults(defineProps<{ dock?: 'left' | 'right' }>(), { dock: 'left' })
-const dock = computed(() => props.dock)
+const dock = computed(/* 返回 props.dock 的当前值。 */ () => props.dock)
 const panelWidth = ref(editorState.hierarchyWidth)
-watch(() => editorState.hierarchyWidth, value => { if (!isDragging.value) { panelWidth.value=value;isCollapsed.value=false } })
-watch(() => workspaceState.maximizedPanel, value => { if(value==='hierarchy')isCollapsed.value=false })
+watch(/* 返回 editorState.hierarchyWidth 的当前值。 */ () => editorState.hierarchyWidth, /** 非拖拽期间同步外部面板宽度并展开侧栏。 */ value => { if (!isDragging.value) { panelWidth.value=value;isCollapsed.value=false } })
+watch(/* 返回 workspaceState.maximizedPanel 的当前值。 */ () => workspaceState.maximizedPanel, /** 最大化目标为层级时展开侧栏。 */ value => { if(value==='hierarchy')isCollapsed.value=false })
 const isCollapsed = ref(false)
 const isDragging = ref(false)
 const editingId = ref<number | null>(null)
@@ -111,19 +112,19 @@ const selectionHistoryIndex = ref(-1)
 const entityList = ref<HTMLElement | null>(null)
 const hierarchyScrollTop = ref(0)
 const hierarchyViewportHeight = ref(400)
-const hierarchyRowHeight = computed(() => Math.ceil(29 * preferencesState.uiScale)), hierarchyOverscan = 12
+const hierarchyRowHeight = computed(/* 调用 Math.ceil(29 * preferencesState.uiScale) 并返回调用结果。 */ () => Math.ceil(29 * preferencesState.uiScale)), hierarchyOverscan = 12
 let hierarchyResizeObserver: ResizeObserver | null = null
 let lastSelectedId: number | null = null
 let applyingSelectionHistory = false
-const canEdit = computed(() => state.playMode === 'editing')
+const canEdit = computed(/* 比较 state.playMode 与 'editing'，返回严格相等的判断结果。 */ () => state.playMode === 'editing')
 const selectionFilters = ['All', 'Visible', 'Unlocked', 'Sprites', 'Cameras', 'Physics'] as const
-const availableTags = computed(() => [...new Set(state.world.entities.flatMap(entity => entity.tags))].sort((left, right) => left.localeCompare(right)))
-const vFocus = { mounted: (element: HTMLInputElement) => { element.focus(); element.select() } }
+const availableTags = computed(/** 收集所有实体标签，去重并按本地顺序排序。 */ () => [...new Set(state.world.entities.flatMap(/* 返回 entity.tags 的当前值。 */ entity => entity.tags))].sort(/* 调用 left.localeCompare(right) 并返回调用结果。 */ (left, right) => left.localeCompare(right)))
+const vFocus = { mounted: /** 重命名输入挂载后聚焦并全选文本。 */ (element: HTMLInputElement) => { element.focus(); element.select() } }
 
-const hierarchyRows = computed(() => {
+const hierarchyRows = computed(/** 建立父子映射及置顶排序，按搜索与过滤保留匹配祖先，防循环遍历生成层级行。 */ () => {
   const rows: Array<{ entity: Entity; depth: number; hasChildren: boolean; expanded: boolean }> = []
   const children = new Map<string | null, Entity[]>()
-  const byUuid = new Map(state.world.entities.map(entity => [entity.uuid, entity]))
+  const byUuid = new Map(state.world.entities.map(/* 返回按声明顺序构造的数组 [entity.uuid, entity]。 */ entity => [entity.uuid, entity]))
   const known = new Set(byUuid.keys())
   for (const entity of state.world.entities) {
     const parent = entity.parentUuid && known.has(entity.parentUuid) ? entity.parentUuid : null
@@ -131,13 +132,13 @@ const hierarchyRows = computed(() => {
     siblings.push(entity)
     children.set(parent, siblings)
   }
-  for (const siblings of children.values()) siblings.sort((left, right) => Number(authoringState.pinnedEntityUuids.includes(right.uuid)) - Number(authoringState.pinnedEntityUuids.includes(left.uuid)))
+  for (const siblings of children.values()) siblings.sort(/** 把置顶实体排列在同级其他实体之前。 */ (left, right) => Number(authoringState.pinnedEntityUuids.includes(right.uuid)) - Number(authoringState.pinnedEntityUuids.includes(left.uuid)))
 
   const query = searchQuery.value.trim().toLocaleLowerCase()
   const included = new Set<string>()
   if (query) {
     for (const entity of state.world.entities) {
-      const components = entity.components.map(component => component.kind).join(' ')
+      const components = entity.components.map(/* 返回 component.kind 的当前值。 */ component => component.kind).join(' ')
       if (!`${entity.name} ${entity.id} ${entity.tags.join(' ')} ${components}`.toLocaleLowerCase().includes(query)) continue
       included.add(entity.uuid)
       let parentUuid = entity.parentUuid
@@ -152,7 +153,7 @@ const hierarchyRows = computed(() => {
   const tagFilter = authoringState.tagFilter
   const filterIncluded = new Set<string>()
   if (filter !== 'All' || tagFilter) {
-    const matchesFilter = (entity: Entity) => (filter === 'Visible' ? entity.editorVisible : filter === 'Unlocked' ? !entity.editorLocked : filter === 'Sprites' ? Boolean(entity.spriteRenderer) : filter === 'Cameras' ? Boolean(entity.camera2D) : filter === 'Physics' ? entity.hasComponent('RigidBody2D') : true) && (!tagFilter || entity.tags.includes(tagFilter))
+    const matchesFilter = /** 按可见、未锁、精灵、相机或物理筛选条件及标签判断实体是否匹配。 */ (entity: Entity) => (filter === 'Visible' ? entity.editorVisible : filter === 'Unlocked' ? !entity.editorLocked : filter === 'Sprites' ? Boolean(entity.spriteRenderer) : filter === 'Cameras' ? Boolean(entity.camera2D) : filter === 'Physics' ? entity.hasComponent('RigidBody2D') : true) && (!tagFilter || entity.tags.includes(tagFilter))
     for (const entity of state.world.entities) {
       if (!matchesFilter(entity)) continue
       filterIncluded.add(entity.uuid)
@@ -164,7 +165,7 @@ const hierarchyRows = computed(() => {
     }
   }
 
-  const visit = (entity: Entity, depth: number, visited: Set<string>) => {
+  const visit = /** 跳过访问过或被过滤实体，添加当前层级行并在展开时递归子实体。 */ (entity: Entity, depth: number, visited: Set<string>) => {
     if (visited.has(entity.uuid) || ((filter !== 'All' || tagFilter) && !filterIncluded.has(entity.uuid)) || (query && !included.has(entity.uuid))) return
     visited.add(entity.uuid)
     const entityChildren = children.get(entity.uuid) ?? []
@@ -177,43 +178,43 @@ const hierarchyRows = computed(() => {
   for (const entity of state.world.entities) visit(entity, 0, visited)
   return rows
 })
-const virtualStart = computed(() => Math.max(0, Math.floor(hierarchyScrollTop.value / hierarchyRowHeight.value) - hierarchyOverscan))
-const virtualEnd = computed(() => Math.min(hierarchyRows.value.length, Math.ceil((hierarchyScrollTop.value + hierarchyViewportHeight.value) / hierarchyRowHeight.value) + hierarchyOverscan))
-const virtualHierarchyRows = computed(() => hierarchyRows.value.slice(virtualStart.value, virtualEnd.value))
-const virtualPaddingTop = computed(() => virtualStart.value * hierarchyRowHeight.value + 5)
-const virtualPaddingBottom = computed(() => Math.max(5, (hierarchyRows.value.length - virtualEnd.value) * hierarchyRowHeight.value + 5))
-function onHierarchyScroll(event: Event) { hierarchyScrollTop.value = (event.currentTarget as HTMLElement).scrollTop }
-function matchesHierarchySearch(entity: Entity) { const query = searchQuery.value.trim().toLocaleLowerCase(); if (!query) return false; return `${entity.name} ${entity.id} ${entity.tags.join(' ')} ${entity.components.map(component => component.kind).join(' ')}`.toLocaleLowerCase().includes(query) }
-function applySavedFilter() { const filter = authoringState.savedFilters.find(candidate => candidate.id === selectedSavedFilter.value); if (!filter) return; searchQuery.value = filter.query; authoringState.tagFilter = filter.tagFilter; authoringState.selectionFilter = filter.selectionFilter }
-function saveCurrentFilter() { selectedSavedFilter.value = saveHierarchyFilter(searchQuery.value || t(`selection${authoringState.selectionFilter}`), searchQuery.value) }
-const breadcrumbs = computed(() => {
-  const selected = state.world.entities.find(entity => entity.id === state.selectedEntityId)
+const virtualStart = computed(/* 调用 Math.max(0, Math.floor(hierarchyScrollTop.value / hierarchyRowHeight.value) - hierarchyOverscan) 并返回调用结果。 */ () => Math.max(0, Math.floor(hierarchyScrollTop.value / hierarchyRowHeight.value) - hierarchyOverscan))
+const virtualEnd = computed(/** 根据滚动位置、视口和行高计算含预留行的虚拟列表末端。 */ () => Math.min(hierarchyRows.value.length, Math.ceil((hierarchyScrollTop.value + hierarchyViewportHeight.value) / hierarchyRowHeight.value) + hierarchyOverscan))
+const virtualHierarchyRows = computed(/* 调用 hierarchyRows.value.slice(virtualStart.value, virtualEnd.value) 并返回调用结果。 */ () => hierarchyRows.value.slice(virtualStart.value, virtualEnd.value))
+const virtualPaddingTop = computed(/* 计算表达式 virtualStart.value * hierarchyRowHeight.value + 5 并返回结果，沿用操作数的原有类型规则。 */ () => virtualStart.value * hierarchyRowHeight.value + 5)
+const virtualPaddingBottom = computed(/* 调用 Math.max(5, (hierarchyRows.value.length - virtualEnd.value) * hierarchyRowHeight.value + 5) 并返回调用结果。 */ () => Math.max(5, (hierarchyRows.value.length - virtualEnd.value) * hierarchyRowHeight.value + 5))
+/** 记录层级列表滚动位置。 */ function onHierarchyScroll(event: Event) { hierarchyScrollTop.value = (event.currentTarget as HTMLElement).scrollTop }
+/** 根据名称、编号、标签和组件种类匹配非空搜索词。 */ function matchesHierarchySearch(entity: Entity) { const query = searchQuery.value.trim().toLocaleLowerCase(); if (!query) return false; return `${entity.name} ${entity.id} ${entity.tags.join(' ')} ${entity.components.map(/* 返回 component.kind 的当前值。 */ component => component.kind).join(' ')}`.toLocaleLowerCase().includes(query) }
+/** 载入已保存的查询、标签和选择类型过滤设置。 */ function applySavedFilter() { const filter = authoringState.savedFilters.find(/* 比较 candidate.id 与 selectedSavedFilter.value，返回严格相等的判断结果。 */ candidate => candidate.id === selectedSavedFilter.value); if (!filter) return; searchQuery.value = filter.query; authoringState.tagFilter = filter.tagFilter; authoringState.selectionFilter = filter.selectionFilter }
+/** 保存当前层级过滤条件并选中新过滤项。 */ function saveCurrentFilter() { selectedSavedFilter.value = saveHierarchyFilter(searchQuery.value || t(`selection${authoringState.selectionFilter}`), searchQuery.value) }
+const breadcrumbs = computed(/** 从选中实体沿父级向上构建面包屑，防止父级循环。 */ () => {
+  const selected = state.world.entities.find(/* 比较 entity.id 与 state.selectedEntityId，返回严格相等的判断结果。 */ entity => entity.id === state.selectedEntityId)
   if (!selected) return []
   const path: Entity[] = [selected], visited = new Set([selected.uuid])
   let parentUuid = selected.parentUuid
-  while (parentUuid && !visited.has(parentUuid)) { const parent = state.world.entities.find(entity => entity.uuid === parentUuid); if (!parent) break; path.unshift(parent); visited.add(parent.uuid); parentUuid = parent.parentUuid }
+  while (parentUuid && !visited.has(parentUuid)) { const parent = state.world.entities.find(/* 比较 entity.uuid 与 parentUuid，返回严格相等的判断结果。 */ entity => entity.uuid === parentUuid); if (!parent) break; path.unshift(parent); visited.add(parent.uuid); parentUuid = parent.parentUuid }
   return path
 })
-function selectBreadcrumb(entity: Entity) { selectEntities([entity.id], 'replace', entity.id) }
-function navigateSelection(offset: -1 | 1) {
+/** 选择面包屑对应实体。 */ function selectBreadcrumb(entity: Entity) { selectEntities([entity.id], 'replace', entity.id) }
+/** 仅在同一场景恢复历史选择，解析实体标识后临时禁止重复记录历史。 */ function navigateSelection(offset: -1 | 1) {
   const index = selectionHistoryIndex.value + offset, entry = selectionHistory.value[index]
   if (!entry || entry.sceneUuid !== sceneManager.activeSceneUuid) return
-  const ids = entry.uuids.flatMap(uuid => { const entity = state.world.entities.find(candidate => candidate.uuid === uuid); return entity ? [entity.id] : [] })
-  const primary = entry.primaryUuid ? state.world.entities.find(entity => entity.uuid === entry.primaryUuid)?.id ?? null : null
+  const ids = entry.uuids.flatMap(/** 把仍存在的实体标识转换为编号，不存在则忽略。 */ uuid => { const entity = state.world.entities.find(/* 比较 candidate.uuid 与 uuid，返回严格相等的判断结果。 */ candidate => candidate.uuid === uuid); return entity ? [entity.id] : [] })
+  const primary = entry.primaryUuid ? state.world.entities.find(/* 比较 entity.uuid 与 entry.primaryUuid，返回严格相等的判断结果。 */ entity => entity.uuid === entry.primaryUuid)?.id ?? null : null
   applyingSelectionHistory = true
   selectionHistoryIndex.value = index
   selectEntities(ids, 'replace', primary)
-  queueMicrotask(() => { applyingSelectionHistory = false })
+  queueMicrotask(/** 微任务后恢复选择历史记录。 */ () => { applyingSelectionHistory = false })
 }
 
-function addScene() { if (canEdit.value && createScene()) { pushHistory('Create scene'); editorState.statusText = t('sceneCreated') } }
-function reloadScene() {
+/** 编辑模式创建场景成功后记录历史并提示。 */ function addScene() { if (canEdit.value && createScene()) { pushHistory('Create scene'); editorState.statusText = t('sceneCreated') } }
+/** 编辑模式重载当前场景成功后同步历史基线并提示。 */ function reloadScene() {
   if (canEdit.value && reloadActiveScene()) {
     synchronizeHistoryBaseline()
     editorState.statusText = t('sceneReloaded')
   }
 }
-function activateScene(uuid: string, loaded: boolean) {
+/** 编辑模式按需加载目标场景，激活成功后同步历史基线和状态。 */ function activateScene(uuid: string, loaded: boolean) {
   if (!canEdit.value) return
   if (!loaded && !setSceneLoaded(uuid, true)) return
   if (setActiveScene(uuid)) {
@@ -221,24 +222,24 @@ function activateScene(uuid: string, loaded: boolean) {
     editorState.statusText = t('sceneActivated')
   }
 }
-function toggleLoaded(uuid: string, loaded: boolean) {
+/** 编辑模式切换场景载入状态，成功记录历史并提示。 */ function toggleLoaded(uuid: string, loaded: boolean) {
   if (canEdit.value && setSceneLoaded(uuid, !loaded)) {
     pushHistory(loaded ? 'Unload scene' : 'Load scene')
     editorState.statusText = t(loaded ? 'sceneUnloaded' : 'sceneLoaded')
   }
 }
-function startSceneEdit(uuid: string, name: string) { if (!canEdit.value) return; editingSceneUuid.value = uuid; sceneName.value = name }
-function finishSceneEdit(uuid: string) { if (editingSceneUuid.value !== uuid) return; const scene = sceneManager.scenes.find(candidate => candidate.uuid === uuid); const name = sceneName.value.trim(); if (scene && name && name !== scene.name) { scene.name = name.slice(0, 80); pushHistory('Rename scene') } editingSceneUuid.value = null }
-function startEdit(entity: Entity) { if (!canEdit.value || entity.editorLocked) return; editingId.value = entity.id; editName.value = entity.name }
-function finishEdit(entity: Entity) { if (editingId.value !== entity.id) return; const name = editName.value.trim(); if (name && name !== entity.name) { entity.name = name.slice(0, 80); pushHistory('Rename entity', `rename:${entity.uuid}`) } editingId.value = null; editorState.renameRequestId = null }
-function getIcon(type: string) { return type === 'Circle' ? '○' : type === 'Triangle' ? '△' : type === 'Box' ? '□' : '·' }
+/** 编辑模式开始指定场景的重命名。 */ function startSceneEdit(uuid: string, name: string) { if (!canEdit.value) return; editingSceneUuid.value = uuid; sceneName.value = name }
+/** 结束匹配场景的重命名，清理并限制有效名称长度，变更时记录历史。 */ function finishSceneEdit(uuid: string) { if (editingSceneUuid.value !== uuid) return; const scene = sceneManager.scenes.find(/* 比较 candidate.uuid 与 uuid，返回严格相等的判断结果。 */ candidate => candidate.uuid === uuid); const name = sceneName.value.trim(); if (scene && name && name !== scene.name) { scene.name = name.slice(0, 80); pushHistory('Rename scene') } editingSceneUuid.value = null }
+/** 仅对编辑模式下未锁定实体启动重命名。 */ function startEdit(entity: Entity) { if (!canEdit.value || entity.editorLocked) return; editingId.value = entity.id; editName.value = entity.name }
+/** 提交有效实体名称并记录资源范围历史，随后清除重命名请求。 */ function finishEdit(entity: Entity) { if (editingId.value !== entity.id) return; const name = editName.value.trim(); if (name && name !== entity.name) { entity.name = name.slice(0, 80); pushHistory('Rename entity', `rename:${entity.uuid}`) } editingId.value = null; editorState.renameRequestId = null }
+/* 根据 type === 'Circle' 的真假，分别返回 '○' 或 type === 'Triangle' ? '△' : type === 'Box' ? '□' : '·'。 */ function getIcon(type: string) { return type === 'Circle' ? '○' : type === 'Triangle' ? '△' : type === 'Box' ? '□' : '·' }
 
-function selectEntity(event: MouseEvent, entity: Entity) {
+/** 支持 Shift 范围选择、修饰键切换或替换选择，并同步活动图层。 */ function selectEntity(event: MouseEvent, entity: Entity) {
   if (event.shiftKey && lastSelectedId !== null) {
     const rows = hierarchyRows.value
-    const start = rows.findIndex(row => row.entity.id === lastSelectedId)
-    const end = rows.findIndex(row => row.entity.id === entity.id)
-    if (start !== -1 && end !== -1) selectEntities(rows.slice(Math.min(start, end), Math.max(start, end) + 1).map(row => row.entity.id), 'add', entity.id)
+    const start = rows.findIndex(/* 比较 row.entity.id 与 lastSelectedId，返回严格相等的判断结果。 */ row => row.entity.id === lastSelectedId)
+    const end = rows.findIndex(/* 比较 row.entity.id 与 entity.id，返回严格相等的判断结果。 */ row => row.entity.id === entity.id)
+    if (start !== -1 && end !== -1) selectEntities(rows.slice(Math.min(start, end), Math.max(start, end) + 1).map(/* 返回 row.entity.id 的当前值。 */ row => row.entity.id), 'add', entity.id)
   } else {
     selectEntities([entity.id], event.ctrlKey || event.metaKey ? 'toggle' : 'replace', entity.id)
   }
@@ -246,21 +247,21 @@ function selectEntity(event: MouseEvent, entity: Entity) {
   if (entity.layer !== editorState.activeLayer) setActiveLayer(entity.layer)
 }
 
-function toggleExpanded(uuid: string) { const next = new Set(expandedUuids.value); if (next.has(uuid)) next.delete(uuid); else next.add(uuid); expandedUuids.value = next }
-function toggleVisibility(entity: Entity) { if (!canEdit.value) return; entity.editorVisible = !entity.editorVisible; pushHistory('Toggle editor visibility', `visibility:${entity.uuid}`) }
-function toggleLock(entity: Entity) { if (!canEdit.value) return; entity.editorLocked = !entity.editorLocked; pushHistory('Toggle editor lock', `lock:${entity.uuid}`) }
-function toggleEnabled(entity: Entity) { if (!canEdit.value) return; entity.enabled = !entity.enabled; pushHistory('Toggle entity', `enabled:${entity.uuid}`) }
+/** 复制展开集合后切换目标实体展开状态。 */ function toggleExpanded(uuid: string) { const next = new Set(expandedUuids.value); if (next.has(uuid)) next.delete(uuid); else next.add(uuid); expandedUuids.value = next }
+/** 编辑模式切换实体编辑可见性并记录历史。 */ function toggleVisibility(entity: Entity) { if (!canEdit.value) return; entity.editorVisible = !entity.editorVisible; pushHistory('Toggle editor visibility', `visibility:${entity.uuid}`) }
+/** 编辑模式切换实体锁定状态并记录历史。 */ function toggleLock(entity: Entity) { if (!canEdit.value) return; entity.editorLocked = !entity.editorLocked; pushHistory('Toggle editor lock', `lock:${entity.uuid}`) }
+/** 编辑模式切换实体运行启用状态并记录历史。 */ function toggleEnabled(entity: Entity) { if (!canEdit.value) return; entity.enabled = !entity.enabled; pushHistory('Toggle entity', `enabled:${entity.uuid}`) }
 
-function startEntityDrag(event: DragEvent, entity: Entity) {
+/** 仅可编辑且未锁实体能开始拖动，确保选中并记录选中根节点及拖拽数据。 */ function startEntityDrag(event: DragEvent, entity: Entity) {
   if (!canEdit.value || entity.editorLocked) { event.preventDefault(); return }
   if (!state.selectedEntityIds.includes(entity.id)) selectEntities([entity.id], 'replace', entity.id)
-  draggingIds.value = selectionRoots(state.selectedEntityIds, state.world.entities).map(candidate => candidate.id)
+  draggingIds.value = selectionRoots(state.selectedEntityIds, state.world.entities).map(/* 返回 candidate.id 的当前值。 */ candidate => candidate.id)
   event.dataTransfer?.setData('text/plain', entity.uuid)
   if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move'
 }
-function finishEntityDrag() { draggingIds.value = []; dropTargetUuid.value = null }
-function leaveDropTarget(event: DragEvent, uuid: string) { if (!(event.currentTarget as HTMLElement).contains(event.relatedTarget as Node | null) && dropTargetUuid.value === uuid) dropTargetUuid.value = null }
-function reparentDragged(parentUuid: string | null, preserveWorld = true) {
+/** 结束拖拽并清除待放置目标。 */ function finishEntityDrag() { draggingIds.value = []; dropTargetUuid.value = null }
+/** 指针实际离开目标元素及子元素时清除对应放置高亮。 */ function leaveDropTarget(event: DragEvent, uuid: string) { if (!(event.currentTarget as HTMLElement).contains(event.relatedTarget as Node | null) && dropTargetUuid.value === uuid) dropTargetUuid.value = null }
+/** 将拖动根实体重新设父级，跳过自身与锁定项，按需保留世界坐标并记录变更。 */ function reparentDragged(parentUuid: string | null, preserveWorld = true) {
   if (!canEdit.value || !draggingIds.value.length) return
   let changed = false
   for (const entity of selectionRoots(draggingIds.value, state.world.entities)) {
@@ -270,25 +271,25 @@ function reparentDragged(parentUuid: string | null, preserveWorld = true) {
   if (changed) { pushHistory('Reparent entities'); addEditorLog(parentUuid ? 'Entities reparented' : 'Entities moved to scene root') }
   finishEntityDrag()
 }
-function reorderDragged(target: Entity) {
-  const moving = selectionRoots(draggingIds.value, state.world.entities).filter(entity => entity !== target)
+/** 将拖动根实体移动到目标同级并插入目标之前，记录顺序历史并结束拖拽。 */ function reorderDragged(target: Entity) {
+  const moving = selectionRoots(draggingIds.value, state.world.entities).filter(/* 比较 entity 与 target，返回严格不等的判断结果。 */ entity => entity !== target)
   if (!moving.length) return
   const parentUuid = target.parentUuid
   for (const entity of moving) setParent(entity, parentUuid, state.world.entities)
-  const remaining = state.world.entities.filter(entity => !moving.includes(entity)), index = remaining.indexOf(target)
+  const remaining = state.world.entities.filter(/* 返回 moving.includes(entity) 的逻辑取反结果。 */ entity => !moving.includes(entity)), index = remaining.indexOf(target)
   remaining.splice(Math.max(0, index), 0, ...moving); state.world.entities.splice(0, state.world.entities.length, ...remaining)
   pushHistory('Reorder entities'); finishEntityDrag()
 }
-function dropOnEntity(event: DragEvent, parent: Entity) { if (event.shiftKey) reorderDragged(parent); else reparentDragged(parent.uuid, !event.altKey) }
-function dropOnRoot(event?: DragEvent) { reparentDragged(null, !event?.altKey) }
+/** Shift 放置执行排序，否则重设父级，Alt 控制是否保留世界坐标。 */ function dropOnEntity(event: DragEvent, parent: Entity) { if (event.shiftKey) reorderDragged(parent); else reparentDragged(parent.uuid, !event.altKey) }
+/** 放置到根时重设为空父级，Alt 控制是否保留世界坐标。 */ function dropOnRoot(event?: DragEvent) { reparentDragged(null, !event?.altKey) }
 
-watch(() => editorState.renameRequestId, id => { if (id === null) return; const entity = state.world.entities.find(candidate => candidate.id === id); if (entity) startEdit(entity) })
-watch(() => state.world.entities.map(entity => entity.uuid), uuids => { if (!expandedUuids.value.size) expandedUuids.value = new Set(uuids) }, { immediate: true })
-watch(() => `${sceneManager.activeSceneUuid}:${state.selectedEntityIds.join(',')}:${state.selectedEntityId ?? ''}`, () => {
+watch(/* 返回 editorState.renameRequestId 的当前值。 */ () => editorState.renameRequestId, /** 收到有效重命名请求编号时查找实体并启动编辑。 */ id => { if (id === null) return; const entity = state.world.entities.find(/* 比较 candidate.id 与 id，返回严格相等的判断结果。 */ candidate => candidate.id === id); if (entity) startEdit(entity) })
+watch(/** 提取当前全部实体标识作为展开初始化依赖。 */ () => state.world.entities.map(/* 返回 entity.uuid 的当前值。 */ entity => entity.uuid), /** 尚无展开项时将现有实体默认展开。 */ uuids => { if (!expandedUuids.value.size) expandedUuids.value = new Set(uuids) }, { immediate: true })
+watch(/** 组合场景、选择集合及主选择为历史监听标记。 */ () => `${sceneManager.activeSceneUuid}:${state.selectedEntityIds.join(',')}:${state.selectedEntityId ?? ''}`, /** 非历史回放期间记录不同的新选择，裁剪未来记录及超过一百项的旧历史。 */ () => {
   if (applyingSelectionHistory) return
   const selected = new Set(state.selectedEntityIds)
-  const uuids = state.world.entities.filter(entity => selected.has(entity.id)).map(entity => entity.uuid)
-  const primaryUuid = state.world.entities.find(entity => entity.id === state.selectedEntityId)?.uuid ?? null
+  const uuids = state.world.entities.filter(/* 调用 selected.has(entity.id) 并返回调用结果。 */ entity => selected.has(entity.id)).map(/* 返回 entity.uuid 的当前值。 */ entity => entity.uuid)
+  const primaryUuid = state.world.entities.find(/* 比较 entity.id 与 state.selectedEntityId，返回严格相等的判断结果。 */ entity => entity.id === state.selectedEntityId)?.uuid ?? null
   const entry = { sceneUuid: sceneManager.activeSceneUuid, uuids, primaryUuid }, current = selectionHistory.value[selectionHistoryIndex.value]
   if (current?.sceneUuid === entry.sceneUuid && current.primaryUuid === entry.primaryUuid && current.uuids.join(',') === entry.uuids.join(',')) return
   selectionHistory.value.splice(selectionHistoryIndex.value + 1)
@@ -298,10 +299,10 @@ watch(() => `${sceneManager.activeSceneUuid}:${state.selectedEntityIds.join(',')
 }, { immediate: true })
 
 const collapseThreshold = 118
-function commitPanelWidth(value:number) { isDragging.value=false;if(value<collapseThreshold){isCollapsed.value=true;panelWidth.value=0}else{panelWidth.value=Math.max(160,value);editorState.hierarchyWidth=panelWidth.value} }
-function expandPanel() { isCollapsed.value = false; panelWidth.value = editorState.hierarchyWidth || 236 }
-onMounted(() => { if (entityList.value) { hierarchyViewportHeight.value = entityList.value.clientHeight; hierarchyResizeObserver = new ResizeObserver(entries => { hierarchyViewportHeight.value = entries[0]?.contentRect.height ?? hierarchyViewportHeight.value }); hierarchyResizeObserver.observe(entityList.value) } })
-onUnmounted(() => { hierarchyResizeObserver?.disconnect() })
+/** 结束宽度拖动，低于阈值则折叠，否则限制最小宽度并保存布局。 */ function commitPanelWidth(value:number) { isDragging.value=false;if(value<collapseThreshold){isCollapsed.value=true;panelWidth.value=0}else{panelWidth.value=Math.max(160,value);editorState.hierarchyWidth=panelWidth.value} }
+/** 展开面板并恢复已保存宽度或默认宽度。 */ function expandPanel() { isCollapsed.value = false; panelWidth.value = editorState.hierarchyWidth || 236 }
+onMounted(/** 挂载时记录层级视口高度并注册尺寸观察器。 */ () => { if (entityList.value) { hierarchyViewportHeight.value = entityList.value.clientHeight; hierarchyResizeObserver = new ResizeObserver(/** 从尺寸观察结果更新虚拟列表视口高度。 */ entries => { hierarchyViewportHeight.value = entries[0]?.contentRect.height ?? hierarchyViewportHeight.value }); hierarchyResizeObserver.observe(entityList.value) } })
+onUnmounted(/** 卸载时解除层级尺寸观察。 */ () => { hierarchyResizeObserver?.disconnect() })
 </script>
 
 <style scoped>

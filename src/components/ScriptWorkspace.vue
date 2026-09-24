@@ -1,3 +1,4 @@
+<!-- 脚本工作区：保存草稿并审核转换后协调代码、结构图和事件表模式。 -->
 <template>
   <section class="script-workspace">
     <nav class="logic-mode" :aria-label="t('logicAuthoringMode')" :aria-busy="switching" :inert="switching || undefined" @keydown="modeNavigation">
@@ -35,23 +36,23 @@ import { openGraphAsset, queueInitialGraphLayout } from '../visual/graphStudioSt
 import { parseGraphDocument } from '../visual/graphTypes'
 import { addEditorLog } from '../store/editor'
 import { readEventSheet } from '../runtime/eventSheets'
-function modeNavigation(event:KeyboardEvent){if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;const tabs=[...(event.currentTarget as HTMLElement).querySelectorAll<HTMLButtonElement>('[role=tab]')],current=tabs.indexOf(event.target as HTMLButtonElement);if(current<0)return;event.preventDefault();tabs[event.key==='Home'?0:event.key==='End'?tabs.length-1:(current+(event.key==='ArrowRight'?1:tabs.length-1))%tabs.length]?.focus()}
+/** 使用左右键、Home 和 End 在模式标签间移动焦点，不自动激活标签。 */ function modeNavigation(event:KeyboardEvent){if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;const tabs=[...(event.currentTarget as HTMLElement).querySelectorAll<HTMLButtonElement>('[role=tab]')],current=tabs.indexOf(event.target as HTMLButtonElement);if(current<0)return;event.preventDefault();tabs[event.key==='Home'?0:event.key==='End'?tabs.length-1:(current+(event.key==='ArrowRight'?1:tabs.length-1))%tabs.length]?.focus()}
 
 const codeEditor = ref<{ getConversionSnapshot: () => ConversionSnapshot | null; focusSourceRange: (span: ConversionSpan) => void } | null>(null)
 const graphEditor = ref<{ getConversionSnapshot: () => ConversionSnapshot | null; focusConversionNode: (request: ConversionNavigation) => void } | null>(null)
 const eventEditor = ref<{ requestLeave: () => Promise<boolean> } | null>(null)
 const switching = ref(false), switchError = ref(''), preview = shallowRef<ConversionSnapshot | null>(null)
-const copy = computed(() => conversionCopy[preferencesState.locale])
+const copy = computed(/* 返回 conversionCopy[preferencesState.locale] 的当前值。 */ () => conversionCopy[preferencesState.locale])
 let pendingNavigation: ConversionNavigation | undefined
-function currentSnapshot() { return studio.mode === 'code' ? codeEditor.value?.getConversionSnapshot() : graphEditor.value?.getConversionSnapshot() }
-async function navigate(request: ConversionNavigation) { await setMode(request.target, false, request) }
-function navigatePreview(request: ConversionNavigation) { if (request.target === studio.mode) focusNavigation(request) }
-function focusNavigation(request: ConversionNavigation) { if (request.target === 'code') codeEditor.value?.focusSourceRange(request.span); else graphEditor.value?.focusConversionNode(request) }
-async function continueConversion() {
+/** 读取当前代码或图编辑器的转换快照。 */ function currentSnapshot() { return studio.mode === 'code' ? codeEditor.value?.getConversionSnapshot() : graphEditor.value?.getConversionSnapshot() }
+/** 按诊断导航请求切换目标模式。 */ async function navigate(request: ConversionNavigation) { await setMode(request.target, false, request) }
+/** 预览目标与当前模式相同则定位当前内容。 */ function navigatePreview(request: ConversionNavigation) { if (request.target === studio.mode) focusNavigation(request) }
+/** 按目标模式定位源范围或图节点。 */ function focusNavigation(request: ConversionNavigation) { if (request.target === 'code') codeEditor.value?.focusSourceRange(request.span); else graphEditor.value?.focusConversionNode(request) }
+/** 检查已接受预览是否仍对应当前快照，再继续切换图模式。 */ async function continueConversion() {
   const accepted = acceptsConversionReview(currentSnapshot(),preview.value)
   await setMode('graph', accepted, pendingNavigation)
 }
-async function setMode(mode: 'code' | 'graph' | 'events', acceptedSourceBacked = false, request?: ConversionNavigation): Promise<void> {
+/** 防止并发切换，先审核转换并保存草稿；成功后切换及定位，失败保留编辑器并显示错误。 */ async function setMode(mode: 'code' | 'graph' | 'events', acceptedSourceBacked = false, request?: ConversionNavigation): Promise<void> {
   if (switching.value) return
   if (mode === studio.mode) { if (request) focusNavigation(request); return }
   switchError.value = ''
@@ -72,7 +73,7 @@ async function setMode(mode: 'code' | 'graph' | 'events', acceptedSourceBacked =
   } catch (error) { switchError.value = error instanceof Error ? error.message : String(error); addEditorLog(switchError.value,'Script','error') }
   finally { switching.value = false }
 }
-async function switchSavedMode(mode: 'code' | 'graph' | 'events'): Promise<void> {
+/** 在已保存前提下解析事件表关联逻辑或代码图伙伴，按需同步新图并安排初始布局后打开目标。 */ async function switchSavedMode(mode: 'code' | 'graph' | 'events'): Promise<void> {
   // Every destination unmounts the active editor, including Event Sheets.
   // Complete its save before changing mode so failed validation retains edits.
   if (mode === 'events') { studio.mode = 'events'; return }
@@ -85,7 +86,7 @@ async function switchSavedMode(mode: 'code' | 'graph' | 'events'): Promise<void>
         const source = readTextAsset(logic.uuid)
         let graphDocumentUuid = ''
         try { graphDocumentUuid = source ? parseGraphDocument(source).uuid : '' } catch { /* Keep the Event Sheet recoverable. */ }
-        const linked = graphDocumentUuid ? assetState.records.find(asset => asset.assetType === 'script' && linkedScriptGraphUuid(asset.uuid) === graphDocumentUuid) : null
+        const linked = graphDocumentUuid ? assetState.records.find(/** 查找关联指定图文档的脚本。 */ asset => asset.assetType === 'script' && linkedScriptGraphUuid(asset.uuid) === graphDocumentUuid) : null
         if (linked) openScriptAsset(linked.uuid); else studio.mode = 'code'
       }
       return
@@ -96,13 +97,13 @@ async function switchSavedMode(mode: 'code' | 'graph' | 'events'): Promise<void>
     }
   }
   if (mode === 'graph') {
-    const script = assetState.records.find(asset => asset.assetType === 'script' && asset.uuid === (scriptStudioState.activeUuid || assetState.selectedGuid))
+    const script = assetState.records.find(/** 查找活动编辑脚本或当前选择的脚本资源。 */ asset => asset.assetType === 'script' && asset.uuid === (scriptStudioState.activeUuid || assetState.selectedGuid))
     if (!script) { studio.mode = 'graph'; return }
     const source = readTextAsset(script.uuid) ?? ''
     try {
       const synchronized = ensureLinkedGraphForScript(script.uuid, source)
       if (!synchronized) { switchError.value = copy.value.failed; return }
-      if(synchronized.created){const created=assetState.records.find(record=>record.uuid===synchronized.graphAssetUuid);if(created)queueInitialGraphLayout(created)}
+      if(synchronized.created){const created=assetState.records.find(/* 比较 record.uuid 与 synchronized.graphAssetUuid，返回严格相等的判断结果。 */ record=>record.uuid===synchronized.graphAssetUuid);if(created)queueInitialGraphLayout(created)}
       openGraphAsset(synchronized.graphAssetUuid)
       assetState.selectedGuid = synchronized.graphAssetUuid
       addEditorLog(t(synchronized.created ? 'linkedGraphCreatedFromCode' : 'linkedGraphUpdatedFromCode'), 'Script', 'info', synchronized.graphAssetUuid)
@@ -114,7 +115,7 @@ async function switchSavedMode(mode: 'code' | 'graph' | 'events'): Promise<void>
   let graphDocumentUuid = ''
   try { graphDocumentUuid = graphSource ? parseGraphDocument(graphSource).uuid : '' } catch { /* Invalid graphs remain open for recovery. */ }
   const script = graphDocumentUuid
-    ? assetState.records.find(asset => asset.assetType === 'script' && linkedScriptGraphUuid(asset.uuid) === graphDocumentUuid)
+    ? assetState.records.find(/** 查找当前图文档关联脚本，以切回代码模式。 */ asset => asset.assetType === 'script' && linkedScriptGraphUuid(asset.uuid) === graphDocumentUuid)
     : null
   if (script) { assetState.selectedGuid = script.uuid; openScriptAsset(script.uuid) }
   else studio.mode = 'code'

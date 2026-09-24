@@ -1,3 +1,4 @@
+/** 功能回归脚本：执行 verify-v6.0.2-interactions.mjs 对应场景，保留断言和证据输出。 */
 import { spawn } from 'node:child_process'
 import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { createServer as createNetServer } from 'node:net'
@@ -13,7 +14,7 @@ const engineVersion = process.env.NOVA_INTERACTION_ENGINE_VERSION || releaseVers
 const outputName = process.env.NOVA_INTERACTION_OUTPUT || `v${releaseVersion}-user-interactions.json`
 const releaseSlug = releaseVersion.replaceAll('.', '')
 const controls = new Map(), clicked = new Set(), settings = [], drags = [], navigation = [], errors = [], launcherLayout = []
-const wait = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds))
+const wait = /** 返回在指定毫秒数后完成的等待任务。 */ milliseconds => new Promise(/* 调用 setTimeout(resolve, milliseconds) 并返回调用结果。 */ resolve => setTimeout(resolve, milliseconds))
 const edgeCandidates = ['C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', 'C:/Program Files/Microsoft/Edge/Application/msedge.exe']
 let edgePath = ''
 for (const candidate of edgeCandidates) { try { await readFile(candidate); edgePath = candidate; break } catch { /* next */ } }
@@ -28,8 +29,8 @@ let client
 try {
   const target = await waitForTarget(debugPort)
   client = await connectCdp(target.webSocketDebuggerUrl)
-  client.on('Runtime.exceptionThrown', event => errors.push(event.exceptionDetails?.exception?.description || event.exceptionDetails?.text || 'Runtime exception'))
-  client.on('Log.entryAdded', event => { if (event.entry?.level === 'error') errors.push(event.entry.text) })
+  client.on('Runtime.exceptionThrown', /* 调用 errors.push(event.exceptionDetails?.exception?.description || event.exceptionDetails?.text || 'Runtime exception') 并返回调用结果。 */ event => errors.push(event.exceptionDetails?.exception?.description || event.exceptionDetails?.text || 'Runtime exception'))
+  client.on('Log.entryAdded', /** 结构说明（自动提取）：client.on 回调；输入 event；直接调用 errors.push。 */ event => { if (event.entry?.level === 'error') errors.push(event.entry.text) })
   await client.send('Runtime.enable'); await client.send('Log.enable'); await client.send('Page.enable')
   await client.send('Emulation.setDeviceMetricsOverride', { width: 1366, height: 768, screenWidth: 1366, screenHeight: 768, deviceScaleFactor: 1, mobile: false })
   await waitForExpression(client, "document.readyState==='complete' && Boolean(document.querySelector('.project-manager,.editor-root'))", 20_000)
@@ -85,43 +86,43 @@ try {
   }
 
   await collect('final')
-  const seriousErrors = errors.filter(message => !/favicon|ResizeObserver loop/i.test(message))
-  const catalog = [...controls.values()].sort((a, b) => a.testId.localeCompare(b.testId)).map(control => {
+  const seriousErrors = errors.filter(/* 返回 /favicon|ResizeObserver loop/i.test(message) 的逻辑取反结果。 */ message => !/favicon|ResizeObserver loop/i.test(message))
+  const catalog = [...controls.values()].sort(/* 调用 a.testId.localeCompare(b.testId) 并返回调用结果。 */ (a, b) => a.testId.localeCompare(b.testId)).map(/** 结构说明（自动提取）：map 回调；输入 control；直接调用 clicked.has、settings.some、test；写入 disposition。 */ control => {
     let disposition = 'source-bound/context-reviewed'
     if (clicked.has(control.testId)) disposition = 'clicked'
     else if (control.disabled) disposition = 'context-blocked'
-    else if (control.kind === 'input' || control.kind === 'select' || control.kind === 'textarea') disposition = settings.some(item => item.testId === control.testId && item.status === 'passed') ? 'mutated-and-restored' : 'input-context-reviewed'
+    else if (control.kind === 'input' || control.kind === 'select' || control.kind === 'textarea') disposition = settings.some(/* 先计算 item.testId === control.testId；仅当其为真值时求右侧 item.status === 'passed'，返回短路求值结果。 */ item => item.testId === control.testId && item.status === 'passed') ? 'mutated-and-restored' : 'input-context-reviewed'
     else if (control.kind === 'link') disposition = 'external-navigation-not-launched'
     else if (/delete|remove|clear|reset|uninstall|destroy|import|open project|build|export|sign|deploy/i.test(control.label)) disposition = 'side-effect-blocked'
     return { ...control, disposition }
   })
-  const unclassified = catalog.filter(item => !item.disposition)
+  const unclassified = catalog.filter(/* 返回 item.disposition 的逻辑取反结果。 */ item => !item.disposition)
   const report = {
     format: `nova-v${releaseVersion}-user-interaction-audit`, version: 1, release: releaseVersion, engineVersion, generatedAt: new Date().toISOString(),
     scope: { locales: ['en', 'de', 'zh'], project: 'Mouse Knockout', policy: 'Safe reversible actions execute; destructive, filesystem, build, external-navigation and permission actions receive an explicit disposition.' },
-    summary: { registeredControls: catalog.length, clickedControls: catalog.filter(item => item.disposition === 'clicked').length, settingsMutatedAndRestored: settings.filter(item => item.status === 'passed').length, dragSurfacesPassed: drags.filter(item => item.status === 'passed').length, explicitlyBlockedOrReviewed: catalog.filter(item => !['clicked', 'mutated-and-restored'].includes(item.disposition)).length },
+    summary: { registeredControls: catalog.length, clickedControls: catalog.filter(/* 比较 item.disposition 与 'clicked'，返回严格相等的判断结果。 */ item => item.disposition === 'clicked').length, settingsMutatedAndRestored: settings.filter(/* 比较 item.status 与 'passed'，返回严格相等的判断结果。 */ item => item.status === 'passed').length, dragSurfacesPassed: drags.filter(/* 比较 item.status 与 'passed'，返回严格相等的判断结果。 */ item => item.status === 'passed').length, explicitlyBlockedOrReviewed: catalog.filter(/* 返回 ['clicked', 'mutated-and-restored'].includes(item.disposition) 的逻辑取反结果。 */ item => !['clicked', 'mutated-and-restored'].includes(item.disposition)).length },
     navigation, settings, drags, launcherLayout, controls: catalog, consoleErrors: seriousErrors,
     fatalSurface: await evaluate(client, "Boolean(document.querySelector('.error-recovery,[data-fatal=true]'))"),
     severity0Open: seriousErrors.length || unclassified.length ? 1 : 0,
-    severity1Open: settings.some(item => item.status === 'failed') || drags.some(item => item.status === 'failed') || launcherLayout.some(item => item.status === 'failed') ? 1 : 0
+    severity1Open: settings.some(/* 比较 item.status 与 'failed'，返回严格相等的判断结果。 */ item => item.status === 'failed') || drags.some(/* 比较 item.status 与 'failed'，返回严格相等的判断结果。 */ item => item.status === 'failed') || launcherLayout.some(/* 比较 item.status 与 'failed'，返回严格相等的判断结果。 */ item => item.status === 'failed') ? 1 : 0
   }
   report.status = report.severity0Open || report.severity1Open || report.fatalSurface ? 'failed' : 'passed'
   await writeFile(join(evidenceRoot, outputName), `${JSON.stringify(report, null, 2)}\n`)
-  if (report.status !== 'passed') throw new Error(`Interaction audit failed: console=${seriousErrors.length}, settings=${settings.filter(item => item.status === 'failed').length}, drags=${drags.filter(item => item.status === 'failed').length}`)
+  if (report.status !== 'passed') throw new Error(`Interaction audit failed: console=${seriousErrors.length}, settings=${settings.filter(/* 比较 item.status 与 'failed'，返回严格相等的判断结果。 */ item => item.status === 'failed').length}, drags=${drags.filter(/* 比较 item.status 与 'failed'，返回严格相等的判断结果。 */ item => item.status === 'failed').length}`)
   console.log(`Nova_A v${releaseVersion} interaction audit passed: ${catalog.length} registered controls, ${navigation.length} navigation actions, ${settings.length} settings, ${drags.length} drag surfaces.`)
 } finally {
   try { await client?.send('Browser.close') } catch { /* process cleanup */ }
   await wait(250)
   if (!edge.killed) edge.kill()
-  await new Promise(resolve => previewServer.httpServer.close(resolve))
+  await new Promise(/* 调用 previewServer.httpServer.close(resolve) 并返回调用结果。 */ resolve => previewServer.httpServer.close(resolve))
   await rm(profile, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 })
 }
 
-async function collect(surface) {
+/** 结构说明（自动提取）：collect；输入 surface；直接调用 evaluate、controls.set；包含循环处理；等待异步结果。 */ async function collect(surface) {
   const records = await evaluate(client, `([...document.querySelectorAll('[data-testid]')].filter(node=>{const r=node.getBoundingClientRect(),s=getComputedStyle(node);return r.width>0&&r.height>0&&s.display!=='none'&&s.visibility!=='hidden'}).map(node=>({testId:node.dataset.testid,kind:node.matches('input')?'input':node.matches('select')?'select':node.matches('textarea')?'textarea':node.matches('a[href]')?'link':'button',surface:node.dataset.surface||'application',label:node.getAttribute('aria-label')||node.getAttribute('title')||(node.textContent||'').trim().replace(/\s+/g,' ').slice(0,160),disabled:node.matches(':disabled'),disabledReason:node.dataset.disabledReason||''})))`)
   for (const record of records) controls.set(record.testId, { ...record, observedAt: surface })
 }
-async function traverse(selector, label, dismiss = false) {
+/** 结构说明（自动提取）：traverse；输入 selector、label、dismiss；直接调用 evaluate、JSON.stringify、clickIndex、collect、navigation.push；包含循环处理；等待异步结果。 */ async function traverse(selector, label, dismiss = false) {
   const count = await evaluate(client, `document.querySelectorAll(${JSON.stringify(selector)}).length`)
   for (let index = 0; index < count; index++) {
     const result = await clickIndex(selector, index, `${label} ${index + 1}/${count}`)
@@ -130,25 +131,25 @@ async function traverse(selector, label, dismiss = false) {
     if (!result) navigation.push({ action: `${label} ${index + 1}`, status: 'failed' })
   }
 }
-async function clickIndex(selector, index, action) {
+/** 结构说明（自动提取）：clickIndex；输入 selector、index、action；直接调用 evaluate、JSON.stringify、wait、clicked.add、navigation.push；返回路径包含 outcome.ok；等待异步结果。 */ async function clickIndex(selector, index, action) {
   const outcome = await evaluate(client, `(() => { const node=document.querySelectorAll(${JSON.stringify(selector)})[${index}]; if(!node||node.matches(':disabled')) return {ok:false,reason:node?'disabled':'missing'}; node.scrollIntoView({block:'nearest',inline:'nearest'}); node.click(); return {ok:true,testId:node.dataset.testid||''} })()`)
   await wait(140)
   if (outcome.testId) clicked.add(outcome.testId)
   navigation.push({ action, selector, index, status: outcome.ok ? 'passed' : 'blocked', reason: outcome.reason || '' })
   return outcome.ok
 }
-async function exerciseRuntime() {
+/** 结构说明（自动提取）：exerciseRuntime；无显式参数；直接调用 clickIndex、wait；等待异步结果。 */ async function exerciseRuntime() {
   await clickIndex('.actionbar button', 0, 'runtime play'); await wait(800)
   await clickIndex('.actionbar button', 1, 'runtime pause')
   await clickIndex('.actionbar button', 2, 'runtime single step')
   await clickIndex('.actionbar button', 0, 'runtime resume'); await wait(250)
   await clickIndex('.actionbar button', 3, 'runtime stop and restore')
 }
-async function exerciseTopMenus() {
+/** 结构说明（自动提取）：exerciseTopMenus；无显式参数；直接调用 evaluate、clickIndex；包含循环处理；等待异步结果。 */ async function exerciseTopMenus() {
   const count = await evaluate(client, "document.querySelectorAll('.menu-container>.menu-item>button').length")
   for (let index = 0; index < count; index++) { await clickIndex('.menu-container>.menu-item>button', index, `top menu ${index + 1}/${count}`); await evaluate(client, "document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true})); true") }
 }
-async function exerciseSettings() {
+/** 结构说明（自动提取）：exerciseSettings；无显式参数；直接调用 clickIndex、collect、evaluate、JSON.stringify、settings.push 等；包含循环处理；等待异步结果。 */ async function exerciseSettings() {
   await clickIndex('.workspace-list button', 5, 'settings: Manage workspace')
   await clickIndex('.manage-body>nav button', 1, 'settings: Settings section')
   await collect('settings before mutation')
@@ -160,7 +161,7 @@ async function exerciseSettings() {
     await wait(35)
   }
 }
-async function exerciseDrags() {
+/** 结构说明（自动提取）：exerciseDrags；无显式参数；直接调用 client.send、wait、clickIndex、pointerDrag、drags.push 等；写入 tabState.after、tabState.restored、reorder；包含循环处理；等待异步结果。 */ async function exerciseDrags() {
   await client.send('Emulation.setDeviceMetricsOverride', { width: 1920, height: 1080, screenWidth: 1920, screenHeight: 1080, deviceScaleFactor: 1, mobile: false })
   await wait(300)
   await clickIndex('.workspace-list button', 0, 'drag audit: Design workspace')
@@ -190,7 +191,7 @@ async function exerciseDrags() {
   drags.push({ name: 'hierarchy reparent', status: 'source-bound/context-reviewed', reason: 'Reparent handlers are registered; structural mutation is excluded from the reversible shell audit.' })
   drags.push({ name: 'animation/key/curve and connection drawing', status: 'context-blocked', reason: 'Requires an authored animation or active two-object connection session; covered by domain verifiers and source bindings.' })
 }
-async function pointerDrag(selector, deltaX, deltaY, axis) {
+/** 结构说明（自动提取）：pointerDrag；输入 selector、deltaX、deltaY、axis；直接调用 evaluate、JSON.stringify、wait、Math.abs；等待异步结果。 */ async function pointerDrag(selector, deltaX, deltaY, axis) {
   const before = await evaluate(client, `(() => { const handle=[...document.querySelectorAll(${JSON.stringify(selector)})].find(node=>{const r=node.getBoundingClientRect(),s=getComputedStyle(node);return r.width>0&&r.height>0&&s.display!=='none'&&s.visibility!=='hidden'});if(!handle)return null;const owner=handle.parentElement,rect=handle.getBoundingClientRect(),bounds=owner.getBoundingClientRect();return{x:rect.left+rect.width/2,y:rect.top+rect.height/2,value:${axis === 'x' ? 'bounds.width' : 'bounds.height'}} })()`)
   if (!before) return { status: 'blocked', reason: 'not visible in current context' }
   await evaluate(client, `(() => { const handle=[...document.querySelectorAll(${JSON.stringify(selector)})].find(node=>{const r=node.getBoundingClientRect(),s=getComputedStyle(node);return r.width>0&&r.height>0&&s.display!=='none'&&s.visibility!=='hidden'});if(!handle)return false;const fire=(target,type,x,y,buttons)=>target.dispatchEvent(new MouseEvent(type,{bubbles:true,cancelable:true,clientX:x,clientY:y,button:0,buttons}));fire(handle,'mousedown',${before.x},${before.y},1);for(let step=1;step<=5;step++)fire(document,'mousemove',${before.x}+${deltaX}*step/5,${before.y}+${deltaY}*step/5,1);fire(document,'mouseup',${before.x + deltaX},${before.y + deltaY},0);return true})()`)
@@ -206,8 +207,8 @@ async function pointerDrag(selector, deltaX, deltaY, axis) {
   const restoredCleanly = changed && restored !== null && Math.abs(restored - before.value) <= 4
   return { status: restoredCleanly ? 'passed' : changed ? 'failed' : 'automation-limited', before: before.value, after, restored, reason: restoredCleanly ? '' : changed ? 'The pane resized but did not restore cleanly.' : 'The browser did not activate the Vue resize listener; the mousedown/move/up binding is verified separately.' }
 }
-async function freePort() { const server=createNetServer();await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(0,'127.0.0.1',resolve)});const address=server.address(),port=typeof address==='object'&&address?address.port:0;await new Promise(resolve=>server.close(resolve));return port }
-async function waitForTarget(port) { const deadline=Date.now()+15_000;while(Date.now()<deadline){try{const targets=await fetch(`http://127.0.0.1:${port}/json/list`).then(response=>response.json()),target=targets.find(item=>item.type==='page');if(target)return target}catch{}await wait(100)}throw new Error('Timed out connecting to Edge DevTools.') }
-async function connectCdp(url) { const socket=new WebSocket(url),pending=new Map(),listeners=new Map();let nextId=1;await new Promise((resolve,reject)=>{socket.addEventListener('open',resolve,{once:true});socket.addEventListener('error',reject,{once:true})});socket.addEventListener('message',message=>{const value=JSON.parse(message.data);if(value.id){const item=pending.get(value.id);if(!item)return;pending.delete(value.id);value.error?item.reject(new Error(value.error.message)):item.resolve(value.result)}else for(const listener of listeners.get(value.method)||[])listener(value.params||{})});return{send(method,params={}){return new Promise((resolve,reject)=>{const id=nextId++;pending.set(id,{resolve,reject});socket.send(JSON.stringify({id,method,params}))})},on(method,listener){listeners.set(method,[...(listeners.get(method)||[]),listener])}} }
-async function evaluate(cdp, expression) { const result=await cdp.send('Runtime.evaluate',{expression,awaitPromise:true,returnByValue:true});if(result.exceptionDetails)throw new Error(result.exceptionDetails.exception?.description||result.exceptionDetails.text);return result.result.value }
-async function waitForExpression(cdp, expression, timeout) { const deadline=Date.now()+timeout;while(Date.now()<deadline){try{if(await evaluate(cdp,expression))return}catch{}await wait(100)}throw new Error(`Timed out waiting for ${expression}`) }
+/** 临时监听本机随机端口，读取分配结果并关闭监听后返回端口。 */ async function freePort() { const server=createNetServer();await new Promise(/** 监听本机随机端口，监听错误时拒绝等待，准备完成时结束等待。 */ (resolve,reject)=>{server.once('error',reject);server.listen(0,'127.0.0.1',resolve)});const address=server.address(),port=typeof address==='object'&&address?address.port:0;await new Promise(/* 调用 server.close(resolve) 并返回调用结果。 */ resolve=>server.close(resolve));return port }
+/** 结构说明（自动提取）：waitForTarget；输入 port；直接调用 Date.now、then、fetch、targets.find、wait 等；返回路径包含 target；包含循环处理；等待异步结果；包含显式抛错路径。 */ async function waitForTarget(port) { const deadline=Date.now()+15_000;while(Date.now()<deadline){try{const targets=await fetch(`http://127.0.0.1:${port}/json/list`).then(/* 调用 response.json() 并返回调用结果。 */ response=>response.json()),target=targets.find(/* 比较 item.type 与 'page'，返回严格相等的判断结果。 */ item=>item.type==='page');if(target)return target}catch{}await wait(100)}throw new Error('Timed out connecting to Edge DevTools.') }
+/** 建立浏览器调试WebSocket连接，关联请求响应并分发协议事件。 */ async function connectCdp(url) { const socket=new WebSocket(url),pending=new Map(),listeners=new Map();let nextId=1;await new Promise(/** 等待WebSocket首次连接成功或首次连接错误。 */ (resolve,reject)=>{socket.addEventListener('open',resolve,{once:true});socket.addEventListener('error',reject,{once:true})});socket.addEventListener('message',/** 将调试响应分配到待处理请求，并把无请求标识的消息分发给事件监听者。 */ message=>{const value=JSON.parse(message.data);if(value.id){const item=pending.get(value.id);if(!item)return;pending.delete(value.id);value.error?item.reject(new Error(value.error.message)):item.resolve(value.result)}else for(const listener of listeners.get(value.method)||[])listener(value.params||{})});return{/** 发送带递增标识的调试协议请求，并返回等待响应的任务。 */ send(method,params={}){return new Promise(/** 登记调试请求的完成处理器并经WebSocket发送请求。 */ (resolve,reject)=>{const id=nextId++;pending.set(id,{resolve,reject});socket.send(JSON.stringify({id,method,params}))})},/** 向指定调试事件的监听器列表追加回调。 */ on(method,listener){listeners.set(method,[...(listeners.get(method)||[]),listener])}} }
+/** 在浏览器内求值并等待异步结果，将远程异常转为本地错误。 */ async function evaluate(cdp, expression) { const result=await cdp.send('Runtime.evaluate',{expression,awaitPromise:true,returnByValue:true});if(result.exceptionDetails)throw new Error(result.exceptionDetails.exception?.description||result.exceptionDetails.text);return result.result.value }
+/** 结构说明（自动提取）：waitForExpression；输入 cdp、expression、timeout；直接调用 Date.now、evaluate、wait、Error；包含循环处理；等待异步结果；包含显式抛错路径。 */ async function waitForExpression(cdp, expression, timeout) { const deadline=Date.now()+timeout;while(Date.now()<deadline){try{if(await evaluate(cdp,expression))return}catch{}await wait(100)}throw new Error(`Timed out waiting for ${expression}`) }

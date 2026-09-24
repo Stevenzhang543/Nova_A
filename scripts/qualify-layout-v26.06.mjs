@@ -1,3 +1,4 @@
+/** 版本资格入口：配置对应发布检查并调用保留的执行流程。 */
 process.env.NOVA_LAYOUT_VERSION = '26.06'
 process.env.NOVA_LAYOUT_ENGINE_VERSION = '26.6.0'
 process.env.NOVA_LAYOUT_OUTPUT = 'v26.06-layout-browser.json'

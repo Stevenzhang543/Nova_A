@@ -1,3 +1,4 @@
+/** 功能回归脚本：执行 verify-v26.22-event-draft-user.mjs 对应场景，保留断言和证据输出。 */
 import {blockedStudioSave22} from './lib/userFixtures22.mjs'
 import assert from 'node:assert/strict'
 import {readFile,writeFile} from 'node:fs/promises'
@@ -8,33 +9,33 @@ import {worldUserControls17} from './lib/worldAudit17.mjs'
 const fixture=join(process.cwd(),'.cache/v2622-event-drafts.nova'),ids=[];
 const opened=await openMediaAuditModules({repository:process.cwd(),bases:[process.cwd()]},{physics:'store/physics',templates:'projects/templates',assets:'assets/AssetDatabase',events:'runtime/eventSheets'});
 try{const {physics:p,templates,assets,events:e}=opened.modules,wasm=await opened.wasm();assert.ok(p.loadProject(wasm.module.migrate_project_json(templates.createTemplateProjectJson('empty','Event drafts'))));const logic=assets.createTextAsset('Callbacks','script','fn start() {}','Assets');for(const name of ['A','B'])ids.push(e.createEventSheetAsset('Events '+name,'asset://'+logic.uuid).uuid);await writeFile(fixture,p.getSceneJSON())}finally{await opened.close()}
-await withBrowserAudit({release:'26.22',name:'event-draft-user',development:process.argv.includes('--development'),expectedRelease:JSON.parse(await readFile('package.json','utf8')).version.split('.').slice(0,2).join('.'),width:1366,height:900},async a=>{
+await withBrowserAudit({release:'26.22',name:'event-draft-user',development:process.argv.includes('--development'),expectedRelease:JSON.parse(await readFile('package.json','utf8')).version.split('.').slice(0,2).join('.'),width:1366,height:900},/** 结构说明（自动提取）：withBrowserAudit 回调；输入 a；直接调用 worldUserControls17、u.open、panel、a.check；等待异步结果。 */ async a=>{
  const u=worldUserControls17(a),priority='.event-list .priority input',seed='.event-details .seed input';
- async function panel(){await u.workspace('Script');await a.until("!!document.querySelector('#logic-events-tab')");await a.click('#logic-events-tab');await a.until("!!document.querySelector('.event-studio .priority input')");await a.clickText('.sheet-browser>button','Events A');}
- const sheet=doc=>{const asset=doc.assets.find(x=>x.uuid===ids[0]);return JSON.parse(decodeURIComponent(asset.source.slice(asset.source.indexOf(',')+1)))};
+ /** 结构说明（自动提取）：panel；无显式参数；直接调用 u.workspace、a.until、a.click、a.clickText；等待异步结果。 */ async function panel(){await u.workspace('Script');await a.until("!!document.querySelector('#logic-events-tab')");await a.click('#logic-events-tab');await a.until("!!document.querySelector('.event-studio .priority input')");await a.clickText('.sheet-browser>button','Events A');}
+ const sheet=/** 结构说明（自动提取）：sheet；输入 doc；直接调用 doc.assets.find、JSON.parse、decodeURIComponent、asset.source.slice、asset.source.indexOf。 */ doc=>{const asset=doc.assets.find(/* 比较 x.uuid 与 ids[0]，返回严格相等的判断结果。 */ x=>x.uuid===ids[0]);return JSON.parse(decodeURIComponent(asset.source.slice(asset.source.indexOf(',')+1)))};
  await u.open(fixture);await panel();
- await a.check('Integer event drafts retain invalid text, block Save and block asset transitions',async()=>{
+ await a.check('Integer event drafts retain invalid text, block Save and block asset transitions',/** 结构说明（自动提取）：a.check 回调；无显式参数；直接调用 u.save、u.field、assert.equal、a.evaluate、u.activate 等；包含循环处理；等待异步结果。 */ async()=>{
   const before=await u.save('event-draft-before-22');
   for(const text of ['1/0','1.5','1000001']){await u.field(priority,text);assert.equal(await a.evaluate(`document.querySelector('${priority}').getAttribute('aria-invalid')`),'true');await u.activate('.sheet-toolbar button.primary');assert.equal(await a.evaluate(`document.querySelector('${priority}').value`),text);await a.clickText('.sheet-browser>button','Events B');assert.ok((await a.evaluate("document.querySelector('.sheet-toolbar>div>strong').textContent")).includes('Events A'));assert.equal(await a.evaluate(`document.querySelector('${priority}').value`),text);}
   await a.evaluate(`document.querySelector('${priority}').focus()`);await a.press('Escape');const after=await u.save('event-draft-blocked-22');assert.deepEqual(sheet(after.document),sheet(before.document));await a.capture('event-invalid-recovery');
  });
- await a.check('Priority and seed expressions save exact integers and survive actual project reopen',async()=>{
+ await a.check('Priority and seed expressions save exact integers and survive actual project reopen',/** 结构说明（自动提取）：a.check 回调；无显式参数；直接调用 u.field、u.activate、u.save、assert.equal、sheet 等；等待异步结果。 */ async()=>{
   await u.field(priority,'2+3');await u.field(seed,'7*9');await u.activate('.sheet-toolbar button.primary');const saved=await u.save('event-draft-saved-22');assert.equal(sheet(saved.document).handlers[0].priority,5);assert.equal(sheet(saved.document).deterministicSeed,63);await u.open(saved.file);await panel();assert.equal(await a.evaluate(`Number(document.querySelector('${priority}').value)`),5);assert.equal(await a.evaluate(`Number(document.querySelector('${seed}').value)`),63);
  });
- await a.check('Invalid seed blocks a switch to code until Escape restores the value',async()=>{
+ await a.check('Invalid seed blocks a switch to code until Escape restores the value',/** 结构说明（自动提取）：a.check 回调；无显式参数；直接调用 u.field、a.click、assert.ok、a.evaluate、assert.equal 等；等待异步结果。 */ async()=>{
   await u.field(seed,'0');await a.click('#logic-code-tab');assert.ok(await a.evaluate("!!document.querySelector('.event-studio')"));assert.equal(await a.evaluate(`document.querySelector('${seed}').value`),'0');await a.evaluate(`document.querySelector('${seed}').focus()`);await a.press('Escape');await a.click('#logic-code-tab');await a.until("!document.querySelector('.event-studio')");await a.click('#logic-events-tab');await a.until("!!document.querySelector('.event-studio')");assert.equal(await a.evaluate(`Number(document.querySelector('${seed}').value)`),63);
  });
- await a.check('A focused expression is included by Save and a clean Save changes no asset data',async()=>{
+ await a.check('A focused expression is included by Save and a clean Save changes no asset data',/** 结构说明（自动提取）：a.check 回调；无显式参数；直接调用 a.evaluate、a.client.send、u.activate、u.save、assert.equal 等；等待异步结果。 */ async()=>{
   await a.evaluate(`(()=>{const e=document.querySelector('${priority}');e.scrollIntoView({block:'center'});e.focus();e.select()})()`);await a.client.send('Input.insertText',{text:'10+2'});await u.activate('.sheet-toolbar button.primary');const first=await u.save('event-focused-saved-22');assert.equal(sheet(first.document).handlers[0].priority,12);await u.activate('.sheet-toolbar button.primary');const second=await u.save('event-clean-saved-22');assert.deepEqual(second.document.assets,first.document.assets);
  });
- await a.check('Clean event-sheet controls follow saved asset Undo and Redo',async()=>{
+ await a.check('Clean event-sheet controls follow saved asset Undo and Redo',/** 结构说明（自动提取）：a.check 回调；无显式参数；直接调用 a.evaluate、a.press、u.save、assert.equal、sheet 等；等待异步结果。 */ async()=>{
   await a.evaluate('document.activeElement.blur()');await a.press('z',2);const undone=await u.save('event-undone-22');assert.equal(sheet(undone.document).handlers[0].priority,5);await a.until("Number(document.querySelector('.event-list .priority input').value)===5");await a.press('y',2);await a.until("Number(document.querySelector('.event-list .priority input').value)===12");
  });
 
- await a.check('Unsaved event edits survive Undo and cannot overwrite its changed source',async()=>{
+ await a.check('Unsaved event edits survive Undo and cannot overwrite its changed source',/** 结构说明（自动提取）：a.check 回调；无显式参数；直接调用 u.field、a.evaluate、a.press、a.until、assert.equal 等；等待异步结果。 */ async()=>{
   await u.field(priority,'17');await a.evaluate('document.activeElement.blur()');await a.press('z',2);await a.until("!!document.querySelector('.event-studio .studio-draft-conflict')");assert.equal(await a.evaluate("Number(document.querySelector('.event-list .priority input').value)"),17);await u.activate('.sheet-toolbar button.primary');await blockedStudioSave22(a);await u.activate('.event-studio .studio-draft-conflict .actions button',1);assert.equal(await a.evaluate("Number(document.querySelector('.event-list .priority input').value)"),5);const recovered=await u.save('event-conflict-recovered-22');assert.equal(sheet(recovered.document).handlers[0].priority,5);await a.capture('event-source-conflict-recovered');
  });
- await a.check('Event priority and seed controls remain readable and reachable across 27 configurations',async()=>{
+ await a.check('Event priority and seed controls remain readable and reachable across 27 configurations',/** 结构说明（自动提取）：a.check 回调；无显式参数；直接调用 a.viewport、u.workspace、a.until、a.click、a.select 等；包含循环处理；等待异步结果。 */ async()=>{
   const failures=[];
   for(const locale of ['en','de','zh'])for(const scale of [1,1.5,2]){
    await a.viewport(1440,900);await u.workspace('Manage');await a.until("!!document.querySelector('.manage-body>nav button')");await a.click('.manage-body>nav button',1);await a.until("!!document.querySelector('.settings-page select:has(option[value=de]):has(option[value=zh])')");await a.select('.settings-page select:has(option[value=de]):has(option[value=zh])',locale);await a.evaluate(`document.querySelector('.settings-page input[type=range][min="1"][max="2"]').focus()`);await a.press('Home');for(let n=0;n<Math.round((scale-1)/.05);n++)await a.press('ArrowRight');await a.press('Tab');await panel();

@@ -1,3 +1,4 @@
+<!-- 设置工作室：管理编辑器体验、项目和运行配置，编辑音频、输入映射及恢复选项。 -->
 <template>
   <div class="settings-page">
     <header class="page-header">
@@ -204,7 +205,7 @@ import DeviceInputPanel from '../components/DeviceInputPanel.vue'
 import { scriptProjectSettings as scriptSettings } from '../runtime/scriptSettings'
 import { applyCreatorPerformanceProfile } from '../runtime/creatorLearning'
 
-function setTheme(theme: ThemeMode) {
+/** 切换明暗主题，选择浅色时关闭高对比模式。 */ function setTheme(theme: ThemeMode) {
   prefs.theme = theme
   if (theme === 'light') prefs.highContrast = false
 }
@@ -212,91 +213,91 @@ function setTheme(theme: ThemeMode) {
 const settingRowLabel = Symbol('settings-row-label')
 const SettingRow = defineComponent({
   props: { label: { type: String, required: true } },
-  setup(props, { slots }) {
-    provide(settingRowLabel, () => props.label)
-    return () => h('label', { class: 'setting-row' }, [h('span', props.label), h('div', { class: 'setting-control' }, slots.default?.())])
+  /** 为设置行提供响应式标签读取器，并返回标签和控件布局的渲染函数。 */ setup(props, { slots }) {
+    provide(settingRowLabel, /* 返回 props.label 的当前值。 */ () => props.label)
+    return /** 渲染设置行名称及默认插槽内容。 */ () => h('label', { class: 'setting-row' }, [h('span', props.label), h('div', { class: 'setting-control' }, slots.default?.())])
   }
 })
 
 const ToggleSwitch = defineComponent({
   props: { modelValue: { type: Boolean, required: true } },
   emits: ['update:modelValue'],
-  setup(props, { emit, attrs }) {
-    const rowLabel = inject<() => string>(settingRowLabel, () => '')
-    return () => h('button', {
+  /** 读取父设置行标签并构造带无障碍名称的开关渲染函数。 */ setup(props, { emit, attrs }) {
+    const rowLabel = inject<() => string>(settingRowLabel, /** 无父行标签时使用空文本。 */ () => '')
+    return /** 渲染具有开关角色、当前状态和点击处理的按钮。 */ () => h('button', {
       class: ['toggle', { active: props.modelValue }],
       role: 'switch',
       'aria-label': attrs['aria-label'] ?? (attrs['aria-labelledby'] ? undefined : rowLabel()),
       'aria-checked': props.modelValue,
-      onClick: () => emit('update:modelValue', !props.modelValue)
+      onClick: /** 点击时向父组件发送相反的布尔模型值。 */ () => emit('update:modelValue', !props.modelValue)
     }, h('span'))
   }
 })
 
-const autosaveAvailable = computed(() => autosaveState.available)
+const autosaveAvailable = computed(/* 返回 autosaveState.available 的当前值。 */ () => autosaveState.available)
 const inputDevices: readonly InputDevice[] = INPUT_DEVICES
 const inputSearch = ref(''), inputDeviceFilter = ref<InputDevice | 'all'>('all'), compactInputMap = ref(false), inputRecording = ref(false), lastInputRecording = ref<InputRecording | null>(null), connectedInputDevices = ref<InputDeviceIdentity[]>([])
-const inputConflicts = computed(() => detectInputConflicts(physics.inputMap))
-const visibleInputActions = computed(() => physics.inputMap.map((action, actionIndex) => ({ action, actionIndex })).filter(({ action }) => {
-  const matchesSearch = !inputSearch.value.trim() || action.name.toLocaleLowerCase().includes(inputSearch.value.trim().toLocaleLowerCase()) || action.bindings.some(binding => `${binding.device} ${binding.code}`.toLocaleLowerCase().includes(inputSearch.value.trim().toLocaleLowerCase()))
-  return matchesSearch && (inputDeviceFilter.value === 'all' || action.bindings.some(binding => binding.device === inputDeviceFilter.value))
+const inputConflicts = computed(/** 检查项目输入映射中的冲突。 */ () => detectInputConflicts(physics.inputMap))
+const visibleInputActions = computed(/** 保留原索引后按名称、绑定文本和设备类型筛选输入动作。 */ () => physics.inputMap.map(/** 将动作和其原始索引组合以便编辑筛选结果。 */ (action, actionIndex) => ({ action, actionIndex })).filter(/** 匹配动作名称或绑定搜索，并要求符合当前设备过滤。 */ ({ action }) => {
+  const matchesSearch = !inputSearch.value.trim() || action.name.toLocaleLowerCase().includes(inputSearch.value.trim().toLocaleLowerCase()) || action.bindings.some(/** 按设备和代码文本匹配输入搜索词。 */ binding => `${binding.device} ${binding.code}`.toLocaleLowerCase().includes(inputSearch.value.trim().toLocaleLowerCase()))
+  return matchesSearch && (inputDeviceFilter.value === 'all' || action.bindings.some(/* 比较 binding.device 与 inputDeviceFilter.value，返回严格相等的判断结果。 */ binding => binding.device === inputDeviceFilter.value))
 }))
 let inputDeviceTimer = 0
-onMounted(() => { connectedInputDevices.value = gameplayRuntime.input.connectedDevices(); inputDeviceTimer = window.setInterval(() => { connectedInputDevices.value = gameplayRuntime.input.connectedDevices() }, 1000) })
-onBeforeUnmount(() => window.clearInterval(inputDeviceTimer))
+onMounted(/** 挂载时读取连接设备并建立每秒刷新计时器。 */ () => { connectedInputDevices.value = gameplayRuntime.input.connectedDevices(); inputDeviceTimer = window.setInterval(/** 周期读取输入运行时的已连接设备列表。 */ () => { connectedInputDevices.value = gameplayRuntime.input.connectedDevices() }, 1000) })
+onBeforeUnmount(/** 卸载时清除设备刷新计时器。 */ () => window.clearInterval(inputDeviceTimer))
 const settingScopes = [{ id: 'all' as const, label: 'all' }, { id: 'editor' as const, label: 'editorScope' }, { id: 'project' as const, label: 'projectScope' }, { id: 'runtime' as const, label: 'runtimeScope' }]
-watch(() => prefs.locale, () => { editorState.statusText = t('ready') })
+watch(/* 返回 prefs.locale 的当前值。 */ () => prefs.locale, /** 偏好变化时把编辑器状态更新为就绪。 */ () => { editorState.statusText = t('ready') })
 
-function showCard(keys: string, scope: 'all' | 'editor' | 'project' | 'runtime'): boolean {
+/** 按设置范围和本地化搜索词决定卡片可见性，表单布局文案使用专用匹配。 */ function showCard(keys: string, scope: 'all' | 'editor' | 'project' | 'runtime'): boolean {
   if (editorState.settingsScope !== 'all' && scope !== 'all' && editorState.settingsScope !== scope) return false
   const needle = editorState.settingsSearch.trim().toLocaleLowerCase()
   if (!needle) return true
-  if (keys.includes('formLabelLayout') && Object.values(FORM_LAYOUT_COPY[prefs.locale]).some(value => value.toLocaleLowerCase().includes(needle))) return true
-  return keys.split(' ').some(key => t(key).toLocaleLowerCase().includes(needle) || key.toLocaleLowerCase().includes(needle))
+  if (keys.includes('formLabelLayout') && Object.values(FORM_LAYOUT_COPY[prefs.locale]).some(/** 检查表单布局选项文案是否包含搜索词。 */ value => value.toLocaleLowerCase().includes(needle))) return true
+  return keys.split(' ').some(/** 匹配翻译后的设置名或原翻译键。 */ key => t(key).toLocaleLowerCase().includes(needle) || key.toLocaleLowerCase().includes(needle))
 }
-function openTool(tab: 'packages' | 'profiler' | 'project') { openEditorTool(tab) }
+/** 打开指定包、性能或健康工具。 */ function openTool(tab: 'packages' | 'profiler' | 'project') { openEditorTool(tab) }
 
-function commitAudioSettings() {
+/** 归一化音频设置并记录历史。 */ function commitAudioSettings() {
   Object.assign(physics.audioSettings, normalizeAudioSettings(physics.audioSettings))
   pushHistory('Edit audio settings')
 }
 
-function commitInputMap() {
+/** 归一化并原位替换输入映射，记录历史。 */ function commitInputMap() {
   const normalized = normalizeInputMap(physics.inputMap)
   physics.inputMap.splice(0, physics.inputMap.length, ...normalized)
   pushHistory('Edit input map')
 }
 
-function addInputAction() {
-  const used = new Set(physics.inputMap.map(action => action.name))
+/** 生成未占用的 Action 名称，创建默认动作并记录历史。 */ function addInputAction() {
+  const used = new Set(physics.inputMap.map(/* 返回 action.name 的当前值。 */ action => action.name))
   let suffix = physics.inputMap.length + 1
   while (used.has(`Action${suffix}`)) suffix++
   physics.inputMap.push(createInputAction(`Action${suffix}`))
   pushHistory('Add input action')
 }
 
-function duplicateInputAction(index: number) {
+/** 在数量上限内复制动作，生成唯一名称并复制内部绑定数组，记录历史。 */ function duplicateInputAction(index: number) {
   const source = physics.inputMap[index]; if (!source || physics.inputMap.length >= 128) return
-  const names = new Set(physics.inputMap.map(action => action.name)); let suffix = 2, name = `${source.name} Copy`; while (names.has(name)) name = `${source.name} Copy ${suffix++}`
-  physics.inputMap.splice(index + 1, 0, { ...source, name, schemes: [...source.schemes], bindings: source.bindings.map(binding => ({ ...binding, modifiers: [...binding.modifiers], chord: [...binding.chord] })) }); pushHistory('Duplicate input action')
+  const names = new Set(physics.inputMap.map(/* 返回 action.name 的当前值。 */ action => action.name)); let suffix = 2, name = `${source.name} Copy`; while (names.has(name)) name = `${source.name} Copy ${suffix++}`
+  physics.inputMap.splice(index + 1, 0, { ...source, name, schemes: [...source.schemes], bindings: source.bindings.map(/** 复制绑定及修饰键、和弦数组，避免副本共享可变列表。 */ binding => ({ ...binding, modifiers: [...binding.modifiers], chord: [...binding.chord] })) }); pushHistory('Duplicate input action')
 }
 
-function removeInputAction(index: number) {
+/** 删除指定输入动作并记录历史。 */ function removeInputAction(index: number) {
   physics.inputMap.splice(index, 1)
   pushHistory('Remove input action')
 }
 
-function addInputBinding(actionIndex: number) {
+/** 给指定动作添加默认输入绑定并记录历史。 */ function addInputBinding(actionIndex: number) {
   physics.inputMap[actionIndex]?.bindings.push(createInputBinding())
   pushHistory('Add input binding')
 }
 
-function removeInputBinding(actionIndex: number, bindingIndex: number) {
+/** 删除指定动作的绑定并记录历史。 */ function removeInputBinding(actionIndex: number, bindingIndex: number) {
   physics.inputMap[actionIndex]?.bindings.splice(bindingIndex, 1)
   pushHistory('Remove input binding')
 }
 
-function setBindingDevice(binding: InputBinding) {
+/** 设备种类变化时设置该设备的默认输入代码。 */ function setBindingDevice(binding: InputBinding) {
   binding.code = binding.device === 'keyboard' || binding.device === 'physical-key' ? 'Space'
     : binding.device === 'mouse-wheel' || binding.device === 'mouse-motion' ? 'y'
       : binding.device === 'touch' ? 'pressed'
@@ -308,19 +309,19 @@ function setBindingDevice(binding: InputBinding) {
                   : binding.device === 'pen-twist' ? 'twist' : '0'
 }
 
-function setBindingList(binding: InputBinding, property: 'modifiers' | 'chord', event: Event) { const values = (event.target as HTMLInputElement).value.split(',').map(value => value.trim()).filter(Boolean); if (property === 'modifiers') binding.modifiers = values.filter((value): value is InputModifier => ['Control','Shift','Alt','Meta'].includes(value)).slice(0, 4); else binding.chord = [...new Set(values)].slice(0, 8); commitInputMap() }
-function setActionSchemes(actionIndex: number, event: Event) { const action = physics.inputMap[actionIndex]; if (!action) return; action.schemes = [...new Set((event.target as HTMLInputElement).value.split(',').map(value => value.trim()).filter(Boolean))].slice(0, 16); commitInputMap() }
-function toggleInputRecording() { if (!inputRecording.value) { gameplayRuntime.input.beginRecording(); inputRecording.value = true } else { lastInputRecording.value = gameplayRuntime.input.endRecording(); inputRecording.value = false } }
-function replayInputRecording() { if (lastInputRecording.value) gameplayRuntime.input.playRecording(lastInputRecording.value) }
+/** 解析修饰键或和弦列表，过滤及限量后提交归一化输入映射。 */ function setBindingList(binding: InputBinding, property: 'modifiers' | 'chord', event: Event) { const values = (event.target as HTMLInputElement).value.split(',').map(/** 去除单个输入项前后空白。 */ value => value.trim()).filter(Boolean); if (property === 'modifiers') binding.modifiers = values.filter(/** 仅允许 Control、Shift、Alt 和 Meta 修饰键。 */ (value): value is InputModifier => ['Control','Shift','Alt','Meta'].includes(value)).slice(0, 4); else binding.chord = [...new Set(values)].slice(0, 8); commitInputMap() }
+/** 解析并去重动作方案名称，最多十六项后提交。 */ function setActionSchemes(actionIndex: number, event: Event) { const action = physics.inputMap[actionIndex]; if (!action) return; action.schemes = [...new Set((event.target as HTMLInputElement).value.split(',').map(/** 去除单个方案名称前后空白。 */ value => value.trim()).filter(Boolean))].slice(0, 16); commitInputMap() }
+/** 切换输入录制状态，结束时保存录制结果。 */ function toggleInputRecording() { if (!inputRecording.value) { gameplayRuntime.input.beginRecording(); inputRecording.value = true } else { lastInputRecording.value = gameplayRuntime.input.endRecording(); inputRecording.value = false } }
+/** 存在最近录制时交给输入运行时播放。 */ function replayInputRecording() { if (lastInputRecording.value) gameplayRuntime.input.playRecording(lastInputRecording.value) }
 
-function restoreSavedScene() {
+/** 恢复自动保存成功则记录历史并提示，否则提示没有可恢复保存。 */ function restoreSavedScene() {
   if (restoreAutosave()) {
     pushHistory()
     editorState.statusText = t('autosaveRestored')
   } else editorState.statusText = t('noAutosave')
 }
 
-function resetExperience() {
+/** 重置编辑器偏好并显示已重置状态。 */ function resetExperience() {
   resetPreferences()
   editorState.statusText = t('settingsReset')
 }

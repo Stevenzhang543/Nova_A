@@ -1,3 +1,4 @@
+/** 版本3.1：汇集发布报告与产物文件，生成带来源记录的发布证据。 */
 import { createHash } from 'node:crypto'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { cpus, freemem, platform, release, totalmem } from 'node:os'
@@ -8,9 +9,9 @@ import { spawnSync } from 'node:child_process'
 const root = dirname(dirname(fileURLToPath(import.meta.url)))
 const output = join(root, 'release-audits')
 await mkdir(output, { recursive: true })
-const command = (name, args) => { const result = spawnSync(name, args, { cwd: root, encoding: 'utf8' }); return result.status === 0 ? result.stdout.trim() : `unavailable: ${(result.stderr || result.error?.message || '').trim()}` }
-const read = path => readFile(join(root, path), 'utf8')
-const hash = source => createHash('sha256').update(source).digest('hex')
+const command = /** 执行命令并读取成功输出，失败返回可读的不可用原因。 */ (name, args) => { const result = spawnSync(name, args, { cwd: root, encoding: 'utf8' }); return result.status === 0 ? result.stdout.trim() : `unavailable: ${(result.stderr || result.error?.message || '').trim()}` }
+const read = /* 调用 readFile(join(root, path), 'utf8') 并返回调用结果。 */ path => readFile(join(root, path), 'utf8')
+const hash = /* 调用 createHash('sha256').update(source).digest('hex') 并返回调用结果。 */ source => createHash('sha256').update(source).digest('hex')
 const [packageJsonSource, pnpmLock, cargoLock, tauriCargoLock] = await Promise.all([read('package.json'), read('pnpm-lock.yaml'), read('Cargo.lock'), read('src-tauri/Cargo.lock')])
 const packageJson = JSON.parse(packageJsonSource)
 const gitCommit = command('git', ['rev-parse', 'HEAD'])
@@ -28,7 +29,7 @@ const environment = {
 await writeFile(join(output, 'v3.1.0-build-environment.json'), `${JSON.stringify(environment, null, 2)}\n`, 'utf8')
 
 const packages = new Map()
-const addPackage = (ecosystem, name, version, checksum = '') => {
+const addPackage = /** 去重登记软件包SPDX条目，保留版本、可选散列和包管理器引用，不推断许可证。 */ (ecosystem, name, version, checksum = '') => {
   if (!name || !version) return
   const key = `${ecosystem}:${name}@${version}`
   if (packages.has(key)) return
@@ -54,7 +55,7 @@ const sbom = {
   spdxVersion: 'SPDX-2.3', dataLicense: 'CC0-1.0', SPDXID: 'SPDXRef-DOCUMENT', name: 'Nova_A-3.1.0', documentNamespace: `https://whitelists.top/spdx/nova-a/3.1.0/${hash(`${gitCommit}:${environment.inputs.pnpmLockSha256}:${environment.inputs.cargoLockSha256}`).slice(0, 32)}`,
   creationInfo: { created: new Date().toISOString(), creators: ['Tool: Nova_A-generate-v3.1-release-evidence', 'Organization: Whitelist'] },
   documentDescribes: [rootPackage.SPDXID], packages: [rootPackage, ...packages.values()],
-  relationships: [...packages.values()].map(item => ({ spdxElementId: rootPackage.SPDXID, relationshipType: 'DEPENDS_ON', relatedSpdxElement: item.SPDXID })),
+  relationships: [...packages.values()].map(/** 生成根包到依赖包的SPDX依赖关系。 */ item => ({ spdxElementId: rootPackage.SPDXID, relationshipType: 'DEPENDS_ON', relatedSpdxElement: item.SPDXID })),
   annotations: [{ annotationDate: new Date().toISOString(), annotationType: 'OTHER', annotator: 'Tool: Nova_A-generate-v3.1-release-evidence', comment: 'Package identities and Cargo checksums are derived from pnpm-lock.yaml and Cargo.lock. Licenses remain NOASSERTION pending legal inventory review.' }]
 }
 await writeFile(join(output, 'v3.1.0-software-bill-of-materials.spdx.json'), `${JSON.stringify(sbom, null, 2)}\n`, 'utf8')

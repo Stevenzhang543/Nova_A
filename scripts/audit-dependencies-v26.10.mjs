@@ -1,3 +1,4 @@
+/* 依赖审计版本入口 v26.10：设置目标版本并复用本地锁文件检查，必要时复制到对应公开版本报告名称。 */
 import { copyFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'

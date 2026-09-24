@@ -1,3 +1,4 @@
+/** 项目插件运行：加载插件描述、注册扩展能力并管理启用与清理。 */
 import { reactive } from 'vue'
 import { onPackageLifecycle } from './packages'
 import { addEditorLog } from '../store/editor'
@@ -63,11 +64,11 @@ export const pluginState = reactive({
   generation: 0, reloads: 0, unloads: 0, isolatedFailures: 0
 })
 
-function safeText(value: unknown, maximum: number): string { return typeof value === 'string' ? value.trim().slice(0, maximum) : '' }
-function decodeBase64(value: string): Uint8Array { return Uint8Array.from(atob(value), character => character.charCodeAt(0)) }
-function hex(bytes: ArrayBuffer): string { return [...new Uint8Array(bytes)].map(value => value.toString(16).padStart(2, '0')).join('') }
+/* 根据 typeof value === 'string' 的真假，分别返回 value.trim().slice(0, maximum) 或 ''。 */ function safeText(value: unknown, maximum: number): string { return typeof value === 'string' ? value.trim().slice(0, maximum) : '' }
+/* 调用 Uint8Array.from(atob(value), character => character.charCodeAt(0)) 并返回调用结果。 */ function decodeBase64(value: string): Uint8Array { return Uint8Array.from(atob(value), /* 调用 character.charCodeAt(0) 并返回调用结果。 */ character => character.charCodeAt(0)) }
+/* 调用 [...new Uint8Array(bytes)].map(value => value.toString(16).padStart(2, '0')).join('') 并返回调用结果。 */ function hex(bytes: ArrayBuffer): string { return [...new Uint8Array(bytes)].map(/* 调用 value.toString(16).padStart(2, '0') 并返回调用结果。 */ value => value.toString(16).padStart(2, '0')).join('') }
 
-export function normalizePluginManifest(value: unknown): PluginManifest {
+/** 结构说明（自动提取）：normalizePluginManifest；输入 value；直接调用 safeText、test、Error、Number、entry.includes 等；写入 contributions[…]；包含循环处理；包含显式抛错路径。 */ export function normalizePluginManifest(value: unknown): PluginManifest {
   const source = value && typeof value === 'object' ? value as Partial<PluginManifest> : {}
   const id = safeText(source.id, 120), name = safeText(source.name, 120), version = safeText(source.version, 40)
   const entryType = source.entryType === 'native' ? 'native' : 'wasm'
@@ -78,16 +79,16 @@ export function normalizePluginManifest(value: unknown): PluginManifest {
   const apiVersion = Number(source.apiVersion)
   if (apiVersion !== 1 && apiVersion !== NOVA_PLUGIN_API_VERSION) throw new Error(`Plugin API ${source.apiVersion} is unsupported; Nova_A accepts API 1 or ${NOVA_PLUGIN_API_VERSION}.`)
   if (entry.includes('..') || entry.startsWith('/') || entry.includes('\\') || (entryType === 'wasm' && !entry.toLowerCase().endsWith('.wasm'))) throw new Error('Plugin entry must be a safe relative path.')
-  const permissions = Array.isArray(source.permissions) ? [...new Set(source.permissions.filter((permission): permission is PluginPermission => allowedPermissions.has(permission as PluginPermission)))] : []
+  const permissions = Array.isArray(source.permissions) ? [...new Set(source.permissions.filter(/* 调用 allowedPermissions.has(permission as PluginPermission) 并返回调用结果。 */ (permission): permission is PluginPermission => allowedPermissions.has(permission as PluginPermission)))] : []
   if (Array.isArray(source.permissions) && permissions.length !== source.permissions.length) throw new Error('Plugin requests an unsupported capability.')
-  if (apiVersion === 1 && permissions.some(permission => permission !== 'log' && permission !== 'events')) throw new Error('Plugin API 1 only supports log and events permissions.')
+  if (apiVersion === 1 && permissions.some(/* 先计算 permission !== 'log'；仅当其为真值时求右侧 permission !== 'events'，返回短路求值结果。 */ permission => permission !== 'log' && permission !== 'events')) throw new Error('Plugin API 1 only supports log and events permissions.')
   const contributions: PluginManifest['contributions'] = {}
   if (source.contributions && typeof source.contributions === 'object') {
     for (const kind of Object.keys(contributionPermission) as PluginContributionKind[]) {
       const values = source.contributions[kind]
       if (!Array.isArray(values)) continue
       if (!permissions.includes(contributionPermission[kind])) throw new Error(`${kind} contributions require ${contributionPermission[kind]}.`)
-      contributions[kind] = values.flatMap(item => item && typeof item === 'object' && safeText(item.id, 120) ? [{
+      contributions[kind] = values.flatMap(/** 结构说明（自动提取）：values.flatMap 回调；输入 item；直接调用 safeText、Number.isFinite、Number、Math.max、Math.min；返回表达式求值结果。 */ item => item && typeof item === 'object' && safeText(item.id, 120) ? [{
         id: safeText(item.id, 120), label: safeText(item.label, 120) || safeText(item.id, 120),
         description: safeText(item.description, 300) || undefined, entry: safeText(item.entry, 120) || undefined,
         slot: safeText(item.slot, 80) || undefined, order: Number.isFinite(Number(item.order)) ? Math.max(-1_000, Math.min(1_000, Number(item.order))) : undefined
@@ -97,45 +98,45 @@ export function normalizePluginManifest(value: unknown): PluginManifest {
   return {
     id, name, version, apiVersion, engine: safeText(source.engine, 40) || (apiVersion === 1 ? '^2.0.0' : '^2.6.0'), entry,
     entryAsset: typeof source.entryAsset === 'string' ? source.entryAsset : null, entryType, permissions,
-    approvedPermissions: Array.isArray(source.approvedPermissions) ? [...new Set(source.approvedPermissions.filter((permission): permission is PluginPermission => permissions.includes(permission as PluginPermission)))] : [],
+    approvedPermissions: Array.isArray(source.approvedPermissions) ? [...new Set(source.approvedPermissions.filter(/* 调用 permissions.includes(permission as PluginPermission) 并返回调用结果。 */ (permission): permission is PluginPermission => permissions.includes(permission as PluginPermission)))] : [],
     enabled: source.enabled !== false, projectEnabled: source.projectEnabled !== false,
     sha256: safeText(source.sha256, 128).toLowerCase(), signature: safeText(source.signature, 1024), publicKey: safeText(source.publicKey, 1024), contributions
   }
 }
 
 /** Imported plugin declarations cannot bring their own user consent. */
-export function preparePackagePluginManifest(value: unknown, reviewedPackage: { id: string; version: string; pluginApi: number | null }): PluginManifest {
+/** 结构说明（自动提取）：preparePackagePluginManifest；输入 value、reviewedPackage；直接调用 normalizePluginManifest、Error；包含显式抛错路径。 */ export function preparePackagePluginManifest(value: unknown, reviewedPackage: { id: string; version: string; pluginApi: number | null }): PluginManifest {
   const manifest = normalizePluginManifest(value)
   if (reviewedPackage.pluginApi !== manifest.apiVersion || manifest.id !== reviewedPackage.id || manifest.version !== reviewedPackage.version) throw new Error('Plugin identity, version and API must match the reviewed package.')
   return { ...manifest, approvedPermissions: [], enabled: false, projectEnabled: false }
 }
 
-export function refreshPluginContributions(): void {
+/** 结构说明（自动提取）：refreshPluginContributions；无显式参数；直接调用 pluginState.contributions.splice、pluginState.manifests.filter、Object.entries、manifest.approvedPermissions.includes、pluginState.contributions.push；包含循环处理。 */ export function refreshPluginContributions(): void {
   pluginState.contributions.splice(0)
-  for (const manifest of pluginState.manifests.filter(item => item.enabled && item.projectEnabled && item.entryType === 'wasm' && pluginState.activePluginIds.includes(item.id))) {
+  for (const manifest of pluginState.manifests.filter(/* 先计算 item.enabled && item.projectEnabled && item.entryType === 'wasm'；仅当其为真值时求右侧 pluginState.activePluginIds.includes(item.id)，返回短路求值结果。 */ item => item.enabled && item.projectEnabled && item.entryType === 'wasm' && pluginState.activePluginIds.includes(item.id))) {
     for (const [kind, items] of Object.entries(manifest.contributions) as Array<[PluginContributionKind, PluginContributionDescriptor[]]>) {
       if (manifest.approvedPermissions.includes(contributionPermission[kind])) for (const item of items) pluginState.contributions.push({ ...item, kind, pluginId: manifest.id, pluginName: manifest.name })
     }
   }
 }
 
-export function setPluginSafeMode(enabled: boolean): void {
+/** 结构说明（自动提取）：setPluginSafeMode；输入 enabled；直接调用 TypeError、localStorage.setItem、String、pluginRuntime.stop；写入 pluginState.safeMode；包含显式抛错路径。 */ export function setPluginSafeMode(enabled: boolean): void {
   if (typeof enabled !== 'boolean') throw new TypeError('Plugin safe mode must be boolean')
   pluginState.safeMode = enabled
   if (typeof localStorage !== 'undefined') localStorage.setItem('nova-a-plugin-safe-mode', String(enabled))
   if (enabled) pluginRuntime.stop()
 }
 
-export function loadPluginManifests(value: unknown): void {
+/** 结构说明（自动提取）：loadPluginManifests；输入 value；直接调用 pluginRuntime.stop、Array.isArray、value.flatMap、pluginState.manifests.splice、values 等。 */ export function loadPluginManifests(value: unknown): void {
   pluginRuntime.stop()
-  const manifests = Array.isArray(value) ? value.flatMap(item => { try { return [normalizePluginManifest(item)] } catch { return [] } }) : []
-  pluginState.manifests.splice(0, pluginState.manifests.length, ...new Map(manifests.map(manifest => [manifest.id, manifest])).values())
+  const manifests = Array.isArray(value) ? value.flatMap(/** 结构说明（自动提取）：value.flatMap 回调；输入 item；直接调用 normalizePluginManifest。 */ item => { try { return [normalizePluginManifest(item)] } catch { return [] } }) : []
+  pluginState.manifests.splice(0, pluginState.manifests.length, ...new Map(manifests.map(/* 返回按声明顺序构造的数组 [manifest.id, manifest]。 */ manifest => [manifest.id, manifest])).values())
   refreshPluginContributions()
 }
 
-export function serializePluginManifests(): PluginManifest[] { return pluginState.manifests.map(manifest => JSON.parse(JSON.stringify(manifest)) as PluginManifest) }
+/* 调用 pluginState.manifests.map(manifest => JSON.parse(JSON.stringify(manifest)) as PluginManifest) 并返回调用结果。 */ export function serializePluginManifests(): PluginManifest[] { return pluginState.manifests.map(/** 结构说明（自动提取）：pluginState.manifests.map 回调；输入 manifest；直接调用 JSON.parse、JSON.stringify；返回表达式求值结果。 */ manifest => JSON.parse(JSON.stringify(manifest)) as PluginManifest) }
 
-async function verifyPlugin(manifest: PluginManifest, bytes: ArrayBuffer): Promise<void> {
+/** 结构说明（自动提取）：verifyPlugin；输入 manifest、bytes；直接调用 crypto.subtle.digest、hex、Error、crypto.subtle.importKey、decodeBase64 等；等待异步结果；包含显式抛错路径。 */ async function verifyPlugin(manifest: PluginManifest, bytes: ArrayBuffer): Promise<void> {
   const digest = await crypto.subtle.digest('SHA-256', bytes)
   if (manifest.sha256 && hex(digest) !== manifest.sha256) throw new Error('Plugin SHA-256 does not match its manifest.')
   if (manifest.signature || manifest.publicKey) {
@@ -145,7 +146,7 @@ async function verifyPlugin(manifest: PluginManifest, bytes: ArrayBuffer): Promi
   }
 }
 
-export async function validateWasmPluginPackage(manifestValue: unknown, bytes: ArrayBuffer): Promise<PluginManifest> {
+/** 结构说明（自动提取）：validateWasmPluginPackage；输入 manifestValue、bytes；直接调用 normalizePluginManifest、Error、Uint8Array、verifyPlugin、WebAssembly.compile 等；返回路径包含 manifest；等待异步结果；包含显式抛错路径。 */ export async function validateWasmPluginPackage(manifestValue: unknown, bytes: ArrayBuffer): Promise<PluginManifest> {
   const manifest = normalizePluginManifest(manifestValue)
   if (manifest.entryType === 'native') throw new Error('Native extensions are not downloaded or executed by Nova_A.')
   if (bytes.byteLength < 8 || bytes.byteLength > MAX_PLUGIN_BYTES) throw new Error('Plugin binary is empty or exceeds 16 MB.')
@@ -154,26 +155,26 @@ export async function validateWasmPluginPackage(manifestValue: unknown, bytes: A
   await verifyPlugin(manifest, bytes)
   const module = await WebAssembly.compile(bytes)
   const allowedImports = new Set(['nova:api_version', 'nova:log', 'nova:emit_event', 'nova:has_capability'])
-  const denied = WebAssembly.Module.imports(module).filter(item => !allowedImports.has(`${item.module}:${item.name}`))
+  const denied = WebAssembly.Module.imports(module).filter(/* 返回 allowedImports.has(`${item.module}:${item.name}`) 的逻辑取反结果。 */ item => !allowedImports.has(`${item.module}:${item.name}`))
   if (denied.length) throw new Error(`Plugin imports an unsupported host capability: ${denied[0].module}.${denied[0].name}.`)
-  const exports = new Map(WebAssembly.Module.exports(module).map(item => [item.name, item.kind]))
+  const exports = new Map(WebAssembly.Module.exports(module).map(/* 返回按声明顺序构造的数组 [item.name, item.kind]。 */ item => [item.name, item.kind]))
   if (exports.get('nova_plugin_api_version') !== 'function' || exports.get('nova_plugin_init') !== 'function') throw new Error('Plugin must export nova_plugin_api_version() and nova_plugin_init().')
   return manifest
 }
 
-function assertMemory(instance: WebAssembly.Instance): void {
+/** 结构说明（自动提取）：assertMemory；输入 instance；直接调用 Error；包含显式抛错路径。 */ function assertMemory(instance: WebAssembly.Instance): void {
   const memory = instance.exports.memory
   if (memory instanceof WebAssembly.Memory && memory.buffer.byteLength > MAX_PLUGIN_BYTES) throw new Error('Plugin exceeds the 16 MB memory limit.')
 }
 
-export async function instantiateWasmPlugin(manifestValue: unknown, bytes: ArrayBuffer, isCurrent: () => boolean = () => true): Promise<WebAssembly.Instance> {
+/** 结构说明（自动提取）：instantiateWasmPlugin；输入 manifestValue、bytes、isCurrent；直接调用 validateWasmPluginPackage、isCurrent、Error、performance.now、WebAssembly.instantiate 等；返回路径包含 instance；等待异步结果；包含显式抛错路径。 */ export async function instantiateWasmPlugin(manifestValue: unknown, bytes: ArrayBuffer, isCurrent: () => boolean = /* 返回固定值 true。 */ () => true): Promise<WebAssembly.Instance> {
   const manifest = await validateWasmPluginPackage(manifestValue, bytes)
   if (!isCurrent()) throw new Error('Plugin loading was cancelled.')
   const imports = { nova: {
-    api_version: () => manifest.apiVersion,
-    log: (level: number, code: number) => { if (manifest.approvedPermissions.includes('log')) addEditorLog(`${manifest.name}: plugin message ${code}`, 'Plugin', level >= 3 ? 'error' : level === 2 ? 'warning' : 'info') },
-    emit_event: (_event: number, _value: number) => manifest.approvedPermissions.includes('events') ? 1 : 0,
-    has_capability: (capability: number) => capability >= 0 && capability < manifest.permissions.length && manifest.approvedPermissions.includes(manifest.permissions[capability]) ? 1 : 0
+    api_version: /* 返回 manifest.apiVersion 的当前值。 */ () => manifest.apiVersion,
+    log: /** 结构说明（自动提取）：匿名回调；输入 level、code；直接调用 manifest.approvedPermissions.includes、addEditorLog。 */ (level: number, code: number) => { if (manifest.approvedPermissions.includes('log')) addEditorLog(`${manifest.name}: plugin message ${code}`, 'Plugin', level >= 3 ? 'error' : level === 2 ? 'warning' : 'info') },
+    emit_event: /* 根据 manifest.approvedPermissions.includes('events') 的真假，分别返回 1 或 0。 */ (_event: number, _value: number) => manifest.approvedPermissions.includes('events') ? 1 : 0,
+    has_capability: /** 结构说明（自动提取）：匿名回调；输入 capability；直接调用 manifest.approvedPermissions.includes；返回表达式求值结果。 */ (capability: number) => capability >= 0 && capability < manifest.permissions.length && manifest.approvedPermissions.includes(manifest.permissions[capability]) ? 1 : 0
   } }
   const started = performance.now()
   const result = await WebAssembly.instantiate(bytes, imports)
@@ -189,35 +190,35 @@ export async function instantiateWasmPlugin(manifestValue: unknown, bytes: Array
   return instance
 }
 
-async function bytesFromAsset(reference: string | null): Promise<ArrayBuffer> {
+/** 结构说明（自动提取）：bytesFromAsset；输入 reference；直接调用 resolveAsset、Error、test、then、fetch；包含显式抛错路径。 */ async function bytesFromAsset(reference: string | null): Promise<ArrayBuffer> {
   const record = resolveAsset(reference)
   if (!record?.source) throw new Error(`Missing plugin asset ${reference ?? '(none)'}.`)
   if (!/^(?:data:|blob:)/i.test(record.source)) throw new Error('Plugin assets must be imported locally before loading; remote fetches are disabled.')
-  return fetch(record.source).then(response => { if (!response.ok) throw new Error('Unable to read the local plugin asset.'); return response.arrayBuffer() })
+  return fetch(record.source).then(/** 结构说明（自动提取）：then 回调；输入 response；直接调用 Error、response.arrayBuffer；包含显式抛错路径。 */ response => { if (!response.ok) throw new Error('Unable to read the local plugin asset.'); return response.arrayBuffer() })
 }
 
-function shutdownPluginInstance(instance: WebAssembly.Instance): void {
+/** 结构说明（自动提取）：shutdownPluginInstance；输入 instance。 */ function shutdownPluginInstance(instance: WebAssembly.Instance): void {
   const shutdown = instance.exports.nova_plugin_shutdown
   if (typeof shutdown === 'function') try { (shutdown as CallableFunction)() } catch { /* Each plugin owns its shutdown failure. */ }
 }
 class PluginRuntime {
   private active: ActivePlugin[] = []
   private generation = 0
-  private synchronizeState(): void { pluginState.active = this.active.length; pluginState.activePluginIds.splice(0, pluginState.activePluginIds.length, ...this.active.map(item => item.manifest.id)); pluginState.generation = this.generation; refreshPluginContributions() }
-  async start(): Promise<void> {
+  /** 结构说明（自动提取）：synchronizeState；无显式参数；直接调用 pluginState.activePluginIds.splice、active.map、refreshPluginContributions；写入 pluginState.active、pluginState.generation。 */ private synchronizeState(): void { pluginState.active = this.active.length; pluginState.activePluginIds.splice(0, pluginState.activePluginIds.length, ...this.active.map(/* 返回 item.manifest.id 的当前值。 */ item => item.manifest.id)); pluginState.generation = this.generation; refreshPluginContributions() }
+  /** 结构说明（自动提取）：start；无显式参数；直接调用 stop、pluginState.errors.splice、addEditorLog、pluginState.manifests.filter、instantiateWasmPlugin 等；包含循环处理；等待异步结果。 */ async start(): Promise<void> {
     this.stop(); const generation = this.generation; pluginState.errors.splice(0)
     if (pluginState.safeMode) { addEditorLog('Plugin Safe Mode is active; third-party plugins were skipped.', 'Plugin', 'warning'); return }
-    for (const manifest of pluginState.manifests.filter(item => item.enabled && item.projectEnabled && item.entryType === 'wasm')) {
+    for (const manifest of pluginState.manifests.filter(/* 先计算 item.enabled && item.projectEnabled；仅当其为真值时求右侧 item.entryType === 'wasm'，返回短路求值结果。 */ item => item.enabled && item.projectEnabled && item.entryType === 'wasm')) {
       if (generation !== this.generation) return
       try {
-        const instance = await instantiateWasmPlugin(manifest, await bytesFromAsset(manifest.entryAsset), () => generation === this.generation && manifest.enabled && manifest.projectEnabled && !pluginState.safeMode)
+        const instance = await instantiateWasmPlugin(manifest, await bytesFromAsset(manifest.entryAsset), /* 先计算 generation === this.generation && manifest.enabled && manifest.projectEnabled；仅当其为真值时求右侧 !pluginState.safeMode，返回短路求值结果。 */ () => generation === this.generation && manifest.enabled && manifest.projectEnabled && !pluginState.safeMode)
         if (generation !== this.generation) { shutdownPluginInstance(instance); return }
         this.active.push({ manifest, instance })
       } catch (error) { if (generation === this.generation) this.isolateFailure(manifest, error) }
     }
     this.synchronizeState()
   }
-  update(delta: number): void {
+  /** 结构说明（自动提取）：update；输入 delta；直接调用 Set、pluginState.manifests.includes、failed.add、shutdownPluginInstance、performance.now 等；写入 active；包含循环处理；包含显式抛错路径。 */ update(delta: number): void {
     const failed = new Set<ActivePlugin>()
     for (const plugin of this.active) {
       if (!plugin.manifest.enabled || !plugin.manifest.projectEnabled || !pluginState.manifests.includes(plugin.manifest)) { failed.add(plugin); shutdownPluginInstance(plugin.instance); continue }
@@ -228,57 +229,57 @@ class PluginRuntime {
         if (performance.now() - started > MAX_PLUGIN_CALL_MS) throw new Error(`runtime call exceeded ${MAX_PLUGIN_CALL_MS} ms`)
       } catch (error) { failed.add(plugin); this.isolateFailure(plugin.manifest, error) }
     }
-    if (failed.size) this.active = this.active.filter(plugin => !failed.has(plugin)); this.synchronizeState()
+    if (failed.size) this.active = this.active.filter(/* 返回 failed.has(plugin) 的逻辑取反结果。 */ plugin => !failed.has(plugin)); this.synchronizeState()
   }
-  invokeCommand(commandId: string, pluginId?: string): boolean {
+  /* 调用 this.invokeContribution('commands', commandId, pluginId) 并返回调用结果。 */ invokeCommand(commandId: string, pluginId?: string): boolean {
     return this.invokeContribution('commands', commandId, pluginId)
   }
-  invokeContribution(kind: PluginContributionKind, contributionId: string, pluginId?: string): boolean {
-    const contribution = pluginState.contributions.find(item => item.kind === kind && item.id === contributionId && (!pluginId || item.pluginId === pluginId))
-    const plugin = contribution && this.active.find(item => item.manifest.id === contribution.pluginId)
-    const exportName = PLUGIN_API_MATRIX.find(item => item.kind === kind)?.exportName
+  /** 结构说明（自动提取）：invokeContribution；输入 kind、contributionId、pluginId；直接调用 pluginState.contributions.find、active.find、PLUGIN_API_MATRIX.find、performance.now、plugin.manifest.contributions[…].findIndex 等；写入 active、pluginState.active；包含显式抛错路径。 */ invokeContribution(kind: PluginContributionKind, contributionId: string, pluginId?: string): boolean {
+    const contribution = pluginState.contributions.find(/* 先计算 item.kind === kind && item.id === contributionId；仅当其为真值时求右侧 (!pluginId || item.pluginId === pluginId)，返回短路求值结果。 */ item => item.kind === kind && item.id === contributionId && (!pluginId || item.pluginId === pluginId))
+    const plugin = contribution && this.active.find(/* 比较 item.manifest.id 与 contribution.pluginId，返回严格相等的判断结果。 */ item => item.manifest.id === contribution.pluginId)
+    const exportName = PLUGIN_API_MATRIX.find(/* 比较 item.kind 与 kind，返回严格相等的判断结果。 */ item => item.kind === kind)?.exportName
       ?? ({ panels: 'nova_plugin_panel', menus: 'nova_plugin_menu', assetEditors: 'nova_plugin_asset_editor', gizmos: 'nova_plugin_gizmo', buildHooks: 'nova_plugin_build_hook', runtimeSystems: 'nova_plugin_runtime_system', events: 'nova_plugin_event' } as Partial<Record<PluginContributionKind, string>>)[kind]
     const handler = exportName ? plugin?.instance.exports[exportName] : undefined
     if (!plugin || typeof handler !== 'function') return false
     try {
       const started = performance.now()
-      ;(handler as CallableFunction)(plugin.manifest.contributions[kind]?.findIndex(item => item.id === contributionId) ?? -1)
+      ;(handler as CallableFunction)(plugin.manifest.contributions[kind]?.findIndex(/* 比较 item.id 与 contributionId，返回严格相等的判断结果。 */ item => item.id === contributionId) ?? -1)
       assertMemory(plugin.instance)
       if (performance.now() - started > MAX_PLUGIN_CALL_MS) throw new Error(`${kind} call exceeded ${MAX_PLUGIN_CALL_MS} ms`)
       return true
     } catch (error) {
-      this.active = this.active.filter(item => item !== plugin); pluginState.active = this.active.length
+      this.active = this.active.filter(/* 比较 item 与 plugin，返回严格不等的判断结果。 */ item => item !== plugin); pluginState.active = this.active.length
       this.isolateFailure(plugin.manifest, error); return false
     }
   }
-  stop(): void {
+  /** 结构说明（自动提取）：stop；无显式参数；直接调用 synchronizeState；写入 active；包含循环处理。 */ stop(): void {
     this.generation++
     for (const plugin of this.active) { const shutdown = plugin.instance.exports.nova_plugin_shutdown; if (typeof shutdown === 'function') try { (shutdown as CallableFunction)() } catch { /* isolated */ } }
     this.active = []; this.synchronizeState()
   }
-  unload(pluginId: string): boolean {
+  /** 结构说明（自动提取）：unload；输入 pluginId；直接调用 active.find、synchronizeState、active.filter；写入 active。 */ unload(pluginId: string): boolean {
     this.generation++
-    const plugin = this.active.find(item => item.manifest.id === pluginId)
+    const plugin = this.active.find(/* 比较 item.manifest.id 与 pluginId，返回严格相等的判断结果。 */ item => item.manifest.id === pluginId)
     if (!plugin) { this.synchronizeState(); return false }
     const shutdown = plugin.instance.exports.nova_plugin_shutdown
     if (typeof shutdown === 'function') try { (shutdown as CallableFunction)() } catch { /* isolated */ }
-    this.active = this.active.filter(item => item !== plugin); pluginState.unloads++; this.synchronizeState()
+    this.active = this.active.filter(/* 比较 item 与 plugin，返回严格不等的判断结果。 */ item => item !== plugin); pluginState.unloads++; this.synchronizeState()
     return true
   }
-  async reload(pluginId?: string): Promise<void> {
+  /** 结构说明（自动提取）：reload；输入 pluginId；直接调用 start、pluginState.manifests.find、unload、instantiateWasmPlugin、bytesFromAsset 等；等待异步结果。 */ async reload(pluginId?: string): Promise<void> {
     pluginState.reloads++
     if (!pluginId) { await this.start(); return }
-    const manifest = pluginState.manifests.find(item => item.id === pluginId && item.enabled && item.projectEnabled && item.entryType === 'wasm')
+    const manifest = pluginState.manifests.find(/* 先计算 item.id === pluginId && item.enabled && item.projectEnabled；仅当其为真值时求右侧 item.entryType === 'wasm'，返回短路求值结果。 */ item => item.id === pluginId && item.enabled && item.projectEnabled && item.entryType === 'wasm')
     this.unload(pluginId)
     if (!manifest || pluginState.safeMode) return
     const generation = this.generation
     try {
-      const instance = await instantiateWasmPlugin(manifest, await bytesFromAsset(manifest.entryAsset), () => generation === this.generation && manifest.enabled && manifest.projectEnabled && !pluginState.safeMode)
+      const instance = await instantiateWasmPlugin(manifest, await bytesFromAsset(manifest.entryAsset), /* 先计算 generation === this.generation && manifest.enabled && manifest.projectEnabled；仅当其为真值时求右侧 !pluginState.safeMode，返回短路求值结果。 */ () => generation === this.generation && manifest.enabled && manifest.projectEnabled && !pluginState.safeMode)
       if (generation !== this.generation) { shutdownPluginInstance(instance); return }
       this.active.push({ manifest, instance }); this.synchronizeState()
     } catch (error) { if (generation === this.generation) this.isolateFailure(manifest, error) }
   }
-  private isolateFailure(manifest: PluginManifest, error: unknown): void {
+  /** 结构说明（自动提取）：isolateFailure；输入 manifest、error；直接调用 String、pluginState.errors.push、addEditorLog、localStorage.setItem；写入 pluginState.safeModeRecommended。 */ private isolateFailure(manifest: PluginManifest, error: unknown): void {
     const message = `${manifest.name}: ${error instanceof Error ? error.message : String(error)}`
     pluginState.errors.push(message); pluginState.isolatedFailures++; addEditorLog(`${message}. The plugin was isolated.`, 'Plugin', 'error')
     if (typeof localStorage !== 'undefined') localStorage.setItem('nova-a-plugin-crashed', 'true')
@@ -286,21 +287,21 @@ class PluginRuntime {
   }
 }
 
-export function attachPluginAsset(manifest: PluginManifest, uuid: string): PluginManifest { return { ...manifest, entryAsset: assetReference(uuid) } }
-export function setPluginPermission(pluginId: string, permission: PluginPermission, approved: boolean): boolean {
+/* 返回具有所列字段的新对象 { ...manifest, entryAsset: assetReference(uuid) }。 */ export function attachPluginAsset(manifest: PluginManifest, uuid: string): PluginManifest { return { ...manifest, entryAsset: assetReference(uuid) } }
+/** 结构说明（自动提取）：setPluginPermission；输入 pluginId、permission、approved；直接调用 pluginState.manifests.find、manifest.permissions.includes、Set、manifest.approvedPermissions.filter、pluginRuntime.unload 等；写入 manifest.approvedPermissions。 */ export function setPluginPermission(pluginId: string, permission: PluginPermission, approved: boolean): boolean {
   if (typeof approved !== 'boolean') return false
-  const manifest=pluginState.manifests.find(item=>item.id===pluginId)
+  const manifest=pluginState.manifests.find(/* 比较 item.id 与 pluginId，返回严格相等的判断结果。 */ item=>item.id===pluginId)
   if(!manifest||!manifest.permissions.includes(permission))return false
-  manifest.approvedPermissions=approved?[...new Set([...manifest.approvedPermissions,permission])]:manifest.approvedPermissions.filter(item=>item!==permission)
+  manifest.approvedPermissions=approved?[...new Set([...manifest.approvedPermissions,permission])]:manifest.approvedPermissions.filter(/* 比较 item 与 permission，返回严格不等的判断结果。 */ item=>item!==permission)
   if (!approved) pluginRuntime.unload(pluginId)
   refreshPluginContributions();pluginState.generation++;return true
 }
 export const pluginRuntime = new PluginRuntime()
 
-onPackageLifecycle((id, action) => {
-  if (action === 'enable') { const manifest = pluginState.manifests.find(item => item.id === id); if (manifest) manifest.projectEnabled = true; refreshPluginContributions(); return }
+onPackageLifecycle(/** 结构说明（自动提取）：onPackageLifecycle 回调；输入 id、action；直接调用 pluginState.manifests.find、refreshPluginContributions、pluginRuntime.unload、pluginState.manifests.findIndex、pluginState.manifests.splice 等；写入 manifest.projectEnabled、pluginState.manifests[…].projectEnabled、pluginState.manifests[…].enabled。 */ (id, action) => {
+  if (action === 'enable') { const manifest = pluginState.manifests.find(/* 比较 item.id 与 id，返回严格相等的判断结果。 */ item => item.id === id); if (manifest) manifest.projectEnabled = true; refreshPluginContributions(); return }
   pluginRuntime.unload(id)
-  const index = pluginState.manifests.findIndex(manifest => manifest.id === id)
+  const index = pluginState.manifests.findIndex(/* 比较 manifest.id 与 id，返回严格相等的判断结果。 */ manifest => manifest.id === id)
   if (index < 0) return
   if (action === 'uninstall') pluginState.manifests.splice(index, 1)
   else {

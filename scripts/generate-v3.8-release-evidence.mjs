@@ -1,3 +1,4 @@
+/** 版本3.8：汇集发布报告与产物文件，生成带来源记录的发布证据。 */
 import { readFile, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -63,7 +64,7 @@ The recorded v3.8 qualification has no open S0 or S1 defects. Large-world target
 
 const [layoutEvidence, worldAudit, benchmarkEvidence, millionEvidence, navigationEvidence, streamingEvidence, saveEvidence, packageEvidence, windowsEvidence] = await Promise.all([
   'layout-browser', 'world-data-audit', 'benchmarks', 'million-tile-benchmark', 'navigation-tests', 'streaming-memory', 'save-corruption-recovery', 'optional-package-removal', 'windows-smoke'
-].map(name => readFile(join(output, `v3.8.0-${name}.json`), 'utf8').then(JSON.parse)))
+].map(/* 调用 readFile(join(output, `v3.8.0-${name}.json`), 'utf8').then(JSON.parse) 并返回调用结果。 */ name => readFile(join(output, `v3.8.0-${name}.json`), 'utf8').then(JSON.parse)))
 const qualificationGeneratedAt = new Date().toISOString()
 await writeFile(join(output, 'v3.8.0-ci-summary.json'), `${JSON.stringify({
   format: 'nova-ci-summary', version: 1, engineVersion: '3.8.0', generatedAt: qualificationGeneratedAt, source: 'local release-equivalent Windows runner',
@@ -76,13 +77,13 @@ await writeFile(join(output, 'v3.8.0-ci-summary.json'), `${JSON.stringify({
     { name: 'pnpm qualify:v3.8:layout', status: layoutEvidence.status },
     { name: 'pnpm tauri build', status: windowsEvidence.status }
   ],
-  severity0Open: 0, severity1Open: 0, status: [worldAudit, layoutEvidence, windowsEvidence].every(item => item.status === 'passed') ? 'passed' : 'failed'
+  severity0Open: 0, severity1Open: 0, status: [worldAudit, layoutEvidence, windowsEvidence].every(/* 比较 item.status 与 'passed'，返回严格相等的判断结果。 */ item => item.status === 'passed') ? 'passed' : 'failed'
 }, null, 2)}\n`)
 await writeFile(join(output, 'v3.8.0-unit-integration-tests.json'), `${JSON.stringify({
   format: 'nova-unit-integration-results', version: 1, engineVersion: '3.8.0', generatedAt: qualificationGeneratedAt,
   rust: { novaFormat: 35, novaMath: 2, novaPhysics: 67, novaRuntime: 6, novaScript: 15, totalPassed: 125, failed: 0 },
-  frontend: { retainedAuditChain: 'passed', worldDataChecks: worldAudit.checks.length, layoutStates: layoutEvidence.results.length, layoutFailures: layoutEvidence.results.filter(item => item.status !== 'passed').length },
-  runtimeEvidence: [millionEvidence, navigationEvidence, streamingEvidence, saveEvidence, packageEvidence].map(item => ({ format: item.format, status: item.status })), status: 'passed'
+  frontend: { retainedAuditChain: 'passed', worldDataChecks: worldAudit.checks.length, layoutStates: layoutEvidence.results.length, layoutFailures: layoutEvidence.results.filter(/* 比较 item.status 与 'passed'，返回严格不等的判断结果。 */ item => item.status !== 'passed').length },
+  runtimeEvidence: [millionEvidence, navigationEvidence, streamingEvidence, saveEvidence, packageEvidence].map(/** 摘取报告格式和状态。 */ item => ({ format: item.format, status: item.status })), status: 'passed'
 }, null, 2)}\n`)
 await writeFile(join(output, 'v3.8.0-editor-e2e.json'), `${JSON.stringify({
   format: 'nova-editor-e2e', version: 1, engineVersion: '3.8.0', generatedAt: qualificationGeneratedAt,

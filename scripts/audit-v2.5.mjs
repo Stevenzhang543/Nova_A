@@ -1,8 +1,9 @@
+/* 审计 2.5 的资源导入、包插件、物理报告与编辑器源码连接。 */
 import { readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 
 const root = process.cwd()
-const read = path => readFile(resolve(root, path), 'utf8')
+const read = /* 调用 readFile(resolve(root, path), 'utf8') 并返回调用结果。 */ path => readFile(resolve(root, path), 'utf8')
 const [pipeline, database, graph, assets, packages, plugins, packagePanel, physicsPanel, monitor, canvas, crash, layout, world, runtime, format, i18n, palette, templates, consolePanel] = await Promise.all([
   read('src/assets/importPipeline.ts'), read('src/assets/AssetDatabase.ts'), read('src/assets/assetGraph.ts'), read('src/components/EditorBottomPanel.vue'),
   read('src/runtime/packages.ts'), read('src/runtime/plugins.ts'), read('src/components/PackageManagerPanel.vue'), read('src/components/PhysicsRuntimePanel.vue'),
@@ -10,6 +11,7 @@ const [pipeline, database, graph, assets, packages, plugins, packagePanel, physi
   read('src/world/World.ts'), read('crates/nova_runtime/src/lib.rs'), read('crates/nova_format/src/lib.rs'), read('src/i18n.ts'), read('src/components/CommandPalette.vue'), read('src/projects/templates.ts'), read('src/components/ConsolePanel.vue')
 ])
 
+/* 条件不满足时抛出指定错误，使当前审计立即失败。 */
 function assert(condition, message) { if (!condition) throw new Error(message) }
 
 for (const key of ['sourceHash', 'ASSET_IMPORTER_VERSION', 'platform', 'stable(settings)', 'atomicCacheWrite', 'cachedArtifact']) assert(pipeline.includes(key), `import-cache key/path lacks ${key}`)
@@ -34,7 +36,7 @@ for (const gravityContract of ["shape('platformer-ground', 'Ground', [0, -4]", "
 
 for (const locale of ['Object.assign(en', 'Object.assign(de', 'Object.assign(zh']) {
   const blocks = i18n.split(locale).slice(1)
-  assert(blocks.some(block => block.slice(0, 9_000).includes('physicsMonitor') && block.slice(0, 9_000).includes('packageManager')), `${locale} lacks v2.5 localization`)
+  assert(blocks.some(/* 先计算 block.slice(0, 9_000).includes('physicsMonitor')；仅当其为真值时求右侧 block.slice(0, 9_000).includes('packageManager')，返回短路求值结果。 */ block => block.slice(0, 9_000).includes('physicsMonitor') && block.slice(0, 9_000).includes('packageManager')), `${locale} lacks v2.5 localization`)
 }
 assert(palette.includes("toolCommand('packages'"), 'Package Manager is missing from the command palette')
 assert(palette.includes('pluginRuntime.invokeCommand'), 'Plugin API 2 commands are missing from the command palette')

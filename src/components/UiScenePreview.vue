@@ -1,3 +1,4 @@
+<!-- 界面场景预览：按设备和主题渲染界面，并限制更新频率与画布像素。 -->
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { Entity } from '../world/Entity'
@@ -9,21 +10,21 @@ import { localizationSettings } from '../runtime/localization'
 import { runtimeAccessibilitySettings } from '../runtime/presentation'
 import { interfaceCopy } from '../editor/interfaceCopy'
 const props = defineProps<{ entities: Entity[]; preset: UiDevicePreset; dpi: number; safeArea: boolean; rtl: boolean; themeReference?: string; themeDraft?: UiThemeDocument | null }>()
-const canvas = ref<HTMLCanvasElement | null>(null), failure = ref(''), runtime = new GameUiRuntime(), hasControls = computed(() => props.entities.some(entity => entity.hasComponent('RectTransform')))
+const canvas = ref<HTMLCanvasElement | null>(null), failure = ref(''), runtime = new GameUiRuntime(), hasControls = computed(/** 检查预览实体是否包含矩形布局组件。 */ () => props.entities.some(/** 判断实体是否含矩形变换组件。 */ entity => entity.hasComponent('RectTransform')))
 let frame = 0, dirty = true, lastDraw = -Infinity
-watch(() => [props.entities, props.preset, props.dpi, props.safeArea, props.rtl, props.themeReference, props.themeDraft, assetState.generation, localizationSettings, runtimeAccessibilitySettings], () => { dirty = true }, { deep: true })
-function draw(now: number) {
+watch(/** 收集实体、显示预设、主题、资源、本地化及无障碍预览依赖。 */ () => [props.entities, props.preset, props.dpi, props.safeArea, props.rtl, props.themeReference, props.themeDraft, assetState.generation, localizationSettings, runtimeAccessibilitySettings], /** 依赖变化时标记需要重绘。 */ () => { dirty = true }, { deep: true })
+/** 在脏状态且间隔足够时重绘受像素限制的预览并收集布局错误，继续安排下一帧检查。 */ function draw(now: number) {
   if (dirty && now - lastDraw >= 50 && canvas.value) {
     dirty = false; lastDraw = now
     const scale = Math.min(1, Math.sqrt(4_000_000 / Math.max(1, props.preset.width * props.preset.height)))
     canvas.value.width = Math.max(1, Math.round(props.preset.width * scale)); canvas.value.height = Math.max(1, Math.round(props.preset.height * scale))
     const context = canvas.value.getContext('2d')
-    if (context) try { context.setTransform(scale, 0, 0, scale, 0, 0); context.clearRect(0, 0, props.preset.width, props.preset.height); runtime.render(context, props.preset.width, props.preset.height, props.entities, { editor: true, preview: true, layout: { dpiScale: props.dpi, safeArea: props.safeArea ? props.preset.safeArea : { left: 0, right: 0, top: 0, bottom: 0 }, direction: props.rtl ? 'rtl' : 'ltr', localeDirection: () => props.rtl ? 'rtl' : 'ltr' }, themeOverride: props.themeReference && props.themeDraft ? { reference: props.themeReference, theme: props.themeDraft } : undefined }); failure.value = runtime.layoutIssues.map(issue => issue.message).join(' ') } catch (error) { failure.value = error instanceof Error ? error.message : String(error) }
+    if (context) try { context.setTransform(scale, 0, 0, scale, 0, 0); context.clearRect(0, 0, props.preset.width, props.preset.height); runtime.render(context, props.preset.width, props.preset.height, props.entities, { editor: true, preview: true, layout: { dpiScale: props.dpi, safeArea: props.safeArea ? props.preset.safeArea : { left: 0, right: 0, top: 0, bottom: 0 }, direction: props.rtl ? 'rtl' : 'ltr', localeDirection: /** 返回当前预览阅读方向。 */ () => props.rtl ? 'rtl' : 'ltr' }, themeOverride: props.themeReference && props.themeDraft ? { reference: props.themeReference, theme: props.themeDraft } : undefined }); failure.value = runtime.layoutIssues.map(/* 返回 issue.message 的当前值。 */ issue => issue.message).join(' ') } catch (error) { failure.value = error instanceof Error ? error.message : String(error) }
   }
   frame = requestAnimationFrame(draw)
 }
-onMounted(() => { frame = requestAnimationFrame(draw) })
-onBeforeUnmount(() => { cancelAnimationFrame(frame); runtime.reset() })
+onMounted(/** 挂载时启动预览帧循环。 */ () => { frame = requestAnimationFrame(draw) })
+onBeforeUnmount(/** 卸载时取消帧并重置预览运行时。 */ () => { cancelAnimationFrame(frame); runtime.reset() })
 </script>
 <template>
   <figure class="ui-scene-preview">

@@ -1,3 +1,4 @@
+/** 版本4.7：生成参考项目与对应资源，供功能演示和版本验证使用。 */
 import { createHash } from 'node:crypto'
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
@@ -12,9 +13,9 @@ const fixtures = [
   { slug: 'ui-v47-accessibility', source: 'accessible-hud', title: 'UI v4.7 Accessibility', purpose: 'Semantic roles, accessible names and state, focus order, keyboard/gamepad navigation, text scale, contrast, reduced motion, subtitles and captions.', workspace: 'UI' }
 ]
 
-function stableUuid(value) { const hash = createHash('sha256').update(value).digest('hex').slice(0, 32); return `${hash.slice(0,8)}-${hash.slice(8,12)}-4${hash.slice(13,16)}-8${hash.slice(17,20)}-${hash.slice(20)}` }
-function jsonText(value) { return `${JSON.stringify(value, null, 2)}\n` }
-function ensureV47Settings(project) {
+/** 由输入散列生成确定性标识。 */ function stableUuid(value) { const hash = createHash('sha256').update(value).digest('hex').slice(0, 32); return `${hash.slice(0,8)}-${hash.slice(8,12)}-4${hash.slice(13,16)}-8${hash.slice(17,20)}-${hash.slice(20)}` }
+/** 格式化对象为带末尾换行的JSON文本。 */ function jsonText(value) { return `${JSON.stringify(value, null, 2)}\n` }
+/** 补齐4.7本地化、无障碍和界面性能设置，并补充矩形及文本组件字段。 */ function ensureV47Settings(project) {
   project.engineVersion = '4.7.0'; project.formatVersion = 29
   project.projectSettings ??= {}; project.projectSettings.presentation ??= {}
   project.projectSettings.presentation.localization = { sourceLocale: 'en', previewLocale: 'en', fallbackChain: ['en'], pseudolocalization: false, pseudolocalizationMode: 'expanded', expansionRatio: .35, buildLocales: ['en','de','zh-CN','ar'], numberStyle: 'decimal', currency: 'USD', dateStyle: 'medium', timeZone: 'local', ...(project.projectSettings.presentation.localization ?? {}) }
@@ -25,8 +26,8 @@ function ensureV47Settings(project) {
     if (component.kind === 'Text') component.data = { wrap: 'Word', overflow: 'Clip', inputPromptAction: '', captionCategory: 'None', ...(component.data ?? {}) }
   }
 }
-function textAsset(project, slug, name, assetType, source) {
-  const seed = project.assets.find(asset => asset.source !== undefined) ?? project.assets[0], uuid = stableUuid(`${slug}:${name}`), text = JSON.stringify(source, null, 2), hash = createHash('sha256').update(text).digest('hex')
+/** 克隆资源基线，生成带稳定标识、分类路径和内容散列的动画相关文本资源。 */ function textAsset(project, slug, name, assetType, source) {
+  const seed = project.assets.find(/* 比较 asset.source 与 undefined，返回严格不等的判断结果。 */ asset => asset.source !== undefined) ?? project.assets[0], uuid = stableUuid(`${slug}:${name}`), text = JSON.stringify(source, null, 2), hash = createHash('sha256').update(text).digest('hex')
   return { ...structuredClone(seed), uuid, name, path: `Assets/${assetType === 'rig' ? 'Rigs' : assetType === 'skin' ? 'Skins' : 'Animations'}/${name}`, assetType, source: text, byteLength: Buffer.byteLength(text), sourceModified: 0, importedAt: 0, pipeline: { ...(seed.pipeline ?? {}), importerVersion: 'nova-v4.7', sourceHash: hash, artifactHash: hash, contentHash: hash, cacheKey: hash, dependencies: [], reverseDependencies: [] } }
 }
 

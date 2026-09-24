@@ -1,3 +1,4 @@
+/** 功能回归脚本：执行 verify-v26.13-focus.mjs 对应场景，保留断言和证据输出。 */
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
 import { mkdtemp, readFile, rm } from 'node:fs/promises'
@@ -11,7 +12,7 @@ const archive = join(root, 'releases/v26.12/Nova_A-v26.12-source.zip')
 const executions = []
 try {
   // The preceding separately verified source archive supplies the actual comparison baseline.
-  const quote = value => "'" + value.replaceAll("'", "''") + "'"
+  const quote = /* 计算表达式 "'" + value.replaceAll("'", "''") + "'" 并返回结果，沿用操作数的原有类型规则。 */ value => "'" + value.replaceAll("'", "''") + "'"
   execFileSync('pwsh.exe', ['-NoProfile', '-NonInteractive', '-Command', `Expand-Archive -LiteralPath ${quote(archive)} -DestinationPath ${quote(temporary)}`], { stdio: 'inherit', windowsHide: true })
   assert.equal(sourceDigest(await releaseSourceInventory(temporary)), baselineDigest, '26.12 baseline must be the separately released source')
   for (const [name, args, report] of [
@@ -28,6 +29,6 @@ try {
   const inventoryExecution = await runAudit(root, 'scripts/audit-v26.13-panels.mjs')
   inventoryExecution.reports = ['release-audits/panel-source-inventory.json']; executions.push(inventoryExecution)
   const inventory = JSON.parse(await readFile(join(root, 'release-audits/panel-source-inventory.json'), 'utf8'))
-  assert.ok(inventory.sourceFiles >= 70 && inventory.records.every(record => record.file && record.sha256), 'Complete current SFC inventory')
+  assert.ok(inventory.sourceFiles >= 70 && inventory.records.every(/* 先计算 record.file；仅当其为真值时求右侧 record.sha256，返回短路求值结果。 */ record => record.file && record.sha256), 'Complete current SFC inventory')
   await writeAuditBundle(root, '26.13', 'focus', executions)
 } finally { await rm(temporary, { recursive: true, force: true }) }

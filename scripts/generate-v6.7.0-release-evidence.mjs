@@ -1,3 +1,4 @@
+/** 版本6.7.0：汇集发布报告与产物文件，生成带来源记录的发布证据。 */
 import { createHash } from 'node:crypto'
 import { execFileSync } from 'node:child_process'
 import { cp, mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises'
@@ -10,9 +11,9 @@ const root = dirname(dirname(fileURLToPath(import.meta.url)))
 const audits = join(root, 'release-audits')
 const evidence = join(audits, `evidence-v${version}`)
 const generatedAt = new Date().toISOString()
-const sha256 = value => createHash('sha256').update(value).digest('hex')
-const readJson = async name => JSON.parse(await readFile(join(audits, name), 'utf8'))
-const writeJson = (path, value) => writeFile(path, `${JSON.stringify(value, null, 2)}\n`)
+const sha256 = /* 调用 createHash('sha256').update(value).digest('hex') 并返回调用结果。 */ value => createHash('sha256').update(value).digest('hex')
+const readJson = /* 调用 JSON.parse(await readFile(join(audits, name), 'utf8')) 并返回调用结果。 */ async name => JSON.parse(await readFile(join(audits, name), 'utf8'))
+const writeJson = /* 调用 writeFile(path, `${JSON.stringify(value, null, 2)}\n`) 并返回调用结果。 */ (path, value) => writeFile(path, `${JSON.stringify(value, null, 2)}\n`)
 
 await rm(evidence, { recursive: true, force: true })
 for (const folder of ['runtime', 'layout', 'build', 'manual', 'reference/touch', 'reference/android', 'performance', 'security', 'external']) await mkdir(join(evidence, folder), { recursive: true })
@@ -68,15 +69,15 @@ const ledger = `# Nova_A 6.7.0 edit ledger
 await writeFile(join(audits, `v${version}-release-notes.md`), notes)
 await writeFile(join(audits, `v${version}-edit-ledger.md`), ledger)
 
-const localAndroid = verification.checks.find(item => item.id === 'V670-ANDROID-HONEST-GATE')
+const localAndroid = verification.checks.find(/* 比较 item.id 与 'V670-ANDROID-HONEST-GATE'，返回严格相等的判断结果。 */ item => item.id === 'V670-ANDROID-HONEST-GATE')
 const artifacts = await Promise.all([
   ['web-editor', 'dist/index.html'], ['web-player', 'dist/player.html'], ['windows-editor', 'src-tauri/target/release/nova_a.exe'],
   ['windows-game', 'release-audits/game-output-v6.7.0/Nova 6.7 Touch Platformer.exe'], ['windows-nsis', 'src-tauri/target/release/bundle/nsis/Nova_A_6.7.0_x64-setup.exe'], ['windows-msi', 'src-tauri/target/release/bundle/msi/Nova_A_6.7.0_x64_en-US.msi']
-].map(async ([name, path]) => {
+].map(/** 读取产物长度与散列，失败时记录缺失状态。 */ async ([name, path]) => {
   try { const bytes = await readFile(join(root, path)); return { name, path, bytes: bytes.length, sha256: sha256(bytes), status: 'passed' } }
   catch { return { name, path, status: 'missing' } }
 }))
-const buildsPassed = artifacts.every(item => item.status === 'passed')
+const buildsPassed = artifacts.every(/* 比较 item.status 与 'passed'，返回严格相等的判断结果。 */ item => item.status === 'passed')
 await writeJson(join(evidence, 'build/local-builds.json'), { format: 'nova-local-build-evidence', version: 1, engineVersion: version, generatedAt, artifacts, status: buildsPassed ? 'passed' : 'incomplete' })
 await writeJson(join(audits, `v${version}-benchmarks.json`), {
   format: 'nova-v6.7.0-benchmark-summary', version: 1, engineVersion: version, generatedAt,
@@ -100,12 +101,12 @@ await writeJson(join(evidence, 'external/gates.json'), {
     'Android APK build on a fully qualified local toolchain', 'Android physical touch/gamepad/audio/sensor and lifecycle matrix', 'Android production signing and store review',
     'iOS matching macOS/Xcode/signing/device qualification', 'publisher identity and Windows artifact signing', 'independent clean-machine install/launch/upgrade/repair/uninstall',
     'second-machine byte reproducibility', 'independent keyboard/screen-reader/accessibility review', 'real 72-hour editor/player soak'
-  ].map(name => ({ name, status: 'pending-external', claimed: false }))
+  ].map(/** 为指定外部资格生成待外部验证且不声称通过的条目。 */ name => ({ name, status: 'pending-external', claimed: false }))
 })
 
 const commit = safeExec('git', ['rev-parse', 'HEAD'])
 const environment = { id: `${platform}-${arch}-${versions.node}`, platform, architecture: arch, node: versions.node, rust: safeExec('rustc', ['--version']), cargo: safeExec('cargo', ['--version']) }
-const entries = await Promise.all((await filesUnder(evidence)).sort().filter(path => !path.endsWith('evidence-manifest.json')).map(async path => {
+const entries = await Promise.all((await filesUnder(evidence)).sort().filter(/* 返回 path.endsWith('evidence-manifest.json') 的逻辑取反结果。 */ path => !path.endsWith('evidence-manifest.json')).map(/** 读取证据文件，返回相对路径、内容散列、字节数及提交、工具和环境身份。 */ async path => {
   const contents = await readFile(path)
   return { path: relative(evidence, path).replaceAll('\\', '/'), sha256: sha256(contents), bytes: contents.length, source: commit, tool: 'generate-v6.7.0-release-evidence.mjs', environment: environment.id }
 }))
@@ -117,5 +118,5 @@ await writeJson(join(evidence, 'evidence-manifest.json'), {
 })
 console.log(`Nova_A v${version} evidence generated with ${entries.length} hashed entries; external certification remains pending.`)
 
-function safeExec(command, args) { try { return execFileSync(command, args, { cwd: root, encoding: 'utf8', windowsHide: true }).trim() } catch { return 'unavailable' } }
-async function filesUnder(directory) { const files = []; for (const entry of await readdir(directory, { withFileTypes: true })) { const path = join(directory, entry.name); entry.isDirectory() ? files.push(...await filesUnder(path)) : files.push(path) } return files }
+/** 隐藏窗口执行命令并返回输出，失败标记为不可用。 */ function safeExec(command, args) { try { return execFileSync(command, args, { cwd: root, encoding: 'utf8', windowsHide: true }).trim() } catch { return 'unavailable' } }
+/** 递归收集目录中的文件路径。 */ async function filesUnder(directory) { const files = []; for (const entry of await readdir(directory, { withFileTypes: true })) { const path = join(directory, entry.name); entry.isDirectory() ? files.push(...await filesUnder(path)) : files.push(path) } return files }

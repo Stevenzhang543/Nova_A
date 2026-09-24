@@ -1,3 +1,4 @@
+/** 功能回归脚本：执行 verify-v26.22-material-corpus.mjs 对应场景，保留断言和证据输出。 */
 import assert from 'node:assert/strict'
 import {propertyAudit22} from './lib/propertyAudit22.mjs'
 import {openMediaAuditModules} from './lib/mediaAudit16.mjs'
@@ -10,10 +11,10 @@ try{
  const material=m.defaultMaterial('Audit material');material.parentMaterial=parentRef;material.graph=g.defaultMaterialGraph();material.graph.nodes[0].values={amount:.5,label:'sample',enabled:true,color:[1,.5,0,1]};material.layers=[g.defaultMaterialLayer('Tint')];material.uniforms={amount:.5,toggle:true,vector:[1,2,3,4]};material.textures={image:null};material.uniformSchema=[{name:'amount',type:'range',label:'Amount',minimum:0,maximum:10,step:.1,options:['One','Two']}];material.includes=['nova/color'];material.variants={audit:'#define AUDIT 1',alternate:'#define AUDIT 2'};material.activeVariant='audit'
  const baseline=m.normalizeMaterial(material),record=assets.createTextAsset('Audit material','material',m.serializeMaterial(baseline),'Assets'),project=p.getSceneJSON(),cases=[],inventory=[]
  const enums={target:['Sprite','UI','Light'],blendMode:['Alpha','Additive','Multiply','Screen'],sampling:['Nearest','Linear'],colorSpace:['sRGB','Linear'],'uniformSchema.*.type':['number','integer','vector2','vector3','vector4','color','texture','enum','range','toggle'],'layers.*.kind':['Tint','Mask','Gradient','Palette','Outline','Dissolve','Distortion'],'graph.nodes.*.kind':['SpriteTexture','UITexture','LightColor','UV','Time','Color','Number','Gradient','Palette','Mask','Outline','Dissolve','Distortion','Multiply','Add','Blend','Output']}
- const get=(root,path)=>path.reduce((v,k)=>v[k],root),set=(root,path,value)=>{get(root,path.slice(0,-1))[path.at(-1)]=value}
- async function visit(value,path){
+ const get=/** 结构说明（自动提取）：get；输入 root、path；直接调用 path.reduce；返回表达式求值结果。 */ (root,path)=>path.reduce(/* 返回 v[k] 的当前值。 */ (v,k)=>v[k],root),set=/** 结构说明（自动提取）：set；输入 root、path、value；直接调用 get、path.slice、path.at；写入 […]。 */ (root,path,value)=>{get(root,path.slice(0,-1))[path.at(-1)]=value}
+ /** 结构说明（自动提取）：visit；输入 value、path；直接调用 Object.keys、visit、Array.isArray、Number、join 等；写入 row.disposition、values；包含循环处理；等待异步结果。 */ async function visit(value,path){
   if(value&&typeof value==='object'){for(const key of Object.keys(value))await visit(value[key],[...path,Array.isArray(value)?Number(key):key]);return}
-  const id=path.map(k=>typeof k==='number'?'*':k).join('.'),field=path.at(-1)
+  const id=path.map(/* 根据 typeof k==='number' 的真假，分别返回 '*' 或 k。 */ k=>typeof k==='number'?'*':k).join('.'),field=path.at(-1)
   const row={id,path,owner:'normalizeMaterial / serializeMaterial / updateTextAssetTransactional',history:'Named material asset transaction / complete source Undo / field Redo; GUI interaction remains separate',runtime:'pending render effect or explicit editor-only classification',cases:[]};inventory.push(row)
   if(field==='version'||field==='format'){row.disposition='Fixed document format identity; not an editable value';return}
   let values=enums[id]||enums[field]||(typeof value==='boolean'?[!value]:typeof value==='number'?[value===0?.25:value*.75]:typeof value==='string'?[value+' audit']:[null])
@@ -31,6 +32,6 @@ try{
   }
  }
  await visit(baseline,[])
- const linked=structuredClone(baseline);linked.graph.nodes.find(n=>n.uuid==='input').uuid='renamed-input';linked.graph.edges[0].fromNode='renamed-input';linked.graph.edges[0].uuid='renamed-edge';linked.layers[0].id='renamed-layer';const renamed=m.normalizeMaterial(linked);assert.equal(renamed.graph.edges[0].fromNode,'renamed-input');assert.ok(renamed.graph.nodes.some(node=>node.uuid==='renamed-input'));assert.equal(renamed.layers[0].id,'renamed-layer');assert.ok(!g.validateMaterialGraph(linked.graph).some(d=>d.severity==='error'))
+ const linked=structuredClone(baseline);linked.graph.nodes.find(/* 比较 n.uuid 与 'input'，返回严格相等的判断结果。 */ n=>n.uuid==='input').uuid='renamed-input';linked.graph.edges[0].fromNode='renamed-input';linked.graph.edges[0].uuid='renamed-edge';linked.layers[0].id='renamed-layer';const renamed=m.normalizeMaterial(linked);assert.equal(renamed.graph.edges[0].fromNode,'renamed-input');assert.ok(renamed.graph.nodes.some(/* 比较 node.uuid 与 'renamed-input'，返回严格相等的判断结果。 */ node=>node.uuid==='renamed-input'));assert.equal(renamed.layers[0].id,'renamed-layer');assert.ok(!g.validateMaterialGraph(linked.graph).some(/* 比较 d.severity 与 'error'，返回严格相等的判断结果。 */ d=>d.severity==='error'))
  await audit.write([{name:'Populated material fields and scalar enums persist through native and NovaPak asset owners',status:'passed',fields:inventory.length,cases:cases.length},{name:'Linked graph identity rename preserves valid connections',status:'passed'}],'Field persistence only: graph kind alternatives are not claimed as semantically valid render programs. Named asset history is checked per candidate; actual render/UI and additional nullable texture references remain separate.',{inventory,cases});console.log(JSON.stringify({fields:inventory.length,cases:cases.length,status:'passed'}))
 }finally{await opened.close()}

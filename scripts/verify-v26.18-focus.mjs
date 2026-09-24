@@ -1,3 +1,4 @@
+/** 功能回归脚本：执行 verify-v26.18-focus.mjs 对应场景，保留断言和证据输出。 */
 import assert from 'node:assert/strict'
 import{dirname,join}from'node:path'
 import{fileURLToPath}from'node:url'
@@ -16,7 +17,7 @@ for(const [script,args,reports] of [
  ['verify-v26.14-runtime-stage.mjs',[],['v26.14-runtime-wasm.json']],
  ['verify-v26.14-project-roundtrip.mjs',[],['v26.14-project-roundtrip.json']],
  ['verify-v26.12-typed-graphs.mjs',[],[]],
- ...['core-references','field-manual','teaching'].map(name=>['generate-v26.18-'+name+'.mjs',['--verify-only'],[]]),
+ ...['core-references','field-manual','teaching'].map(/* 返回按声明顺序构造的数组 ['generate-v26.18-'+name+'.mjs',['--verify-only'],[]]。 */ name=>['generate-v26.18-'+name+'.mjs',['--verify-only'],[]]),
  ['audit-v26.13-panels.mjs',[],['panel-source-inventory.json']]
-]){const run=await runAudit(root,'scripts/'+script,args);run.reports=reports.map(name=>'release-audits/'+name);executions.push(run)}
+]){const run=await runAudit(root,'scripts/'+script,args);run.reports=reports.map(/* 计算表达式 'release-audits/'+name 并返回结果，沿用操作数的原有类型规则。 */ name=>'release-audits/'+name);executions.push(run)}
 await writeAuditBundle(root,'26.18','focus',executions);

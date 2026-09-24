@@ -1,13 +1,17 @@
+/** 渲染目标资源：管理离屏纹理描述及相关生命周期。 */
 import { reactive } from 'vue'
 
 export const RENDER_TEXTURE_LIMITS = { entries: 32, bytes: 64 * 1048576, dimension: 2048 } as const
 export interface RenderTextureRecord { key: string; width: number; height: number; canvas: HTMLCanvasElement; updatedFrame: number; revision: number }
 export const renderTextureState = reactive({ generation: 0, keys: [] as string[], bytes: 0, evictions: 0, rejectedCaptures: 0, lastError: '' })
 const textures = new Map<string, RenderTextureRecord>()
+/* 移除渲染纹理并释放画布尺寸，更新占用字节和淘汰统计。 */
 function discard(key: string): void { const record = textures.get(key); if (!record) return; textures.delete(key); renderTextureState.bytes -= record.width * record.height * 4; record.canvas.width = 0; record.canvas.height = 0; renderTextureState.evictions++ }
+/* 记录捕获拒绝次数与错误说明，并返回失败标记。 */
 function reject(message: string): false { renderTextureState.rejectedCaptures++; renderTextureState.lastError = message; return false }
 
 /** Capture into a temporary surface first; invalid/failed captures retain the last good pixels. */
+/* 校验并裁剪源视口，将捕获写入受预算约束的渲染纹理缓存，成功后更新版本。 */
 export function captureRenderTexture(key: string, source: HTMLCanvasElement, viewport: { x: number; y: number; width: number; height: number }, frame: number): boolean {
   const safeKey = key.trim().slice(0, 120)
   if (!safeKey || ![viewport.x, viewport.y, viewport.width, viewport.height, frame, source.width, source.height].every(Number.isFinite) || viewport.width <= 0 || viewport.height <= 0 || source.width <= 0 || source.height <= 0) return reject('Render texture needs a finite non-empty viewport and source.')
@@ -21,7 +25,7 @@ export function captureRenderTexture(key: string, source: HTMLCanvasElement, vie
     context.globalCompositeOperation = 'copy'; context.drawImage(source, sx, sy, sw, sh, 0, 0, width, height)
     let record = textures.get(safeKey)
     const previousBytes = record ? record.width * record.height * 4 : 0, nextBytes = width * height * 4
-    while (textures.size - (record ? 1 : 0) >= RENDER_TEXTURE_LIMITS.entries || renderTextureState.bytes - previousBytes + nextBytes > RENDER_TEXTURE_LIMITS.bytes) { const oldest = [...textures.keys()].find(candidate => candidate !== safeKey); if (!oldest) return reject('Render texture exceeds the cache budget.'); discard(oldest) }
+    while (textures.size - (record ? 1 : 0) >= RENDER_TEXTURE_LIMITS.entries || renderTextureState.bytes - previousBytes + nextBytes > RENDER_TEXTURE_LIMITS.bytes) { const oldest = [...textures.keys()].find(/* 比较 candidate 与 safeKey，返回严格不等的判断结果。 */ candidate => candidate !== safeKey); if (!oldest) return reject('Render texture exceeds the cache budget.'); discard(oldest) }
     if (!record) record = { key: safeKey, width, height, canvas: document.createElement('canvas'), updatedFrame: frame, revision: 0 }
     const destination = record.canvas.getContext('2d'); if (!destination) return reject('Render texture output is unavailable.')
     if (record.canvas.width !== width) record.canvas.width = width
@@ -34,5 +38,7 @@ export function captureRenderTexture(key: string, source: HTMLCanvasElement, vie
   } catch (error) { return reject(error instanceof Error ? error.message : String(error)) }
   finally { prepared.width = 0; prepared.height = 0 }
 }
+/* 解析渲染纹理画布并更新缓存中的最近访问顺序。 */
 export function resolveRenderTexture(key: string): HTMLCanvasElement | null { const record = textures.get(key); if (record) { textures.delete(key); textures.set(key, record) }; return record?.canvas ?? null }
+/* 释放所有渲染纹理并更新键列表、版本和错误状态。 */
 export function clearRenderTextures(): void { for (const key of textures.keys()) discard(key); renderTextureState.keys.splice(0); renderTextureState.generation++; renderTextureState.lastError = '' }

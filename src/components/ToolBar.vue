@@ -1,3 +1,4 @@
+<!-- 设计工具栏：选择变换工具、添加参考线并管理键盘快捷键。 -->
 <template>
   <div class="toolbar" role="toolbar" :aria-label="t('sceneView')">
     <div class="toolbar-content">
@@ -118,21 +119,21 @@ const snapOptions = [
 ]
 const overlayOptions = ['Off', '16:9', '16:10', '4:3', '9:16', 'Custom'] as const
 const guideValue = ref('0')
-function addGuide(axis: 'horizontal' | 'vertical') { if (addViewportGuide(axis, Number(guideValue.value))) guideValue.value = '0' }
+/** 按输入坐标添加指定方向参考线，成功后重置坐标输入。 */ function addGuide(axis: 'horizontal' | 'vertical') { if (addViewportGuide(axis, Number(guideValue.value))) guideValue.value = '0' }
 
-function handleShortcut(event: KeyboardEvent) {
+/** 处理创建对象和变换工具按键；普通工具选择跳过文本输入及其他修饰键事件。 */ function handleShortcut(event: KeyboardEvent) {
   if (event.shiftKey && !event.ctrlKey && !event.metaKey && !event.altKey && event.key.toLowerCase() === 'a') { estate.createObjectPaletteOpen = true; event.preventDefault(); return }
   if (event.ctrlKey || event.metaKey || event.altKey) return
   const tag = (event.target as HTMLElement | null)?.tagName
   if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
-  const tool = transformTools.find(candidate => candidate.key === event.key.toLowerCase())
+  const tool = transformTools.find(/* 比较 candidate.key 与 event.key.toLowerCase()，返回严格相等的判断结果。 */ candidate => candidate.key === event.key.toLowerCase())
   if (!tool) return
   state.activeTool = tool.id
   event.preventDefault()
 }
 
-onMounted(() => window.addEventListener('keydown', handleShortcut))
-onBeforeUnmount(() => window.removeEventListener('keydown', handleShortcut))
+onMounted(/** 挂载时注册工具键盘监听。 */ () => window.addEventListener('keydown', handleShortcut))
+onBeforeUnmount(/** 卸载时移除工具键盘监听。 */ () => window.removeEventListener('keydown', handleShortcut))
 </script>
 
 <style scoped>

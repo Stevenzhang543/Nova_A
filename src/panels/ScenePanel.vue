@@ -1,3 +1,4 @@
+<!-- 场景视图容器：组合图层快捷栏与世界画布。 -->
 <template>
   <div class="scene-panel"><LayerBar /><WorldCanvas /></div>
 </template>

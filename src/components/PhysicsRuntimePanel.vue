@@ -1,3 +1,4 @@
+<!-- 物理运行设置：编辑求解器和运行参数，并展示物理相关诊断。 -->
 <template>
   <aside :class="['physics-runtime-panel', { collapsed: monitor.collapsed }]" :aria-label="t('physicsMonitor')">
     <header>
@@ -98,49 +99,49 @@ import { capturePhysicsSnapshot, clearCollisionTimeline, comparePhysicsSnapshots
 
 const Metric = defineComponent({
   props: { label: { type: String, required: true }, value: { type: String, required: true } },
-  setup: props => () => h('div', { class: 'metric' }, [h('span', props.label), h('strong', { title: props.value }, props.value)])
+  setup: /** 为指标组件返回渲染函数，将标签和值显示在固定结构中。 */ props => /* 调用 h('div', { class: 'metric' }, [h('span', props.label), h('strong', { title: props.value }, props.value)]) 并返回调用结果。 */ () => h('div', { class: 'metric' }, [h('span', props.label), h('strong', { title: props.value }, props.value)])
 })
 
-const query = computed(() => monitor.query.trim().toLocaleLowerCase())
-const bodies = computed(() => {
-  const filtered = query.value ? monitor.bodies.filter(body => `${body.name} ${body.role} ${body.bodyType} ${body.layer}`.toLocaleLowerCase().includes(query.value)) : [...monitor.bodies]
+const query = computed(/* 调用 monitor.query.trim().toLocaleLowerCase() 并返回调用结果。 */ () => monitor.query.trim().toLocaleLowerCase())
+const bodies = computed(/** 按查询文本过滤物体，再按所选指标与方向排序，同值时按名称排序。 */ () => {
+  const filtered = query.value ? monitor.bodies.filter(/* 调用 `${body.name} ${body.role} ${body.bodyType} ${body.layer}`.toLocaleLowerCase().includes(query.value) 并返回调用结果。 */ body => `${body.name} ${body.role} ${body.bodyType} ${body.layer}`.toLocaleLowerCase().includes(query.value)) : [...monitor.bodies]
   const direction = monitor.sortDirection === 'ascending' ? 1 : -1
-  return filtered.sort((a, b) => direction * (bodyMetricRaw(a) - bodyMetricRaw(b) || a.name.localeCompare(b.name)))
+  return filtered.sort(/* 计算表达式 direction * (bodyMetricRaw(a) - bodyMetricRaw(b) || a.name.localeCompare(b.name)) 并返回结果，沿用操作数的原有类型规则。 */ (a, b) => direction * (bodyMetricRaw(a) - bodyMetricRaw(b) || a.name.localeCompare(b.name)))
 })
-const collisions = computed(() => query.value ? monitor.collisions.filter(event => `${event.firstName} ${event.secondName} ${event.type}`.toLocaleLowerCase().includes(query.value)) : monitor.collisions)
-const constraints = computed(() => query.value ? monitor.constraints.filter(item => `${item.name} ${item.kind} ${item.firstName} ${item.secondName}`.toLocaleLowerCase().includes(query.value)) : monitor.constraints)
-const captures = computed(() => query.value ? monitor.captures.filter(item => item.name.toLocaleLowerCase().includes(query.value)) : monitor.captures)
+const collisions = computed(/** 搜索碰撞名称和类型，空查询直接使用全部碰撞。 */ () => query.value ? monitor.collisions.filter(/* 调用 `${event.firstName} ${event.secondName} ${event.type}`.toLocaleLowerCase().includes(query.value) 并返回调用结果。 */ event => `${event.firstName} ${event.secondName} ${event.type}`.toLocaleLowerCase().includes(query.value)) : monitor.collisions)
+const constraints = computed(/** 搜索约束名称、种类和端点名称，空查询使用全部约束。 */ () => query.value ? monitor.constraints.filter(/* 调用 `${item.name} ${item.kind} ${item.firstName} ${item.secondName}`.toLocaleLowerCase().includes(query.value) 并返回调用结果。 */ item => `${item.name} ${item.kind} ${item.firstName} ${item.secondName}`.toLocaleLowerCase().includes(query.value)) : monitor.constraints)
+const captures = computed(/* 根据 query.value 的真假，分别返回 monitor.captures.filter(item => item.name.toLocaleLowerCase().includes(query.value)) 或 monitor.captures。 */ () => query.value ? monitor.captures.filter(/* 调用 item.name.toLocaleLowerCase().includes(query.value) 并返回调用结果。 */ item => item.name.toLocaleLowerCase().includes(query.value)) : monitor.captures)
 const bodyScroll = ref(0), collisionScroll = ref(0), selectedBodyUuid = ref(''), selectedCollisionId = ref<number | null>(null), selectedConstraintUuid = ref(''), selectedCaptureId = ref('')
 const snapshotComparison = ref<ReturnType<typeof comparePhysicsSnapshots>>([])
 const rowHeight = 46, visibleRows = 7
-const bodyStart = computed(() => Math.max(0, Math.floor(bodyScroll.value / rowHeight) - 2)), collisionStart = computed(() => Math.max(0, Math.floor(collisionScroll.value / rowHeight) - 2))
-const visibleBodies = computed(() => bodies.value.slice(bodyStart.value, bodyStart.value + visibleRows + 4)), visibleCollisions = computed(() => collisions.value.slice(collisionStart.value, collisionStart.value + visibleRows + 4))
-const bodyTop = computed(() => bodyStart.value * rowHeight), bodyBottom = computed(() => Math.max(0, (bodies.value.length - bodyStart.value - visibleBodies.value.length) * rowHeight))
-const collisionTop = computed(() => collisionStart.value * rowHeight), collisionBottom = computed(() => Math.max(0, (collisions.value.length - collisionStart.value - visibleCollisions.value.length) * rowHeight))
-const selectedBody = computed(() => bodies.value.find(body => body.uuid === selectedBodyUuid.value) ?? bodies.value[0] ?? null)
-const selectedCollision = computed(() => collisions.value.find(collision => collision.id === selectedCollisionId.value) ?? collisions.value[0] ?? null)
-const selectedConstraint = computed(() => constraints.value.find(constraint => constraint.uuid === selectedConstraintUuid.value) ?? constraints.value[0] ?? null)
-const status = computed(() => `${t(physicsState.playMode === 'paused' ? 'runtimePaused' : 'live')} · ${physicsState.engineDiagnostics.totalPhysicsSteps} ${t('steps')}`)
-const bodyMetricUnit = computed(() => ({ name: '', speed: 'm/s', acceleration: 'm/s²', force: 'N', energy: 'J', contacts: '' })[monitor.sortKey])
+const bodyStart = computed(/* 调用 Math.max(0, Math.floor(bodyScroll.value / rowHeight) - 2) 并返回调用结果。 */ () => Math.max(0, Math.floor(bodyScroll.value / rowHeight) - 2)), collisionStart = computed(/* 调用 Math.max(0, Math.floor(collisionScroll.value / rowHeight) - 2) 并返回调用结果。 */ () => Math.max(0, Math.floor(collisionScroll.value / rowHeight) - 2))
+const visibleBodies = computed(/* 调用 bodies.value.slice(bodyStart.value, bodyStart.value + visibleRows + 4) 并返回调用结果。 */ () => bodies.value.slice(bodyStart.value, bodyStart.value + visibleRows + 4)), visibleCollisions = computed(/* 调用 collisions.value.slice(collisionStart.value, collisionStart.value + visibleRows + 4) 并返回调用结果。 */ () => collisions.value.slice(collisionStart.value, collisionStart.value + visibleRows + 4))
+const bodyTop = computed(/* 计算表达式 bodyStart.value * rowHeight 并返回结果，沿用操作数的原有类型规则。 */ () => bodyStart.value * rowHeight), bodyBottom = computed(/* 调用 Math.max(0, (bodies.value.length - bodyStart.value - visibleBodies.value.length) * rowHeight) 并返回调用结果。 */ () => Math.max(0, (bodies.value.length - bodyStart.value - visibleBodies.value.length) * rowHeight))
+const collisionTop = computed(/* 计算表达式 collisionStart.value * rowHeight 并返回结果，沿用操作数的原有类型规则。 */ () => collisionStart.value * rowHeight), collisionBottom = computed(/* 调用 Math.max(0, (collisions.value.length - collisionStart.value - visibleCollisions.value.length) * rowHeight) 并返回调用结果。 */ () => Math.max(0, (collisions.value.length - collisionStart.value - visibleCollisions.value.length) * rowHeight))
+const selectedBody = computed(/** 取得所选物体，缺失回退首项或空值。 */ () => bodies.value.find(/* 比较 body.uuid 与 selectedBodyUuid.value，返回严格相等的判断结果。 */ body => body.uuid === selectedBodyUuid.value) ?? bodies.value[0] ?? null)
+const selectedCollision = computed(/** 取得所选碰撞，缺失回退首项或空值。 */ () => collisions.value.find(/* 比较 collision.id 与 selectedCollisionId.value，返回严格相等的判断结果。 */ collision => collision.id === selectedCollisionId.value) ?? collisions.value[0] ?? null)
+const selectedConstraint = computed(/** 取得所选约束，缺失回退首项或空值。 */ () => constraints.value.find(/* 比较 constraint.uuid 与 selectedConstraintUuid.value，返回严格相等的判断结果。 */ constraint => constraint.uuid === selectedConstraintUuid.value) ?? constraints.value[0] ?? null)
+const status = computed(/** 组合暂停或实时状态及累计物理步数。 */ () => `${t(physicsState.playMode === 'paused' ? 'runtimePaused' : 'live')} · ${physicsState.engineDiagnostics.totalPhysicsSteps} ${t('steps')}`)
+const bodyMetricUnit = computed(/* 返回 ({ name: '', speed: 'm/s', acceleration: 'm/s²', force: 'N', energy: 'J', contacts: '' })[monitor.sortKey] 的当前值。 */ () => ({ name: '', speed: 'm/s', acceleration: 'm/s²', force: 'N', energy: 'J', contacts: '' })[monitor.sortKey])
 
-function clean(value: number): number { return Math.abs(value) < 5e-10 ? 0 : value }
-function numberText(value: number, unit = ''): string { return `${clean(value).toLocaleString(undefined, { maximumFractionDigits: 4 })} ${unit}`.trim() }
-function vectorText(x: number, y: number, unit = ''): string { return `(${numberText(x)}, ${numberText(y)}) ${unit}`.trim() }
-function timeText(value: number): string { return `${(value / 1000).toFixed(3)}s` }
-function typeLabel(type: string): string { return t(type as Parameters<typeof t>[0]) }
-function bodyMetricRaw(body: PhysicsBodyTelemetry): number { return ({ name: 0, speed: body.speed, acceleration: body.accelerationMagnitude, force: body.forceMagnitude, energy: body.kineticEnergy, contacts: body.contactCount })[monitor.sortKey] }
-function bodyMetric(body: PhysicsBodyTelemetry): number { return monitor.sortKey === 'name' ? body.speed : bodyMetricRaw(body) }
-function sparklinePoints(history: number[]): string {
+/* 根据 Math.abs(value) < 5e-10 的真假，分别返回 0 或 value。 */ function clean(value: number): number { return Math.abs(value) < 5e-10 ? 0 : value }
+/* 调用 `${clean(value).toLocaleString(undefined, { maximumFractionDigits: 4 })} ${unit}`.trim() 并返回调用结果。 */ function numberText(value: number, unit = ''): string { return `${clean(value).toLocaleString(undefined, { maximumFractionDigits: 4 })} ${unit}`.trim() }
+/* 调用 `(${numberText(x)}, ${numberText(y)}) ${unit}`.trim() 并返回调用结果。 */ function vectorText(x: number, y: number, unit = ''): string { return `(${numberText(x)}, ${numberText(y)}) ${unit}`.trim() }
+/** 将毫秒转换为保留三位小数的秒文本。 */ function timeText(value: number): string { return `${(value / 1000).toFixed(3)}s` }
+/* 调用 t(type as Parameters<typeof t>[0]) 并返回调用结果。 */ function typeLabel(type: string): string { return t(type as Parameters<typeof t>[0]) }
+/** 按当前排序键提取物理指标，名称排序对应数值零。 */ function bodyMetricRaw(body: PhysicsBodyTelemetry): number { return ({ name: 0, speed: body.speed, acceleration: body.accelerationMagnitude, force: body.forceMagnitude, energy: body.kineticEnergy, contacts: body.contactCount })[monitor.sortKey] }
+/* 根据 monitor.sortKey === 'name' 的真假，分别返回 body.speed 或 bodyMetricRaw(body)。 */ function bodyMetric(body: PhysicsBodyTelemetry): number { return monitor.sortKey === 'name' ? body.speed : bodyMetricRaw(body) }
+/** 将历史值按最大值归一化为固定画布内的折线坐标。 */ function sparklinePoints(history: number[]): string {
   if (!history.length) return ''
   const maximum = Math.max(1e-9, ...history), width = 240, height = 42
-  return history.map((value, index) => `${history.length === 1 ? width : index * width / (history.length - 1)},${height - value / maximum * (height - 4) - 2}`).join(' ')
+  return history.map(/** 按样本位置和归一化幅度计算单个折线坐标。 */ (value, index) => `${history.length === 1 ? width : index * width / (history.length - 1)},${height - value / maximum * (height - 4) - 2}`).join(' ')
 }
-function downloadText(name: string, source: string): void {
+/** 下载 JSON 文本并释放临时对象地址。 */ function downloadText(name: string, source: string): void {
   const url = URL.createObjectURL(new Blob([source], { type: 'application/json' }))
   const anchor = document.createElement('a'); anchor.href = url; anchor.download = name; anchor.click(); URL.revokeObjectURL(url)
 }
-function exportCapture(capture: PhysicsMonitorCapture): void { downloadText(`${capture.name.replace(/[^a-z0-9_-]+/gi, '-') || 'physics-capture'}.nova-physics.json`, physicsCaptureJson(capture)) }
-function compareLatest(): void {
+/** 净化捕获名称为文件名并导出物理捕获 JSON。 */ function exportCapture(capture: PhysicsMonitorCapture): void { downloadText(`${capture.name.replace(/[^a-z0-9_-]+/gi, '-') || 'physics-capture'}.nova-physics.json`, physicsCaptureJson(capture)) }
+/** 至少有两次捕获时比较最新两份物理快照，并选中最新捕获。 */ function compareLatest(): void {
   if (monitor.captures.length < 2) return
   const last = monitor.captures[monitor.captures.length - 1]!, previous = monitor.captures[monitor.captures.length - 2]!
   snapshotComparison.value = comparePhysicsSnapshots(previous, last)

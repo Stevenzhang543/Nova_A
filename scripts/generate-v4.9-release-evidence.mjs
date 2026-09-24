@@ -1,3 +1,4 @@
+/** 版本4.9：汇集发布报告与产物文件，生成带来源记录的发布证据。 */
 import { createHash } from 'node:crypto'
 import { execFileSync } from 'node:child_process'
 import { mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises'
@@ -9,11 +10,11 @@ const audits = join(root, 'release-audits')
 const tree = join(audits, 'evidence-v4.9.0')
 const generatedAt = new Date().toISOString()
 const commit = execFileSync('git', ['-C', root, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim()
-const json = value => `${JSON.stringify(value, null, 2)}\n`
-const writeJson = async (path, value) => { await mkdir(dirname(path), { recursive: true }); await writeFile(path, json(value)) }
-const readJson = async (name, fallback) => { try { return JSON.parse(await readFile(join(audits, name), 'utf8')) } catch { return fallback } }
-const exists = async path => { try { const info = await stat(path); return { exists: true, bytes: info.size } } catch { return { exists: false, bytes: 0 } } }
-const walk = async directory => { const files = []; for (const entry of await readdir(directory, { withFileTypes: true })) { const path = join(directory, entry.name); if (entry.isDirectory()) files.push(...await walk(path)); else files.push(path) } return files }
+const json = /** 将对象序列化为带末尾换行的格式化JSON。 */ value => `${JSON.stringify(value, null, 2)}\n`
+const writeJson = /** 创建父目录并通过统一JSON格式函数写入内容。 */ async (path, value) => { await mkdir(dirname(path), { recursive: true }); await writeFile(path, json(value)) }
+const readJson = /** 读取审计JSON报告，失败使用回退值。 */ async (name, fallback) => { try { return JSON.parse(await readFile(join(audits, name), 'utf8')) } catch { return fallback } }
+const exists = /** 读取文件存在与长度，失败返回不存在和零长度。 */ async path => { try { const info = await stat(path); return { exists: true, bytes: info.size } } catch { return { exists: false, bytes: 0 } } }
+const walk = /** 递归枚举目录内文件供证据归档。 */ async directory => { const files = []; for (const entry of await readdir(directory, { withFileTypes: true })) { const path = join(directory, entry.name); if (entry.isDirectory()) files.push(...await walk(path)); else files.push(path) } return files }
 
 await rm(tree, { recursive: true, force: true })
 await mkdir(tree, { recursive: true })
@@ -27,13 +28,13 @@ const reports = {
   layout: await readJson('v4.9.0-layout-browser.json', { status: 'not-run', checks: [] }),
   windows: await readJson('v4.9.0-windows-smoke.json', { status: 'not-run' })
 }
-const manualChecks = reports.audit.checks?.filter(item => String(item.id).startsWith('MANUAL-')) ?? []
-reports.manual.status = manualChecks.length >= 4 && manualChecks.every(item => item.status === 'passed') ? 'passed' : 'not-run-or-failed'
+const manualChecks = reports.audit.checks?.filter(/* 调用 String(item.id).startsWith('MANUAL-') 并返回调用结果。 */ item => String(item.id).startsWith('MANUAL-')) ?? []
+reports.manual.status = manualChecks.length >= 4 && manualChecks.every(/* 比较 item.status 与 'passed'，返回严格相等的判断结果。 */ item => item.status === 'passed') ? 'passed' : 'not-run-or-failed'
 // The pipeline writes its own final record after the evidence stage. Include a
 // previous completed record when available, but do not make the in-flight run
 // circularly depend on a report it cannot write until it exits.
-const localRequired = Object.entries(reports).filter(([name]) => name !== 'pipelineRun')
-const localFailures = localRequired.filter(([, report]) => report.status !== 'passed')
+const localRequired = Object.entries(reports).filter(/* 比较 name 与 'pipelineRun'，返回严格不等的判断结果。 */ ([name]) => name !== 'pipelineRun')
+const localFailures = localRequired.filter(/* 比较 report.status 与 'passed'，返回严格不等的判断结果。 */ ([, report]) => report.status !== 'passed')
 const expectedArtifacts = [
   'EDIT_LEDGER.md', 'LICENSE.md', 'Nova_A-v4.9.0-reference-projects.zip', 'Nova_A-v4.9.0-release-evidence.zip',
   'Nova_A-v4.9.0-source.zip', 'Nova_A-v4.9.0-web.zip', 'Nova_A-v4.9.0-windows-x64.msi',
@@ -57,14 +58,14 @@ await writeJson(join(tree, 'platform', 'support-matrix.json'), {
 await writeJson(join(tree, 'build', 'reproducibility.json'), {
   format: 'nova-v4.9-reproducibility', engineVersion: '4.9.0', generatedAt,
   model: 'Canonical input manifests and unsigned payload files are sorted and compared by SHA-256; timestamps, signatures, installer metadata and evidence archives are excluded.',
-  localDeterministicComparison: reports.runtime.checks?.find(item => item.id === 'BLD-REPRODUCIBILITY')?.status ?? 'not-run',
+  localDeterministicComparison: reports.runtime.checks?.find(/* 比较 item.id 与 'BLD-REPRODUCIBILITY'，返回严格相等的判断结果。 */ item => item.id === 'BLD-REPRODUCIBILITY')?.status ?? 'not-run',
   independentMachineA: { status: 'pending', required: true }, independentMachineB: { status: 'pending', required: true },
   finalStatus: 'pending-independent-machine-evidence', claim: 'No two-machine reproducibility claim is made by this local run.'
 })
 await writeJson(join(tree, 'build', 'clean-machine-matrix.json'), {
   format: 'nova-v4.9-clean-machine-matrix', engineVersion: '4.9.0', generatedAt,
   localWindowsPortable: reports.windows.status,
-  jobs: ['MSI install + launch', 'NSIS install + launch', 'portable launch', '4.8 upgrade to 4.9', 'repair', 'uninstall and residue review', 'hosted web launch'].map(id => ({ id, status: 'pending-external', evidence: '' })),
+  jobs: ['MSI install + launch', 'NSIS install + launch', 'portable launch', '4.8 upgrade to 4.9', 'repair', 'uninstall and residue review', 'hosted web launch'].map(/** 生成带空证据引用的待外部资格条目。 */ id => ({ id, status: 'pending-external', evidence: '' })),
   status: 'pending-external', reason: 'This job must run in disposable clean Windows/browser environments; local startup is not relabeled as clean-machine evidence.'
 })
 await writeJson(join(tree, 'build', 'release-pipeline-dry-run.json'), {
@@ -81,27 +82,27 @@ await writeJson(join(tree, 'packages', 'security-matrix.json'), {
     ['permission/provenance/license denial', 'PKG-UNTRUSTED-CLOSED'], ['offline cache verification and quarantine', 'PKG-CACHE'],
     ['permission escalation and rollback', 'PKG-PERMISSION-ROLLBACK'], ['dependency cycle rejection', 'PKG-CONFLICT-CYCLE'],
     ['plugin safe mode', 'PKG-SAFE-MODE'], ['malicious archive path rejection', 'PKG-MALICIOUS-ARCHIVE']
-  ].map(([name, id]) => ({ name, status: reports.runtime.checks?.find(item => item.id === id)?.status ?? 'not-run', evidence: `release-audits/v4.9.0-verification.json#${id}` })),
+  ].map(/** 从4.9实际运行报告提取用例状态，缺失时标为未运行。 */ ([name, id]) => ({ name, status: reports.runtime.checks?.find(/* 比较 item.id 与 id，返回严格相等的判断结果。 */ item => item.id === id)?.status ?? 'not-run', evidence: `release-audits/v4.9.0-verification.json#${id}` })),
   additionalImplemented: ['dependency conflict/cycle rejection', 'locked dependency hashes', 'quarantine', 'safe mode', 'rollback', 'offline mirror', 'native entry-point denial'],
   vulnerabilityDatabaseScan: reports.dependencyAudit.status, status: reports.runtime.status === 'passed' && reports.dependencyAudit.status === 'passed' ? 'passed-local-and-online-advisory-scan' : 'failed-or-not-run'
 })
 
 await writeJson(join(tree, 'source-control', 'fixtures.json'), {
   format: 'nova-v4.9-source-control-fixtures', engineVersion: '4.9.0', generatedAt,
-  local: { optionalWorkflow: 'passed-static-and-runtime', semanticKeyOrderComparison: reports.runtime.checks?.find(item => item.id === 'HLT-LOCAL-COLLAB')?.status ?? 'not-run', gitignore: 'generated', codeowners: 'generated', externalChanges: 'covered-by-regression-catalog', advisoryBinaryLock: 'covered' },
-  external: ['branch switch with real repository host', 'three-way merge conflict tool', 'host-enforced binary locking'].map(name => ({ name, status: 'pending-fixture-host' })),
+  local: { optionalWorkflow: 'passed-static-and-runtime', semanticKeyOrderComparison: reports.runtime.checks?.find(/* 比较 item.id 与 'HLT-LOCAL-COLLAB'，返回严格相等的判断结果。 */ item => item.id === 'HLT-LOCAL-COLLAB')?.status ?? 'not-run', gitignore: 'generated', codeowners: 'generated', externalChanges: 'covered-by-regression-catalog', advisoryBinaryLock: 'covered' },
+  external: ['branch switch with real repository host', 'three-way merge conflict tool', 'host-enforced binary locking'].map(/** 生成等待匹配夹具宿主的状态条目。 */ name => ({ name, status: 'pending-fixture-host' })),
   cloudRequired: false, hiddenNetworkOperations: false
 })
 
-const manualFiles = await Promise.all(['manual/index.html','manual/MANUAL.en.md','manual/MANUAL.de.md','manual/MANUAL.zh-CN.md'].map(async path => ({ path, ...await exists(join(root, path)) })))
-const docFiles = await Promise.all(['docs/FIRST_GAME_4_9.md','docs/BUILD_EXPORT_4_9.md','docs/PACKAGE_PLUGIN_SDK_4_9.md','docs/SOURCE_CONTROL_4_9.md','docs/MIGRATION_4_9.md','docs/RELEASE_ENGINEERING_4_9.md','docs/TROUBLESHOOTING_4_0.md','docs/ACCESSIBILITY_GUIDE_4_0.md','docs/API_REFERENCE_4_0.md'].map(async path => ({ path, ...await exists(join(root, path)) })))
+const manualFiles = await Promise.all(['manual/index.html','manual/MANUAL.en.md','manual/MANUAL.de.md','manual/MANUAL.zh-CN.md'].map(/** 记录仓库文件路径及其存在和长度信息。 */ async path => ({ path, ...await exists(join(root, path)) })))
+const docFiles = await Promise.all(['docs/FIRST_GAME_4_9.md','docs/BUILD_EXPORT_4_9.md','docs/PACKAGE_PLUGIN_SDK_4_9.md','docs/SOURCE_CONTROL_4_9.md','docs/MIGRATION_4_9.md','docs/RELEASE_ENGINEERING_4_9.md','docs/TROUBLESHOOTING_4_0.md','docs/ACCESSIBILITY_GUIDE_4_0.md','docs/API_REFERENCE_4_0.md'].map(/** 记录仓库文件路径及其存在和长度信息。 */ async path => ({ path, ...await exists(join(root, path)) })))
 await writeJson(join(tree, 'documentation', 'validation.json'), {
   format: 'nova-v4.9-documentation-validation', engineVersion: '4.9.0', generatedAt, audit: reports.manual.status,
   manualFiles, guides: docFiles, contextHelp: ['Inspector', 'Problems', 'Project Health', 'Build warnings', 'Package errors'],
   referenceProjectCi: reports.referenceCi.status, referenceProjects: reports.referenceCi.projectCount ?? 0,
   tier1ReferenceExports: (reports.referenceCi.projectCount ?? 0) * (reports.referenceCi.targets?.length ?? 0),
   codeSamples: 'validated by static audit and clean Windows/Web exports recorded in the reference CI report',
-  status: reports.manual.status === 'passed' && reports.referenceCi.status === 'passed' && [...manualFiles, ...docFiles].every(item => item.exists && item.bytes > 500) ? 'passed-local' : 'failed'
+  status: reports.manual.status === 'passed' && reports.referenceCi.status === 'passed' && [...manualFiles, ...docFiles].every(/* 先计算 item.exists；仅当其为真值时求右侧 item.bytes > 500，返回短路求值结果。 */ item => item.exists && item.bytes > 500) ? 'passed-local' : 'failed'
 })
 
 await writeJson(join(tree, 'migration', 'matrix.json'), {

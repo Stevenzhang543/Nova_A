@@ -1,3 +1,4 @@
+/** 版本26.01：汇集发布报告与产物文件，生成带来源记录的发布证据。 */
 import { createHash } from 'node:crypto'
 import { execFileSync } from 'node:child_process'
 import { arch, platform, versions } from 'node:process'
@@ -11,9 +12,9 @@ const root = dirname(dirname(fileURLToPath(import.meta.url)))
 const audits = join(root, 'release-audits')
 const evidence = join(audits, `evidence-v${release}`)
 const generatedAt = new Date().toISOString()
-const sha256 = value => createHash('sha256').update(value).digest('hex')
-const readJson = async name => JSON.parse(await readFile(join(audits, name), 'utf8'))
-const writeJson = (path, value) => writeFile(path, `${JSON.stringify(value, null, 2)}\n`)
+const sha256 = /* 调用 createHash('sha256').update(value).digest('hex') 并返回调用结果。 */ value => createHash('sha256').update(value).digest('hex')
+const readJson = /* 调用 JSON.parse(await readFile(join(audits, name), 'utf8')) 并返回调用结果。 */ async name => JSON.parse(await readFile(join(audits, name), 'utf8'))
+const writeJson = /* 调用 writeFile(path, `${JSON.stringify(value, null, 2)}\n`) 并返回调用结果。 */ (path, value) => writeFile(path, `${JSON.stringify(value, null, 2)}\n`)
 
 await rm(evidence, { recursive: true, force: true })
 for (const folder of ['runtime', 'layout', 'build', 'manual', 'documentation', 'performance', 'external']) {
@@ -58,7 +59,7 @@ const artifactInputs = [
   ['windows-nsis', `src-tauri/target/release/bundle/nsis/Nova_A_${machineVersion}_x64-setup.exe`],
   ['windows-msi', `src-tauri/target/release/bundle/msi/Nova_A_${machineVersion}_x64_en-US.msi`]
 ]
-const artifacts = await Promise.all(artifactInputs.map(async ([name, path]) => {
+const artifacts = await Promise.all(artifactInputs.map(/** 读取产物长度与散列，失败时记录缺失状态。 */ async ([name, path]) => {
   try {
     const bytes = await readFile(join(root, path))
     return { name, path, bytes: bytes.length, sha256: sha256(bytes), status: 'passed' }
@@ -66,7 +67,7 @@ const artifacts = await Promise.all(artifactInputs.map(async ([name, path]) => {
     return { name, path, status: 'missing' }
   }
 }))
-const buildsPassed = artifacts.every(item => item.status === 'passed')
+const buildsPassed = artifacts.every(/* 比较 item.status 与 'passed'，返回严格相等的判断结果。 */ item => item.status === 'passed')
 await writeJson(join(evidence, 'build/local-builds.json'), {
   format: 'nova-local-build-evidence', version: 1, release, engineVersion: machineVersion,
   generatedAt, artifacts, status: buildsPassed ? 'passed' : 'incomplete'
@@ -84,7 +85,7 @@ const externalGates = [
 ]
 await writeJson(join(evidence, 'external/gates.json'), {
   format: 'nova-external-certification-gates', version: 1, release, generatedAt,
-  gates: externalGates.map(name => ({ name, status: 'pending-external', claimed: false }))
+  gates: externalGates.map(/** 为指定外部资格生成待外部验证且不声称通过的条目。 */ name => ({ name, status: 'pending-external', claimed: false }))
 })
 
 const commit = safeExec('git', ['rev-parse', 'HEAD'])
@@ -93,11 +94,11 @@ const environment = {
   platform, architecture: arch, node: versions.node,
   rust: safeExec('rustc', ['--version']), cargo: safeExec('cargo', ['--version'])
 }
-const passed = report => report.status === 'passed'
+const passed = /* 比较 report.status 与 'passed'，返回严格相等的判断结果。 */ report => report.status === 'passed'
 const localQualificationComplete = Object.values(reports).every(passed) && buildsPassed
 const entries = await Promise.all((await filesUnder(evidence)).sort()
-  .filter(path => !path.endsWith('evidence-manifest.json'))
-  .map(async path => {
+  .filter(/* 返回 path.endsWith('evidence-manifest.json') 的逻辑取反结果。 */ path => !path.endsWith('evidence-manifest.json'))
+  .map(/** 记录证据相对路径、字节数、散列及源码和工具来源。 */ async path => {
     const contents = await readFile(path)
     return {
       path: relative(evidence, path).replaceAll('\\', '/'), sha256: sha256(contents), bytes: contents.length,
@@ -112,11 +113,11 @@ await writeJson(join(evidence, 'evidence-manifest.json'), {
 if (!localQualificationComplete) throw new Error('The Nova_A 26.01 local evidence tree is incomplete; release packaging is blocked.')
 console.log(`Nova_A ${release} evidence generated with ${entries.length} hashed entries; external certification remains pending.`)
 
-function safeExec(command, args) {
+/** 隐藏窗口执行命令并返回输出，失败标记为不可用。 */ function safeExec(command, args) {
   try { return execFileSync(command, args, { cwd: root, encoding: 'utf8', windowsHide: true }).trim() }
   catch { return 'unavailable' }
 }
-async function filesUnder(directory) {
+/** 递归收集目录中的文件路径。 */ async function filesUnder(directory) {
   const files = []
   for (const entry of await readdir(directory, { withFileTypes: true })) {
     const path = join(directory, entry.name)

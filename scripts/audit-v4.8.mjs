@@ -1,19 +1,20 @@
+/* 审计 4.8 的渲染路径、材质、粒子、音频和性能预算工作流。 */
 import { access, mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)))
-const read = path => readFile(join(root, path), 'utf8')
+const read = /* 调用 readFile(join(root, path), 'utf8') 并返回调用结果。 */ path => readFile(join(root, path), 'utf8')
 const checks = []
-const check = (id, passed, detail) => checks.push({ id, status: passed ? 'passed' : 'failed', detail })
+const check = /* 调用 checks.push({ id, status: passed ? 'passed' : 'failed', detail }) 并返回调用结果。 */ (id, passed, detail) => checks.push({ id, status: passed ? 'passed' : 'failed', detail })
 const paths = [
   'package.json','src-tauri/tauri.conf.json','src/renderer/capabilities.ts','src/renderer/renderSettings.ts','src/renderer/WebGL2Renderer.ts','src/renderer/materials.ts',
   'src/runtime/particles.ts','src/runtime/audio.ts','src/runtime/profiler.ts','src/runtime/performanceTools.ts','src/runtime/productionValidation.ts',
   'src/components/RenderingPanel.vue','src/components/PresentationPanel.vue','src/components/ProfilerPanel.vue','src/components/ProjectHealthPanel.vue','src/components/BuildSettingsPanel.vue','src/i18n.ts'
 ]
-const sources = Object.fromEntries(await Promise.all(paths.map(async path => [path, await read(path)])))
+const sources = Object.fromEntries(await Promise.all(paths.map(/* 返回按声明顺序构造的数组 [path, await read(path)]。 */ async path => [path, await read(path)])))
 const all = Object.values(sources).join('\n'), pkg = JSON.parse(sources['package.json']), tauri = JSON.parse(sources['src-tauri/tauri.conf.json'])
-const contains = values => values.every(value => all.includes(value))
+const contains = /* 调用 values.every(value => all.includes(value)) 并返回调用结果。 */ values => values.every(/* 调用 all.includes(value) 并返回调用结果。 */ value => all.includes(value))
 
 check('V480-VERSION', pkg.version === '4.8.0' && tauri.version === '4.8.0', 'Web and native version authorities report 4.8.0.')
 check('REN480-PATHS', contains(['RendererPath','Native','Compatibility','Diagnostic fallback','requestedPath','fallbackReason']), 'Renderer paths and explicit fallback reason are modeled.')
@@ -27,7 +28,7 @@ check('AUD480-DEVICE', contains(['enumerateDevices','setSinkId','devicechange','
 check('PRF480-CAPTURE', contains(['nova-performance-capture','markers','counters','annotations','comparePerformanceCaptures','performanceCaptureCiReport','remotePeer','estimatedOverheadPercent']), 'Profiler capture, comparison, annotations, remote field and CI export are connected.')
 check('PRF480-BUDGETS', contains(['frameBudgetMs','gpuBudgetMs','drawCallBudget','textureBudgetMb','particleBudgetMs','profilerOverheadBudgetPercent']), 'Project-owned performance budgets cover frame, GPU, renderer, particles and profiler overhead.')
 check('INT480-HEALTH-BUILD', contains(['validateProductionRuntime','SHD-EXPLICIT-FALLBACK','AUD-ROUTE-MISSING','productionRuntimeIssues','productionBuildIssues']), 'Project Health and Build Settings consume renderer/audio production diagnostics.')
-check('I18N480', ['en','de','zh'].every(language => sources['src/i18n.ts'].includes("releaseLabel:'Nova_A v4.8.0'")), 'The v4.8 UI vocabulary is supplied in English, German and Chinese.')
+check('I18N480', ['en','de','zh'].every(/* 调用 sources['src/i18n.ts'].includes("releaseLabel:'Nova_A v4.8.0'") 并返回调用结果。 */ language => sources['src/i18n.ts'].includes("releaseLabel:'Nova_A v4.8.0'")), 'The v4.8 UI vocabulary is supplied in English, German and Chinese.')
 
 for (const name of ['RENDERER_CAPABILITY_PATHS.md','MATERIAL_SHADER_WORKFLOW.md','PARTICLE_SYSTEMS.md','AUDIO_PRODUCTION.md','PERFORMANCE_CAPTURES.md']) {
   try { await access(join(root, 'docs', name)); check(`DOC480-${name}`, true, 'Present.') } catch { check(`DOC480-${name}`, false, 'Missing.') }
@@ -36,7 +37,7 @@ for (const slug of ['rendering-v48-lighting-materials','rendering-v48-shader-pla
   try { await access(join(root, 'reference-projects', 'projects', slug, name)); check(`REF480-${slug}-${name}`, true, 'Present.') } catch { check(`REF480-${slug}-${name}`, false, 'Missing.') }
 }
 
-const failed = checks.filter(item => item.status === 'failed')
+const failed = checks.filter(/* 比较 item.status 与 'failed'，返回严格相等的判断结果。 */ item => item.status === 'failed')
 const report = { format: 'nova-v4.8-renderer-audio-audit', version: 1, engineVersion: '4.8.0', generatedAt: new Date().toISOString(), catalog: ['REN','AUD','PRF'], checks, severity0Open: 0, severity1Open: failed.length, status: failed.length ? 'failed' : 'passed' }
 await mkdir(join(root, 'release-audits'), { recursive: true })
 await writeFile(join(root, 'release-audits', 'v4.8.0-renderer-audio-audit.json'), `${JSON.stringify(report, null, 2)}\n`)

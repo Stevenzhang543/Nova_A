@@ -1,3 +1,4 @@
+/** 版本6.0.4：生成参考项目与对应资源，供功能演示和版本验证使用。 */
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'

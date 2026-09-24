@@ -1,3 +1,4 @@
+/** 功能回归脚本：执行 verify-v26.16-interface-pixels.mjs 对应场景，保留断言和证据输出。 */
 import { resolveMilestoneAuditContext, runMilestoneBrowserAudit } from './lib/milestoneAuditContext.mjs'
 import assert from 'node:assert/strict'
 import { mkdir, readFile, writeFile, rm } from 'node:fs/promises'
@@ -17,8 +18,8 @@ try{
  context.fillStyle='#ffffff';context.font='24px "Noto Sans SC Variable", sans-serif';context.textBaseline='top';const value='Unicode 中文 é 👩‍💻 wrapping preserves glyph shape',layout=layoutUiText(value,{width:290,height:130,lineHeight:32,wrap:'Word',overflow:'Ellipsis',measure:value=>context.measureText(value).width});layout.lines.forEach((line,index)=>context.fillText(line,250,20+32*index));check('Actual canvas measures and wraps Unicode without squeeze',layout.lines.length>1&&layout.lines.every(line=>context.measureText(line).width<=291),layout);
  check('Cache releases owned pixels',(()=>{cache.clear();return cache.inspect().bytes===0})(),cache.inspect());document.getElementById('result').textContent=JSON.stringify({status:'passed',scope:'Actual browser Canvas2D programmer fixture; no editor or physical-device claim',checks});}catch(error){document.getElementById('result').textContent=JSON.stringify({status:'failed',checks,error:String(error)})}
  </script></body></html>`)
- await runMilestoneBrowserAudit(auditContext,{name:'interface-pixels'},async audit=>{
+ await runMilestoneBrowserAudit(auditContext,{name:'interface-pixels'},/** 结构说明（自动提取）：runMilestoneBrowserAudit 回调；输入 audit；直接调用 audit.evaluate、audit.client.send、audit.until、assert.equal、JSON.stringify 等；包含循环处理；等待异步结果。 */ async audit=>{
   const origin=await audit.evaluate('location.origin');await audit.client.send('Page.navigate',{url:origin+'/interface-programmer-probe/index.html'});await audit.until("document.querySelector('#result')?.textContent.startsWith('{')")
-  const result=await audit.evaluate("JSON.parse(document.querySelector('#result').textContent)");assert.equal(result.status,'passed',JSON.stringify(result));for(const entry of result.checks)await audit.check(entry.name,async()=>assert.equal(entry.status,'passed'));audit.observations.push(result);await audit.capture('real-canvas-pixels')
+  const result=await audit.evaluate("JSON.parse(document.querySelector('#result').textContent)");assert.equal(result.status,'passed',JSON.stringify(result));for(const entry of result.checks)await audit.check(entry.name,/* 调用 assert.equal(entry.status,'passed') 并返回调用结果。 */ async()=>assert.equal(entry.status,'passed'));audit.observations.push(result);await audit.capture('real-canvas-pixels')
  })
 }finally{assert.ok(probe.startsWith(resolve(root,'dist')+'\\')||probe.startsWith(resolve(root,'dist')+'/'));await rm(probe,{recursive:true,force:true})}

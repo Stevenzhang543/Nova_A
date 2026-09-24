@@ -1,3 +1,4 @@
+/** 组件登记表：描述组件类别与能力，并按组件种类查询定义。 */
 import type { ComponentKind } from './components'
 
 export const STABLE_COMPONENT_API_VERSION = '2.0'
@@ -70,8 +71,8 @@ export const STABLE_COMPONENTS: readonly ComponentDescriptor[] = [
   { kind: 'ObjectPool2D', category: 'Gameplay', unique: true, summary: 'Bounded prefab pool with spawn and despawn lifecycle events.' }
 ] as const
 
-export const STABLE_COMPONENT_KINDS = STABLE_COMPONENTS.map(component => component.kind) as readonly ComponentKind[]
+export const STABLE_COMPONENT_KINDS = STABLE_COMPONENTS.map(/* 返回 component.kind 的当前值。 */ component => component.kind) as readonly ComponentKind[]
 
-export function componentDescriptor(kind: ComponentKind): ComponentDescriptor | undefined {
-  return STABLE_COMPONENTS.find(component => component.kind === kind)
+/** 按组件种类返回稳定登记描述；未登记的种类保持 undefined。 */ export function componentDescriptor(kind: ComponentKind): ComponentDescriptor | undefined {
+  return STABLE_COMPONENTS.find(/* 比较 component.kind 与 kind，返回严格相等的判断结果。 */ component => component.kind === kind)
 }

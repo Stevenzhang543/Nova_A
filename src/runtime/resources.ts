@@ -1,3 +1,4 @@
+/** 运行资源解析：从项目资源记录加载可使用的数据，管理引用及缓存。 */
 import { assetReference, assetState, createTextAsset, updateTextAssetTransactional } from '../assets/AssetDatabase'
 import type { AssetRecord } from '../assets/types'
 import { assetSourceText } from '../assets/assetReferences'
@@ -19,45 +20,45 @@ export interface ResolvedResource extends NovaResourceDocument { chain: string[]
 export interface ResourceIssue { severity: 'error' | 'warning'; code: string; assetUuid: string; message: string }
 
 const kinds: ResourceKind[] = ['Material', 'AnimationLibrary', 'InputMap', 'PhysicsMaterial', 'Theme', 'DataTable']
-function object(value: unknown): Record<string, unknown> { return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {} }
-function finite(value: unknown, fallback: number, minimum: number, maximum: number): number { const number = Number(value); return Math.min(maximum, Math.max(minimum, Number.isFinite(number) ? number : fallback)) }
-function id(value: unknown, fallback: string): string { const result = typeof value === 'string' ? value.trim().replace(/[^a-zA-Z0-9_.-]/g, '_').slice(0, 120) : ''; return result || fallback }
-function reference(value: unknown): string | null { return typeof value === 'string' && /^(?:asset:\/\/)?[0-9a-f-]{8,}$/i.test(value) ? value.slice(0, 160) : null }
-function references(value: unknown, maximum = 4_096): string[] { return [...new Set((Array.isArray(value) ? value : []).flatMap(item => { const result = reference(item); return result ? [result] : [] }))].sort().slice(0, maximum) }
-function safeJson(value: unknown, depth = 0): unknown {
+/* 根据 value && typeof value === 'object' && !Array.isArray(value) 的真假，分别返回 value as Record<string, unknown> 或 {}。 */ function object(value: unknown): Record<string, unknown> { return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {} }
+/** 结构说明（自动提取）：finite；输入 value、fallback、minimum、maximum；直接调用 Number、Math.min、Math.max、Number.isFinite。 */ function finite(value: unknown, fallback: number, minimum: number, maximum: number): number { const number = Number(value); return Math.min(maximum, Math.max(minimum, Number.isFinite(number) ? number : fallback)) }
+/** 结构说明（自动提取）：id；输入 value、fallback；直接调用 slice、replace、value.trim。 */ function id(value: unknown, fallback: string): string { const result = typeof value === 'string' ? value.trim().replace(/[^a-zA-Z0-9_.-]/g, '_').slice(0, 120) : ''; return result || fallback }
+/* 根据 typeof value === 'string' && /^(?:asset:\/\/)?[0-9a-f-]{8,}$/i.test(value) 的真假，分别返回 value.slice(0, 160) 或 null。 */ function reference(value: unknown): string | null { return typeof value === 'string' && /^(?:asset:\/\/)?[0-9a-f-]{8,}$/i.test(value) ? value.slice(0, 160) : null }
+/** 结构说明（自动提取）：references；输入 value、maximum；直接调用 slice、sort、Set、flatMap、Array.isArray。 */ function references(value: unknown, maximum = 4_096): string[] { return [...new Set((Array.isArray(value) ? value : []).flatMap(/** 结构说明（自动提取）：flatMap 回调；输入 item；直接调用 reference。 */ item => { const result = reference(item); return result ? [result] : [] }))].sort().slice(0, maximum) }
+/** 结构说明（自动提取）：safeJson；输入 value、depth；直接调用 includes、value.slice、Number.isFinite、Array.isArray、map 等。 */ function safeJson(value: unknown, depth = 0): unknown {
   if (depth > 12) return null
   if (value === null || ['string', 'boolean'].includes(typeof value)) return typeof value === 'string' ? value.slice(0, 100_000) : value
   if (typeof value === 'number') return Number.isFinite(value) ? value : 0
-  if (Array.isArray(value)) return value.slice(0, 10_000).map(item => safeJson(item, depth + 1))
-  if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value as Record<string, unknown>).sort(([a], [b]) => a.localeCompare(b)).slice(0, 2_000).map(([key, item]) => [key.slice(0, 160), safeJson(item, depth + 1)]))
+  if (Array.isArray(value)) return value.slice(0, 10_000).map(/* 调用 safeJson(item, depth + 1) 并返回调用结果。 */ item => safeJson(item, depth + 1))
+  if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value as Record<string, unknown>).sort(/* 调用 a.localeCompare(b) 并返回调用结果。 */ ([a], [b]) => a.localeCompare(b)).slice(0, 2_000).map(/* 返回按声明顺序构造的数组 [key.slice(0, 160), safeJson(item, depth + 1)]。 */ ([key, item]) => [key.slice(0, 160), safeJson(item, depth + 1)]))
   return null
 }
-function normalizeData(kind: ResourceKind, source: unknown): Record<string, unknown> {
+/** 结构说明（自动提取）：normalizeData；输入 kind、source；直接调用 object、finite、references、reference、flatMap 等。 */ function normalizeData(kind: ResourceKind, source: unknown): Record<string, unknown> {
   const data = object(source)
   if (kind === 'PhysicsMaterial') return {
     density: finite(data.density, 1, .000001, 1e9), friction: finite(data.friction, .5, 0, 1), restitution: finite(data.restitution, .2, 0, 1),
     linearDamping: finite(data.linearDamping, .01, 0, 1e6), angularDamping: finite(data.angularDamping, .01, 0, 1e6), surfaceVelocity: finite(data.surfaceVelocity, 0, -1e9, 1e9)
   }
   if (kind === 'AnimationLibrary') return { clips: references(data.clips), controllers: references(data.controllers), masks: references(data.masks), rigs: references(data.rigs), retargetProfile: reference(data.retargetProfile) }
-  if (kind === 'InputMap') return { actions: (Array.isArray(data.actions) ? data.actions : []).slice(0, 1_024).flatMap((raw, index) => { const action = object(raw), name = id(action.name, `action_${index + 1}`); return [{ name, deadZone: finite(action.deadZone, .15, 0, 1), consume: action.consume !== false, priority: Math.round(finite(action.priority, 0, -1_000_000, 1_000_000)), bindings: (Array.isArray(action.bindings) ? action.bindings : []).slice(0, 64).map(binding => safeJson(binding)) }] }) }
+  if (kind === 'InputMap') return { actions: (Array.isArray(data.actions) ? data.actions : []).slice(0, 1_024).flatMap(/** 结构说明（自动提取）：flatMap 回调；输入 raw、index；直接调用 object、id、finite、Math.round、map 等。 */ (raw, index) => { const action = object(raw), name = id(action.name, `action_${index + 1}`); return [{ name, deadZone: finite(action.deadZone, .15, 0, 1), consume: action.consume !== false, priority: Math.round(finite(action.priority, 0, -1_000_000, 1_000_000)), bindings: (Array.isArray(action.bindings) ? action.bindings : []).slice(0, 64).map(/* 调用 safeJson(binding) 并返回调用结果。 */ binding => safeJson(binding)) }] }) }
   if (kind === 'Material') return { materialAsset: reference(data.materialAsset), parameters: object(safeJson(data.parameters)) }
   if (kind === 'Theme') return { themeAsset: reference(data.themeAsset), variant: id(data.variant, 'Default'), tokens: object(safeJson(data.tokens)) }
   return { tableAsset: reference(data.tableAsset), rowFilter: typeof data.rowFilter === 'string' ? data.rowFilter.slice(0, 2_000) : '', overrides: object(safeJson(data.overrides)) }
 }
-function normalizeOverrideData(kind: ResourceKind, source: unknown): Record<string, unknown> {
+/** 结构说明（自动提取）：normalizeOverrideData；输入 kind、source；直接调用 object、normalizeData、Object.fromEntries、map、sort 等。 */ function normalizeOverrideData(kind: ResourceKind, source: unknown): Record<string, unknown> {
   const data = object(source), complete = normalizeData(kind, data)
-  return Object.fromEntries(Object.keys(data).filter(key => Object.prototype.hasOwnProperty.call(complete,key)).sort().map(key => [key, complete[key]]))
+  return Object.fromEntries(Object.keys(data).filter(/* 调用 Object.prototype.hasOwnProperty.call(complete,key) 并返回调用结果。 */ key => Object.prototype.hasOwnProperty.call(complete,key)).sort().map(/* 返回按声明顺序构造的数组 [key, complete[key]]。 */ key => [key, complete[key]]))
 }
-function normalizeVariants(kind: ResourceKind, source: unknown): Record<string, Record<string, unknown>> {
-  return Object.fromEntries(Object.entries(object(source)).sort(([a], [b]) => a.localeCompare(b)).slice(0, 128).flatMap(([name, value]) => {
+/** 结构说明（自动提取）：normalizeVariants；输入 kind、source；直接调用 Object.fromEntries、flatMap、slice、sort、Object.entries 等。 */ function normalizeVariants(kind: ResourceKind, source: unknown): Record<string, Record<string, unknown>> {
+  return Object.fromEntries(Object.entries(object(source)).sort(/* 调用 a.localeCompare(b) 并返回调用结果。 */ ([a], [b]) => a.localeCompare(b)).slice(0, 128).flatMap(/** 结构说明（自动提取）：flatMap 回调；输入 [name, value]；直接调用 slice、id、normalizeOverrideData。 */ ([name, value]) => {
     const safeName = id(name, '').slice(0, 80)
     return safeName && safeName !== 'Default' ? [[safeName, normalizeOverrideData(kind, value)]] : []
   }))
 }
-export function defaultResource(kind: ResourceKind, name: string = kind): NovaResourceDocument {
+/** 结构说明（自动提取）：defaultResource；输入 kind、name；直接调用 normalizeResource、id。 */ export function defaultResource(kind: ResourceKind, name: string = kind): NovaResourceDocument {
   return normalizeResource({ format: 'nova-resource', version: 1, id: id(name, kind), name, kind, parent: null, data: {}, variants: {}, activeVariant: 'Default' })
 }
-export function normalizeResource(value: unknown): NovaResourceDocument {
+/** 结构说明（自动提取）：normalizeResource；输入 value；直接调用 object、kinds.includes、source.name.trim、slice、reference 等。 */ export function normalizeResource(value: unknown): NovaResourceDocument {
   const source = object(value), kind = kinds.includes(source.kind as ResourceKind) ? source.kind as ResourceKind : 'Material'
   const name = typeof source.name === 'string' && source.name.trim() ? source.name.trim().slice(0, 120) : kind
   const parent = reference(source.parent)
@@ -66,13 +67,13 @@ export function normalizeResource(value: unknown): NovaResourceDocument {
   const activeVariant = requestedVariant === 'Default' || Object.prototype.hasOwnProperty.call(variants,requestedVariant) || parent ? requestedVariant : 'Default'
   return { format: 'nova-resource', version: 1, id: id(source.id, name), name, kind, parent, data: parent ? normalizeOverrideData(kind, source.data) : normalizeData(kind, source.data), variants, activeVariant }
 }
-export function serializeResource(value: unknown): string { return `${JSON.stringify(normalizeResource(value), null, 2)}\n` }
-export function createResourceAsset(kind: ResourceKind, name: string = kind): AssetRecord { return createTextAsset(name, 'resource', serializeResource(defaultResource(kind, name)), `Assets/Resources/${kind === 'AnimationLibrary' ? 'Animation Libraries' : kind === 'InputMap' ? 'Input Maps' : kind === 'PhysicsMaterial' ? 'Physics Materials' : ''}`.replace(/\/$/, '')) }
-function resourceRecord(referenceValue:string|null|undefined,assets:readonly AssetRecord[]):AssetRecord|null{
+/** 按模板 `${JSON.stringify(normalizeResource(value), null, 2)}\n` 生成并返回字符串。 */ export function serializeResource(value: unknown): string { return `${JSON.stringify(normalizeResource(value), null, 2)}\n` }
+/** 结构说明（自动提取）：createResourceAsset；输入 kind、name；直接调用 createTextAsset、serializeResource、defaultResource、replace。 */ export function createResourceAsset(kind: ResourceKind, name: string = kind): AssetRecord { return createTextAsset(name, 'resource', serializeResource(defaultResource(kind, name)), `Assets/Resources/${kind === 'AnimationLibrary' ? 'Animation Libraries' : kind === 'InputMap' ? 'Input Maps' : kind === 'PhysicsMaterial' ? 'Physics Materials' : ''}`.replace(/\/$/, '')) }
+/** 结构说明（自动提取）：resourceRecord；输入 referenceValue、assets；直接调用 toLowerCase、replace、assets.find。 */ function resourceRecord(referenceValue:string|null|undefined,assets:readonly AssetRecord[]):AssetRecord|null{
   const id=(referenceValue??'').replace(/^asset:\/\//,'').toLowerCase()
-  return assets.find(asset=>asset.uuid.toLowerCase()===id)??null
+  return assets.find(/* 比较 asset.uuid.toLowerCase() 与 id，返回严格相等的判断结果。 */ asset=>asset.uuid.toLowerCase()===id)??null
 }
-export function readResourceFromAssets(referenceValue:string|null|undefined,assets:readonly AssetRecord[]):NovaResourceDocument|null{
+/** 结构说明（自动提取）：readResourceFromAssets；输入 referenceValue、assets；直接调用 resourceRecord、assetSourceText、JSON.parse、kinds.includes、reference 等。 */ export function readResourceFromAssets(referenceValue:string|null|undefined,assets:readonly AssetRecord[]):NovaResourceDocument|null{
   const asset=resourceRecord(referenceValue,assets)
   if(!asset||asset.assetType!=='resource')return null
   try{const source=assetSourceText(asset);if(!source)return null;const parsed=JSON.parse(source)
@@ -80,28 +81,28 @@ export function readResourceFromAssets(referenceValue:string|null|undefined,asse
     return normalizeResource(parsed)
   }catch{return null}
 }
-export function readResource(referenceValue:string|null|undefined):NovaResourceDocument|null{return readResourceFromAssets(referenceValue,assetState.records)}
-export function saveResource(referenceValue:string,resource:NovaResourceDocument):boolean{
+/* 调用 readResourceFromAssets(referenceValue,assetState.records) 并返回调用结果。 */ export function readResource(referenceValue:string|null|undefined):NovaResourceDocument|null{return readResourceFromAssets(referenceValue,assetState.records)}
+/** 结构说明（自动提取）：saveResource；输入 referenceValue、resource；直接调用 resourceRecord、serializeResource、resolveResourceFromAssets、assetState.records.map、updateTextAssetTransactional。 */ export function saveResource(referenceValue:string,resource:NovaResourceDocument):boolean{
   const record=resourceRecord(referenceValue,assetState.records);if(!record||record.assetType!=='resource')return false
   const source=serializeResource(resource),candidate={...record,source}
-  if(!resolveResourceFromAssets(record.uuid,assetState.records.map(asset=>asset.uuid===record.uuid?candidate:asset)))return false
+  if(!resolveResourceFromAssets(record.uuid,assetState.records.map(/* 根据 asset.uuid===record.uuid 的真假，分别返回 candidate 或 asset。 */ asset=>asset.uuid===record.uuid?candidate:asset)))return false
   return updateTextAssetTransactional(record.uuid,source)
 }
 
-export function createResourceOverride(referenceValue:string,name='Resource Override'):AssetRecord{
+/** 结构说明（自动提取）：createResourceOverride；输入 referenceValue、name；直接调用 readResource、resolveResource、Error、defaultResource、referenceValue.startsWith 等；写入 document.parent、document.data；包含显式抛错路径。 */ export function createResourceOverride(referenceValue:string,name='Resource Override'):AssetRecord{
   const source=readResource(referenceValue)
   if(!source||!resolveResource(referenceValue))throw new Error('RESOURCE_SOURCE_MISSING: Choose a valid Resource inheritance chain before creating an override.')
   const document=defaultResource(source.kind,name);document.parent=referenceValue.startsWith('asset://')?referenceValue:assetReference(referenceValue);document.data={}
   return createTextAsset(name,'resource',serializeResource(document),'Assets/Resources')
 }
 
-function deepMerge(base: Record<string, unknown>, override: Record<string, unknown>): Record<string, unknown> {
+/** 结构说明（自动提取）：deepMerge；输入 base、override；直接调用 structuredClone、Object.entries、Object.prototype.hasOwnProperty.call、Object.defineProperty、Array.isArray 等；返回路径包含 output；包含循环处理。 */ function deepMerge(base: Record<string, unknown>, override: Record<string, unknown>): Record<string, unknown> {
   const output = structuredClone(base)
   for (const [key, value] of Object.entries(override)) { const previous=Object.prototype.hasOwnProperty.call(output,key)?output[key]:undefined; Object.defineProperty(output,key,{value:value&&typeof value==='object'&&!Array.isArray(value)&&previous&&typeof previous==='object'&&!Array.isArray(previous)?deepMerge(previous as Record<string,unknown>,value as Record<string,unknown>):structuredClone(value),enumerable:true,writable:true,configurable:true}) }
   return output
 }
-export function resolveResource(referenceValue:string|null|undefined,variantName?:string):ResolvedResource|null{return resolveResourceFromAssets(referenceValue,assetState.records,variantName)}
-export function resolveResourceFromAssets(referenceValue: string | null | undefined, assets:readonly AssetRecord[], variantName?: string): ResolvedResource | null {
+/* 调用 resolveResourceFromAssets(referenceValue,assetState.records,variantName) 并返回调用结果。 */ export function resolveResource(referenceValue:string|null|undefined,variantName?:string):ResolvedResource|null{return resolveResourceFromAssets(referenceValue,assetState.records,variantName)}
+/** 结构说明（自动提取）：resolveResourceFromAssets；输入 referenceValue、assets、variantName；直接调用 Set、resourceRecord、visited.has、visited.add、chain.push 等；写入 currentReference、resolved；包含循环处理。 */ export function resolveResourceFromAssets(referenceValue: string | null | undefined, assets:readonly AssetRecord[], variantName?: string): ResolvedResource | null {
   let currentReference = referenceValue ?? null, resolved: NovaResourceDocument | null = null
   const visited = new Set<string>(), chain: string[] = [], layers: NovaResourceDocument[] = []
   while (currentReference && layers.length < 64) {
@@ -123,8 +124,8 @@ export function resolveResourceFromAssets(referenceValue: string | null | undefi
   }
   return resolved ? { ...resolved, chain: [...chain].reverse(), overrides: localOverrides, variants: structuredClone(allVariants), activeVariant: selectedVariant } : null
 }
-export function resourceVariantNames(value: NovaResourceDocument | null | undefined, assets:readonly AssetRecord[]=assetState.records): string[] { const names=new Set(Object.keys(value?.variants??{})),seen=new Set<string>();let parent=value?.parent;while(parent&&seen.size<64){const record=resourceRecord(parent,assets);if(!record||seen.has(record.uuid))break;seen.add(record.uuid);const resource=readResourceFromAssets(record.uuid,assets);if(!resource||resource.kind!==value?.kind)break;Object.keys(resource.variants??{}).forEach(name=>names.add(name));parent=resource.parent}return ['Default', ...[...names].sort()] }
-export function setResourceVariantData(value: NovaResourceDocument, name: string, data: unknown): NovaResourceDocument {
+/** 结构说明（自动提取）：resourceVariantNames；输入 value、assets；直接调用 Set、Object.keys、resourceRecord、seen.has、seen.add 等；写入 parent；包含循环处理。 */ export function resourceVariantNames(value: NovaResourceDocument | null | undefined, assets:readonly AssetRecord[]=assetState.records): string[] { const names=new Set(Object.keys(value?.variants??{})),seen=new Set<string>();let parent=value?.parent;while(parent&&seen.size<64){const record=resourceRecord(parent,assets);if(!record||seen.has(record.uuid))break;seen.add(record.uuid);const resource=readResourceFromAssets(record.uuid,assets);if(!resource||resource.kind!==value?.kind)break;Object.keys(resource.variants??{}).forEach(/* 调用 names.add(name) 并返回调用结果。 */ name=>names.add(name));parent=resource.parent}return ['Default', ...[...names].sort()] }
+/** 结构说明（自动提取）：setResourceVariantData；输入 value、name、data；直接调用 slice、id、Error、normalizeResource、Object.prototype.hasOwnProperty.call 等；包含显式抛错路径。 */ export function setResourceVariantData(value: NovaResourceDocument, name: string, data: unknown): NovaResourceDocument {
   const safeName = id(name, '').slice(0,80)
   if (!safeName || safeName === 'Default') throw new Error('RESOURCE_VARIANT_NAME: Choose a unique named variant.')
   const normalized = normalizeResource(value)
@@ -132,9 +133,9 @@ export function setResourceVariantData(value: NovaResourceDocument, name: string
   const variants = { ...(normalized.variants ?? {}), [safeName]: normalizeOverrideData(normalized.kind, data) }
   return normalizeResource({ ...normalized, variants, activeVariant: safeName })
 }
-export function validateResourceProject(assets: AssetRecord[] = assetState.records): ResourceIssue[] {
+/** 结构说明（自动提取）：validateResourceProject；输入 assets；直接调用 sort、assets.filter、readResourceFromAssets、issues.push、resolveResourceFromAssets；返回路径包含 issues；包含循环处理。 */ export function validateResourceProject(assets: AssetRecord[] = assetState.records): ResourceIssue[] {
   const issues: ResourceIssue[] = []
-  for (const asset of assets.filter(candidate => candidate.assetType === 'resource').sort((a, b) => a.uuid.localeCompare(b.uuid))) {
+  for (const asset of assets.filter(/* 比较 candidate.assetType 与 'resource'，返回严格相等的判断结果。 */ candidate => candidate.assetType === 'resource').sort(/* 调用 a.uuid.localeCompare(b.uuid) 并返回调用结果。 */ (a, b) => a.uuid.localeCompare(b.uuid))) {
     const document = readResourceFromAssets(asset.uuid,assets)
     if (!document) { issues.push({ severity: 'error', code: 'RESOURCE_PARSE', assetUuid: asset.uuid, message: `${asset.path} is not a valid Resource asset.` }); continue }
     if (document.parent) {

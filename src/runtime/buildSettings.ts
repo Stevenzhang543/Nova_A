@@ -1,3 +1,4 @@
+/** 项目构建设置：规范构建目标及输出选项，维护可持久化配置与验证。 */
 import { reactive } from 'vue'
 import { deliveryLabel19 } from '../editor/deliveryLabels19'
 import { OFFICIAL_ANDROID_PACKAGE_ID, OFFICIAL_NETWORKING_PACKAGE_ID, packageEnabled, packageState } from './packages'
@@ -87,7 +88,7 @@ export interface BuildSettings {
 export type BuildIssueSeverity = 'error' | 'warning' | 'info'
 export interface BuildIssue { code: string; severity: BuildIssueSeverity; message: string; helpTarget: string }
 
-export function buildIssueHelpTarget(code: string): string {
+/** 结构说明（自动提取）：buildIssueHelpTarget；输入 code；直接调用 code.startsWith、includes。 */ export function buildIssueHelpTarget(code: string): string {
   if (code.startsWith('platform-') || ['android', 'android-package', 'host', 'architecture'].includes(code)) return 'platform-support'
   if (code.startsWith('telemetry') || code === 'privacy') return 'security-privacy'
   if (code === 'scene' || code === 'include-rules') return 'project-health'
@@ -124,7 +125,7 @@ export const BUILTIN_BUILD_PRESETS: readonly BuildPreset[] = Object.freeze([
   Object.freeze({ id: 'macos-ci', name: 'macOS matching-host CI', target: 'macos', architecture: 'x86_64', profile: 'release', runtimeMode: 'game', cacheMode: 'clean', compression: 'maximum', stripUnusedAssets: true, releaseChannel: 'beta', exportTemplate: 'macos-universal-experimental-v1' })
 ])
 
-function loadBuildHistory(): BuildHistoryEntry[] {
+/** 结构说明（自动提取）：loadBuildHistory；无显式参数；直接调用 JSON.parse、localStorage.getItem、Array.isArray、value.slice。 */ function loadBuildHistory(): BuildHistoryEntry[] {
   if (typeof localStorage === 'undefined') return []
   try { const value = JSON.parse(localStorage.getItem('nova_a.build_history.v1') ?? '[]'); return Array.isArray(value) ? value.slice(0, 50) : [] } catch { return [] }
 }
@@ -140,7 +141,7 @@ const DEFAULT_CAPABILITIES: ExportCapabilities = {
 }
 
 const BUILD_LOCAL_KEY = 'nova_a.build_local.v1'
-function localBuildSettings(): { outputDirectory: string; signingIdentity: string; notarizationProfile: string } {
+/** 结构说明（自动提取）：localBuildSettings；无显式参数；直接调用 JSON.parse、localStorage.getItem、text。 */ function localBuildSettings(): { outputDirectory: string; signingIdentity: string; notarizationProfile: string } {
   if (typeof localStorage === 'undefined') return { outputDirectory: '', signingIdentity: '', notarizationProfile: '' }
   try { const value = JSON.parse(localStorage.getItem(BUILD_LOCAL_KEY) ?? '{}') as Record<string, unknown>; return { outputDirectory: text(value.outputDirectory, 1_024), signingIdentity: text(value.signingIdentity, 240), notarizationProfile: text(value.notarizationProfile, 240) } } catch { return { outputDirectory: '', signingIdentity: '', notarizationProfile: '' } }
 }
@@ -180,25 +181,25 @@ export const buildProgress = reactive<BuildProgress>({
   phase: 'idle', message: '', percent: 0, outputPath: '', cacheHits: 0, changedFiles: 0
 })
 
-function safeName(value: unknown): string {
+/** 结构说明（自动提取）：safeName；输入 value；直接调用 slice、trim、replace、String。 */ function safeName(value: unknown): string {
   const normalized = String(value ?? '').replace(/[<>:"/\\|?*\x00-\x1f]/g, '').trim().slice(0, 80)
   return normalized || 'MyGame'
 }
 
-function text(value: unknown, maximum: number): string { return typeof value === 'string' ? value.trim().slice(0, maximum) : '' }
-function bool(value: unknown, fallback: boolean): boolean { return typeof value === 'boolean' ? value : fallback }
-function stringList(value: unknown, maximum = 64): string[] {
-  return Array.isArray(value) ? [...new Set(value.filter((item): item is string => typeof item === 'string').map(item => item.trim().slice(0, 120)).filter(Boolean))].slice(0, maximum) : []
+/* 根据 typeof value === 'string' 的真假，分别返回 value.trim().slice(0, maximum) 或 ''。 */ function text(value: unknown, maximum: number): string { return typeof value === 'string' ? value.trim().slice(0, maximum) : '' }
+/* 根据 typeof value === 'boolean' 的真假，分别返回 value 或 fallback。 */ function bool(value: unknown, fallback: boolean): boolean { return typeof value === 'boolean' ? value : fallback }
+/** 结构说明（自动提取）：stringList；输入 value、maximum；直接调用 Array.isArray、slice、Set、filter、map 等。 */ function stringList(value: unknown, maximum = 64): string[] {
+  return Array.isArray(value) ? [...new Set(value.filter(/* 比较 typeof item 与 'string'，返回严格相等的判断结果。 */ (item): item is string => typeof item === 'string').map(/* 调用 item.trim().slice(0, 120) 并返回调用结果。 */ item => item.trim().slice(0, 120)).filter(Boolean))].slice(0, maximum) : []
 }
-function slug(value: string): string { return value.toLowerCase().replace(/[^a-z0-9]+/g, '.').replace(/^\.+|\.+$/g, '') || 'game' }
+/* 先计算 value.toLowerCase().replace(/[^a-z0-9]+/g, '.').replace(/^\.+|\.+$/g, '')；仅当其为假值时求右侧 'game'，返回短路求值结果。 */ function slug(value: string): string { return value.toLowerCase().replace(/[^a-z0-9]+/g, '.').replace(/^\.+|\.+$/g, '') || 'game' }
 
-export function normalizeBuildSettings(source: unknown, availableSceneUuids: string[]): BuildSettings {
+/** 结构说明（自动提取）：normalizeBuildSettings；输入 source、availableSceneUuids；直接调用 Set、Array.isArray、item.sceneOrder.filter、ordered.includes、ordered.push 等；写入 metadata[…]；包含循环处理。 */ export function normalizeBuildSettings(source: unknown, availableSceneUuids: string[]): BuildSettings {
   const item = source && typeof source === 'object' ? source as Partial<BuildSettings> : {}
   const platform = item.platform && typeof item.platform === 'object' ? item.platform as Partial<BuildPlatformOptions> : {}
   const delivery = item.delivery && typeof item.delivery === 'object' ? item.delivery as Partial<BuildDeliveryOptions> : {}
   const available = new Set(availableSceneUuids)
   const ordered = Array.isArray(item.sceneOrder)
-    ? item.sceneOrder.filter((uuid): uuid is string => typeof uuid === 'string' && available.has(uuid))
+    ? item.sceneOrder.filter(/* 先计算 typeof uuid === 'string'；仅当其为真值时求右侧 available.has(uuid)，返回短路求值结果。 */ (uuid): uuid is string => typeof uuid === 'string' && available.has(uuid))
     : []
   for (const uuid of availableSceneUuids) if (!ordered.includes(uuid)) ordered.push(uuid)
   const startup = typeof item.startupSceneUuid === 'string' && available.has(item.startupSceneUuid) ? item.startupSceneUuid : ordered[0] ?? ''
@@ -250,27 +251,27 @@ export function normalizeBuildSettings(source: unknown, availableSceneUuids: str
   }
 }
 
-export function synchronizeBuildScenes(availableSceneUuids: string[]): void {
+/** 执行时调用 Object.assign(buildSettings, normalizeBuildSettings(buildSettings, availableSceneUuids))；不显式返回调用结果。 */ export function synchronizeBuildScenes(availableSceneUuids: string[]): void {
   Object.assign(buildSettings, normalizeBuildSettings(buildSettings, availableSceneUuids))
 }
 
-export function serializeBuildSettings(availableSceneUuids = buildSettings.sceneOrder): BuildSettings {
+/** 结构说明（自动提取）：serializeBuildSettings；输入 availableSceneUuids；直接调用 normalizeBuildSettings；写入 shared.outputDirectory、shared.platform.signingIdentity、shared.platform.notarizationProfile；返回路径包含 shared。 */ export function serializeBuildSettings(availableSceneUuids = buildSettings.sceneOrder): BuildSettings {
   const shared = normalizeBuildSettings(buildSettings, availableSceneUuids)
   shared.outputDirectory = ''; shared.platform.signingIdentity = ''; shared.platform.notarizationProfile = ''
   return shared
 }
 
-export function persistBuildLocalSettings(): void {
+/** 结构说明（自动提取）：persistBuildLocalSettings；无显式参数；直接调用 localStorage.setItem、JSON.stringify、buildSettings.outputDirectory.slice、buildSettings.platform.signingIdentity.slice、buildSettings.platform.notarizationProfile.slice。 */ export function persistBuildLocalSettings(): void {
   try { localStorage.setItem(BUILD_LOCAL_KEY, JSON.stringify({ outputDirectory: buildSettings.outputDirectory.slice(0, 1_024), signingIdentity: buildSettings.platform.signingIdentity.slice(0, 240), notarizationProfile: buildSettings.platform.notarizationProfile.slice(0, 240) })) } catch { /* User-local build preferences are best effort. */ }
 }
 
-export function setBuildProfile(profile: BuildProfile): void {
+/** 结构说明（自动提取）：setBuildProfile；输入 profile；写入 buildSettings.profile、buildSettings.developmentBuild。 */ export function setBuildProfile(profile: BuildProfile): void {
   buildSettings.profile = profile
   buildSettings.developmentBuild = profile === 'debug'
 }
 
-export function applyBuildPreset(id: string): boolean {
-  const preset = BUILTIN_BUILD_PRESETS.find(item => item.id === id)
+/** 结构说明（自动提取）：applyBuildPreset；输入 id；直接调用 BUILTIN_BUILD_PRESETS.find、defaultExportTemplateId、setBuildProfile；写入 buildSettings.presetName、buildSettings.target、buildSettings.architecture、buildSettings.runtimeMode 等。 */ export function applyBuildPreset(id: string): boolean {
+  const preset = BUILTIN_BUILD_PRESETS.find(/* 比较 item.id 与 id，返回严格相等的判断结果。 */ item => item.id === id)
   if (!preset) return false
   buildSettings.presetName = preset.id; buildSettings.target = preset.target; buildSettings.architecture = preset.architecture; buildSettings.runtimeMode = preset.runtimeMode
   buildSettings.delivery.cacheMode = preset.cacheMode; buildSettings.delivery.incremental = preset.cacheMode !== 'clean'
@@ -281,13 +282,13 @@ export function applyBuildPreset(id: string): boolean {
   setBuildProfile(preset.profile); return true
 }
 
-export function recordBuildHistory(entry: BuildHistoryEntry): void {
+/** 结构说明（自动提取）：recordBuildHistory；输入 entry；直接调用 buildHistory.unshift、entry.message.slice、entry.outputPath.slice、buildHistory.splice、localStorage.setItem 等。 */ export function recordBuildHistory(entry: BuildHistoryEntry): void {
   buildHistory.unshift({ ...entry, message: entry.message.slice(0, 500), outputPath: entry.outputPath.slice(0, 1_024) })
   if (buildHistory.length > 50) buildHistory.splice(50)
   try { localStorage.setItem('nova_a.build_history.v1', JSON.stringify(buildHistory)) } catch { /* Build history is user-local and best effort. */ }
 }
 
-export function validateBuildSettings(settings: BuildSettings, capabilities = exportCapabilities): BuildIssue[] {
+/** 结构说明（自动提取）：validateBuildSettings；输入 settings、capabilities；直接调用 platformSupport、issues.push、support.architectures.includes、deliveryLabel19、test 等；包含循环处理；包含显式抛错路径。 */ export function validateBuildSettings(settings: BuildSettings, capabilities = exportCapabilities): BuildIssue[] {
   const issues: Array<Omit<BuildIssue, 'helpTarget'>> = []
   const support = platformSupport(settings.target)
   if (support.tier === 'unsupported') issues.push({ code: 'platform-unsupported', severity: 'error', message: `${support.label} is Unsupported: ${support.reason}` })
@@ -303,7 +304,7 @@ export function validateBuildSettings(settings: BuildSettings, capabilities = ex
   if (settings.target === 'android' && !packageEnabled(OFFICIAL_ANDROID_PACKAGE_ID)) issues.push({ code: 'android-package', severity: 'error', message: 'Install and enable the optional Nova Android Export package.' })
   if (settings.target !== 'web' && settings.target !== 'android' && capabilities.host !== 'unknown' && settings.target !== capabilities.host) issues.push({ code: 'host', severity: 'error', message: `${settings.target} export requires a ${settings.target} host or matching CI runner.` })
   if (settings.target === 'android') {
-    const purposes = Object.fromEntries(settings.platform.permissions.map(permission => [permission, settings.platform.versionMetadata[`permissionPurpose.${permission}`] ?? '']))
+    const purposes = Object.fromEntries(settings.platform.permissions.map(/* 返回按声明顺序构造的数组 [permission, settings.platform.versionMetadata[`permissionPurpose.${permission}`] ?? '']。 */ permission => [permission, settings.platform.versionMetadata[`permissionPurpose.${permission}`] ?? '']))
     for (const issue of validateAndroidPermissions(settings.platform.permissions, purposes)) issues.push({ code: `android-${issue.code.toLocaleLowerCase()}`, severity: issue.severity, message: `${issue.permission}: ${issue.message}` })
     if (settings.platform.signingMode === 'manual' && !settings.platform.signingIdentity) issues.push({ code: 'android-signing', severity: 'error', message: 'Manual Android release signing requires an existing keystore path; passwords and alias are read only from the documented environment variables.' })
   }
@@ -333,20 +334,20 @@ export function validateBuildSettings(settings: BuildSettings, capabilities = ex
   if (productionSettings.networking.enabled) {
     for (const channel of productionSettings.networking.channels) if (channel.maximumPayloadBytes > productionSettings.networking.maximumPacketBytes) issues.push({ code: 'network-channel-packet-bound', severity: 'error', message: `Channel ${channel.id} allows ${channel.maximumPayloadBytes} payload bytes, above the ${productionSettings.networking.maximumPacketBytes}-byte packet bound.` })
     for (const rpc of productionSettings.networking.rpcContracts) {
-      const channel = productionSettings.networking.channels.find(item => item.id === rpc.channelId)
+      const channel = productionSettings.networking.channels.find(/* 比较 item.id 与 rpc.channelId，返回严格相等的判断结果。 */ item => item.id === rpc.channelId)
       if (!channel) issues.push({ code: 'network-rpc-channel', severity: 'error', message: `RPC ${rpc.name} references missing channel ${rpc.channelId}.` })
       else if (rpc.maximumPayloadBytes > channel.maximumPayloadBytes) issues.push({ code: 'network-rpc-payload-bound', severity: 'error', message: `RPC ${rpc.name} allows ${rpc.maximumPayloadBytes} bytes, above channel ${channel.id}'s ${channel.maximumPayloadBytes}-byte bound.` })
     }
     if (!productionSettings.networking.transportAdapterId && productionSettings.networking.transport === 'native-udp' && (productionSettings.networking.role === 'host' || productionSettings.networking.role === 'server')) {
-      const networkPackage = packageState.installed.find(item => item.manifest.id === OFFICIAL_NETWORKING_PACKAGE_ID && item.project && item.enabled)
+      const networkPackage = packageState.installed.find(/* 先计算 item.manifest.id === OFFICIAL_NETWORKING_PACKAGE_ID && item.project；仅当其为真值时求右侧 item.enabled，返回短路求值结果。 */ item => item.manifest.id === OFFICIAL_NETWORKING_PACKAGE_ID && item.project && item.enabled)
       if (networkPackage && !networkPackage.grantedPermissions.includes('network.listen')) issues.push({ code: 'network-listen-permission', severity: 'error', message: 'Native Host/Server builds require the Nova Networking package network.listen grant.' })
     }
   }
-  if (productionSettings.networking.enabled && productionSettings.networking.transportAdapterId && !reviewedNetworkTransports().some(adapter => adapter.id === productionSettings.networking.transportAdapterId)) issues.push({ code: 'network-adapter', severity: 'error', message: `Reviewed transport adapter ${productionSettings.networking.transportAdapterId} is not registered.` })
-  if (productionSettings.networking.enabled && productionSettings.networking.authentication.mode === 'hook' && !networkAuthenticationProviders().some(provider => provider.id === productionSettings.networking.authentication.providerId)) issues.push({ code: 'network-authentication', severity: 'error', message: `Authentication provider ${productionSettings.networking.authentication.providerId || '(empty)'} is not registered.` })
+  if (productionSettings.networking.enabled && productionSettings.networking.transportAdapterId && !reviewedNetworkTransports().some(/* 比较 adapter.id 与 productionSettings.networking.transportAdapterId，返回严格相等的判断结果。 */ adapter => adapter.id === productionSettings.networking.transportAdapterId)) issues.push({ code: 'network-adapter', severity: 'error', message: `Reviewed transport adapter ${productionSettings.networking.transportAdapterId} is not registered.` })
+  if (productionSettings.networking.enabled && productionSettings.networking.authentication.mode === 'hook' && !networkAuthenticationProviders().some(/* 比较 provider.id 与 productionSettings.networking.authentication.providerId，返回严格相等的判断结果。 */ provider => provider.id === productionSettings.networking.authentication.providerId)) issues.push({ code: 'network-authentication', severity: 'error', message: `Authentication provider ${productionSettings.networking.authentication.providerId || '(empty)'} is not registered.` })
   if (productionSettings.networking.enabled && productionSettings.networking.authentication.requireVerifiedPeers && productionSettings.networking.authentication.mode !== 'hook') issues.push({ code: 'network-verification', severity: 'error', message: 'Verified peers require a reviewed authentication hook.' })
   if (productionSettings.networking.enabled) for (const issue of networkServiceSelectionIssues(productionSettings.networking)) issues.push({ code: 'network-service', severity: 'error', message: issue })
-  if (productionSettings.networking.enabled) { const selectedAdapter = reviewedNetworkTransports().find(adapter => adapter.id === productionSettings.networking.transportAdapterId), guidance = networkEncryptionGuidance(productionSettings.networking, selectedAdapter?.encrypted === true); if (guidance.severity === 'error') issues.push({ code: 'network-encryption', severity: 'error', message: guidance.message }); else if (guidance.severity === 'warning') issues.push({ code: 'network-encryption', severity: 'warning', message: guidance.message }) }
+  if (productionSettings.networking.enabled) { const selectedAdapter = reviewedNetworkTransports().find(/* 比较 adapter.id 与 productionSettings.networking.transportAdapterId，返回严格相等的判断结果。 */ adapter => adapter.id === productionSettings.networking.transportAdapterId), guidance = networkEncryptionGuidance(productionSettings.networking, selectedAdapter?.encrypted === true); if (guidance.severity === 'error') issues.push({ code: 'network-encryption', severity: 'error', message: guidance.message }); else if (guidance.severity === 'warning') issues.push({ code: 'network-encryption', severity: 'warning', message: guidance.message }) }
   if (settings.runtimeMode === 'headless-server' && !productionSettings.networking.enabled) issues.push({ code: 'headless-network', severity: 'error', message: 'The headless server preset requires networking to be enabled explicitly.' })
   if (settings.runtimeMode === 'headless-server' && !productionSettings.networking.autoStart) issues.push({ code: 'headless-network-autostart', severity: 'error', message: 'The headless server preset requires networking to start automatically with the runtime.' })
   if (settings.runtimeMode === 'headless-server' && !['server', 'host'].includes(productionSettings.networking.role)) issues.push({ code: 'headless-authority', severity: 'error', message: 'Headless servers require the Server or Host authority role.' })
@@ -371,10 +372,10 @@ export function validateBuildSettings(settings: BuildSettings, capabilities = ex
   if (settings.delivery.deltaBuilds && !settings.delivery.patchManifest) issues.push({ code: 'delta-manifest', severity: 'warning', message: 'Delta builds require the patch manifest to describe added, changed and removed content.' })
   if (settings.profile === 'release' && settings.delivery.cacheMode === 'incremental' && !settings.delivery.deterministic) issues.push({ code: 'release-cache', severity: 'error', message: 'Release incremental builds require deterministic output or a validated clean cache.' })
   if (!settings.delivery.include.length) issues.push({ code: 'include-rules', severity: 'warning', message: 'No explicit content inclusion rule is configured.' })
-  return issues.map(issue => ({ ...issue, helpTarget: buildIssueHelpTarget(issue.code) }))
+  return issues.map(/** 构造并返回记录 { ...issue, helpTarget: buildIssueHelpTarget(issue.code) }，字段按当前实参及捕获状态求值。 */ issue => ({ ...issue, helpTarget: buildIssueHelpTarget(issue.code) }))
 }
 
-export async function detectExportCapabilities(): Promise<void> {
+/** 结构说明（自动提取）：detectExportCapabilities；无显式参数；直接调用 Object.assign、invoke、slice、String、refreshAndroidToolchain；写入 exportCapabilities.nativeAvailable、exportCapabilities.nativeReason；等待异步结果。 */ export async function detectExportCapabilities(): Promise<void> {
   if (!('__TAURI_INTERNALS__' in window)) return
   try {
     const { invoke } = await import('@tauri-apps/api/core')

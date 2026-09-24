@@ -1,3 +1,4 @@
+/** 功能回归脚本：执行 verify-v6.5.0-windows.mjs 对应场景，保留断言和证据输出。 */
 process.env.NOVA_WINDOWS_VERSION = '6.5.0'
 process.env.NOVA_WINDOWS_REFERENCE = 'creator-v650-physics-renderer'
 process.env.NOVA_WINDOWS_GAME_NAME = 'Nova 6.5 Physics Renderer Audit'

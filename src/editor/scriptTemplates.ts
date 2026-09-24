@@ -1,3 +1,4 @@
+/** 脚本初始模板：按选定用途提供可写入资源的 Rhai 示例代码。 */
 export type ScriptTemplateId = 'component' | 'ui' | 'physics' | 'animation-event' | 'test'
 export interface ScriptTemplate { id: ScriptTemplateId; name: string; description: string; source: string }
 
@@ -72,4 +73,4 @@ fn after_each() { value = 0; }
 ` }
 ] as const
 
-export function scriptTemplate(id: ScriptTemplateId): ScriptTemplate { return SCRIPT_TEMPLATES.find(item => item.id === id) ?? SCRIPT_TEMPLATES[0] }
+/** 按模板 ID 查找脚本初始代码，未知 ID 使用第一个模板。 */ export function scriptTemplate(id: ScriptTemplateId): ScriptTemplate { return SCRIPT_TEMPLATES.find(/* 比较 item.id 与 id，返回严格相等的判断结果。 */ item => item.id === id) ?? SCRIPT_TEMPLATES[0] }

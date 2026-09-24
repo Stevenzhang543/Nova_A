@@ -1,25 +1,26 @@
+/** 资源批处理：调度批量导入及重新导入，并筛选可处理的资源候选。 */
 import type { AssetRecord } from './types'
 import { assetSessionVersion, assetState, importAssetFiles, reimportAsset, resolveAsset } from './AssetDatabase'
 export interface AssetBatchProgress {active: boolean;total: number;done: number;completed: number;failed: number;cancelled: number;name: string;results: Array<{name: string;status:'completed'|'failed';message:string}>}
-export const emptyAssetBatch = (): AssetBatchProgress => ({active:false,total:0,done:0,completed:0,failed:0,cancelled:0,name:'',results:[]})
+export const emptyAssetBatch = /** 构造并返回记录 {active:false,total:0,done:0,completed:0,failed:0,cancelled:0,name:'',results:[]}，字段按当前实参及捕获状态求值。 */ (): AssetBatchProgress => ({active:false,total:0,done:0,completed:0,failed:0,cancelled:0,name:'',results:[]})
 export interface AssetBatchOptions {signal: AbortSignal;progress(value: AssetBatchProgress): void}
-async function run<T>(items:readonly T[],name:(item:T)=>string,operation:(item:T)=>Promise<void>,options:AssetBatchOptions):Promise<AssetBatchProgress>{
+/** 在数量上限内顺序执行资源批次，检查取消与会话代次，记录有界逐项结果并在每项间让出事件循环。 */ async function run<T>(items:readonly T[],name:(item:T)=>string,operation:(item:T)=>Promise<void>,options:AssetBatchOptions):Promise<AssetBatchProgress>{
   if(items.length>2000)throw new Error('ASSET_BATCH_LIMIT: Choose at most2000 files per batch.')
   const session = assetSessionVersion()
   const progress={...emptyAssetBatch(),active:true,total:items.length}
-  const publish=()=>options.progress({...progress,results:[...progress.results]})
+  const publish=/* 调用 options.progress({...progress,results:[...progress.results]}) 并返回调用结果。 */ ()=>options.progress({...progress,results:[...progress.results]})
   publish()
-  try{for(const item of items){if(options.signal.aborted || session !== assetSessionVersion())break;progress.name=name(item);publish();try{await operation(item);progress.completed++;progress.results.push({name:progress.name,status:'completed',message:''})}catch(error){if(options.signal.aborted || session !== assetSessionVersion())break;progress.failed++;progress.results.push({name:progress.name,status:'failed',message:(error instanceof Error?error.message:String(error)).slice(0,2000)})}progress.done++;progress.results=progress.results.slice(-50);publish();await new Promise<void>(resolve=>setTimeout(resolve,0))}}
+  try{for(const item of items){if(options.signal.aborted || session !== assetSessionVersion())break;progress.name=name(item);publish();try{await operation(item);progress.completed++;progress.results.push({name:progress.name,status:'completed',message:''})}catch(error){if(options.signal.aborted || session !== assetSessionVersion())break;progress.failed++;progress.results.push({name:progress.name,status:'failed',message:(error instanceof Error?error.message:String(error)).slice(0,2000)})}progress.done++;progress.results=progress.results.slice(-50);publish();await new Promise<void>(/* 调用 setTimeout(resolve,0) 并返回调用结果。 */ resolve=>setTimeout(resolve,0))}}
   finally{progress.cancelled=(options.signal.aborted || session !== assetSessionVersion())?progress.total-progress.done:0;progress.active=false;progress.name='';publish()}
   return progress
 }
-export async function importAssetBatch(files:readonly File[],folder:string|undefined,options:AssetBatchOptions):Promise<{progress:AssetBatchProgress;assets:AssetRecord[]}>{
+/** 通过共享批次调度逐个导入文件，返回进度汇总及成功导入资源。 */ export async function importAssetBatch(files:readonly File[],folder:string|undefined,options:AssetBatchOptions):Promise<{progress:AssetBatchProgress;assets:AssetRecord[]}>{
   const imported:AssetRecord[]=[]
-  const progress=await run(files,file=>file.name,async file=>{imported.push(...await importAssetFiles([file],folder,options.signal))},options)
+  const progress=await run(files,/* 返回 file.name 的当前值。 */ file=>file.name,/** 执行时调用 imported.push(...await importAssetFiles([file],folder,options.signal))；不显式返回调用结果。 */ async file=>{imported.push(...await importAssetFiles([file],folder,options.signal))},options)
   return {progress,assets:imported}
 }
-export function reimportAssetBatch(records:readonly AssetRecord[],options:AssetBatchOptions):Promise<AssetBatchProgress>{
-  return run(records,record=>record.name,async record=>{
+/** 逐个重导入资源，验证原始来源和项目身份，并拒绝异步读取期间源或设置发生变化的项。 */ export function reimportAssetBatch(records:readonly AssetRecord[],options:AssetBatchOptions):Promise<AssetBatchProgress>{
+  return run(records,/* 返回 record.name 的当前值。 */ record=>record.name,/** 恢复单个资源的原始文件，核对源、设置及身份快照，再执行可取消的重导入。 */ async record=>{
     if(record.derivedSprite)throw new Error('ASSET_BATCH_SOURCE: Reimport the linked original source.')
     if(resolveAsset(record.uuid)!==record)throw new Error('ASSET_BATCH_STALE: The asset is no longer in this project.')
     const source=record.source,settings=JSON.stringify(record.settings)
@@ -31,4 +32,4 @@ export function reimportAssetBatch(records:readonly AssetRecord[],options:AssetB
   },options)
 }
 /** UUIDs and derived ownership, not current folder contents, define the queued batch. */
-export function reimportCandidates(records:readonly AssetRecord[]):AssetRecord[]{return records.filter(record=>!record.derivedSprite&&record.pipeline?.importerId!=='nova.inline'&&(!!record.interchange||/^(data:|blob:)/.test(record.source))&&assetState.records.includes(record))}
+/** 筛选当前项目中保留可重读原始来源且非派生、非内联生成的资源。 */ export function reimportCandidates(records:readonly AssetRecord[]):AssetRecord[]{return records.filter(/** 只接受可重读来源、仍在当前项目且非派生或内联生成的批次候选。 */ record=>!record.derivedSprite&&record.pipeline?.importerId!=='nova.inline'&&(!!record.interchange||/^(data:|blob:)/.test(record.source))&&assetState.records.includes(record))}

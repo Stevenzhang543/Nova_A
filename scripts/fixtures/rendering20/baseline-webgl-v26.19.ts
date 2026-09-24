@@ -1,3 +1,4 @@
+/** 测试夹具：为 baseline-webgl-v26.19.ts 提供受控数据或执行环境，限定于对应验证场景。 */
 import { nineSliceGeometry, shapeGeometry, spriteGeometry, strokeGeometry, type GeometryData } from './geometry'
 import { assetState, resolveTexture as resolveTextureAsset } from '../assets/AssetDatabase'
 import { analyzeMaterialShader, defaultMaterial, reflectShaderUniforms, reportMaterialFallback, resolvedMaterialFragment, resolveMaterial, type Material2DResource } from './materials'
@@ -50,8 +51,8 @@ interface CachedText {
 }
 
 const MAX_PACKET_VERTICES = 65_000
-function finite(value: number, fallback: number): number { return Number.isFinite(value) ? value : fallback }
-function safeViewport(viewport: CameraRenderView['viewport']): { x: number; y: number; width: number; height: number } {
+/* 根据 Number.isFinite(value) 的真假，分别返回 value 或 fallback。 */ function finite(value: number, fallback: number): number { return Number.isFinite(value) ? value : fallback }
+/** 结构说明（自动提取）：safeViewport；输入 viewport；直接调用 Math.min、Math.max、finite。 */ function safeViewport(viewport: CameraRenderView['viewport']): { x: number; y: number; width: number; height: number } {
   const x = Math.min(1 - 1e-6, Math.max(0, finite(viewport?.x ?? 0, 0)))
   const y = Math.min(1 - 1e-6, Math.max(0, finite(viewport?.y ?? 0, 0)))
   return { x, y, width: Math.max(1e-6, Math.min(1 - x, finite(viewport?.width ?? 1, 1))), height: Math.max(1e-6, Math.min(1 - y, finite(viewport?.height ?? 1, 1))) }
@@ -97,7 +98,7 @@ const vec2 positions[3] = vec2[3](vec2(-1.,-1.),vec2(3.,-1.),vec2(-1.,3.));
 out vec2 v_uv;
 void main(){ vec2 position=positions[gl_VertexID]; gl_Position=vec4(position,0.,1.); v_uv=position*.5+.5; }`
 
-function compileShader(gl: WebGL2RenderingContext, type: number, source: string): WebGLShader {
+/** 结构说明（自动提取）：compileShader；输入 gl、type、source；直接调用 gl.createShader、Error、gl.shaderSource、gl.compileShader、gl.getShaderParameter 等；返回路径包含 shader；包含显式抛错路径。 */ function compileShader(gl: WebGL2RenderingContext, type: number, source: string): WebGLShader {
   const shader = gl.createShader(type)
   if (!shader) throw new Error('Could not allocate WebGL shader')
   gl.shaderSource(shader, source)
@@ -110,7 +111,7 @@ function compileShader(gl: WebGL2RenderingContext, type: number, source: string)
   return shader
 }
 
-function createProgram(gl: WebGL2RenderingContext, fragmentSource = FRAGMENT_SOURCE, vertexSource = VERTEX_SOURCE): WebGLProgram {
+/** 结构说明（自动提取）：createProgram；输入 gl、fragmentSource、vertexSource；直接调用 compileShader、gl.createProgram、Error、gl.attachShader、gl.linkProgram 等；写入 fragment、program；返回路径包含 program；包含显式抛错路径。 */ function createProgram(gl: WebGL2RenderingContext, fragmentSource = FRAGMENT_SOURCE, vertexSource = VERTEX_SOURCE): WebGLProgram {
   const vertex = compileShader(gl, gl.VERTEX_SHADER, vertexSource)
   let fragment: WebGLShader | null = null, program: WebGLProgram | null = null
   try {
@@ -141,19 +142,19 @@ interface ProgramState {
 interface PostProgramState { program: WebGLProgram; texture: WebGLUniformLocation; material: Material2DResource }
 interface TimerQueryExtension { TIME_ELAPSED_EXT: number; GPU_DISJOINT_EXT: number }
 
-function builtInPostMaterial(): Material2DResource {
+/** 结构说明（自动提取）：builtInPostMaterial；无显式参数；直接调用 defaultMaterial；写入 material.target；返回路径包含 material。 */ function builtInPostMaterial(): Material2DResource {
   const material = defaultMaterial('Nova built-in post process')
   material.target = 'UI'
   return material
 }
 
-function materialFragment(material: Material2DResource): string {
+/** 结构说明（自动提取）：materialFragment；输入 material；直接调用 resolvedMaterialFragment、Set、map、reflectShaderUniforms、join 等。 */ function materialFragment(material: Material2DResource): string {
   const resolved = resolvedMaterialFragment(material)
-  const declared = new Set(reflectShaderUniforms(resolved.source).map(field => field.name))
-  const uniforms = Object.entries(material.uniforms).filter(([name]) => !declared.has(name)).map(([name, value]) => Array.isArray(value)
+  const declared = new Set(reflectShaderUniforms(resolved.source).map(/* 返回 field.name 的当前值。 */ field => field.name))
+  const uniforms = Object.entries(material.uniforms).filter(/* 返回 declared.has(name) 的逻辑取反结果。 */ ([name]) => !declared.has(name)).map(/** 结构说明（自动提取）：map 回调；输入 [name, value]；直接调用 Array.isArray；返回表达式求值结果。 */ ([name, value]) => Array.isArray(value)
     ? `uniform vec${value.length} ${name};`
     : typeof value === 'boolean' ? `uniform bool ${name};` : `uniform float ${name};`).join('\n')
-  const textures = Object.keys(material.textures).filter(name => !declared.has(name)).map(name => `uniform sampler2D ${name};`).join('\n')
+  const textures = Object.keys(material.textures).filter(/* 返回 declared.has(name) 的逻辑取反结果。 */ name => !declared.has(name)).map(/** 结构说明（自动提取）：map 回调；输入 name；返回表达式求值结果。 */ name => `uniform sampler2D ${name};`).join('\n')
   const converted = material.colorSpace === 'Linear' ? `vec4(pow(max(result.rgb, vec3(0.0)), vec3(1.0 / 2.2)), result.a)` : 'result'
   return `#version 300 es
 precision highp float;
@@ -169,13 +170,13 @@ out vec4 outputColor;
 void main(){ vec4 sampled=texture(u_texture,v_uv); if(u_linearTexture) sampled=vec4(pow(max(sampled.rgb,vec3(0.0)),vec3(1.0/2.2)),sampled.a); vec4 shaded=nova_material(sampled * v_color,v_uv); vec4 result=u_writeColor ? shaded : vec4(sampled.rgb * v_color.rgb, shaded.a); outputColor = ${converted}; }`
 }
 
-function postMaterialFragment(material: Material2DResource): string {
+/** 结构说明（自动提取）：postMaterialFragment；输入 material；直接调用 resolvedMaterialFragment、Set、map、reflectShaderUniforms、join 等。 */ function postMaterialFragment(material: Material2DResource): string {
   const resolved = resolvedMaterialFragment(material)
-  const declared = new Set(reflectShaderUniforms(resolved.source).map(field => field.name))
-  const uniforms = Object.entries(material.uniforms).filter(([name]) => !declared.has(name)).map(([name, value]) => Array.isArray(value)
+  const declared = new Set(reflectShaderUniforms(resolved.source).map(/* 返回 field.name 的当前值。 */ field => field.name))
+  const uniforms = Object.entries(material.uniforms).filter(/* 返回 declared.has(name) 的逻辑取反结果。 */ ([name]) => !declared.has(name)).map(/** 结构说明（自动提取）：map 回调；输入 [name, value]；直接调用 Array.isArray；返回表达式求值结果。 */ ([name, value]) => Array.isArray(value)
     ? `uniform vec${value.length} ${name};`
     : typeof value === 'boolean' ? `uniform bool ${name};` : `uniform float ${name};`).join('\n')
-  const textures = Object.keys(material.textures).filter(name => !declared.has(name)).map(name => `uniform sampler2D ${name};`).join('\n')
+  const textures = Object.keys(material.textures).filter(/* 返回 declared.has(name) 的逻辑取反结果。 */ name => !declared.has(name)).map(/** 结构说明（自动提取）：map 回调；输入 name；返回表达式求值结果。 */ name => `uniform sampler2D ${name};`).join('\n')
   const converted = material.colorSpace === 'Linear' ? 'vec4(pow(max(result.rgb,vec3(0.0)),vec3(1.0/2.2)),result.a)' : 'result'
   return `#version 300 es
 precision highp float;
@@ -200,11 +201,11 @@ void main(){
 }`
 }
 
-function createPostProgram(gl: WebGL2RenderingContext, material: Material2DResource): WebGLProgram {
+/* 调用 createProgram(gl, postMaterialFragment(material), POST_VERTEX_SOURCE) 并返回调用结果。 */ function createPostProgram(gl: WebGL2RenderingContext, material: Material2DResource): WebGLProgram {
   return createProgram(gl, postMaterialFragment(material), POST_VERTEX_SOURCE)
 }
 
-function textureDimensions(source: TexImageSource): { width: number; height: number } {
+/** 结构说明（自动提取）：textureDimensions；输入 source。 */ function textureDimensions(source: TexImageSource): { width: number; height: number } {
   if (source instanceof HTMLImageElement) return { width: source.naturalWidth, height: source.naturalHeight }
   if (source instanceof HTMLVideoElement) return { width: source.videoWidth, height: source.videoHeight }
   const value = source as { width?: number; height?: number }
@@ -254,7 +255,7 @@ export class WebGL2Renderer implements Renderer2D {
   private contextLost = false
   private contextLossCount = 0
   private frameSerial = 0
-  private readonly onContextLost = (event: Event) => {
+  private readonly onContextLost = /** 结构说明（自动提取）：匿名回调；输入 event；直接调用 event.preventDefault、reportRendererContextLost；写入 contextLost、activeTimer、pendingTimers。 */ (event: Event) => {
     event.preventDefault()
     this.contextLost = true
     this.contextLossCount++
@@ -262,7 +263,7 @@ export class WebGL2Renderer implements Renderer2D {
     this.pendingTimers = []
     reportRendererContextLost()
   }
-  private readonly onContextRestored = () => {
+  private readonly onContextRestored = /** 结构说明（自动提取）：匿名回调；无显式参数；直接调用 textureCache.clear、reportRendererContextRestored、window.dispatchEvent、CustomEvent；写入 contextLost、textureMemoryBytes、textureCount。 */ () => {
     // Objects from the lost context are invalid; remain suspended until the owner rebuilds.
     this.contextLost = true
     this.textureCache.clear()
@@ -272,7 +273,7 @@ export class WebGL2Renderer implements Renderer2D {
     window.dispatchEvent(new CustomEvent('nova-renderer-reset-request'))
   }
 
-  constructor(private readonly canvas: HTMLCanvasElement) {
+  /** 结构说明（自动提取）：匿名回调；输入 canvas；直接调用 canvas.getContext、Error、canvas.addEventListener、createProgram、gl.createVertexArray 等；写入 gl、program、vao、vertexBuffer 等；包含循环处理；包含显式抛错路径。 */ constructor(private readonly canvas: HTMLCanvasElement) {
     const gl = canvas.getContext('webgl2', { alpha: false, antialias: true, depth: false, premultipliedAlpha: true, powerPreference: 'high-performance' })
     if (!gl) throw new Error('WebGL2 is unavailable')
     this.gl = gl
@@ -319,7 +320,7 @@ export class WebGL2Renderer implements Renderer2D {
     }
   }
 
-  resize(width: number, height: number, pixelRatio: number): void {
+  /** 结构说明（自动提取）：resize；输入 width、height、pixelRatio；直接调用 boundedFrame、gl.getParameter、Math.max、Math.floor、resizeEffectsTarget；写入 targetWidth、targetHeight、canvas.width、canvas.height。 */ resize(width: number, height: number, pixelRatio: number): void {
     const safe = boundedFrame({ width, height, pixelRatio, clearColor: this.frame.clearColor }, this.gl.getParameter(this.gl.MAX_RENDERBUFFER_SIZE) as number)
     const pixelWidth = Math.max(1, Math.floor(safe.width * safe.pixelRatio))
     const pixelHeight = Math.max(1, Math.floor(safe.height * safe.pixelRatio))
@@ -331,7 +332,7 @@ export class WebGL2Renderer implements Renderer2D {
     if (this.framebuffer && this.colorTarget) this.resizeEffectsTarget(pixelWidth, pixelHeight)
   }
 
-  beginFrame(options: FrameOptions): void {
+  /** 结构说明（自动提取）：beginFrame；输入 options；直接调用 boundedFrame、gl.getParameter、resize、gl.isContextLost、ensureEffectsTarget 等；写入 frame、packets、sequence、cameraIndex 等。 */ beginFrame(options: FrameOptions): void {
     this.frameSerial++
     this.frame = boundedFrame(options, this.gl.getParameter(this.gl.MAX_RENDERBUFFER_SIZE) as number)
     this.resize(this.frame.width, this.frame.height, this.frame.pixelRatio)
@@ -359,15 +360,15 @@ export class WebGL2Renderer implements Renderer2D {
     }
   }
 
-  beginCamera(camera: CameraRenderView): void { this.camera = camera; this.cameraIndex++ }
+  /** 结构说明（自动提取）：beginCamera；输入 camera；写入 camera。 */ beginCamera(camera: CameraRenderView): void { this.camera = camera; this.cameraIndex++ }
 
-  submitSprite(command: SpriteRenderCommand): void {
+  /** 结构说明（自动提取）：submitSprite；输入 command；直接调用 queue、spriteGeometry、nineSliceGeometry。 */ submitSprite(command: SpriteRenderCommand): void {
     if (command.mesh && (command.mesh.positions.length > MAX_PACKET_VERTICES || command.mesh.uvs.length > MAX_PACKET_VERTICES || command.mesh.indices.length > MAX_PACKET_VERTICES * 3)) return
     this.stats.sprites++
     this.queue(command, command.texture, command.tint, command.mesh ? spriteGeometry(command) : command.nineSlice ? nineSliceGeometry(command) : spriteGeometry(command))
   }
 
-  submitShape(command: ShapeRenderCommand): void {
+  /** 结构说明（自动提取）：submitShape；输入 command；直接调用 queue、shapeGeometry、strokeGeometry。 */ submitShape(command: ShapeRenderCommand): void {
     if (command.vertices.length > MAX_PACKET_VERTICES) return
     this.stats.shapes++
     if (command.fill.a > 0 && command.shape !== 'Line') this.queue(command, command.texture ?? this.whiteRegion, command.fill, shapeGeometry(command))
@@ -375,7 +376,7 @@ export class WebGL2Renderer implements Renderer2D {
     if (stroke) this.queue(command, this.whiteRegion, command.stroke, stroke, command.orderInLayer + .0001)
   }
 
-  submitText(command: TextRenderCommand): void {
+  /** 结构说明（自动提取）：submitText；输入 command；直接调用 command.text.trim、every、textTexture、Math.min、queue 等。 */ submitText(command: TextRenderCommand): void {
     if (command.text.length > 65_536 || !command.text.trim() || command.color.a <= 0) return
     if (![command.fontSize, command.fontWeight, command.lineHeight, command.outlineWidth, command.maxWidth].every(Number.isFinite) || command.fontSize <= 0 || command.lineHeight <= 0) return
     this.stats.text++
@@ -393,17 +394,17 @@ export class WebGL2Renderer implements Renderer2D {
     this.queue(sprite, cached.region, command.color, spriteGeometry(sprite))
   }
 
-  submitTileChunk(command: TileChunkRenderCommand): void {
+  /** 结构说明（自动提取）：submitTileChunk；输入 command；直接调用 submitSprite；包含循环处理。 */ submitTileChunk(command: TileChunkRenderCommand): void {
     for (const sprite of command.sprites) this.submitSprite({ ...sprite, sortingLayer: command.sortingLayer, orderInLayer: command.orderInLayer, material: command.material, blendMode: command.blendMode })
   }
 
-  endCamera(): void { /* Commands are flushed at endFrame to preserve global sorting. */ }
+  /** 结构说明（自动提取）：endCamera；无显式参数；空实现，不执行额外操作。 */ endCamera(): void { /* Commands are flushed at endFrame to preserve global sorting. */ }
 
-  endFrame(): RendererStats {
+  /** 结构说明（自动提取）：endFrame；无显式参数；直接调用 gl.isContextLost、packets.sort、batch.reduce、flush、batch.push 等；写入 stats.batchBreakReasons[…]、stats.batchBreaks、activeTimer、validatedFirstBlit；包含循环处理；包含显式抛错路径。 */ endFrame(): RendererStats {
     if (this.contextLost || this.gl.isContextLost()) return { ...this.stats }
-    this.packets.sort((first, second) => first.cameraIndex - second.cameraIndex || first.layer - second.layer || first.order - second.order || first.sequence - second.sequence)
+    this.packets.sort(/** 结构说明（自动提取）：packets.sort 回调；输入 first、second；返回表达式求值结果。 */ (first, second) => first.cameraIndex - second.cameraIndex || first.layer - second.layer || first.order - second.order || first.sequence - second.sequence)
     let batch: GeometryPacket[] = []
-    const flush = () => {
+    const flush = /** 结构说明（自动提取）：flush；无显式参数；直接调用 drawBatch；写入 batch。 */ () => {
       if (!batch.length) return
       this.drawBatch(batch)
       batch = []
@@ -416,7 +417,7 @@ export class WebGL2Renderer implements Renderer2D {
         && previous.filter === packet.filter
         && previous.material === packet.material
         && previous.blend === packet.blend
-      const vertexCount = batch.reduce((total, item) => total + item.geometry.positions.length, 0)
+      const vertexCount = batch.reduce(/* 计算表达式 total + item.geometry.positions.length 并返回结果，沿用操作数的原有类型规则。 */ (total, item) => total + item.geometry.positions.length, 0)
       if ((!sameBatch || vertexCount + packet.geometry.positions.length > 65_000) && batch.length) {
         const reason = !previous ? 'initial' : previous.cameraIndex !== packet.cameraIndex ? 'camera' : previous.texture?.source !== packet.texture?.source ? 'texture' : previous.filter !== packet.filter ? 'filter' : previous.material !== packet.material ? 'material' : previous.blend !== packet.blend ? 'blend' : 'vertex-limit'
         this.stats.batchBreakReasons[reason] = (this.stats.batchBreakReasons[reason] ?? 0) + 1
@@ -449,7 +450,7 @@ export class WebGL2Renderer implements Renderer2D {
     return { ...this.stats, batchBreakReasons: { ...this.stats.batchBreakReasons } }
   }
 
-  destroy(): void {
+  /** 结构说明（自动提取）：destroy；无显式参数；直接调用 canvas.removeEventListener、textCache.values、textCache.clear、pendingTextureUploads.clear、gl.isContextLost 等；写入 surface.width、surface.height、textCacheBytes、packets 等；包含循环处理。 */ destroy(): void {
     this.canvas.removeEventListener('webglcontextlost', this.onContextLost)
     this.canvas.removeEventListener('webglcontextrestored', this.onContextRestored)
     const gl = this.gl
@@ -470,7 +471,7 @@ export class WebGL2Renderer implements Renderer2D {
     this.materialPrograms.clear()
   }
 
-  private queue(
+  /** 结构说明（自动提取）：queue；输入 order、texture、color、geometry、orderOverride；直接调用 geometry.positions.some、geometry.uvs.some、geometry.indices.some、packets.push、finite 等。 */ private queue(
     order: { sortingLayer: number; orderInLayer: number; material: string; blendMode?: 'Alpha' | 'Additive' | 'Multiply' | 'Screen' },
     texture: TextureRegion | null,
     color: { r: number; g: number; b: number; a: number },
@@ -479,9 +480,9 @@ export class WebGL2Renderer implements Renderer2D {
   ): void {
     if (this.packets.length >= 100_000 || !geometry.positions.length || !geometry.indices.length) return
     if (geometry.positions.length > MAX_PACKET_VERTICES) return
-    if (geometry.positions.some(position => !Number.isFinite(position.x) || !Number.isFinite(position.y))) return
-    if (geometry.uvs.some(uv => !Number.isFinite(uv.x) || !Number.isFinite(uv.y))) return
-    if (geometry.indices.some(index => !Number.isInteger(index) || index < 0 || index >= geometry.positions.length)) return
+    if (geometry.positions.some(/* 先计算 !Number.isFinite(position.x)；仅当其为假值时求右侧 !Number.isFinite(position.y)，返回短路求值结果。 */ position => !Number.isFinite(position.x) || !Number.isFinite(position.y))) return
+    if (geometry.uvs.some(/* 先计算 !Number.isFinite(uv.x)；仅当其为假值时求右侧 !Number.isFinite(uv.y)，返回短路求值结果。 */ uv => !Number.isFinite(uv.x) || !Number.isFinite(uv.y))) return
+    if (geometry.indices.some(/* 先计算 !Number.isInteger(index) || index < 0；仅当其为假值时求右侧 index >= geometry.positions.length，返回短路求值结果。 */ index => !Number.isInteger(index) || index < 0 || index >= geometry.positions.length)) return
     this.packets.push({
       layer: finite(order.sortingLayer, 0), order: finite(orderOverride, 0), sequence: this.sequence++, material: order.material || 'Default',
       blend: order.blendMode ?? 'Alpha', texture, filter: texture?.filter ?? 'Linear', color: normalizedColor(color), geometry,
@@ -489,18 +490,18 @@ export class WebGL2Renderer implements Renderer2D {
     })
   }
 
-  private drawBatch(batch: GeometryPacket[]): void {
+  /** 结构说明（自动提取）：drawBatch；输入 batch；直接调用 packet.geometry.positions.forEach、packet.geometry.indices.forEach、safeViewport、Math.round、Math.max 等；写入 vertexOffset、validatedFirstDraw、stats.triangles、stats.overdraw 等；包含循环处理；包含显式抛错路径。 */ private drawBatch(batch: GeometryPacket[]): void {
     const gl = this.gl
     const vertices: number[] = []
     const indices: number[] = []
     let vertexOffset = 0
     for (const packet of batch) {
       const [r, g, b, a] = packet.color
-      packet.geometry.positions.forEach((position, index) => {
+      packet.geometry.positions.forEach(/** 结构说明（自动提取）：packet.geometry.positions.forEach 回调；输入 position、index；直接调用 vertices.push。 */ (position, index) => {
         const uv = packet.geometry.uvs[index] ?? { x: 0, y: 0 }
         vertices.push(position.x, position.y, uv.x, uv.y, r, g, b, a)
       })
-      packet.geometry.indices.forEach(index => indices.push(index + vertexOffset))
+      packet.geometry.indices.forEach(/* 调用 indices.push(index + vertexOffset) 并返回调用结果。 */ index => indices.push(index + vertexOffset))
       vertexOffset += packet.geometry.positions.length
     }
 
@@ -559,7 +560,7 @@ export class WebGL2Renderer implements Renderer2D {
     this.stats.textureMemoryBytes = this.textureMemoryBytes
   }
 
-  private programFor(reference: string): ProgramState {
+  /** 结构说明（自动提取）：programFor；输入 reference；直接调用 materialPrograms.values、gl.deleteProgram、materialPrograms.clear、reference.startsWith、materialPrograms.has 等；写入 materialGeneration；返回路径包含 baseProgramState、state；包含循环处理；包含显式抛错路径。 */ private programFor(reference: string): ProgramState {
     if (this.materialGeneration !== assetState.generation) {
       for (const state of this.materialPrograms.values()) if (state) this.gl.deleteProgram(state.program)
       this.materialPrograms.clear(); this.materialGeneration = assetState.generation
@@ -569,7 +570,7 @@ export class WebGL2Renderer implements Renderer2D {
     if (this.materialPrograms.size >= 128) { const key = this.materialPrograms.keys().next().value!; const stale = this.materialPrograms.get(key); if (stale) this.gl.deleteProgram(stale.program); this.materialPrograms.delete(key) }
     const material = resolveMaterial(reference)
     const resolved = resolvedMaterialFragment(material)
-    if ([...resolved.diagnostics, ...analyzeMaterialShader(resolved.source, material.includes)].some(item => item.severity === 'error')) { reportMaterialFallback(reference, 'shader validation failed'); this.stats.shaderFallbacks++; this.materialPrograms.set(reference, null); return this.baseProgramState }
+    if ([...resolved.diagnostics, ...analyzeMaterialShader(resolved.source, material.includes)].some(/* 比较 item.severity 与 'error'，返回严格相等的判断结果。 */ item => item.severity === 'error')) { reportMaterialFallback(reference, 'shader validation failed'); this.stats.shaderFallbacks++; this.materialPrograms.set(reference, null); return this.baseProgramState }
     try {
       const program = createProgram(this.gl, materialFragment(material))
       this.stats.shaderCompiles++
@@ -586,11 +587,11 @@ export class WebGL2Renderer implements Renderer2D {
     }
   }
 
-  private applyMaterialUniforms(state: ProgramState): void {
+  /** 结构说明（自动提取）：applyMaterialUniforms；输入 state；直接调用 applyResourceUniforms。 */ private applyMaterialUniforms(state: ProgramState): void {
     this.applyResourceUniforms(state.program, state.material!)
   }
 
-  private applyResourceUniforms(program: WebGLProgram, material: Material2DResource): void {
+  /** 结构说明（自动提取）：applyResourceUniforms；输入 program、material；直接调用 gl.getUniformLocation、gl.uniform1f、performance.now、Object.entries、gl.uniform1i 等；包含循环处理。 */ private applyResourceUniforms(program: WebGLProgram, material: Material2DResource): void {
     const time = this.gl.getUniformLocation(program, 'u_nova_time')
     if (time) this.gl.uniform1f(time, performance.now() / 1_000)
     for (const [name, value] of Object.entries(material.uniforms)) {
@@ -602,7 +603,7 @@ export class WebGL2Renderer implements Renderer2D {
       else if (value.length === 3) this.gl.uniform3fv(location, value)
       else if (value.length === 4) this.gl.uniform4fv(location, value)
     }
-    Object.entries(material.textures).slice(0, 7).forEach(([name, reference], index) => {
+    Object.entries(material.textures).slice(0, 7).forEach(/** 结构说明（自动提取）：forEach 回调；输入 [name, reference]、index；直接调用 gl.getUniformLocation、resolveTextureAsset、gl.activeTexture、gl.bindTexture、resolveTexture 等。 */ ([name, reference], index) => {
       const location = this.gl.getUniformLocation(program, name)
       if (!location) return
       const region = resolveTextureAsset(reference, material.sampling) ?? this.whiteRegion
@@ -613,13 +614,13 @@ export class WebGL2Renderer implements Renderer2D {
     this.gl.activeTexture(this.gl.TEXTURE0)
   }
 
-  private drawPostMaterial(reference: string, providedMaterial: Material2DResource | null = null): boolean {
+  /** 结构说明（自动提取）：drawPostMaterial；输入 reference、providedMaterial；直接调用 resolveMaterial、resolvedMaterialFragment、some、analyzeMaterialShader、reportMaterialFallback 等；写入 failedPostSignature、postProgram。 */ private drawPostMaterial(reference: string, providedMaterial: Material2DResource | null = null): boolean {
     if (!this.colorTarget) return false
     const signature = providedMaterial ? `${reference}:${providedMaterial.fragment}` : `${reference}:${assetState.generation}`
     if (this.failedPostSignature === signature) return false
     const material = providedMaterial ?? resolveMaterial(reference), resolved = resolvedMaterialFragment(material)
-    if ([...resolved.diagnostics, ...analyzeMaterialShader(resolved.source, material.includes)].some(item => item.severity === 'error')) { this.failedPostSignature = signature; reportMaterialFallback(reference, 'post-process validation failed'); this.stats.shaderFallbacks++; return false }
-    const generation = providedMaterial ? signature.length + [...signature].reduce((sum, character) => (sum * 31 + character.charCodeAt(0)) | 0, 0) : assetState.generation
+    if ([...resolved.diagnostics, ...analyzeMaterialShader(resolved.source, material.includes)].some(/* 比较 item.severity 与 'error'，返回严格相等的判断结果。 */ item => item.severity === 'error')) { this.failedPostSignature = signature; reportMaterialFallback(reference, 'post-process validation failed'); this.stats.shaderFallbacks++; return false }
+    const generation = providedMaterial ? signature.length + [...signature].reduce(/** 结构说明（自动提取）：reduce 回调；输入 sum、character；直接调用 character.charCodeAt；返回表达式求值结果。 */ (sum, character) => (sum * 31 + character.charCodeAt(0)) | 0, 0) : assetState.generation
     if (!this.postProgram || this.postProgram.reference !== reference || this.postProgram.generation !== generation) {
       if (this.postProgram) this.gl.deleteProgram(this.postProgram.program)
       try {
@@ -641,7 +642,7 @@ export class WebGL2Renderer implements Renderer2D {
     return gl.getError() === gl.NO_ERROR
   }
 
-  private ensureEffectsTarget(): void {
+  /** 结构说明（自动提取）：ensureEffectsTarget；无显式参数；直接调用 gl.createFramebuffer、gl.createTexture、Error、resizeEffectsTarget；写入 framebuffer、colorTarget；包含显式抛错路径。 */ private ensureEffectsTarget(): void {
     const gl = this.gl
     if (!this.framebuffer) this.framebuffer = gl.createFramebuffer()
     if (!this.colorTarget) this.colorTarget = gl.createTexture()
@@ -649,7 +650,7 @@ export class WebGL2Renderer implements Renderer2D {
     if (this.effectsWidth !== this.canvas.width || this.effectsHeight !== this.canvas.height) this.resizeEffectsTarget(this.canvas.width, this.canvas.height)
   }
 
-  private resizeEffectsTarget(pixelWidth: number, pixelHeight: number): void {
+  /** 结构说明（自动提取）：resizeEffectsTarget；输入 pixelWidth、pixelHeight；直接调用 gl.bindTexture、gl.texParameteri、gl.texImage2D、gl.bindFramebuffer、gl.framebufferTexture2D 等；写入 effectsWidth、effectsHeight；包含显式抛错路径。 */ private resizeEffectsTarget(pixelWidth: number, pixelHeight: number): void {
     if (!this.framebuffer || !this.colorTarget) return
     const gl = this.gl
     gl.bindTexture(gl.TEXTURE_2D, this.colorTarget)
@@ -662,7 +663,7 @@ export class WebGL2Renderer implements Renderer2D {
     this.effectsWidth = pixelWidth; this.effectsHeight = pixelHeight
   }
 
-  private pollGpuTimers(): void {
+  /** 结构说明（自动提取）：pollGpuTimers；无显式参数；直接调用 gl.getQueryParameter、pendingTimers.shift、gl.getParameter、Number、gl.deleteQuery；写入 lastGpuMs；包含循环处理。 */ private pollGpuTimers(): void {
     if (!this.timerExtension) return
     while (this.pendingTimers.length) {
       const query = this.pendingTimers[0]
@@ -674,7 +675,7 @@ export class WebGL2Renderer implements Renderer2D {
     }
   }
 
-  private resolveTexture(region: TextureRegion, filter: TextureFilter): WebGLTexture {
+  /** 结构说明（自动提取）：resolveTexture；输入 region、filter；直接调用 textureDimensions、Math.min、gl.getParameter、textureCache.get、textureContentVersion 等；写入 cached.lastUsedFrame、stats.textureBudgetExceeded、cached、textureMemoryBytes 等；返回路径包含 cached.texture；包含显式抛错路径。 */ private resolveTexture(region: TextureRegion, filter: TextureFilter): WebGLTexture {
     const source = region.source as object
     const dimensions = textureDimensions(region.source)
     const maximum = Math.min(8192, this.gl.getParameter(this.gl.MAX_TEXTURE_SIZE) as number), weight = dimensions.width * dimensions.height * 4
@@ -722,14 +723,14 @@ export class WebGL2Renderer implements Renderer2D {
     return cached.texture
   }
 
-  preloadTexture(region: TextureRegion): void {
+  /** 结构说明（自动提取）：preloadTexture；输入 region；直接调用 textureCache.get、textureContentVersion、queueTextureUpload。 */ preloadTexture(region: TextureRegion): void {
     const cached = this.textureCache.get(region.source as object)
     if (!cached || cached.contentVersion !== textureContentVersion(region, this.frameSerial)) this.queueTextureUpload(region)
   }
 
-  private uploadBudget(): number { return Math.round(Math.min(4096, Math.max(1, finite(renderingSettings.textureStreaming.uploadBudgetPerFrame, 16)))) }
+  /* 调用 Math.round(Math.min(4096, Math.max(1, finite(renderingSettings.textureStreaming.uploadBudgetPerFrame, 16)))) 并返回调用结果。 */ private uploadBudget(): number { return Math.round(Math.min(4096, Math.max(1, finite(renderingSettings.textureStreaming.uploadBudgetPerFrame, 16)))) }
 
-  private queueTextureUpload(region: TextureRegion): void {
+  /** 结构说明（自动提取）：queueTextureUpload；输入 region；直接调用 textureDimensions、Number.isFinite、pendingTextureUploads.get、pendingTextureUploads.has、textureBudget 等；写入 stats.textureUploadDeferrals、pendingTextureBytes、stats.textureBudgetExceeded、stats.textureUploadQueue 等。 */ private queueTextureUpload(region: TextureRegion): void {
     const source = region.source as object, dimensions = textureDimensions(region.source)
     if (!Number.isFinite(dimensions.width * dimensions.height) || dimensions.width <= 0 || dimensions.height <= 0 || dimensions.width > 8192 || dimensions.height > 8192) return
     this.stats.textureUploadDeferrals = (this.stats.textureUploadDeferrals ?? 0) + 1
@@ -740,7 +741,7 @@ export class WebGL2Renderer implements Renderer2D {
     this.stats.textureUploadQueue = this.pendingTextureUploads.size; this.stats.textureUploadQueueBytes = this.pendingTextureBytes
   }
 
-  private drainTextureUploads(): void {
+  /** 结构说明（自动提取）：drainTextureUploads；无显式参数；直接调用 uploadBudget、pendingTextureUploads.delete、resolveTexture；写入 drainingTextureUploads、pendingTextureBytes、stats.textureUploadQueue、stats.textureUploadQueueBytes；包含循环处理。 */ private drainTextureUploads(): void {
     this.drainingTextureUploads = true
     try {
       const maximum = renderingSettings.textureStreaming.enabled ? this.uploadBudget() : 4096
@@ -753,25 +754,25 @@ export class WebGL2Renderer implements Renderer2D {
     } finally { this.drainingTextureUploads = false; this.stats.textureUploadQueue = this.pendingTextureUploads.size; this.stats.textureUploadQueueBytes = this.pendingTextureBytes }
   }
 
-  private textureBudget(): number { return Math.min(GPU_TEXTURE_MEMORY_LIMIT_MB, Math.max(16, finite(renderingSettings.textureStreaming.memoryBudgetMb, 256))) * 1048576 }
+  /** 结构说明（自动提取）：textureBudget；无显式参数；直接调用 Math.min、Math.max、finite。 */ private textureBudget(): number { return Math.min(GPU_TEXTURE_MEMORY_LIMIT_MB, Math.max(16, finite(renderingSettings.textureStreaming.memoryBudgetMb, 256))) * 1048576 }
 
-  private evictTexture(source: object): void {
+  /** 结构说明（自动提取）：evictTexture；输入 source；直接调用 textureCache.get、gl.deleteTexture、textureCache.delete；写入 textureMemoryBytes。 */ private evictTexture(source: object): void {
     const cached = this.textureCache.get(source); if (!cached) return
     this.gl.deleteTexture(cached.texture); this.textureCache.delete(source)
     this.textureCount--; this.textureMemoryBytes -= cached.width * cached.height * 4; this.stats.textureEvictions++
   }
 
-  private reserveTexture(source: object, bytes: number): boolean {
+  /** 结构说明（自动提取）：reserveTexture；输入 source、bytes；直接调用 textureCache.get、textureCache.has、textureBudget、over、sort 等；包含循环处理。 */ private reserveTexture(source: object, bytes: number): boolean {
     const cached = this.textureCache.get(source), previousBytes = cached ? cached.width * cached.height * 4 : 0
     const reserveFallback = source !== this.whiteCanvas && !this.textureCache.has(this.whiteCanvas)
     const budget = this.textureBudget() - (reserveFallback ? 4 : 0), entries = 2048 - (reserveFallback ? 1 : 0)
     if (bytes > budget) return false
-    const over = () => this.textureMemoryBytes - previousBytes + bytes > budget || this.textureCache.size + (cached ? 0 : 1) > entries
-    if (over()) for (const [candidate] of [...this.textureCache].filter(([candidate, value]) => candidate !== source && candidate !== this.whiteCanvas && value.lastUsedFrame < this.frameSerial).sort((a, b) => a[1].lastUsedFrame - b[1].lastUsedFrame)) { this.evictTexture(candidate); if (!over()) break }
+    const over = /* 先计算 this.textureMemoryBytes - previousBytes + bytes > budget；仅当其为假值时求右侧 this.textureCache.size + (cached ? 0 : 1) > entries，返回短路求值结果。 */ () => this.textureMemoryBytes - previousBytes + bytes > budget || this.textureCache.size + (cached ? 0 : 1) > entries
+    if (over()) for (const [candidate] of [...this.textureCache].filter(/* 先计算 candidate !== source && candidate !== this.whiteCanvas；仅当其为真值时求右侧 value.lastUsedFrame < this.frameSerial，返回短路求值结果。 */ ([candidate, value]) => candidate !== source && candidate !== this.whiteCanvas && value.lastUsedFrame < this.frameSerial).sort(/* 计算表达式 a[1].lastUsedFrame - b[1].lastUsedFrame 并返回结果，沿用操作数的原有类型规则。 */ (a, b) => a[1].lastUsedFrame - b[1].lastUsedFrame)) { this.evictTexture(candidate); if (!over()) break }
     return !over()
   }
 
-  private trimTextureResidency(): void {
+  /** 结构说明（自动提取）：trimTextureResidency；无显式参数；直接调用 textureBudget、Math.max、sort、filter、textureCache.entries 等；写入 stats.textureBudgetBytes、stats.textureBudgetExceeded、stats.textures、stats.textureMemoryBytes 等；包含循环处理。 */ private trimTextureResidency(): void {
     const budgetBytes = this.textureBudget()
     this.stats.textureBudgetBytes = budgetBytes
     if (!renderingSettings.textureStreaming.enabled) {
@@ -782,8 +783,8 @@ export class WebGL2Renderer implements Renderer2D {
     }
     const idleBefore = this.frameSerial - Math.max(2, renderingSettings.textureStreaming.idleFrames)
     const candidates = [...this.textureCache.entries()]
-      .filter(([source, cached]) => source !== this.whiteCanvas && cached.lastUsedFrame < this.frameSerial)
-      .sort((first, second) => first[1].lastUsedFrame - second[1].lastUsedFrame || first[1].width * first[1].height - second[1].width * second[1].height)
+      .filter(/* 先计算 source !== this.whiteCanvas；仅当其为真值时求右侧 cached.lastUsedFrame < this.frameSerial，返回短路求值结果。 */ ([source, cached]) => source !== this.whiteCanvas && cached.lastUsedFrame < this.frameSerial)
+      .sort(/** 结构说明（自动提取）：sort 回调；输入 first、second；返回表达式求值结果。 */ (first, second) => first[1].lastUsedFrame - second[1].lastUsedFrame || first[1].width * first[1].height - second[1].width * second[1].height)
     for (const [source, cached] of candidates) {
       if (cached.lastUsedFrame > idleBefore && this.textureMemoryBytes <= budgetBytes) break
       this.gl.deleteTexture(cached.texture)
@@ -797,7 +798,7 @@ export class WebGL2Renderer implements Renderer2D {
     this.stats.textureMemoryBytes = this.textureMemoryBytes
   }
 
-  private textTexture(command: TextRenderCommand): CachedText | null {
+  /** 结构说明（自动提取）：textTexture；输入 command；直接调用 join、textCache.get、Math.max、Math.ceil、slice 等；写入 existing.lastUsedFrame、measure.font、textCacheBytes、surface.width 等；返回路径包含 existing、cached；包含循环处理。 */ private textTexture(command: TextRenderCommand): CachedText | null {
     const key = [command.text, command.fontFamily, command.fontWeight, command.fontSize, command.lineHeight, command.outlineWidth, command.outlineColor.r, command.outlineColor.g, command.outlineColor.b, command.outlineColor.a].join('|')
     const existing = this.textCache.get(key)
     if (existing) { existing.lastUsedFrame = this.frameSerial; return existing }
@@ -808,7 +809,7 @@ export class WebGL2Renderer implements Renderer2D {
     const measureCanvas = document.createElement('canvas')
     const measure = measureCanvas.getContext('2d')!
     measure.font = `${command.fontWeight} ${fontPixels}px ${command.fontFamily}`
-    const width = Math.max(1, Math.ceil(Math.max(...lines.map(line => measure.measureText(line || ' ').width)) + padding * 2))
+    const width = Math.max(1, Math.ceil(Math.max(...lines.map(/* 返回 measure.measureText(line || ' ').width 的当前值。 */ line => measure.measureText(line || ' ').width)) + padding * 2))
     const height = Math.max(1, Math.ceil(lines.length * fontPixels * command.lineHeight + padding * 2))
     const bytes = Math.min(4096, width) * Math.min(4096, height) * 4
     for (const [key, value] of this.textCache) { if (this.textCache.size < 256 && this.textCacheBytes + bytes <= 64 * 1048576) break; if (value.lastUsedFrame === this.frameSerial) continue; this.textCache.delete(key); this.textCacheBytes -= value.bytes; this.evictTexture(value.region.source as object); const surface = value.region.source as HTMLCanvasElement; surface.width = 0; surface.height = 0 }
@@ -826,7 +827,7 @@ export class WebGL2Renderer implements Renderer2D {
       context.lineWidth = rasterOutline * 2
       context.lineJoin = 'round'
     }
-    lines.forEach((line, index) => {
+    lines.forEach(/** 结构说明（自动提取）：lines.forEach 回调；输入 line、index；直接调用 context.strokeText、context.fillText。 */ (line, index) => {
       const y = padding + index * fontPixels * command.lineHeight
       if (rasterOutline > 0 && command.outlineColor.a > 0) context.strokeText(line, padding, y)
       context.fillText(line, padding, y)

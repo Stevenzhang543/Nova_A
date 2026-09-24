@@ -1,3 +1,4 @@
+/** 版本7.0.0：生成参考项目与对应资源，供功能演示和版本验证使用。 */
 import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -19,9 +20,9 @@ const references = [
   }
 ]
 
-const rewriteForV7 = value => {
+const rewriteForV7 = /** 递归遍历数组和对象，将字符串中的6.9.0版本及兼容上限改写为7.0.0与8.0.0上限。 */ value => {
   if (Array.isArray(value)) return value.map(rewriteForV7)
-  if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([key, child]) => [key, rewriteForV7(child)]))
+  if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(/* 返回按声明顺序构造的数组 [key, rewriteForV7(child)]。 */ ([key, child]) => [key, rewriteForV7(child)]))
   if (typeof value !== 'string') return value
   return value
     .replaceAll('6.9.0', '7.0.0')
@@ -77,7 +78,7 @@ for (const reference of references) {
       ['v6.9-schema29.nova', historical],
       ['v7-schema29-expected.nova', current],
       ['future-schema.nova', future]
-    ].map(([name, value]) => writeFile(join(fixtureDirectory, name), `${JSON.stringify(value, null, 2)}\n`)))
+    ].map(/* 调用 writeFile(join(fixtureDirectory, name), `${JSON.stringify(value, null, 2)}\n`) 并返回调用结果。 */ ([name, value]) => writeFile(join(fixtureDirectory, name), `${JSON.stringify(value, null, 2)}\n`)))
     await writeFile(join(fixtureDirectory, 'EXPECTED.md'), '# Expected migration behavior\n\n- The v6.9 fixture previews a metadata-only `<7.0.0` → `<8.0.0` compatibility seal.\n- The preview produces a backup and deterministic semantic diff before apply.\n- Repeating the migration is a no-op and produces the same canonical project.\n- Rollback restores the byte-for-byte source fixture.\n- The future-schema fixture is blocked without modifying the open project.\n')
   }
 }

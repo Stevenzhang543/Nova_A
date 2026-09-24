@@ -1,3 +1,4 @@
+/** 用户偏好状态：读取和约束持久化设置，将配色、语言、缩放及动效偏好应用到文档。 */
 import { reactive, watch } from 'vue'
 import { colorPalette, paletteForMode, type ColorPaletteId } from './colorPalettes'
 
@@ -70,25 +71,25 @@ const defaults: Preferences = {
   defaultFriction: 0.25
 }
 
-function finiteRange(value: unknown, fallback: number, minimum: number, maximum: number): number {
+/** 仅接受有限数值并夹到指定区间；类型或数值无效时使用默认值。 */ function finiteRange(value: unknown, fallback: number, minimum: number, maximum: number): number {
   return typeof value === 'number' && Number.isFinite(value)
     ? Math.min(maximum, Math.max(minimum, value))
     : fallback
 }
 
-function storedBoolean(value: unknown, fallback: boolean): boolean {
+/* 根据 typeof value === 'boolean' 的真假，分别返回 value 或 fallback。 */ function storedBoolean(value: unknown, fallback: boolean): boolean {
   return typeof value === 'boolean' ? value : fallback
 }
 
-function normalizedTheme(value: unknown): ThemeMode {
+/* 根据 value === 'light' 的真假，分别返回 'light' 或 'dark'。 */ function normalizedTheme(value: unknown): ThemeMode {
   return value === 'light' ? 'light' : 'dark'
 }
 
-function normalizedLocale(value: unknown): Locale {
+/* 根据 value === 'de' || value === 'zh' 的真假，分别返回 value 或 'en'。 */ function normalizedLocale(value: unknown): Locale {
   return value === 'de' || value === 'zh' ? value : 'en'
 }
 
-function normalizedPreferences(parsed: Partial<Preferences>, resetLegacyLightContrast: boolean): Preferences {
+/** 逐项校验已保存偏好、迁移旧全屏及浅色高对比设置，并为缺失或非法值补默认值。 */ function normalizedPreferences(parsed: Partial<Preferences>, resetLegacyLightContrast: boolean): Preferences {
   return {
     ...defaults,
     theme: normalizedTheme(parsed.theme),
@@ -121,7 +122,7 @@ function normalizedPreferences(parsed: Partial<Preferences>, resetLegacyLightCon
   }
 }
 
-function loadPreferences(): Preferences {
+/** 从本地存储加载偏好并执行一次浅色对比迁移；缺少存储或解析失败时恢复默认值。 */ function loadPreferences(): Preferences {
   if (typeof localStorage === 'undefined') return { ...defaults }
   try {
     const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}') as Partial<Preferences>
@@ -136,7 +137,7 @@ function loadPreferences(): Preferences {
 
 export const preferencesState = reactive<Preferences>(loadPreferences())
 
-export function applyPreferences(): void {
+/** 将当前偏好写入根元素数据属性、界面缩放变量和文档语言；无文档环境直接返回。 */ export function applyPreferences(): void {
   if (typeof document === 'undefined') return
   const root = document.documentElement
   root.dataset.theme = preferencesState.theme
@@ -151,7 +152,7 @@ export function applyPreferences(): void {
   root.lang = preferencesState.locale === 'zh' ? 'zh-CN' : preferencesState.locale
 }
 
-export function selectColorPalette(value: unknown): void {
+/** 仅接受已登记配色，并同步其明暗模式及该模式下选中的配色标识。 */ export function selectColorPalette(value: unknown): void {
   const palette = colorPalette(value)
   if (!palette) return
   preferencesState.theme = palette.mode
@@ -159,13 +160,13 @@ export function selectColorPalette(value: unknown): void {
   else preferencesState.darkPalette = palette.id
 }
 
-export function resetPreferences(): void {
+/** 就地恢复全部默认偏好，保留响应式对象身份以继续通知已有订阅者。 */ export function resetPreferences(): void {
   Object.assign(preferencesState, { ...defaults })
 }
 
 applyPreferences()
 
-watch(preferencesState, () => {
+watch(preferencesState, /** 应用响应式偏好变更并尝试持久化；存储失败只记录警告，不阻断编辑。 */ () => {
   applyPreferences()
   if (typeof localStorage !== 'undefined') {
     try {

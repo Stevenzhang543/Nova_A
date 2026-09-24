@@ -1,3 +1,4 @@
+<!-- 代码/图转换检查面板：展示完整性分类、诊断和精确位置导航，不改写用户源码。 -->
 <template>
   <section class="conversion-panel" :aria-label="copy.title" data-conversion-panel>
     <strong>{{ copy.title }}</strong>
@@ -9,15 +10,15 @@
     <p>{{ copy.explanation }}</p>
     <p :class="['conversion-state', gate]" role="status">{{ gate === 'blocked' ? copy.blocked : gate === 'review' ? copy.review : copy.ready }}</p>
     <article v-for="(diagnostic, index) in assessment.diagnostics" :key="`${diagnostic.code}:${diagnostic.span.start}:${index}`" :class="['conversion-region', diagnostic.severity]">
-      <strong>{{ diagnostic.code }} · {{ diagnostic.severity }}</strong><p>{{ diagnostic.message }}</p>
+      <strong>{{ diagnostic.code }} · {{ graphDiagnosticSeverityLabel(diagnostic.severity,preferencesState.locale) }}</strong><p>{{ graphDiagnosticMessage(diagnostic,preferencesState.locale) }}</p><details v-if="graphDiagnosticMessage(diagnostic,preferencesState.locale)!==diagnostic.message"><summary>{{ graphDiagnosticDetailsLabel(preferencesState.locale) }}</summary><pre>{{ diagnostic.message }}</pre></details>
       <small>{{ location(diagnostic.span) }}</small>
       <div class="conversion-actions"><button @click="navigate('code', diagnostic)">{{ copy.code }}</button><button v-if="graphNavigationEnabled && (diagnostic.nodeUuid || regionAt(assessment,diagnostic.span)?.nodeUuid)" @click="navigate('graph', diagnostic)">{{ copy.graph }}</button></div>
     </article>
     <details :open="gate !== 'ready'">
       <summary>{{ copy.structural }} / {{ copy.sourceBacked }} · {{ assessment.regions.length }}</summary>
       <article v-for="region in regions.slice(0, limit)" :key="region.id" :class="['conversion-region', region.classification]" :data-conversion-region="region.classification">
-        <strong>{{ region.kind }} · {{ classificationLabel(region.classification) }}</strong><small>{{ location(region.span) }}</small>
-        <p v-if="region.reason">{{ region.reason }}</p><pre>{{ source.slice(region.span.start, region.span.end).slice(0, 600) }}{{ region.span.end-region.span.start > 600 ? '…' : '' }}</pre>
+        <strong>{{ syntaxKindLabel(region.kind,preferencesState.locale) }} · {{ classificationLabel(region.classification) }}</strong><small>{{ location(region.span) }}</small>
+        <p v-if="region.reason">{{ graphConversionReason(region.reason,preferencesState.locale) }}</p><pre>{{ source.slice(region.span.start, region.span.end).slice(0, 600) }}{{ region.span.end-region.span.start > 600 ? '…' : '' }}</pre>
         <div class="conversion-actions"><button @click="navigate('code', region)">{{ copy.code }}</button><button v-if="graphNavigationEnabled && region.nodeUuid" @click="navigate('graph', region)">{{ copy.graph }}</button></div>
       </article>
       <button v-if="regions.length > limit" @click="limit += 60">{{ copy.more }} ({{ regions.length - limit }})</button>
@@ -30,14 +31,19 @@
 import { computed, ref, watch } from 'vue'
 import type { SourceConversionAssessment } from '../visual/graphCodeSync'
 import { preferencesState } from '../store/preferences'
+import { graphDiagnosticMessage, graphDiagnosticDetailsLabel, graphDiagnosticSeverityLabel, graphConversionReason } from '../editor/graphDiagnosticCopy'
+import { syntaxKindLabel } from '../editor/graphSyntaxCopy'
 import { conversionCopy, conversionGate, regionAt, type ConversionNavigation, type ConversionSpan } from '../editor/scriptConversionPresentation'
 const props = withDefaults(defineProps<{ assessment: SourceConversionAssessment; source: string; graphNavigationEnabled?: boolean }>(), { graphNavigationEnabled:true })
 const emit = defineEmits<{ navigate: [request: ConversionNavigation] }>()
-const copy = computed(() => conversionCopy[preferencesState.locale]), gate = computed(() => conversionGate(props.assessment)), limit = ref(60)
-const regions = computed(() => [...props.assessment.regions].sort((a, b) => Number(a.classification === 'structural') - Number(b.classification === 'structural') || a.span.start - b.span.start))
-watch(() => props.source, () => { limit.value = 60 })
+const copy = computed(/** 跟随界面语言选择转换说明。 */ () => conversionCopy[preferencesState.locale]), gate = computed(/** 按诊断与覆盖状态确定是否允许转换。 */ () => conversionGate(props.assessment)), limit = ref(60)
+const regions = computed(/** 优先展示需要注意的非结构区域，再按源码位置排序。 */ () => [...props.assessment.regions].sort(/** 同类区域维持源码顺序。 */ (a, b) => Number(a.classification === 'structural') - Number(b.classification === 'structural') || a.span.start - b.span.start))
+watch(/** 观察源码身份而非展开状态。 */ () => props.source, /** 新源码恢复分页上限，避免继承上个文档的大量展开内容。 */ () => { limit.value = 60 })
+/** 将解析器起止位置显示为行列范围。 */
 function location(span: ConversionSpan) { return `${span.line}:${span.column}–${span.endLine}:${span.endColumn}` }
+/** 将稳定分类值转换成当前语言的覆盖说明。 */
 function classificationLabel(kind: string) { return kind === 'structural' ? copy.value.structural : kind === 'source-backed' ? copy.value.sourceBacked : copy.value.unpreservable }
+/** 优先使用直接节点关联，否则从源范围定位；只发出导航请求而不执行转换。 */
 function navigate(target: 'code' | 'graph', item: { span: ConversionSpan; nodeUuid?: string; scopeUuid?: string }) { const region = item.nodeUuid ? item : regionAt(props.assessment,item.span); emit('navigate', { target, span: item.span, nodeUuid: region?.nodeUuid, scopeUuid: region?.scopeUuid }) }
 </script>
 

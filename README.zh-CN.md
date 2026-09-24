@@ -1,9 +1,13 @@
+<!-- 项目入口说明：区分当前开发源码、已完成发布与历史版本材料。 -->
 **语言：** 中文 | [English](./README.md)
 
 # Nova_A 2D 游戏引擎与编辑器
 
+<!-- NOVA_V2624_OVERVIEW -->
+**当前开发源码 26.24：** [版本状态](docs/RELEASE_NOTES_26_24.md)、[结构化图契约](docs/STRUCTURAL_GRAPH_26_24.md)、[验收追踪](docs/IMPLEMENTATION_TRACKER_26_24.md)、[逐文件修改](docs/EDIT_LEDGER_26_24.md)及[网页部署](docs/WEB_HOSTING_26_24.md)。完整门禁、全量中文注释和最终发布包仍在实施中。
+
 <!-- NOVA_V2623_OVERVIEW -->
-**当前源码26.23：** [版本说明](docs/RELEASE_NOTES_26_23.md)、[脚本契约](docs/SCRIPTING_CONTRACT_26_23.md)、[网页部署](docs/WEB_HOSTING_26_23.md)、[26.23–26.30补充计划](docs/ROADMAP_26_23_TO_26_30_ADDENDUM.md)、[验收追踪](docs/IMPLEMENTATION_TRACKER_26_23.md)、[逐项修改](docs/EDIT_LEDGER_26_23.md)。发布验收以源码绑定的实际测试证据与校验和为准。
+**上一版源码 26.23：** [版本说明](docs/RELEASE_NOTES_26_23.md)、[脚本契约](docs/SCRIPTING_CONTRACT_26_23.md)、[网页部署](docs/WEB_HOSTING_26_23.md)、[26.23–26.30补充计划](docs/ROADMAP_26_23_TO_26_30_ADDENDUM.md)、[验收追踪](docs/IMPLEMENTATION_TRACKER_26_23.md)、[逐项修改](docs/EDIT_LEDGER_26_23.md)。发布验收以源码绑定的实际测试证据与校验和为准。
 
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE.md)

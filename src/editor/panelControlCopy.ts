@@ -1,3 +1,4 @@
+/** 面板操作控件的多语言标签查询。 */
 import { preferencesState } from '../store/preferences'
 
 const copy = {
@@ -7,7 +8,7 @@ const copy = {
 } as const
 
 export type PanelControlCopyKey = keyof typeof copy.en
-export function panelControlLabel(key: PanelControlCopyKey, context?: string | number): string {
+/** 读取当前语言的控件标签，有上下文文本时附加分隔说明。 */ export function panelControlLabel(key: PanelControlCopyKey, context?: string | number): string {
   const label = copy[preferencesState.locale][key]
   return context === undefined || context === '' ? label : `${label} · ${context}`
 }

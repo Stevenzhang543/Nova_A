@@ -1,3 +1,4 @@
+/** 版本26.15：生成参考项目与对应资源，供功能演示和版本验证使用。 */
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
 import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
@@ -7,8 +8,8 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 import { build } from 'vite'
 
 const root=dirname(dirname(fileURLToPath(import.meta.url))),temporary=await mkdtemp(join(tmpdir(),'nova-reference-2615-'))
-const release='26.15',engineVersion='26.15.0',verify=process.argv.includes('--verify-only'),hash=value=>createHash('sha256').update(value).digest('hex')
-const uuid=value=>{const h=hash(value);return h.slice(0,8)+'-'+h.slice(8,12)+'-4'+h.slice(13,16)+'-a'+h.slice(17,20)+'-'+h.slice(20,32)}
+const release='26.15',engineVersion='26.15.0',verify=process.argv.includes('--verify-only'),hash=/* 调用 createHash('sha256').update(value).digest('hex') 并返回调用结果。 */ value=>createHash('sha256').update(value).digest('hex')
+const uuid=/** 将输入散列转换为确定性参考标识。 */ value=>{const h=hash(value);return h.slice(0,8)+'-'+h.slice(8,12)+'-4'+h.slice(13,16)+'-a'+h.slice(17,20)+'-'+h.slice(20,32)}
 const stamp='2026-09-05T00:00:00.000Z'
 const actions=[
   {action:'Arrange the whole typed graph, then select a region and arrange only that region. Undo and Redo.',expected:'Unselected/manual positions, node identities and viewport survive; playing still follows the same six-point route.'},
@@ -20,27 +21,27 @@ const actions=[
   {action:'Add an invalid delimiter in Code, attempt Visual, then cancel and repair it.',expected:'The invalid draft stays in Code with its diagnostic; repair enables conversion without losing the draft.'},
   {action:'Save the project, reopen, play, and export Web or Windows on the corresponding available host.',expected:'The same linked source/graph and six-checkpoint route survive reopening; exported runtime uses the selected Script2D asset.'}
 ]
-async function output(path,content){if(verify)assert.equal(await readFile(path,'utf8'),content,path+' differs from its deterministic generator');else{await mkdir(dirname(path),{recursive:true});await writeFile(path,content)}}
+/** 验证模式逐字比较生成内容，否则创建父目录并写入文件。 */ async function output(path,content){if(verify)assert.equal(await readFile(path,'utf8'),content,path+' differs from its deterministic generator');else{await mkdir(dirname(path),{recursive:true});await writeFile(path,content)}}
 try{
   assert.equal(JSON.parse(await readFile(join(root,'package.json'),'utf8')).version,engineVersion,'Select the26.15 candidate before generating its references.')
   const entries={templates:'projects/templates',sync:'visual/graphCodeSync',types:'visual/graphTypes',compiler:'visual/graphCompiler',layout:'visual/graphLayoutEngine'}
-  await build({configFile:false,root,logLevel:'error',ssr:{noExternal:true},build:{ssr:true,outDir:temporary,emptyOutDir:false,rollupOptions:{input:Object.fromEntries(Object.entries(entries).map(([name,path])=>[name,join(root,'src',path+'.ts')])),output:{entryFileNames:'[name].mjs',chunkFileNames:'[name]-[hash].mjs'}}}})
-  const [templates,sync,types,compiler,layout]=await Promise.all(Object.keys(entries).map(name=>import(pathToFileURL(join(temporary,name+'.mjs')).href)))
+  await build({configFile:false,root,logLevel:'error',ssr:{noExternal:true},build:{ssr:true,outDir:temporary,emptyOutDir:false,rollupOptions:{input:Object.fromEntries(Object.entries(entries).map(/* 返回按声明顺序构造的数组 [name,join(root,'src',path+'.ts')]。 */ ([name,path])=>[name,join(root,'src',path+'.ts')])),output:{entryFileNames:'[name].mjs',chunkFileNames:'[name]-[hash].mjs'}}}})
+  const [templates,sync,types,compiler,layout]=await Promise.all(Object.keys(entries).map(/* 调用 import(pathToFileURL(join(temporary,name+'.mjs')).href) 并返回调用结果。 */ name=>import(pathToFileURL(join(temporary,name+'.mjs')).href)))
   // Every shipped Rhai starter participates in the same projection qualification.
   let converted=0
-  for(const descriptor of templates.PROJECT_TEMPLATES)for(const asset of templates.createTemplateProject(descriptor.id,descriptor.name).assets.filter(asset=>asset.assetType==='script')){
+  for(const descriptor of templates.PROJECT_TEMPLATES)for(const asset of templates.createTemplateProject(descriptor.id,descriptor.name).assets.filter(/* 比较 asset.assetType 与 'script'，返回严格相等的判断结果。 */ asset=>asset.assetType==='script')){
     const graph=sync.createGraphFromRhaiSource(asset.source,asset.name),compiled=compiler.compileGraph(graph)
     assert.equal(compiled.valid,true,descriptor.id+'/'+asset.name+': '+JSON.stringify(compiled.diagnostics));assert.equal(compiled.source,asset.source);converted++
   }
   for(const mode of ['code','blocks','mixed']){
     const id='creator-v2615-'+mode+'-game',title='Nova 26.15 Coin Trail — '+mode,project=templates.createTemplateProject('coin-trail',title)
     const projectId=uuid(id);project.engineVersion=engineVersion;project.projectName=title;project.projectMetadata={...project.projectMetadata,id:projectId,name:title,template:id,createdAt:stamp,updatedAt:stamp};project.manifest={...project.manifest,projectUuid:projectId,name:title}
-    const originalScripts=project.assets.filter(asset=>asset.assetType==='script'),graphAssets=[]
+    const originalScripts=project.assets.filter(/* 比较 asset.assetType 与 'script'，返回严格相等的判断结果。 */ asset=>asset.assetType==='script'),graphAssets=[]
     for(const script of originalScripts){
       const seed=id+'/'+script.path,graph=sync.createGraphFromRhaiSource(script.source,script.name.replace(/\.rhai$/,''),uuid(seed+'/graph')),ids=new Map()
       for(const node of graph.nodes){ids.set(node.uuid,uuid(seed+'/node/'+node.config.astId));for(const pin of node.pins)ids.set(pin.uuid,uuid(seed+'/pin/'+node.config.astId+'/'+pin.direction+'/'+pin.key))}
       for(const edge of graph.edges)ids.set(edge.uuid,uuid(seed+'/edge/'+ids.get(edge.from.pinUuid)+'/'+ids.get(edge.to.pinUuid)))
-      const stable=JSON.parse(JSON.stringify(graph,(_key,value)=>typeof value==='string'&&ids.has(value)?ids.get(value):value))
+      const stable=JSON.parse(JSON.stringify(graph,/* 根据 typeof value==='string'&&ids.has(value) 的真假，分别返回 ids.get(value) 或 value。 */ (_key,value)=>typeof value==='string'&&ids.has(value)?ids.get(value):value))
       const arranged=layout.layoutGraph({nodes:stable.nodes,edges:stable.edges})
       for(const node of stable.nodes)node.position=arranged.positions[node.uuid]??node.position
       assert.equal(compiler.compileGraph(stable).source,script.source,'Layout must preserve generated behavior and source')
@@ -53,10 +54,10 @@ try{
     project.assets.push(...graphAssets)
     const directory=join(root,'reference-projects/projects',id),authoring=mode==='blocks'?'typed Rhai structure attached through Script2D':mode==='mixed'?'linked Rhai code and typed structure':'Rhai code with synchronized typed companion'
     const common={version:1,release,engineVersion,projectFormat:2,schema:29,reference:id,authoring}
-    const expected={format:'nova-reference-expected-output',...common,checkpoints:6,initialScore:0,completionScore:6,restartAction:'Restart',graphs:graphAssets.map(asset=>asset.uuid),sourceScripts:originalScripts.map(asset=>asset.uuid),behaviors:actions.map((item,index)=>({id:id+'-'+index,description:item.action,expectedOutcome:item.expected}))}
+    const expected={format:'nova-reference-expected-output',...common,checkpoints:6,initialScore:0,completionScore:6,restartAction:'Restart',graphs:graphAssets.map(/* 返回 asset.uuid 的当前值。 */ asset=>asset.uuid),sourceScripts:originalScripts.map(/* 返回 asset.uuid 的当前值。 */ asset=>asset.uuid),behaviors:actions.map(/** 将测试操作转换为带稳定索引的行为预期。 */ (item,index)=>({id:id+'-'+index,description:item.action,expectedOutcome:item.expected}))}
     const controls={format:'nova-reference-test-controls',...common,classification:['gameplay','code-visual','save-reopen','export'],actions}
     await output(join(directory,'project.nova'),JSON.stringify(project,null,2)+'\n');await output(join(directory,'expected-output.json'),JSON.stringify(expected,null,2)+'\n');await output(join(directory,'test-controls.json'),JSON.stringify(controls,null,2)+'\n')
-    await output(join(directory,'README.md'),'# '+title+'\n\nPublic release **26.15** · Engine **26.15.0** · Project Format 2/schema 29.\n\nAuthoring: '+authoring+'. The same Coin Trail scene, input map and gameplay source are used by all three variants. Only the blocks variant attaches the graph asset directly. Both modes use the same runtime module resolver and command path.\n\n'+actions.map((item,index)=>(index+1)+'. '+item.action+' **Expected:** '+item.expected).join('\n\n')+'\n\nSee [the26.14 object-family lesson and current asset/rendering manual](../../../docs/OBJECT_FAMILY_LESSON_26_14.en.md) and the English/German/Chinese offline manual. A generated reference is a repeatable test input; qualification results are recorded separately.\n')
+    await output(join(directory,'README.md'),'# '+title+'\n\nPublic release **26.15** · Engine **26.15.0** · Project Format 2/schema 29.\n\nAuthoring: '+authoring+'. The same Coin Trail scene, input map and gameplay source are used by all three variants. Only the blocks variant attaches the graph asset directly. Both modes use the same runtime module resolver and command path.\n\n'+actions.map(/* 计算表达式 (index+1)+'. '+item.action+' **Expected:** '+item.expected 并返回结果，沿用操作数的原有类型规则。 */ (item,index)=>(index+1)+'. '+item.action+' **Expected:** '+item.expected).join('\n\n')+'\n\nSee [the26.14 object-family lesson and current asset/rendering manual](../../../docs/OBJECT_FAMILY_LESSON_26_14.en.md) and the English/German/Chinese offline manual. A generated reference is a repeatable test input; qualification results are recorded separately.\n')
   }
   const server=JSON.parse(await readFile(join(root,'reference-projects/projects/server-v2610-headless-authority/project.nova'),'utf8')),id='server-v2615-headless-authority',title='Nova 26.15 Headless Authority',directory=join(root,'reference-projects/projects',id)
   server.engineVersion=engineVersion;server.projectName=title;server.projectMetadata={...server.projectMetadata,id:uuid(id),name:title,template:id,createdAt:stamp,updatedAt:stamp};server.manifest={...server.manifest,projectUuid:uuid(id),name:title};if(server.projectSettings?.build)server.projectSettings.build.gameName=title

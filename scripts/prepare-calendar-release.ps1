@@ -1,3 +1,4 @@
+# 日历版本发布准备：选择明确资格计划并按顺序执行所需验证。
 [CmdletBinding()]
 param(
   [ValidatePattern('^\d{2}\.\d{2}$')]
@@ -35,6 +36,7 @@ $cargoCommand = Get-Command cargo -ErrorAction Stop
 $pnpmPath = $pnpmCommand.Source
 $cargoPath = $cargoCommand.Source
 
+# 调用指定项目脚本并在非零退出码时立即报错。
 function Invoke-PnpmScript {
   param(
     [Parameter(Mandatory = $true)][string]$Name,
@@ -51,7 +53,7 @@ try {
   # Validate every required command before a version setter or generator runs.
   $package = Get-Content -LiteralPath 'package.json' -Raw | ConvertFrom-Json
   $requiredScripts = @('tauri','test:core','check','audit:manual','audit:scripts','audit:rendering','audit:animation','audit:typography','verify:templates','audit:repository',$FocusScript,"version:v$Release","manual:v$Release","references:v$Release","verify:v$Release","verify:v${Release}:history","verify:v${Release}:layout-contract","verify:v${Release}:interactions","qualify:v${Release}:layout","verify:v${Release}:windows","verify:v${Release}:headless","benchmark:v$Release","stability:v$Release","security:v$Release","audit:v$Release","evidence:v$Release")
-  $missingScripts = @($requiredScripts | Where-Object { $_ -notin $package.scripts.psobject.Properties.Name })
+  $missingScripts = @($requiredScripts | Where-Object <# 按条件 $_ -notin $package.scripts.psobject.Properties.Name 筛选当前条目。 #> { $_ -notin $package.scripts.psobject.Properties.Name })
   if ($missingScripts.Count -gt 0) { throw "Release $Release has no complete qualification command plan: $($missingScripts -join ', '). No version authority or generated source was changed." }
   $currentVersion = [string](Get-Content -LiteralPath 'package.json' -Raw | ConvertFrom-Json).version
   if ($currentVersion -ne $machineVersion) {

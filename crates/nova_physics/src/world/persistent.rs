@@ -1,3 +1,4 @@
+// 持久物理世界：稳定句柄、按需重建、状态缓存及接触生命周期事件。
 #[derive(Clone, Debug, PartialEq)]
 pub enum PhysicsEvent {
     BodyCreated {
@@ -83,6 +84,7 @@ pub struct PhysicsWorld {
 }
 
 impl PhysicsWorld {
+    // 创建空持久物理世界并使用规范的默认求解质量。
     pub fn new() -> Self {
         Self {
             quality: SolverQuality::default(),
@@ -90,6 +92,7 @@ impl PhysicsWorld {
         }
     }
 
+    // 设置物理求解质量，并使依赖配置的缓存按需更新。
     pub fn set_quality(
         &mut self,
         minimum_substeps: usize,
@@ -113,6 +116,7 @@ impl PhysicsWorld {
         }
     }
 
+    // 分别设置速度与位置迭代上限及连续碰撞、休眠选项。
     pub fn set_quality_iterations(
         &mut self,
         minimum_substeps: usize,
@@ -137,19 +141,24 @@ impl PhysicsWorld {
         }
     }
 
+    // 返回持久世界中的刚体数量。
     pub fn body_count(&self) -> usize {
         self.bodies.len()
     }
+    // 返回持久世界中的连接数量。
     pub fn connection_count(&self) -> usize {
         self.connections.len()
     }
+    // 返回因配置改变而重建求解器的累计次数。
     pub fn configuration_rebuilds(&self) -> u64 {
         self.configuration_rebuilds
     }
+    // 返回累计物理推进次数。
     pub fn physics_steps(&self) -> u64 {
         self.physics_steps
     }
 
+    // 分配稳定句柄并插入规范化后的刚体记录。
     pub fn create_body(
         &mut self,
         handle: u32,
@@ -159,9 +168,10 @@ impl PhysicsWorld {
         if self.body_index.contains_key(&handle) {
             return Err("body handle already exists");
         }
-        self.upsert_body(handle, order, values).map(|_| ())
+        self.upsert_body(handle, order, values).map(/* 计算并返回 ()，用于当前 create_body 流程。 */ |_| ())
     }
 
+    // 按稳定句柄新增或更新刚体记录，返回是否发生有效变化。
     pub fn upsert_body(
         &mut self,
         handle: u32,
@@ -177,7 +187,7 @@ impl PhysicsWorld {
             if changed {
                 let transform_changed = [2_usize, 3, 12, 13, 14, 43, 44, 45]
                     .into_iter()
-                    .any(|field| record.values[field] != values[field])
+                    .any(/* 判断 record . values [field] != values [field] 是否成立，供过滤或有效性检查使用。 */ |field| record.values[field] != values[field])
                     || record.values[34..42] != values[34..42];
                 record.order = order;
                 record.values.copy_from_slice(values);
@@ -201,6 +211,7 @@ impl PhysicsWorld {
         Ok(true)
     }
 
+    // 移除指定刚体以及依赖它的状态，返回是否找到目标。
     pub fn destroy_body(&mut self, handle: u32) -> bool {
         let Some(index) = self.body_index.get(&handle).copied() else {
             return false;
@@ -208,7 +219,7 @@ impl PhysicsWorld {
         let ended = self
             .contacts
             .iter()
-            .filter_map(|(pair, contact)| {
+            .filter_map(/* 判断 (pair . 0 == handle || pair . 1 == handle) . then_some ((* pair , * contact)) 是否成立，供过滤或有效性检查使用。 */ |(pair, contact)| {
                 (pair.0 == handle || pair.1 == handle).then_some((*pair, *contact))
             })
             .collect::<Vec<_>>();
@@ -223,6 +234,7 @@ impl PhysicsWorld {
         true
     }
 
+    // 按刚体句柄更新复合碰撞体记录，并标记配置变化。
     /// Additive collider-child channel. The stable body record remains 56
     /// scalars; compound/chain/concave pieces are retained beside it.
     pub fn upsert_collider_shapes(
@@ -248,6 +260,7 @@ impl PhysicsWorld {
         Ok(true)
     }
 
+    // 更新指定刚体的位置与角度，并使休眠刚体重新活动。
     pub fn set_transform(
         &mut self,
         handle: u32,
@@ -255,7 +268,7 @@ impl PhysicsWorld {
         y: f64,
         angle: f64,
     ) -> Result<(), &'static str> {
-        self.update_body(handle, |values| {
+        self.update_body(handle, /* 更新有限化后的位置和规范角度，并清零休眠状态与计时。 */ |values| {
             values[2] = finite_or(x, values[2]);
             values[3] = finite_or(y, values[3]);
             values[14] = normalize_angle(angle);
@@ -264,6 +277,7 @@ impl PhysicsWorld {
         })
     }
 
+    // 更新指定刚体的线速度与角速度。
     pub fn set_velocity(
         &mut self,
         handle: u32,
@@ -271,7 +285,7 @@ impl PhysicsWorld {
         y: f64,
         angular: f64,
     ) -> Result<(), &'static str> {
-        self.update_body(handle, |values| {
+        self.update_body(handle, /* 更新有限化后的线速度和角速度，并清零休眠状态与计时。 */ |values| {
             values[4] = finite_or(x, values[4]);
             values[5] = finite_or(y, values[5]);
             values[15] = finite_or(angular, values[15]);
@@ -280,6 +294,7 @@ impl PhysicsWorld {
         })
     }
 
+    // 更新刚体接触材质参数，并触发必要的求解配置更新。
     pub fn set_material(
         &mut self,
         handle: u32,
@@ -287,13 +302,14 @@ impl PhysicsWorld {
         static_friction: f64,
         dynamic_friction: f64,
     ) -> Result<(), &'static str> {
-        self.update_body(handle, |values| {
+        self.update_body(handle, /* 把恢复系数限制为单位区间，并保存非负静、动摩擦系数。 */ |values| {
             values[10] = unit_interval(restitution);
             values[20] = non_negative(static_friction, values[20]);
             values[11] = non_negative(dynamic_friction, values[11]);
         })
     }
 
+    // 给指定刚体设置持续力和力矩。
     pub fn apply_force(
         &mut self,
         handle: u32,
@@ -301,7 +317,7 @@ impl PhysicsWorld {
         y: f64,
         torque: f64,
     ) -> Result<(), &'static str> {
-        self.update_body(handle, |values| {
+        self.update_body(handle, /* 保存有限化后的持续力与力矩，并唤醒目标刚体。 */ |values| {
             values[21] = finite_or(x, values[21]);
             values[22] = finite_or(y, values[22]);
             values[16] = finite_or(torque, values[16]);
@@ -310,6 +326,7 @@ impl PhysicsWorld {
         })
     }
 
+    // 累加仅下一物理步生效的临时力与力矩。
     /// Adds a force for the next fixed step only. Multiple effectors accumulate
     /// without changing the retained body descriptor or rebuilding the solver.
     pub fn apply_transient_force(
@@ -332,6 +349,7 @@ impl PhysicsWorld {
         Ok(())
     }
 
+    // 把冲量转换为线速度和角速度变化，并遵守刚体运动约束。
     pub fn apply_impulse(
         &mut self,
         handle: u32,
@@ -340,7 +358,7 @@ impl PhysicsWorld {
         offset_x: f64,
         offset_y: f64,
     ) -> Result<(), &'static str> {
-        self.update_body(handle, |values| {
+        self.update_body(handle, /* 忽略不可受冲量的刚体，按质量和惯量更新速度并清理非法数值。 */ |values| {
             if values[9] > 0.5 || values[24] > 0.5 {
                 return;
             }
@@ -357,6 +375,7 @@ impl PhysicsWorld {
         })
     }
 
+    // 按稳定句柄新增或更新连接记录，并保留确定性的顺序。
     pub fn upsert_connection(
         &mut self,
         handle: u32,
@@ -386,6 +405,7 @@ impl PhysicsWorld {
         Ok(true)
     }
 
+    // 移除指定连接并标记求解配置需要更新。
     pub fn destroy_connection(&mut self, handle: u32) -> bool {
         let Some(index) = self.connection_index.get(&handle).copied() else {
             return false;
@@ -396,6 +416,7 @@ impl PhysicsWorld {
         true
     }
 
+    // 清空运行状态及其关联缓存，供重新加载使用。
     pub fn clear(&mut self) {
         for record in &self.bodies {
             self.events.push(PhysicsEvent::BodyDestroyed {
@@ -418,6 +439,7 @@ impl PhysicsWorld {
         self.physics_steps = 0;
     }
 
+    // 推进物理世界一个时间步，更新求解状态、缓存和事件。
     pub fn step(&mut self, dt: f64, global_gravity: f64, air_friction: f64) {
         self.rebuild_dense_if_needed();
         if self.dense_bodies.is_empty() {
@@ -463,9 +485,11 @@ impl PhysicsWorld {
         self.state_buffer.extend_from_slice(&self.dense_connections);
     }
 
+    // 借用当前合并后的扁平物理状态。
     pub fn state(&self) -> &[f64] {
         &self.state_buffer
     }
+    // 对物理状态生成可重现校验值，用于回放一致性检查。
     /// Stable checksum of the authoritative, ordered physics state. Float bits
     /// are hashed exactly so replay diagnostics detect even sub-pixel drift.
     pub fn state_checksum(&self) -> u64 {
@@ -479,16 +503,20 @@ impl PhysicsWorld {
         hash ^= self.physics_steps;
         hash.wrapping_mul(0x0000_0100_0000_01b3)
     }
+    // 借用上一物理步的刚体状态，供渲染插值使用。
     pub fn previous_body_state(&self) -> &[f64] {
         &self.previous_bodies
     }
+    // 返回刚体状态所占的扁平元素数量。
     pub fn body_state_len(&self) -> usize {
         self.dense_bodies.len()
     }
+    // 取出待处理事件并清空内部事件队列。
     pub fn drain_events(&mut self) -> Vec<PhysicsEvent> {
         std::mem::take(&mut self.events)
     }
 
+    // 重建稳定句柄到记录位置的索引。
     fn rebuild_indexes(&mut self) {
         self.body_index.clear();
         for (index, record) in self.bodies.iter().enumerate() {
@@ -500,12 +528,13 @@ impl PhysicsWorld {
         }
     }
 
+    // 仅在配置脏标记存在时重建连续求解数据。
     fn rebuild_dense_if_needed(&mut self) {
         if !self.configuration_dirty {
             return;
         }
-        self.bodies.sort_by_key(|record| record.order);
-        self.connections.sort_by_key(|record| record.order);
+        self.bodies.sort_by_key(/* 返回当前快照值 record . order。 */ |record| record.order);
+        self.connections.sort_by_key(/* 返回当前快照值 record . order。 */ |record| record.order);
         self.rebuild_indexes();
         self.dense_bodies.clear();
         for record in &self.bodies {
@@ -518,7 +547,7 @@ impl PhysicsWorld {
         let child_shapes = self
             .bodies
             .iter()
-            .map(|record| record.collider_shapes.as_slice())
+            .map(/* 按 record . collider_shapes . as_slice () 读取或转换可选值，保留转换失败分支。 */ |record| record.collider_shapes.as_slice())
             .collect::<Vec<_>>();
         self.solver = Some(SolverWorld::new_with_children(
             &self.dense_bodies,
@@ -533,6 +562,7 @@ impl PhysicsWorld {
         self.configuration_dirty = false;
     }
 
+    // 将连续求解缓冲中的状态同步回持久记录。
     fn copy_dense_to_records(&mut self) {
         for (index, record) in self.bodies.iter_mut().enumerate() {
             record
@@ -546,6 +576,7 @@ impl PhysicsWorld {
         }
     }
 
+    // 比较前后刚体与连接状态，生成休眠、唤醒或断裂事件。
     fn collect_state_events(&mut self) {
         for (index, record) in self.bodies.iter().enumerate() {
             let before = record.values[49] > 0.5;
@@ -606,6 +637,7 @@ impl PhysicsWorld {
         }
     }
 
+    // 比较前后接触集合，生成进入、持续和离开事件。
     fn collect_contact_events(&mut self) {
         let mut current = HashMap::<(u32, u32, u32, u32), PhysicsContact>::new();
         if let Some(solver) = self.solver.as_ref() {
@@ -662,7 +694,7 @@ impl PhysicsWorld {
             }
         }
         let mut current_contacts = current.iter().collect::<Vec<_>>();
-        current_contacts.sort_by_key(|(pair, _)| **pair);
+        current_contacts.sort_by_key(/* 计算并返回 * * pair，用于当前 collect_contact_events 流程。 */ |(pair, _)| **pair);
         for (pair, contact) in current_contacts {
             self.events.push(if self.contacts.contains_key(pair) {
                 PhysicsEvent::ContactStayed(*contact)
@@ -671,7 +703,7 @@ impl PhysicsWorld {
             });
         }
         let mut ended_contacts = self.contacts.iter().collect::<Vec<_>>();
-        ended_contacts.sort_by_key(|(pair, _)| **pair);
+        ended_contacts.sort_by_key(/* 计算并返回 * * pair，用于当前 collect_contact_events 流程。 */ |(pair, _)| **pair);
         for (pair, contact) in ended_contacts {
             if !current.contains_key(pair) {
                 self.events.push(PhysicsEvent::ContactEnded(*contact));
@@ -680,6 +712,7 @@ impl PhysicsWorld {
         self.contacts = current;
     }
 
+    // 取得目标刚体记录并应用更新回调，再记录配置变化。
     fn update_body(
         &mut self,
         handle: u32,
@@ -698,6 +731,7 @@ impl PhysicsWorld {
 mod persistent_world_tests {
     use super::*;
 
+    // 构造持久物理世界测试使用的刚体记录。
     fn body_record() -> Vec<f64> {
         let mut body = vec![0.0; STRIDE];
         body[8] = 1.0;
@@ -709,6 +743,7 @@ mod persistent_world_tests {
         body
     }
 
+    // 验证常规物理步复用求解器而不反复重建。
     #[test]
     fn retained_solver_is_not_rebuilt_between_ordinary_steps() {
         let mut world = PhysicsWorld::new();
@@ -719,6 +754,7 @@ mod persistent_world_tests {
         assert_eq!(world.physics_steps(), 2);
     }
 
+    // 验证配置命令延迟到下一物理步才触发重建。
     #[test]
     fn command_changes_rebuild_only_on_the_next_step() {
         let mut world = PhysicsWorld::new();
@@ -730,6 +766,7 @@ mod persistent_world_tests {
         assert_eq!(world.configuration_rebuilds(), 2);
     }
 
+    // 验证临时力累加一次生效且不重建求解器。
     #[test]
     fn transient_forces_accumulate_for_one_tick_without_rebuilding() {
         let mut world = PhysicsWorld::new();
@@ -746,6 +783,7 @@ mod persistent_world_tests {
         assert_eq!(world.configuration_rebuilds(), rebuilds);
     }
 
+    // 验证变换命令唤醒休眠刚体。
     #[test]
     fn transform_commands_wake_a_sleeping_body() {
         let mut record = body_record();
@@ -765,6 +803,7 @@ mod persistent_world_tests {
         assert_eq!(world.bodies[0].values[50], 0.0);
     }
 
+    // 验证接触事件包含两端身份和传感器状态。
     #[test]
     fn contact_events_identify_both_bodies_and_sensor_state() {
         let mut first = body_record();
@@ -780,7 +819,7 @@ mod persistent_world_tests {
         world.drain_events();
         world.step(1.0 / 60.0, 0.0, 0.0);
         let events = world.drain_events();
-        assert!(events.iter().any(|event| matches!(
+        assert!(events.iter().any(/* 检查事件或命令是否符合当前测试预期：matches ! (event , PhysicsEvent :: ContactStarted (contact) if contact . first == 10 && contact . second == 20 && contact . sensor)。 */ |event| matches!(
             event,
             PhysicsEvent::ContactStarted(contact)
                 if contact.first == 10 && contact.second == 20 && contact.sensor
@@ -789,9 +828,10 @@ mod persistent_world_tests {
         assert!(world
             .drain_events()
             .iter()
-            .any(|event| matches!(event, PhysicsEvent::ContactStayed(_))));
+            .any(/* 检查事件或命令是否符合当前测试预期：matches ! (event , PhysicsEvent :: ContactStayed (_))。 */ |event| matches!(event, PhysicsEvent::ContactStayed(_))));
     }
 
+    // 验证同时接触按稳定句柄顺序发出事件。
     #[test]
     fn simultaneous_contacts_are_emitted_in_stable_handle_order() {
         let mut world = PhysicsWorld::new();
@@ -809,7 +849,7 @@ mod persistent_world_tests {
         let pairs = world
             .drain_events()
             .into_iter()
-            .filter_map(|event| match event {
+            .filter_map(/* 仅提取接触进入事件，并按较小句柄在前规范接触对。 */ |event| match event {
                 PhysicsEvent::ContactStarted(contact) => Some((
                     contact.first.min(contact.second),
                     contact.first.max(contact.second),

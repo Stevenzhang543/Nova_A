@@ -1,9 +1,10 @@
+/** 版本审计与用户夹具辅助库，区分开发证据和实际资格。 */
 import assert from 'node:assert/strict'
 import {mkdir,writeFile} from 'node:fs/promises'
 import {join} from 'node:path'
 import {openMediaAuditModules} from './mediaAudit16.mjs'
 import {populateImportProject22} from '../fixtures/v26.22-import-project.mjs'
-export async function userFixture22(name,kind='empty'){
+/** 创建空白或导入项目夹具，写入缓存原生项目，并始终关闭临时模块环境。 */ export async function userFixture22(name,kind='empty'){
  assert.match(name,/^[a-z0-9-]+$/);assert.ok(['empty','imports'].includes(kind));
  const opened=await openMediaAuditModules({repository:process.cwd(),bases:[process.cwd()]},{physics:'store/physics',templates:'projects/templates',assets:'assets/AssetDatabase'});
  try{const {physics:p,templates,assets}=opened.modules,wasm=await opened.wasm();let source;
@@ -14,7 +15,7 @@ export async function userFixture22(name,kind='empty'){
 }
 
 /** Actual menu input; a rejected studio Save must display its reason and write nothing. */
-export async function blockedStudioSave22(a){
+/** 通过实际保存菜单验证脏工作室阻止保存、显示提示且没有产生下载文件。 */ export async function blockedStudioSave22(a){
  const {readdir,mkdtemp}=await import('node:fs/promises'),{wait}=await import('./browserUserAudit.mjs');
  const folder=await mkdtemp(join(a.profile,'blocked-studio-'));
  await a.client.send('Browser.setDownloadBehavior',{behavior:'allow',downloadPath:folder,eventsEnabled:true});

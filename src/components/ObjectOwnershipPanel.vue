@@ -1,3 +1,4 @@
+<!-- 对象来源面板：展示蓝图、预制体、属性和事件来源，定位源资源及检查器字段。 -->
 <template>
   <details class="object-ownership" @toggle="expanded=($event.target as HTMLDetailsElement).open" @change.stop>
     <summary>{{ labels.title }}</summary>
@@ -30,18 +31,18 @@ import { openEventSheetAsset, openGraphAsset } from '../visual/graphStudioState'
 import { describeObjectProvenance, type OwnershipAsset, type ObjectSource } from '../editor/objectProvenance'
 import { objectOwnershipCopy } from '../editor/objectOwnershipCopy'
 const props=defineProps<{entity:Entity}>(),emit=defineEmits<{'edit-blueprint':[uuid:string];'create-blueprint':[];'open-callback':[uuid:string,callback:string]}>()
-const expanded=ref(false),revision=ref(0),query=ref(''),error=ref(''),labels=computed(()=>objectOwnershipCopy[preferencesState.locale])
-const canEdit=computed(()=>physicsState.playMode==='editing')
-const view=computed(()=>{void revision.value;void assetState.generation;return describeObjectProvenance(props.entity)})
-const matches=(value:string)=>!query.value.trim()||value.toLocaleLowerCase().includes(query.value.trim().toLocaleLowerCase())
-const matchingSources=computed(()=>view.value.sources.filter(item=>matches(`${item.asset.name} ${item.asset.path} ${item.relationship}`)))
-const matchingProperties=computed(()=>view.value.properties.filter(row=>matches(`${row.path} ${labels.value[row.origin]} ${row.owner?.name??''}`)))
-const matchingEvents=computed(()=>view.value.events.filter(row=>matches(`${row.kind} ${row.selector} ${row.callback} ${row.sheet?.name??''}`)))
-const timer=setInterval(()=>{if(expanded.value&&physicsState.playMode!=='editing')revision.value++},500)
-onBeforeUnmount(()=>clearInterval(timer))
-function sourceLabel(relationship:ObjectSource['relationship']):string {const keys={blueprint:'blueprint','base-blueprint':'base',prefab:'prefab','prefab-layer':'prefabLayer',events:'eventSheet','base-events':'baseEvents',logic:'logicSource'} as const;return labels.value[keys[relationship]]}
-function valueText(value:unknown):string {return value===undefined?'—':typeof value==='string'?value:JSON.stringify(value)}
-function openSource(source:OwnershipAsset,callback?:string){
+const expanded=ref(false),revision=ref(0),query=ref(''),error=ref(''),labels=computed(/* 返回 objectOwnershipCopy[preferencesState.locale] 的当前值。 */ ()=>objectOwnershipCopy[preferencesState.locale])
+const canEdit=computed(/* 比较 physicsState.playMode 与 'editing'，返回严格相等的判断结果。 */ ()=>physicsState.playMode==='editing')
+const view=computed(/** 依赖手动修订和资源代次计算对象来源。 */ ()=>{void revision.value;void assetState.generation;return describeObjectProvenance(props.entity)})
+const matches=/** 搜索词为空时匹配全部，否则按大小写无关文本匹配。 */ (value:string)=>!query.value.trim()||value.toLocaleLowerCase().includes(query.value.trim().toLocaleLowerCase())
+const matchingSources=computed(/** 按资源名称、路径及来源关系筛选源记录。 */ ()=>view.value.sources.filter(/** 判断源记录组合文本是否匹配搜索。 */ item=>matches(`${item.asset.name} ${item.asset.path} ${item.relationship}`)))
+const matchingProperties=computed(/** 按属性路径、来源标签及拥有者名称筛选属性。 */ ()=>view.value.properties.filter(/** 判断属性来源组合文本是否匹配搜索。 */ row=>matches(`${row.path} ${labels.value[row.origin]} ${row.owner?.name??''}`)))
+const matchingEvents=computed(/** 按事件种类、选择器、回调及事件表名称筛选事件。 */ ()=>view.value.events.filter(/** 判断事件来源组合文本是否匹配搜索。 */ row=>matches(`${row.kind} ${row.selector} ${row.callback} ${row.sheet?.name??''}`)))
+const timer=setInterval(/** 面板展开且处于运行模式时增加修订号以刷新来源。 */ ()=>{if(expanded.value&&physicsState.playMode!=='editing')revision.value++},500)
+onBeforeUnmount(/** 卸载时清除运行时来源刷新计时器。 */ ()=>clearInterval(timer))
+/** 将来源关系映射为本地化来源标签。 */ function sourceLabel(relationship:ObjectSource['relationship']):string {const keys={blueprint:'blueprint','base-blueprint':'base',prefab:'prefab','prefab-layer':'prefabLayer',events:'eventSheet','base-events':'baseEvents',logic:'logicSource'} as const;return labels.value[keys[relationship]]}
+/** 未定义显示占位符，字符串保留原文，其他值使用 JSON 显示。 */ function valueText(value:unknown):string {return value===undefined?'—':typeof value==='string'?value:JSON.stringify(value)}
+/** 验证源资源身份后打开对应蓝图、事件表、图或脚本；其他资源定位到资源浏览器，逻辑源切换脚本工作区。 */ function openSource(source:OwnershipAsset,callback?:string){
   error.value='';const record=resolveAsset(source.uuid)
   if(!record||record.assetType!==source.assetType){error.value=labels.value.missingSource;return}
   if(record.assetType==='objectBlueprint'){emit('edit-blueprint',record.uuid);return}
@@ -52,11 +53,11 @@ function openSource(source:OwnershipAsset,callback?:string){
   else {assetState.currentFolder=record.path.slice(0,record.path.lastIndexOf('/'));assetState.selectedGuid=record.uuid;assetState.search='';assetState.typeFilter='all';assetState.favoritesOnly=false;assetState.tagFilter='';assetState.selectedCollectionId='';editorState.bottomPanelTab='assets';editorState.bottomPanelVisible=true;return}
   applyEditorWorkspace('script')
 }
-function openRuntimeAuthor(uuid:string,callback?:string){const record=resolveAsset(uuid);if(!record){error.value=labels.value.missingSource;return}openSource(record,callback)}
-const inspectorPath=(path:string)=>path.replace(/^Transform2D\./,'Transform.').replace(/^SpriteRenderer2D\./,'Sprite.').replace(/^Camera2D\./,'Camera.').replace(/^Path2D\./,'Path.')
-const propertyElement=(path:string)=>Array.from(document.querySelectorAll<HTMLElement>('.config-panel [data-property-path]')).find(element=>element.dataset.propertyPath===inspectorPath(path))
-function canLocate(path:string){void revision.value;return Boolean(propertyElement(path))}
-function locateProperty(path:string){editorState.inspectorCategory='all';editorState.inspectorSearch='';editorState.inspectorModifiedOnly=false;editorState.inspectorPinnedOnly=false;queueMicrotask(()=>{const element=propertyElement(path);if(!element)return;for(let parent:HTMLElement|null=element;parent;parent=parent.parentElement)if(parent instanceof HTMLDetailsElement)parent.open=true;element.scrollIntoView({block:'center'});element.querySelector<HTMLElement>('input,select,button,textarea')?.focus({preventScroll:true})})}
+/** 根据运行时作者标识查找资源，缺失提示错误，否则打开其源内容。 */ function openRuntimeAuthor(uuid:string,callback?:string){const record=resolveAsset(uuid);if(!record){error.value=labels.value.missingSource;return}openSource(record,callback)}
+const inspectorPath=/** 将运行时组件路径前缀转换为检查器所用路径。 */ (path:string)=>path.replace(/^Transform2D\./,'Transform.').replace(/^SpriteRenderer2D\./,'Sprite.').replace(/^Camera2D\./,'Camera.').replace(/^Path2D\./,'Path.')
+const propertyElement=/** 在检查器的属性标记元素中查找对应路径。 */ (path:string)=>Array.from(document.querySelectorAll<HTMLElement>('.config-panel [data-property-path]')).find(/* 比较 element.dataset.propertyPath 与 inspectorPath(path)，返回严格相等的判断结果。 */ element=>element.dataset.propertyPath===inspectorPath(path))
+/** 依赖修订号检测该属性是否已有可定位的检查器元素。 */ function canLocate(path:string){void revision.value;return Boolean(propertyElement(path))}
+/** 清除检查器过滤后安排字段定位，以便目标重新出现在 DOM。 */ function locateProperty(path:string){editorState.inspectorCategory='all';editorState.inspectorSearch='';editorState.inspectorModifiedOnly=false;editorState.inspectorPinnedOnly=false;queueMicrotask(/** 寻找目标字段，展开祖先详情、居中滚动并聚焦首个输入控件。 */ ()=>{const element=propertyElement(path);if(!element)return;for(let parent:HTMLElement|null=element;parent;parent=parent.parentElement)if(parent instanceof HTMLDetailsElement)parent.open=true;element.scrollIntoView({block:'center'});element.querySelector<HTMLElement>('input,select,button,textarea')?.focus({preventScroll:true})})}
 </script>
 
 <style scoped>

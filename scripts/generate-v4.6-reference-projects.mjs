@@ -1,3 +1,4 @@
+/** 版本4.6：生成参考项目与对应资源，供功能演示和版本验证使用。 */
 import { createHash } from 'node:crypto'
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
@@ -6,7 +7,7 @@ import { fileURLToPath } from 'node:url'
 const root = dirname(dirname(fileURLToPath(import.meta.url)))
 const projectsRoot = join(root, 'reference-projects', 'projects')
 const base = JSON.parse(await readFile(join(projectsRoot, 'script-api-v1-examples', 'project.nova'), 'utf8'))
-const baseScript = base.assets.find(asset => asset.assetType === 'script')
+const baseScript = base.assets.find(/* 比较 asset.assetType 与 'script'，返回严格相等的判断结果。 */ asset => asset.assetType === 'script')
 if (!baseScript) throw new Error('The script API reference seed has no script asset')
 
 const namespaceRepresentatives = {
@@ -15,13 +16,13 @@ const namespaceRepresentatives = {
   save: 'save_get', timing: 'time_delta', logging: 'log_info', resources: 'resource_handle', signals: 'signal_emit', tasks: 'task_wait', testing: 'expect'
 }
 
-function stableUuid(seed) {
+/** 由种子SHA-256散列生成稳定标识。 */ function stableUuid(seed) {
   const value = createHash('sha256').update(seed).digest('hex').slice(0, 32)
   return `${value.slice(0, 8)}-${value.slice(8, 12)}-4${value.slice(13, 16)}-8${value.slice(17, 20)}-${value.slice(20)}`
 }
 
-function hash(source) { return createHash('sha256').update(source).digest('hex') }
-function scriptAsset(slug, name, source, options = {}) {
+/* 调用 createHash('sha256').update(source).digest('hex') 并返回调用结果。 */ function hash(source) { return createHash('sha256').update(source).digest('hex') }
+/** 从脚本基线生成4.6资源，设置源码散列、接口版本、断点、测试和重载策略。 */ function scriptAsset(slug, name, source, options = {}) {
   const contentHash = hash(source)
   return {
     ...structuredClone(baseScript), uuid: options.uuid ?? stableUuid(`v4.6:${slug}:${name}`), name: `${name}.rhai`, path: `Assets/Scripts/${name}.rhai`,
@@ -31,7 +32,7 @@ function scriptAsset(slug, name, source, options = {}) {
   }
 }
 
-function projectSettings(project) {
+/** 配置参考项目的脚本格式、诊断、索引、测试与默认禁用远程调试。 */ function projectSettings(project) {
   project.projectSettings ??= {}
   project.projectSettings.scripting = {
     apiVersion: 2, exceptionPolicy: 'uncaught', hotReload: true,
@@ -43,15 +44,15 @@ function projectSettings(project) {
   }
 }
 
-function readme(slug, title, demonstrates, limitations) {
+/** 生成4.6脚本参考的用途、测试步骤、要求和限制说明。 */ function readme(slug, title, demonstrates, limitations) {
   return `# ${title}\n\nEngine **4.6.0**, Project Format 2, schema 29.\n\n## Purpose\n\n${demonstrates}\n\n## Test procedure\n\n1. Open \`project.nova\` and switch to **Script**.\n2. Follow \`test-controls.json\` and compare the result with \`expected-output.json\`.\n3. Run \`pnpm nova script-test ./reference-projects/projects/${slug}/project.nova --format json\` when the project path is supported, or use the listed \`Assets/Scripts\` fixture sources directly.\n4. Confirm Project Health reports API v2 and no blocking script error.\n\n## Requirements\n\n- Required packages: None; Nova_A core only.\n- Target platforms: Windows x86-64 editor/runtime and the supported Chromium web runtime.\n\n## Known limitations\n\n${limitations}\n`
 }
 
-async function writeReference({ slug, title, description, scripts, expectations, limitations = 'This focused fixture validates its listed workflow; clean-machine, real remote-player, and long-duration soak gates remain external qualification work.' }) {
+/** 克隆项目并替换脚本资源和旧绑定，写出原生项目、测试预期及说明。 */ async function writeReference({ slug, title, description, scripts, expectations, limitations = 'This focused fixture validates its listed workflow; clean-machine, real remote-player, and long-duration soak gates remain external qualification work.' }) {
   const project = structuredClone(base)
   project.engineVersion = '4.6.0'; project.projectMetadata.name = title; project.projectMetadata.template = slug; project.manifest.name = title
   projectSettings(project)
-  project.assets = project.assets.filter(asset => asset.assetType !== 'script')
+  project.assets = project.assets.filter(/* 比较 asset.assetType 与 'script'，返回严格不等的判断结果。 */ asset => asset.assetType !== 'script')
   project.assets.push(...scripts)
   const oldScriptUuid = baseScript.uuid
   for (const scene of project.scenes ?? []) for (const entity of scene.entities ?? []) for (const component of entity.components ?? []) {
@@ -64,14 +65,14 @@ async function writeReference({ slug, title, description, scripts, expectations,
   await writeFile(join(directory, 'README.md'), readme(slug, title, description, limitations))
 }
 
-const apiScripts = Object.entries(namespaceRepresentatives).map(([namespace, representative]) => {
+const apiScripts = Object.entries(namespaceRepresentatives).map(/** 为API命名空间生成带代表接口元数据断言的脚本测试资源。 */ ([namespace, representative]) => {
   const testName = `test_api_${namespace}`
   const source = `// Nova_A API v2 contract fixture: ${namespace}\n// Representative binding: ${representative}\n// @test tags=api,contract,${namespace} timeout=1000 seed=460\nfn ${testName}() {\n  expect(api_current_version() == 2, "API v2 engine");\n  expect(api_minimum_version() == 1, "API v1 adapter");\n  expect(api_namespace("${representative}") == "${namespace}", "${namespace} namespace metadata");\n}\n`
   return scriptAsset('script-v46-api-contract', `Api_${namespace}`, source, { tests: [testName] })
 })
 await writeReference({ slug: 'script-v46-api-contract', title: 'Script v4.6 API Contract', description: 'One deterministic tested script covers every stable API v2 namespace/category and the v1 compatibility floor.', scripts: apiScripts, expectations: { minimumScripts: apiScripts.length, apiVersion: 2, apiNamespaces: Object.keys(namespaceRepresentatives), expectedTests: apiScripts.length } })
 
-const languageSource = `${Array.from({ length: 500 }, (_, index) => `fn indexed_symbol_${String(index).padStart(4, '0')}(value) { value + ${index} }`).join('\n')}\n// @test tags=language,index timeout=1500 seed=460\nfn test_language_index() { expect(indexed_symbol_0499(1) == 500, "large symbol index"); }\n`
+const languageSource = `${Array.from({ length: 500 }, /** 生成带顺序名称和固定加数的索引压力函数源码。 */ (_, index) => `fn indexed_symbol_${String(index).padStart(4, '0')}(value) { value + ${index} }`).join('\n')}\n// @test tags=language,index timeout=1500 seed=460\nfn test_language_index() { expect(indexed_symbol_0499(1) == 500, "large symbol index"); }\n`
 await writeReference({ slug: 'script-v46-language-services', title: 'Script v4.6 Language Services', description: 'Large-symbol completion, hover, signature help, definition, references, rename, formatting, module assistance, cancellation and persisted workspace indexing.', scripts: [scriptAsset('script-v46-language-services', 'LargeWorkspace', languageSource, { tests: ['test_language_index'] }), scriptAsset('script-v46-language-services', 'UtilityModule', 'fn utility_value() { 46 }\n', { dependencies: ['LargeWorkspace.rhai'] })], expectations: { minimumSymbols: 502, interactiveBudgetMs: 50, persistedIndex: true } })
 
 const debuggerSource = `@export(type="integer", group="Debug") let counter = 0;\nfn recursive_depth(value) { if value <= 0 { counter } else { recursive_depth(value - 1) } }\nfn update(dt) { counter += 1; task_wait("debug-task", 0.01); if counter == 3 { log_info("logpoint counter=" + counter); } }\nfn on_task(name) { let depth = recursive_depth(3); expect(depth >= 0, "recursive stack"); }\n// @test tags=debugger timeout=1000 seed=460\nfn test_debugger_fixture() { expect(recursive_depth(4) >= 0, "stack and locals"); }\n`
@@ -84,7 +85,7 @@ const hotReloadSources = [
   ['HotReloadRemovedState', '@export(type="float") let legacy_speed = 4.0;\nfn update(dt) { set_position(legacy_speed * dt, 0.0); }\n'],
   ['HotReloadSyntaxError', 'fn update(dt) { set_position(dt, 0.0);\n'],
   ['HotReloadRuntimeException', 'fn update(dt) { expect(false, "deliberate runtime failure"); }\n']
-].map(([name, source]) => scriptAsset('script-v46-hot-reload', name, source))
+].map(/* 调用 scriptAsset('script-v46-hot-reload', name, source) 并返回调用结果。 */ ([name, source]) => scriptAsset('script-v46-hot-reload', name, source))
 await writeReference({ slug: 'script-v46-hot-reload', title: 'Script v4.6 Hot Reload', description: 'Deliberate compatible, function-addition, removed-state, syntax-error and runtime-exception candidates exercise classification, state transfer, transaction rollback and restart-required reporting.', scripts: hotReloadSources, expectations: { fixtures: ['compatible-property', 'function-added', 'removed-state', 'syntax-error', 'runtime-exception'], failedCandidateReplacesRuntime: false } })
 
 const testSource = `@export(type="integer", serialize=false) let state = 0;\nfn before_all() { state = 1; }\nfn before_each() { state += 1; }\n// @test tags=unit,fast fixture=counter timeout=1000 seed=460 cases=alpha|beta\nfn test_unit_counter() { expect(state >= 2, "unit setup"); }\n// @test tags=integration,scene,ui,physics,animation,regression timeout=1500 seed=461\nfn test_cross_domain() { expect(api_current_version() == 2, "cross-domain API"); }\nfn after_each() { state -= 1; }\nfn after_all() { state = 0; }\n`

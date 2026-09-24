@@ -1,3 +1,4 @@
+/** 派生精灵纹理缓存：解析派生资源图像并在源数据变化时清理缓存。 */
 import type { DerivedSprite } from './derivedSprites'
 import { validateDerivedSprite } from './derivedSprites'
 import type { TextureRegion } from '../renderer'
@@ -5,11 +6,11 @@ import type { TextureRegion } from '../renderer'
 const cache = new Map<string, { canvas: HTMLCanvasElement; bytes: number }>()
 const MAX_BYTES = 64 * 1024 * 1024, MAX_ENTRIES = 512
 let bytes = 0
-export function derivedSpriteTextureStats() { return { entries: cache.size, bytes, maxBytes: MAX_BYTES, maxEntries: MAX_ENTRIES } }
-export function clearDerivedSpriteTextures(): void { cache.clear(); bytes = 0 }
+/* 返回具有所列字段的新对象 { entries: cache.size, bytes, maxBytes: MAX_BYTES, maxEntries: MAX_ENTRIES }。 */ export function derivedSpriteTextureStats() { return { entries: cache.size, bytes, maxBytes: MAX_BYTES, maxEntries: MAX_ENTRIES } }
+/** 清空派生精灵画布缓存并重置已计费字节。 */ export function clearDerivedSpriteTextures(): void { cache.clear(); bytes = 0 }
 
 /** Undo clockwise atlas packing and transparent trimming into original source-frame coordinates. */
-export function resolveDerivedSpriteTexture(sprite: DerivedSprite, texture: TextureRegion, imageSize: { width: number; height: number }, filter: 'Nearest' | 'Linear'): TextureRegion | null {
+/** 校验帧边界并在有界最近使用缓存中恢复裁剪、旋转与透明边距，返回完整精灵画布纹理。 */ export function resolveDerivedSpriteTexture(sprite: DerivedSprite, texture: TextureRegion, imageSize: { width: number; height: number }, filter: 'Nearest' | 'Linear'): TextureRegion | null {
   const valid = validateDerivedSprite(sprite)!, frame = valid.frame, source = texture.source
   if (frame.x + frame.width > imageSize.width || frame.y + frame.height > imageSize.height || imageSize.width <= 0 || imageSize.height <= 0) return null
   const key = `derived:${texture.key}:${texture.revision ?? ''}:${JSON.stringify(valid)}`

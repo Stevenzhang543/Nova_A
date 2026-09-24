@@ -1,3 +1,4 @@
+<!-- 管理工作区：按需加载各管理面板并显示对应脏状态。 -->
 <template>
   <section class="manage-workspace" data-control-scope="manage-workspace">
     <header class="manage-header">
@@ -30,13 +31,13 @@ import { projectScopeDirty } from '../runtime/projectTransactions'
 // Each management tool is an independent route. Deferring inactive tools keeps
 // launcher/editor startup responsive while Vue retains the same component state
 // and transition behavior once a route is selected.
-const SettingsPanel = defineAsyncComponent(() => import('../panels/SettingsPanel.vue'))
-const PackageManagerPanel = defineAsyncComponent(() => import('./PackageManagerPanel.vue'))
-const ProjectHealthPanel = defineAsyncComponent(() => import('./ProjectHealthPanel.vue'))
-const RenderingPanel = defineAsyncComponent(() => import('./RenderingPanel.vue'))
-const BuildSettingsPanel = defineAsyncComponent(() => import('./BuildSettingsPanel.vue'))
-const CreatorLearningCenter = defineAsyncComponent(() => import('./CreatorLearningCenter.vue'))
-const AutomationStudio = defineAsyncComponent(() => import('./AutomationStudio.vue'))
+const SettingsPanel = defineAsyncComponent(/** 按需加载项目设置面板。 */ () => import('../panels/SettingsPanel.vue'))
+const PackageManagerPanel = defineAsyncComponent(/** 按需加载资源包面板。 */ () => import('./PackageManagerPanel.vue'))
+const ProjectHealthPanel = defineAsyncComponent(/** 按需加载项目健康面板。 */ () => import('./ProjectHealthPanel.vue'))
+const RenderingPanel = defineAsyncComponent(/** 按需加载渲染面板。 */ () => import('./RenderingPanel.vue'))
+const BuildSettingsPanel = defineAsyncComponent(/** 按需加载构建设置面板。 */ () => import('./BuildSettingsPanel.vue'))
+const CreatorLearningCenter = defineAsyncComponent(/** 按需加载学习中心。 */ () => import('./CreatorLearningCenter.vue'))
+const AutomationStudio = defineAsyncComponent(/** 按需加载自动化工作室。 */ () => import('./AutomationStudio.vue'))
 
 type TranslationKey = Parameters<typeof t>[0]
 const sections: ReadonlyArray<{ id: ManageSection; label: TranslationKey; description: TranslationKey; short: TranslationKey; icon: string }> = [
@@ -48,8 +49,8 @@ const sections: ReadonlyArray<{ id: ManageSection; label: TranslationKey; descri
   { id: 'rendering', label: 'renderingStudio', description: 'manageRenderingHint', short: 'renderingQuality', icon: '◈' },
   { id: 'build', label: 'buildPanel', description: 'manageBuildHint', short: 'buildReadiness', icon: '▶' }
 ]
-const active = computed(() => sections.find(item => item.id === state.manageSection) ?? sections[0])
-function sectionDirty(id:ManageSection){return id==='learn'||id==='automation'?false:id==='packages'?projectScopeDirty('packages'):id==='build'?projectScopeDirty('build'):id==='project'?projectScopeDirty('project'):projectScopeDirty('settings')}
+const active = computed(/** 选择当前管理栏目，未知栏目回退到首项。 */ () => sections.find(/* 比较 item.id 与 state.manageSection，返回严格相等的判断结果。 */ item => item.id === state.manageSection) ?? sections[0])
+/** 把栏目映射至项目修改范围，学习与自动化栏目不单独标记脏状态。 */ function sectionDirty(id:ManageSection){return id==='learn'||id==='automation'?false:id==='packages'?projectScopeDirty('packages'):id==='build'?projectScopeDirty('build'):id==='project'?projectScopeDirty('project'):projectScopeDirty('settings')}
 </script>
 
 <style scoped>

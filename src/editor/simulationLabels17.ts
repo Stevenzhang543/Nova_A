@@ -1,3 +1,4 @@
+/** 仿真及物理编辑界面的多语言标签。 */
 import { preferencesState } from '../store/preferences'
 const labels = {
   title: ['Physics and world status', 'Physik- und Weltstatus', '物理与世界状态'],
@@ -31,4 +32,4 @@ const labels = {
   radiusHint: ['Child shape size contains the full width and height. The legacy radius field is retained for project compatibility; use size to edit a circle or ellipse.', 'Die Größe einer Teilform enthält volle Breite und Höhe. Das alte Radiusfeld bleibt zur Projektkompatibilität erhalten; Kreis oder Ellipse über Größe bearbeiten.', '子形状尺寸表示完整宽高。旧版 radius 字段仅为项目兼容而保留，请使用尺寸编辑圆或椭圆。'],
 } as const
 export type SimulationLabel17 = keyof typeof labels
-export function simulationLabel17(key: SimulationLabel17): string { return labels[key][preferencesState.locale === 'de' ? 1 : preferencesState.locale === 'zh' ? 2 : 0] }
+/* 返回 labels[key][preferencesState.locale === 'de' ? 1 : preferencesState.locale === 'zh' ? 2 : 0] 的当前值。 */ export function simulationLabel17(key: SimulationLabel17): string { return labels[key][preferencesState.locale === 'de' ? 1 : preferencesState.locale === 'zh' ? 2 : 0] }

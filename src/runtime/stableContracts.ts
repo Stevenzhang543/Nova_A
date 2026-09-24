@@ -1,3 +1,4 @@
+/** 稳定接口约定：定义和检查可供项目及扩展依赖的兼容契约。 */
 import { reactive } from 'vue'
 import {
   NOVA_ENGINE_VERSION,
@@ -37,7 +38,7 @@ export interface ContractMigrationCheck { contract: StableContract['id']; source
 const minimumVersions: Record<StableContract['id'], number> = { project: NOVA_MINIMUM_SCHEMA_VERSION, script: 1, graph: 1, plugin: 1, package: 1, build: 1, workspace: 2 }
 const currentVersions: Record<StableContract['id'], number> = { project: NOVA_PROJECT_SCHEMA_VERSION, script: NOVA_RUNTIME_API_VERSION, graph: NOVA_GRAPH_VERSION, plugin: NOVA_PLUGIN_API_VERSION, package: NOVA_PACKAGE_MANIFEST_VERSION, build: NOVA_BUILD_CLI_VERSION, workspace: NOVA_WORKSPACE_DOCUMENT_VERSION }
 
-export function contractMigrationCheck(contract: StableContract['id'], sourceVersion: unknown): ContractMigrationCheck {
+/** 结构说明（自动提取）：contractMigrationCheck；输入 contract、sourceVersion；直接调用 Number、Number.isInteger、Number.isFinite。 */ export function contractMigrationCheck(contract: StableContract['id'], sourceVersion: unknown): ContractMigrationCheck {
   const source = Number(sourceVersion), targetVersion = currentVersions[contract], minimum = minimumVersions[contract]
   if (!Number.isInteger(source) || source < minimum) return { contract, sourceVersion: Number.isFinite(source) ? source : -1, targetVersion, supported: false, action: 'blocked', message: `${contract} version is missing or older than the supported migration floor ${minimum}.` }
   if (source > targetVersion) return { contract, sourceVersion: source, targetVersion, supported: false, action: 'read-only', message: `${contract} version ${source} is newer than this editor's version ${targetVersion}.` }
@@ -45,15 +46,15 @@ export function contractMigrationCheck(contract: StableContract['id'], sourceVer
   return { contract, sourceVersion: source, targetVersion, supported: true, action: 'migrate', message: `${contract} version ${source} can migrate to ${targetVersion} through its reviewed compatibility path.` }
 }
 
-export function stableContractMatrix(): ContractMigrationCheck[] {
-  return (Object.keys(currentVersions) as StableContract['id'][]).map(contract => contractMigrationCheck(contract, currentVersions[contract]))
+/** 结构说明（自动提取）：stableContractMatrix；无显式参数；直接调用 map、Object.keys。 */ export function stableContractMatrix(): ContractMigrationCheck[] {
+  return (Object.keys(currentVersions) as StableContract['id'][]).map(/* 调用 contractMigrationCheck(contract, currentVersions[contract]) 并返回调用结果。 */ contract => contractMigrationCheck(contract, currentVersions[contract]))
 }
 
 export const studioStatusState = reactive({ visible: false })
-export function openStudioStatus(): void { studioStatusState.visible = true }
-export function closeStudioStatus(): void { studioStatusState.visible = false }
+/** 将 true 赋给 studioStatusState.visible，不显式返回值。 */ export function openStudioStatus(): void { studioStatusState.visible = true }
+/** 将 false 赋给 studioStatusState.visible，不显式返回值。 */ export function closeStudioStatus(): void { studioStatusState.visible = false }
 
-export function stableContractDiagnostics(): string {
+/** 结构说明（自动提取）：stableContractDiagnostics；无显式参数；直接调用 JSON.stringify、navigator.userAgent.slice、toISOString、Date。 */ export function stableContractDiagnostics(): string {
   return JSON.stringify({
     product: 'Nova_A Studio', engineVersion: NOVA_ENGINE_VERSION,
     projectFormat: NOVA_PROJECT_FORMAT, projectFormatMajor: NOVA_PROJECT_FORMAT_MAJOR,

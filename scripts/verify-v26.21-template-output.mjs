@@ -1,3 +1,4 @@
+/** 验证脚本（v26.21-template-output）：组织对应功能与边界场景检查，断言行为并汇总验证结果。 */
 // Retained 26.20 regression implementation, executed against actual 26.21 source.
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
@@ -20,9 +21,9 @@ const playerPath = join(workspace, 'nova-player-template.exe')
 const exporter = join(root, 'scripts', 'nova-export.mjs')
 const checks = []
 const templateResults = []
-const check = (id, passed, detail, metrics = {}) => checks.push({ id, status: passed ? 'passed' : 'failed', detail, metrics })
+const check = /* 调用 checks.push({ id, status: passed ? 'passed' : 'failed', detail, metrics }) 并返回调用结果。 */ (id, passed, detail, metrics = {}) => checks.push({ id, status: passed ? 'passed' : 'failed', detail, metrics })
 
-async function exportProject(projectPath, output, target, template, extra = []) {
+/** 以指定模板和目标执行发布模式导出，附加额外参数并解析JSON结果。 */ async function exportProject(projectPath, output, target, template, extra = []) {
   const args = [exporter, '--project', projectPath, '--target', target, '--output', output, '--profile', 'release', '--architecture', 'x86_64', '--runtime', 'game', '--compression', 'store', '--template', template, '--no-patch', ...extra]
   const result = await execute(process.execPath, args, { cwd: root, windowsHide: true, maxBuffer: 4 * 1024 * 1024 })
   return JSON.parse(result.stdout)
@@ -69,7 +70,7 @@ try {
 
       const native = await exportProject(projectPath, nativeOutput, 'windows', 'windows-x64-v1', ['--single-file', '--player', playerPath])
       const nativeReport = JSON.parse(await readFile(join(nativeOutput, 'nova-build-report.json'), 'utf8'))
-      const executable = await readFile(join(nativeOutput, nativeReport.files.find(file => file.path.endsWith('.exe'))?.path ?? ''))
+      const executable = await readFile(join(nativeOutput, nativeReport.files.find(/* 调用 file.path.endsWith('.exe') 并返回调用结果。 */ file => file.path.endsWith('.exe'))?.path ?? ''))
       const trailer = executable.subarray(executable.length - 48)
       const nativeOk = native.exportTemplate === 'windows-x64-v1'
         && nativeReport.engineVersion === engineVersion
@@ -84,7 +85,7 @@ try {
     }
   }
 
-  check('OUTPUT-ALL-TEMPLATES', templateResults.length === templates.PROJECT_TEMPLATES.length && templateResults.length === 40 && templateResults.every(result => result.web === 'passed' && result.windowsPortable === 'passed'), 'Every registered launcher template exports through the supported Web folder and Windows portable packaging paths.', { templateResults })
+  check('OUTPUT-ALL-TEMPLATES', templateResults.length === templates.PROJECT_TEMPLATES.length && templateResults.length === 40 && templateResults.every(/* 先计算 result.web === 'passed'；仅当其为真值时求右侧 result.windowsPortable === 'passed'，返回短路求值结果。 */ result => result.web === 'passed' && result.windowsPortable === 'passed'), 'Every registered launcher template exports through the supported Web folder and Windows portable packaging paths.', { templateResults })
 
   const sampleProject = join(projectsDirectory, `${templates.PROJECT_TEMPLATES[0].id}.nova`)
   const incrementalOutput = join(workspace, 'incremental')
@@ -142,7 +143,7 @@ try {
   await rm(workspace, { recursive: true, force: true })
 }
 
-const failed = checks.filter(item => item.status === 'failed')
+const failed = checks.filter(/* 比较 item.status 与 'failed'，返回严格相等的判断结果。 */ item => item.status === 'failed')
 const report = {
   format: 'nova-v26.21-template-output-verification',
   version: 1,

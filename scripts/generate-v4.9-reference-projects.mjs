@@ -1,10 +1,11 @@
+/** 版本4.9：生成参考项目与对应资源，供功能演示和版本验证使用。 */
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)))
 const projects = join(root, 'reference-projects', 'projects')
-const json = value => `${JSON.stringify(value, null, 2)}\n`
+const json = /** 将对象序列化为带末尾换行的格式化JSON。 */ value => `${JSON.stringify(value, null, 2)}\n`
 const OFFICIAL_SECURITY = {
   'top.whitelists.novaa.navigation': ['26434adf10b122a8708afc496f682242d7f634a344bbd00f4699ff71b2e3a9ae', 'runtime'],
   'top.whitelists.novaa.ai': ['11c75ccdc9f2037548e9eef31bd3ee34134a365e9eaeef741ee8e7917a69ac4e', 'runtime'],
@@ -13,7 +14,7 @@ const OFFICIAL_SECURITY = {
   'top.whitelists.novaa.networking': ['fd048525377499fbd054cb74b69d5369c57d11431951695d413ec1e14cfe3424', 'runtime'],
   'top.whitelists.novaa.android': ['cb2f4c6efb9bf972451cf545a4854878f8515ca327417424975ad2756349a5ca', 'build']
 }
-function refreshPackage(item) {
+/** 更新历史包引擎范围，并按官方映射补齐签名、许可证和来源元数据。 */ function refreshPackage(item) {
   if (!item?.manifest) return
   const manifest = item.manifest
   if (manifest.engine) manifest.engine = String(manifest.engine).replace('<5.0.0', '<6.0.0')
@@ -33,14 +34,14 @@ function refreshPackage(item) {
     manifest.vulnerabilityPolicy = 'Report privately through the Nova_A security policy; Critical and High findings block Stable installation.'
   }
 }
-function refreshProject(project) {
+/** 升级4.9项目与包兼容性，并使锁文件和内嵌包源码保持一致。 */ function refreshProject(project) {
   project.engineVersion = '4.9.0'
   project.formatVersion = 29
   project.manifest ??= {}
   project.manifest.schemaVersion = 29
   project.manifest.engineCompatibility = { minimum: '3.9.0', maximumExclusive: '6.0.0' }
   for (const item of project.packages?.installed ?? []) refreshPackage(item)
-  const installed = new Map((project.packages?.installed ?? []).map(item => [item.manifest?.id, item.manifest]))
+  const installed = new Map((project.packages?.installed ?? []).map(/* 返回按声明顺序构造的数组 [item.manifest?.id, item.manifest]。 */ item => [item.manifest?.id, item.manifest]))
   for (const lock of project.packages?.lockfile ?? []) {
     const manifest = installed.get(lock.id)
     if (!manifest) continue
@@ -59,7 +60,7 @@ const fixtures = [
   ['first-game-v49-tier1', 'platformer', 'First Game 4.9 Tier-1 Export', ['first-game tutorial', 'Windows export', 'web export', 'Project Health gate', 'release evidence']]
 ]
 
-function updateProject(project, slug, title, features) {
+/** 设置4.9参考身份、发布工程能力清单及默认团队配置。 */ function updateProject(project, slug, title, features) {
   refreshProject(project)
   project.projectMetadata ??= {}
   project.projectMetadata.name = title
@@ -96,7 +97,7 @@ for (const [slug, source, title, features] of fixtures) {
   await writeFile(join(directory, 'README.md'), `# ${title}\n\nEngine **4.9.0**, Project Format 2, schema 29.\n\nRequired packages: None; the package fixture may additionally load \`../../plugins/hello-plugin/plugin.json\` after reviewing its permissions and provenance.\n\nTarget platforms: Windows x86-64 and Web (Tier 1). Linux and macOS are matching-host Experimental targets; mobile is unavailable.\n\nKnown limitations: signing, disposable clean-machine lifecycle, external browsers, independent-machine reproducibility and the 14-day RC window require real external evidence.\n\n## Purpose\n\nValidates ${features.join(', ')} without a mandatory cloud service.\n\n## Procedure\n\n1. Open \`project.nova\` and follow \`test-controls.json\`.\n2. Resolve local Project Health failures before export.\n3. Build both declared Tier-1 presets and retain manifests, hashes, logs, provenance, and evidence.\n4. Treat matching-host Linux/macOS, mobile, clean-machine lifecycle, independent-machine reproducibility, and the 14-day RC window as external gates until signed evidence is attached.\n`)
 }
 
-const entries = (await readdir(projects, { withFileTypes: true })).sort((left, right) => Number(right.isDirectory()) - Number(left.isDirectory()) || left.name.localeCompare(right.name))
+const entries = (await readdir(projects, { withFileTypes: true })).sort(/* 先计算 Number(right.isDirectory()) - Number(left.isDirectory())；仅当其为假值时求右侧 left.name.localeCompare(right.name)，返回短路求值结果。 */ (left, right) => Number(right.isDirectory()) - Number(left.isDirectory()) || left.name.localeCompare(right.name))
 for (const entry of entries) {
   if (entry.isFile() && entry.name.endsWith('.nova')) {
     try {

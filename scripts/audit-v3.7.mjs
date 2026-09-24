@@ -1,12 +1,13 @@
+/* 审计 3.7 的渲染能力、恢复、光照、材质、粒子、字体、音频与质量设置契约。 */
 import { access, mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)))
-const read = path => readFile(join(root, path), 'utf8')
-const json = path => read(path).then(JSON.parse)
+const read = /* 调用 readFile(join(root, path), 'utf8') 并返回调用结果。 */ path => readFile(join(root, path), 'utf8')
+const json = /* 调用 read(path).then(JSON.parse) 并返回调用结果。 */ path => read(path).then(JSON.parse)
 const checks = []
-const check = (name, passed, evidence) => checks.push({ name, status: passed ? 'passed' : 'failed', evidence })
+const check = /* 调用 checks.push({ name, status: passed ? 'passed' : 'failed', evidence }) 并返回调用结果。 */ (name, passed, evidence) => checks.push({ name, status: passed ? 'passed' : 'failed', evidence })
 
 const [pkg, tauri, projectFormat, rustFormat, components, geometry, canvas, webgl, capabilities, renderSettings, renderGraph, renderTextures, materials, lighting, particles, audio, assets, profiles, assetPanel, renderingPanel, profiler, health, i18n, readme, compatibility] = await Promise.all([
   json('package.json'), json('src-tauri/tauri.conf.json'), read('src/projects/projectFormat.ts'), read('crates/nova_format/src/lib.rs'), read('src/world/components.ts'), read('src/renderer/geometry.ts'), read('src/renderer/Canvas2DRenderer.ts'), read('src/renderer/WebGL2Renderer.ts'), read('src/renderer/capabilities.ts'), read('src/renderer/renderSettings.ts'), read('src/renderer/renderGraph.ts'), read('src/renderer/renderTextures.ts'), read('src/renderer/materials.ts'), read('src/renderer/lighting2d.ts'), read('src/runtime/particles.ts'), read('src/runtime/audio.ts'), read('src/assets/types.ts'), read('src/assets/importProfiles.ts'), read('src/components/EditorBottomPanel.vue'), read('src/components/RenderingPanel.vue'), read('src/components/ProfilerPanel.vue'), read('src/components/ProjectHealthPanel.vue'), read('src/i18n.ts'), read('README.md'), read('docs/COMPATIBILITY.md')
@@ -26,7 +27,7 @@ check('font pipeline reaches renderers', canvas.includes('strokeText(command.tex
 check('audio authoring and runtime', audio.includes('AudioMixerEffect') && audio.includes('StereoPannerNode') && audio.includes('attenuationCurve') && audio.includes('playPolyphonic') && audio.includes('virtualizeWhenLimited') && audio.includes('installDeviceListener') && audio.includes('baseLatencyMs') && audio.includes('underruns'), 'Preview/import, positional audio, effects graph, deterministic polyphony/limits, device changes, latency and underruns are implemented.')
 check('audio and renderer metrics surface', profiler.includes('audioRuntime.diagnostics') && renderingPanel.includes('batchBreaks') && renderingPanel.includes('overdraw') && health.includes('rendererCapabilityState'), 'Profiler, Rendering Diagnostics and Project Health expose runtime/capability measurements.')
 check('quality presets affect actual settings', renderSettings.includes('applyQualityPreset') && renderSettings.includes("preset === 'Performance'") && renderSettings.includes("preset === 'Ultra'") && renderSettings.includes("preset === 'PixelArt'"), 'Performance/Balanced/High/Ultra/PixelArt presets change shadow, pixel density, particle and post-process settings.')
-check('localized visual/audio editor', ['importProfile:', 'lightingWorkflowHint:', 'particleBudget:', 'capabilityReport:', 'audioLatency:'].every(key => (i18n.match(new RegExp(key, 'g')) ?? []).length >= 3), 'Every new v3.7 editor label is present in English, German and Chinese.')
+check('localized visual/audio editor', ['importProfile:', 'lightingWorkflowHint:', 'particleBudget:', 'capabilityReport:', 'audioLatency:'].every(/* 比较 (i18n.match(new RegExp(key, 'g')) ?? []).length 与 3，返回大于或等于的判断结果。 */ key => (i18n.match(new RegExp(key, 'g')) ?? []).length >= 3), 'Every new v3.7 editor label is present in English, German and Chinese.')
 check('documentation declares current capability boundary', readme.includes('4.0.0') && readme.toLowerCase().includes('renderer') && readme.toLowerCase().includes('audio') && compatibility.includes('schema 29'), 'Current docs retain the renderer/audio pipeline and current schema compatibility.')
 
 const requiredReferences = ['authoring-pixel-art','rendering-lighting-shadows','rendering-particles','rendering-shader-uniforms','rendering-render-textures','rendering-fonts-multilingual','audio-positional','audio-bus-effects','audio-streaming']
@@ -35,16 +36,16 @@ for (const slug of requiredReferences) {
   try { await access(join(root, 'reference-projects', 'projects', slug, 'project.nova')); const project = await json(`reference-projects/projects/${slug}/project.nova`); referenceEvidence.push({ slug, engineVersion: project.engineVersion, schema: project.formatVersion, valid: project.engineVersion === '4.0.0' && project.formatVersion === 29 }) }
   catch { referenceEvidence.push({ slug, valid: false }) }
 }
-check('mandatory visual/audio references', referenceEvidence.every(item => item.valid), referenceEvidence)
+check('mandatory visual/audio references', referenceEvidence.every(/* 返回 item.valid 的当前值。 */ item => item.valid), referenceEvidence)
 
 const requiredEvidence = ['golden-images','gpu-browser-matrix','shader-fuzz','performance-captures','audio-latency-underrun','editor-export-comparison','material-roundtrip','renderer-recovery','benchmarks']
 const evidence = []
 for (const name of requiredEvidence) { try { const value = await json(`release-audits/v3.7.0-${name}.json`); evidence.push({ name, status: value.status ?? 'recorded' }) } catch { evidence.push({ name, status: 'missing' }) } }
-check('mandatory qualification evidence', evidence.every(item => item.status === 'passed' || item.status === 'recorded'), evidence)
+check('mandatory qualification evidence', evidence.every(/* 先计算 item.status === 'passed'；仅当其为假值时求右侧 item.status === 'recorded'，返回短路求值结果。 */ item => item.status === 'passed' || item.status === 'recorded'), evidence)
 
 const report = { format: 'nova-v3.7-visual-audio-audit', version: 1, engineVersion: '3.7.0', projectSchema: 27, generatedAt: new Date().toISOString(), severity0Open: 0, severity1Open: 0, referenceEvidence, checks }
-report.status = checks.every(item => item.status === 'passed') ? 'passed' : 'failed'
+report.status = checks.every(/* 比较 item.status 与 'passed'，返回严格相等的判断结果。 */ item => item.status === 'passed') ? 'passed' : 'failed'
 await mkdir(join(root, 'release-audits'), { recursive: true })
 await writeFile(join(root, 'release-audits', 'v3.7.0-visual-audio-audit.json'), `${JSON.stringify(report, null, 2)}\n`)
-console.log(`Nova_A v3.7 audit ${report.status} (${checks.filter(item => item.status === 'passed').length}/${checks.length}).`)
+console.log(`Nova_A v3.7 audit ${report.status} (${checks.filter(/* 比较 item.status 与 'passed'，返回严格相等的判断结果。 */ item => item.status === 'passed').length}/${checks.length}).`)
 if (report.status !== 'passed') process.exitCode = 1

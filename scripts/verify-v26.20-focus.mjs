@@ -1,3 +1,4 @@
+/** 功能回归脚本：执行 verify-v26.20-focus.mjs 对应场景，保留断言和证据输出。 */
 import assert from 'node:assert/strict'
 import{dirname,join}from'node:path'
 import{fileURLToPath}from'node:url'
@@ -19,9 +20,9 @@ for(const [script,args,reports] of [
  ['verify-v26.12-syntax-slots.mjs',[],['v26.12-syntax-slots.json']],
  ['verify-v26.12-script-modules.mjs',[],['v26.12-script-modules.json']],
  ['verify-v26.11-templates.mjs',[],['v26.11-template-behavior.json']],
- ...['references','teaching','template-walkthroughs'].map(name=>['generate-v26.20-'+name+'.mjs',['--verify-only'],[]]),
+ ...['references','teaching','template-walkthroughs'].map(/* 返回按声明顺序构造的数组 ['generate-v26.20-'+name+'.mjs',['--verify-only'],[]]。 */ name=>['generate-v26.20-'+name+'.mjs',['--verify-only'],[]]),
  ['audit-v26.13-panels.mjs',[],['panel-source-inventory.json']]
-]){const run=await runAudit(root,'scripts/'+script,args);run.reports=reports.map(name=>'release-audits/'+name);executions.push(run)}
+]){const run=await runAudit(root,'scripts/'+script,args);run.reports=reports.map(/* 计算表达式 'release-audits/'+name 并返回结果，沿用操作数的原有类型规则。 */ name=>'release-audits/'+name);executions.push(run)}
 for(const [version,names] of [['26.16',['animation-audio','animation-authoring','animation-ui','audio-pcm','interface','media-roundtrip','timeline-actions','media-performance']],['26.17',['queries','navigation','world-streaming','bindings','world-roundtrip']],['26.18',['networking','network-process']]])for(const name of names){const run=await runAudit(root,'scripts/verify-v'+version+'-'+name+'.mjs',['--qualification-release=26.20']);run.reports=['release-audits/v26.20-'+name+'.json'];executions.push(run)}
 const renderer=await runAudit(root,'scripts/verify-v26.20-renderer.mjs',['--qualification','--report-dir=release-audits/v26.20-renderer']);renderer.reports=['release-audits/v26.20-renderer/renderer-staged.json'];executions.push(renderer)
 const templates=await runAudit(root,'scripts/verify-v26.20-template-output.mjs');templates.reports=['release-audits/v26.20-template-output.json'];executions.push(templates)

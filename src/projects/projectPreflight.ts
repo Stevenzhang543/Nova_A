@@ -1,16 +1,17 @@
+/** 项目预检：在加载前检查实体元数据与持久化字段值，阻止非法输入进入编辑状态。 */
 import { validateComponentValues } from '../world/componentValidation'
 
 
 /** Match full-project enum validation before direct entity construction mutates owners. */
-export function validateEntityMetadataValues(entity: {ownership?: unknown; runtimePersistence?: unknown}, path = 'entity'): void {
+/** 校验实体所有权与运行持久化策略枚举，非法值抛出含字段路径的错误。 */ export function validateEntityMetadataValues(entity: {ownership?: unknown; runtimePersistence?: unknown}, path = 'entity'): void {
   for (const [field, values] of [['ownership', ['Scene', 'Prefab', 'Runtime']], ['runtimePersistence', ['Scene', 'Session', 'SaveGame', 'Transient']]] as const) {
     const value = entity[field]
-    if (value != null && !values.some(allowed => allowed === value)) throw new Error(path + '.' + field + ': unsupported value ' + String(value))
+    if (value != null && !values.some(/* 比较 allowed 与 value，返回严格相等的判断结果。 */ allowed => allowed === value)) throw new Error(path + '.' + field + ': unsupported value ' + String(value))
   }
 }
 
 /** Reject structural/non-finite authoring errors before any project owner is hydrated. */
-export function preflightProjectValues(project: Record<string, unknown>): void {
+/** 遍历数据拒绝非有限数值，再检查场景、实体及组件结构并复用组件字段校验。 */ export function preflightProjectValues(project: Record<string, unknown>): void {
   const pending: Array<{value: unknown; path: string}> = [{value: project, path: '$'}]
   while (pending.length) {
     const {value, path} = pending.pop()!

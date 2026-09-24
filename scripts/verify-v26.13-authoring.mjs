@@ -1,3 +1,4 @@
+/** 功能回归脚本：执行 verify-v26.13-authoring.mjs 对应场景，保留断言和证据输出。 */
 import { dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import assert from 'node:assert/strict'

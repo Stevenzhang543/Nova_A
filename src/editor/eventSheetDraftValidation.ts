@@ -1,3 +1,4 @@
+/** 事件表草稿校验：在模式切换或保存边界检查编辑内容，避免提交非法事件配置。 */
 import type { EventSheetDiagnostic, EventSheetDocument } from '../runtime/eventSheets'
 const copy={
   en:{callback:'Use a callback identifier beginning with a letter or underscore, followed by letters, digits or underscores.',priority:'Priority must be a whole number between −1,000,000 and 1,000,000.',seed:'The deterministic seed must be a whole number between 1 and 2,147,483,647.'},
@@ -5,7 +6,7 @@ const copy={
   zh:{callback:'回调标识符必须以字母或下划线开头，之后只能包含字母、数字或下划线。',priority:'优先级必须是 −1,000,000 到 1,000,000 之间的整数。',seed:'确定性种子必须是 1 到 2,147,483,647 之间的整数。'},
 }
 /** Validate the actual editing values before the saved-document normalizer runs. */
-export function validateEventSheetDraft(document:EventSheetDocument,locale:keyof typeof copy='en'):EventSheetDiagnostic[]{
+/** 校验事件表随机种子、回调标识符及优先级范围，返回带处理器定位的本地化诊断。 */ export function validateEventSheetDraft(document:EventSheetDocument,locale:keyof typeof copy='en'):EventSheetDiagnostic[]{
   const labels=copy[locale],issues:EventSheetDiagnostic[]=[]
   if(!Number.isInteger(document.deterministicSeed)||document.deterministicSeed<1||document.deterministicSeed>2147483647)issues.push({code:'EVENT-DRAFT-SEED',severity:'error',message:labels.seed})
   for(const handler of document.handlers){

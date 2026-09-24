@@ -1,3 +1,4 @@
+/** 功能回归脚本：执行 verify-v26.14-runtime-stage.mjs 对应场景，保留断言和证据输出。 */
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
 import { build } from 'vite'
@@ -10,13 +11,13 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 import {runtimeAudit14Paths,buildRuntimeAudit14Example} from './lib/runtimeAudit14.mjs'
 const paths=runtimeAudit14Paths(import.meta.url),{stage,root,integrated,reportDir}=paths,useNative=process.argv.includes('--native')
 const outDir = join(paths.cacheDir, 'runtime-compiled-'+(useNative?'native':'wasm')), checks = [], logs = [], registrations = []
-const normalize = path => path.replaceAll('\\', '/')
-const overlay = file => { const normalized = normalize(file), prefix = normalize(root) + '/'; return normalized.startsWith(prefix) ? join(stage, normalized.slice(prefix.length)) : null }
-const readOverlay = file => { const candidate = overlay(file); return candidate && existsSync(candidate) ? readFileSync(candidate, 'utf8') : readFileSync(file, 'utf8') }
+const normalize = /* 调用 path.replaceAll('\\', '/') 并返回调用结果。 */ path => path.replaceAll('\\', '/')
+const overlay = /** 结构说明（自动提取）：overlay；输入 file；直接调用 normalize、normalized.startsWith、join、normalized.slice。 */ file => { const normalized = normalize(file), prefix = normalize(root) + '/'; return normalized.startsWith(prefix) ? join(stage, normalized.slice(prefix.length)) : null }
+const readOverlay = /** 结构说明（自动提取）：readOverlay；输入 file；直接调用 overlay、existsSync、readFileSync。 */ file => { const candidate = overlay(file); return candidate && existsSync(candidate) ? readFileSync(candidate, 'utf8') : readFileSync(file, 'utf8') }
 const runtimeFile = join(root, 'src/runtime/GameplayRuntime.ts'), source = readOverlay(runtimeFile)
 const ast = ts.createSourceFile(runtimeFile, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS), imports = new Map()
 for (const statement of ast.statements.filter(ts.isImportDeclaration)) {
-  const names = statement.importClause?.namedBindings && ts.isNamedImports(statement.importClause.namedBindings) ? statement.importClause.namedBindings.elements.filter(element => !element.isTypeOnly).map(element => element.propertyName?.text ?? element.name.text) : []
+  const names = statement.importClause?.namedBindings && ts.isNamedImports(statement.importClause.namedBindings) ? statement.importClause.namedBindings.elements.filter(/* 返回 element.isTypeOnly 的逻辑取反结果。 */ element => !element.isTypeOnly).map(/* 当 element.propertyName?.text 为 null 或 undefined 时返回 element.name.text，否则保留左侧值。 */ element => element.propertyName?.text ?? element.name.text) : []
   if (!statement.importClause?.isTypeOnly) imports.set(statement.moduleSpecifier.text, [...new Set([...(imports.get(statement.moduleSpecifier.text) ?? []), ...names])])
 }
 const realImports = new Set(['../assets/AssetDatabase', '../world/geometry', '../world/hierarchy', '../editor/selection', './time', './entityLifetimes', './dynamicObjects', './objectPool', './scriptTestExecution', './scriptHotReload', './scriptContracts', './scriptModules', './eventSheets', '../visual/graphCompiler', '../visual/graphProduction', '../editor/scriptLanguage', '../editor/scriptLanguage26', './scriptSettings', './scriptDebug', './mediaClock', './timelineUiActions'])
@@ -26,68 +27,68 @@ wasm.initSync({ module: await readFile(join(wasmDirectory, 'nova_core_bg.wasm'))
 const nativeBridge = useNative ? await buildRuntimeAudit14Example(paths,'runtime_bridge') : null
 class NativeVm {
   sources = new Map()
-  request(source, fn, context) { const result = spawnSync(nativeBridge, { input: JSON.stringify({ source, function: fn, context: context && JSON.parse(context) }), encoding: 'utf8', timeout: 15_000, maxBuffer: 10_000_000, windowsHide: true }); if (result.error || result.status) throw result.error ?? Error(result.stderr); const parsed = JSON.parse(result.stdout); if (parsed.error) throw Error(parsed.error); return JSON.stringify(parsed.value) }
-  compile_cached(id, source) { const exports = this.request(source); this.sources.set(id, source); return exports }
-  execute_cached_json(id, fn, context) { if (!this.sources.has(id)) throw Error('Missing native source cache'); return this.request(this.sources.get(id), fn, context) }
-  execute_json(source, fn, context) { return this.request(source, fn, context) }
-  validate(source) { return this.request(source) }
-  fork() { const candidate = new NativeVm(); candidate.sources = new Map(this.sources); return candidate }
-  free() { this.sources.clear() }
+  /** 结构说明（自动提取）：request；输入 source、fn、context；直接调用 spawnSync、JSON.stringify、JSON.parse、Error；包含显式抛错路径。 */ request(source, fn, context) { const result = spawnSync(nativeBridge, { input: JSON.stringify({ source, function: fn, context: context && JSON.parse(context) }), encoding: 'utf8', timeout: 15_000, maxBuffer: 10_000_000, windowsHide: true }); if (result.error || result.status) throw result.error ?? Error(result.stderr); const parsed = JSON.parse(result.stdout); if (parsed.error) throw Error(parsed.error); return JSON.stringify(parsed.value) }
+  /** 结构说明（自动提取）：compile_cached；输入 id、source；直接调用 request、sources.set；返回路径包含 exports。 */ compile_cached(id, source) { const exports = this.request(source); this.sources.set(id, source); return exports }
+  /** 结构说明（自动提取）：execute_cached_json；输入 id、fn、context；直接调用 sources.has、Error、request、sources.get；包含显式抛错路径。 */ execute_cached_json(id, fn, context) { if (!this.sources.has(id)) throw Error('Missing native source cache'); return this.request(this.sources.get(id), fn, context) }
+  /* 调用 this.request(source, fn, context) 并返回调用结果。 */ execute_json(source, fn, context) { return this.request(source, fn, context) }
+  /* 调用 this.request(source) 并返回调用结果。 */ validate(source) { return this.request(source) }
+  /** 结构说明（自动提取）：fork；无显式参数；直接调用 NativeVm、Map；写入 candidate.sources；返回路径包含 candidate。 */ fork() { const candidate = new NativeVm(); candidate.sources = new Map(this.sources); return candidate }
+  /** 结构说明（自动提取）：free；无显式参数；直接调用 sources.clear。 */ free() { this.sources.clear() }
 }
 let allocations = 0, frees = 0
 const compiledRequests = []
 class TrackedVm {
-  constructor(vm) { this.vm = vm ?? (useNative ? new NativeVm() : new wasm.WasmScriptRuntime()); allocations++ }
-  fork() { return new TrackedVm(this.vm.fork()) }
-  compile_cached(...args) { compiledRequests.push(args[0]); return this.vm.compile_cached(...args) }
-  execute_cached_json(...args) { return this.vm.execute_cached_json(...args) }
-  execute_json(...args) { return this.vm.execute_json(...args) }
-  validate(source) { return this.vm.validate(source) }
-  free() { this.vm.free(); frees++ }
+  /** 结构说明（自动提取）：匿名回调；输入 vm；直接调用 NativeVm、wasm.WasmScriptRuntime；写入 vm。 */ constructor(vm) { this.vm = vm ?? (useNative ? new NativeVm() : new wasm.WasmScriptRuntime()); allocations++ }
+  /** 结构说明（自动提取）：fork；无显式参数；直接调用 TrackedVm、vm.fork。 */ fork() { return new TrackedVm(this.vm.fork()) }
+  /** 结构说明（自动提取）：compile_cached；输入 args；直接调用 compiledRequests.push、vm.compile_cached。 */ compile_cached(...args) { compiledRequests.push(args[0]); return this.vm.compile_cached(...args) }
+  /* 调用 this.vm.execute_cached_json(...args) 并返回调用结果。 */ execute_cached_json(...args) { return this.vm.execute_cached_json(...args) }
+  /* 调用 this.vm.execute_json(...args) 并返回调用结果。 */ execute_json(...args) { return this.vm.execute_json(...args) }
+  /* 调用 this.vm.validate(source) 并返回调用结果。 */ validate(source) { return this.vm.validate(source) }
+  /** 结构说明（自动提取）：free；无显式参数；直接调用 vm.free。 */ free() { this.vm.free(); frees++ }
 }
 const fixture = {
-  InputManager: class { start() {} stop() {} }, WasmScriptRuntime: TrackedVm,
-  physicsState: { playMode: 'paused', selectedEntityIds: [], inputMap: [], globalSettings: { tickRate: 60, timeScale: 1 }, engineDiagnostics: {}, audioSettings: {}, world: { entities: [], connections: [], invalidateRuntime() {}, update: () => ({}), teleport: (entity, position, rotation) => { entity.transform.position = { ...position }; entity.transform.rotation = rotation } } },
+  InputManager: class { /** 结构说明（自动提取）：start；无显式参数；空实现，不执行额外操作。 */ start() {} /** 结构说明（自动提取）：stop；无显式参数；空实现，不执行额外操作。 */ stop() {} }, WasmScriptRuntime: TrackedVm,
+  physicsState: { playMode: 'paused', selectedEntityIds: [], inputMap: [], globalSettings: { tickRate: 60, timeScale: 1 }, engineDiagnostics: {}, audioSettings: {}, world: { entities: [], connections: [], /** 结构说明（自动提取）：invalidateRuntime；无显式参数；空实现，不执行额外操作。 */ invalidateRuntime() {}, update: /** 结构说明（自动提取）：匿名回调；无显式参数；返回表达式求值结果。 */ () => ({}), teleport: /** 结构说明（自动提取）：匿名回调；输入 entity、position、rotation；写入 entity.transform.position、entity.transform.rotation。 */ (entity, position, rotation) => { entity.transform.position = { ...position }; entity.transform.rotation = rotation } } },
   editorState: {}, packageState: { installed: [] },
-  addEditorLog: (...args) => logs.push(args), replayFixedInput: input => input, deterministicRandom: () => .5, saveSnapshot: () => ({}), gameFlowSnapshot: () => ({ paused: false, score: 0, session: {}, checkpoints: [] }), productionNetworkContext: () => ({ enabled: false, connected: false, authority: false, localPeerId: '', peerCount: 0, tick: 0 }), runtimeSceneEntitySnapshots: () => [],
-  registerGraphDebugDocument: document => registrations.push(document),
-  readEntityAuthoringData: entity => ({ uuid:entity.uuid,components:entity.components.map(component=>({kind:component.kind,data:JSON.parse(JSON.stringify(component))})) }),
-  prepareRuntimeSceneTransition: identifier => fixture.prepareScene(identifier),
-  deleteEntity: id => { const entity=fixture.physicsState.world.entities.find(entity=>entity.id===id);if(!entity)return;const doomed=new Set([entity.uuid]);let changed=true;while(changed){changed=false;for(const item of fixture.physicsState.world.entities)if(item.parentUuid&&doomed.has(item.parentUuid)&&!doomed.has(item.uuid)){doomed.add(item.uuid);changed=true}}fixture.physicsState.world.entities=fixture.physicsState.world.entities.filter(entity=>!doomed.has(entity.uuid)) },
-  gameScreenToWorld: point => point, visibleWorldBounds: () => ({minX:-1,maxX:1,minY:-1,maxY:1}),
-  graphDebugState: {}, graphStateValues: () => ({}),
-  audioRuntime: { update() {}, stopAll() {}, setTransportTime() {}, dispose() {}, begin() {} }, particleRuntime: { update() {}, reset() {} }, pluginRuntime: { update() {}, stop() {} }, animationRuntime: { reset() {}, update() {} }, timelineRuntime: { reset() {}, update() {} },
+  addEditorLog: /* 调用 logs.push(args) 并返回调用结果。 */ (...args) => logs.push(args), replayFixedInput: /* 返回 input 的当前值。 */ input => input, deterministicRandom: /* 返回固定值 .5。 */ () => .5, saveSnapshot: /** 结构说明（自动提取）：匿名回调；无显式参数；返回表达式求值结果。 */ () => ({}), gameFlowSnapshot: /** 结构说明（自动提取）：匿名回调；无显式参数；返回表达式求值结果。 */ () => ({ paused: false, score: 0, session: {}, checkpoints: [] }), productionNetworkContext: /** 结构说明（自动提取）：匿名回调；无显式参数；返回表达式求值结果。 */ () => ({ enabled: false, connected: false, authority: false, localPeerId: '', peerCount: 0, tick: 0 }), runtimeSceneEntitySnapshots: /* 返回按声明顺序构造的数组 []。 */ () => [],
+  registerGraphDebugDocument: /* 调用 registrations.push(document) 并返回调用结果。 */ document => registrations.push(document),
+  readEntityAuthoringData: /** 结构说明（自动提取）：匿名回调；输入 entity；直接调用 entity.components.map；返回表达式求值结果。 */ entity => ({ uuid:entity.uuid,components:entity.components.map(/** 结构说明（自动提取）：entity.components.map 回调；输入 component；直接调用 JSON.parse、JSON.stringify；返回表达式求值结果。 */ component=>({kind:component.kind,data:JSON.parse(JSON.stringify(component))})) }),
+  prepareRuntimeSceneTransition: /* 调用 fixture.prepareScene(identifier) 并返回调用结果。 */ identifier => fixture.prepareScene(identifier),
+  deleteEntity: /** 结构说明（自动提取）：匿名回调；输入 id；直接调用 fixture.physicsState.world.entities.find、Set、doomed.has、doomed.add、fixture.physicsState.world.entities.filter；写入 changed、fixture.physicsState.world.entities；包含循环处理。 */ id => { const entity=fixture.physicsState.world.entities.find(/* 比较 entity.id 与 id，返回严格相等的判断结果。 */ entity=>entity.id===id);if(!entity)return;const doomed=new Set([entity.uuid]);let changed=true;while(changed){changed=false;for(const item of fixture.physicsState.world.entities)if(item.parentUuid&&doomed.has(item.parentUuid)&&!doomed.has(item.uuid)){doomed.add(item.uuid);changed=true}}fixture.physicsState.world.entities=fixture.physicsState.world.entities.filter(/* 返回 doomed.has(entity.uuid) 的逻辑取反结果。 */ entity=>!doomed.has(entity.uuid)) },
+  gameScreenToWorld: /* 返回 point 的当前值。 */ point => point, visibleWorldBounds: /** 结构说明（自动提取）：匿名回调；无显式参数；返回表达式求值结果。 */ () => ({minX:-1,maxX:1,minY:-1,maxY:1}),
+  graphDebugState: {}, graphStateValues: /** 结构说明（自动提取）：匿名回调；无显式参数；返回表达式求值结果。 */ () => ({}),
+  audioRuntime: { /** 结构说明（自动提取）：update；无显式参数；空实现，不执行额外操作。 */ update() {}, /** 结构说明（自动提取）：stopAll；无显式参数；空实现，不执行额外操作。 */ stopAll() {}, /** 结构说明（自动提取）：setTransportTime；无显式参数；空实现，不执行额外操作。 */ setTransportTime() {}, /** 结构说明（自动提取）：dispose；无显式参数；空实现，不执行额外操作。 */ dispose() {}, /** 结构说明（自动提取）：begin；无显式参数；空实现，不执行额外操作。 */ begin() {} }, particleRuntime: { /** 结构说明（自动提取）：update；无显式参数；空实现，不执行额外操作。 */ update() {}, /** 结构说明（自动提取）：reset；无显式参数；空实现，不执行额外操作。 */ reset() {} }, pluginRuntime: { /** 结构说明（自动提取）：update；无显式参数；空实现，不执行额外操作。 */ update() {}, /** 结构说明（自动提取）：stop；无显式参数；空实现，不执行额外操作。 */ stop() {} }, animationRuntime: { /** 结构说明（自动提取）：reset；无显式参数；空实现，不执行额外操作。 */ reset() {}, /** 结构说明（自动提取）：update；无显式参数；空实现，不执行额外操作。 */ update() {} }, timelineRuntime: { /** 结构说明（自动提取）：reset；无显式参数；空实现，不执行额外操作。 */ reset() {}, /** 结构说明（自动提取）：update；无显式参数；空实现，不执行额外操作。 */ update() {} },
 }
 globalThis.__novaRuntime14 = fixture
-const check = async (name, operation) => { try { await operation(); checks.push({ name, status: 'passed' }); console.log('PASS ' + name) } catch (error) { checks.push({ name, status: 'failed', error: error.stack }); console.error('FAIL ' + name + ': ' + error.message) } }
+const check = /** 结构说明（自动提取）：check；输入 name、operation；直接调用 operation、checks.push、console.log、console.error；等待异步结果。 */ async (name, operation) => { try { await operation(); checks.push({ name, status: 'passed' }); console.log('PASS ' + name) } catch (error) { checks.push({ name, status: 'failed', error: error.stack }); console.error('FAIL ' + name + ': ' + error.message) } }
 
 try {
   await build({ configFile: false, root, logLevel: 'error', ssr: { noExternal: true }, plugins: [{
     name: 'isolated-runtime14-overlay', enforce: 'pre',
-    resolveId(specifier, importer) {
+    /** 结构说明（自动提取）：resolveId；输入 specifier、importer；直接调用 overlay、existsSync、normalize、endsWith、includes 等；包含循环处理。 */ resolveId(specifier, importer) {
       if (!importer && overlay(specifier) && existsSync(overlay(specifier))) return normalize(specifier)
       if (normalize(importer ?? '').endsWith('/src/runtime/objectBlueprints.ts') && ['../store/physics', './prefabs', '../editor/authoring2d'].includes(specifier)) return `\0blueprint14:${specifier}`
-      if (['/src/runtime/objectPool.ts','/src/runtime/dynamicObjects.ts'].some(file => normalize(importer ?? '').endsWith(file)) && ['../store/physics','../store/editor','./prefabs','./gameplayComponents'].includes(specifier)) return `\0host14:${specifier}`
+      if (['/src/runtime/objectPool.ts','/src/runtime/dynamicObjects.ts'].some(/* 调用 normalize(importer ?? '').endsWith(file) 并返回调用结果。 */ file => normalize(importer ?? '').endsWith(file)) && ['../store/physics','../store/editor','./prefabs','./gameplayComponents'].includes(specifier)) return `\0host14:${specifier}`
       if (normalize(importer ?? '') === normalize(runtimeFile) && imports.has(specifier) && !realImports.has(specifier)) return `\0fixture14:${specifier}`
       if (specifier.startsWith('.') && importer && !importer.startsWith('\0')) for (const suffix of ['', '.ts', '.js']) {
         const path = resolve(dirname(importer), specifier + suffix), candidate = overlay(path)
         if (candidate && existsSync(candidate)) return normalize(path)
       }
     },
-    load(id) {
+    /** 结构说明（自动提取）：load；输入 id；直接调用 id.startsWith、id.endsWith、join、names.map、replace 等。 */ load(id) {
       if (id.startsWith('\0host14:')) {
         const names = id.endsWith('/physics') ? ['physicsState'] : id.endsWith('/editor') ? ['addEditorLog'] : id.endsWith('/prefabs') ? ['instantiatePrefab'] : ['initializeGameplayEntities']
-        return names.map(name => name === 'physicsState' ? 'export const physicsState = globalThis.__novaRuntime14.physicsState;' : `export const ${name} = (...args) => globalThis.__novaRuntime14[${JSON.stringify(name)}]?.(...args);`).join('\n')
+        return names.map(/** 结构说明（自动提取）：names.map 回调；输入 name；直接调用 JSON.stringify；返回表达式求值结果。 */ name => name === 'physicsState' ? 'export const physicsState = globalThis.__novaRuntime14.physicsState;' : `export const ${name} = (...args) => globalThis.__novaRuntime14[${JSON.stringify(name)}]?.(...args);`).join('\n')
       }
       if (id.startsWith('\0blueprint14:')) {
         const names = id.endsWith('/physics') ? ['beginHistoryTransaction','cancelHistoryTransaction','commitHistoryTransaction','physicsState','selectEntities'] : id.endsWith('/prefabs') ? ['capturePrefabOverrides','createPrefabFromEntities','instantiatePrefab'] : ['createAuthoringObject']
-        return names.map(name => `export const ${name} = (...args) => globalThis.__novaRuntime14[${JSON.stringify(name)}](...args);`).join('\n').replace('export const physicsState = (...args) => globalThis.__novaRuntime14["physicsState"](...args);', 'export const physicsState = globalThis.__novaRuntime14.physicsState;')
+        return names.map(/** 结构说明（自动提取）：names.map 回调；输入 name；直接调用 JSON.stringify；返回表达式求值结果。 */ name => `export const ${name} = (...args) => globalThis.__novaRuntime14[${JSON.stringify(name)}](...args);`).join('\n').replace('export const physicsState = (...args) => globalThis.__novaRuntime14["physicsState"](...args);', 'export const physicsState = globalThis.__novaRuntime14.physicsState;')
       }
-      if (id.startsWith('\0fixture14:')) return imports.get(id.slice('\0fixture14:'.length)).map(name => `export const ${name} = globalThis.__novaRuntime14[${JSON.stringify(name)}] ?? (() => {});`).join('\n')
+      if (id.startsWith('\0fixture14:')) return imports.get(id.slice('\0fixture14:'.length)).map(/** 结构说明（自动提取）：map 回调；输入 name；直接调用 JSON.stringify；返回表达式求值结果。 */ name => `export const ${name} = globalThis.__novaRuntime14[${JSON.stringify(name)}] ?? (() => {});`).join('\n')
       const candidate = overlay(id); if (candidate && existsSync(candidate)) return readFileSync(candidate, 'utf8')
     },
   }], build: { ssr: true, outDir, emptyOutDir: true, rollupOptions: { input: { prefabsReal: join(root,'src/runtime/prefabs.ts'), physicsReal: join(root, 'src/store/physics.ts'), scenes:join(root,'src/world/SceneManager.ts'), sceneTransitions:join(root,'src/runtime/runtimeSceneTransition.ts'), time: join(root, 'src/runtime/time.ts'), lifetimes: join(root, 'src/runtime/entityLifetimes.ts'), pool: join(root, 'src/runtime/objectPool.ts'), dynamic: join(root, 'src/runtime/dynamicObjects.ts'), runtime: runtimeFile, events: join(root, 'src/runtime/eventSheets.ts'), composition: join(root, 'src/runtime/objectComposition.ts'), blueprints: join(root, 'src/runtime/objectBlueprints.ts'), tests: join(root, 'src/runtime/scriptTestExecution.ts'), hotReload: join(root, 'src/runtime/scriptHotReload.ts'), assets: join(root, 'src/assets/AssetDatabase.ts'), entity: join(root, 'src/world/BoxEntity.ts'), components: join(root, 'src/world/components.ts'), settings: join(root, 'src/runtime/scriptSettings.ts'), sync: join(root, 'src/visual/graphCodeSync.ts'), graphTypes: join(root, 'src/visual/graphTypes.ts') }, output: { entryFileNames: '[name].mjs', chunkFileNames: '[name]-[hash].mjs' } } } })
-  const load = name => import(pathToFileURL(join(outDir, name + '.mjs')))
+  const load = /* 调用 import(pathToFileURL(join(outDir, name + '.mjs'))) 并返回调用结果。 */ name => import(pathToFileURL(join(outDir, name + '.mjs')))
   const [runtimeModule, events, suites, reload, db, entityModule, components, settings, sync, types] = await Promise.all(['runtime', 'events', 'tests', 'hotReload', 'assets', 'entity', 'components', 'settings', 'sync', 'graphTypes'].map(load))
   const [composition, blueprints] = await Promise.all(['composition', 'blueprints'].map(load))
   const prefabsReal = await load('prefabsReal')
@@ -97,202 +98,202 @@ try {
   settings.scriptProjectSettings.hotReloadEnabled = true
   settings.scriptProjectSettings.testing.coverageEnabled = false
   const assets = new Map()
-  function asset(name, source, assetType = 'script') {
+  /** 结构说明（自动提取）：asset；输入 name、source、assetType；直接调用 crypto.randomUUID、encodeURIComponent、assets.set、db.assetState.records.splice、assets.values；返回路径包含 record。 */ function asset(name, source, assetType = 'script') {
     const record = { uuid: crypto.randomUUID(), name, path: `Assets/Scripts/${name}`, source: 'data:text/plain;charset=utf-8,' + encodeURIComponent(source), assetType, script: { reloadPolicy: 'preserve', apiVersion: 2 } }
     assets.set(record.uuid, record); db.assetState.records.splice(0, db.assetState.records.length, ...assets.values()); db.assetState.generation++; return record
   }
-  const update = (record, source) => { record.source = 'data:text/plain;charset=utf-8,' + encodeURIComponent(source); db.assetState.generation++ }
-  const ref = record => 'asset://' + record.uuid
-  const handler = (callback, overrideInherited = true) => ({ ...events.defaultEventHandler('start'), callback, overrideInherited })
-  const sheet = (name, logic, handlers, base) => asset(name, JSON.stringify({ ...events.defaultEventSheet(name, logic && ref(logic)), handlers, baseSheetAsset: base && ref(base) }), 'eventSheet')
+  const update = /** 结构说明（自动提取）：update；输入 record、source；直接调用 encodeURIComponent；写入 record.source。 */ (record, source) => { record.source = 'data:text/plain;charset=utf-8,' + encodeURIComponent(source); db.assetState.generation++ }
+  const ref = /* 计算表达式 'asset://' + record.uuid 并返回结果，沿用操作数的原有类型规则。 */ record => 'asset://' + record.uuid
+  const handler = /** 结构说明（自动提取）：handler；输入 callback、overrideInherited；直接调用 events.defaultEventHandler；返回表达式求值结果。 */ (callback, overrideInherited = true) => ({ ...events.defaultEventHandler('start'), callback, overrideInherited })
+  const sheet = /** 结构说明（自动提取）：sheet；输入 name、logic、handlers、base；直接调用 asset、JSON.stringify、events.defaultEventSheet、ref；返回表达式求值结果。 */ (name, logic, handlers, base) => asset(name, JSON.stringify({ ...events.defaultEventSheet(name, logic && ref(logic)), handlers, baseSheetAsset: base && ref(base) }), 'eventSheet')
   const baseLogic = asset('base.rhai', '@export let count = 0;\nfn inherited() { count += 1; log_info("base:" + count); }\nfn start() { log_info("base-start"); }')
   const derivedLogic = asset('derived.rhai', '@export let count = 100;\nfn local() { count += 1; log_info("derived:" + count); }\nfn start() { log_info("derived-start"); }')
   const base = sheet('base.events', baseLogic, [handler('inherited'), handler('start')])
   const child = sheet('child.events', derivedLogic, [handler('local'), handler('start', false)], base)
-  await check('same event selector keeps distinct callbacks and additive author provenance', () => {
+  await check('same event selector keeps distinct callbacks and additive author provenance', /** 结构说明（自动提取）：check 回调；无显式参数；直接调用 events.resolveEventHandlers、ref、assert.equal、resolved.find、resolved.filter。 */ () => {
     const resolved = events.resolveEventHandlers(ref(child)); assert.equal(resolved.length, 4)
-    assert.equal(resolved.find(item => item.callback === 'inherited').logicAsset, ref(baseLogic))
-    assert.equal(resolved.filter(item => item.callback === 'start').length, 2)
+    assert.equal(resolved.find(/* 比较 item.callback 与 'inherited'，返回严格相等的判断结果。 */ item => item.callback === 'inherited').logicAsset, ref(baseLogic))
+    assert.equal(resolved.filter(/* 比较 item.callback 与 'start'，返回严格相等的判断结果。 */ item => item.callback === 'start').length, 2)
   })
-  await check('explicit override replaces only matching inherited callback', () => {
+  await check('explicit override replaces only matching inherited callback', /** 结构说明（自动提取）：check 回调；无显式参数；直接调用 sheet、handler、events.resolveEventHandlers、ref、assert.deepEqual 等。 */ () => {
     const override = sheet('override.events', derivedLogic, [handler('start')], base), resolved = events.resolveEventHandlers(ref(override))
-    assert.deepEqual(resolved.map(item => item.callback).sort(), ['inherited', 'start'])
-    assert.equal(resolved.find(item => item.callback === 'start').logicAsset, ref(derivedLogic))
+    assert.deepEqual(resolved.map(/* 返回 item.callback 的当前值。 */ item => item.callback).sort(), ['inherited', 'start'])
+    assert.equal(resolved.find(/* 比较 item.callback 与 'start'，返回严格相等的判断结果。 */ item => item.callback === 'start').logicAsset, ref(derivedLogic))
   })
-  await check('cycles and missing bases cannot execute partial handler chains', () => {
+  await check('cycles and missing bases cannot execute partial handler chains', /** 结构说明（自动提取）：check 回调；无显式参数；直接调用 sheet、handler、crypto.randomUUID、assert.deepEqual、events.resolveEventHandlers 等；写入 document.baseSheetAsset。 */ () => {
     const broken = sheet('broken.events', derivedLogic, [handler('local')], { uuid: crypto.randomUUID() })
     assert.deepEqual(events.resolveEventHandlers(ref(broken)), [])
     const cyclic = sheet('cycle.events', derivedLogic, [handler('local')]); const document = events.readEventSheet(ref(cyclic)); document.baseSheetAsset = ref(cyclic); update(cyclic, JSON.stringify(document))
     assert.deepEqual(events.resolveEventHandlers(ref(cyclic)), [])
-    assert.ok(events.validateEventSheet(document).some(item => item.code === 'EVENT-INHERIT-CYCLE'))
+    assert.ok(events.validateEventSheet(document).some(/* 比较 item.code 与 'EVENT-INHERIT-CYCLE'，返回严格相等的判断结果。 */ item => item.code === 'EVENT-INHERIT-CYCLE'))
   })
   const entity = new entityModule.BoxEntity(1, { x: 0, y: 0 }, { x: 1, y: 1 }); entity.addComponent(new components.Script2D())
   entity.script2D.scriptAsset = ref(derivedLogic); entity.script2D.eventSheetAsset = ref(child); fixture.physicsState.world.entities = [entity]
   const runtime = new runtimeModule.GameplayRuntime(); runtime.active = true; runtime.scriptRuntime = new TrackedVm()
-  await check('inherited handlers execute their actual author VM and keep independent properties', () => {
+  await check('inherited handlers execute their actual author VM and keep independent properties', /** 结构说明（自动提取）：check 回调；无显式参数；直接调用 runtime.compileAttachedScripts、runtime.runEntityFunction、runtime.runEventSheetHandlers、assert.deepEqual、sort 等；写入 logs.length。 */ () => {
     logs.length = 0; runtime.compileAttachedScripts(); runtime.runEntityFunction(entity, 'start'); runtime.runEventSheetHandlers(entity, 'start', '', 'start')
-    assert.deepEqual(logs.map(item => item[0]).sort(), [`${entity.name}: base:1`, `${entity.name}: base-start`, `${entity.name}: derived:101`, `${entity.name}: derived-start`].sort())
+    assert.deepEqual(logs.map(/* 返回 item[0] 的当前值。 */ item => item[0]).sort(), [`${entity.name}: base:1`, `${entity.name}: base-start`, `${entity.name}: derived:101`, `${entity.name}: derived-start`].sort())
     assert.equal(entity.script2D.properties.count, 101)
     runtime.runEventSheetHandlers(entity, 'start', '', 'start'); assert.equal(entity.script2D.properties.count, 102)
-    assert.ok(logs.some(item => item[0] === `${entity.name}: base:2`))
+    assert.ok(logs.some(/* 比较 item[0] 与 `${entity.name}: base:2`，返回严格相等的判断结果。 */ item => item[0] === `${entity.name}: base:2`))
   })
-  await check('active callbacks retain their compiled generation after an unqueued source edit', () => {
+  await check('active callbacks retain their compiled generation after an unqueued source edit', /** 结构说明（自动提取）：check 回调；无显式参数；直接调用 update、runtime.runEntityFunction、assert.ok、logs.some、logs.every；写入 logs.length。 */ () => {
     update(derivedLogic, 'fn local() { log_info("UNQUEUED"); }'); logs.length = 0; runtime.runEntityFunction(entity, 'local')
-    assert.ok(logs.some(item => item[0] === `${entity.name}: derived:103`)); assert.ok(logs.every(item => !item[0].includes('UNQUEUED')))
+    assert.ok(logs.some(/* 比较 item[0] 与 `${entity.name}: derived:103`，返回严格相等的判断结果。 */ item => item[0] === `${entity.name}: derived:103`)); assert.ok(logs.every(/* 返回 item[0].includes('UNQUEUED') 的逻辑取反结果。 */ item => !item[0].includes('UNQUEUED')))
   })
-  await check('disabled reload classification cannot be downgraded by changed export types', () => {
+  await check('disabled reload classification cannot be downgraded by changed export types', /** 结构说明（自动提取）：check 回调；无显式参数；直接调用 reload.prepareHotReload、assert.equal。 */ () => {
     const plan = reload.prepareHotReload('disabled', 'fn start() {}', 'fn start() {}', [{ name: 'x', valueType: 'int', serialized: true }], [{ name: 'x', valueType: 'float', serialized: true }], 'disabled')
     assert.equal(plan.classification, 'rejected')
   })
-  await check('paused frame compiles the exact queued draft without advancing time', () => {
+  await check('paused frame compiles the exact queued draft without advancing time', /** 结构说明（自动提取）：check 回调；无显式参数；直接调用 runtime.queueHotReload、runtime.frame、assert.equal、runtime.runEntityFunction、assert.ok 等；写入 logs.length。 */ () => {
     const draft = '@export let count = 100;\nfn local() { count += 10; log_info("draft:" + count); }'
     runtime.queueHotReload(derivedLogic.uuid, draft); const frame = runtime.time.value.frame; runtime.frame(.1)
     assert.equal(runtime.time.value.frame, frame); logs.length = 0; runtime.runEntityFunction(entity, 'local')
-    assert.ok(logs.some(item => item[0] === `${entity.name}: draft:113`)); assert.equal(db.readTextAsset(derivedLogic.uuid), 'fn local() { log_info("UNQUEUED"); }')
+    assert.ok(logs.some(/* 比较 item[0] 与 `${entity.name}: draft:113`，返回严格相等的判断结果。 */ item => item[0] === `${entity.name}: draft:113`)); assert.equal(db.readTextAsset(derivedLogic.uuid), 'fn local() { log_info("UNQUEUED"); }')
   })
-  await check('invalid queued draft leaves the prior runnable generation intact', () => {
+  await check('invalid queued draft leaves the prior runnable generation intact', /** 结构说明（自动提取）：check 回调；无显式参数；直接调用 runtime.queueHotReload、runtime.frame、runtime.runEntityFunction、assert.ok、logs.some；写入 logs.length。 */ () => {
     runtime.queueHotReload(derivedLogic.uuid, 'fn local( {'); runtime.frame(.1); logs.length = 0; runtime.runEntityFunction(entity, 'local')
-    assert.ok(logs.some(item => item[0] === `${entity.name}: draft:123`))
+    assert.ok(logs.some(/* 比较 item[0] 与 `${entity.name}: draft:123`，返回严格相等的判断结果。 */ item => item[0] === `${entity.name}: draft:123`))
   })
-  await check('project policy changed after queuing still prevents the frame-boundary swap',()=>{
+  await check('project policy changed after queuing still prevents the frame-boundary swap',/** 结构说明（自动提取）：check 回调；无显式参数；直接调用 runtime.queueHotReload、assert.equal、runtime.pendingReloads.has、runtime.frame、runtime.runEntityFunction 等；写入 settings.scriptProjectSettings.hotReloadEnabled、logs.length。 */ ()=>{
     runtime.queueHotReload(derivedLogic.uuid,'@export let count=100;\nfn local(){count+=1000;log_info("forbidden:"+count);}');assert.equal(runtime.pendingReloads.has(derivedLogic.uuid),true)
     settings.scriptProjectSettings.hotReloadEnabled=false;runtime.frame(.1);logs.length=0;runtime.runEntityFunction(entity,'local')
-    assert.ok(logs.some(item=>item[0]===`${entity.name}: draft:133`));assert.ok(logs.every(item=>!item[0].includes('forbidden:')));settings.scriptProjectSettings.hotReloadEnabled=true
+    assert.ok(logs.some(/* 比较 item[0] 与 `${entity.name}: draft:133`，返回严格相等的判断结果。 */ item=>item[0]===`${entity.name}: draft:133`));assert.ok(logs.every(/* 返回 item[0].includes('forbidden:') 的逻辑取反结果。 */ item=>!item[0].includes('forbidden:')));settings.scriptProjectSettings.hotReloadEnabled=true
   })
-  await check('reloaded inherited author keeps its own state and cancels stale paused commands',()=>{
+  await check('reloaded inherited author keeps its own state and cancels stale paused commands',/** 结构说明（自动提取）：check 回调；无显式参数；直接调用 runtime.queueHotReload、assert.equal、runtime.pendingReloads.has、runtime.frame、runtime.runEventSheetHandlers 等；写入 runtime.pendingGraphExecution、logs.length。 */ ()=>{
     runtime.pendingGraphExecution={entityUuid:entity.uuid,scriptUuid:baseLogic.uuid,sourcePath:baseLogic.path,functionName:'inherited',commands:[{type:'setPosition',x:99,y:0}],nextIndex:0}
     runtime.queueHotReload(baseLogic.uuid,'@export let count=0;\nfn inherited(){count+=10;log_info("base-draft:"+count);} fn start(){}');assert.equal(runtime.pendingReloads.has(baseLogic.uuid),true);runtime.frame(.1)
-    assert.equal(runtime.pendingGraphExecution,null);logs.length=0;runtime.runEventSheetHandlers(entity,'start','','start');assert.ok(logs.some(item=>item[0]===`${entity.name}: base-draft:12`));assert.equal(entity.script2D.properties.count,143)
+    assert.equal(runtime.pendingGraphExecution,null);logs.length=0;runtime.runEventSheetHandlers(entity,'start','','start');assert.ok(logs.some(/* 比较 item[0] 与 `${entity.name}: base-draft:12`，返回严格相等的判断结果。 */ item=>item[0]===`${entity.name}: base-draft:12`));assert.equal(entity.script2D.properties.count,143)
   })
-  await check('one signal deduplicates event/connection callbacks while keeping distinct authors',()=>{
+  await check('one signal deduplicates event/connection callbacks while keeping distinct authors',/** 结构说明（自动提取）：check 回调；无显式参数；直接调用 asset、handler、sheet、entityModule.BoxEntity、target.addComponent 等；写入 own.script.signalConnections、target.script2D.scriptAsset、target.script2D.eventSheetAsset、fixture.physicsState.world.entities 等。 */ ()=>{
     const own=asset('signals.rhai','@export let count=0;\nfn on_signal(name,payload,source){count+=100;} fn signal_callback(){count+=1;log_info("signal:"+count);}'),parent=asset('signal-base.rhai','fn signal_callback(){log_info("signal-parent");}')
     const eventHandler={...handler('signal_callback'),kind:'signal',selector:'pulse',overrideInherited:false},parentSheet=sheet('signals-base.events',parent,[eventHandler]),ownSheet=sheet('signals.events',own,[eventHandler],parentSheet)
     own.script.signalConnections=[{enabled:true,signal:'pulse',source:'',target:'',callback:'signal_callback'},{enabled:true,signal:'pulse',source:'',target:'',callback:'signal_callback'},{enabled:true,signal:'pulse',source:'',target:'',callback:'on_signal'}]
     const target=new entityModule.BoxEntity(52,{x:0,y:0},{x:1,y:1});target.addComponent(new components.Script2D());target.script2D.scriptAsset=ref(own);target.script2D.eventSheetAsset=ref(ownSheet);fixture.physicsState.world.entities=[target];runtime.compileAttachedScripts();logs.length=0;runtime.emitSignal('pulse',{},target.uuid,'test');runtime.dispatchSignals()
-    assert.equal(target.script2D.properties.count,101,JSON.stringify(logs));assert.equal(logs.filter(item=>item[0]===`${target.name}: signal-parent`).length,1);assert.equal(logs.filter(item=>item[0]===`${target.name}: signal:101`).length,1)
+    assert.equal(target.script2D.properties.count,101,JSON.stringify(logs));assert.equal(logs.filter(/* 比较 item[0] 与 `${target.name}: signal-parent`，返回严格相等的判断结果。 */ item=>item[0]===`${target.name}: signal-parent`).length,1);assert.equal(logs.filter(/* 比较 item[0] 与 `${target.name}: signal:101`，返回严格相等的判断结果。 */ item=>item[0]===`${target.name}: signal:101`).length,1)
     fixture.physicsState.world.entities=[entity]
   })
 
-  await check('one UI action delivers event payload once, preserves direct callbacks and deduplicates connections',()=>{
+  await check('one UI action delivers event payload once, preserves direct callbacks and deduplicates connections',/** 结构说明（自动提取）：check 回调；无显式参数；直接调用 asset、handler、sheet、entityModule.BoxEntity、target.addComponent 等；写入 own.script.signalConnections、target.script2D.scriptAsset、target.script2D.eventSheetAsset、uiRuntime.active 等。 */ ()=>{
     const own=asset('ui-event.rhai','@export let count=0;\nfn legacy(){count+=1;} fn on_signal(name,payload,source){if name!="ui.legacy" || payload.entity!=source || source==""{throw "missing UI signal data";}count+=100;} fn request_restart(name,payload,source){if name!="ui.legacy" || payload.entity!=source || source==""{throw "missing UI handler data";}count+=10;}')
     const parent=asset('ui-event-parent.rhai','fn request_restart(name,payload,source){if name!="ui.legacy" || source==""{throw "missing parent UI data";}log_info("UI_PARENT_ONCE");}')
     const event={...handler('request_restart'),kind:'ui',selector:'legacy',overrideInherited:false},baseSheet=sheet('ui-base.events',parent,[event]),ownSheet=sheet('ui.events',own,[event],baseSheet)
     own.script.signalConnections=[{enabled:true,signal:'ui.legacy',source:'',target:'',callback:'legacy'},{enabled:true,signal:'ui.legacy',source:'',target:'',callback:'request_restart'}]
     const target=new entityModule.BoxEntity(551,{x:0,y:0},{x:1,y:1});target.addComponent(new components.Script2D());target.script2D.scriptAsset=ref(own);target.script2D.eventSheetAsset=ref(ownSheet)
     const uiRuntime=new runtimeModule.GameplayRuntime();uiRuntime.active=true;uiRuntime.scriptRuntime=new TrackedVm();fixture.physicsState.world.entities=[target];uiRuntime.compileAttachedScripts();logs.length=0
-    try{uiRuntime.invokeUiCallback(target,' legacy ');assert.equal(target.script2D.properties.count,1,'Only the legacy callback should run immediately');uiRuntime.dispatchSignals();uiRuntime.dispatchSignals();assert.equal(target.script2D.properties.count,111,JSON.stringify(logs));assert.equal(logs.filter(item=>item[0]===target.name+': UI_PARENT_ONCE').length,1);assert.equal(uiRuntime.diagnostics.scriptErrors,0,JSON.stringify(logs))}finally{uiRuntime.stopSession();fixture.physicsState.world.entities=[entity]}
+    try{uiRuntime.invokeUiCallback(target,' legacy ');assert.equal(target.script2D.properties.count,1,'Only the legacy callback should run immediately');uiRuntime.dispatchSignals();uiRuntime.dispatchSignals();assert.equal(target.script2D.properties.count,111,JSON.stringify(logs));assert.equal(logs.filter(/* 比较 item[0] 与 target.name+': UI_PARENT_ONCE'，返回严格相等的判断结果。 */ item=>item[0]===target.name+': UI_PARENT_ONCE').length,1);assert.equal(uiRuntime.diagnostics.scriptErrors,0,JSON.stringify(logs))}finally{uiRuntime.stopSession();fixture.physicsState.world.entities=[entity]}
   })
-  await check('UI handler sharing the button name receives signal arguments without a direct zero-argument invocation',()=>{
+  await check('UI handler sharing the button name receives signal arguments without a direct zero-argument invocation',/** 结构说明（自动提取）：check 回调；无显式参数；直接调用 asset、sheet、handler、entityModule.BoxEntity、target.addComponent 等；写入 target.script2D.scriptAsset、target.script2D.eventSheetAsset、uiRuntime.active、uiRuntime.scriptRuntime 等。 */ ()=>{
     const own=asset('ui-same-name.rhai','@export let count=0;\nfn restart(name,payload,source){if name!="ui.restart" || payload.entity!=source || source==""{throw "missing same-name UI data";}count+=1;}')
     const ownSheet=sheet('ui-same-name.events',own,[{...handler('restart'),kind:'ui',selector:'restart'}]),target=new entityModule.BoxEntity(552,{x:0,y:0},{x:1,y:1});target.addComponent(new components.Script2D());target.script2D.scriptAsset=ref(own);target.script2D.eventSheetAsset=ref(ownSheet)
     const uiRuntime=new runtimeModule.GameplayRuntime();uiRuntime.active=true;uiRuntime.scriptRuntime=new TrackedVm();fixture.physicsState.world.entities=[target];uiRuntime.compileAttachedScripts();logs.length=0
     try{uiRuntime.invokeUiCallback(target,'restart');assert.equal(uiRuntime.diagnostics.scriptErrors,0,JSON.stringify(logs));assert.equal(target.script2D.properties.count??0,0);uiRuntime.dispatchSignals();assert.equal(target.script2D.properties.count,1,JSON.stringify(logs));assert.equal(uiRuntime.diagnostics.scriptErrors,0,JSON.stringify(logs))}finally{uiRuntime.stopSession();fixture.physicsState.world.entities=[entity]}
   })
 
-  await check('event callback discovery ignores comments, strings and receiver-only methods',()=>{
+  await check('event callback discovery ignores comments, strings and receiver-only methods',/** 结构说明（自动提取）：check 回调；无显式参数；直接调用 asset、events.defaultEventSheet、ref、assert.deepEqual、events.callbackNamesInLogic。 */ ()=>{
     const source=asset('callback-discovery.rhai','// fn phantom(){}\nlet text="fn string_fake(){}"; fn real(){} fn int.receiver(){}'),document=events.defaultEventSheet('names',ref(source))
     assert.deepEqual([...events.callbackNamesInLogic(document)],['real'])
   })
 
-  await check('superseded invalid source and graph requests preserve live code and independent queued scripts',()=>{
+  await check('superseded invalid source and graph requests preserve live code and independent queued scripts',/** 结构说明（自动提取）：check 回调；无显式参数；直接调用 asset、map、runtimeModule.GameplayRuntime、TrackedVm、live.compileAttachedScripts 等；写入 fixture.physicsState.world.entities、live.active、live.scriptRuntime、settings.scriptProjectSettings.hotReloadEnabled；包含循环处理。 */ ()=>{
     const first=asset('generation-a.rhai','@export let count=0;\nfn update(dt){count+=1;}'),second=asset('generation-b.rhai','@export let count=0;\nfn update(dt){count+=2;}');
-    const targets=[first,second].map((code,index)=>{const item=new entityModule.BoxEntity(700+index,{x:0,y:0},{x:1,y:1});item.addComponent(new components.Script2D());item.script2D.scriptAsset=ref(code);return item});
+    const targets=[first,second].map(/** 结构说明（自动提取）：map 回调；输入 code、index；直接调用 entityModule.BoxEntity、item.addComponent、components.Script2D、ref；写入 item.script2D.scriptAsset；返回路径包含 item。 */ (code,index)=>{const item=new entityModule.BoxEntity(700+index,{x:0,y:0},{x:1,y:1});item.addComponent(new components.Script2D());item.script2D.scriptAsset=ref(code);return item});
     fixture.physicsState.world.entities=targets;const live=new runtimeModule.GameplayRuntime();live.active=true;live.scriptRuntime=new TrackedVm();live.compileAttachedScripts();
     const before=compiledRequests.length;
     live.queueHotReload(first.uuid,'@export let count=0;\nfn update(dt){count+=100;}');
     live.queueHotReload(second.uuid,'@export let count=0;\nfn update(dt){count+=20;}');
     live.queueHotReload(first.uuid,'fn update( {');assert.equal(live.pendingReloads.has(first.uuid),false);assert.equal(live.pendingReloads.has(second.uuid),true);live.frame(.1);
-    assert.deepEqual(compiledRequests.slice(before),[second.uuid]);for(const item of targets)live.runEntityFunction(item,'update');assert.deepEqual(targets.map(item=>item.script2D.properties.count),[1,20]);
+    assert.deepEqual(compiledRequests.slice(before),[second.uuid]);for(const item of targets)live.runEntityFunction(item,'update');assert.deepEqual(targets.map(/* 返回 item.script2D.properties.count 的当前值。 */ item=>item.script2D.properties.count),[1,20]);
     live.queueHotReload(first.uuid,'@export let count=0;\nfn update(dt){count+=100;}');live.queueGraphHotReload(first.uuid,'invalid graph','invalid graph');assert.equal(live.pendingReloads.has(first.uuid),false);
     live.queueHotReload(first.uuid,'@export let count=0;\nfn update(dt){count+=100;}');settings.scriptProjectSettings.hotReloadEnabled=false;live.queueHotReload(first.uuid,'@export let count=0;\nfn update(dt){count+=200;}');settings.scriptProjectSettings.hotReloadEnabled=true;assert.equal(live.pendingReloads.has(first.uuid),false);
     live.scriptRuntime.free();live.scriptRuntime=null;fixture.physicsState.world.entities=[entity];
   })
   const sharedModule=asset('atomic-helper.rhai','fn increment(){1}'),rootA=asset('atomic-a.rhai','use "atomic-helper";\n@export let count=0;\nfn update(dt){count+=increment();}'),rootB=asset('atomic-b.rhai','use "atomic-helper";\n@export let count=100;\nfn update(dt){count+=increment();}\nfn collision(){0}')
-  const atomicEntities=[rootA,rootB].map((code,index)=>{const target=new entityModule.BoxEntity(61+index,{x:0,y:0},{x:1,y:1});target.addComponent(new components.Script2D());target.script2D.scriptAsset=ref(code);return target})
+  const atomicEntities=[rootA,rootB].map(/** 结构说明（自动提取）：map 回调；输入 code、index；直接调用 entityModule.BoxEntity、target.addComponent、components.Script2D、ref；写入 target.script2D.scriptAsset；返回路径包含 target。 */ (code,index)=>{const target=new entityModule.BoxEntity(61+index,{x:0,y:0},{x:1,y:1});target.addComponent(new components.Script2D());target.script2D.scriptAsset=ref(code);return target})
   const atomicRuntime=new runtimeModule.GameplayRuntime();atomicRuntime.active=true;atomicRuntime.scriptRuntime=new TrackedVm();fixture.physicsState.world.entities=atomicEntities;atomicRuntime.compileAttachedScripts();for(const target of atomicEntities)atomicRuntime.runEntityFunction(target,'update')
-  await check('shared module reload swaps all affected roots and pins unqueued root edits',()=>{
-    assert.deepEqual(atomicEntities.map(target=>target.script2D.properties.count),[1,101]);const oldVm=atomicRuntime.scriptRuntime
+  await check('shared module reload swaps all affected roots and pins unqueued root edits',/** 结构说明（自动提取）：check 回调；无显式参数；直接调用 assert.deepEqual、atomicEntities.map、update、atomicRuntime.queueHotReload、assert.equal 等；包含循环处理。 */ ()=>{
+    assert.deepEqual(atomicEntities.map(/* 返回 target.script2D.properties.count 的当前值。 */ target=>target.script2D.properties.count),[1,101]);const oldVm=atomicRuntime.scriptRuntime
     update(rootA,'fn update(dt){throw "unqueued root";}');atomicRuntime.queueHotReload(sharedModule.uuid,'fn increment(){5}');assert.equal(atomicRuntime.pendingReloads.has(sharedModule.uuid),true);atomicRuntime.frame(.1)
-    assert.notEqual(atomicRuntime.scriptRuntime,oldVm);for(const target of atomicEntities)atomicRuntime.runEntityFunction(target,'update');assert.deepEqual(atomicEntities.map(target=>target.script2D.properties.count),[6,106])
+    assert.notEqual(atomicRuntime.scriptRuntime,oldVm);for(const target of atomicEntities)atomicRuntime.runEntityFunction(target,'update');assert.deepEqual(atomicEntities.map(/* 返回 target.script2D.properties.count 的当前值。 */ target=>target.script2D.properties.count),[6,106])
     assert.equal(db.readTextAsset(sharedModule.uuid),'fn increment(){1}')
   })
-  await check('one dependent compile failure rejects the entire prepared VM and preserves every instance',()=>{
+  await check('one dependent compile failure rejects the entire prepared VM and preserves every instance',/** 结构说明（自动提取）：check 回调；无显式参数；直接调用 atomicRuntime.queueHotReload、assert.equal、atomicRuntime.pendingReloads.has、atomicRuntime.frame、assert.deepEqual 等；包含循环处理。 */ ()=>{
     const beforeVm=atomicRuntime.scriptRuntime,beforeSources=[...atomicRuntime.compiledSources],before=[allocations,frees]
     atomicRuntime.queueHotReload(sharedModule.uuid,'fn increment(){9}\nfn collision(){2}');assert.equal(atomicRuntime.pendingReloads.has(sharedModule.uuid),true);atomicRuntime.frame(.1)
     assert.equal(atomicRuntime.scriptRuntime,beforeVm);assert.deepEqual([...atomicRuntime.compiledSources],beforeSources);assert.deepEqual([allocations-before[0],frees-before[1]],[1,1])
-    for(const target of atomicEntities)atomicRuntime.runEntityFunction(target,'update');assert.deepEqual(atomicEntities.map(target=>target.script2D.properties.count),[11,111])
+    for(const target of atomicEntities)atomicRuntime.runEntityFunction(target,'update');assert.deepEqual(atomicEntities.map(/* 返回 target.script2D.properties.count 的当前值。 */ target=>target.script2D.properties.count),[11,111])
   })
-  await check('dependent-root rollback cannot consume history or claim a change when only imported module text changed',()=>{
+  await check('dependent-root rollback cannot consume history or claim a change when only imported module text changed',/** 结构说明（自动提取）：check 回调；无显式参数；直接调用 reload.peekHotReloadRollback、assert.ok、assert.equal、atomicRuntime.rollbackHotReload、assert.deepEqual 等。 */ ()=>{
     const before=reload.peekHotReloadRollback(rootB.uuid),vm=atomicRuntime.scriptRuntime;assert.ok(before);assert.equal(atomicRuntime.rollbackHotReload(rootB.uuid),false);assert.deepEqual(reload.peekHotReloadRollback(rootB.uuid),before);assert.equal(atomicRuntime.scriptRuntime,vm);assert.equal(atomicRuntime.pendingReloads.has(rootB.uuid),false)
   })
-  await check('a dependent script opting out prevents indirect reload through a shared module',()=>{
+  await check('a dependent script opting out prevents indirect reload through a shared module',/** 结构说明（自动提取）：check 回调；无显式参数；直接调用 atomicRuntime.queueHotReload、atomicRuntime.frame、assert.equal、atomicRuntime.runEntityFunction、assert.deepEqual 等；写入 rootB.script.reloadPolicy；包含循环处理。 */ ()=>{
     const beforeVm=atomicRuntime.scriptRuntime;rootB.script.reloadPolicy='disabled';atomicRuntime.queueHotReload(sharedModule.uuid,'fn increment(){50}');atomicRuntime.frame(.1);assert.equal(atomicRuntime.scriptRuntime,beforeVm)
-    for(const target of atomicEntities)atomicRuntime.runEntityFunction(target,'update');assert.deepEqual(atomicEntities.map(target=>target.script2D.properties.count),[16,116]);rootB.script.reloadPolicy='preserve'
+    for(const target of atomicEntities)atomicRuntime.runEntityFunction(target,'update');assert.deepEqual(atomicEntities.map(/* 返回 target.script2D.properties.count 的当前值。 */ target=>target.script2D.properties.count),[16,116]);rootB.script.reloadPolicy='preserve'
   })
-  await check('rollback history is consumed only after a validated persisted candidate actually commits',()=>{
+  await check('rollback history is consumed only after a validated persisted candidate actually commits',/** 结构说明（自动提取）：check 回调；无显式参数；直接调用 reload.peekHotReloadRollback、assert.ok、assert.equal、atomicRuntime.rollbackHotReload、assert.deepEqual 等；写入 sharedModule.path、settings.scriptProjectSettings.hotReloadEnabled；包含循环处理。 */ ()=>{
     const before=reload.peekHotReloadRollback(sharedModule.uuid);assert.ok(before);const originalPath=sharedModule.path;sharedModule.path='.nova/protected.rhai';assert.equal(atomicRuntime.rollbackHotReload(sharedModule.uuid),false);assert.deepEqual(reload.peekHotReloadRollback(sharedModule.uuid),before);sharedModule.path=originalPath
-    assert.equal(atomicRuntime.rollbackHotReload(sharedModule.uuid),true);assert.equal(reload.scriptHotReloadState.history.find(item=>item.id===before.historyId).status,'committed');settings.scriptProjectSettings.hotReloadEnabled=false;atomicRuntime.frame(.1);settings.scriptProjectSettings.hotReloadEnabled=true
-    assert.equal(reload.scriptHotReloadState.history.find(item=>item.id===before.historyId).status,'committed');assert.deepEqual(reload.peekHotReloadRollback(sharedModule.uuid),before)
-    assert.equal(atomicRuntime.rollbackHotReload(sharedModule.uuid),true);atomicRuntime.frame(.1);assert.equal(reload.scriptHotReloadState.history.find(item=>item.id===before.historyId).status,'rolled-back')
-    for(const target of atomicEntities)atomicRuntime.runEntityFunction(target,'update');assert.deepEqual(atomicEntities.map(target=>target.script2D.properties.count),[17,117])
+    assert.equal(atomicRuntime.rollbackHotReload(sharedModule.uuid),true);assert.equal(reload.scriptHotReloadState.history.find(/* 比较 item.id 与 before.historyId，返回严格相等的判断结果。 */ item=>item.id===before.historyId).status,'committed');settings.scriptProjectSettings.hotReloadEnabled=false;atomicRuntime.frame(.1);settings.scriptProjectSettings.hotReloadEnabled=true
+    assert.equal(reload.scriptHotReloadState.history.find(/* 比较 item.id 与 before.historyId，返回严格相等的判断结果。 */ item=>item.id===before.historyId).status,'committed');assert.deepEqual(reload.peekHotReloadRollback(sharedModule.uuid),before)
+    assert.equal(atomicRuntime.rollbackHotReload(sharedModule.uuid),true);atomicRuntime.frame(.1);assert.equal(reload.scriptHotReloadState.history.find(/* 比较 item.id 与 before.historyId，返回严格相等的判断结果。 */ item=>item.id===before.historyId).status,'rolled-back')
+    for(const target of atomicEntities)atomicRuntime.runEntityFunction(target,'update');assert.deepEqual(atomicEntities.map(/* 返回 target.script2D.properties.count 的当前值。 */ target=>target.script2D.properties.count),[17,117])
   })
   atomicRuntime.scriptRuntime.free();atomicRuntime.scriptRuntime=null;fixture.physicsState.world.entities=[entity]
   runtime.scriptRuntime.free(); runtime.scriptRuntime = null
-  const metadata = name => ({ name, line: 1, timeoutMs: 10000, skipped: false, tags: [], seed: 7, cases: [] })
+  const metadata = /** 结构说明（自动提取）：metadata；输入 name；返回表达式求值结果。 */ name => ({ name, line: 1, timeoutMs: 10000, skipped: false, tags: [], seed: 7, cases: [] })
   const suiteContext = { entity: 'fixture', randomSeed: 7, properties: {}, transform: { position: [0, 0], scale: [1, 1], rotation: 0 } }
-  await check('actual VM suite hooks run once/per-case and failed test still tears down and frees', () => {
+  await check('actual VM suite hooks run once/per-case and failed test still tears down and frees', /** 结构说明（自动提取）：check 回调；无显式参数；直接调用 suites.executeScriptTestSuite、Set、metadata、assert.equal、JSON.stringify 等。 */ () => {
     const source = 'fn before_all(){log_info("all-before");} fn before_each(){log_info("before");} fn test_ok(){let xs=[1,2];let m=#{n:3};let f=|x|x+m.n;if f.call(xs[1])!=5 {throw "closure result";}} fn test_fail(){throw "deliberate";} fn after_each(){log_info("after");} fn after_all(){log_info("all-after");}'
     const order = [], before = [allocations, frees]
-    const results = suites.executeScriptTestSuite({ scriptUuid: 'suite', scriptName: 'suite', source, functions: new Set(['before_all','before_each','test_ok','test_fail','after_each','after_all']), tests: [metadata('test_ok'),metadata('test_fail')], context: suiteContext, createVm: () => new TrackedVm(), parseExecution: JSON.parse, onExecution: (name, execution) => { order.push(name) } })
+    const results = suites.executeScriptTestSuite({ scriptUuid: 'suite', scriptName: 'suite', source, functions: new Set(['before_all','before_each','test_ok','test_fail','after_each','after_all']), tests: [metadata('test_ok'),metadata('test_fail')], context: suiteContext, createVm: /** 结构说明（自动提取）：匿名回调；无显式参数；直接调用 TrackedVm；返回表达式求值结果。 */ () => new TrackedVm(), parseExecution: JSON.parse, onExecution: /** 结构说明（自动提取）：匿名回调；输入 name、execution；直接调用 order.push。 */ (name, execution) => { order.push(name) } })
     assert.equal(results[0].passed, true, JSON.stringify(results)); assert.equal(results[1].passed, false)
     assert.deepEqual(order, ['before_all','before_each','test_ok','after_each','before_each','after_each','after_all'])
     assert.deepEqual([allocations - before[0], frees - before[1]], [1,1])
   })
-  await check('compile failure frees its VM and skip-only suites allocate nothing', () => {
-    const run = (source, tests) => suites.executeScriptTestSuite({ scriptUuid: 'failure', scriptName: 'failure', source, functions: new Set(['test_ok']), tests, context: suiteContext, createVm: () => new TrackedVm(), parseExecution: JSON.parse })
+  await check('compile failure frees its VM and skip-only suites allocate nothing', /** 结构说明（自动提取）：check 回调；无显式参数；直接调用 assert.equal、run、metadata、assert.deepEqual。 */ () => {
+    const run = /** 结构说明（自动提取）：run；输入 source、tests；直接调用 suites.executeScriptTestSuite、Set；返回表达式求值结果。 */ (source, tests) => suites.executeScriptTestSuite({ scriptUuid: 'failure', scriptName: 'failure', source, functions: new Set(['test_ok']), tests, context: suiteContext, createVm: /** 结构说明（自动提取）：匿名回调；无显式参数；直接调用 TrackedVm；返回表达式求值结果。 */ () => new TrackedVm(), parseExecution: JSON.parse })
     const before = [allocations, frees]; assert.equal(run('fn broken( {', [metadata('test_ok')])[0].passed, false); assert.deepEqual([allocations - before[0], frees - before[1]], [1,1])
     run('fn test_ok(){}', [{ ...metadata('test_ok'), skipped: true }]); assert.deepEqual([allocations - before[0], frees - before[1]], [1,1])
   })
-  await check('production test discovery executes a visual graph through the same suite runner', () => {
+  await check('production test discovery executes a visual graph through the same suite runner', /** 结构说明（自动提取）：check 回调；无显式参数；直接调用 sync.createGraphFromRhaiSource、asset、types.serializeGraphDocument、runScriptTests、runtimeModule.GameplayRuntime 等。 */ () => {
     const graph = sync.createGraphFromRhaiSource('fn test_visual(){ if 2+2!=4 { throw "arithmetic"; } }', 'Visual tests'), graphAsset = asset('tests.nova-graph', types.serializeGraphDocument(graph), 'visualScript')
     const results = new runtimeModule.GameplayRuntime().runScriptTests(graphAsset.uuid)
     assert.equal(results.length, 1); assert.equal(results[0].test, 'test_visual'); assert.equal(results[0].passed, true, JSON.stringify(results))
   })
-  await check('composition resolves required dependencies and exclusions before any mutation', () => {
-    const target = new entityModule.BoxEntity(2, { x: 0, y: 0 }, { x: 1, y: 1 }), before = target.components.map(item => item.kind)
-    assert.throws(() => composition.planObjectComposition(target, ['TopDownController2D'], ['RigidBody2D']), /requires excluded/)
-    assert.deepEqual(target.components.map(item => item.kind), before)
+  await check('composition resolves required dependencies and exclusions before any mutation', /** 结构说明（自动提取）：check 回调；无显式参数；直接调用 entityModule.BoxEntity、target.components.map、assert.throws、assert.deepEqual、composition.planObjectComposition 等；包含循环处理。 */ () => {
+    const target = new entityModule.BoxEntity(2, { x: 0, y: 0 }, { x: 1, y: 1 }), before = target.components.map(/* 返回 item.kind 的当前值。 */ item => item.kind)
+    assert.throws(/* 调用 composition.planObjectComposition(target, ['TopDownController2D'], ['RigidBody2D']) 并返回调用结果。 */ () => composition.planObjectComposition(target, ['TopDownController2D'], ['RigidBody2D']), /requires excluded/)
+    assert.deepEqual(target.components.map(/* 返回 item.kind 的当前值。 */ item => item.kind), before)
     const plan = composition.planObjectComposition(target, ['AreaEffector2D','Health2D'], ['ShapeRenderer2D'])
     assert.equal(target.hasComponent('Health2D'), false); composition.applyObjectComposition(target, plan)
     for (const kind of ['AreaEffector2D','Area2D','Health2D','BoxCollider2D']) assert.equal(target.hasComponent(kind), true)
     assert.equal(target.hasComponent('ShapeRenderer2D'), false)
   })
-  await check('composition rejects conflicting controllers, removed transform and connection-only components', () => {
+  await check('composition rejects conflicting controllers, removed transform and connection-only components', /** 结构说明（自动提取）：check 回调；无显式参数；直接调用 entityModule.BoxEntity、assert.throws。 */ () => {
     const target = new entityModule.BoxEntity(3, { x: 0, y: 0 }, { x: 1, y: 1 })
-    assert.throws(() => composition.planObjectComposition(target, ['TopDownController2D','PlatformController2D'], []), /conflicts/)
-    assert.throws(() => composition.planObjectComposition(target, [], ['Transform2D']), /cannot exclude/)
-    assert.throws(() => composition.planObjectComposition(target, ['Rope2D'], []), /scene connection/)
+    assert.throws(/* 调用 composition.planObjectComposition(target, ['TopDownController2D','PlatformController2D'], []) 并返回调用结果。 */ () => composition.planObjectComposition(target, ['TopDownController2D','PlatformController2D'], []), /conflicts/)
+    assert.throws(/* 调用 composition.planObjectComposition(target, [], ['Transform2D']) 并返回调用结果。 */ () => composition.planObjectComposition(target, [], ['Transform2D']), /cannot exclude/)
+    assert.throws(/* 调用 composition.planObjectComposition(target, ['Rope2D'], []) 并返回调用结果。 */ () => composition.planObjectComposition(target, ['Rope2D'], []), /scene connection/)
   })
   const prefab = asset('composition.prefab', '{}', 'prefab')
-  const blueprint = (name, required, excluded = [], base = null) => asset(name, JSON.stringify({ ...blueprints.defaultObjectBlueprint(name), prefabAsset: ref(prefab), baseBlueprintAsset: base && ref(base), requiredComponents: required, excludedComponents: excluded, tags: ['enemy'] }), 'objectBlueprint')
-  fixture.selectEntities = ids => { fixture.physicsState.selectedEntityIds = ids }
-  fixture.capturePrefabOverrides = target => { target.prefabOverrides = { recorded: true }; return target.prefabOverrides }
-  let createBatch = () => []
-  fixture.instantiatePrefab = () => { const batch = createBatch(); fixture.physicsState.world.entities.push(...batch); return batch }
+  const blueprint = /** 结构说明（自动提取）：blueprint；输入 name、required、excluded、base；直接调用 asset、JSON.stringify、blueprints.defaultObjectBlueprint、ref；返回表达式求值结果。 */ (name, required, excluded = [], base = null) => asset(name, JSON.stringify({ ...blueprints.defaultObjectBlueprint(name), prefabAsset: ref(prefab), baseBlueprintAsset: base && ref(base), requiredComponents: required, excludedComponents: excluded, tags: ['enemy'] }), 'objectBlueprint')
+  fixture.selectEntities = /** 结构说明（自动提取）：匿名回调；输入 ids；写入 fixture.physicsState.selectedEntityIds。 */ ids => { fixture.physicsState.selectedEntityIds = ids }
+  fixture.capturePrefabOverrides = /** 结构说明（自动提取）：匿名回调；输入 target；写入 target.prefabOverrides；返回路径包含 target.prefabOverrides。 */ target => { target.prefabOverrides = { recorded: true }; return target.prefabOverrides }
+  let createBatch = /* 返回按声明顺序构造的数组 []。 */ () => []
+  fixture.instantiatePrefab = /** 结构说明（自动提取）：匿名回调；无显式参数；直接调用 createBatch、fixture.physicsState.world.entities.push；返回路径包含 batch。 */ () => { const batch = createBatch(); fixture.physicsState.world.entities.push(...batch); return batch }
   const family = blueprint('family.object', ['Health2D']), derived = blueprint('enemy.object', ['TopDownController2D'], ['ShapeRenderer2D'], family)
-  await check('unsaved blueprint validation detects cycles, composition conflicts and missing prefabs without writes', () => {
-    const saved = blueprints.readObjectBlueprint(ref(family)), before = [...assets.values()].map(record => [record.uuid, record.source]), generation = db.assetState.generation
+  await check('unsaved blueprint validation detects cycles, composition conflicts and missing prefabs without writes', /** 结构说明（自动提取）：check 回调；无显式参数；直接调用 blueprints.readObjectBlueprint、ref、map、assets.values、assert.deepEqual 等。 */ () => {
+    const saved = blueprints.readObjectBlueprint(ref(family)), before = [...assets.values()].map(/* 返回按声明顺序构造的数组 [record.uuid, record.source]。 */ record => [record.uuid, record.source]), generation = db.assetState.generation
     assert.deepEqual(blueprints.validateObjectBlueprintDraft(family.uuid, saved), [])
-    assert.ok(blueprints.validateObjectBlueprintDraft(family.uuid, { ...saved, baseBlueprintAsset: ref(derived) }).some(issue => issue.code === 'OBJECT-INHERIT-CYCLE'))
-    assert.ok(blueprints.validateObjectBlueprintDraft(family.uuid, { ...saved, excludedComponents: ['Health2D'] }).some(issue => issue.code === 'OBJECT-COMPONENT-CONFLICT'))
-    assert.ok(blueprints.validateObjectBlueprintDraft(family.uuid, { ...saved, prefabAsset: 'asset://' + crypto.randomUUID() }).some(issue => issue.code === 'OBJECT-PREFAB-MISSING'))
-    assert.ok(blueprints.validateObjectBlueprintDraft(family.uuid, { ...saved, uuid: crypto.randomUUID() }).some(issue => issue.code === 'OBJECT-DRAFT-IDENTITY'))
-    assert.deepEqual([...assets.values()].map(record => [record.uuid, record.source]), before); assert.equal(db.assetState.generation, generation)
+    assert.ok(blueprints.validateObjectBlueprintDraft(family.uuid, { ...saved, baseBlueprintAsset: ref(derived) }).some(/* 比较 issue.code 与 'OBJECT-INHERIT-CYCLE'，返回严格相等的判断结果。 */ issue => issue.code === 'OBJECT-INHERIT-CYCLE'))
+    assert.ok(blueprints.validateObjectBlueprintDraft(family.uuid, { ...saved, excludedComponents: ['Health2D'] }).some(/* 比较 issue.code 与 'OBJECT-COMPONENT-CONFLICT'，返回严格相等的判断结果。 */ issue => issue.code === 'OBJECT-COMPONENT-CONFLICT'))
+    assert.ok(blueprints.validateObjectBlueprintDraft(family.uuid, { ...saved, prefabAsset: 'asset://' + crypto.randomUUID() }).some(/* 比较 issue.code 与 'OBJECT-PREFAB-MISSING'，返回严格相等的判断结果。 */ issue => issue.code === 'OBJECT-PREFAB-MISSING'))
+    assert.ok(blueprints.validateObjectBlueprintDraft(family.uuid, { ...saved, uuid: crypto.randomUUID() }).some(/* 比较 issue.code 与 'OBJECT-DRAFT-IDENTITY'，返回严格相等的判断结果。 */ issue => issue.code === 'OBJECT-DRAFT-IDENTITY'))
+    assert.deepEqual([...assets.values()].map(/* 返回按声明顺序构造的数组 [record.uuid, record.source]。 */ record => [record.uuid, record.source]), before); assert.equal(db.assetState.generation, generation)
     assert.deepEqual(blueprints.readObjectBlueprint(ref(family)), saved)
   })
-  await check('blueprint inheritance applies composition to roots and preserves authored children', () => {
+  await check('blueprint inheritance applies composition to roots and preserves authored children', /** 结构说明（自动提取）：check 回调；无显式参数；直接调用 entityModule.BoxEntity、blueprints.instantiateObjectBlueprint、ref、assert.equal、rootEntity.hasComponent 等；写入 childEntity.parentUuid、createBatch；包含循环处理。 */ () => {
     const rootEntity = new entityModule.BoxEntity(4, { x: 0, y: 0 }, { x: 1, y: 1 }), childEntity = new entityModule.BoxEntity(5, { x: 0, y: 0 }, { x: 1, y: 1 }); childEntity.parentUuid = rootEntity.uuid
-    createBatch = () => [rootEntity, childEntity]
+    createBatch = /* 返回按声明顺序构造的数组 [rootEntity, childEntity]。 */ () => [rootEntity, childEntity]
     const result = blueprints.instantiateObjectBlueprint(ref(derived)); assert.equal(result.length, 2)
     for (const kind of ['Health2D','TopDownController2D','CharacterBody2D','RigidBody2D']) assert.equal(rootEntity.hasComponent(kind), true)
     assert.equal(rootEntity.hasComponent('ShapeRenderer2D'), false); assert.equal(childEntity.hasComponent('ShapeRenderer2D'), true); assert.equal(childEntity.hasComponent('Health2D'), false)
@@ -302,7 +303,7 @@ try {
     assert.equal(stored.objectBlueprintAsset, ref(derived)); assert.equal(reopened.objectBlueprintAsset, ref(derived)); assert.equal(reopened.script2D, null)
     assert.deepEqual(fixture.physicsState.selectedEntityIds, [rootEntity.id])
   })
-  await check('blueprint identity migrates legacy Script2D and asset replacement visits live and stored static instances', () => {
+  await check('blueprint identity migrates legacy Script2D and asset replacement visits live and stored static instances', /** 结构说明（自动提取）：check 回调；无显式参数；直接调用 entityModule.BoxEntity、target.addComponent、components.Script2D、ref、physicsReal.readEntityAuthoringData 等；写入 target.script2D.objectBlueprintAsset、staticEntity.objectBlueprintAsset、storedScene.data。 */ () => {
     const target = new entityModule.BoxEntity(96, { x: 0, y: 0 }, { x: 1, y: 1 }); target.addComponent(new components.Script2D()); target.script2D.objectBlueprintAsset = ref(family)
     const legacy = physicsReal.readEntityAuthoringData(target); delete legacy.objectBlueprintAsset
     const migrated = physicsReal.createEntityFromData(legacy, 97); assert.equal(migrated.objectBlueprintAsset, ref(family))
@@ -318,40 +319,40 @@ try {
       assert.equal(physicsReal.clearAssetReferences(replacement), 2); assert.equal(staticEntity.objectBlueprintAsset, null); assert.equal(storedScene.data.entities[0].objectBlueprintAsset, null)
     } finally { physicsReal.physicsState.world.entities.splice(0, physicsReal.physicsState.world.entities.length, ...previous) }
   })
-  await check('blueprint failure removes only new entities/connections and preserves selection', () => {
+  await check('blueprint failure removes only new entities/connections and preserves selection', /** 结构说明（自动提取）：check 回调；无显式参数；直接调用 blueprint、assert.deepEqual、blueprints.instantiateObjectBlueprint、ref、assert.ok 等；写入 createBatch、fixture.instantiatePrefab。 */ () => {
     const before = [...fixture.physicsState.world.entities], selected = [...fixture.physicsState.selectedEntityIds], connection = { id: 55 }
     const invalid = blueprint('invalid.object', ['TopDownController2D'], ['RigidBody2D'])
-    createBatch = () => [new entityModule.BoxEntity(6, { x: 0, y: 0 }, { x: 1, y: 1 })]
+    createBatch = /* 返回按声明顺序构造的数组 [new entityModule.BoxEntity(6, { x: 0, y: 0 }, { x: 1, y: 1 })]。 */ () => [new entityModule.BoxEntity(6, { x: 0, y: 0 }, { x: 1, y: 1 })]
     assert.deepEqual(blueprints.instantiateObjectBlueprint(ref(invalid)), []); assert.deepEqual(fixture.physicsState.world.entities, before); assert.deepEqual(fixture.physicsState.selectedEntityIds, selected)
-    fixture.instantiatePrefab = () => { fixture.physicsState.world.entities.push(...createBatch()); fixture.physicsState.world.connections.push(connection); throw Error('Late prefab failure') }
+    fixture.instantiatePrefab = /** 结构说明（自动提取）：匿名回调；无显式参数；直接调用 fixture.physicsState.world.entities.push、createBatch、fixture.physicsState.world.connections.push、Error；包含显式抛错路径。 */ () => { fixture.physicsState.world.entities.push(...createBatch()); fixture.physicsState.world.connections.push(connection); throw Error('Late prefab failure') }
     assert.deepEqual(blueprints.instantiateObjectBlueprint(ref(derived)), []); assert.deepEqual(fixture.physicsState.world.entities, before); assert.ok(!fixture.physicsState.world.connections.includes(connection))
   })
-  await check('cancel, replace, pause, entity cleanup and reset invalidate prepared timer dispatches', () => {
+  await check('cancel, replace, pause, entity cleanup and reset invalidate prepared timer dispatches', /** 结构说明（自动提取）：check 回调；无显式参数；直接调用 timeModule.RuntimeTime、clock.startTask、clock.beginFrame、assert.equal、clock.consumeExpiration 等。 */ () => {
     const clock = new timeModule.RuntimeTime()
     clock.startTask('one','a',.1); clock.startTask('one','b',.1)
     const due = clock.beginFrame(.2,60,1); assert.equal(clock.consumeExpiration(due[0]),true)
     clock.cancelTask('one','b'); assert.equal(clock.consumeExpiration(due[1]),false)
     clock.start('one','repeat',.01,true); const repeated=clock.beginFrame(.1,60,1); assert.ok(repeated.length>1)
-    clock.start('one','repeat',1,true); assert.ok(repeated.every(item=>!clock.consumeExpiration(item)))
-    clock.start('one','pause',.01,true); const paused=clock.beginFrame(.1,60,1).filter(item=>item.name==='pause'); clock.pause('one','pause'); assert.ok(paused.every(item=>!clock.consumeExpiration(item)))
-    clock.startTask('one','remove',.1); const removed=clock.beginFrame(.2,60,1); clock.removeEntity('one'); assert.ok(removed.every(item=>!clock.consumeExpiration(item)))
-    clock.startTask('one','reset',.1); const reset=clock.beginFrame(.2,60,1); clock.reset(); assert.ok(reset.every(item=>!clock.consumeExpiration(item)))
+    clock.start('one','repeat',1,true); assert.ok(repeated.every(/* 返回 clock.consumeExpiration(item) 的逻辑取反结果。 */ item=>!clock.consumeExpiration(item)))
+    clock.start('one','pause',.01,true); const paused=clock.beginFrame(.1,60,1).filter(/* 比较 item.name 与 'pause'，返回严格相等的判断结果。 */ item=>item.name==='pause'); clock.pause('one','pause'); assert.ok(paused.every(/* 返回 clock.consumeExpiration(item) 的逻辑取反结果。 */ item=>!clock.consumeExpiration(item)))
+    clock.startTask('one','remove',.1); const removed=clock.beginFrame(.2,60,1); clock.removeEntity('one'); assert.ok(removed.every(/* 返回 clock.consumeExpiration(item) 的逻辑取反结果。 */ item=>!clock.consumeExpiration(item)))
+    clock.startTask('one','reset',.1); const reset=clock.beginFrame(.2,60,1); clock.reset(); assert.ok(reset.every(/* 返回 clock.consumeExpiration(item) 的逻辑取反结果。 */ item=>!clock.consumeExpiration(item)))
   })
-  await check('timer capacity, nonfinite requests and per-frame dispatch volume are bounded', () => {
+  await check('timer capacity, nonfinite requests and per-frame dispatch volume are bounded', /** 结构说明（自动提取）：check 回调；无显式参数；直接调用 timeModule.RuntimeTime、assert.equal、clock.start、clock.startTask、clock.beginFrame 等；包含循环处理。 */ () => {
     const clock=new timeModule.RuntimeTime(); assert.equal(clock.start('one','bad',Infinity,false),false)
     for(let i=0;i<timeModule.MAX_RUNTIME_TIMERS;i++) assert.equal(clock.start('one','t'+i,.001,true),true)
     assert.equal(clock.startTask('two','full',1),false); assert.equal(clock.start('one','t0',1,false),true)
-    const due=clock.beginFrame(.25,60,1); assert.equal(due.length,timeModule.MAX_TIMER_EXPIRATIONS_PER_FRAME); assert.ok(due.every(item=>clock.consumeExpiration(item)))
-    assert.ok(due.every(item=>!clock.consumeExpiration(item)))
+    const due=clock.beginFrame(.25,60,1); assert.equal(due.length,timeModule.MAX_TIMER_EXPIRATIONS_PER_FRAME); assert.ok(due.every(/* 调用 clock.consumeExpiration(item) 并返回调用结果。 */ item=>clock.consumeExpiration(item)))
+    assert.ok(due.every(/* 返回 clock.consumeExpiration(item) 的逻辑取反结果。 */ item=>!clock.consumeExpiration(item)))
   })
-  await check('paused single-step dispatches timers/tasks and a callback can cancel another due task',()=>{
+  await check('paused single-step dispatches timers/tasks and a callback can cancel another due task',/** 结构说明（自动提取）：check 回调；无显式参数；直接调用 entityModule.BoxEntity、asset、target.addComponent、components.Script2D、ref 等；写入 target.script2D.scriptAsset、fixture.physicsState.world.entities、fixture.physicsState.camera、running.active 等。 */ ()=>{
     const target=new entityModule.BoxEntity(71,{x:0,y:0},{x:1,y:1}),code=asset('step-timers.rhai','@export let count=0;\nfn on_timer(name){count+=1;} fn on_task(name){if name=="a"{task_cancel("b");count+=10;}else{count+=1000;}}')
-    target.addComponent(new components.Script2D());target.script2D.scriptAsset=ref(code);fixture.physicsState.world.entities=[target];fixture.physicsState.camera={scale:1,offset:{x:0,y:0}};Object.assign(fixture.physicsState.world,{singleStep:()=>({}),stateChecksum:()=>'',events:[]})
-    const running=new runtimeModule.GameplayRuntime();running.active=true;running.scriptRuntime=new TrackedVm();running.input.sample=()=>running.inputSnapshot;running.compileAttachedScripts()
+    target.addComponent(new components.Script2D());target.script2D.scriptAsset=ref(code);fixture.physicsState.world.entities=[target];fixture.physicsState.camera={scale:1,offset:{x:0,y:0}};Object.assign(fixture.physicsState.world,{singleStep:/** 结构说明（自动提取）：匿名回调；无显式参数；返回表达式求值结果。 */ ()=>({}),stateChecksum:/* 返回固定值 ''。 */ ()=>'',events:[]})
+    const running=new runtimeModule.GameplayRuntime();running.active=true;running.scriptRuntime=new TrackedVm();running.input.sample=/* 返回 running.inputSnapshot 的当前值。 */ ()=>running.inputSnapshot;running.compileAttachedScripts()
     running.time.start(target.uuid,'tick',.001,false);running.time.startTask(target.uuid,'a',.001);running.time.startTask(target.uuid,'b',.001);running.stepOnce();assert.equal(target.script2D.properties.count,11);assert.equal(fixture.physicsState.playMode,'paused')
     running.stepOnce();assert.equal(target.script2D.properties.count,11);running.scriptRuntime.free()
   })
-  await check('direct and pending handles reject retired and reused entity lifetimes', () => {
+  await check('direct and pending handles reject retired and reused entity lifetimes', /** 结构说明（自动提取）：check 回调；无显式参数；直接调用 entityModule.BoxEntity、lifetimes.beginEntityLifetime、Map、dynamic.runtimeHandleGeneration、assert.equal 等；写入 fixture.physicsState.world.entities。 */ () => {
     const target=new entityModule.BoxEntity(31,{x:0,y:0},{x:1,y:1});fixture.physicsState.world.entities=[target]
     const first=lifetimes.beginEntityLifetime(target), handle={id:target.uuid,generation:first}, pendingId='pending:test:8:1', pending=new Map([[pendingId,{uuid:target.uuid,generation:first}]]), pendingHandle={id:pendingId,generation:dynamic.runtimeHandleGeneration(pendingId)}
     assert.equal(dynamic.resolveRuntimeHandle(handle,pending),target);assert.equal(dynamic.resolveRuntimeHandle(pendingHandle,pending),target)
@@ -359,41 +360,41 @@ try {
     const next=lifetimes.beginEntityLifetime(target);assert.notEqual(next,first);assert.equal(dynamic.resolveRuntimeHandle(handle,pending),null);assert.equal(dynamic.resolveRuntimeHandle(pendingHandle,pending),null)
     assert.equal(dynamic.resolveRuntimeHandle({id:target.uuid,generation:next},pending),target)
   })
-  await check('pooled expiry uses simulation time, cleans before reset and gets a fresh lifetime', () => {
+  await check('pooled expiry uses simulation time, cleans before reset and gets a fresh lifetime', /** 结构说明（自动提取）：check 回调；无显式参数；直接调用 pool.resetObjectPools、entityModule.BoxEntity、components.ObjectPool2D、owner.addComponent、pool.setPoolRuntimeHooks 等；写入 config.prefabAsset、config.prewarm、config.capacity、config.maximumLifetime 等。 */ () => {
     pool.resetObjectPools();const owner=new entityModule.BoxEntity(41,{x:0,y:0},{x:1,y:1}), config=new components.ObjectPool2D();config.prefabAsset='asset://pooled';config.prewarm=1;config.capacity=1;config.maximumLifetime=.5;owner.addComponent(config)
-    const reused=new entityModule.BoxEntity(42,{x:0,y:0},{x:1,y:1});fixture.physicsState.world.entities=[owner];fixture.instantiatePrefab=()=>{fixture.physicsState.world.entities.push(reused);return[reused]}
-    let now=0;const calls=[];pool.setPoolRuntimeHooks({clock:()=>now,beforeRelease:entities=>{calls.push(entities[0].enabled);assert.equal(pool.releasePooled(entities[0]),false);assert.equal(pool.acquirePooled(config.prefabAsset,{x:99,y:0}),null)}})
+    const reused=new entityModule.BoxEntity(42,{x:0,y:0},{x:1,y:1});fixture.physicsState.world.entities=[owner];fixture.instantiatePrefab=/** 结构说明（自动提取）：匿名回调；无显式参数；直接调用 fixture.physicsState.world.entities.push。 */ ()=>{fixture.physicsState.world.entities.push(reused);return[reused]}
+    let now=0;const calls=[];pool.setPoolRuntimeHooks({clock:/* 返回 now 的当前值。 */ ()=>now,beforeRelease:/** 结构说明（自动提取）：匿名回调；输入 entities；直接调用 calls.push、assert.equal、pool.releasePooled、pool.acquirePooled。 */ entities=>{calls.push(entities[0].enabled);assert.equal(pool.releasePooled(entities[0]),false);assert.equal(pool.acquirePooled(config.prefabAsset,{x:99,y:0}),null)}})
     pool.prepareObjectPools();assert.equal(lifetimes.entityLifetimeActive(reused),false);assert.equal(pool.acquirePooled(config.prefabAsset,{x:2,y:0})[0],reused);const generation=lifetimes.entityLifetimeGeneration(reused)
     now=.49;pool.updateObjectPools();assert.equal(reused.enabled,true);now=.5;pool.updateObjectPools();assert.deepEqual(calls,[true]);assert.equal(reused.enabled,false);assert.equal(config.activeCount,0)
     assert.equal(pool.acquirePooled(config.prefabAsset,{x:4,y:0})[0],reused);assert.ok(lifetimes.entityLifetimeGeneration(reused)>generation);pool.releasePooled(reused);assert.equal(reused.transform.position.x,0)
-    pool.acquirePooled(config.prefabAsset,{x:8,y:0});pool.setPoolRuntimeHooks({beforeRelease:()=>{throw Error('cleanup failure')}});assert.throws(()=>pool.releasePooled(reused),/cleanup failure/);assert.equal(lifetimes.entityLifetimeActive(reused),false);assert.equal(config.activeCount,0);assert.equal(pool.acquirePooled(config.prefabAsset,{x:0,y:0})[0],reused)
+    pool.acquirePooled(config.prefabAsset,{x:8,y:0});pool.setPoolRuntimeHooks({beforeRelease:/** 结构说明（自动提取）：匿名回调；无显式参数；直接调用 Error；包含显式抛错路径。 */ ()=>{throw Error('cleanup failure')}});assert.throws(/* 调用 pool.releasePooled(reused) 并返回调用结果。 */ ()=>pool.releasePooled(reused),/cleanup failure/);assert.equal(lifetimes.entityLifetimeActive(reused),false);assert.equal(config.activeCount,0);assert.equal(pool.acquirePooled(config.prefabAsset,{x:0,y:0})[0],reused)
     pool.setPoolRuntimeHooks();pool.releasePooled(reused);pool.resetObjectPools()
   })
 
-  await check('configured pool capacity refuses fallback allocation while unrelated prefabs and allowed expansion remain valid',()=>{
+  await check('configured pool capacity refuses fallback allocation while unrelated prefabs and allowed expansion remain valid',/** 结构说明（自动提取）：check 回调；无显式参数；直接调用 pool.resetObjectPools、entityModule.BoxEntity、components.ObjectPool2D、owner.addComponent、assert.equal 等；写入 config.prefabAsset、config.prewarm、config.capacity、config.autoExpand 等。 */ ()=>{
     pool.resetObjectPools();const owner=new entityModule.BoxEntity(580,{x:0,y:0},{x:1,y:1}),config=new components.ObjectPool2D();config.prefabAsset='asset://bounded-pool';config.prewarm=0;config.capacity=1;config.autoExpand=false;owner.addComponent(config);fixture.physicsState.world.entities=[owner];let made=0
-    fixture.instantiatePrefab=()=>{const entity=new entityModule.BoxEntity(581+made++,{x:0,y:0},{x:1,y:1});fixture.physicsState.world.entities.push(entity);return[entity]};const transform={position:{x:0,y:0},rotation:0,scale:{x:1,y:1}}
+    fixture.instantiatePrefab=/** 结构说明（自动提取）：匿名回调；无显式参数；直接调用 entityModule.BoxEntity、fixture.physicsState.world.entities.push。 */ ()=>{const entity=new entityModule.BoxEntity(581+made++,{x:0,y:0},{x:1,y:1});fixture.physicsState.world.entities.push(entity);return[entity]};const transform={position:{x:0,y:0},rotation:0,scale:{x:1,y:1}}
     try{assert.equal(dynamic.spawnRuntimePrefab(config.prefabAsset,transform),null);assert.equal(made,0);assert.ok(dynamic.spawnRuntimePrefab('asset://unrelated-prefab',transform));assert.equal(made,1);config.autoExpand=true;assert.ok(dynamic.spawnRuntimePrefab(config.prefabAsset,transform));assert.equal(made,2);assert.equal(dynamic.spawnRuntimePrefab(config.prefabAsset,transform),null);assert.equal(made,2);config.capacity=2;assert.ok(dynamic.spawnRuntimePrefab(config.prefabAsset,transform));assert.equal(made,3)}finally{pool.resetObjectPools();fixture.physicsState.world.entities=[entity]}
   })
 
-  if(useNative||stagedWasm) await check('staged actual bridge targets only the current runtime entity generation',()=>{
+  if(useNative||stagedWasm) await check('staged actual bridge targets only the current runtime entity generation',/** 结构说明（自动提取）：check 回调；无显式参数；直接调用 entityModule.BoxEntity、asset、target.addComponent、components.Script2D、ref 等；写入 target.script2D.scriptAsset、fixture.physicsState.world.entities、running.active、running.scriptRuntime 等。 */ ()=>{
     const target=new entityModule.BoxEntity(51,{x:0,y:0},{x:1,y:1}), code=asset('lifetime.rhai','fn update(dt){let current=entity_handle();entity_set_position(current,2.0,0.0);}')
     target.addComponent(new components.Script2D());target.script2D.scriptAsset=ref(code);fixture.physicsState.world.entities=[target];lifetimes.beginEntityLifetime(target)
     const running=new runtimeModule.GameplayRuntime();running.active=true;running.scriptRuntime=new TrackedVm();running.compileAttachedScripts();running.runEntityFunction(target,'update');running.flushDynamicCommands();assert.equal(target.transform.position.x,2)
     running.runEntityFunction(target,'update');lifetimes.beginEntityLifetime(target);target.transform.position.x=0;running.flushDynamicCommands();assert.equal(target.transform.position.x,0);running.scriptRuntime.free()
   })
-  await check('actual physics authoring snapshot is detached and never normalizes live values',()=>{
-    const target=new entityModule.BoxEntity(301,{x:0,y:0},{x:1,y:1});target.addComponent(new components.Script2D());target.script2D.properties={nested:{value:9}};assert.throws(()=>{target.mass=NaN},/mass must be finite/);target.rigidBody.mass=NaN /* inject corrupted internal state past the validated public setter */
-    const snapshot=physicsReal.readEntityAuthoringData(target);assert.equal(Number.isNaN(target.mass),true);snapshot.components.find(item=>item.kind==='Script2D').data.properties.nested.value=100;assert.equal(target.script2D.properties.nested.value,9)
+  await check('actual physics authoring snapshot is detached and never normalizes live values',/** 结构说明（自动提取）：check 回调；无显式参数；直接调用 entityModule.BoxEntity、target.addComponent、components.Script2D、assert.throws、physicsReal.readEntityAuthoringData 等；写入 target.script2D.properties、target.rigidBody.mass、data.properties.nested.value。 */ ()=>{
+    const target=new entityModule.BoxEntity(301,{x:0,y:0},{x:1,y:1});target.addComponent(new components.Script2D());target.script2D.properties={nested:{value:9}};assert.throws(/** 结构说明（自动提取）：assert.throws 回调；无显式参数；写入 target.mass。 */ ()=>{target.mass=NaN},/mass must be finite/);target.rigidBody.mass=NaN /* inject corrupted internal state past the validated public setter */
+    const snapshot=physicsReal.readEntityAuthoringData(target);assert.equal(Number.isNaN(target.mass),true);snapshot.components.find(/* 比较 item.kind 与 'Script2D'，返回严格相等的判断结果。 */ item=>item.kind==='Script2D').data.properties.nested.value=100;assert.equal(target.script2D.properties.nested.value,9)
   })
 
 
-  await check('reactive world proxies preserve real pool identity and stale replacement objects cannot release a lease',async()=>{
+  await check('reactive world proxies preserve real pool identity and stale replacement objects cannot release a lease',/** 结构说明（自动提取）：check 回调；无显式参数；直接调用 entityModule.BoxEntity、components.ObjectPool2D、owner.addComponent、reactive、pool.prepareObjectPools 等；写入 config.prefabAsset、config.prewarm、config.capacity、fixture.physicsState.world.entities 等；等待异步结果。 */ async()=>{
     const {reactive}=await import('vue'),owner=new entityModule.BoxEntity(561,{x:0,y:0},{x:1,y:1}),config=new components.ObjectPool2D();config.prefabAsset='asset://reactive-pool';config.prewarm=1;config.capacity=1;owner.addComponent(config)
-    fixture.physicsState.world.entities=reactive([owner]);let made=0;fixture.instantiatePrefab=()=>{const entity=new entityModule.BoxEntity(562+made++,{x:0,y:0},{x:1,y:1});fixture.physicsState.world.entities.push(entity);return[entity]}
+    fixture.physicsState.world.entities=reactive([owner]);let made=0;fixture.instantiatePrefab=/** 结构说明（自动提取）：匿名回调；无显式参数；直接调用 entityModule.BoxEntity、fixture.physicsState.world.entities.push。 */ ()=>{const entity=new entityModule.BoxEntity(562+made++,{x:0,y:0},{x:1,y:1});fixture.physicsState.world.entities.push(entity);return[entity]}
     try{
       pool.prepareObjectPools();pool.prepareObjectPools();assert.equal(made,1,'Raw/proxy mismatch pruned a live pool instance')
-      const first=pool.acquirePooled(config.prefabAsset,{x:1,y:0})[0],generation=lifetimes.entityLifetimeGeneration(first),proxy=fixture.physicsState.world.entities.find(entity=>entity.uuid===first.uuid)
+      const first=pool.acquirePooled(config.prefabAsset,{x:1,y:0})[0],generation=lifetimes.entityLifetimeGeneration(first),proxy=fixture.physicsState.world.entities.find(/* 比较 entity.uuid 与 first.uuid，返回严格相等的判断结果。 */ entity=>entity.uuid===first.uuid)
       assert.notEqual(first,proxy,'Fixture must expose a real Vue proxy');pool.prepareObjectPools();assert.equal(pool.objectPoolDiagnostics()[0].active,1);assert.equal(pool.releasePooled(proxy),true)
       const next=pool.acquirePooled(config.prefabAsset,{x:2,y:0})[0];assert.equal(next,first);assert.ok(lifetimes.entityLifetimeGeneration(next)>generation);assert.equal(made,1);assert.equal(config.reusedCount,2)
       const stale=new entityModule.BoxEntity(first.id,{x:0,y:0},{x:1,y:1},first.uuid);assert.equal(pool.releasePooled(stale),false,'Same UUID replacement must not release original identity')
@@ -401,13 +402,13 @@ try {
     }finally{pool.resetObjectPools();pool.setPoolRuntimeHooks();fixture.physicsState.world.entities=[entity]}
   })
 
-  await check('actual prefab comparison and conflict reads never mutate reactive scene or override identity',()=>{
+  await check('actual prefab comparison and conflict reads never mutate reactive scene or override identity',/** 结构说明（自动提取）：check 回调；无显式参数；直接调用 entityModule.BoxEntity、physicsReal.readEntityAuthoringData、asset、JSON.stringify、ref 等；写入 entity.prefabAsset、entity.prefabSourceUuid、entity.prefabInstanceUuid、entity.name 等；包含循环处理。 */ ()=>{
     const entity=new entityModule.BoxEntity(1201,{x:0,y:0},{x:1,y:1}),source=physicsReal.readEntityAuthoringData(entity),record=asset('readonly-inspector.prefab',JSON.stringify({prefabVersion:2,name:'Inspector source',bundle:{entities:[source],rootUuids:[entity.uuid],connections:[]},variantOf:null,sourceChecksum:'',createdAt:'2026-01-01T00:00:00.000Z'}),'prefab')
-    entity.prefabAsset=ref(record);entity.prefabSourceUuid=entity.uuid;entity.prefabInstanceUuid=crypto.randomUUID();entity.name='Local name';assert.throws(()=>{entity.mass=NaN},/mass must be finite/);entity.rigidBody.mass=NaN /* inject corrupted internal state past the validated public setter */
-    const originalOverrides={sentinel:true};let overrideWrites=0;Object.defineProperty(entity,'prefabOverrides',{configurable:true,get:()=>originalOverrides,set:()=>{overrideWrites++}})
+    entity.prefabAsset=ref(record);entity.prefabSourceUuid=entity.uuid;entity.prefabInstanceUuid=crypto.randomUUID();entity.name='Local name';assert.throws(/** 结构说明（自动提取）：assert.throws 回调；无显式参数；写入 entity.mass。 */ ()=>{entity.mass=NaN},/mass must be finite/);entity.rigidBody.mass=NaN /* inject corrupted internal state past the validated public setter */
+    const originalOverrides={sentinel:true};let overrideWrites=0;Object.defineProperty(entity,'prefabOverrides',{configurable:true,get:/* 返回 originalOverrides 的当前值。 */ ()=>originalOverrides,set:/** 结构说明（自动提取）：匿名回调；无显式参数。 */ ()=>{overrideWrites++}})
     const world=physicsReal.physicsState.world,previous=world.entities.slice(),connectionIdentity=world.connections,assetBytes=record.source;world.entities.splice(0,world.entities.length,entity)
     const snapshot=JSON.stringify(physicsReal.readEntityAuthoringData(entity)),selection=[...physicsReal.physicsState.selectedEntityIds]
-    try{for(let iteration=0;iteration<25;iteration++){const comparison=prefabsReal.comparePrefabInstance(entity),conflicts=prefabsReal.prefabConflictReport(entity);assert.ok(comparison.some(item=>item.path==='name'&&item.value==='Local name'));assert.ok(conflicts.some(item=>item.code==='override'&&item.path==='name'))}
+    try{for(let iteration=0;iteration<25;iteration++){const comparison=prefabsReal.comparePrefabInstance(entity),conflicts=prefabsReal.prefabConflictReport(entity);assert.ok(comparison.some(/* 先计算 item.path==='name'；仅当其为真值时求右侧 item.value==='Local name'，返回短路求值结果。 */ item=>item.path==='name'&&item.value==='Local name'));assert.ok(conflicts.some(/* 先计算 item.code==='override'；仅当其为真值时求右侧 item.path==='name'，返回短路求值结果。 */ item=>item.code==='override'&&item.path==='name'))}
       assert.equal(overrideWrites,0);assert.equal(entity.prefabOverrides,originalOverrides);assert.equal(Number.isNaN(entity.mass),true);assert.equal(JSON.stringify(physicsReal.readEntityAuthoringData(entity)),snapshot);assert.equal(world.connections,connectionIdentity);assert.deepEqual(physicsReal.physicsState.selectedEntityIds,selection);assert.equal(record.source,assetBytes)
     }finally{world.entities.splice(0,world.entities.length,...previous)}
   })
@@ -422,70 +423,70 @@ try {
   const incoming=new entityModule.BoxEntity(1,{x:0,y:0},{x:1,y:1}),incomingCode=asset('scene-incoming.rhai','fn awake(){log_info("incoming-awake");} fn start(){log_info("incoming-start");}')
   incoming.addComponent(new components.Script2D());incoming.script2D.scriptAsset=ref(incomingCode)
   const destination=realScenes.create('Transaction destination');destination.data={entities:[{id:1,...physicsReal.readEntityAuthoringData(incoming)}],connections:[],layers:[1],activeLayer:1,renderLayer:'all'}
-  fixture.prepareScene=identifier=>physicsReal.prepareRuntimeSceneTransition(identifier)
-  await check('actual scene adapter rejects malformed and stale targets without changing the live world or active scene',()=>{
+  fixture.prepareScene=/* 调用 physicsReal.prepareRuntimeSceneTransition(identifier) 并返回调用结果。 */ identifier=>physicsReal.prepareRuntimeSceneTransition(identifier)
+  await check('actual scene adapter rejects malformed and stale targets without changing the live world or active scene',/** 结构说明（自动提取）：check 回调；无显式参数；直接调用 realWorld.entities.slice、realScenes.create、assert.throws、assert.deepEqual、assert.equal 等；写入 invalid.data、destination.data.layers。 */ ()=>{
     const before=realWorld.entities.slice(),active=realScenes.activeSceneUuid,invalid=realScenes.create('Malformed');invalid.data={entities:[null]}
-    assert.throws(()=>physicsReal.prepareRuntimeSceneTransition(invalid.uuid),/must be objects/);assert.deepEqual(realWorld.entities,before);assert.equal(realScenes.activeSceneUuid,active)
+    assert.throws(/* 调用 physicsReal.prepareRuntimeSceneTransition(invalid.uuid) 并返回调用结果。 */ ()=>physicsReal.prepareRuntimeSceneTransition(invalid.uuid),/must be objects/);assert.deepEqual(realWorld.entities,before);assert.equal(realScenes.activeSceneUuid,active)
     const prepared=physicsReal.prepareRuntimeSceneTransition(destination.uuid);destination.data.layers=[1,2];assert.equal(prepared.commit(),false);assert.match(prepared.error,/changed/);assert.deepEqual(realWorld.entities,before);assert.equal(realScenes.activeSceneUuid,active)
   })
-  await check('actual scene adapter rolls back a late scene-manager failure including world identity and navigation',()=>{
+  await check('actual scene adapter rolls back a late scene-manager failure including world identity and navigation',/** 结构说明（自动提取）：check 回调；无显式参数；直接调用 realWorld.entities.slice、realScenes.navigationHistory.slice、physicsReal.prepareRuntimeSceneTransition、assert.equal、prepared.commit 等；写入 realScenes.setActive。 */ ()=>{
     const before=realWorld.entities.slice(),active=realScenes.activeSceneUuid,history=realScenes.navigationHistory.slice(),original=realScenes.setActive
-    realScenes.setActive=function(uuid){original.call(this,uuid);throw Error('Injected host installation failure')}
+    realScenes.setActive=/** 结构说明（自动提取）：匿名回调；输入 uuid；直接调用 original.call、Error；包含显式抛错路径。 */ function(uuid){original.call(this,uuid);throw Error('Injected host installation failure')}
     try{const prepared=physicsReal.prepareRuntimeSceneTransition(destination.uuid);assert.equal(prepared.commit(),false);assert.match(prepared.error,/Injected host/);assert.deepEqual(realWorld.entities,before);assert.equal(realWorld.entities[0],before[0]);assert.equal(realScenes.activeSceneUuid,active);assert.deepEqual(realScenes.navigationHistory,history);assert.equal(persistent.parentUuid,outgoing.uuid);assert.equal(persistent.transform.position.x,2)}finally{realScenes.setActive=original}
   })
   const switching=new runtimeModule.GameplayRuntime();switching.active=true;switching.scriptRuntime=new TrackedVm();switching.compileAttachedScripts();switching.ensureLifecycle();switching.time.startTask(outgoing.uuid,'waiting',1)
-  await check('failed runtime scene preparation or commit leaves callbacks, timers and instances live',()=>{
-    logs.length=0;switching.pendingScene={type:'load',identifier:'missing-scene'};switching.flushStructuralCommands();assert.equal(switching.time.inspect(outgoing.uuid).length,1);assert.equal(outgoing.script2D.properties.destroyed,undefined);assert.ok(realWorld.entities.includes(outgoing));assert.ok(!logs.some(item=>item[0].includes('outgoing-destroy')))
-    const original=realScenes.setActive;realScenes.setActive=()=>{throw Error('Rejected host transition')};try{switching.pendingScene={type:'load',identifier:destination.uuid};switching.flushStructuralCommands();assert.equal(switching.time.inspect(outgoing.uuid).length,1);assert.ok(realWorld.entities.includes(outgoing));assert.ok(!logs.some(item=>item[0].includes('outgoing-destroy')))}finally{realScenes.setActive=original}
+  await check('failed runtime scene preparation or commit leaves callbacks, timers and instances live',/** 结构说明（自动提取）：check 回调；无显式参数；直接调用 switching.flushStructuralCommands、assert.equal、switching.time.inspect、assert.ok、realWorld.entities.includes 等；写入 logs.length、switching.pendingScene、realScenes.setActive。 */ ()=>{
+    logs.length=0;switching.pendingScene={type:'load',identifier:'missing-scene'};switching.flushStructuralCommands();assert.equal(switching.time.inspect(outgoing.uuid).length,1);assert.equal(outgoing.script2D.properties.destroyed,undefined);assert.ok(realWorld.entities.includes(outgoing));assert.ok(!logs.some(/* 调用 item[0].includes('outgoing-destroy') 并返回调用结果。 */ item=>item[0].includes('outgoing-destroy')))
+    const original=realScenes.setActive;realScenes.setActive=/** 结构说明（自动提取）：匿名回调；无显式参数；直接调用 Error；包含显式抛错路径。 */ ()=>{throw Error('Rejected host transition')};try{switching.pendingScene={type:'load',identifier:destination.uuid};switching.flushStructuralCommands();assert.equal(switching.time.inspect(outgoing.uuid).length,1);assert.ok(realWorld.entities.includes(outgoing));assert.ok(!logs.some(/* 调用 item[0].includes('outgoing-destroy') 并返回调用结果。 */ item=>item[0].includes('outgoing-destroy')))}finally{realScenes.setActive=original}
   })
-  await check('successful scene commit preserves persistent identities/descendants and orders destruction before new lifecycle',()=>{
+  await check('successful scene commit preserves persistent identities/descendants and orders destruction before new lifecycle',/** 结构说明（自动提取）：check 回调；无显式参数；直接调用 lifetimes.entityLifetimeGeneration、switching.flushStructuralCommands、assert.equal、assert.ok、realWorld.entities.includes 等；写入 logs.length、switching.pendingScene。 */ ()=>{
     const generation=lifetimes.entityLifetimeGeneration(persistent);logs.length=0;switching.pendingScene={type:'load',identifier:destination.uuid};switching.flushStructuralCommands()
     assert.equal(realScenes.activeSceneUuid,destination.uuid);assert.ok(!realWorld.entities.includes(outgoing));assert.ok(realWorld.entities.includes(persistent));assert.ok(realWorld.entities.includes(persistentChild));assert.equal(lifetimes.entityLifetimeGeneration(persistent),generation);assert.equal(persistent.parentUuid,null);assert.equal(persistent.transform.position.x,12)
     assert.equal(outgoing.script2D.properties.destroyed,1);assert.equal(switching.time.inspect(outgoing.uuid).length,0);assert.equal(lifetimes.entityLifetimeActive(outgoing),false)
-    const order=logs.map(item=>item[0]).filter(message=>/outgoing-destroy|incoming-awake|incoming-start/.test(message));assert.deepEqual(order.map(message=>message.split(': ').at(-1)),['outgoing-destroy','incoming-awake','incoming-start'])
+    const order=logs.map(/* 返回 item[0] 的当前值。 */ item=>item[0]).filter(/* 调用 /outgoing-destroy|incoming-awake|incoming-start/.test(message) 并返回调用结果。 */ message=>/outgoing-destroy|incoming-awake|incoming-start/.test(message));assert.deepEqual(order.map(/* 调用 message.split(': ').at(-1) 并返回调用结果。 */ message=>message.split(': ').at(-1)),['outgoing-destroy','incoming-awake','incoming-start'])
   })
   switching.scriptRuntime.free();switching.scriptRuntime=null;fixture.physicsState.world=previousWorld
-  await check('destroy/task Event Sheets use actual inherited authors and teardown never leaves debugger commands suspended',()=>{
+  await check('destroy/task Event Sheets use actual inherited authors and teardown never leaves debugger commands suspended',/** 结构说明（自动提取）：check 回调；无显式参数；直接调用 asset、sheet、events.defaultEventHandler、entityModule.BoxEntity、target.addComponent 等；写入 target.script2D.scriptAsset、target.script2D.eventSheetAsset、fixture.physicsState.world.entities、running.active 等。 */ ()=>{
     const parentLogic=asset('destroy-base.rhai','fn cleanup(){log_info("base-cleanup");} fn task_done(name){log_info("base-task:"+name);}'),localLogic=asset('destroy-child.rhai','fn on_destroy(){log_info("primary-cleanup");} fn on_task(name){log_info("primary-task:"+name);}')
     const parent=sheet('destroy-base.events',parentLogic,[{...events.defaultEventHandler('destroy'),callback:'cleanup'},{...events.defaultEventHandler('task'),callback:'task_done',selector:'done'}]),child=sheet('destroy-child.events',localLogic,[events.defaultEventHandler('destroy')],parent)
     const target=new entityModule.BoxEntity(501,{x:0,y:0},{x:1,y:1});target.addComponent(new components.Script2D());target.script2D.scriptAsset=ref(localLogic);target.script2D.eventSheetAsset=ref(child);fixture.physicsState.world.entities=[target]
     const running=new runtimeModule.GameplayRuntime();running.active=true;running.scriptRuntime=new TrackedVm();running.compileAttachedScripts();running.ensureLifecycle();logs.length=0
-    running.time.startTask(target.uuid,'done',.01);running.dispatchTimerExpirations(running.time.beginFrame(.1,60,1));assert.ok(logs.some(item=>item[0].endsWith('base-task:done')));assert.ok(logs.some(item=>item[0].endsWith('primary-task:done')))
-    running.queueEntityRemoval(target,false);running.flushEntityCommands();assert.equal(logs.filter(item=>item[0].endsWith('base-cleanup')).length,1);assert.equal(logs.filter(item=>item[0].endsWith('primary-cleanup')).length,1);assert.equal(running.pendingDebugInvocation,null);assert.equal(running.pendingGraphExecution,null);running.scriptRuntime.free()
+    running.time.startTask(target.uuid,'done',.01);running.dispatchTimerExpirations(running.time.beginFrame(.1,60,1));assert.ok(logs.some(/* 调用 item[0].endsWith('base-task:done') 并返回调用结果。 */ item=>item[0].endsWith('base-task:done')));assert.ok(logs.some(/* 调用 item[0].endsWith('primary-task:done') 并返回调用结果。 */ item=>item[0].endsWith('primary-task:done')))
+    running.queueEntityRemoval(target,false);running.flushEntityCommands();assert.equal(logs.filter(/* 调用 item[0].endsWith('base-cleanup') 并返回调用结果。 */ item=>item[0].endsWith('base-cleanup')).length,1);assert.equal(logs.filter(/* 调用 item[0].endsWith('primary-cleanup') 并返回调用结果。 */ item=>item[0].endsWith('primary-cleanup')).length,1);assert.equal(running.pendingDebugInvocation,null);assert.equal(running.pendingGraphExecution,null);running.scriptRuntime.free()
   })
-  await check('runtime inspector keeps authored properties distinct and returns detached state without allocating a VM or generation',()=>{
+  await check('runtime inspector keeps authored properties distinct and returns detached state without allocating a VM or generation',/** 结构说明（自动提取）：check 回调；无显式参数；直接调用 asset、entityModule.BoxEntity、target.addComponent、components.Script2D、ref 等；写入 target.script2D.scriptAsset、target.script2D.properties、fixture.physicsState.world.entities、running.active 等。 */ ()=>{
     const code=asset('inspect.rhai','@export let count=0;\nfn update(dt){count+=1;}'),target=new entityModule.BoxEntity(601,{x:0,y:0},{x:1,y:1});target.addComponent(new components.Script2D());target.script2D.scriptAsset=ref(code);target.script2D.properties={count:20};fixture.physicsState.world.entities=[target]
     const running=new runtimeModule.GameplayRuntime();running.active=true;const before=allocations;assert.equal(lifetimes.inspectEntityLifetimeGeneration(target),null);assert.equal(running.inspectObjectRuntime(target.uuid).generation,null);assert.equal(lifetimes.inspectEntityLifetimeGeneration(target),null);assert.equal(allocations,before)
     running.scriptRuntime=new TrackedVm();running.compileAttachedScripts();running.ensureLifecycle();running.runEntityFunction(target,'update');running.time.startTask(target.uuid,'probe',1)
     const inspected=running.inspectObjectRuntime(target.uuid);assert.equal(inspected.behaviors[0].authoredProperties.count,20);assert.equal(inspected.behaviors[0].properties.count,21);inspected.behaviors[0].properties.count=99;inspected.timers[0].remaining=0;assert.equal(target.script2D.properties.count,21);assert.equal(running.time.inspect(target.uuid)[0].remaining,1);running.scriptRuntime.free()
   })
-  await check('nested awake spawns survive successive structural boundaries and each lifecycle executes once',()=>{
+  await check('nested awake spawns survive successive structural boundaries and each lifecycle executes once',/** 结构说明（自动提取）：check 回调；无显式参数；直接调用 pool.resetObjectPools、Map、asset、make、runtimeModule.GameplayRuntime 等；写入 fixture.physicsState.world.entities、fixture.instantiatePrefab、running.active、running.scriptRuntime 等。 */ ()=>{
     pool.resetObjectPools();const codes=new Map([['parent',asset('nested-parent.rhai','fn awake(){log_info("parent-awake");spawn_at("child",0.0,0.0,0.0,1.0,1.0);} fn start(){log_info("parent-start");}')],['child',asset('nested-child.rhai','fn awake(){log_info("child-awake");spawn_at("grandchild",0.0,0.0,0.0,1.0,1.0);} fn start(){log_info("child-start");}')],['grandchild',asset('nested-grandchild.rhai','fn awake(){log_info("grandchild-awake");} fn start(){log_info("grandchild-start");}')]])
-    let next=700;const make=name=>{const value=new entityModule.BoxEntity(++next,{x:0,y:0},{x:1,y:1});value.addComponent(new components.Script2D());value.script2D.scriptAsset=ref(codes.get(name));return value}
-    const parent=make('parent');fixture.physicsState.world.entities=[parent];fixture.instantiatePrefab=name=>{const value=make(name);fixture.physicsState.world.entities.push(value);return[value]}
+    let next=700;const make=/** 结构说明（自动提取）：make；输入 name；直接调用 entityModule.BoxEntity、value.addComponent、components.Script2D、ref、codes.get；写入 value.script2D.scriptAsset；返回路径包含 value。 */ name=>{const value=new entityModule.BoxEntity(++next,{x:0,y:0},{x:1,y:1});value.addComponent(new components.Script2D());value.script2D.scriptAsset=ref(codes.get(name));return value}
+    const parent=make('parent');fixture.physicsState.world.entities=[parent];fixture.instantiatePrefab=/** 结构说明（自动提取）：匿名回调；输入 name；直接调用 make、fixture.physicsState.world.entities.push。 */ name=>{const value=make(name);fixture.physicsState.world.entities.push(value);return[value]}
     const running=new runtimeModule.GameplayRuntime();running.active=true;running.scriptRuntime=new TrackedVm();running.compileAttachedScripts();logs.length=0;running.ensureLifecycle();assert.equal(running.pendingDynamicCommands.length,1)
     running.flushEntityCommands();assert.equal(fixture.physicsState.world.entities.length,2);assert.equal(running.pendingDynamicCommands.length,1)
     running.flushEntityCommands();running.flushEntityCommands();assert.equal(fixture.physicsState.world.entities.length,3);assert.equal(running.pendingDynamicCommands.length,0)
-    assert.deepEqual(logs.map(item=>item[0].split(': ').at(-1)),['parent-awake','parent-start','child-awake','child-start','grandchild-awake','grandchild-start']);running.scriptRuntime.free()
+    assert.deepEqual(logs.map(/* 调用 item[0].split(': ').at(-1) 并返回调用结果。 */ item=>item[0].split(': ').at(-1)),['parent-awake','parent-start','child-awake','child-start','grandchild-awake','grandchild-start']);running.scriptRuntime.free()
   })
-  await check('deferred source commands and queued destruction cannot affect a later reused lifetime',()=>{
+  await check('deferred source commands and queued destruction cannot affect a later reused lifetime',/** 结构说明（自动提取）：check 回调；无显式参数；直接调用 entityModule.BoxEntity、lifetimes.beginEntityLifetime、runtimeModule.GameplayRuntime、running.applyCommand、running.flushEntityCommands 等；写入 fixture.physicsState.world.entities、fixture.instantiatePrefab。 */ ()=>{
     const source=new entityModule.BoxEntity(801,{x:0,y:0},{x:1,y:1}),target=new entityModule.BoxEntity(802,{x:0,y:0},{x:1,y:1});fixture.physicsState.world.entities=[source,target];lifetimes.beginEntityLifetime(source);const targetGeneration=lifetimes.beginEntityLifetime(target)
     const running=new runtimeModule.GameplayRuntime();running.applyCommand(source,{type:'targetSetPosition',target:target.uuid,generation:targetGeneration,x:99,y:0});running.applyCommand(source,{type:'instantiate',prefab:'never'})
-    let created=0;fixture.instantiatePrefab=()=>{created++;return[]};lifetimes.beginEntityLifetime(source);running.flushEntityCommands();assert.equal(target.transform.position.x,0);assert.equal(created,0)
+    let created=0;fixture.instantiatePrefab=/** 结构说明（自动提取）：匿名回调；无显式参数。 */ ()=>{created++;return[]};lifetimes.beginEntityLifetime(source);running.flushEntityCommands();assert.equal(target.transform.position.x,0);assert.equal(created,0)
     running.queueEntityRemoval(target,true);running.queueEntityRemoval(target,false);lifetimes.beginEntityLifetime(target);running.flushEntityCommands();assert.ok(fixture.physicsState.world.entities.includes(target));assert.equal(lifetimes.entityLifetimeActive(target),true)
   })
-  await check('stopping a session destroys once, cancels timers/signals/deferred work and frees its VM',()=>{
+  await check('stopping a session destroys once, cancels timers/signals/deferred work and frees its VM',/** 结构说明（自动提取）：check 回调；无显式参数；直接调用 asset、entityModule.BoxEntity、target.addComponent、components.Script2D、ref 等；写入 target.script2D.scriptAsset、fixture.physicsState.world.entities、running.active、running.scriptRuntime 等。 */ ()=>{
     const code=asset('stop-cleanup.rhai','fn on_destroy(){log_info("stopped-cleanup");spawn_at("discard",0.0,0.0,0.0,1.0,1.0);task_wait("discard",1.0);}'),target=new entityModule.BoxEntity(901,{x:0,y:0},{x:1,y:1});target.addComponent(new components.Script2D());target.script2D.scriptAsset=ref(code);fixture.physicsState.world.entities=[target]
     const running=new runtimeModule.GameplayRuntime();running.active=true;running.scriptRuntime=new TrackedVm();running.compileAttachedScripts();running.ensureLifecycle();running.time.startTask(target.uuid,'pending',1);running.emitSignal('pending',null,target.uuid,'test');logs.length=0;const freed=frees
-    running.stopSession(false);running.stopSession(false);assert.equal(logs.filter(item=>item[0].endsWith('stopped-cleanup')).length,1);assert.equal(running.isActive,false);assert.equal(running.scriptRuntime,null);assert.equal(frees,freed+1);assert.equal(running.pendingDynamicCommands.length,0);assert.equal(running.pendingSignals.length,0);assert.equal(running.time.inspect(target.uuid).length,0);assert.equal(lifetimes.entityLifetimeActive(target),false)
+    running.stopSession(false);running.stopSession(false);assert.equal(logs.filter(/* 调用 item[0].endsWith('stopped-cleanup') 并返回调用结果。 */ item=>item[0].endsWith('stopped-cleanup')).length,1);assert.equal(running.isActive,false);assert.equal(running.scriptRuntime,null);assert.equal(frees,freed+1);assert.equal(running.pendingDynamicCommands.length,0);assert.equal(running.pendingSignals.length,0);assert.equal(running.time.inspect(target.uuid).length,0);assert.equal(lifetimes.entityLifetimeActive(target),false)
   })
-  await check('inherited-only Event Sheets attach atomically and imported callbacks validate through the production resolver',()=>{
+  await check('inherited-only Event Sheets attach atomically and imported callbacks validate through the production resolver',/** 结构说明（自动提取）：check 回调；无显式参数；直接调用 asset、sheet、handler、events.parseEventSheet、decodeURIComponent 等。 */ ()=>{
     asset('event-module.rhai','fn imported_callback(){log_info("module-callback");}')
     const logic=asset('event-import-root.rhai','use "event-module.rhai";\nfn start(){}'),base=sheet('event-inherit-base.events',logic,[handler('imported_callback')]),child=sheet('event-inherit-only.events',null,[],base)
-    const document=events.parseEventSheet(decodeURIComponent(child.source.split(',')[1]));assert.equal(events.validateEventSheet(document).some(item=>item.severity==='error'),false);assert.equal(events.callbackNamesInLogic(document).has('imported_callback'),true)
+    const document=events.parseEventSheet(decodeURIComponent(child.source.split(',')[1]));assert.equal(events.validateEventSheet(document).some(/* 比较 item.severity 与 'error'，返回严格相等的判断结果。 */ item=>item.severity==='error'),false);assert.equal(events.callbackNamesInLogic(document).has('imported_callback'),true)
     const target=new entityModule.BoxEntity(1001,{x:0,y:0},{x:1,y:1});assert.ok(events.attachEventSheet(target,ref(child)));assert.equal(target.script2D.scriptAsset,ref(logic));assert.equal(events.resolveEventHandlers(ref(child))[0].logicAsset,ref(logic))
     const invalid=sheet('invalid-local.events',{uuid:'missing'},[],base),empty=new entityModule.BoxEntity(1002,{x:0,y:0},{x:1,y:1});assert.equal(events.attachEventSheet(empty,ref(invalid)),null);assert.equal(empty.script2D,null)
-    update(logic,'use "missing-module.rhai";\nfn start(){}');assert.ok(events.validateEventSheet(document).some(item=>item.code==='EVENT-LOGIC-SOURCE'))
+    update(logic,'use "missing-module.rhai";\nfn start(){}');assert.ok(events.validateEventSheet(document).some(/* 比较 item.code 与 'EVENT-LOGIC-SOURCE'，返回严格相等的判断结果。 */ item=>item.code==='EVENT-LOGIC-SOURCE'))
   })
 } catch (error) {
   checks.push({ name: 'stage harness execution', status: 'failed', error: error.stack }); process.exitCode = 1
@@ -493,8 +494,8 @@ try {
 } finally {
   delete globalThis.__novaRuntime14
   await mkdir(reportDir, { recursive: true })
-  const report = { format:'nova-v26.14-runtime-verification',version:1,...paths.metadata,status: !checks.length || checks.some(item => item.status === 'failed') ? 'failed' : 'passed', generatedAt: new Date().toISOString(), runtimeBackend: (integrated ? 'integrated-' : 'isolated-') + (useNative ? 'native-Rhai' : stagedWasm ? 'staged-WASM' : 'workspace-WASM'), scope: (integrated ? 'Integrated source programmer fixture: ' : 'Isolated 26.14 source overlay: ') + 'real Rhai execution, production asset records, event resolution, compiler, command processing, physics scene adapter and test runner. Render/audio/network hosts and prefab factory/project history boundary are controlled fixtures; scene decoding/rollback use real World/SceneManager/store functions, including an explicit injected installation failure. Native bridge validates and executes through real Rust; its JavaScript source cache is a test adapter, with native AST cache atomicity tested separately in Rust. This report describes executed fixtures only; it is not a global release-readiness claim.', checks, vmAllocations: allocations, vmFrees: frees }
+  const report = { format:'nova-v26.14-runtime-verification',version:1,...paths.metadata,status: !checks.length || checks.some(/* 比较 item.status 与 'failed'，返回严格相等的判断结果。 */ item => item.status === 'failed') ? 'failed' : 'passed', generatedAt: new Date().toISOString(), runtimeBackend: (integrated ? 'integrated-' : 'isolated-') + (useNative ? 'native-Rhai' : stagedWasm ? 'staged-WASM' : 'workspace-WASM'), scope: (integrated ? 'Integrated source programmer fixture: ' : 'Isolated 26.14 source overlay: ') + 'real Rhai execution, production asset records, event resolution, compiler, command processing, physics scene adapter and test runner. Render/audio/network hosts and prefab factory/project history boundary are controlled fixtures; scene decoding/rollback use real World/SceneManager/store functions, including an explicit injected installation failure. Native bridge validates and executes through real Rust; its JavaScript source cache is a test adapter, with native AST cache atomicity tested separately in Rust. This report describes executed fixtures only; it is not a global release-readiness claim.', checks, vmAllocations: allocations, vmFrees: frees }
   await writeFile(join(reportDir, integrated ? `v26.14-runtime-${useNative?'native':'wasm'}.json` : `runtime-${useNative ? 'native' : stagedWasm ? 'staged-wasm' : 'wasm'}-verification.json`), JSON.stringify(report, null, 2) + '\n')
   if(!integrated) await writeFile(join(reportDir, 'runtime-verification.json'), JSON.stringify(report, null, 2) + '\n')
 }
-if (checks.some(item => item.status === 'failed')) process.exitCode = 1
+if (checks.some(/* 比较 item.status 与 'failed'，返回严格相等的判断结果。 */ item => item.status === 'failed')) process.exitCode = 1

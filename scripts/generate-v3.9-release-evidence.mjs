@@ -1,3 +1,4 @@
+/** 版本3.9：汇集发布报告与产物文件，生成带来源记录的发布证据。 */
 import { createHash } from 'node:crypto'
 import { access, readFile, stat, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
@@ -9,17 +10,17 @@ await import('./generate-v3.3-release-evidence.mjs')
 const root = dirname(dirname(fileURLToPath(import.meta.url)))
 const output = join(root, 'release-audits')
 const generatedAt = new Date().toISOString()
-const read = path => readFile(join(root, path), 'utf8')
-const json = path => read(path).then(JSON.parse)
-const writeJson = (name, value) => writeFile(join(output, 'v3.9.0-' + name + '.json'), JSON.stringify(value, null, 2) + '\n')
-const accepted = report => report?.status === 'passed' || String(report?.status ?? '').startsWith('passed-with-declared-external-gate')
+const read = /* 调用 readFile(join(root, path), 'utf8') 并返回调用结果。 */ path => readFile(join(root, path), 'utf8')
+const json = /* 调用 read(path).then(JSON.parse) 并返回调用结果。 */ path => read(path).then(JSON.parse)
+const writeJson = /* 调用 writeFile(join(output, 'v3.9.0-' + name + '.json'), JSON.stringify(value, null, 2) + '\n') 并返回调用结果。 */ (name, value) => writeFile(join(output, 'v3.9.0-' + name + '.json'), JSON.stringify(value, null, 2) + '\n')
+const accepted = /* 先计算 report?.status === 'passed'；仅当其为假值时求右侧 String(report?.status ?? '').startsWith('passed-with-declared-external-gate')，返回短路求值结果。 */ report => report?.status === 'passed' || String(report?.status ?? '').startsWith('passed-with-declared-external-gate')
 
 const names = [
   'release-candidate-audit', 'package-security', 'lockfile-tests', 'source-control-workflow',
   'tier1-platform-matrix', 'reproducible-build', 'clean-machine-matrix', 'installer-lifecycle',
   'api-freeze', 'automation-package-collaboration-tests', 'cli-matrix', 'layout-browser', 'windows-smoke'
 ]
-const reports = Object.fromEntries(await Promise.all(names.map(async name => [name, await json('release-audits/v3.9.0-' + name + '.json')])))
+const reports = Object.fromEntries(await Promise.all(names.map(/* 返回按声明顺序构造的数组 [name, await json('release-audits/v3.9.0-' + name + '.json')]。 */ async name => [name, await json('release-audits/v3.9.0-' + name + '.json')])))
 const retained = {
   world: await json('release-audits/v3.8.0-benchmarks.json'),
   worldAudit: await json('release-audits/v3.8.0-world-data-audit.json'),
@@ -28,9 +29,9 @@ const retained = {
   scripting: await json('release-audits/v3.5.0-programming-workflow.json'),
   presentation: await json('release-audits/v3.6.0-presentation-audit.json')
 }
-const requiredFailures = Object.entries(reports).filter(([, report]) => !accepted(report)).map(([name, report]) => ({ name, status: report.status }))
+const requiredFailures = Object.entries(reports).filter(/* 返回 accepted(report) 的逻辑取反结果。 */ ([, report]) => !accepted(report)).map(/** 把命名报告转换为名称与状态摘要。 */ ([name, report]) => ({ name, status: report.status }))
 if (requiredFailures.length) throw new Error('Required v3.9 qualification reports did not pass: ' + JSON.stringify(requiredFailures))
-if (Object.entries(retained).some(([, report]) => report.status !== 'passed')) throw new Error('A retained feature audit is not passing.')
+if (Object.entries(retained).some(/* 比较 report.status 与 'passed'，返回严格不等的判断结果。 */ ([, report]) => report.status !== 'passed')) throw new Error('A retained feature audit is not passing.')
 
 const knownPath = join(output, 'v3.9.0-known-issues.json')
 const known = await json('release-audits/v3.9.0-known-issues.json')
@@ -49,15 +50,15 @@ await writeFile(knownPath, JSON.stringify(known, null, 2) + '\n')
 await writeJson('benchmarks', {
   format: 'nova-v3.9-benchmarks', version: 1, engineVersion: '3.9.0', generatedAt,
   scope: 'Retained v3.3 authoring, v3.4 physics, v3.5 scripting, v3.6 presentation, v3.7 visual/audio, v3.8 world data plus v3.9 deterministic build/package/collaboration checks.',
-  retainedReports: Object.entries(retained).map(([name, report]) => ({ name, format: report.format, status: report.status })),
+  retainedReports: Object.entries(retained).map(/** 把命名报告转换为名称、格式和状态摘要。 */ ([name, report]) => ({ name, format: report.format, status: report.status })),
   reproducibility: reports['reproducible-build'], packageSecurity: reports['package-security'],
   regressions: [], externalMetrics: ['clean-machine cold start', 'target GPU frame time', '24-hour wall-clock endurance'],
   status: 'passed'
 })
 await writeJson('stability-smoke', {
   format: 'nova-stability-report', version: 1, engineVersion: '3.9.0', generatedAt,
-  retainedFeatureAudits: Object.entries(retained).map(([name, report]) => ({ name, status: report.status })),
-  currentAudits: ['release-candidate-audit', 'automation-package-collaboration-tests', 'layout-browser', 'windows-smoke'].map(name => ({ name, status: reports[name].status })),
+  retainedFeatureAudits: Object.entries(retained).map(/** 把命名报告转换为名称与状态摘要。 */ ([name, report]) => ({ name, status: report.status })),
+  currentAudits: ['release-candidate-audit', 'automation-package-collaboration-tests', 'layout-browser', 'windows-smoke'].map(/** 按报告名称读取并生成状态摘要。 */ name => ({ name, status: reports[name].status })),
   crashes: 0, severity0Open: 0, severity1Open: 0, qualified24Hours: false,
   note: 'All automated local gates passed. The 24-hour wall-clock and clean-VM lifecycle gates remain explicitly external.',
   status: 'passed'
@@ -102,7 +103,7 @@ await writeJson('migration-results', {
 await writeJson('performance-comparison', {
   format: 'nova-performance-comparison', version: 1, engineVersion: '3.9.0', generatedAt,
   comparisonBasis: 'Every retained version audit and benchmark reran; v3.9 adds metadata, validation, reports and focused panels without deleting renderer quality or animation.',
-  retained: Object.entries(retained).map(([name, report]) => ({ name, status: report.status })),
+  retained: Object.entries(retained).map(/** 把命名报告转换为名称与状态摘要。 */ ([name, report]) => ({ name, status: report.status })),
   regressions: [], interactiveTargetMeasurements: 'See retained benchmark reports and target-hardware external gates.',
   status: 'passed'
 })

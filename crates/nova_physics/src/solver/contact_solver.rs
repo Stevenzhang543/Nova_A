@@ -1,3 +1,4 @@
+// 接触求解器：有效质量、法向与摩擦冲量、位置修正和缓存热启动。
 #[derive(Clone, Debug)]
 struct Contact {
     body_a: usize,
@@ -20,6 +21,7 @@ struct Contact {
     position_weight: f64,
 }
 
+// 拆分刚体切片以安全取得两个不重叠的可变引用。
 fn two_bodies_mut(bodies: &mut [Body], a: usize, b: usize) -> (&mut Body, &mut Body) {
     debug_assert_ne!(a, b);
     if a < b {
@@ -31,6 +33,7 @@ fn two_bodies_mut(bodies: &mut [Body], a: usize, b: usize) -> (&mut Body, &mut B
     }
 }
 
+// 将大小相等、方向相反的接触冲量施加到两个刚体。
 fn apply_pair_impulse(
     bodies: &mut [Body],
     body_a: usize,
@@ -44,6 +47,7 @@ fn apply_pair_impulse(
     b.apply_impulse(impulse, radius_b);
 }
 
+// 按有效质量求解接触法向与摩擦速度约束，并累计冲量。
 fn solve_contact_velocity(bodies: &mut [Body], contact: &mut Contact) {
     if contact.is_sensor {
         return;
@@ -123,6 +127,7 @@ fn solve_contact_velocity(bodies: &mut [Body], contact: &mut Contact) {
     }
 }
 
+// 利用线性及旋转有效质量修正穿透，保留允许的微小余量。
 fn correct_contact_position(bodies: &mut [Body], contact: &Contact) {
     if contact.is_sensor {
         return;
@@ -163,10 +168,12 @@ fn correct_contact_position(bodies: &mut [Body], contact: &Contact) {
 
 type ContactCacheKey = (usize, usize, u32, u32, u8);
 
+// 提取接触两端与子形状身份，生成热启动缓存键。
 fn contact_cache_key(contact: &Contact) -> ContactCacheKey {
     (contact.body_a, contact.body_b, contact.child_a, contact.child_b, contact.feature_id)
 }
 
+// 把上一时间步缓存的法向和切向冲量重新施加到接触对。
 fn warm_start_contact(bodies: &mut [Body], contact: &Contact) {
     if contact.is_sensor { return; }
     let impulse = contact.normal.mul(contact.normal_impulse).add(contact.tangent.mul(contact.tangent_impulse));

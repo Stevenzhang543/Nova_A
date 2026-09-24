@@ -1,3 +1,4 @@
+/** 验证脚本（v6.4.0）：组织对应功能与边界场景检查，断言行为并汇总验证结果。 */
 import { webcrypto } from 'node:crypto'
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
@@ -10,14 +11,14 @@ if (!globalThis.crypto) globalThis.crypto = webcrypto
 const root = dirname(dirname(fileURLToPath(import.meta.url)))
 const compiled = await mkdtemp(join(tmpdir(), 'nova-v640-verify-'))
 const checks = []
-const check = (id, passed, detail, metrics = {}) => checks.push({ id, status: passed ? 'passed' : 'failed', detail, metrics })
-const source = path => readFile(join(root, path), 'utf8')
+const check = /* 调用 checks.push({ id, status: passed ? 'passed' : 'failed', detail, metrics }) 并返回调用结果。 */ (id, passed, detail, metrics = {}) => checks.push({ id, status: passed ? 'passed' : 'failed', detail, metrics })
+const source = /* 调用 readFile(join(root, path), 'utf8') 并返回调用结果。 */ path => readFile(join(root, path), 'utf8')
 
 try {
   await build({ configFile: false, root, logLevel: 'warn', ssr: { noExternal: true }, build: { ssr: true, outDir: compiled, emptyOutDir: false, rollupOptions: { input: {
     content: join(root, 'src/assets/contentInteroperability.ts'), resources: join(root, 'src/runtime/resources.ts'), rigging: join(root, 'src/runtime/rigging.ts'), animation: join(root, 'src/runtime/animation.ts'), formats: join(root, 'src/projects/projectFormat.ts')
   }, output: { entryFileNames: '[name].mjs', chunkFileNames: 'chunks/[name]-[hash].mjs' } } } })
-  const load = name => import(`${pathToFileURL(join(compiled, `${name}.mjs`)).href}?v=${Date.now()}`)
+  const load = /* 调用 import(`${pathToFileURL(join(compiled, `${name}.mjs`)).href}?v=${Date.now()}`) 并返回调用结果。 */ name => import(`${pathToFileURL(join(compiled, `${name}.mjs`)).href}?v=${Date.now()}`)
   const [content, resources, rigging, animation, formats] = await Promise.all(['content', 'resources', 'rigging', 'animation', 'formats'].map(load))
   check('V640-AUTHORITY', formats.NOVA_ENGINE_VERSION === '6.4.0' && formats.NOVA_PROJECT_FORMAT_MAJOR === 2 && formats.NOVA_PROJECT_SCHEMA_VERSION === 29, 'Engine authority is 6.4.0 while Project Format 2/schema 29 remain frozen.')
 
@@ -28,10 +29,10 @@ try {
   const first = content.importContentInterchange('hero.aseprite.json', aseprite)
   const reorderedSource = JSON.stringify({ ...JSON.parse(aseprite), frames: Object.fromEntries(Object.entries(JSON.parse(aseprite).frames).reverse()) })
   const second = content.importContentInterchange('hero.aseprite.json', reorderedSource, first.metadata)
-  const ids1 = Object.fromEntries(first.metadata.slices.map(item => [item.sourceKey, item.id])), ids2 = Object.fromEntries(second.metadata.slices.map(item => [item.sourceKey, item.id]))
-  check('V640-ASEPRITE-GOLDEN', first.metadata.format === 'aseprite-json' && first.metadata.texturePath === 'hero.png' && first.metadata.slices.length === 2 && first.metadata.slices.every(item => item.tags.includes('idle')), 'Aseprite frames, texture, timing and tags import into canonical atlas data.')
+  const ids1 = Object.fromEntries(first.metadata.slices.map(/* 返回按声明顺序构造的数组 [item.sourceKey, item.id]。 */ item => [item.sourceKey, item.id])), ids2 = Object.fromEntries(second.metadata.slices.map(/* 返回按声明顺序构造的数组 [item.sourceKey, item.id]。 */ item => [item.sourceKey, item.id]))
+  check('V640-ASEPRITE-GOLDEN', first.metadata.format === 'aseprite-json' && first.metadata.texturePath === 'hero.png' && first.metadata.slices.length === 2 && first.metadata.slices.every(/* 调用 item.tags.includes('idle') 并返回调用结果。 */ item => item.tags.includes('idle')), 'Aseprite frames, texture, timing and tags import into canonical atlas data.')
   check('V640-REIMPORT-IDENTITY', JSON.stringify(ids1) === JSON.stringify(ids2), 'Frame reordering preserves stable source-key identities.', { slices: first.metadata.slices.length })
-  const precise = first.metadata.slices.find(item => item.sourceKey === 'idle-2')
+  const precise = first.metadata.slices.find(/* 比较 item.sourceKey 与 'idle-2'，返回严格相等的判断结果。 */ item => item.sourceKey === 'idle-2')
   check('V640-PIVOT-COLLIDER-PRECISION', precise.pivot.x === .375 && precise.pivot.y === .625 && first.metadata.slices[0].collider[1].x === 15.75, 'Fractional pivots and collider coordinates survive canonical import.')
 
   const texturePacker = content.importContentInterchange('ui.texturepacker.json', JSON.stringify({ frames: [{ filename: 'button', frame: { x: 1, y: 2, w: 30, h: 12 }, rotated: true }], meta: { app: 'TexturePacker', image: 'ui.webp', size: { w: 64, h: 64 } } }))
@@ -58,16 +59,16 @@ try {
   check('V640-RESOURCE-DETERMINISM', serializedA === serializedB && !serializedA.includes('"density"'), 'Resource serialization is deterministic and does not expand local overrides.')
   const sharedDocument = resources.readResource(shared.uuid); sharedDocument.parent = `asset://${override.uuid}`; resources.saveResource(shared.uuid, sharedDocument)
   const resourceIssues = resources.validateResourceProject()
-  check('V640-RESOURCE-CYCLE', resourceIssues.some(issue => issue.code === 'RESOURCE_CYCLE') && resources.resolveResource(shared.uuid) === null, 'Resource inheritance cycles fail closed and produce build-visible diagnostics.')
+  check('V640-RESOURCE-CYCLE', resourceIssues.some(/* 比较 issue.code 与 'RESOURCE_CYCLE'，返回严格相等的判断结果。 */ issue => issue.code === 'RESOURCE_CYCLE') && resources.resolveResource(shared.uuid) === null, 'Resource inheritance cycles fail closed and produce build-visible diagnostics.')
 
   const rig = rigging.defaultRig('Two Bone'); rig.bones.push({ id: 'tip', name: 'Tip', parentId: 'root', position: { x: 1, y: 0 }, rotation: 0, scale: { x: 1, y: 1 }, length: 1 }); rig.retargetAliases.tip = 'tip'
   const skin = rigging.defaultSkin('Weighted Quad'), weightResult = rigging.autoWeightSkin(rig, skin, 2, 2)
-  const weightSums = skin.vertices.map(vertex => vertex.weights.reduce((sum, weight) => sum + weight.weight, 0))
+  const weightSums = skin.vertices.map(/* 调用 vertex.weights.reduce((sum, weight) => sum + weight.weight, 0) 并返回调用结果。 */ vertex => vertex.weights.reduce(/* 计算表达式 sum + weight.weight 并返回结果，沿用操作数的原有类型规则。 */ (sum, weight) => sum + weight.weight, 0))
   const heat = rigging.skinWeightHeat(skin, 'root'), retarget = rigging.retargetPreviewSummary(rigging.defaultRig('Source'), rig)
-  check('V640-RIG-WEIGHTS', weightResult.operations === 8 && weightSums.every(sum => Math.abs(sum - 1) < 1e-12) && heat.length === 4, 'Bounded auto-weights normalize every vertex and feed the skin-weight heat view.', weightResult)
+  check('V640-RIG-WEIGHTS', weightResult.operations === 8 && weightSums.every(/* 比较 Math.abs(sum - 1) 与 1e-12，返回小于的判断结果。 */ sum => Math.abs(sum - 1) < 1e-12) && heat.length === 4, 'Bounded auto-weights normalize every vertex and feed the skin-weight heat view.', weightResult)
   check('V640-RETARGET', retarget.sourceBones === 1 && retarget.targetBones === 2 && retarget.mapped >= 1 && retarget.missing.includes('Tip'), 'Retarget preview identifies mapped and missing aliases before playback.')
 
-  const key = (time, value) => ({ time, value, tangentMode: 'Linear', inTangent: 0, outTangent: 0, easing: 'Linear', interpolation: 'Linear' })
+  const key = /** 创建采用线性切线、缓动与插值的时间值关键帧。 */ (time, value) => ({ time, value, tangentMode: 'Linear', inTangent: 0, outTangent: 0, easing: 'Linear', interpolation: 'Linear' })
   const clip = animation.defaultAnimationClip('Root motion'); clip.frameRate = 60; clip.tracks = [
     { property: 'Transform.position.x', targetEntityUuid: null, keyframes: [key(0, 0), key(2, 6)] },
     { property: 'Transform.position.y', targetEntityUuid: null, keyframes: [key(0, 0), key(2, 8)] }
@@ -76,13 +77,13 @@ try {
   check('V640-ROOT-MOTION', rootMotion.delta.x === 6 && rootMotion.delta.y === 8 && Math.abs(rootMotion.distance - 10) < 1e-9 && rootMotion.samples === 121, 'Root-motion preview uses the runtime sampler and reports exact motion.', rootMotion)
 
   const atlasStart = performance.now()
-  const frames = Object.fromEntries(Array.from({ length: 20_000 }, (_, index) => [`frame-${String(index).padStart(5, '0')}`, { frame: { x: index % 1024, y: Math.floor(index / 1024), w: 1, h: 1 } }]))
+  const frames = Object.fromEntries(Array.from({ length: 20_000 }, /* 返回按声明顺序构造的数组 [`frame-${String(index).padStart(5, '0')}`, { frame: { x: index % 1024, y: Math.floor(index / 1024), w: 1, h: 1 } }]。 */ (_, index) => [`frame-${String(index).padStart(5, '0')}`, { frame: { x: index % 1024, y: Math.floor(index / 1024), w: 1, h: 1 } }]))
   const large = content.importContentInterchange('large.aseprite.json', JSON.stringify({ frames, meta: { app: 'Aseprite', image: 'large.png', size: { w: 1024, h: 20 } } }))
   const atlasMs = performance.now() - atlasStart
   const timelineStart = performance.now(); for (let index = 0; index < 10_000; index++) animation.sampleAnimationTrack(clip.tracks[0].keyframes, (index % 2000) / 1000); const timelineMs = performance.now() - timelineStart
   check('V640-LARGE-CONTENT', large.metadata.slices.length === 20_000 && atlasMs < 8_000 && timelineMs < 1_000, 'Large atlas and timeline operations remain within explicit local release budgets.', { atlasFrames: 20_000, atlasMs: Number(atlasMs.toFixed(2)), timelineSamples: 10_000, timelineMs: Number(timelineMs.toFixed(2)) })
 
-  const sources = Object.fromEntries(await Promise.all(['src/components/ContentAssetInspector.vue', 'src/components/AnimationPanel.vue', 'src/components/EditorBottomPanel.vue', 'src/runtime/controlRegistry.ts', 'src/runtime/productionValidation.ts', 'src/runtime/novaPak.ts', 'scripts/nova-export.mjs', 'src/i18n.ts', 'instructions.txt', 'docs/CONTENT_ANIMATION_6_4.md'].map(async path => [path, await source(path)])))
+  const sources = Object.fromEntries(await Promise.all(['src/components/ContentAssetInspector.vue', 'src/components/AnimationPanel.vue', 'src/components/EditorBottomPanel.vue', 'src/runtime/controlRegistry.ts', 'src/runtime/productionValidation.ts', 'src/runtime/novaPak.ts', 'scripts/nova-export.mjs', 'src/i18n.ts', 'instructions.txt', 'docs/CONTENT_ANIMATION_6_4.md'].map(/* 返回按声明顺序构造的数组 [path, await source(path)]。 */ async path => [path, await source(path)])))
   check('V640-CONTEXT-UI', sources['src/components/ContentAssetInspector.vue'].includes("const tabs=computed<ContextTab[]>") && sources['src/components/EditorBottomPanel.vue'].includes('ContentAssetInspector') && sources['src/components/AnimationPanel.vue'].includes("t('autoWeights')"), 'Dedicated contextual Asset tabs and production animation controls are connected.')
   check('V640-ASSET-MENU-SAFETY', sources['src/components/EditorBottomPanel.vue'].includes('asset-overflow-menu') && sources['src/components/EditorBottomPanel.vue'].includes('clonePipelineMetadata') && sources['src/runtime/controlRegistry.ts'].includes('element.textContent'), 'The compact Asset menu has distinct bounded controls, reactive metadata crosses a JSON clone boundary and hidden controls retain real labels.')
   check('V640-BUILD-EXPORT', sources['src/runtime/productionValidation.ts'].includes('validateResourceProject') && sources['src/runtime/novaPak.ts'].includes("'resource'") && sources['scripts/nova-export.mjs'].includes("'resource'") && sources['scripts/nova-export.mjs'].includes('visitedEntries') && sources['scripts/nova-export.mjs'].includes('100,000-entry export safety limit'), 'Resource validation and content inclusion reach cycle-safe, bounded native/Web package paths.')
@@ -92,7 +93,7 @@ try {
   await rm(compiled, { recursive: true, force: true })
 }
 
-const failed = checks.filter(item => item.status === 'failed')
+const failed = checks.filter(/* 比较 item.status 与 'failed'，返回严格相等的判断结果。 */ item => item.status === 'failed')
 const report = { format: 'nova-v6.4.0-verification', version: 1, engineVersion: '6.4.0', generatedAt: new Date().toISOString(), perspectives: ['compatibility', 'content-interchange', 'resources', 'animation', 'performance', 'export', 'localization', 'documentation'], checks, severity0Open: failed.length, severity1Open: 0, status: failed.length ? 'failed' : 'passed' }
 await mkdir(join(root, 'release-audits'), { recursive: true })
 await writeFile(join(root, 'release-audits/v6.4.0-verification.json'), `${JSON.stringify(report, null, 2)}\n`)

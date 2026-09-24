@@ -1,3 +1,4 @@
+/** 功能回归脚本：执行 verify-v26.22-component-order.mjs 对应场景，保留断言和证据输出。 */
 import assert from 'node:assert/strict'
 import {readFile} from 'node:fs/promises'
 import {propertyAudit22} from './lib/propertyAudit22.mjs'

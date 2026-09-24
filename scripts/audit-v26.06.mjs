@@ -1,17 +1,19 @@
+/* 汇总 26.06 的物理、导航、属性绑定、输出、可访问性及参考项目证据。 */
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
 import { dirname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = dirname(dirname(fileURLToPath(import.meta.url))), checks = []
-const text = path => readFile(join(root, path), 'utf8')
-const check = (id, passed, detail, metrics = {}) => checks.push({ id, status: passed ? 'passed' : 'failed', detail, metrics })
+const text = /* 调用 readFile(join(root, path), 'utf8') 并返回调用结果。 */ path => readFile(join(root, path), 'utf8')
+const check = /* 调用 checks.push({ id, status: passed ? 'passed' : 'failed', detail, metrics }) 并返回调用结果。 */ (id, passed, detail, metrics = {}) => checks.push({ id, status: passed ? 'passed' : 'failed', detail, metrics })
+/* 递归收集目录中的全部文件路径，不执行文件内容。 */
 async function filesUnder(directory) { const result = []; for (const entry of await readdir(directory, { withFileTypes: true })) { const path = join(directory, entry.name); entry.isDirectory() ? result.push(...await filesUnder(path)) : result.push(path) } return result }
-const vueFiles = (await filesUnder(join(root, 'src'))).filter(path => path.endsWith('.vue')).sort()
-const sources = await Promise.all(vueFiles.map(async path => ({ path: relative(root, path).replaceAll('\\', '/'), source: await readFile(path, 'utf8') })))
+const vueFiles = (await filesUnder(join(root, 'src'))).filter(/* 调用 path.endsWith('.vue') 并返回调用结果。 */ path => path.endsWith('.vue')).sort()
+const sources = await Promise.all(vueFiles.map(/* 返回相对于仓库根目录的规范路径及对应 UTF-8 源码。 */ async path => ({ path: relative(root, path).replaceAll('\\', '/'), source: await readFile(path, 'utf8') })))
 const [css, format, simulation, geometry, navigation, ai, production, world, build, exporter, registry, catalog, outputVerifier, i18n, accessibilityEvidence, releaseScript, releaseVerifier, roadmap, referenceProject] = await Promise.all([
   'src/assets/main.css','src/projects/projectFormat.ts','src/runtime/simulationAuthoring26.ts','src/runtime/physicsGeometry.ts','src/runtime/navigation2d.ts','src/runtime/aiTools.ts','src/runtime/productionValidation.ts','src/components/WorldToolsPanel.vue','src/components/BuildSettingsPanel.vue','scripts/nova-export.mjs','scripts/export-template-registry.mjs','scripts/verify-template-catalog.mjs','scripts/verify-v26.06-template-output.mjs','src/i18n.ts','src/runtime/accessibilityEvidence.ts','scripts/package-release.ps1','scripts/verify-release-package.ps1','docs/ROADMAP_26_01_TO_26_10.md','reference-projects/projects/simulation-v2606-physics-navigation-ai/project.nova'
 ].map(text))
-check('V2606-AUDIT-ALL-SURFACES', vueFiles.length >= 65 && sources.every(item => item.source.includes('<template') && item.source.includes('<script')), 'All Vue surfaces were enumerated for the 26.06 source-level product audit.', { vueFiles: vueFiles.length })
+check('V2606-AUDIT-ALL-SURFACES', vueFiles.length >= 65 && sources.every(/* 先计算 item.source.includes('<template')；仅当其为真值时求右侧 item.source.includes('<script')，返回短路求值结果。 */ item => item.source.includes('<template') && item.source.includes('<script')), 'All Vue surfaces were enumerated for the 26.06 source-level product audit.', { vueFiles: vueFiles.length })
 check('V2606-AUDIT-CONTRACTS', format.includes("NOVA_PROJECT_SCHEMA_VERSION = 29") && format.includes("NOVA_ENGINE_VERSION = '26.6.0'"), 'The release remains additive over frozen schema 29.')
 check('V2606-AUDIT-PHYSICS', geometry.includes('prepareColliderSet') && simulation.includes('SIM-DYNAMIC-CONCAVE') && simulation.includes('SIM-ROPE-BOUNDS') && simulation.includes('breakForce'), 'Compound/concave validation, rope bounds and joint break values enter the simulation gate.')
 check('V2606-AUDIT-NAV-AI', navigation.includes('FlowField') && navigation.includes('HierarchicalAStar') && navigation.includes('10_000') && ai.includes('BehaviorTree') && ai.includes('StateMachine') && ai.includes('10_000'), 'Navigation, avoidance and AI algorithms retain bounded deterministic schedulers.')
@@ -22,7 +24,7 @@ check('V2606-AUDIT-I18N-LAYOUT', i18n.includes("releaseLabel:'Nova_A 26.06'") &&
 check('V2606-AUDIT-WEB-A11Y-BRIDGE', accessibilityEvidence.includes("!('__TAURI_INTERNALS__' in window)") && accessibilityEvidence.includes("automationProvider: 'Web ARIA'") && accessibilityEvidence.includes('nativeAccessibilityState.loading = false'), 'Browser and SSR surfaces use the Web ARIA capability fallback without attempting a desktop IPC command.')
 check('V2606-AUDIT-REFERENCE', referenceProject.includes('Compound Cross Body') && referenceProject.includes('Lattice A-B') && referenceProject.includes('Navigating Enemy') && referenceProject.includes('BehaviorTree2D') && referenceProject.includes('StateMachine2D'), 'The normal-user simulation project is authored, not represented only by prose.')
 check('V2606-AUDIT-RELEASE', releaseScript.includes("'SHA256SUMS.txt'") && releaseScript.includes('Get-FilesystemSourceFiles') && releaseVerifier.includes('$checksumCount -ne 10') && roadmap.includes('Implementation status: completed as a 26.06 release candidate'), 'Release packaging keeps exact eleven artifacts and truthful source-snapshot provenance.')
-const failed = checks.filter(item => item.status === 'failed')
+const failed = checks.filter(/* 比较 item.status 与 'failed'，返回严格相等的判断结果。 */ item => item.status === 'failed')
 const report = { format: 'nova-v26.06-product-audit', version: 1, release: '26.06', engineVersion: '26.6.0', generatedAt: new Date().toISOString(), perspectives: ['programmer','normal-user','layout','localization','runtime','output','security'], checks, severity0Open: failed.length, severity1Open: 0, externalGates: { independentBeginnerObservation: 'pending-external', independentExpertKeyboardObservation: 'pending-external', screenReaderHardware: 'pending-external', publisherSigning: 'pending-external', nonWindowsHosts: 'pending-external', browserMatrix: 'pending-external', soak72Hours: 'pending-external' }, status: failed.length ? 'failed' : 'passed' }
 await mkdir(join(root, 'release-audits'), { recursive: true }); await writeFile(join(root, 'release-audits/v26.06-product-audit.json'), `${JSON.stringify(report, null, 2)}\n`)
 if (failed.length) { console.error(failed); process.exit(1) }

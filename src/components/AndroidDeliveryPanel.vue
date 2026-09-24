@@ -1,3 +1,4 @@
+<!-- Android 交付设置：检查工具链、权限及用途，并预览清单。 -->
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { buildSettings } from '../runtime/buildSettings'
@@ -12,21 +13,21 @@ const words={
   de:{title:'Android-Auslieferung',subtitle:'Optional, lokal und ausdrücklich. SDK- oder Geräteaktionen starten nur per Klick.',package:'Android-Exportpaket',enable:'Paket aktivieren',discover:'Toolchain erkennen',ready:'Bereit',blocked:'Blockiert',missing:'Fehlt',permissions:'Minimale Berechtigungen',purpose:'Angezeigter Zweck',manifest:'Manifest-Vorschau',devices:'Geräte',refreshDevices:'Geräte aktualisieren',apk:'Pfad zur gebauten APK',deploy:'Auf ausgewähltem Gerät installieren',logs:'Logcat erfassen',output:'Befehlsausgabe',ios:'iOS-Status',signing:'Signierung',debug:'Debug/lokal',manual:'Manuelle Veröffentlichung',none:'Kein verbundenes Gerät.',qualified:'Build wird nur mit JDK, SDK 35, Build-Tools, NDK und validierter Vorlage freigegeben.'},
   zh:{title:'Android 交付',subtitle:'可选、本地并且明确执行；未点击时不会运行 SDK 或设备操作。',package:'Android 导出包',enable:'启用软件包',discover:'检测工具链',ready:'就绪',blocked:'被阻止',missing:'缺少',permissions:'最小权限',purpose:'向用户说明的用途',manifest:'清单预览',devices:'设备',refreshDevices:'刷新设备',apk:'已构建 APK 路径',deploy:'安装到所选设备',logs:'捕获 logcat',output:'命令输出',ios:'iOS 状态',signing:'签名',debug:'调试/本地',manual:'手动发布',none:'没有已连接的设备。',qualified:'仅当 JDK、SDK 35、Build Tools、NDK 和已验证模板齐全时才允许构建。'}
 }as const
-function l(key:keyof typeof words.en):string{return(words[preferencesState.locale]??words.en)[key]}
-const packageReady=computed(()=>packageEnabled(OFFICIAL_ANDROID_PACKAGE_ID))
-const purposes=computed(()=>Object.fromEntries(buildSettings.platform.permissions.map(permission=>[permission,buildSettings.platform.versionMetadata[`permissionPurpose.${permission}`]??''])))
-const permissionIssues=computed(()=>validateAndroidPermissions(buildSettings.platform.permissions,purposes.value))
-const manifest=computed(()=>androidManifestPreview({identifier:buildSettings.platform.identifier,version:buildSettings.platform.version,orientation:buildSettings.platform.orientation,permissions:buildSettings.platform.permissions}))
-const gates=computed(()=>[
+/** 按偏好语言读取本面板文案，未知语言回退英文。 */ function l(key:keyof typeof words.en):string{return(words[preferencesState.locale]??words.en)[key]}
+const packageReady=computed(/** 判断官方 Android 支持包是否启用。 */ ()=>packageEnabled(OFFICIAL_ANDROID_PACKAGE_ID))
+const purposes=computed(/** 将已选权限与对应用途元数据组合为映射。 */ ()=>Object.fromEntries(buildSettings.platform.permissions.map(/** 读取单项权限的用途说明，缺失时使用空文本。 */ permission=>[permission,buildSettings.platform.versionMetadata[`permissionPurpose.${permission}`]??''])))
+const permissionIssues=computed(/** 校验已声明权限及用途。 */ ()=>validateAndroidPermissions(buildSettings.platform.permissions,purposes.value))
+const manifest=computed(/** 根据标识符、版本、方向和权限生成 Android 清单预览。 */ ()=>androidManifestPreview({identifier:buildSettings.platform.identifier,version:buildSettings.platform.version,orientation:buildSettings.platform.orientation,permissions:buildSettings.platform.permissions}))
+const gates=computed(/** 按固定顺序收集 JDK、SDK、平台、构建工具、NDK、ADB 和模板的就绪状态。 */ ()=>[
   ['JDK',androidDeliveryState.status.jdkReady],['SDK',androidDeliveryState.status.sdkReady],['API 35',androidDeliveryState.status.platformReady],
   ['Build tools',androidDeliveryState.status.buildToolsReady],['NDK',androidDeliveryState.status.ndkReady],['ADB',androidDeliveryState.status.adbReady],['Template',androidDeliveryState.status.templateReady]
 ]as const)
-function hasPermission(id:string):boolean{return buildSettings.platform.permissions.includes(id)}
-function togglePermission(id:string,checked:boolean):void{const set=new Set(buildSettings.platform.permissions);checked?set.add(id):set.delete(id);buildSettings.platform.permissions=[...set].sort();pushHistory('Edit Android permissions')}
-function purpose(id:string):string{return buildSettings.platform.versionMetadata[`permissionPurpose.${id}`]??''}
-function setPurpose(id:string,event:Event):void{const value=(event.target as HTMLInputElement).value.trim().slice(0,500),key=`permissionPurpose.${id}`;if(value)buildSettings.platform.versionMetadata[key]=value;else delete buildSettings.platform.versionMetadata[key];pushHistory('Edit Android permission purpose')}
-function enablePackage():void{enableOfficialPackage(OFFICIAL_ANDROID_PACKAGE_ID)}
-onMounted(()=>void refreshAndroidToolchain())
+/** 检查平台设置是否已包含指定权限。 */ function hasPermission(id:string):boolean{return buildSettings.platform.permissions.includes(id)}
+/** 增删权限后去重排序，并记录设置历史。 */ function togglePermission(id:string,checked:boolean):void{const set=new Set(buildSettings.platform.permissions);checked?set.add(id):set.delete(id);buildSettings.platform.permissions=[...set].sort();pushHistory('Edit Android permissions')}
+/** 读取权限用途元数据，缺失时返回空文本。 */ function purpose(id:string):string{return buildSettings.platform.versionMetadata[`permissionPurpose.${id}`]??''}
+/** 规范化用途输入并限制长度；空值删除元数据，然后记录历史。 */ function setPurpose(id:string,event:Event):void{const value=(event.target as HTMLInputElement).value.trim().slice(0,500),key=`permissionPurpose.${id}`;if(value)buildSettings.platform.versionMetadata[key]=value;else delete buildSettings.platform.versionMetadata[key];pushHistory('Edit Android permission purpose')}
+/** 启用官方 Android 功能包。 */ function enablePackage():void{enableOfficialPackage(OFFICIAL_ANDROID_PACKAGE_ID)}
+onMounted(/** 挂载时异步刷新 Android 工具链状态。 */ ()=>void refreshAndroidToolchain())
 </script>
 
 <template>

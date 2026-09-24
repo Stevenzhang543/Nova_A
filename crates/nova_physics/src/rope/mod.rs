@@ -1,3 +1,4 @@
+// 连接约束求解：绳索节点、断裂、摩擦、锚点、刚性绑定及关节电机与限位。
 #[derive(Clone, Debug)]
 struct ConnectionConstraint {
     data_index: usize,
@@ -48,6 +49,7 @@ struct RopeNode {
 }
 
 impl ConnectionConstraint {
+    // 解析连接两端及约束字段；非法端点返回空值，绳节点与限位采用有界参数。
     fn from_data(data: &[f64], data_index: usize, body_count: usize) -> Option<Self> {
         let body_a = non_negative(data[data_index + 1], 0.0).round() as usize;
         let body_b = non_negative(data[data_index + 2], 0.0).round() as usize;
@@ -58,7 +60,7 @@ impl ConnectionConstraint {
             .round()
             .min(ROPE_NODE_CAPACITY as f64) as usize;
         let rope_nodes = (0..rope_node_count)
-            .map(|node_index| {
+            .map(/* 从固定步长绳节点记录中读取有限化的位置和速度。 */ |node_index| {
                 let offset = data_index + ROPE_NODE_DATA_OFFSET + node_index * 4;
                 RopeNode {
                     position: Vec2::new(
@@ -148,6 +150,7 @@ impl ConnectionConstraint {
         })
     }
 
+    // 计算连接两端世界锚点、方向、距离与相关偏移。
     fn geometry(&self, bodies: &[Body]) -> (Vec2, Vec2, Vec2, f64, Vec2) {
         let a = &bodies[self.body_a];
         let b = &bodies[self.body_b];
@@ -161,12 +164,13 @@ impl ConnectionConstraint {
         (radius_a, radius_b, normal, length, delta)
     }
 
+    // 计算绳索相邻节点或端点之间的链节长度。
     fn link_lengths(&self, bodies: &[Body], physical_rope: bool) -> Vec<f64> {
         if !physical_rope {
             return vec![self.geometry(bodies).3];
         }
         (0..rope_point_count(self) - 1)
-            .map(|point| {
+            .map(/* 计算并返回 rope_point_position (self , bodies , point + 1) . sub (rope_point_position (self , bodies , point)) . length ()，用于当前 link_lengths 流程。 */ |point| {
                 rope_point_position(self, bodies, point + 1)
                     .sub(rope_point_position(self, bodies, point))
                     .length()
@@ -174,21 +178,23 @@ impl ConnectionConstraint {
             .collect()
     }
 
+    // 找出伸长比例最大的链节及其比例。
     fn strongest_stretch(&self) -> (usize, f64) {
         self.link_tensions
             .iter()
             .copied()
             .enumerate()
-            .max_by(|a, b| a.1.total_cmp(&b.1))
+            .max_by(/* 按 a . 1 . total_cmp (& b . 1) 比较顺序，供稳定排序使用。 */ |a, b| a.1.total_cmp(&b.1))
             .unwrap_or((0, self.tension))
     }
 
+    // 找出最严重的弯曲位置与弯曲程度。
     fn strongest_bend(&self, bodies: &[Body], physical_rope: bool) -> (usize, f64) {
         if !physical_rope {
             return (0, self.tension * self.bend_amount);
         }
         let positions: Vec<Vec2> = (0..rope_point_count(self))
-            .map(|point| rope_point_position(self, bodies, point))
+            .map(/* 计算并返回 rope_point_position (self , bodies , point)，用于当前 strongest_bend 流程。 */ |point| rope_point_position(self, bodies, point))
             .collect();
         let mut strongest = (0, 0.0);
         for point in 1..positions.len() - 1 {
@@ -216,6 +222,7 @@ impl ConnectionConstraint {
         strongest
     }
 
+    // 按最大拉伸处记录断裂，维护断裂后的分段状态。
     fn break_at_stretch(
         &mut self,
         physical_rope: bool,
@@ -228,8 +235,8 @@ impl ConnectionConstraint {
             .iter()
             .copied()
             .enumerate()
-            .max_by(|a, b| a.1.total_cmp(&b.1))
-            .map(|entry| entry.0)
+            .max_by(/* 按 a . 1 . total_cmp (& b . 1) 比较顺序，供稳定排序使用。 */ |a, b| a.1.total_cmp(&b.1))
+            .map(/* 返回当前快照值 entry . 0。 */ |entry| entry.0)
             .unwrap_or(stretch_link);
         self.break_link = physical_rope.then_some(if stretch_force > 0.0 {
             stretch_link
@@ -238,6 +245,7 @@ impl ConnectionConstraint {
         });
     }
 
+    // 比较拉伸和弯曲负载与容限，更新连接失效状态。
     fn evaluate_failure(&mut self, bodies: &[Body]) {
         if !self.active || self.broken_code != 0 || self.binding {
             return;
@@ -275,6 +283,7 @@ impl ConnectionConstraint {
     }
 }
 
+// 把作用力换算为相对于容许质量重力的负载比例。
 fn load_ratio(force: f64, tolerance_mass: f64) -> f64 {
     if tolerance_mass > 0.0 {
         force / STANDARD_GRAVITY / tolerance_mass
@@ -285,10 +294,12 @@ fn load_ratio(force: f64, tolerance_mass: f64) -> f64 {
     }
 }
 
+// 返回包含锚点的绳索求解点数。
 fn rope_point_count(constraint: &ConnectionConstraint) -> usize {
     constraint.rope_nodes.len() + 2
 }
 
+// 根据绳索线密度和离散长度计算节点逆质量。
 fn rope_node_inverse_mass(constraint: &ConnectionConstraint) -> f64 {
     let node_count = constraint.rope_nodes.len().max(1) as f64;
     let node_mass =
@@ -296,6 +307,7 @@ fn rope_node_inverse_mass(constraint: &ConnectionConstraint) -> f64 {
     1.0 / node_mass
 }
 
+// 按端点或中间节点索引读取绳索世界位置。
 fn rope_point_position(constraint: &ConnectionConstraint, bodies: &[Body], point: usize) -> Vec2 {
     if point == 0 {
         let body = &bodies[constraint.body_a];
@@ -310,6 +322,7 @@ fn rope_point_position(constraint: &ConnectionConstraint, bodies: &[Body], point
     }
 }
 
+// 按端点或中间节点索引取得绳索点速度。
 fn rope_point_velocity(constraint: &ConnectionConstraint, bodies: &[Body], point: usize) -> Vec2 {
     if point == 0 {
         let body = &bodies[constraint.body_a];
@@ -322,6 +335,7 @@ fn rope_point_velocity(constraint: &ConnectionConstraint, bodies: &[Body], point
     }
 }
 
+// 计算指定方向上绳索点的有效逆质量，包含端点转动贡献。
 fn rope_point_effective_inverse(
     constraint: &ConnectionConstraint,
     bodies: &[Body],
@@ -341,6 +355,7 @@ fn rope_point_effective_inverse(
     }
 }
 
+// 将冲量施加到绳索节点或其连接刚体。
 fn apply_rope_point_impulse(
     constraint: &mut ConnectionConstraint,
     bodies: &mut [Body],
@@ -365,6 +380,7 @@ fn apply_rope_point_impulse(
     }
 }
 
+// 按有效质量修正绳索节点或端点刚体的位置。
 fn apply_rope_point_correction(
     constraint: &mut ConnectionConstraint,
     bodies: &mut [Body],
@@ -397,6 +413,7 @@ fn apply_rope_point_correction(
     }
 }
 
+// 按重力、阻尼与时间步推进自由绳索节点。
 fn integrate_rope_nodes(
     constraint: &mut ConnectionConstraint,
     dt: f64,
@@ -417,6 +434,7 @@ fn integrate_rope_nodes(
     }
 }
 
+// 求解绳索伸长、阻尼和弯曲的速度约束。
 fn solve_rope_velocity(bodies: &mut [Body], constraint: &mut ConnectionConstraint, dt: f64) {
     if dt <= 0.0 || constraint.rope_nodes.is_empty() {
         return;
@@ -482,6 +500,7 @@ fn solve_rope_velocity(bodies: &mut [Body], constraint: &mut ConnectionConstrain
     }
 }
 
+// 修正绳索长度及弯曲位置误差，尊重已断开的链节。
 fn correct_rope_position(bodies: &mut [Body], constraint: &mut ConnectionConstraint) {
     if constraint.rope_nodes.is_empty() {
         return;
@@ -515,7 +534,7 @@ fn correct_rope_position(bodies: &mut [Body], constraint: &mut ConnectionConstra
     }
     if !constraint.bendable && constraint.rope_nodes.len() > 1 {
         let positions: Vec<Vec2> = (0..point_count)
-            .map(|point| rope_point_position(constraint, bodies, point))
+            .map(/* 计算并返回 rope_point_position (constraint , bodies , point)，用于当前 correct_rope_position 流程。 */ |point| rope_point_position(constraint, bodies, point))
             .collect();
         let inverse_mass = rope_node_inverse_mass(constraint);
         for node_index in 0..constraint.rope_nodes.len() {
@@ -535,6 +554,7 @@ fn correct_rope_position(bodies: &mut [Body], constraint: &mut ConnectionConstra
     }
 }
 
+// 将绳索局部采样构造为用于碰撞求解的临时刚体。
 fn rope_collision_body(
     node: RopeNode,
     radius: f64,
@@ -588,6 +608,7 @@ fn rope_collision_body(
     }
 }
 
+// 在绳索相邻求解点之间插值世界位置。
 fn rope_sample_position(
     constraint: &ConnectionConstraint,
     bodies: &[Body],
@@ -599,6 +620,7 @@ fn rope_sample_position(
         .add(rope_point_position(constraint, bodies, link + 1).mul(ratio))
 }
 
+// 在绳索相邻求解点之间插值速度。
 fn rope_sample_velocity(
     constraint: &ConnectionConstraint,
     bodies: &[Body],
@@ -610,6 +632,7 @@ fn rope_sample_velocity(
         .add(rope_point_velocity(constraint, bodies, link + 1).mul(ratio))
 }
 
+// 按采样权重合成两端的有效逆质量。
 fn rope_sample_effective_inverse(
     constraint: &ConnectionConstraint,
     bodies: &[Body],
@@ -625,6 +648,7 @@ fn rope_sample_effective_inverse(
             * rope_point_effective_inverse(constraint, bodies, link + 1, direction)
 }
 
+// 把采样点冲量按插值权重分配到相邻绳索点。
 fn apply_rope_sample_impulse(
     constraint: &mut ConnectionConstraint,
     bodies: &mut [Body],
@@ -636,6 +660,7 @@ fn apply_rope_sample_impulse(
     apply_rope_point_impulse(constraint, bodies, link + 1, impulse.mul(ratio));
 }
 
+// 把采样点位置修正按权重分配到相邻绳索点。
 fn apply_rope_sample_correction(
     constraint: &mut ConnectionConstraint,
     bodies: &mut [Body],
@@ -663,6 +688,7 @@ struct RopeContactKinematics {
     normal_scalar: f64,
 }
 
+// 检查绳索与刚体的层及端点排除规则。
 fn rope_can_collide_with_body(
     constraint: &ConnectionConstraint,
     body: &Body,
@@ -677,6 +703,7 @@ fn rope_can_collide_with_body(
         && !body.is_sensor
 }
 
+// 根据接触法向冲量限制绳索切向摩擦冲量。
 fn apply_rope_friction(
     bodies: &mut [Body],
     constraint: &mut ConnectionConstraint,
@@ -713,6 +740,7 @@ fn apply_rope_friction(
     bodies[body_index].apply_impulse(friction_impulse, contact.radius_body);
 }
 
+// 按接触流形求解绳索与刚体间的冲量和穿透修正。
 fn resolve_rope_manifold(
     bodies: &mut [Body],
     constraint: &mut ConnectionConstraint,
@@ -789,6 +817,7 @@ fn resolve_rope_manifold(
     body.angle = normalize_angle(body.angle + radius_body.cross(correction) * body.inv_inertia);
 }
 
+// 为绳索采样点与刚体生成接触并求解。
 fn resolve_rope_sample_body(
     bodies: &mut [Body],
     constraint: &mut ConnectionConstraint,
@@ -828,6 +857,7 @@ fn resolve_rope_sample_body(
     }
 }
 
+// 遍历绳索采样与合格刚体，处理绳索碰撞。
 fn resolve_rope_collisions(bodies: &mut [Body], constraint: &mut ConnectionConstraint) {
     if !constraint.active || !constraint.collision_enabled || constraint.rope_nodes.is_empty() {
         return;
@@ -873,6 +903,7 @@ fn resolve_rope_collisions(bodies: &mut [Body], constraint: &mut ConnectionConst
     }
 }
 
+// 求解对称二阶线性系统；退化时使用安全后备结果。
 fn solve_symmetric_2x2(k11: f64, k12: f64, k22: f64, rhs: Vec2) -> Vec2 {
     let determinant = k11 * k22 - k12 * k12;
     if determinant.abs() <= EPSILON {
@@ -884,6 +915,7 @@ fn solve_symmetric_2x2(k11: f64, k12: f64, k22: f64, rhs: Vec2) -> Vec2 {
     )
 }
 
+// 计算两个刚体在绑定锚点处的二维有效质量矩阵。
 fn binding_mass_matrix(a: &Body, b: &Body, radius_a: Vec2, radius_b: Vec2) -> (f64, f64, f64) {
     let inverse_mass = a.inv_mass + b.inv_mass;
     (
@@ -897,6 +929,7 @@ fn binding_mass_matrix(a: &Body, b: &Body, radius_a: Vec2, radius_b: Vec2) -> (f
     )
 }
 
+// 求解刚性绑定的相对线速度和角速度约束。
 fn solve_binding_velocity(bodies: &mut [Body], constraint: &mut ConnectionConstraint, dt: f64) {
     if dt <= 0.0 {
         return;
@@ -945,6 +978,7 @@ fn solve_binding_velocity(bodies: &mut [Body], constraint: &mut ConnectionConstr
     }
 }
 
+// 修正绑定刚体间的参考位置与角度偏差。
 fn correct_binding_position(bodies: &mut [Body], constraint: &ConnectionConstraint) {
     for _ in 0..8 {
         let (angle_error, inverse_inertia) = {
@@ -986,6 +1020,7 @@ fn correct_binding_position(bodies: &mut [Body], constraint: &ConnectionConstrai
     }
 }
 
+// 按组合质量同步绑定刚体的整体运动。
 fn synchronize_binding_motion(bodies: &mut [Body], constraint: &ConnectionConstraint) {
     if (!constraint.binding && constraint.joint_kind != 1) || !constraint.active {
         return;
@@ -1056,6 +1091,7 @@ fn synchronize_binding_motion(bodies: &mut [Body], constraint: &ConnectionConstr
     b.angular_velocity = finite_or(angular_velocity, 0.0);
 }
 
+// 在配置的力或力矩限制内驱动关节目标速度。
 fn solve_joint_motor(bodies: &mut [Body], constraint: &mut ConnectionConstraint, dt: f64) {
     if !constraint.motor_enabled || constraint.max_motor_force <= 0.0 || dt <= 0.0 {
         return;
@@ -1092,6 +1128,7 @@ fn solve_joint_motor(bodies: &mut [Body], constraint: &mut ConnectionConstraint,
     constraint.motor_torque = constraint.motor_torque.max(impulse.abs() / dt);
 }
 
+// 在转动关节达到角度限制时修正相对角速度。
 fn solve_revolute_limit_velocity(bodies: &mut [Body], constraint: &mut ConnectionConstraint, dt: f64) {
     if !constraint.limits_enabled || dt <= 0.0 { return; }
     let a = &bodies[constraint.body_a];
@@ -1109,6 +1146,7 @@ fn solve_revolute_limit_velocity(bodies: &mut [Body], constraint: &mut Connectio
     constraint.motor_torque = constraint.motor_torque.max(impulse.abs() / dt);
 }
 
+// 把转动关节角度修正到允许区间。
 fn correct_revolute_limit(bodies: &mut [Body], constraint: &ConnectionConstraint) {
     if !constraint.limits_enabled { return; }
     let a = &bodies[constraint.body_a];
@@ -1125,6 +1163,7 @@ fn correct_revolute_limit(bodies: &mut [Body], constraint: &ConnectionConstraint
     b.angle = normalize_angle(b.angle + impulse * b.inv_inertia);
 }
 
+// 求解两端锚点相对速度，使锚点保持连接。
 fn solve_anchor_point_velocity(bodies: &mut [Body], constraint: &mut ConnectionConstraint, dt: f64) {
     let (radius_a, radius_b, error, relative_velocity, k11, k12, k22) = {
         let a = &bodies[constraint.body_a];
@@ -1143,6 +1182,7 @@ fn solve_anchor_point_velocity(bodies: &mut [Body], constraint: &mut ConnectionC
     }
 }
 
+// 修正两端锚点间的位置误差。
 fn correct_anchor_point_position(bodies: &mut [Body], constraint: &ConnectionConstraint) {
     for _ in 0..4 {
         let (radius_a, radius_b, error, k11, k12, k22) = {
@@ -1163,6 +1203,7 @@ fn correct_anchor_point_position(bodies: &mut [Body], constraint: &ConnectionCon
     }
 }
 
+// 限制连接两端的相对角速度。
 fn solve_relative_angle_velocity(bodies: &mut [Body], constraint: &mut ConnectionConstraint, dt: f64) {
     let a = &bodies[constraint.body_a];
     let b = &bodies[constraint.body_b];
@@ -1176,6 +1217,7 @@ fn solve_relative_angle_velocity(bodies: &mut [Body], constraint: &mut Connectio
     b.angular_velocity += impulse * b.inv_inertia;
 }
 
+// 修正连接两端相对参考角度误差。
 fn correct_relative_angle(bodies: &mut [Body], constraint: &ConnectionConstraint) {
     let a = &bodies[constraint.body_a];
     let b = &bodies[constraint.body_b];
@@ -1187,6 +1229,7 @@ fn correct_relative_angle(bodies: &mut [Body], constraint: &ConnectionConstraint
     b.angle = normalize_angle(b.angle + impulse * b.inv_inertia);
 }
 
+// 限制移动关节的垂直运动，并处理轴向限位。
 fn solve_prismatic_velocity(bodies: &mut [Body], constraint: &mut ConnectionConstraint, dt: f64) {
     let (radius_a, radius_b, axis, perpendicular, translation, relative_velocity) = {
         let a = &bodies[constraint.body_a];
@@ -1198,7 +1241,7 @@ fn solve_prismatic_velocity(bodies: &mut [Body], constraint: &mut ConnectionCons
         let delta = b.position.add(radius_b).sub(a.position.add(radius_a));
         (radius_a, radius_b, axis, perpendicular, delta.dot(axis), b.point_velocity(radius_b).sub(a.point_velocity(radius_a)))
     };
-    let solve_axis = |bodies: &mut [Body], direction: Vec2, error: f64, relative_speed: f64| {
+    let solve_axis = /* 根据方向有效质量和误差求解移动关节单轴冲量，并施加到两端。 */ |bodies: &mut [Body], direction: Vec2, error: f64, relative_speed: f64| {
         let a = &bodies[constraint.body_a];
         let b = &bodies[constraint.body_b];
         let denominator = a.inv_mass + b.inv_mass
@@ -1223,6 +1266,7 @@ fn solve_prismatic_velocity(bodies: &mut [Body], constraint: &mut ConnectionCons
     solve_relative_angle_velocity(bodies, constraint, dt);
 }
 
+// 修正移动关节的横向偏移与超限位置。
 fn correct_prismatic_position(bodies: &mut [Body], constraint: &ConnectionConstraint) {
     for _ in 0..4 {
         let (radius_a, radius_b, axis, perpendicular, delta) = {
@@ -1256,6 +1300,7 @@ fn correct_prismatic_position(bodies: &mut [Body], constraint: &ConnectionConstr
     correct_relative_angle(bodies, constraint);
 }
 
+// 按连接种类分派绳索、弹簧、绑定及关节速度求解。
 fn solve_connection_velocity(bodies: &mut [Body], constraint: &mut ConnectionConstraint, dt: f64) {
     let simulating_fragments = constraint.collision_enabled && constraint.break_link.is_some();
     if !constraint.active || (constraint.broken_code != 0 && !simulating_fragments) || dt <= 0.0 {
@@ -1341,6 +1386,7 @@ fn solve_connection_velocity(bodies: &mut [Body], constraint: &mut ConnectionCon
     }
 }
 
+// 按连接种类分派位置约束修正。
 fn correct_connection_position(bodies: &mut [Body], constraint: &mut ConnectionConstraint) {
     let simulating_fragments = constraint.collision_enabled && constraint.break_link.is_some();
     if !constraint.active || (constraint.broken_code != 0 && !simulating_fragments) {

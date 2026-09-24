@@ -1,3 +1,4 @@
+/** 功能回归脚本：执行 verify-v26.21-template-library.mjs 对应场景，保留断言和证据输出。 */
 // Retained 26.20 regression implementation, executed against actual 26.21 source.
 import assert from 'node:assert/strict'
 import { mkdir, writeFile } from 'node:fs/promises'
@@ -10,13 +11,13 @@ const only = process.env.NOVA_TEMPLATE_IDS?.split(',')
 const discoveryOnly = process.env.NOVA_TEMPLATE_DISCOVERY_ONLY === '1'
 if(process.argv.includes('--qualification'))assert.ok(!only&&!discoveryOnly,'Qualification must execute all40 starters')
 await mkdir(captureRoot, { recursive: true })
-await withBrowserAudit({release:'26.21',name:'template-library',root,development:process.env.NOVA_AUDIT_DEVELOPMENT==='1',expectedRelease:process.env.NOVA_AUDIT_EXPECTED_RELEASE || '26.21',width:1600,height:1000}, async audit => {
+await withBrowserAudit({release:'26.21',name:'template-library',root,development:process.env.NOVA_AUDIT_DEVELOPMENT==='1',expectedRelease:process.env.NOVA_AUDIT_EXPECTED_RELEASE || '26.21',width:1600,height:1000}, /** 结构说明（自动提取）：withBrowserAudit 回调；输入 audit；直接调用 client.on、client.send、until、evaluate、check 等；包含循环处理；等待异步结果。 */ async audit => {
   const {evaluate,until,click,clickText,client,observations,check} = audit
-  const fill=async(selector,value)=>{await evaluate(`document.querySelector(${JSON.stringify(selector)}).scrollIntoView({block:'center',behavior:'instant'})`);await wait(60);await audit.fill(selector,value)}
-  const webSockets=[]; client.on('Network.webSocketCreated',e=>webSockets.push(e.url)); await client.send('Network.enable')
+  const fill=/** 结构说明（自动提取）：fill；输入 selector、value；直接调用 evaluate、JSON.stringify、wait、audit.fill；等待异步结果。 */ async(selector,value)=>{await evaluate(`document.querySelector(${JSON.stringify(selector)}).scrollIntoView({block:'center',behavior:'instant'})`);await wait(60);await audit.fill(selector,value)}
+  const webSockets=[]; client.on('Network.webSocketCreated',/* 调用 webSockets.push(e.url) 并返回调用结果。 */ e=>webSockets.push(e.url)); await client.send('Network.enable')
   await until("document.querySelectorAll('[data-template-id]').length===40")
   const ids=await evaluate("[...document.querySelectorAll('[data-template-id]')].map(e=>e.dataset.templateId)")
-  await check('Localized requirements, controls/results, search reset, preview and real help navigation',async()=>{
+  await check('Localized requirements, controls/results, search reset, preview and real help navigation',/** 结构说明（自动提取）：check 回调；无显式参数；直接调用 audit.select、click、evaluate、assert.match、until 等；包含循环处理；等待异步结果。 */ async()=>{
     for(const locale of ['en','de','zh']){
       await audit.select('.manager-header select',locale)
       await click('[data-template-id="networked-optional"]')
@@ -52,8 +53,8 @@ await withBrowserAudit({release:'26.21',name:'template-library',root,development
   if(discoveryOnly)return
 
   assert.equal(new Set(ids).size,40)
-  for (const id of ids.filter(id=>!only||only.includes(id))) {
-    await check(`${id}: select visible launcher card, create, Play, rendered output, Console, Stop`,async()=>{
+  for (const id of ids.filter(/* 先计算 !only；仅当其为假值时求右侧 only.includes(id)，返回短路求值结果。 */ id=>!only||only.includes(id))) {
+    await check(`${id}: select visible launcher card, create, Play, rendered output, Console, Stop`,/** 结构说明（自动提取）：check 回调；无显式参数；直接调用 until、fill、click、assert.equal、evaluate 等；等待异步结果。 */ async()=>{
       await until("!!document.querySelector('.project-manager')")
       await fill('.creation-card header input',`Library ${id}`)
       await click(`[data-template-id="${id}"]`)
@@ -61,7 +62,7 @@ await withBrowserAudit({release:'26.21',name:'template-library',root,development
       const title=await evaluate(`document.querySelector('[data-template-id="${id}"] strong').textContent`)
       await until(`document.querySelector('[data-template-id="${id}"] img').naturalWidth>0`)
       const instructions=await evaluate("[...document.querySelectorAll('.template-instructions p')].map(e=>e.textContent)")
-      assert.equal(instructions.length,2);assert.ok(instructions.every(text=>text.length>10))
+      assert.equal(instructions.length,2);assert.ok(instructions.every(/* 比较 text.length 与 10，返回大于的判断结果。 */ text=>text.length>10))
       await click('.create-button'); await until("!!document.querySelector('.editor-root')&&!document.querySelector('.project-manager')",30000)
       await wait(320)
       if(await evaluate("!!document.querySelector('.onboarding-scrim')")){await clickText('button','Skip for now');await until("!document.querySelector('.onboarding-scrim')")}
@@ -73,7 +74,7 @@ await withBrowserAudit({release:'26.21',name:'template-library',root,development
       const errors=await evaluate("[...document.querySelectorAll('.console-panel .log-entry.error,.console-panel .log-entry.fatal')].map(e=>e.textContent)")
       const output=await evaluate("[...document.querySelectorAll('.console-panel .log-entry')].map(e=>e.textContent)")
       assert.deepEqual(errors,[],`${id} runtime Console errors`)
-      assert.ok(output.some(text=>/running/i.test(text)),`${id} must report actual running simulation`)
+      assert.ok(output.some(/* 调用 /running/i.test(text) 并返回调用结果。 */ text=>/running/i.test(text)),`${id} must report actual running simulation`)
       if(id==='networked-optional')assert.deepEqual(webSockets.slice(socketBefore),[],'Offline default must not open a hidden server connection')
       const clip=await evaluate("(()=>{const e=document.querySelector('.game-view .canvas-container'),r=e.getBoundingClientRect();return{x:r.x,y:r.y,width:r.width,height:r.height,scale:1}})()")
       assert.ok(clip.width>200&&clip.height>150,'Game output must have a usable visible area')
@@ -89,7 +90,7 @@ await withBrowserAudit({release:'26.21',name:'template-library',root,development
       observations.push({id,title,instructions,preview:`${id}.png`,capture:'Actual visible running Game viewport; no generated artwork or application-state injection',rendered,pixels,output,webSockets:webSockets.slice(socketBefore)})
       if(id==='top-down'||id==='tile-world'){
         await clickText('.workspace-list button','Design');await wait(250);await clickText('.entity-list .entity-item .name','Player')
-        const positions=()=>evaluate("[...document.querySelectorAll('[data-property-path=\"Transform.position\"] input')].map(e=>Number(e.value))")
+        const positions=/* 调用 evaluate("[...document.querySelectorAll('[data-property-path=\"Transform.position\"] input')].map(e=>Number(e.value))") 并返回调用结果。 */ ()=>evaluate("[...document.querySelectorAll('[data-property-path=\"Transform.position\"] input')].map(e=>Number(e.value))")
         await until("document.querySelectorAll('[data-property-path=\"Transform.position\"] input').length===2")
         await click('.actionbar .mode-label');const before=await positions();await audit.press('w',0,240);const up=await positions();assert.ok(up[1]>before[1]+.3,`${id}: W must move up`)
         await audit.press('s',0,240);const down=await positions();assert.ok(down[1]<up[1]-.3,`${id}: S must move down`)

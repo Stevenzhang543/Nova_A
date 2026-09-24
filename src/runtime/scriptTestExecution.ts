@@ -1,3 +1,4 @@
+/** 脚本测试执行桥接：组织脚本测试运行请求和结果回传。 */
 import type { ScriptTestMetadata } from '../editor/scriptLanguage'
 import type { ScriptTestResult } from './scriptDebug'
 
@@ -22,23 +23,23 @@ export interface ScriptSuiteOptions {
 }
 
 /** One compiled VM per suite, isolated case properties, and teardown/free on every failure path. */
-export function executeScriptTestSuite(options: ScriptSuiteOptions): ScriptTestResult[] {
-  const results: ScriptTestResult[] = [], now = options.now ?? (() => performance.now())
-  const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T
-  const message = (error: unknown) => error instanceof Error ? error.message : String(error)
+/** 使用独立虚拟机执行套件与逐例前后钩子，复制上下文、固定种子并记录超时和失败，最终释放虚拟机。 */ export function executeScriptTestSuite(options: ScriptSuiteOptions): ScriptTestResult[] {
+  const results: ScriptTestResult[] = [], now = options.now ?? (/* 调用 performance.now() 并返回调用结果。 */ () => performance.now())
+  const clone = /** 用 JSON 往返复制测试数据，隔离套件与每个用例的可变上下文。 */ <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T
+  const message = /* 根据 error instanceof Error 的真假，分别返回 error.message 或 String(error)。 */ (error: unknown) => error instanceof Error ? error.message : String(error)
   let vm: IsolatedTestVm | null = null, suiteError: string | null = null, initialized = false
   const suiteContext = clone(options.context), suiteStarted = now()
-  const recordSuiteFailure = (test: string, error: unknown) => results.push({ script: options.scriptName, test, passed: false, skipped: false, durationMs: now() - suiteStarted, seed: Number(suiteContext.randomSeed) || 1, caseName: '', tags: [], message: message(error) })
-  const invoke = (callback: string, context: Record<string, unknown>) => {
+  const recordSuiteFailure = /** 将初始化、套件清理等错误记录为独立失败结果并附带套件耗时。 */ (test: string, error: unknown) => results.push({ script: options.scriptName, test, passed: false, skipped: false, durationMs: now() - suiteStarted, seed: Number(suiteContext.randomSeed) || 1, caseName: '', tags: [], message: message(error) })
+  const invoke = /** 仅调用存在的测试回调，回写执行属性并通知观察者，发现错误日志时抛错。 */ (callback: string, context: Record<string, unknown>) => {
     if (!options.functions.has(callback)) return
     const execution = options.parseExecution(vm!.execute_cached_json(options.scriptUuid, callback, JSON.stringify(context)))
     context.properties = execution.properties
     options.onExecution?.(callback, execution)
-    const failure = execution.logs.find(log => log.level === 'error')
+    const failure = execution.logs.find(/* 比较 log.level 与 'error'，返回严格相等的判断结果。 */ log => log.level === 'error')
     if (failure) throw Error(`${callback}: ${failure.message}`)
   }
   try {
-    if (options.tests.some(test => !test.skipped || options.includeSkipped)) {
+    if (options.tests.some(/* 先计算 !test.skipped；仅当其为假值时求右侧 options.includeSkipped，返回短路求值结果。 */ test => !test.skipped || options.includeSkipped)) {
       vm = options.createVm(); vm.compile_cached(options.scriptUuid, options.source); initialized = true
       try { invoke('before_all', suiteContext) } catch (error) { suiteError = `before_all: ${message(error)}` }
     }

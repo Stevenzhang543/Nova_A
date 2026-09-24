@@ -1,3 +1,4 @@
+/** 内容摘要：计算资源字节的 SHA-256，以识别相同输入和验证导入产物。 */
 const INITIAL = new Uint32Array([0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19])
 const ROUND = new Uint32Array([
   0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
@@ -10,10 +11,10 @@ const ROUND = new Uint32Array([
   0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
 ])
 
-function rotateRight(value: number, count: number): number { return (value >>> count) | (value << (32 - count)) }
+/** 以位运算实现三十二位循环右移，供 SHA-256 消息扩展和压缩使用。 */ function rotateRight(value: number, count: number): number { return (value >>> count) | (value << (32 - count)) }
 
 /** Synchronous SHA-256 for editor-created in-memory assets and deterministic repair. */
-export function sha256Bytes(source: Uint8Array): string {
+/** 对源字节执行 SHA-256 填充、消息扩展与六十四轮压缩，返回六十四位十六进制摘要。 */ export function sha256Bytes(source: Uint8Array): string {
   const byteLength = source.byteLength
   const paddedLength = Math.ceil((byteLength + 9) / 64) * 64
   const bytes = new Uint8Array(paddedLength)
@@ -44,12 +45,12 @@ export function sha256Bytes(source: Uint8Array): string {
     hash[0] = (hash[0] + a) >>> 0; hash[1] = (hash[1] + b) >>> 0; hash[2] = (hash[2] + c) >>> 0; hash[3] = (hash[3] + d) >>> 0
     hash[4] = (hash[4] + e) >>> 0; hash[5] = (hash[5] + f) >>> 0; hash[6] = (hash[6] + g) >>> 0; hash[7] = (hash[7] + h) >>> 0
   }
-  return [...hash].map(value => value.toString(16).padStart(8, '0')).join('')
+  return [...hash].map(/* 调用 value.toString(16).padStart(8, '0') 并返回调用结果。 */ value => value.toString(16).padStart(8, '0')).join('')
 }
 
-export function sha256Text(source: string): string { return sha256Bytes(new TextEncoder().encode(source)) }
+/* 调用 sha256Bytes(new TextEncoder().encode(source)) 并返回调用结果。 */ export function sha256Text(source: string): string { return sha256Bytes(new TextEncoder().encode(source)) }
 
-export function assetSourceBytes(source: string): Uint8Array {
+/** 将文本或数据 URI 解码为真实源字节；URI 解码失败时保留原字符串的 UTF-8 字节。 */ export function assetSourceBytes(source: string): Uint8Array {
   const comma = source.indexOf(',')
   if (!source.startsWith('data:') || comma < 0) return new TextEncoder().encode(source)
   try {

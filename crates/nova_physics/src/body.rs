@@ -1,3 +1,4 @@
+// 刚体内部表示：形状支撑点、惯性、复合碰撞体、积分、冲量与休眠。
 #[derive(Clone, Debug)]
 enum Shape {
     Polygon { vertices: Vec<Vec2> },
@@ -18,6 +19,7 @@ struct ColliderChild {
 }
 
 impl Shape {
+    // 在给定世界方向求形状最远支撑点；椭圆使用解析解，多边形遍历顶点。
     fn support(&self, position: Vec2, angle: f64, direction: Vec2) -> Vec2 {
         let direction = direction.normalized_or(Vec2::new(1.0, 0.0));
         match self {
@@ -50,6 +52,7 @@ impl Shape {
         }
     }
 
+    // 计算椭圆或多边形面积，多边形使用有向边叉积的绝对值。
     fn area(&self) -> f64 {
         match self {
             Self::Ellipse { radius_x, radius_y } => std::f64::consts::PI * radius_x * radius_y,
@@ -63,6 +66,7 @@ impl Shape {
         }
     }
 
+    // 根据形状和质量计算转动惯量，并限制为最小正惯量。
     fn inertia(&self, mass: f64) -> f64 {
         match self {
             Self::Ellipse { radius_x, radius_y } => {
@@ -89,6 +93,7 @@ impl Shape {
         .max(MIN_INERTIA)
     }
 
+    // 提取用于连续碰撞步数估计的最小特征尺寸。
     fn characteristic_extent(&self) -> f64 {
         match self {
             Self::Ellipse { radius_x, radius_y } => radius_x.min(*radius_y),
@@ -104,6 +109,7 @@ impl Shape {
         .max(MIN_DIMENSION)
     }
 
+    // 计算轴对齐边界范围，供宽相筛选和查询使用。
     fn aabb(&self, position: Vec2, angle: f64) -> Aabb {
         match self {
             Self::Ellipse { radius_x, radius_y } => {
@@ -181,6 +187,7 @@ struct Body {
 }
 
 impl Body {
+    // 读取稳定扁平 ABI 中的刚体字段，清理非法值并构造形状、质量和运动状态。
     fn from_data(data: &[f64], data_index: usize) -> Self {
         // Shape codes are part of the stable editor/native ABI: 0 polygon/box,
         // 1 circle/ellipse, 2 capsule, and 3 finite segment.  Higher-level
@@ -238,7 +245,7 @@ impl Body {
                     finite_or(data[data_index + 34 + vertex_index * 2], 0.0),
                     finite_or(data[data_index + 35 + vertex_index * 2], 0.0),
                 );
-                if !vertices.iter().any(|existing: &Vec2| {
+                if !vertices.iter().any(/* 判断 existing . sub (vertex) . length_squared () <= EPSILON * EPSILON 是否成立，供过滤或有效性检查使用。 */ |existing: &Vec2| {
                     existing.sub(vertex).length_squared() <= EPSILON * EPSILON
                 }) {
                     vertices.push(vertex);
@@ -356,6 +363,7 @@ impl Body {
         }
     }
 
+    // 读取并规范复合碰撞体子形状，同时更新质量与惯性相关数据。
     fn apply_collider_children(&mut self, data: &[f64]) {
         self.collider_children.clear();
         for record in data.chunks_exact(COLLIDER_CHILD_STRIDE).take(128) {
@@ -388,7 +396,7 @@ impl Body {
                 let mut vertices = Vec::new();
                 for vertex_index in 0..4 {
                     let vertex = Vec2::new(finite_or(record[10 + vertex_index * 2], 0.0), finite_or(record[11 + vertex_index * 2], 0.0));
-                    if !vertices.iter().any(|existing: &Vec2| existing.sub(vertex).length_squared() <= EPSILON * EPSILON) { vertices.push(vertex); }
+                    if !vertices.iter().any(/* 判断 existing . sub (vertex) . length_squared () <= EPSILON * EPSILON 是否成立，供过滤或有效性检查使用。 */ |existing: &Vec2| existing.sub(vertex).length_squared() <= EPSILON * EPSILON) { vertices.push(vertex); }
                 }
                 let mut vertices = convex_hull(vertices);
                 if vertices.len() < 3 || (Shape::Polygon { vertices: vertices.clone() }).area() <= MIN_AREA {
@@ -411,11 +419,11 @@ impl Body {
         }
         if self.auto_inertia && !self.collider_children.is_empty() {
             let primary_area = if self.is_sensor { 0.0 } else { self.shape.area() };
-            let total_area = primary_area + self.collider_children.iter().filter(|child| !child.is_sensor).map(|child| child.shape.area()).sum::<f64>();
+            let total_area = primary_area + self.collider_children.iter().filter(/* 计算并返回 ! child . is_sensor，用于当前 apply_collider_children 流程。 */ |child| !child.is_sensor).map(/* 计算并返回 child . shape . area ()，用于当前 apply_collider_children 流程。 */ |child| child.shape.area()).sum::<f64>();
             if total_area > MIN_AREA {
                 let primary_mass = self.mass * primary_area / total_area;
                 let mut inertia = if primary_mass > 0.0 { self.shape.inertia(primary_mass) + primary_mass * self.collider_offset.length_squared() } else { 0.0 };
-                for child in self.collider_children.iter().filter(|child| !child.is_sensor) {
+                for child in self.collider_children.iter().filter(/* 计算并返回 ! child . is_sensor，用于当前 apply_collider_children 流程。 */ |child| !child.is_sensor) {
                     let child_mass = self.mass * child.shape.area() / total_area;
                     inertia += child.shape.inertia(child_mass) + child_mass * child.offset.length_squared();
                 }
@@ -425,10 +433,11 @@ impl Body {
         }
     }
 
+    // 构造某个子碰撞体的查询代理，保留所属刚体运动信息。
     fn collider_proxy(&self, child_index: Option<usize>) -> Self {
         let mut proxy = self.clone();
         proxy.collider_children.clear();
-        if let Some(child) = child_index.and_then(|index| self.collider_children.get(index)) {
+        if let Some(child) = child_index.and_then(/* 按 self . collider_children . get (index) 读取或转换可选值，保留转换失败分支。 */ |index| self.collider_children.get(index)) {
             proxy.shape = child.shape.clone();
             proxy.collider_offset = child.offset;
             proxy.collider_angle_offset = child.angle_offset;
@@ -441,10 +450,12 @@ impl Body {
         proxy
     }
 
+    // 返回选定子碰撞体的稳定标识；根形状使用默认标识。
     fn child_id(&self, child_index: Option<usize>) -> u32 {
-        child_index.and_then(|index| self.collider_children.get(index)).map_or(0, |child| child.id)
+        child_index.and_then(/* 按 self . collider_children . get (index) 读取或转换可选值，保留转换失败分支。 */ |index| self.collider_children.get(index)).map_or(0, /* 返回当前快照值 child . id。 */ |child| child.id)
     }
 
+    // 合并根形状及所有子形状的世界轴对齐边界。
     fn compound_aabb(&self) -> Aabb {
         let mut bounds = self.shape.aabb(self.collider_position(), self.collider_angle());
         for index in 0..self.collider_children.len() {
@@ -456,31 +467,37 @@ impl Body {
         bounds
     }
 
+    // 返回全部碰撞形状中最小的特征尺寸。
     fn minimum_collider_extent(&self) -> f64 {
-        self.collider_children.iter().fold(self.shape.characteristic_extent(), |extent, child| extent.min(child.shape.characteristic_extent()))
+        self.collider_children.iter().fold(self.shape.characteristic_extent(), /* 计算并返回 extent . min (child . shape . characteristic_extent ())，用于当前 minimum_collider_extent 流程。 */ |extent, child| extent.min(child.shape.characteristic_extent()))
     }
 
+    // 求相对刚体原点最远的碰撞形状半径，用于旋转连续碰撞。
     fn maximum_collider_radius(&self) -> f64 {
         let primary = self.collider_offset.length() + self.shape.aabb(Vec2::ZERO, 0.0).max_x.abs().max(self.shape.aabb(Vec2::ZERO, 0.0).max_y.abs());
-        self.collider_children.iter().fold(primary, |radius, child| {
+        self.collider_children.iter().fold(primary, /* 累计子形状相对原点的最远外包半径，计入子形状偏移。 */ |radius, child| {
             let bounds = child.shape.aabb(Vec2::ZERO, 0.0);
             radius.max(child.offset.length() + bounds.max_x.abs().max(bounds.min_x.abs()).max(bounds.max_y.abs()).max(bounds.min_y.abs()))
         }).max(MIN_DIMENSION)
     }
 
+    // 将局部碰撞偏移旋转后叠加到刚体世界位置。
     fn collider_position(&self) -> Vec2 {
         self.position.add(rotate(self.collider_offset, self.angle))
     }
 
+    // 合并刚体旋转与碰撞体局部角度偏移。
     fn collider_angle(&self) -> f64 {
         normalize_angle(self.angle + self.collider_angle_offset)
     }
 
+    // 根据层和碰撞掩码判断两个刚体是否允许接触。
     fn can_collide_with(&self, other: &Self) -> bool {
         (self.collision_mask & (1_u32 << other.layer)) != 0
             && (other.collision_mask & (1_u32 << self.layer)) != 0
     }
 
+    // 根据单向法线和相对位置判断是否接收该接触。
     fn accepts_one_way_contact(&self, other: &Self, normal_to_other: Vec2) -> bool {
         if !self.one_way {
             return true;
@@ -496,6 +513,7 @@ impl Body {
         normal_to_other.dot(allowed) >= 0.5 && on_blocking_side && approaching_or_resting
     }
 
+    // 按时间步积分力、重力、阻尼及角运动，同时遵守静态和休眠限制。
     fn integrate(&mut self, dt: f64, global_gravity: f64, air_friction: f64) {
         if self.is_static {
             return;
@@ -538,6 +556,7 @@ impl Body {
         self.angular_velocity = finite_or(self.angular_velocity, 0.0);
     }
 
+    // 计算刚体上偏移点的线速度，包含角速度贡献。
     fn point_velocity(&self, radius: Vec2) -> Vec2 {
         if self.is_static {
             Vec2::ZERO
@@ -549,6 +568,7 @@ impl Body {
         }
     }
 
+    // 把冲量转换为线速度和角速度变化，并遵守刚体运动约束。
     fn apply_impulse(&mut self, impulse: Vec2, radius: Vec2) {
         if self.inv_mass <= 0.0 {
             return;
@@ -561,6 +581,7 @@ impl Body {
         }
     }
 
+    // 依据速度阈值和持续时间更新休眠状态。
     fn update_sleep_state(
         &mut self,
         dt: f64,

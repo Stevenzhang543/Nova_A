@@ -1,3 +1,4 @@
+/** 渲染设置界面的多语言字段、选项和提示。 */
 export const renderSettingsCopy = {
   en: {
     uploads: 'GPU uploads this frame', queue: 'Queued textures', queueBytes: 'Queued source pixels', deferred: 'Deferred requests this frame',

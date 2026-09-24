@@ -1,3 +1,4 @@
+/** 资源工作流文案：提供纹理诊断和资源操作界面的多语言提示。 */
 import { preferencesState } from '../store/preferences'
 const en = {
   metadataHint: 'Inspect source settings, dependency ownership and import diagnostics here.', resourceObject: 'Resource overrides must be a JSON object.', uniqueVariant: 'Choose a new variant name using 1–80 letters, numbers, dots, underscores or hyphens.', saveBeforeOverride: 'Save this resource before creating an inherited override.',
@@ -53,8 +54,8 @@ const zh: Record<keyof typeof en, string> = {
   browse: '浏览', previewDetails: '预览与详情', progress: '批量导入进度', cancel: '取消批次',
   completed: '已完成', failed: '失败', cancelled: '已取消', sourceFrames: '来源帧',
 }
-export function assetWorkflowCopy(key: keyof typeof en): string { return ({ en, de, zh }[preferencesState.locale] ?? en)[key] }
-export function textureProblemCopy(diagnostic: string): string {
+/* 返回 ({ en, de, zh }[preferencesState.locale] ?? en)[key] 的当前值。 */ export function assetWorkflowCopy(key: keyof typeof en): string { return ({ en, de, zh }[preferencesState.locale] ?? en)[key] }
+/** 按纹理诊断前缀选择内存、解码、边界或缺失资源的本地化说明，其余使用不可用提示。 */ export function textureProblemCopy(diagnostic: string): string {
   if (!diagnostic) return ''
   if (diagnostic.startsWith('TEXTURE_MEMORY_BUDGET')) return assetWorkflowCopy('memory')
   if (diagnostic.startsWith('TEXTURE_DECODE_FAILED')) return assetWorkflowCopy('decode')

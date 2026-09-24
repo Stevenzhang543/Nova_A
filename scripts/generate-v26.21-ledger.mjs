@@ -1,3 +1,4 @@
+/** 版本26.21：汇总文件修改记录，生成逐路径编辑说明文档。 */
 import {execFileSync} from 'node:child_process'
 import {readFileSync,writeFileSync} from 'node:fs'
 import assert from 'node:assert/strict'

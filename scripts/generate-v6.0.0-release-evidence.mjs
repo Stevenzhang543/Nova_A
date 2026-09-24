@@ -1,3 +1,4 @@
+/** 版本6.0.0：汇集发布报告与产物文件，生成带来源记录的发布证据。 */
 import { cp, mkdir, readFile, stat, writeFile } from 'node:fs/promises'
 import { createHash } from 'node:crypto'
 import { execFileSync } from 'node:child_process'
@@ -6,11 +7,11 @@ import { fileURLToPath } from 'node:url'
 import { arch, platform, versions } from 'node:process'
 
 const root = dirname(dirname(fileURLToPath(import.meta.url))), audits = join(root, 'release-audits'), evidence = join(audits, 'evidence-v6.0.0'), generatedAt = new Date().toISOString()
-const readJson = async name => JSON.parse(await readFile(join(audits, name), 'utf8'))
-const sha256 = value => createHash('sha256').update(value).digest('hex')
-const writeJson = (path, value) => writeFile(path, `${JSON.stringify(value, null, 2)}\n`)
-const exists = async path => { try { await stat(path); return true } catch { return false } }
-async function filesUnder(directory) { const { readdir } = await import('node:fs/promises'); const output = []; for (const entry of await readdir(directory, { withFileTypes: true })) { const path = join(directory, entry.name); entry.isDirectory() ? output.push(...await filesUnder(path)) : output.push(path) } return output }
+const readJson = /* 调用 JSON.parse(await readFile(join(audits, name), 'utf8')) 并返回调用结果。 */ async name => JSON.parse(await readFile(join(audits, name), 'utf8'))
+const sha256 = /* 调用 createHash('sha256').update(value).digest('hex') 并返回调用结果。 */ value => createHash('sha256').update(value).digest('hex')
+const writeJson = /* 调用 writeFile(path, `${JSON.stringify(value, null, 2)}\n`) 并返回调用结果。 */ (path, value) => writeFile(path, `${JSON.stringify(value, null, 2)}\n`)
+const exists = /** 检查路径是否可读取文件状态，失败返回否。 */ async path => { try { await stat(path); return true } catch { return false } }
+/** 动态加载目录接口并递归枚举文件。 */ async function filesUnder(directory) { const { readdir } = await import('node:fs/promises'); const output = []; for (const entry of await readdir(directory, { withFileTypes: true })) { const path = join(directory, entry.name); entry.isDirectory() ? output.push(...await filesUnder(path)) : output.push(path) } return output }
 
 const [product, verification, layout] = await Promise.all(['v6.0.0-product-audit.json', 'v6.0.0-creator-verification.json', 'v6.0.0-layout-browser.json'].map(readJson))
 await mkdir(join(evidence, 'runtime'), { recursive: true }); await mkdir(join(evidence, 'build'), { recursive: true }); await mkdir(join(evidence, 'external'), { recursive: true }); await mkdir(join(evidence, 'manual'), { recursive: true })
@@ -23,17 +24,17 @@ await writeFile(join(audits, 'v6.0.0-release-notes.md'), notes); await writeFile
 
 const candidates = [['web-dist', 'dist/index.html'], ['windows-portable', 'src-tauri/target/release/nova_a.exe'], ['windows-nsis', 'src-tauri/target/release/bundle/nsis/Nova_A_6.0.0_x64-setup.exe'], ['windows-msi', 'src-tauri/target/release/bundle/msi/Nova_A_6.0.0_x64_en-US.msi']], builds = []
 for (const [name, path] of candidates) { const absolute = join(root, path); if (await exists(absolute)) { const bytes = await readFile(absolute); builds.push({ name, path, bytes: bytes.length, sha256: sha256(bytes), status: 'passed' }) } else builds.push({ name, path, status: 'missing' }) }
-const buildsPassed = builds.every(item => item.status === 'passed')
+const buildsPassed = builds.every(/* 比较 item.status 与 'passed'，返回严格相等的判断结果。 */ item => item.status === 'passed')
 await writeJson(join(evidence, 'build/local-builds.json'), { format: 'nova-local-build-evidence', version: 1, engineVersion: '6.0.0', generatedAt, artifacts: builds, status: buildsPassed ? 'passed' : 'incomplete' })
-const perfCheck = verification.checks.find(item => item.id === 'V600-PERFORMANCE')
+const perfCheck = verification.checks.find(/* 比较 item.id 与 'V600-PERFORMANCE'，返回严格相等的判断结果。 */ item => item.id === 'V600-PERFORMANCE')
 await writeJson(join(audits, 'v6.0.0-benchmarks.json'), { format: 'nova-v6.0.0-benchmark-summary', version: 1, engineVersion: '6.0.0', generatedAt, scope: 'Local deterministic regression qualification; not an independent hardware claim.', hierarchyObjects: 10_000, assets: 50_000, graphNodes: 1_000, qualification: perfCheck?.metrics?.profiles ?? [], layoutStates: layout.matrix?.length ?? 0, localBuilds: buildsPassed ? 'passed' : 'incomplete', independentHardware: 'pending-external', status: buildsPassed ? 'passed' : 'incomplete' })
 await writeJson(join(audits, 'v6.0.0-stability-smoke.json'), { format: 'nova-v6.0.0-stability-summary', version: 1, engineVersion: '6.0.0', generatedAt, typeCheck: 'passed', rustWorkspaceTests: 'passed', contractMigration: 'passed', lifecycleProjects: 12, layoutMatrix: 'passed', localBuilds: buildsPassed ? 'passed' : 'incomplete', wallClock72HourSoakComplete: false, twoMachineReproductionComplete: false, independentCleanLifecycleComplete: false, status: buildsPassed ? 'passed' : 'incomplete' })
 await writeJson(join(audits, 'v6.0.0-native-startup-smoke.json'), { format: 'nova-native-startup-smoke', version: 1, engineVersion: '6.0.0', generatedAt, executable: 'src-tauri/target/release/nova_a.exe', observationSeconds: 8, unexpectedExit: false, status: 'passed', scope: 'Local hidden launch only; independent clean-machine lifecycle remains pending-external.' })
 await cp(join(audits, 'v6.0.0-native-startup-smoke.json'), join(evidence, 'runtime/native-startup-smoke.json'))
-await writeJson(join(evidence, 'external/gates.json'), { format: 'nova-external-certification-gates', version: 1, release: '6.0.0', generatedAt, gates: ['publisher identity and Windows artifact signing', 'independent clean-machine install/launch/upgrade/repair/uninstall', 'second-machine byte-reproducibility', 'matching-host Linux and macOS build/runtime', 'independent Chromium/Firefox/WebKit browser and hardware matrix', 'independent screen-reader and RTL/high-DPI review', 'real 72-hour editor/player/plugin/network soak'].map(name => ({ name, status: 'pending-external', claimed: false })) })
+await writeJson(join(evidence, 'external/gates.json'), { format: 'nova-external-certification-gates', version: 1, release: '6.0.0', generatedAt, gates: ['publisher identity and Windows artifact signing', 'independent clean-machine install/launch/upgrade/repair/uninstall', 'second-machine byte-reproducibility', 'matching-host Linux and macOS build/runtime', 'independent Chromium/Firefox/WebKit browser and hardware matrix', 'independent screen-reader and RTL/high-DPI review', 'real 72-hour editor/player/plugin/network soak'].map(/** 为指定外部资格生成待外部验证且不声称通过的条目。 */ name => ({ name, status: 'pending-external', claimed: false })) })
 
 let commit = 'unavailable'; try { commit = execFileSync('git', ['-C', root, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim() } catch { /* Source identity stays explicit. */ }
 const environment = { id: `${platform}-${arch}-node${versions.node}`, os: platform, architecture: arch, node: versions.node }
-const entries = await Promise.all((await filesUnder(evidence)).sort().filter(path => !path.endsWith('evidence-manifest.json')).map(async path => { const contents = await readFile(path); return { path: relative(evidence, path).replaceAll('\\', '/'), sha256: sha256(contents), bytes: contents.length, source: commit, tool: 'generate-v6.0.0-release-evidence.mjs', environment: environment.id } }))
+const entries = await Promise.all((await filesUnder(evidence)).sort().filter(/* 返回 path.endsWith('evidence-manifest.json') 的逻辑取反结果。 */ path => !path.endsWith('evidence-manifest.json')).map(/** 读取证据文件并记录长度、散列和工具环境。 */ async path => { const contents = await readFile(path); return { path: relative(evidence, path).replaceAll('\\', '/'), sha256: sha256(contents), bytes: contents.length, source: commit, tool: 'generate-v6.0.0-release-evidence.mjs', environment: environment.id } }))
 await writeJson(join(evidence, 'evidence-manifest.json'), { format: 'nova-release-evidence-manifest', version: 1, release: '6.0.0', generatedAt, source: { commit, dirty: true, note: 'Current working candidate; tagged-source verification remains pending.' }, environment, localQualificationComplete: product.status === 'passed' && verification.status === 'passed' && layout.status === 'passed' && buildsPassed, externalCertificationComplete: false, entries })
 console.log(`Nova_A v6.0 evidence generated with ${entries.length} hashed entries; external certification remains pending.`)

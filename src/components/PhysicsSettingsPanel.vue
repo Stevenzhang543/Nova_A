@@ -1,3 +1,4 @@
+<!-- 物理项目设置：配置世界求解、单位、边界及材料。 -->
 <template>
   <section class="physics-workspace" @focusin="form17.focus" @change="form17.change">
     <header class="physics-heading">
@@ -107,35 +108,35 @@ const layerSearch = ref('')
 const pairA = ref(0)
 const pairB = ref(0)
 const preset = ref('')
-const layerIds = Array.from({ length: 32 }, (_, index) => index)
+const layerIds = Array.from({ length: 32 }, /* 返回 index 的当前值。 */ (_, index) => index)
 const combineModes: PhysicsCombineMode[] = ['Average', 'Minimum', 'Maximum', 'Multiply']
 const selectedMaterial = ref('')
 const draft = ref<PhysicsMaterialAsset2D | null>(null)
-const materialAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'material' && parseMaterial(asset.uuid)))
-const visibleLayers = computed(() => { const needle = layerSearch.value.trim().toLocaleLowerCase(); return physics.globalSettings.layers.filter(layer => !needle || `${layer.name} ${layer.description}`.toLocaleLowerCase().includes(needle)) })
+const materialAssets = computed(/* 调用 assetState.records.filter(asset => asset.assetType === 'material' && parseMaterial(asset.uuid)) 并返回调用结果。 */ () => assetState.records.filter(/* 先计算 asset.assetType === 'material'；仅当其为真值时求右侧 parseMaterial(asset.uuid)，返回短路求值结果。 */ asset => asset.assetType === 'material' && parseMaterial(asset.uuid)))
+const visibleLayers = computed(/** 按规范化搜索词过滤物理图层名称和说明。 */ () => { const needle = layerSearch.value.trim().toLocaleLowerCase(); return physics.globalSettings.layers.filter(/* 先计算 !needle；仅当其为假值时求右侧 `${layer.name} ${layer.description}`.toLocaleLowerCase().includes(needle)，返回短路求值结果。 */ layer => !needle || `${layer.name} ${layer.description}`.toLocaleLowerCase().includes(needle)) })
 
-function layerBit(layer: number) { return (2 ** layer) >>> 0 }
-function layerLabel(layer: number) { return physics.globalSettings.layers[layer]?.name ?? `Layer ${layer + 1}` }
-function layersCollide(first: number, second: number) { return (physics.globalSettings.collisionMatrix[first] & layerBit(second)) !== 0 && (physics.globalSettings.collisionMatrix[second] & layerBit(first)) !== 0 }
-function toggleLayerCollision(first: number, second: number) { const enabled = !layersCollide(first, second); const firstBit = layerBit(second), secondBit = layerBit(first); physics.globalSettings.collisionMatrix[first] = enabled ? (physics.globalSettings.collisionMatrix[first] | firstBit) >>> 0 : (physics.globalSettings.collisionMatrix[first] & ~firstBit) >>> 0; physics.globalSettings.collisionMatrix[second] = enabled ? (physics.globalSettings.collisionMatrix[second] | secondBit) >>> 0 : (physics.globalSettings.collisionMatrix[second] & ~secondBit) >>> 0; pushHistory('Edit collision pair') }
-function syncProfile() { physics.globalSettings.tickRate = physics.globalSettings.profile.tickRate; physics.globalSettings.maxCatchUpSteps = physics.globalSettings.profile.maxCatchUpSteps; physics.globalSettings.interpolation = physics.globalSettings.profile.interpolation }
-function commit() { syncProfile(); normalizeGlobalSettings(); pushHistory('Edit physics settings') }
-function applyQualityProfile() { const id = physics.globalSettings.profile.id; if (id !== 'Custom') physics.globalSettings.profile = applyPhysicsProfile(id); syncProfile(); commit() }
-function openPhysicsDebugger() { openEditorTool('profiler') }
-function openTestRunner() { openEditorTool('profiler') }
+/** 把图层编号转换为无符号三十二位掩码位。 */ function layerBit(layer: number) { return (2 ** layer) >>> 0 }
+/* 当 physics.globalSettings.layers[layer]?.name 为 null 或 undefined 时返回 `Layer ${layer + 1}`，否则保留左侧值。 */ function layerLabel(layer: number) { return physics.globalSettings.layers[layer]?.name ?? `Layer ${layer + 1}` }
+/** 仅当碰撞矩阵双方都允许时认为图层对可碰撞。 */ function layersCollide(first: number, second: number) { return (physics.globalSettings.collisionMatrix[first] & layerBit(second)) !== 0 && (physics.globalSettings.collisionMatrix[second] & layerBit(first)) !== 0 }
+/** 对称切换两个图层的碰撞位并记录历史。 */ function toggleLayerCollision(first: number, second: number) { const enabled = !layersCollide(first, second); const firstBit = layerBit(second), secondBit = layerBit(first); physics.globalSettings.collisionMatrix[first] = enabled ? (physics.globalSettings.collisionMatrix[first] | firstBit) >>> 0 : (physics.globalSettings.collisionMatrix[first] & ~firstBit) >>> 0; physics.globalSettings.collisionMatrix[second] = enabled ? (physics.globalSettings.collisionMatrix[second] | secondBit) >>> 0 : (physics.globalSettings.collisionMatrix[second] & ~secondBit) >>> 0; pushHistory('Edit collision pair') }
+/** 将当前质量配置中的 tick、补步上限和插值同步至全局设置。 */ function syncProfile() { physics.globalSettings.tickRate = physics.globalSettings.profile.tickRate; physics.globalSettings.maxCatchUpSteps = physics.globalSettings.profile.maxCatchUpSteps; physics.globalSettings.interpolation = physics.globalSettings.profile.interpolation }
+/** 同步配置并归一化全局物理设置，然后记录历史。 */ function commit() { syncProfile(); normalizeGlobalSettings(); pushHistory('Edit physics settings') }
+/** 选择非自定义质量档时应用预设，再同步并提交。 */ function applyQualityProfile() { const id = physics.globalSettings.profile.id; if (id !== 'Custom') physics.globalSettings.profile = applyPhysicsProfile(id); syncProfile(); commit() }
+/** 打开性能分析工具作为物理调试入口。 */ function openPhysicsDebugger() { openEditorTool('profiler') }
+/** 打开性能分析工具中的测试入口。 */ function openTestRunner() { openEditorTool('profiler') }
 
-function applyLayerPreset() {
+/** 按平台、俯视或其他预设命名图层，并重建预设范围内互通的碰撞矩阵及历史。 */ function applyLayerPreset() {
   const names = preset.value === 'platformer' ? ['World', 'Player', 'Enemy', 'Pickup', 'Trigger', 'Projectile'] : preset.value === 'topdown' ? ['World', 'Player', 'Enemy', 'Interactable', 'Trigger', 'Projectile'] : ['World', 'Pieces', 'Goals', 'Trigger', 'Decoration']
-  names.forEach((name, id) => { const layer = physics.globalSettings.layers[id]; if (layer) { layer.name = name; layer.description = `${preset.value} preset · ${name}` } })
-  physics.globalSettings.collisionMatrix = layerIds.map(row => layerIds.reduce((mask, column) => row < names.length && column < names.length ? (mask | layerBit(column)) >>> 0 : mask, 0))
+  names.forEach(/** 给存在的图层写入预设名称与说明。 */ (name, id) => { const layer = physics.globalSettings.layers[id]; if (layer) { layer.name = name; layer.description = `${preset.value} preset · ${name}` } })
+  physics.globalSettings.collisionMatrix = layerIds.map(/** 为单行计算预设已使用图层的碰撞位掩码。 */ row => layerIds.reduce(/* 根据 row < names.length && column < names.length 的真假，分别返回 (mask | layerBit(column)) >>> 0 或 mask。 */ (mask, column) => row < names.length && column < names.length ? (mask | layerBit(column)) >>> 0 : mask, 0))
   pushHistory('Apply physics layer preset')
 }
 
-function parseMaterial(uuid: string): PhysicsMaterialAsset2D | null { const source = readTextAsset(uuid); if (!source) return null; try { const parsed = JSON.parse(source) as Record<string, unknown>; return parsed.format === 'nova-physics-material' ? normalizePhysicsMaterial(parsed) : null } catch { return null } }
-function materialName(uuid: string) { return parseMaterial(uuid)?.name ?? t('physicsMaterial') }
-function selectMaterial(uuid: string) { selectedMaterial.value = uuid; draft.value = parseMaterial(uuid) }
-function newMaterial() { const material = defaultPhysicsMaterial(`Physics Material ${materialAssets.value.length + 1}`); const asset = createTextAsset(material.name, 'material', JSON.stringify(material, null, 2), 'Assets/Materials/Physics'); selectMaterial(asset.uuid); pushHistory('Create physics material') }
-function saveMaterial() { if (!draft.value || !selectedMaterial.value) return; draft.value = normalizePhysicsMaterial(draft.value); updateTextAsset(selectedMaterial.value, JSON.stringify(draft.value, null, 2)); pushHistory('Save physics material') }
+/** 读取并解析物理材料，仅接受对应格式，解析失败返回空值。 */ function parseMaterial(uuid: string): PhysicsMaterialAsset2D | null { const source = readTextAsset(uuid); if (!source) return null; try { const parsed = JSON.parse(source) as Record<string, unknown>; return parsed.format === 'nova-physics-material' ? normalizePhysicsMaterial(parsed) : null } catch { return null } }
+/* 当 parseMaterial(uuid)?.name 为 null 或 undefined 时返回 t('physicsMaterial')，否则保留左侧值。 */ function materialName(uuid: string) { return parseMaterial(uuid)?.name ?? t('physicsMaterial') }
+/** 选中材料资源并载入其编辑草稿。 */ function selectMaterial(uuid: string) { selectedMaterial.value = uuid; draft.value = parseMaterial(uuid) }
+/** 创建默认命名物理材料资源，选中它并记录创建历史。 */ function newMaterial() { const material = defaultPhysicsMaterial(`Physics Material ${materialAssets.value.length + 1}`); const asset = createTextAsset(material.name, 'material', JSON.stringify(material, null, 2), 'Assets/Materials/Physics'); selectMaterial(asset.uuid); pushHistory('Create physics material') }
+/** 存在草稿与选择时归一化材料并保存源内容，记录保存历史。 */ function saveMaterial() { if (!draft.value || !selectedMaterial.value) return; draft.value = normalizePhysicsMaterial(draft.value); updateTextAsset(selectedMaterial.value, JSON.stringify(draft.value, null, 2)); pushHistory('Save physics material') }
 </script>
 
 <style scoped>

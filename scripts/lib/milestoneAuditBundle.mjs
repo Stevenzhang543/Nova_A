@@ -1,23 +1,26 @@
+/** 版本审核证据汇总：运行真实命令，核对报告新鲜度，并将截图和下载文件连同摘要收入独立证据包。 */
 import { spawn } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { readFile, mkdir, writeFile } from 'node:fs/promises'
 import { join, relative, resolve, isAbsolute } from 'node:path'
 import assert from 'node:assert/strict'
 
+/** 使用当前 Node 顺序执行审核脚本并继承输出；启动或退出失败立即拒绝，成功记录实际开始和结束时间。 */
 export async function runAudit(root, script, args = []) {
   const startedAt = Date.now()
-  await new Promise((done, reject) => {
+  await new Promise(/** 监听真实子进程结果；仅退出码为零时完成本次审核。 */ (done, reject) => {
     const child = spawn(process.execPath, [join(root, script), ...args], { cwd: root, stdio: 'inherit', windowsHide: true })
-    child.on('error', reject); child.on('exit', code => code === 0 ? done() : reject(Error(`${script} exited ${code}`)))
+    child.on('error', reject); child.on('exit', /* 根据 code === 0 的真假，分别返回 done() 或 reject(Error(`${script} exited ${code}`))。 */ code => code === 0 ? done() : reject(Error(`${script} exited ${code}`)))
   })
   return { script, args, startedAt, completedAt: Date.now() }
 }
 
-/** Preserve fresh raw reports and their actual screenshots/downloads inside a hash-bound gate report. */
+/** 核对报告通过状态和本次执行时间，保留原始报告内容；只汇总已有证据，不把局部通过提升为正式发布资格。 */
 export async function writeAuditBundle(root, release, kind, executions) {
   const engineVersion = JSON.parse(await readFile(join(root, 'package.json'), 'utf8')).version
   assert.equal(engineVersion, `${release}.0`)
   const reports = [], attachments = new Map(); let total = 0
+  /** 附件须位于审核目录且格式获准；按相对路径去重，限制单件及总大小，再编码实际字节与 SHA-256。 */
   async function attach(path) {
     const absolute = resolve(root, path), local = relative(join(root, 'release-audits'), absolute).replaceAll('\\', '/')
     assert.ok(local && !isAbsolute(local) && !local.startsWith('..') && !local.includes('/../'), 'Audit attachment stays inside release-audits')

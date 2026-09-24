@@ -1,3 +1,4 @@
+/** 功能回归脚本：执行 verify-v4.5.mjs 对应场景，保留断言和证据输出。 */
 import { mkdir, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -5,14 +6,14 @@ import { createServer } from 'vite'
 
 const root=dirname(dirname(fileURLToPath(import.meta.url))),output=join(root,'release-audits'),generatedAt=new Date().toISOString()
 globalThis.navigator??={hardwareConcurrency:4,userAgent:'Nova_A v4.5 verification Windows Chromium'}
-globalThis.window??={setTimeout,clearTimeout,setInterval,clearInterval,addEventListener(){},removeEventListener(){}}
-globalThis.localStorage??={getItem(){return null},setItem(){},removeItem(){}}
+globalThis.window??={setTimeout,clearTimeout,setInterval,clearInterval,/** 提供不注册监听器的测试事件接口。 */ addEventListener(){},/** 提供无需移除监听器的测试事件接口。 */ removeEventListener(){}}
+globalThis.localStorage??={/* 返回固定值 null。 */ getItem(){return null},/** 隔离存储桩忽略写入，不持久化生成过程数据。 */ setItem(){},/** 隔离存储桩忽略删除请求。 */ removeItem(){}}
 await mkdir(output,{recursive:true})
-const server=await createServer({root,appType:'custom',logLevel:'silent',server:{middlewareMode:true}}),checks=[],check=(id,passed,detail,metrics={})=>checks.push({id,status:passed?'passed':'failed',detail,metrics})
+const server=await createServer({root,appType:'custom',logLevel:'silent',server:{middlewareMode:true}}),checks=[],check=/* 调用 checks.push({id,status:passed?'passed':'failed',detail,metrics}) 并返回调用结果。 */ (id,passed,detail,metrics={})=>checks.push({id,status:passed?'passed':'failed',detail,metrics})
 try {
   const physics=await server.ssrLoadModule('/src/runtime/physicsProduction.ts')
   const tolerance=physics.PHYSICS_ANALYTICAL_TOLERANCES, analytical=[]
-  const compare=(id,expected,actual,tol)=>{const result=physics.comparePhysicsValue(id,expected,actual,tol);analytical.push(result);check(`PHY-AN-${id}`,result.passed,`${id}: expected ${expected}, actual ${actual}.`,result)}
+  const compare=/** 结构说明（自动提取）：compare；输入 id、expected、actual、tol；直接调用 physics.comparePhysicsValue、analytical.push、check。 */ (id,expected,actual,tol)=>{const result=physics.comparePhysicsValue(id,expected,actual,tol);analytical.push(result);check(`PHY-AN-${id}`,result.passed,`${id}: expected ${expected}, actual ${actual}.`,result)}
   const dt=1/60,steps=600,g=9.80665,gravityExpected=g*dt*dt*steps*(steps+1)/2
   compare('gravity',gravityExpected,physics.analyticalGravityPosition(0,0,g,dt,steps),tolerance.gravity)
   compare('velocity',12*Math.exp(-.35*3.5),physics.analyticalDampedVelocity(12,.35,3.5),tolerance.velocity)
@@ -23,18 +24,18 @@ try {
   compare('rope-strain',.25,physics.ropeStrain(4,5),tolerance.rope)
   compare('spring-force',-25,physics.springForce(20,2,3,.5,10),tolerance.joint)
   const eventInput=[{type:'collisionEnded',first:2,second:1},{type:'collisionStarted',first:2,second:1},{type:'collisionStayed',first:1,second:2},{type:'triggerEntered',first:9,second:3}],eventOrder=physics.stablePhysicsEventOrder(eventInput)
-  check('PHY-EVENT-ORDER',eventOrder.map(item=>item.type).join(',')==='collisionStarted,collisionStayed,collisionEnded,triggerEntered','Pair ordering and enter/stay/exit phase ordering are stable.',{order:eventOrder.map(item=>item.type)})
+  check('PHY-EVENT-ORDER',eventOrder.map(/* 返回 item.type 的当前值。 */ item=>item.type).join(',')==='collisionStarted,collisionStayed,collisionEnded,triggerEntered','Pair ordering and enter/stay/exit phase ordering are stable.',{order:eventOrder.map(/* 返回 item.type 的当前值。 */ item=>item.type)})
   const normalized=physics.normalizePhysicsProfile({id:'Custom',tickRate:Infinity,maxCatchUpSteps:-50,minimumSubsteps:500,velocityIterations:0,positionIterations:NaN,sleepLinearThreshold:-1,physicsBudgetMs:9999})
   check('PHY-EDGE-NUMBERS',normalized.tickRate===60&&normalized.maxCatchUpSteps===1&&normalized.minimumSubsteps===128&&normalized.velocityIterations===1&&normalized.positionIterations===16&&normalized.sleepLinearThreshold===0&&normalized.physicsBudgetMs===1000,'Non-finite and out-of-range profile values normalize to documented safe bounds.',normalized)
   check('PHY-PROFILES',physics.PHYSICS_PROFILE_LIBRARY.Accurate.tickRate===120&&physics.PHYSICS_PROFILE_LIBRARY.Balanced.minimumSubsteps===8&&physics.PHYSICS_PROFILE_LIBRARY.Fast.droppedTimePolicy==='SlowMotion','Accurate, Balanced, and Fast profiles retain documented settings.')
-  check('PHY-QUERY-CATALOG',['ray','point','shape','overlap','sweep','nearest','contact'].every(id=>physics.PHYSICS_QUERY_CATALOG.some(item=>item.id===id&&item.stability==='stable')),'Every documented stable query is cataloged.')
-  check('PHY-SHAPE-CATALOG',['Box','Circle','Capsule','Segment','Chain','WorldBoundary','ConvexPolygon','ConcavePolygon'].every(id=>physics.PHYSICS_SHAPE_SUPPORT[id]),'All stable authoring shapes declare solver support rather than silently substituting.')
+  check('PHY-QUERY-CATALOG',['ray','point','shape','overlap','sweep','nearest','contact'].every(/* 调用 physics.PHYSICS_QUERY_CATALOG.some(item=>item.id===id&&item.stability==='stable') 并返回调用结果。 */ id=>physics.PHYSICS_QUERY_CATALOG.some(/* 先计算 item.id===id；仅当其为真值时求右侧 item.stability==='stable'，返回短路求值结果。 */ item=>item.id===id&&item.stability==='stable')),'Every documented stable query is cataloged.')
+  check('PHY-SHAPE-CATALOG',['Box','Circle','Capsule','Segment','Chain','WorldBoundary','ConvexPolygon','ConcavePolygon'].every(/* 返回 physics.PHYSICS_SHAPE_SUPPORT[id] 的当前值。 */ id=>physics.PHYSICS_SHAPE_SUPPORT[id]),'All stable authoring shapes declare solver support rather than silently substituting.')
   const profileRoundTrip=physics.normalizePhysicsProfile(JSON.parse(JSON.stringify({...physics.PHYSICS_PROFILE_LIBRARY.Accurate})))
   check('PHY-PROFILE-ROUNDTRIP',JSON.stringify(profileRoundTrip)===JSON.stringify(physics.PHYSICS_PROFILE_LIBRARY.Accurate),'Physics profile JSON round-trip is deterministic.')
   const characterFixtures=[
     {id:'slope-30',slopeDegrees:30,maxSlope:45,onFloor:true},{id:'slope-60',slopeDegrees:60,maxSlope:45,onFloor:false},{id:'step-supported',height:.3,stepHeight:.35,climbs:true},{id:'step-rejected',height:.5,stepHeight:.35,climbs:false},{id:'floor-snap',gap:.1,floorSnap:.15,snaps:true},{id:'ceiling',normal:{x:0,y:-1},onCeiling:true},{id:'moving-platform',platformVelocity:{x:2,y:0},transfer:true},{id:'fixed-rate',desiredVelocity:6,distanceAt60:6,distanceAt120:6}
   ]
-  check('PHY-CHARACTER-FIXTURES',characterFixtures.every(item=>item.id),'Slope, step, snap, ceiling, platform, and fixed-rate fixtures are explicit.',{count:characterFixtures.length})
+  check('PHY-CHARACTER-FIXTURES',characterFixtures.every(/* 返回 item.id 的当前值。 */ item=>item.id),'Slope, step, snap, ceiling, platform, and fixed-rate fixtures are explicit.',{count:characterFixtures.length})
   const ropeJoint=[{id:'distance',restLength:3,tolerance:tolerance.joint},{id:'revolute',anchorDrift:0,tolerance:tolerance.joint},{id:'prismatic',lower:-2,upper:2},{id:'weld',relativeAngle:0},{id:'spring',force:-25},{id:'motor',targetSpeed:2},{id:'rope',segments:12,strain:.25,breakLink:6}]
   check('PHY-JOINT-ROPE-FIXTURES',ropeJoint.length===7&&ropeJoint.at(-1).segments>=3,'All stable joint families and segmented Rope2D have evidence fixtures.',{count:ropeJoint.length})
   const stressStart=performance.now();let stressChecksum=0,peakEnergy=0
@@ -46,7 +47,7 @@ try {
   const soakMs=performance.now()-soakStart,soak={format:'nova-v4.5-physics-soak',version:1,generatedAt,simulatedSteps:soakSteps,simulatedSeconds:soakSteps/60,equivalentHours:soakSteps/60/3600,wallClockSeconds:soakMs/1000,wallClock24Hours:false,maximumEnergy,finalPosition:position,finalVelocity:velocity,status:Number.isFinite(position+velocity+maximumEnergy)?'passed-accelerated':'failed',externalGate:'real wall-clock 24-hour qualified-player soak pending'}
   check('PHY-ACCELERATED-SOAK',soak.status==='passed-accelerated'&&soak.equivalentHours===24,'Accelerated deterministic 24-hour-equivalent step soak remained finite; wall-clock claim remains false.',soak)
   const monitorApiComparison={format:'nova-v4.5-monitor-api-comparison',version:1,generatedAt,fields:{position:'same Entity Transform2D source',velocity:'same RigidBody2D source',acceleration:'fixed-step velocity delta',force:'same RigidBody2D source',contacts:'same runtime state',constraints:'same Connection telemetry'},windows:'passed-static-and-runtime-unit',webChromium:'passed-static-and-runtime-unit',crossPlatformBitwise:'not-guaranteed',exportedPlayer:'pending-clean-player-gate',status:'passed-local-with-external-gate'}
-  await writeFile(join(output,'v4.5.0-analytical-results.json'),`${JSON.stringify({format:'nova-v4.5-analytical-results',version:1,generatedAt,results:analytical,status:analytical.every(item=>item.passed)?'passed':'failed'},null,2)}\n`)
+  await writeFile(join(output,'v4.5.0-analytical-results.json'),`${JSON.stringify({format:'nova-v4.5-analytical-results',version:1,generatedAt,results:analytical,status:analytical.every(/* 返回 item.passed 的当前值。 */ item=>item.passed)?'passed':'failed'},null,2)}\n`)
   await writeFile(join(output,'v4.5.0-physics-tolerances.json'),`${JSON.stringify({format:'nova-v4.5-physics-tolerances',version:1,generatedAt,tolerances:tolerance,versioned:true},null,2)}\n`)
   await writeFile(join(output,'v4.5.0-physics-stress.json'),`${JSON.stringify({format:'nova-v4.5-physics-stress',version:1,generatedAt,bodyCount:20_000,contactBudget:20_000,constraintBudget:2_000,stressMs,peakEnergy,checksum:stressChecksum,status:'passed-local'},null,2)}\n`)
   await writeFile(join(output,'v4.5.0-character-fixtures.json'),`${JSON.stringify({format:'nova-v4.5-character-fixtures',version:1,generatedAt,fixtures:characterFixtures,profiles:Object.values(physics.PHYSICS_PROFILE_LIBRARY),status:'passed-contract'},null,2)}\n`)
@@ -54,6 +55,6 @@ try {
   await writeFile(join(output,'v4.5.0-platform-comparison.json'),`${JSON.stringify(monitorApiComparison,null,2)}\n`)
   await writeFile(join(output,'v4.5.0-soak.json'),`${JSON.stringify(soak,null,2)}\n`)
 } finally { await server.close() }
-const failed=checks.filter(item=>item.status==='failed'),report={format:'nova-v4.5-physics-verification',version:1,engineVersion:'4.5.0',generatedAt,checks,severity0Open:0,severity1Open:failed.length,status:failed.length?'failed':'passed'}
+const failed=checks.filter(/* 比较 item.status 与 'failed'，返回严格相等的判断结果。 */ item=>item.status==='failed'),report={format:'nova-v4.5-physics-verification',version:1,engineVersion:'4.5.0',generatedAt,checks,severity0Open:0,severity1Open:failed.length,status:failed.length?'failed':'passed'}
 await writeFile(join(output,'v4.5.0-physics-verification.json'),`${JSON.stringify(report,null,2)}\n`)
 if(failed.length){console.error(failed);process.exit(1)}console.log(`Nova_A v4.5 physics verification passed: ${checks.length} checks.`)

@@ -1,3 +1,4 @@
+/** 项目版本升级：准备迁移、验证升级结果并保留失败回退或恢复资料。 */
 import { NOVA_ENGINE_VERSION, NOVA_MINIMUM_SCHEMA_VERSION, NOVA_PROJECT_SCHEMA_VERSION } from '../projects/projectFormat'
 import { compareVersions, normalizePackageManifest, packageCompatibility, parseVersion, reviewPackageSecurity } from './packages'
 import { reactive } from 'vue'
@@ -44,7 +45,7 @@ export const migrationState = reactive({ active: false, lastDryRun: null as Migr
 const ROLLBACK_KEY = 'nova_a.project_upgrade_rollback.v1'
 const MAX_ROLLBACK_BYTES = 4_000_000
 
-export function analyzeProjectUpgrade(source: string): UpgradePreview {
+/** 分析格式、模式版本、引擎兼容区间和包清单，列出迁移步骤与预检结果，不执行项目内容。 */ export function analyzeProjectUpgrade(source: string): UpgradePreview {
   const project = JSON.parse(source) as Record<string, unknown>
   const sourceSchema = Number(project.formatVersion ?? 1)
   const scenes = Array.isArray(project.scenes) ? project.scenes as Array<Record<string, unknown>> : []
@@ -52,7 +53,7 @@ export function analyzeProjectUpgrade(source: string): UpgradePreview {
   const packageProblems: string[] = []
   const packages = project.packages && typeof project.packages === 'object' && Array.isArray((project.packages as Record<string, unknown>).installed)
     ? (project.packages as { installed: Array<Record<string, unknown>> }).installed : []
-  const previewPackages = packages.slice(0, 512).flatMap(raw => {
+  const previewPackages = packages.slice(0, 512).flatMap(/** 规范化单个包清单生成升级预览记录，失败收集问题并跳过。 */ raw => {
     try {
       const manifest = normalizePackageManifest(raw.manifest)
       return [{ manifest, source: { kind: 'local' as const, location: 'upgrade preview' }, enabled: raw.enabled !== false, project: raw.project !== false, installedAt: 0, securityStatus: reviewPackageSecurity(manifest).status, grantedPermissions: manifest.permissions, deprecations: [] }]
@@ -61,7 +62,7 @@ export function analyzeProjectUpgrade(source: string): UpgradePreview {
   for (const item of previewPackages) {
     try {
       const problems = packageCompatibility(item, NOVA_ENGINE_VERSION, previewPackages)
-      packageProblems.push(...problems.map(problem => `${item.manifest.name}: ${problem}`))
+      packageProblems.push(...problems.map(/** 按模板 `${item.manifest.name}: ${problem}` 生成并返回字符串。 */ problem => `${item.manifest.name}: ${problem}`))
     } catch (error) { packageProblems.push(error instanceof Error ? error.message : String(error)) }
   }
   const warnings: string[] = []
@@ -85,7 +86,7 @@ export function analyzeProjectUpgrade(source: string): UpgradePreview {
   if (calendarBoundarySeal) warnings.push(`This project has the archived <${maximumEngine} ceiling; 26.01 seals only compatibility metadata to the reviewed <27.0.0 range without changing schema 29 or authored data.`)
   if (!engineRangeSupported) warnings.push(validEngineRange ? `This project does not declare compatibility with Nova_A ${NOVA_ENGINE_VERSION}.` : 'The project engine compatibility range is malformed.')
   const engineUpgradeRequired = sourceEngine !== NOVA_ENGINE_VERSION || calendarBoundarySeal
-  const migrationSteps = Array.from({ length: Math.max(0, NOVA_PROJECT_SCHEMA_VERSION - Math.max(sourceSchema, 1)) }, (_, index) => {
+  const migrationSteps = Array.from({ length: Math.max(0, NOVA_PROJECT_SCHEMA_VERSION - Math.max(sourceSchema, 1)) }, /** 按模式版本顺序构造逐级前向迁移步骤描述。 */ (_, index) => {
     const fromSchema = Math.max(sourceSchema, 1) + index
     return { fromSchema, toSchema: fromSchema + 1, name: fromSchema === 22 ? 'Authoritative project data, assets, scenes, and prefabs' : `Legacy schema ${fromSchema} projection` }
   })
@@ -107,7 +108,7 @@ export function analyzeProjectUpgrade(source: string): UpgradePreview {
     requiresMigration: sourceSchema !== NOVA_PROJECT_SCHEMA_VERSION || engineUpgradeRequired,
     supported,
     sceneCount: scenes.length || (legacyEntities.length ? 1 : 0),
-    entityCount: scenes.reduce((count, scene) => count + (Array.isArray(scene.entities) ? scene.entities.length : 0), legacyEntities.length),
+    entityCount: scenes.reduce(/* 计算表达式 count + (Array.isArray(scene.entities) ? scene.entities.length : 0) 并返回结果，沿用操作数的原有类型规则。 */ (count, scene) => count + (Array.isArray(scene.entities) ? scene.entities.length : 0), legacyEntities.length),
     assetCount: Array.isArray(project.assets) ? project.assets.length : 0,
     packageProblems: packageProblems.slice(0, 256), warnings,
     projectName: String(manifest.name ?? metadata.name ?? 'Unnamed project').slice(0, 80),
@@ -118,9 +119,9 @@ export function analyzeProjectUpgrade(source: string): UpgradePreview {
 }
 
 /** Runs the complete migration chain without mutating the editor or source file. */
-export function dryRunProjectMigration(source: string, migrate: (source: string) => string): MigrationDryRun {
+/** 先预检支持范围，再独立运行两次迁移检查确定性和完整校验，输出变化与日志而不加载编辑会话。 */ export function dryRunProjectMigration(source: string, migrate: (source: string) => string): MigrationDryRun {
   const preview = analyzeProjectUpgrade(source), id = crypto.randomUUID?.() ?? `migration-${Date.now()}`
-  const log: MigrationDryRun['log'] = preview.preflight.map((item, index) => ({ step: index + 1, status: item.status === 'blocked' ? 'blocked' : item.status === 'warning' ? 'warning' : 'passed', message: `${item.label}: ${item.detail}` }))
+  const log: MigrationDryRun['log'] = preview.preflight.map(/** 构造并返回记录 { step: index + 1, status: item.status === 'blocked' ? 'blocked' : item.status === 'warning' ? 'warning' : 'passed', message: `${item.label}: ${item.detail}` }，字段按当前实参及捕获状态求值。 */ (item, index) => ({ step: index + 1, status: item.status === 'blocked' ? 'blocked' : item.status === 'warning' ? 'warning' : 'passed', message: `${item.label}: ${item.detail}` }))
   if (!preview.supported) {
     const report: MigrationDryRun = { format: 'nova-migration-dry-run', version: 1, id, generatedAt: new Date().toISOString(), preview, sourceChecksum: projectChecksum(source), outputChecksum: '', estimatedChangedBytes: 0, semanticChanges: [], log, deterministic: false, valid: false, output: '' }
     migrationState.lastDryRun = report; migrationState.logs.splice(0, migrationState.logs.length, ...log); return report
@@ -130,7 +131,7 @@ export function dryRunProjectMigration(source: string, migrate: (source: string)
     output = canonicalProjectText(migrate(source)); second = canonicalProjectText(migrate(source))
     const validation = validateProjectDocument(output); valid = validation.valid
     semanticChanges = semanticProjectDiff(source, output)
-    log.push({ step: log.length + 1, status: valid ? 'passed' : 'blocked', message: valid ? `Schema ${preview.sourceSchema} migrated and passed complete validation.` : `Migration output contains ${validation.issues.filter(item => item.severity === 'error').length} blocking issue(s).` })
+    log.push({ step: log.length + 1, status: valid ? 'passed' : 'blocked', message: valid ? `Schema ${preview.sourceSchema} migrated and passed complete validation.` : `Migration output contains ${validation.issues.filter(/* 比较 item.severity 与 'error'，返回严格相等的判断结果。 */ item => item.severity === 'error').length} blocking issue(s).` })
     log.push({ step: log.length + 1, status: output === second ? 'passed' : 'blocked', message: output === second ? 'A deterministic re-run produced identical bytes.' : 'The migration produced different bytes on a deterministic re-run.' })
   } catch (error) { log.push({ step: log.length + 1, status: 'blocked', message: error instanceof Error ? error.message : String(error) }) }
   const report: MigrationDryRun = {
@@ -142,23 +143,23 @@ export function dryRunProjectMigration(source: string, migrate: (source: string)
   return report
 }
 
-export function recordMigrationApplied(report: MigrationDryRun): void {
+/** 保留不含完整输出文本的迁移报告，并更新日志和回滚可用状态。 */ export function recordMigrationApplied(report: MigrationDryRun): void {
   migrationState.lastReport = { ...report, output: '' }; migrationState.logs.splice(0, migrationState.logs.length, ...report.log); migrationState.rollbackAvailable = readUpgradeRollback() !== null
 }
 
-export function downloadProjectBackup(source: string, fileName = 'project'): void {
+/** 清理下载文件名，生成升级前项目备份下载并释放临时对象地址。 */ export function downloadProjectBackup(source: string, fileName = 'project'): void {
   const safeName = fileName.replace(/[^a-z0-9._-]+/gi, '-').replace(/^-+|-+$/g, '') || 'project'
   const url = URL.createObjectURL(new Blob([source], { type: 'application/json' }))
   const anchor = document.createElement('a'); anchor.href = url; anchor.download = `${safeName}.pre-upgrade.nova`; anchor.click()
-  window.setTimeout(() => URL.revokeObjectURL(url), 0)
+  window.setTimeout(/* 调用 URL.revokeObjectURL(url) 并返回调用结果。 */ () => URL.revokeObjectURL(url), 0)
 }
 
-export function storeUpgradeRollback(source: string, fileName: string): boolean {
+/** 在文本大小限制内尽力保存升级前源码、名称和摘要，成功标记可回滚。 */ export function storeUpgradeRollback(source: string, fileName: string): boolean {
   if (typeof localStorage === 'undefined' || source.length > MAX_ROLLBACK_BYTES) return false
   try { localStorage.setItem(ROLLBACK_KEY, JSON.stringify({ savedAt: new Date().toISOString(), fileName: fileName.slice(0, 180), checksum: projectChecksum(source), source })); migrationState.rollbackAvailable = true; return true } catch { return false }
 }
 
-export function readUpgradeRollback(): { savedAt: string; fileName: string; source: string } | null {
+/** 解析本地回滚记录并验证必要文本字段，缺失或异常返回 null。 */ export function readUpgradeRollback(): { savedAt: string; fileName: string; source: string } | null {
   if (typeof localStorage === 'undefined') return null
   try {
     const value = JSON.parse(localStorage.getItem(ROLLBACK_KEY) ?? 'null') as Record<string, unknown> | null
@@ -167,11 +168,11 @@ export function readUpgradeRollback(): { savedAt: string; fileName: string; sour
   } catch { return null }
 }
 
-export function downloadLastUpgradeRollback(): boolean {
+/** 读取最近升级回滚记录，有记录时触发带回滚标记的备份下载。 */ export function downloadLastUpgradeRollback(): boolean {
   const rollback = readUpgradeRollback()
   if (!rollback) return false
   downloadProjectBackup(rollback.source, `${rollback.fileName}.rollback`)
   return true
 }
 
-export function clearUpgradeRollback(): void { if (typeof localStorage !== 'undefined') localStorage.removeItem(ROLLBACK_KEY) }
+/** 本地存储可用时移除升级回滚副本。 */ export function clearUpgradeRollback(): void { if (typeof localStorage !== 'undefined') localStorage.removeItem(ROLLBACK_KEY) }

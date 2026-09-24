@@ -1,3 +1,4 @@
+/** 功能回归脚本：执行 verify-v6.9.0-clean-source.mjs 对应场景，保留断言和证据输出。 */
 import { execFileSync, spawnSync } from 'node:child_process'
 import { cp, mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
@@ -36,7 +37,7 @@ try {
   await rm(temporary, { recursive: true, force: true })
 }
 
-function run(label, command, args, cwd) {
+/** 结构说明（自动提取）：run；输入 label、command、args、cwd；直接调用 performance.now、spawnSync、commands.push、Math.round、Error；包含显式抛错路径。 */ function run(label, command, args, cwd) {
   const started = performance.now()
   const result = spawnSync(command, args, { cwd, encoding: 'utf8', windowsHide: true, env: { ...process.env, CI: '1' } })
   commands.push({ label, exitCode: result.status, durationMs: Math.round(performance.now() - started) })

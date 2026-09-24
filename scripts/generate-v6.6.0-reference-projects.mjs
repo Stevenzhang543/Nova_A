@@ -1,3 +1,4 @@
+/** 版本6.6.0：生成参考项目与对应资源，供功能演示和版本验证使用。 */
 import { createHash } from 'node:crypto'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
@@ -5,32 +6,32 @@ import { fileURLToPath } from 'node:url'
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)))
 const projectsRoot = join(root, 'reference-projects/projects')
-const readJson = async path => JSON.parse(await readFile(path, 'utf8'))
-const clone = value => structuredClone(value)
-const sha = value => createHash('sha256').update(value).digest('hex')
-const writeJson = (path, value) => writeFile(path, `${JSON.stringify(value, null, 2)}\n`)
+const readJson = /* 调用 JSON.parse(await readFile(path, 'utf8')) 并返回调用结果。 */ async path => JSON.parse(await readFile(path, 'utf8'))
+const clone = /* 调用 structuredClone(value) 并返回调用结果。 */ value => structuredClone(value)
+const sha = /* 调用 createHash('sha256').update(value).digest('hex') 并返回调用结果。 */ value => createHash('sha256').update(value).digest('hex')
+const writeJson = /* 调用 writeFile(path, `${JSON.stringify(value, null, 2)}\n`) 并返回调用结果。 */ (path, value) => writeFile(path, `${JSON.stringify(value, null, 2)}\n`)
 
 const base = await readJson(join(projectsRoot, 'creator-v60-network-sample/project.nova'))
 const scriptTemplateProject = await readJson(join(projectsRoot, 'creator-v601-mouse-knockout/project.nova'))
-const scriptTemplate = scriptTemplateProject.assets.find(asset => asset.assetType === 'script')
+const scriptTemplate = scriptTemplateProject.assets.find(/* 比较 asset.assetType 与 'script'，返回严格相等的判断结果。 */ asset => asset.assetType === 'script')
 if (!scriptTemplate) throw new Error('A retained Rhai asset template is required.')
 
-function scriptAsset(uuid, name, source) {
+/** 克隆脚本资源模板，写入源码、字节数和导入散列，并初始化脚本API与恢复元数据。 */ function scriptAsset(uuid, name, source) {
   const asset = clone(scriptTemplate), digest = sha(source)
   Object.assign(asset, { uuid, name, path: `Assets/Scripts/${name}`, source, byteLength: Buffer.byteLength(source), sourceModified: 0, importedAt: 0 })
   asset.pipeline = { ...asset.pipeline, importerVersion: 'reference-6.6', sourceHash: digest, artifactHash: digest, contentHash: digest, cacheKey: digest, status: 'ready', lastValidSource: source, error: '', dependencies: [], reverseDependencies: [], cacheHit: false }
   asset.script = { ...asset.script, apiVersion: 2, reloadPolicy: 'preserve', signalConnections: [], recoverySource: '', lastSavedHash: digest }
   return asset
 }
-function attachScript(entity, componentUuid, assetUuid) {
+/** 为实体附加启用的脚本组件，使用资源地址关联脚本并初始化属性。 */ function attachScript(entity, componentUuid, assetUuid) {
   entity.components.push({ uuid: componentUuid, kind: 'Script2D', enabled: true, removed: false, data: { scriptAsset: `asset://${assetUuid}`, properties: {} } })
 }
-function productionNetworkDefaults(networking) {
+/** 在网络配置上写入传输、认证、安全、兴趣区域、多实例及权限移交的默认选项。 */ function productionNetworkDefaults(networking) {
   return Object.assign(networking, {
     transportAdapterId: '', authentication: { mode: 'none', providerId: '', requireVerifiedPeers: false, handshakeTimeoutMs: 10_000 }, security: { requireEncryption: false, maximumPacketAgeMs: 15_000, replayWindow: 2_048 }, interest: { enabled: true, defaultRadius: 24, maximumRadius: 256 }, multiInstance: { peerCount: 2, separateLogs: true, separateInspectors: true }, allowAuthorityTransfer: true, allowSceneHandoff: true
   })
 }
-function identify(project, name, template) {
+/** 写入参考项目名称、6.6.0引擎版本、固定元数据日期、兼容范围与脚本API版本。 */ function identify(project, name, template) {
   project.engineVersion = '6.6.0'; project.projectName = name; project.projectMetadata.name = name; project.projectMetadata.template = template; project.projectMetadata.updatedAt = '2026-09-01T00:00:00.000Z'
   project.manifest.name = name; project.manifest.engineCompatibility.maximumExclusive = '7.0.0'; project.projectSettings.scripting.apiVersion = 2
 }
@@ -46,7 +47,7 @@ coop.projectSettings.build.delivery.exportTemplate = 'windows-x64-v1'
 const coopNetwork = productionNetworkDefaults(coop.projectSettings.production.networking)
 Object.assign(coopNetwork, { enabled: true, permissionGranted: true, autoStart: true, role: 'host', sessionMode: 'local', sessionName: 'Nova 6.6 Co-op Arena', playerName: 'Host', maxPeers: 8, protocolVersion: 2, schemaVersion: 1 })
 coopNetwork.rpcContracts = [{ name: 'coop.move', channelId: 'events', direction: 'client-to-server', authority: 'any', payloadSchema: 'object', maximumPayloadBytes: 128, callsPerSecond: 40 }]
-const scene = coop.scenes[0], host = scene.entities.find(entity => entity.name === 'Server Player'), remote = scene.entities.find(entity => entity.name === 'Remote Player')
+const scene = coop.scenes[0], host = scene.entities.find(/* 比较 entity.name 与 'Server Player'，返回严格相等的判断结果。 */ entity => entity.name === 'Server Player'), remote = scene.entities.find(/* 比较 entity.name 与 'Remote Player'，返回严格相等的判断结果。 */ entity => entity.name === 'Remote Player')
 if (!host || !remote) throw new Error('Retained network sample players are missing.')
 host.name = 'Host Player'; remote.name = 'Client Player'
 const hostSource = `fn fixed_update(dt) {
@@ -66,7 +67,7 @@ fn on_signal(name, payload, source) {
 const hostScriptId = '66000000-0000-4000-8000-000000000001', clientScriptId = '66000000-0000-4000-8000-000000000002'
 coop.assets.push(scriptAsset(hostScriptId, 'CoopHostPlayer.rhai', hostSource), scriptAsset(clientScriptId, 'CoopClientPlayer.rhai', clientSource))
 attachScript(host, '66000000-0000-4000-8000-000000000011', hostScriptId); attachScript(remote, '66000000-0000-4000-8000-000000000012', clientScriptId)
-coopNetwork.replicatedEntities = [host, remote].map((entity, index) => ({ entityUuid: entity.uuid, authority: 'server', properties: ['transform', 'rotation', 'velocity'], interpolate: true, predict: index === 1, ownerPeerId: '', alwaysRelevant: false, interestRadius: 24, sceneUuid: scene.uuid }))
+coopNetwork.replicatedEntities = [host, remote].map(/** 将实体映射为服务端权威的网络复制项，配置变换、旋转和速度同步，并仅为第二项启用预测。 */ (entity, index) => ({ entityUuid: entity.uuid, authority: 'server', properties: ['transform', 'rotation', 'velocity'], interpolate: true, predict: index === 1, ownerPeerId: '', alwaysRelevant: false, interestRadius: 24, sceneUuid: scene.uuid }))
 
 const coopDir = join(projectsRoot, 'creator-v660-coop-arena'); await mkdir(coopDir, { recursive: true }); await writeJson(join(coopDir, 'project.nova'), coop)
 await writeFile(join(coopDir, 'README.md'), `# Nova_A 6.6 co-op arena

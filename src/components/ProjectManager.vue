@@ -1,3 +1,4 @@
+<!-- 项目启动与管理：创建、打开、升级和选择项目模板。 -->
 <template>
   <main class="project-manager">
     <header class="manager-header">
@@ -102,7 +103,7 @@
         <label v-if="state.pendingUpgrade.preview.requiresMigration" class="backup-choice"><input checked disabled type="checkbox"><span>{{ t('backupBeforeUpgradeRequired') }}</span></label>
         <p>{{ t('upgradeAtomicHint') }}</p>
         <p v-if="state.lockConflict" class="lock-warning">{{ t('projectLockedBy',{owner:state.lockConflict.owner,time:new Date(state.lockConflict.expiresAt).toLocaleString()}) }}</p>
-        <footer><button @click="cancelPendingProjectUpgrade">{{ t('cancel') }}</button><button v-if="state.lockConflict" @click="migrateAndOpen(true)">{{ t('openReadOnly') }}</button><button class="primary" :disabled="state.pendingUpgrade.preview.preflight.some(check => check.status === 'blocked') || Boolean(state.lockConflict)" @click="migrateAndOpen(false)">{{ state.pendingUpgrade.preview.requiresMigration ? t('migrateAndOpen') : t('openProject') }}</button></footer>
+<!-- 项目迁移预检回调检测阻断项，用于禁止不可执行的打开操作。 -->        <footer><button @click="cancelPendingProjectUpgrade">{{ t('cancel') }}</button><button v-if="state.lockConflict" @click="migrateAndOpen(true)">{{ t('openReadOnly') }}</button><button class="primary" :disabled="state.pendingUpgrade.preview.preflight.some(check => check.status === 'blocked') || Boolean(state.lockConflict)" @click="migrateAndOpen(false)">{{ state.pendingUpgrade.preview.requiresMigration ? t('migrateAndOpen') : t('openProject') }}</button></footer>
       </section>
     </div>
     <div v-if="state.readOnlyDocument" class="upgrade-scrim" role="dialog" aria-modal="true" v-modal-focus :aria-label="t('readOnlyCompatibility')">
@@ -136,8 +137,8 @@ import { readProjectArchive } from '../projects/projectArchive'
 import { NOVA_RELEASE_NAME } from '../projects/projectFormat'
 
 const creationOpen = ref(false)
-const moreActionsLabel = computed(() => ({ en: 'More project actions', de: 'Weitere Projektaktionen', zh: '更多项目操作' }[prefs.locale]))
-function closeCreation() { if (!state.busy) creationOpen.value = false }
+const moreActionsLabel = computed(/** 按偏好语言返回更多项目操作标签。 */ () => ({ en: 'More project actions', de: 'Weitere Projektaktionen', zh: '更多项目操作' }[prefs.locale]))
+/** 仅在没有忙碌操作时关闭创建面板。 */ function closeCreation() { if (!state.busy) creationOpen.value = false }
 const projectName = ref('My Game')
 const projectLocation = ref('Projects/My Game')
 const selectedTemplate = ref<ProjectTemplateId | null>('empty')
@@ -146,7 +147,7 @@ const categories = ['all', ...PROJECT_TEMPLATE_CATEGORIES] as const
 const templateQuery = ref('')
 const templateDifficulty = ref<'all' | 'beginner' | 'intermediate' | 'advanced'>('all')
 const templateSort = ref<'catalog' | 'name' | 'time' | 'newest'>('catalog')
-const libraryText = computed(() => ({
+const libraryText = computed(/** 按偏好语言返回模板库浏览、筛选和说明文案。 */ () => ({
   en: { browse: 'Browse all starters, or narrow the library by category, difficulty, and search.', sort: 'Sort by', catalog: 'Catalog order', newest: 'Newest first', quickest: 'Quickest setup', results: '{count} of {total} templates', reset: 'Reset filters', selected: 'Create from', utilities: 'Project manager utilities', preview: 'Runtime preview', previewOf: 'Runtime preview of', controls: 'Controls and setup', expected: 'Expected result', requirements: 'Requirements', guide: 'Feature manual', task: 'Related task', foundation: 'Uses the complete foundation', captureHint: 'Captured from the running Game view. Colors and motion may vary by renderer and frame.' },
   de: { browse: 'Alle Vorlagen durchsuchen oder nach Kategorie, Schwierigkeit und Suchbegriff filtern.', sort: 'Sortieren', catalog: 'Katalogreihenfolge', newest: 'Neueste zuerst', quickest: 'Schnellster Einstieg', results: '{count} von {total} Vorlagen', reset: 'Filter zurücksetzen', selected: 'Erstellen aus', utilities: 'Projektmanager-Werkzeuge', preview: 'Laufzeitvorschau', previewOf: 'Laufzeitvorschau von', controls: 'Steuerung und Einrichtung', expected: 'Erwartetes Ergebnis', requirements: 'Voraussetzungen', guide: 'Funktionshandbuch', task: 'Verwandte Aufgabe', foundation: 'Nutzt die vollständige Grundlage', captureHint: 'Aus der laufenden Spielansicht aufgenommen. Farben und Bewegung können je nach Renderer und Frame variieren.' },
   zh: { browse: '浏览所有模板，或按分类、难度和关键词筛选。', sort: '排序方式', catalog: '目录顺序', newest: '最新优先', quickest: '最快上手', results: '{count} / {total} 个模板', reset: '重置筛选', selected: '使用模板', utilities: '项目管理工具', preview: '运行时预览', previewOf: '运行时预览：', controls: '操作与准备', expected: '预期结果', requirements: '使用要求', guide: '功能手册', task: '相关任务', foundation: '使用完整基础项目', captureHint: '截图来自正在运行的游戏视口；颜色与运动效果可能因渲染器和帧而异。' }
@@ -158,38 +159,38 @@ const archiveInput = ref<HTMLInputElement | null>(null)
 
 const categoryIcon: Record<ProjectTemplateCategory | 'all', string> = { all: '▦', scene: '◇', test: '⌁', game: '▶' }
 
-function templateName(id: ProjectTemplateId, fallback: string): string { const translated = templates.find(value => value.id === id)?.localized?.[prefs.locale as 'de' | 'zh']; if (translated) return translated.name; const key = `template_${id}_name`, localized = t(key); return localized && localized !== key ? localized : fallback }
-function templateDescription(id: ProjectTemplateId, fallback: string): string { const translated = templates.find(value => value.id === id)?.localized?.[prefs.locale as 'de' | 'zh']; if (translated) return translated.description; const key = `template_${id}_description`, localized = t(key); return localized && localized !== key ? localized : fallback }
-function templateFeatures(id: ProjectTemplateId, fallback: string[]): string[] { const key = `template_${id}_features`, localized = t(key); return localized && localized !== key ? localized.split('|') : fallback }
-function categoryName(category: ProjectTemplateCategory | 'all'): string { return category === 'all' ? t('all') : t(`templateCategory_${category}`) }
-function categoryDescription(category: ProjectTemplateCategory): string { return t(`templateCategory_${category}_description`) }
-function templateCount(category: ProjectTemplateCategory | 'all'): number { return category === 'all' ? templates.length : templates.filter(template => template.category === category).length }
-function selectCategory(category: ProjectTemplateCategory | 'all'): void {
+/** 优先使用模板内嵌本地化名称，再尝试翻译键，最后使用默认名称。 */ function templateName(id: ProjectTemplateId, fallback: string): string { const translated = templates.find(/* 比较 value.id 与 id，返回严格相等的判断结果。 */ value => value.id === id)?.localized?.[prefs.locale as 'de' | 'zh']; if (translated) return translated.name; const key = `template_${id}_name`, localized = t(key); return localized && localized !== key ? localized : fallback }
+/** 优先使用模板内嵌本地化摘要，再尝试翻译键，最后使用默认摘要。 */ function templateDescription(id: ProjectTemplateId, fallback: string): string { const translated = templates.find(/* 比较 value.id 与 id，返回严格相等的判断结果。 */ value => value.id === id)?.localized?.[prefs.locale as 'de' | 'zh']; if (translated) return translated.description; const key = `template_${id}_description`, localized = t(key); return localized && localized !== key ? localized : fallback }
+/** 将有效本地化功能文本按竖线拆分，否则保留默认功能列表。 */ function templateFeatures(id: ProjectTemplateId, fallback: string[]): string[] { const key = `template_${id}_features`, localized = t(key); return localized && localized !== key ? localized.split('|') : fallback }
+/* 根据 category === 'all' 的真假，分别返回 t('all') 或 t(`templateCategory_${category}`)。 */ function categoryName(category: ProjectTemplateCategory | 'all'): string { return category === 'all' ? t('all') : t(`templateCategory_${category}`) }
+/* 调用 t(`templateCategory_${category}_description`) 并返回调用结果。 */ function categoryDescription(category: ProjectTemplateCategory): string { return t(`templateCategory_${category}_description`) }
+/** 返回全部模板数或指定类别模板数。 */ function templateCount(category: ProjectTemplateCategory | 'all'): number { return category === 'all' ? templates.length : templates.filter(/* 比较 template.category 与 category，返回严格相等的判断结果。 */ template => template.category === category).length }
+/** 更新模板类别筛选项。 */ function selectCategory(category: ProjectTemplateCategory | 'all'): void {
   selectedCategory.value = category
 }
-const visibleTemplates = computed(() => discoverTemplates(templates, { category: selectedCategory.value, difficulty: templateDifficulty.value, query: templateQuery.value, sort: templateSort.value, locale: prefs.locale }, template => `${templateName(template.id, template.name)} ${templateDescription(template.id, template.description)} ${templateFeatures(template.id, template.features).join(' ')} ${templateGuide(template.id, prefs.locale).controls} ${templateGuide(template.id, prefs.locale).expected} ${templateGuide(template.id, prefs.locale).requirements.join(' ')}`))
-watch(visibleTemplates, visible => { if (!visible.some(template => template.id === selectedTemplate.value)) selectedTemplate.value = visible[0]?.id ?? null }, { flush: 'sync' })
-const selectedTemplateRecord = computed(() => visibleTemplates.value.find(template => template.id === selectedTemplate.value))
-const selectedGuide = computed(() => selectedTemplateRecord.value ? templateGuide(selectedTemplateRecord.value.id, prefs.locale) : null)
+const visibleTemplates = computed(/** 根据类别、难度、搜索、排序和语言发现模板，并提供本地化可检索文本。 */ () => discoverTemplates(templates, { category: selectedCategory.value, difficulty: templateDifficulty.value, query: templateQuery.value, sort: templateSort.value, locale: prefs.locale }, /** 组合模板名称、说明、功能、操作、预期结果和要求作为搜索文本。 */ template => `${templateName(template.id, template.name)} ${templateDescription(template.id, template.description)} ${templateFeatures(template.id, template.features).join(' ')} ${templateGuide(template.id, prefs.locale).controls} ${templateGuide(template.id, prefs.locale).expected} ${templateGuide(template.id, prefs.locale).requirements.join(' ')}`))
+watch(visibleTemplates, /** 当前模板已不在可见结果中时选中首项或清空选择。 */ visible => { if (!visible.some(/* 比较 template.id 与 selectedTemplate.value，返回严格相等的判断结果。 */ template => template.id === selectedTemplate.value)) selectedTemplate.value = visible[0]?.id ?? null }, { flush: 'sync' })
+const selectedTemplateRecord = computed(/** 查找当前已选且可见的模板记录。 */ () => visibleTemplates.value.find(/* 比较 template.id 与 selectedTemplate.value，返回严格相等的判断结果。 */ template => template.id === selectedTemplate.value))
+const selectedGuide = computed(/* 根据 selectedTemplateRecord.value 的真假，分别返回 templateGuide(selectedTemplateRecord.value.id, prefs.locale) 或 null。 */ () => selectedTemplateRecord.value ? templateGuide(selectedTemplateRecord.value.id, prefs.locale) : null)
 const previews = import.meta.glob('../assets/template-previews/*.png', { eager: true, query: '?url', import: 'default' }) as Record<string, string>
-function templatePreview(id: ProjectTemplateId): string { return previews[`../assets/template-previews/${id}.png`] ?? '' }
-function openTemplateManual(section: string): void { openBundledManual(`${prefs.locale === 'zh' ? 'zh-CN' : prefs.locale}-${section}`) }
-function resetTemplateFilters(): void { selectedCategory.value = 'all'; templateDifficulty.value = 'all'; templateQuery.value = ''; templateSort.value = 'catalog' }
-const pathError = computed(() => {
+/* 当 previews[`../assets/template-previews/${id}.png`] 为 null 或 undefined 时返回 ''，否则保留左侧值。 */ function templatePreview(id: ProjectTemplateId): string { return previews[`../assets/template-previews/${id}.png`] ?? '' }
+/** 按当前语言和章节打开内置模板手册。 */ function openTemplateManual(section: string): void { openBundledManual(`${prefs.locale === 'zh' ? 'zh-CN' : prefs.locale}-${section}`) }
+/** 重置模板类别、难度、搜索和排序条件。 */ function resetTemplateFilters(): void { selectedCategory.value = 'all'; templateDifficulty.value = 'all'; templateQuery.value = ''; templateSort.value = 'catalog' }
+const pathError = computed(/** 校验项目位置非空、无非法字符或父目录跳转，且不使用 Windows 保留设备名。 */ () => {
   const value = projectLocation.value.trim()
   if (!value) return t('projectLocationRequired')
   if (/[<>"|?*\u0000-\u001f]/.test(value) || /(^|[\\/])\.\.([\\/]|$)/.test(value)) return t('projectLocationInvalid')
   if (/(^|[\\/])(con|prn|aux|nul|com[1-9]|lpt[1-9])([.\\/]|$)/i.test(value)) return t('projectLocationReserved')
   return ''
 })
-function create(): void { if (!state.busy && !pathError.value && projectName.value.trim() && selectedTemplateRecord.value) void createNewProject(projectName.value, selectedTemplateRecord.value.id, projectLocation.value) }
-async function chooseProject(mode:'open'|'add'|'migrate'|'archive'):Promise<void>{
+/** 未忙碌且路径、名称和模板均有效时发起项目创建。 */ function create(): void { if (!state.busy && !pathError.value && projectName.value.trim() && selectedTemplateRecord.value) void createNewProject(projectName.value, selectedTemplateRecord.value.id, projectLocation.value) }
+/** 根据打开模式选择压缩包或项目文件，优先使用文件句柄 API 并按需监视打开文件；不支持时使用文件输入。 */ async function chooseProject(mode:'open'|'add'|'migrate'|'archive'):Promise<void>{
   if(mode==='archive'){archiveInput.value?.click();return}
   const picker=(window as unknown as {showOpenFilePicker?: (options:unknown)=>Promise<Array<{getFile():Promise<File>}>>}).showOpenFilePicker
   if(picker){try{const projectHandle=(await picker({multiple:false,types:[{description:'Nova_A Project',accept:{'application/json':['.nova','.json']}}]}))[0];if(!projectHandle)return;const file=await projectHandle.getFile();await openProjectDocument(await file.text(),file.name,mode==='add');if(mode==='open')await watchProjectFile(projectHandle)}catch(error){if(!(error instanceof DOMException&&error.name==='AbortError'))state.error=error instanceof Error?error.message:String(error)};return}
   ;(mode==='add'?importInput:mode==='migrate'?migrationInput:openInput).value?.click()
 }
-async function migrateAndOpen(readOnly=false): Promise<void> {
+/** 对待升级项目启动任务，执行升级或只读打开并记录成功或失败。 */ async function migrateAndOpen(readOnly=false): Promise<void> {
   const pending = state.pendingUpgrade
   if (!pending) return
   const task = startTask(t('projectUpgrade'), { detail: `Schema ${pending.preview.sourceSchema} → ${pending.preview.targetSchema}` })
@@ -198,10 +199,10 @@ async function migrateAndOpen(readOnly=false): Promise<void> {
     completeTask(task, t('upgradeComplete'))
   } catch (error) { failTask(task, error) }
 }
-function formatDate(value: string): string { const date = new Date(value); return Number.isNaN(date.getTime()) ? value : date.toLocaleString(prefs.locale === 'zh' ? 'zh-CN' : prefs.locale) }
+/** 将有效日期按偏好语言格式显示，解析失败保留原文本。 */ function formatDate(value: string): string { const date = new Date(value); return Number.isNaN(date.getTime()) ? value : date.toLocaleString(prefs.locale === 'zh' ? 'zh-CN' : prefs.locale) }
 
-function localizedPreflightLabel(id: string): string { return t(`preflight_${id}_label`) }
-function localizedPreflightDetail(id: string, status: string): string {
+/* 调用 t(`preflight_${id}_label`) 并返回调用结果。 */ function localizedPreflightLabel(id: string): string { return t(`preflight_${id}_label`) }
+/** 按预检项及状态生成文档、格式、版本、包、备份和验证说明，未知项回退原详情。 */ function localizedPreflightDetail(id: string, status: string): string {
   const preview = state.pendingUpgrade?.preview
   if (!preview) return ''
   if (id === 'document') return t('preflight_document_detail')
@@ -211,20 +212,20 @@ function localizedPreflightDetail(id: string, status: string): string {
   if (id === 'packages') return t(preview.packageProblems.length ? 'preflight_packages_warning' : 'preflight_packages_ok', { count: preview.packageProblems.length })
   if (id === 'backup') return t('preflight_backup_detail')
   if (id === 'validation') return t(status === 'blocked' ? 'preflight_validation_blocked' : 'preflight_validation_pending')
-  return preview.preflight.find(check => check.id === id)?.detail ?? id
+  return preview.preflight.find(/* 比较 check.id 与 id，返回严格相等的判断结果。 */ check => check.id === id)?.detail ?? id
 }
 
-function readFile(event: Event, asCopy: boolean): void {
+/** 读取选中文件并设置成功或失败回调，启动读取后清空文件输入。 */ function readFile(event: Event, asCopy: boolean): void {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
   if (!file) return
   const reader = new FileReader()
-  reader.onload = () => { if (typeof reader.result === 'string') void openProjectDocument(reader.result, file.name, asCopy) }
-  reader.onerror = () => { state.error = reader.error?.message ?? t('fileReadFailed') }
+  reader.onload = /** 文件读取为字符串时按指定副本模式打开项目文档。 */ () => { if (typeof reader.result === 'string') void openProjectDocument(reader.result, file.name, asCopy) }
+  reader.onerror = /** 读取失败时显示具体错误或本地化默认提示。 */ () => { state.error = reader.error?.message ?? t('fileReadFailed') }
   reader.readAsText(file)
   input.value = ''
 }
-async function readArchive(event:Event):Promise<void>{const input=event.target as HTMLInputElement,file=input.files?.[0];if(!file)return;const task=startTask(t('importArchive'),{detail:file.name,progress:null});try{const archive=await readProjectArchive(file);await openProjectDocument(archive.source,archive.entry,true);completeTask(task,`${archive.entries} archive entries checked.`)}catch(error){state.error=error instanceof Error?error.message:String(error);failTask(task,error)}finally{input.value=''}}
+/** 以任务方式检查并导入项目归档为副本，显示已检查条目数，失败记录错误，最后清空输入。 */ async function readArchive(event:Event):Promise<void>{const input=event.target as HTMLInputElement,file=input.files?.[0];if(!file)return;const task=startTask(t('importArchive'),{detail:file.name,progress:null});try{const archive=await readProjectArchive(file);await openProjectDocument(archive.source,archive.entry,true);completeTask(task,`${archive.entries} archive entries checked.`)}catch(error){state.error=error instanceof Error?error.message:String(error);failTask(task,error)}finally{input.value=''}}
 </script>
 
 <style scoped>

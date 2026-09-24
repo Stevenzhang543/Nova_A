@@ -1,11 +1,12 @@
+/* 审计 3.2 的规范项目文本、迁移修复、稳定引用、资源管线及大规模资源浏览契约。 */
 import { readFile, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)))
-const read = path => readFile(join(root, path), 'utf8')
+const read = /* 调用 readFile(join(root, path), 'utf8') 并返回调用结果。 */ path => readFile(join(root, path), 'utf8')
 const checks = []
-const check = (name, condition, evidence) => checks.push({ name, status: condition ? 'passed' : 'failed', evidence })
+const check = /* 调用 checks.push({ name, status: condition ? 'passed' : 'failed', evidence }) 并返回调用结果。 */ (name, condition, evidence) => checks.push({ name, status: condition ? 'passed' : 'failed', evidence })
 
 const [pkg, tauri, format, rustFormat, data, manifest, assets, imports, browser, prefab, scenes, manager, windowRuntime, capability, reference, exporter] = await Promise.all([
   read('package.json').then(JSON.parse), read('src-tauri/tauri.conf.json').then(JSON.parse), read('src/projects/projectFormat.ts'), read('crates/nova_format/src/lib.rs'), read('src/projects/projectData.ts'), read('src/projects/projectManifest.ts'), read('src/assets/AssetDatabase.ts'), read('src/assets/importPipeline.ts'), read('src/components/EditorBottomPanel.vue'), read('src/runtime/prefabs.ts'), read('src/runtime/sceneInstances.ts'), read('src/projects/projectManager.ts'), read('src/runtime/editorWindow.ts'), read('src-tauri/capabilities/default.json'), read('reference-projects/projects/data-foundation-validation.nova').then(JSON.parse), read('scripts/nova-export.mjs')
@@ -23,8 +24,8 @@ check('resource browser redesign', browser.includes('filter-popover') && browser
 check('generated artifacts protected', assets.includes("record.path.startsWith('.nova/')") && browser.includes('generatedArtifact'), 'Generated artifacts are marked and refuse direct text editing')
 check('maximized resizable default window', tauri.app.windows[0].maximized === true && tauri.app.windows[0].fullscreen === false && tauri.app.windows[0].decorations === true && tauri.app.windows[0].resizable === true && windowRuntime.includes('launchMaximized') && capability.includes('allow-maximize'), 'Decorated maximized startup; user can restore/resize; F11 remains explicit fullscreen')
 check('headless exporter accepts schema 29', exporter.includes("ENGINE_VERSION = '4.0.0'") && exporter.includes('schema > 29'), 'Build CLI 1 accepts the frozen schema and continues rejecting future schemas')
-check('reference coverage', reference.formatVersion === 23 && reference.assets.some(asset => asset.assetType === 'image' && /^[0-9a-f]{64}$/i.test(asset.pipeline?.sourceHash ?? '') && /^[0-9a-f]{64}$/i.test(asset.pipeline?.artifactHash ?? '')) && reference.scenes[0].entities[0].prefabLayers.length && reference.scenes[0].entities[0].sceneLayers.length && reference.missingResourceDemo?.startsWith('asset://'), 'Deliberate schema-23 migration fixture with nested scene/prefab data, verified imported-artifact hashes, and missing-resource repair')
+check('reference coverage', reference.formatVersion === 23 && reference.assets.some(/* 验证图像资源同时具有格式正确的源码与产物 SHA-256 哈希。 */ asset => asset.assetType === 'image' && /^[0-9a-f]{64}$/i.test(asset.pipeline?.sourceHash ?? '') && /^[0-9a-f]{64}$/i.test(asset.pipeline?.artifactHash ?? '')) && reference.scenes[0].entities[0].prefabLayers.length && reference.scenes[0].entities[0].sceneLayers.length && reference.missingResourceDemo?.startsWith('asset://'), 'Deliberate schema-23 migration fixture with nested scene/prefab data, verified imported-artifact hashes, and missing-resource repair')
 
-const report = { format: 'nova-v3.2-regression-audit', version: 1, engineVersion: '3.7.0', generatedAt: new Date().toISOString(), status: checks.every(item => item.status === 'passed') ? 'passed' : 'failed', severity0Open: 0, severity1Open: 0, checks }
+const report = { format: 'nova-v3.2-regression-audit', version: 1, engineVersion: '3.7.0', generatedAt: new Date().toISOString(), status: checks.every(/* 比较 item.status 与 'passed'，返回严格相等的判断结果。 */ item => item.status === 'passed') ? 'passed' : 'failed', severity0Open: 0, severity1Open: 0, checks }
 await writeFile(join(root, 'release-audits', 'v3.2.0-project-data-audit.json'), `${JSON.stringify(report, null, 2)}\n`, 'utf8')
 if (report.status !== 'passed') { console.error(JSON.stringify(report, null, 2)); process.exitCode = 1 } else console.log(`v3.2 audit passed (${checks.length} checks).`)

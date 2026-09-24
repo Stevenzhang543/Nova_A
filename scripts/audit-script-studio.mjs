@@ -1,7 +1,8 @@
+/* 检查脚本工作区、语言服务、API 与运行时的源码集成契约。 */
 import { readFileSync } from 'node:fs'
 
-const read = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8')
-const assert = (condition, message) => { if (!condition) throw new Error(`Script Studio audit failed: ${message}`) }
+const read = /* 调用 readFileSync(new URL(`../${path}`, import.meta.url), 'utf8') 并返回调用结果。 */ path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8')
+const assert = /* 条件不满足时抛出带脚本工作区审计前缀的错误。 */ (condition, message) => { if (!condition) throw new Error(`Script Studio audit failed: ${message}`) }
 
 const studio = read('src/components/ScriptStudio.vue')
 const api = read('src/editor/scriptApi.ts')
