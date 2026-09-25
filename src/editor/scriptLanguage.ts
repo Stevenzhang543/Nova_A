@@ -197,6 +197,8 @@ export class ScriptLanguageService {
     const pending = this.pending.get(id)
     if (!pending) return
     this.pending.delete(id); pending.cleanup()
+    // 编号匹配仍不足以证明文档匹配；旧修订或不同 API 的结果必须重新计算。
+    if (analysis && (analysis.revision !== pending.revision || analysis.apiVersion !== pending.apiVersion || JSON.stringify(analysis.externalFunctions ?? []) !== JSON.stringify(pending.externalFunctions))) analysis = undefined
     try { pending.resolve(analysis ?? analyzeScript(pending.source, pending.apiVersion, pending.revision, pending.externalFunctions)) }
     catch (error) { pending.reject(error) }
   }

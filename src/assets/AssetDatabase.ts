@@ -253,7 +253,7 @@ let recordsByUuid = new Map<string, AssetRecord>()
   void prepareFont(record).then(/** 仅在异步加载对应的原资源仍有效且源未改动时安装字体。 */ face=>{if(assetState.records.includes(record)&&record.source===source)registerFont(record.uuid,face)}).catch(/* 返回 undefined 的当前值。 */ ()=>undefined)
 }
 
-/** 转换交换格式、读取媒体元信息和准备字体，核对会话及取消状态后才将资源加入数据库。 */ async function recordImportedArtifact(file: File, settings: AssetImportSettings, artifact: ImportedArtifact, requestedFolder?: string, signal?: AbortSignal, session = assetSessionRevision): Promise<AssetRecord> {
+/** 转换交换格式、验证媒体及字体；批次调用只暂存记录和字体，单项重试在会话有效时登记。 */ async function recordImportedArtifact(file: File, settings: AssetImportSettings, artifact: ImportedArtifact, requestedFolder?: string, signal?: AbortSignal, session = assetSessionRevision, stagedFonts?: Map<string, FontFace | null>): Promise<AssetRecord> {
   let assetType = inferAssetType(file), source = artifact.source
   const external = ['atlas', 'tileset', 'other'].includes(assetType) ? await importContentInterchangeAsync(file.name, new TextDecoder().decode(artifact.bytes)) : null
   if (external) {
@@ -280,6 +280,7 @@ let recordsByUuid = new Map<string, AssetRecord>()
   }
   const font=await prepareFont(record)
   if(signal?.aborted || session !== assetSessionRevision) throw new DOMException('Import cancelled or project replaced', 'AbortError')
+  if (stagedFonts) { stagedFonts.set(record.uuid, font); return record }
   registerFont(record.uuid,font)
   assetState.records.push(record)
   const folder = record.path.slice(0, record.path.lastIndexOf('/'))
@@ -287,10 +288,11 @@ let recordsByUuid = new Map<string, AssetRecord>()
   return record
 }
 
-/** 按顺序导入文件并守卫会话身份，最后重绑定交换依赖、排序资源及安排图集更新。 */ export async function importAssetFiles(files: Iterable<File>, requestedFolder?: string, signal?: AbortSignal): Promise<AssetRecord[]> {
+/** 逐项验证并暂存整批资源，守卫会话及取消状态后统一登记、绑定依赖与更新图集；失败不提交部分文件。 */ export async function importAssetFiles(files: Iterable<File>, requestedFolder?: string, signal?: AbortSignal, onPrepared?: (file: File, count: number) => void): Promise<AssetRecord[]> {
   const session = assetSessionRevision
   assetState.importing = true
   const imported: AssetRecord[] = []
+  const stagedFonts = new Map<string, FontFace | null>()
   try {
     for (const file of files) {
       if(signal?.aborted || session !== assetSessionRevision) throw new DOMException('Import cancelled or project replaced', 'AbortError')
@@ -298,12 +300,22 @@ let recordsByUuid = new Map<string, AssetRecord>()
       const settings = defaultImportSettings()
       if (assetType === 'image' && /(?:^|[-_.])pixel(?:[-_.]|$)/i.test(file.name)) settings.filterMode = 'Nearest'
       const artifact = await processAssetImport(file, settings, {signal})
-      const record = await recordImportedArtifact(file, settings, artifact, requestedFolder, signal, session)
+      const record = await recordImportedArtifact(file, settings, artifact, requestedFolder, signal, session, stagedFonts)
       imported.push(record)
+      onPrepared?.(file, imported.length)
+    }
+    if(signal?.aborted || session !== assetSessionRevision) throw new DOMException('Import cancelled or project replaced', 'AbortError')
+    // 所有文件验证成功后才一次提交；同名文件按提交次序分配路径，失败不留下半批资源。
+    for (const record of imported) {
+      record.path = uniquePath(requestedFolder || defaultFolder(record.assetType), record.name)
+      registerFont(record.uuid, stagedFonts.get(record.uuid) ?? null)
+      assetState.records.push(record)
+      const folder = record.path.slice(0, record.path.lastIndexOf('/'))
+      if (folder && !assetState.folders.includes(folder)) assetState.folders.push(folder)
     }
     return imported
   } finally {
-    if (session === assetSessionRevision && imported.length) { for (const asset of assetState.records) if (asset.interchange) bindInterchangeTexture(asset, assetState.records); assetState.records.sort(/* 调用 first.path.localeCompare(second.path) 并返回调用结果。 */ (first, second) => first.path.localeCompare(second.path)); assetState.generation++; queueTextureAtlasRebuild() }
+    if (session === assetSessionRevision && imported.some(/** 仅为实际提交的批次更新索引及图集。 */ record => assetState.records.includes(record))) { for (const asset of assetState.records) if (asset.interchange) bindInterchangeTexture(asset, assetState.records); assetState.records.sort(/* 调用 first.path.localeCompare(second.path) 并返回调用结果。 */ (first, second) => first.path.localeCompare(second.path)); assetState.generation++; queueTextureAtlasRebuild() }
     assetState.importing = false
   }
 }
@@ -637,7 +649,8 @@ let recordsByUuid = new Map<string, AssetRecord>()
     } : null
     assetState.records.push({
       uuid, name: sanitizedName(item.name || item.path?.split('/').pop() || 'Asset'),
-      path: uniquePath(sourceFolder(item.path, assetType), item.name || item.path?.split('/').pop() || 'Asset', uuid),
+      // 显示名可能相同；保存路径中的消歧后缀属于身份，重新打开时不得按显示名重新分配。
+      path: uniquePath(sourceFolder(item.path, assetType), (typeof item.path === 'string' ? item.path.replace(/\\/g, '/').split('/').pop() : '') || item.name || 'Asset', uuid),
       assetType, mimeType: String(item.mimeType || 'application/octet-stream'), byteLength: Math.max(0, Number(item.byteLength) || 0),
       source: typeof item.source === 'string' ? item.source : '', sourceModified: Number(item.sourceModified) || 0,
       importedAt: Number(item.importedAt) || 0, width: Math.max(0, Number(item.width) || 0), height: Math.max(0, Number(item.height) || 0),
@@ -929,7 +942,7 @@ let recordsByUuid = new Map<string, AssetRecord>()
 
 type SourceFileHandle = { getFile(): Promise<File> }
 
-/** 通过浏览器选择原始文件并建立修改监听，记录初始时间，区分不支持与用户取消。 */ export async function linkAssetSource(uuid: string): Promise<'linked' | 'cancelled' | 'unsupported'> {
+/** 通过浏览器选择原始文件并建立修改监听，记录初始时间，区分不支持与用户取消。 */ export async function linkAssetSource(uuid: string, onReimported?: () => void): Promise<'linked' | 'cancelled' | 'unsupported'> {
   const picker = (window as unknown as { showOpenFilePicker?: (options?: { multiple: boolean }) => Promise<SourceFileHandle[]> }).showOpenFilePicker
   if (!picker) return 'unsupported'
   let handles: SourceFileHandle[]
@@ -937,7 +950,7 @@ type SourceFileHandle = { getFile(): Promise<File> }
   const handle = handles[0]
   if (!handle || !assetState.records.some(/* 比较 record.uuid 与 uuid，返回严格相等的判断结果。 */ record => record.uuid === uuid)) return 'cancelled'
   const initial = await handle.getFile()
-  watchAssetSource(uuid, handle, /* 调用 reimportAsset(uuid, file) 并返回调用结果。 */ async file => reimportAsset(uuid, file), initial.lastModified)
+  watchAssetSource(uuid, handle, /** 自动换源成功后通知作者历史拥有者，失败保留原源。 */ async file => { const success = await reimportAsset(uuid, file); if (success) onReimported?.(); return success }, initial.lastModified)
   const record = assetState.records.find(/* 比较 asset.uuid 与 uuid，返回严格相等的判断结果。 */ asset => asset.uuid === uuid)
   if (record) record.sourceModified = initial.lastModified
   return 'linked'
@@ -1081,7 +1094,9 @@ type SourceFileHandle = { getFile(): Promise<File> }
 }
 
 /** 启动图集重建，失败时保留旧有效图集并记录有界错误消息。 */ export function queueTextureAtlasRebuild(): void {
-  void rebuildTextureAtlases().catch(/** 保存有界图集构建错误并输出诊断，保持上一有效图集可用。 */ error => {
+  const pending = rebuildTextureAtlases(), requestedRevision = atlasRevision
+  void pending.catch(/** 只发布最新构建的错误，旧请求不得覆盖后来成功构建的状态。 */ error => {
+    if (requestedRevision !== atlasRevision) return
     assetState.atlasError = error instanceof Error ? error.message.slice(0, 500) : String(error).slice(0, 500)
     console.error('Texture atlas rebuild failed; the previous valid atlas remains active.', error)
   })

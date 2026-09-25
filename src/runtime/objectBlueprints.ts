@@ -64,7 +64,11 @@ export interface QuickObjectWorkflowResult { entity: Entity; eventSheetAsset: st
 }
 
 /** 结构说明（自动提取）：synchronizeObjectBlueprintDependencies；输入 record、document；直接调用 sort、Set、flatMap；写入 record.pipeline.dependencies。 */ function synchronizeObjectBlueprintDependencies(record: AssetRecord, document: ObjectBlueprintDocument): void { if(record.pipeline)record.pipeline.dependencies=[...new Set([document.prefabAsset,document.eventSheetAsset,document.baseBlueprintAsset].flatMap(/* 当 assetGuid(reference) 为 null 或 undefined 时返回 []，否则保留左侧值。 */ reference=>assetGuid(reference)??[]))].sort() }
-/** 结构说明（自动提取）：saveObjectBlueprintAsset；输入 assetUuid、document；直接调用 updateTextAssetTransactional、serializeObjectBlueprint、resolveAsset、synchronizeObjectBlueprintDependencies。 */ export function saveObjectBlueprintAsset(assetUuid: string, document: ObjectBlueprintDocument): boolean { if(!updateTextAssetTransactional(assetUuid, serializeObjectBlueprint(document)))return false;const record=resolveAsset(assetUuid);if(record)synchronizeObjectBlueprintDependencies(record,document);return true }
+/** 结构说明（自动提取）：saveObjectBlueprintAsset；输入 assetUuid、document；直接调用 updateTextAssetTransactional、serializeObjectBlueprint、resolveAsset、synchronizeObjectBlueprintDependencies。 */ export function saveObjectBlueprintAsset(assetUuid: string, document: ObjectBlueprintDocument): boolean {
+  // 所有调用者共享身份及继承安全边界，拒绝结构错误后才写入资源。
+  const issues = validateObjectBlueprintDraft(assetUuid, document)
+  if (issues.some(/** 允许尚未完成的预制件引用，但拒绝草稿身份和循环损坏。 */ issue => ['OBJECT-DRAFT-IDENTITY','OBJECT-DRAFT-SHAPE','OBJECT-INHERIT-CYCLE','OBJECT-INHERIT-DEPTH','OBJECT-REFERENCE','OBJECT-MISSING','OBJECT-COMPONENT-CONFLICT','OBJECT-TRANSFORM-EXCLUDED','OBJECT-SCRIPT-EXCLUDED'].includes(issue.code))) return false
+  if(!updateTextAssetTransactional(assetUuid, serializeObjectBlueprint(document)))return false;const record=resolveAsset(assetUuid);if(record)synchronizeObjectBlueprintDependencies(record,document);return true }
 
 /* 调用 resolveObjectBlueprintUsing(reference, visited, readObjectBlueprint) 并返回调用结果。 */ export function resolvedObjectBlueprint(reference: string | null | undefined, visited = new Set<string>()): ObjectBlueprintDocument | null { return resolveObjectBlueprintUsing(reference, visited, readObjectBlueprint) }
 

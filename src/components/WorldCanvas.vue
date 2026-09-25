@@ -1,5 +1,6 @@
 <!-- 场景与游戏画布：持有渲染器、输入和单一帧循环，页面切换保留实例，项目退出释放资源。 -->
 <script setup lang="ts">
+import { installEditorTouch } from '../runtime/editorTouch'
 import { boundedFrame } from '../renderer/surfaceLimits'
 import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import { physicsState, pushHistory, selectEntities } from '../store/physics'
@@ -61,6 +62,7 @@ const focusedUiInput = ref<{ entity: Entity; rect: { x: number; y: number; width
 const accessibilityNodes = ref<UiAccessibilityNode[]>([])
 let accessibilitySignature = ''
 let touchPointer: number | null = null
+let disposeEditorTouch: (() => void) | null = null
 const captionTick = ref(0), visibleCaptions = computed(/** 随字幕刷新计数变化获取当前有效的运行时字幕。 */ () => { void captionTick.value; return activeRuntimeCaptions() })
 const inputBridge = new UiNativeInputBridge(/* 调用 gameUiRuntime.commitTextInput(uuid, value) 并返回调用结果。 */ (uuid, value) => gameUiRuntime.commitTextInput(uuid, value))
 let ctx: CanvasRenderingContext2D | null = null
@@ -343,6 +345,7 @@ let canvasLogicalWidth = 0, canvasLogicalHeight = 0
 }
 
 onMounted(/** 挂载时连接运行时输入、创建渲染器并启动帧循环及窗口监听。 */ () => {
+  if (canvasRef.value) disposeEditorTouch = installEditorTouch(canvasRef.value, { enabled: /** 只对设计视图接管触摸。 */ () => editorState.currentPage === 'scene', camera, down: onMouseDown, move: onMouseMove, up: onMouseUp })
   readPalette()
   gameUiRuntime.setCallback(/* 调用 gameplayRuntime.invokeUiCallback(entity, functionName) 并返回调用结果。 */ (entity, functionName) => gameplayRuntime.invokeUiCallback(entity, functionName))
   gameUiRuntime.setInputActions(physicsState.inputMap)
@@ -362,7 +365,7 @@ onMounted(/** 挂载时连接运行时输入、创建渲染器并启动帧循环
     if (world.wasmError) editorState.statusText = t('physicsUnavailable', { message: world.wasmError.message })
   }).catch(/** 物理初始化拒绝时显示状态并记录可恢复错误。 */ error => { editorState.statusText = t('physicsUnavailable', { message: error instanceof Error ? error.message : String(error) }); reportRecoverableError(error, 'Physics WebAssembly initialization', 'Physics') })
 })
-onBeforeUnmount(/** 卸载时失效初始化、取消帧与监听并销毁运行时及渲染器。 */ () => { canvasDisposed = true; rendererInitialization++; pendingMouseMove = null; if (raf) cancelAnimationFrame(raf); if (resizeRaf) cancelAnimationFrame(resizeRaf); window.removeEventListener('resize', scheduleResize); window.removeEventListener('mouseup', onMouseUp); window.removeEventListener('keydown', onKeyDown, true); window.removeEventListener('nova-renderer-reset-request', resetRenderer); if (resizeObserver) resizeObserver.disconnect(); gameUiRuntime.reset(); renderer?.destroy(); renderer = null })
+onBeforeUnmount(/** 卸载时失效初始化、取消帧与监听并销毁运行时及渲染器。 */ () => { disposeEditorTouch?.(); disposeEditorTouch = null; canvasDisposed = true; rendererInitialization++; pendingMouseMove = null; if (raf) cancelAnimationFrame(raf); if (resizeRaf) cancelAnimationFrame(resizeRaf); window.removeEventListener('resize', scheduleResize); window.removeEventListener('mouseup', onMouseUp); window.removeEventListener('keydown', onKeyDown, true); window.removeEventListener('nova-renderer-reset-request', resetRenderer); if (resizeObserver) resizeObserver.disconnect(); gameUiRuntime.reset(); renderer?.destroy(); renderer = null })
 
 let rendererContextAntialias: boolean | null = null
 watch(/* 比较 renderingSettings.antiAliasing 与 'Off'，返回严格相等的判断结果。 */ () => renderingSettings.antiAliasing === 'Off', /** 渲染设置变化后异步重建渲染器。 */ () => { void resetRenderer() })
@@ -1562,3 +1565,4 @@ canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%
 .timeline-subtitles.caption-transparent p { background: transparent; border-color: transparent; box-shadow: none; text-shadow: 0 1px 3px #000, 0 -1px 3px #000; }
 .overlay-canvas:focus-visible { outline: 2px solid var(--accent, #79b2ff); outline-offset: -2px; }
 </style>
+

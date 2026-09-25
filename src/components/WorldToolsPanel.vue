@@ -223,4 +223,10 @@ const simulationReport = computed(/** 以当前实体、连接及全局设置生
 aside>label:has(input[type=number]){flex-direction:column;align-items:stretch;gap:6px}aside>label input[type=number]{width:100%;min-width:86px;min-height:34px}
 .world-tools aside button{height:auto;min-height:36px;padding-block:6px;white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere;word-break:normal;hyphens:auto;line-height:1.3}
 @container(max-width:850px){.world-tools>.simulation-status17{max-height:25%}}
+/* 26.26：表单与状态沿一个页面滚动，消除父面板、状态卡、左右表单三层滚动陷阱。 */
+.world-tools>.simulation-status17{max-height:none;overflow:visible}
+.workspace{flex:0 0 auto;min-height:240px}.workspace>aside,.workspace>main{overflow:visible;min-width:0}
+.world-tools nav button{min-width:0;flex:1 1 100px;white-space:normal;overflow-wrap:anywhere}
+.simulation-checks{grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr))}
+@container(max-width:620px){.world-tools>header>div{display:flex}.world-tools>header small{white-space:normal;overflow:visible;text-overflow:clip}.simulation-issues>article{grid-template-columns:minmax(0,1fr)}.simulation-issues>article small{grid-column:1}}
 </style>

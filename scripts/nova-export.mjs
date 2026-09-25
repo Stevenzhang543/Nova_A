@@ -138,7 +138,8 @@ const INLINE_TEXT_ASSET_TYPES = new Set(['script', 'prefab', 'scene', 'material'
 }
 /** 优先读取内嵌资产；文件资产解析真实路径并限制在项目目录内，读取失败时提供修复信息。 */ async function assetBytes(asset) {
   const source = String(asset.source ?? '')
-  if (source.startsWith('data:')) return Buffer.from(source.slice(source.indexOf(',') + 1), source.slice(0, source.indexOf(',')).includes(';base64') ? 'base64' : 'utf8')
+  // 与浏览器导出使用同一 data URL 解码语义，避免把百分号编码的 SVG 字符串当成图像字节。
+  if (source.startsWith('data:')) { const response = await fetch(source); return Buffer.from(await response.arrayBuffer()) }
   const embeddedText = INLINE_TEXT_ASSET_TYPES.has(String(asset.assetType))
     || String(asset.mimeType ?? '').startsWith('text/')
     || String(asset.mimeType ?? '').includes('json')

@@ -162,6 +162,21 @@ let diskMaintenance: Promise<void> = Promise.resolve()
   if (!(file.type.startsWith('image/') || /\.(?:png|jpe?g|webp|gif|svg)$/i.test(file.name))) return
   if (typeof createImageBitmap !== 'function') return
   const bitmap = await createImageBitmap(blob).catch(/* 返回固定值 null。 */ () => null)
+  // 部分浏览器不支持直接从 SVG Blob 创建 ImageBitmap，但其图像解码器可以正常显示 SVG。
+  if (!bitmap && (file.type === 'image/svg+xml' || /\.svg$/i.test(file.name)) && typeof Image !== 'undefined') {
+    const url = URL.createObjectURL(blob)
+    try {
+      await new Promise<void>(/** 使用真实图像解码器验证 SVG，超时与错误均清理监听。 */ (resolve, reject) => {
+        const image = new Image()
+        const timer = setTimeout(/** 限制 SVG 解码等待时间，拒绝不可结算的输入。 */ () => finish(new Error('IMAGE_DECODE: SVG decoding timed out.')), 15000)
+        /** 单次结算并解除对源和监听器的引用。 */ function finish(error?: Error) { clearTimeout(timer); image.onload = null; image.onerror = null; image.src = ''; error ? reject(error) : resolve() }
+        image.onload = /** 对 SVG 解码后的实际像素使用与位图完全相同的预算。 */ () => finish(image.naturalWidth < 1 || image.naturalHeight < 1 || image.naturalWidth > 32768 || image.naturalHeight > 32768 || image.naturalWidth * image.naturalHeight > 268435456 ? new Error('IMAGE_DECODE: SVG dimensions exceed the importer limit.') : undefined)
+        image.onerror = /** 将浏览器解码失败交给导入错误路径。 */ () => finish(new Error('IMAGE_DECODE: SVG source could not be decoded.'))
+        image.src = url
+      })
+      return
+    } finally { URL.revokeObjectURL(url) }
+  }
   if (!bitmap || bitmap.width < 1 || bitmap.height < 1 || bitmap.width > 32768 || bitmap.height > 32768 || bitmap.width * bitmap.height > 268435456) { bitmap?.close(); throw new Error('IMAGE_DECODE: Source bytes could not be decoded within the 32768px / 268435456-pixel limit.') }
   bitmap.close()
 }

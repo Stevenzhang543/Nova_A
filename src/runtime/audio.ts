@@ -324,6 +324,10 @@ export class AudioRuntime {
       else if(voice.started&&voice.element.paused)void voice.element.play().catch(/* 调用 this.reportFailure('resume timeline audio',error,'Interact with the game view and resume playback.') 并返回调用结果。 */ error=>this.reportFailure('resume timeline audio',error,'Interact with the game view and resume playback.'))
       const clock=this.diagnostics.voiceClocks['timeline:'+request.key];if(clock){clock.playing=wantsPlayback;clock.playbackRate=request.playbackRate*this.transportScale}
     }
+    // UUID 在重导入与撤销时保持不变；源内容变化必须释放旧播放实例及其解码租约。
+    for (const [key, voice] of this.uiVoices) if (resolveAsset(voice.reference)?.source !== voice.element.src) this.releaseUiVoice(key)
+    for (const [key, voices] of this.polyphonic) for (const voice of [...voices]) if (resolveAsset(voice.reference)?.source !== voice.element.src) this.releasePolyphonicVoice(key, voice)
+    for (const [key, entry] of this.timelineVoices) if (resolveAsset(entry.voice.reference)?.source !== entry.voice.element.src) this.releaseTimelineVoice(key)
     const updateAt = performance.now()
     this.settings = normalizeAudioSettings(settings)
     this.refreshContextForSampleRate(); if (playing) this.ensureContext(); this.configureMixerGraph(); this.applyMix()
@@ -355,7 +359,8 @@ export class AudioRuntime {
       const loopStart = Math.max(trimStart, clamp(selectedLoop?.start ?? asset.settings.audioSettings.loopStart, 0, 0, Math.max(0, asset.duration)))
       const loopEnd = Math.min(trimEnd > trimStart ? trimEnd : Math.max(0, asset.duration), clamp(selectedLoop?.end ?? asset.settings.audioSettings.loopEnd, 0, 0, Math.max(0, asset.duration)) || Math.max(0, asset.duration))
       let audio = this.active.get(component.uuid)
-      if (!audio || audio.reference !== reference || audio.streaming !== streaming) {
+      if (!audio || audio.reference !== reference || audio.streaming !== streaming || audio.element.src !== asset.source) {
+        const prior = audio?.reference === reference ? { started: audio.started, manuallyPaused: audio.manuallyPaused, completed: audio.completed, time: audio.element.currentTime } : null
         this.release(component.uuid)
         const element = this.createPlayback(asset.source,streaming); element.preload = streaming || asset.settings.audioSettings.preload === 'Metadata' ? 'metadata' : asset.settings.audioSettings.preload === 'None' ? 'none' : 'auto'
         let created: ActiveAudio
@@ -363,6 +368,7 @@ export class AudioRuntime {
         element.addEventListener('timeupdate', timeUpdate)
         const pitchVariation = seededVariation(`${component.uuid}:pitch:${this.diagnostics.activeVoices}`), volumeVariation = seededVariation(`${component.uuid}:volume:${this.diagnostics.activeVoices}`)
         created = { reference, bus: busSettings.id, element, source: null, gain: null, panner: null, started: false, manuallyPaused: false, completed: false, streaming, loopStart, loopEnd, timeUpdate, pitchVariation, volumeVariation }
+        if (prior) { created.started=prior.started; created.manuallyPaused=prior.manuallyPaused; created.completed=prior.completed; element.currentTime=Math.min(Math.max(0,asset.duration),Math.max(0,prior.time)) }
         this.connect(component, created); this.active.set(component.uuid, created); audio = created
       }
       if (!audio) continue
@@ -449,7 +455,7 @@ export class AudioRuntime {
       let entry=this.timelineVoices.get(request.key)
       const authored=request.entity.getComponent<AudioSource>('AudioSource'),component=authored??entry?.component??new AudioSource()
       const bus=this.settings.mixer.buses.find(/* 比较 bus.id 与 component.bus，返回严格相等的判断结果。 */ bus=>bus.id===component.bus)??this.settings.mixer.buses.find(/* 比较 bus.id 与 'SFX'，返回严格相等的判断结果。 */ bus=>bus.id==='SFX')!,streaming=component.streamOverride==='Stream'||component.streamOverride==='ImportSetting'&&asset.settings.audioSettings.streaming
-      if(entry&&(entry.voice.reference!==request.reference||entry.voice.streaming!==streaming)){this.releaseTimelineVoice(request.key);entry=undefined}
+      if(entry&&(entry.voice.reference!==request.reference||entry.voice.streaming!==streaming||entry.voice.element.src!==asset.source)){this.releaseTimelineVoice(request.key);entry=undefined}
       if(!entry){
         const all=[...this.active.values(),...[...this.polyphonic.values()].flat(),...[...this.timelineVoices.values()].map(/* 返回 value.voice 的当前值。 */ value=>value.voice)],audible=all.filter(/* 先计算 voice.started&&!voice.completed；仅当其为真值时求右侧 !voice.manuallyPaused，返回短路求值结果。 */ voice=>voice.started&&!voice.completed&&!voice.manuallyPaused)
         if(audible.length+this.uiVoices.size>=this.settings.mixer.masterVoiceLimit||audible.filter(/* 比较 voice.bus 与 bus.id，返回严格相等的判断结果。 */ voice=>voice.bus===bus.id).length>=bus.voiceLimit){diagnostics.push({key:request.key,message:'Timeline audio voice limit reached.'});continue}

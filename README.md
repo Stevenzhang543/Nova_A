@@ -4,7 +4,7 @@
 # Nova_A 2D Game Engine & Editor
 
 <!-- NOVA_V2624_OVERVIEW -->
-**Current development source 26.24:** [release status](docs/RELEASE_NOTES_26_24.md), [structured graph contract](docs/STRUCTURAL_GRAPH_26_24.md), [acceptance tracker](docs/IMPLEMENTATION_TRACKER_26_24.md), [every edit](docs/EDIT_LEDGER_26_24.md), and [Web hosting](docs/WEB_HOSTING_26_24.md). Full qualification, Chinese comment coverage and final release packaging remain in progress.
+**Current development source 26.26:** [implementation and audit scope](docs/IMPLEMENTATION_TRACKER_26_26.md), [release notes](docs/RELEASE_NOTES_26_26.md), [every edit](docs/EDIT_LEDGER_26_26.md), [panel inventory](docs/PANEL_INVENTORY_26_26.md), and [Web hosting](docs/WEB_HOSTING_26_26.md). Version 26.25 is released; this version has separate frozen-source qualification.
 
 <!-- NOVA_V2623_OVERVIEW -->
 **Previous source 26.23:** [release notes](docs/RELEASE_NOTES_26_23.md), [scripting contract](docs/SCRIPTING_CONTRACT_26_23.md), [Web hosting](docs/WEB_HOSTING_26_23.md), [26.23–26.30 roadmap addendum](docs/ROADMAP_26_23_TO_26_30_ADDENDUM.md), [acceptance tracker](docs/IMPLEMENTATION_TRACKER_26_23.md), and [every edit](docs/EDIT_LEDGER_26_23.md). Release acceptance requires source-bound executed evidence and verified checksums.
@@ -12,7 +12,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE.md)
 [![Tier 1](https://img.shields.io/badge/Tier%201-Windows%20%7C%20Web-63c6ff)](./docs/PLATFORM_BUILD_MATRIX_5_0.md)
-[![Release](https://img.shields.io/badge/source-26.24-63c6ff)]()
+[![Release](https://img.shields.io/badge/source-26.26-63c6ff)]()
 
 <!-- NOVA_V2621_DEVELOPMENT -->
 **Next series (development):** [26.21–26.30 coding manual](docs/ROADMAP_26_21_TO_26_30.md), [current feature inventory](docs/FEATURE_INVENTORY_26_21.md), [source map](docs/SOURCE_MAP_26_21.md), [engine comparison](docs/COMPETITIVE_REVIEW_26_21.md), [panel audit](docs/PANEL_AUDIT_26_21.md), [open gaps](docs/GAP_REGISTER_26_21.md), and [every development edit](docs/EDIT_LEDGER_26_21.md). 26.21 source and localized teaching are implemented; release qualification is tracked in [the 26.21 acceptance tracker](docs/IMPLEMENTATION_TRACKER_26_21.md). A packaged release is accepted only with its source-bound evidence and verified checksums.

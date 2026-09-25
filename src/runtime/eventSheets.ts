@@ -122,6 +122,10 @@ const CALLBACK_BY_EVENT: Record<ObjectEventKind, string> = {
   if (!destination || destination.assetType !== 'eventSheet' || !document || !Array.isArray(document.handlers)) return false
   if (document.handlers.some(/* 先计算 !handler；仅当其为假值时求右侧 !OBJECT_EVENT_KINDS.includes(handler.kind)，返回短路求值结果。 */ handler => !handler || !OBJECT_EVENT_KINDS.includes(handler.kind))) return false
   if (validateEventSheetDraft(document).length) return false
+  // 保存边界保护资源身份与继承链；未配置逻辑的工作中草稿仍可保存。
+  const saved = readEventSheet(assetUuid)
+  if (!saved || saved.uuid !== document.uuid || document.format !== saved.format || document.version !== saved.version) return false
+  if (validateEventSheet(document).some(/** 仅阻断结构和继承错误，允许尚未绑定逻辑的草稿。 */ issue => issue.code.startsWith('EVENT-INHERIT-') || issue.code === 'EVENT-BASE-MISSING' || issue.code === 'EVENT-DUPLICATE')) return false
   if (!updateTextAssetTransactional(assetUuid, serializeEventSheet(document))) return false
   const record = resolveAsset(assetUuid)
   if (record) synchronizeEventSheetDependencies(record, document)
@@ -192,12 +196,12 @@ const CALLBACK_BY_EVENT: Record<ObjectEventKind, string> = {
 
 /* 调用 JSON.stringify([handler.kind, handler.selector, handler.callback]) 并返回调用结果。 */ export function eventHandlerKey(handler: ObjectEventHandler): string { return JSON.stringify([handler.kind, handler.selector, handler.callback]) }
 
-/** 结构说明（自动提取）：resolveEventHandlers；输入 reference、visited；直接调用 Set、assetGuid、readEventSheet、seen.has、seen.add 等；写入 cursor；包含循环处理。 */ export function resolveEventHandlers(reference: string | null | undefined, visited = new Set<string>()): ResolvedObjectEventHandler[] {
+/** 结构说明（自动提取）：resolveEventHandlers；输入 reference、visited；直接调用 Set、assetGuid、readEventSheet、seen.has、seen.add 等；写入 cursor；包含循环处理。 */ export function resolveEventHandlers(reference: string | null | undefined, visited = new Set<string>(), draft?: EventSheetDocument): ResolvedObjectEventHandler[] {
   const chain: Array<{ asset: string; document: EventSheetDocument }> = []
   const seen = new Set(visited)
   let cursor = reference
   while (cursor) {
-    const asset = assetGuid(cursor), document = readEventSheet(cursor)
+    const asset = assetGuid(cursor), document = draft && asset === assetGuid(reference) ? draft : readEventSheet(cursor)
     // A broken chain cannot silently execute a partial inheritance result.
     if (!asset || !document || seen.has(asset) || seen.size >= 64) return []
     seen.add(asset)
@@ -229,10 +233,10 @@ const CALLBACK_BY_EVENT: Record<ObjectEventKind, string> = {
     for (const handler of resolveEventHandlers(entity.script2D.eventSheetAsset)) {
       if (handler.kind !== kind || (handler.selector && handler.selector !== selector)) continue
       scheduled.push({ sheetUuid: handler.sourceSheetUuid, sourceSheetAsset: handler.sourceSheetAsset, logicAsset: handler.logicAsset, handlerUuid: handler.uuid, entityUuid: entity.uuid, callback: handler.callback, priority: handler.priority, order: scheduled.length })
-      if (scheduled.length >= MAX_EVENT_HANDLERS) return scheduled.sort(/* 先计算 b.priority - a.priority || a.entityUuid.localeCompare(b.entityUuid)；仅当其为假值时求右侧 a.handlerUuid.localeCompare(b.handlerUuid)，返回短路求值结果。 */ (a, b) => b.priority - a.priority || a.entityUuid.localeCompare(b.entityUuid) || a.handlerUuid.localeCompare(b.handlerUuid))
+      if (scheduled.length >= MAX_EVENT_HANDLERS) return scheduled.sort(/* 先计算 b.priority - a.priority || a.entityUuid.localeCompare(b.entityUuid)；仅当其为假值时求右侧 a.order - b.order，返回短路求值结果。 */ (a, b) => b.priority - a.priority || a.entityUuid.localeCompare(b.entityUuid) || a.order - b.order)
     }
   }
-  return scheduled.sort(/* 先计算 b.priority - a.priority || a.entityUuid.localeCompare(b.entityUuid)；仅当其为假值时求右侧 a.handlerUuid.localeCompare(b.handlerUuid)，返回短路求值结果。 */ (a, b) => b.priority - a.priority || a.entityUuid.localeCompare(b.entityUuid) || a.handlerUuid.localeCompare(b.handlerUuid))
+  return scheduled.sort(/* 先计算 b.priority - a.priority || a.entityUuid.localeCompare(b.entityUuid)；仅当其为假值时求右侧 a.order - b.order，返回短路求值结果。 */ (a, b) => b.priority - a.priority || a.entityUuid.localeCompare(b.entityUuid) || a.order - b.order)
 }
 
 /** Stable per-sheet random stream; save/load and hot reload reproduce the same sequence. */

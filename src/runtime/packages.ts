@@ -108,7 +108,16 @@ export const packageState = reactive({
 export type PackageLifecycleAction = 'enable' | 'disable' | 'uninstall' | 'update' | 'rollback'
 const packageLifecycleListeners = new Set<(id: string, action: PackageLifecycleAction) => void>()
 /** 结构说明（自动提取）：onPackageLifecycle；输入 listener；直接调用 packageLifecycleListeners.add。 */ export function onPackageLifecycle(listener: (id: string, action: PackageLifecycleAction) => void): () => void { packageLifecycleListeners.add(listener); return /** 执行时调用 packageLifecycleListeners.delete(listener)；不显式返回调用结果。 */ () => { packageLifecycleListeners.delete(listener) } }
-/** 结构说明（自动提取）：notifyPackageLifecycle；输入 id、action；直接调用 listener；包含循环处理。 */ function notifyPackageLifecycle(id: string, action: PackageLifecycleAction): void { for (const listener of packageLifecycleListeners) listener(id, action) }
+/** 包状态已提交后逐个通知订阅者；隔离外部回调异常，避免把成功提交误报为失败或漏通知后续消费者。 */
+function notifyPackageLifecycle(id: string, action: PackageLifecycleAction): void {
+  for (const listener of [...packageLifecycleListeners]) {
+    try { listener(id, action) }
+    catch (error) {
+      packageState.errors.push(`Package ${id} ${action} committed; consumer notification failed: ${error instanceof Error ? error.message : String(error)}`)
+      if (packageState.errors.length > 100) packageState.errors.splice(0, packageState.errors.length - 100)
+    }
+  }
+}
 /** 结构说明（自动提取）：setPackageEnabled；输入 id、enabled；直接调用 packageState.installed.find、packageCompatibility、notifyPackageLifecycle；写入 item.enabled。 */ export function setPackageEnabled(id: string, enabled: boolean): boolean {
   if (typeof enabled !== 'boolean') return false
   const item = packageState.installed.find(/* 比较 candidate.manifest.id 与 id，返回严格相等的判断结果。 */ candidate => candidate.manifest.id === id)
@@ -541,6 +550,12 @@ export interface PackageInstallReview {
   const candidates = existing >= 0 ? packageState.installed.map(/* 根据 index === existing 的真假，分别返回 item 或 current。 */ (current, index) => index === existing ? item : current) : [...packageState.installed, item]
   const diagnostic = diagnosePackageResolution(candidates)
   if (diagnostic.status === 'blocked') throw new Error(diagnostic.errors.join(' '))
+  // 导入同一包的新版本也保留回滚基线；所有验证完成后才修改包、缓存和锁文件。
+  if (existing >= 0) {
+    const history = packageState.rollback[manifest.id] ?? (packageState.rollback[manifest.id] = [])
+    history.unshift(packageState.installed[existing].manifest)
+    if (history.length > 5) history.splice(5)
+  }
   if (cached >= 0) packageState.offlineCache.splice(cached, 1, manifest); else packageState.offlineCache.push(manifest)
   if (existing >= 0) packageState.installed.splice(existing, 1, item); else packageState.installed.push(item)
   packageState.lockfile.splice(0, packageState.lockfile.length, ...diagnostic.lockfile)

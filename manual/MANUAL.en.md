@@ -1,4 +1,44 @@
-# Nova_A 26.24 Complete Manual
+# Nova_A 26.26 Complete Manual
+
+<!-- NOVA_V2626_START -->
+## 26.26 — production assets and readable libraries
+
+Engine: **26.26.0** · Project Format 2/schema 29.
+
+### Import and reimport
+
+Import a small valid batch first. Replace a sprite, audio clip or font through the existing asset so its UUID remains stable; creating a new asset is a separate identity decision. A failed batch must report failure without silently retaining earlier files. Undo/redo and save/reopen must preserve the chosen identity and authored overrides.
+
+### Dependencies and export
+
+Inspect dependencies and consumers before deletion or replacement. Repair a missing reference by choosing the intended existing identity. Review an atlas or variant after source changes. Save before rebuilding; compare the downloaded game package with the saved assets. Updating only a loose file beside an old packed game does not update that game.
+
+### Library and panels
+
+Use grid/list for discovery and the inspector/details view for full paths, metadata, provenance and import settings. Long names must remain inspectable and controls keyboard reachable. Large collections keep rendered rows bounded; timing and memory reports describe the measured workload, not every device. All forty starters remain available.
+
+### Checks and limits
+
+Replace resources during playback, undo, repair a missing consumer, reopen from a moved project, choose a variant, rebuild an atlas and export. Test fonts and audio on target hardware. Offline authoring remains supported; hosted discovery/publishing requires a real configured service. The complete panel inventory distinguishes source branches from actually exercised UI states.
+
+<!-- NOVA_V2626_END -->
+
+<!-- NOVA_V2625_START -->
+## 26.25 — debugging, inherited events and mobile Web
+
+Engine: **26.25.0** · Project Format 2/schema 29.
+
+Use the debugger capability notice to distinguish callback-boundary pauses and command replay from a suspended Rhai VM. A frame snapshot is not a live VM stack. Continue or cancel the active session; source navigation must reject stale revisions. Watches accept bounded side-effect-free inspection, not arbitrary game calls.
+
+In the event editor, read inherited provenance before adding an override. The same-priority dispatch order follows inheritance/declaration order. Invalid callbacks and cycles must block saving with a focused diagnostic. Save, reopen and export to verify your authored result.
+
+On touch devices use landscape. Rotating does not destroy the mounted editor or unsaved fields; the portrait prompt blocks interaction until landscape returns. Software keyboard height changes are distinct from device rotation. Use one finger to edit and two fingers to pan/zoom the design canvas.
+
+Install the HTTPS Web app through the browser menu; on iPhone Safari use Share → Add to Home Screen. This is an online-only home-screen Web app, not a native iOS binary. Save/export project backups before updating. Offline reload is not supported; a tab already loaded may continue only with resources already in memory.
+
+Acceptance: diagnose a wrong score and failing callback; inspect session/source identity; edit inherited handlers, save/reopen/export; rotate an unsaved form and menu; start the downloaded game. Windows browser emulation does not certify a physical phone or Safari.
+
+<!-- NOVA_V2625_END -->
 
 <!-- NOVA_V2624_START -->
 ## 26.24 — structured graphs and readable workspaces

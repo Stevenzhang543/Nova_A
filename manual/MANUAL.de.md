@@ -1,4 +1,44 @@
-# Nova_A 26.24 – Vollständiges Handbuch
+# Nova_A 26.26 – Vollständiges Handbuch
+
+<!-- NOVA_V2626_START -->
+## 26.26 — Produktionsressourcen und lesbare Bibliotheken
+
+Engine: **26.26.0** · Project Format 2/schema 29.
+
+### Import und erneuter Import
+
+Zuerst einen kleinen gültigen Stapel importieren. Sprite, Audio oder Schrift über die vorhandene Ressource ersetzen, damit die UUID stabil bleibt; eine neue Ressource besitzt eine eigene Identität. Ein fehlgeschlagener Stapel darf frühere Dateien nicht unbemerkt übernehmen. Rückgängig/Wiederholen und Speichern/Öffnen erhalten Identität und eigene Überschreibungen.
+
+### Abhängigkeiten und Export
+
+Vor Löschen oder Ersetzen Abhängigkeiten und Verbraucher prüfen. Fehlende Verweise mit der beabsichtigten vorhandenen Identität reparieren. Atlas und Variante nach Änderungen kontrollieren. Vor dem Neubau speichern; das heruntergeladene Paket mit den gespeicherten Ressourcen vergleichen. Eine lose Datei aktualisiert kein älteres Spielpaket.
+
+### Bibliothek und Fenster
+
+Raster/Liste dienen der Suche; Inspektor/Details zeigen vollständige Pfade, Herkunft und Importeinstellungen. Lange Namen müssen lesbar und Bedienelemente per Tastatur erreichbar bleiben. Große Sammlungen begrenzen gerenderte Zeilen; Messwerte gelten nur für die dokumentierte Last. Alle vierzig Vorlagen bleiben erhalten.
+
+### Prüfungen und Grenzen
+
+Während der Wiedergabe ersetzen, rückgängig machen, fehlende Verweise reparieren, verschobenes Projekt öffnen, Variante wählen, Atlas neu erstellen und exportieren. Audio und Schriften auf Zielgeräten prüfen. Offline-Bearbeitung bleibt möglich; gehostete Veröffentlichung braucht echte Dienste. Die Fensterübersicht trennt Quellzweige von tatsächlich bedienten Zuständen.
+
+<!-- NOVA_V2626_END -->
+
+<!-- NOVA_V2625_START -->
+## 26.25 — Debugging, geerbte Ereignisse und mobiles Web
+
+Engine: **26.25.0** · Project Format 2/schema 29.
+
+Der Fähigkeitshinweis unterscheidet Callback-Grenzen und Befehlswiedergabe von einer angehaltenen Rhai-VM. Ein Frame-Schnappschuss ist kein lebender VM-Stack. Sitzung fortsetzen oder abbrechen; veraltete Quellrevisionen dürfen nicht navigieren. Watches erlauben begrenzte nebenwirkungsfreie Inspektion.
+
+Im Ereigniseditor zuerst die Herkunft geerbter Handler lesen. Bei gleicher Priorität gilt die Reihenfolge von Vererbung und Deklaration. Ungültige Callbacks und Zyklen blockieren das Speichern mit einem fokussierten Hinweis. Speichern, erneut öffnen und exportieren.
+
+Touch-Geräte verwenden Querformat. Drehen erhält den Editor und ungespeicherte Felder; der Hochformat-Hinweis sperrt nur die Bedienung. Tastaturhöhe ist keine Drehung. Ein Finger bearbeitet, zwei Finger verschieben und zoomen die Entwurfsfläche.
+
+HTTPS-Web-App über das Browsermenü installieren; in Safari auf dem iPhone: Teilen → Zum Home-Bildschirm. Nur online, keine native iOS-Datei. Vor Updates Projekte sichern. Neuladen ohne Netzwerk wird nicht unterstützt.
+
+Prüfen: falschen Punktestand und Callback-Fehler untersuchen, Sitzung/Quellrevision prüfen, geerbte Handler speichern/öffnen/exportieren, ungespeicherte Felder und Menüs drehen, heruntergeladenes Spiel starten. Desktop-Emulation zertifiziert kein echtes Mobilgerät.
+
+<!-- NOVA_V2625_END -->
 
 <!-- NOVA_V2624_START -->
 ## 26.24 — Strukturierte Graphen und lesbare Arbeitsbereiche

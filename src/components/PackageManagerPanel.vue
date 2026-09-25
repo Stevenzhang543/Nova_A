@@ -18,7 +18,7 @@
     <div v-if="registryOpen && !pluginToolsOpen" class="registry-layout">
       <section class="registry-list">
         <header><select v-model="packages.selectedRegistry" :aria-label="t('registry')"><option v-for="registry in packages.registries" :key="registry.id" :value="registry.id">{{ registry.name }}</option></select><input v-model="packages.registryQuery" type="search" :placeholder="t('searchRegistry')"></header>
-        <article v-for="manifest in catalog" :key="`${manifest.id}:${manifest.version}`" :class="{ selected: selectedRegistryId === manifest.id }" @click="selectedRegistryId = manifest.id">
+        <article v-for="manifest in catalog" :key="`${manifest.id}:${manifest.version}`" :class="{ selected: selectedRegistryId === manifest.id }" tabindex="0" @keydown.enter.self="selectedRegistryId = manifest.id" @keydown.space.self.prevent="selectedRegistryId = manifest.id" @click="selectedRegistryId = manifest.id">
           <div class="package-mark">{{ manifest.pluginApi === 2 ? 'P' : 'N' }}</div><div><strong>{{ manifest.name }}</strong><small>{{ manifest.id }} · {{ manifest.version }}</small><p>{{ manifest.description }}</p></div><span v-if="manifest.publisherVerified" class="verified">✓ {{ t('verifiedPublisher') }}</span>
         </article>
         <p v-if="!catalog.length" class="empty">{{ t('noResults') }}</p>
@@ -37,7 +37,7 @@
     </div>
     <div v-else-if="!pluginToolsOpen" class="package-layout">
       <div class="package-list">
-        <article v-for="item in visiblePackages" :key="item.manifest.id" :class="{ selected: selectedId === item.manifest.id }" @click="selectedId = item.manifest.id">
+        <article v-for="item in visiblePackages" :key="item.manifest.id" :class="{ selected: selectedId === item.manifest.id }" tabindex="0" @keydown.enter.self="selectedId = item.manifest.id" @keydown.space.self.prevent="selectedId = item.manifest.id" @click="selectedId = item.manifest.id">
           <div class="package-mark">{{ item.manifest.native ? 'N' : item.manifest.pluginApi === 2 ? 'P' : 'A' }}</div>
           <div class="package-name"><strong>{{ item.manifest.name }}</strong><small>{{ item.manifest.id }} · {{ item.manifest.version }}</small></div>
           <span class="source">{{ item.source.kind }}</span>
@@ -215,6 +215,7 @@ const visiblePackages = computed(/* 调用 packages.installed.filter(item => mat
 </style>
 
 <style scoped>
+.registry-list strong,.registry-list small,.package-name strong,.package-name small{white-space:normal;overflow-wrap:anywhere;overflow:visible}
 .registry-inspector dt,.package-inspector dt{overflow-wrap:anywhere;white-space:normal}
 .registry-links{grid-template-columns:repeat(2,minmax(0,1fr))}.registry-links button{min-width:0;white-space:normal;overflow-wrap:anywhere;height:auto}
 .registry-inspector>header,.package-title{flex-wrap:wrap;overflow-wrap:anywhere}

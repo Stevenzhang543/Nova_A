@@ -2,6 +2,7 @@
 import { reactive } from 'vue'
 import { evaluateDebugExpression } from '../runtime/scriptDebug'
 import { parseGraphDocument, type GraphBreakpoint, type GraphValue, type NovaGraphDocument } from './graphTypes'
+import { snapshotPreview } from '../runtime/dynamicInspection'
 import { NOVA_ENGINE_VERSION } from '../projects/projectFormat'
 
 export interface GraphTraceCommand {
@@ -48,7 +49,7 @@ const documents = new Map<string, NovaGraphDocument>()
 const MAX_TRACE_ENTRIES = 5_000
 
 /* 根据 value && typeof value === 'object' && !Array.isArray(value) 的真假，分别返回 value as Record<string, unknown> 或 {}。 */ function values(value: unknown): Record<string, unknown> { return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {} }
-/** 字符串直接返回，其他值优先 JSON 序列化，无法序列化时退回普通字符串转换。 */ function text(value: unknown): string { if (typeof value === 'string') return value; try { return JSON.stringify(value) } catch { return String(value) } }
+/** 字符串直接返回，其他值优先 JSON 序列化，无法序列化时退回普通字符串转换。 */ function text(value: unknown): string { return snapshotPreview(value, 4096) }
 /* 当 graph?.debug.breakpoints.find(item => item.enabled && item.nodeUuid === nodeUuid) 为 null 或 undefined 时返回 null，否则保留左侧值。 */ function breakpointFor(graph: NovaGraphDocument | undefined, nodeUuid: string): GraphBreakpoint | null { return graph?.debug.breakpoints.find(/* 先计算 item.enabled；仅当其为真值时求右侧 item.nodeUuid === nodeUuid，返回短路求值结果。 */ item => item.enabled && item.nodeUuid === nodeUuid) ?? null }
 /** 用当前上下文替换日志模板中的标识符路径，占位值不可求解时给出提示并限制结果长度。 */ function formatLogpoint(template: string, context: Record<string, unknown>): string { return template.replace(/\{([A-Za-z_][A-Za-z0-9_.]*)\}/g, /** 求解日志占位路径并格式化；失败时显示该路径不可用。 */ (_match, path: string) => { try { return text(evaluateDebugExpression(path, context)) } catch { return `<${path}: unavailable>` } }).slice(0, 4_096) }
 
@@ -61,6 +62,7 @@ const MAX_TRACE_ENTRIES = 5_000
 /* 当 documents.get(uuid) 为 null 或 undefined 时返回 null，否则保留左侧值。 */ export function graphDebugDocument(uuid: string): NovaGraphDocument | null { return documents.get(uuid) ?? null }
 
 /** 开启新调试会话，清空暂停位置、轨迹、调用栈、耗时、覆盖和断点计数。 */ export function beginGraphDebugSession(): void {
+  documents.clear()
   graphDebugState.session++
   graphDebugState.paused = false; graphDebugState.reason = ''; graphDebugState.stepMode = 'continue'; graphDebugState.stepDepth = 0
   graphDebugState.activeGraphUuid = ''; graphDebugState.activeScopeUuid = ''; graphDebugState.activeNodeUuid = ''; graphDebugState.activeEdgeUuid = ''; graphDebugState.activeAt = 0; graphDebugState.sequence = 0
@@ -95,14 +97,14 @@ const MAX_TRACE_ENTRIES = 5_000
   const graph = documents.get(command.graphUuid), watchExpressions = graph?.debug.watches ?? []
   graphDebugState.watches.splice(0, graphDebugState.watches.length, ...watchExpressions.map(/** 分别求解观察表达式，将单个求值异常转为该项错误而不打断其他观察值。 */ expression => { try { return { expression, value: text(evaluateDebugExpression(expression, context)), error: '' } } catch (error) { return { expression, value: '—', error: error instanceof Error ? error.message : String(error) } } }))
   const breakpoint = command.nodeUuid ? breakpointFor(graph, command.nodeUuid) : null
-  let pause = shouldStep(command), reason = pause ? `Step ${graphDebugState.stepMode} reached node ${command.nodeUuid}` : '', logMessage = ''
+  let pause = shouldStep(command), reason = pause ? `Command replay step ${graphDebugState.stepMode} reached node ${command.nodeUuid}` : '', logMessage = ''
   if (breakpoint) {
     const hits = Math.min(1_000_000_000, (graphDebugState.breakpointHits[command.nodeUuid] ?? 0) + 1); graphDebugState.breakpointHits[command.nodeUuid] = hits
     let condition = true
     if (breakpoint.condition.trim()) try { condition = Boolean(evaluateDebugExpression(breakpoint.condition, context)) } catch (error) { condition = false; recordGraphError(command.graphUuid, command.nodeUuid, `Breakpoint condition: ${error instanceof Error ? error.message : String(error)}`) }
     if (breakpoint.hitCondition > 0 && hits < breakpoint.hitCondition) condition = false
     if (condition && breakpoint.logMessage.trim()) { logMessage = formatLogpoint(breakpoint.logMessage, context); condition = false }
-    if (condition) { pause = true; reason = `Visual breakpoint at node ${command.nodeUuid} · hit ${hits}` }
+    if (condition) { pause = true; reason = `Command replay breakpoint at node ${command.nodeUuid} · hit ${hits}` }
   }
   if (pause) { graphDebugState.paused = true; graphDebugState.reason = reason; graphDebugState.stepMode = 'continue' }
   graphDebugState.revision++

@@ -26,6 +26,8 @@ export interface AssetDependencyView {
   missing: number
   cycles: string[][]
   truncated: boolean
+  /** 正反遍历实际访问项数，用于记录大资源库的有界成本。 */
+  visited: number
 }
 
 const MAX_GRAPH_NODES = 2_048
@@ -40,13 +42,16 @@ const thumbnailCache = new Map<string, string>()
 
 /** Builds a bounded, deterministic two-way dependency projection suitable for visual and accessible views. */
 /** 从选定资源向正反依赖展开有界视图，标注缺失、循环和距离并仅保留可见节点间连线。 */ export function buildAssetDependencyView(selectedUuid: string, assets: readonly AssetRecord[], maximumNodes = MAX_GRAPH_NODES): AssetDependencyView {
+  maximumNodes = Number.isFinite(maximumNodes) ? Math.max(1, Math.min(MAX_GRAPH_NODES, Math.floor(maximumNodes))) : MAX_GRAPH_NODES
   const graph = buildProductionAssetGraph([...assets]), byUuid = new Map(assets.map(/* 返回按声明顺序构造的数组 [normalizedUuid(asset.uuid), asset]。 */ asset => [normalizedUuid(asset.uuid), asset])), selected = normalizedUuid(selectedUuid)
   const forward = new Map<string, number>(), reverse = new Map<string, number>()
   const walk = /** 按广度遍历排序邻接项并记录最短发现深度，在输出达到节点限制后停止扩展。 */ (root: string, adjacency: Map<string, Set<string>>, output: Map<string, number>) => {
     const queue: Array<[string, number]> = [[root, 0]]
-    while (queue.length && output.size < Math.max(1, maximumNodes)) {
-      const [owner, depth] = queue.shift()!
+    let cursor = 0
+    while (cursor < queue.length && output.size < maximumNodes) {
+      const [owner, depth] = queue[cursor++]!
       for (const raw of [...(adjacency.get(owner) ?? [])].sort()) {
+        if (output.size >= maximumNodes) break
         const uuid = normalizedUuid(raw), previous = output.get(uuid)
         if (previous !== undefined && previous <= depth + 1) continue
         output.set(uuid, depth + 1); if (byUuid.has(uuid)) queue.push([uuid, depth + 1])
@@ -79,7 +84,8 @@ const thumbnailCache = new Map<string, string>()
     directDependents: graph.reverseDependencies.get(selected)?.size ?? 0, transitiveDependents: reverse.size,
     missing: nodes.filter(/* 比较 node.direction 与 'missing'，返回严格相等的判断结果。 */ node => node.direction === 'missing').length,
     cycles: graph.cycles.filter(/* 调用 cycle.some(uuid => visible.has(normalizedUuid(uuid))) 并返回调用结果。 */ cycle => cycle.some(/* 调用 visible.has(normalizedUuid(uuid)) 并返回调用结果。 */ uuid => visible.has(normalizedUuid(uuid)))).map(/* 调用 cycle.map(normalizedUuid) 并返回调用结果。 */ cycle => cycle.map(normalizedUuid)),
-    truncated: ids.size > nodes.length || forward.size >= maximumNodes || reverse.size >= maximumNodes
+    truncated: ids.size > nodes.length || forward.size >= maximumNodes || reverse.size >= maximumNodes,
+    visited: forward.size + reverse.size
   }
 }
 

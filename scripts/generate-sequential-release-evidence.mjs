@@ -40,13 +40,13 @@ import { verifyReleaseSnapshot } from './release-source-snapshot.mjs'
   const environment = { id: `${process.platform}-${process.arch}-node${process.versions.node}`, platform: process.platform, architecture: process.arch, node: process.versions.node }
   const source = { commit: 'unavailable-source-snapshot', state: 'immutable-filesystem-snapshot', authority: snapshot.sourceInputDigest }
   const entries = await Promise.all((await filesBelow(evidence)).map(/** 为归档文件记录散列信息并附源码、工具与环境来源。 */ async path => ({ ...await fileRecord(evidence, path), source: source.commit, tool: 'generate-sequential-release-evidence.mjs', environment: environment.id })))
-  await writeJson(join(evidence, 'evidence-manifest.json'), { format: 'nova-release-evidence-manifest', version: 1, release, machineVersion, engineVersion: machineVersion, generatedAt, source, sourceInputDigest: snapshot.sourceInputDigest, sourceInputs: snapshot.sourceInputs, environment, qualification: { runPath: relative(root, runRoot).replaceAll('\\', '/'), sourceSnapshot: plan.sourceSnapshot ?? `.cache/release-snapshots/v${release}/snapshot.json` }, localQualificationComplete: true, localReportAuthorities: { status: 'passed', issues: [] }, externalCertificationComplete: false, externalGates, entries })
+  await writeJson(join(evidence, 'evidence-manifest.json'), { format: 'nova-release-evidence-manifest', version: 1, release, machineVersion, engineVersion: machineVersion, generatedAt, source, sourceInputDigest: snapshot.sourceInputDigest, sourceInputs: snapshot.sourceInputs, environment, qualification: { runPath: relative(root, runRoot).replaceAll('\\', '/'), sourceSnapshot: plan.sourceSnapshot ?? `.cache/release-snapshots/v${release}/snapshot.json` }, localQualificationComplete: true, auditPolicy: plan.auditPolicy ?? { kind: 'full-baseline' }, localReportAuthorities: { status: 'passed', issues: [] }, externalCertificationComplete: false, externalGates, entries })
   await verifyReleaseSnapshot(join(runRoot, 'source-snapshot.json'), root)
   await verifyExecutedGates(root, runRoot)
   await cp(confinedPath(root, plan.releaseNotes), join(audits, `v${release}-release-notes.md`))
   await cp(confinedPath(root, plan.editLedger), join(audits, `v${release}-edit-ledger.md`))
-  await cp(join(runRoot, 'reports/performance/benchmarks.json'), join(audits, `v${release}-benchmarks.json`))
-  await cp(join(runRoot, 'reports/performance/stability-local.json'), join(audits, `v${release}-stability-smoke.json`))
+  if (reports.has('performance/benchmarks.json')) await cp(join(runRoot, 'reports/performance/benchmarks.json'), join(audits, `v${release}-benchmarks.json`))
+  if (reports.has('performance/stability-local.json')) await cp(join(runRoot, 'reports/performance/stability-local.json'), join(audits, `v${release}-stability-smoke.json`))
   // Never replace a previously qualified evidence set. Retain failed staging for diagnosis.
   try { await lstat(final); throw new Error(`Immutable qualified evidence already exists: ${final}`) } catch (error) { if (error.code !== 'ENOENT') throw error }
   await rename(evidence, final)

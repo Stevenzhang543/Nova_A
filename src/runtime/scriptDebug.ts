@@ -10,6 +10,9 @@ export interface DebugFrame {
   line: number
   sourcePath?: string
   depth?: number
+  sourceRevision?: string
+  sessionRevision?: number
+  pauseId?: number
 }
 
 export interface DebugWatch { id: number; expression: string; value: string; error: string | null; valueType?: string }
@@ -63,6 +66,17 @@ export const scriptDebugState = reactive({
 })
 
 let nextWatchId = 1
+
+/** 宿主提供可执行的继续、命令/回调步进和取消；同步 Rhai 调用不具有可恢复的 VM 栈。 */
+export interface DebugHost { continue(): void; step(mode: Exclude<DebugStepMode, 'continue'>): void; cancelTask(id: string): boolean }
+let debugHost: DebugHost | null = null
+let authenticatedToken = ''
+export const DEBUG_CAPABILITIES = Object.freeze({ vmSuspension: false, vmStack: false, vmLocals: false, callbackBreakpoints: true, callbackStep: true, commandReplayStep: true, snapshotWatches: true, caughtExceptionPause: false })
+/** 登记宿主操作，停止时撤销旧会话的权限与未完成任务。 */
+export function bindDebugHost(host: DebugHost | null): void { debugHost = host; if (!host) { disconnectRemoteDebugger(); scriptDebugState.tasks.splice(0); clearScriptDebugger() } }
+/** 对实际执行源码计算稳定身份，用于阻止将旧位置投射到已编辑草稿。 */
+export function debugSourceRevision(source: string): string { let hash = 2166136261; for (let index = 0; index < source.length; index++) hash = Math.imul(hash ^ source.charCodeAt(index), 16777619); return `${source.length}:${(hash >>> 0).toString(16)}` }
+
 
 /** 验证有数量上限的调试映射，拒绝非法坐标与绝对或父级路径，排序有效结果并限制诊断数量。 */ export function normalizeDebugSourceMap(value: unknown): DebugSourceMap {
   const diagnostics: string[] = [], mappings: DebugSourceMapping[] = []
@@ -146,7 +160,8 @@ let nextWatchId = 1
 /** 记录暂停原因、当前栈帧和局部变量，限制去重栈列表并刷新观察表达式。 */ export function pauseScriptDebugger(frame: DebugFrame, locals: Record<string, unknown>, reason: string): void {
   scriptDebugState.paused = true
   scriptDebugState.reason = reason
-  scriptDebugState.callStack.splice(0, scriptDebugState.callStack.length, frame, ...scriptDebugState.callStack.filter(/* 先计算 item.entityUuid !== frame.entityUuid；仅当其为假值时求右侧 item.functionName !== frame.functionName，返回短路求值结果。 */ item => item.entityUuid !== frame.entityUuid || item.functionName !== frame.functionName).slice(0, 31))
+  // 旧回调不是当前调用栈；只保存宿主确实提供的这一个快照位置。
+  scriptDebugState.callStack.splice(0, scriptDebugState.callStack.length, { ...frame, sessionRevision: scriptDebugState.sessionRevision, pauseId: scriptDebugState.pauseCount + 1 })
   scriptDebugState.locals = locals
   scriptDebugState.selectedFrame = 0
   scriptDebugState.pauseCount++
@@ -165,7 +180,7 @@ let nextWatchId = 1
   evaluateDebugWatches()
 }
 
-/** 开启新的调试会话代次、重置暂停计数并清理旧调试状态。 */ export function beginDebugSession(): void { scriptDebugState.sessionRevision++; scriptDebugState.pauseCount = 0; clearScriptDebugger() }
+/** 开启新的调试会话代次、重置暂停计数并清理旧调试状态。 */ export function beginDebugSession(): void { disconnectRemoteDebugger(); scriptDebugState.tasks.splice(0); scriptDebugState.sessionRevision++; scriptDebugState.pauseCount = 0; clearScriptDebugger() }
 /** 记录请求的步进模式并递增状态版本，供执行宿主消费。 */ export function requestDebugStep(mode: DebugStepMode): void { scriptDebugState.stepMode = mode; scriptDebugState.revision++ }
 
 /** 把选择索引限制到现有调用栈范围并更新状态版本。 */ export function selectDebugFrame(index: number): void {
@@ -196,16 +211,21 @@ let nextWatchId = 1
   return second.length >= 32 && mismatch === 0
 }
 
-/** 校验显式启用的本地播放器令牌会话后处理线程、栈、变量、只读求值、任务取消和步进协议请求。 */ export function handleDebugProtocol(request: DebugProtocolRequest, policy: { enabled: boolean; expectedTokenHash: string; allowExportedPlayers: boolean }): { id: string; result?: unknown; error?: { code: string; message: string } } {
+/** 校验显式启用的本地播放器令牌会话后处理线程、栈、变量、只读求值、任务取消和步进协议请求。 */ export function handleDebugProtocol(request: DebugProtocolRequest & { sessionRevision?: number; pauseId?: number }, policy: { enabled: boolean; expectedTokenHash: string; allowExportedPlayers: boolean }): { id: string; result?: unknown; error?: { code: string; message: string } } {
   if (request.method === 'initialize') {
     const local = request.address === '127.0.0.1' || request.address === '::1' || request.address === 'localhost'
     const accepted = policy.enabled && policy.allowExportedPlayers && local && secureTokenMatch(request.tokenHash, policy.expectedTokenHash)
     scriptDebugState.remoteAudit.unshift({ at: new Date().toISOString(), event: 'initialize', accepted, detail: `${request.address} · ${request.playerVersion}` })
     if (scriptDebugState.remoteAudit.length > 200) scriptDebugState.remoteAudit.splice(200)
-    if (!accepted) return { id: request.id, error: { code: 'NOVA-DEBUG-AUTH', message: 'Remote debugging requires explicit local-player enablement and a valid authentication token.' } }
+    if (!accepted) { disconnectRemoteDebugger('Authentication rejected'); return { id: request.id, error: { code: 'NOVA-DEBUG-AUTH', message: 'Remote debugging requires explicit local-player enablement and a valid authentication token.' } } }
+    authenticatedToken = policy.expectedTokenHash
     scriptDebugState.remotePeer = { id: `peer-${Date.now()}`, address: request.address, authenticated: true, connectedAt: new Date().toISOString(), playerVersion: request.playerVersion.slice(0, 40) }
-    return { id: request.id, result: { protocol: 'nova-rhai-debug', version: 3, capabilities: ['statementMaps', 'statementStepping', 'breakpoints', 'conditionalBreakpoints', 'hitCounts', 'logpoints', 'stackTrace', 'scopes', 'evaluate', 'tasks', 'taskCancellation', 'hotReload'] } }
+    return { id: request.id, result: { protocol: 'nova-rhai-debug', version: 4, sessionRevision: scriptDebugState.sessionRevision, pauseId: scriptDebugState.pauseCount, capabilities: DEBUG_CAPABILITIES } }
   }
+  if (!policy.enabled || !policy.allowExportedPlayers || (scriptDebugState.remotePeer && authenticatedToken !== policy.expectedTokenHash)) { disconnectRemoteDebugger('Permission revoked'); return { id: request.id, error: { code: 'NOVA-DEBUG-AUTH', message: 'Debug permission is disabled.' } } }
+  if (request.sessionRevision !== scriptDebugState.sessionRevision) return { id: request.id, error: { code: 'NOVA-DEBUG-STALE', message: 'Execution session changed; initialize again.' } }
+  if (['scopes', 'evaluate', 'continue', 'next', 'stepIn', 'stepOut'].includes(request.method) && (!scriptDebugState.paused || request.pauseId !== scriptDebugState.pauseCount)) return { id: request.id, error: { code: 'NOVA-DEBUG-STALE', message: 'The requested pause is no longer active.' } }
+  if ((request.method === 'scopes' || request.method === 'evaluate') && (request.frame !== 0 || !scriptDebugState.callStack.length)) return { id: request.id, error: { code: 'NOVA-DEBUG-FRAME', message: 'Only the current host snapshot is available; VM frames are unsupported.' } }
   if (!scriptDebugState.remotePeer?.authenticated) return { id: request.id, error: { code: 'NOVA-DEBUG-NOT-AUTHENTICATED', message: 'Initialize an authenticated local session first.' } }
   if (request.method === 'threads') return { id: request.id, result: [{ id: 1, name: 'Main callbacks' }, ...scriptDebugState.tasks.map(/** 构造并返回记录 { id: index + 2, name: `${task.name} · ${task.state}` }，字段按当前实参及捕获状态求值。 */ (task, index) => ({ id: index + 2, name: `${task.name} · ${task.state}` }))] }
   if (request.method === 'stackTrace') return { id: request.id, result: scriptDebugState.callStack.map(/** 构造并返回记录 { id: index, ...frame }，字段按当前实参及捕获状态求值。 */ (frame, index) => ({ id: index, ...frame })) }
@@ -214,15 +234,17 @@ let nextWatchId = 1
     try { return { id: request.id, result: evaluateDebugExpression(request.expression) } } catch (error) { return { id: request.id, error: { code: 'NOVA-DEBUG-EVALUATE', message: error instanceof Error ? error.message : String(error) } } }
   }
   if (request.method === 'cancelTask') {
-    const task = markDebugTaskCancelled(request.taskId, 'Cancellation accepted by remote debugger')
+    const task = debugHost?.cancelTask(request.taskId) ? scriptDebugState.tasks.find(/** 获取宿主真正取消的任务。 */ item => item.id === request.taskId) : null
     return task ? { id: request.id, result: { accepted: true, taskId: task.id } } : { id: request.id, error: { code: 'NOVA-DEBUG-TASK', message: 'Task is not cancellable.' } }
   }
   const mode: DebugStepMode = request.method === 'continue' ? 'continue' : request.method === 'stepIn' ? 'into' : request.method === 'stepOut' ? 'out' : 'over'
-  requestDebugStep(mode)
+  if (!debugHost) return { id: request.id, error: { code: 'NOVA-DEBUG-HOST', message: 'No active execution host.' } }
+  if (mode === 'continue') debugHost.continue(); else debugHost.step(mode)
   return { id: request.id, result: { accepted: true, mode } }
 }
 
 /** 记录远程调试断开原因并清除已认证端点。 */ export function disconnectRemoteDebugger(reason = 'Session closed'): void {
   if (scriptDebugState.remotePeer) scriptDebugState.remoteAudit.unshift({ at: new Date().toISOString(), event: 'disconnect', accepted: true, detail: reason.slice(0, 256) })
+  authenticatedToken = ''
   scriptDebugState.remotePeer = null
 }

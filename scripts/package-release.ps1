@@ -163,6 +163,12 @@ function Assert-StructuredEvidence {
   if (@(Compare-Object @($paths | Sort-Object) $actualPaths).Count -gt 0) { throw 'Evidence manifest does not cover the exact unique evidence file inventory.' }
   if (Test-RequiresStructuredEvidence -Label ([string]$Manifest.release)) {
     $requiredEvidence = @('build/local-builds.json','build/windows-smoke.json','external/gates.json','layout/layout-browser.json','performance/benchmarks.json','performance/stability-local.json','runtime/dependency-audit.json','runtime/migration-history.json','runtime/product-audit.json','runtime/template-catalog.json','runtime/user-interactions.json','runtime/verification.json','manual/MANUAL.en.md','manual/MANUAL.de.md','manual/MANUAL.zh-CN.md','manual/index.html')
+    # 用户授权的风险范围只要求实际计划报告；后续 JS 验证仍检查必需门禁、命令、源码和散列。
+    if ($Manifest.PSObject.Properties.Name -contains 'auditPolicy' -and $Manifest.auditPolicy.kind -eq 'change-risk-v1') {
+      $qualifiedPlan = Get-Content -LiteralPath (Join-Path $resolvedRoot 'qualification/plan.json') -Raw | ConvertFrom-Json
+      if ([version]$Manifest.machineVersion -lt [version]'26.25.0' -or $qualifiedPlan.auditPolicy.kind -ne 'change-risk-v1') { throw 'Invalid scoped audit policy.' }
+      $requiredEvidence = @('build/local-builds.json','external/gates.json','manual/MANUAL.en.md','manual/MANUAL.de.md','manual/MANUAL.zh-CN.md','manual/index.html') + @($qualifiedPlan.gates | ForEach-Object <# 获取实际门禁声明的报告。 #> { $_.reports } | ForEach-Object <# 保留报告归档目标路径。 #> { $_.target })
+    }
     if (Test-RequiresHeadlessAuthority -Label ([string]$Manifest.release)) { $requiredEvidence += 'build/headless-authority.json' }
     foreach ($required in $requiredEvidence) {
       if (-not $paths.Contains($required)) { throw "Structured evidence is missing required baseline entry: $required" }
@@ -365,6 +371,13 @@ $requiresCurrentHostingGuide = [version]$MachineVersion -ge [version]'26.24.0'
 $hostingGuide = Join-Path $projectRoot $(if ($requiresCurrentHostingGuide) { 'docs\WEB_HOSTING_' + $Version.Replace('.', '_') + '.md' } else { 'docs\WEB_HOSTING_26_23.md' })
 if ($requiresCurrentHostingGuide) { $requiredInputs += $hostingGuide }
 if ($requiresStructuredEvidence) { $requiredInputs += $structuredEvidenceManifest }
+# 风险范围的未运行性能检查不生成假报告；实际计划报告仍由结构化证据逐项校验。
+if ($requiresStructuredEvidence -and (Test-Path -LiteralPath $structuredEvidenceManifest -PathType Leaf)) {
+  $scopeManifest = Get-Content -LiteralPath $structuredEvidenceManifest -Raw | ConvertFrom-Json
+  if ($scopeManifest.PSObject.Properties.Name -contains 'auditPolicy' -and $scopeManifest.auditPolicy.kind -eq 'change-risk-v1') {
+    $requiredInputs = @($requiredInputs | Where-Object <# 仅移除旧版平面性能副本要求，不移除构建或证据清单。 #> { $_ -ne $benchmarkPath -and $_ -ne $stabilityPath })
+  }
+}
 foreach ($source in $requiredInputs) {
   if (-not (Test-Path -LiteralPath $source -PathType Leaf)) {
     throw "Required release input is missing: $source"

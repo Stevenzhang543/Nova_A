@@ -1996,7 +1996,7 @@ let entityClipboard: EntityBundle | null = null
   physicsState.simulationRunning = false
   physicsState.playMode = 'editing'
   simulationSnapshot = null
-  if (snapshot) loadProject(snapshot)
+  if (snapshot && loadProject(snapshot)) historyBaseline = getSceneJSON()
 }
 
 /** 结算首次步进前编辑并保存恢复快照，在暂停状态执行一个物理步并更新诊断。 */ export function singleStepSimulation(): boolean {
@@ -2237,6 +2237,20 @@ export const autosaveState = reactive({ available: readAutosave() !== null })
   if (/build|preset|export/.test(value)) return 'build'
   if (/setting|physics layer|input|audio|render/.test(value)) return 'settings'
   return 'scene'
+}
+
+/** 保留播放时明确执行的资源重导入，只更新恢复快照中的资源域，绝不提交仿真实体状态。 */ export function pushAssetReimportHistory(label = 'Reimport asset', mergeKey: string | null = null): void {
+  if (physicsState.playMode === 'editing') { pushHistory(label, mergeKey); return }
+  if (applyingHistory || !simulationSnapshot) return
+  const before = simulationSnapshot, authored = JSON.parse(before)
+  const assets = serializeAssets(), assetFolders = serializeAssetFolders(), assetDatabase = serializeAssetDatabaseSettings()
+  if (JSON.stringify(authored.assets) === JSON.stringify(assets) && JSON.stringify(authored.assetFolders) === JSON.stringify(assetFolders) && JSON.stringify(authored.assetDatabase) === JSON.stringify(assetDatabase)) return
+  Object.assign(authored, { assets, assetFolders, assetDatabase })
+  const after = JSON.stringify(authored)
+  commandHistory.commit(new DocumentMutationCommand({ label, before, after, apply: applyHistoryDocument, mergeKey, affectedResource: 'project.nova:assets', scope: 'asset' }), true)
+  simulationSnapshot = after
+  historyBaseline = after
+  markProjectDirty('asset'); sceneManager.markDirty(); syncHistoryState()
 }
 
 /** 在编辑模式比较序列化文档基线，提交实际变化或更新活动事务，标记脏状态并安排自动保存。 */ export function pushHistory(label = 'Edit scene', mergeKey: string | null = null, affectedResource = 'project.nova'): void {

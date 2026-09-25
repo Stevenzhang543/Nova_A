@@ -60,7 +60,7 @@
         >
           <button class="disclosure" :class="{ placeholder: !row.hasChildren }" :aria-label="row.expanded ? t('collapsePanel') : t('expandPanel')" @click.stop="toggleExpanded(row.entity.uuid)">{{ row.hasChildren ? (row.expanded ? '⌄' : '›') : '' }}</button>
           <span class="shape-icon">{{ getIcon(row.entity.shapeType) }}</span>
-          <span v-if="editingId !== row.entity.id" class="name" :title="`${row.entity.name} — ${t('renameHint')}`" @dblclick.stop="startEdit(row.entity)"><mark v-if="searchQuery && row.entity.name.toLocaleLowerCase().includes(searchQuery.toLocaleLowerCase())">{{ row.entity.name }}</mark><template v-else>{{ row.entity.name }}</template><small>{{ row.entity.id }}</small></span>
+          <button v-if="editingId !== row.entity.id" type="button" class="name" :aria-pressed="state.selectedEntityIds.includes(row.entity.id)" @click.stop="selectEntity($event, row.entity)" :title="`${row.entity.name} — ${t('renameHint')}`" @dblclick.stop="startEdit(row.entity)"><mark v-if="searchQuery && row.entity.name.toLocaleLowerCase().includes(searchQuery.toLocaleLowerCase())">{{ row.entity.name }}</mark><template v-else>{{ row.entity.name }}</template><small>{{ row.entity.id }}</small></button>
           <input v-else v-model="editName" v-focus class="edit-input" @click.stop @blur="finishEdit(row.entity)" @keyup.enter="finishEdit(row.entity)" @keyup.escape="editingId = null">
           <span v-if="row.entity.prefabAsset" class="status-mark" :title="t('prefabInstance')">P</span><span v-if="row.entity.sceneLayers.length" class="status-mark scene" :title="t('sceneInstance')">S</span><span v-if="Object.keys(row.entity.prefabOverrides).length" class="status-mark override" :title="t('prefabOverrides')">●</span>
           <button class="state-button pin" :class="{ active: authoringState.pinnedEntityUuids.includes(row.entity.uuid) }" :title="t('pinEntity')" @click.stop="toggleHierarchyPin(row.entity.uuid)">◆</button>
@@ -321,4 +321,7 @@ onUnmounted(/** 卸载时解除层级尺寸观察。 */ () => { hierarchyResizeO
 .status-mark{width:16px;height:16px;display:grid;place-items:center;border-radius:4px;color:var(--accent);background:var(--accent-soft);font-size:11px;font-weight:800}.status-mark.scene{color:var(--success)}.status-mark.override{color:var(--warning);background:transparent}
 .empty-state { padding: 18px 8px; color: var(--text-muted); font-size:11px; text-align: center; }.root-drop { width: calc(100% - 8px); min-height: 31px; margin: 6px 4px; border: 1px dashed var(--accent); border-radius: 8px; color: var(--accent); background: var(--accent-soft); font-size:11px; }
 .resize-handle { position: absolute; inset: 0 0 0 auto; width: 8px; cursor: ew-resize; z-index: 4; }.right .resize-handle{inset:0 auto 0 0}.expand { position: absolute; left: 0; top: 48%; z-index: 5; width: 20px; height: 54px; border: 1px solid var(--border-subtle); border-left: 0; border-radius: 0 9px 9px 0; color: var(--accent); background: var(--surface-1); }.right .expand{left:auto;right:0;transform:scaleX(-1)}
+/* 26.26：名称成为独立原生选择按钮，键盘激活不重复冒泡至整行选择。 */
+button.name{height:100%;padding:0;border:0;border-radius:3px;background:transparent;color:inherit;font:inherit;text-align:left}
+button.name:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 </style>

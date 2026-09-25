@@ -1,6 +1,6 @@
 <!-- 事件表编辑器：编辑继承、条件和动作，维护草稿与转换源。 -->
 <template>
-  <section class="event-studio">
+  <section ref="studioElement" class="event-studio">
     <ObjectBlueprintEditor v-if="blueprintEditorUuid" :key="blueprintEditorUuid" :asset-uuid="blueprintEditorUuid" @close="blueprintEditorUuid=null" @derive="deriveBlueprint" />
     <StudioDraftConflict format="json" v-if="eventDraftConflict" :saved-source="savedEventSource" :draft-source="JSON.stringify(document)" @keep="acceptEventDraftBase" @discard="restoreDiscardedDraft" />
     <div class="event-layout">
@@ -30,9 +30,18 @@
 <!-- 继承候选过滤回调排除当前事件表资源。 -->        <label><span>{{ t('inheritsFrom') }}</span><select v-model="document.baseSheetAsset" @change="markDirty"><option :value="null">{{ t('none') }}</option><option v-for="asset in sheetAssets.filter(item => item.uuid !== activeAsset?.uuid)" :key="asset.uuid" :value="assetReference(asset.uuid)">{{ asset.name }}</option></select></label>
       </section>
 
+      <details class="event-provenance" open>
+        <summary>{{ provenanceCopy.title }}</summary><p>{{ provenanceCopy.hint }}</p>
+        <ol><li v-for="handler in effectiveHandlers" :key="`${handler.sourceSheetAsset}:${handler.uuid}`">
+          <strong>{{ handler.inherited ? provenanceCopy.inherited : provenanceCopy.local }} · {{ resolveAsset(handler.sourceSheetAsset)?.name ?? handler.sourceSheetAsset }}</strong>
+          <span>{{ provenanceCopy.condition }}: {{ eventKindLabel(handler.kind) }}<template v-if="handler.selector"> · {{ handler.selector }}</template></span>
+          <span>{{ provenanceCopy.action }}: {{ handler.callback }}() · {{ resolveAsset(handler.logicAsset)?.path ?? t('none') }} · {{ t('priority') }} {{ handler.priority }}</span>
+          <button v-if="!handler.inherited" @click="focusHandler(handler.uuid)">{{ provenanceCopy.focus }}</button>
+        </li></ol><p v-if="!effectiveHandlers.length">{{ provenanceCopy.empty }}</p>
+      </details>
       <section class="event-list">
         <header><div><strong>{{ t('objectEvents') }}</strong><span>{{ visibleHandlers.length }} / {{ document.handlers.length }}</span></div><input :aria-label="t('searchEvents')" v-model="eventSearch" type="search" :placeholder="t('searchEvents')"><button class="primary" @click="addHandler">＋ {{ t('addEvent') }}</button></header>
-        <article v-for="handler in visibleHandlers" :key="handler.uuid" :class="{ disabled: !handler.enabled }">
+        <article v-for="handler in visibleHandlers" :key="handler.uuid" :data-handler-uuid="handler.uuid" :class="{ disabled: !handler.enabled }">
           <label class="enabled"><input :aria-label="t('enabled') + ' · ' + handler.name" v-model="handler.enabled" type="checkbox" @change="markDirty"><span></span></label>
           <select :aria-label="panelControlLabel('eventKind')" v-model="handler.kind" class="event-kind" @change="eventKindChanged(handler)"><option v-for="kind in eventKinds" :key="kind" :value="kind">{{ eventKindLabel(kind) }}</option></select>
           <div class="event-copy"><input :aria-label="t('eventName')" v-model="handler.name" maxlength="120" :placeholder="t('eventName')" @change="markDirty"><small>{{ eventDescription(handler.kind) }}</small></div>
@@ -55,7 +64,7 @@
       </section>
       <section>
         <header><strong>{{ t('validation') }}</strong><span :class="{ valid: !errors.length }">{{ errors.length ? t('issueCount', { count: errors.length }) : `✓ ${t('valid')}` }}</span></header>
-        <p v-for="issue in diagnostics" :key="`${issue.code}:${issue.handlerUuid}`" :class="issue.severity"><b>{{ issue.code }}</b>{{ issue.message }}</p>
+        <p v-for="issue in diagnostics" :key="`${issue.code}:${issue.handlerUuid}`" :class="issue.severity"><b>{{ issue.code }}</b>{{ issue.message }}<button v-if="issue.handlerUuid" @click="focusHandler(issue.handlerUuid)">{{ provenanceCopy.focus }}</button></p>
         <p v-if="!diagnostics.length" class="valid">{{ t('eventSheetValid') }}</p>
       </section>
       <section class="blueprints">
@@ -70,12 +79,13 @@
 </template>
 
 <script setup lang="ts">
+import { eventProvenanceCopy } from '../editor/eventProvenanceCopy'
 import NumericExpressionInput from './NumericExpressionInput.vue'
 import { settleEditorDrafts } from '../editor/pendingDrafts'
 import ObjectBlueprintEditor from './ObjectBlueprintEditor.vue'
 import {authorBlueprintFromEntity,authorDerivedBlueprint,authorBlueprintInstance} from '../editor/objectBlueprintAuthoring'
 import {objectOwnershipCopy} from '../editor/objectOwnershipCopy'
-import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { assetReference, assetState, createTextAsset, readTextAsset, resolveAsset } from '../assets/AssetDatabase'
 import { openScriptAsset } from '../editor/scriptStudioState'
 import { t } from '../i18n'
@@ -91,9 +101,17 @@ import { physicsState, pushHistory } from '../store/physics'
 import { addEditorLog } from '../store/editor'
 import { graphStudioState, openGraphAsset } from '../visual/graphStudioState'
 import type { AuthoringObjectKind } from '../world/Entity'
-import { OBJECT_EVENT_KINDS, resolveEventSheetPrimaryLogic, attachEventSheet, callbackNamesInLogic, createEventSheetAsset, defaultEventHandler, defaultEventSheet, parseEventSheet, saveEventSheetAsset, validateEventSheet, type EventSheetDocument, type ObjectEventHandler, type ObjectEventKind } from '../runtime/eventSheets'
+import { OBJECT_EVENT_KINDS, resolveEventHandlers, resolveEventSheetPrimaryLogic, attachEventSheet, callbackNamesInLogic, createEventSheetAsset, defaultEventHandler, defaultEventSheet, parseEventSheet, saveEventSheetAsset, validateEventSheet, type EventSheetDocument, type ObjectEventHandler, type ObjectEventKind } from '../runtime/eventSheets'
 import { createQuickObjectWorkflow } from '../runtime/objectBlueprints'
 
+const studioElement=ref<HTMLElement|null>(null)
+const provenanceCopy=computed(/** 采用当前界面语言显示继承及定位文案。 */ ()=>eventProvenanceCopy[preferencesState.locale])
+const effectiveHandlers=computed(/** 资源或草稿变化时通过运行时解析器预览实际继承顺序。 */ ()=>{void assetState.generation;return resolveEventHandlers(assetReference(activeUuid.value),new Set(),document.value)})
+/** 清除筛选后将诊断定位到对应处理器，保持所有未保存字段。 */ async function focusHandler(uuid:string){
+  eventSearch.value='';await nextTick()
+  const row=Array.from(studioElement.value?.querySelectorAll<HTMLElement>('[data-handler-uuid]')??[]).find(/** 按完整标识查找，避免拼接 CSS 选择器。 */ item=>item.dataset.handlerUuid===uuid)
+  row?.scrollIntoView({block:'nearest'});row?.querySelector<HTMLElement>('input:not([type="checkbox"]),select')?.focus()
+}
 const assetSearch=ref(''),eventSearch=ref(''),dirty=ref(false),document=shallowRef<EventSheetDocument>(defaultEventSheet()),activeUuid=ref('')
 const sheetAssets=computed(/** 依赖资源代次列出事件表并按路径排序。 */ ()=>{void assetState.generation;return assetState.records.filter(/* 比较 asset.assetType 与 'eventSheet'，返回严格相等的判断结果。 */ asset=>asset.assetType==='eventSheet').sort(/* 调用 a.path.localeCompare(b.path) 并返回调用结果。 */ (a,b)=>a.path.localeCompare(b.path))})
 const blueprintAssets=computed(/** 依赖资源代次列出对象蓝图并按路径排序。 */ ()=>{void assetState.generation;return assetState.records.filter(/* 比较 asset.assetType 与 'objectBlueprint'，返回严格相等的判断结果。 */ asset=>asset.assetType==='objectBlueprint').sort(/* 调用 a.path.localeCompare(b.path) 并返回调用结果。 */ (a,b)=>a.path.localeCompare(b.path))})
@@ -197,4 +215,8 @@ onMounted(/** 挂载时优先打开工作室活动事件表，再使用资源选
 /* Keep scaled headers from consuming the event-list scroll viewport. */
 .sheet-main{overflow:auto}.sheet-toolbar,.object-context{flex:0 0 auto}.event-list{flex:1 0 auto;overflow:visible}
 @container nova-event-main (max-width:1000px){.event-list>header{position:static}}
+/* 条件、动作和来源各自换行，长路径不压缩编辑控件。 */
+.event-provenance{margin:10px;padding:12px;border:1px solid var(--border-subtle);border-radius:8px;flex:0 0 auto;min-width:0}
+.event-provenance ol{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:10px;padding-left:24px}
+.event-provenance li{padding:8px;overflow-wrap:anywhere}.event-provenance li>*{display:block;margin:4px 0}.event-provenance button{min-height:32px}
 </style>

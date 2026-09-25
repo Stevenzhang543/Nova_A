@@ -19,9 +19,9 @@
         <button @click="toggleScriptDetailDock">{{ scriptStudioState.layout.detailDock === 'right' ? t('dockBottom') : t('dockRight') }}</button>
         <span class="toolbar-spacer"></span>
         <button :disabled="!debug.paused" @click="runtime.debugContinue">▶ {{ t('continueExecution') }}</button>
-        <button :disabled="!debug.paused" @click="runtime.debugStep('into')">↓ {{ t('stepInto') }}</button>
-        <button :disabled="!debug.paused" @click="runtime.debugStep('over')">↦ {{ t('stepOver') }}</button>
-        <button :disabled="!debug.paused" @click="runtime.debugStep('out')">↑ {{ t('stepOut') }}</button>
+        <button :disabled="!debug.paused" :title="debugCopy.capability" @click="runtime.debugStep('into')">↓ {{ debugCopy.into }}</button>
+        <button :disabled="!debug.paused" :title="debugCopy.capability" @click="runtime.debugStep('over')">↦ {{ debugCopy.over }}</button>
+        <button :disabled="!debug.paused" :title="debugCopy.capability" @click="runtime.debugStep('out')">↑ {{ debugCopy.out }}</button>
         <button @click="runtime.debugRestart">↻ {{ t('restart') }}</button>
         <label class="compact-setting"><input v-model="scriptStudioState.layout.compactToolbar" type="checkbox">{{ layoutLabels.compactToolbar }}</label>
         </div></details>
@@ -157,11 +157,11 @@
 
         <div v-else-if="inspectorTab === 'debug'" class="inspector-pane debug-pane">
           <div class="pane-heading"><strong>{{ t('scriptDebugger') }}</strong><span :class="{ paused: debug.paused }">{{ debug.paused ? t('paused') : t('running') }}</span></div>
-          <p>{{ debug.reason || t('debuggerWaiting') }}</p>
-          <h3>{{ t('callStack') }}</h3><button v-for="(frame,index) in debug.callStack" :key="`${frame.entityUuid}:${index}`" :class="{ active: debug.selectedFrame === index }" @click="selectFrame(index,frame.scriptUuid,frame.line)">{{ frame.entityName }} · {{ frame.functionName }}:{{ frame.line }}</button>
+          <p>{{ debug.reason || t('debuggerWaiting') }}</p><p v-if="debugLocationError" class="error" role="alert">{{ debugLocationError }}</p>
+          <p class="pane-help" role="note">{{ debugCopy.capability }}</p><p>Session {{ debug.sessionRevision }} · Pause {{ debug.pauseCount }}</p><h3>{{ debugCopy.frames }}</h3><button v-for="(frame,index) in debug.callStack" :key="`${frame.entityUuid}:${index}`" :class="{ active: debug.selectedFrame === index }" @click="selectFrame(index,frame.scriptUuid,frame.line)">{{ frame.entityName }} · {{ frame.functionName }}:{{ frame.line }}</button>
           <h3>{{ t('breakpoints') }}</h3><article v-for="point in breakpointDetails" :key="point.id" class="breakpoint-detail"><label><input v-model="point.enabled" type="checkbox"><span>{{ point.line }}</span></label><input v-model="point.group" :placeholder="t('breakpointGroup')"><input v-model="point.functionName" :placeholder="t('functionBreakpoint')"><input v-model="point.condition" :placeholder="t('condition')"><input v-model.number="point.hitCondition" type="number" min="0" max="1000000" :placeholder="t('hitCount')"><input v-model="point.logMessage" :placeholder="t('logpointMessage')"><button @click="removeDetailedBreakpoint(point.id)">×</button></article>
           <button @click="addFunctionBreakpoint">＋ {{ t('functionBreakpoint') }}</button>
-          <h3>{{ t('exceptionPolicy') }}</h3><select v-model="scriptProjectSettings.exceptionPolicy"><option value="never">{{ t('never') }}</option><option value="uncaught">{{ t('uncaught') }}</option><option value="all">{{ t('allExceptions') }}</option></select>
+          <h3>{{ t('exceptionPolicy') }}</h3><select v-model="scriptProjectSettings.exceptionPolicy"><option value="never">{{ t('never') }}</option><option value="uncaught">{{ t('uncaught') }}</option><option value="all" disabled :title="debugCopy.capability">{{ t('allExceptions') }}</option></select>
           <h3>{{ t('tasks') }}</h3><label v-for="task in debug.tasks" :key="task.id"><span><b>{{ task.name }}</b><small>{{ task.state }} · {{ task.detail }}</small></span><button v-if="['queued','running','waiting'].includes(task.state)" :title="t('cancelTask')" @click="runtime.cancelDebugTask(task.id)">×</button></label><p v-if="!debug.tasks.length" class="empty-pane">{{ t('noDebugTasks') }}</p>
           <h3>{{ t('remoteDebugging') }}</h3><p>{{ scriptProjectSettings.remoteDebug.enabled ? `${scriptProjectSettings.remoteDebug.host}:${scriptProjectSettings.remoteDebug.port} · ${debug.remotePeer?.authenticated ? t('authenticated') : t('waitingForAuthenticatedPlayer')}` : t('remoteDebugDisabled') }}</p>
           <h3>{{ t('locals') }}</h3><p class="pane-help">{{ runtimeCopy.snapshot }}</p><pre>{{ formattedLocals }}</pre>
@@ -213,7 +213,7 @@ import { addEditorLog } from '../store/editor'
 import { pushHistory } from '../store/physics'
 import { requestConfirmation } from '../store/dialog'
 import { gameplayRuntime as runtime } from '../runtime/GameplayRuntime'
-import { scriptDebugState as debug, addDebugWatch, removeDebugWatch, selectDebugFrame } from '../runtime/scriptDebug'
+import { debugSourceRevision, scriptDebugState as debug, addDebugWatch, removeDebugWatch, selectDebugFrame } from '../runtime/scriptDebug'
 import { scriptProjectSettings } from '../runtime/scriptSettings'
 import { SCRIPT_API, apiEntry } from '../editor/scriptApi'
 import { ScriptLanguageService, analyzeScript, applyScriptLintPolicy, completionItems, type ScriptAnalysis } from '../editor/scriptLanguage'
@@ -325,6 +325,12 @@ const runtimeCopy = computed(/** 按当前语言提供受限运行时快照与�
   en: { snapshot: 'Authorized host snapshot. Values are bounded previews; unavailable VM locals are not inferred.', rejected: 'Request rejected. No running program was replaced.', pending: 'Reload queued. Running code stays unchanged until the transaction validates.', applied: 'Reload transaction applied.', disabled: 'Hot reload is disabled.', idle: 'No reload request.', path: 'Reload source', hint: 'Inspect a property, items[0], or bag["item name"]. Calls and accessors are not evaluated.' },
   de: { snapshot: 'Freigegebener Host-Zustand. Werte werden begrenzt angezeigt; nicht verfügbare VM-Variablen werden nicht ergänzt.', rejected: 'Anfrage abgelehnt. Kein laufendes Programm wurde ersetzt.', pending: 'Neuladen vorgemerkt. Laufender Code bleibt bis zur erfolgreichen Prüfung unverändert.', applied: 'Neuladen als Transaktion angewendet.', disabled: 'Neuladen im Betrieb ist deaktiviert.', idle: 'Keine Anfrage zum Neuladen.', path: 'Quelle zum Neuladen', hint: 'Eigenschaft, items[0] oder bag["item name"] prüfen. Aufrufe und Getter werden nicht ausgeführt.' },
   zh: { snapshot: '已授权的宿主状态快照。值使用有界预览；不会推测不可用的虚拟机局部变量。', rejected: '请求已拒绝，未替换任何正在运行的程序。', pending: '重载已排队；事务通过验证前，运行代码保持不变。', applied: '重载事务已应用。', disabled: '热重载已禁用。', idle: '暂无重载请求。', path: '重载源文件', hint: '可检查属性、items[0] 或 bag["item name"]。不会执行函数调用或访问器。' }
+}[preferencesState.locale]))
+const debugLocationError = ref('')
+const debugCopy = computed(/** 调试器明确说明回调边界与命令回放能力，不宣称 VM 语句暂停。 */ () => ({
+  en: { capability: 'Callback-entry breakpoints and command replay only. Rhai executes synchronously: VM statement suspension, live VM frames/locals and caught-exception breaks are unavailable. Graph values are snapshots taken before command replay.', frames: 'Host snapshot location', into: 'Boundary into', over: 'Boundary over', out: 'Boundary out', stale: 'Source changed since this pause. Draft preserved; stale location was not selected.' },
+  de: { capability: 'Haltepunkte am Rückrufbeginn und Befehlswiedergabe. Rhai läuft synchron: VM-Anweisungsunterbrechung, aktive VM-Frames/Variablen und Halt bei abgefangenen Fehlern sind nicht verfügbar. Graphwerte sind Zustandsaufnahmen vor der Wiedergabe.', frames: 'Position der Host-Aufnahme', into: 'Grenze hinein', over: 'Grenze weiter', out: 'Grenze hinaus', stale: 'Quelle seit dieser Pause geändert. Entwurf bleibt erhalten; alte Position nicht ausgewählt.' },
+  zh: { capability: '支持回调入口断点与命令回放步进。Rhai 同步执行，不支持虚拟机语句挂起、实时 VM 栈/局部变量或已捕获异常断点。图值来自命令回放之前的快照。', frames: '宿主快照位置', into: '边界进入', over: '边界越过', out: '边界跳出', stale: '源码已在暂停后改变，已保留草稿，不定位过时位置。' }
 }[preferencesState.locale]))
 const reloadSourcePath = computed(/** 将热重载记录的脚本标识解析为资源路径，找不到时保留标识。 */ () => assetState.records.find(/* 比较 asset.uuid 与 debug.hotReload.scriptUuid，返回严格相等的判断结果。 */ asset => asset.uuid === debug.hotReload.scriptUuid)?.path ?? debug.hotReload.scriptUuid)
 const formattedLocals = computed(/* 调用 snapshotPreview(debug.locals) 并返回调用结果。 */ () => snapshotPreview(debug.locals))
@@ -450,7 +456,11 @@ onBeforeUnmount(/** 卸载前保留所有脏草稿，解除保存与尺寸监听
   runtime.runScriptTests(target, { tags: testScope.value === 'tags' ? tags : undefined, testNames: failed })
   inspectorTab.value = 'tests'
 }
-/** 选中调试栈帧，并打开该帧对应脚本与源码行。 */ function selectFrame(index: number, uuid: string, line: number) { selectDebugFrame(index); openAt(uuid, line) }
+/** 选中调试栈帧，并打开该帧对应脚本与源码行。 */ function selectFrame(index: number, uuid: string, line: number) {
+  const frame=debug.callStack[index],source=drafts[uuid]??readTextAsset(uuid)??''
+  if(!frame || frame.sessionRevision!==debug.sessionRevision || frame.sourceRevision!==debugSourceRevision(source)){debugLocationError.value=debugCopy.value.stale;return}
+  debugLocationError.value='';selectDebugFrame(index); openAt(uuid, line)
+}
 /** 将输入限制到零至一之间，转换为保留一位小数的百分比。 */ function percent(value: number) { return `${(Math.max(0, Math.min(1, value)) * 100).toFixed(1)}%` }
 /* 调用 value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') 并返回调用结果。 */ function escapeRegex(value: string) { return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') }
 /** 逐字符执行异或和整数乘法，生成用于源码变化识别的八位十六进制散列。 */ function sourceHash(value: string) { let hash = 2166136261; for (const character of value) hash = Math.imul(hash ^ character.charCodeAt(0), 16777619) >>> 0; return hash.toString(16).padStart(8, '0') }

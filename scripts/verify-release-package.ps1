@@ -295,6 +295,12 @@ try {
     $manifestPaths = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
     foreach ($entry in @($manifest.entries)) { [void]$manifestPaths.Add(([string]$entry.path).Replace('\','/')) }
     $requiredEvidence = @('build/local-builds.json','build/windows-smoke.json','external/gates.json','layout/layout-browser.json','performance/benchmarks.json','performance/stability-local.json','runtime/dependency-audit.json','runtime/migration-history.json','runtime/product-audit.json','runtime/template-catalog.json','runtime/user-interactions.json','runtime/verification.json','manual/MANUAL.en.md','manual/MANUAL.de.md','manual/MANUAL.zh-CN.md','manual/index.html')
+    # 独立解包核验沿用显式风险计划，随后仍执行源码绑定的 JS 门禁验证。
+    if ($manifest.PSObject.Properties.Name -contains 'auditPolicy' -and $manifest.auditPolicy.kind -eq 'change-risk-v1') {
+      $qualifiedPlan = Get-Content -LiteralPath (Join-Path $evidence 'qualification/plan.json') -Raw | ConvertFrom-Json
+      if ([version]$manifest.machineVersion -lt [version]'26.25.0' -or $qualifiedPlan.auditPolicy.kind -ne 'change-risk-v1') { throw 'Invalid scoped audit policy.' }
+      $requiredEvidence = @('build/local-builds.json','external/gates.json','manual/MANUAL.en.md','manual/MANUAL.de.md','manual/MANUAL.zh-CN.md','manual/index.html') + @($qualifiedPlan.gates | ForEach-Object <# 读取每项实际门禁的报告集合。 #> { $_.reports } | ForEach-Object <# 保留每份必须验证的报告目标路径。 #> { $_.target })
+    }
     if ($requiresHeadlessAuthority) { $requiredEvidence += 'build/headless-authority.json' }
     foreach ($required in $requiredEvidence) {
       if (-not $manifestPaths.Contains($required)) { throw "Evidence archive is missing required baseline entry: $required" }

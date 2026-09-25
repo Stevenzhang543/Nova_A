@@ -17,7 +17,7 @@
     </header>
 
     <div v-if="estate.bottomPanelOpen" class="panel-content">
-      <div v-if="estate.bottomPanelTab === 'assets'" class="asset-browser" :class="{ inspecting: selectedAsset, 'details-visible': assetDetailMode && selectedAsset }">
+      <div v-if="estate.bottomPanelTab === 'assets'" class="asset-browser" :class="{ inspecting: selectedAsset, 'details-visible': assetDetailMode && selectedAsset, 'full-page-details': assetFullPage && selectedAsset }">
         <aside class="folder-tree">
           <strong>{{ t('projectFiles') }}</strong>
           <button
@@ -35,7 +35,7 @@
           <header class="asset-toolbar">
             <div class="asset-actions-row">
               <button class="primary" :disabled="assets.importing || assetBatch.active" @click="assetInput?.click()">＋ {{ t('importAssets') }}</button>
-              <button v-if="selectedAsset" class="asset-detail-toggle" type="button" @click="assetDetailMode = true">{{ assetCopy('previewDetails') }}</button>
+              <button v-if="selectedAsset" class="asset-detail-toggle" type="button" @click="assetDetailMode = true; assetFullPage = true">{{ assetCopy('previewDetails') }}</button>
               <button @click="createScriptAsset">+ {{ t('newScript') }}</button>
               <button @click="createVisualGraphAsset">+ {{ t('visualGraph') }}</button>
               <button :disabled="!state.selectedEntityIds.length" @click="createSceneAssetFromSelection">+ {{ t('createSceneAsset') }}</button>
@@ -77,7 +77,7 @@
               <progress :value="job.progress" max="1"></progress>
               <button v-if="!['complete','cancelled','failed'].includes(job.status)" @click="cancelAssetImport(job.id)">{{ t('cancel') }}</button>
               <button v-else-if="job.retryable" @click="retryImport(job.id)">{{ t('retry') }}</button>
-              <details v-if="job.logs.length"><summary>{{ t('importLog') }}</summary><code v-for="(line,index) in job.logs" :key="index">{{ line }}</code></details>
+              <p v-if="job.status==='failed'" role="alert">{{ assetImportFailureSummary(job.logs.join(' ' ),preferencesState.locale) }}</p><details v-if="job.logs.length"><summary>{{ assetImportTechnicalLabel(preferencesState.locale) }}</summary><code v-for="(line,index) in job.logs" :key="index">{{ line }}</code></details>
             </article>
           </details>
 
@@ -99,7 +99,7 @@
             <header><strong>{{ assetCopy('progress') }} {{ assetBatch.done }}/{{ assetBatch.total }}</strong><button v-if="assetBatch.active" type="button" @click="cancelAssetBatch">{{ assetCopy('cancel') }}</button></header>
             <progress :value="assetBatch.done" :max="assetBatch.total" :aria-label="assetCopy('progress')"></progress>
             <p role="status">{{ assetBatch.name }} · {{ assetCopy('completed') }} {{ assetBatch.completed }} · {{ assetCopy('failed') }} {{ assetBatch.failed }} · {{ assetCopy('cancelled') }} {{ assetBatch.cancelled }}</p>
-<!-- 批处理结果过滤回调仅保留失败项以显示错误详情。 -->            <details v-if="assetBatch.failed"><summary>{{ assetCopy('failed') }}</summary><p v-for="(item,index) in assetBatch.results.filter(v=>v.status==='failed')" :key="index">{{ item.name }}: {{ item.message }}</p></details>
+<!-- 批处理结果过滤回调仅保留失败项以显示错误详情。 -->            <details v-if="assetBatch.failed"><summary>{{ assetCopy('failed') }}</summary><section v-for="(item,index) in assetBatch.results.filter(v=>v.status==='failed')" :key="index"><strong>{{ item.name }}</strong><p role="alert">{{ assetImportFailureSummary(item.message,preferencesState.locale) }}</p><details><summary>{{ assetImportTechnicalLabel(preferencesState.locale) }}</summary><code>{{ item.message }}</code></details></section></details>
           </section>
           <div ref="assetGrid" class="asset-grid" :class="`asset-${assets.viewMode}`" @scroll.passive="updateAssetWindow">
             <!-- 占位间距属于内容，不属于被观察的滚动视口，避免虚拟高度反馈到可见行数。 -->
@@ -108,6 +108,11 @@
               v-for="asset in displayedAssets"
               :key="asset.uuid"
               :class="{ selected: assets.selectedGuid === asset.uuid }"
+              tabindex="0"
+              :aria-label="asset.path"
+              :title="asset.path"
+              @keydown.enter.self="assets.selectedGuid = asset.uuid; assetDetailMode = true"
+              @keydown.space.self.prevent="assets.selectedGuid = asset.uuid"
               draggable="true"
               @dragstart="dragAsset($event, asset.uuid)"
               @click="assets.selectedGuid = asset.uuid"
@@ -117,8 +122,8 @@
               <span v-if="assetSourceStatus(asset.uuid)" :class="['source-badge', assetSourceStatus(asset.uuid)]">{{ assetSourceStatus(asset.uuid)?.slice(0, 1).toUpperCase() }}</span>
               <button class="favorite-button" :class="{ active: assets.favorites.includes(asset.uuid) }" :title="t('favorite')" @click.stop="toggleAssetFavorite(asset.uuid)">★</button>
               <input v-if="renamingGuid === asset.uuid" v-model="renameValue" @click.stop @keydown.enter="commitRename" @keydown.escape="renamingGuid = null" @blur="commitRename">
-              <strong v-else>{{ asset.name }}</strong>
-              <small>{{ asset.assetType }} · {{ formatBytes(asset.byteLength) }}</small>
+              <strong v-else :title="asset.path">{{ asset.name }}</strong>
+              <small :title="asset.path">{{ assets.viewMode === 'list' ? asset.path : `${asset.assetType} · ${formatBytes(asset.byteLength)}` }}</small>
             </article>
             <p v-if="!displayedAssets.length" class="empty">{{ t('noAssets') }}</p>
             <p v-else-if="displayedAssets.length < filteredAssetCount" class="asset-window-status">{{ t('virtualizedAssets', { shown: displayedAssets.length, total: filteredAssetCount }) }}</p>
@@ -127,13 +132,13 @@
         </section>
 
         <aside v-if="selectedAsset" class="asset-inspector" @change="assetSettingsChanged">
-          <header><button class="asset-detail-back" type="button" @click="assetDetailMode = false">← {{ assetCopy('browse') }}</button><span>{{ t('assetInspector') }}</span><strong>{{ selectedAsset.name }}</strong></header>
+          <header><button class="asset-detail-back" type="button" @click="assetDetailMode = false; assetFullPage = false">← {{ assetCopy('browse') }}</button><span>{{ t('assetInspector') }}</span><strong>{{ selectedAsset.name }}</strong></header>
           <nav class="importer-tabs" :aria-label="t('assetImporter')"><button v-for="tab in importerTabs" :key="tab" :class="{ active: inspectorTab === tab }" @click="inspectorTab = tab">{{ t(`importerTab_${tab}`) }}</button></nav>
           <AssetImagePreview v-if="selectedAsset.assetType === 'image'" class="large-preview" :asset="selectedAsset" show-error />
           <audio v-else-if="selectedAsset.assetType === 'audio'" class="asset-media-preview" :src="selectedAsset.source" controls preload="metadata"></audio>
           <div v-else-if="selectedAsset.assetType === 'font'" class="font-preview" :style="{ fontFamily: selectedAsset.fontFamily }">Nova_A Aa 123</div>
           <ContentAssetInspector :asset="selectedAsset" @open-animation="openAnimationAsset" @select-asset="assets.selectedGuid=$event" />
-          <details v-if="assetOperationError" class="pipeline-error" open><summary>{{ assetCopy('operationFailed') }}</summary><p role="alert">{{ assetOperationError }}</p></details>
+          <details v-if="assetOperationError" class="pipeline-error" open><summary>{{ assetCopy('operationFailed') }}</summary><p role="alert">{{ assetImportFailureSummary(assetOperationError,preferencesState.locale) }}</p><details><summary>{{ assetImportTechnicalLabel(preferencesState.locale) }}</summary><code>{{ assetOperationError }}</code></details></details>
           <section v-show="inspectorTab === 'source'" class="inspector-pane">
             <label><span>GUID</span><code>{{ selectedAsset.uuid.slice(0, 13) }}…</code></label>
             <label><span>{{ t('assetPath') }}</span><code>{{ selectedAsset.path }}</code></label>
@@ -326,7 +331,7 @@ import { createSpriteFrameAnimation } from '../assets/assetFrameAnimation'
 import { assetWorkflowCopy as assetCopy } from '../assets/assetWorkflowCopy'
 import { t } from '../i18n'
 import { addEditorLog, editorState as estate } from '../store/editor'
-import { clearAssetReferences, countAssetReferences, getSceneJSON, physicsState as state, pushHistory, replaceAssetReferences } from '../store/physics'
+import { clearAssetReferences, countAssetReferences, getSceneJSON, physicsState as state, pushHistory, pushAssetReimportHistory, replaceAssetReferences } from '../store/physics'
 import { requestConfirmation } from '../store/dialog'
 import {
   applyAssetFilter, applyImportPreset, assetReference, assetSessionVersion, assetState as assets, createAssetCollection, createAssetFolder, createTextAsset, deleteAsset, filteredAssets,
@@ -337,6 +342,8 @@ import type { AssetPipelineMetadata, AssetType } from '../assets/types'
 import type { AudioImportProfile, TextureImportProfile } from '../assets/types'
 import { applyBulkAssetSettings, buildContentClosure, buildProductionAssetGraph, compareImportMetadata, detectOpaqueRegions, fontGlyphCoverage, packAtlasDeterministic, polygonOutlineForRegion, provenanceDiagnostics, revertToVerifiedArtifact, validateContentClosure } from '../assets/assetProduction'
 import { contentThumbnailDataUrl } from '../assets/contentLibrary26'
+import { assetImportFailureSummary, assetImportTechnicalLabel } from '../assets/assetImportCopy'
+import { preferencesState } from '../store/preferences'
 import { applyAudioImportProfile, applyTextureImportProfile, normalizedFontFallbacks } from '../assets/importProfiles'
 import { exportProjectFolder } from '../assets/projectFolder'
 import { DEFAULT_SCRIPT_SOURCE } from '../editor/scriptTemplates'
@@ -358,7 +365,7 @@ import { pluginRuntime, pluginState } from '../runtime/plugins'
 import { createResourceAsset, type ResourceKind } from '../runtime/resources'
 
 const assetOperationError = ref('')
-const assetBatch = ref(emptyAssetBatch()), assetDetailMode = ref(false)
+const assetBatch = ref(emptyAssetBatch()), assetDetailMode = ref(false), assetFullPage = ref(false)
 let assetBatchController: AbortController | null = null
 /** 向活动资源批处理发送取消信号。 */ function cancelAssetBatch(){assetBatchController?.abort()}
 onBeforeUnmount(cancelAssetBatch)
@@ -674,21 +681,21 @@ watch(/* 返回 estate.bottomPanelOpen 的当前值。 */ () => estate.bottomPan
 /** 裁剪透明图片成功后记录历史，失败显示错误。 */ async function trimSelectedImage() { const asset = selectedAsset.value; if (!asset) return; assetOperationError.value = ''; try { if (await trimTransparentImage(asset)) { pushHistory('Trim transparent sprite', `asset:${asset.uuid}`); addEditorLog(t('transparentTrimApplied'), 'Assets') } } catch(error) { assetOperationError.value = error instanceof Error ? error.message : String(error) } }
 /** 从所选帧创建动画并打开，失败显示错误。 */ function animateSelectedFrames() { const asset = selectedAsset.value; if (!asset) return; assetOperationError.value = ''; try { const animation = createSpriteFrameAnimation(asset); pushHistory('Create sprite animation', `asset:${animation.uuid}`); openAnimationAsset(animation.uuid) } catch(error) { assetOperationError.value = error instanceof Error ? error.message : String(error) } }
 /** 切分精灵表，成功选中首片并记录数量，失败显示及记录错误。 */ function sliceSelectedSheet() { const asset = selectedAsset.value; if (!asset) return; assetOperationError.value = ''; try { const generated = sliceSpriteSheet(asset); if (generated.length) { assets.selectedGuid = generated[0].uuid; pushHistory('Slice sprite sheet'); addEditorLog(t('spriteSlicesCreated', { count: generated.length }), 'Assets') } } catch (error) { assetOperationError.value = error instanceof Error ? error.message : String(error); addEditorLog(assetOperationError.value, 'Assets', 'error') } }
-/** 重导入文件前保存流水线基线，结束显示结果并按成功记录历史。 */ async function reimportSelectedAsset(event: Event) {
+/** 重导入文件前保存流水线基线，成功后记录资源作者历史；播放结束也保留资源更新，不提交模拟实体位移。 */ async function reimportSelectedAsset(event: Event) {
   const input = event.target as HTMLInputElement, file = input.files?.[0]; input.value = ''
   const asset = selectedAsset.value
   if (!asset || !file) return
   previousPipeline.value = clonePipelineMetadata(asset.pipeline)
   const success = await reimportAsset(asset.uuid, file)
   addEditorLog(t(success ? 'assetReimported' : 'assetReimportFailed', { name: asset.name }), 'Assets', success ? 'info' : 'error')
-  if (success) pushHistory('Reimport asset', `asset:${asset.uuid}`)
+  if (success) pushAssetReimportHistory('Reimport asset', `asset:${asset.uuid}`)
 }
 /** 比较导入前后流水线元数据并格式化差异文本。 */ function compareSelectedImport() { const current = selectedAsset.value?.pipeline; importComparisonText.value = compareImportMetadata(previousPipeline.value, current).map(/** 为导入字段显示变化标记、字段名及前后值。 */ row => `${row.changed ? '●' : '○'} ${row.field}: ${row.before || '—'} → ${row.after || '—'}`).join('\n') }
-/** 恢复到验证过的产物，成功递增代次并清空比较；无可用产物显示警告。 */ function revertSelectedImport() { const asset = selectedAsset.value; if (!asset || !revertToVerifiedArtifact(asset)) { addEditorLog(t('noVerifiedArtifact'), 'Assets', 'warning'); return } assets.generation++; importComparisonText.value = ''; addEditorLog(t('importReverted'), 'Assets') }
-/** 对可见候选执行可取消批量重导入，使用会话校验后记录历史，并显示完成和失败数量。 */ async function batchReimportVisible() {
+/** 恢复到验证过的产物，成功递增代次并清空比较；无可用产物显示警告。 */ function revertSelectedImport() { const asset = selectedAsset.value; if (!asset || !revertToVerifiedArtifact(asset)) { addEditorLog(t('noVerifiedArtifact'), 'Assets', 'warning'); return } assets.generation++; importComparisonText.value = ''; pushAssetReimportHistory('Revert verified asset', `asset:${asset.uuid}`); addEditorLog(t('importReverted'), 'Assets') }
+/** 对可见候选执行可取消重导入，经会话校验后记录播放期也有效的资源历史，并显示完成和失败数量。 */ async function batchReimportVisible() {
   if(assetBatch.value.active)return
   const session=assetSessionVersion(),candidates=reimportCandidates(filteredAssetRecords.value),controller=new AbortController();assetBatchController=controller;assetOperationError.value=''
-  try{const result=await reimportAssetBatch(candidates,{signal:controller.signal,progress:/** 同步批量重导入进度状态。 */ value=>assetBatch.value=value});if(session===assetSessionVersion() && result.completed)pushHistory('Batch reimport assets');addEditorLog(t('batchReimportComplete',{complete:result.completed,failed:result.failed}),'Assets',result.failed?'warning':'info')}
+  try{const result=await reimportAssetBatch(candidates,{signal:controller.signal,progress:/** 同步批量重导入进度状态。 */ value=>assetBatch.value=value});if(session===assetSessionVersion() && result.completed)pushAssetReimportHistory('Batch reimport assets');addEditorLog(t('batchReimportComplete',{complete:result.completed,failed:result.failed}),'Assets',result.failed?'warning':'info')}
   catch(error){assetOperationError.value=error instanceof Error?error.message:String(error)}finally{if(assetBatchController===controller)assetBatchController=null}
 }
 
@@ -729,9 +736,9 @@ watch(/* 返回 estate.bottomPanelOpen 的当前值。 */ () => estate.bottomPan
 /** 非空标识时应用已保存资源筛选。 */ function applySavedFilter(id: string) { if (id) applyAssetFilter(id) }
 /** 以当前资源类型和设置保存导入预设，成功清空名称并记录日志。 */ function saveSelectedPreset() { const asset = selectedAsset.value; if (!asset) return; const preset = saveImportPreset(presetName.value, asset.assetType, asset.settings); if (preset) { presetName.value = ''; addEditorLog(t('presetSaved', { name: preset.name }), 'Assets') } }
 /** 应用有效导入预设成功后记录资源历史及日志。 */ function applySelectedPreset(id: string) { const asset = selectedAsset.value; if (asset && id && applyImportPreset(id, asset)) { pushHistory('Apply import preset', `asset:${asset.uuid}`); addEditorLog(t('presetApplied'), 'Assets') } }
-/** 为选中资源关联本地源文件，并按关联、不可用或取消结果显示状态。 */ async function linkSelectedSource() { const asset = selectedAsset.value; if (!asset) return; const result = await linkAssetSource(asset.uuid); estate.statusText = t(result === 'linked' ? 'sourceLinked' : result === 'unsupported' ? 'sourceLinkUnsupported' : 'saveCancelled') }
-/** 解决指定外部资源变更成功后记录日志。 */ async function resolveExternal(id: string, choice: 'reimport' | 'keep' | 'duplicate') { if (await resolveExternalAssetChange(id, choice)) addEditorLog(t('externalChangeResolved'), 'Assets') }
-/** 重试失败导入，并按结果记录成功或错误。 */ async function retryImport(id: number) { const asset = await retryFailedAssetImport(id, assets.currentFolder); addEditorLog(t(asset ? 'assetReimported' : 'assetReimportFailed', { name: asset?.name ?? '' }), 'Assets', asset ? 'info' : 'error') }
+/** 为选中资源关联本地源文件，并按关联、不可用或取消结果显示状态。 */ async function linkSelectedSource() { const asset = selectedAsset.value; if (!asset) return; const result = await linkAssetSource(asset.uuid, /** 自动来源重导入成功后记录作者历史。 */ ()=>pushAssetReimportHistory('Reimport linked asset',`asset:${asset.uuid}`)); estate.statusText = t(result === 'linked' ? 'sourceLinked' : result === 'unsupported' ? 'sourceLinkUnsupported' : 'saveCancelled') }
+/** 解决指定外部资源变更成功后记录日志。 */ async function resolveExternal(id: string, choice: 'reimport' | 'keep' | 'duplicate') { if (await resolveExternalAssetChange(id, choice)) { if(choice!=='keep')pushAssetReimportHistory(choice==='duplicate'?'Duplicate external asset':'Reimport external asset'); addEditorLog(t('externalChangeResolved'), 'Assets') } }
+/** 重试失败导入，并按结果记录成功或错误。 */ async function retryImport(id: number) { const asset = await retryFailedAssetImport(id, assets.currentFolder); if(asset)pushAssetReimportHistory('Retry asset import',`asset:${asset.uuid}`); addEditorLog(t(asset ? 'assetReimported' : 'assetReimportFailed', { name: asset?.name ?? '' }), 'Assets', asset ? 'info' : 'error') }
 /** 导出当前项目文件夹，显示保存、取消或不支持结果；失败记录本地化错误。 */ async function exportFolder() {
   try {
     const result = await exportProjectFolder(getSceneJSON(), assets.records, assets.folders)
@@ -827,4 +834,11 @@ watch(/* 返回 estate.bottomPanelOpen 的当前值。 */ () => estate.bottomPan
 /* 视口尺寸稳定；内部网格独自携带虚拟行占位，列数与切片算法共用同一计算值。 */
 .asset-grid,.asset-grid.asset-list { display:block; padding:0; overflow-anchor:none; }
 .asset-grid-window { display:grid; padding-inline:9px; align-content:start; min-width:0; }
+/* 全页详情由用户显式打开，保留默认并排浏览；仅检查器拥有纵向滚动。 */
+.asset-detail-toggle{display:block;min-height:32px;white-space:normal}
+.asset-browser.full-page-details{grid-template-columns:minmax(0,1fr)}
+.asset-browser.full-page-details>.folder-tree,.asset-browser.full-page-details>.asset-workspace{display:none}
+.asset-browser.full-page-details>.asset-inspector{display:block;position:static;width:auto;max-width:none}
+.asset-browser.full-page-details .asset-detail-back{display:block;min-height:32px}
+.asset-browser.full-page-details .asset-inspector header strong{white-space:normal;overflow-wrap:anywhere}
 </style>

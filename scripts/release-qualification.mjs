@@ -8,6 +8,8 @@ import { fileURLToPath } from 'node:url'
 import { releaseVersion, verifyReleaseSnapshot } from './release-source-snapshot.mjs'
 
 export const requiredGateIds = ['focus', 'typescript', 'rust', 'rust-lint', 'native-rust', 'wasm', 'web', 'native-build', 'history', 'templates', 'product', 'browser-layout', 'layout-contract', 'user-interactions', 'windows', 'headless', 'performance', 'stability', 'security', 'hygiene', 'manual']
+// 26.25 起按用户要求缩小审计范围，构建、行为及归档完整性始终必查。
+export const riskRequiredGateIds = ['focus', 'typescript', 'web', 'native-build', 'product', 'browser-layout', 'user-interactions', 'windows', 'headless', 'hygiene', 'manual']
 export const reportTargets = {
   focus: 'runtime/focused-verification.json', typescript: 'runtime/verification.json', history: 'runtime/migration-history.json', templates: 'runtime/template-catalog.json', product: 'runtime/product-audit.json',
   'browser-layout': 'layout/layout-browser.json', 'layout-contract': 'layout/layout-contract.json', 'user-interactions': 'runtime/user-interactions.json', windows: 'build/windows-smoke.json', headless: 'build/headless-authority.json',
@@ -66,7 +68,18 @@ export function validateQualificationPlan(plan) {
       artifacts.add(artifact.name)
     }
   }
-  const missing = requiredGateIds.filter(/* 返回 ids.has(id) 的逻辑取反结果。 */ id => !ids.has(id))
+  const scoped = plan.auditPolicy?.kind === 'change-risk-v1'
+  if (plan.auditPolicy && !scoped) throw new Error('Unknown audit policy.')
+  if (scoped) {
+    if (Number(plan.release.replace('.', '')) < 2625 || !plan.auditPolicy.authorization?.trim() || !Array.isArray(plan.auditPolicy.omitted)) throw new Error('Risk scope requires 26.25+, explicit authorization and omission reasons.')
+    const omissions = new Set()
+    for (const entry of plan.auditPolicy.omitted) {
+      if (!requiredGateIds.includes(entry.id) || ids.has(entry.id) || omissions.has(entry.id) || !entry.reason?.trim() || entry.status !== 'not-run') throw new Error('Invalid or misleading audit omission.')
+      omissions.add(entry.id)
+    }
+    if (requiredGateIds.some(/* 未执行原门禁必须说明，不能默认为通过。 */ id => !ids.has(id) && !omissions.has(id))) throw new Error('Missing explicit audit omission.')
+  }
+  const missing = (scoped ? riskRequiredGateIds : requiredGateIds).filter(/* 检查计划是否遗漏不可跳过的门禁。 */ id => !ids.has(id))
   if (missing.length) throw new Error(`Qualification plan omits required gates: ${missing.join(', ')}`)
   if (artifactNames.some(/* 返回 artifacts.has(name) 的逻辑取反结果。 */ name => !artifacts.has(name))) throw new Error('Qualification plan must bind all six actual local build artifacts to executed gates.')
   for (const path of [plan.releaseNotes, plan.editLedger, ...(plan.documentation ?? [])]) confinedPath('/qualification', path)

@@ -33,7 +33,7 @@ import { clearSaveValues, commitSaveSlot, deleteSaveValue, loadSaveSlot, saveSna
 import { pluginRuntime } from './plugins'
 import { analyzeScript } from '../editor/scriptLanguage'
 import { analyzeScript26, statementAtLine } from '../editor/scriptLanguage26'
-import { beginDebugSession, clearScriptDebugger, evaluateDebugExpression, pauseScriptDebugger, requestDebugStep, scriptDebugState, updateDebugTask, type DebugStepMode, type ScriptTestResult } from './scriptDebug'
+import { bindDebugHost, debugSourceRevision, beginDebugSession, clearScriptDebugger, evaluateDebugExpression, pauseScriptDebugger, requestDebugStep, scriptDebugState, updateDebugTask, type DebugStepMode, type ScriptTestResult } from './scriptDebug'
 import { scriptProjectSettings } from './scriptSettings'
 import { beforeWorldPhysicsStep, beginWorldGameplay, finishWorldSceneTransition, canUseCoyoteTime, queueCharacterMotion, retireWorldGameplayEntity, resetWorldGameplay } from './worldGameplay'
 import { acquirePooled, hasObjectPool, releasePooled, setPoolRuntimeHooks } from './objectPool'
@@ -305,6 +305,7 @@ export class GameplayRuntime {
     this.declaredFunctions.clear()
     this.behaviorProperties.clear()
     beginDebugSession()
+    bindDebugHost({ continue: /** 远程继续转交真实宿主。 */ () => this.debugContinue(), step: /** 远程步进转交真实命令/回调边界。 */ mode => this.debugStep(mode), cancelTask: /** 返回真实计时任务的取消结果。 */ id => this.cancelDebugTask(id) })
     beginGraphDebugSession()
     scriptDebugState.exceptionPolicy = scriptProjectSettings.exceptionPolicy
     this.fixedPressed = {}
@@ -544,6 +545,7 @@ export class GameplayRuntime {
     this.pendingGraphExecution = null
     this.scriptRuntime?.free(); this.scriptRuntime = null
     clearHotReloadSession()
+    bindDebugHost(null)
     clearScriptDebugger()
     clearGraphPause()
     if (log) addEditorLog('Gameplay runtime stopped', 'Runtime')
@@ -990,7 +992,9 @@ export class GameplayRuntime {
       networking: productionNetworkContext()
     }
     if (!bypassBreakpoint && scriptProjectSettings.debuggerEnabled && scriptDebugState.enabled && !scriptDebugState.paused) {
-      const language = analyzeScript(source), fn = language.functions[functionName], rich = analyzeScript26(source)
+      // 断点属于作者文档；模块打包可能插入前缀，不能使用生成源码的行号。
+      const debugSource = this.compiledDocuments.get(asset.uuid) ?? readTextAsset(asset.uuid) ?? source
+      const language = analyzeScript(debugSource), fn = language.functions[functionName], rich = analyzeScript26(debugSource)
       const legacy = (asset.script?.breakpoints ?? []).map(/** 构造并返回记录 { id: `line-${line}-${index}`, line, functionName: '', condition: '', hitCondition: 0, logMessage: '', enabled: true, hitCount: 0 }，字段按当前实参及捕获状态求值。 */ (line, index): ScriptBreakpointMetadata => ({ id: `line-${line}-${index}`, line, functionName: '', condition: '', hitCondition: 0, logMessage: '', enabled: true, hitCount: 0 }))
       const details = asset.script?.breakpointDetails?.length ? asset.script.breakpointDetails : legacy
       const breakpoint = details.find(/** 结构说明（自动提取）：details.find 回调；输入 point；直接调用 Boolean、statementAtLine；返回表达式求值结果。 */ point => point.enabled && fn && point.line >= fn.line && point.line <= fn.endLine && Boolean(statementAtLine(rich, point.line, functionName)) && (!point.functionName || point.functionName === functionName))
@@ -1008,7 +1012,7 @@ export class GameplayRuntime {
         if (condition) {
         this.pendingDebugInvocation = { entityUuid: entity.uuid, scriptUuid: asset.uuid, functionName, contact, event, logicAsset, callbackKind }
         physicsState.playMode = 'paused'
-        pauseScriptDebugger({ entityUuid: entity.uuid, entityName: entity.name, scriptUuid: asset.uuid, sourcePath: asset.path, functionName, line: breakpoint.line, depth: 0 }, context, `Breakpoint at ${asset.path}:${breakpoint.line} · hit ${breakpoint.hitCount}`)
+        pauseScriptDebugger({ entityUuid: entity.uuid, entityName: entity.name, scriptUuid: asset.uuid, sourcePath: asset.path, sourceRevision: debugSourceRevision(debugSource), functionName, line: breakpoint.line, depth: 0 }, context, `Callback-entry breakpoint requested at ${asset.path}:${breakpoint.line} · hit ${breakpoint.hitCount}; VM statements have not been suspended`)
         addEditorLog(`Paused at ${asset.path}:${breakpoint.line}`, 'Script', 'debug', asset.uuid)
         return
         }
@@ -1032,7 +1036,7 @@ export class GameplayRuntime {
       if (asset.assetType === 'visualScript') recordGraphError(graphDebugState.activeGraphUuid || asset.uuid, graphDebugState.activeNodeUuid, message)
       if (!duringDestruction && scriptProjectSettings.debuggerEnabled && scriptProjectSettings.breakOnRuntimeError && scriptProjectSettings.exceptionPolicy !== 'never') {
         physicsState.playMode = 'paused'
-        pauseScriptDebugger({ entityUuid: entity.uuid, entityName: entity.name, scriptUuid: asset.uuid, sourcePath: asset.path, functionName, line: analyzeScript(source).functions[functionName]?.line ?? 1, depth: 0 }, context, `Runtime error: ${this.errorMessage(error)}`)
+        pauseScriptDebugger({ entityUuid: entity.uuid, entityName: entity.name, scriptUuid: asset.uuid, sourcePath: asset.path, sourceRevision: debugSourceRevision(this.compiledDocuments.get(asset.uuid) ?? source), functionName, line: analyzeScript(this.compiledDocuments.get(asset.uuid) ?? source).functions[functionName]?.line ?? 1, depth: 0 }, context, `Runtime error: ${this.errorMessage(error)}`)
       }
     } finally {
       recordScriptFunction(asset.uuid, asset.name, functionName, performance.now() - started, source.length * 2 + JSON.stringify(context.properties).length)
@@ -1052,7 +1056,7 @@ export class GameplayRuntime {
       if (!decision.pause) continue
       this.pendingGraphExecution = { entityUuid: entity.uuid, scriptUuid, sourcePath, functionName, commands, nextIndex: index + 1 }
       physicsState.playMode = 'paused'
-      pauseScriptDebugger({ entityUuid: entity.uuid, entityName: entity.name, scriptUuid, sourcePath, functionName, line: 1, depth: command.depth }, command.values && typeof command.values === 'object' ? command.values as Record<string, unknown> : {}, decision.reason)
+      pauseScriptDebugger({ entityUuid: entity.uuid, entityName: entity.name, scriptUuid, sourcePath, sourceRevision: debugSourceRevision(this.compiledSources.get(scriptUuid) ?? ''), functionName, line: 1, depth: command.depth }, command.values && typeof command.values === 'object' ? command.values as Record<string, unknown> : {}, decision.reason)
       addEditorLog(`Paused at visual node ${command.nodeUuid}`, 'Script', 'debug', scriptUuid)
       return false
     }

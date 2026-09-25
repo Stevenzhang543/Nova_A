@@ -1,4 +1,4 @@
-/* 26.21: editor forms retain every control and all existing motion. */
+/* 编辑器共享可读性样式：保留全部控件和原有动画，按容器宽度安排表单、说明与焦点。 */
 #app .editor-root :is(.config-wrapper, .settings-card) { font-size: calc(13px * var(--ui-scale, 1)); }
 #app .editor-root .settings-card { container: nova-form / inline-size; }
 #app .editor-root .property-control .pair { flex-wrap: wrap; }
@@ -60,3 +60,15 @@ html[data-form-label-layout='stacked'] #app .editor-root :is(.property-row > spa
 #app .editor-root .production-panel .settings-card > label:has(> div > input[type="number"] + input[type="number"]) { flex-direction: column; align-items: stretch; }
 #app .editor-root .production-panel .settings-card > label > div:has(> input[type="number"] + input[type="number"]) { display: flex; flex-wrap: wrap; gap: 8px; width: 100%; }
 #app .editor-root .production-panel .settings-card > label > div > input[type="number"] { flex: 1 1 calc(8ch + 34px); width: auto; min-width: min(100%, calc(8ch + 34px)); }
+
+/* 26.26：仅约束面板说明文字和状态，画布、轨道与二维数据表继续使用各自的布局及滚动。 */
+#app .editor-root :is(.production-panel,.world-tools,.physics-workspace,.manage-workspace) :is(header>div,.notice,.form-error17,[role="alert"],[role="status"]) {
+  min-width:0;overflow-wrap:anywhere;word-break:normal;
+}
+#app .editor-root :is(.production-panel,.world-tools,.physics-workspace) :is(header,.notice) :is(p,small,span,strong) {
+  max-width:100%;
+}
+/* 让键盘焦点保持可见，尤其是嵌套诊断与长帮助链接。 */
+#app .editor-root :is(.production-panel,.world-tools,.physics-workspace) :is(a,button,input,select,textarea,summary):focus-visible {
+  scroll-margin-block:12px;
+}

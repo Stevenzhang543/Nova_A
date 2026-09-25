@@ -14,9 +14,20 @@ export interface AssetBatchOptions {signal: AbortSignal;progress(value: AssetBat
   finally{progress.cancelled=(options.signal.aborted || session !== assetSessionVersion())?progress.total-progress.done:0;progress.active=false;progress.name='';publish()}
   return progress
 }
-/** 通过共享批次调度逐个导入文件，返回进度汇总及成功导入资源。 */ export async function importAssetBatch(files:readonly File[],folder:string|undefined,options:AssetBatchOptions):Promise<{progress:AssetBatchProgress;assets:AssetRecord[]}>{
-  const imported:AssetRecord[]=[]
-  const progress=await run(files,/* 返回 file.name 的当前值。 */ file=>file.name,/** 执行时调用 imported.push(...await importAssetFiles([file],folder,options.signal))；不显式返回调用结果。 */ async file=>{imported.push(...await importAssetFiles([file],folder,options.signal))},options)
+/** 暂存全部文件后一次提交；失败或取消不留下部分依赖，并报告整批失败而非虚假成功。 */ export async function importAssetBatch(files:readonly File[],folder:string|undefined,options:AssetBatchOptions):Promise<{progress:AssetBatchProgress;assets:AssetRecord[]}>{
+  if(files.length>2000)throw new Error('ASSET_BATCH_LIMIT: Choose at most2000 files per batch.')
+  const session=assetSessionVersion(),progress={...emptyAssetBatch(),active:true,total:files.length}
+  /** 复制进度数据，避免界面持有可变工作对象。 */ const publish=()=>options.progress({...progress,results:[...progress.results]})
+  publish()
+  let imported:AssetRecord[]=[]
+  try {
+    imported=await importAssetFiles(files,folder,options.signal,/** 暂存完成只更新读取进度，全部提交之前不报告成功。 */ (file,count)=>{progress.done=count;progress.name=file.name;publish()})
+    progress.completed=files.length
+    progress.results=files.slice(-50).map(/** 仅为已提交的整批记录成功。 */ file=>({name:file.name,status:'completed' as const,message:''}))
+  } catch(error) {
+    if(options.signal.aborted||session!==assetSessionVersion())progress.cancelled=files.length
+    else {progress.failed=files.length;progress.results=files.slice(-50).map(/** 说明整批已回滚，并保留真实错误。 */ file=>({name:file.name,status:'failed' as const,message:(error instanceof Error?error.message:String(error)).slice(0,2000)}))}
+  } finally {progress.active=false;progress.name='';publish()}
   return {progress,assets:imported}
 }
 /** 逐个重导入资源，验证原始来源和项目身份，并拒绝异步读取期间源或设置发生变化的项。 */ export function reimportAssetBatch(records:readonly AssetRecord[],options:AssetBatchOptions):Promise<AssetBatchProgress>{

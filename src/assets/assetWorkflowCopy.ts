@@ -1,6 +1,7 @@
 /** 资源工作流文案：提供纹理诊断和资源操作界面的多语言提示。 */
 import { preferencesState } from '../store/preferences'
 const en = {
+  retainedDraftInvalid: 'The retained resource draft is invalid.', savedResourceUnavailable: 'The saved resource is unavailable; your draft is retained.', resourceConflict: 'Review the saved-resource conflict before saving this draft.', resourceSaveFailed: 'The resource could not be saved.',
   metadataHint: 'Inspect source settings, dependency ownership and import diagnostics here.', resourceObject: 'Resource overrides must be a JSON object.', uniqueVariant: 'Choose a new variant name using 1–80 letters, numbers, dots, underscores or hyphens.', saveBeforeOverride: 'Save this resource before creating an inherited override.',
   sourceBindings: 'Original source bindings', chooseSource: 'Choose a source', openSource: 'Open source', imageSource: 'Image', tilesetSource: 'Tileset',
   sourceOwnedTiles: 'These tile definitions belong to the imported map. Make an independent editable copy to customize them; source reimports continue to update the original.', editableTileSet: 'Make editable TileSet copy', savedResourceValues: 'Saved runtime values',
@@ -19,6 +20,7 @@ const en = {
   completed: 'Completed', failed: 'Failed', cancelled: 'Cancelled', sourceFrames: 'Source frames',
 }
 const de: Record<keyof typeof en, string> = {
+  retainedDraftInvalid: 'Der aufbewahrte Ressourcenentwurf ist ungültig.', savedResourceUnavailable: 'Die gespeicherte Ressource ist nicht verfügbar; dein Entwurf bleibt erhalten.', resourceConflict: 'Prüfe vor dem Speichern den Konflikt mit der gespeicherten Ressource.', resourceSaveFailed: 'Die Ressource konnte nicht gespeichert werden.',
   metadataHint: 'Prüfe hier Quelleinstellungen, Abhängigkeiten und Importdiagnosen.', resourceObject: 'Ressourcenüberschreibungen müssen ein JSON-Objekt sein.', uniqueVariant: 'Wähle einen neuen Variantennamen aus 1–80 Buchstaben (A–Z), Ziffern, Punkten, Unterstrichen oder Bindestrichen.', saveBeforeOverride: 'Speichere die Ressource, bevor du eine abgeleitete Überschreibung erstellst.',
   sourceBindings: 'Verknüpfte Originalquellen', chooseSource: 'Quelle auswählen', openSource: 'Quelle öffnen', imageSource: 'Bild', tilesetSource: 'Tileset',
   sourceOwnedTiles: 'Diese Kacheldefinitionen gehören zur importierten Karte. Erstelle zum Anpassen eine unabhängige Kopie. Erneute Quellimporte aktualisieren weiterhin das Original.', editableTileSet: 'Bearbeitbare TileSet-Kopie erstellen', savedResourceValues: 'Gespeicherte Laufzeitwerte',
@@ -37,6 +39,7 @@ const de: Record<keyof typeof en, string> = {
   completed: 'Abgeschlossen', failed: 'Fehlgeschlagen', cancelled: 'Abgebrochen', sourceFrames: 'Quellframes',
 }
 const zh: Record<keyof typeof en, string> = {
+  retainedDraftInvalid: '保留的资源草稿无效。', savedResourceUnavailable: '已保存的资源不可用；当前草稿已保留。', resourceConflict: '请先处理与已保存资源的冲突，再保存草稿。', resourceSaveFailed: '资源无法保存。',
   metadataHint: '在此检查来源设置、依赖归属与导入诊断。', resourceObject: '资源覆盖数据必须是 JSON 对象。', uniqueVariant: '请使用 1–80 个英文字母、数字、点、下划线或连字符创建未使用的变体名称。', saveBeforeOverride: '创建继承覆盖前请先保存此资源。',
   sourceBindings: '原始来源关联', chooseSource: '选择来源', openSource: '打开来源', imageSource: '图像', tilesetSource: '瓦片集',
   sourceOwnedTiles: '这些瓦片定义属于导入的地图。请创建独立可编辑副本以进行自定义；重新导入来源时仍更新原始地图。', editableTileSet: '创建可编辑瓦片集副本', savedResourceValues: '已保存的运行时值',

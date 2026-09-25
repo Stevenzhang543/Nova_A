@@ -146,4 +146,13 @@ const visibleLayers = computed(/** 按规范化搜索词过滤物理图层名称
 .physics-workspace{container-type:inline-size}.physics-card label>span{white-space:normal;overflow-wrap:anywhere}.physics-card label input,.physics-card label select{min-height:34px;min-width:0;max-width:100%}.form-error17{color:var(--danger,#d95065);overflow-wrap:anywhere}
 @container(max-width:640px){.physics-grid{grid-template-columns:minmax(0,1fr)!important}.physics-card label{display:grid;grid-template-columns:minmax(0,1fr);gap:6px}.physics-card label>input,.physics-card label>select,.physics-card label>div{width:100%}}
 label:has(.numeric-draft){flex-wrap:wrap;align-items:stretch}label>div:has(.numeric-draft){display:flex;flex-wrap:wrap;gap:6px}.numeric-draft{max-width:100%}
+/* 26.26：按实际面板宽度折叠表单，而不是只依赖浏览器宽度；碰撞矩阵保留独立二维滚动。 */
+@container(max-width:640px){
+ .physics-heading{flex-direction:column}.physics-heading nav{justify-content:flex-start}
+ .material-workspace,.conformance-workspace,.layer-toolbar,.pair-editor{grid-template-columns:minmax(0,1fr)}
+ .material-workspace>*{min-width:0}.material-workspace aside button strong,.material-workspace aside button span{white-space:normal;overflow-wrap:anywhere;text-overflow:clip}
+ .layer-list{max-height:none;overflow:visible}.layer-list article{min-width:0;grid-template-columns:24px 34px minmax(0,1fr)}.layer-list article>input:last-child{grid-column:1/-1}
+ .support-row{grid-template-columns:minmax(0,1fr)}.case-grid{grid-template-columns:minmax(0,1fr)}.case-grid span{white-space:normal;overflow-wrap:anywhere}
+ .units-card dl{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
 </style>

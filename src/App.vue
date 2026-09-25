@@ -1,6 +1,7 @@
 <!-- 应用根组件：选择编辑器或播放器入口，加载全局窗口并初始化恢复与编辑服务。 -->
 <template>
   <template v-if="mode === 'editor'">
+    <MobileShell />
     <ProjectManager v-if="projectManager.visible" />
     <EditorLayout v-else />
     <ManualViewer v-if="manualViewerState.visible" />
@@ -21,6 +22,7 @@
 <script setup lang="ts">
 import { defineAsyncComponent, onBeforeUnmount, onMounted, ref } from 'vue'
 import ProjectManager from './components/ProjectManager.vue'
+import MobileShell from './components/MobileShell.vue'
 import EditorFeedback from './components/EditorFeedback.vue'
 import ConfirmDialog from './components/ConfirmDialog.vue'
 import { projectManagerState as projectManager } from './projects/projectManager'
@@ -99,3 +101,4 @@ onBeforeUnmount(/** 卸载时释放选择详情、项目变更路由、快捷键
 </script>
 
 <style>.app-loading { height: 100vh; display: grid; place-items: center; color: var(--text-muted); background: var(--bg-base); font-weight: 700; }</style>
+
