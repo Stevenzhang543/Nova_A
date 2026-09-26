@@ -72,3 +72,29 @@ html[data-form-label-layout='stacked'] #app .editor-root :is(.property-row > spa
 #app .editor-root :is(.production-panel,.world-tools,.physics-workspace) :is(a,button,input,select,textarea,summary):focus-visible {
   scroll-margin-block:12px;
 }
+
+/* 26.30：表单卡片按自身宽度布局；不改变画布、时间轴、数据列表或动画。 */
+#app .editor-root :is(.settings-card, .studio-card, .network-studio .card) { min-width: 0; }
+#app .editor-root .network-studio .card { container: nova-network-form / inline-size; }
+#app .editor-root :is(.settings-card, .studio-card, .network-studio .card) > :is(header, footer) { flex-wrap: wrap; gap: 8px; }
+#app .editor-root :is(.settings-card, .studio-card, .network-studio .card) :is(input:not([type='checkbox']):not([type='radio']):not([type='color']):not([type='range']), select, textarea) { box-sizing: border-box; max-width: 100%; min-height: calc(30px * var(--ui-scale, 1)); }
+#app .editor-root :is(.settings-card, .studio-card, .network-studio .card) > label { min-width: 0; }
+#app .editor-root :is(.settings-card, .studio-card, .network-studio .card) > label > :is(span, strong, small) { overflow-wrap: anywhere; }
+@container nova-form (max-width: 32em) {
+  /* 直接标签用于旧生产设置；与 SettingRow 一样给输入完整行，避免只剩几个字符。 */
+  #app .editor-root .settings-card > label:has(> input:not([type='checkbox']):not([type='radio']):not([type='color'])),
+  #app .editor-root .settings-card > label:has(> select),
+  #app .editor-root .settings-card > label:has(> textarea) { display: flex; flex-direction: column; align-items: stretch; gap: 6px; height: auto; }
+  #app .editor-root .settings-card > label > :is(input:not([type='checkbox']):not([type='radio']):not([type='color']), select, textarea) { width: 100%; min-width: 0; }
+}
+@container nova-network-form (max-width: 32em) {
+  /* 网络表单之前只随视口变化；窄宿主和大字号也需要逐行排布。 */
+  #app .editor-root .network-studio .card > label:has(> input:not([type='checkbox']):not([type='radio'])),
+  #app .editor-root .network-studio .card > label:has(> select),
+  #app .editor-root .network-studio .card > label:has(> textarea) { display: flex; flex-direction: column; align-items: stretch; gap: 6px; height: auto; }
+  #app .editor-root .network-studio .card > label > :is(input:not([type='checkbox']):not([type='radio']), select, textarea) { width: 100%; min-width: 0; }
+}
+/* 焦点模式已有整页宿主；只解除表单卡片的局部高度限制，长列表仍独立滚动。 */
+#app .editor-root .panel-maximized :is(.settings-card, .studio-card, .network-studio .card) { max-height: none; overflow: visible; }
+/* 实际遍历发现资源文件夹长路径在全页仍被省略；允许多行，同时保留整棵目录的滚动。 */
+#app .editor-root .folder-tree button { height: auto; min-height: 30px; white-space: normal; overflow-wrap: anywhere; overflow: visible; text-overflow: clip; text-align: start; }

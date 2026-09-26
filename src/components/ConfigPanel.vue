@@ -1,7 +1,7 @@
 <!-- 对象属性检查器：编辑实体组件、资源绑定及场景属性，协调验证和历史。 -->
 <template>
   <div class="config-wrapper" data-doc="manual/inspector" :class="[dock,{'panel-maximized':workspaceState.maximizedPanel==='inspector'}]" :style="{ width: `${panelWidth}px` }">
-    <PanelResizeHandle v-model="panelWidth" orientation="vertical" :minimum="252" :maximum="480" :reset-value="292" :reverse="dock==='right'" :label="t('inspector')" :disabled="workspaceState.maximizedPanel==='inspector'" @commit="estate.inspectorWidth=$event" />
+    <PanelResizeHandle v-model="panelWidth" orientation="vertical" :minimum="252" :maximum="480" :reset-value="340" :reverse="dock==='right'" :label="t('inspector')" :disabled="workspaceState.maximizedPanel==='inspector'" @commit="estate.inspectorWidth=$event" />
     <PanelMaximizeButton panel="inspector" class="inspector-maximize" />
     <aside :data-resource-key="numericResourceKey" class="config-panel" :class="{ runtime: !canEdit }" :inert="!canEdit">
       <div v-if="selectedEntities.length" class="inspector-sticky">

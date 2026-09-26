@@ -3,8 +3,8 @@
 
 # Nova_A 2D 游戏引擎与编辑器
 
-<!-- NOVA_V2624_OVERVIEW -->
-**当前开发源码 26.24：** [版本状态](docs/RELEASE_NOTES_26_24.md)、[结构化图契约](docs/STRUCTURAL_GRAPH_26_24.md)、[验收追踪](docs/IMPLEMENTATION_TRACKER_26_24.md)、[逐文件修改](docs/EDIT_LEDGER_26_24.md)及[网页部署](docs/WEB_HOSTING_26_24.md)。完整门禁、全量中文注释和最终发布包仍在实施中。
+<!-- NOVA_V2630_OVERVIEW -->
+**当前开发源码26.30 / Engine 26.30.0：** [功能清单](docs/FEATURE_INVENTORY_26_30.md)、[面板清单](docs/PANEL_INVENTORY_26_30.md)、[对比差距](docs/COMPETITIVE_REVIEW_26_30.md)、[关闭边界](docs/ISSUE_CLOSURE_26_30.md)、[教学](docs/QUALIFICATION_LESSON_26_30.zh.md)。最终验收以冻结源码报告/校验和为准。原生JSONL仅物理，不是游戏服务器。Web为在线入口，不支持离线重载。
 
 <!-- NOVA_V2623_OVERVIEW -->
 **上一版源码 26.23：** [版本说明](docs/RELEASE_NOTES_26_23.md)、[脚本契约](docs/SCRIPTING_CONTRACT_26_23.md)、[网页部署](docs/WEB_HOSTING_26_23.md)、[26.23–26.30补充计划](docs/ROADMAP_26_23_TO_26_30_ADDENDUM.md)、[验收追踪](docs/IMPLEMENTATION_TRACKER_26_23.md)、[逐项修改](docs/EDIT_LEDGER_26_23.md)。发布验收以源码绑定的实际测试证据与校验和为准。

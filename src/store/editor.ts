@@ -51,7 +51,7 @@ export const editorState = reactive({
   undoHistoryOpen: false,
   statusCenterOpen: false,
   hierarchyWidth: 236,
-  inspectorWidth: 292,
+  inspectorWidth: 340,
   hierarchyDock: 'left' as 'left' | 'right',
   inspectorDock: 'right' as 'left' | 'right',
   inspectorSearch: '',

@@ -13,7 +13,7 @@ exclude = ["src-tauri"]
 resolver = "2"
 
 [workspace.package]
-version = "26.29.0"
+version = "26.30.0"
 edition = "2021"
 rust-version = "1.77"
 license = "MIT"
