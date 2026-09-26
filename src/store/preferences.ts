@@ -1,5 +1,7 @@
 /** 用户偏好状态：读取和约束持久化设置，将配色、语言、缩放及动效偏好应用到文档。 */
-import { reactive, watch } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
+import { DEFAULT_EDITOR_PERFORMANCE_OVERRIDES, normalizeEditorPerformanceOverrides, resolveEditorPerformancePreferences, type EditorPerformanceOverrides } from './editorPerformance'
+export { resolveEditorPerformancePreferences } from './editorPerformance'
 import { colorPalette, paletteForMode, type ColorPaletteId } from './colorPalettes'
 
 export type ThemeMode = 'dark' | 'light'
@@ -7,7 +9,7 @@ export type Locale = 'en' | 'de' | 'zh'
 export type WorkspaceLayoutScope = 'user' | 'project'
 export type PerformanceProfile = 'balanced' | 'low-end' | 'quality'
 
-export interface Preferences {
+export interface Preferences extends EditorPerformanceOverrides {
   theme: ThemeMode
   lightPalette: ColorPaletteId
   darkPalette: ColorPaletteId
@@ -42,6 +44,7 @@ const STORAGE_KEY = 'nova_a.preferences.v1'
 const LIGHT_CONTRAST_MIGRATION_KEY = 'nova_a.light-contrast-default.v1.1'
 
 const defaults: Preferences = {
+  ...DEFAULT_EDITOR_PERFORMANCE_OVERRIDES,
   theme: 'dark',
   lightPalette: 'cloud-blue',
   darkPalette: 'midnight-blue',
@@ -49,7 +52,7 @@ const defaults: Preferences = {
   formLabelLayout: 'auto',
   uiScale: 1,
   compactMode: false,
-  reduceMotion: typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true,
+  reduceMotion: false,
   highContrast: false,
   gridSize: 10,
   snapToGrid: false,
@@ -92,6 +95,7 @@ const defaults: Preferences = {
 /** 逐项校验已保存偏好、迁移旧全屏及浅色高对比设置，并为缺失或非法值补默认值。 */ function normalizedPreferences(parsed: Partial<Preferences>, resetLegacyLightContrast: boolean): Preferences {
   return {
     ...defaults,
+    ...normalizeEditorPerformanceOverrides(parsed),
     theme: normalizedTheme(parsed.theme),
     lightPalette: paletteForMode(parsed.lightPalette, 'light'),
     darkPalette: paletteForMode(parsed.darkPalette, 'dark'),
@@ -136,6 +140,15 @@ const defaults: Preferences = {
 }
 
 export const preferencesState = reactive<Preferences>(loadPreferences())
+const motionMedia = typeof window !== 'undefined' ? window.matchMedia?.('(prefers-reduced-motion: reduce)') : undefined
+/** 系统减少动效实时状态不保存为用户选择，避免系统恢复后留下隐式强制覆盖。 */
+export const systemReducedMotion = ref(motionMedia?.matches === true)
+/** 根据用户预设、独立覆盖和系统无障碍偏好计算当前编辑器预算。 */
+export const editorPerformancePreferences = computed(/** 合并用户覆盖与系统动效限制，得到有效编辑器预算。 */ () => resolveEditorPerformancePreferences(preferencesState, systemReducedMotion.value))
+/** 只更新系统来源的减少动效信号，不覆盖用户设置。 */
+function updateSystemMotion(event: MediaQueryListEvent): void { systemReducedMotion.value = event.matches }
+motionMedia?.addEventListener('change', updateSystemMotion)
+
 
 /** 将当前偏好写入根元素数据属性、界面缩放变量和文档语言；无文档环境直接返回。 */ export function applyPreferences(): void {
   if (typeof document === 'undefined') return
@@ -147,6 +160,8 @@ export const preferencesState = reactive<Preferences>(loadPreferences())
   root.dataset.reduceMotion = String(preferencesState.reduceMotion)
   root.dataset.highContrast = String(preferencesState.highContrast)
   root.dataset.performanceProfile = preferencesState.performanceProfile
+  root.dataset.editorMotion = editorPerformancePreferences.value.decorativeMotion ? 'on' : 'off'
+  root.dataset.editorPreview = editorPerformancePreferences.value.previewBounded ? 'bounded' : 'full'
   root.style.setProperty('--ui-scale', String(preferencesState.uiScale))
   root.dataset.uiScale = preferencesState.uiScale > 1.75 ? 'xlarge' : preferencesState.uiScale > 1.25 ? 'large' : 'standard'
   root.lang = preferencesState.locale === 'zh' ? 'zh-CN' : preferencesState.locale
@@ -166,7 +181,7 @@ export const preferencesState = reactive<Preferences>(loadPreferences())
 
 applyPreferences()
 
-watch(preferencesState, /** 应用响应式偏好变更并尝试持久化；存储失败只记录警告，不阻断编辑。 */ () => {
+const stopPreferenceWatch = watch([preferencesState, systemReducedMotion], /** 应用响应式偏好变更并尝试持久化；存储失败只记录警告，不阻断编辑。 */ () => {
   applyPreferences()
   if (typeof localStorage !== 'undefined') {
     try {
@@ -176,3 +191,6 @@ watch(preferencesState, /** 应用响应式偏好变更并尝试持久化；存�
     }
   }
 }, { deep: true })
+
+/** 开发热替换时释放根观察器和系统监听，避免重复订阅。 */
+if (import.meta.hot) import.meta.hot.dispose(/** 热替换释放偏好观察器和媒体查询回调。 */ () => { stopPreferenceWatch(); motionMedia?.removeEventListener('change', updateSystemMotion) })

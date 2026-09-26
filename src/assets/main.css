@@ -1044,3 +1044,12 @@ html body #app :where(p, li, td, th, .body-copy) {
 /* This dialog is teleported to body, outside #app. */
 .authoring-palette .favorite { width: calc(28px * var(--ui-scale)); min-width: calc(28px * var(--ui-scale)); height: auto; min-height: calc(var(--line-control) + 8px); padding: 2px; }
 .authoring-palette .type-card { padding-right: calc(34px * var(--ui-scale)); }
+
+/* 播放器也共享 #app 与本样式表，必须排除整个 player-root 和游戏/设计画布子树，避免编辑器偏好覆盖运行时 DOM 动效。 */
+:root[data-editor-motion='off'] #app *:not(.player-root, .player-root *, .canvas-container, .canvas-container *),
+:root[data-editor-motion='off'] #app *:not(.player-root, .player-root *, .canvas-container, .canvas-container *)::before,
+:root[data-editor-motion='off'] #app *:not(.player-root, .player-root *, .canvas-container, .canvas-container *)::after {
+ animation: none !important;
+ transition: none !important;
+ scroll-behavior: auto !important;
+}

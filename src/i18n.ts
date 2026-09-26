@@ -1,5 +1,6 @@
 /** 编辑器语言字典及查询：按用户语言选择界面标签，并提供缺失翻译的后备行为。 */
 import { preferencesState } from './store/preferences'
+import { NOVA_RELEASE_NAME } from './projects/projectFormat'
 
 const en = {
   ready: 'Ready', file: 'File', edit: 'Edit', view: 'View', saveProject: 'Save Project', loadProject: 'Import Project…', clearScene: 'Clear Scene',
@@ -1363,8 +1364,8 @@ Object.assign(zh, {
 })
 
 Object.assign(en, {
-  releaseLabel: 'Nova_A v26.24',
-  version: 'Nova_A v26.24',
+  releaseLabel: `Nova_A v${NOVA_RELEASE_NAME}`,
+  version: `Nova_A v${NOVA_RELEASE_NAME}`,
   quickPeerCounts: 'Quick instance-count presets',
   refreshInstances: 'Refresh status',
   stopAllInstances: 'Stop all',
@@ -1424,8 +1425,8 @@ Object.assign(en, {
 })
 
 Object.assign(de, {
-  releaseLabel: 'Nova_A v26.24',
-  version: 'Nova_A v26.24',
+  releaseLabel: `Nova_A v${NOVA_RELEASE_NAME}`,
+  version: `Nova_A v${NOVA_RELEASE_NAME}`,
   quickPeerCounts: 'Voreinstellungen für die Instanzanzahl',
   refreshInstances: 'Status aktualisieren',
   stopAllInstances: 'Alle stoppen',
@@ -1485,8 +1486,8 @@ Object.assign(de, {
 })
 
 Object.assign(zh, {
-  releaseLabel: 'Nova_A v26.24',
-  version: 'Nova_A v26.24',
+  releaseLabel: `Nova_A v${NOVA_RELEASE_NAME}`,
+  version: `Nova_A v${NOVA_RELEASE_NAME}`,
   quickPeerCounts: '快速选择实例数量',
   refreshInstances: '刷新状态',
   stopAllInstances: '全部停止',
@@ -1548,6 +1549,11 @@ Object.assign(zh, {
 Object.assign(en, { growingTemplateLibrary: 'Template library' })
 Object.assign(de, { growingTemplateLibrary: 'Vorlagenbibliothek' })
 Object.assign(zh, { growingTemplateLibrary: '模板库' })
+
+/** 补齐曾退回英文的依赖、心跳和摩擦标签，保持键与项目数据不变。 */
+Object.assign(en, { vertices: 'Vertices', transform: 'Transform', rotation: 'Rotation', time: 'Time', shape: 'Shape' })
+Object.assign(de, { vertices: 'Eckpunkte', transform: 'Transformation', rotation: 'Drehung', time: 'Zeit', shape: 'Form', noReferencesFound: 'Keine abhängigen Ressourcen.', heartbeat: 'Lebenszeichen' })
+Object.assign(zh, { vertices: '顶点', transform: '变换', rotation: '旋转', time: '时间', shape: '形状', noReferencesFound: '没有依赖此资源的项目。', heartbeat: '心跳', staticFriction: '静摩擦', dynamicFriction: '动摩擦' })
 
 const dictionaries: Record<'en' | 'de' | 'zh', Dictionary> = { en, de, zh }
 

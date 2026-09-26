@@ -96,10 +96,10 @@ export const PLATFORM_GAP_REGISTER: readonly Readonly<PlatformGap>[] = Object.fr
   }),
   gap({
     id: 'windowless-dedicated-server', area: 'multiplayer', title: 'Truly windowless dedicated server', status: 'intentional-scope',
-    currentBoundary: 'Headless authority disables rendering inside the current WebView-backed player process; it is not a no-window native service runtime.',
-    decision: 'Describe the shipped mode as renderer-disabled headless authority. Do not claim a windowless service binary.',
-    evidence: ['src/runtime/networkProduction.ts', 'scripts/verify-v26.07-headless.mjs', 'docs/SUPPORT_MATRIX_26_10.md'],
-    owner: 'Runtime platform', target: 'Future native service host, if justified'
+    currentBoundary: 'The game export headless mode still disables rendering in a WebView-backed player. The separate nova_headless crate provides windowless bounded physics over JSONL stdio, without a project loader, Rhai host or network listener.',
+    decision: 'Distinguish the renderer-disabled full player from the native physics command. Do not claim full-game, script, rollback or multiplayer parity for the native command.',
+    evidence: ['src/runtime/networkProduction.ts', 'crates/nova_headless/src/main.rs', 'docs/PLATFORM_26_29.md'],
+    owner: 'Runtime platform', target: '26.29 native physics boundary; full-game windowless runtime remains outside this contract'
   }),
   gap({
     id: 'mandatory-cloud-services', area: 'product-scope', title: 'Mandatory accounts, cloud, telemetry and managed services', status: 'intentional-scope',
@@ -147,14 +147,14 @@ export const PLATFORM_GAP_REGISTER: readonly Readonly<PlatformGap>[] = Object.fr
     id: 'linux-matching-host', area: 'platforms', title: 'Linux matching-host qualification', status: 'deferred-external',
     currentBoundary: 'Source and pipeline definitions exist, but graphics, WebKitGTK, audio, input, package and lifecycle evidence is not attached from a Linux host.',
     decision: 'Keep Linux experimental until matching-host evidence passes.',
-    evidence: ['pending-external/linux-clean-machine.json', 'docs/SUPPORT_MATRIX_26_10.md'],
+    evidence: ['pending-external/linux-clean-machine.json', 'docs/PLATFORM_26_29.md', '.github/workflows/platform-recipes.yml'],
     owner: 'Linux platform QA', target: 'Matching-host platform promotion review'
   }),
   gap({
     id: 'macos-matching-host', area: 'platforms', title: 'macOS matching-host qualification', status: 'deferred-external',
     currentBoundary: 'Xcode, hardware, architecture, signing, notarization, audio/input and lifecycle evidence is not attached.',
     decision: 'Keep macOS experimental until matching-host evidence passes.',
-    evidence: ['pending-external/macos-clean-machine.json', 'docs/SUPPORT_MATRIX_26_10.md'],
+    evidence: ['pending-external/macos-clean-machine.json', 'docs/PLATFORM_26_29.md', '.github/workflows/platform-recipes.yml'],
     owner: 'macOS platform QA', target: 'Matching-host platform promotion review'
   }),
   gap({

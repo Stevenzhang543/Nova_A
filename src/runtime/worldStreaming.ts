@@ -234,7 +234,8 @@ interface StreamedEntityState {
     const parent = queued.shift()!
     if (visited.has(parent)) continue
     visited.add(parent)
-    for (const entity of entities) if (entity.parentUuid === parent) { result.push(entity); queued.push(entity.uuid) }
+    // 损坏的父链回路不能把分块根本身变成可恢复成员。
+    for (const entity of entities) if (entity.uuid !== cellUuid && !visited.has(entity.uuid) && entity.parentUuid === parent) { result.push(entity); queued.push(entity.uuid) }
   }
   return result.sort(/* 调用 a.uuid.localeCompare(b.uuid) 并返回调用结果。 */ (a, b) => a.uuid.localeCompare(b.uuid))
 }
@@ -251,12 +252,13 @@ interface StreamedEntityState {
 /** 结构说明（自动提取）：restoreStreamCellState；输入 cellUuid、entities；直接调用 consumeStreamedSaveState、snapshots.get、Array.isArray、Map、entities.map 等；写入 entity.enabled、entity.transform.position、entity.transform.rotation、entity.transform.scale 等；包含循环处理。 */ export function restoreStreamCellState(cellUuid: string, entities: Entity[]): boolean {
   const value = consumeStreamedSaveState(snapshots.get(cellUuid)?.saveStateKey || cellUuid)
   if (!Array.isArray(value)) return false
-  const byUuid = new Map(entities.map(/* 返回按声明顺序构造的数组 [entity.uuid, entity]。 */ entity => [entity.uuid, entity]))
+  // 存档交接只能恢复当前分块后代，不能凭导入 UUID 修改其他分块或全局实体。
+  const byUuid = new Map(cellMembers(cellUuid, entities).map(/** 仅索引已核实属于该分块的成员。 */ entity => [entity.uuid, entity]))
   for (const raw of value.slice(0, 100_000)) {
     if (!raw || typeof raw !== 'object') continue
     const state = raw as Partial<StreamedEntityState>, entity = typeof state.uuid === 'string' ? byUuid.get(state.uuid) : undefined
     if (!entity) continue
-    entity.enabled = state.enabled !== false
+    if (typeof state.enabled === 'boolean') entity.enabled = state.enabled
     if (state.position && Number.isFinite(state.position.x) && Number.isFinite(state.position.y)) entity.transform.position = { ...state.position }
     if (Number.isFinite(state.rotation)) entity.transform.rotation = state.rotation!
     if (state.scale && Number.isFinite(state.scale.x) && Number.isFinite(state.scale.y)) entity.transform.scale = { ...state.scale }

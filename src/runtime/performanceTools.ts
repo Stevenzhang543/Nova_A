@@ -70,7 +70,7 @@ export const performanceToolsState = reactive({
 })
 
 const knownEntities = new Set<string>()
-const memoryWindow: Array<{ frame: number; value: number }> = []
+const memoryWindow: Array<{ frame: number; timestamp: number; value: number }> = []
 
 /* 返回具有所列字段的新对象 { ...stats, batchBreakReasons: { ...stats.batchBreakReasons } }。 */ function cloneStats(stats: RendererStats): RendererStats { return { ...stats, batchBreakReasons: { ...stats.batchBreakReasons } } }
 /* 根据 values.length 的真假，分别返回 values.reduce((total, value) => total + value, 0) / values.length 或 0。 */ function finiteAverage(values: number[]): number { return values.length ? values.reduce(/* 计算表达式 total + value 并返回结果，沿用操作数的原有类型规则。 */ (total, value) => total + value, 0) / values.length : 0 }
@@ -108,12 +108,13 @@ const memoryWindow: Array<{ frame: number; value: number }> = []
   performanceToolsState.assetBudgetExceeded = performanceToolsState.assetMb > productionSettings.performance.assetBudgetMb
 
   if (performanceToolsState.memoryMb !== null) {
-    memoryWindow.push({ frame, value: performanceToolsState.memoryMb })
+    memoryWindow.push({ frame, timestamp: performance.now(), value: performanceToolsState.memoryMb })
     const capacity = productionSettings.performance.leakWindowFrames
     if (memoryWindow.length > capacity) memoryWindow.splice(0, memoryWindow.length - capacity)
     if (memoryWindow.length >= Math.min(60, capacity)) {
       const first = memoryWindow[0], last = memoryWindow[memoryWindow.length - 1]
-      const elapsedMinutes = Math.max(1 / 3_600, (last.frame - first.frame) / 60 / 60)
+      // 采样间隔随编辑器模式改变；使用真实单调时钟，不能假定每秒六十帧。
+      const elapsedMinutes = Math.max(1 / 60_000, (last.timestamp - first.timestamp) / 60_000)
       const slope = (last.value - first.value) / elapsedMinutes
       performanceToolsState.leakSlopeMbPerMinute = slope
       const risingSamples = memoryWindow.slice(1).filter(/* 比较 sample.value 与 memoryWindow[index].value - .05，返回大于或等于的判断结果。 */ (sample, index) => sample.value >= memoryWindow[index].value - .05).length

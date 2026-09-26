@@ -912,16 +912,24 @@ void main(){ outputColor=texelFetch(u_texture,ivec2(gl_FragCoord.xy),0); }`, POS
       return
     }
     const idleBefore = this.frameSerial - Math.max(2, renderingSettings.textureStreaming.idleFrames)
-    const candidates = [...this.textureCache.entries()]
-      .filter(/* 先计算 source !== this.whiteCanvas；仅当其为真值时求右侧 cached.lastUsedFrame < this.frameSerial，返回短路求值结果。 */ ([source, cached]) => source !== this.whiteCanvas && cached.lastUsedFrame < this.frameSerial)
-      .sort(/* 优先按最后使用帧排序，再按像素面积排序确定纹理淘汰次序。 */ (first, second) => first[1].lastUsedFrame - second[1].lastUsedFrame || first[1].width * first[1].height - second[1].width * second[1].height)
-    for (const [source, cached] of candidates) {
-      if (cached.lastUsedFrame > idleBefore && this.textureMemoryBytes <= budgetBytes) break
-      this.gl.deleteTexture(cached.texture)
-      this.textureCache.delete(source)
-      this.textureCount = Math.max(0, this.textureCount - 1)
-      this.textureMemoryBytes = Math.max(0, this.textureMemoryBytes - cached.width * cached.height * 4)
-      this.stats.textureEvictions++
+    if (this.textureMemoryBytes <= budgetBytes) {
+      // 预算充足时仅回收到期项；无需为仍驻留的所有纹理分配候选数组并排序。
+      // Map 删除当前项不会跳过后续项；白色回退和本帧纹理仍受同一生命周期保护。
+      for (const [source, cached] of this.textureCache) {
+        if (source !== this.whiteCanvas && cached.lastUsedFrame < this.frameSerial && cached.lastUsedFrame <= idleBefore) this.evictTexture(source)
+      }
+    } else {
+      const candidates = [...this.textureCache.entries()]
+        .filter(/* 先计算 source !== this.whiteCanvas；仅当其为真值时求右侧 cached.lastUsedFrame < this.frameSerial，返回短路求值结果。 */ ([source, cached]) => source !== this.whiteCanvas && cached.lastUsedFrame < this.frameSerial)
+        .sort(/* 优先按最后使用帧排序，再按像素面积排序确定纹理淘汰次序。 */ (first, second) => first[1].lastUsedFrame - second[1].lastUsedFrame || first[1].width * first[1].height - second[1].width * second[1].height)
+      for (const [source, cached] of candidates) {
+        if (cached.lastUsedFrame > idleBefore && this.textureMemoryBytes <= budgetBytes) break
+        this.gl.deleteTexture(cached.texture)
+        this.textureCache.delete(source)
+        this.textureCount = Math.max(0, this.textureCount - 1)
+        this.textureMemoryBytes = Math.max(0, this.textureMemoryBytes - cached.width * cached.height * 4)
+        this.stats.textureEvictions++
+      }
     }
     this.stats.textureBudgetExceeded ||= this.textureMemoryBytes > budgetBytes
     this.stats.textures = this.textureCount

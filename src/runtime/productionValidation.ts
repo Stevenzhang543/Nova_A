@@ -10,7 +10,8 @@ import { audioRuntime } from './audio'
 import { particleDiagnostics } from './particles'
 import { OFFICIAL_NETWORKING_PACKAGE_ID, packageEnabled, packageState } from './packages'
 import { productionSettings } from './production'
-import { physicsState } from '../store/physics'
+import { physicsState, sceneManager } from '../store/physics'
+import { buildSettings } from './buildSettings'
 import { validateScriptContract } from './scriptContracts'
 import { validateResourceProject } from './resources'
 import { networkAuthenticationProviders, networkEncryptionGuidance, reviewedNetworkTransports } from './networkProduction'
@@ -19,6 +20,34 @@ import { buildMediaProductionReport } from './mediaProduction26'
 import { buildSimulationProductionReport } from './simulationAuthoring26'
 
 export interface ProductionValidationIssue { code: string; severity: 'warning' | 'error'; message: string; fix: string }
+
+/** 按实际构建场景检查复制身份；未加载流送场景仍是合法作者来源，排除场景不是。 */
+export function validateNetworkReplicationBindings(): ProductionValidationIssue[] {
+  const issues: ProductionValidationIssue[] = [], included = new Set(buildSettings.sceneOrder), owners = new Map<string, string[]>()
+  const storedIds = new Set<string>()
+  /** 只接受有稳定 UUID 的序列化实体记录，不把无效场景内容当作有效目标。 */
+  const ids = (value: unknown): string[] => Array.isArray(value) ? value.flatMap(/** 提取实际保存的身份。 */ item => item && typeof item === 'object' && typeof item.uuid === 'string' ? [item.uuid] : []) : []
+  const activeAuthoredIds = new Set(ids(sceneManager.activeScene.data.entities))
+  for (const scene of sceneManager.scenes) if (scene.uuid !== sceneManager.activeSceneUuid) for (const id of ids(scene.data.entities)) storedIds.add(id)
+  for (const scene of sceneManager.scenes) {
+    if (!included.has(scene.uuid)) continue
+    const entityIds = scene.uuid === sceneManager.activeSceneUuid
+      ? physicsState.world.entities.filter(/** 播放时流送成员保留其作者场景归属，不重复归为活动场景。 */ entity => physicsState.playMode === 'editing' || activeAuthoredIds.has(entity.uuid) || !storedIds.has(entity.uuid)).map(/** 使用当前活动世界防止已删除实体被旧文档复活。 */ entity => entity.uuid)
+      : ids(scene.data.entities)
+    for (const uuid of entityIds) owners.set(uuid, [...(owners.get(uuid) ?? []), scene.uuid])
+  }
+  for (const definition of productionSettings.networking.replicatedEntities) {
+    const matches = owners.get(definition.entityUuid) ?? []
+    if (definition.sceneUuid && (!included.has(definition.sceneUuid) || !sceneManager.scenes.some(/** 要求场景本身存在于项目。 */ scene => scene.uuid === definition.sceneUuid))) {
+      issues.push({ code: 'NET-REPLICATION-SCENE', severity: 'error', message: `Replication scene ${definition.sceneUuid} is missing or not included in the build.`, fix: 'Include the exact authored scene in Build Settings or correct the replication scene binding.' })
+    } else if (!matches.length || definition.sceneUuid && !matches.includes(definition.sceneUuid)) {
+      issues.push({ code: 'NET-REPLICATION-ENTITY', severity: 'error', message: `Replication references missing entity ${definition.entityUuid} in its included authored scene.`, fix: 'Restore the entity in the bound scene, include its scene, or remove the stale replication row.' })
+    } else if (matches.length !== 1) {
+      issues.push({ code: 'NET-REPLICATION-AMBIGUOUS', severity: 'error', message: `Replication entity ${definition.entityUuid} has multiple authored owners in included scenes.`, fix: 'Give each replicated entity a unique UUID; runtime ownership must resolve to one object.' })
+    }
+  }
+  return issues
+}
 
 /** 结构说明（自动提取）：validateProductionRuntime；输入 assets、renderer、audio；直接调用 queryRendererCapabilities、issues.push、materialRuntimeDiagnostics.fallbackEvents.slice、slice、assets.records.filter 等；包含循环处理。 */ export function validateProductionRuntime(assets: Pick<AssetDatabaseState, 'records'>, renderer: RendererStats, audio: AudioProjectSettings): ProductionValidationIssue[] {
   const issues: ProductionValidationIssue[] = [], capability = rendererCapabilityState.report ?? queryRendererCapabilities(renderer.backend)
@@ -59,11 +88,11 @@ export interface ProductionValidationIssue { code: string; severity: 'warning' |
     const selectedAdapter = reviewedNetworkTransports().find(/* 比较 adapter.id 与 network.transportAdapterId，返回严格相等的判断结果。 */ adapter => adapter.id === network.transportAdapterId)
     const encryption = networkEncryptionGuidance(network, selectedAdapter?.encrypted === true)
     if (encryption.severity !== 'info') issues.push({ code: 'NET-ENCRYPTION', severity: encryption.severity, message: encryption.message, fix: 'Use a secure WebSocket/reviewed encrypted adapter, or disable the strict encryption requirement only for trusted local development.' })
+    issues.push(...validateNetworkReplicationBindings())
     const replicated = new Set<string>()
     for (const definition of network.replicatedEntities) {
       if (replicated.has(definition.entityUuid)) issues.push({ code: 'NET-REPLICATION-DUPLICATE', severity: 'error', message: `Entity ${definition.entityUuid} has more than one replication definition.`, fix: 'Keep one replication definition per entity in Network Studio → Replication.' })
       replicated.add(definition.entityUuid)
-      if (!physicsState.world.entities.some(/* 比较 entity.uuid 与 definition.entityUuid，返回严格相等的判断结果。 */ entity => entity.uuid === definition.entityUuid)) issues.push({ code: 'NET-REPLICATION-ENTITY', severity: 'error', message: `Replication references missing entity ${definition.entityUuid}.`, fix: 'Remove the stale row or restore the entity before building.' })
       if (definition.authority === 'owner' && !definition.ownerPeerId.trim()) issues.push({ code: 'NET-OWNER-MISSING', severity: 'warning', message: `Owner-authoritative entity ${definition.entityUuid} has no initial peer owner.`, fix: 'Assign an initial owner or allow the host/server to own it until an explicit authority transfer.' })
       if (!definition.alwaysRelevant && network.interest.enabled && definition.interestRadius <= 0) issues.push({ code: 'NET-INTEREST-RADIUS', severity: 'warning', message: `Entity ${definition.entityUuid} uses the global interest radius.`, fix: 'Set an entity radius when it needs a different visibility range, or keep the global radius intentionally.' })
     }

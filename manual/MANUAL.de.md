@@ -1,4 +1,55 @@
-# Nova_A 26.26 – Vollständiges Handbuch
+# Nova_A 26.29 – Vollständiges Handbuch
+
+<!-- NOVA_V2629_START -->
+## 26.29 — Welt, Netzwerk und Plattformauslieferung
+
+Engine: **26.29.0** · Project Format 2/schema 29. Bestehende Funktionen und Standardanimationen bleiben erhalten. Dieses Kapitel trennt lokale Ausführung von Anforderungen an andere Rechner, Laufzeiten oder Dienste.
+
+Verwenden Sie stabile Objekt-UUIDs für Navigationsziele und ordnen Sie Zellobjekte ihrer eigenen Wurzel unter. Fehlt ein Ziel oder ist es deaktiviert, werden alter Pfad und Geschwindigkeit sofort gelöscht; zurückkehrende Ziele können erneut aufgelöst werden. Eine Zellübergabe stellt nur Nachkommen dieser Zelle wieder her und bewahrt einen nicht angegebenen Aktivierungszustand. Sie ist eine begrenzte Transformations-/Geschwindigkeitsübergabe und kein vollständiger Skript- oder Physikcheckpoint. Prüfen Sie Entladen, erneutes Laden und Zielersatz; speichern und öffnen Sie das Projekt erneut und testen Sie den Export.
+
+Aktivieren Sie im Network Studio das Paket und erteilen Sie vor dem Verbinden die Berechtigung. Wählen Sie eine lokale Sitzung oder einen ausdrücklich konfigurierten direkten Transport. Prüfen Sie Objektbesitz und RPC-Richtungen. Diagnostics erläutert die Transformationsdelta-Korrektur und zeigt Alter, Tick und Absender des zuletzt angewandten autorisierten Zustandsdatenpakets. Die lokale monotone Zeit ist weder entfernte Latenz noch ein Nachweis des vollständigen Weltzustands. Stop beendet einen offenen WebSocket-Verbindungsaufbau und gibt dessen Timer frei. Beim Neuverbinden entsteht eine neue Sitzungsepoche; alte Pakete dürfen keine Autorität zurückerhalten.
+
+Manuelle Snapshot-Wiederherstellung und Mehrspieler-Spielstände stellen nicht beliebigen VM-Zustand, Physikkontakte, Zufallszustand, Audio, Datei- oder Netzwerkeffekte wieder her. Aufgezeichnete Transformationsdeltas sind keine deterministische Neusimulation eines Spiels. Lesen Sie vor rollbackabhängiger Spiellogik den Netzwerkvertrag; vollständige Checkpoints und ein Journal externer Effekte sind gesonderte Entwicklungsarbeit.
+
+Öffnen Sie Build Settings und lesen Sie die Voraussetzungen für Ziel und Architektur. Windows-Editor und Spielplayer benötigen WebView2. Wenn sie nicht starten, führen Sie aus dem Quellpaket `powershell -NoProfile -File scripts/check-windows-prerequisites.ps1` aus. Das Skript diagnostiziert nur und installiert nichts. Grafikeinstellungen für schwache Rechner ersetzen keine fehlende Laufzeit. Linux-/macOS-Rezepte benötigen einen passenden Rechner und Systembibliotheken; ein Rezept ist kein abgenommenes Binärpaket.
+
+Das Referenz-ZIP enthält das native Windows-Physikwerkzeug. Sein Quellcode liegt in nova_headless; `cargo run --release -p nova_headless -- --stdio` baut und startet es. Es verarbeitet begrenzte JSONL-Physikbefehle ohne Fenster oder WebView. Es lädt keine project.nova, führt keine Rhai-Spiele aus und lauscht nicht als Mehrspielerserver. Der bisherige Spielserverexport mit deaktivierter Grafik benötigt weiterhin die normale Desktoplaufzeit. `--version` und der hello-Befehl zeigen diese Grenze.
+
+Laden Sie den Inhalt des Web-ZIPs an einen HTTP(S)-Stamm- oder Unterpfad hoch; relative Assets und korrekter WASM-MIME-Typ müssen erhalten bleiben. Lokales Bearbeiten und Einzelspielerspiele benötigen keinen Anwendungs-Backenddienst. Build Web liefert ein separates Spiel-ZIP. Optionale Authentifizierung, Lobby, Relay und Netzwerkfunktionen brauchen ausdrücklich konfigurierte Dienste mit passender Origin-/CORS-/TLS-Regelung. PWA-Installation oder iPhone „Zum Home-Bildschirm“ ist ein Online-Webzugang, kein natives iOS-Paket und keine Datensicherung. Diese Version hat keinen Service Worker und unterstützt kein Offline-Neuladen. Prüfen Sie das tatsächliche Zielgerät. Die endgültige Freigabe folgt den ausgeführten Nachweisen des eingefrorenen Quellstands.
+<!-- NOVA_V2629_END -->
+
+<!-- NOVA_V2628_START -->
+## 26.28 — Animation, Audio und lokalisierte Spieloberflächen
+
+Engine: **26.28.0** · Project Format 2/schema 29. Öffnen Sie creator-v2628-animated-menu: Die Zeitleiste steuert Titelanimation, Musik und übersetzte Untertitel; Schaltflächen verwenden ausdrückliche @timeline-Aktionen. Bestehende Spiele, Standardanimationen und Qualitätseinstellungen bleiben erhalten.
+
+Wählen Sie unter Animate das gespeicherte Asset, vergrößern Sie das untere Panel und wählen Sie eine Spur oder einen Kurvenschlüssel. Ändern Sie Schlüsselwert oder Musikpegel, speichern Sie den Asset-Entwurf und prüfen Sie Vorschau, Pause und Positionswechsel. Vorschau stoppen stellt den bearbeiteten Szenenzustand wieder her. Undo/Redo bearbeitet das Projekt; der Vorschau-Abspielkopf erzeugt keinen neuen Schlüssel. Prüfen Sie lange Bindungspfade. Speichern Sie das Projekt, öffnen Sie den Download erneut und prüfen Sie Werte und Untertitel.
+
+Ein- und Ausblendgewichte verschachtelter Sequenzen multiplizieren den Beitrag ihrer Kindanimation und Audiospur. Positionswechsel und Rückwärtslauf verwenden dieselbe begrenzte lokale Zeit. Bildrate und Audio-Abtastrate bleiben getrennt. Mixeränderungen gehören zum Projekt; vorübergehende Vorschau- und Abhörsteuerungen dürfen sie nicht stillschweigend überschreiben.
+
+Wählen Sie die Projektsprache in der UI-Lokalisierung und bearbeiten Sie die Übersetzungstabelle. Die Editorsprache ist unabhängig. Fehlende Übersetzungen verwenden den Rückfall auf die Ausgangssprache; eigene Bezeichner bleiben erhalten. Spieltext und zugängliche Beschreibungen müssen gemeinsam wechseln. Browser-Textlayout und verfügbare Schriftarten bestimmen die Zeichenabdeckung.
+
+Öffnen Sie ein modales Fenster, während ein anderer Button den Fokus besitzt. Tastatur und Controller dürfen nur berechtigte Elemente bedienen. Deaktivierte oder versteckte Elemente dürfen nicht aktiv bleiben. Ein zweiter unbenutzter Controller darf gehaltene Navigation nicht zurücksetzen. Native Texteingabe bewahrt laufende IME-Komposition; deren Escape, Pfeiltasten und Enter gehören der Eingabemethode. Prüfen Sie RTL-Schieberegler mit Tastatur und Touch.
+
+Exportieren Sie ein Web-ZIP, stellen Sie es über HTTP(S) bereit und prüfen Sie ausschließlich den exportierten Player: Start, Pause, Überspringen, Fortsetzen, Unicode-Eingabe und Untertitel. PCM-/DOM-Tests prüfen Semantik; Hörqualität, echte Controller, mobile IME und assistive Technik benötigen reale Geräte. Unveränderte Renderer- und Vorlagenmatrizen werden nicht erneut ausgeführt.
+
+<!-- NOVA_V2628_END -->
+
+
+<!-- NOVA_V2627_START -->
+## 26.27 — Gemessene Leistung und reine Editor-Einstellungen
+
+Engine: **26.27.0** · Project Format 2/schema 29.
+
+Wählen Sie in den Einstellungen das Profil für schwächere Geräte. Dekorative Bewegung, Leerlauf-Bildgrenze und Vorschauen lassen sich getrennt überschreiben. Zurücksetzen stellt Profilvorgaben wieder her; reduzierte Bewegung des Systems und die explizite Barrierefreiheit bleiben unabhängig. Projektanimation, Physik und Exportqualität werden nicht umgeschrieben.
+
+Vergleichen Sie dieselbe Szene, Auflösung, Effekte und Hardware. Der Profiler zeigt tatsächliche Puffergröße, Backend, AA-Samples, CPU-Pässe und verfügbare GPU-Zeitmessung. Median, p95 und p99 gelten für aufgezeichnete Frames; fehlende GPU-Werte sind nicht null Millisekunden. Speicherwachstum nach echter Zeit beweist kein Leck.
+
+Wechseln Sie zwischen Design und Script, warten Sie im Leerlauf, wechseln Sie in den Hintergrund und zurück und öffnen Sie Projekte erneut. Begrenzte Vorschauen geben Canvas-Pixel und wartende Rückrufe frei. Der vorhandene Canvas wird wiederverwendet. Speichern, exportieren und starten Sie das Spiel und prüfen Sie Effekte, Auflösung und Animation.
+
+Berichte behalten verrauschte Messungen und nicht verfügbare Geräte bei. Eine kurze lokale Beobachtung zertifiziert weder ganztägige Stabilität noch ältere PCs oder echte mobile GPUs.
+
+<!-- NOVA_V2627_END -->
 
 <!-- NOVA_V2626_START -->
 ## 26.26 — Produktionsressourcen und lesbare Bibliotheken

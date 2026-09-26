@@ -46,6 +46,8 @@ export const navigationBakeState = reactive({
   artifactHash: '',
   error: ''
 })
+/** 返回实际缓存规模，供流送诊断和生命周期验证使用，不暴露可修改集合。 */
+export function inspectNavigationCache(){return {grids:grids.size,repathSchedules:nextRepath.size,pathRevisions:pathRevisions.size,debugPaths:navigationDebugPaths.size}}
 export const navigationProfile = {
   bakeCount: 0,
   pathQueries: 0,
@@ -502,6 +504,10 @@ class MinHeap {
 /** 结构说明（自动提取）：updateNavigation；输入 entities、fixedDelta、nowSeconds；直接调用 sort、entities.filter、allAgents.slice、Math.max、activeAgents.reduce 等；写入 performanceRuntimeState.spatialEntries、navigationProfile.activeAgents、navigationProfile.droppedAgents、navigationProfile.avoidancePairs 等；包含循环处理。 */ export function updateNavigation(entities: Entity[], fixedDelta: number, nowSeconds: number): void {
   const regions = entities.filter(/* 先计算 entity.enabled；仅当其为真值时求右侧 entity.getComponent<NavigationRegion2D>('NavigationRegion2D')?.enabled，返回短路求值结果。 */ entity => entity.enabled && entity.getComponent<NavigationRegion2D>('NavigationRegion2D')?.enabled).sort(/* 调用 first.uuid.localeCompare(second.uuid) 并返回调用结果。 */ (first, second) => first.uuid.localeCompare(second.uuid))
   const allAgents = entities.filter(/* 先计算 entity.enabled；仅当其为真值时求右侧 entity.getComponent<NavigationAgent2D>('NavigationAgent2D')?.enabled，返回短路求值结果。 */ entity => entity.enabled && entity.getComponent<NavigationAgent2D>('NavigationAgent2D')?.enabled).sort(/* 调用 first.uuid.localeCompare(second.uuid) 并返回调用结果。 */ (first, second) => first.uuid.localeCompare(second.uuid))
+  // 退场与禁用实体不得继续持有调度或网格；流送重载必须从当前成员重新建立路径。
+  const liveRegions=new Set(regions.map(/** 收集仍可使用的导航区域标识。 */ entity=>entity.uuid)),liveAgents=new Set(allAgents.map(/** 收集仍启用的导航代理标识。 */ entity=>entity.uuid))
+  for(const [key,grid] of grids)if(!liveRegions.has(grid.regionUuid))grids.delete(key)
+  for(const cache of [nextRepath,pathRevisions,navigationDebugPaths])for(const key of cache.keys())if(!liveAgents.has(key))cache.delete(key)
   const activeAgents = allAgents.slice(0, MAX_NAVIGATION_AGENTS)
   const avoidanceEntities = entities.filter(/** 结构说明（自动提取）：entities.filter 回调；输入 entity；直接调用 entity.getComponent；返回表达式求值结果。 */ entity => entity.enabled && (entity.getComponent<NavigationAgent2D>('NavigationAgent2D')?.enabled || entity.getComponent<NavigationObstacle2D>('NavigationObstacle2D')?.enabled))
   // Keep both the largest query and largest inserted bounds below the spatial
@@ -535,7 +541,13 @@ class MinHeap {
     const agent = entity.getComponent<NavigationAgent2D>('NavigationAgent2D')
     if (!agent) continue
     const position = worldTransform(entity, entities).position
-    const target = agent.targetEntityUuid ? worldTransform(entities.find(/* 比较 candidate.uuid 与 agent.targetEntityUuid，返回严格相等的判断结果。 */ candidate => candidate.uuid === agent.targetEntityUuid) ?? entity, entities).position : agent.targetPosition
+    const targetEntity=agent.targetEntityUuid?entities.find(/** 目标必须仍在当前世界中且启用。 */ candidate=>candidate.uuid===agent.targetEntityUuid&&candidate.enabled):undefined
+    if(agent.targetEntityUuid&&!targetEntity){
+      // 不以自身位置替代失效绑定，否则旧路径会在重新寻路间隔内继续驱动物理速度。
+      agent.velocity={x:0,y:0};entity.velocity={x:0,y:0};agent.path=[];agent.pathIndex=0;agent.pathStatus='Unreachable';nextRepath.delete(entity.uuid);pathRevisions.delete(entity.uuid)
+      navigationDebugPaths.set(entity.uuid,{entityUuid:entity.uuid,points:[],status:'Unreachable'});continue
+    }
+    const target=targetEntity?worldTransform(targetEntity,entities).position:agent.targetPosition
     const compatibleRegions = regions.filter(/** 结构说明（自动提取）：regions.filter 回调；输入 candidate；直接调用 candidate.getComponent。 */ candidate => {
       const region = candidate.getComponent<NavigationRegion2D>('NavigationRegion2D')!
       const bit = 1 << ((region.navigationLayer - 1) & 31)

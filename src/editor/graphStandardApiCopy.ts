@@ -90,6 +90,12 @@ export function graphStandardApiHelp(type:string,locale:GraphCopyLocale,fallback
   if(!signature)return undefined
   const row=translations.get(signature.documentation)
   if(locale==='en')return fallback
+  if(!signature.documentation.trim()){
+    const parameters=signature.parameters.map(/** 使用真实重载参数，不猜测没有上游文档的行为。 */ parameter=>`${parameter.name}${parameter.optional?'?':''}: ${parameter.type}`).join(', ')
+    return locale==='zh'
+      ? `调用 ${signature.name}(${parameters})，返回类型 ${signature.returnType}。带 ? 的参数可省略；其余参数必需。此重载没有提供额外的上游说明。`
+      : `${signature.name}(${parameters}) aufrufen; Rückgabetyp: ${signature.returnType}. Parameter mit ? sind optional; alle anderen sind erforderlich. Für diese Überladung liegt keine zusätzliche Beschreibung vor.`
+  }
   if(!row)return graphStandardApiLongHelp(signature.documentation,locale)
   return row[locale==='zh'?1:2]
 }

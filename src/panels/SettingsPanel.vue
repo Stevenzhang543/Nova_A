@@ -46,10 +46,24 @@
         <SettingRow :label="t('compactMode')"><ToggleSwitch v-model="prefs.compactMode" /></SettingRow>
         <SettingRow :label="t('reduceMotion')"><ToggleSwitch v-model="prefs.reduceMotion" /></SettingRow>
         <SettingRow :label="t('highContrast')"><ToggleSwitch v-model="prefs.highContrast" /></SettingRow>
-        <SettingRow :label="t('performanceProfiles')"><select :value="prefs.performanceProfile" @change="applyCreatorPerformanceProfile(($event.target as HTMLSelectElement).value as PerformanceProfile)"><option value="balanced">Balanced</option><option value="low-end">Low-end</option><option value="quality">High quality</option></select></SettingRow>
         <SettingRow :label="t('launchMaximized')"><ToggleSwitch v-model="prefs.launchMaximized" /></SettingRow>
         <SettingRow :label="t('workspaceLayoutScope')"><select v-model="prefs.workspaceLayoutScope"><option value="user">{{ t('editorScope') }}</option><option value="project">{{ t('projectScope') }}</option></select></SettingRow>
         <button class="secondary-action" @click="editorState.shortcutEditorOpen = true">{{ t('shortcutEditor') }}</button>
+      </section>
+
+      <section v-show="showCard('performanceProfiles reduceMotion idle preview budget editor performance', 'editor')" class="settings-card editor-performance-card" data-non-project-control>
+        <div class="card-heading"><span class="card-icon">◷</span><h2>{{ performanceCopy.title }}</h2></div>
+        <p>{{ performanceCopy.scope }}</p>
+        <SettingRow :label="t('performanceProfiles')"><select data-audit="editor-performance-profile" :value="prefs.performanceProfile" @change="applyCreatorPerformanceProfile(($event.target as HTMLSelectElement).value as PerformanceProfile)"><option value="balanced">{{ performanceCopy.balanced }}</option><option value="low-end">{{ performanceCopy.low }}</option><option value="quality">{{ performanceCopy.quality }}</option></select></SettingRow>
+        <SettingRow :label="performanceCopy.motion"><select v-model="prefs.editorDecorativeMotion" data-audit="editor-motion-override"><option value="auto">{{ performanceCopy.preset }}</option><option value="on">{{ performanceCopy.on }}</option><option value="off">{{ performanceCopy.off }}</option></select></SettingRow>
+        <p>{{ performanceCopy.priority }}</p>
+        <SettingRow :label="performanceCopy.idle"><select v-model.number="prefs.editorIdleFps" data-audit="editor-idle-fps"><option :value="0">{{ performanceCopy.preset }}</option><option :value="15">15 FPS</option><option :value="30">30 FPS</option><option :value="60">60 FPS</option></select></SettingRow>
+        <p>{{ performanceCopy.idleHint }}</p>
+        <SettingRow :label="performanceCopy.preview"><select v-model="prefs.editorPreviewPolicy" data-audit="editor-preview-policy"><option value="auto">{{ performanceCopy.preset }}</option><option value="bounded">{{ performanceCopy.bounded }}</option><option value="full">{{ performanceCopy.full }}</option></select></SettingRow>
+        <p>{{ performanceCopy.previewHint }}</p>
+        <p role="status" data-audit="editor-performance-effective">{{ performanceCopy.effective }}: {{ performanceCopy.motion }} {{ editorPerformancePreferences.decorativeMotion ? performanceCopy.on : performanceCopy.off }} · {{ editorPerformancePreferences.idleFps }} FPS · {{ editorPerformancePreferences.previewMaxDimension }} × {{ editorPerformancePreferences.previewMaxHeight }}</p>
+        <p>{{ performanceCopy.system }}: {{ systemReducedMotion ? t('yes') : t('no') }} · {{ performanceCopy.manual }}: {{ prefs.reduceMotion ? t('yes') : t('no') }}</p>
+        <button class="secondary-action" data-audit="reset-editor-performance" @click="applyCreatorPerformanceProfile('balanced')">{{ performanceCopy.reset }}</button><p>{{ performanceCopy.resetHint }}</p>
       </section>
 
       <PhysicsSettingsPanel v-show="showCard('physicsSettings globalGravity collisionLayers physicsMaterials conformance', 'project')" />
@@ -191,7 +205,8 @@ import { computed, defineComponent, h, inject, onBeforeUnmount, onMounted, provi
 import { t } from '../i18n'
 import { editorState } from '../store/editor'
 import { autosaveState, physicsState as physics, pushHistory, restoreAutosave } from '../store/physics'
-import { preferencesState as prefs, resetPreferences, selectColorPalette } from '../store/preferences'
+import { editorPerformancePreferences, systemReducedMotion, preferencesState as prefs, resetPreferences, selectColorPalette } from '../store/preferences'
+import { EDITOR_PERFORMANCE_COPY } from '../store/editorPerformanceCopy'
 import { FORM_LAYOUT_COPY } from '../editor/formLayoutCopy'
 import { COLOR_PALETTES, PALETTE_COPY } from '../store/colorPalettes'
 import type { ThemeMode } from '../store/preferences'
@@ -210,6 +225,8 @@ import { applyCreatorPerformanceProfile } from '../runtime/creatorLearning'
   if (theme === 'light') prefs.highContrast = false
 }
 
+/** 设置文案随界面语言即时更新，不写入项目内容。 */
+const performanceCopy = computed(/** 读取当前语言的性能设置文案。 */ () => EDITOR_PERFORMANCE_COPY[prefs.locale])
 const settingRowLabel = Symbol('settings-row-label')
 const SettingRow = defineComponent({
   props: { label: { type: String, required: true } },
@@ -323,6 +340,7 @@ watch(/* 返回 prefs.locale 的当前值。 */ () => prefs.locale, /** 偏好�
 
 /** 重置编辑器偏好并显示已重置状态。 */ function resetExperience() {
   resetPreferences()
+  void applyCreatorPerformanceProfile('balanced')
   editorState.statusText = t('settingsReset')
 }
 </script>

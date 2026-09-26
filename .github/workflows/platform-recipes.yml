@@ -1,0 +1,41 @@
+# 匹配宿主的候选构建配方：产生 CI 候选包，不宣称实机、签名或发布验收完成。
+name: Nova_A matching-host platform candidates
+on:
+  workflow_dispatch:
+jobs:
+  desktop-candidate:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+          - os: macos-14
+            target: aarch64-apple-darwin
+          - os: macos-15-intel
+            target: x86_64-apple-darwin
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev fonts-dejavu-core patchelf
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: wasm-pack
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec tauri build --target ${{ matrix.target }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: unqualified-desktop-candidate-${{ matrix.target }}
+          path: src-tauri/target/${{ matrix.target }}/release/bundle/**
+          if-no-files-found: error

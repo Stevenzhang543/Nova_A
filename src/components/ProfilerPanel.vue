@@ -34,6 +34,14 @@
           <article><span>{{ t('audioLatency') }}</span><strong>{{ audioRuntime.diagnostics.baseLatencyMs === null ? 'n/a' : `${audioRuntime.diagnostics.baseLatencyMs.toFixed(1)} ms` }}</strong></article>
           <article><span>{{ t('audioUnderruns') }}</span><strong>{{ audioRuntime.diagnostics.underruns }}</strong></article>
         </div>
+        <section class="presentation-diagnostics" data-audit="profiler-measurement">
+          <h3>{{ measurementCopy.title }}</h3>
+          <p>{{ measurementCopy.interval }}: median {{ intervalSummary.median }} ms · p95 {{ intervalSummary.p95 }} ms · p99 {{ intervalSummary.p99 }} ms ({{ intervalSummary.count }})</p>
+          <p>{{ measurementCopy.scope }}</p>
+          <dl><div><dt>{{ measurementCopy.backend }}</dt><dd>{{ presentationStats.backend }}</dd></div><div><dt>{{ measurementCopy.resolution }}</dt><dd>{{ presentationStats.backingWidth ?? '—' }} × {{ presentationStats.backingHeight ?? '—' }}</dd></div><div><dt>{{ measurementCopy.samples }}</dt><dd>{{ presentationStats.antiAliasingSamples ?? '—' }}</dd></div><div><dt>{{ measurementCopy.fallback }}</dt><dd>{{ presentationStats.antiAliasingLimited ? t('yes') : t('no') }} / {{ presentationStats.shaderFallbacks }}</dd></div><div><dt>{{ measurementCopy.gpu }}</dt><dd>{{ presentationStats.gpuMs === null ? measurementCopy.unavailable : presentationStats.gpuMs.toFixed(2) + ' ms' }}</dd></div><div><dt>{{ measurementCopy.budget }}</dt><dd>{{ (presentationStats.textureMemoryBytes / 1048576).toFixed(1) }} / {{ (presentationStats.textureBudgetBytes / 1048576).toFixed(1) }} MB</dd></div></dl>
+          <table><thead><tr><th>{{ measurementCopy.pass }}</th><th>{{ measurementCopy.cpu }}</th><th>{{ t('drawCalls') }}</th></tr></thead><tbody><tr v-for="pass in renderGraphState.passes" :key="pass.name"><th>{{ pass.name }}</th><td>{{ pass.enabled ? pass.durationMs.toFixed(2) + ' ms' : measurementCopy.disabled }}</td><td>{{ pass.drawCalls }}</td></tr></tbody></table>
+          <p>{{ measurementCopy.quality }}</p><p>{{ measurementCopy.memory }}</p>
+        </section>
         <svg class="trace-chart" viewBox="0 0 600 110" preserveAspectRatio="none" :aria-label="t('frameHistory')"><line x1="0" y1="93.3" x2="600" y2="93.3"/><line x1="0" y1="76.7" x2="600" y2="76.7"/><polyline :points="chartPoints" /></svg>
 <!-- 火焰视图过滤回调仅展示耗时大于零的指标。 -->        <div class="flame-view"><article v-for="metric in timingMetrics.filter(item => item.value > 0)" :key="metric.label" :style="{ width: `${Math.max(8, metric.value / Math.max(.001,current.frameMs) * 100)}%` }"><span>{{ t(metric.label) }}</span><output>{{ metric.value.toFixed(2) }} ms</output></article></div>
         <div class="button-row"><button @click="profilerState.frozen = !profilerState.frozen">{{ t(profilerState.frozen ? 'resumeProfiler' : 'freezeProfiler') }}</button><button @click="clearProfiler">{{ t('clearSamples') }}</button><button class="primary" @click="takeCapture">{{ t('capturePerformance') }}</button></div>
@@ -253,6 +261,10 @@
 
 <script setup lang="ts">
 import { computed, ref, shallowRef, watch } from 'vue'
+import { profilerMeasurementCopy } from '../editor/profilerMeasurementCopy'
+import { preferencesState } from '../store/preferences'
+import type { RendererStats } from '../renderer/types'
+import { renderGraphState } from '../renderer/renderGraph'
 import { assetState, createTextAsset, readTextAsset } from '../assets/AssetDatabase'
 import type { DataFieldSchema, DataSchemaResource, DataTableResource, DataValidationIssue } from '../runtime/dataResources'
 import { createDataSchemaAsset, createDataTableAsset, generateTypedDataAccessors, importDataText, readDataSchema, readDataTable, saveDataSchema, saveDataTable } from '../runtime/dataResources'
@@ -280,6 +292,13 @@ import { performanceRuntimeState as runtimePerformance } from '../runtime/largeW
 type TabId = 'trace' | 'memory' | 'replay' | 'tests' | 'data' | 'jobs' | 'scripts' | 'runtime' | 'network'
 const activeTab = ref<TabId>('trace')
 const current = computed(/* 返回 profilerState.current 的当前值。 */ () => profilerState.current)
+const measurementCopy=computed(/** 读取当前语言的实测与不可用提示。 */ ()=>profilerMeasurementCopy[preferencesState.locale])
+const presentationStats=computed(/** 读取实际渲染器最近发布的统计，不用项目请求值冒充实际后端结果。 */ ()=>editorState.rendererStats as RendererStats)
+const intervalSummary=computed(/** 对最多240个真实记录帧做有限排序，空样本明确显示不可用。 */ ()=>{
+ const values=profilerState.samples.slice(-240).map(/** 提取引擎记录的帧间隔。 */ sample=>sample.frameMs).filter(/** 丢弃无效或负间隔。 */ value=>Number.isFinite(value)&&value>=0).sort(/** 升序排序以计算样本分位。 */ (a,b)=>a-b)
+ /** 没有样本时返回短横线，否则给出两位小数分位数。 */ const at=(quantile:number)=>values.length?values[Math.floor((values.length-1)*quantile)].toFixed(2):'—'
+ return{count:values.length,median:at(.5),p95:at(.95),p99:at(.99)}
+})
 const timingMetrics = computed(/** 按固定顺序生成当前帧各子系统耗时指标。 */ () => [{ label: 'frameTime' as const, value: current.value.frameMs }, { label: 'inputTime' as const, value: current.value.inputMs }, { label: 'physicsTime' as const, value: current.value.physicsMs }, { label: 'renderingTime' as const, value: current.value.renderingMs }, { label: 'scriptsTime' as const, value: current.value.scriptsMs }, { label: 'animationTime' as const, value: current.value.animationMs }, { label: 'audioTime' as const, value: current.value.audioMs }, { label: 'assetsTime' as const, value: current.value.assetsMs }, { label: 'otherTime' as const, value: current.value.otherMs }])
 const activeContacts = computed(/* 调用 Math.round(physicsState.world.entities.reduce((total, entity) => total + entity.contactCount, 0) / 2) 并返回调用结果。 */ () => Math.round(physicsState.world.entities.reduce(/* 计算表达式 total + entity.contactCount 并返回结果，沿用操作数的原有类型规则。 */ (total, entity) => total + entity.contactCount, 0) / 2))
 const sleepingBodies = computed(/* 返回 physicsState.world.entities.filter(entity => entity.rigidBody.sleeping).length 的当前值。 */ () => physicsState.world.entities.filter(/* 返回 entity.rigidBody.sleeping 的当前值。 */ entity => entity.rigidBody.sleeping).length)
@@ -377,4 +396,8 @@ watch(tableGuid, /** 数据表选择变化时加载或清空表草稿。 */ guid
 .production-panel{container-type:inline-size}@container(max-width:900px){.trace-layout,.studio-grid,.network-layout{grid-template-columns:repeat(2,minmax(240px,1fr))}.tests-layout,.data-layout{grid-template-columns:180px minmax(320px,1fr)}.results-card,.import-card{grid-column:1/-1;max-height:260px}}@container(max-width:620px){.trace-layout,.studio-grid,.network-layout,.tests-layout,.data-layout{display:flex;flex-direction:column;overflow:auto}.card{width:100%;overflow:visible}.production-header{align-items:flex-start;flex-direction:column}.production-header nav{width:100%;flex-wrap:nowrap;overflow-x:auto}.production-header nav button{flex:0 0 auto}.form-grid{grid-template-columns:1fr 1fr}.metrics{grid-template-columns:1fr 1fr}.field-list article,.assertion-list article{grid-template-columns:1fr 1fr}}
 .script-profile-layout{display:grid;grid-template-columns:minmax(480px,1.6fr) minmax(260px,.7fr);gap:9px;align-items:start}.profile-heading,.profile-row{display:grid;grid-template-columns:minmax(160px,1.6fr) 62px 92px 92px 110px;gap:7px;align-items:center}.profile-heading{padding:8px;color:var(--text-muted);font-size:11px;text-transform:uppercase}.profile-row{min-height:39px;padding:5px 8px;border-top:1px solid var(--border-subtle);font-size:11px}.profile-row>span{min-width:0;display:flex;flex-direction:column}.profile-row strong,.profile-row small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.profile-row small{color:var(--text-muted)}.profile-comparison{display:grid;gap:6px;margin-top:8px}.profile-comparison article{padding:7px;display:grid;gap:3px;border-radius:7px;background:var(--surface-3);font-size:11px}.profile-comparison span{color:var(--text-muted)}@media(max-width:900px){.script-profile-layout{grid-template-columns:1fr}.profile-heading,.profile-row{grid-template-columns:minmax(130px,1fr) 48px 78px 78px 90px}}@media(max-width:620px){.script-profile-layout{display:flex;flex-direction:column}.script-profile-table,.script-capture-card{width:100%}.profile-heading{display:none}.profile-row{grid-template-columns:1fr 1fr}.profile-row>span{grid-column:1/-1}}
 .flame-view{margin:8px 0;display:flex;flex-direction:column;align-items:flex-start;gap:2px}.flame-view article{min-width:120px;padding:4px 7px;display:flex;justify-content:space-between;border-left:3px solid var(--accent);border-radius:4px;background:var(--accent-soft);font-size:11px}.budget-checks{margin-top:8px;display:grid;gap:3px}.budget-checks article{padding:4px 6px;display:flex;justify-content:space-between;border-radius:4px;background:var(--surface-3);font-size:11px}
+/* 实测诊断保留逐通道表格；窄面板允许名称和不可用说明完整换行。 */
+.presentation-diagnostics{padding:12px;border:1px solid var(--border-subtle);border-radius:8px;min-width:0}
+.presentation-diagnostics dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:8px}.presentation-diagnostics dd{margin:4px 0}.presentation-diagnostics p,.presentation-diagnostics dd{overflow-wrap:anywhere}
+.presentation-diagnostics table{width:100%;table-layout:fixed;border-collapse:collapse}.presentation-diagnostics th,.presentation-diagnostics td{padding:6px;text-align:left;overflow-wrap:anywhere;border-bottom:1px solid var(--border-subtle)}
 </style>

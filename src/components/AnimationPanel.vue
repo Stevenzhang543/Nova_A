@@ -20,6 +20,7 @@
 
     <div v-if="document" class="authoring-status" :data-draft-dirty="draftDirty">
       <strong>{{ previewActive ? copy.preview : draftDirty ? copy.dirty : copy.draft }}</strong>
+      <details v-if="selectedAsset" class="binding-details"><summary>{{ copy.asset }} · {{ selectedAsset.name }}</summary><code>{{ selectedAsset.path }}</code><code v-if="activeTrack">{{ targetName(activeTrack.targetEntityUuid) }} · {{ activeTrack.property }}</code><code v-if="activeTimelineClip">{{ activeTimelineClip.id }} · {{ activeTimelineClip.asset ?? activeTimelineClip.targetEntityUuid }}</code></details>
       <span v-if="draftConflict" class="draft-error" role="alert">{{ copy.conflict }}</span>
       <button v-if="draftDirty" :disabled="previewActive" @click="discardDraft">{{ copy.discard }}</button>
       <template v-if="clip || controller || timeline"><button :disabled="previewBusy" @click="togglePreview">{{ previewActive ? (studio.previewPlaying ? t('pause') : t('play')) : copy.preview }}</button><button v-if="previewActive" @click="stopPreview()">{{ copy.stopPreview }}</button><label v-if="previewActive && !controller">{{ copy.runtimeTime }}<input v-model.number="studio.playhead" type="number" min="0" :step="frameStep" @change="seekPreview"></label></template>
@@ -334,4 +335,33 @@ onBeforeUnmount(/** 卸载前保留草稿、停止预览并清理会话、计时
 
 /* Keep decimal transport values readable while the toolbar wraps. */
 .animation-studio .transport input[type=number]{width:96px;min-width:96px}
+/* 工作区滚动时保留传输工具；长资源路径可选中、换行并完整阅读。 */
+.animation-studio .transport{position:sticky;top:0;z-index:6;background:var(--surface-2)}
+.binding-details{min-width:0}.binding-details code{display:block;white-space:normal;overflow-wrap:anywhere;user-select:text;padding-block:3px}
+.animation-studio .authoring-status summary{cursor:pointer}
+/* 放大文字或矮停靠区时由工作室承担纵向滚动，禁止工作区被工具栏挤成不可点击的细条。 */
+.animation-studio{overflow:auto}
+.animation-studio>:is(.clip-workspace,.controller-workspace,.rig-workspace,.skin-workspace,.sequencer){flex:1 0 360px;min-height:360px}
+/* 创建动作保持完整单行标签；窄停靠区可横向访问全部动作，不把每个名称拆成多行。 */
+.create-menu{min-width:0;max-width:100%;flex-wrap:nowrap;overflow-x:auto;overscroll-behavior-inline:contain}
+.create-menu button{flex:0 0 auto;white-space:nowrap;overflow-wrap:normal}
+@container nova-animation (max-width:1100px){
+ .animation-studio .transport{position:static}
+ .create-menu button{flex:0 0 auto}
+}
+/* 明确为换行传输工具保留内在高度；后续标尺和属性行不能侵占该行。 */
+.animation-studio .sequencer{grid-template-rows:max-content minmax(0,1fr)}
+.sequencer>.transport{grid-row:1;align-self:start;height:auto;min-height:max-content}
+@container nova-animation (max-width:1100px){
+ .animation-studio .sequencer{grid-template-rows:max-content minmax(280px,1fr) var(--animation-properties-height)}
+ .sequencer>.timeline-structure{grid-column:1;grid-row:2}
+ .sequencer>main{grid-column:2;grid-row:2}
+ .sequencer>.timeline-inspector{grid-column:1/-1;grid-row:3}
+}
+@container nova-animation (max-width:650px){
+ .animation-studio .sequencer{grid-template-rows:max-content minmax(64px,max-content) minmax(280px,1fr) var(--animation-properties-height)}
+ .sequencer>.timeline-structure{grid-column:1;grid-row:2}
+ .sequencer>main{grid-column:1;grid-row:3}
+ .sequencer>.timeline-inspector{grid-column:1;grid-row:4}
+}
 </style>

@@ -1,4 +1,55 @@
-# Nova_A 26.26 Complete Manual
+# Nova_A 26.29 Complete Manual
+
+<!-- NOVA_V2629_START -->
+## 26.29 — World, networking and platform delivery
+
+Engine: **26.29.0** · Project Format 2/schema 29. Existing features and default animation remain. This chapter separates what runs locally from what requires another host, runtime or service.
+
+For a streamed world, use stable entity UUIDs for navigation targets and keep cell children under their owning root. A missing or disabled target now clears its old path and velocity immediately; returning targets can be resolved again. Cell handoff restores only that cell's descendants and preserves unspecified enabled state. It is a bounded transform/velocity handoff, not a complete script or physics checkpoint. Test unload/reload and target replacement, then save, reopen and run the exported project.
+
+In Network Studio, enable the package and grant permission before connecting. Select an explicit local session or configured direct transport. Check entity ownership and RPC directions. Diagnostics explains transform-delta correction and shows the age, tick and sender of the most recently applied authorized snapshot packet. Age uses the local monotonic clock and is not remote latency or proof of complete world state. Stop cancels an unfinished WebSocket handshake and releases its timer. Reconnect establishes a new session epoch; old packets must not regain authority.
+
+A manual snapshot restore or multiplayer save does not restore arbitrary VM state, solver contacts, RNG, audio, filesystem or network side effects. Reapplying recorded transform deltas is not deterministic game resimulation. Use the Network contract documentation before designing rollback-dependent gameplay; a full checkpoint and side-effect journal remain separate engineering work.
+
+Open Build Settings and read prerequisites for the exact target and architecture. The Windows desktop editor and game player require WebView2. If they cannot start, run `powershell -NoProfile -File scripts/check-windows-prerequisites.ps1` from the source package; it only diagnoses, without installing anything. Low-end graphics settings cannot replace a missing runtime. Linux/macOS recipes require a matching host and their system libraries; recipe availability does not mean an accepted binary exists.
+
+The reference ZIP includes the Windows native physics utility. Its source is the nova_headless crate; run `cargo run --release -p nova_headless -- --stdio` to build and start it. It accepts bounded JSONL physics requests and creates no window or WebView. It does not load project.nova, execute Rhai games or listen as a multiplayer server. The existing rendering-disabled game export still needs the normal desktop runtime. Use `--version` and the hello command to inspect this boundary.
+
+Upload the Web ZIP contents to an HTTP(S) root or subdirectory, retaining relative assets and correct WASM MIME type. Local authoring and single-player games do not need an application backend. Build Web downloads a separate game ZIP. Optional authentication/lobby/relay/networking requires an explicitly configured compatible service and its Origin/CORS/TLS policy. PWA installation or iPhone Add to Home Screen is an online Web shortcut, not a native iOS build or backup. This release has no service worker and does not support offline reload. Verify on the actual intended device. Final release acceptance is recorded in frozen-source executed evidence, not inferred from these instructions.
+<!-- NOVA_V2629_END -->
+
+<!-- NOVA_V2628_START -->
+## 26.28 — Animation, audio and localized game UI
+
+Engine: **26.28.0** · Project Format 2/schema 29. Open the creator-v2628-animated-menu reference: its timeline owns title animation, music and localized captions; buttons use explicit @timeline actions. Existing games, default animation and quality settings remain supported.
+
+In Animate, select the saved asset, expand the bottom panel and select a track or curve key. Edit the key value or music clip gain, Save the asset draft, then preview, pause and seek. Stop preview restores authored scene state. Undo/redo is an authoring operation; changing the preview playhead does not bake a new key. Inspect long binding paths before retargeting. Save Project, reopen the downloaded file and verify the edited key, caption and gain.
+
+Nested timeline blend-in and blend-out weights must multiply the child animation/audio contribution. Seek and reverse use the same bounded local-time evaluation. Keep frame rate and audio sample rate distinct: presentation frames do not replace the integer audio sample clock. A mixer edit is authored project data; preview transport and temporary listening controls must not silently rewrite it.
+
+In UI localization, choose the project language and edit its translation table. Editor language is a separate setting. Use source-language fallback for missing translations and keep user identifiers unchanged. Game text and accessibility descriptions should update together. Browser shaping and installed/bundled fonts determine glyph coverage; this is not a replacement for a complete independent text engine.
+
+Open a modal while another button has focus: keyboard/controller activation must move into the eligible modal scope. Disabled or hidden controls must not remain actionable. Multiple connected pads must not cause an idle pad to reset a held direction. Native text input retains composition until commit; Escape, arrow keys and Enter during composition belong to the IME. Check RTL slider direction with both keyboard and touch.
+
+Build Web, download its ZIP, serve it over HTTP(S), and test only the exported player: play/pause/skip/resume the cutscene, enter Unicode text and check captions. Automated PCM/DOM tests validate semantics; listening quality, real controllers/mobile IME candidate windows and assistive-technology acceptance require actual devices. Unrelated renderer and template matrices are not repeated in this release.
+
+<!-- NOVA_V2628_END -->
+
+
+<!-- NOVA_V2627_START -->
+## 26.27 — Measured performance and editor-only controls
+
+Engine: **26.27.0** · Project Format 2/schema 29.
+
+Choose a low-end editor preset in Settings, then independently adjust decorative motion, idle frame limit and preview policy. Reset restores preset defaults; system reduced motion and the explicit accessibility preference remain independent. These controls do not rewrite project animation, physics or export quality.
+
+Compare the same scene, resolution, effects and hardware. Profiler shows actual backing dimensions, backend, AA samples, CPU passes and whether GPU timing is available. Median, p95 and p99 describe recorded frames; unavailable GPU data is not zero. Memory growth is a wall-clock observation, not proof of a leak.
+
+Switch Design/Script, leave the editor idle, background and restore it, then reopen projects and check input. Low-end previews use bounded canvases and release pending callbacks when closed. Existing canvas reuse avoids an extra preload cache. Save, export and run the game to confirm authored effects, resolution and animation survive.
+
+Reports retain noisy measurements and unavailable devices. A short local observation does not certify all-day stability, old PCs or physical mobile GPUs.
+
+<!-- NOVA_V2627_END -->
 
 <!-- NOVA_V2626_START -->
 ## 26.26 — production assets and readable libraries

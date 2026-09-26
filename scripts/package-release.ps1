@@ -463,6 +463,17 @@ try { Invoke-WithTransientFileRetry -Operation 'Reference-project archive creati
     if (-not (Test-VersionAtMost -Candidate $engine -Maximum $MachineVersion)) { continue }
     Copy-Item -LiteralPath $directory.FullName -Destination (Join-Path $projectsStage $directory.Name) -Recurse -Force
   }
+  # 26.29起将已资格验证的原生工具加入示例归档，不改变根目录十一项发布契约。
+  if ([version]$MachineVersion -ge [version]'26.29.0') {
+    $nativeReport = Get-Content -LiteralPath (Join-Path $structuredEvidence 'runtime/native-headless.json') -Raw | ConvertFrom-Json
+    $nativeBinary = Join-Path $projectRoot 'target/release/nova_headless.exe'
+    if ($nativeReport.status -ne 'passed' -or $nativeReport.engineVersion -ne $MachineVersion -or $nativeReport.artifact.path -ne 'target/release/nova_headless.exe' -or $nativeReport.artifact.sha256 -ne (Get-Sha256Lower -LiteralPath $nativeBinary) -or [long]$nativeReport.artifact.bytes -ne (Get-Item -LiteralPath $nativeBinary).Length) { throw 'Native physics binary does not match qualified evidence.' }
+    $nativeStage = Join-Path $referenceStage 'native-tools/windows-x64'
+    New-Item -ItemType Directory -Path $nativeStage -Force | Out-Null
+    Copy-Item -LiteralPath $nativeBinary -Destination (Join-Path $nativeStage 'nova_headless.exe')
+    Copy-Item -LiteralPath (Join-Path $projectRoot ('docs/NATIVE_HEADLESS_' + $Version.Replace('.','_') + '.md')) -Destination (Join-Path $nativeStage 'README.md')
+    Copy-Item -LiteralPath (Join-Path $projectRoot 'scripts/check-windows-prerequisites.ps1') -Destination (Join-Path $nativeStage 'check-windows-prerequisites.ps1')
+  }
   New-DeterministicZip -SourceDirectory $referenceStage -DestinationPath $referenceArchive
 } }
 finally { if (Test-Path -LiteralPath $referenceStage) { Remove-Item -LiteralPath $referenceStage -Recurse -Force } }

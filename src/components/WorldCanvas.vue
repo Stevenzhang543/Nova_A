@@ -11,7 +11,7 @@ import type { Entity } from '../world/Entity'
 import type { Vec2 } from '../world/types'
 import { addEditorLog, editorState, openContextMenu } from '../store/editor'
 import { isValidConvexPolygon, MIN_SIZE, normalizeEntity, syncMassFromDensity } from '../world/geometry'
-import { preferencesState as prefs } from '../store/preferences'
+import { preferencesState as prefs, editorPerformancePreferences } from '../store/preferences'
 import { boundCompoundEntityIds, connectionGeometrySignature, connectionSharesLayer, entityBoundaryPoints, repatchConnection, resolveAnchor, routePoints, setManualRoute } from '../world/Connection'
 import { t } from '../i18n'
 import { defaultColorForLayer } from '../world/layers'
@@ -69,7 +69,7 @@ let ctx: CanvasRenderingContext2D | null = null
 let renderer: Renderer2D | null = null
 let canvasPixelRatio = 1
 let isManualDrawing = false
-const knownBrokenConnections = new Set<number>()
+const knownBrokenConnections = new WeakSet<object>()
 const connectionGeometrySignatures = new Map<number, string>()
 let palette = {
   canvas: '#11151b', grid: '#202630', label: '#626c7c', xAxis: '#a9505b', yAxis: '#4e946d',
@@ -84,7 +84,8 @@ let isDragging = false; let isPanning = false; let isVertexDragging = false; let
 let dragStart: Vec2 | null = null; let dragNow: Vec2 | null = null; let lastMouseScreen: Vec2 | null = null
 let raf = 0; let resizeRaf = 0; let lastTime = performance.now(); let resizeObserver: ResizeObserver | null = null
 let pendingMouseMove: MouseEvent | null = null
-let lastLowEndEditorFrame = 0, performanceSampleCounter = 0, profileFrameCounter = 0, cachedPerformanceSample = { allocations: 0, assetJobs: 0 }
+let idleFrameTimer: ReturnType<typeof setTimeout> | null = null
+let performanceSampleCounter = 0, profileFrameCounter = 0, cachedPerformanceSample = { allocations: 0, assetJobs: 0 }
 
 let hoveredVertex: { entityId: number, index: number, target: 'shape' | 'renderer' | 'collider', virtualPos?: Vec2 } | null = null
 let dragMeta: { initialScaleX: number, initialScaleY: number, initialDist: number } | null = null
@@ -235,7 +236,7 @@ watch(/* 返回 editorState.currentPage 的当前值。 */ () => editorState.cur
 
 let canvasLogicalWidth = 0, canvasLogicalHeight = 0
 /** 综合设备像素比、画质上限、自适应比例和分辨率缩放计算有界像素比。 */ function desiredCanvasPixelRatio(width: number, height: number) {
-  return boundedFrame({width, height, pixelRatio: Math.max(.5, Math.min(window.devicePixelRatio || 1, prefs.maxPixelRatio, activeRenderQuality.maximumPixelRatio) * performanceRuntimeState.adaptivePixelRatioScale * (Number.isFinite(renderingSettings.resolutionScale) ? Math.min(2, Math.max(.5, renderingSettings.resolutionScale)) : 1)), clearColor: {r:0,g:0,b:0,a:1}}).pixelRatio
+  return boundedFrame({width, height, pixelRatio: Math.max(.5, Math.min(window.devicePixelRatio || 1, editorState.currentPage === 'game' ? Infinity : prefs.maxPixelRatio, activeRenderQuality.maximumPixelRatio) * performanceRuntimeState.adaptivePixelRatioScale * (Number.isFinite(renderingSettings.resolutionScale) ? Math.min(2, Math.max(.5, renderingSettings.resolutionScale)) : 1)), clearColor: {r:0,g:0,b:0,a:1}}).pixelRatio
 }
 /** 同步逻辑尺寸、后备像素及渲染视口，保持相机中心并重新绘制。 */ function resize() {
   const canvas = canvasRef.value; if (!canvas) return
@@ -279,12 +280,12 @@ let canvasLogicalWidth = 0, canvasLogicalHeight = 0
   beginPerformanceFrame(frameStarted)
   flushPendingMouseMove()
 
-  if (camera.targetScale !== null && !prefs.reduceMotion) {
+  if (camera.targetScale !== null && editorPerformancePreferences.value.decorativeMotion) {
     camera.scale += (camera.targetScale - camera.scale) * (1 - Math.exp(-8 * dt));
     if (Math.abs(camera.scale - camera.targetScale) < 0.005) { camera.scale = camera.targetScale; camera.targetScale = null; }
   }
-  if (camera.targetScale !== null && prefs.reduceMotion) { camera.scale = camera.targetScale; camera.targetScale = null }
-  if (camera.targetOffset !== null && !prefs.reduceMotion) {
+  if (camera.targetScale !== null && !editorPerformancePreferences.value.decorativeMotion) { camera.scale = camera.targetScale; camera.targetScale = null }
+  if (camera.targetOffset !== null && editorPerformancePreferences.value.decorativeMotion) {
     const blend = 1 - Math.exp(-8 * dt)
     camera.offset.x += (camera.targetOffset.x - camera.offset.x) * blend;
     camera.offset.y += (camera.targetOffset.y - camera.offset.y) * blend;
@@ -292,7 +293,7 @@ let canvasLogicalWidth = 0, canvasLogicalHeight = 0
       camera.offset.x = camera.targetOffset.x; camera.offset.y = camera.targetOffset.y; camera.targetOffset = null;
     }
   }
-  if (camera.targetOffset !== null && prefs.reduceMotion) { camera.offset = { ...camera.targetOffset }; camera.targetOffset = null }
+  if (camera.targetOffset !== null && !editorPerformancePreferences.value.decorativeMotion) { camera.offset = { ...camera.targetOffset }; camera.targetOffset = null }
 
   if (editorState.currentPage === 'scene' && !state.simulationRunning) syncEditableConnections(true)
   gameplayRuntime.frame(Math.min(dt, 0.1), canvasRef.value?.getBoundingClientRect())
@@ -301,8 +302,8 @@ let canvasLogicalWidth = 0, canvasLogicalHeight = 0
   prepareHierarchyIndex(world.entities)
   if (editorState.currentPage === 'scene' && state.simulationRunning) syncEditableConnections(false)
   for (const connection of world.connections) {
-    if (connection.breakState !== 'intact' && !knownBrokenConnections.has(connection.id)) {
-      knownBrokenConnections.add(connection.id)
+    if (connection.breakState !== 'intact' && !knownBrokenConnections.has(connection)) {
+      knownBrokenConnections.add(connection)
       editorState.statusText = t('connectionBroken', { name: connection.name })
       addEditorLog(t('connectionBroken', { name: connection.name }), 'Physics', 'warning')
     }
@@ -335,14 +336,30 @@ let canvasLogicalWidth = 0, canvasLogicalHeight = 0
   completePerformanceFrame()
 }
 
-/** 低端空闲编辑时限制帧率，运行帧失败则报告并停止调度。 */ function loop(time?: number) {
-  const timestamp=time??performance.now()
-  if(prefs.performanceProfile==='low-end'&&editorState.currentPage==='scene'&&!state.simulationRunning&&camera.targetScale===null&&camera.targetOffset===null&&!isDragging&&!isPanning&&!isVertexDragging&&timestamp-lastLowEndEditorFrame<1000/30){raf=requestAnimationFrame(loop);return}
-  lastLowEndEditorFrame=timestamp
-  try { runFrame(time) }
-  catch (error) { raf = 0; reportFatalError(error, 'Scene/Game frame', 'Renderer'); return }
-  raf = requestAnimationFrame(loop)
+/** 只限制静止的编辑器画布；运行、游戏和交互仍使用显示器帧率。 */
+function idleFrameDelay(): number {
+  if (state.playMode !== 'editing') return 0
+  // 隐藏的停止态仍以有界频率更新插件/热重载，不浪费完整物理同步帧。
+  if (document.hidden || !['scene', 'game'].includes(editorState.currentPage) || editorState.activeWorkspace === 'ui') return 1000 / 15
+  if (editorState.currentPage !== 'scene' || camera.targetScale !== null || camera.targetOffset !== null || isDragging || isPanning || isVertexDragging) return 0
+  const fps = editorPerformancePreferences.value.idleFps
+  return fps < 60 ? 1000 / fps : 0
 }
+/** 每次只拥有一个帧或定时任务，低端等待期间不持续唤醒 rAF。 */
+function loop(time?: number) {
+  raf = 0; idleFrameTimer = null
+  if (canvasDisposed) return
+  try { runFrame(time) }
+  catch (error) { reportFatalError(error, 'Scene/Game frame', 'Renderer'); return }
+  const delay = idleFrameDelay()
+  if (delay) idleFrameTimer = setTimeout(/** 等待后交给下一显示帧，不并存多条循环。 */ () => { idleFrameTimer = null; if (!canvasDisposed) raf = requestAnimationFrame(loop) }, delay)
+  else raf = requestAnimationFrame(loop)
+}
+/** 设置或播放状态变化时取消低频等待，及时恢复交互而不重置游戏时钟。 */
+function wakeFrameLoop() {
+  if (idleFrameTimer !== null) { clearTimeout(idleFrameTimer); idleFrameTimer = null; if (!canvasDisposed && !raf) raf = requestAnimationFrame(loop) }
+}
+watch(/** 只观察排程参数和播放模式，避免深层世界观察开销。 */ () => [editorPerformancePreferences.value.idleFps, state.playMode, editorState.currentPage, editorState.activeWorkspace], wakeFrameLoop)
 
 onMounted(/** 挂载时连接运行时输入、创建渲染器并启动帧循环及窗口监听。 */ () => {
   if (canvasRef.value) disposeEditorTouch = installEditorTouch(canvasRef.value, { enabled: /** 只对设计视图接管触摸。 */ () => editorState.currentPage === 'scene', camera, down: onMouseDown, move: onMouseMove, up: onMouseUp })
@@ -354,18 +371,18 @@ onMounted(/** 挂载时连接运行时输入、创建渲染器并启动帧循环
   })
   void resetRenderer()
   window.addEventListener('nova-renderer-reset-request', resetRenderer)
-  world.connections.filter(/* 比较 connection.breakState 与 'intact'，返回严格不等的判断结果。 */ connection => connection.breakState !== 'intact').forEach(/* 调用 knownBrokenConnections.add(connection.id) 并返回调用结果。 */ connection => knownBrokenConnections.add(connection.id))
+  world.connections.filter(/* 比较 connection.breakState 与 'intact'，返回严格不等的判断结果。 */ connection => connection.breakState !== 'intact').forEach(/* 调用 knownBrokenConnections.add(connection) 并返回调用结果。 */ connection => knownBrokenConnections.add(connection))
   resize()
   if (canvasRef.value) {
     const r = canvasRef.value.getBoundingClientRect(); camera.offset.x = r.width / 2; camera.offset.y = r.height / 2
     resizeObserver = new ResizeObserver(scheduleResize); resizeObserver.observe(canvasRef.value.parentElement!)
   }
-  lastTime = performance.now(); loop(); window.addEventListener('resize', scheduleResize); window.addEventListener('mouseup', onMouseUp); window.addEventListener('keydown', onKeyDown, true)
+  lastTime = performance.now(); loop(); document.addEventListener('visibilitychange', wakeFrameLoop); window.addEventListener('resize', scheduleResize); window.addEventListener('mouseup', onMouseUp); window.addEventListener('keydown', onKeyDown, true)
   void world.wasmReady.then(/** 物理模块就绪后将初始化失败信息显示在状态栏。 */ () => {
     if (world.wasmError) editorState.statusText = t('physicsUnavailable', { message: world.wasmError.message })
   }).catch(/** 物理初始化拒绝时显示状态并记录可恢复错误。 */ error => { editorState.statusText = t('physicsUnavailable', { message: error instanceof Error ? error.message : String(error) }); reportRecoverableError(error, 'Physics WebAssembly initialization', 'Physics') })
 })
-onBeforeUnmount(/** 卸载时失效初始化、取消帧与监听并销毁运行时及渲染器。 */ () => { disposeEditorTouch?.(); disposeEditorTouch = null; canvasDisposed = true; rendererInitialization++; pendingMouseMove = null; if (raf) cancelAnimationFrame(raf); if (resizeRaf) cancelAnimationFrame(resizeRaf); window.removeEventListener('resize', scheduleResize); window.removeEventListener('mouseup', onMouseUp); window.removeEventListener('keydown', onKeyDown, true); window.removeEventListener('nova-renderer-reset-request', resetRenderer); if (resizeObserver) resizeObserver.disconnect(); gameUiRuntime.reset(); renderer?.destroy(); renderer = null })
+onBeforeUnmount(/** 卸载时失效初始化、取消帧与监听并销毁运行时及渲染器。 */ () => { disposeEditorTouch?.(); disposeEditorTouch = null; canvasDisposed = true; rendererInitialization++; pendingMouseMove = null; if (raf) cancelAnimationFrame(raf); if (idleFrameTimer !== null) clearTimeout(idleFrameTimer); if (resizeRaf) cancelAnimationFrame(resizeRaf); document.removeEventListener('visibilitychange', wakeFrameLoop); window.removeEventListener('resize', scheduleResize); window.removeEventListener('mouseup', onMouseUp); window.removeEventListener('keydown', onKeyDown, true); window.removeEventListener('nova-renderer-reset-request', resetRenderer); if (resizeObserver) resizeObserver.disconnect(); gameUiRuntime.reset(); renderer?.destroy(); renderer = null })
 
 let rendererContextAntialias: boolean | null = null
 watch(/* 比较 renderingSettings.antiAliasing 与 'Off'，返回严格相等的判断结果。 */ () => renderingSettings.antiAliasing === 'Off', /** 渲染设置变化后异步重建渲染器。 */ () => { void resetRenderer() })
@@ -394,7 +411,7 @@ watch(/* 比较 renderingSettings.antiAliasing 与 'Off'，返回严格相等的
 }
 
 /** 将鼠标窗口坐标转换为画布逻辑坐标。 */ function screenPos(e: MouseEvent): Vec2 { const r = canvasRef.value!.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top } }
-/** 游戏视图转发滚轮到控件，编辑视图以指针为中心缩放。 */ function onWheel(e: WheelEvent) { markPerformanceInput(); e.preventDefault(); if (editorState.currentPage === 'game') { gameUiRuntime.wheel(screenPos(e), e.deltaX, e.deltaY); return } const factor = Math.pow(1.1, prefs.zoomSensitivity); camera.zoomAt(screenPos(e), e.deltaY < 0 ? factor : 1 / factor) }
+/** 游戏视图转发滚轮到控件，编辑视图以指针为中心缩放。 */ function onWheel(e: WheelEvent) { wakeFrameLoop(); markPerformanceInput(); e.preventDefault(); if (editorState.currentPage === 'game') { gameUiRuntime.wheel(screenPos(e), e.deltaX, e.deltaY); return } const factor = Math.pow(1.1, prefs.zoomSensitivity); camera.zoomAt(screenPos(e), e.deltaY < 0 ? factor : 1 / factor) }
 /** 仅在编辑状态接受携带资源标识的拖放。 */ function onAssetDragOver(event: DragEvent) { if (state.playMode === 'editing' && event.dataTransfer?.types.includes('application/x-nova-asset-guid')) event.preventDefault() }
 /** 在落点实例化预制体，或按导入尺寸、轴心和过滤设置创建精灵并记录历史。 */ function onAssetDrop(event: DragEvent) {
   if (state.playMode !== 'editing') return
@@ -611,6 +628,7 @@ const drawTools = new Set(['rectangle', 'circle', 'triangle'])
 }
 
 /** 按控件、瓦片、连接、测量、轴心、顶点及变换优先级分派按下，必要时开始绘图或框选。 */ function onMouseDown(e: MouseEvent) {
+  wakeFrameLoop()
   markPerformanceInput()
   const sPos = screenPos(e); const wPos = camera.screenToWorld(sPos); dragButton = e.button; hasMovedEntity = false
   if (editorState.currentPage === 'game') {
@@ -695,6 +713,7 @@ const drawTools = new Set(['rectangle', 'circle', 'triangle'])
 }
 
 /** 仅保留最新鼠标移动样本，避免高频事件积压编辑操作。 */ function onMouseMove(e: MouseEvent) {
+  wakeFrameLoop()
   markPerformanceInput()
   // Browser mouse events can arrive much faster than the display can present
   // them. Retaining only the newest sample prevents an expensive drag or snap

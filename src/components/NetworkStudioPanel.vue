@@ -236,10 +236,11 @@
     </main>
 
     <main v-else id="network-studio-panel-diagnostics" data-measured-studio-layout class="studio-grid network-diagnostics-grid" role="tabpanel" tabindex="0" aria-labelledby="network-studio-tab-diagnostics">
+      <section class="card span-three network-contract29"><header><strong>{{ nc29('contract') }}</strong></header><p><strong>{{ nc29('mode') }}</strong> — {{ nc29('limits') }}</p><dl><div><dt>{{ nc29('age') }}</dt><dd>{{ snapshotAge29 === null ? nc29('none') : snapshotAge29 + ' ms' }}</dd></div><div><dt>{{ nc29('tick') }}</dt><dd>{{ networkState?.lastAppliedSnapshotTick ?? '—' }}</dd></div><div><dt>{{ nc29('peer') }}</dt><dd>{{ networkState?.lastAppliedSnapshotPeer || '—' }}</dd></div></dl><p>{{ nc29('ageHint') }}</p></section>
       <section class="card metrics-card"><header><strong>{{ t('replication') }}</strong></header><p>{{ nl18('pagesHint') }}</p><dl><div><dt>{{ nl18('pageEntities') }}</dt><dd>{{ networkState?.snapshotPageEntities ?? 0 }}</dd></div><div><dt>{{ nl18('deferredEntities') }}</dt><dd>{{ networkState?.snapshotDeferredEntities ?? 0 }}</dd></div></dl></section>
       <section class="card metrics-card">
         <header><strong>{{ t('multiplayerDiagnostics') }}</strong><button @click="downloadDiagnostics">{{ t('exportDiagnostics') }}</button></header>
-        <dl v-if="networkState"><div><dt>{{ t('sentReceived') }}</dt><dd>{{ networkState.sentBytes }} / {{ networkState.receivedBytes }} B</dd></div><div><dt>{{ t('bandwidth') }}</dt><dd>{{ networkState.bandwidthOutKbps }} / {{ networkState.bandwidthInKbps }} kbps</dd></div><div><dt>{{ t('packets') }}</dt><dd>{{ networkState.sentPackets }} / {{ networkState.receivedPackets }}</dd></div><div><dt>{{ t('droppedPackets') }}</dt><dd>{{ networkState.droppedPackets }}</dd></div><div><dt>{{ t('invalidPackets') }}</dt><dd>{{ networkState.invalidPackets }}</dd></div><div><dt>{{ t('rateLimited') }}</dt><dd>{{ networkState.rateLimited }}</dd></div><div><dt>{{ t('replayRejected') }}</dt><dd>{{ networkState.replayRejected }}</dd></div><div><dt>{{ t('authenticationRejected') }}</dt><dd>{{ networkState.authenticationRejected }}</dd></div><div><dt>{{ t('reliablePending') }}</dt><dd>{{ networkState.reliablePending }}</dd></div><div><dt>{{ t('resends') }}</dt><dd>{{ networkState.reliableResent }}</dd></div><div><dt>{{ t('lateJoins') }}</dt><dd>{{ networkState.lateJoins }}</dd></div><div><dt>{{ t('divergences') }}</dt><dd>{{ networkState.divergences }}</dd></div><div><dt>{{ t('rollbacks') }}</dt><dd>{{ networkState.rollbacks }}</dd></div><div><dt>{{ t('replayedInputs') }}</dt><dd>{{ networkState.replayedInputs }}</dd></div><div><dt>{{ t('interestCulled') }}</dt><dd>{{ networkState.interestCulled }}</dd></div><div><dt>{{ t('disconnectCleanups') }}</dt><dd>{{ networkState.disconnectCleanups }}</dd></div></dl>
+        <dl v-if="networkState"><div><dt>{{ t('sentReceived') }}</dt><dd>{{ networkState.sentBytes }} / {{ networkState.receivedBytes }} B</dd></div><div><dt>{{ t('bandwidth') }}</dt><dd>{{ networkState.bandwidthOutKbps }} / {{ networkState.bandwidthInKbps }} kbps</dd></div><div><dt>{{ t('packets') }}</dt><dd>{{ networkState.sentPackets }} / {{ networkState.receivedPackets }}</dd></div><div><dt>{{ t('droppedPackets') }}</dt><dd>{{ networkState.droppedPackets }}</dd></div><div><dt>{{ t('invalidPackets') }}</dt><dd>{{ networkState.invalidPackets }}</dd></div><div><dt>{{ t('rateLimited') }}</dt><dd>{{ networkState.rateLimited }}</dd></div><div><dt>{{ t('replayRejected') }}</dt><dd>{{ networkState.replayRejected }}</dd></div><div><dt>{{ t('authenticationRejected') }}</dt><dd>{{ networkState.authenticationRejected }}</dd></div><div><dt>{{ t('reliablePending') }}</dt><dd>{{ networkState.reliablePending }}</dd></div><div><dt>{{ t('resends') }}</dt><dd>{{ networkState.reliableResent }}</dd></div><div><dt>{{ t('lateJoins') }}</dt><dd>{{ networkState.lateJoins }}</dd></div><div><dt>{{ t('divergences') }}</dt><dd>{{ networkState.divergences }}</dd></div><div><dt>{{ t('rollbacks') }}</dt><dd>{{ networkState.rollbacks }}</dd></div><div><dt>{{ nc29('deltaFrames') }}</dt><dd>{{ networkState.replayedInputs }}</dd></div><div><dt>{{ t('interestCulled') }}</dt><dd>{{ networkState.interestCulled }}</dd></div><div><dt>{{ t('disconnectCleanups') }}</dt><dd>{{ networkState.disconnectCleanups }}</dd></div></dl>
       </section>
       <section class="card span-two">
         <header><strong>{{ t('networkEvents') }}</strong><span>{{ networkState?.events.length ?? 0 }}</span></header><div class="event-list"><article v-for="event in networkState?.events.slice(-200).reverse() ?? []" :key="`${event.at}-${event.message}`" :class="event.level"><code>{{ new Date(event.at).toLocaleTimeString() }}</code><strong>{{ event.level }}</strong><span>{{ event.message }}</span></article></div>
@@ -254,6 +255,7 @@
 </template>
 
 <script setup lang="ts">
+import { networkCopy29 as nc29 } from '../editor/networkCopy29'
 import { nextTick, computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { assetState, createTextAsset, readTextAsset } from '../assets/AssetDatabase'
 import { t } from '../i18n'
@@ -279,6 +281,17 @@ type NetworkModule = typeof import('../runtime/networking')
 interface LaunchedNetworkInstance { id: string; role: string; playerName: string; sessionName: string; logScope: string; inspectorId: string; endpoint: string; bindAddress: string; processId: number; status?: string; running?: boolean; exitCode?: number | null }
 const tabs: Array<{ id: TabId; label: Parameters<typeof t>[0] }> = [{ id: 'session', label: 'session' }, { id: 'protocol', label: 'protocol' }, { id: 'replication', label: 'replication' }, { id: 'orchestration', label: 'orchestration' }, { id: 'simulation', label: 'simulationReplay' }, { id: 'diagnostics', label: 'diagnostics' }]
 const activeTab = ref<TabId>('session'), networkBusy = ref(false), moduleRef = shallowRef<NetworkModule | null>(null), networkState = shallowRef<NetworkModule['networkingState'] | null>(null)
+const diagnosticNow29 = ref(performance.now())
+let diagnosticTimer29: ReturnType<typeof setInterval> | null = null
+/** 只在打开诊断页且已有授权快照时推进年龄显示，离开或断开后停止计时。 */
+watch(/** 监听实际可见页与会话快照状态。 */ () => activeTab.value === 'diagnostics' && networkState.value?.lastAppliedSnapshotAt != null, /** 释放旧定时器并按需建立唯一订阅。 */ active => {
+  if (diagnosticTimer29 !== null) clearInterval(diagnosticTimer29)
+  diagnosticTimer29 = null; diagnosticNow29.value = performance.now()
+  if (active) diagnosticTimer29 = setInterval(/** 更新时间，不采集或修改游戏数据。 */ () => { diagnosticNow29.value = performance.now() }, 1000)
+})
+const snapshotAge29 = computed(/** 接受时间只与本地单调时钟比较。 */ () => networkState.value?.lastAppliedSnapshotAt == null ? null : Math.max(0, Math.round(diagnosticNow29.value - networkState.value.lastAppliedSnapshotAt)))
+onBeforeUnmount(/** 卸载时释放诊断页计时器。 */ () => { if (diagnosticTimer29 !== null) clearInterval(diagnosticTimer29) })
+
 const replayA = ref(''), replayB = ref(''), saveAsset = ref(''), interestX = ref(0), interestY = ref(0), authorityEntity = ref(''), authorityPeer = ref(''), handoffScene = ref(''), handoffPeer = ref(''), handoffSpawnTag = ref(''), multiInstanceError = ref(''), multiInstanceNotice = ref(''), launchedInstances = ref<LaunchedNetworkInstance[]>([]), selectedInstanceId = ref(''), instanceDetailMode = ref<'logs' | 'inspector'>('inspector')
 const peerCountPresets = [2, 4, 8] as const
 const builtInChannels = ['state', 'input', 'events'], payloadSchemas: NetworkPayloadSchema[] = ['any', 'boolean', 'number', 'integer', 'string', 'vec2', 'object', 'array']
@@ -414,6 +427,8 @@ onBeforeUnmount(/* 调用 stopLocalLobbyDirectory() 并返回调用结果。 */ 
 </script>
 
 <style scoped>
+.network-contract29 dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(240px,100%),1fr));gap:12px}.network-contract29 dd{margin:4px 0;overflow-wrap:anywhere}.network-contract29 p{line-height:1.5;overflow-wrap:anywhere}
+
 .network-studio {
   height: 100%;
   min-height: 0;

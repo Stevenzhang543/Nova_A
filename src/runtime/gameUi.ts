@@ -59,7 +59,7 @@ export class GameUiRuntime {
   private remapCallback: RemapCallback | null = null
   private awaitingRemap: { entity: Entity; action: string; bindingIndex: number } | null = null
   private previousGamepadButtons = new Set<string>()
-  private previousGamepadDirection = ''
+  private previousGamepadDirections = new Map<number, string>()
   private dragged: { entity: Entity; start: { x: number; y: number }; origin: { x: number; y: number } } | null = null
   private tooltip: { entity: Entity; since: number } | null = null
   private inputActions: InputAction[] = []
@@ -71,7 +71,7 @@ export class GameUiRuntime {
   /** 结构说明（自动提取）：render；输入 context、width、height、entities、options；直接调用 resolve、resolved.filter、resolved.some、Set、pollGamepads 等；写入 resolved、focused；包含循环处理。 */ render(context: CanvasRenderingContext2D, width: number, height: number, entities: Entity[], options: GameUiRenderOptions = {}): void {
     const resolved = this.resolve(width, height, entities, context, options)
     this.resolved = options.editor ? resolved.filter(/* 返回 item.entity.editorVisible 的当前值。 */ item => item.entity.editorVisible) : resolved
-    if (this.focused && !this.resolved.some(/* 比较 item.entity 与 this.focused，返回严格相等的判断结果。 */ item => item.entity === this.focused)) this.focused = null
+    this.reconcileInteractionScope()
     const selected = new Set(options.selectedEntityIds ?? [])
     if (!options.editor && !options.preview && runtimeAccessibilitySettings.gamepadNavigation) this.pollGamepads()
     context.save(); context.beginPath(); context.rect(0, 0, Math.max(0, width), Math.max(0, height)); context.clip()
@@ -108,7 +108,7 @@ export class GameUiRuntime {
       const role = rect.accessibilityRole || (item.entity.hasComponent('Button') ? 'button' : item.entity.hasComponent('Slider') ? 'slider' : item.entity.hasComponent('Checkbox') ? 'checkbox' : item.entity.hasComponent('TextInput') ? 'textbox' : item.entity.hasComponent('ProgressBar') ? 'progressbar' : 'group')
       const slider = item.entity.getComponent<Slider>('Slider') ?? item.entity.getComponent<ProgressBar>('ProgressBar'), checkboxValue = item.entity.getComponent<Checkbox>('Checkbox')?.checked, input = item.entity.getComponent<TextInput>('TextInput'), inputValue = input?.password ? '•'.repeat(uiTextGraphemes(input.value).length) : input?.value
       const inferredValue = slider ? String(slider.value) : checkboxValue !== undefined ? String(checkboxValue) : inputValue ?? ''
-      return [{ uuid: item.entity.uuid, role, label, description: [rect.accessibilityDescription, rect.accessibilityState].filter(Boolean).join('; '), state: rect.accessibilityState || (isDisabled(item.entity) ? 'disabled' : ''), value: input?.password ? inferredValue : rect.accessibilityValue || inferredValue, valueMin: slider?.min, valueMax: slider?.max, valueNow: slider?.value, checked: checkboxValue, live: rect.accessibilityLive.toLowerCase() as 'off' | 'polite' | 'assertive', rect: { ...item.rect }, tabIndex: rect.focusable && !rect.skipNavigation && !isDisabled(item.entity) ? Math.max(-1, rect.tabIndex) : -1, focused: item.entity === this.focused, disabled: isDisabled(item.entity) }]
+      return [{ uuid: item.entity.uuid, role, label, description: [localizeUiLabel(rect.accessibilityDescription, item.locale), localizeUiLabel(rect.accessibilityState, item.locale)].filter(Boolean).join('; '), state: localizeUiLabel(rect.accessibilityState, item.locale) || (isDisabled(item.entity) ? 'disabled' : ''), value: input?.password ? inferredValue : localizeUiLabel(rect.accessibilityValue, item.locale) || inferredValue, valueMin: slider?.min, valueMax: slider?.max, valueNow: slider?.value, checked: checkboxValue, live: rect.accessibilityLive.toLowerCase() as 'off' | 'polite' | 'assertive', rect: { ...item.rect }, tabIndex: rect.focusable && !rect.skipNavigation && !isDisabled(item.entity) ? Math.max(-1, rect.tabIndex) : -1, focused: item.entity === this.focused, disabled: isDisabled(item.entity) }]
     })
   }
 
@@ -206,6 +206,7 @@ export class GameUiRuntime {
   /** 结构说明（自动提取）：keyDown；输入 event；直接调用 setInputModality、applyRemap、audioRuntime.playUiClip、blurTextInput、focusNext 等；写入 awaitingRemap。 */ keyDown(event: KeyboardEvent): boolean {
     if (event.isComposing || event.keyCode === 229 || event.ctrlKey || event.metaKey || event.altKey) return false
     setInputModality('keyboard')
+    this.reconcileInteractionScope()
     if (this.awaitingRemap && event.key !== 'Escape') { this.applyRemap({ device: 'keyboard', code: event.code || event.key }); return true }
     if (event.key === 'Escape' && this.awaitingRemap) { this.awaitingRemap = null; audioRuntime.playUiClip(uiAudioSettings.cancel, uiAudioSettings.bus); return true }
     if (this.focusedInput) {
@@ -217,9 +218,7 @@ export class GameUiRuntime {
     if (!runtimeAccessibilitySettings.keyboardNavigation) return false
     if (event.key === 'Tab') { if (!this.focusableItems().length) return false; this.focusNext(event.shiftKey ? -1 : 1); return true }
     if (event.key === 'ArrowUp' || event.key === 'ArrowDown' || event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
-      const slider = this.focused?.getComponent<Slider>('Slider')
-      if (slider?.interactable && (event.key === 'ArrowLeft' || event.key === 'ArrowRight')) { this.adjustSlider(this.focused!, slider, event.key === 'ArrowRight' ? 1 : -1); return true }
-      this.focusDirection(event.key.replace('Arrow', '').toLowerCase() as 'up' | 'down' | 'left' | 'right'); return true
+      this.navigateDirection(event.key.replace('Arrow', '').toLowerCase() as 'up' | 'down' | 'left' | 'right'); return true
     }
     if ((event.key === 'Enter' || event.key === ' ') && this.focused) { if (!event.repeat) this.activate(this.focused); return true }
     return false
@@ -227,7 +226,7 @@ export class GameUiRuntime {
 
   /** 结构说明（自动提取）：reset；无显式参数；直接调用 hovered.getComponent、imageTints.clear、previousGamepadButtons.clear；写入 button.state、resolved、hovered、pressed 等。 */ reset(): void {
     if (this.hovered) { const button = this.hovered.getComponent<Button>('Button'); if (button) button.state = button.interactable ? 'Normal' : 'Disabled' }
-    this.imageTints.clear(); this.resolved = []; this.hovered = null; this.pressed = null; this.focused = null; this.focusedInput = null; this.awaitingRemap = null; this.dragged = null; this.tooltip = null; this.previousGamepadButtons.clear(); this.previousGamepadDirection = ''
+    this.imageTints.clear(); this.resolved = []; this.hovered = null; this.pressed = null; this.focused = null; this.focusedInput = null; this.awaitingRemap = null; this.dragged = null; this.tooltip = null; this.previousGamepadButtons.clear(); this.previousGamepadDirections.clear()
   }
 
   /** 结构说明（自动提取）：resolve；输入 width、height、entities、context、options；直接调用 resolveUiLayout、activeTextDirection、Map、map、result.items.filter；写入 layoutIssues。 */ private resolve(width: number, height: number, entities: Entity[], context: CanvasRenderingContext2D, options: GameUiRenderOptions): ResolvedUi[] {
@@ -275,8 +274,8 @@ export class GameUiRuntime {
       const component = progress ?? slider!, style = themeStyle(theme, component.styleClass, 'normal', component.styleOverrides)
       const ratio = component.max > component.min ? Math.min(1, Math.max(0, (component.value - component.min) / (component.max - component.min))) : 0, barHeight = Math.min(12 * item.scale, rect.height), bar = { x: rect.x, y: rect.y + (rect.height - barHeight) / 2, width: rect.width, height: barHeight }
       roundRect(context, bar, barHeight / 2); context.fillStyle = typeof style.background === 'string' ? style.background : color(progress?.backgroundColor ?? { r: 31, g: 37, b: 47 }); context.fill()
-      const filled = { ...bar, width: bar.width * ratio }; if (filled.width > 0) { roundRect(context, filled, barHeight / 2); context.fillStyle = typeof style.foreground === 'string' ? style.foreground : color(progress?.fillColor ?? { r: 79, g: 150, b: 255 }); context.fill() }
-      if (slider) { context.beginPath(); context.arc(bar.x + bar.width * ratio, bar.y + bar.height / 2, 9 * item.scale, 0, Math.PI * 2); context.fillStyle = '#f7f9fc'; context.fill() }
+      const filled = { ...bar, x: item.direction === 'rtl' ? bar.x + bar.width * (1 - ratio) : bar.x, width: bar.width * ratio }; if (filled.width > 0) { roundRect(context, filled, barHeight / 2); context.fillStyle = typeof style.foreground === 'string' ? style.foreground : color(progress?.fillColor ?? { r: 79, g: 150, b: 255 }); context.fill() }
+      if (slider) { context.beginPath(); context.arc(bar.x + bar.width * (item.direction === 'rtl' ? 1 - ratio : ratio), bar.y + bar.height / 2, 9 * item.scale, 0, Math.PI * 2); context.fillStyle = '#f7f9fc'; context.fill() }
     }
     const checkbox = entity.getComponent<Checkbox>('Checkbox')
     if (checkbox?.enabled) {
@@ -303,7 +302,7 @@ export class GameUiRuntime {
   }
 
   /** 结构说明（自动提取）：drawFocusRing；输入 context、rect；直接调用 context.save、context.setLineDash、context.strokeRect、context.restore；写入 context.strokeStyle、context.lineWidth。 */ private drawFocusRing(context: CanvasRenderingContext2D, rect: UiRect): void { context.save(); context.strokeStyle = runtimeAccessibilitySettings.focusRingColor; context.lineWidth = runtimeAccessibilitySettings.focusRingWidth; context.setLineDash([]); context.strokeRect(rect.x - 3, rect.y - 3, rect.width + 6, rect.height + 6); context.restore() }
-  /** 结构说明（自动提取）：drawTooltip；输入 context；直接调用 current.entity.getComponent、resolved.find、performance.now、Math.max、panel.tooltipText.slice 等；写入 context.font、context.fillStyle、context.strokeStyle、context.textAlign 等。 */ private drawTooltip(context: CanvasRenderingContext2D): void { const current = this.tooltip; if (!current) return; const panel = current.entity.getComponent<Panel>('Panel'), item = this.resolved.find(/* 比较 candidate.entity 与 current.entity，返回严格相等的判断结果。 */ candidate => candidate.entity === current.entity); if (!panel || !item || performance.now() - current.since < Math.max(0, panel.tooltipDelay) * 1000) return; const text = panel.tooltipText.slice(0, 500); context.save(); context.font = `${14 * runtimeAccessibilitySettings.textScale}px Nunito Sans, Segoe UI, sans-serif`; const width = Math.min(360, Math.max(90, context.measureText(text).width + 20)), x = Math.min(context.canvas.width - width - 8, Math.max(8, item.rect.x)), y = Math.min(context.canvas.height - 38, item.rect.y + item.rect.height + 6); roundRect(context, { x, y, width, height: 32 }, 7); context.fillStyle = runtimeAccessibilitySettings.highContrast ? '#000' : 'rgba(22,29,40,.96)'; context.fill(); context.strokeStyle = '#79b2ff'; context.stroke(); context.fillStyle = '#fff'; context.textAlign = 'left'; context.textBaseline = 'middle'; context.fillText(text, x + 10, y + 16, width - 20); context.restore() }
+  /** 结构说明（自动提取）：drawTooltip；输入 context；直接调用 current.entity.getComponent、resolved.find、performance.now、Math.max、panel.tooltipText.slice 等；写入 context.font、context.fillStyle、context.strokeStyle、context.textAlign 等。 */ private drawTooltip(context: CanvasRenderingContext2D): void { const current = this.tooltip; if (!current) return; const panel = current.entity.getComponent<Panel>('Panel'), item = this.resolved.find(/* 比较 candidate.entity 与 current.entity，返回严格相等的判断结果。 */ candidate => candidate.entity === current.entity); if (!panel || !item || performance.now() - current.since < Math.max(0, panel.tooltipDelay) * 1000) return; const text = localizeUiLabel(panel.tooltipText, item.locale).slice(0, 500); context.save(); context.font = `${14 * runtimeAccessibilitySettings.textScale}px Nunito Sans, Segoe UI, sans-serif`; const width = Math.min(360, Math.max(90, context.measureText(text).width + 20)), x = Math.min(context.canvas.width - width - 8, Math.max(8, item.rect.x)), y = Math.min(context.canvas.height - 38, item.rect.y + item.rect.height + 6); roundRect(context, { x, y, width, height: 32 }, 7); context.fillStyle = runtimeAccessibilitySettings.highContrast ? '#000' : 'rgba(22,29,40,.96)'; context.fill(); context.strokeStyle = '#79b2ff'; context.stroke(); context.fillStyle = '#fff'; context.textAlign = 'left'; context.textBaseline = 'middle'; context.fillText(text, x + 10, y + 16, width - 20); context.restore() }
   /** 结构说明（自动提取）：rawEntityAt；输入 point；直接调用 item.clips.every；返回路径包含 item.entity；包含循环处理。 */ private rawEntityAt(point: { x: number; y: number }): Entity | null { for (let index = this.resolved.length - 1; index >= 0; index--) { const item = this.resolved[index]; if (item.clips.every(/* 调用 uiClipContains(clip, point) 并返回调用结果。 */ clip => uiClipContains(clip, point)) && point.x >= item.rect.x && point.x <= item.rect.x + item.rect.width && point.y >= item.rect.y && point.y <= item.rect.y + item.rect.height) return item.entity }; return null }
   /** 结构说明（自动提取）：isDescendantOf；输入 entity、ancestor；直接调用 Map、resolved.map、Set、byUuid.get、seen.has 等；写入 parent；包含循环处理。 */ private isDescendantOf(entity: Entity, ancestor: Entity): boolean { if (entity === ancestor) return true; const byUuid = new Map(this.resolved.map(/* 返回按声明顺序构造的数组 [item.entity.uuid, item.entity]。 */ item => [item.entity.uuid, item.entity])), seen = new Set<string>(); let parent = entity.parentUuid ? byUuid.get(entity.parentUuid) : null; while (parent && !seen.has(parent.uuid)) { if (parent === ancestor) return true; seen.add(parent.uuid); parent = parent.parentUuid ? byUuid.get(parent.parentUuid) : null }; return false }
   /** 结构说明（自动提取）：inFocusScope；输入 item；直接调用 uiItemVisibleArea、find、reverse、isDescendantOf。 */ private inFocusScope(item: ResolvedUi): boolean { const area = uiItemVisibleArea(item), modal = [...this.resolved].reverse().find(/* 比较 candidate.entity.getComponent<Panel>('Panel')?.behavior 与 'Modal'，返回严格相等的判断结果。 */ candidate => candidate.entity.getComponent<Panel>('Panel')?.behavior === 'Modal'); return area.width > 0 && area.height > 0 && (!modal || this.isDescendantOf(item.entity, modal.entity)) }
@@ -326,6 +325,21 @@ export class GameUiRuntime {
     context.restore()
   }
 
+  /** 模态层、禁用或删除后清理失效的交互所有者，防止后台控件继续提交输入。 */
+  private reconcileInteractionScope(): void {
+    const usable = /** 使用当前布局、裁剪和组件状态判断交互范围。 */ (entity: Entity): boolean => {
+      const item = this.resolved.find(/** 按实体身份查找当前布局。 */ candidate => candidate.entity === entity)
+      return Boolean(item && this.inFocusScope(item) && !isDisabled(entity))
+    }
+    if (this.focused && !this.focusableItems(true).some(/** 仅保留仍可导航的焦点。 */ item => item.entity === this.focused)) {
+      const previous = this.focused; this.focused = null
+      if (runtimeAccessibilitySettings.announceFocusChanges) this.callback?.(previous, 'on_focus_exit')
+    }
+    if (this.focusedInput && (!usable(this.focusedInput) || !this.focusedInput.getComponent<TextInput>('TextInput')?.enabled)) this.focusedInput = null
+    if (this.pressed && !usable(this.pressed) || this.dragged && !usable(this.dragged.entity)) this.pointerCancel()
+    if (this.awaitingRemap && !usable(this.awaitingRemap.entity)) this.awaitingRemap = null
+  }
+
   /** 结构说明（自动提取）：focusableItems；输入 includeNegative；直接调用 sort、resolved.filter。 */ private focusableItems(includeNegative = false): ResolvedUi[] {
     const priority = /** 结构说明（自动提取）：priority；输入 item；直接调用 item.entity.getComponent。 */ (item: ResolvedUi) => { const value = item.entity.getComponent<RectTransform>('RectTransform')?.tabIndex ?? 0; return value > 0 ? value : Number.POSITIVE_INFINITY }
     return this.resolved.filter(/** 结构说明（自动提取）：resolved.filter 回调；输入 item；直接调用 item.entity.getComponent、interactive、Boolean、isDisabled、inFocusScope。 */ item => { const rect = item.entity.getComponent<RectTransform>('RectTransform'); return rect?.focusable && (includeNegative || rect.tabIndex >= 0) && !rect.skipNavigation && !rect.accessibilityHidden && (interactive(item.entity) || Boolean(rect.accessibilityRole)) && !isDisabled(item.entity) && this.inFocusScope(item) }).sort(/** 结构说明（自动提取）：sort 回调；输入 a、b；直接调用 priority、a.entity.getComponent、b.entity.getComponent；返回表达式求值结果。 */ (a, b) => priority(a) - priority(b) || (a.entity.getComponent<RectTransform>('RectTransform')?.readingOrder ?? 0) - (b.entity.getComponent<RectTransform>('RectTransform')?.readingOrder ?? 0))
@@ -339,6 +353,16 @@ export class GameUiRuntime {
   }
 
   /** 结构说明（自动提取）：focusNext；输入 direction；直接调用 focusableItems、items.findIndex、setFocus。 */ private focusNext(direction: -1 | 1): void { const items = this.focusableItems(); if (!items.length) return; const current = items.findIndex(/* 比较 item.entity 与 this.focused，返回严格相等的判断结果。 */ item => item.entity === this.focused), next = current < 0 ? (direction > 0 ? 0 : items.length - 1) : (current + direction + items.length) % items.length; this.setFocus(items[next].entity) }
+  /** 键盘与控制器共享方向规则；水平滑块沿屏幕方向移动，RTL 下反转数值增减。 */
+  private navigateDirection(direction: 'up' | 'down' | 'left' | 'right'): void {
+    const slider = this.focused?.getComponent<Slider>('Slider')
+    if (slider?.enabled && slider.interactable && (direction === 'left' || direction === 'right')) {
+      const rtl = this.resolved.find(/** 使用当前控件的实际阅读方向。 */ item => item.entity === this.focused)?.direction === 'rtl'
+      this.adjustSlider(this.focused!, slider, (direction === 'right' ? 1 : -1) * (rtl ? -1 : 1)); return
+    }
+    this.focusDirection(direction)
+  }
+
   /** 结构说明（自动提取）：focusDirection；输入 direction；直接调用 resolved.find、focusNext、currentItem.entity.getComponent、direction[…].toUpperCase、direction.slice 等。 */ private focusDirection(direction: 'up' | 'down' | 'left' | 'right'): void {
     const currentItem = this.resolved.find(/* 比较 item.entity 与 this.focused，返回严格相等的判断结果。 */ item => item.entity === this.focused); if (!currentItem) { this.focusNext(1); return }
     const rect = currentItem.entity.getComponent<RectTransform>('RectTransform')!, explicit = rect[`focus${direction[0].toUpperCase()}${direction.slice(1)}` as 'focusUp']
@@ -362,7 +386,8 @@ export class GameUiRuntime {
 
   /** 结构说明（自动提取）：pollGamepads；无显式参数；直接调用 Set、navigator.getGamepads、gamepad.buttons.some、gamepad.axes.some、setInputModality 等；写入 previousGamepadDirection、previousGamepadButtons；包含循环处理。 */ private pollGamepads(): void {
     if (typeof navigator === 'undefined' || !navigator.getGamepads) return
-    const nextButtons = new Set<string>(), gamepads = navigator.getGamepads()
+    this.reconcileInteractionScope()
+    const nextButtons = new Set<string>(), nextDirections = new Map<number, string>(), gamepads = navigator.getGamepads()
     for (let gamepadIndex = 0; gamepadIndex < gamepads.length; gamepadIndex++) {
       const gamepad = gamepads[gamepadIndex]; if (!gamepad) continue
       if (gamepad.buttons.some(/* 返回 button.pressed 的当前值。 */ button => button.pressed) || gamepad.axes.some(/* 比较 Math.abs(axis) 与 .35，返回大于的判断结果。 */ axis => Math.abs(axis) > .35)) setInputModality('gamepad', gamepad.id)
@@ -371,14 +396,14 @@ export class GameUiRuntime {
         if (!this.previousGamepadButtons.has(key)) {
           if (this.awaitingRemap) this.applyRemap({ device: 'gamepad-button', code: String(index) })
           else if (index === 0 && this.focused) this.activate(this.focused)
-          else if (index === 12) this.focusDirection('up'); else if (index === 13) this.focusDirection('down'); else if (index === 14) this.focusDirection('left'); else if (index === 15) this.focusDirection('right')
+          else if (index === 12) this.navigateDirection('up'); else if (index === 13) this.navigateDirection('down'); else if (index === 14) this.navigateDirection('left'); else if (index === 15) this.navigateDirection('right')
         }
       }
       const x = gamepad.axes[0] ?? 0, y = gamepad.axes[1] ?? 0, direction = Math.abs(x) > Math.abs(y) && Math.abs(x) > .65 ? (x < 0 ? 'left' : 'right') : Math.abs(y) > .65 ? (y < 0 ? 'up' : 'down') : ''
-      if (direction && direction !== this.previousGamepadDirection) this.focusDirection(direction as 'up' | 'down' | 'left' | 'right')
-      this.previousGamepadDirection = direction
+      if (direction && direction !== this.previousGamepadDirections.get(gamepadIndex)) this.navigateDirection(direction as 'up' | 'down' | 'left' | 'right')
+      nextDirections.set(gamepadIndex, direction)
     }
-    this.previousGamepadButtons = nextButtons
+    this.previousGamepadButtons = nextButtons; this.previousGamepadDirections = nextDirections
   }
 }
 

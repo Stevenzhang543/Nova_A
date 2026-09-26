@@ -270,6 +270,13 @@ try {
   if ($requiresStructuredEvidence -and $currentReferenceCount -lt 1) { throw "Reference archive has no complete project for public $Version / machine $MachineVersion." }
 
   $evidence = Join-Path $temporaryRoot 'release-evidence'
+  # 独立解包后绑定原生物理工具和归档内实际资格报告，拒绝替换或旧版二进制。
+  if ([version]$MachineVersion -ge [version]'26.29.0') {
+    $nativeReport = Get-Content -LiteralPath (Join-Path $evidence 'runtime/native-headless.json') -Raw | ConvertFrom-Json
+    $nativeBinary = Join-Path $references 'native-tools/windows-x64/nova_headless.exe'
+    if ($nativeReport.status -ne 'passed' -or $nativeReport.engineVersion -ne $MachineVersion -or $nativeReport.artifact.sha256 -ne (Get-Sha256Lower -LiteralPath $nativeBinary) -or [long]$nativeReport.artifact.bytes -ne (Get-Item -LiteralPath $nativeBinary).Length) { throw 'Packaged native physics tool does not match evidence.' }
+    if (-not (Test-Path -LiteralPath (Join-Path $references 'native-tools/windows-x64/README.md'))) { throw 'Native physics protocol documentation missing.' }
+  }
   $manifestPath = Join-Path $evidence 'evidence-manifest.json'
   $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
   if ($manifest.format -ne 'nova-release-evidence-manifest' -or $manifest.version -ne 1 -or $manifest.release -ne $Version -or $manifest.machineVersion -ne $MachineVersion -or $manifest.engineVersion -ne $MachineVersion -or $manifest.localQualificationComplete -ne $true -or $manifest.localReportAuthorities.status -ne 'passed') { throw 'Evidence manifest release authority or local qualification state is incorrect.' }

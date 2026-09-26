@@ -24,6 +24,9 @@
             <div><strong>{{ buildSettings.target === 'web' ? webCopy.title : t(artifactTitle) }}</strong><p>{{ buildSettings.target === 'web' ? webCopy.hint : t(artifactDescription) }}</p></div>
             <code>{{ artifactExtension }}</code>
           </section>
+          <section class="artifact-card prerequisite-card" data-audit="platform-prerequisites" aria-live="polite">
+            <div><strong>{{ prerequisiteCopy.title }}</strong><p v-for="message in prerequisites" :key="message">{{ message }}</p><pre v-if="prerequisiteDetail">{{ prerequisiteDetail }}</pre><button @click="detectExportCapabilities()">{{ prerequisiteCopy.refresh }}</button></div>
+          </section>
           <section class="scenes-card">
             <header><strong>{{ t('sceneOrder') }}</strong><span>{{ t('startupScene') }}</span></header>
             <article v-for="(uuid, index) in buildSettings.sceneOrder" :key="uuid"><span class="index">{{ index + 1 }}</span><strong>{{ sceneName(uuid) }}</strong><label><input v-model="buildSettings.startupSceneUuid" type="radio" :value="uuid"><span>{{ t('startupScene') }}</span></label><button :disabled="index === 0" :title="t('moveUp')" @click="move(index, -1)">↑</button><button :disabled="index === buildSettings.sceneOrder.length - 1" :title="t('moveDown')" @click="move(index, 1)">↓</button></article>
@@ -104,6 +107,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { t } from '../i18n'
 import { preferencesState } from '../store/preferences'
+import { platformPrerequisiteCopy29, platformPrerequisites29 } from '../runtime/platformPrerequisites29'
 import { webExportCopy } from '../runtime/webExportCopy'
 import { BUILTIN_BUILD_PRESETS, applyBuildPreset, buildHistory, buildProgress, buildSettings, detectExportCapabilities, exportCapabilities, persistBuildLocalSettings, setBuildProfile, synchronizeBuildScenes, validateBuildSettings, type BuildProfile } from '../runtime/buildSettings'
 import { PLATFORM_SUPPORT_MATRIX, platformSupport, platformTierLabel, selectableBuildPlatforms } from '../runtime/platformSupport'
@@ -151,7 +155,10 @@ const webCopy = computed(/* 返回 webExportCopy[preferencesState.locale] 的当
 const artifactTitle = computed(/** 按 Web、单文件或播放器加资源包形式返回产物类型键。 */ () => buildSettings.target === 'web' ? 'webFolderArtifact' : buildSettings.packageIntoExecutable && singleFileAvailable.value ? 'portableApplicationArtifact' : 'playerAndPackArtifact')
 const artifactDescription = computed(/** 按实际打包形式返回产物说明键。 */ () => buildSettings.target === 'web' ? 'webFolderArtifactHint' : buildSettings.packageIntoExecutable && singleFileAvailable.value ? 'portableApplicationArtifactHint' : 'playerAndPackArtifactHint')
 const artifactExtension = computed(/** 根据目标平台及单文件设置展示预期产物扩展名或目录结构。 */ () => buildSettings.target === 'web' ? 'ZIP / index.html + game.nova-pak' : buildSettings.target === 'windows' ? (buildSettings.packageIntoExecutable ? '.exe' : '.exe + .nova-pak') : buildSettings.target === 'macos' ? '.app + .nova-pak' : buildSettings.target === 'linux' ? (buildSettings.packageIntoExecutable ? 'executable' : 'executable + .nova-pak') : '.apk')
-const selectablePlatforms = selectableBuildPlatforms()
+const selectablePlatforms = computed(/** 只展示可用目标和当前原生宿主可构建的实验目标。 */ () => selectableBuildPlatforms(exportCapabilities.nativeAvailable ? exportCapabilities.host : undefined))
+const prerequisiteCopy = computed(/** 标题与刷新按钮随语言切换更新。 */ () => platformPrerequisiteCopy29(preferencesState.locale))
+const prerequisites = computed(/** 根据当前目标与实际宿主能力重新生成前置条件。 */ () => platformPrerequisites29(buildSettings.target, buildSettings.architecture, buildSettings.runtimeMode, { ...exportCapabilities, nativeHost: '__TAURI_INTERNALS__' in window }, preferencesState.locale))
+const prerequisiteDetail = computed(/** 保留探测器具体缺项，不把未知错误猜译成已就绪。 */ () => buildSettings.target === 'android' ? exportCapabilities.androidReason : exportCapabilities.nativeReason)
 const currentSupport = computed(/* 调用 platformSupport(buildSettings.target) 并返回调用结果。 */ () => platformSupport(buildSettings.target))
 const supportTier = computed(/* 调用 platformTierLabel(currentSupport.value.tier) 并返回调用结果。 */ () => platformTierLabel(currentSupport.value.tier))
 const targetLabel = computed(/** 返回目标平台的本地化名称。 */ () => buildSettings.target === 'windows' ? t('windows') : buildSettings.target === 'linux' ? t('linux') : buildSettings.target === 'macos' ? t('macos') : buildSettings.target === 'web' ? t('web') : 'Android')
@@ -206,4 +213,8 @@ watch(/* 返回按声明顺序构造的数组 [buildSettings.outputDirectory, bu
 <style scoped>
 .build-header{flex-wrap:wrap;flex-shrink:0}.build-header nav{flex-wrap:wrap;overflow:visible}.build-header nav button{flex:0 0 auto;max-width:100%;height:auto;white-space:normal;overflow-wrap:anywhere}
 @container(max-width:850px){.build-header nav{flex-basis:100%}}
+/* 前置条件卡没有左侧图标列，整段说明必须使用整卡宽度。 */
+.artifact-card.prerequisite-card { display: block; }
+.prerequisite-card > div { min-width: 0; }
+.prerequisite-card p, .prerequisite-card pre { white-space: pre-wrap; overflow-wrap: anywhere; }
 </style>

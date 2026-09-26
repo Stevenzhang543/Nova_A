@@ -12,7 +12,7 @@ pub const PROJECT_FORMAT_NAME: &str = "Nova_A Project Format 2";
 pub const PROJECT_FORMAT_MAJOR: u32 = 2;
 pub const CURRENT_FORMAT_VERSION: u32 = 29;
 pub const MINIMUM_SUPPORTED_FORMAT_VERSION: u32 = 5;
-pub const CURRENT_ENGINE_VERSION: &str = "26.26.0";
+pub const CURRENT_ENGINE_VERSION: &str = "26.29.0";
 
 // 建立默认命名物理层，同时保留各层既有位掩码。
 fn default_named_physics_layers() -> Value {

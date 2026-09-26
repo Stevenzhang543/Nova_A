@@ -94,6 +94,7 @@ export const networkingState = reactive({
   reliableSent: 0, reliableAcknowledged: 0, reliableResent: 0, reliableExpired: 0, reliablePending: 0, duplicatePackets: 0, outOfOrderPackets: 0,
   rpcCalls: 0, rpcRejected: 0, snapshots: 0, inputFrames: 0, lateJoins: 0, rollbacks: 0, replayedInputs: 0, predictionCorrections: 0, divergences: 0,
   snapshotPageEntities: 0, snapshotDeferredEntities: 0,
+  lastAppliedSnapshotAt: null as number | null, lastAppliedSnapshotTick: null as number | null, lastAppliedSnapshotPeer: '',
   reconnectAttempts: 0, pingMs: null as number | null, currentTick: 0, bandwidthOutKbps: 0, bandwidthInKbps: 0,
   replayRejected: 0, authenticationRejected: 0, authorityTransfers: 0, interestCulled: 0, sceneHandoffs: 0, disconnectCleanups: 0,
   ownership: [] as Array<{ entityUuid: string; ownerPeerId: string }>,
@@ -122,12 +123,21 @@ class LocalLobbyTransport implements NetworkTransport {
 class WebSocketTransport implements NetworkTransport {
   readonly kind = 'websocket' as const
   private socket: WebSocket | null = null
+  private cancelOpening: (() => void) | null = null
   /** 结构说明（自动提取）：connect；输入 onMessage、onState；直接调用 test、Error、Promise；等待异步结果；包含显式抛错路径。 */ async connect(onMessage: (source: string, peer: string) => void, onState: (state: string) => void): Promise<void> {
     if (!/^wss?:\/\//i.test(productionSettings.networking.endpoint)) throw new Error('WebSocket endpoint must begin with ws:// or wss://.')
     await new Promise<void>(/** 结构说明（自动提取）：匿名回调；输入 resolve、reject；直接调用 WebSocket、globalThis.setTimeout；写入 socket、socket.onopen、socket.onmessage、socket.onerror 等。 */ (resolve, reject) => {
       const socket = new WebSocket(productionSettings.networking.endpoint); this.socket = socket
-      const timeout = globalThis.setTimeout(/* 调用 reject(new Error('WebSocket connection timed out.')) 并返回调用结果。 */ () => reject(new Error('WebSocket connection timed out.')), 10_000)
-      socket.onopen = /** 结构说明（自动提取）：匿名回调；无显式参数；直接调用 clearTimeout、onState、resolve。 */ () => { clearTimeout(timeout); onState('connected'); resolve() }
+      let settled = false
+      /** 握手只完成一次；所有成功、失败和主动停止路径均释放超时。 */
+      const finish = (error?: Error): void => {
+        if (settled) return
+        settled = true; clearTimeout(timeout); this.cancelOpening = null
+        if (error) reject(error); else resolve()
+      }
+      const timeout = globalThis.setTimeout(/** 超时必须拒绝当前握手而非遗留挂起承诺。 */ () => finish(new Error('WebSocket connection timed out.')), 10_000)
+      this.cancelOpening = /** 主动停止立刻结束尚未完成的握手。 */ () => finish(new DOMException('WebSocket connection cancelled.', 'AbortError'))
+      socket.onopen = /** 结构说明（自动提取）：匿名回调；无显式参数；直接调用 clearTimeout、onState、resolve。 */ () => { if (settled || this.socket !== socket) return; onState('connected'); finish() }
       socket.onmessage = /** 结构说明（自动提取）：匿名回调；输入 event；直接调用 JSON.parse、test、onMessage。 */ event => {
         const source = typeof event.data === 'string' ? event.data : ''
         try {
@@ -136,12 +146,12 @@ class WebSocketTransport implements NetworkTransport {
         } catch { /* A one-peer/raw broker remains backwards compatible. */ }
         onMessage(source, 'websocket-peer')
       }
-      socket.onerror = /** 结构说明（自动提取）：匿名回调；无显式参数；直接调用 clearTimeout、reject、Error。 */ () => { clearTimeout(timeout); reject(new Error('WebSocket transport failed.')) }
-      socket.onclose = /* 调用 onState('closed') 并返回调用结果。 */ () => onState('closed')
+      socket.onerror = /** 结构说明（自动提取）：匿名回调；无显式参数；直接调用 clearTimeout、reject、Error。 */ () => { finish(new Error('WebSocket transport failed.')); if (this.socket === socket) onState('WebSocket transport failed.') }
+      socket.onclose = /** 对端握手前关闭时也立即失败，避免等待残留超时。 */ () => { finish(new Error('WebSocket closed before connection completed.')); if (this.socket === socket) onState('closed') }
     })
   }
   /** 结构说明（自动提取）：send；输入 source、target；直接调用 Error、socket.send、stableNetworkJson；包含显式抛错路径。 */ async send(source: string, target = ''): Promise<void> { if (this.socket?.readyState !== WebSocket.OPEN) throw new Error('WebSocket is not connected.'); this.socket.send(target ? stableNetworkJson({ format: 'nova-network-route', version: 1, sender: networkingState.localPeerId, target, payload: source }) : source) }
-  /** 结构说明（自动提取）：close；无显式参数；直接调用 socket.close；写入 socket。 */ async close(): Promise<void> { this.socket?.close(1000, 'Nova_A session stopped'); this.socket = null }
+  /** 结构说明（自动提取）：close；无显式参数；直接调用 socket.close；写入 socket。 */ async close(): Promise<void> { const socket = this.socket; this.socket = null; this.cancelOpening?.(); this.cancelOpening = null; if (socket) { socket.onopen = null; socket.onmessage = null; socket.onerror = null; socket.onclose = null; socket.close(1000, 'Nova_A session stopped') } }
 }
 
 class NativeUdpTransport implements NetworkTransport {
@@ -302,6 +312,7 @@ const MAX_SEQUENCE = 0x7fff_ffff
   }
 }
 /** 结构说明（自动提取）：resetConnectionPeerState；无显式参数；直接调用 removePeer、networkingState.peerDetails.splice、remoteSnapshots.splice、remoteInputs.clear、inboundSequences.clear 等；写入 networkingState.peers；包含循环处理。 */ function resetConnectionPeerState(): void {
+  networkingState.lastAppliedSnapshotAt = null; networkingState.lastAppliedSnapshotTick = null; networkingState.lastAppliedSnapshotPeer = ''
   for (const peer of [...networkingState.peerDetails]) removePeer(peer.id, 'session reset')
   networkingState.peerDetails.splice(0); networkingState.peers = 0; remoteSnapshots.splice(0); remoteInputs.clear(); inboundSequences.clear(); reliableBuffers.clear(); peerSources.clear(); peerEpochs.clear(); retiredPeerEpochs.clear(); baselineSending.clear(); snapshotCursors.clear(); sourcePeers.clear(); baselinePending.clear(); baselineTransfers.clear(); clearDeferredInbound(); preAdmissionRpcs.splice(0); verifiedPeers.clear(); handshakenPeers.clear(); peerInterests.clear(); interpolationTargets.clear(); replayProtection.clear(); reliableWindow.clear(); outboundRate.clear(); inboundRate.clear(); rpcRate.clear()
 }
@@ -701,6 +712,7 @@ const NETWORK_WORLD_BOUND = 1_000_000_000
     if (!definition || !entity || !receivesAuthority) continue
     const remote: EntitySnapshot = { uuid: candidate.uuid, ...(definition.properties.includes('transform') && candidate.position ? { position: candidate.position } : {}), ...(definition.properties.includes('rotation') && candidate.rotation !== undefined ? { rotation: candidate.rotation } : {}), ...(definition.properties.includes('velocity') && candidate.velocity ? { velocity: candidate.velocity } : {}) }
     if (!remote.position && remote.rotation === undefined && !remote.velocity) continue
+    networkingState.lastAppliedSnapshotAt = performance.now(); networkingState.lastAppliedSnapshotTick = snapshotPacket.tick; networkingState.lastAppliedSnapshotPeer = snapshotPacket.sender
     const current = previousWorld.get(remote.uuid)!, remoteVelocity = remote.velocity ?? [entity.velocity.x, entity.velocity.y], predictionSeconds = definition.predict ? Math.min(.25, Math.max(0, productionSettings.networking.interpolationMs / 1_000)) : 0, projectedX = remote.position ? remote.position[0] + remoteVelocity[0] * predictionSeconds : current.position.x, projectedY = remote.position ? remote.position[1] + remoteVelocity[1] * predictionSeconds : current.position.y, error = Math.hypot(projectedX - current.position.x, projectedY - current.position.y), fields: string[] = []
     if (remote.position && (remote.position[0] !== current.position.x || remote.position[1] !== current.position.y)) fields.push('transform')
     if (remote.rotation !== undefined && remote.rotation !== current.rotation) fields.push('rotation')

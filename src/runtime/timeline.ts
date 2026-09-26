@@ -223,32 +223,34 @@ class TimelineRuntime {
             const start=clip.start+cycle*timeline.duration,stop=end+cycle*timeline.duration,from=Math.max(low,start),to=Math.min(high,stop)
             if(to<from||to===from&&!(includeStart&&from===previous))continue
             const local=/* 调用 Math.min(nested.duration,Math.max(0,clip.offset+(time-start)*clip.playbackRate)) 并返回调用结果。 */ (time:number)=>Math.min(nested.duration,Math.max(0,clip.offset+(time-start)*clip.playbackRate)),a=local(forward?from:to),b=local(forward?to:from)
-            this.collectEvents(target,entities,nested,a,b,false,includeStart&&from===previous||forward&&from===start&&start>previous,pending,nestedVisited,depth+1,/* 调用 mapTime(start+(time-clip.offset)/clip.playbackRate) 并返回调用结果。 */ time=>mapTime(start+(time-clip.offset)/clip.playbackRate))
+            this.collectEvents(target,entities,nested,a,b,false,includeStart&&(forward?from:to)===previous||forward&&from===start&&start>previous||!forward&&to===stop&&stop<previous,pending,nestedVisited,depth+1,/* 调用 mapTime(start+(time-clip.offset)/clip.playbackRate) 并返回调用结果。 */ time=>mapTime(start+(time-clip.offset)/clip.playbackRate))
           }
         }
       }
     }
   }
 
-  /** 结构说明（自动提取）：applyTimeline；输入 owner、entities、timeline、state、_previous、current、movingForward、_wrapped、scrubbing、pending、depth、visited、_rawEnd、path、rate、playing、preciseTime；直接调用 Math.max、entities.find、Math.min、visibilityPose.get、visibilityPose.set 等；写入 timelinePresentationState.nestedDepth、pose、target.enabled、pose.output；包含循环处理。 */ private applyTimeline(owner: Entity, entities: Entity[], timeline: TimelineDocument, state: TimelineState, _previous: number, current: number, movingForward: boolean, _wrapped: boolean, scrubbing: boolean, pending: PendingTimelineEvent[], depth: number, visited: Set<string>, _rawEnd=current,path=owner.uuid,rate=1,playing=false,preciseTime=current): void {
+  /** 结构说明（自动提取）：applyTimeline；输入 owner、entities、timeline、state、_previous、current、movingForward、_wrapped、scrubbing、pending、depth、visited、_rawEnd、path、rate、playing、preciseTime；直接调用 Math.max、entities.find、Math.min、visibilityPose.get、visibilityPose.set 等；写入 timelinePresentationState.nestedDepth、pose、target.enabled、pose.output；包含循环处理。 */ private applyTimeline(owner: Entity, entities: Entity[], timeline: TimelineDocument, state: TimelineState, _previous: number, current: number, movingForward: boolean, _wrapped: boolean, scrubbing: boolean, pending: PendingTimelineEvent[], depth: number, visited: Set<string>, _rawEnd=current,path=owner.uuid,rate=1,playing=false,preciseTime=current,inheritedWeight=1): void {
     if (depth > 8) return; timelinePresentationState.nestedDepth = Math.max(timelinePresentationState.nestedDepth, depth)
     for (let trackIndex = 0; trackIndex < timeline.tracks.length; trackIndex++) {
       const track = timeline.tracks[trackIndex]; if (track.muted) continue
       for (let clipIndex = 0; clipIndex < track.clips.length; clipIndex++) {
         const clip = track.clips[clipIndex]; timelinePresentationState.processedClips++
         const target = clip.targetEntityUuid ? entities.find(/* 比较 entity.uuid 与 clip.targetEntityUuid，返回严格相等的判断结果。 */ entity => entity.uuid === clip.targetEntityUuid) : owner; if (!target) continue
-        const clipEnd = Math.min(timeline.duration, clip.start + clip.duration), active = current >= clip.start && (current < clipEnd || track.type==='Animation'&&current===timeline.duration&&clipEnd===timeline.duration)
+        const clipEnd = Math.min(timeline.duration, clip.start + clip.duration), active = current >= clip.start && (current < clipEnd || (track.type==='Animation'||track.type==='NestedTimeline')&&current===timeline.duration&&clipEnd===timeline.duration)
         const instance=`${path}:${trackIndex}:${clipIndex}`
         if (track.type === 'Visibility' && current>=clip.start){let pose=this.visibilityPose.get(target);if(!pose){pose={base:target.enabled,output:target.enabled};this.visibilityPose.set(target,pose)}target.enabled=clip.value!==false&&clip.value!=='false';pose.output=target.enabled}
         else if (track.type === 'Camera' && current>=clip.start) this.applyCamera(owner, entities, state, clip, current)
         else if (track.type === 'Subtitle' && active) this.applySubtitle(owner, clip, current)
-        else if(track.type==='Audio'&&active&&clip.asset){const local=Math.max(0,preciseTime-clip.start),weight=Math.min(clip.blendIn>0?Math.min(1,local/clip.blendIn):1,clip.blendOut>0?Math.min(1,Math.max(0,clipEnd-current)/clip.blendOut):1);this.audioVoices.push({key:instance,ownerUuid:owner.uuid,entity:target,reference:clip.asset,time:clip.offset+local*clip.playbackRate,playbackRate:clip.playbackRate*rate,gain:weight,playing:playing&&!scrubbing})}
-        else if(track.type==='Animation'&&active&&clip.asset){const local=Math.max(0,current-clip.start),weight=Math.min(clip.blendIn>0?Math.min(1,local/clip.blendIn):1,clip.blendOut>0?Math.min(1,Math.max(0,clipEnd-current)/clip.blendOut):1);this.animationSamples.push({key:instance,owner:target,clipAsset:clip.asset,time:clip.offset+local*clip.playbackRate,weight})}
+        else if(track.type==='Audio'&&active&&clip.asset){const local=Math.max(0,preciseTime-clip.start),weight=Math.min(clip.blendIn>0?Math.min(1,local/clip.blendIn):1,clip.blendOut>0?Math.min(1,Math.max(0,clipEnd-current)/clip.blendOut):1);this.audioVoices.push({key:instance,ownerUuid:owner.uuid,entity:target,reference:clip.asset,time:clip.offset+local*clip.playbackRate,playbackRate:clip.playbackRate*rate,gain:weight*inheritedWeight,playing:playing&&!scrubbing})}
+        else if(track.type==='Animation'&&active&&clip.asset){const local=Math.max(0,current-clip.start),weight=Math.min(clip.blendIn>0?Math.min(1,local/clip.blendIn):1,clip.blendOut>0?Math.min(1,Math.max(0,clipEnd-current)/clip.blendOut):1);this.animationSamples.push({key:instance,owner:target,clipAsset:clip.asset,time:clip.offset+local*clip.playbackRate,weight:weight*inheritedWeight})}
         else if (track.type === 'NestedTimeline' && active && clip.asset && !visited.has(clip.asset)) {
           const nested = readTimeline(clip.asset); if (nested) {
             const exact=Math.min(nested.duration,clip.offset+Math.max(0,preciseTime-clip.start)*clip.playbackRate),local=exact===nested.duration?exact:mediaFrameTime(exact,nested.frameRate),nestedVisited=new Set(visited)
             nestedVisited.add(clip.asset)
-            this.applyTimeline(target,entities,nested,state,local,local,movingForward,false,scrubbing,pending,depth+1,nestedVisited,local,instance,rate*clip.playbackRate,playing,exact)
+            // 父片段淡入淡出逐层乘入子动画权重与音频增益，不影响事件派发。
+            const elapsed=Math.max(0,preciseTime-clip.start),envelope=Math.min(clip.blendIn>0?Math.min(1,elapsed/clip.blendIn):1,clip.blendOut>0?Math.min(1,Math.max(0,clipEnd-preciseTime)/clip.blendOut):1)
+            this.applyTimeline(target,entities,nested,state,local,local,movingForward,false,scrubbing,pending,depth+1,nestedVisited,local,instance,rate*clip.playbackRate,playing,exact,inheritedWeight*envelope)
           }
 
         }

@@ -144,7 +144,7 @@ const localeText = {
 
 export const CREATOR_PERFORMANCE_PROFILES = Object.freeze({
   balanced: Object.freeze({ id: 'balanced' as PerformanceProfile, label: 'Balanced', maximumPixelRatio: 2, hierarchyPerformanceMode: false, description: 'Full authoring fidelity with bounded high-DPI rendering.' }),
-  'low-end': Object.freeze({ id: 'low-end' as PerformanceProfile, label: 'Low-end', maximumPixelRatio: 1, hierarchyPerformanceMode: true, description: 'Caps pixel ratio and enables bounded viewport sampling while preserving authored data and player output.' }),
+  'low-end': Object.freeze({ id: 'low-end' as PerformanceProfile, label: 'Low-end', maximumPixelRatio: 1, hierarchyPerformanceMode: true, description: 'Disables decorative editor animation, caps idle redraw and preview pixels, and enables bounded viewport sampling. Game animation and output quality stay unchanged.' }),
   quality: Object.freeze({ id: 'quality' as PerformanceProfile, label: 'High quality', maximumPixelRatio: 3, hierarchyPerformanceMode: false, description: 'Raises editor preview fidelity; project build quality remains separately controlled.' })
 })
 
@@ -164,10 +164,16 @@ export const filteredCreatorGuides = computed(/** 结构说明（自动提取）
 /** 结构说明（自动提取）：restartCreatorOnboarding；无显式参数；写入 creatorLearningState.onboardingVisible、creatorLearningState.onboardingStep。 */ export function restartCreatorOnboarding(): void { creatorLearningState.onboardingVisible = true; creatorLearningState.onboardingStep = 0 }
 /** 结构说明（自动提取）：applyCreatorPerformanceProfile；输入 profile；写入 preferencesState.performanceProfile、preferencesState.maxPixelRatio、authoringState.performanceMode；等待异步结果。 */ export async function applyCreatorPerformanceProfile(profile: PerformanceProfile): Promise<void> {
   const selected = CREATOR_PERFORMANCE_PROFILES[profile]
+  if (!selected) return
+  // 显式选择预设同时重置独立覆盖，但不改变用户或系统的无障碍动效偏好。
+  preferencesState.editorDecorativeMotion = 'auto'
+  preferencesState.editorIdleFps = 0
+  preferencesState.editorPreviewPolicy = 'auto'
   preferencesState.performanceProfile = profile
   preferencesState.maxPixelRatio = selected.maximumPixelRatio
   // The scene-authoring graph is intentionally lazy so onboarding/manual startup does not load the world runtime.
   const { authoringState } = await import('../editor/authoring2d')
+  if (preferencesState.performanceProfile !== profile) return // 异步模块加载结束后拒绝覆盖更新的用户选择。
   authoringState.performanceMode = selected.hierarchyPerformanceMode
 }
 /** 结构说明（自动提取）：resetLearningProgress；无显式参数；直接调用 creatorLearningState.completed.splice、persist。 */ export function resetLearningProgress(): void { creatorLearningState.completed.splice(0); persist() }
