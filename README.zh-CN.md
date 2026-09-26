@@ -468,11 +468,11 @@ Nova_A 仍以桌面／Web 编辑器为主。Android 是可选、受工具链门�
 
 ## 通用环境要求
 
-- Node.js 18 或更高版本（`.node-version` 记录了测试版本）。
-- pnpm 9 或更高版本（`package.json` 固定了项目使用的包管理器版本）。
-- Rust 1.88 或更高版本与 Cargo（独立核心 crate 仍保留 1.77 MSRV；安全修复后的桌面依赖图需要 1.88）。
+- Node.js **22.22.2**，与 `.node-version` 和 `package.json` 一致。
+- pnpm **10.30.0**，与 `package.json` 的固定版本一致。
+- Rust **1.92.0** 与 Cargo，版本见 `rust-toolchain.toml`。核心 crate 声明的最低版本为 1.77，桌面应用为 1.88。
 - Rust 的 `wasm32-unknown-unknown` 目标。
-- `wasm-pack` 0.14.0 或更高版本。
+- `wasm-pack` **0.14.0**。
 - Git 以及当前系统需要的原生开发依赖。
 
 安装通用工具与项目依赖：
@@ -480,12 +480,12 @@ Nova_A 仍以桌面／Web 编辑器为主。Android 是可选、受工具链门�
 ```sh
 corepack enable
 corepack prepare pnpm@10.30.0 --activate
-rustup target add wasm32-unknown-unknown
+rustup show active-toolchain
 cargo install wasm-pack --version 0.14.0 --locked
 pnpm install --frozen-lockfile
 ```
 
-如已安装 `wasm-pack` 0.14.0 或更高版本，可跳过对应命令。Rust 官方的 [`wasm32-unknown-unknown` 说明](https://doc.rust-lang.org/stable/rustc/platform-support/wasm32-unknown-unknown.html)包含目标安装方法。
+先安装 Node.js 和 rustup，再在仓库根目录执行上述命令。`rustup show active-toolchain` 会安装 `rust-toolchain.toml` 指定的 Rust 版本、WASM 目标、clippy 和 rustfmt。已安装 wasm-pack 0.14.0 的话，可跳过对应命令。
 
 把现有仓库移动到其他磁盘后，不要继续使用复制过来的依赖链接或原生构建元数据。只删除移动后副本中的 `node_modules`、`target` 与 `src-tauri/target`，再运行 `pnpm install --frozen-lockfile` 并重新构建；源码、项目、`pnpm-lock.yaml` 和 Cargo 锁文件必须保留。这样可避免 pnpm 链接与 Tauri 权限元数据继续引用旧仓库的绝对路径。
 
@@ -494,7 +494,7 @@ pnpm install --frozen-lockfile
 请以最新的 [Tauri 官方环境要求](https://v2.tauri.app/start/prerequisites/)为准。
 
 - Windows：安装 Microsoft C++ Build Tools，并选择“使用 C++ 的桌面开发”。Tauri 使用 WebView2；当前 Windows 10/11 通常已自带。生成 MSI 时可能还需要启用 Windows 的 VBSCRIPT 可选功能。
-- macOS 10.15 或更高版本：安装 Xcode；仅开发桌面应用时也可安装 Xcode Command Line Tools，并完成首次初始化。
+- macOS 12 或更高版本（实验性支持）：安装 Xcode；仅开发桌面应用时也可安装 Xcode Command Line Tools，并完成首次初始化。详见[平台说明](docs/PLATFORM_26_29.md)。
 - Debian/Ubuntu Linux：
 
 ```sh
@@ -527,12 +527,16 @@ pnpm tauri dev
 ```sh
 pnpm test:core
 cargo clippy --workspace --all-targets -- -D warnings
+pnpm build:wasm:dev
 pnpm check
 pnpm audit:manual
+pnpm test:native-headless
 pnpm build
 ```
 
-这些命令用于开发阶段反馈：依次运行全部 workspace 测试（包括完整物理测试套件）、将警告视为错误的代码检查、Vue/TypeScript 类型检查、手册审计、Release WASM 和优化后的 Vite 前端构建。它们不会生成打包所需的原生、浏览器布局、交互、性能、安全或发布证据报告。
+首次运行 `pnpm check` 前，先用 `pnpm build:wasm:dev` 生成 `nova_core/pkg/` 及其 TypeScript 声明。`pnpm test:native-headless` 会在本机编译并测试原生物理进程。发布检查见下文。
+
+代码目录和 PR 提交流程见[贡献指南](CONTRIBUTING.md)。
 
 `pnpm audit` 是当前公开版本 26.10 的通用审计入口。它检查当前静态／手册门禁，并读取下方发布准备流程生成的完整 26.10 报告；它不能代替这些报告的生成过程。
 

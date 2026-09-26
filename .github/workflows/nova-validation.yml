@@ -12,8 +12,21 @@ jobs:
         with:
           node-version-file: .node-version
           cache: pnpm
+      - name: Install repository Rust toolchain
+        run: rustup show active-toolchain
+      - name: Install wasm-pack
+        run: cargo install wasm-pack --version 0.14.0 --locked
       - run: pnpm install --frozen-lockfile
       - run: pnpm nova version --jsonl
+      - run: pnpm build:wasm:dev
       - run: pnpm check
-      - run: cargo test --workspace --all-targets
-      - run: pnpm audit:v3.9
+      - run: cargo test --locked --workspace --all-targets
+      - run: pnpm audit:manual
+      # Retained behavior suites run against the checked-out source. These are
+      # development checks, not frozen-release qualification reports.
+      - name: World regressions
+        run: node scripts/verify-v26.29-world.mjs --development --report=release-audits/contributor-world.json
+      - name: Network regressions
+        run: node scripts/verify-v26.29-network.mjs
+      - name: Platform contract regressions
+        run: node scripts/verify-v26.29-platform.mjs

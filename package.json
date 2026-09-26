@@ -17,6 +17,7 @@
     "build:wasm": "wasm-pack build crates/nova_wasm --target web --out-dir ../../nova_core/pkg --out-name nova_core --release",
     "build:wasm:dev": "wasm-pack build crates/nova_wasm --target web --out-dir ../../nova_core/pkg --out-name nova_core --dev",
     "test:core": "cargo test --workspace --all-targets",
+    "test:native-headless": "node scripts/test-native-headless.mjs",
     "check": "vue-tsc --noEmit && tsc --project tsconfig.node.json --noEmit",
     "check:config": "tsc --project tsconfig.node.json --noEmit",
     "inventory:v26.11": "node scripts/inventory-v26.11.mjs",

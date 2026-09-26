@@ -3,13 +3,15 @@ import {captureNodeBundle22,registerNodeBundle22} from './nodeOperationTrace22.m
 import assert from 'node:assert/strict'
 import {build} from 'vite'
 import {existsSync,statSync} from 'node:fs'
-import {mkdtemp,rm,readFile} from 'node:fs/promises'
+import {mkdir,mkdtemp,rm,readFile} from 'node:fs/promises'
 import {dirname,join,resolve,sep,relative,isAbsolute} from 'node:path'
 import {pathToFileURL} from 'node:url'
 /** Real production modules; only missing browser host surfaces are inert in this Node CPU/format audit. */
 /** 搭建隔离的真实模块审计环境，按源码优先级构建导入并提供清理和 WASM 初始化入口。 */ export async function openMediaAuditModules(context,entries){
  const {repository:root,bases}=context
  Object.assign(globalThis,{window:globalThis,location:{href:'https://nova.local/'},localStorage:{getItem:/* 返回固定值 null。 */ ()=>null,/** 存储桩忽略写入，不持久化审计数据。 */ setItem(){},/** 存储桩忽略删除操作。 */ removeItem(){}},/** 环境桩不注册全局事件监听。 */ addEventListener(){},/** 环境桩不执行全局事件移除。 */ removeEventListener(){},document:{documentElement:{dataset:{},style:{/** 样式桩忽略自定义属性写入。 */ setProperty(){}}},fonts:{/** 字体集合桩忽略字体注册。 */ add(){},/* 返回固定值 true。 */ delete(){return true}},createElement:/** 创建只提供空绘图上下文的元素桩。 */ ()=>({getContext:/* 返回固定值 null。 */ ()=>null})}})
+ // A fresh checkout has no ignored cache directory yet.
+ await mkdir(join(root,'.cache'),{recursive:true})
  const temporary=await mkdtemp(join(root,'.cache','nova-v2616-media-corpus-'))
  const locate=/** 按源码覆盖顺序定位真实模块，找不到时中止。 */ path=>{const file=bases.map(/* 调用 join(base,'src',path+'.ts') 并返回调用结果。 */ base=>join(base,'src',path+'.ts')).find(existsSync);assert.ok(file,'Missing real module '+path);return file}
  const overlay={name:'media-corpus-overlay',enforce:'pre',/** 为相对导入按覆盖源码根与扩展名优先级解析实际文件。 */ resolveId(source,importer){if(!importer||!source.startsWith('.'))return null;const raw=resolve(dirname(importer.split('?')[0]),source),prefix=bases.map(/* 调用 join(base,'src') 并返回调用结果。 */ base=>join(base,'src')).find(/* 调用 raw.startsWith(prefix+sep) 并返回调用结果。 */ prefix=>raw.startsWith(prefix+sep));if(!prefix)return null;for(const base of bases)for(const ext of['','.ts','.json','.js','/index.ts']){const file=join(base,'src',raw.slice(prefix.length+1)+ext);if(existsSync(file)&&statSync(file).isFile())return file.replaceAll('\\','/')}return null}}

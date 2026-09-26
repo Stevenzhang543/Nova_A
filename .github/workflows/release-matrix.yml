@@ -2,7 +2,8 @@ name: Nova_A release matrix
 
 on:
   workflow_dispatch:
-  pull_request:
+  # Pull requests use ci.yml and nova-validation.yml. The release audit below
+  # requires separately generated release evidence that a fresh PR checkout lacks.
   push:
     tags: ['v*']
 
@@ -16,7 +17,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-        with: { components: rustfmt, clippy }
+        with: { components: 'rustfmt, clippy' }
       - uses: pnpm/action-setup@v4
         with: { version: 10.30.0 }
       - uses: actions/setup-node@v4
