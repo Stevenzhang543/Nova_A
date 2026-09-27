@@ -1,0 +1,119 @@
+/* 26.32 desktop editor visual system. Colors/preferences and authored game UI remain owned by their existing systems. */
+#app :is(.editor-root, .project-manager), .creation-scrim {
+  --radius-control-small: 4px;
+  --radius-input: 4px;
+  --radius-panel: 5px;
+  --radius-dialog: 8px;
+  --control-default: 32px;
+  --control-compact: 28px;
+  --studio-rule: color-mix(in srgb, var(--border-subtle) 80%, transparent);
+}
+html body #app .editor-root { background: var(--bg-base); --context-rail-width: calc(5.5 * var(--type-caption) + 20px); }
+#app .editor-root :is(.top-bar, .workspace-control-row, .panel-tabs, .bottom-panel, .side-bar, .scene-sidebar, .config-panel, .floating-dock) {
+  background-image: none;
+  backdrop-filter: none;
+}
+/* Legacy scale rules used toolbar height as the horizontal children's flex basis. */
+html[data-ui-scale] body #app .editor-root .workspace-control-row > .workspace-bar { flex: 1 1 0%; min-width: 0; }
+html[data-ui-scale] body #app .editor-root .workspace-control-row > .actionbar { flex: 0 0 auto; min-width: max-content; }
+#app .editor-root :is(.settings-card, .studio-card, .network-studio .card) {
+  border-radius: var(--radius-panel);
+  border-color: var(--studio-rule);
+  box-shadow: none;
+  background-image: none;
+}
+#app .editor-root :is(.settings-card, .studio-card, .network-studio .card) > :is(header, h3, h4) {
+  padding-block: 8px;
+  border-bottom: 1px solid var(--studio-rule);
+  margin-block-start: 0;
+}
+#app .editor-root :is(.config-header, .panel-header, .section-header, .hierarchy-header, .studio-header) {
+  background: var(--surface-1);
+  box-shadow: none;
+}
+#app .editor-root :is(.property-row, .setting-row) {
+  padding-block: 6px;
+  border-bottom: 1px solid var(--studio-rule);
+}
+#app .editor-root :is(.property-row, .setting-row):focus-within {
+  background: color-mix(in srgb, var(--accent) 5%, transparent);
+}
+#app .editor-root .numeric-steppers button {
+  background: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  box-shadow: none;
+}
+#app .editor-root .numeric-steppers button:hover { background: var(--surface-hover); color: var(--text-primary); }
+#app .editor-root :is(.property-row, .setting-row) > :is(label, span):first-child {
+  color: var(--text-secondary);
+}
+#app .editor-root :is(.scene-tabs, .importer-tabs, .studio-tabs, .render-tabs, .settings-tabs, .panel-tabs) {
+  gap: 2px;
+  background: var(--surface-1);
+  border-bottom: 1px solid var(--border-subtle);
+}
+#app .editor-root :is(.scene-tabs, .importer-tabs, .studio-tabs, .render-tabs, .settings-tabs) button {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+#app .editor-root :is(.scene-tabs, .importer-tabs, .studio-tabs, .render-tabs, .settings-tabs) button:is(.active, [aria-selected='true']) {
+  background: var(--selection-bg);
+  color: var(--text-primary);
+  box-shadow: inset 0 -2px var(--accent);
+}
+#app .editor-root :is(.entity-item, .folder-tree button, .asset-row) {
+  border-radius: 3px;
+}
+/* A single horizontal category strip gives management forms the width previously consumed by a second sidebar. */
+#app .editor-root .manage-header { min-height: 0; padding: 10px 16px; }
+#app .editor-root .manage-header h1 { font-size: var(--type-section); margin-block: 2px; }
+#app .editor-root .manage-header .lifecycle { display: none; }
+#app .editor-root .manage-body { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+#app .editor-root .manage-body > nav {
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  padding: 4px 8px;
+  gap: 3px;
+  overflow: auto;
+  border-right: 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+#app .editor-root .manage-body > nav button {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 7px;
+  min-height: 34px;
+  padding: 6px 10px;
+  border-color: transparent;
+}
+#app .editor-root .manage-body > nav button.active { box-shadow: inset 0 -2px var(--accent); }
+#app .editor-root .manage-body > nav button > span:first-child { width: 20px; height: 20px; background: none; }
+#app .editor-root .manage-body > nav button > span:last-child { position: static; width: auto; height: auto; overflow: visible; clip-path: none; }
+#app .editor-root .manage-body > nav strong { white-space: nowrap; }
+#app .editor-root .manage-body > nav small { display: none; }
+/* Supersede the legacy 200% two-column/icon-only Manage layout as one unit. */
+html[data-ui-scale='xlarge'] body #app .editor-root .manage-body { grid-template-columns: minmax(0, 1fr); }
+html[data-ui-scale='xlarge'] body #app .editor-root .manage-body > nav button > span:last-child {
+  position: static; width: auto; height: auto; overflow: visible; clip-path: none;
+}
+html[data-ui-scale='xlarge'] body #app .editor-root .manage-body > nav button { min-height: 46px; padding: 6px 10px; }
+#app .editor-root .ecosystem-studio > .studio-header { display: flex; flex-wrap: wrap; }
+#app .editor-root .ecosystem-studio > .studio-header > div { flex: 1 1 18ch; }
+#app .editor-root .ecosystem-studio > .studio-header > nav {
+  display: flex; flex: 1 1 100%; gap: 4px; overflow-x: auto; min-width: 0;
+}
+#app .editor-root .ecosystem-studio > .studio-header > nav button {
+  flex: 0 0 auto; padding: 6px 10px; white-space: nowrap; word-break: normal; overflow-wrap: normal;
+}
+/* Readable editor dialogs and launcher without changing game/player styling. */
+#app .project-manager :is(.welcome, .recent, .manager-shell) { box-shadow: none; background-image: none; }
+#app .project-manager .welcome h1 { font-size: clamp(24px, 2.8vw, 38px); line-height: 1.2; }
+#app .project-manager .quick-actions { justify-content: flex-start; }
+.creation-scrim .creation-card { border-radius: 8px; }
+@media (max-width: 720px) { html body #app .editor-root { --context-rail-width: 56px; } }
+@media (pointer: coarse) {
+  #app :is(.editor-root, .project-manager), .creation-scrim { --control-default: 44px; --control-compact: 44px; }
+}

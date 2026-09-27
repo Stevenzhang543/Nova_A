@@ -1,7 +1,7 @@
 {
   "name": "nova_a",
   "private": true,
-  "version": "26.30.0",
+  "version": "26.32.0",
   "homepage": "https://github.com/Stevenzhang543/Nova_A/",
   "repository": {
     "type": "git",
@@ -318,7 +318,8 @@
     "references": "node scripts/export-reference-projects.mjs",
     "benchmark:v3": "node scripts/benchmark-v3.mjs",
     "stability:v3": "node scripts/stability-v3.mjs",
-    "audit": "pnpm check && pnpm audit:manual && pnpm audit:scripts && pnpm audit:rendering && pnpm audit:animation && pnpm audit:typography && pnpm verify:templates && pnpm audit:repository && pnpm audit:v26.10",
+    "audit:environment": "node scripts/verify-ci-environment.mjs",
+    "audit": "pnpm check && pnpm audit:manual && pnpm verify:templates && pnpm audit:repository && pnpm audit:environment",
     "nova": "node scripts/nova-cli.mjs",
     "validate": "node scripts/nova-cli.mjs validate",
     "import:headless": "node scripts/nova-cli.mjs import",

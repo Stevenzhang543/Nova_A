@@ -98,3 +98,42 @@ html[data-form-label-layout='stacked'] #app .editor-root :is(.property-row > spa
 #app .editor-root .panel-maximized :is(.settings-card, .studio-card, .network-studio .card) { max-height: none; overflow: visible; }
 /* 实际遍历发现资源文件夹长路径在全页仍被省略；允许多行，同时保留整棵目录的滚动。 */
 #app .editor-root .folder-tree button { height: auto; min-height: 30px; white-space: normal; overflow-wrap: anywhere; overflow: visible; text-overflow: clip; text-align: start; }
+
+/* 26.31: give form content priority over decorative headers in short workspaces. */
+#app .editor-root :is(.settings-card, .studio-card) {
+  container: nova-form / inline-size;
+}
+#app .editor-root :is(.settings-card, .studio-card, .network-studio .card) :is(p, small, output, legend) {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  line-height: 1.5;
+}
+#app .editor-root :is(.settings-card, .studio-card, .network-studio .card) > :is(header, footer) button {
+  height: auto;
+  min-height: var(--control-default);
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+#app .editor-root .manage-body > nav :is(strong, small) {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-overflow: clip;
+}
+@container nova-form (max-width: 32em) {
+  #app .editor-root .studio-card > label:has(> :is(input:not([type='checkbox']):not([type='radio']):not([type='color']), select, textarea)) {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    height: auto;
+  }
+  #app .editor-root .studio-card > label > :is(input:not([type='checkbox']):not([type='radio']):not([type='color']), select, textarea) {
+    width: 100%;
+    min-width: 0;
+  }
+}
+@media (max-height: 800px) {
+  #app .editor-root .manage-header { min-height: 0; padding-block: 8px; }
+  #app .editor-root .manage-header h1 { margin-block: 2px; font-size: var(--type-section); }
+  #app .editor-root .manage-header .lifecycle { display: none; }
+}

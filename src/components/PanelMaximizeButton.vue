@@ -1,9 +1,10 @@
 <!-- 面板最大化按钮：共享工作区展开状态，并提供当前语言的恢复或展开说明。 -->
 <template>
-  <button type="button" class="panel-maximize" :data-panel-maximize="panel" :aria-label="label" :title="label" :aria-pressed="active" @click.stop="togglePanelMaximize(panel)">{{ active ? '↙' : '⛶' }}</button>
+  <button type="button" class="panel-maximize" :data-panel-maximize="panel" :aria-label="label" :title="label" :aria-pressed="active" @click.stop="togglePanelMaximize(panel)"><EditorIcon :name="active ? 'restore' : 'maximize'" /></button>
 </template>
 <script setup lang="ts">
 import { computed } from 'vue'
+import EditorIcon from './EditorIcon.vue'
 import { preferencesState } from '../store/preferences'
 import { togglePanelMaximize,workspaceState } from '../editor/workspaces'
 const props=defineProps<{panel:'hierarchy'|'inspector'|'bottom'}>()

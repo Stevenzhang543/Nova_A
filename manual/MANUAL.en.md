@@ -1,9 +1,9 @@
-# Nova_A 26.30 Complete Manual
+# Nova_A 26.32 Complete Manual
 
 <!-- NOVA_V2630_LESSON -->
 ## 26.30 — Integrated authoring and release qualification
 
-Engine: **26.30.0** · Project Format 2/schema29. Start with a copy of a project and keep its migration backup. Open Project Health, resolve invalid references, then save and reopen before export. Do not overwrite the only old-format copy.
+Engine: **26.32.0** · Project Format 2/schema29. Start with a copy of a project and keep its migration backup. Open Project Health, resolve invalid references, then save and reopen before export. Do not overwrite the only old-format copy.
 
 Create a template from Library, identify its main scene and entry script, then change one visible property. Preview, stop, undo, redo, save and reopen; confirm the same authored value. Build a Web game and check the downloaded player separately from the editor. Repeat this procedure for each template you actually intend to ship; catalog presence is not a successful walkthrough.
 

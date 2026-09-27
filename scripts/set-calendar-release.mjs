@@ -8,6 +8,15 @@ const root = dirname(dirname(fileURLToPath(import.meta.url)))
 const release = process.argv.find(/* 调用 value.startsWith('--release=') 并返回调用结果。 */ value => value.startsWith('--release='))?.slice('--release='.length)
 const engineVersion = releaseVersion(release)
 
+// Current translations derive both labels from projectFormat; retain legacy literal support.
+const validTranslationVersion = source => {
+  const dynamicLabels = [...source.matchAll(/(?:releaseLabel|version):\s*`Nova_A v\$\{NOVA_RELEASE_NAME\}`/g)]
+  return source.includes(`Nova_A v${release}`) || (
+    /import\s*\{\s*NOVA_RELEASE_NAME\s*\}\s*from\s*['"]\.\/projects\/projectFormat['"]/.test(source)
+    && dynamicLabels.length === 6
+  )
+}
+
 const replaceJsonVersion = /* 调用 source.replace(/("version"\s*:\s*")[0-9]+\.[0-9]+\.[0-9]+("\s*,)/, `$1${engineVersion}$2`) 并返回调用结果。 */ source => source.replace(/("version"\s*:\s*")[0-9]+\.[0-9]+\.[0-9]+("\s*,)/, `$1${engineVersion}$2`)
 const definitions = [
   ['package.json', replaceJsonVersion, /* 比较 JSON.parse(source).version 与 engineVersion，返回严格相等的判断结果。 */ source => JSON.parse(source).version === engineVersion],
@@ -20,7 +29,7 @@ const definitions = [
   ['src/projects/projectFormat.ts', /** 替换前端引擎机器版本和面向用户的发布名称常量。 */ source => source.replace(/NOVA_ENGINE_VERSION = '[0-9]+\.[0-9]+\.[0-9]+'/, `NOVA_ENGINE_VERSION = '${engineVersion}'`).replace(/NOVA_RELEASE_NAME = '[0-9]{2}\.[0-9]{2}'/, `NOVA_RELEASE_NAME = '${release}'`), /* 先计算 source.includes(`NOVA_ENGINE_VERSION = '${engineVersion}'`)；仅当其为真值时求右侧 source.includes(`NOVA_RELEASE_NAME = '${release}'`)，返回短路求值结果。 */ source => source.includes(`NOVA_ENGINE_VERSION = '${engineVersion}'`) && source.includes(`NOVA_RELEASE_NAME = '${release}'`)],
   ['crates/nova_format/src/lib.rs', /** 替换 Rust 项目格式模块中的当前引擎版本常量。 */ source => source.replace(/CURRENT_ENGINE_VERSION: &str = "[0-9]+\.[0-9]+\.[0-9]+"/, `CURRENT_ENGINE_VERSION: &str = "${engineVersion}"`), /* 调用 source.includes(`CURRENT_ENGINE_VERSION: &str = "${engineVersion}"`) 并返回调用结果。 */ source => source.includes(`CURRENT_ENGINE_VERSION: &str = "${engineVersion}"`)],
   ['tests/fixtures/migrations/public-schema-expected.json', /* 调用 source.replace(/("targetEngine"\s*:\s*")[0-9]+\.[0-9]+\.[0-9]+("\s*,)/, `$1${engineVersion}$2`) 并返回调用结果。 */ source => source.replace(/("targetEngine"\s*:\s*")[0-9]+\.[0-9]+\.[0-9]+("\s*,)/, `$1${engineVersion}$2`), /* 比较 JSON.parse(source).targetEngine 与 engineVersion，返回严格相等的判断结果。 */ source => JSON.parse(source).targetEngine === engineVersion],
-  ['src/i18n.ts', /* 调用 source.replace(/Nova_A v[0-9]{2}\.[0-9]{2}/g, `Nova_A v${release}`) 并返回调用结果。 */ source => source.replace(/Nova_A v[0-9]{2}\.[0-9]{2}/g, `Nova_A v${release}`), /* 调用 source.includes(`Nova_A v${release}`) 并返回调用结果。 */ source => source.includes(`Nova_A v${release}`)]
+  ['src/i18n.ts', source => source.replace(/Nova_A v[0-9]{2}\.[0-9]{2}/g, `Nova_A v${release}`), validTranslationVersion]
 ]
 
 // Preflight every authority before changing any file. The transaction is

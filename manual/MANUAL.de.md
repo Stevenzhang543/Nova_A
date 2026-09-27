@@ -1,9 +1,9 @@
-# Nova_A 26.30 – Vollständiges Handbuch
+# Nova_A 26.32 – Vollständiges Handbuch
 
 <!-- NOVA_V2630_LESSON -->
 ## 26.30 — Integriertes Authoring und Release-Prüfung
 
-Engine: **26.30.0** · Projektformat2/Schema29. Mit einer Projektkopie beginnen und das Migrationsbackup behalten. Project Health prüfen, ungültige Referenzen korrigieren, speichern und erneut öffnen. Die einzige alte Projektkopie nicht überschreiben.
+Engine: **26.32.0** · Projektformat2/Schema29. Mit einer Projektkopie beginnen und das Migrationsbackup behalten. Project Health prüfen, ungültige Referenzen korrigieren, speichern und erneut öffnen. Die einzige alte Projektkopie nicht überschreiben.
 
 Eine Vorlage aus Library anlegen, Hauptszene und Einstiegsskript finden und einen sichtbaren Wert ändern. Vorschau starten/stoppen, rückgängig machen/wiederholen, speichern und erneut öffnen. Ein Web-Spiel exportieren und den heruntergeladenen Player separat prüfen. Dies für jede tatsächlich verwendete Vorlage wiederholen; ein Katalogeintrag ist kein bestandener Durchlauf.
 

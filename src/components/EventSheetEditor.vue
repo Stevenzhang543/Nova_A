@@ -219,4 +219,8 @@ onMounted(/** 挂载时优先打开工作室活动事件表，再使用资源选
 .event-provenance{margin:10px;padding:12px;border:1px solid var(--border-subtle);border-radius:8px;flex:0 0 auto;min-width:0}
 .event-provenance ol{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:10px;padding-left:24px}
 .event-provenance li{padding:8px;overflow-wrap:anywhere}.event-provenance li>*{display:block;margin:4px 0}.event-provenance button{min-height:32px}
+/* Handler source IDs must wrap inside their own grid cell, including inherited
+   global heading styles. Keep every character available rather than ellipsizing. */
+.event-provenance li { min-width:0; max-width:100%; }
+.event-provenance li > :is(strong,span,small,code) { min-width:0; max-width:100%; white-space:normal; overflow-wrap:anywhere; word-break:normal; }
 </style>

@@ -16,7 +16,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-        with: { components: rustfmt, clippy }
+        with: { toolchain: 1.92.0, components: rustfmt, clippy }
       - uses: pnpm/action-setup@v4
         with: { version: 10.30.0 }
       - uses: actions/setup-node@v4
@@ -28,7 +28,7 @@ jobs:
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - run: cargo test --workspace --all-targets
       - run: pnpm references
-      - run: pnpm audit
+      - run: pnpm run audit
       - run: pnpm build
 
   native-bundle:
@@ -43,6 +43,7 @@ jobs:
       - if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
       - uses: dtolnay/rust-toolchain@stable
+        with: { toolchain: 1.92.0 }
       - uses: pnpm/action-setup@v4
         with: { version: 10.30.0 }
       - uses: actions/setup-node@v4
@@ -56,7 +57,7 @@ jobs:
           name: nova-a-${{ runner.os }}-${{ runner.arch }}
           path: src-tauri/target/release/bundle/**
 
-  android-contract:
+  export-template-contract:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -65,6 +66,6 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version-file: .node-version, cache: pnpm }
       - run: pnpm install --frozen-lockfile
-      - run: node scripts/audit-v3.mjs --android-contract
+      - run: pnpm verify:templates
       # Producing a signed APK/AAB remains an optional-package qualification,
       # not a core-release claim. See docs/PLATFORM_VERIFICATION.md.

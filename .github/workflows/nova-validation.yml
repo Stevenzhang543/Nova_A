@@ -5,6 +5,9 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.92.0
       - uses: pnpm/action-setup@v4
         with:
           version: 10.30.0
@@ -16,4 +19,5 @@ jobs:
       - run: pnpm nova version --jsonl
       - run: pnpm check
       - run: cargo test --workspace --all-targets
-      - run: pnpm audit:v3.9
+      - run: pnpm audit:manual
+      - run: pnpm audit:environment

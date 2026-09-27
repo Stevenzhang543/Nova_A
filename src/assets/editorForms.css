@@ -1,0 +1,186 @@
+/* 26.32 authoring forms: bounded property controls and responsive label columns.
+   Imported after editorReadability.css. Only editor/launcher/dialog controls are
+   matched; canvas, timeline geometry and exported game UI are not form layouts. */
+html body :is(#app .editor-root, #app .project-manager, body > [role='dialog'], body > .dialog-overlay) {
+  --field-number: calc(12ch + 24px);
+  --field-text: calc(36ch + 24px);
+  --field-search: calc(32ch + 24px);
+  /* ch follows the control font once; rem multiplied by UI scale compounded
+     the root font scaling and produced 693px sliders at 1.5x. */
+  --field-range: calc(24ch + 24px);
+  --field-multiline: 68ch;
+}
+
+/* Bounds intentionally override legacy full-width !important declarations.
+   Width may shrink with the actual host; it never forces a wider panel. */
+html body :is(#app .editor-root, #app .project-manager, body > [role='dialog'], body > .dialog-overlay)
+  :is(input:not([type]), input[type='text'], input[type='search'], input[type='email'], input[type='url'], input[type='password'], input[type='tel'], input[type='date'], input[type='time'], select) {
+  box-sizing: border-box;
+  width: min(100%, var(--field-text)) !important;
+  max-width: min(100%, var(--field-text)) !important;
+  min-width: 0;
+  /* Reset legacy flex: 1 (basis 0%) as well as growth. A zero basis with
+     growth disabled otherwise collapses searches to their padding width. */
+  flex: 0 1 auto;
+  flex-basis: auto !important;
+  text-align: start !important;
+  text-align-last: auto !important;
+}
+html body :is(#app .editor-root, #app .project-manager, body > [role='dialog'], body > .dialog-overlay)
+  :is(input:not([type]), input[type='text'], input[type='search'], input[type='email'], input[type='url'], input[type='password'], input[type='tel'])::placeholder {
+  text-align: start !important;
+}
+html body :is(#app .editor-root, #app .project-manager, body > [role='dialog'], body > .dialog-overlay) input[type='search'] {
+  width: min(100%, var(--field-search)) !important;
+  max-width: min(100%, var(--field-search)) !important;
+}
+html body :is(#app .editor-root, #app .project-manager, body > [role='dialog'], body > .dialog-overlay)
+  :is(input[type='number'], input[data-numeric-expression]) {
+  box-sizing: border-box;
+  width: min(100%, var(--field-number)) !important;
+  max-width: min(100%, var(--field-number)) !important;
+  min-width: 0;
+  flex: 0 1 auto;
+  flex-basis: auto !important;
+  text-align: end !important;
+  text-align-last: auto !important;
+  font-variant-numeric: tabular-nums;
+}
+html body :is(#app .editor-root, #app .project-manager, body > [role='dialog'], body > .dialog-overlay) input[type='range'] {
+  box-sizing: border-box;
+  width: min(100%, var(--field-range)) !important;
+  max-width: min(100%, var(--field-range)) !important;
+  min-width: 0;
+  flex: 0 1 auto;
+  flex-basis: auto !important;
+  accent-color: var(--accent);
+}
+html body :is(#app .editor-root, #app .project-manager, body > [role='dialog'], body > .dialog-overlay)
+  textarea:not(.editor-shell textarea, .shader-editor > textarea, .automation-studio .authoring > textarea, .graph-editor textarea, .upgrade-scrim textarea) {
+  box-sizing: border-box;
+  width: min(100%, var(--field-multiline)) !important;
+  max-width: min(100%, var(--field-multiline)) !important;
+  min-width: 0;
+  min-height: calc(5em + 16px);
+  resize: vertical;
+  text-align: start !important;
+}
+
+/* Compound numeric drafts keep the expression, increment controls and errors
+   together. Paired axes wrap before either expression becomes unreadable. */
+#app .editor-root .numeric-draft {
+  width: min(100%, var(--field-number));
+  max-width: min(100%, var(--field-number));
+  min-width: min(100%, 10ch);
+  flex: 0 1 auto;
+  flex-basis: auto !important;
+}
+#app .editor-root .numeric-draft:has(.numeric-steppers) {
+  width: min(100%, calc(var(--field-number) + 64px));
+  max-width: min(100%, calc(var(--field-number) + 64px));
+  min-width: min(100%, calc(8ch + 64px));
+  flex-basis: auto;
+}
+#app .editor-root .numeric-value-row { width: 100%; min-width: 0; }
+#app .editor-root .numeric-draft .numeric-value-row input { flex: 1 1 8ch; }
+#app .editor-root :is(.number-range, .value-control, .property-control .pair) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+#app .editor-root .number-range { max-width: calc(var(--field-range) + var(--field-number) + 72px); }
+#app .editor-root .value-control { max-width: calc(var(--field-range) + 6ch); }
+/* Each draft already has a measure. Let the group use the available column:
+   measuring its children with the parent's different ch font caused premature
+   wrapping even inside a maximized inspector. */
+#app .editor-root .property-control .pair { max-width: 100%; }
+#app .editor-root :is(.runtime-component, .world-component, .gameplay-card, .physics-card, .material-editor) label > div:has(.numeric-draft) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  max-width: calc(2 * var(--field-number) + 136px);
+}
+
+/* Stable label/value alignment on generous hosts; narrow cards use stacked
+   labels. Text scaling affects em/ch measures and therefore stack thresholds. */
+#app .editor-root :is(.property-row, .setting-row) {
+  display: grid;
+  grid-template-columns: minmax(10ch, min(35%, 22ch)) minmax(0, 1fr);
+  align-items: start;
+  gap: 8px 14px;
+  min-width: 0;
+  padding-block: 8px;
+}
+#app .editor-root :is(.property-row, .setting-row) > span:first-child {
+  width: auto;
+  max-width: 100%;
+  min-width: 0;
+  padding-block: 5px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+#app .editor-root :is(.property-control, .setting-control) {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  justify-content: flex-start;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+#app .editor-root :is(.settings-card, .studio-card, .physics-card, .material-editor, .network-studio .card) > label {
+  min-width: 0;
+  column-gap: 14px;
+  row-gap: 6px;
+  flex-wrap: wrap;
+}
+/* Presentation labels inherit a 12ch flex basis for their caption. In stacked
+   labels that becomes a tall blank region above the actual field. */
+#app .editor-root .studio-card label > span:not(.numeric-draft) {
+  flex: 0 1 auto;
+}
+#app .editor-root :is(.form-grid, .field-grid, .service-selector-grid, .effect-list, .layer-details) label {
+  min-width: 0;
+  align-items: flex-start;
+}
+#app .editor-root :is(.form-grid, .field-grid, .service-selector-grid, .effect-list, .layer-details) label > span {
+  min-width: 0;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+@container nova-inspector (max-width: 32em) {
+  #app .editor-root .property-row { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+  #app .editor-root .property-row > span:first-child { padding-block: 0; }
+}
+@container nova-form (max-width: 32em) {
+  #app .editor-root .setting-row { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+  #app .editor-root .setting-row > span:first-child { padding-block: 0; }
+}
+html[data-form-label-layout='stacked'] #app .editor-root :is(.property-row, .setting-row) {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 4px;
+}
+html[data-form-label-layout='stacked'] #app .editor-root :is(.property-row, .setting-row) > span:first-child { padding-block: 0; }
+
+/* Search controls keep their adjacent filters and actions visible at narrow
+   widths. Lists and source editing regions retain their own scrolling. */
+#app .editor-root :is(.inspector-search-row, .dependency-editor, .input-map-toolbar, .asset-actions-row, .layer-toolbar, .metadata-row) {
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+/* The profiler's input/add pair must not inherit a wrapping flex row's
+   cross-axis stretch (62px at default scale, 75.5px at 1.5x). */
+html body #app .editor-root .production-panel .settings-card > label > div.annotation-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+}

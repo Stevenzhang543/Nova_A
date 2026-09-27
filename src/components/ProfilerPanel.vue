@@ -68,7 +68,7 @@
         <label><span>{{ t('profilerMode') }}</span><select v-model="profilerState.overheadMode"><option>Full</option><option>Low overhead</option><option>Off</option></select></label>
         <label><span>{{ t('overheadBudget') }} %</span><input v-model.number="settings.performance.profilerOverheadBudgetPercent" type="number" min="0" max="100" step=".1" @change="commit"></label>
         <label><span>{{ t('remotePlayer') }}</span><input v-model="profilerState.remotePeer" maxlength="160" placeholder="exported-player:port"></label>
-        <label><span>{{ t('annotation') }}</span><div><input v-model="annotationDraft" maxlength="500"><button @click="annotate">＋</button></div></label>
+        <label><span>{{ t('annotation') }}</span><div class="annotation-control"><input v-model="annotationDraft" maxlength="500"><button @click="annotate">＋</button></div></label>
         <p>{{ profilerState.markers.length }} markers · {{ profilerState.counters.length }} counters · {{ profilerState.annotations.length }} annotations · {{ profilerState.estimatedOverheadPercent.toFixed(2) }}% overhead</p>
         <p :class="{ danger: current.animationMs > settings.performance.animationBudgetMs }">{{ current.animationMs > settings.performance.animationBudgetMs ? t('animationBudgetExceeded') : t('animationWithinBudget') }}</p>
         <label><span>{{ t('audioTime') }}</span><output>{{ current.audioMs.toFixed(2) }} ms</output></label>

@@ -7,7 +7,7 @@
     </header>
     <div class="manage-body">
       <nav :aria-label="t('workspaceManage')">
-        <button v-for="item in sections" :key="item.id" :class="{ active: state.manageSection === item.id }" :aria-pressed="state.manageSection === item.id" @click="state.manageSection = item.id"><span aria-hidden="true">{{ item.icon }}</span><span><strong>{{ t(item.label) }} <i v-if="sectionDirty(item.id)">●</i></strong><small>{{ t(item.short) }}</small></span></button>
+        <button v-for="item in sections" :key="item.id" :class="{ active: state.manageSection === item.id }" :aria-pressed="state.manageSection === item.id" :aria-label="t(item.label)" :title="t(item.label)" @click="state.manageSection = item.id"><span aria-hidden="true"><EditorIcon :name="item.icon" /></span><span><strong>{{ t(item.label) }} <i v-if="sectionDirty(item.id)">●</i></strong><small>{{ t(item.short) }}</small></span></button>
       </nav>
       <main :key="state.manageSection">
         <CreatorLearningCenter v-if="state.manageSection === 'learn'" />
@@ -24,6 +24,7 @@
 
 <script setup lang="ts">
 import { computed, defineAsyncComponent } from 'vue'
+import EditorIcon, { type EditorIconName } from './EditorIcon.vue'
 import { t } from '../i18n'
 import { editorState as state, type ManageSection } from '../store/editor'
 import { projectScopeDirty } from '../runtime/projectTransactions'
@@ -40,14 +41,14 @@ const CreatorLearningCenter = defineAsyncComponent(/** 按需加载学习中心�
 const AutomationStudio = defineAsyncComponent(/** 按需加载自动化工作室。 */ () => import('./AutomationStudio.vue'))
 
 type TranslationKey = Parameters<typeof t>[0]
-const sections: ReadonlyArray<{ id: ManageSection; label: TranslationKey; description: TranslationKey; short: TranslationKey; icon: string }> = [
-  { id: 'learn', label: 'creatorLearning', description: 'creatorLearningHint', short: 'learnByBuilding', icon: '◉' },
-  { id: 'settings', label: 'projectSettings', description: 'manageSettingsHint', short: 'settings', icon: '⚙' },
-  { id: 'automation', label: 'automationStudio', description: 'automationStudioHint', short: 'safeEditorAutomation', icon: '✦' },
-  { id: 'packages', label: 'packages', description: 'managePackagesHint', short: 'pluginApiCompatibility', icon: '◇' },
-  { id: 'project', label: 'projectHealth', description: 'projectHealthHint', short: 'projectValidation', icon: '✓' },
-  { id: 'rendering', label: 'renderingStudio', description: 'manageRenderingHint', short: 'renderingQuality', icon: '◈' },
-  { id: 'build', label: 'buildPanel', description: 'manageBuildHint', short: 'buildReadiness', icon: '▶' }
+const sections: ReadonlyArray<{ id: ManageSection; label: TranslationKey; description: TranslationKey; short: TranslationKey; icon: EditorIconName }> = [
+  { id: 'learn', label: 'creatorLearning', description: 'creatorLearningHint', short: 'learnByBuilding', icon: 'learn' },
+  { id: 'settings', label: 'projectSettings', description: 'manageSettingsHint', short: 'settings', icon: 'settings' },
+  { id: 'automation', label: 'automationStudio', description: 'automationStudioHint', short: 'safeEditorAutomation', icon: 'tools' },
+  { id: 'packages', label: 'packages', description: 'managePackagesHint', short: 'pluginApiCompatibility', icon: 'package' },
+  { id: 'project', label: 'projectHealth', description: 'projectHealthHint', short: 'projectValidation', icon: 'check' },
+  { id: 'rendering', label: 'renderingStudio', description: 'manageRenderingHint', short: 'renderingQuality', icon: 'render' },
+  { id: 'build', label: 'buildPanel', description: 'manageBuildHint', short: 'buildReadiness', icon: 'build' }
 ]
 const active = computed(/** 选择当前管理栏目，未知栏目回退到首项。 */ () => sections.find(/* 比较 item.id 与 state.manageSection，返回严格相等的判断结果。 */ item => item.id === state.manageSection) ?? sections[0])
 /** 把栏目映射至项目修改范围，学习与自动化栏目不单独标记脏状态。 */ function sectionDirty(id:ManageSection){return id==='learn'||id==='automation'?false:id==='packages'?projectScopeDirty('packages'):id==='build'?projectScopeDirty('build'):id==='project'?projectScopeDirty('project'):projectScopeDirty('settings')}

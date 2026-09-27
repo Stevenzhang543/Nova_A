@@ -52,8 +52,31 @@ Nova_A preserves third-party copyright and license terms. The principal
 redistributed runtime components are Vue (MIT), Tauri and its JavaScript/Rust
 components (Apache-2.0 OR MIT), and the Rust crates and JavaScript packages
 identified by the pinned `Cargo.lock` and `pnpm-lock.yaml` files. Fontsource
-package code is MIT while the font binaries retain OFL-1.1. The complete
-version and license inventory is recorded in the release-evidence SBOM at
-`build/software-bill-of-materials.spdx.json`; authoritative dependency
-manifests and upstream license references are included in the source archive.
+package code is MIT while the font binaries retain OFL-1.1. Authoritative dependency manifests and upstream license references are included in the source archive. Historical SBOMs apply only to their recorded release; see the current evidence manifest for included reports.
 Nothing in this MIT grant replaces a third party's license for its component.
+
+
+## Godot editor icon adaptations (26.32)
+
+Selected SVG geometry in `src/components/EditorIcon.vue` is adapted from Godot Engine. Original source paths, hashes and modifications are recorded in `public/third-party/godot-editor-icons.json`. The following notice is also distributed as `third-party/godot-editor-icons-LICENSE.txt` in the web/native assets.
+
+Copyright (c) 2014-present Godot Engine contributors (see AUTHORS.md).
+Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

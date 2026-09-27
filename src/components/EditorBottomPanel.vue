@@ -6,13 +6,13 @@
       <!-- 标签与固定操作分区，长译文只滚动标签，不挤压展开、固定和关闭按钮。 -->
       <select v-model="estate.bottomPanelTab" class="compact-tab-select" :aria-label="t('tools')" @change="estate.bottomPanelOpen = true"><option v-for="tab in tabs" :key="tab.id" :value="tab.id">{{ t(tab.label) }}</option></select>
       <div class="panel-tab-strip">
-      <button v-for="tab in tabs" :key="tab.id" class="panel-tab" :class="{ active: estate.bottomPanelTab === tab.id }" draggable="true" :aria-pressed="estate.bottomPanelTab === tab.id" @dragstart="draggedTab = tab.id" @dragover.prevent @drop="dropTab(tab.id)" @click="openTab(tab.id)">{{ t(tab.label) }}<i v-if="tabDirty(tab.id)">●</i></button>
+      <button v-for="tab in tabs" :key="tab.id" class="panel-tab" :class="{ active: estate.bottomPanelTab === tab.id }" draggable="true" :aria-pressed="estate.bottomPanelTab === tab.id" @dragstart="draggedTab = tab.id" @dragover.prevent @drop="dropTab(tab.id)" @click="openTab(tab.id)" :title="t(tab.label)"><EditorIcon :name="tab.icon" /><span class="tab-label">{{ t(tab.label) }}</span><i v-if="tabDirty(tab.id)">●</i></button>
       </div>
       <div class="panel-controls">
       <PanelMaximizeButton v-if="estate.bottomPanelOpen" panel="bottom" />
-      <button :class="{ active: estate.bottomPanelPinned }" :aria-pressed="estate.bottomPanelPinned" :title="t(estate.bottomPanelPinned ? 'unpinPanel' : 'pinPanel')" @click="estate.bottomPanelPinned = !estate.bottomPanelPinned">⌖</button>
-      <button v-if="estate.bottomPanelTab === 'console' && estate.bottomPanelOpen" :title="t('clearConsole')" @click="estate.logs.splice(0)">⌫</button>
-      <button :title="t(estate.bottomPanelOpen ? 'collapsePanel' : 'expandPanel')" @click="estate.bottomPanelOpen = !estate.bottomPanelOpen">{{ estate.bottomPanelOpen ? '⌄' : '⌃' }}</button>
+      <button :class="{ active: estate.bottomPanelPinned }" :aria-pressed="estate.bottomPanelPinned" :aria-label="t(estate.bottomPanelPinned ? 'unpinPanel' : 'pinPanel')" :title="t(estate.bottomPanelPinned ? 'unpinPanel' : 'pinPanel')" @click="estate.bottomPanelPinned = !estate.bottomPanelPinned"><EditorIcon :name="estate.bottomPanelPinned ? 'unpin' : 'pin'" /></button>
+      <button v-if="estate.bottomPanelTab === 'console' && estate.bottomPanelOpen" :aria-label="t('clearConsole')" :title="t('clearConsole')" @click="estate.logs.splice(0)"><EditorIcon name="clear" /></button>
+      <button :aria-label="t(estate.bottomPanelOpen ? 'collapsePanel' : 'expandPanel')" :aria-expanded="estate.bottomPanelOpen" :title="t(estate.bottomPanelOpen ? 'collapsePanel' : 'expandPanel')" @click="estate.bottomPanelOpen = !estate.bottomPanelOpen"><EditorIcon :name="estate.bottomPanelOpen ? 'down' : 'up'" /></button>
       </div>
     </header>
 
@@ -24,30 +24,32 @@
             v-for="folder in visibleFolders"
             :key="folder"
             :title="folder"
+            :aria-label="folder"
+            :style="{ paddingInlineStart: `${7 + Math.min(4, Math.max(0, folder.split('/').filter(Boolean).length - 1)) * 10}px` }"
             :class="{ active: assets.currentFolder === folder }"
             @click="assets.currentFolder = folder"
             @dragover.prevent
             @drop="dropOnFolder($event, folder)"
-          ><span>▸</span>{{ folder }}</button>
+          ><EditorIcon name="forward" /><span class="folder-label">{{ folder.split('/').filter(Boolean).at(-1) ?? folder }}</span></button>
         </aside>
 
         <section class="asset-workspace">
           <header class="asset-toolbar">
             <div class="asset-actions-row">
-              <button class="primary" :disabled="assets.importing || assetBatch.active" @click="assetInput?.click()">＋ {{ t('importAssets') }}</button>
+              <button class="primary" :disabled="assets.importing || assetBatch.active" @click="assetInput?.click()"><EditorIcon name="add" /> {{ t('importAssets') }}</button>
               <button v-if="selectedAsset" class="asset-detail-toggle" type="button" @click="assetDetailMode = true; assetFullPage = true">{{ assetCopy('previewDetails') }}</button>
-              <button @click="createScriptAsset">+ {{ t('newScript') }}</button>
-              <button @click="createVisualGraphAsset">+ {{ t('visualGraph') }}</button>
-              <button :disabled="!state.selectedEntityIds.length" @click="createSceneAssetFromSelection">+ {{ t('createSceneAsset') }}</button>
-              <button @click="creatingFolder = !creatingFolder">{{ t('newFolder') }}</button>
-              <details ref="assetOverflow" class="asset-overflow"><summary :title="t('moreActions')">•••</summary><section class="asset-overflow-menu"><strong>{{ t('newSharedResource') }}</strong><button v-for="kind in resourceKinds" :key="kind" type="button" :aria-label="`+ ${t(`resource_${kind}`)}`" @click="createSharedResource(kind); closeAssetOverflow()">+ {{ t(`resource_${kind}`) }}</button><button type="button" @click="exportFolder(); closeAssetOverflow()">{{ t('exportProjectFolder') }}</button><button type="button" :disabled="assetBatch.active" @click="batchReimportVisible(); closeAssetOverflow()">{{ t('batchReimport') }}</button><button type="button" :disabled="!selectedAsset" @click="bulkApplyVisible(); closeAssetOverflow()">{{ t('bulkApplyVisible') }}</button><button v-for="item in pluginAssetContributions" :key="`${item.pluginId}:${item.kind}:${item.id}`" type="button" :title="`${item.pluginName} · ${item.description ?? ''}`" @click="pluginRuntime.invokeContribution(item.kind,item.id,item.pluginId); closeAssetOverflow()">{{ item.label }}</button></section></details>
+              <button @click="createScriptAsset"><EditorIcon name="add" /> {{ t('newScript') }}</button>
+              <button @click="createVisualGraphAsset"><EditorIcon name="add" /> {{ t('visualGraph') }}</button>
+              <button :disabled="!state.selectedEntityIds.length" @click="createSceneAssetFromSelection"><EditorIcon name="add" /> {{ t('createSceneAsset') }}</button>
+              <button @click="creatingFolder = !creatingFolder"><EditorIcon name="folder" /> {{ t('newFolder') }}</button>
+              <details ref="assetOverflow" class="asset-overflow"><summary :title="t('moreActions')" :aria-label="t('moreActions')"><EditorIcon name="more" /></summary><section class="asset-overflow-menu"><strong>{{ t('newSharedResource') }}</strong><button v-for="kind in resourceKinds" :key="kind" type="button" :aria-label="`+ ${t(`resource_${kind}`)}`" @click="createSharedResource(kind); closeAssetOverflow()">+ {{ t(`resource_${kind}`) }}</button><button type="button" @click="exportFolder(); closeAssetOverflow()">{{ t('exportProjectFolder') }}</button><button type="button" :disabled="assetBatch.active" @click="batchReimportVisible(); closeAssetOverflow()">{{ t('batchReimport') }}</button><button type="button" :disabled="!selectedAsset" @click="bulkApplyVisible(); closeAssetOverflow()">{{ t('bulkApplyVisible') }}</button><button v-for="item in pluginAssetContributions" :key="`${item.pluginId}:${item.kind}:${item.id}`" type="button" :title="`${item.pluginName} · ${item.description ?? ''}`" @click="pluginRuntime.invokeContribution(item.kind,item.id,item.pluginId); closeAssetOverflow()">{{ item.label }}</button></section></details>
               <input v-if="creatingFolder" v-model="newFolderName" class="folder-input" :placeholder="t('folderName')" @keydown.enter="createFolder" @keydown.escape="creatingFolder = false">
               <span class="path" :title="assets.currentFolder">{{ assets.currentFolder }}</span>
-              <input v-model="assets.search" type="search" :placeholder="t('searchAssets')">
-              <button :class="{ active: assets.viewMode === 'grid' }" :title="t('gridView')" @click="assets.viewMode = 'grid'">▦</button><button :class="{ active: assets.viewMode === 'list' }" :title="t('listView')" @click="assets.viewMode = 'list'">☷</button>
+              <input v-model="assets.search" :aria-label="t('searchAssets')" type="search" :placeholder="t('searchAssets')">
+              <button :class="{ active: assets.viewMode === 'grid' }" :aria-label="t('gridView')" :aria-pressed="assets.viewMode === 'grid'" :title="t('gridView')" @click="assets.viewMode = 'grid'"><EditorIcon name="grid" /></button><button :class="{ active: assets.viewMode === 'list' }" :aria-label="t('listView')" :aria-pressed="assets.viewMode === 'list'" :title="t('listView')" @click="assets.viewMode = 'list'"><EditorIcon name="list" /></button>
             </div>
             <div class="filter-menu" :aria-label="t('assetType')">
-              <button :class="{ active: assets.typeFilter !== 'all' || assets.favoritesOnly }" @click="filterMenuOpen = !filterMenuOpen">⌕ {{ activeFilterLabel }} ▾</button>
+              <button :class="{ active: assets.typeFilter !== 'all' || assets.favoritesOnly }" @click="filterMenuOpen = !filterMenuOpen"><EditorIcon name="filter" /> {{ activeFilterLabel }} <EditorIcon name="down" /></button>
               <section v-if="filterMenuOpen" class="filter-popover">
                 <input v-model="filterQuery" type="search" :placeholder="t('searchFilters')">
                 <button v-for="filter in filteredTypeFilters" :key="filter.type" :class="{ active: assets.typeFilter === filter.type }" @click="assets.typeFilter = filter.type; filterMenuOpen = false">{{ t(filter.label) }}</button>
@@ -323,6 +325,7 @@
 import NumericExpressionInput from './NumericExpressionInput.vue'
 import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import PanelMaximizeButton from './PanelMaximizeButton.vue'
+import EditorIcon from './EditorIcon.vue'
 import PanelResizeHandle from './PanelResizeHandle.vue'
 import AssetImagePreview from './AssetImagePreview.vue'
 import { emptyAssetBatch, importAssetBatch, reimportAssetBatch, reimportCandidates } from '../assets/assetBatch'
@@ -384,13 +387,13 @@ const TilemapPanel = defineAsyncComponent(/* 调用 import('./TilemapPanel.vue')
 const WorldToolsPanel = defineAsyncComponent(/* 调用 import('./WorldToolsPanel.vue') 并返回调用结果。 */ () => import('./WorldToolsPanel.vue'))
 
 const permanentTabs = [
-  { id: 'assets' as const, label: 'assets' as const }, { id: 'console' as const, label: 'console' as const },
-  { id: 'animation' as const, label: 'animation' as const }, { id: 'audio' as const, label: 'audioMixer' as const }, { id: 'worldProduction' as const, label: 'worldStudio' as const }, { id: 'networkStudio' as const, label: 'networkStudio' as const }, { id: 'ecosystem' as const, label: 'ecosystemStudio' as const }, { id: 'profiler' as const, label: 'profiler' as const }
+  { id: 'assets' as const, icon: 'assets' as const, label: 'assets' as const }, { id: 'console' as const, icon: 'command' as const, label: 'console' as const },
+  { id: 'animation' as const, icon: 'animation' as const, label: 'animation' as const }, { id: 'audio' as const, icon: 'audio' as const, label: 'audioMixer' as const }, { id: 'worldProduction' as const, icon: 'world' as const, label: 'worldStudio' as const }, { id: 'networkStudio' as const, icon: 'network' as const, label: 'networkStudio' as const }, { id: 'ecosystem' as const, icon: 'ecosystem' as const, label: 'ecosystemStudio' as const }, { id: 'profiler' as const, icon: 'profiler' as const, label: 'profiler' as const }
 ]
 const pluginAssetContributions = computed(/* 调用 pluginState.contributions.filter(item => item.kind === 'importers' || item.kind === 'assetEditors') 并返回调用结果。 */ () => pluginState.contributions.filter(/* 先计算 item.kind === 'importers'；仅当其为假值时求右侧 item.kind === 'assetEditors'，返回短路求值结果。 */ item => item.kind === 'importers' || item.kind === 'assetEditors'))
 const tabs = computed(/** 根据是否选中瓦片实体追加上下文标签，再按保存的标签顺序排列。 */ () => {
   const selected = state.world.entities.find(/* 比较 entity.id 与 state.selectedEntityId，返回严格相等的判断结果。 */ entity => entity.id === state.selectedEntityId)
-  const contextual = selected?.hasComponent('TileMap2D') ? [{ id: 'tilemap' as const, label: 'tilemap' as const }] : []
+  const contextual = selected?.hasComponent('TileMap2D') ? [{ id: 'tilemap' as const, icon: 'grid' as const, label: 'tilemap' as const }] : []
   const available = [...permanentTabs, ...contextual]
   return [...available].sort(/* 计算表达式 workspaceState.bottomTabOrder.indexOf(a.id) - workspaceState.bottomTabOrder.indexOf(b.id) 并返回结果，沿用操作数的原有类型规则。 */ (a, b) => workspaceState.bottomTabOrder.indexOf(a.id) - workspaceState.bottomTabOrder.indexOf(b.id))
 })
@@ -411,7 +414,7 @@ const pivotPresets = [
   { id: 'left', label: 'pivotLeft', value: { x: 0, y: .5 } }, { id: 'center', label: 'center', value: { x: .5, y: .5 } }, { id: 'right', label: 'pivotRight', value: { x: 1, y: .5 } },
   { id: 'bottom-left', label: 'pivotBottomLeft', value: { x: 0, y: 1 } }, { id: 'bottom', label: 'pivotBottom', value: { x: .5, y: 1 } }, { id: 'bottom-right', label: 'pivotBottomRight', value: { x: 1, y: 1 } }
 ] as const
-const panelStyle = computed(/** 面板展开时按像素和视口上限设置高度，收起时保留标签栏高度。 */ () => ({ height: estate.bottomPanelOpen ? `min(${estate.bottomPanelHeight}px, 42vh)` : '34px' }))
+const panelStyle = computed(/** Collapsed docks size to their actual translated/scaled controls. */ () => ({ height: estate.bottomPanelOpen ? `min(${estate.bottomPanelHeight}px, 42vh)` : 'auto' }))
 const assetGrid = ref<HTMLElement | null>(null)
 const assetScrollTop = ref(0)
 const assetViewportHeight = ref(320)
@@ -762,15 +765,17 @@ watch(/* 返回 estate.bottomPanelOpen 的当前值。 */ () => estate.bottomPan
 .bottom-panel { position: relative; flex: 0 0 auto; min-height: 34px; display: flex; flex-direction: column; border-top: 1px solid var(--border-subtle); background: var(--surface-1); container-type: inline-size; }
 .resize-handle { position: absolute; inset: 0 0 auto; height: 8px; cursor: ns-resize; z-index: 5; }
 .panel-tabs { min-height: 34px; flex: 0 0 auto; padding: 3px 5px; display: flex; align-items: center; flex-wrap: wrap; gap: 2px; overflow: hidden; border-bottom: 1px solid var(--border-subtle); }
-.panel-tabs span { min-width: 4px; flex: 1; }.panel-tabs button { height: 29px; padding: 0 clamp(7px, .9vw, 12px); flex: 0 1 auto; border: 0; border-radius: 7px; color: var(--text-muted); background: transparent; font-size: clamp(10px, .82vw, 12px); white-space: nowrap; word-break: keep-all; writing-mode: horizontal-tb; }.panel-tabs button:hover, .panel-tabs button.active { color: var(--text-primary); background: var(--surface-hover); }.panel-tabs button.active { color: var(--accent); }
-/* 按底栏实际宽度切换标签选择器；大文字缩放同样触发紧凑布局。 */
+.panel-tabs .tab-label { min-width: 0; }.panel-tabs button { height: 29px; padding: 0 clamp(7px, .9vw, 12px); flex: 0 1 auto; border: 0; border-radius: 7px; color: var(--text-muted); background: transparent; font-size: clamp(10px, .82vw, 12px); white-space: nowrap; word-break: keep-all; writing-mode: horizontal-tb; }.panel-tabs button:hover, .panel-tabs button.active { color: var(--text-primary); background: var(--surface-hover); }.panel-tabs button.active { color: var(--accent); }
+/* Keep recognizable dock tabs available; only narrow docks use the compact selector. */
 .panel-tabs { flex-wrap: nowrap; overflow: visible; }
-.panel-tab-strip { display: flex; flex: 1 1 auto; min-width: 0; overflow-x: auto; align-items: center; gap: 2px; }
-.panel-tab-strip .panel-tab { flex: 0 0 auto; height: auto; min-height: var(--control-default); font-size: var(--type-caption); }
-.panel-controls { display: flex; flex: 0 0 auto; gap: 2px; align-items: center; }
-.panel-controls > button { flex: 0 0 auto; min-width: var(--control-default); height: auto; min-height: var(--control-default); }
+.panel-tab-strip { display: flex; flex: 1 1 auto; min-width: 0; overflow-x: auto; align-items: center; gap: 2px; scrollbar-width: thin; scroll-padding-inline: 6px; }
+.panel-tab-strip .panel-tab { flex: 0 0 auto; height: auto; min-height: var(--control-default); font-size: var(--type-caption); display:inline-flex; align-items:center; gap:6px; border-radius:3px 3px 0 0; }
+.panel-tab-strip .panel-tab.active { box-shadow:inset 0 -2px var(--accent); background:var(--accent-soft); }
+.panel-tab-strip .panel-tab i { width:5px; height:5px; border-radius:50%; background:var(--warning); font-size:0; }
+.panel-controls { padding-left:4px; border-left:1px solid var(--border-subtle); display: flex; flex: 0 0 auto; gap: 2px; align-items: center; }
+.panel-controls > button { flex: 0 0 auto; min-width: var(--control-default); padding:0; display:grid; place-items:center; border-radius:4px; height: auto; min-height: var(--control-default); }
 .compact-tab-select { display:none; flex:1 1 auto; width:0; min-width:0; min-height:var(--control-default); height:auto; padding-block:4px; }
-@container (max-width: 76em) { .panel-tab-strip { display:none; } .compact-tab-select { display:block; } }
+@container (max-width: 28em) { .panel-tab-strip { display:none; } .compact-tab-select { display:block; } }
 .panel-content { flex: 1; min-width: 0; min-height: 0; overflow: hidden; }.asset-browser { height: 100%; min-height: 120px; display: grid; grid-template-columns: minmax(145px,18%) minmax(180px,1fr); overflow: hidden; }.asset-browser.inspecting { grid-template-columns: minmax(145px,18%) minmax(160px,1fr) minmax(205px,25%); }.folder-tree, .asset-inspector { min-height: 0; padding: 9px; overflow: auto; background: var(--surface-2); }.folder-tree { border-right: 1px solid var(--border-subtle); }.folder-tree strong { display: block; padding: 3px 7px 8px; color: var(--text-muted); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }.folder-tree button { width: 100%; min-width:0; min-height: 29px; padding: 0 7px; display: flex; align-items: center; gap: 5px; overflow:hidden; border: 0; border-radius: 7px; color: var(--text-muted); background: transparent; font-size: 12px; text-align: left; text-overflow:ellipsis; white-space:nowrap; }.folder-tree button span{flex:0 0 auto}.folder-tree button.active, .folder-tree button:hover { color: var(--accent); background: var(--accent-soft); }
 .asset-workspace { position: relative; min-width: 0; overflow: hidden; display: flex; flex-direction: column; }.asset-toolbar { min-height: 86px; padding: 6px 8px; display: grid; grid-template-columns:minmax(0,1fr) auto; gap: 5px; overflow: visible; border-bottom: 1px solid var(--border-subtle); }.asset-actions-row, .asset-filters { min-width: 0; display: flex; align-items: center; flex-wrap: wrap; gap: 5px; }.asset-actions-row{grid-column:1/-1}.asset-toolbar button { height: 31px; padding: 0 8px; flex: 0 0 auto; border: 1px solid var(--border-subtle); border-radius: 7px; color: var(--text-secondary); background: var(--surface-2); font-size: 11px; white-space: nowrap; word-break: keep-all; writing-mode: horizontal-tb; }.asset-toolbar button.primary { color: var(--accent-contrast); border-color: var(--accent); background: var(--accent); }.asset-toolbar .path { min-width: 45px; flex: 1 1 80px; overflow: hidden; color: var(--text-muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }.asset-toolbar input { width: 140px; min-width: 100px; min-height: 31px; flex: 0 1 140px; font-size: 11px; }.asset-toolbar .folder-input { width: 105px; }.asset-filters button { height: 25px; padding-inline: 8px; border-radius: 999px; font-size: 11px; }.asset-filters button.active { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 65%, var(--border-subtle)); background: var(--accent-soft); }.asset-diagnostics{display:flex;align-items:center;gap:4px}.asset-diagnostics button{height:25px;font-size:11px}.asset-diagnostics span{color:var(--danger)}.asset-diagnostics .atlas-error{max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .import-queue{position:absolute;z-index:6;top:87px;right:8px;width:min(360px,calc(100% - 16px));padding:6px;display:grid;gap:4px;border:1px solid var(--border-strong);border-radius:9px;background:var(--surface-1);box-shadow:var(--shadow-md)}.import-queue article{min-width:0;display:grid;grid-template-columns:minmax(80px,1fr) 90px auto;align-items:center;gap:6px}.import-queue article>span{min-width:0;display:grid}.import-queue strong,.import-queue small,.import-queue em{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.import-queue small,.import-queue em{color:var(--text-muted);font-size:11px}.import-queue progress{width:100%;accent-color:var(--accent)}.import-queue button{min-height:25px}
@@ -841,4 +846,14 @@ watch(/* 返回 estate.bottomPanelOpen 的当前值。 */ () => estate.bottomPan
 .asset-browser.full-page-details>.asset-inspector{display:block;position:static;width:auto;max-width:none}
 .asset-browser.full-page-details .asset-detail-back{display:block;min-height:32px}
 .asset-browser.full-page-details .asset-inspector header strong{white-space:normal;overflow-wrap:anywhere}
+/* Toolbar actions remain intrinsically sized; input and path regions may shrink. */
+.asset-actions-row > button, .filter-menu > button { display:inline-flex; align-items:center; justify-content:center; gap:5px; max-width:100%; }
+.asset-actions-row > button { min-width:0; height:auto; min-height:31px; white-space:normal; }
+.asset-actions-row > input { min-width:0; max-width:min(100%, 17rem); flex:0 1 12rem; }
+.asset-actions-row > .folder-input { flex-basis:10rem; }
+.asset-overflow > summary { display:grid; place-items:center; min-width:32px; }
+/* A folder row is a hierarchy label, not a paragraph. Show its leaf name and
+   allow deliberate horizontal scrolling rather than wrapping paths into letters. */
+.folder-tree > button { width:max-content; min-width:100%; max-width:none; overflow:visible; white-space:nowrap; }
+.folder-tree > button > .folder-label { min-width:10ch; flex:0 0 auto; overflow:visible; white-space:nowrap; overflow-wrap:normal; word-break:normal; }
 </style>
