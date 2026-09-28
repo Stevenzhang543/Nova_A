@@ -1,32 +1,29 @@
 <!-- 资源包管理面板：浏览、启用和检查项目扩展包。 -->
 <template>
   <section class="package-manager" data-doc="manual/package-security">
-    <header class="package-header">
-      <div><strong>{{ t('packageManager') }}</strong><small>{{ t('packageManagerHint') }}</small></div>
+    <UiPanelHeader class="package-header" :title="t('packageManager')" :description="t('packageManagerHint')">
+      <template #actions>
       <label class="offline"><input v-model="packages.offlineMode" type="checkbox">{{ t('offlineMode') }}</label>
-      <button :class="{ active: registryOpen }" @click="pluginToolsOpen = false; registryOpen = !registryOpen">{{ t('browsePackages') }}</button>
-      <button :class="{ active: pluginToolsOpen }" @click="pluginToolsOpen = !pluginToolsOpen; registryOpen = false">{{ t('pluginApi') }}</button>
-      <button @click="manifestInput?.click()">+ {{ t('importPackageManifest') }}</button>
+      <UiButton icon="search" :label="t('browsePackages')" :aria-pressed="registryOpen" @click="pluginToolsOpen = false; registryOpen = !registryOpen" />
+      <UiButton icon="settings" :label="t('pluginApi')" :aria-pressed="pluginToolsOpen" @click="pluginToolsOpen = !pluginToolsOpen; registryOpen = false" />
+      <UiButton icon="upload" :label="t('importPackageManifest')" @click="manifestInput?.click()" />
       <input ref="manifestInput" hidden type="file" accept=".json,application/json" @change="importManifest">
-    </header>
+      </template>
+    </UiPanelHeader>
     <PluginSettings v-if="pluginToolsOpen" class="plugin-manager-tools" />
-    <nav v-if="!registryOpen && !pluginToolsOpen" class="package-tabs" role="tablist">
-      <button v-for="tab in statuses" :key="tab" :class="{ active: packages.selectedStatus === tab }" @click="packages.selectedStatus = tab">
-        {{ t(`packageStatus_${tab}`) }} <span>{{ count(tab) }}</span>
-      </button>
-    </nav>
+    <UiTabs v-if="!registryOpen && !pluginToolsOpen" :model-value="packages.selectedStatus" :items="statusTabs" :aria-label="t('packageManager')" @change="selectStatus" />
     <div v-if="registryOpen && !pluginToolsOpen" class="registry-layout">
       <section class="registry-list">
         <header><select v-model="packages.selectedRegistry" :aria-label="t('registry')"><option v-for="registry in packages.registries" :key="registry.id" :value="registry.id">{{ registry.name }}</option></select><input v-model="packages.registryQuery" type="search" :placeholder="t('searchRegistry')"></header>
         <article v-for="manifest in catalog" :key="`${manifest.id}:${manifest.version}`" :class="{ selected: selectedRegistryId === manifest.id }" tabindex="0" @keydown.enter.self="selectedRegistryId = manifest.id" @keydown.space.self.prevent="selectedRegistryId = manifest.id" @click="selectedRegistryId = manifest.id">
-          <div class="package-mark">{{ manifest.pluginApi === 2 ? 'P' : 'N' }}</div><div><strong>{{ manifest.name }}</strong><small>{{ manifest.id }} · {{ manifest.version }}</small><p>{{ manifest.description }}</p></div><span v-if="manifest.publisherVerified" class="verified">✓ {{ t('verifiedPublisher') }}</span>
+          <div class="package-mark">{{ manifest.pluginApi === 2 ? 'P' : 'N' }}</div><div><strong>{{ manifest.name }}</strong><small>{{ manifest.id }} · {{ manifest.version }}</small><p>{{ manifest.description }}</p></div><span v-if="manifest.publisherVerified" class="verified"><EditorIcon name="check" /> {{ t('verifiedPublisher') }}</span>
         </article>
         <p v-if="!catalog.length" class="empty">{{ t('noResults') }}</p>
       </section>
       <aside v-if="selectedRegistry" class="registry-inspector">
         <header><div><strong>{{ selectedRegistry.name }}</strong><small>{{ selectedRegistry.id }}</small></div><span>{{ selectedRegistry.rating ?? '—' }} / 5</span></header>
         <p>{{ selectedRegistry.description }}</p>
-        <dl><div><dt>{{ t('publisher') }}</dt><dd>{{ selectedRegistry.publisher }} <b v-if="selectedRegistry.publisherVerified">✓</b></dd></div><div><dt>{{ t('engineVersion') }}</dt><dd>{{ selectedRegistry.engine }}</dd></div><div><dt>{{ t('packageType') }}</dt><dd>{{ selectedRegistry.entryPointType }}</dd></div><div><dt>{{ t('pluginApiCompatibility') }}</dt><dd>{{ installReviewRegistry.pluginApiCompatibility }} · {{ installReviewRegistry.certification }}</dd></div><div><dt>{{ t('license') }}</dt><dd>{{ installReviewRegistry.license }}</dd></div><div><dt>{{ t('provenance') }}</dt><dd>{{ installReviewRegistry.provenance }}</dd></div><div><dt>SHA-256</dt><dd>{{ selectedRegistry.sha256 }}</dd></div></dl>
+        <dl><div><dt>{{ t('publisher') }}</dt><dd>{{ selectedRegistry.publisher }} <EditorIcon v-if="selectedRegistry.publisherVerified" name="check" /></dd></div><div><dt>{{ t('engineVersion') }}</dt><dd>{{ selectedRegistry.engine }}</dd></div><div><dt>{{ t('packageType') }}</dt><dd>{{ selectedRegistry.entryPointType }}</dd></div><div><dt>{{ t('pluginApiCompatibility') }}</dt><dd>{{ installReviewRegistry.pluginApiCompatibility }} · {{ installReviewRegistry.certification }}</dd></div><div><dt>{{ t('license') }}</dt><dd>{{ installReviewRegistry.license }}</dd></div><div><dt>{{ t('provenance') }}</dt><dd>{{ installReviewRegistry.provenance }}</dd></div><div><dt>SHA-256</dt><dd>{{ selectedRegistry.sha256 }}</dd></div></dl>
         <p :class="reviewRegistry.status === 'verified' ? 'success' : 'problem'">{{ reviewRegistry.status }}<template v-if="reviewRegistry.blocking.length"> · {{ reviewRegistry.blocking.join(' ') }}</template><template v-if="reviewRegistry.warnings.length"> · {{ reviewRegistry.warnings.join(' ') }}</template> <button v-if="reviewRegistry.blocking.length || reviewRegistry.warnings.length" @click="openBundledManual('package-sdk')">{{ t('documentation') }}</button></p>
         <section><strong>{{ t('permissionReview') }}</strong><div class="chips"><span v-for="permission in selectedRegistry.permissions" :key="permission">{{ permission }}</span><p v-if="!selectedRegistry.permissions.length">{{ t('none') }}</p></div></section>
         <section class="registry-links"><strong>{{ t('security') }} / {{ t('documentation') }}</strong><button :disabled="!selectedRegistry.securityUrl" @click="openPackageUrl(selectedRegistry.securityUrl)">{{ t('security') }}</button><button :disabled="!selectedRegistry.documentationUrl" @click="openPackageUrl(selectedRegistry.documentationUrl)">{{ t('documentation') }}</button></section>
@@ -99,9 +96,12 @@ import { setPackageEnabled, approvePackageUpdatePermissions, installPackageManif
 import { preparePackagePluginManifest, pluginRuntime, pluginState as plugins, setPluginSafeMode } from '../runtime/plugins'
 import { completeTask, failTask, startTask } from '../runtime/editorFeedback'
 import { openBundledManual } from '../runtime/openManual'
+import EditorIcon from './EditorIcon.vue'
 import PluginSettings from './PluginSettings.vue'
 
 const statuses = ['installed', 'project', 'updates', 'incompatible', 'disabled'] as const
+const statusTabs = computed(() => statuses.map(id => ({ id, label: `${t(`packageStatus_${id}`)} (${count(id)})` })))
+function selectStatus(id: string): void { if (statuses.includes(id as typeof statuses[number])) packages.selectedStatus = id as typeof statuses[number] }
 const selectedId = ref(''), manifestInput = ref<HTMLInputElement | null>(null)
 const registryOpen = ref(false), selectedRegistryId = ref('')
 const pluginToolsOpen = ref(false)
@@ -200,23 +200,32 @@ const visiblePackages = computed(/* 调用 packages.installed.filter(item => mat
 </script>
 
 <style scoped>
-.plugin-manager-tools{min-height:0;flex:1;padding:12px;overflow:auto}
-.package-manager{height:100%;min-width:0;display:flex;flex-direction:column;overflow:hidden}.package-header{min-height:48px;padding:7px 10px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border-subtle)}.package-header>div{min-width:0;flex:1;display:grid}.package-header strong{font-size:12px}.package-header small{overflow:hidden;color:var(--text-muted);font-size:11px;text-overflow:ellipsis;white-space:nowrap}.package-header button{height:31px;padding:0 10px;flex:0 0 auto}.offline{display:flex;align-items:center;gap:5px;color:var(--text-muted);white-space:nowrap}.package-tabs{min-height:36px;padding:4px 8px 0;display:flex;gap:3px;overflow-x:auto;border-bottom:1px solid var(--border-subtle);scrollbar-width:thin}.package-tabs button{min-width:max-content;padding:0 10px;border:0;border-bottom:2px solid transparent;background:transparent;color:var(--text-muted)}.package-tabs button.active{border-bottom-color:var(--accent);color:var(--accent)}.package-tabs span{margin-left:4px;color:var(--text-muted)}.package-layout{min-height:0;flex:1;display:grid;grid-template-columns:minmax(300px,1fr) minmax(260px,32%)}.package-list,.package-inspector{min-height:0;overflow:auto;scrollbar-gutter:stable}.package-list{padding:8px}.package-list article{min-width:0;min-height:53px;padding:7px;display:grid;grid-template-columns:38px minmax(0,1fr) auto auto;align-items:center;gap:8px;border:1px solid transparent;border-radius:9px}.package-list article:hover,.package-list article.selected{border-color:var(--border-strong);background:var(--surface-2)}.package-mark{width:34px;height:34px;display:grid;place-items:center;border-radius:8px;background:var(--accent-soft);color:var(--accent);font-weight:750}.package-name{min-width:0;display:grid}.package-name strong,.package-name small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.package-name strong{font-size:11px}.package-name small{color:var(--text-muted);font-size:11px}.source{padding:3px 6px;border-radius:999px;background:var(--surface-3);color:var(--text-muted);font-size:11px}.package-list label{display:flex;align-items:center;gap:4px;white-space:nowrap}.package-inspector{padding:12px;border-left:1px solid var(--border-subtle);background:var(--surface-2)}.package-title{display:flex;justify-content:space-between;gap:8px}.package-title span{color:var(--accent)}.package-inspector>p,.package-inspector section p{color:var(--text-muted);line-height:1.45}.package-inspector section{margin-top:12px;padding-top:10px;border-top:1px solid var(--border-subtle)}.package-inspector section>strong{font-size:11px;text-transform:uppercase;letter-spacing:.06em}.package-inspector dl{margin:10px 0 0}.package-inspector dl div{min-width:0;padding:5px 0;display:grid;grid-template-columns:95px minmax(0,1fr);gap:8px;border-bottom:1px solid var(--border-subtle)}.package-inspector dt{color:var(--text-muted)}.package-inspector dd{margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.package-inspector ul{padding-left:17px}.package-inspector li{margin:5px 0}.package-inspector li span{float:right;color:var(--text-muted)}.problem{color:var(--danger)!important}.success{color:var(--success)!important}.chips{margin-top:7px;display:flex;flex-wrap:wrap;gap:4px}.chips span{padding:3px 6px;border-radius:999px;background:var(--surface-3);color:var(--text-muted);font-size:11px}.danger{width:100%;min-height:32px;margin-top:12px;color:var(--danger)}.safety label{margin-top:12px;display:flex;align-items:center;gap:6px}.empty{padding:25px;color:var(--text-muted);text-align:center}@media(max-width:800px){.package-layout{grid-template-columns:1fr}.package-inspector{position:absolute;right:0;bottom:0;width:min(320px,75vw);height:calc(100% - 84px);box-shadow:var(--shadow-lg)}.package-header small{display:none}}
-.primary-action{width:100%;min-height:30px;color:var(--accent);border-color:var(--accent);background:var(--accent-soft)}
-.registry-layout{min-height:0;flex:1;display:grid;grid-template-columns:minmax(300px,1fr) minmax(260px,34%);overflow:hidden}.registry-list,.registry-inspector{min-height:0;overflow:auto;scrollbar-gutter:stable}.registry-list{padding:8px}.registry-list>header{padding-bottom:7px;display:grid;grid-template-columns:minmax(130px,220px) minmax(140px,1fr);gap:6px}.registry-list>header>*{min-width:0}.registry-list>article{min-width:0;padding:9px;display:grid;grid-template-columns:38px minmax(0,1fr) auto;align-items:start;gap:8px;border:1px solid transparent;border-radius:10px}.registry-list>article:hover,.registry-list>article.selected{border-color:var(--accent);background:var(--accent-soft)}.registry-list>article>div:nth-child(2){min-width:0;display:grid}.registry-list strong,.registry-list small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.registry-list small,.registry-list p,.registry-inspector p{color:var(--text-muted);font-size:11px}.registry-list p{margin:3px 0 0;line-height:1.4}.verified{color:var(--success);font-size:11px;white-space:nowrap}.registry-inspector{padding:12px;border-left:1px solid var(--border-subtle);background:var(--surface-2)}.registry-inspector>header{display:flex;justify-content:space-between;gap:8px}.registry-inspector>header>div{min-width:0;display:grid}.registry-inspector>header small{overflow:hidden;color:var(--text-muted);font-size:11px;text-overflow:ellipsis}.registry-inspector>header>span{color:var(--warning)}.registry-inspector dl div{padding:5px 0;display:grid;grid-template-columns:90px minmax(0,1fr);gap:6px;border-bottom:1px solid var(--border-subtle)}.registry-inspector dt{color:var(--text-muted)}.registry-inspector dd{margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.registry-inspector dd b{color:var(--success)}.registry-inspector section{margin-top:11px;padding-top:9px;border-top:1px solid var(--border-subtle)}.registry-links{display:grid;grid-template-columns:1fr 1fr;gap:5px}.registry-links strong{grid-column:1/-1}.registry-links button,.registry-inspector>.install{min-height:30px;border:1px solid var(--border-subtle);border-radius:7px;background:var(--surface-3)}.registry-inspector>.install{width:100%;margin-top:10px;color:var(--accent-contrast);border-color:var(--accent);background:var(--accent)}
-@media(max-width:800px){.package-header{flex-wrap:wrap}.package-header>div{flex-basis:100%}.package-tabs{flex-wrap:wrap;overflow:visible}.package-list article{grid-template-columns:38px minmax(0,1fr) auto}.package-list .source{display:none}}
-@media(max-width:800px){.registry-layout{grid-template-columns:1fr}.registry-inspector{position:absolute;right:0;bottom:0;width:min(330px,78vw);height:calc(100% - 48px);box-shadow:var(--shadow-lg)}}
-</style>
-
-<style scoped>
-.package-manager{container-type:inline-size}.package-header{flex-wrap:wrap}.package-header button,.package-tabs button{height:auto;white-space:normal}
-.registry-inspector dd,.package-inspector dd,.registry-inspector p,.package-inspector p{white-space:normal;overflow-wrap:anywhere;overflow:visible;text-overflow:clip}
-@container(max-width:850px){.package-layout,.registry-layout{grid-template-columns:minmax(0,1fr);overflow:auto;align-content:start}.package-inspector,.registry-inspector{position:static;width:auto;height:auto;min-width:0;max-width:100%;box-shadow:none;overflow:visible}.package-list,.registry-list{overflow:visible}.registry-list>header{grid-template-columns:minmax(0,1fr)}}
-</style>
-
-<style scoped>
-.registry-list strong,.registry-list small,.package-name strong,.package-name small{white-space:normal;overflow-wrap:anywhere;overflow:visible}
-.registry-inspector dt,.package-inspector dt{overflow-wrap:anywhere;white-space:normal}
-.registry-links{grid-template-columns:repeat(2,minmax(0,1fr))}.registry-links button{min-width:0;white-space:normal;overflow-wrap:anywhere;height:auto}
-.registry-inspector>header,.package-title{flex-wrap:wrap;overflow-wrap:anywhere}
+.package-manager{height:100%;min-width:0;min-height:0;display:flex;flex-direction:column;overflow:hidden;container-type:inline-size}
+.plugin-manager-tools{min-height:0;flex:1;padding:var(--space-3);overflow:auto}
+.offline,.package-list label{display:flex;align-items:center;gap:var(--space-1);color:var(--text-secondary)}
+.package-layout,.registry-layout{min-height:0;flex:1;display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);overflow:hidden}
+.package-list,.registry-list,.package-inspector,.registry-inspector{min-width:0;min-height:0;overflow:auto;scrollbar-gutter:stable}
+.package-list,.registry-list{padding:var(--space-2)}
+.package-list article,.registry-list>article{min-width:0;padding:var(--space-2);display:grid;grid-template-columns:var(--ui-control-height) minmax(0,1fr) auto auto;align-items:center;gap:var(--space-2);border-bottom:1px solid var(--border-subtle);cursor:pointer}
+.registry-list>article{grid-template-columns:var(--ui-control-height) minmax(0,1fr) auto;align-items:start}
+.package-list article:hover,.registry-list>article:hover{background:var(--surface-hover)}
+.package-list article.selected,.registry-list>article.selected{background:var(--selection-bg);box-shadow:inset var(--space-0) 0 var(--accent)}
+.package-mark{height:var(--ui-control-height);display:grid;place-items:center;color:var(--accent);font-weight:700}
+.package-name,.registry-list>article>div:nth-child(2),.registry-inspector>header>div{min-width:0;display:grid;overflow-wrap:anywhere}
+.package-name small,.registry-list small,.source,.registry-list p,.registry-inspector p,.package-inspector p{color:var(--text-muted)}
+.source,.verified{font-size:var(--type-caption)}
+.verified{display:flex;align-items:center;gap:var(--space-1);color:var(--success)}
+.package-inspector,.registry-inspector{padding:var(--space-3);border-left:1px solid var(--border-subtle);background:var(--surface-1)}
+.package-title,.registry-inspector>header{display:flex;justify-content:space-between;flex-wrap:wrap;gap:var(--space-2);overflow-wrap:anywhere}
+.package-title span{color:var(--accent)}
+.package-inspector section,.registry-inspector section{margin-top:var(--space-3);padding-top:var(--space-3);border-top:1px solid var(--border-subtle)}
+dl{margin:var(--space-3) 0}dl>div{min-width:0;padding:var(--space-1) 0;display:grid;grid-template-columns:minmax(0,var(--ui-label-width)) minmax(0,1fr);gap:var(--space-2);border-bottom:1px solid var(--border-subtle)}dt{color:var(--text-muted)}dd{margin:0;overflow-wrap:anywhere}
+ul{padding-left:var(--space-4)}li{margin:var(--space-1) 0}li span{margin-left:var(--space-2);color:var(--text-muted)}
+.problem{color:var(--danger)}.success{color:var(--success)}
+.chips{margin-top:var(--space-2);display:flex;flex-wrap:wrap;gap:var(--space-1)}.chips span{padding:var(--space-0) var(--space-1);background:var(--surface-2);color:var(--text-secondary);font-size:var(--type-caption)}
+.danger{margin-top:var(--space-3);color:var(--danger)}.safety label{margin-top:var(--space-3);display:flex;align-items:center;gap:var(--space-2)}.empty{padding:var(--space-4);color:var(--text-muted);text-align:center}
+.primary-action,.install{color:var(--accent);border-color:var(--accent)}
+.registry-list>header{padding-bottom:var(--space-2);display:flex;flex-wrap:wrap;gap:var(--space-2)}
+.registry-links{display:flex;flex-wrap:wrap;gap:var(--space-1)}.registry-links strong{flex-basis:100%}.registry-inspector>.install{margin-top:var(--space-3)}
+@container(max-width:700px){.package-layout,.registry-layout{grid-template-columns:minmax(0,1fr);overflow:auto;align-content:start}.package-list,.registry-list,.package-inspector,.registry-inspector{overflow:visible}.package-inspector,.registry-inspector{border-left:0;border-top:1px solid var(--border-subtle)}.package-list article{grid-template-columns:var(--ui-control-height) minmax(0,1fr) auto}.source{grid-column:2}.package-list label{grid-column:3;grid-row:auto}.registry-list>article{grid-template-columns:var(--ui-control-height) minmax(0,1fr)}.verified{grid-column:2}}
 </style>

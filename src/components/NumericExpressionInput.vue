@@ -1,11 +1,12 @@
 <!-- 数值表达式输入：保留编辑草稿，校验范围与整数要求，支持步进提交。 -->
 <template>
-  <span class="numeric-draft">
-    <span class="numeric-value-row"><input v-bind="$attrs" ref="input" :value="draft" type="text" inputmode="decimal" :min="Number.isFinite(minimum) ? minimum : undefined" :max="Number.isFinite(maximum) ? maximum : undefined" :step="step" :placeholder="mixed ? copy.mixed : undefined" :data-numeric-expression="draft" :data-resource-key="resourceKey" :data-nova-invalid="error ? 'true' : undefined" :aria-invalid="error ? 'true' : undefined" :aria-describedby="[$attrs['aria-describedby'], error ? errorId : ''].filter(Boolean).join(' ') || undefined" :title="t('numericExpressionHelp')" @input="edit" @change="changed" @blur="commit" @keydown.up="stepBy(1,$event)" @keydown.down="stepBy(-1,$event)" @keydown.enter.prevent="commit" @keydown.esc.stop.prevent="reset" /><span v-if="step" class="numeric-steppers"><button type="button" :aria-label="`${$attrs['aria-label'] || ''}: ${copy.decrease}`" @click.prevent="stepBy(-1)">−</button><button type="button" :aria-label="`${$attrs['aria-label'] || ''}: ${copy.increase}`" @click.prevent="stepBy(1)">+</button></span></span>
+  <span class="numeric-draft ui-number-field">
+    <span class="numeric-value-row"><input v-bind="$attrs" ref="input" :value="draft" type="text" inputmode="decimal" :min="Number.isFinite(minimum) ? minimum : undefined" :max="Number.isFinite(maximum) ? maximum : undefined" :step="step" :placeholder="mixed ? copy.mixed : undefined" :data-numeric-expression="draft" :data-resource-key="resourceKey" :data-nova-invalid="error ? 'true' : undefined" :aria-invalid="error ? 'true' : undefined" :aria-describedby="[$attrs['aria-describedby'], error ? errorId : ''].filter(Boolean).join(' ') || undefined" :title="t('numericExpressionHelp')" @input="edit" @change="changed" @blur="commit" @keydown.up="stepBy(1,$event)" @keydown.down="stepBy(-1,$event)" @keydown.enter.prevent="commit" @keydown.esc.stop.prevent="reset" /><span v-if="step" class="numeric-steppers"><button type="button" :aria-label="`${$attrs['aria-label'] || ''}: ${copy.decrease}`"  :disabled="($attrs.disabled !== undefined && $attrs.disabled !== false) || ($attrs.readonly !== undefined && $attrs.readonly !== false)" @click.prevent="stepBy(-1)"><EditorIcon name="down" /></button><button type="button" :aria-label="`${$attrs['aria-label'] || ''}: ${copy.increase}`"  :disabled="($attrs.disabled !== undefined && $attrs.disabled !== false) || ($attrs.readonly !== undefined && $attrs.readonly !== false)" @click.prevent="stepBy(1)"><EditorIcon name="up" /></button></span></span>
     <small v-if="error" :id="errorId" role="alert">{{ error }}</small>
   </span>
 </template>
 <script setup lang="ts">
+import EditorIcon from './EditorIcon.vue'
 import {computed,onUnmounted,ref,useId,watch} from 'vue'
 import {evaluateNumericExpression} from '../editor/sceneAuthoring'
 import {preferencesState as prefs} from '../store/preferences'
@@ -40,6 +41,7 @@ const copy=computed(/* 返回 messages[prefs.locale] 的当前值。 */ ()=>mess
 }
 /** 仅在提交成功后向父组件转发变更事件。 */ function changed(event: Event): void { if (commit(event)) emit('change', event) }
 /** 按合法步长计算下一刻度，控制精度并钳制范围后提交。 */ function stepBy(direction: number, event?: KeyboardEvent): void {
+  if (input.value?.disabled || input.value?.readOnly) return
   const step=props.step
   if (!step || !Number.isFinite(step) || step <= 0) return
   event?.preventDefault()
@@ -57,7 +59,3 @@ const copy=computed(/* 返回 messages[prefs.locale] 的当前值。 */ ()=>mess
 onUnmounted(registerEditorDraft({validate, commit:/** 在外部保存边界尝试提交当前草稿。 */ ()=>commit(), cancel:reset}))
 watch(/** 监听模型值、资源标识和混合状态以同步编辑上下文。 */ ()=>[props.modelValue,props.resourceKey,props.mixed],reset,{immediate:true,flush:'sync'})
 </script>
-<style scoped>
-.numeric-draft{font-family:var(--font-ui);font-size:var(--type-dense);display:flex;flex-direction:column;gap:4px;min-width:min(100%,10ch);max-width:100%;flex:1 1 10ch}.numeric-draft:has(.numeric-steppers){min-width:min(100%,calc(10ch + 64px));flex-basis:calc(10ch + 64px)}.numeric-value-row{display:flex;align-items:center;gap:4px;min-width:0}.numeric-draft input{width:100%;min-width:0;flex:1}.numeric-steppers{display:flex;gap:2px;flex:none}.numeric-steppers button{width:28px;min-width:28px;height:28px;padding:0}.numeric-draft small{color:var(--danger);font-size:var(--type-caption);white-space:normal;overflow-wrap:anywhere}.numeric-draft input[aria-invalid=true]{border-color:var(--danger)}
-</style>
-

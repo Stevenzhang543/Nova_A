@@ -1,7 +1,7 @@
 <!-- 场景上下文菜单：提供对象及图层操作，检查编辑状态并按设置确认删除。 -->
 <template>
   <Transition name="context">
-    <div v-if="state.contextMenu.visible" class="context-menu" :style="position" @contextmenu.prevent @click.stop>
+    <div ref="menuRoot" v-if="state.contextMenu.visible" class="context-menu" :style="position" @contextmenu.prevent @click.stop><UiMenu @close="closeContextMenu">
       <template v-if="state.contextMenu.type === 'sidebar-entity' || state.contextMenu.type === 'grid-entity'">
         <button @click="handleEntity('rename')">{{ t('rename') }}<kbd>F2</kbd></button>
         <button @click="handleEntity('copy')">{{ t('copy') }}<kbd>Ctrl C</kbd></button>
@@ -27,12 +27,13 @@
         <button :disabled="!canEdit" @click="handleLayer('front')">{{ t('moveAllFront') }}</button>
         <button :disabled="!canEdit" @click="handleLayer('back')">{{ t('moveAllBack') }}</button>
       </template>
-    </div>
+    </UiMenu></div>
   </Transition>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
+import UiMenu from '../ui/components/UiMenu.vue'
 import { t } from '../i18n'
 import { closeContextMenu, deleteLayer, duplicateLayer, editorState as state, moveLayerToBack, moveLayerToFront, setActiveLayer } from '../store/editor'
 import { copySelectedEntities, deleteSelected, duplicateSelectedEntities, moveToBack, moveToFront, physicsState, pushHistory, selectEntities } from '../store/physics'
@@ -42,7 +43,11 @@ import { selectionRoots } from '../editor/selection'
 import { setParent } from '../world/hierarchy'
 import { authoringState, groupSelection, requestViewport, toggleIsolateSelection } from '../editor/authoring2d'
 
-const position = computed(/** 根据鼠标位置和预留菜单尺寸限制菜单的右侧与底部坐标。 */ () => ({ top: `${Math.min(state.contextMenu.y, window.innerHeight - 390)}px`, left: `${Math.min(state.contextMenu.x, window.innerWidth - 220)}px` }))
+const menuRoot=ref<HTMLElement|null>(null)
+const menuSize=ref({width:220,height:390})
+const position=computed(()=>({top:`${Math.max(4,Math.min(state.contextMenu.y,window.innerHeight-menuSize.value.height-4))}px`,left:`${Math.max(4,Math.min(state.contextMenu.x,window.innerWidth-menuSize.value.width-4))}px`}))
+watch(()=>[state.contextMenu.visible,state.contextMenu.x,state.contextMenu.y],async()=>{if(!state.contextMenu.visible)return;await nextTick();const box=menuRoot.value?.getBoundingClientRect();if(box)menuSize.value={width:box.width,height:box.height}})
+
 const targetEntity = computed(/** 按上下文菜单目标编号查找当前实体，找不到时返回空值。 */ () => physicsState.world.entities.find(/* 比较 entity.id 与 state.contextMenu.targetId，返回严格相等的判断结果。 */ entity => entity.id === state.contextMenu.targetId) ?? null)
 const canEdit = computed(/* 比较 physicsState.playMode 与 'editing'，返回严格相等的判断结果。 */ () => physicsState.playMode === 'editing')
 
@@ -92,8 +97,4 @@ const canEdit = computed(/* 比较 physicsState.playMode 与 'editing'，返回�
 }
 </script>
 
-<style scoped>
-.context-menu { position: fixed; z-index: 2000; min-width: 205px; padding: 6px; display: flex; flex-direction: column; border: 1px solid var(--border-subtle); border-radius: 12px; background: var(--surface-1); backdrop-filter: var(--glass-blur); box-shadow: var(--shadow-lg); }
-.context-menu button { min-height: 33px; padding: 0 9px; display: flex; align-items: center; justify-content: space-between; gap: 20px; border: 0; border-radius: 7px; color: var(--text-secondary); background: transparent; text-align: left; font-size: 11px; }.context-menu button:hover:not(:disabled) { color: var(--text-primary); background: var(--accent-soft); }.context-menu button.danger { color: var(--danger); }.context-menu button.danger:hover:not(:disabled) { background: var(--danger-soft); }.context-menu hr { width: 100%; margin: 5px 0; border: 0; border-top: 1px solid var(--border-subtle); }kbd { color: var(--text-muted); font-family: inherit; font-size:11px; }
-.context-enter-active, .context-leave-active { transition: opacity 110ms ease, transform 120ms ease; transform-origin: top left; }.context-enter-from, .context-leave-to { opacity: 0; transform: scale(.97); }
-</style>
+<style scoped>.context-menu{position:fixed;z-index:2000;max-width:calc(100vw - var(--ui-space-sm));max-height:calc(100vh - var(--ui-space-sm));overflow:auto}.context-menu :deep(.ui-menu){min-width:24ch;max-height:inherit}.context-menu button{display:flex;justify-content:space-between;gap:var(--ui-space-lg);border-color:transparent;background:transparent;text-align:left}.context-menu hr{width:100%;border:0;border-top:1px solid var(--border-subtle);margin-block:var(--ui-space-xs)}.context-menu kbd{color:var(--text-muted);font-size:var(--type-caption)}.danger{color:var(--danger)}</style>

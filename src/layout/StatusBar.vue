@@ -11,8 +11,8 @@ const activeTasks = computed(/** 合计运行或排队任务、未结束导入�
 const failedTasks = computed(/** 合计失败的后台任务、导入及构建。 */ () => feedbackState.tasks.filter(/* 比较 item.status 与 'failed'，返回严格相等的判断结果。 */ item => item.status === 'failed').length + importPipelineState.jobs.filter(/* 比较 item.status 与 'failed'，返回严格相等的判断结果。 */ item => item.status === 'failed').length + (buildProgress.phase === 'failed' ? 1 : 0))
 </script>
 <style scoped>
-.status-bar { height: 30px; flex: 0 0 30px; padding: 0 12px; display: flex; align-items: center; justify-content: space-between; color: var(--text-muted); background: color-mix(in srgb,var(--surface-1) 96%,var(--bg-base)); border-top: 1px solid var(--border-subtle); font-size:var(--type-caption); z-index: 200; }
-.status { min-width: 0; display: flex; align-items: center; gap: 7px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.status i { width: 6px; height: 6px; flex: 0 0 6px; border-radius: 50%; background: var(--success); box-shadow: 0 0 8px color-mix(in srgb, var(--success) 60%, transparent); }
-.task-status{min-height:24px;margin-left:auto;padding:0 8px;display:flex;align-items:center;gap:5px;border:0;border-radius:7px;color:var(--text-muted);background:transparent;font-size:var(--type-caption)}.task-status:hover,.task-status.busy{color:var(--accent);background:var(--accent-soft)}.task-status b{min-width:17px;padding:1px 4px;border-radius:99px;color:white;background:var(--danger);font-size:var(--type-caption)}.tag { margin-left:8px; opacity: .78; }
+.status-bar{min-height:var(--ui-control-height);flex:0 0 auto;padding:0 var(--space-2);display:flex;align-items:center;gap:var(--space-2);color:var(--text-muted);background:var(--surface-1);border-top:1px solid var(--border-subtle);font-size:var(--type-caption);z-index:200}
+.status{min-width:0;display:flex;align-items:center;gap:var(--space-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.status i{width:var(--space-1);height:var(--space-1);flex:0 0 var(--space-1);border-radius:50%;background:var(--success)}
+.task-status{margin-left:auto;display:flex;align-items:center;gap:var(--space-1);color:var(--text-muted);font-size:var(--type-caption)}.task-status.busy{color:var(--accent)}.task-status b{padding:0 var(--space-1);color:var(--danger);font-size:var(--type-caption)}.tag{white-space:nowrap}
+@media(max-width:600px){.tag{display:none}}
 </style>

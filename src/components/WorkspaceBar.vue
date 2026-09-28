@@ -2,7 +2,7 @@
 <template>
   <nav class="workspace-bar" role="toolbar" :aria-label="t('workspaces')">
     <div class="workspace-list">
-      <button
+      <UiButton
         v-for="preset in visiblePresets"
       :key="preset.id"
       :class="{ active: state.activeWorkspace === preset.id }"
@@ -10,31 +10,31 @@
       :aria-label="`${t(preset.label)} · ${t('workspacePreset')}`"
         @click="selectWorkspace(preset.id)"
       :title="`${t(preset.label)} · ${t('workspacePreset')}`"
-      ><EditorIcon :name="preset.id" /><span class="label">{{ t(preset.label) }}</span><i v-if="workspaceDirty(preset.id)" class="dirty" :title="t('unsavedChanges')">●</i></button>
+      ><EditorIcon :name="preset.id" /><span class="label">{{ t(preset.label) }}</span><i v-if="workspaceDirty(preset.id)" class="dirty" :title="t('unsavedChanges')"></i></UiButton>
     </div>
     <div class="context-title" :title="contextTitle"><small>{{ t('currentContext') }}</small><strong>{{ contextTitle }}</strong></div>
     <span class="workspace-spacer"></span>
     <div class="history-controls" :aria-label="t('navigationHistory')">
-      <button :aria-label="t('navigateBack')" :disabled="!workspaceState.navigationBack.length" :title="`${t('navigateBack')} (Alt+←)`" data-doc="manual/navigation-history" @click="navigateHistory('back')"><EditorIcon name="back" /><span class="control-label">{{ t('back') }}</span></button>
-      <button :aria-label="t('navigateForward')" :disabled="!workspaceState.navigationForward.length" :title="`${t('navigateForward')} (Alt+→)`" data-doc="manual/navigation-history" @click="navigateHistory('forward')"><EditorIcon name="forward" /><span class="control-label">{{ t('forward') }}</span></button>
+      <UiButton :aria-label="t('navigateBack')" :disabled="!workspaceState.navigationBack.length" :title="`${t('navigateBack')} (Alt+←)`" data-doc="manual/navigation-history" @click="navigateHistory('back')"><EditorIcon name="back" /><span class="control-label">{{ t('back') }}</span></UiButton>
+      <UiButton :aria-label="t('navigateForward')" :disabled="!workspaceState.navigationForward.length" :title="`${t('navigateForward')} (Alt+→)`" data-doc="manual/navigation-history" @click="navigateHistory('forward')"><EditorIcon name="forward" /><span class="control-label">{{ t('forward') }}</span></UiButton>
     </div>
     <details v-transient-popover class="workspace-menu layout-menu">
       <summary :aria-label="t('layoutPanels')" :title="t('layoutPanels')"><EditorIcon name="layout" /><span>{{ t('layout') }}</span></summary>
       <div class="workspace-popover" role="group" :aria-label="t('layoutPanels')">
         <h3>{{ t('layoutPanels') }}</h3>
-        <button :class="{ active: state.hierarchyVisible && !state.distractionFree }" :title="t('toggleHierarchy')" data-doc="manual/hierarchy" @click="toggleEditorPanel('hierarchy')"><EditorIcon name="hierarchy" /><span>{{ t('hierarchy') }}</span><i>{{ state.hierarchyVisible && !state.distractionFree ? '✓' : '' }}</i></button>
-        <button :class="{ active: state.inspectorVisible && !state.distractionFree }" :title="t('toggleInspector')" data-doc="manual/inspector" @click="toggleEditorPanel('inspector')"><EditorIcon name="layout" /><span>{{ t('inspector') }}</span><i>{{ state.inspectorVisible && !state.distractionFree ? '✓' : '' }}</i></button>
-        <button :class="{ active: state.bottomPanelVisible && !state.distractionFree }" :title="t('toggleBottomPanel')" data-doc="manual/bottom-panel" @click="toggleEditorPanel('bottom')"><EditorIcon name="bottom" /><span>{{ t('bottomPanel') }}</span><i>{{ state.bottomPanelVisible && !state.distractionFree ? '✓' : '' }}</i></button>
-        <button :class="{ active: state.distractionFree }" :title="t('focusMode')" data-doc="manual/focus-mode" @click="toggleFocusMode"><EditorIcon name="maximize" /><span>{{ t('focusMode') }}</span><i>{{ state.distractionFree ? '✓' : '' }}</i></button>
-        <button :title="`${t('manageWorkspaces')} (Ctrl+Alt+W)`" data-doc="manual/workspaces" @click="state.workspaceManagerOpen = true"><EditorIcon name="manage" /><span>{{ t('manageWorkspaces') }}</span><i></i></button>
+        <UiButton :class="{ active: state.hierarchyVisible && !state.distractionFree }" :title="t('toggleHierarchy')" data-doc="manual/hierarchy" @click="toggleEditorPanel('hierarchy')"><EditorIcon name="hierarchy" /><span>{{ t('hierarchy') }}</span><EditorIcon v-if="state.hierarchyVisible && !state.distractionFree" name="check" /></UiButton>
+        <UiButton :class="{ active: state.inspectorVisible && !state.distractionFree }" :title="t('toggleInspector')" data-doc="manual/inspector" @click="toggleEditorPanel('inspector')"><EditorIcon name="layout" /><span>{{ t('inspector') }}</span><EditorIcon v-if="state.inspectorVisible && !state.distractionFree" name="check" /></UiButton>
+        <UiButton :class="{ active: state.bottomPanelVisible && !state.distractionFree }" :title="t('toggleBottomPanel')" data-doc="manual/bottom-panel" @click="toggleEditorPanel('bottom')"><EditorIcon name="bottom" /><span>{{ t('bottomPanel') }}</span><EditorIcon v-if="state.bottomPanelVisible && !state.distractionFree" name="check" /></UiButton>
+        <UiButton :class="{ active: state.distractionFree }" :title="t('focusMode')" data-doc="manual/focus-mode" @click="toggleFocusMode"><EditorIcon name="maximize" /><span>{{ t('focusMode') }}</span><EditorIcon v-if="state.distractionFree" name="check" /></UiButton>
+        <UiButton :title="`${t('manageWorkspaces')} (Ctrl+Alt+W)`" data-doc="manual/workspaces" @click="state.workspaceManagerOpen = true"><EditorIcon name="manage" /><span>{{ t('manageWorkspaces') }}</span><i></i></UiButton>
       </div>
     </details>
     <details v-transient-popover class="workspace-menu command-menu">
       <summary :aria-label="t('commands')" :title="t('commands')"><EditorIcon name="search" /><span>{{ t('commands') }}</span></summary>
       <div class="workspace-popover command-popover" role="group" :aria-label="t('commands')">
         <h3>{{ t('commandsAndSearch') }}</h3>
-        <button class="quick-trigger" data-shortcut="Ctrl+P" @click="openPalette('quick')"><EditorIcon name="search" /><span>{{ t('quickOpen') }}</span><kbd>Ctrl P</kbd></button>
-        <button class="command-trigger" data-shortcut="Ctrl+Shift+P" @click="openPalette('commands')"><EditorIcon name="command" /><span>{{ t('commandPalette') }}</span><kbd>Ctrl Shift P</kbd></button>
+        <UiButton class="quick-trigger" data-shortcut="Ctrl+P" @click="openPalette('quick')"><EditorIcon name="search" /><span>{{ t('quickOpen') }}</span><kbd>Ctrl P</kbd></UiButton>
+        <UiButton class="command-trigger" data-shortcut="Ctrl+Shift+P" @click="openPalette('commands')"><EditorIcon name="command" /><span>{{ t('commandPalette') }}</span><kbd>Ctrl Shift P</kbd></UiButton>
       </div>
     </details>
   </nav>
@@ -43,6 +43,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import EditorIcon from './EditorIcon.vue'
+import UiButton from '../ui/components/UiButton.vue'
 import { vTransientPopover } from '../editor/transientPopover'
 import { t } from '../i18n'
 import { editorState as state, type EditorWorkspace } from '../store/editor'
@@ -68,20 +69,18 @@ const contextTitle = computed(/** 生成项目与当前栏目、选中实体或�
 </script>
 
 <style scoped>
-.workspace-bar { min-height: 42px; flex: 0 0 auto; padding: 3px 8px; display: flex; align-items: center; gap: 7px; overflow: visible; border-bottom:1px solid var(--border-subtle); background:color-mix(in srgb,var(--surface-1) 92%,transparent); z-index: 350; }
-.workspace-list, .history-controls { min-width: 0; display: flex; align-items: center; gap: 3px; }
-.workspace-list { padding:0; overflow-x:auto; border:0; border-radius:0; background:transparent; scrollbar-width:none; }.workspace-list::-webkit-scrollbar { display: none; }
-.workspace-spacer { flex: 1; }
-.context-title{min-width:140px;max-width:min(290px,23vw);display:grid;align-content:center;padding:0 10px;border-left:1px solid var(--border-subtle)}.context-title small,.context-title strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.context-title small{color:var(--text-muted);font-size:var(--type-caption);font-weight:500}.context-title strong{font-size:var(--type-dense)}
-button,summary { min-height: 34px; padding: 0 10px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; flex: 0 0 auto; border: 1px solid transparent; border-radius: 4px; color: var(--text-muted); background: transparent; font-size:var(--type-caption); white-space: nowrap; }
-.workspace-list button { line-height: 1.2 !important; }
-button:hover { color: var(--text-primary); background: var(--surface-hover); }
-button.active { color: var(--accent); border-color: transparent; background: var(--accent-soft); box-shadow: inset 0 -2px var(--accent); }
-.workspace-list button span:first-child { min-width: 15px; color: currentColor; font: 600 var(--type-caption)/1 var(--font-mono); }
-.workspace-list button i.dirty{width:6px;height:6px;min-width:6px;border-radius:50%;background:var(--warning);font-size:0;font-style:normal;box-shadow:0 0 0 2px color-mix(in srgb,var(--warning) 18%,transparent)}
-.history-controls { flex:0 0 auto; padding-left:6px; border-left:1px solid var(--border-subtle) }.history-controls button{padding:0 8px}.workspace-menu{position:relative;flex:0 0 auto}.workspace-menu summary{min-width:82px;list-style:none;cursor:pointer;border-color:var(--border-subtle);background:var(--surface-2);font-weight:650}.workspace-menu summary::-webkit-details-marker{display:none}.workspace-menu[open] summary{color:var(--accent);border-color:color-mix(in srgb,var(--accent) 40%,var(--border-strong));background:var(--accent-soft)}.workspace-popover{position:absolute;top:calc(100% + 7px);right:0;width:260px;padding:8px;display:grid;gap:3px;border:1px solid var(--border-strong);border-radius:var(--radius-panel);background:var(--surface-1);box-shadow:var(--shadow-float)}.workspace-popover h3{margin:2px 7px 6px;color:var(--text-muted);font-size:var(--type-caption);font-weight:750;letter-spacing:.035em;text-transform:uppercase}.workspace-popover button{width:100%;justify-content:flex-start}.workspace-popover button > span{min-width:0;overflow:hidden;text-overflow:ellipsis}.workspace-popover button i{margin-left:auto;font-style:normal}.command-popover{width:300px}.command-popover kbd{margin-left:auto;padding:2px 6px;border:1px solid var(--border-subtle);border-radius:5px;color:var(--text-muted);background:var(--surface-2);font:500 11px/1.2 var(--font-mono)}
-@media (max-width: 1280px) { .control-label { position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%); }.history-controls button { width:34px;padding:0; }.context-title{max-width:180px}.workspace-menu summary{min-width:44px;padding:0 9px}.workspace-menu summary > span{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)} }
-@media (max-width: 920px) { .workspace-list .label { display:none; }.workspace-list button{width:34px;padding:0}.context-title{display:none} }
-@media(max-width:1180px){.workspace-list .label{display:none}.workspace-list button{width:34px;padding:0}.context-title{display:none}}
-@media(max-width:680px){.workspace-list button{width:31px;min-height:31px}.workspace-bar{gap:4px;padding-inline:5px}.history-controls{display:none}}
+.workspace-bar { flex:1 1 auto; min-width:0; display:flex; align-items:center; gap:var(--ui-space-xs); padding-inline:var(--ui-space-xs); overflow:visible; z-index:350; }
+.workspace-list,.history-controls { display:flex; align-items:center; gap:var(--ui-space-micro); min-width:0; }
+.workspace-list { overflow-x:auto; scrollbar-width:thin; }.workspace-list .ui-button { flex:none; }.workspace-spacer{flex:1}
+.workspace-list .active{box-shadow:inset 0 -2px var(--accent)}
+.dirty{inline-size:var(--ui-space-xs);block-size:var(--ui-space-xs);border-radius:50%;background:var(--warning);flex:none}
+.context-title{min-width:0;max-width:24ch;display:grid;padding-inline:var(--ui-space-sm);border-left:1px solid var(--border-subtle)}
+.context-title small,.context-title strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.context-title small{display:none}.context-title strong{font-size:var(--type-dense);font-weight:500}
+.history-controls{flex:none;border-left:1px solid var(--border-subtle);padding-inline-start:var(--ui-space-xs)}.control-label{display:none}
+.workspace-menu{position:relative;flex:none}.workspace-menu summary{display:flex;align-items:center;gap:var(--ui-space-xs)}
+.workspace-popover{position:absolute;top:100%;right:0;min-width:24ch;max-width:min(38ch,90vw);padding:var(--ui-space-xs);display:grid;gap:var(--ui-space-micro);border:1px solid var(--border-strong);background:var(--surface-popover);box-shadow:var(--shadow-md);z-index:500}
+.workspace-popover h3{font-size:var(--type-caption);color:var(--text-muted);margin:var(--ui-space-xs)}.workspace-popover .ui-button{justify-content:flex-start}.workspace-popover .ui-button>span{flex:1;text-align:left}.workspace-popover kbd{margin-left:auto;font-size:var(--type-caption)}
+@media(max-width:1280px){.context-title{display:none}.workspace-menu summary>span{display:none}}
+@media(max-width:1100px){.workspace-list .label{display:none}.workspace-list .ui-button{padding-inline:var(--ui-space-xs)}}
+@media(max-width:680px){.history-controls{display:none}}
 </style>

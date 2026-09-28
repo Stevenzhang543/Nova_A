@@ -1,19 +1,16 @@
 <!-- 故障恢复提示：显示受控错误，提供诊断复制、下载和安全重启。 -->
 <template>
   <Teleport to="body">
-    <section v-if="fault" class="fault-overlay" data-doc="manual/recovery" role="alertdialog" aria-modal="true" v-modal-focus :aria-label="t('fatalErrorTitle')" @keydown.esc="dismissActiveFault">
-      <article>
-        <header><span>!</span><div><strong>{{ t('fatalErrorTitle') }}</strong><small>{{ t('fatalErrorContained') }}</small></div></header>
+    <UiDialog role="alertdialog" v-if="fault" :title="t('fatalErrorTitle')" @close="dismissActiveFault"><p class="dialog-hint">{{ t('fatalErrorContained') }}</p>
         <p>{{ fault.message }}</p><code>{{ fault.context }} · {{ timestamp }}</code>
         <details v-if="fault.stack"><summary>{{ t('technicalDetails') }}</summary><pre>{{ fault.stack }}</pre></details>
         <footer><button @click="copy">{{ copied ? t('copied') : t('copyDiagnostics') }}</button><button @click="download">{{ t('downloadDiagnostics') }}</button><button @click="dismissActiveFault">{{ t('continueSafely') }}</button><button class="primary" @click="safeRestart">{{ t('restartSafeMode') }}</button></footer>
-      </article>
-    </section>
+    </UiDialog>
   </Teleport>
 </template>
 
 <script setup lang="ts">
-import { vModalFocus } from '../editor/modalFocus'
+import UiDialog from '../ui/components/UiDialog.vue'
 import { computed, ref } from 'vue'
 import { t } from '../i18n'
 import { dismissActiveFault, faultCenterState, faultDiagnostics, reportRecoverableError } from '../runtime/faultCenter'
@@ -37,6 +34,4 @@ const timestamp = computed(/** 将当前故障时间转换为本地日期时间�
 }
 </script>
 
-<style scoped>
-.fault-overlay{position:fixed;inset:0;z-index:9000;padding:20px;display:grid;place-items:center;background:var(--scrim);backdrop-filter:blur(10px)}article{width:min(680px,100%);max-height:min(680px,92vh);padding:18px;overflow:auto;border:1px solid var(--danger);border-radius:var(--radius-lg);background:var(--surface-1);box-shadow:var(--shadow-lg)}header{display:flex;align-items:center;gap:12px}header>span{width:38px;height:38px;display:grid;place-items:center;border-radius:11px;color:#fff;background:var(--danger);font-size:20px;font-weight:800}header div{display:grid;gap:3px}header strong{font-size:16px}header small,p,code,summary{font-size:12px;line-height:1.5}header small,code{color:var(--text-muted)}p{margin:16px 0 8px;overflow-wrap:anywhere}code{display:block}details{margin-top:12px}summary{cursor:pointer}pre{max-height:220px;padding:10px;overflow:auto;border-radius:8px;background:var(--bg-canvas);font:11px/1.5 var(--font-mono);white-space:pre-wrap;overflow-wrap:anywhere}footer{margin-top:16px;display:flex;justify-content:flex-end;flex-wrap:wrap;gap:7px}button{min-height:34px;padding:0 12px;border:1px solid var(--border-subtle);border-radius:8px;background:var(--surface-3)}button.primary{color:var(--accent-contrast);border-color:var(--accent);background:var(--accent)}
-</style>
+<style scoped>.dialog-hint{color:var(--text-muted);margin:0 0 var(--ui-space-sm)}p,code{overflow-wrap:anywhere}pre{max-height:40vh;overflow:auto;padding:var(--ui-space-sm);background:var(--input-bg);white-space:pre-wrap;overflow-wrap:anywhere;font:var(--type-caption)/var(--line-body) var(--font-mono)}footer{display:flex;gap:var(--ui-space-xs);flex-wrap:wrap;justify-content:flex-end;border-top:1px solid var(--border-subtle);padding-top:var(--ui-space-sm)}.recovery-layout{display:grid;grid-template-columns:minmax(18ch,30%) minmax(0,1fr);gap:var(--ui-space-sm)}.recovery-layout>nav{display:flex;flex-direction:column;max-height:50vh;overflow:auto;border-right:1px solid var(--border-subtle);padding-right:var(--ui-space-sm)}.recovery-layout>nav button{display:grid;gap:var(--ui-space-xs);text-align:left;flex:none;border-color:transparent;border-radius:0;background:transparent;padding:var(--ui-space-sm)}.recovery-layout>nav button.active{background:var(--selection-bg)}.recovery-layout small,.recovery-layout dt{color:var(--text-muted)}.recovery-layout main{min-width:0}.recovery-layout dl{display:grid;gap:var(--ui-space-xs);margin:0}.recovery-layout dl>div{display:grid;grid-template-columns:14ch minmax(0,1fr);gap:var(--ui-space-xs);padding-block:var(--ui-space-xs)}.recovery-layout dd{margin:0;overflow-wrap:anywhere}.recovery-preview{border-block:1px solid var(--border-subtle);padding-block:var(--ui-space-sm);margin-block:var(--ui-space-sm)}.recovery-preview header{display:flex;justify-content:space-between;align-items:center}.recovery-preview textarea{width:100%;height:24vh;font-family:var(--font-mono)}.recovery-preview li{overflow-wrap:anywhere}.warning{color:var(--warning)}@media(max-width:640px){.recovery-layout{grid-template-columns:minmax(0,1fr)}.recovery-layout>nav{max-height:20vh;border-right:0;border-bottom:1px solid var(--border-subtle)}}</style>

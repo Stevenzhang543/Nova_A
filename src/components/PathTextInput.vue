@@ -23,6 +23,3 @@ onUnmounted(registerEditorDraft({validate,commit:/** 在外部保存边界提交
 watch(/* 返回 props.resourceKey 的当前值。 */ ()=>props.resourceKey,reset,{immediate:true,flush:'sync'})
 watch(/* 返回 props.modelValue 的当前值。 */ ()=>props.modelValue,/** 仅在没有未保存编辑时从模型重置输入，避免覆盖草稿。 */ ()=>{if(!dirty)reset()},{flush:'sync'})
 </script>
-<style scoped>
-.path-text-draft{display:flex;flex-direction:column;gap:4px;min-width:0;width:100%}.path-text-draft textarea{width:100%;min-width:0;box-sizing:border-box;resize:vertical}.path-text-draft small{color:var(--danger);font-size:var(--type-caption);white-space:normal;overflow-wrap:anywhere}.path-text-draft textarea[aria-invalid=true]{border-color:var(--danger)}
-</style>

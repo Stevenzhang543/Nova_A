@@ -4,17 +4,16 @@ import App from "./App.vue";
 import '@fontsource-variable/nunito-sans/wght.css'
 import '@fontsource-variable/noto-sans-sc/wght.css'
 import '@fontsource-variable/jetbrains-mono/wght.css'
-import './assets/main.css'
-import './assets/editorReadability.css'
-import './assets/editorStudio.css'
-import './assets/editorForms.css'
+import './ui/editor.css'
 import { installCrashReporter } from './runtime/crashReporter'
 import { reportFatalError } from './runtime/faultCenter'
 import { installExternalLinkGuard } from './runtime/externalLinks'
+import { installEditorUi } from './ui/register'
 
 installCrashReporter('Nova_A Editor')
 installExternalLinkGuard()
 const app = createApp(App)
+installEditorUi(app)
 app.config.errorHandler = /** 执行时调用 reportFatalError(error, `Vue: ${info}`)；不显式返回调用结果。 */ (error, _instance, info) => { reportFatalError(error, `Vue: ${info}`) }
 try { app.mount("#app") }
 catch (error) {

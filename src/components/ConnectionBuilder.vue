@@ -1,23 +1,8 @@
 <!-- 物理连接编辑器：创建、选择和配置实体之间的连接。 -->
 <template>
   <Teleport to="body">
-    <div class="modal-scrim" @mousedown.self="emit('close')">
-      <section class="builder" @focusin="form17.focus" @change="form17.change" role="dialog" aria-modal="true" v-modal-focus :aria-label="t('connectionBuilder')">
-      <header>
-        <div>
-          <span class="eyebrow">{{ t('connections') }}</span>
-          <h2>{{ t('connectionBuilder') }}</h2>
-        </div>
-        <div class="step-indicator" aria-hidden="true">
-          <i :class="{ active: stage === 'objects' }">1</i>
-          <span></span>
-          <i :class="{ active: stage === 'path' }">2</i>
-          <span></span>
-          <i :class="{ active: stage === 'simulation' }">3</i>
-        </div>
-        <button class="icon-button" :aria-label="t('cancel')" @click="emit('close')">×</button>
-      </header>
-
+    <UiDialog :title="t('connectionBuilder')" class="connection-dialog" dismiss-on-backdrop @close="emit('close')">
+      <section class="builder" @focusin="form17.focus" @change="form17.change">
       <div class="builder-body">
         <p v-if="form17.error.value" class="form-error17" role="alert">{{ form17.error.value }}</p>
         <Transition name="step" mode="out-in">
@@ -27,15 +12,15 @@
               <div><h3>{{ t('chooseObjects') }}</h3><p>{{ t('chooseExactlyTwo') }}</p></div>
             </div>
             <div class="chosen-object fixed">
-              <span class="shape">{{ shapeGlyph(selectedEntity?.shapeType) }}</span>
+              <EditorIcon :name="shapeIcon(selectedEntity?.shapeType)" />
               <span><small>{{ t('selectedObject') }}</small><strong>{{ entityName(props.selectedId) }}</strong></span>
-              <i>✓</i>
+              <EditorIcon name="check" />
             </div>
             <div class="object-picker">
               <button v-for="entity in availableEntities" :key="entity.id" :class="{ selected: partnerId === entity.id }" @click="selectPartner(entity.id)">
-                <span class="shape">{{ shapeGlyph(entity.shapeType) }}</span>
+                <EditorIcon :name="shapeIcon(entity.shapeType)" />
                 <span><strong>{{ entity.name }}_{{ entity.id }}</strong><small>{{ t(entity.shapeType === 'Circle' ? 'ellipse' : entity.shapeType === 'Triangle' ? 'triangle' : 'rectangle') }}</small></span>
-                <i>{{ partnerId === entity.id ? '✓' : '＋' }}</i>
+                <EditorIcon :name="partnerId === entity.id ? 'check' : 'add'" />
               </button>
             </div>
             <p v-if="availableEntities.length === 0" class="empty-state">{{ t('noConnectionCandidates') }}</p>
@@ -47,9 +32,9 @@
               <div><h3>{{ t('choosePath') }}</h3><p>{{ t('choosePathDescription') }}</p></div>
             </div>
             <div class="pair-summary">
-              <span>{{ entityName(props.selectedId) }}</span><i>↔</i><span>{{ partnerId === null ? '—' : entityName(partnerId) }}</span>
+              <span>{{ entityName(props.selectedId) }}</span><EditorIcon name="link" /><span>{{ partnerId === null ? '—' : entityName(partnerId) }}</span>
             </div>
-            <div v-if="overlapping" class="overlap-notice"><span>⌁</span><div><strong>{{ t('objectsOverlap') }}</strong><small>{{ t('bindAvailable') }}</small></div></div>
+            <div v-if="overlapping" class="overlap-notice"><EditorIcon name="path" /><div><strong>{{ t('objectsOverlap') }}</strong><small>{{ t('bindAvailable') }}</small></div></div>
             <div class="path-picker">
               <button @click="choosePath('straight')"><span class="path-preview straight-preview"></span><strong>{{ t('straight') }}</strong><small>{{ t('straightDescription') }}</small></button>
               <button @click="choosePath('manual')"><span class="path-preview manual-preview"></span><strong>{{ t('manual') }}</strong><small>{{ t('manualDescription') }}</small></button>
@@ -65,12 +50,12 @@
             </div>
             <div class="preview-shell" :class="{ complete: drawingComplete }">
               <canvas ref="previewCanvas" @pointerdown="onPreviewPointerDown" @pointermove="onPreviewPointerMove" @pointerup="onPreviewPointerUp" @pointercancel="cancelPreviewDrawing"></canvas>
-              <div v-if="!drawingComplete && !isDrawing" class="preview-instruction"><span>⌁</span>{{ t('startOnObject') }}</div>
-              <div v-if="drawingComplete" class="preview-success"><span>✓</span>{{ t('connectionReady') }}</div>
+              <div v-if="!drawingComplete && !isDrawing" class="preview-instruction"><EditorIcon name="path" />{{ t('startOnObject') }}</div>
+              <div v-if="drawingComplete" class="preview-success"><EditorIcon name="check" />{{ t('connectionReady') }}</div>
             </div>
             <div class="preview-footer">
               <p :class="{ error: drawMessage }">{{ drawMessage || t('anchorHint') }}</p>
-              <button v-if="drawingComplete" class="redraw-button" @click="clearDrawing">↻ {{ t('redraw') }}</button>
+              <button v-if="drawingComplete" class="redraw-button" @click="clearDrawing"><EditorIcon name="refresh" /> {{ t('redraw') }}</button>
             </div>
             <details v-if="drawingComplete" class="advanced-physics">
               <summary>{{ t('connectionPhysics') }}</summary>
@@ -101,7 +86,7 @@
         <button v-if="stage === 'simulation'" class="primary" :disabled="!drawingComplete" @click="saveConnection">{{ t(props.connectionId === null ? 'createConnection' : 'saveConnection') }}</button>
       </footer>
       </section>
-    </div>
+    </UiDialog>
   </Teleport>
 </template>
 
@@ -110,7 +95,8 @@ import NumericExpressionInput from './NumericExpressionInput.vue'
 import { settleEditorDrafts } from '../editor/pendingDrafts'
 import { useSimulationFormGuard17 } from '../editor/simulationForm17'
 import { simulationLabel17 } from '../editor/simulationLabels17'
-import { vModalFocus } from '../editor/modalFocus'
+import UiDialog from '../ui/components/UiDialog.vue'
+import EditorIcon from './EditorIcon.vue'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { t } from '../i18n'
 import { editorState } from '../store/editor'
@@ -193,7 +179,7 @@ let rawPoints: Vec2[] = []
   const entity = world.entities.find(/* 比较 candidate.id 与 id，返回严格相等的判断结果。 */ candidate => candidate.id === id)
   return entity ? `${entity.name}_${entity.id}` : String(id)
 }
-/* 根据 type === 'Circle' 的真假，分别返回 '○' 或 type === 'Triangle' ? '△' : '□'。 */ function shapeGlyph(type?: string) { return type === 'Circle' ? '○' : type === 'Triangle' ? '△' : '□' }
+/* 根据 type === 'Circle' 的真假，分别返回 '○' 或 type === 'Triangle' ? '△' : '□'。 */ function shapeIcon(type?: string) { return type === 'Circle' ? 'circle' : type === 'Triangle' ? 'triangle' : 'rectangle' }
 
 /** 选择伙伴后清空绘制并进入路径选择阶段。 */ function selectPartner(id: number) {
   partnerId.value = id
@@ -526,29 +512,5 @@ onBeforeUnmount(/** 卸载时解除尺寸观察并取消待执行尺寸帧。 */
 })
 </script>
 
-<style scoped>
-.modal-scrim { position: fixed; inset: 0; z-index: 1200; display: grid; place-items: center; padding: 24px; background: var(--scrim); backdrop-filter: blur(8px); }
-.builder { width: min(760px, 100%); height: min(720px, calc(100vh - 48px)); display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--border-strong); border-radius: 22px; background: var(--surface-2); box-shadow: var(--shadow-lg); }
-header, footer { flex: 0 0 auto; min-height: 64px; padding: 13px 18px; display: flex; align-items: center; gap: 16px; border-bottom: 1px solid var(--border-subtle); }
-footer { min-height: 60px; justify-content: flex-end; border-top: 1px solid var(--border-subtle); border-bottom: 0; }
-.eyebrow { color: var(--accent); font-size:11px; font-weight: 750; letter-spacing: .14em; text-transform: uppercase; }
-h2 { margin: 2px 0 0; font-size: 18px; letter-spacing: -.02em; }
-.icon-button { width: 32px; height: 32px; margin-left: auto; border: 1px solid var(--border-subtle); border-radius: 10px; background: var(--surface-3); color: var(--text-secondary); font-size: 20px; }
-.step-indicator { margin-left: auto; display: flex; align-items: center; }.step-indicator i { width: 24px; height: 24px; display: grid; place-items: center; border: 1px solid var(--border-strong); border-radius: 50%; color: var(--text-muted); font-size:11px; font-style: normal; }.step-indicator i.active { color: var(--accent-contrast); border-color: var(--accent); background: var(--accent); }.step-indicator span { width: 28px; height: 1px; background: var(--border-strong); }
-.builder-body { min-height: 0; flex: 1; overflow: auto; }.wizard-step { min-height: 100%; padding: 24px; display: flex; flex-direction: column; gap: 16px; }
-.step-copy { display: flex; align-items: center; gap: 13px; }.step-number { width: 38px; height: 38px; flex: 0 0 38px; display: grid; place-items: center; border-radius: 12px; color: var(--accent); background: var(--accent-soft); font-size: 11px; font-weight: 750; }.step-copy h3 { margin: 0; font-size: 17px; }.step-copy p { margin: 3px 0 0; color: var(--text-muted); font-size: 11px; }.compact-copy { align-items: center; }.compact-copy > div { min-width: 0; flex: 1; }
-.chosen-object, .object-picker button { min-height: 54px; padding: 10px 12px; display: flex; align-items: center; gap: 11px; border: 1px solid var(--border-subtle); border-radius: 13px; background: var(--surface-1); text-align: left; }.chosen-object.fixed { border-color: color-mix(in srgb, var(--accent) 48%, var(--border-subtle)); background: var(--accent-soft); }.chosen-object > span:nth-child(2), .object-picker button > span:nth-child(2) { min-width: 0; display: flex; flex: 1; flex-direction: column; }.chosen-object small, .object-picker small { color: var(--text-muted); font-size:11px; }.chosen-object strong, .object-picker strong { overflow: hidden; color: var(--text-primary); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }.chosen-object i, .object-picker i { color: var(--accent); font-style: normal; }.shape { width: 28px; color: var(--accent); font-size: 24px; line-height: 1; text-align: center; }
-.object-picker { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }.object-picker button:hover, .object-picker button.selected { border-color: var(--accent); background: var(--accent-soft); }.empty-state { margin: auto; color: var(--text-muted); font-size: 12px; text-align: center; }
-.pair-summary { display: flex; align-items: center; justify-content: center; gap: 13px; padding: 12px; border: 1px solid var(--border-subtle); border-radius: 13px; background: var(--surface-1); color: var(--text-primary); font-size: 12px; font-weight: 650; }.pair-summary i { color: var(--accent); font-style: normal; }
-.overlap-notice { padding: 11px 13px; display: flex; align-items: center; gap: 10px; border: 1px solid color-mix(in srgb, var(--accent) 48%, var(--border-subtle)); border-radius: 12px; background: var(--accent-soft); }.overlap-notice > span { color: var(--accent); font-size: 22px; }.overlap-notice div { display: flex; flex-direction: column; }.overlap-notice strong { font-size: 11px; }.overlap-notice small { color: var(--text-muted); font-size:11px; }
-.path-picker { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }.path-picker button { min-height: 142px; padding: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; border: 1px solid var(--border-subtle); border-radius: 15px; background: var(--surface-1); }.path-picker button:hover { transform: translateY(-2px); border-color: var(--accent); background: var(--accent-soft); }.path-picker strong { font-size: 12px; }.path-picker small { min-height: 30px; color: var(--text-muted); font-size:11px; line-height: 1.45; text-align: center; }.path-preview { width: 76px; height: 42px; position: relative; display: block; }.straight-preview::after { content: ''; position: absolute; inset: 20px 4px auto; height: 3px; border-radius: 99px; background: var(--accent); transform: rotate(-12deg); }.straight-preview::before, .manual-preview::before { content: ''; position: absolute; inset: 14px auto auto 1px; width: 9px; height: 9px; border: 3px solid var(--accent); border-radius: 50%; background: white; box-shadow: 65px 14px 0 -3px white, 65px 14px 0 0 var(--accent); z-index: 1; }.manual-preview::after { content: ''; position: absolute; inset: 9px 5px; border-bottom: 3px solid var(--accent); border-radius: 50%; transform: rotate(10deg); }.bind-preview { display: grid; place-items: center; color: var(--accent); font-size: 38px; }.bind-option { border-color: color-mix(in srgb, var(--accent) 38%, var(--border-subtle)) !important; }
-.center-toggle { flex: 0 0 auto; padding: 7px 10px; display: flex; align-items: center; gap: 7px; border: 1px solid var(--border-subtle); border-radius: 10px; background: var(--surface-1); color: var(--text-secondary); font-size:11px; }.center-toggle input { accent-color: var(--accent); }
-.preview-shell { min-height: 320px; position: relative; flex: 1; overflow: hidden; border: 1px solid var(--border-strong); border-radius: 15px; background: var(--bg-canvas); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--surface-1) 40%, transparent); }.preview-shell.complete { border-color: color-mix(in srgb, var(--accent) 60%, var(--border-strong)); }.preview-shell canvas { display: block; width: 100%; height: 100%; min-height: 320px; touch-action: none; cursor: crosshair; }.preview-instruction, .preview-success { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); padding: 7px 11px; display: flex; align-items: center; gap: 6px; border: 1px solid var(--border-strong); border-radius: 999px; background: var(--surface-1); color: var(--text-secondary); box-shadow: var(--shadow-sm); font-size:11px; pointer-events: none; white-space: nowrap; }.preview-instruction span { color: var(--accent); }.preview-success { color: var(--success); }.preview-success span { width: 16px; height: 16px; display: grid; place-items: center; border-radius: 50%; color: var(--accent-contrast); background: var(--success); }
-.preview-footer { min-height: 30px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }.preview-footer p { margin: 0; color: var(--text-muted); font-size:11px; }.preview-footer p.error { color: var(--danger); }.redraw-button { padding: 6px 10px; border: 1px solid var(--border-subtle); border-radius: 8px; color: var(--text-secondary); background: var(--surface-3); font-size:11px; }
-.advanced-physics { border: 1px solid var(--border-subtle); border-radius: 12px; background: var(--surface-1); overflow: hidden; }.advanced-physics summary { padding: 10px 12px; color: var(--text-secondary); cursor: pointer; font-size:11px; font-weight: 700; }.physics-grid { padding: 2px 12px 12px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 12px; }.physics-grid label { min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--text-muted); font-size:11px; }.physics-grid label.collision-toggle { grid-column: 1 / -1; padding: 8px 0; border-bottom: 1px solid var(--border-subtle); }.collision-toggle > span { display: flex; flex-direction: column; gap: 2px; }.collision-toggle strong { color: var(--text-secondary); font-size:11px; }.collision-toggle small { max-width: 470px; font-size:11px; font-weight: 400; line-height: 1.4; }.physics-grid input[type='number'] { width: 92px; min-width: 0; }.physics-grid input[type='checkbox'] { accent-color: var(--accent); }
-.rope-warning { margin: 0 12px 12px; padding: 8px 10px; border: 1px solid color-mix(in srgb, var(--warning) 45%, var(--border-subtle)); border-radius: 9px; color: var(--warning); background: color-mix(in srgb, var(--warning) 8%, transparent); font-size: 11px; line-height: 1.45; }
-footer button { min-height: 35px; padding: 0 14px; border: 1px solid var(--border-subtle); border-radius: 9px; background: var(--surface-3); color: var(--text-secondary); font-size: 11px; }footer button.primary { min-width: 140px; color: var(--accent-contrast); border-color: var(--accent); background: var(--accent); }
-.step-enter-active, .step-leave-active { transition: opacity 180ms ease, transform 220ms cubic-bezier(.2,.8,.2,1); }.step-enter-from { opacity: 0; transform: translateX(24px); }.step-leave-to { opacity: 0; transform: translateX(-18px); }
-@media (max-width: 680px) { .path-picker, .object-picker { grid-template-columns: 1fr; }.path-picker button { min-height: 108px; }.step-indicator { display: none; }.center-toggle { align-self: flex-start; }.compact-copy { flex-wrap: wrap; }.preview-shell, .preview-shell canvas { min-height: 280px; } }
-.builder{container-type:inline-size}.physics-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr))}.physics-grid label{flex-wrap:wrap;align-items:stretch;flex-direction:column}.physics-grid input[type=number]{width:100%;min-width:86px;min-height:34px}.physics-grid input[type=checkbox]{align-self:flex-start}.builder h2,.builder h3,.builder strong,.builder p,.builder summary{overflow-wrap:anywhere;white-space:normal}.rope-units17,.form-error17{padding:8px 12px;line-height:1.5}.form-error17{color:var(--danger)}footer{flex-wrap:wrap}footer button{white-space:normal;overflow-wrap:anywhere}.preview-instruction,.preview-success{max-width:95%;white-space:normal}
+<style scoped>.connection-dialog :deep(.ui-dialog){width:min(90ch,calc(100vw - var(--ui-space-xl)))}.builder{min-width:0;display:flex;flex-direction:column;container:connection-builder/inline-size}.builder-body{min-height:0}.wizard-step{display:grid;gap:var(--ui-space-sm)}.step-copy{display:flex;gap:var(--ui-space-sm);align-items:center}.step-number{color:var(--accent);font-size:var(--type-caption);font-weight:600}.step-copy h3{margin:0;font-size:var(--type-section)}.step-copy p{margin:var(--ui-space-xs) 0;color:var(--text-muted);font-size:var(--type-caption)}.compact-copy>div{flex:1;min-width:0}.compact-copy{flex-wrap:wrap}.chosen-object,.object-picker button{display:flex;align-items:center;gap:var(--ui-space-sm);padding:var(--ui-space-sm);text-align:left;border:0;border-bottom:1px solid var(--border-subtle);border-radius:0;background:transparent}.chosen-object>span,.object-picker button>span{display:grid;flex:1;min-width:0}.chosen-object small,.object-picker small{color:var(--text-muted);font-size:var(--type-caption)}.chosen-object.fixed,.object-picker button.selected{background:var(--selection-bg)}.object-picker{display:grid;max-height:45vh;overflow:auto}.chosen-object strong,.object-picker strong{overflow-wrap:anywhere}.pair-summary,.overlap-notice{display:flex;align-items:center;gap:var(--ui-space-sm);padding-block:var(--ui-space-sm);border-bottom:1px solid var(--border-subtle)}.overlap-notice>div{display:grid}.overlap-notice small{color:var(--text-muted)}.path-picker{display:grid;gap:var(--ui-space-xs)}.path-picker button{display:grid;grid-template-columns:var(--ui-icon-size) minmax(0,1fr);gap:var(--ui-space-xs) var(--ui-space-sm);text-align:left;align-items:center;padding:var(--ui-space-sm)}.path-picker small{grid-column:2;color:var(--text-muted);font-size:var(--type-caption)}.path-preview{display:block;width:var(--ui-icon-size);height:var(--ui-icon-size);border-bottom:2px solid var(--accent);transform:rotate(-15deg)}.manual-preview{border-radius:50%}.bind-preview{border:1px solid var(--accent);transform:none}.center-toggle{display:flex;align-items:center;gap:var(--ui-space-xs);font-size:var(--type-caption)}.preview-shell{min-height:320px;position:relative;overflow:hidden;border:1px solid var(--border-strong);background:var(--bg-canvas)}.preview-shell canvas{display:block;width:100%;height:100%;min-height:320px;touch-action:none;cursor:crosshair}.preview-instruction,.preview-success{position:absolute;left:50%;bottom:var(--ui-space-sm);transform:translateX(-50%);display:flex;gap:var(--ui-space-xs);align-items:center;max-width:95%;padding:var(--ui-space-xs) var(--ui-space-sm);background:var(--surface-popover);border:1px solid var(--border-subtle);font-size:var(--type-caption);pointer-events:none}.preview-success{color:var(--success)}.preview-footer{display:flex;align-items:center;justify-content:space-between;gap:var(--ui-space-sm)}.preview-footer p{margin:0;color:var(--text-muted);font-size:var(--type-caption)}.advanced-physics{border-top:1px solid var(--border-subtle);padding-top:var(--ui-space-sm)}.physics-grid{display:grid;gap:var(--ui-space-sm);padding-block:var(--ui-space-sm)}.physics-grid label{display:grid;grid-template-columns:minmax(var(--ui-label-width),1fr) minmax(0,1fr);gap:var(--ui-space-sm);align-items:center}.physics-grid input[type=number]{width:var(--ui-number-width);justify-self:start}.collision-toggle>span{display:grid}.collision-toggle small{font-size:var(--type-caption);color:var(--text-muted)}.physics-grid input[type=checkbox]{justify-self:start}.rope-warning{color:var(--warning);font-size:var(--type-caption)}.form-error17,.preview-footer p.error{color:var(--danger)}footer{display:flex;gap:var(--ui-space-xs);justify-content:flex-end;flex-wrap:wrap;padding-top:var(--ui-space-sm);margin-top:var(--ui-space-sm);border-top:1px solid var(--border-subtle)}.empty-state{padding:var(--ui-space-xl);color:var(--text-muted);text-align:center}@container connection-builder(max-width:400px){.physics-grid label{grid-template-columns:minmax(0,1fr)}}
 </style>

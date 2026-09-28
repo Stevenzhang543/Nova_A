@@ -17,6 +17,3 @@ const copy=computed(/* 返回 ({en:'Unlimited',de:'Unbegrenzt',zh:'无限制'})[
 watch(/** 同时监听上限值和资源标识，以区分同一资源编辑与切换资源。 */ ()=>[props.modelValue,props.resourceKey] as const,/** 切换资源时重置有限值记忆；收到有效非负有限值时保存该值。 */ ([value,resource],old)=>{if(old&&old[1]!==resource)lastFinite.value=1000;if(Number.isFinite(value)&&value>=0)lastFinite.value=value},{immediate:true,flush:'sync'})
 /** 在无限制与记忆的有限值之间切换，发出模型更新和可冒泡的变更事件。 */ function toggle(){emit('update:modelValue',unlimited.value?lastFinite.value:Number.POSITIVE_INFINITY);root.value?.dispatchEvent(new Event('change',{bubbles:true}))}
 </script>
-<style scoped>
-.limit-number-control{display:flex;flex-wrap:wrap;align-items:center;gap:6px;min-width:0;width:100%}.limit-number-control button{flex:0 1 auto;white-space:normal;min-height:30px}.limit-number-control button.active{color:var(--accent-contrast);background:var(--accent);border-color:var(--accent)}
-</style>

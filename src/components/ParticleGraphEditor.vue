@@ -1,9 +1,9 @@
 <!-- 粒子模块编辑器：显示诊断与成本，编辑模块值并提交规范化粒子配置。 -->
 <template>
   <section class="particle-graph-editor">
-    <header><div><strong>{{ t('particleGraph') }}</strong><small>{{ t('particleGraphHint') }}</small></div><label>{{ t('simulationBackend') }}<select v-model="document.simulation" @change="commit"><option>Auto</option><option>CPU</option><option>GPU</option></select></label></header>
+    <UiPanelHeader :title="t('particleGraph')" :description="t('particleGraphHint')"><template #actions><label class="backend-field">{{ t('simulationBackend') }}<select v-model="document.simulation" @change="commit"><option>Auto</option><option>CPU</option><option>GPU</option></select></label></template></UiPanelHeader>
     <div class="particle-layout">
-      <aside><div v-for="item in document.modules" :key="item.id" class="module-row" :class="{ active: selectedId === item.id, disabled: !item.enabled }"><input :aria-label="t('enabled') + ' · ' + t(`particleModule${item.kind}`)" :checked="item.enabled" type="checkbox" @click.stop @change="toggle(item.id,$event)"><button :aria-pressed="selectedId === item.id" @click="selectedId = item.id"><span>{{ t(`particleModule${item.kind}`) }}</span><small>#{{ item.order + 1 }}</small></button></div></aside>
+      <aside :aria-label="t('particleGraph')"><div v-for="item in document.modules" :key="item.id" class="module-row" :class="{ active: selectedId === item.id, disabled: !item.enabled }"><input :aria-label="t('enabled') + ' · ' + t(`particleModule${item.kind}`)" :checked="item.enabled" type="checkbox" @click.stop @change="toggle(item.id,$event)"><UiButton variant="quiet" :aria-pressed="selectedId === item.id" @click="selectedId = item.id"><span>{{ t(`particleModule${item.kind}`) }}</span><small>#{{ item.order + 1 }}</small></UiButton></div></aside>
       <main v-if="selected">
         <header><strong>{{ t(`particleModule${selected.kind}`) }}</strong><span>{{ selected.id }}</span></header>
         <label v-if="selected.kind === 'Spawn'">{{ t('emissionRate') }}<NumericExpressionInput :model-value="Number(value('rate',20))" :minimum="0" :maximum="100000" :resource-key="(props.resourceKey ?? 'particle-graph') + ':' + selected.id + ':rate'" @update:model-value="setNumber('rate',$event)" /></label>
@@ -35,6 +35,8 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import NumericExpressionInput from './NumericExpressionInput.vue'
+import UiButton from '../ui/components/UiButton.vue'
+import UiPanelHeader from '../ui/components/UiPanelHeader.vue'
 import { t } from '../i18n'
 import { panelControlLabel } from '../editor/panelControlCopy'
 import { normalizeParticleGraph, particleGraphCost, validateParticleGraph, type ParticleGraphDocument } from '../renderer/particleGraph'
@@ -55,13 +57,29 @@ const editableSelected = computed(/** 判断选中模块是否属于提供通用
 </script>
 
 <style scoped>
-main>label{flex-wrap:wrap}
-.particle-vector{display:flex;flex-wrap:wrap;gap:6px;flex:1 1 18ch;min-width:0}
-
-.particle-graph-editor{min-height:350px;display:flex;flex-direction:column;border:1px solid var(--border-subtle);border-radius:10px;overflow:hidden;background:var(--surface-2)}.particle-graph-editor>header{min-height:42px;padding:6px 9px;display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px solid var(--border-subtle)}header>div{display:grid}header small{color:var(--text-muted);font-size:11px}.particle-layout{min-height:0;display:grid;grid-template-columns:minmax(170px,220px) minmax(290px,1fr) minmax(210px,280px);flex:1}.particle-layout>aside,.particle-layout>main{min-width:0;padding:8px;overflow:auto;border-right:1px solid var(--border-subtle)}.particle-layout>aside:first-child{display:flex;flex-direction:column;gap:4px}.particle-layout>aside:first-child button{min-height:32px;padding:4px 7px;display:grid;grid-template-columns:20px 1fr auto;align-items:center;text-align:left}.particle-layout button.disabled{opacity:.6}.particle-layout button.active{border-color:var(--accent);background:var(--accent-soft)}main header{display:flex;justify-content:space-between}main>label{min-height:34px;display:flex;align-items:center;justify-content:space-between;gap:8px;border-bottom:1px solid var(--border-subtle);color:var(--text-muted)}main input,main select{width:min(180px,55%)}.particle-preview{border-right:0!important}.particle-preview dl{display:grid;gap:5px}.particle-preview dl div{display:flex;justify-content:space-between}.particle-preview dd{margin:0;color:var(--accent)}.particle-preview p{font-size:11px;line-height:1.4}.good{color:var(--success)}.warning{color:var(--warning)}.error{color:var(--danger)}@container nova-particle (max-width:1000px){.particle-layout{grid-template-columns:180px 1fr}.particle-preview{grid-column:1/-1;max-height:150px;border-top:1px solid var(--border-subtle)}}@container nova-particle (max-width:680px){.particle-layout{grid-template-columns:1fr}.particle-layout>aside:first-child{max-height:135px}.particle-preview{grid-column:auto}}
-/* 26.13: module enable and selection are separate keyboard controls. */
-.particle-graph-editor{container:nova-particle/inline-size;min-width:0}.particle-graph-editor>header{flex-wrap:wrap}.particle-graph-editor>header>*{min-width:0;max-width:100%}.particle-layout{overflow:auto}.particle-layout>main{container:nova-particle-fields/inline-size}.module-row{min-width:0;display:grid;grid-template-columns:20px minmax(0,1fr);gap:5px;align-items:center}.module-row>button{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;min-width:0;white-space:normal;overflow-wrap:anywhere}.module-row.disabled{opacity:.6}.module-row.active>button{border-color:var(--accent);background:var(--accent-soft)}.particle-preview :is(p,dt,dd){overflow-wrap:anywhere}.particle-preview dl div{flex-wrap:wrap;gap:5px}
-@container nova-particle (max-width:1000px){.particle-layout{grid-template-columns:180px minmax(0,1fr)}.particle-preview{grid-column:1/-1}}
-@container nova-particle (max-width:680px){.particle-layout{grid-template-columns:minmax(0,1fr)}.particle-layout>aside:first-child{max-height:180px}.particle-preview{grid-column:auto;max-height:none}}
-@container nova-particle-fields (max-width:380px){main>label{flex-direction:column;align-items:stretch;height:auto;gap:5px;padding-block:5px}main input,main select{width:100%;max-width:100%;min-width:0}main header{flex-wrap:wrap;overflow-wrap:anywhere}}
+.particle-graph-editor { container: nova-particle / inline-size; min-width: 0; min-height: 0; display: flex; flex-direction: column; background: var(--surface-1); }
+.backend-field { display: flex; align-items: center; gap: var(--space-2); font-size: var(--type-caption); color: var(--text-secondary); }
+.backend-field select { width: auto; }
+.particle-layout { display: grid; grid-template-columns: minmax(14ch, 1fr) minmax(0, 2fr) minmax(18ch, 1fr); min-height: 0; flex: 1; overflow: auto; }
+.particle-layout > aside, .particle-layout > main { min-width: 0; padding: var(--space-2); overflow: auto; }
+.particle-layout > :not(:last-child) { border-right: var(--ui-border-width) solid var(--border-subtle); }
+.module-row { display: grid; grid-template-columns: var(--ui-icon-size) minmax(0, 1fr); align-items: center; gap: var(--space-1); }
+.module-row > button { min-width: 0; justify-content: space-between; white-space: normal; text-align: start; }
+.module-row > button span { min-width: 0; overflow-wrap: anywhere; }
+.module-row small { color: var(--text-muted); font-size: var(--type-caption); }
+.module-row.disabled { opacity: var(--disabled-opacity); }
+.module-row.active { background: var(--selection-bg); }
+main { container: nova-particle-fields / inline-size; }
+main > header { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: baseline; padding-block: var(--space-1) var(--space-2); }
+main > header span { color: var(--text-muted); font-size: var(--type-caption); }
+main > label { display: grid; grid-template-columns: minmax(0, var(--ui-label-width)) minmax(0, 1fr); align-items: center; gap: var(--space-2); min-height: var(--ui-standard-height); padding-block: var(--space-1); color: var(--text-secondary); font-size: var(--type-dense); }
+.particle-vector { display: flex; flex-wrap: wrap; gap: var(--space-1); min-width: 0; }
+.particle-preview dl { display: grid; gap: var(--space-1); }
+.particle-preview dl div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-2); }
+.particle-preview dd { margin: 0; font-variant-numeric: tabular-nums; color: var(--text-primary); }
+.particle-preview p, main > p { margin-block: var(--space-2); font-size: var(--type-caption); line-height: var(--line-body); overflow-wrap: anywhere; }
+.good { color: var(--success); }.warning { color: var(--warning); }.error { color: var(--danger); }
+@container nova-particle (max-width: 760px) { .particle-layout { grid-template-columns: minmax(14ch, 1fr) minmax(0, 2fr); }.particle-preview { grid-column: 1 / -1; border-top: var(--ui-border-width) solid var(--border-subtle); } }
+@container nova-particle (max-width: 480px) { .particle-layout { grid-template-columns: minmax(0, 1fr); }.particle-layout > aside:first-child { max-height: calc(6 * var(--ui-tree-row-height)); }.particle-layout > :not(:last-child) { border-right: 0; border-bottom: var(--ui-border-width) solid var(--border-subtle); }.backend-field { flex-wrap: wrap; } }
+@container nova-particle-fields (max-width: 280px) { main > label { grid-template-columns: minmax(0, 1fr); gap: var(--space-1); } }
 </style>

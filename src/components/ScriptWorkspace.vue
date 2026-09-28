@@ -1,25 +1,26 @@
 <!-- 脚本工作区：保存草稿并审核转换后协调代码、结构图和事件表模式。 -->
 <template>
   <section class="script-workspace">
-    <nav class="logic-mode" :aria-label="t('logicAuthoringMode')" :aria-busy="switching" :inert="switching || undefined" @keydown="modeNavigation">
-      <div class="logic-tabs" role="tablist" :aria-label="t('logicAuthoringMode')">
-      <button id="logic-code-tab" role="tab" :tabindex="studio.mode==='code'?0:-1" aria-controls="logic-authoring-panel" :aria-selected="studio.mode === 'code'" :class="{ active: studio.mode === 'code' }" @click="setMode('code')"><span>{ }</span>{{ t('rhaiCode') }}</button>
-      <button id="logic-graph-tab" role="tab" :tabindex="studio.mode==='graph'?0:-1" aria-controls="logic-authoring-panel" :aria-selected="studio.mode === 'graph'" :class="{ active: studio.mode === 'graph' }" @click="setMode('graph')"><span>⌘</span>{{ t('visualGraph') }}</button>
-      <button id="logic-events-tab" role="tab" :tabindex="studio.mode==='events'?0:-1" aria-controls="logic-authoring-panel" :aria-selected="studio.mode === 'events'" :class="{ active: studio.mode === 'events' }" @click="setMode('events')"><span>⚡</span>{{ t('eventSheet') }}</button>
-      </div><details class="logic-help"><summary>{{ t('help') }}</summary><p>{{ studio.mode === 'graph' ? t('visualGraphContract') : studio.mode === 'events' ? t('eventSheetContract') : t('rhaiContract') }}</p></details>
-    </nav>
+    <div class="logic-mode" :aria-busy="switching" :inert="switching || undefined">
+      <UiTabs class="logic-tabs" :aria-label="t('logicAuthoringMode')" :items="modeTabs" :model-value="studio.mode" @update:model-value="setMode($event as 'code' | 'graph' | 'events')" />
+      <details class="logic-help"><summary>{{ t('help') }}</summary><p>{{ studio.mode === 'graph' ? t('visualGraphContract') : studio.mode === 'events' ? t('eventSheetContract') : t('rhaiContract') }}</p></details>
+    </div>
     <section v-if="preview" class="conversion-review" :aria-label="copy.title">
-      <div class="conversion-review-actions"><button v-if="conversionGate(preview.assessment) === 'review'" :disabled="switching" @click="continueConversion">{{ copy.continue }}</button><button @click="preview = null">{{ copy.cancel }}</button></div>
+      <div class="conversion-review-actions"><UiButton v-if="conversionGate(preview.assessment) === 'review'" :disabled="switching" variant="primary" @click="continueConversion">{{ copy.continue }}</UiButton><UiButton @click="preview = null">{{ copy.cancel }}</UiButton></div>
       <ScriptConversionPanel :assessment="preview.assessment" :source="preview.source" :graph-navigation-enabled="studio.mode === 'graph'" @navigate="navigatePreview" />
     </section>
     <p v-if="switchError" class="switch-error" role="alert">{{ switchError }}</p>
-    <ScriptStudio v-if="studio.mode === 'code'" id="logic-authoring-panel" role="tabpanel" aria-labelledby="logic-code-tab" ref="codeEditor" class="logic-editor" @navigate="navigate" />
-    <VisualGraphEditor v-else-if="studio.mode === 'graph'" id="logic-authoring-panel" role="tabpanel" aria-labelledby="logic-graph-tab" ref="graphEditor" class="logic-editor" @navigate="navigate" />
-    <EventSheetEditor v-else ref="eventEditor" id="logic-authoring-panel" role="tabpanel" aria-labelledby="logic-events-tab" class="logic-editor" />
+    <KeepAlive>
+      <ScriptStudio v-if="studio.mode === 'code'" id="logic-authoring-panel" role="tabpanel" aria-labelledby="logic-code-tab" ref="codeEditor" class="logic-editor" @navigate="navigate" />
+      <VisualGraphEditor v-else-if="studio.mode === 'graph'" id="logic-authoring-panel" role="tabpanel" aria-labelledby="logic-graph-tab" ref="graphEditor" class="logic-editor" @navigate="navigate" />
+      <EventSheetEditor v-else ref="eventEditor" id="logic-authoring-panel" role="tabpanel" aria-labelledby="logic-events-tab" class="logic-editor" />
+    </KeepAlive>
   </section>
 </template>
 
 <script setup lang="ts">
+import UiButton from '../ui/components/UiButton.vue'
+import UiTabs from '../ui/components/UiTabs.vue'
 import { computed, nextTick, ref, shallowRef } from 'vue'
 import ScriptStudio from './ScriptStudio.vue'
 import VisualGraphEditor from './VisualGraphEditor.vue'
@@ -36,7 +37,11 @@ import { openGraphAsset, queueInitialGraphLayout } from '../visual/graphStudioSt
 import { parseGraphDocument } from '../visual/graphTypes'
 import { addEditorLog } from '../store/editor'
 import { readEventSheet } from '../runtime/eventSheets'
-/** 使用左右键、Home 和 End 在模式标签间移动焦点，不自动激活标签。 */ function modeNavigation(event:KeyboardEvent){if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;const tabs=[...(event.currentTarget as HTMLElement).querySelectorAll<HTMLButtonElement>('[role=tab]')],current=tabs.indexOf(event.target as HTMLButtonElement);if(current<0)return;event.preventDefault();tabs[event.key==='Home'?0:event.key==='End'?tabs.length-1:(current+(event.key==='ArrowRight'?1:tabs.length-1))%tabs.length]?.focus()}
+const modeTabs = computed(() => [
+  { id: 'code', label: t('rhaiCode'), icon: 'script' as const, tabId: 'logic-code-tab', controls: 'logic-authoring-panel' },
+  { id: 'graph', label: t('visualGraph'), icon: 'graph' as const, tabId: 'logic-graph-tab', controls: 'logic-authoring-panel' },
+  { id: 'events', label: t('eventSheet'), icon: 'events' as const, tabId: 'logic-events-tab', controls: 'logic-authoring-panel' },
+])
 
 const codeEditor = ref<{ getConversionSnapshot: () => ConversionSnapshot | null; focusSourceRange: (span: ConversionSpan) => void } | null>(null)
 const graphEditor = ref<{ getConversionSnapshot: () => ConversionSnapshot | null; focusConversionNode: (request: ConversionNavigation) => void } | null>(null)
@@ -124,10 +129,7 @@ let pendingNavigation: ConversionNavigation | undefined
 
 <style scoped>
 .script-workspace{position:absolute;inset:0;display:flex;flex-direction:column;min-width:0;min-height:0;background:var(--bg-canvas)}
-.conversion-review{flex:0 1 auto;max-height:48%;overflow:auto;border-bottom:1px solid var(--border-strong);background:var(--surface-1)}.conversion-review-actions{display:flex;gap:8px;flex-wrap:wrap;padding:8px 12px}.conversion-review-actions button{min-height:30px;height:auto;white-space:normal;padding:6px 10px;color:var(--text-primary);background:var(--surface-3);border:1px solid var(--border-strong);border-radius:6px}.switch-error{margin:0;padding:8px 12px;color:var(--danger,#f87171);font-size:12px}
-.logic-mode{position:relative;z-index:50;flex:0 0 auto;min-height:38px;padding:4px 8px;display:flex;align-items:center;gap:4px;border-bottom:1px solid var(--border-subtle);background:var(--surface-1);overflow:visible;flex-wrap:wrap}
-.logic-mode button{min-height:30px;padding:0 11px;display:flex;align-items:center;gap:7px;border:1px solid transparent;border-radius:8px;color:var(--text-muted);background:transparent;font-size:12px}.logic-mode button span{color:var(--accent);font:700 12px var(--font-mono)}.logic-mode button.active{color:var(--text-primary);border-color:var(--border-strong);background:var(--surface-3);box-shadow:var(--shadow-sm)}
-.logic-tabs{display:flex;flex-wrap:wrap;gap:4px;min-width:0}.logic-help{margin-left:auto}.logic-help summary{cursor:pointer;padding:7px 10px;min-height:30px;color:var(--text-secondary);font-size:12px}.logic-help p{position:absolute;z-index:1;top:100%;right:8px;width:min(520px,calc(100% - 16px));max-height:min(300px,50vh);box-sizing:border-box;margin:0;padding:12px;overflow:auto;border:1px solid var(--border-strong);border-radius:8px;background:var(--surface-2);box-shadow:var(--shadow-lg);color:var(--text-primary);font-size:12px;line-height:1.6;white-space:normal;overflow-wrap:anywhere}.script-workspace>.logic-editor{position:relative;inset:auto;min-height:0;flex:1}
-.logic-mode button{flex-shrink:0;min-width:max-content;height:auto;padding-block:5px;white-space:normal}
-.script-workspace{container:script-modes/inline-size}@container script-modes(max-width:760px){.logic-tabs{flex:1}.logic-mode button{flex:1;justify-content:center}}
+.conversion-review{flex:0 1 auto;max-height:48%;overflow:auto;border-bottom:1px solid var(--border-strong);background:var(--surface-1)}.conversion-review-actions{display:flex;gap:var(--space-2);flex-wrap:wrap;padding:var(--space-2) var(--space-3)}.switch-error{margin:0;padding:var(--space-2) var(--space-3);color:var(--danger);font-size:var(--type-dense)}
+.logic-mode{position:relative;z-index:50;flex:0 0 auto;display:flex;align-items:center;border-bottom:1px solid var(--border-subtle);background:var(--surface-1);min-width:0}
+.logic-tabs{flex:1;min-width:0}.logic-help{flex:none;padding-inline:var(--space-2)}.logic-help summary{cursor:pointer;color:var(--text-secondary);font-size:var(--type-dense)}.logic-help p{position:absolute;z-index:1;top:100%;right:var(--space-2);width:min(60ch,calc(100% - var(--space-4)));max-height:50vh;box-sizing:border-box;margin:0;padding:var(--space-3);overflow:auto;border:1px solid var(--border-strong);background:var(--surface-2);color:var(--text-primary);font-size:var(--type-dense);white-space:normal;overflow-wrap:anywhere}.script-workspace>.logic-editor{position:relative;inset:auto;min-height:0;flex:1}
 </style>

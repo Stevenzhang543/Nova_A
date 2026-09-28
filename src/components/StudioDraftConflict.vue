@@ -3,7 +3,7 @@
   <section class="studio-draft-conflict" role="alert">
     <strong>{{ labels.title }}</strong><p>{{ labels.message }}</p>
     <details><summary>{{ labels.review }}</summary><div class="versions"><label>{{ labels.saved }}<pre>{{ previews.saved }}</pre></label><label>{{ labels.draft }}<pre>{{ previews.draft }}</pre></label></div></details>
-    <div class="actions"><button @click="$emit('keep')">{{ labels.keep }}</button><button @click="$emit('discard')">{{ labels.discard }}</button></div>
+    <div class="actions"><UiButton variant="primary" @click="$emit('keep')">{{ labels.keep }}</UiButton><UiButton variant="danger" @click="$emit('discard')">{{ labels.discard }}</UiButton></div>
   </section>
 </template>
 <script setup lang="ts">
@@ -21,5 +21,5 @@ const labels=computed(/* 返回 copy[preferencesState.locale] 的当前值。 */
 const previews=computed(/** 分别生成已保存源内容和当前草稿的可读预览。 */ ()=>({saved:preview(props.savedSource),draft:preview(props.draftSource)}))
 </script>
 <style scoped>
-.studio-draft-conflict{flex:0 0 auto;max-height:45%;overflow:hidden;padding:10px 12px;display:flex;flex-direction:column;gap:7px;border-block:1px solid var(--warning);color:var(--text-primary);background:var(--surface-2);font-size:var(--type-dense)}strong,p,.actions{flex:0 0 auto}details{min-height:0;overflow:auto;flex:0 1 auto}p{margin:0;line-height:1.5;overflow-wrap:anywhere}summary{cursor:pointer;padding-block:5px}.versions{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(260px,100%),1fr));gap:10px}.versions label{min-width:0;display:grid;align-content:start;gap:5px}pre{min-width:0;max-height:180px;overflow:auto;margin:0;padding:8px;border:1px solid var(--border-subtle);background:var(--bg-canvas);font:12px/1.5 var(--font-mono);white-space:pre}.actions{display:flex;gap:8px;flex-wrap:wrap}button{min-height:32px;height:auto;padding:6px 9px;white-space:normal;overflow-wrap:anywhere;border:1px solid var(--border-strong);border-radius:7px;color:var(--text-primary);background:var(--surface-3)}
+.studio-draft-conflict{flex:0 0 auto;max-height:45%;overflow:hidden;padding:var(--space-2) var(--space-3);display:flex;flex-direction:column;gap:var(--space-2);border-block:1px solid var(--warning);color:var(--text-primary);background:var(--surface-1);font-size:var(--type-dense)}strong,p,.actions{flex:0 0 auto}details{min-height:0;overflow:auto;flex:0 1 auto}p{overflow-wrap:anywhere}.versions{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(var(--ui-field-width),100%),1fr));gap:var(--space-3)}.versions label{min-width:0;display:grid;align-content:start;gap:var(--space-1)}pre{min-width:0;max-height:calc(6 * var(--ui-control-height));overflow:auto;margin:0;padding:var(--space-2);border:1px solid var(--border-subtle);background:var(--bg-canvas);font:var(--type-code)/var(--line-body) var(--font-mono);white-space:pre}.actions{display:flex;gap:var(--space-2);flex-wrap:wrap}.actions :deep(.ui-button){white-space:normal;text-align:start;height:auto;padding-block:var(--space-1)}
 </style>

@@ -60,17 +60,17 @@
           <button @click="handleStatusCenter"><span>{{ t('statusCenter') }}</span></button>
         </div>
           <div v-else-if="activeMenu === 'view'" :key="'view'" class="dropdown">
-          <button @click="handleToggleGrid"><span>{{ t(editorState.showGrid ? 'hideGrid' : 'showGrid') }}</span><span class="check">{{ editorState.showGrid ? '✓' : '' }}</span></button>
+          <button @click="handleToggleGrid"><span>{{ t(editorState.showGrid ? 'hideGrid' : 'showGrid') }}</span><EditorIcon v-if="editorState.showGrid" name="check" /></button>
           <hr>
-          <button @click="toggleAxis('x')"><span>{{ t(editorState.showXAxis ? 'hideXAxis' : 'showXAxis') }}</span><span class="check">{{ editorState.showXAxis ? '✓' : '' }}</span></button>
-          <button @click="toggleAxis('y')"><span>{{ t(editorState.showYAxis ? 'hideYAxis' : 'showYAxis') }}</span><span class="check">{{ editorState.showYAxis ? '✓' : '' }}</span></button>
+          <button @click="toggleAxis('x')"><span>{{ t(editorState.showXAxis ? 'hideXAxis' : 'showXAxis') }}</span><EditorIcon v-if="editorState.showXAxis" name="check" /></button>
+          <button @click="toggleAxis('y')"><span>{{ t(editorState.showYAxis ? 'hideYAxis' : 'showYAxis') }}</span><EditorIcon v-if="editorState.showYAxis" name="check" /></button>
           <button @click="handleToggleAllAxes"><span>{{ t((editorState.showXAxis || editorState.showYAxis) ? 'hideAllAxes' : 'showAllAxes') }}</span></button>
           <hr><button @click="handleResetCamera"><span>{{ t('resetCamera') }}</span></button>
           <hr>
-          <button @click="handleTogglePanel('hierarchy')"><span>{{ t('toggleHierarchy') }}</span><span class="check">{{ editorState.hierarchyVisible ? '✓' : '' }}</span></button>
-          <button @click="handleTogglePanel('inspector')"><span>{{ t('toggleInspector') }}</span><span class="check">{{ editorState.inspectorVisible ? '✓' : '' }}</span></button>
-          <button @click="handleTogglePanel('bottom')"><span>{{ t('toggleBottomPanel') }}</span><span class="check">{{ editorState.bottomPanelVisible ? '✓' : '' }}</span></button>
-          <button @click="handleFocusMode"><span>{{ t('focusMode') }}</span><span class="check">{{ editorState.distractionFree ? '✓' : '' }}</span></button>
+          <button @click="handleTogglePanel('hierarchy')"><span>{{ t('toggleHierarchy') }}</span><EditorIcon v-if="editorState.hierarchyVisible" name="check" /></button>
+          <button @click="handleTogglePanel('inspector')"><span>{{ t('toggleInspector') }}</span><EditorIcon v-if="editorState.inspectorVisible" name="check" /></button>
+          <button @click="handleTogglePanel('bottom')"><span>{{ t('toggleBottomPanel') }}</span><EditorIcon v-if="editorState.bottomPanelVisible" name="check" /></button>
+          <button @click="handleFocusMode"><span>{{ t('focusMode') }}</span><EditorIcon v-if="editorState.distractionFree" name="check" /></button>
           <button @click="handleResetLayout"><span>{{ t('resetLayout') }}</span></button>
           <button @click="handleWorkspaceManager"><span>{{ t('manageWorkspaces') }}</span><kbd>Ctrl Alt W</kbd></button>
           <hr>
@@ -91,13 +91,14 @@
     </nav>
     <div class="top-spacer"></div>
     <span v-if="recoveryState.safeMode" class="safe-pill">{{ t('safeMode') }}</span>
-    <span v-if="historyState.dirty" class="dirty-pill" :title="projectTransactionState.unsavedScopes.join(', ')">● {{ t('unsavedChanges') }}</span>
+    <span v-if="historyState.dirty" class="dirty-pill" :title="projectTransactionState.unsavedScopes.join(', ')">{{ t('unsavedChanges') }}</span>
     <span class="release-pill">{{ NOVA_RELEASE_NAME }}</span>
     <input ref="fileInput" type="file" hidden accept="application/json,.nova,.json" @change="handleFileSelected">
   </header>
 </template>
 
 <script setup lang="ts">
+import EditorIcon from '../components/EditorIcon.vue'
 import { installTransientPopover } from '../editor/transientPopover'
 import { openExternalUrl } from '../runtime/externalLinks'
 import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
@@ -248,40 +249,7 @@ onUnmounted(/** 卸载时移除键盘和尺寸监听并释放弹出菜单行为�
 </script>
 
 <style scoped>
-/* Above the workspace toolbar (600), below dialogs and palettes (1200+). */
-.top-bar { height: 44px; flex: 0 0 44px; display: flex; align-items: center; gap: 12px; padding: 0 12px; color: var(--text-secondary); background: color-mix(in srgb,var(--surface-1) 96%,var(--bg-base)); border-bottom: 1px solid var(--border-subtle); box-shadow:inset 0 -1px color-mix(in srgb,var(--accent) 4%,transparent); backdrop-filter: var(--glass-blur); position: relative; z-index: 650; }
-.brand { display: flex; align-items: center; gap: 8px; color: var(--text-primary); text-decoration: none; font-size: var(--type-dense); font-weight: 700; letter-spacing: -.01em; }
-.brand-mark { display: grid; place-items: center; width: 25px; height: 25px; border-radius: 8px; color: var(--accent-contrast); background: linear-gradient(145deg, var(--accent), var(--accent-secondary)); font-size: var(--type-caption); box-shadow: 0 5px 16px var(--accent-soft); }
-.menu-container { height: 100%; display: flex; align-items: center; gap: 2px; }
-.menu-item { height: 100%; position: relative; display: flex; align-items: center; }
-.menu-item > button { height: 30px; padding: 0 10px; border: 0; border-radius: 8px; color: var(--text-secondary); background: transparent; font-size: var(--type-caption); }
-.menu-item > button:hover, .menu-item > button.active { color: var(--text-primary); background: var(--surface-hover); }
-.dropdown { position: absolute; top: 38px; left: 0; min-width: 250px; padding: 7px; display: flex; flex-direction: column; border: 1px solid var(--border-strong); border-radius: var(--radius-panel); background: var(--surface-1); backdrop-filter: var(--glass-blur); box-shadow: var(--shadow-float); }
-.dropdown-right { right: 0; left: auto; }
-.dropdown button { min-height: 36px; padding: 0 10px; display: flex; align-items: center; justify-content: space-between; gap: 18px; border: 0; border-radius: 8px; background: transparent; color: var(--text-secondary); text-align: left; font-size: var(--type-caption); }
-.dropdown button:hover { color: var(--text-primary); background: var(--accent-soft); }
-.dropdown button.danger { color: var(--danger); }
-.dropdown button.danger:hover { background: var(--danger-soft); }
-.dropdown hr { width: 100%; margin: 5px 0; border: 0; border-top: 1px solid var(--border-subtle); }
-kbd { color: var(--text-muted); font-family: inherit; font-size:var(--type-caption); }
-.check { color: var(--accent); }
-.top-spacer { flex: 1; }
-.release-pill { padding: 3px 8px; border: 1px solid var(--border-subtle); border-radius: 999px; color: var(--text-muted); font-size:var(--type-caption); white-space:nowrap }
-.safe-pill{padding:3px 8px;border:1px solid var(--warning);border-radius:999px;color:var(--warning);font-size:var(--type-caption)}
-.dirty-pill{padding:3px 8px;border:1px solid color-mix(in srgb,var(--warning) 60%,var(--border-subtle));border-radius:999px;color:var(--warning);font-size:var(--type-caption);white-space:nowrap}
-@media(max-width:980px){.release-pill{display:none}.top-bar{gap:7px}.menu-item>button{padding-inline:7px}}
-@media(max-width:720px){.brand>span:last-child{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}.brand{gap:0}.top-bar{padding-inline:7px}.menu-container{min-width:0;overflow-x:auto;scrollbar-width:none}.menu-container::-webkit-scrollbar{display:none}}
-.menu-popover-host { flex: 0 0 0; width: 0; }
-.dropdown[inert] { pointer-events: none; }
-.menu-enter-active, .menu-leave-active { transition: opacity 130ms ease, transform 130ms ease; transform-origin: top left; }
-.menu-enter-from, .menu-leave-to { opacity: 0; transform: translateY(-4px) scale(.98); }
-/* Keep translated menu labels intrinsic-sized. The positioned top bar, outside
-   the scroller, owns dropdown geometry so scrolling never clips open commands. */
-.menu-container { min-width: 0; flex: 0 1 auto; overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; overscroll-behavior-inline: contain; }
-.menu-container::-webkit-scrollbar { display: initial; height: 4px; }
-.brand, .safe-pill, .dirty-pill, .release-pill { flex-shrink: 0; }
-.menu-item { position: static; flex: 0 0 auto; }
-.menu-item > button { flex: 0 0 auto; width: max-content; white-space: nowrap; }
-.dropdown, .dropdown-right { top: 100%; left: var(--menu-left, 8px); right: auto; min-width: min(250px, calc(100vw - 16px)); max-width: calc(100vw - 16px); max-height: calc(100vh - 74px); overflow: auto; }
-.dropdown > button { flex: 0 0 auto; white-space: normal; }
+.top-bar{min-height:var(--ui-control-height);display:flex;align-items:center;gap:var(--ui-space-sm);padding-inline:var(--ui-space-sm);border-bottom:1px solid var(--border-subtle);background:var(--surface-1);position:relative;z-index:600;flex:none}.brand{display:flex;gap:var(--ui-space-xs);align-items:center;color:var(--text-primary);text-decoration:none;font-weight:600;white-space:nowrap}.brand-mark{color:var(--accent)}.menu-container{display:flex;min-width:0;overflow-x:auto}.menu-item{flex:none}.menu-item>button{border-color:transparent;background:transparent}.top-spacer{flex:1}.release-pill,.safe-pill,.dirty-pill{font-size:var(--type-caption);white-space:nowrap;color:var(--text-muted)}.dirty-pill{color:var(--warning)}.safe-pill{color:var(--danger)}
+.dropdown{position:fixed;top:calc(var(--ui-control-height) + 1px);left:var(--menu-left);z-index:650;display:flex;flex-direction:column;min-width:26ch;max-width:min(54ch,calc(100vw - var(--ui-space-lg)));max-height:calc(100vh - 2 * var(--ui-control-height));overflow:auto;padding:var(--ui-space-xs);border:1px solid var(--border-strong);background:var(--surface-popover);box-shadow:var(--shadow-md)}.dropdown button{display:flex;justify-content:space-between;gap:var(--ui-space-lg);text-align:left;border-color:transparent;background:transparent}.dropdown kbd{color:var(--text-muted);font-size:var(--type-caption);margin-inline-start:auto}.dropdown hr{inline-size:100%;border:0;border-top:1px solid var(--border-subtle);margin-block:var(--ui-space-xs)}.danger{color:var(--danger)}
+@media(max-width:900px){.release-pill{display:none}.brand>span:last-child{display:none}}
 </style>

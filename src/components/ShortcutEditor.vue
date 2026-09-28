@@ -1,27 +1,27 @@
 <!-- 快捷键编辑器：搜索、录制、检查冲突及导入导出按键配置。 -->
 <template>
   <Teleport to="body">
-    <section v-if="state.shortcutEditorOpen" class="scrim" role="dialog" aria-modal="true" v-modal-focus :aria-label="t('shortcutEditor')" @mousedown.self="close" @keydown.esc="close">
-      <article>
-        <header><div><strong>{{ t('shortcutEditor') }}</strong><small>{{ t('shortcutEditorHint') }}</small></div><button :title="t('close')" @click="close">×</button></header>
-        <label class="search"><span>⌕</span><input v-model="query" type="search" :placeholder="t('searchShortcuts')"></label>
+    <UiDialog v-if="state.shortcutEditorOpen" :title="t('shortcutEditor')" @close="close">
+        <p class="dialog-hint">{{ t('shortcutEditorHint') }}</p>
+        <label class="search"><EditorIcon name="search" /><input v-model="query" type="search" :placeholder="t('searchShortcuts')"></label>
         <div class="shortcut-list">
           <section v-for="item in visible" :key="item.id">
             <span><strong>{{ t(item.label) }}</strong><small>{{ t('defaultShortcut') }}: {{ item.defaultBinding }}</small></span>
             <button :class="{ recording: recording === item.id }" @click="recording = item.id" @keydown="capture($event, item.id)">{{ recording === item.id ? t('pressShortcut') : item.binding }}</button>
-            <button :title="t('reset')" @click="setShortcut(item.id, item.defaultBinding)">↺</button>
+            <UiButton :label="t('reset')" @click="setShortcut(item.id, item.defaultBinding)" icon="reset" />
           </section>
           <p v-if="!visible.length">{{ t('noCommandsFound') }}</p>
         </div>
         <p v-if="conflict" class="conflict" role="alert">{{ conflict }}</p>
         <input ref="importInput" hidden type="file" accept="application/json,.json" @change="loadShortcuts">
         <footer><button @click="importInput?.click()">{{ t('importShortcuts') }}</button><button @click="saveShortcuts">{{ t('exportShortcuts') }}</button><button @click="resetShortcuts">{{ t('resetAllShortcuts') }}</button><button class="primary" @click="close">{{ t('done') }}</button></footer>
-      </article>
-    </section>
+    </UiDialog>
   </Teleport>
 </template>
 <script setup lang="ts">
-import { vModalFocus } from '../editor/modalFocus'
+import UiDialog from '../ui/components/UiDialog.vue'
+import UiButton from '../ui/components/UiButton.vue'
+import EditorIcon from './EditorIcon.vue'
 import { computed, ref } from 'vue'
 import { t } from '../i18n'
 import { editorState as state } from '../store/editor'
@@ -35,5 +35,8 @@ const visible = computed(/** 按规范化搜索词筛选命令名称、现有与
 /** 读取并导入文件，显示数量或错误，最后清空文件输入。 */ async function loadShortcuts(event: Event) { const input = event.target as HTMLInputElement; const file = input.files?.[0]; if (!file) return; try { const count = importShortcuts(await file.text()); conflict.value = t('shortcutsImported', { count }) } catch (error) { conflict.value = error instanceof Error ? error.message : String(error) } finally { input.value = '' } }
 </script>
 <style scoped>
-.scrim{position:fixed;inset:0;z-index:1850;padding:20px;display:grid;place-items:center;background:var(--scrim);backdrop-filter:blur(8px)}article{width:min(650px,100%);max-height:90vh;display:flex;flex-direction:column;overflow:hidden;border:1px solid var(--border-strong);border-radius:16px;background:var(--surface-1);box-shadow:var(--shadow-lg)}header{min-height:58px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border-subtle)}header div{display:grid;gap:3px}header strong{font-size:15px}header small,.shortcut-list small{color:var(--text-muted);font-size:12px}button{min-height:34px;padding:0 10px;border:1px solid var(--border-subtle);border-radius:8px;background:var(--surface-2)}.search{margin:10px 12px;padding:0 9px;display:flex;align-items:center;gap:7px;border:1px solid var(--border-subtle);border-radius:9px;background:var(--input-bg)}.search input{min-width:0;flex:1;border:0;background:transparent}.shortcut-list{min-height:0;padding:0 12px;overflow:auto}.shortcut-list section{min-height:55px;display:grid;grid-template-columns:minmax(0,1fr) 145px 36px;gap:7px;align-items:center;border-top:1px solid var(--border-subtle)}.shortcut-list section>span{min-width:0;display:grid;gap:3px}.shortcut-list button.recording{color:var(--accent);border-color:var(--accent);background:var(--accent-soft)}.conflict{margin:8px 12px;color:var(--danger)}footer{padding:10px 12px;display:flex;justify-content:flex-end;gap:7px;border-top:1px solid var(--border-subtle)}button.primary{color:var(--accent-contrast);border-color:var(--accent);background:var(--accent)}
+.dialog-hint{margin:0 0 var(--ui-space-sm);color:var(--text-muted)}.scope,.profiles,.actions,.io,footer{display:flex;align-items:center;flex-wrap:wrap;gap:var(--ui-space-xs);padding-block:var(--ui-space-sm)}.manager-grid{display:grid;grid-template-columns:minmax(18ch,30%) minmax(0,1fr);gap:var(--ui-space-lg)}.manager-grid>nav{display:flex;flex-direction:column;gap:var(--ui-space-xs);border-right:1px solid var(--border-subtle);padding-right:var(--ui-space-sm);max-height:50vh;overflow:auto}.manager-grid>nav button{display:flex;flex-direction:column;align-items:flex-start;text-align:left;flex:none;min-height:calc(2 * var(--ui-control-height))}.manager-grid>main{min-width:0}.manager-grid label{display:flex;gap:var(--ui-space-xs);align-items:center;flex-wrap:wrap}.manager-grid label input:not([type=checkbox]){flex:1;min-width:8ch}.dock-grid{display:grid;gap:var(--ui-space-sm)}.dock-grid fieldset{display:flex;gap:var(--ui-space-xs);flex-wrap:wrap;padding:var(--ui-space-sm);border:1px solid var(--border-subtle)}.status,.conflict{overflow-wrap:anywhere}.conflict{color:var(--danger)}
+.search{display:flex;gap:var(--ui-space-xs);align-items:center}.search input{flex:1;min-width:0}.shortcut-list{margin-block:var(--ui-space-sm)}.shortcut-list>section{display:grid;grid-template-columns:minmax(0,1fr) minmax(14ch,auto) var(--ui-control-height);gap:var(--ui-space-sm);align-items:center;padding-block:var(--ui-space-xs);border-bottom:1px solid var(--border-subtle)}.shortcut-list small{display:block;color:var(--text-muted);font-size:var(--type-caption)}.recording{color:var(--warning)}
+.contracts{display:grid;grid-template-columns:repeat(auto-fit,minmax(20ch,1fr));gap:var(--ui-space-sm)}.contracts>section{display:grid;gap:var(--ui-space-xs);padding-block:var(--ui-space-sm);border-bottom:1px solid var(--border-subtle)}.contracts small,.support-grid small{color:var(--text-muted)}.support-grid,.release-channels,.privacy-review{display:grid;gap:var(--ui-space-sm);padding-block:var(--ui-space-sm);border-top:1px solid var(--border-subtle)}.release-channels>header{display:flex;justify-content:space-between}.release-channels>article{display:grid;grid-template-columns:12ch minmax(0,1fr);gap:var(--ui-space-xs);padding:var(--ui-space-xs)}.release-channels>article small{grid-column:2}.release-channels>article.active{background:var(--selection-bg)}.privacy-review label{display:flex;gap:var(--ui-space-xs);align-items:center}.crash-consent{border-top:1px solid var(--border-subtle);padding-top:var(--ui-space-sm)}
+@media(max-width:600px){.manager-grid{grid-template-columns:minmax(0,1fr)}.manager-grid>nav{max-height:22vh;border-right:0;border-bottom:1px solid var(--border-subtle)}.shortcut-list>section{grid-template-columns:minmax(0,1fr) var(--ui-control-height)}.shortcut-list>section>span{grid-column:1/-1}}
 </style>

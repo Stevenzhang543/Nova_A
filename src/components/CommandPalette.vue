@@ -5,7 +5,7 @@
       <div v-if="state.commandPaletteOpen" class="palette-scrim" role="presentation" @mousedown.self="close">
         <section ref="dialog" class="command-palette" role="dialog" aria-modal="true" v-modal-focus :aria-label="t('commandPalette')">
           <header>
-            <span>⌕</span>
+            <EditorIcon name="search" />
             <input ref="searchInput" v-model="query" type="search" :placeholder="palettePlaceholder" @keydown="onKeyDown">
             <kbd>Esc</kbd>
           </header>
@@ -18,7 +18,7 @@
               :aria-selected="index === activeIndex"
               @mouseenter="activeIndex = index"
               @click="run(command)"
-            ><span class="command-icon">{{ command.icon }}</span><span><strong>{{ t(command.label) }}</strong><small>{{ t(command.group) }}</small></span><kbd v-if="command.shortcut">{{ command.shortcut }}</kbd></button>
+            ><EditorIcon :name="commandIcon(command)" /><span><strong>{{ t(command.label) }}</strong><small>{{ t(command.group) }}</small></span><kbd v-if="command.shortcut">{{ command.shortcut }}</kbd></button>
             <p v-if="!filteredCommands.length">{{ t('noCommandsFound') }}</p>
           </div>
           <footer><span>↑↓ {{ t('navigate') }}</span><span>↵ {{ t('runCommand') }}</span></footer>
@@ -29,6 +29,7 @@
 </template>
 
 <script setup lang="ts">
+import EditorIcon, { type EditorIconName } from './EditorIcon.vue'
 import { vModalFocus } from '../editor/modalFocus'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { t } from '../i18n'
@@ -50,6 +51,16 @@ import { simulationPreflight } from '../runtime/simulationAuthoring26'
 type TranslationKey = Parameters<typeof t>[0]
 interface EditorCommand { id: string; label: TranslationKey; group: TranslationKey; icon: string; shortcut?: string; keywords: string; run: () => void }
 
+function commandIcon(command: EditorCommand): EditorIconName {
+ const exact:Record<string,EditorIconName>={'project-save':'save','project-validate':'check','project-repair':'tools','edit-undo':'undo','edit-redo':'redo','edit-copy':'copy','edit-paste':'paste','edit-duplicate':'duplicate','edit-delete':'remove','runtime-play':'play','runtime-stop':'stop','create-object':'add','settings':'settings','scene':'design','game':'play','creator-learning':'learn','automation-studio':'tools','toggle-hierarchy':'hierarchy','toggle-inspector':'inspector','toggle-bottom':'bottom','focus':'maximize'}
+ if(exact[command.id])return exact[command.id]
+ if(command.id.includes('script'))return 'script'
+ if(command.id.includes('animation'))return 'animation'
+ if(command.id.includes('asset'))return 'assets'
+ if(command.id.includes('entity'))return 'design'
+ if(command.id.includes('workspace'))return 'layout'
+ return 'command'
+}
 const searchInput = ref<HTMLInputElement | null>(null)
 const dialog = ref<HTMLElement | null>(null)
 const query = ref('')
@@ -173,11 +184,4 @@ onMounted(/* 调用 window.addEventListener('keydown', globalShortcut) 并返回
 onUnmounted(/* 调用 window.removeEventListener('keydown', globalShortcut) 并返回调用结果。 */ () => window.removeEventListener('keydown', globalShortcut))
 </script>
 
-<style scoped>
-.palette-scrim { position: fixed; inset: 0; z-index: 1200; padding-top: min(14vh, 110px); display: flex; justify-content: center; align-items: flex-start; background: var(--scrim); backdrop-filter: blur(5px); }
-.command-palette { width: min(620px, calc(100vw - 32px)); max-height: min(620px, calc(100vh - 130px)); display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--border-strong); border-radius: 16px; background: var(--surface-1); box-shadow: var(--shadow-lg); }
-header { min-height: 52px; padding: 7px 12px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border-subtle); }header > span { color: var(--accent); font-size: 20px; }header input { min-width: 0; flex: 1; border: 0; background: transparent; font-size: 14px; box-shadow: none; }kbd { padding: 2px 6px; border: 1px solid var(--border-subtle); border-radius: 5px; color: var(--text-muted); background: var(--surface-2); font: 11px/1.4 inherit; }
-.command-results { min-height: 80px; padding: 7px; overflow: auto; }.command-results button { width: 100%; min-height: 46px; padding: 6px 10px; display: grid; grid-template-columns: 30px 1fr auto; align-items: center; gap: 8px; border: 0; border-radius: 9px; color: var(--text-secondary); background: transparent; text-align: left; }.command-results button.active { color: var(--text-primary); background: var(--accent-soft); }.command-icon { width: 27px; height: 27px; display: grid; place-items: center; border: 1px solid var(--border-subtle); border-radius: 7px; color: var(--accent); background: var(--surface-2); font: 600 11px/1 var(--font-mono); }.command-results button > span:nth-child(2) { min-width: 0; display: flex; flex-direction: column; gap: 2px; }.command-results strong { overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }.command-results small { color: var(--text-muted); font-size:11px; }.command-results p { padding: 22px; color: var(--text-muted); text-align: center; font-size: 11px; }
-footer { min-height: 30px; padding: 0 12px; display: flex; align-items: center; gap: 15px; border-top: 1px solid var(--border-subtle); color: var(--text-muted); font-size:11px; }
-.palette-enter-active, .palette-leave-active { transition: opacity 130ms ease; }.palette-enter-active .command-palette, .palette-leave-active .command-palette { transition: transform 160ms cubic-bezier(.2,.8,.2,1), opacity 130ms ease; }.palette-enter-from, .palette-leave-to { opacity: 0; }.palette-enter-from .command-palette, .palette-leave-to .command-palette { opacity: 0; transform: translateY(-8px) scale(.985); }
-</style>
+<style scoped>.palette-scrim{position:fixed;inset:0;z-index:3000;display:flex;align-items:flex-start;justify-content:center;padding:12vh var(--ui-space-lg) var(--ui-space-lg);background:var(--scrim)}.command-palette{width:min(76ch,100%);max-height:70vh;display:flex;flex-direction:column;border:1px solid var(--border-strong);border-radius:var(--radius-dialog);background:var(--surface-popover);box-shadow:var(--shadow-lg);overflow:hidden}.command-palette>header{display:flex;gap:var(--ui-space-sm);align-items:center;padding:var(--ui-space-sm);border-bottom:1px solid var(--border-subtle)}header input{flex:1;min-width:0}.command-results{min-height:0;overflow:auto}.command-results button{width:100%;display:grid;grid-template-columns:var(--ui-icon-size) minmax(0,1fr) auto;gap:var(--ui-space-sm);text-align:left;min-height:calc(2 * var(--ui-tree-row-height));padding:var(--ui-space-xs) var(--ui-space-sm);border:0;border-radius:0;background:transparent}.command-results button.active{background:var(--selection-bg)}.command-results small{display:block;font-size:var(--type-caption);color:var(--text-muted)}.command-results p{padding:var(--ui-space-sm);color:var(--text-muted)}kbd{font-size:var(--type-caption);color:var(--text-muted);align-self:center}footer{display:flex;gap:var(--ui-space-lg);padding:var(--ui-space-xs) var(--ui-space-sm);border-top:1px solid var(--border-subtle);font-size:var(--type-caption);color:var(--text-muted)}</style>

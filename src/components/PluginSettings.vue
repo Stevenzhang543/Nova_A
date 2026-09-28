@@ -7,18 +7,20 @@
       <article v-for="manifest in pluginState.manifests" :key="manifest.id">
         <div class="plugin-identity"><strong>{{ manifest.name }}</strong><small>{{ manifest.id }} · {{ manifest.version }}</small><span>{{ contributionCount(manifest.id) }} {{ t('pluginContributions') }}</span></div>
         <label><input v-model="manifest.enabled" type="checkbox" @change="toggle(manifest.id,manifest.enabled)">{{ t('enabled') }}</label>
-        <button :title="t('reloadPlugin')" @click="pluginRuntime.reload(manifest.id)">↻</button><button :title="t('removePlugin')" @click="remove(manifest.id)">×</button>
+        <UiButton icon="refresh" :label="t('reloadPlugin')" @click="pluginRuntime.reload(manifest.id)" /><UiButton icon="remove" :label="t('removePlugin')" @click="remove(manifest.id)" />
         <div class="permission-review"><strong>{{ t('permissionReview') }}</strong><label v-for="permission in manifest.permissions" :key="permission"><input :checked="manifest.approvedPermissions.includes(permission)" type="checkbox" @change="approve(manifest.id,permission,($event.target as HTMLInputElement).checked)"><span>{{ permission }}</span></label><small v-if="!manifest.permissions.length">{{ t('noPermissionsRequested') }}</small></div>
       </article>
     </div>
     <p v-else class="empty">{{ t('noPlugins') }}</p>
-    <button class="import-button" @click="fileInput?.click()">+ {{ t('importWasmPlugin') }}</button>
+    <button class="import-button" @click="fileInput?.click()"><EditorIcon name="upload" /> {{ t('importWasmPlugin') }}</button>
     <p v-if="message" :class="['message', { error: failed }]" role="status">{{ message }}</p>
     <input ref="fileInput" hidden type="file" multiple accept=".json,.wasm,application/json,application/wasm" @change="importBundle">
   </section>
 </template>
 
 <script setup lang="ts">
+import UiButton from '../ui/components/UiButton.vue'
+import EditorIcon from './EditorIcon.vue'
 import { ref } from 'vue'
 import { t } from '../i18n'
 import { importAssetFiles } from '../assets/AssetDatabase'
@@ -63,15 +65,4 @@ const failed = ref(false)
 }
 </script>
 
-<style scoped>
-.plugin-settings > p { margin: 0 0 9px; }.plugin-summary { display: grid; grid-template-columns: 1fr auto; gap: 5px 12px; padding: 8px; border: 1px solid var(--border-subtle); border-radius: 8px; color: var(--text-muted); font-size:11px; }.plugin-summary strong { color: var(--accent); }.plugin-list { margin-top: 8px; display: grid; gap: 5px; }.plugin-list article { min-height: 42px; padding: 5px 7px; display: grid; grid-template-columns: minmax(0, 1fr) auto 25px; gap: 7px; align-items: center; border: 1px solid var(--border-subtle); border-radius: 8px; background: var(--surface-2); }.plugin-list article > div { min-width: 0; display: flex; flex-direction: column; }.plugin-list strong, .plugin-list small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.plugin-list strong { font-size:11px; }.plugin-list small { color: var(--text-muted); font-size:11px; }.plugin-list label { display: flex; align-items: center; gap: 4px; color: var(--text-muted); font-size:11px; }.plugin-list button { width: 24px; height: 24px; border: 0; border-radius: 6px; color: var(--danger); background: transparent; }.plugin-list button:hover { background: var(--danger-soft); }.import-button { width: 100%; min-height: 31px; margin-top: 8px; border: 1px solid var(--border-subtle); border-radius: 8px; color: var(--accent); background: var(--surface-2); font-size:11px; }.empty { color: var(--text-muted); font-size:11px; }.message { color: var(--accent) !important; font-size:11px !important; }.message.error { color: var(--danger) !important; }
-.plugin-summary { font-size: 11px; }.plugin-list article { min-height: 46px; }.plugin-list strong { font-size: 11px; }.plugin-list small, .plugin-list label { font-size:11px; }
-.import-button { min-height: 34px; font-size: 11px; }.empty { font-size: 11px; }.message { font-size:11px !important; }
-.plugin-list article { grid-template-columns: minmax(0, 1fr) auto 25px 25px; padding: 7px; }
-.plugin-identity { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.plugin-identity span { color: var(--accent); font-size: var(--type-caption); }
-.permission-review { grid-column: 1 / -1; display: flex !important; flex-flow: row wrap !important; align-items: center; gap: 6px 12px; padding-top: 7px; border-top: 1px solid var(--border-subtle); }
-.permission-review > strong { flex: 0 0 100%; font-size: var(--type-caption); color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; }
-.permission-review label { min-height: 24px; padding: 2px 7px; border: 1px solid var(--border-subtle); border-radius: 999px; background: var(--surface-1); }
-@media (max-width: 520px) { .plugin-list article { grid-template-columns: minmax(0, 1fr) 25px 25px; }.plugin-list article > label { grid-column: 1 / -1; grid-row: 2; } }
-</style>
+<style scoped> .plugin-settings{display:grid;gap:var(--ui-space-sm)}.plugin-settings>p{margin:0;color:var(--text-muted)}.plugin-summary{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:var(--ui-space-xs);padding-block:var(--ui-space-sm);border-block:1px solid var(--border-subtle)}.plugin-summary strong{color:var(--accent)}.plugin-list>article{display:grid;grid-template-columns:minmax(0,1fr) auto repeat(2,var(--ui-control-height));gap:var(--ui-space-xs);align-items:center;padding-block:var(--ui-space-sm);border-bottom:1px solid var(--border-subtle)}.plugin-identity{display:grid;min-width:0}.plugin-identity strong,.plugin-identity small{overflow-wrap:anywhere}.plugin-identity small,.plugin-identity span{font-size:var(--type-caption);color:var(--text-muted)}.plugin-list label{display:flex;gap:var(--ui-space-xs);align-items:center}.permission-review{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:var(--ui-space-sm)}.permission-review>strong{flex-basis:100%;color:var(--text-muted);font-size:var(--type-caption)}.import-button{justify-self:start}.message{color:var(--success)}.message.error{color:var(--danger)}</style>

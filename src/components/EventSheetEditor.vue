@@ -5,23 +5,19 @@
     <StudioDraftConflict format="json" v-if="eventDraftConflict" :saved-source="savedEventSource" :draft-source="JSON.stringify(document)" @keep="acceptEventDraftBase" @discard="restoreDiscardedDraft" />
     <div class="event-layout">
     <aside class="sheet-browser">
-      <header><strong>{{ t('eventSheets') }}</strong><button :aria-label="t('newEventSheet')" class="primary" @click="createForSelection">＋</button></header>
+      <header><strong>{{ t('eventSheets') }}</strong><UiButton icon="add" :label="t('newEventSheet')" variant="primary" @click="createForSelection" /></header>
       <input :aria-label="t('searchEventSheets')" v-model="assetSearch" type="search" :placeholder="t('searchEventSheets')">
-      <button v-for="asset in filteredAssets" :key="asset.uuid" :class="{ active: asset.uuid === activeAsset?.uuid }" @click="open(asset.uuid)"><i>⚡</i><span><strong>{{ asset.name }}</strong><small>{{ asset.path }}</small></span></button>
+      <button v-for="asset in filteredAssets" :key="asset.uuid" :class="{ active: asset.uuid === activeAsset?.uuid }" @click="open(asset.uuid)"><EditorIcon name="events" /><span><strong>{{ asset.name }}</strong><small>{{ asset.path }}</small></span></button>
       <p v-if="!filteredAssets.length" class="empty">{{ t('noEventSheets') }}</p>
       <section class="quick-flow">
         <strong>{{ t('quickObjectWorkflow') }}</strong>
         <p>{{ t('quickObjectWorkflowHint') }}</p>
-        <div><button @click="quickObject('Rectangle')">▭ {{ t('rectangle') }}</button><button @click="quickObject('Sprite')">▧ Sprite</button></div>
+        <div><UiButton icon="rectangle" :label="t('rectangle')" @click="quickObject('Rectangle')" /><UiButton icon="render" label="Sprite" @click="quickObject('Sprite')" /></div>
       </section>
     </aside>
 
     <main class="sheet-main">
-      <header class="sheet-toolbar">
-        <div><strong>{{ document.name }}</strong><span>{{ activeAsset?.path ?? t('unsaved') }}</span></div>
-        <button :disabled="!selectedEntity || !activeAsset" @click="attachToSelection">{{ attached ? t('attached') : t('attachToSelected') }}</button>
-        <button :disabled="!activeAsset" class="primary" @click="save">{{ t('saveAsset') }}</button>
-      </header>
+      <UiPanelHeader class="sheet-toolbar" :title="document.name" :description="activeAsset?.path ?? t('unsaved')"><template #actions><UiButton icon="link" :label="attached ? t('attached') : t('attachToSelected')" :disabled="!selectedEntity || !activeAsset" @click="attachToSelection" /><UiButton icon="save" :label="t('saveAsset')" :disabled="!activeAsset" variant="primary" @click="save" /></template></UiPanelHeader>
 
       <section class="object-context">
         <div><span>{{ t('selectedObject') }}</span><strong>{{ selectedEntity?.name ?? t('none') }}</strong><small>{{ selectedEntity ? `${selectedEntity.components.length} ${t('components')}` : t('selectObjectForEvents') }}</small></div>
@@ -30,7 +26,7 @@
 <!-- 继承候选过滤回调排除当前事件表资源。 -->        <label><span>{{ t('inheritsFrom') }}</span><select v-model="document.baseSheetAsset" @change="markDirty"><option :value="null">{{ t('none') }}</option><option v-for="asset in sheetAssets.filter(item => item.uuid !== activeAsset?.uuid)" :key="asset.uuid" :value="assetReference(asset.uuid)">{{ asset.name }}</option></select></label>
       </section>
 
-      <details class="event-provenance" open>
+      <details class="event-provenance">
         <summary>{{ provenanceCopy.title }}</summary><p>{{ provenanceCopy.hint }}</p>
         <ol><li v-for="handler in effectiveHandlers" :key="`${handler.sourceSheetAsset}:${handler.uuid}`">
           <strong>{{ handler.inherited ? provenanceCopy.inherited : provenanceCopy.local }} · {{ resolveAsset(handler.sourceSheetAsset)?.name ?? handler.sourceSheetAsset }}</strong>
@@ -40,7 +36,7 @@
         </li></ol><p v-if="!effectiveHandlers.length">{{ provenanceCopy.empty }}</p>
       </details>
       <section class="event-list">
-        <header><div><strong>{{ t('objectEvents') }}</strong><span>{{ visibleHandlers.length }} / {{ document.handlers.length }}</span></div><input :aria-label="t('searchEvents')" v-model="eventSearch" type="search" :placeholder="t('searchEvents')"><button class="primary" @click="addHandler">＋ {{ t('addEvent') }}</button></header>
+        <header><div><strong>{{ t('objectEvents') }}</strong><span>{{ visibleHandlers.length }} / {{ document.handlers.length }}</span></div><input :aria-label="t('searchEvents')" v-model="eventSearch" type="search" :placeholder="t('searchEvents')"><UiButton icon="add" :label="t('addEvent')" variant="primary" @click="addHandler" /></header>
         <article v-for="handler in visibleHandlers" :key="handler.uuid" :data-handler-uuid="handler.uuid" :class="{ disabled: !handler.enabled }">
           <label class="enabled"><input :aria-label="t('enabled') + ' · ' + handler.name" v-model="handler.enabled" type="checkbox" @change="markDirty"><span></span></label>
           <select :aria-label="panelControlLabel('eventKind')" v-model="handler.kind" class="event-kind" @change="eventKindChanged(handler)"><option v-for="kind in eventKinds" :key="kind" :value="kind">{{ eventKindLabel(kind) }}</option></select>
@@ -49,7 +45,7 @@
           <label class="callback"><span>{{ t('callback') }}</span><input v-model="handler.callback" list="event-callbacks" maxlength="120" @change="markDirty"></label>
           <label class="priority"><span>{{ t('priority') }}</span><NumericExpressionInput v-model="handler.priority" :resource-key="`${activeUuid}:${handler.uuid}:priority`" :aria-label="t('priority')" :minimum="-1000000" :maximum="1000000" integer @change="markDirty" /></label>
           <label class="override"><input v-model="handler.overrideInherited" type="checkbox" @change="markDirty"><span>{{ t('overrideInherited') }}</span></label>
-          <button class="danger" :title="t('remove')" @click="removeHandler(handler.uuid)">×</button>
+          <UiButton class="remove-handler" icon="remove" variant="danger" :label="t('remove')" @click="removeHandler(handler.uuid)" />
         </article>
         <p v-if="!visibleHandlers.length" class="empty">{{ t('noMatchingEvents') }}</p>
         <datalist id="event-callbacks"><option v-for="name in callbacks" :key="name" :value="name"></option></datalist>
@@ -59,16 +55,16 @@
     <aside class="event-details">
       <section>
         <header><strong>{{ t('underlyingAssets') }}</strong></header>
-        <button :disabled="!logicRecord" @click="openLogic"><i>{{ logicRecord?.assetType === 'visualScript' ? '⌘' : '{ }' }}</i><span><strong>{{ logicRecord?.name ?? t('none') }}</strong><small>{{ t('openWithoutHidingAsset') }}</small></span></button>
-        <button v-if="activeAsset"><i>⚡</i><span><strong>{{ activeAsset.name }}</strong><small>{{ t('eventSheetAssetVisible') }}</small></span></button>
+        <button :disabled="!logicRecord" @click="openLogic"><EditorIcon :name="logicRecord?.assetType === 'visualScript' ? 'graph' : 'code'" /><span><strong>{{ logicRecord?.name ?? t('none') }}</strong><small>{{ t('openWithoutHidingAsset') }}</small></span></button>
+        <button v-if="activeAsset"><EditorIcon name="events" /><span><strong>{{ activeAsset.name }}</strong><small>{{ t('eventSheetAssetVisible') }}</small></span></button>
       </section>
       <section>
-        <header><strong>{{ t('validation') }}</strong><span :class="{ valid: !errors.length }">{{ errors.length ? t('issueCount', { count: errors.length }) : `✓ ${t('valid')}` }}</span></header>
+        <header><strong>{{ t('validation') }}</strong><span :class="{ valid: !errors.length }">{{ errors.length ? t('issueCount', { count: errors.length }) : t('valid') }}</span></header>
         <p v-for="issue in diagnostics" :key="`${issue.code}:${issue.handlerUuid}`" :class="issue.severity"><b>{{ issue.code }}</b>{{ issue.message }}<button v-if="issue.handlerUuid" @click="focusHandler(issue.handlerUuid)">{{ provenanceCopy.focus }}</button></p>
         <p v-if="!diagnostics.length" class="valid">{{ t('eventSheetValid') }}</p>
       </section>
       <section class="blueprints">
-        <header><strong>{{ t('objectBlueprints') }}</strong><button :aria-label="t('add') + ' · ' + t('objectBlueprints')" :disabled="!selectedEntity" @click="createBlueprint">＋</button></header>
+        <header><strong>{{ t('objectBlueprints') }}</strong><UiButton icon="add" :label="t('add') + ' · ' + t('objectBlueprints')" :disabled="!selectedEntity" @click="createBlueprint" /></header>
         <article v-for="asset in blueprintAssets" :key="asset.uuid" class="blueprint-entry"><strong>{{ asset.name }}</strong><small>{{ asset.path }}</small><div><button @click="blueprintEditorUuid=asset.uuid">{{ ownershipLabels.editBlueprint }}</button><button :disabled="physicsState.playMode!=='editing'" @click="instantiateBlueprint(asset.uuid)">{{ t('instantiateToScene') }}</button></div></article>
         <p v-if="!blueprintAssets.length" class="empty">{{ t('noObjectBlueprints') }}</p>
       </section>
@@ -79,6 +75,9 @@
 </template>
 
 <script setup lang="ts">
+import UiButton from '../ui/components/UiButton.vue'
+import UiPanelHeader from '../ui/components/UiPanelHeader.vue'
+import EditorIcon from './EditorIcon.vue'
 import { eventProvenanceCopy } from '../editor/eventProvenanceCopy'
 import NumericExpressionInput from './NumericExpressionInput.vue'
 import { settleEditorDrafts } from '../editor/pendingDrafts'
@@ -203,24 +202,23 @@ onMounted(/** 挂载时优先打开工作室活动事件表，再使用资源选
 </script>
 
 <style scoped>
-.event-studio{position:absolute;inset:0;min-width:0;min-height:0;display:grid;grid-template-columns:238px minmax(420px,1fr) 284px;overflow:hidden;background:var(--bg-canvas)}button,input,select{font:inherit}.sheet-browser,.event-details{min-width:0;min-height:0;overflow:auto;background:var(--surface-1)}.sheet-browser{border-right:1px solid var(--border-subtle)}.event-details{border-left:1px solid var(--border-subtle)}.sheet-browser>header,.event-details section>header{min-height:38px;padding:6px 9px;display:flex;align-items:center;justify-content:space-between}.sheet-browser>input{width:calc(100% - 14px);margin:0 7px 7px}.sheet-browser>button,.event-details section>button{width:calc(100% - 12px);margin:2px 6px;padding:7px;display:flex;align-items:center;gap:8px;text-align:left;border:1px solid transparent;border-radius:8px;color:var(--text-secondary);background:transparent}.sheet-browser>button.active{border-color:var(--accent);background:var(--accent-soft)}.sheet-browser button i,.event-details button i{width:27px;height:27px;display:grid;place-items:center;flex:0 0 auto;border-radius:7px;color:var(--accent);background:var(--surface-3);font-style:normal}.sheet-browser button span,.event-details button span{min-width:0;display:grid}.sheet-browser button strong,.sheet-browser button small,.event-details button strong,.event-details button small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.sheet-browser button small,.event-details button small{color:var(--text-muted);font-size:var(--type-caption)}.primary{color:var(--accent-contrast)!important;border-color:var(--accent)!important;background:var(--accent)!important}.quick-flow{margin:10px 7px;padding:9px;border:1px solid var(--border-subtle);border-radius:10px;background:var(--surface-2)}.quick-flow p{color:var(--text-muted);font-size:var(--type-caption)}.quick-flow div{display:flex;gap:5px}.quick-flow button{min-height:30px;flex:1;border:1px solid var(--border-subtle);border-radius:7px;background:var(--surface-3)}.sheet-main{min-width:0;min-height:0;display:flex;flex-direction:column}.sheet-toolbar{min-height:51px;padding:6px 10px;display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--border-subtle);background:var(--surface-1)}.sheet-toolbar>div{min-width:0;display:grid;flex:1}.sheet-toolbar span{overflow:hidden;color:var(--text-muted);font-size:var(--type-caption);text-overflow:ellipsis;white-space:nowrap}.sheet-toolbar button{min-height:32px;padding:0 10px;border:1px solid var(--border-subtle);border-radius:8px;background:var(--surface-2)}.object-context{padding:8px;display:grid;grid-template-columns:minmax(150px,1fr) repeat(3,minmax(135px,1fr));gap:7px;border-bottom:1px solid var(--border-subtle);background:var(--surface-2)}.object-context>div,.object-context label{min-width:0;display:grid;gap:3px}.object-context span,.object-context small,.event-list label span,.seed span{color:var(--text-muted);font-size:var(--type-caption)}.object-context strong,.object-context small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.event-list{min-height:0;padding:8px;overflow:auto}.event-list>header{position:sticky;z-index:2;top:-8px;min-height:46px;padding:6px 0;display:flex;align-items:center;gap:7px;background:var(--bg-canvas)}.event-list>header>div{min-width:120px;display:grid}.event-list>header span{color:var(--text-muted);font-size:var(--type-caption)}.event-list>header input{min-width:120px;flex:1}.event-list>header button{min-height:32px;border:1px solid var(--border-subtle);border-radius:8px}.event-list article{margin:5px 0;padding:7px;display:grid;grid-template-columns:22px minmax(125px,.8fr) minmax(145px,1.2fr) minmax(115px,1fr) minmax(110px,1fr) 78px 115px 28px;align-items:center;gap:6px;border:1px solid var(--border-subtle);border-radius:10px;background:var(--surface-1);box-shadow:var(--shadow-sm);transition:opacity var(--motion-fast),border-color var(--motion-fast),transform var(--motion-fast)}.event-list article:hover{border-color:var(--border-strong);transform:translateY(-1px)}.event-list article.disabled{opacity:.56}.event-list article label,.event-copy{min-width:0;display:grid;gap:2px}.event-copy small{overflow:hidden;color:var(--text-muted);font-size:var(--type-caption);text-overflow:ellipsis;white-space:nowrap}.event-list input,.event-list select{min-width:0;width:100%}.event-list .enabled input{width:16px}.event-list .override{display:flex;align-items:center;gap:4px}.event-list .override input{width:15px}.event-list .danger{width:28px;height:28px;border:0;border-radius:7px;color:var(--danger);background:transparent}.event-details section{padding-bottom:7px;border-bottom:1px solid var(--border-subtle)}.event-details section>header span{font-size:var(--type-caption)}.event-details section>p{margin:4px 8px;padding:7px;display:grid;gap:2px;border-radius:7px;color:var(--text-secondary);background:var(--surface-2);font-size:var(--type-caption)}.event-details p.error{border-left:3px solid var(--danger)}.event-details p.warning{border-left:3px solid var(--warning)}.event-details .valid{color:var(--success)}.seed{padding:9px!important}.seed label{display:grid;gap:4px}.seed small{display:block;margin-top:5px;color:var(--text-muted);font-size:var(--type-caption)}.empty{padding:12px;color:var(--text-muted);font-size:var(--type-caption)}
-@container nova-events (max-width:1180px){.event-studio{grid-template-columns:210px minmax(360px,1fr)}.event-details{position:absolute;z-index:10;top:0;right:0;bottom:0;width:280px;box-shadow:var(--shadow-lg)}.event-list article{grid-template-columns:22px minmax(120px,1fr) minmax(140px,1.2fr) minmax(120px,1fr) minmax(110px,1fr) 28px}.event-list .priority,.event-list .override{display:none}.object-context{grid-template-columns:repeat(2,minmax(150px,1fr))}}
-@container nova-events (max-width:760px){.event-studio{display:block}.sheet-browser{position:absolute;z-index:12;top:0;bottom:0;left:0;width:min(230px,78vw);box-shadow:var(--shadow-lg)}.sheet-main{height:100%;margin-left:46px}.event-details{display:none}.event-list article{grid-template-columns:22px minmax(120px,1fr) minmax(140px,1fr) 28px}.event-list .selector,.event-list .callback{grid-column:2/4}.object-context{grid-template-columns:1fr}.sheet-toolbar>button:not(.primary){display:none}}
-/* 26.13: all panes and handler fields remain reachable inside narrow docks. */
-.event-studio{container:nova-events/inline-size;display:flex;flex-direction:column}.event-layout{flex:1;min-width:0;min-height:0;display:grid;grid-template-columns:238px minmax(0,1fr) 284px;overflow:auto}.sheet-main{container:nova-event-main/inline-size}.sheet-toolbar,.event-list>header{flex-wrap:wrap}.sheet-toolbar>div,.event-list>header>div,.event-list>header input{min-width:0}.event-copy small,.object-context strong,.object-context small{white-space:normal;overflow:visible;overflow-wrap:anywhere}.event-studio :is(p,label,small,strong){overflow-wrap:anywhere}.sheet-toolbar button{white-space:normal;height:auto;padding-block:5px}.object-context{grid-template-columns:repeat(auto-fit,minmax(min(150px,100%),1fr))}.event-details section>header{flex-wrap:wrap}
-@container nova-events (max-width:1180px){.event-layout{grid-template-columns:210px minmax(0,1fr);grid-template-rows:minmax(280px,1fr) auto}.event-details{position:static;width:auto;grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(240px,100%),1fr));box-shadow:none}.event-list .priority,.event-list .override{display:grid}}
-@container nova-events (max-width:760px){.event-layout{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(350px,1fr) auto}.sheet-browser{position:static;width:auto;max-height:180px;box-shadow:none}.sheet-main{height:auto;margin-left:0}.event-details{display:grid;grid-column:auto}.sheet-toolbar>button:not(.primary){display:block}}
-@container nova-event-main (max-width:1000px){.event-list article{grid-template-columns:22px minmax(0,1fr) minmax(0,1fr) 30px}.event-list .enabled{grid-column:1;grid-row:1}.event-list .event-kind{grid-column:2/4;grid-row:1}.event-list .danger{grid-column:4;grid-row:1}.event-copy,.event-list .selector,.event-list .callback,.event-list .priority,.event-list .override{grid-column:2/4;display:grid}.event-list .override{display:flex}.event-list>header input{flex-basis:140px}}
-.blueprint-entry{margin:6px;padding:8px;min-width:0;border:1px solid var(--border-subtle);border-radius:8px}.blueprint-entry>strong,.blueprint-entry>small{display:block;white-space:normal;overflow-wrap:anywhere}.blueprint-entry>div{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}.blueprint-entry button{min-width:0;min-height:32px;flex:1 1 110px;height:auto;white-space:normal;overflow-wrap:anywhere}
-/* Keep scaled headers from consuming the event-list scroll viewport. */
-.sheet-main{overflow:auto}.sheet-toolbar,.object-context{flex:0 0 auto}.event-list{flex:1 0 auto;overflow:visible}
-@container nova-event-main (max-width:1000px){.event-list>header{position:static}}
-/* 条件、动作和来源各自换行，长路径不压缩编辑控件。 */
-.event-provenance{margin:10px;padding:12px;border:1px solid var(--border-subtle);border-radius:8px;flex:0 0 auto;min-width:0}
-.event-provenance ol{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:10px;padding-left:24px}
-.event-provenance li{padding:8px;overflow-wrap:anywhere}.event-provenance li>*{display:block;margin:4px 0}.event-provenance button{min-height:32px}
-/* Handler source IDs must wrap inside their own grid cell, including inherited
-   global heading styles. Keep every character available rather than ellipsizing. */
-.event-provenance li { min-width:0; max-width:100%; }
-.event-provenance li > :is(strong,span,small,code) { min-width:0; max-width:100%; white-space:normal; overflow-wrap:anywhere; word-break:normal; }
+.event-studio { container: nova-events / inline-size; min-width: 0; min-height: 0; height: 100%; display: flex; flex-direction: column; overflow: hidden; background: var(--bg-canvas); }
+.event-layout { flex: 1; min-width: 0; min-height: 0; display: grid; grid-template-columns: minmax(16ch,.65fr) minmax(0,2fr) minmax(22ch,.8fr); overflow: auto; }
+.sheet-browser,.event-details { min-width: 0; min-height: 0; overflow: auto; background: var(--surface-1); }.sheet-browser { border-right: var(--ui-border-width) solid var(--border-subtle); }.event-details { border-left: var(--ui-border-width) solid var(--border-subtle); }
+.sheet-browser > header,.event-details section > header { min-height: var(--ui-toolbar-height); padding: var(--space-1) var(--space-2); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-1); }
+.sheet-browser > input { margin: var(--space-2); max-width: calc(100% - 2 * var(--space-2)); }
+.sheet-browser > button,.event-details section > button { width: 100%; display: flex; align-items: center; gap: var(--space-2); padding: var(--space-1) var(--space-2); text-align: start; }
+.sheet-browser button span,.event-details button span { min-width: 0; display: grid; }.sheet-browser button strong,.event-details button strong { overflow-wrap: anywhere; }.sheet-browser button small,.event-details button small { overflow: hidden; text-overflow: ellipsis; color: var(--text-muted); font-size: var(--type-caption); }
+.quick-flow { padding: var(--space-2); border-top: var(--ui-border-width) solid var(--border-subtle); }.quick-flow p { margin-block: var(--space-2); color: var(--text-muted); font-size: var(--type-caption); }.quick-flow div { display: flex; gap: var(--space-1); }
+.sheet-main { container: nova-event-main / inline-size; min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: auto; }.sheet-toolbar { position: sticky; top: 0; z-index: 2; }
+.object-context { flex: 0 0 auto; padding: var(--space-2); display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,18ch),1fr)); gap: var(--space-2); border-bottom: var(--ui-border-width) solid var(--border-subtle); background: var(--surface-1); }.object-context > div,.object-context label { min-width: 0; display: grid; align-content: start; gap: var(--space-1); }.object-context :is(span,small),.event-list label span,.seed span { color: var(--text-muted); font-size: var(--type-caption); }.object-context strong,.object-context small { overflow-wrap: anywhere; }
+.event-list { flex: 1 0 auto; min-height: 0; padding: var(--space-2); }.event-list > header { min-height: var(--ui-toolbar-height); display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin-bottom: var(--space-2); }.event-list > header > div { flex: 1 1 16ch; min-width: 0; display: grid; }.event-list > header span { color: var(--text-muted); font-size: var(--type-caption); }
+.event-list article { padding-block: var(--space-2); display: grid; grid-template-columns: var(--ui-icon-size) minmax(0,1fr) minmax(0,1.4fr) var(--ui-control-height); gap: var(--space-2); align-items: center; border-bottom: var(--ui-border-width) solid var(--border-subtle); }
+.event-list article.disabled { opacity: var(--disabled-opacity); }.event-list .enabled { grid-column: 1; grid-row: 1; }.event-list .event-kind { grid-column: 2; grid-row: 1; }.event-list .event-copy { grid-column: 3; grid-row: 1; }.event-list .remove-handler { grid-column: 4; grid-row: 1; }.event-list :is(.selector,.callback,.priority,.override) { grid-column: 2 / 4; }.event-list article label,.event-copy { min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2); }.event-copy { display: grid; }.event-copy small { color: var(--text-muted); font-size: var(--type-caption); overflow-wrap: anywhere; }.event-list label > span { min-width: 0; flex: 0 1 var(--ui-label-width); }.event-list .override { display: flex; }.event-list .override span { flex-basis: auto; }
+.event-details section { padding: var(--space-2); border-bottom: var(--ui-border-width) solid var(--border-subtle); }.event-details section > header { padding: 0; }.event-details section > header span { font-size: var(--type-caption); }.event-details section > p { margin-block: var(--space-1); padding-block: var(--space-1); display: grid; gap: var(--space-1); font-size: var(--type-caption); overflow-wrap: anywhere; }.event-details p.error { color: var(--danger); }.event-details p.warning { color: var(--warning); }.event-details .valid { color: var(--success); }.seed label { display: grid; gap: var(--space-1); }.seed small { display: block; margin-top: var(--space-1); color: var(--text-muted); font-size: var(--type-caption); }.empty { padding: var(--space-2); color: var(--text-muted); font-size: var(--type-caption); }
+.blueprint-entry { padding-block: var(--space-2); border-top: var(--ui-border-width) solid var(--border-subtle); }.blueprint-entry > strong,.blueprint-entry > small { display: block; overflow-wrap: anywhere; }.blueprint-entry > div { display: flex; flex-wrap: wrap; gap: var(--space-1); margin-top: var(--space-1); }.blueprint-entry button { white-space: normal; overflow-wrap: anywhere; }
+.event-provenance { flex: 0 0 auto; min-width: 0; border-bottom: var(--ui-border-width) solid var(--border-subtle); }.event-provenance > p { padding-inline: var(--space-2); font-size: var(--type-caption); color: var(--text-muted); }.event-provenance ol { display: flex; flex-direction: column; gap: var(--space-2); padding-inline: var(--space-5) var(--space-2); }.event-provenance li { min-width: 0; font-size: var(--type-caption); }.event-provenance li > * { display: block; margin-block: var(--space-1); max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+@container nova-events (max-width: 1050px) { .event-layout { grid-template-columns: minmax(16ch,.65fr) minmax(0,2fr); grid-template-rows: minmax(320px,1fr) auto; }.event-details { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,26ch),1fr)); border-top: var(--ui-border-width) solid var(--border-subtle); } }
+@container nova-events (max-width: 640px) { .event-layout { grid-template-columns: minmax(0,1fr); grid-template-rows: auto minmax(350px,1fr) auto; }.sheet-browser { max-height: calc(6 * var(--ui-tree-row-height)); }.event-details { grid-column: auto; } }
+@container nova-event-main (max-width: 440px) { .event-list .event-kind,.event-list .event-copy { grid-column: 2 / 4; }.event-list .event-copy { grid-row: 2; } }
 </style>

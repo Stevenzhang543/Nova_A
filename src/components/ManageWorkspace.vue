@@ -1,44 +1,30 @@
 <!-- 管理工作区：按需加载各管理面板并显示对应脏状态。 -->
 <template>
   <section class="manage-workspace" data-control-scope="manage-workspace">
-    <header class="manage-header">
-      <div><span>{{ t('workspaceManage') }}</span><h1>{{ t(active.label) }}</h1><small>{{ t(active.description) }}</small></div>
-      <span class="lifecycle"><b>{{ t('stable') }}</b>{{ t('stableFeatureExplanation') }}</span>
-    </header>
+    <UiPanelHeader class="manage-header" :title="t('workspaceManage')" :description="t(active.description)" />
     <div class="manage-body">
-      <nav :aria-label="t('workspaceManage')">
-        <button v-for="item in sections" :key="item.id" :class="{ active: state.manageSection === item.id }" :aria-pressed="state.manageSection === item.id" :aria-label="t(item.label)" :title="t(item.label)" @click="state.manageSection = item.id"><span aria-hidden="true"><EditorIcon :name="item.icon" /></span><span><strong>{{ t(item.label) }} <i v-if="sectionDirty(item.id)">●</i></strong><small>{{ t(item.short) }}</small></span></button>
-      </nav>
-      <main :key="state.manageSection">
-        <CreatorLearningCenter v-if="state.manageSection === 'learn'" />
-        <SettingsPanel v-else-if="state.manageSection === 'settings'" />
-        <AutomationStudio v-else-if="state.manageSection === 'automation'" />
-        <PackageManagerPanel v-else-if="state.manageSection === 'packages'" />
-        <ProjectHealthPanel v-else-if="state.manageSection === 'project'" />
-        <RenderingPanel v-else-if="state.manageSection === 'rendering'" />
-        <BuildSettingsPanel v-else />
+      <UiTabs :aria-label="t('workspaceManage')" :items="tabs" :model-value="state.manageSection" @update:model-value="state.manageSection = $event as ManageSection" />
+      <main>
+        <UiAsyncWorkspace :view="state.manageSection" :loaders="loaders" />
       </main>
     </div>
   </section>
 </template>
 
 <script setup lang="ts">
-import { computed, defineAsyncComponent } from 'vue'
-import EditorIcon, { type EditorIconName } from './EditorIcon.vue'
+import { computed } from 'vue'
+import { type EditorIconName } from './EditorIcon.vue'
+import UiAsyncWorkspace from '../ui/components/UiAsyncWorkspace.vue'
 import { t } from '../i18n'
 import { editorState as state, type ManageSection } from '../store/editor'
 import { projectScopeDirty } from '../runtime/projectTransactions'
 
-// Each management tool is an independent route. Deferring inactive tools keeps
-// launcher/editor startup responsive while Vue retains the same component state
-// and transition behavior once a route is selected.
-const SettingsPanel = defineAsyncComponent(/** 按需加载项目设置面板。 */ () => import('../panels/SettingsPanel.vue'))
-const PackageManagerPanel = defineAsyncComponent(/** 按需加载资源包面板。 */ () => import('./PackageManagerPanel.vue'))
-const ProjectHealthPanel = defineAsyncComponent(/** 按需加载项目健康面板。 */ () => import('./ProjectHealthPanel.vue'))
-const RenderingPanel = defineAsyncComponent(/** 按需加载渲染面板。 */ () => import('./RenderingPanel.vue'))
-const BuildSettingsPanel = defineAsyncComponent(/** 按需加载构建设置面板。 */ () => import('./BuildSettingsPanel.vue'))
-const CreatorLearningCenter = defineAsyncComponent(/** 按需加载学习中心。 */ () => import('./CreatorLearningCenter.vue'))
-const AutomationStudio = defineAsyncComponent(/** 按需加载自动化工作室。 */ () => import('./AutomationStudio.vue'))
+const loaders = {
+  settings: () => import('../panels/SettingsPanel.vue'), packages: () => import('./PackageManagerPanel.vue'),
+  project: () => import('./ProjectHealthPanel.vue'), rendering: () => import('./RenderingPanel.vue'),
+  build: () => import('./BuildSettingsPanel.vue'), learn: () => import('./CreatorLearningCenter.vue'),
+  automation: () => import('./AutomationStudio.vue')
+}
 
 type TranslationKey = Parameters<typeof t>[0]
 const sections: ReadonlyArray<{ id: ManageSection; label: TranslationKey; description: TranslationKey; short: TranslationKey; icon: EditorIconName }> = [
@@ -51,19 +37,13 @@ const sections: ReadonlyArray<{ id: ManageSection; label: TranslationKey; descri
   { id: 'build', label: 'buildPanel', description: 'manageBuildHint', short: 'buildReadiness', icon: 'build' }
 ]
 const active = computed(/** 选择当前管理栏目，未知栏目回退到首项。 */ () => sections.find(/* 比较 item.id 与 state.manageSection，返回严格相等的判断结果。 */ item => item.id === state.manageSection) ?? sections[0])
+const tabs = computed(() => sections.map(item => ({ id: item.id, icon: item.icon, label: `${t(item.label)}${sectionDirty(item.id) ? ' *' : ''}` })))
 /** 把栏目映射至项目修改范围，学习与自动化栏目不单独标记脏状态。 */ function sectionDirty(id:ManageSection){return id==='learn'||id==='automation'?false:id==='packages'?projectScopeDirty('packages'):id==='build'?projectScopeDirty('build'):id==='project'?projectScopeDirty('project'):projectScopeDirty('settings')}
 </script>
 
 <style scoped>
-.manage-workspace{position:absolute;inset:0;display:flex;flex-direction:column;min-width:0;min-height:0;background:var(--surface-1)}
-.manage-header{min-height:76px;padding:var(--space-3) var(--space-4);display:flex;align-items:center;justify-content:space-between;gap:var(--space-4);border-bottom:1px solid var(--border-subtle)}
-.manage-header>div{min-width:0;display:grid;gap:2px}.manage-header span{color:var(--accent);font-size:var(--type-caption);font-weight:700}.manage-header h1{margin:0;font-size:var(--type-page);line-height:var(--line-page)}.manage-header small{color:var(--text-muted);font-size:var(--type-dense)}
-.lifecycle{max-width:330px;padding:6px 9px;display:grid;border:1px solid var(--border-subtle);border-radius:var(--radius-panel);color:var(--text-muted)!important;background:var(--surface-2)}.lifecycle b{color:var(--success)}
-.manage-body{min-height:0;flex:1;display:grid;grid-template-columns:220px minmax(0,1fr)}.manage-body>nav{padding:var(--space-2);display:flex;flex-direction:column;gap:4px;overflow:auto;border-right:1px solid var(--border-subtle)}
-.manage-body>nav button{min-width:0;min-height:52px;padding:6px 8px;display:grid;grid-template-columns:28px minmax(0,1fr);align-items:center;gap:8px;border:1px solid transparent;border-radius:var(--radius-panel);color:var(--text-muted);background:transparent;text-align:left}.manage-body>nav button:hover{background:var(--surface-hover)}.manage-body>nav button.active{color:var(--text-primary);border-color:color-mix(in srgb,var(--accent) 45%,var(--border-subtle));background:var(--selection-bg)}.manage-body>nav button>span:first-child{width:28px;height:28px;display:grid;place-items:center;border-radius:var(--radius-input);color:var(--accent);background:var(--surface-3)}.manage-body>nav button>span:last-child{min-width:0;display:grid}.manage-body>nav strong,.manage-body>nav small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.manage-body>nav small{color:var(--text-muted);font-size:var(--type-caption);font-weight:400}
-.manage-body>main{position:relative;min-width:0;min-height:0;overflow:hidden;background:var(--bg-base)}.manage-body>main>:deep(*){max-width:100%}
-@media(max-width:760px){.manage-header{min-height:64px}.lifecycle{display:none}.manage-body{grid-template-columns:54px minmax(0,1fr)}.manage-body>nav button{grid-template-columns:1fr;padding:4px}.manage-body>nav button>span:last-child{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}.manage-body>nav button>span:first-child{margin:auto}}
-.manage-body>nav strong i{display:inline-block;width:6px;height:6px;margin-left:5px;border-radius:50%;background:var(--warning);font-size:0;font-style:normal;vertical-align:middle}
-.manage-body > nav strong, .manage-body > nav small { white-space: normal; overflow-wrap: anywhere; line-height: 1.4; }
-.manage-body > nav button { flex: 0 0 auto; height: auto; padding-block: 9px; }
+.manage-workspace { position: absolute; inset: 0; display: flex; flex-direction: column; min-width: 0; min-height: 0; background: var(--surface-1); }
+.manage-body { display: flex; flex: 1; flex-direction: column; min-width: 0; min-height: 0; }
+.manage-body > nav { border-bottom: var(--ui-border-width) solid var(--border-subtle); padding-inline: var(--space-2); }
+.manage-body > main { position: relative; flex: 1; min-width: 0; min-height: 0; overflow: hidden; }
 </style>

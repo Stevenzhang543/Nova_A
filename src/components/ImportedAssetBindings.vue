@@ -2,7 +2,7 @@
 <template>
   <section class="imported-bindings" @change.stop>
     <strong>{{ copy('sourceBindings') }}</strong>
-    <label v-for="slot in slots" :key="slot.id"><span>{{ copy(slot.kind==='image'?'imageSource':'tilesetSource') }} · {{ slot.name }}</span><select :value="slot.reference??''" @change="choose(slot.id,($event.target as HTMLSelectElement).value)"><option value="" disabled>{{ copy('chooseSource') }}</option><option v-for="candidate in candidates(slot.kind)" :key="candidate.uuid" :value="'asset://'+candidate.uuid">{{ candidate.path }}</option></select><button v-if="resolveAsset(slot.reference)" type="button" @click="$emit('select-asset',resolveAsset(slot.reference)!.uuid)">{{ copy('openSource') }}</button></label>
+    <UiPropertyRow v-for="slot in slots" :key="slot.id" :label="copy(slot.kind==='image'?'imageSource':'tilesetSource') + ' · ' + slot.name" stacked><select :value="slot.reference??''" @change="choose(slot.id,($event.target as HTMLSelectElement).value)"><option value="" disabled>{{ copy('chooseSource') }}</option><option v-for="candidate in candidates(slot.kind)" :key="candidate.uuid" :value="'asset://'+candidate.uuid">{{ candidate.path }}</option></select><UiButton icon="open" :label="copy('openSource')" v-if="resolveAsset(slot.reference)" @click="$emit('select-asset',resolveAsset(slot.reference)!.uuid)"></UiButton></UiPropertyRow>
     <p v-if="error || slotResult.error" role="alert">{{ error || slotResult.error }}</p>
   </section>
 </template>
@@ -21,5 +21,5 @@ const candidates=/** 按图片或图集类型筛选依赖候选，排除自身�
 /** 写入依赖绑定并记录资源历史，失败时保留可见错误。 */ function choose(id:string,reference:string){error.value='';try{setImportedDependency(props.asset,id,reference);pushHistory('Assign imported source','asset:'+props.asset.uuid)}catch(value){error.value=value instanceof Error?value.message:String(value)}}
 </script>
 <style scoped>
-.imported-bindings{display:grid;gap:8px;padding:8px;border:1px solid var(--border-subtle);border-radius:8px}.imported-bindings label{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:6px}.imported-bindings label>span{overflow-wrap:anywhere;white-space:normal}.imported-bindings select,.imported-bindings button{width:100%;max-width:100%;min-width:0;min-height:32px;white-space:normal}.imported-bindings button{border:1px solid var(--border-subtle);border-radius:6px;background:var(--surface-2);color:var(--text-primary)}.imported-bindings p{overflow-wrap:anywhere;color:var(--danger)}
+.imported-bindings{display:grid;gap:var(--space-2);padding-block:var(--space-2);border-top:1px solid var(--border-subtle)}.imported-bindings p{overflow-wrap:anywhere;color:var(--danger)}
 </style>

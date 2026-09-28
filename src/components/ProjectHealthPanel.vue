@@ -1,19 +1,21 @@
 <!-- 项目健康面板：检查依赖、项目质量及可修复问题。 -->
 <template>
   <section class="project-health">
-    <header><div><strong>{{ t('projectHealth') }}</strong><small>{{ t('projectHealthHint') }}</small></div><span :class="healthClass">{{ summary }}</span></header>
-    <div class="health-browser">
+    <UiPanelHeader :class="healthClass" :title="t('projectHealth')" :description="summary" />
+    <UiTabs v-model="healthView" :items="[{ id: 'overview', label: t('projectHealth') }, { id: 'readiness', label: t('releaseReadinessGate') }, { id: 'data', label: t('projectDataFoundation') }]" />
+    <div class="health-scroll">
+    <div v-show="healthView === 'overview'" class="health-browser">
       <div class="health-table" role="listbox"><button v-for="row in healthRows" :key="row.id" :class="{ active: selectedHealthId === row.id }" role="option" :aria-selected="selectedHealthId === row.id" @click="selectedHealthId = row.id"><span>{{ row.label }}</span><strong>{{ row.value }}</strong><i :class="row.status"></i></button></div>
       <article v-if="selectedHealth" class="health-detail"><span>{{ selectedHealth.label }}</span><strong>{{ selectedHealth.value }}</strong><p>{{ selectedHealth.detail }}</p><button v-if="['animation','ui','localization','accessibility'].includes(selectedHealth.id)" @click="navigateSelectedHealth">{{ t('openAffectedEditor') }}</button></article>
     </div>
-    <section class="release-gate">
+    <UiPropertySection v-show="healthView === 'readiness'" class="release-gate">
       <header><div><strong>{{ t('releaseReadinessGate') }}</strong><small>Nova_A {{ engineVersion }}</small></div><span :class="releaseSummary.status">{{ releaseSummary.blockers ? t('readinessBlocked') : releaseSummary.external ? t('pending-external') : t('releaseCandidate') }} · {{ releaseSummary.passed }}/{{ releaseGates.length }}</span></header>
       <div class="release-gate-grid"><article v-for="gate in releaseGates" :key="gate.id" :class="gate.status"><i></i><div><strong>{{ gate.label }}</strong><p>{{ gate.evidence }}</p><small>{{ gate.fix }}</small></div><button @click="openReleaseGate(gate.area)">{{ t('openAffectedEditor') }}</button></article></div>
       <p>{{ RELEASE_CANDIDATE_FREEZE.policy }}</p>
-    </section>
-    <div v-if="issues.length" class="issues"><article v-for="issue in issues" :key="issue"><span>!</span><p>{{ issue }}</p><button :aria-label="t('documentation')" @click="openBundledManual('project-health')">?</button></article></div>
-    <div v-else class="healthy-empty"><span>✓</span><div><strong>{{ t('projectHealthy') }}</strong><p>{{ t('projectHealthyHint') }}</p></div></div>
-    <section class="data-foundation">
+    </UiPropertySection>
+    <div v-if="issues.length" v-show="healthView === 'overview'" class="issues"><article v-for="issue in issues" :key="issue"><EditorIcon name="warning" /><p>{{ issue }}</p><UiButton icon="learn" :label="t('documentation')" @click="openBundledManual('project-health')" /></article></div>
+    <div v-else v-show="healthView === 'overview'" class="healthy-empty"><EditorIcon name="check" /><div><strong>{{ t('projectHealthy') }}</strong><p>{{ t('projectHealthyHint') }}</p></div></div>
+    <UiPropertySection v-show="healthView === 'data'" class="data-foundation">
       <header><strong>{{ t('projectDataFoundation') }}</strong><small>{{ t('projectDataFoundationHint') }}</small></header>
       <div class="data-actions"><button class="primary" @click="validateNow">{{ t('validateProject') }}</button><button @click="previewRepair">{{ t('repairProject') }}</button><button @click="canonicalResave">{{ t('deterministicResave') }}</button><button @click="downloadBackup">{{ t('createProjectBackup') }}</button><button :disabled="!rollback" @click="downloadLastUpgradeRollback">{{ t('downloadRollback') }}</button><button :disabled="!rollback" @click="rollbackNow">{{ t('restoreRollback') }}</button></div>
       <label class="repair-mode"><input v-model="projectIntegrityState.repairReadOnly" type="checkbox"> {{ t('readOnlyRepairMode') }}</label>
@@ -21,18 +23,21 @@
       <ol v-if="validation?.issues.length"><li v-for="issue in validation.issues.slice(0,20)" :key="`${issue.code}:${issue.path}`"><code>{{ issue.path || '/' }}</code> {{ issue.message }}</li></ol>
       <details><summary>{{ t('sceneDependencyGraph') }} · {{ sceneDependencies.length }}</summary><article v-for="node in sceneDependencies" :key="node.sceneUuid"><strong>{{ node.name }}</strong><small>{{ t('dependencies') }}: {{ node.dependencies.length }} · {{ t('reverseDependencies') }}: {{ node.reverseDependencies.length }}</small></article></details>
       <section v-if="graph.missingReferences.length" class="reference-repair"><strong>{{ t('missingReferenceMapping') }}</strong><div><select v-model="missingReference"><option value="">{{ t('chooseMissingReference') }}</option><option v-for="item in graph.missingReferences" :key="item.reference" :value="item.reference">{{ item.reference }}</option></select><select v-model="replacementReference"><option value="">{{ t('chooseReplacement') }}</option><option v-for="asset in assets.records" :key="asset.uuid" :value="asset.uuid">{{ asset.path }}</option></select><button :disabled="!missingReference || !replacementReference" @click="mapReference">{{ t('applyMapping') }}</button></div></section>
-    </section>
-    <section class="integrity-runtime">
+    </UiPropertySection>
+    <section v-show="healthView === 'data'" class="integrity-runtime">
       <header><strong>{{ t('integrityRuntime') }}</strong><small>{{ transaction.phase }} · {{ transaction.lastManualChecksum || t('noManualSave') }}</small></header>
       <div class="integrity-grid"><article><span>{{ t('transactions') }}</span><b>{{ transaction.recent.length }}</b><small>{{ transaction.interrupted.length }} {{ t('interrupted') }}</small></article><article><span>{{ t('recoveryCheckpoints') }}</span><b>{{ recovery.snapshots.length }}</b><small>{{ recovery.invalidSnapshots }} {{ t('invalid') }}</small></article><article><span>{{ t('migrationReport') }}</span><b>{{ migration.lastReport ? t('passed') : t('notRun') }}</b><small>{{ migration.logs.length }} {{ t('steps') }}</small></article><article><span>{{ t('projectTrash') }}</span><b>{{ trash.items.length }}</b><small>{{ t('recoverableItems') }}</small></article></div>
       <div class="data-actions"><button @click="recoverInterruptedProjectTransactions">{{ t('scanTransactions') }}</button><button @click="rebuildCaches">{{ t('rebuildStaleCache') }}</button></div>
       <details v-if="trash.items.length" open><summary>{{ t('projectTrash') }} · {{ trash.items.length }}</summary><article v-for="item in trash.items" :key="item.id" class="trash-row"><div><strong>{{ item.name }}</strong><small>{{ item.path }} · {{ item.referenceCount }} {{ t('references') }}</small></div><button @click="restoreTrash(item.id)">{{ t('restore') }}</button><button class="danger" @click="purgeTrash(item.id,item.name)">{{ t('deletePermanently') }}</button></article></details>
     </section>
+    </div>
     <footer><button @click="openEditorTool('assets')">{{ t('assets') }}</button><button @click="openEditorTool('packages')">{{ t('packages') }}</button><button @click="openEditorTool('build')">{{ t('buildPanel') }}</button><button @click="openManageSection('settings')">{{ t('projectSettings') }}</button></footer>
   </section>
 </template>
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useProjectInspectionSnapshot } from '../editor/projectInspectionSnapshot'
+import EditorIcon from './EditorIcon.vue'
 import { t } from '../i18n'
 import { assetState as assets, queueTextureAtlasRebuild, readTextAsset } from '../assets/AssetDatabase'
 import { buildAssetDependencyGraph, repairMissingAssetReference } from '../assets/assetGraph'
@@ -40,7 +45,7 @@ import { buildProductionAssetGraph } from '../assets/assetProduction'
 import { buildSettings, validateBuildSettings } from '../runtime/buildSettings'
 import { packageCompatibility, packageState as packages } from '../runtime/packages'
 import { NOVA_ENGINE_VERSION, projectCompatibility } from '../projects/projectFormat'
-import { enterEditMode, getSceneJSON, physicsState, pushHistory, replaceAssetReferences, sceneManager } from '../store/physics'
+import { enterEditMode, physicsState, pushHistory, replaceAssetReferences, sceneManager } from '../store/physics'
 import { buildSceneDependencyGraph } from '../projects/projectData'
 import { projectManifestState as manifest } from '../projects/projectManifest'
 import { downloadLastUpgradeRollback, migrationState as migration, readUpgradeRollback } from '../runtime/projectUpgrade'
@@ -75,7 +80,7 @@ import { compileGraphSource } from '../visual/graphCompiler'
 import { parseScriptContract } from '../runtime/scriptContracts'
 const compatibility = projectCompatibility()
 const engineVersion = NOVA_ENGINE_VERSION
-const project = computed(/** 尝试解析当前项目序列化结果，失败返回空值。 */ () => { try { return JSON.parse(getSceneJSON()) as unknown } catch { return null } })
+const project = useProjectInspectionSnapshot()
 const graph = computed(/* 调用 buildAssetDependencyGraph(assets.records, project.value) 并返回调用结果。 */ () => buildAssetDependencyGraph(assets.records, project.value))
 const productionGraph = computed(/* 调用 buildProductionAssetGraph(assets.records, project.value) 并返回调用结果。 */ () => buildProductionAssetGraph(assets.records, project.value))
 const buildIssues = computed(/* 调用 validateBuildSettings(buildSettings) 并返回调用结果。 */ () => validateBuildSettings(buildSettings))
@@ -125,6 +130,7 @@ const worldMetrics = computed(/** 统计瓦片地图、有效瓦片、分块和�
   return { tilemaps: tilemaps.length, tiles: tilemaps.reduce(/** 累加单个地图所有层的有效瓦片数量。 */ (sum, { map }) => sum + map.layers.reduce(/** 累加瓦片编号非负的格子数量。 */ (layerSum, layer) => layerSum + layer.tiles.filter(/* 比较 tile 与 0，返回大于或等于的判断结果。 */ tile => tile >= 0).length, 0), 0), chunks: tilemaps.reduce(/* 计算表达式 sum + Math.ceil(map.width / map.chunkSize) * Math.ceil(map.height / map.chunkSize) * map.layers.length 并返回结果，沿用操作数的原有类型规则。 */ (sum, { map }) => sum + Math.ceil(map.width / map.chunkSize) * Math.ceil(map.height / map.chunkSize) * map.layers.length, 0), navigationRegions: physicsEntities().filter(/* 调用 entity.hasComponent('NavigationRegion2D') 并返回调用结果。 */ entity => entity.hasComponent('NavigationRegion2D')).length, navigationAgents: physicsEntities().filter(/* 调用 entity.hasComponent('NavigationAgent2D') 并返回调用结果。 */ entity => entity.hasComponent('NavigationAgent2D')).length, width: bounds.length ? Math.max(...bounds.map(/* 返回 item.maxX 的当前值。 */ item => item.maxX)) - Math.min(...bounds.map(/* 返回 item.minX 的当前值。 */ item => item.minX)) : 0, height: bounds.length ? Math.max(...bounds.map(/* 返回 item.maxY 的当前值。 */ item => item.maxY)) - Math.min(...bounds.map(/* 返回 item.minY 的当前值。 */ item => item.minY)) : 0 }
 })
 const selectedHealthId = ref('format')
+const healthView = ref('overview')
 const missingReference = ref(''), replacementReference = ref('')
 const healthRows = computed(/** 将格式、资源、运行、脚本、媒体和世界指标转换为健康列表及相应状态。 */ () => [
   { id: 'format', label: t('formatVersion'), value: compatibility.format, detail: `schema ${compatibility.schemaVersion}`, status: 'ok' },
@@ -179,8 +185,33 @@ const healthClass = computed(/* 根据 issues.value.length 的真假，分别返
 }
 </script>
 <style scoped>
-.project-health{height:100%;padding:10px;overflow:auto;background:var(--surface-1)}header{min-height:42px;display:flex;align-items:center;justify-content:space-between;gap:10px}header>div{display:grid}header small{color:var(--text-muted)}header>span{padding:4px 8px;border-radius:999px}.healthy{color:var(--success);background:color-mix(in srgb,var(--success) 12%,transparent)}.attention{color:var(--warning);background:color-mix(in srgb,var(--warning) 12%,transparent)}.health-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:7px}.health-grid article{padding:9px;display:grid;gap:3px;border:1px solid var(--border-subtle);border-radius:9px;background:var(--surface-2)}.health-grid span,.health-grid small{color:var(--text-muted)}.health-grid strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.issues{margin-top:9px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}.issues article{min-width:0;padding:7px;display:flex;gap:7px;border-left:3px solid var(--warning);border-radius:7px;background:var(--surface-2)}.issues p{margin:0;overflow-wrap:anywhere}.healthy-empty{margin-top:10px;padding:12px;display:flex;align-items:center;gap:10px;border:1px solid color-mix(in srgb,var(--success) 40%,transparent);border-radius:10px;background:color-mix(in srgb,var(--success) 7%,transparent)}.healthy-empty>span{font-size:20px;color:var(--success)}.healthy-empty p{margin:2px 0 0;color:var(--text-muted)}.data-foundation{margin-top:10px;padding:10px;border:1px solid var(--border-subtle);border-radius:10px;background:var(--surface-2)}.data-foundation>header{min-height:34px;display:grid;justify-content:stretch}.data-foundation>header small{color:var(--text-muted)}.data-foundation details>summary{min-height:22px;display:flex;align-items:center;line-height:1.45}.data-actions{display:flex;gap:6px;flex-wrap:wrap}.data-actions button,footer button{min-height:34px;padding:0 10px;border:1px solid var(--border-subtle);border-radius:8px;background:var(--surface-3)}.data-actions .primary{color:var(--accent-contrast);border-color:var(--accent);background:var(--accent)}.data-foundation p.valid{color:var(--success)}.data-foundation p.invalid{color:var(--danger)}.data-foundation ol{max-height:130px;overflow:auto}.data-foundation li{margin:4px 0;color:var(--text-muted)}.data-foundation details article{padding:6px;display:flex;justify-content:space-between;gap:8px;border-top:1px solid var(--border-subtle)}footer{margin-top:9px;display:flex;gap:6px;flex-wrap:wrap}@media(max-width:900px){.health-grid{grid-template-columns:repeat(3,minmax(120px,1fr))}}@media(max-width:560px){.health-grid,.issues{grid-template-columns:1fr 1fr}}
-.health-browser{display:grid;grid-template-columns:minmax(280px,1fr) minmax(230px,.7fr);gap:8px}.health-table{max-height:250px;overflow:auto;border:1px solid var(--border-subtle);border-radius:9px}.health-table button{width:100%;min-height:36px;padding:5px 8px;display:grid;grid-template-columns:minmax(110px,1fr) minmax(90px,auto) 8px;align-items:center;gap:8px;border:0;border-bottom:1px solid var(--border-subtle);background:var(--surface-2);text-align:left}.health-table button.active{background:var(--selection-bg)}.health-table span{color:var(--text-muted)}.health-table strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.health-table i{width:7px;height:7px;border-radius:50%;background:var(--success)}.health-table i.warning{background:var(--warning)}.health-table i.error{background:var(--danger)}.health-detail{padding:12px;display:grid;align-content:start;gap:6px;border:1px solid var(--border-subtle);border-radius:9px;background:var(--surface-2)}.health-detail span,.health-detail p{color:var(--text-muted)}.health-detail strong{font-size:var(--type-section);overflow-wrap:anywhere}.health-detail p{margin:0;overflow-wrap:anywhere}@media(max-width:700px){.health-browser{grid-template-columns:1fr}.health-detail{min-height:100px}}
-.integrity-runtime{margin-top:10px;padding:10px;border:1px solid var(--border-subtle);border-radius:10px;background:var(--surface-2)}.integrity-runtime>header{min-height:36px}.integrity-grid{display:grid;grid-template-columns:repeat(4,minmax(120px,1fr));gap:6px}.integrity-grid article{padding:8px;display:grid;gap:2px;border:1px solid var(--border-subtle);border-radius:8px;background:var(--surface-1)}.integrity-grid span,.integrity-grid small{color:var(--text-muted)}.integrity-runtime details{margin-top:8px}.trash-row{min-height:42px;padding:5px;display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:6px;align-items:center;border-top:1px solid var(--border-subtle)}.trash-row div{min-width:0;display:grid}.trash-row small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-muted)}.trash-row button{min-height:30px;padding:0 8px;border:1px solid var(--border-subtle);border-radius:7px;background:var(--surface-3)}.trash-row button.danger{color:var(--danger)}.reference-repair{margin-top:8px;padding:8px;border:1px solid var(--warning);border-radius:8px}.reference-repair>div{margin-top:6px;display:grid;grid-template-columns:1fr 1fr auto;gap:6px}.reference-repair select,.reference-repair button{min-width:0;min-height:32px}@media(max-width:800px){.integrity-grid{grid-template-columns:1fr 1fr}.reference-repair>div{grid-template-columns:1fr}}
-.repair-mode{margin:8px 0 2px;display:flex;align-items:center;gap:7px;color:var(--text-muted)}.repair-mode input{width:16px;height:16px}.release-gate{margin-top:10px;padding:10px;border:1px solid var(--border-subtle);border-radius:10px;background:var(--surface-2)}.release-gate>header>span.passed{color:var(--success);background:color-mix(in srgb,var(--success) 12%,transparent)}.release-gate>header>span.warning{color:var(--warning);background:color-mix(in srgb,var(--warning) 12%,transparent)}.release-gate>header>span.blocked{color:var(--danger);background:var(--danger-soft)}.release-gate-grid{margin-top:7px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}.release-gate-grid article{min-width:0;min-height:64px;padding:7px;display:grid;grid-template-columns:9px minmax(0,1fr) auto;align-items:start;gap:7px;border:1px solid var(--border-subtle);border-radius:8px;background:var(--surface-1)}.release-gate-grid i{width:8px;height:8px;margin-top:4px;border-radius:50%;background:var(--success)}.release-gate-grid .warning i,.release-gate-grid .external i{background:var(--warning)}.release-gate-grid .blocked i{background:var(--danger)}.release-gate-grid article>div{min-width:0;display:grid}.release-gate-grid p,.release-gate-grid small,.release-gate>p{margin:2px 0;color:var(--text-muted);font-size:11px;overflow-wrap:anywhere}.release-gate-grid button{min-height:27px;padding:0 7px;border:1px solid var(--border-subtle);border-radius:6px;background:var(--surface-3);font-size:11px}@media(max-width:760px){.release-gate-grid{grid-template-columns:1fr}}
+.project-health { display:flex; flex-direction:column; height:100%; min-height:0; overflow:hidden; background:var(--bg-base); }
+.health-scroll { flex:1; min-height:0; overflow:auto; padding:var(--space-2); }
+.health-browser { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,2fr); border-bottom:var(--ui-border-width) solid var(--border-subtle); }
+.health-table { min-width:0; border-inline-end:var(--ui-border-width) solid var(--border-subtle); }
+.health-table button { display:grid; width:100%; grid-template-columns:minmax(0,1fr) auto var(--space-2); align-items:center; gap:var(--space-2); text-align:start; }
+.health-table button span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.health-detail { min-width:0; padding:var(--space-3); display:flex; flex-direction:column; align-items:flex-start; gap:var(--space-2); }
+.health-detail p { color:var(--text-muted); overflow-wrap:anywhere; }
+.release-gate :deep(header), .data-foundation :deep(header), .integrity-runtime > header { display:flex; align-items:center; justify-content:space-between; gap:var(--space-2); padding-block:var(--space-2); }
+.release-gate-grid { display:flex; flex-direction:column; }
+.release-gate-grid article { display:grid; grid-template-columns:var(--space-2) minmax(0,1fr) auto; align-items:start; gap:var(--space-2); padding-block:var(--space-2); border-block-end:var(--ui-border-width) solid var(--border-subtle); }
+.release-gate-grid p,.release-gate-grid small { color:var(--text-muted); font-size:var(--type-caption); overflow-wrap:anywhere; }
+.health-table i,.release-gate-grid i { width:var(--space-2); height:var(--space-2); border-radius:50%; background:var(--success); }
+.health-table i.warning,.release-gate-grid .warning i,.release-gate-grid .external i { background:var(--warning); }
+.health-table i.blocked,.release-gate-grid .blocked i { background:var(--danger); }
+.issues article,.healthy-empty { display:flex; align-items:center; gap:var(--space-2); padding-block:var(--space-2); border-block-end:var(--ui-border-width) solid var(--border-subtle); }
+.issues article p { flex:1; min-width:0; overflow-wrap:anywhere; }
+.data-actions,footer { display:flex; flex-wrap:wrap; gap:var(--space-1); padding-block:var(--space-2); }
+.repair-mode { display:flex; align-items:center; gap:var(--space-2); }
+.integrity-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(var(--ui-field-width),1fr)); gap:var(--space-2); }
+.integrity-grid article { display:grid; grid-template-columns:1fr auto; padding:var(--space-2); border-block-end:var(--ui-border-width) solid var(--border-subtle); }
+.integrity-grid small { grid-column:1/-1; color:var(--text-muted); }
+.trash-row { display:flex; align-items:center; gap:var(--space-2); border-block-end:var(--ui-border-width) solid var(--border-subtle); padding-block:var(--space-1); }
+.trash-row > div { flex:1; min-width:0; display:flex; flex-direction:column; }
+.trash-row small { overflow-wrap:anywhere; color:var(--text-muted); }
+.reference-repair > div { display:flex; gap:var(--space-2); flex-wrap:wrap; }
+.invalid,.danger,.blocked { color:var(--danger); }.valid { color:var(--success); }
+footer { flex:0 0 auto; padding-inline:var(--space-2); border-top:var(--ui-border-width) solid var(--border-subtle); }
+@media(max-width:800px) { .health-browser { grid-template-columns:minmax(0,1fr); } .health-table { border-inline-end:0; } }
 </style>

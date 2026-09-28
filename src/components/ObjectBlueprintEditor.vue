@@ -1,9 +1,9 @@
 <!-- 对象蓝图编辑器：校验结构与依赖，维护可恢复草稿，协调保存冲突和关闭选择。 -->
 <template>
   <Teleport to="body">
-    <div class="blueprint-scrim" @keydown.escape.stop.prevent="requestClose">
-      <section ref="editorElement" class="blueprint-editor" role="dialog" aria-modal="true" v-modal-focus :aria-label="labels.blueprint">
-        <header><div><h3>{{ labels.blueprint }} · {{ document?.name ?? activeRecord?.name }}</h3><small>{{ activeRecord?.path }}<template v-if="dirty"> · {{ labels.pending }}</template></small></div><button :aria-label="labels.close" @click="requestClose">×</button></header>
+    <UiDialog :title="`${labels.blueprint} · ${document?.name ?? activeRecord?.name ?? ''}`" class="blueprint-dialog" @close="requestClose">
+      <section ref="editorElement" class="blueprint-editor">
+        <p class="blueprint-path">{{ activeRecord?.path }}<template v-if="dirty"> · {{ labels.pending }}</template></p>
         <StudioDraftConflict v-if="conflict" format="json" :saved-source="savedSource" :draft-source="draftJson" @keep="keepDraft" @discard="discardDraft" />
         <p v-if="status" class="blueprint-status" role="status">{{ status }}</p>
         <p v-if="!canEdit" class="blueprint-status">{{ labels.disabledDuringPlay }}</p>
@@ -26,7 +26,7 @@
         </div>
         <footer><button :disabled="!canEdit||pending||dirty" @click="derive">{{ labels.derive }}</button><button :disabled="!canEdit||pending||dirty" @click="instantiate">{{ labels.instantiate }}</button><button :disabled="!canEdit||pending||!dirty" class="primary" @click="save">{{ labels.save }}</button><button :disabled="pending" @click="requestClose">{{ labels.close }}</button></footer>
       </section>
-    </div>
+    </UiDialog>
   </Teleport>
 </template>
 
@@ -45,7 +45,7 @@ import { clearStudioDraft,readStudioDraft,registerStudioDraftOwner,retainStudioD
 import { validateObjectBlueprintFields } from '../editor/objectBlueprintFields'
 import { authorBlueprintInstance } from '../editor/objectBlueprintAuthoring'
 import { objectOwnershipCopy } from '../editor/objectOwnershipCopy'
-import { vModalFocus } from '../editor/modalFocus'
+import UiDialog from '../ui/components/UiDialog.vue'
 import StudioDraftConflict from './StudioDraftConflict.vue'
 const props=defineProps<{assetUuid:string}>(),emit=defineEmits<{close:[];derive:[uuid:string]}>()
 const labels=computed(/* 返回 objectOwnershipCopy[preferencesState.locale] 的当前值。 */ ()=>objectOwnershipCopy[preferencesState.locale]),componentKinds=STABLE_COMPONENT_KINDS
@@ -111,8 +111,4 @@ onBeforeUnmount(/** 卸载时保留草稿并解除保存边界注册。 */ ()=>{
 defineExpose({requestClose,save})
 </script>
 
-<style scoped>
-.blueprint-scrim{position:fixed;inset:0;z-index:1200;display:grid;place-items:center;padding:16px;background:#0009}.blueprint-editor{width:min(880px,100%);max-height:calc(100dvh - 32px);min-width:0;display:flex;flex-direction:column;overflow:hidden;background:var(--surface-1);border:1px solid var(--border-strong);border-radius:12px;color:var(--text-primary);box-shadow:var(--shadow-lg)}header{display:flex;align-items:center;gap:12px;padding:12px;border-bottom:1px solid var(--border-subtle)}header>div{min-width:0;flex:1}h3{margin:0;font-size:16px;overflow-wrap:anywhere}small{display:block;overflow-wrap:anywhere;color:var(--text-muted)}header>button{flex-shrink:0;min-width:32px;min-height:32px}.blueprint-status{margin:0;padding:8px 12px;flex:0 0 auto;overflow-wrap:anywhere}.blueprint-form{min-height:0;overflow:auto;padding:12px;flex:1}fieldset{min-width:0;border:0;padding:0;margin:0}.blueprint-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(260px,100%),1fr));gap:12px}.blueprint-fields label{display:grid;gap:5px;min-width:0}input:not([type=checkbox]),select,textarea{min-width:0;width:100%;max-width:100%;min-height:34px;box-sizing:border-box}textarea{resize:vertical}.blueprint-composition{margin-top:14px}.blueprint-composition summary{padding:8px 0;font-weight:650;cursor:pointer}.blueprint-composition p{line-height:1.5;overflow-wrap:anywhere}.component-columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.component-columns fieldset{border:1px solid var(--border-subtle);padding:8px}.component-columns label{display:flex;gap:8px;align-items:start;min-height:30px;padding:3px}.component-columns input{flex:0 0 16px;width:16px;height:16px}.component-columns span{min-width:0;overflow-wrap:anywhere}.blueprint-diagnostics{margin:12px 0;padding-left:20px;color:var(--danger)}.blueprint-diagnostics li{margin-top:7px;overflow-wrap:anywhere}footer{display:flex;flex-wrap:wrap;gap:8px;padding:12px;border-top:1px solid var(--border-subtle);flex:0 0 auto}footer button{flex:1 1 150px;min-height:34px;height:auto;white-space:normal;overflow-wrap:anywhere}@media(max-width:600px){.blueprint-scrim{padding:8px}.blueprint-editor{max-height:calc(100dvh - 16px)}.component-columns{grid-template-columns:1fr}}
-/* 来源卡片允许长资源路径换行，避免继承字段被窄对话框截断。 */
-.blueprint-provenance{padding:12px;border:1px solid var(--border-subtle);border-radius:8px}.blueprint-provenance ol{display:grid;gap:10px;padding-left:24px}.blueprint-provenance li>*{display:block;overflow-wrap:anywhere;margin:4px 0}.blueprint-diagnostics button{min-height:32px}
-</style>
+<style scoped>.blueprint-dialog :deep(.ui-dialog){width:min(100ch,calc(100vw - var(--ui-space-xl)))}.blueprint-editor{min-width:0;display:grid;gap:var(--ui-space-sm)}.blueprint-path,.blueprint-status{margin:0;color:var(--text-muted);overflow-wrap:anywhere}.blueprint-form{min-width:0;display:grid;gap:var(--ui-space-sm)}fieldset{min-width:0;border:0;padding:0;margin:0}.blueprint-fields{display:grid;gap:var(--ui-space-sm)}.blueprint-fields label{display:grid;grid-template-columns:var(--ui-label-width) minmax(0,1fr);gap:var(--ui-space-sm);align-items:start}.blueprint-composition{border-top:1px solid var(--border-subtle);padding-top:var(--ui-space-sm)}.component-columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--ui-space-lg)}.component-columns fieldset{border:1px solid var(--border-subtle);padding:var(--ui-space-sm)}.component-columns label{display:flex;gap:var(--ui-space-xs);align-items:center;min-height:var(--ui-tree-row-height)}.component-columns span{min-width:0;overflow-wrap:anywhere}.blueprint-diagnostics{color:var(--danger);padding-left:var(--ui-space-lg)}.blueprint-diagnostics li{margin-block:var(--ui-space-xs);overflow-wrap:anywhere}footer{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:var(--ui-space-xs);padding-top:var(--ui-space-sm);border-top:1px solid var(--border-subtle)}.blueprint-provenance{border-top:1px solid var(--border-subtle);padding-top:var(--ui-space-sm)}.blueprint-provenance li>*{display:block;overflow-wrap:anywhere;margin-block:var(--ui-space-xs)}.blueprint-provenance small{color:var(--text-muted)}@media(max-width:600px){.component-columns,.blueprint-fields label{grid-template-columns:minmax(0,1fr)}}</style>

@@ -1,14 +1,11 @@
 <!-- 材质图编辑器：维护节点、连接和输出，展示诊断并提交材质配置。 -->
 <template>
   <section class="material-graph-editor">
-    <header>
-      <div><strong>{{ t('visualMaterialGraph') }}</strong><small>{{ t('visualMaterialGraphHint') }}</small></div>
-      <label>{{ t('target') }}<select :value="document.target" @change="setTarget"><option>Sprite</option><option>UI</option><option>Light</option></select></label>
-    </header>
+    <UiPanelHeader :title="t('visualMaterialGraph')" :description="t('visualMaterialGraphHint')"><template #actions><label class="target-field">{{ t('target') }}<select :value="document.target" @change="setTarget"><option>Sprite</option><option>UI</option><option>Light</option></select></label></template></UiPanelHeader>
     <div class="graph-workspace">
       <aside>
         <input :aria-label="t('searchNodes')" v-model.trim="search" :placeholder="t('searchNodes')">
-        <button v-for="kind in filteredKinds" :key="kind" @click="addNode(kind)">＋ {{ nodeLabel(kind) }}</button>
+        <UiButton v-for="kind in filteredKinds" :key="kind" icon="add" @click="addNode(kind)">{{ nodeLabel(kind) }}</UiButton>
       </aside>
       <div class="graph-canvas" role="application" :aria-label="t('visualMaterialGraph')">
         <svg aria-hidden="true" :viewBox="`0 0 ${canvasWidth} ${canvasHeight}`"><path v-for="edge in lines" :key="edge.uuid" :d="edge.path" /></svg>
@@ -29,12 +26,12 @@
           <label v-if="selectedNode.kind === 'Gradient'">{{ t('startColor') }}<input type="color" :value="nodeColor('colorA')" @input="setNodeColor('colorA',$event)"></label>
           <label v-if="selectedNode.kind === 'Gradient'">{{ t('endColor') }}<input type="color" :value="nodeColor('colorB')" @input="setNodeColor('colorB',$event)"></label>
           <label v-if="selectedNode.kind === 'Palette'">{{ t('paletteSteps') }}<NumericExpressionInput :model-value="Number(selectedNode.values.steps)" @update:model-value="selectedNode.values.steps = $event" :resource-key="resourceKey + ':node:' + selectedNode.uuid + ':selectedNode.values.steps'" :minimum="2" :maximum="64" :step="1" @change="commit" /></label>
-          <label v-if="selectedNode.kind === 'Dissolve'">{{ t('threshold') }}<input v-model.number="selectedNode.values.threshold" type="range" min="0" max="1" step=".01" @input="commit"></label>
-          <label v-if="selectedNode.kind === 'Dissolve'">{{ t('softness') }}<input v-model.number="selectedNode.values.softness" type="range" min=".001" max="1" step=".01" @input="commit"></label>
+          <label v-if="selectedNode.kind === 'Dissolve'">{{ t('threshold') }}<UiSlider :model-value="Number(selectedNode.values.threshold)" @update:model-value="selectedNode.values.threshold = $event" min="0" max="1" step=".01" @input="commit" /></label>
+          <label v-if="selectedNode.kind === 'Dissolve'">{{ t('softness') }}<UiSlider :model-value="Number(selectedNode.values.softness)" @update:model-value="selectedNode.values.softness = $event" min=".001" max="1" step=".01" @input="commit" /></label>
           <label v-for="pin in selectedInputPins" :key="pin">{{ inputLabel(pin) }}
             <select :value="inputSource(pin)" @change="setInput(pin,$event)"><option value="">{{ t('none') }}</option><option v-for="node in inputCandidates" :key="node.uuid" :value="node.uuid">{{ node.label }} · {{ nodeLabel(node.kind) }}</option></select>
           </label>
-          <button v-if="selectedNode.kind !== 'Output'" class="danger" @click="removeSelected">{{ t('removeNode') }}</button>
+          <UiButton v-if="selectedNode.kind !== 'Output'" icon="remove" variant="danger" :label="t('removeNode')" @click="removeSelected" />
         </template>
         <p v-else>{{ t('selectGraphNode') }}</p>
         <hr>
@@ -45,12 +42,14 @@
       </aside>
     </div>
     <details class="generated-source"><summary>{{ t('deterministicSource') }}</summary><pre>{{ compiledSource }}</pre></details>
-<!-- 诊断严重程度回调检测错误；消息映射回调提取各诊断文本供页脚显示。 -->    <footer><span :class="diagnostics.some(item => item.severity === 'error') ? 'error' : 'good'">{{ diagnostics.length ? diagnostics.map(item => item.message).join(' · ') : t('graphReady') }}</span><button @click="resetGraph">{{ t('resetGraph') }}</button></footer>
+<!-- 诊断严重程度回调检测错误；消息映射回调提取各诊断文本供页脚显示。 -->    <footer><span :class="diagnostics.some(item => item.severity === 'error') ? 'error' : 'good'">{{ diagnostics.length ? diagnostics.map(item => item.message).join(' · ') : t('graphReady') }}</span><UiButton icon="reset" :label="t('resetGraph')" @click="resetGraph" /></footer>
   </section>
 </template>
 
 <script setup lang="ts">
 import NumericExpressionInput from './NumericExpressionInput.vue'
+import UiButton from '../ui/components/UiButton.vue'
+import UiPanelHeader from '../ui/components/UiPanelHeader.vue'
 import { computed, ref } from 'vue'
 import { t } from '../i18n'
 import { panelControlLabel } from '../editor/panelControlCopy'
@@ -103,10 +102,19 @@ const lines = computed(/** 把有效连接转换为可绘制的贝塞尔路径�
 </script>
 
 <style scoped>
-.material-graph-editor{height:100%;min-height:360px;display:flex;flex-direction:column;border:1px solid var(--border-subtle);border-radius:10px;overflow:hidden;background:var(--surface-2)}header,footer{min-height:42px;padding:6px 9px;display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px solid var(--border-subtle)}header>div{display:grid}header small{color:var(--text-muted);font-size:11px}.graph-workspace{min-height:0;display:grid;grid-template-columns:minmax(150px,190px) minmax(460px,1fr) minmax(190px,240px);flex:1}.graph-workspace>aside{min-width:0;padding:7px;display:flex;flex-direction:column;gap:5px;overflow:auto;border-right:1px solid var(--border-subtle)}aside>button{min-height:30px;text-align:left}.graph-canvas{position:relative;min-width:0;overflow:auto;background-color:#11161e;background-image:radial-gradient(circle,#344054 1px,transparent 1px);background-size:18px 18px}.graph-canvas svg{position:absolute;inset:0;min-width:100%;min-height:100%;pointer-events:none}.graph-canvas path{fill:none;stroke:#67a7ff;stroke-width:2}.graph-node{position:absolute;width:150px;height:66px;padding:7px;display:grid;text-align:left;border:1px solid #50617a;border-radius:8px;color:#d8e5f7;background:#202a38;box-shadow:0 8px 20px #0005}.graph-node.selected{border-color:#74b0ff;box-shadow:0 0 0 2px #4090ff44,0 8px 20px #0006}.graph-node.output{background:#263b35}.graph-node small{overflow:hidden;color:#91a3bb;text-overflow:ellipsis}.details{border-right:0!important;border-left:1px solid var(--border-subtle)}.details label{display:grid;gap:3px;color:var(--text-muted);font-size:11px}.details dl{display:grid;gap:4px}.details dl div{display:flex;justify-content:space-between}.details dd{margin:0;color:var(--accent)}.details p{font-size:11px;line-height:1.4}.generated-source{max-height:130px;padding:5px 9px;overflow:auto;border-top:1px solid var(--border-subtle)}.generated-source pre{font:11px/1.45 var(--font-mono);white-space:pre-wrap}.warning,.error{color:var(--warning)}.good{color:var(--success)}footer{border-top:1px solid var(--border-subtle);border-bottom:0}footer span{min-width:0;overflow:hidden;font-size:11px;text-overflow:ellipsis;white-space:nowrap}@container nova-material (max-width:1100px){.graph-workspace{grid-template-columns:150px minmax(430px,1fr)}.details{grid-column:1/-1;max-height:180px;border-top:1px solid var(--border-subtle);border-left:0!important}}@container nova-material (max-width:760px){.graph-workspace{grid-template-columns:1fr}.graph-workspace>aside{max-height:120px;border-right:0;border-bottom:1px solid var(--border-subtle)}.graph-canvas{min-height:420px}.details{max-height:220px}}
-.graph-workspace>aside>button{white-space:normal;overflow-wrap:anywhere}
-/* 26.13: graph canvases keep their own scroll range while surrounding panes reflow. */
-.material-graph-editor{container:nova-material/inline-size;min-width:0}.material-graph-editor>header,.material-graph-editor>footer{flex-wrap:wrap;flex-shrink:0}.material-graph-editor>header>*{min-width:0;max-width:100%}.graph-workspace{overflow:auto}.graph-workspace input,.graph-workspace select{min-width:0;max-width:100%}.graph-node strong{white-space:normal;overflow-wrap:anywhere}.details :is(p,dt,dd){overflow-wrap:anywhere}.details dl div{flex-wrap:wrap;gap:5px}footer span{white-space:normal;overflow:visible;overflow-wrap:anywhere}
-@container nova-material (max-width:1100px){.graph-workspace{grid-template-columns:minmax(130px,170px) minmax(0,1fr);grid-template-rows:minmax(320px,1fr) auto}.details{grid-column:1/-1;max-height:260px}}
-@container nova-material (max-width:680px){.graph-workspace{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(320px,1fr) auto}.graph-workspace>aside{max-height:180px}.graph-canvas{min-height:320px}.details{grid-column:auto;max-height:260px}}
+.material-graph-editor { container: nova-material / inline-size; height: 100%; min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; background: var(--surface-1); }
+.target-field { display: flex; align-items: center; gap: var(--space-2); font-size: var(--type-caption); }.target-field select { width: auto; }
+.graph-workspace { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(14ch, .65fr) minmax(0, 2fr) minmax(20ch, 1fr); overflow: auto; }
+.graph-workspace > aside { min-width: 0; padding: var(--space-2); display: flex; flex-direction: column; gap: var(--space-1); overflow: auto; border-right: var(--ui-border-width) solid var(--border-subtle); }
+.graph-workspace > aside > button { justify-content: start; text-align: start; white-space: normal; overflow-wrap: anywhere; }
+.graph-canvas { position: relative; min-width: 0; overflow: auto; background-color: var(--bg-canvas); background-image: radial-gradient(circle, var(--border-strong) 1px, transparent 1px); background-size: var(--space-5) var(--space-5); }
+.graph-canvas svg { position: absolute; inset: 0; min-width: 100%; min-height: 100%; pointer-events: none; }.graph-canvas path { fill: none; stroke: var(--accent); stroke-width: 2; }
+/* Node geometry remains coupled to graph edge coordinates, not form controls. */
+.graph-node { position: absolute; width: 150px; height: 66px; padding: var(--space-2); display: grid; text-align: start; border: var(--ui-border-width) solid var(--border-strong); border-radius: var(--radius-control); color: var(--text-primary); background: var(--surface-2); }
+.graph-node.selected { border-color: var(--accent); outline: var(--ui-border-width) solid var(--accent); }.graph-node.output { border-left: var(--space-1) solid var(--success); }.graph-node strong { white-space: normal; overflow-wrap: anywhere; }.graph-node small { overflow: hidden; color: var(--text-muted); text-overflow: ellipsis; }
+.graph-workspace > .details { border-right: 0; border-left: var(--ui-border-width) solid var(--border-subtle); }.details label { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-1) var(--space-2); min-height: var(--ui-standard-height); padding-block: var(--space-1); color: var(--text-secondary); font-size: var(--type-dense); }.details label > :is(input, select) { flex: 0 1 auto; }.details dl { display: grid; gap: var(--space-1); }.details dl div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-2); }.details dd { margin: 0; font-variant-numeric: tabular-nums; }.details p { font-size: var(--type-caption); line-height: var(--line-body); overflow-wrap: anywhere; }
+.generated-source { max-height: calc(6 * var(--ui-control-height)); overflow: auto; border-top: var(--ui-border-width) solid var(--border-subtle); }.generated-source pre { padding: var(--space-2); font-size: var(--type-caption); white-space: pre-wrap; }
+footer { display: flex; flex: 0 0 auto; align-items: center; justify-content: space-between; gap: var(--space-2); padding: var(--space-1) var(--space-2); border-top: var(--ui-border-width) solid var(--border-subtle); }footer span { min-width: 0; overflow-wrap: anywhere; font-size: var(--type-caption); }.warning { color: var(--warning); }.error { color: var(--danger); }.good { color: var(--success); }
+@container nova-material (max-width: 900px) { .graph-workspace { grid-template-columns: minmax(14ch,.65fr) minmax(0,2fr); grid-template-rows: minmax(320px,1fr) auto; }.graph-workspace > .details { grid-column: 1 / -1; max-height: calc(8 * var(--ui-standard-height)); border-left: 0; border-top: var(--ui-border-width) solid var(--border-subtle); } }
+@container nova-material (max-width: 520px) { .graph-workspace { grid-template-columns: minmax(0,1fr); grid-template-rows: auto minmax(320px,1fr) auto; }.graph-workspace > aside:first-child { max-height: calc(5 * var(--ui-standard-height)); }.graph-workspace > .details { grid-column: auto; } }
 </style>

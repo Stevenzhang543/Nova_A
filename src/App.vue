@@ -2,8 +2,7 @@
 <template>
   <template v-if="mode === 'editor'">
     <MobileShell />
-    <ProjectManager v-if="projectManager.visible" />
-    <EditorLayout v-else />
+    <UiAsyncWorkspace :key="projectSessionState.id" :view="projectManager.visible ? 'launcher' : 'editor'" :loaders="applicationViews" :cache="false" />
     <ManualViewer v-if="manualViewerState.visible" />
     <StudioStatusDialog v-if="studioStatusState.visible" />
     <ErrorRecovery v-if="faultCenterState.activeFatal" />
@@ -22,10 +21,12 @@
 <script setup lang="ts">
 import { defineAsyncComponent, onBeforeUnmount, onMounted, ref } from 'vue'
 import ProjectManager from './components/ProjectManager.vue'
+import UiAsyncWorkspace from './ui/components/UiAsyncWorkspace.vue'
 import MobileShell from './components/MobileShell.vue'
 import EditorFeedback from './components/EditorFeedback.vue'
 import ConfirmDialog from './components/ConfirmDialog.vue'
 import { projectManagerState as projectManager } from './projects/projectManager'
+import { projectSessionState } from './projects/projectSession'
 import { editorState } from './store/editor'
 import { applySafeModeRestrictions, initializeRecoverySession } from './runtime/recovery'
 import { disposeEditorWindow, initializeEditorWindow, toggleEditorFullscreen } from './runtime/editorWindow'
@@ -42,7 +43,8 @@ import { externalChangeState } from './runtime/projectExternalChanges'
 
 // The launcher and exported player no longer parse the complete editor workspace
 // up front. Each mode retains the same UI and animations after its chunk loads.
-const EditorLayout = defineAsyncComponent(/** 按需加载编辑器布局。 */ () => import('./layout/EditorLayout.vue'))
+// Project changes remain disposal boundaries; resolve a mode before replacing its visible host.
+const applicationViews = { launcher: async () => ({ default: ProjectManager }), editor: () => import('./layout/EditorLayout.vue') }
 const PlayerApp = defineAsyncComponent(/** 按需加载播放器入口。 */ () => import('./PlayerApp.vue'))
 const ManualViewer = defineAsyncComponent(/** 按需加载手册窗口。 */ () => import('./components/ManualViewer.vue'))
 const StudioStatusDialog = defineAsyncComponent(/** 按需加载工作室状态窗口。 */ () => import('./components/StudioStatusDialog.vue'))

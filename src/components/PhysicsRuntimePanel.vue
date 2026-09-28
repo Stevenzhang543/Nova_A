@@ -1,14 +1,12 @@
 <!-- 物理运行设置：编辑求解器和运行参数，并展示物理相关诊断。 -->
 <template>
-  <aside :class="['physics-runtime-panel', { collapsed: monitor.collapsed }]" :aria-label="t('physicsMonitor')">
+  <aside :style="{'--telemetry-row-height':rowHeight+'px'}" :class="['physics-runtime-panel', { collapsed: monitor.collapsed }]" :aria-label="t('physicsMonitor')">
     <header>
       <div class="heading">
         <span class="live-dot" aria-hidden="true"></span>
         <div><strong>{{ t('physicsMonitor') }}</strong><small>{{ status }}</small></div>
       </div>
-      <button class="icon-button" :title="t(monitor.collapsed ? 'expandPanel' : 'collapsePanel')" @click="monitor.collapsed = !monitor.collapsed">
-        <span aria-hidden="true">{{ monitor.collapsed ? '‹' : '›' }}</span>
-      </button>
+      <UiButton :icon="monitor.collapsed ? 'back' : 'forward'" :label="t(monitor.collapsed ? 'expandPanel' : 'collapsePanel')" @click="monitor.collapsed = !monitor.collapsed" />
     </header>
 
     <template v-if="!monitor.collapsed">
@@ -31,7 +29,7 @@
       </div>
       <div class="runtime-tools">
         <input v-model="monitor.query" type="search" :placeholder="t('filterRuntimeData')">
-        <button :class="{ active: monitor.frozen }" @click="monitor.frozen = !monitor.frozen">{{ t(monitor.frozen ? 'resumeTelemetry' : 'freezeTelemetry') }}</button>
+        <UiButton :icon="monitor.frozen ? 'play' : 'pause'" :class="{ active: monitor.frozen }" :label="t(monitor.frozen ? 'resumeTelemetry' : 'freezeTelemetry')" @click="monitor.frozen = !monitor.frozen" />
         <button v-if="monitor.activeTab === 'collisions'" :disabled="!monitor.collisions.length" @click="clearCollisionTimeline">{{ t('clear') }}</button>
         <button v-else-if="monitor.activeTab === 'captures'" @click="capturePhysicsSnapshot()">{{ t('takeCapture') }}</button>
       </div>
@@ -39,7 +37,7 @@
       <section v-if="monitor.activeTab === 'bodies'" class="telemetry-browser" role="tabpanel">
         <div class="table-controls">
           <label>{{ t('sortBy') }} <select v-model="monitor.sortKey"><option value="name">{{ t('name') }}</option><option value="speed">{{ t('speed') }}</option><option value="acceleration">{{ t('acceleration') }}</option><option value="force">{{ t('force') }}</option><option value="energy">{{ t('kineticEnergy') }}</option><option value="contacts">{{ t('contacts') }}</option></select></label>
-          <button :title="t('sortDirection')" @click="monitor.sortDirection = monitor.sortDirection === 'ascending' ? 'descending' : 'ascending'">{{ monitor.sortDirection === 'ascending' ? '↑' : '↓' }}</button>
+          <UiButton :icon="monitor.sortDirection === 'ascending' ? 'up' : 'down'" :label="t('sortDirection')" @click="monitor.sortDirection = monitor.sortDirection === 'ascending' ? 'descending' : 'ascending'" />
         </div>
         <div class="virtual-list" @scroll="bodyScroll = ($event.target as HTMLElement).scrollTop">
           <div :style="{ height: `${bodyTop}px` }"></div>
@@ -83,7 +81,7 @@
 
       <section v-else class="telemetry-browser" role="tabpanel">
         <div class="capture-actions"><button :disabled="monitor.captures.length < 2" @click="compareLatest">{{ t('compareSnapshots') }}</button></div>
-        <div class="capture-list"><article v-for="capture in captures" :key="capture.id"><button @click="selectedCaptureId = capture.id"><strong>{{ capture.name }}</strong><small>{{ capture.createdAt }} · {{ capture.step }} {{ t('steps') }}</small></button><button :title="t('exportCapture')" @click="exportCapture(capture)">⇩</button></article></div>
+        <div class="capture-list"><article v-for="capture in captures" :key="capture.id"><button @click="selectedCaptureId = capture.id"><strong>{{ capture.name }}</strong><small>{{ capture.createdAt }} · {{ capture.step }} {{ t('steps') }}</small></button><UiButton icon="download" :label="t('exportCapture')" @click="exportCapture(capture)" /></article></div>
         <article v-if="snapshotComparison.length" class="comparison-table"><strong>{{ t('snapshotDelta') }}</strong><div v-for="row in snapshotComparison.slice(0, 100)" :key="row.uuid"><span>{{ row.name }}</span><code>Δv {{ numberText(row.speedDelta) }} · ΔE {{ numberText(row.energyDelta) }}</code></div></article>
         <p v-if="!captures.length" class="empty">{{ t('noCaptures') }}</p>
       </section>
@@ -92,6 +90,8 @@
 </template>
 
 <script setup lang="ts">
+import UiButton from '../ui/components/UiButton.vue'
+import { preferencesState } from '../store/preferences'
 import { computed, defineComponent, h, ref } from 'vue'
 import { t } from '../i18n'
 import { physicsState } from '../store/physics'
@@ -113,11 +113,11 @@ const constraints = computed(/** 搜索约束名称、种类和端点名称，�
 const captures = computed(/* 根据 query.value 的真假，分别返回 monitor.captures.filter(item => item.name.toLocaleLowerCase().includes(query.value)) 或 monitor.captures。 */ () => query.value ? monitor.captures.filter(/* 调用 item.name.toLocaleLowerCase().includes(query.value) 并返回调用结果。 */ item => item.name.toLocaleLowerCase().includes(query.value)) : monitor.captures)
 const bodyScroll = ref(0), collisionScroll = ref(0), selectedBodyUuid = ref(''), selectedCollisionId = ref<number | null>(null), selectedConstraintUuid = ref(''), selectedCaptureId = ref('')
 const snapshotComparison = ref<ReturnType<typeof comparePhysicsSnapshots>>([])
-const rowHeight = 46, visibleRows = 7
-const bodyStart = computed(/* 调用 Math.max(0, Math.floor(bodyScroll.value / rowHeight) - 2) 并返回调用结果。 */ () => Math.max(0, Math.floor(bodyScroll.value / rowHeight) - 2)), collisionStart = computed(/* 调用 Math.max(0, Math.floor(collisionScroll.value / rowHeight) - 2) 并返回调用结果。 */ () => Math.max(0, Math.floor(collisionScroll.value / rowHeight) - 2))
+const rowHeight = computed(()=>48 * preferencesState.uiScale), visibleRows = 7
+const bodyStart = computed(/* 调用 Math.max(0, Math.floor(bodyScroll.value / rowHeight.value) - 2) 并返回调用结果。 */ () => Math.max(0, Math.floor(bodyScroll.value / rowHeight.value) - 2)), collisionStart = computed(/* 调用 Math.max(0, Math.floor(collisionScroll.value / rowHeight.value) - 2) 并返回调用结果。 */ () => Math.max(0, Math.floor(collisionScroll.value / rowHeight.value) - 2))
 const visibleBodies = computed(/* 调用 bodies.value.slice(bodyStart.value, bodyStart.value + visibleRows + 4) 并返回调用结果。 */ () => bodies.value.slice(bodyStart.value, bodyStart.value + visibleRows + 4)), visibleCollisions = computed(/* 调用 collisions.value.slice(collisionStart.value, collisionStart.value + visibleRows + 4) 并返回调用结果。 */ () => collisions.value.slice(collisionStart.value, collisionStart.value + visibleRows + 4))
-const bodyTop = computed(/* 计算表达式 bodyStart.value * rowHeight 并返回结果，沿用操作数的原有类型规则。 */ () => bodyStart.value * rowHeight), bodyBottom = computed(/* 调用 Math.max(0, (bodies.value.length - bodyStart.value - visibleBodies.value.length) * rowHeight) 并返回调用结果。 */ () => Math.max(0, (bodies.value.length - bodyStart.value - visibleBodies.value.length) * rowHeight))
-const collisionTop = computed(/* 计算表达式 collisionStart.value * rowHeight 并返回结果，沿用操作数的原有类型规则。 */ () => collisionStart.value * rowHeight), collisionBottom = computed(/* 调用 Math.max(0, (collisions.value.length - collisionStart.value - visibleCollisions.value.length) * rowHeight) 并返回调用结果。 */ () => Math.max(0, (collisions.value.length - collisionStart.value - visibleCollisions.value.length) * rowHeight))
+const bodyTop = computed(/* 计算表达式 bodyStart.value * rowHeight 并返回结果，沿用操作数的原有类型规则。 */ () => bodyStart.value * rowHeight.value), bodyBottom = computed(/* 调用 Math.max(0, (bodies.value.length - bodyStart.value - visibleBodies.value.length) * rowHeight.value) 并返回调用结果。 */ () => Math.max(0, (bodies.value.length - bodyStart.value - visibleBodies.value.length) * rowHeight.value))
+const collisionTop = computed(/* 计算表达式 collisionStart.value * rowHeight 并返回结果，沿用操作数的原有类型规则。 */ () => collisionStart.value * rowHeight.value), collisionBottom = computed(/* 调用 Math.max(0, (collisions.value.length - collisionStart.value - visibleCollisions.value.length) * rowHeight.value) 并返回调用结果。 */ () => Math.max(0, (collisions.value.length - collisionStart.value - visibleCollisions.value.length) * rowHeight.value))
 const selectedBody = computed(/** 取得所选物体，缺失回退首项或空值。 */ () => bodies.value.find(/* 比较 body.uuid 与 selectedBodyUuid.value，返回严格相等的判断结果。 */ body => body.uuid === selectedBodyUuid.value) ?? bodies.value[0] ?? null)
 const selectedCollision = computed(/** 取得所选碰撞，缺失回退首项或空值。 */ () => collisions.value.find(/* 比较 collision.id 与 selectedCollisionId.value，返回严格相等的判断结果。 */ collision => collision.id === selectedCollisionId.value) ?? collisions.value[0] ?? null)
 const selectedConstraint = computed(/** 取得所选约束，缺失回退首项或空值。 */ () => constraints.value.find(/* 比较 constraint.uuid 与 selectedConstraintUuid.value，返回严格相等的判断结果。 */ constraint => constraint.uuid === selectedConstraintUuid.value) ?? constraints.value[0] ?? null)
@@ -149,48 +149,5 @@ const bodyMetricUnit = computed(/* 返回 ({ name: '', speed: 'm/s', acceleratio
 }
 </script>
 
-<style scoped>
-.physics-runtime-panel { position: relative; z-index: 190; width: clamp(340px, 26vw, 410px); min-width: 0; display: flex; flex: 0 0 auto; flex-direction: column; overflow: hidden; contain: layout paint; border-left: 1px solid var(--border-strong); background: var(--surface-1); box-shadow: -12px 0 32px color-mix(in srgb, #000 16%, transparent); }
-.physics-runtime-panel.collapsed { width: 44px; }
-header { min-height: 54px; padding: 9px 10px 9px 14px; display: flex; align-items: center; justify-content: space-between; gap: 8px; border-bottom: 1px solid var(--border-subtle); }
-.heading { min-width: 0; display: flex; align-items: center; gap: 10px; }
-.heading div { min-width: 0; display: grid; gap: 2px; }
-.heading strong, .heading small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.heading strong { font-size: 12px; } .heading small { color: var(--text-muted); font-size:11px; }
-.live-dot { width: 8px; height: 8px; flex: 0 0 auto; border-radius: 50%; background: var(--success); box-shadow: 0 0 0 4px color-mix(in srgb, var(--success) 15%, transparent); animation: live-pulse 1.8s ease-in-out infinite; }
-.collapsed .heading { display: none; }
-.icon-button { width: 28px; height: 28px; flex: 0 0 auto; border: 1px solid var(--border-subtle); border-radius: 8px; background: var(--surface-2); color: var(--text-secondary); font-size: 18px; }
-.tabs { min-height: 40px; padding: 5px 8px 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 3px; border-bottom: 1px solid var(--border-subtle); }
-.tabs button { min-width: 0; padding: 7px 6px; border: 0; border-bottom: 2px solid transparent; border-radius: 7px 7px 0 0; background: transparent; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.tabs button.active { border-bottom-color: var(--accent); background: var(--surface-hover); color: var(--text-primary); }
-.tabs span { margin-left: 4px; padding: 1px 5px; border-radius: 999px; background: var(--surface-3); color: var(--text-muted); font-size:11px; }
-.runtime-tools { padding: 8px; display: grid; grid-template-columns: minmax(90px, 1fr) auto auto; gap: 5px; border-bottom: 1px solid var(--border-subtle); }
-.runtime-tools input { width: 100%; min-width: 0; height: 30px; padding: 0 9px; }
-.runtime-tools button { min-width: 0; height: 30px; padding: 0 9px; white-space: nowrap; }
-.runtime-tools button.active { border-color: var(--accent); background: var(--accent-soft); }
-.runtime-warnings{max-height:84px;padding:7px 9px;display:grid;gap:3px;overflow:auto;border-bottom:1px solid color-mix(in srgb,var(--warning) 35%,var(--border-subtle));background:color-mix(in srgb,var(--warning) 8%,var(--surface-1));font-size:11px}.runtime-warnings strong{color:var(--warning)}.runtime-warnings span{color:var(--text-secondary)}
-.table-controls{display:flex;align-items:center;justify-content:space-between;gap:8px}.table-controls label{min-width:0;display:flex;align-items:center;gap:6px;color:var(--text-muted)}.table-controls select{min-width:0;height:28px}.table-controls button,.pin-button,.capture-actions button{height:28px;padding:0 8px}.pin-button{margin-left:auto}.pin-button.active{border-color:var(--accent);background:var(--accent-soft)}
-.telemetry-browser{min-height:0;flex:1;padding:8px;display:flex;flex-direction:column;gap:8px;overflow:hidden}.virtual-list{height:180px;flex:0 0 180px;overflow:auto;border:1px solid var(--border-subtle);border-radius:9px;background:var(--surface-2)}.virtual-list button{width:100%;height:46px;padding:5px 8px;display:flex;align-items:center;justify-content:space-between;gap:8px;border:0;border-bottom:1px solid var(--border-subtle);background:transparent;text-align:left}.virtual-list button.active{background:var(--selection-bg)}.virtual-list button>span{min-width:0;display:grid}.virtual-list strong,.virtual-list small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.virtual-list small{color:var(--text-muted)}.virtual-list code{color:var(--accent)}.telemetry-detail{min-height:0;overflow:auto}
-.virtual-list button.pinned{box-shadow:inset 3px 0 var(--accent)}.sparkline{width:100%;height:42px;margin-top:8px;border:1px solid var(--border-subtle);border-radius:7px;background:linear-gradient(180deg,color-mix(in srgb,var(--accent) 7%,transparent),transparent)}.sparkline polyline{fill:none;stroke:var(--accent);stroke-width:1.7;vector-effect:non-scaling-stroke}
-.constraint-list,.capture-list{min-height:0;overflow:auto;border:1px solid var(--border-subtle);border-radius:9px;background:var(--surface-2)}.constraint-list>button{width:100%;height:50px;padding:6px 9px;display:flex;justify-content:space-between;align-items:center;gap:8px;border:0;border-bottom:1px solid var(--border-subtle);background:transparent;text-align:left}.constraint-list>button.active{background:var(--selection-bg)}.constraint-list span{min-width:0;display:grid}.constraint-list small{overflow:hidden;color:var(--text-muted);text-overflow:ellipsis;white-space:nowrap}.constraint-list code{color:var(--accent)}.capture-actions{display:flex;justify-content:flex-end}.capture-list article{display:grid;grid-template-columns:minmax(0,1fr) 32px;border-bottom:1px solid var(--border-subtle)}.capture-list button{min-width:0;padding:7px;border:0;background:transparent;text-align:left}.capture-list button:first-child{display:grid;gap:3px}.capture-list small{overflow:hidden;color:var(--text-muted);text-overflow:ellipsis;white-space:nowrap}.comparison-table{min-height:0;padding:9px;overflow:auto;border:1px solid var(--border-subtle);border-radius:9px;background:var(--surface-2)}.comparison-table>div{padding:5px 0;display:flex;justify-content:space-between;gap:8px;border-bottom:1px solid var(--border-subtle)}.comparison-table span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.comparison-table code{color:var(--accent);white-space:nowrap}
-.telemetry-card, .event-body { min-width: 0; padding: 10px; border: 1px solid var(--border-subtle); border-radius: 11px; background: var(--surface-2); }
-.telemetry-card + .telemetry-card { margin-top: 8px; }
-.card-title { min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.card-title strong, .card-title span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.card-title strong { font-size: 11px; } .card-title span { color: var(--text-muted); font-size:11px; }
-.metric-grid { margin-top: 9px; display: grid; grid-template-columns: 1fr 1fr; gap: 7px 10px; }
-.metric { min-width: 0; display: grid; gap: 2px; }
-.metric :deep(span) { color: var(--text-muted); font-size:11px; letter-spacing: .04em; text-transform: uppercase; }
-.metric :deep(strong) { overflow: hidden; color: var(--text-secondary); font-family: var(--font-mono); font-size:11px; font-weight: 550; text-overflow: ellipsis; white-space: nowrap; }
-.timeline-event { min-width: 0; display: grid; grid-template-columns: 12px minmax(0, 1fr); gap: 5px; }
-.timeline-event + .timeline-event { margin-top: 8px; }
-.event-rail { position: relative; display: flex; justify-content: center; }
-.event-rail::after { content: ''; position: absolute; top: 13px; bottom: -14px; width: 1px; background: var(--border-strong); }
-.timeline-event:last-child .event-rail::after { display: none; }
-.event-rail span { z-index: 1; width: 7px; height: 7px; margin-top: 12px; border: 2px solid var(--accent); border-radius: 50%; background: var(--surface-1); }
-.empty { margin: 30px 12px; color: var(--text-muted); text-align: center; line-height: 1.5; }
-@keyframes live-pulse { 50% { opacity: .58; transform: scale(.86); } }
-@media (prefers-reduced-motion: reduce) { .live-dot { animation: none; } }
-@media (max-width: 1250px) { .physics-runtime-panel { position: absolute; z-index: 190; top: 0; right: 0; bottom: 0; width: min(390px, calc(100vw - 72px)); } }
-@media (max-width: 520px) { .metric-grid { grid-template-columns: 1fr; } .runtime-tools { grid-template-columns: 1fr 1fr; } .runtime-tools input { grid-column: 1 / -1; } .tabs{grid-template-columns:1fr 1fr}.card-title{flex-wrap:wrap} }
+<style scoped>.physics-runtime-panel{position:relative;z-index:190;width:min(44ch,35vw);min-width:0;display:flex;flex:none;flex-direction:column;overflow:hidden;border-left:1px solid var(--border-subtle);background:var(--surface-1)}.physics-runtime-panel.collapsed{width:calc(var(--ui-control-height) + 2 * var(--ui-space-xs))}header{display:flex;align-items:center;justify-content:space-between;gap:var(--ui-space-xs);padding:var(--ui-space-xs) var(--ui-space-sm);border-bottom:1px solid var(--border-subtle)}.heading{min-width:0;display:flex;align-items:center;gap:var(--ui-space-xs)}.heading>div{display:grid;min-width:0}.heading small{color:var(--text-muted);font-size:var(--type-caption)}.heading strong,.heading small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.live-dot{width:var(--ui-space-xs);height:var(--ui-space-xs);border-radius:50%;background:var(--success);flex:none}.collapsed .heading{display:none}.tabs{display:flex;overflow-x:auto;flex:none;border-bottom:1px solid var(--border-subtle)}.tabs button{flex:none;border-color:transparent;border-radius:0;background:transparent;white-space:nowrap}.tabs span{font-size:var(--type-caption);color:var(--text-muted)}.runtime-tools{display:flex;gap:var(--ui-space-xs);padding:var(--ui-space-xs);flex-wrap:wrap;border-bottom:1px solid var(--border-subtle)}.runtime-tools input{flex:1;min-width:10ch}.runtime-warnings{max-height:20vh;display:grid;gap:var(--ui-space-xs);overflow:auto;padding:var(--ui-space-sm);border-bottom:1px solid var(--warning);font-size:var(--type-caption)}.runtime-warnings strong{color:var(--warning)}.table-controls{display:flex;gap:var(--ui-space-xs);justify-content:space-between;align-items:center}.table-controls label{display:flex;align-items:center;gap:var(--ui-space-xs);min-width:0}.table-controls select{min-width:0}.pin-button{margin-left:auto}.telemetry-browser{min-height:0;flex:1;display:flex;flex-direction:column;gap:var(--ui-space-sm);padding:var(--ui-space-sm);overflow:auto}.virtual-list{height:calc(4 * var(--telemetry-row-height));flex:none;overflow:auto;border-block:1px solid var(--border-subtle)}.virtual-list button{width:100%;height:var(--telemetry-row-height);display:flex;align-items:center;justify-content:space-between;gap:var(--ui-space-xs);padding:var(--ui-space-xs);border:0;border-bottom:1px solid var(--border-subtle);border-radius:0;background:transparent;text-align:left;box-sizing:border-box}.virtual-list button.active{background:var(--selection-bg)}.virtual-list button>span{min-width:0;display:grid}.virtual-list strong,.virtual-list small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.virtual-list small{color:var(--text-muted);font-size:var(--type-caption)}.virtual-list code{color:var(--accent);font-size:var(--type-caption);flex:none}.virtual-list button.pinned{border-left:2px solid var(--accent)}.telemetry-detail{min-height:0}.sparkline{width:100%;height:42px;margin-top:var(--ui-space-sm);border-block:1px solid var(--border-subtle);background:var(--bg-canvas)}.sparkline polyline{fill:none;stroke:var(--accent);stroke-width:1.7;vector-effect:non-scaling-stroke}.constraint-list,.capture-list{min-height:0;overflow:auto;border-block:1px solid var(--border-subtle)}.constraint-list>button{width:100%;min-height:var(--telemetry-row-height);padding:var(--ui-space-xs);display:flex;justify-content:space-between;align-items:center;gap:var(--ui-space-xs);border:0;border-bottom:1px solid var(--border-subtle);border-radius:0;background:transparent;text-align:left}.constraint-list span{min-width:0;display:grid}.constraint-list small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-muted)}.capture-actions{display:flex;justify-content:flex-end}.capture-list article{display:grid;grid-template-columns:minmax(0,1fr) var(--ui-control-height);align-items:center;border-bottom:1px solid var(--border-subtle)}.capture-list button:first-child{display:grid;gap:var(--ui-space-xs);min-width:0;text-align:left;padding:var(--ui-space-xs);background:transparent;border-color:transparent}.capture-list small{color:var(--text-muted);overflow-wrap:anywhere}.comparison-table{min-height:0;overflow:auto}.comparison-table>div{display:flex;justify-content:space-between;gap:var(--ui-space-sm);padding-block:var(--ui-space-xs);border-bottom:1px solid var(--border-subtle)}.comparison-table span{overflow-wrap:anywhere}.comparison-table code{white-space:nowrap}.telemetry-card,.event-body{min-width:0;padding-block:var(--ui-space-sm);border-bottom:1px solid var(--border-subtle)}.card-title{display:flex;align-items:center;gap:var(--ui-space-xs);flex-wrap:wrap}.card-title>span{font-size:var(--type-caption);color:var(--text-muted)}.metric-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--ui-space-sm);margin-top:var(--ui-space-sm)}.metric{display:grid;min-width:0;gap:var(--ui-space-xs)}.metric :deep(span){color:var(--text-muted);font-size:var(--type-caption)}.metric :deep(strong){font-family:var(--font-mono);font-size:var(--type-caption);font-weight:500;overflow-wrap:anywhere}.timeline-event{display:grid;grid-template-columns:var(--ui-space-sm) minmax(0,1fr);gap:var(--ui-space-xs)}.event-rail{border-left:1px solid var(--border-subtle);margin-left:var(--ui-space-xs)}.empty{padding:var(--ui-space-xl);color:var(--text-muted);text-align:center}@media(max-width:1250px){.physics-runtime-panel{position:absolute;right:0;top:0;bottom:0;width:min(44ch,calc(100vw - 2 * var(--ui-control-height)))}}@media(max-width:520px){.metric-grid{grid-template-columns:minmax(0,1fr)}}
 </style>

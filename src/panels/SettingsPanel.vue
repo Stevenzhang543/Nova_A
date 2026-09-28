@@ -7,101 +7,101 @@
         <h1>{{ t('settings') }}</h1>
       </div>
       <div class="theme-switch" :aria-label="t('theme')">
-        <button :class="{ active: prefs.theme === 'dark' }" @click="setTheme('dark')">☾ {{ t('dark') }}</button>
-        <button :class="{ active: prefs.theme === 'light' }" @click="setTheme('light')">☀ {{ t('light') }}</button>
+        <button :class="{ active: prefs.theme === 'dark' }" @click="setTheme('dark')">{{ t('dark') }}</button>
+        <button :class="{ active: prefs.theme === 'light' }" @click="setTheme('light')">{{ t('light') }}</button>
       </div>
     </header>
 
     <section class="settings-search" aria-label="Settings search">
-      <label><span>⌕</span><input v-model="editorState.settingsSearch" type="search" :aria-label="t('searchSettings')" :placeholder="t('searchSettings')"></label>
+      <UiPropertyRow :label="t('searchSettings')"><input v-model="editorState.settingsSearch" type="search" :aria-label="t('searchSettings')" :placeholder="t('searchSettings')"></UiPropertyRow>
       <nav :aria-label="t('settingScope')"><button v-for="scope in settingScopes" :key="scope.id" :class="{ active: editorState.settingsScope === scope.id }" @click="editorState.settingsScope = scope.id">{{ t(scope.label) }}</button></nav>
     </section>
 
-    <div class="settings-grid">
-      <section v-show="showCard('appearanceSettings formLabelLayout theme color palette language interfaceScale compactMode reduceMotion highContrast launchMaximized workspaceLayoutScope shortcutEditor', 'editor')" class="settings-card">
-        <div class="card-heading"><span class="card-icon">◐</span><h2>{{ t('appearanceSettings') }}</h2></div>
-        <SettingRow :label="t('language')">
+    <div class="ui-section-list settings-sections">
+      <UiPropertySection :title="t('appearanceSettings')" v-show="showCard('appearanceSettings formLabelLayout theme color palette language interfaceScale compactMode reduceMotion highContrast launchMaximized workspaceLayoutScope shortcutEditor', 'editor')" >
+
+        <UiPropertyRow :label="t('language')">
           <select v-model="prefs.locale">
             <option value="en">{{ t('english') }}</option>
             <option value="de">{{ t('german') }}</option>
             <option value="zh">{{ t('chinese') }}</option>
           </select>
-        </SettingRow>
-        <SettingRow :label="PALETTE_COPY[prefs.locale].label">
+        </UiPropertyRow>
+        <UiPropertyRow :label="PALETTE_COPY[prefs.locale].label">
           <select data-audit="color-palette" :aria-label="PALETTE_COPY[prefs.locale].label" :value="prefs.theme === 'light' ? prefs.lightPalette : prefs.darkPalette" @change="selectColorPalette(($event.target as HTMLSelectElement).value)">
             <option v-for="(palette, index) in COLOR_PALETTES" :key="palette.id" :value="palette.id">{{ PALETTE_COPY[prefs.locale].names[index] }} · {{ t(palette.mode) }}</option>
           </select>
-        </SettingRow>
+        </UiPropertyRow>
         <p>{{ PALETTE_COPY[prefs.locale].hint }}</p><button class="secondary-action" data-audit="qualification-help" @click="openProductionManual(prefs.locale)">{{ t('documentation') }}</button>
-        <SettingRow :label="FORM_LAYOUT_COPY[prefs.locale].label" data-non-project-control>
+        <UiPropertyRow :label="FORM_LAYOUT_COPY[prefs.locale].label" data-non-project-control>
           <select v-model="prefs.formLabelLayout" data-audit="form-label-layout" :aria-label="FORM_LAYOUT_COPY[prefs.locale].label">
             <option value="auto">{{ FORM_LAYOUT_COPY[prefs.locale].auto }}</option>
             <option value="stacked">{{ FORM_LAYOUT_COPY[prefs.locale].stacked }}</option>
           </select>
-        </SettingRow>
+        </UiPropertyRow>
         <p>{{ FORM_LAYOUT_COPY[prefs.locale].hint }}</p>
-        <SettingRow :label="t('interfaceScale')">
-          <div class="value-control"><input v-model.number="prefs.uiScale" type="range" min="1" max="2" step="0.05"><output>{{ Math.round(prefs.uiScale * 100) }}%</output></div>
-        </SettingRow>
-        <SettingRow :label="t('compactMode')"><ToggleSwitch v-model="prefs.compactMode" /></SettingRow>
-        <SettingRow :label="t('reduceMotion')"><ToggleSwitch v-model="prefs.reduceMotion" /></SettingRow>
-        <SettingRow :label="t('highContrast')"><ToggleSwitch v-model="prefs.highContrast" /></SettingRow>
-        <SettingRow :label="t('launchMaximized')"><ToggleSwitch v-model="prefs.launchMaximized" /></SettingRow>
-        <SettingRow :label="t('workspaceLayoutScope')"><select v-model="prefs.workspaceLayoutScope"><option value="user">{{ t('editorScope') }}</option><option value="project">{{ t('projectScope') }}</option></select></SettingRow>
+        <UiPropertyRow :label="t('interfaceScale')">
+          <div class="value-control"><UiSlider v-model.number="prefs.uiScale" min="1" max="2" step="0.05" /><output>{{ Math.round(prefs.uiScale * 100) }}%</output></div>
+        </UiPropertyRow>
+        <UiPropertyRow :label="t('compactMode')"><UiToggle v-model="prefs.compactMode" /></UiPropertyRow>
+        <UiPropertyRow :label="t('reduceMotion')"><UiToggle v-model="prefs.reduceMotion" /></UiPropertyRow>
+        <UiPropertyRow :label="t('highContrast')"><UiToggle v-model="prefs.highContrast" /></UiPropertyRow>
+        <UiPropertyRow :label="t('launchMaximized')"><UiToggle v-model="prefs.launchMaximized" /></UiPropertyRow>
+        <UiPropertyRow :label="t('workspaceLayoutScope')"><select v-model="prefs.workspaceLayoutScope"><option value="user">{{ t('editorScope') }}</option><option value="project">{{ t('projectScope') }}</option></select></UiPropertyRow>
         <button class="secondary-action" @click="editorState.shortcutEditorOpen = true">{{ t('shortcutEditor') }}</button>
-      </section>
+      </UiPropertySection>
 
-      <section v-show="showCard('performanceProfiles reduceMotion idle preview budget editor performance', 'editor')" class="settings-card editor-performance-card" data-non-project-control>
-        <div class="card-heading"><span class="card-icon">◷</span><h2>{{ performanceCopy.title }}</h2></div>
+      <UiPropertySection :title="performanceCopy.title" v-show="showCard('performanceProfiles reduceMotion idle preview budget editor performance', 'editor')" class="editor-performance-card" data-non-project-control>
+
         <p>{{ performanceCopy.scope }}</p>
-        <SettingRow :label="t('performanceProfiles')"><select data-audit="editor-performance-profile" :value="prefs.performanceProfile" @change="applyCreatorPerformanceProfile(($event.target as HTMLSelectElement).value as PerformanceProfile)"><option value="balanced">{{ performanceCopy.balanced }}</option><option value="low-end">{{ performanceCopy.low }}</option><option value="quality">{{ performanceCopy.quality }}</option></select></SettingRow>
-        <SettingRow :label="performanceCopy.motion"><select v-model="prefs.editorDecorativeMotion" data-audit="editor-motion-override"><option value="auto">{{ performanceCopy.preset }}</option><option value="on">{{ performanceCopy.on }}</option><option value="off">{{ performanceCopy.off }}</option></select></SettingRow>
+        <UiPropertyRow :label="t('performanceProfiles')"><select data-audit="editor-performance-profile" :value="prefs.performanceProfile" @change="applyCreatorPerformanceProfile(($event.target as HTMLSelectElement).value as PerformanceProfile)"><option value="balanced">{{ performanceCopy.balanced }}</option><option value="low-end">{{ performanceCopy.low }}</option><option value="quality">{{ performanceCopy.quality }}</option></select></UiPropertyRow>
+        <UiPropertyRow :label="performanceCopy.motion"><select v-model="prefs.editorDecorativeMotion" data-audit="editor-motion-override"><option value="auto">{{ performanceCopy.preset }}</option><option value="on">{{ performanceCopy.on }}</option><option value="off">{{ performanceCopy.off }}</option></select></UiPropertyRow>
         <p>{{ performanceCopy.priority }}</p>
-        <SettingRow :label="performanceCopy.idle"><select v-model.number="prefs.editorIdleFps" data-audit="editor-idle-fps"><option :value="0">{{ performanceCopy.preset }}</option><option :value="15">15 FPS</option><option :value="30">30 FPS</option><option :value="60">60 FPS</option></select></SettingRow>
+        <UiPropertyRow :label="performanceCopy.idle"><select v-model.number="prefs.editorIdleFps" data-audit="editor-idle-fps"><option :value="0">{{ performanceCopy.preset }}</option><option :value="15">15 FPS</option><option :value="30">30 FPS</option><option :value="60">60 FPS</option></select></UiPropertyRow>
         <p>{{ performanceCopy.idleHint }}</p>
-        <SettingRow :label="performanceCopy.preview"><select v-model="prefs.editorPreviewPolicy" data-audit="editor-preview-policy"><option value="auto">{{ performanceCopy.preset }}</option><option value="bounded">{{ performanceCopy.bounded }}</option><option value="full">{{ performanceCopy.full }}</option></select></SettingRow>
+        <UiPropertyRow :label="performanceCopy.preview"><select v-model="prefs.editorPreviewPolicy" data-audit="editor-preview-policy"><option value="auto">{{ performanceCopy.preset }}</option><option value="bounded">{{ performanceCopy.bounded }}</option><option value="full">{{ performanceCopy.full }}</option></select></UiPropertyRow>
         <p>{{ performanceCopy.previewHint }}</p>
         <p role="status" data-audit="editor-performance-effective">{{ performanceCopy.effective }}: {{ performanceCopy.motion }} {{ editorPerformancePreferences.decorativeMotion ? performanceCopy.on : performanceCopy.off }} · {{ editorPerformancePreferences.idleFps }} FPS · {{ editorPerformancePreferences.previewMaxDimension }} × {{ editorPerformancePreferences.previewMaxHeight }}</p>
         <p>{{ performanceCopy.system }}: {{ systemReducedMotion ? t('yes') : t('no') }} · {{ performanceCopy.manual }}: {{ prefs.reduceMotion ? t('yes') : t('no') }}</p>
         <button class="secondary-action" data-audit="reset-editor-performance" @click="applyCreatorPerformanceProfile('balanced')">{{ performanceCopy.reset }}</button><p>{{ performanceCopy.resetHint }}</p>
-      </section>
+      </UiPropertySection>
 
       <PhysicsSettingsPanel v-show="showCard('physicsSettings globalGravity collisionLayers physicsMaterials conformance', 'project')" />
 
-      <section v-show="showCard('scriptingSettings scriptApiVersion debugger hotReload formatting lint indexing testing remoteDebugging', 'project')" class="settings-card">
-        <div class="card-heading"><span class="card-icon">{ }</span><h2>{{ t('scriptingSettings') }}</h2></div>
-        <SettingRow :label="t('scriptApiVersion')"><select v-model.number="scriptSettings.apiVersion"><option :value="2">API v2</option><option :value="1">API v1 · {{ t('compatibilityMode') }}</option></select></SettingRow>
-        <SettingRow :label="t('scriptDebugger')"><ToggleSwitch v-model="scriptSettings.debuggerEnabled" /></SettingRow>
-        <SettingRow :label="t('exceptionPolicy')"><select v-model="scriptSettings.exceptionPolicy"><option value="never">{{ t('never') }}</option><option value="uncaught">{{ t('uncaught') }}</option><option value="all">{{ t('allExceptions') }}</option></select></SettingRow>
-        <SettingRow :label="t('hotReloadPolicy')"><ToggleSwitch v-model="scriptSettings.hotReloadEnabled" /></SettingRow>
-        <SettingRow :label="t('formatIndent')"><select v-model.number="scriptSettings.formatting.indentSize"><option :value="2">2</option><option :value="4">4</option></select></SettingRow>
-        <SettingRow :label="t('formatLineWidth')"><NumericExpressionInput v-model="scriptSettings.formatting.lineWidth" :minimum="60" :maximum="240" :resource-key="'project:scriptSettings.formatting.lineWidth'" /></SettingRow>
-        <SettingRow :label="t('deprecatedLint')"><select v-model="scriptSettings.lint.deprecatedApi"><option value="off">{{ t('disabled') }}</option><option value="warning">{{ t('warning') }}</option><option value="error">{{ t('error') }}</option></select></SettingRow>
-        <SettingRow :label="t('persistLanguageIndex')"><ToggleSwitch v-model="scriptSettings.indexing.persist" /></SettingRow>
-        <SettingRow :label="t('languageBudget')"><NumericExpressionInput v-model="scriptSettings.indexing.interactiveBudgetMs" :minimum="10" :maximum="500" :resource-key="'project:scriptSettings.indexing.interactiveBudgetMs'" /></SettingRow>
-        <SettingRow :label="t('testParallelism')"><NumericExpressionInput v-model="scriptSettings.testing.parallelism" :minimum="1" :maximum="16" :resource-key="'project:scriptSettings.testing.parallelism'" /></SettingRow>
-        <SettingRow :label="t('coverage')"><ToggleSwitch v-model="scriptSettings.testing.coverageEnabled" /></SettingRow>
-        <SettingRow :label="t('remoteDebugging')"><ToggleSwitch v-model="scriptSettings.remoteDebug.enabled" /></SettingRow>
-        <SettingRow :label="t('remoteDebugPort')"><NumericExpressionInput v-model="scriptSettings.remoteDebug.port" :minimum="1024" :maximum="65535" :resource-key="'project:scriptSettings.remoteDebug.port'" /></SettingRow>
-        <SettingRow :label="t('allowExportedPlayers')"><ToggleSwitch v-model="scriptSettings.remoteDebug.allowExportedPlayers" /></SettingRow>
-        <SettingRow :label="t('authenticationTokenHash')"><input v-model="scriptSettings.remoteDebug.tokenHash" maxlength="128" autocomplete="off" spellcheck="false" placeholder="SHA-256"></SettingRow>
-        <p>{{ t('remoteDebugSecurityHint') }}</p>
-      </section>
+      <UiPropertySection :title="t('scriptingSettings')" v-show="showCard('scriptingSettings scriptApiVersion debugger hotReload formatting lint indexing testing remoteDebugging', 'project')" >
 
-      <section v-show="showCard('audioSettings masterVolume musicVolume sfxVolume uiVolume sampleRate', 'project')" class="settings-card" @change="commitAudioSettings">
-        <div class="card-heading"><span class="card-icon">♫</span><h2>{{ t('audioSettings') }}</h2></div>
-        <SettingRow :label="t('masterVolume')"><div class="value-control"><input v-model.number="physics.audioSettings.masterVolume" type="range" min="0" max="1" step="0.01"><output>{{ Math.round(physics.audioSettings.masterVolume * 100) }}%</output></div></SettingRow>
-        <SettingRow :label="t('musicVolume')"><div class="value-control"><input v-model.number="physics.audioSettings.buses.Music" type="range" min="0" max="1" step="0.01"><output>{{ Math.round(physics.audioSettings.buses.Music * 100) }}%</output></div></SettingRow>
-        <SettingRow :label="t('sfxVolume')"><div class="value-control"><input v-model.number="physics.audioSettings.buses.SFX" type="range" min="0" max="1" step="0.01"><output>{{ Math.round(physics.audioSettings.buses.SFX * 100) }}%</output></div></SettingRow>
-        <SettingRow :label="t('uiVolume')"><div class="value-control"><input v-model.number="physics.audioSettings.buses.UI" type="range" min="0" max="1" step="0.01"><output>{{ Math.round(physics.audioSettings.buses.UI * 100) }}%</output></div></SettingRow>
-        <SettingRow :label="t('sampleRate')"><select v-model.number="physics.audioSettings.sampleRate"><option :value="44100">44.1 kHz</option><option :value="48000">48 kHz</option><option :value="96000">96 kHz</option></select></SettingRow>
-      </section>
+        <UiPropertyRow :label="t('scriptApiVersion')"><select v-model.number="scriptSettings.apiVersion"><option :value="2">API v2</option><option :value="1">API v1 · {{ t('compatibilityMode') }}</option></select></UiPropertyRow>
+        <UiPropertyRow :label="t('scriptDebugger')"><UiToggle v-model="scriptSettings.debuggerEnabled" /></UiPropertyRow>
+        <UiPropertyRow :label="t('exceptionPolicy')"><select v-model="scriptSettings.exceptionPolicy"><option value="never">{{ t('never') }}</option><option value="uncaught">{{ t('uncaught') }}</option><option value="all">{{ t('allExceptions') }}</option></select></UiPropertyRow>
+        <UiPropertyRow :label="t('hotReloadPolicy')"><UiToggle v-model="scriptSettings.hotReloadEnabled" /></UiPropertyRow>
+        <UiPropertyRow :label="t('formatIndent')"><select v-model.number="scriptSettings.formatting.indentSize"><option :value="2">2</option><option :value="4">4</option></select></UiPropertyRow>
+        <UiPropertyRow :label="t('formatLineWidth')"><NumericExpressionInput v-model="scriptSettings.formatting.lineWidth" :minimum="60" :maximum="240" :resource-key="'project:scriptSettings.formatting.lineWidth'" /></UiPropertyRow>
+        <UiPropertyRow :label="t('deprecatedLint')"><select v-model="scriptSettings.lint.deprecatedApi"><option value="off">{{ t('disabled') }}</option><option value="warning">{{ t('warning') }}</option><option value="error">{{ t('error') }}</option></select></UiPropertyRow>
+        <UiPropertyRow :label="t('persistLanguageIndex')"><UiToggle v-model="scriptSettings.indexing.persist" /></UiPropertyRow>
+        <UiPropertyRow :label="t('languageBudget')"><NumericExpressionInput v-model="scriptSettings.indexing.interactiveBudgetMs" :minimum="10" :maximum="500" :resource-key="'project:scriptSettings.indexing.interactiveBudgetMs'" /></UiPropertyRow>
+        <UiPropertyRow :label="t('testParallelism')"><NumericExpressionInput v-model="scriptSettings.testing.parallelism" :minimum="1" :maximum="16" :resource-key="'project:scriptSettings.testing.parallelism'" /></UiPropertyRow>
+        <UiPropertyRow :label="t('coverage')"><UiToggle v-model="scriptSettings.testing.coverageEnabled" /></UiPropertyRow>
+        <UiPropertyRow :label="t('remoteDebugging')"><UiToggle v-model="scriptSettings.remoteDebug.enabled" /></UiPropertyRow>
+        <UiPropertyRow :label="t('remoteDebugPort')"><NumericExpressionInput v-model="scriptSettings.remoteDebug.port" :minimum="1024" :maximum="65535" :resource-key="'project:scriptSettings.remoteDebug.port'" /></UiPropertyRow>
+        <UiPropertyRow :label="t('allowExportedPlayers')"><UiToggle v-model="scriptSettings.remoteDebug.allowExportedPlayers" /></UiPropertyRow>
+        <UiPropertyRow :label="t('authenticationTokenHash')"><input v-model="scriptSettings.remoteDebug.tokenHash" maxlength="128" autocomplete="off" spellcheck="false" placeholder="SHA-256"></UiPropertyRow>
+        <p>{{ t('remoteDebugSecurityHint') }}</p>
+      </UiPropertySection>
+
+      <UiPropertySection :title="t('audioSettings')" v-show="showCard('audioSettings masterVolume musicVolume sfxVolume uiVolume sampleRate', 'project')"  @change="commitAudioSettings">
+
+        <UiPropertyRow :label="t('masterVolume')"><div class="value-control"><UiSlider v-model.number="physics.audioSettings.masterVolume" min="0" max="1" step="0.01" /><output>{{ Math.round(physics.audioSettings.masterVolume * 100) }}%</output></div></UiPropertyRow>
+        <UiPropertyRow :label="t('musicVolume')"><div class="value-control"><UiSlider v-model.number="physics.audioSettings.buses.Music" min="0" max="1" step="0.01" /><output>{{ Math.round(physics.audioSettings.buses.Music * 100) }}%</output></div></UiPropertyRow>
+        <UiPropertyRow :label="t('sfxVolume')"><div class="value-control"><UiSlider v-model.number="physics.audioSettings.buses.SFX" min="0" max="1" step="0.01" /><output>{{ Math.round(physics.audioSettings.buses.SFX * 100) }}%</output></div></UiPropertyRow>
+        <UiPropertyRow :label="t('uiVolume')"><div class="value-control"><UiSlider v-model.number="physics.audioSettings.buses.UI" min="0" max="1" step="0.01" /><output>{{ Math.round(physics.audioSettings.buses.UI * 100) }}%</output></div></UiPropertyRow>
+        <UiPropertyRow :label="t('sampleRate')"><select v-model.number="physics.audioSettings.sampleRate"><option :value="44100">44.1 kHz</option><option :value="48000">48 kHz</option><option :value="96000">96 kHz</option></select></UiPropertyRow>
+      </UiPropertySection>
 
       <DeviceInputPanel v-show="showCard('deviceInput virtualControls touch gesture gamepad calibration safeArea orientation sensors haptics mobile', 'project')" />
-      <section v-show="showCard('inputMap inputDevice bindingCode gamepad keyboard', 'project')" class="settings-card input-map-card">
-        <div class="card-heading"><span class="card-icon">⌨</span><h2>{{ t('inputMap') }}</h2></div>
+      <UiPropertySection :title="t('inputMap')" v-show="showCard('inputMap inputDevice bindingCode gamepad keyboard', 'project')" class="input-map-card">
+
         <p>{{ t('inputMapDescription') }}</p>
-        <div class="input-map-toolbar"><input v-model="inputSearch" type="search" :placeholder="t('searchActions')"><select v-model="inputDeviceFilter" :aria-label="t('inputDevice')"><option value="all">{{ t('allDevices') }}</option><option v-for="device in inputDevices" :key="device">{{ device }}</option></select><label><input v-model="compactInputMap" type="checkbox"> {{ t('compactMode') }}</label><button :class="{ active: inputRecording }" @click="toggleInputRecording">{{ inputRecording ? t('stop') : t('record') }}</button><button :disabled="!lastInputRecording" @click="replayInputRecording">▶ {{ t('replay') }}</button></div>
+        <div class="input-map-toolbar"><input v-model="inputSearch" type="search" :placeholder="t('searchActions')"><select v-model="inputDeviceFilter" :aria-label="t('inputDevice')"><option value="all">{{ t('allDevices') }}</option><option v-for="device in inputDevices" :key="device">{{ device }}</option></select><label><input v-model="compactInputMap" type="checkbox"> {{ t('compactMode') }}</label><button :class="{ active: inputRecording }" @click="toggleInputRecording">{{ inputRecording ? t('stop') : t('record') }}</button><UiButton icon="play" :disabled="!lastInputRecording" @click="replayInputRecording">{{ t('replay') }}</UiButton></div>
         <div class="connected-devices"><span v-for="device in connectedInputDevices" :key="`${device.kind}:${device.index}`">{{ device.kind }} {{ device.index }} · {{ device.mapping }}</span></div>
         <div v-if="inputConflicts.length" class="input-conflicts" role="alert"><strong>{{ t('bindingConflicts') }} · {{ inputConflicts.length }}</strong><span v-for="conflict in inputConflicts" :key="`${conflict.signature}:${conflict.action}`">{{ conflict.conflictsWithAction }} ↔ {{ conflict.action }} · {{ conflict.signature }}</span></div>
         <div class="input-actions">
@@ -113,86 +113,86 @@
                 <option value="axis">{{ t('inputAxis') }}</option>
                 <option value="vector2">{{ t('inputVector') }}</option>
               </select>
-              <button class="icon-action danger" :title="t('removeInputAction')" @click="removeInputAction(actionIndex)">×</button>
-              <button class="icon-action" :title="t('duplicate')" @click="duplicateInputAction(actionIndex)">⧉</button>
+              <UiButton icon="clear" class="icon-action danger" :title="t('removeInputAction')" @click="removeInputAction(actionIndex)" />
+              <UiButton icon="duplicate" class="icon-action" :label="t('duplicate')" @click="duplicateInputAction(actionIndex)" />
             </div>
             <details v-if="!compactInputMap" class="action-advanced">
               <summary>{{ t('actionBehavior') }}</summary>
               <div class="action-advanced-grid">
-                <label><span>{{ t('enabled') }}</span><input v-model="action.enabled" type="checkbox" @change="commitInputMap"></label>
-                <label><span>{{ t('inputContext') }}</span><input v-model.trim="action.context" maxlength="80" @change="commitInputMap"></label>
-                <label><span>{{ t('actionMap') }}</span><input v-model.trim="action.map" maxlength="80" @change="commitInputMap"></label>
-                <label><span>{{ t('controlSchemes') }}</span><input :value="action.schemes.join(', ')" :placeholder="t('allSchemes')" @change="setActionSchemes(actionIndex, $event)"></label>
-                <label><span>{{ t('interaction') }}</span><select v-model="action.interaction" @change="commitInputMap"><option value="press">{{ t('inputPress') }}</option><option value="hold">{{ t('inputHold') }}</option><option value="tap">{{ t('inputTap') }}</option><option value="multiTap">{{ t('inputMultiTap') }}</option></select></label>
-                <label v-if="action.interaction === 'hold'"><span>{{ t('holdSeconds') }}</span><NumericExpressionInput v-model="action.holdSeconds" :minimum="0.001" :maximum="60" :step="0.05" @change="commitInputMap" :resource-key="'project:input:' + action.name + ':' + actionIndex + ':action.holdSeconds'" /></label>
-                <label v-if="action.interaction === 'tap' || action.interaction === 'multiTap'"><span>{{ t('tapSeconds') }}</span><NumericExpressionInput v-model="action.tapSeconds" :minimum="0.001" :maximum="10" :step="0.05" @change="commitInputMap" :resource-key="'project:input:' + action.name + ':' + actionIndex + ':action.tapSeconds'" /></label>
-                <label v-if="action.interaction === 'multiTap'"><span>{{ t('tapCount') }}</span><NumericExpressionInput v-model="action.multiTapCount" :minimum="2" :maximum="16" :step="1" @change="commitInputMap" :resource-key="'project:input:' + action.name + ':' + actionIndex + ':action.multiTapCount'" /></label>
-                <label><span>{{ t('consumeInput') }}</span><input v-model="action.consume" type="checkbox" @change="commitInputMap"></label>
-                <label><span>{{ t('actionPriority') }}</span><NumericExpressionInput v-model="action.priority" :minimum="-10000" :maximum="10000" :step="1" @change="commitInputMap" :resource-key="'project:input:' + action.name + ':' + actionIndex + ':action.priority'" /></label>
-                <label><span>{{ t('callbackFunction') }}</span><input v-model.trim="action.callback" maxlength="80" placeholder="on_jump" @change="commitInputMap"></label>
+                <UiPropertyRow :label="t('enabled')"><input v-model="action.enabled" type="checkbox" @change="commitInputMap"></UiPropertyRow>
+                <UiPropertyRow :label="t('inputContext')"><input v-model.trim="action.context" maxlength="80" @change="commitInputMap"></UiPropertyRow>
+                <UiPropertyRow :label="t('actionMap')"><input v-model.trim="action.map" maxlength="80" @change="commitInputMap"></UiPropertyRow>
+                <UiPropertyRow :label="t('controlSchemes')"><input :value="action.schemes.join(', ')" :placeholder="t('allSchemes')" @change="setActionSchemes(actionIndex, $event)"></UiPropertyRow>
+                <UiPropertyRow :label="t('interaction')"><select v-model="action.interaction" @change="commitInputMap"><option value="press">{{ t('inputPress') }}</option><option value="hold">{{ t('inputHold') }}</option><option value="tap">{{ t('inputTap') }}</option><option value="multiTap">{{ t('inputMultiTap') }}</option></select></UiPropertyRow>
+                <UiPropertyRow :label="t('holdSeconds')" v-if="action.interaction === 'hold'"><NumericExpressionInput v-model="action.holdSeconds" :minimum="0.001" :maximum="60" :step="0.05" @change="commitInputMap" :resource-key="'project:input:' + action.name + ':' + actionIndex + ':action.holdSeconds'" /></UiPropertyRow>
+                <UiPropertyRow :label="t('tapSeconds')" v-if="action.interaction === 'tap' || action.interaction === 'multiTap'"><NumericExpressionInput v-model="action.tapSeconds" :minimum="0.001" :maximum="10" :step="0.05" @change="commitInputMap" :resource-key="'project:input:' + action.name + ':' + actionIndex + ':action.tapSeconds'" /></UiPropertyRow>
+                <UiPropertyRow :label="t('tapCount')" v-if="action.interaction === 'multiTap'"><NumericExpressionInput v-model="action.multiTapCount" :minimum="2" :maximum="16" :step="1" @change="commitInputMap" :resource-key="'project:input:' + action.name + ':' + actionIndex + ':action.multiTapCount'" /></UiPropertyRow>
+                <UiPropertyRow :label="t('consumeInput')"><input v-model="action.consume" type="checkbox" @change="commitInputMap"></UiPropertyRow>
+                <UiPropertyRow :label="t('actionPriority')"><NumericExpressionInput v-model="action.priority" :minimum="-10000" :maximum="10000" :step="1" @change="commitInputMap" :resource-key="'project:input:' + action.name + ':' + actionIndex + ':action.priority'" /></UiPropertyRow>
+                <UiPropertyRow :label="t('callbackFunction')"><input v-model.trim="action.callback" maxlength="80" placeholder="on_jump" @change="commitInputMap"></UiPropertyRow>
               </div>
             </details>
             <div v-for="(binding, bindingIndex) in action.bindings" :key="bindingIndex" class="input-binding">
-              <label class="binding-field"><span>{{ t('inputDevice') }}</span><select v-model="binding.device" :aria-label="t('inputDevice')" @change="setBindingDevice(binding); commitInputMap()">
+              <UiPropertyRow :label="t('inputDevice')" class="binding-field"><select v-model="binding.device" :aria-label="t('inputDevice')" @change="setBindingDevice(binding); commitInputMap()">
                 <option v-for="device in inputDevices" :key="device" :value="device">{{ device }}</option>
-              </select></label>
-              <label class="binding-field"><span>{{ t('bindingCode') }}</span><input v-model.trim="binding.code" :aria-label="t('bindingCode')" maxlength="80" @change="commitInputMap"></label>
+              </select></UiPropertyRow>
+              <UiPropertyRow :label="t('bindingCode')" class="binding-field"><input v-model.trim="binding.code" :aria-label="t('bindingCode')" maxlength="80" @change="commitInputMap"></UiPropertyRow>
               <template v-if="action.kind === 'vector2'">
-                <label class="binding-field"><span>{{ t('inputX') }}</span><NumericExpressionInput v-model="binding.x" :aria-label="t('inputX')" :minimum="-100" :maximum="100" :step="0.1" @change="commitInputMap" :resource-key="'project:input:' + action.name + ':' + actionIndex + ':binding:' + bindingIndex + ':binding.x'" /></label>
-                <label class="binding-field"><span>{{ t('inputY') }}</span><NumericExpressionInput v-model="binding.y" :aria-label="t('inputY')" :minimum="-100" :maximum="100" :step="0.1" @change="commitInputMap" :resource-key="'project:input:' + action.name + ':' + actionIndex + ':binding:' + bindingIndex + ':binding.y'" /></label>
+                <UiPropertyRow :label="t('inputX')" class="binding-field"><NumericExpressionInput v-model="binding.x" :aria-label="t('inputX')" :minimum="-100" :maximum="100" :step="0.1" @change="commitInputMap" :resource-key="'project:input:' + action.name + ':' + actionIndex + ':binding:' + bindingIndex + ':binding.x'" /></UiPropertyRow>
+                <UiPropertyRow :label="t('inputY')" class="binding-field"><NumericExpressionInput v-model="binding.y" :aria-label="t('inputY')" :minimum="-100" :maximum="100" :step="0.1" @change="commitInputMap" :resource-key="'project:input:' + action.name + ':' + actionIndex + ':binding:' + bindingIndex + ':binding.y'" /></UiPropertyRow>
               </template>
-              <label v-else class="binding-field"><span>{{ t('inputScale') }}</span><NumericExpressionInput v-model="binding.scale" :aria-label="t('inputScale')" :minimum="-100" :maximum="100" :step="0.1" @change="commitInputMap" :resource-key="'project:input:' + action.name + ':' + actionIndex + ':binding:' + bindingIndex + ':binding.scale'" /></label>
-              <label v-if="binding.device.startsWith('gamepad')" class="binding-field"><span>{{ t('gamepadIndex') }}</span><NumericExpressionInput v-model="binding.gamepad" :aria-label="t('gamepadIndex')" :minimum="0" :maximum="15" :step="1" @change="commitInputMap" :resource-key="'project:input:' + action.name + ':' + actionIndex + ':binding:' + bindingIndex + ':binding.gamepad'" /></label>
-              <label v-if="binding.device === 'gamepad-axis'" class="binding-field"><span>{{ t('deadzone') }}</span><NumericExpressionInput v-model="binding.deadzone" :aria-label="t('deadzone')" :minimum="0" :maximum="0.99" :step="0.01" @change="commitInputMap" :resource-key="'project:input:' + action.name + ':' + actionIndex + ':binding:' + bindingIndex + ':binding.deadzone'" /></label>
-              <button class="icon-action danger" :title="t('removeBinding')" @click="removeInputBinding(actionIndex, bindingIndex)">×</button>
-              <details v-if="!compactInputMap" class="binding-advanced"><summary>{{ t('advanced') }}</summary><label>{{ t('threshold') }}<NumericExpressionInput v-model="binding.threshold" :minimum="0" :maximum="1" :step="0.01" @change="commitInputMap" :resource-key="'project:input:' + action.name + ':' + actionIndex + ':binding:' + bindingIndex + ':binding.threshold'" /></label><label>{{ t('invert') }}<input v-model="binding.invert" type="checkbox" @change="commitInputMap"></label><label>{{ t('responseCurve') }}<select v-model="binding.responseCurve" @change="commitInputMap"><option>linear</option><option>square</option><option>cubic</option><option>exponential</option></select></label><label>{{ t('deviceIdentity') }}<input v-model="binding.deviceId" @change="commitInputMap"></label><label>{{ t('modifiers') }}<input :value="binding.modifiers.join(', ')" @change="setBindingList(binding,'modifiers',$event)"></label><label>{{ t('chord') }}<input :value="binding.chord.join(', ')" @change="setBindingList(binding,'chord',$event)"></label></details>
+              <UiPropertyRow :label="t('inputScale')" v-else class="binding-field"><NumericExpressionInput v-model="binding.scale" :aria-label="t('inputScale')" :minimum="-100" :maximum="100" :step="0.1" @change="commitInputMap" :resource-key="'project:input:' + action.name + ':' + actionIndex + ':binding:' + bindingIndex + ':binding.scale'" /></UiPropertyRow>
+              <UiPropertyRow :label="t('gamepadIndex')" v-if="binding.device.startsWith('gamepad')" class="binding-field"><NumericExpressionInput v-model="binding.gamepad" :aria-label="t('gamepadIndex')" :minimum="0" :maximum="15" :step="1" @change="commitInputMap" :resource-key="'project:input:' + action.name + ':' + actionIndex + ':binding:' + bindingIndex + ':binding.gamepad'" /></UiPropertyRow>
+              <UiPropertyRow :label="t('deadzone')" v-if="binding.device === 'gamepad-axis'" class="binding-field"><NumericExpressionInput v-model="binding.deadzone" :aria-label="t('deadzone')" :minimum="0" :maximum="0.99" :step="0.01" @change="commitInputMap" :resource-key="'project:input:' + action.name + ':' + actionIndex + ':binding:' + bindingIndex + ':binding.deadzone'" /></UiPropertyRow>
+              <UiButton icon="clear" class="icon-action danger" :title="t('removeBinding')" @click="removeInputBinding(actionIndex, bindingIndex)" />
+              <details v-if="!compactInputMap" class="binding-advanced"><summary>{{ t('advanced') }}</summary><UiPropertyRow :label="(t('threshold'))"><NumericExpressionInput v-model="binding.threshold" :minimum="0" :maximum="1" :step="0.01" @change="commitInputMap" :resource-key="'project:input:' + action.name + ':' + actionIndex + ':binding:' + bindingIndex + ':binding.threshold'" /></UiPropertyRow><UiPropertyRow :label="(t('invert'))"><input v-model="binding.invert" type="checkbox" @change="commitInputMap"></UiPropertyRow><UiPropertyRow :label="(t('responseCurve'))"><select v-model="binding.responseCurve" @change="commitInputMap"><option>linear</option><option>square</option><option>cubic</option><option>exponential</option></select></UiPropertyRow><UiPropertyRow :label="(t('deviceIdentity'))"><input v-model="binding.deviceId" @change="commitInputMap"></UiPropertyRow><UiPropertyRow :label="(t('modifiers'))"><input :value="binding.modifiers.join(', ')" @change="setBindingList(binding,'modifiers',$event)"></UiPropertyRow><UiPropertyRow :label="(t('chord'))"><input :value="binding.chord.join(', ')" @change="setBindingList(binding,'chord',$event)"></UiPropertyRow></details>
             </div>
-            <button class="secondary-action compact-action" @click="addInputBinding(actionIndex)">+ {{ t('addBinding') }}</button>
+            <UiButton icon="add" class="secondary-action compact-action" @click="addInputBinding(actionIndex)">{{ t('addBinding') }}</UiButton>
           </article>
         </div>
-        <button class="secondary-action" @click="addInputAction">+ {{ t('addInputAction') }}</button>
-      </section>
+        <UiButton icon="add" class="secondary-action" @click="addInputAction">{{ t('addInputAction') }}</UiButton>
+      </UiPropertySection>
 
-      <section v-show="showCard('canvasSettings gridSize snapToGrid zoomSensitivity showConnections renderQuality', 'editor')" class="settings-card">
-        <div class="card-heading"><span class="card-icon">⌗</span><h2>{{ t('canvasSettings') }}</h2></div>
-        <SettingRow :label="t('gridSize')"><input v-model.number="prefs.gridSize" type="number" min="0.000001" step="1"></SettingRow>
-        <SettingRow :label="t('snapToGrid')"><ToggleSwitch v-model="prefs.snapToGrid" /></SettingRow>
-        <SettingRow :label="t('zoomSensitivity')">
-          <div class="value-control"><input v-model.number="prefs.zoomSensitivity" type="range" min="0.2" max="3" step="0.1"><output>{{ prefs.zoomSensitivity.toFixed(1) }}×</output></div>
-        </SettingRow>
-        <SettingRow :label="t('showConnections')"><ToggleSwitch v-model="prefs.showConnections" /></SettingRow>
-        <SettingRow :label="t('connectionThickness')">
-          <div class="value-control"><input v-model.number="prefs.connectionThickness" type="range" min="0.5" max="8" step="0.5"><output>{{ prefs.connectionThickness }} px</output></div>
-        </SettingRow>
-        <SettingRow :label="t('showDiagnostics')"><ToggleSwitch v-model="prefs.showDiagnostics" /></SettingRow>
-        <SettingRow :label="t('renderQuality')">
+      <UiPropertySection :title="t('canvasSettings')" v-show="showCard('canvasSettings gridSize snapToGrid zoomSensitivity showConnections renderQuality', 'editor')" >
+
+        <UiPropertyRow :label="t('gridSize')"><input v-model.number="prefs.gridSize" type="number" min="0.000001" step="1"></UiPropertyRow>
+        <UiPropertyRow :label="t('snapToGrid')"><UiToggle v-model="prefs.snapToGrid" /></UiPropertyRow>
+        <UiPropertyRow :label="t('zoomSensitivity')">
+          <div class="value-control"><UiSlider v-model.number="prefs.zoomSensitivity" min="0.2" max="3" step="0.1" /><output>{{ prefs.zoomSensitivity.toFixed(1) }}×</output></div>
+        </UiPropertyRow>
+        <UiPropertyRow :label="t('showConnections')"><UiToggle v-model="prefs.showConnections" /></UiPropertyRow>
+        <UiPropertyRow :label="t('connectionThickness')">
+          <div class="value-control"><UiSlider v-model.number="prefs.connectionThickness" min="0.5" max="8" step="0.5" /><output>{{ prefs.connectionThickness }} px</output></div>
+        </UiPropertyRow>
+        <UiPropertyRow :label="t('showDiagnostics')"><UiToggle v-model="prefs.showDiagnostics" /></UiPropertyRow>
+        <UiPropertyRow :label="t('renderQuality')">
           <select v-model.number="prefs.maxPixelRatio"><option :value="1">1×</option><option :value="1.5">1.5×</option><option :value="2">2×</option><option :value="3">3×</option></select>
-        </SettingRow>
-      </section>
+        </UiPropertyRow>
+      </UiPropertySection>
 
-      <section v-show="showCard('packages plugins saveData engineDiagnostics projectHealth', 'all')" class="settings-card related-tools">
-        <div class="card-heading"><span class="card-icon">↗</span><h2>{{ t('relatedTools') }}</h2></div>
+      <UiPropertySection :title="t('relatedTools')" v-show="showCard('packages plugins saveData engineDiagnostics projectHealth', 'all')" class="related-tools">
+
         <p>{{ t('settingsRelocationHint') }}</p>
         <button class="secondary-action" @click="openTool('packages')">{{ t('openPackageManager') }}</button>
         <button class="secondary-action" @click="openTool('profiler')">{{ t('openDebugTools') }}</button>
         <button class="secondary-action" @click="openTool('project')">{{ t('openProjectHealth') }}</button>
-      </section>
+      </UiPropertySection>
 
-      <section v-show="showCard('projectSettings autosave autosaveInterval confirmDestructive restoreAutosave', 'project')" class="settings-card">
-        <div class="card-heading"><span class="card-icon">↻</span><h2>{{ t('projectSettings') }}</h2></div>
-        <SettingRow :label="t('autosave')"><ToggleSwitch v-model="prefs.autosave" /></SettingRow>
-        <SettingRow :label="t('autosaveInterval')"><input v-model.number="prefs.autosaveInterval" type="number" min="5" max="600" step="5"></SettingRow>
-        <SettingRow :label="t('confirmDestructive')"><ToggleSwitch v-model="prefs.confirmDestructiveActions" /></SettingRow>
+      <UiPropertySection :title="t('projectSettings')" v-show="showCard('projectSettings autosave autosaveInterval confirmDestructive restoreAutosave', 'project')" >
+
+        <UiPropertyRow :label="t('autosave')"><UiToggle v-model="prefs.autosave" /></UiPropertyRow>
+        <UiPropertyRow :label="t('autosaveInterval')"><input v-model.number="prefs.autosaveInterval" type="number" min="5" max="600" step="5"></UiPropertyRow>
+        <UiPropertyRow :label="t('confirmDestructive')"><UiToggle v-model="prefs.confirmDestructiveActions" /></UiPropertyRow>
         <button class="secondary-action" :disabled="!autosaveAvailable" @click="restoreSavedScene">{{ t('restoreAutosave') }}</button>
-      </section>
+      </UiPropertySection>
 
-      <section v-show="showCard('defaultsSettings defaultDensity defaultRestitution defaultFriction', 'editor')" class="settings-card">
-        <div class="card-heading"><span class="card-icon">◇</span><h2>{{ t('defaultsSettings') }}</h2></div>
-        <SettingRow :label="t('defaultDensity')"><input v-model.number="prefs.defaultDensity" type="number" min="0.000001" step="0.1"></SettingRow>
-        <SettingRow :label="t('defaultRestitution')"><input v-model.number="prefs.defaultRestitution" type="number" min="0" max="1" step="0.05"></SettingRow>
-        <SettingRow :label="t('defaultFriction')"><input v-model.number="prefs.defaultFriction" type="number" min="0" step="0.05"></SettingRow>
+      <UiPropertySection :title="t('defaultsSettings')" v-show="showCard('defaultsSettings defaultDensity defaultRestitution defaultFriction', 'editor')" >
+
+        <UiPropertyRow :label="t('defaultDensity')"><input v-model.number="prefs.defaultDensity" type="number" min="0.000001" step="0.1"></UiPropertyRow>
+        <UiPropertyRow :label="t('defaultRestitution')"><input v-model.number="prefs.defaultRestitution" type="number" min="0" max="1" step="0.05"></UiPropertyRow>
+        <UiPropertyRow :label="t('defaultFriction')"><input v-model.number="prefs.defaultFriction" type="number" min="0" step="0.05"></UiPropertyRow>
         <button class="danger-action" @click="resetExperience">{{ t('resetSettings') }}</button>
-      </section>
+      </UiPropertySection>
     </div>
   </div>
 </template>
@@ -201,7 +201,7 @@
 import NumericExpressionInput from '../components/NumericExpressionInput.vue'
 import { openProductionManual } from '../runtime/openManual'
 import { NOVA_RELEASE_NAME } from '../projects/projectFormat'
-import { computed, defineComponent, h, inject, onBeforeUnmount, onMounted, provide, ref, watch } from 'vue'
+import { computed, onActivated, onDeactivated, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { t } from '../i18n'
 import { editorState } from '../store/editor'
 import { autosaveState, physicsState as physics, pushHistory, restoreAutosave } from '../store/physics'
@@ -227,30 +227,6 @@ import { applyCreatorPerformanceProfile } from '../runtime/creatorLearning'
 
 /** 设置文案随界面语言即时更新，不写入项目内容。 */
 const performanceCopy = computed(/** 读取当前语言的性能设置文案。 */ () => EDITOR_PERFORMANCE_COPY[prefs.locale])
-const settingRowLabel = Symbol('settings-row-label')
-const SettingRow = defineComponent({
-  props: { label: { type: String, required: true } },
-  /** 为设置行提供响应式标签读取器，并返回标签和控件布局的渲染函数。 */ setup(props, { slots }) {
-    provide(settingRowLabel, /* 返回 props.label 的当前值。 */ () => props.label)
-    return /** 渲染设置行名称及默认插槽内容。 */ () => h('label', { class: 'setting-row' }, [h('span', props.label), h('div', { class: 'setting-control' }, slots.default?.())])
-  }
-})
-
-const ToggleSwitch = defineComponent({
-  props: { modelValue: { type: Boolean, required: true } },
-  emits: ['update:modelValue'],
-  /** 读取父设置行标签并构造带无障碍名称的开关渲染函数。 */ setup(props, { emit, attrs }) {
-    const rowLabel = inject<() => string>(settingRowLabel, /** 无父行标签时使用空文本。 */ () => '')
-    return /** 渲染具有开关角色、当前状态和点击处理的按钮。 */ () => h('button', {
-      class: ['toggle', { active: props.modelValue }],
-      role: 'switch',
-      'aria-label': attrs['aria-label'] ?? (attrs['aria-labelledby'] ? undefined : rowLabel()),
-      'aria-checked': props.modelValue,
-      onClick: /** 点击时向父组件发送相反的布尔模型值。 */ () => emit('update:modelValue', !props.modelValue)
-    }, h('span'))
-  }
-})
-
 const autosaveAvailable = computed(/* 返回 autosaveState.available 的当前值。 */ () => autosaveState.available)
 const inputDevices: readonly InputDevice[] = INPUT_DEVICES
 const inputSearch = ref(''), inputDeviceFilter = ref<InputDevice | 'all'>('all'), compactInputMap = ref(false), inputRecording = ref(false), lastInputRecording = ref<InputRecording | null>(null), connectedInputDevices = ref<InputDeviceIdentity[]>([])
@@ -260,8 +236,12 @@ const visibleInputActions = computed(/** 保留原索引后按名称、绑定文
   return matchesSearch && (inputDeviceFilter.value === 'all' || action.bindings.some(/* 比较 binding.device 与 inputDeviceFilter.value，返回严格相等的判断结果。 */ binding => binding.device === inputDeviceFilter.value))
 }))
 let inputDeviceTimer = 0
-onMounted(/** 挂载时读取连接设备并建立每秒刷新计时器。 */ () => { connectedInputDevices.value = gameplayRuntime.input.connectedDevices(); inputDeviceTimer = window.setInterval(/** 周期读取输入运行时的已连接设备列表。 */ () => { connectedInputDevices.value = gameplayRuntime.input.connectedDevices() }, 1000) })
-onBeforeUnmount(/** 卸载时清除设备刷新计时器。 */ () => window.clearInterval(inputDeviceTimer))
+function startDevicePolling() { if (inputDeviceTimer) return; connectedInputDevices.value = gameplayRuntime.input.connectedDevices(); inputDeviceTimer = window.setInterval(() => { connectedInputDevices.value = gameplayRuntime.input.connectedDevices() }, 1000) }
+function stopDevicePolling() { window.clearInterval(inputDeviceTimer); inputDeviceTimer = 0 }
+onMounted(startDevicePolling)
+onActivated(startDevicePolling)
+onDeactivated(stopDevicePolling)
+onBeforeUnmount(stopDevicePolling)
 const settingScopes = [{ id: 'all' as const, label: 'all' }, { id: 'editor' as const, label: 'editorScope' }, { id: 'project' as const, label: 'projectScope' }, { id: 'runtime' as const, label: 'runtimeScope' }]
 watch(/* 返回 prefs.locale 的当前值。 */ () => prefs.locale, /** 偏好变化时把编辑器状态更新为就绪。 */ () => { editorState.statusText = t('ready') })
 
@@ -346,77 +326,35 @@ watch(/* 返回 prefs.locale 的当前值。 */ () => prefs.locale, /** 偏好�
 </script>
 
 <style scoped>
-.settings-page { height: 100%; overflow: auto; padding: clamp(22px, 4vw, 48px); background: radial-gradient(circle at 88% 0%, var(--accent-soft), transparent 32%), var(--bg-base); }
-.page-header { width: min(1040px, 100%); margin: 0 auto 26px; display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; }
-.settings-search{width:min(1040px,100%);margin:0 auto 16px;padding:8px;display:flex;align-items:center;gap:8px;border:1px solid var(--border-subtle);border-radius:12px;background:var(--surface-1)}.settings-search>label{min-width:220px;flex:1;display:flex;align-items:center;gap:7px;padding:0 8px;border:1px solid var(--border-subtle);border-radius:8px;background:var(--input-bg)}.settings-search input{min-width:0;flex:1;border:0;background:transparent}.settings-search nav{display:flex;gap:4px;flex-wrap:wrap}.settings-search button{min-height:34px;padding:0 10px;border:1px solid transparent;border-radius:8px;background:transparent}.settings-search button.active{color:var(--accent);border-color:var(--accent);background:var(--accent-soft)}
-.eyebrow { display: block; color: var(--accent); font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; margin-bottom: 5px; }
-h1 { margin: 0; font-size: clamp(26px, 4vw, 38px); font-weight: 620; letter-spacing: -.035em; }
-.theme-switch { display: flex; gap: 4px; padding: 4px; border: 1px solid var(--border-subtle); background: var(--surface-1); backdrop-filter: var(--glass-blur); border-radius: 999px; box-shadow: var(--shadow-sm); }
-.theme-switch button { border: 0; background: transparent; color: var(--text-secondary); padding: 8px 13px; border-radius: 999px; }
-.theme-switch button.active { color: var(--accent-contrast); background: var(--accent); box-shadow: 0 3px 10px var(--accent-soft); }
-.settings-grid { width: min(1040px, 100%); margin: 0 auto; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; padding-bottom: 30px; }
-.settings-card { align-self: start; display: flex; flex-direction: column; padding: 18px; contain: layout paint; border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); background: var(--surface-1); box-shadow: var(--shadow-sm); transition: transform 180ms ease, border-color 180ms ease; }
-.settings-card:hover { transform: translateY(-2px); border-color: var(--border-strong); }
-.matrix-card { grid-column: 1 / -1; }.related-tools .secondary-action{margin-top:6px}.related-tools p{margin-left:40px}
-.input-map-card { grid-column: 1 / -1; }
-.input-actions { display: flex; flex-direction: column; gap: 9px; }
-.input-action { padding: 9px; border: 1px solid var(--border-subtle); border-radius: 10px; background: var(--surface-2); }
-.input-action-heading, .input-binding { display: grid; grid-template-columns: minmax(120px, 1.3fr) minmax(110px, 1fr) repeat(4, minmax(64px, .6fr)) 28px; gap: 6px; align-items: center; }
-.input-action-heading { margin-bottom: 7px; }
-.input-action-heading > input { grid-column: span 3; }
-.input-action-heading > select { grid-column: span 3; }
-.input-binding { padding: 6px 0; border-top: 1px solid var(--border-subtle); }
-.input-binding input, .input-binding select, .input-action-heading input, .input-action-heading select { width: 100%; min-width: 0; }
-.icon-action { width: 28px; height: 28px; padding: 0; border: 1px solid var(--border-subtle); border-radius: 7px; color: var(--text-muted); background: var(--surface-3); }
+.matrix-card { grid-column: 1 / -1; }.related-tools .secondary-action{margin-top:var(--space-1)}.related-tools p{margin-left:var(--space-6)}
+.icon-action { width: 28px; height: 28px; padding: 0; border: 1px solid var(--border-subtle); color: var(--text-muted); background: var(--surface-3); }
 .icon-action.danger:hover { color: var(--danger); border-color: var(--danger); }
-.compact-action { min-height: 29px; margin-top: 6px; }
-.matrix-card p { margin-bottom: 12px; }
-.matrix-scroll { max-width: 100%; padding: 7px; overflow: auto; border: 1px solid var(--border-subtle); border-radius: 10px; background: var(--surface-2); }
-.matrix-header, .matrix-row { width: max-content; display: grid; grid-template-columns: 28px repeat(32, 18px); gap: 3px; align-items: center; }
-.matrix-header { margin-bottom: 4px; }
-.matrix-header b, .matrix-row > b { color: var(--text-muted); font-size:11px; text-align: center; font-weight: 600; }
-.matrix-row { margin-bottom: 3px; }
-.matrix-row button { width: 18px; height: 18px; padding: 0; border: 1px solid var(--border-subtle); border-radius: 4px; background: var(--surface-3); }
-.matrix-row button.active { border-color: color-mix(in srgb, var(--accent) 76%, white); background: var(--accent); box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--accent) 65%, white); }
-.card-heading { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-.card-icon { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 9px; color: var(--accent); background: var(--accent-soft); font-size: 16px; }
-h2 { margin: 0; font-size: 15px; font-weight: 650; letter-spacing: -.01em; }
-p { margin: 0 0 8px 40px; color: var(--text-muted); font-size: 12px; line-height: 1.55; }
-:deep(.setting-row) { min-height: 47px; display: flex; align-items: center; justify-content: space-between; gap: 16px; border-top: 1px solid var(--border-subtle); color: var(--text-secondary); font-size: 12.5px; }
-:deep(.setting-row > span:first-child) { min-width: 0; flex: 1 1 auto; overflow-wrap: anywhere; line-height: 1.35; }
-:deep(.setting-control) { width: 230px; max-width: 55%; min-width: 0; flex: 0 0 min(230px, 55%); display: flex; justify-content: flex-end; }
-:deep(.setting-control > input[type='number']) { width: 150px; max-width: 100%; }
-:deep(.setting-control > select) { width: 100%; }
-.value-control { width: min(190px, 100%); min-width: 0; display: flex; align-items: center; gap: 10px; }
-.value-control input { min-width: 0; flex: 1; accent-color: var(--accent); }
-.value-control output { min-width: 46px; text-align: right; color: var(--text-primary); font-variant-numeric: tabular-nums; }
-.metric-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 4px; }
-.metric-grid > div { min-width: 0; padding: 10px; display: flex; flex-direction: column; gap: 4px; border: 1px solid var(--border-subtle); border-radius: 10px; background: var(--surface-2); }
-.metric-grid span { overflow: hidden; color: var(--text-muted); font-size:11px; text-overflow: ellipsis; white-space: nowrap; }
-.metric-grid strong, :deep(output) { color: var(--text-primary); font-size: 12px; font-variant-numeric: tabular-nums; }
-:deep(.toggle) { width: 38px; height: 22px; padding: 3px; border: 0; border-radius: 99px; background: var(--surface-3); box-shadow: inset 0 0 0 1px var(--border-subtle); }
-:deep(.toggle span) { display: block; width: 16px; height: 16px; border-radius: 50%; background: var(--text-muted); transition: transform 180ms cubic-bezier(.2,.8,.2,1), background 180ms ease; }
-:deep(.toggle.active) { background: var(--accent); }
-:deep(.toggle.active span) { transform: translateX(16px); background: var(--accent-contrast); }
-.secondary-action, .danger-action { margin-top: 10px; min-height: 34px; border-radius: 9px; border: 1px solid var(--border-subtle); background: var(--surface-3); }
+.compact-action { min-height: 29px; margin-top: var(--space-1); }
+.matrix-card p { margin-bottom: var(--space-3); }
+.matrix-scroll { max-width: 100%; padding: var(--space-2); overflow: auto; border: 1px solid var(--border-subtle); background: var(--surface-2); }
+.matrix-header, .matrix-row { width: max-content; display: grid; grid-template-columns: 28px repeat(32, 18px); gap: var(--space-0); align-items: center; }
+.matrix-header { margin-bottom: var(--space-1); }
+.matrix-header b, .matrix-row > b { color: var(--text-muted); text-align: center; }
+.matrix-row { margin-bottom: var(--space-0); }
+.matrix-row button { width: 18px; height: 18px; padding: 0; border: 1px solid var(--border-subtle); background: var(--surface-3); }
+.matrix-row button.active { border-color: color-mix(in srgb, var(--accent) 76%, white); background: var(--accent); }
+h2 { margin: 0; }
+p { margin: 0 0 var(--space-2) var(--space-6); color: var(--text-muted); line-height: 1.55; }
+.value-control { width: max-content; max-width: 100%; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.value-control output { text-align: right; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.metric-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); margin-top: var(--space-1); }
+.metric-grid > div { min-width: 0; padding: var(--space-2); display: flex; flex-direction: column; gap: var(--space-1); border: 1px solid var(--border-subtle); background: var(--surface-2); }
+.metric-grid span { overflow: hidden; color: var(--text-muted); text-overflow: ellipsis; white-space: nowrap; }
+.metric-grid strong, :deep(output) { color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.secondary-action, .danger-action { align-self: flex-start; margin-top: var(--space-2); min-height: var(--ui-control-height); border: 1px solid var(--border-subtle); background: var(--surface-3); }
 .secondary-action:hover { border-color: var(--accent); background: var(--accent-soft); }
 .danger-action { color: var(--danger); background: var(--danger-soft); }
-.danger-action:hover { border-color: var(--danger); }
-.input-map-toolbar{margin-bottom:8px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}.input-map-toolbar>input{min-width:160px;flex:1}.input-map-toolbar label{display:flex;align-items:center;gap:5px}.input-map-toolbar button.active{color:#fff;border-color:#d53b4c;background:#b92537}.connected-devices{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px}.connected-devices span{padding:3px 7px;border:1px solid var(--border-subtle);border-radius:99px;color:var(--text-muted);font-size:11px}.input-conflicts{margin-bottom:8px;padding:8px;display:grid;gap:3px;border:1px solid var(--warning);border-radius:8px;background:color-mix(in srgb,var(--warning) 8%,transparent);font-size:11px}.input-conflicts span{overflow-wrap:anywhere;color:var(--text-muted)}.input-action-heading{grid-template-columns:minmax(120px,3fr) minmax(100px,2fr) 28px 28px}.input-binding{grid-template-columns:minmax(150px,1.25fr) minmax(100px,1fr) repeat(4,minmax(64px,.6fr)) 28px}.binding-advanced{grid-column:1/-1;padding:5px;border:1px solid var(--border-subtle);border-radius:7px}.binding-advanced summary{cursor:pointer;color:var(--accent)}.binding-advanced>label{display:grid;grid-template-columns:100px minmax(100px,1fr);gap:6px;align-items:center;margin-top:4px;color:var(--text-muted);font-size:11px}.input-action.compact .input-binding{padding-block:2px}.input-action.compact .compact-action{margin-top:2px}
+.danger-action:hover { border-color: var(--danger); }.connected-devices{display:flex;gap:var(--space-1);flex-wrap:wrap;margin-bottom:var(--space-2)}.connected-devices span{padding:var(--space-0) var(--space-2);border:1px solid var(--border-subtle);color:var(--text-muted)}.binding-advanced{grid-column:1/-1;padding:var(--space-1);border:1px solid var(--border-subtle)}.binding-advanced summary{cursor:pointer;color:var(--accent)}
 .binding-advanced summary{min-height:20px;display:flex;align-items:center;line-height:18px}
-.action-advanced{margin-bottom:7px;padding:7px;border:1px solid var(--border-subtle);border-radius:8px;background:color-mix(in srgb,var(--surface-3) 55%,transparent)}.action-advanced>summary{min-height:24px;display:flex;align-items:center;cursor:pointer;color:var(--accent);font-size:12px;font-weight:620}.action-advanced-grid{display:grid;grid-template-columns:repeat(3,minmax(150px,1fr));gap:7px;padding-top:7px}.action-advanced-grid label{min-width:0;display:grid;grid-template-columns:minmax(88px,.8fr) minmax(0,1fr);gap:7px;align-items:center;color:var(--text-muted);font-size:11.5px}.action-advanced-grid input:not([type='checkbox']),.action-advanced-grid select{width:100%;min-width:0}.action-advanced-grid input[type='checkbox']{justify-self:end}
-@media (max-width: 1400px) { .settings-grid { grid-template-columns: 1fr; } }
-@media (max-width: 800px) { .page-header,.settings-search { align-items: flex-start; flex-direction: column; }.settings-search>label{width:100%}.settings-search nav{width:100%} .input-action-heading, .input-binding { grid-template-columns: repeat(2, minmax(0, 1fr)) 28px; } .input-action-heading > input, .input-action-heading > select { grid-column: auto; }.binding-advanced{grid-column:1/-1}.input-map-toolbar>*{flex:1 1 130px}.action-advanced-grid{grid-template-columns:1fr} }
+.action-advanced{margin-bottom:var(--space-2);padding:var(--space-2);border:1px solid var(--border-subtle);background:color-mix(in srgb,var(--surface-3) 55%,transparent)}.action-advanced>summary{min-height:24px;display:flex;align-items:center;cursor:pointer;color:var(--accent)}.action-advanced-grid{display:grid;grid-template-columns:repeat(3,minmax(150px,1fr));gap:var(--space-2);padding-top:var(--space-2)}
+@media (max-width: 800px) {.binding-advanced{grid-column:1/-1}.action-advanced-grid{grid-template-columns:1fr} }
 /* Binding labels remain attached to their fields when the card reflows. */
-.input-binding{grid-template-columns:repeat(auto-fit,minmax(min(160px,100%),1fr));align-items:end}
-.input-binding>.binding-field{display:grid;grid-template-columns:minmax(0,1fr);gap:4px;min-width:0;align-self:stretch}
-.binding-field>span{font-size:var(--type-caption);color:var(--text-muted);overflow-wrap:anywhere}
-.binding-field>input,.binding-field>select{width:100%;max-width:100%}
-.input-binding>.icon-action{justify-self:end;align-self:start;width:30px}
-.input-map-toolbar>input{flex:1 1 200px}
-.input-map-toolbar>select{flex:1 1 160px}
-.input-map-toolbar>label{flex:1 1 160px}
-.settings-search{flex-wrap:wrap}.settings-search>label{flex:1 1 250px}.settings-search nav{flex:1 1 300px}
-@container nova-form (max-width:600px){.input-action-heading{grid-template-columns:minmax(0,1fr) 30px 30px}.input-action-heading>input,.input-action-heading>select{grid-column:1/-1}.action-advanced-grid{grid-template-columns:minmax(0,1fr)}.binding-advanced>label{grid-template-columns:minmax(0,1fr)}.settings-card>.input-map-toolbar>input{flex-basis:100%;width:100%}}
-.input-binding,.action-advanced-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,calc(14em + 64px)),1fr))}
+.binding-field>span{color:var(--text-muted);overflow-wrap:anywhere}
+@container nova-form (max-width:600px){.action-advanced-grid{grid-template-columns:minmax(0,1fr)}}
+.action-advanced-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,calc(14em + 64px)),1fr))}
 </style>

@@ -3,7 +3,7 @@
   <section class="save-settings">
     <p>{{ t('saveDataDescription') }}</p>
     <label><span>{{ t('saveSlot') }}</span><input v-model.trim="slot" maxlength="80"></label>
-    <div class="actions"><button :disabled="saveGameState.busy" @click="load">{{ t('loadSlot') }}</button><button class="primary" :disabled="saveGameState.busy" @click="commit">{{ t('commitSlot') }}</button><button v-if="saveGameState.busy" @click="cancel">{{ t('cancel') }}</button><button class="danger" :disabled="saveGameState.busy" @click="clear">{{ t('clearWorkingSave') }}</button></div>
+    <div class="actions"><UiButton :disabled="saveGameState.busy" @click="load" icon="open" :label="t('loadSlot')" /><UiButton class="primary" :disabled="saveGameState.busy" @click="commit" icon="save" :label="t('commitSlot')" /><button v-if="saveGameState.busy" @click="cancel">{{ t('cancel') }}</button><UiButton class="danger" :disabled="saveGameState.busy" @click="clear" icon="clear" :label="t('clearWorkingSave')" /></div>
     <progress v-if="saveGameState.busy" :value="saveGameState.progress" max="1"></progress><small v-if="saveGameState.progressMessage">{{ saveGameState.progressMessage }}</small>
     <button v-if="saveGameState.recoveryAvailable" class="recovery" @click="recover">{{ t('recover') }} · {{ saveGameState.recoverySource }}</button>
     <p v-if="saveGameState.recoveryMessage">{{ saveGameState.recoveryMessage }}</p>
@@ -15,6 +15,7 @@
 </template>
 
 <script setup lang="ts">
+import UiButton from '../ui/components/UiButton.vue'
 import { computed, ref } from 'vue'
 import { t } from '../i18n'
 import { clearSaveValues, commitSaveSlotAsync, listSaveSlots, loadSaveSlotAsync, recoverSaveSlot, saveGameState, useSaveProject } from '../runtime/saveGame'
@@ -33,9 +34,4 @@ const slots = computed(/** 依赖刷新计数重新列出存档槽。 */ () => {
 /** 清空工作存档值并显示提示。 */ function clear(): void { clearSaveValues(); message.value = t('workingSaveCleared') }
 </script>
 
-<style scoped>
-.save-settings > p { margin: 0 0 8px; }.save-settings > label { min-height: 32px; display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--text-muted); font-size:11px; }.save-settings input { width: 55%; min-height: 27px; }.actions { display: flex; flex-wrap: wrap; gap: 5px; margin: 7px 0; }.actions button { min-height: 28px; padding: 0 8px; border: 1px solid var(--border-subtle); border-radius: 7px; color: var(--text-secondary); background: var(--surface-2); font-size:11px; }.actions .primary { color: var(--accent); border-color: var(--accent); }.actions .danger { color: var(--danger); }.summary { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; padding: 7px; border: 1px solid var(--border-subtle); border-radius: 7px; color: var(--text-muted); font-size:11px; }.summary strong { color: var(--accent); }.save-settings pre { max-height: 130px; margin: 7px 0 0; padding: 8px; overflow: auto; border-radius: 7px; color: var(--text-secondary); background: var(--surface-3); font: 11px/1.5 var(--font-mono); white-space: pre-wrap; word-break: break-word; }.save-settings p.error { color: var(--danger); }
-.save-settings > label { min-height: 34px; font-size: 11px; }.save-settings input { min-height: 29px; }.actions button { min-height: 31px; font-size:11px; }
-.summary { font-size:11px; }.save-settings pre { max-height: 150px; font-size:11px; }
-.save-settings progress{width:100%}.save-settings>small{display:block;margin:4px 0;color:var(--text-muted)}.recovery{width:100%;min-height:32px;border:1px solid var(--warning);border-radius:7px;color:var(--warning);background:color-mix(in srgb,var(--warning) 8%,transparent)}.save-settings details>summary{min-height:24px;display:flex;align-items:center;line-height:1.4;color:var(--text-secondary);cursor:pointer}.save-settings details>button{width:100%;padding:6px;display:grid;grid-template-columns:minmax(0,1fr) auto;text-align:left;border:0;border-top:1px solid var(--border-subtle);background:transparent;color:var(--text-secondary)}.save-settings details>button span,.save-settings details>button strong{min-width:0;overflow-wrap:anywhere}.save-settings details>button small{grid-column:1/-1;color:var(--text-muted);overflow-wrap:anywhere}
-</style>
+<style scoped> .save-settings{display:grid;gap:var(--ui-space-sm)}.save-settings>p{margin:0;color:var(--text-muted)}.save-settings>label{display:grid;grid-template-columns:var(--ui-label-width) minmax(0,1fr);gap:var(--ui-space-sm);align-items:center}.actions{display:flex;gap:var(--ui-space-xs);flex-wrap:wrap}.summary{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:var(--ui-space-xs);padding-block:var(--ui-space-sm);border-block:1px solid var(--border-subtle)}.save-settings pre{max-height:160px;margin:0;padding:var(--ui-space-sm);overflow:auto;background:var(--input-bg);font-family:var(--font-mono);white-space:pre-wrap;overflow-wrap:anywhere}.save-settings p.error{color:var(--danger)}.save-settings progress{width:100%}.save-settings>small{color:var(--text-muted)}.recovery{color:var(--warning);justify-self:start}.save-settings details>button{width:100%;display:grid;grid-template-columns:minmax(0,1fr) auto;text-align:left;gap:var(--ui-space-xs);padding:var(--ui-space-xs);border:0;border-top:1px solid var(--border-subtle);border-radius:0;background:transparent}.save-settings details>button small{grid-column:1/-1;color:var(--text-muted);overflow-wrap:anywhere}</style>
