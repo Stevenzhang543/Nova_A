@@ -1,0 +1,19 @@
+{
+  "format": "nova-v26.22-component-order",
+  "version": 1,
+  "release": "26.22",
+  "regressionOrigin": "26.22",
+  "engineVersion": "26.32.0",
+  "expectedRelease": "26.32",
+  "development": true,
+  "qualifiedRelease": null,
+  "generatedAt": "2026-09-28T18:09:51.794Z",
+  "status": "passed",
+  "scope": "Actual production project hydration and serialization. Separate browser playback smoke checks the real Play/Pause/Stop boundary.",
+  "checks": [
+    {
+      "name": "Fifty project hydrations preserve component order identities removed records and exact authored values",
+      "status": "passed"
+    }
+  ]
+}

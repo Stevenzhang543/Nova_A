@@ -1,0 +1,1617 @@
+{
+  "format": "nova-v26.32-static-host-user-user-audit",
+  "version": 1,
+  "release": "26.32",
+  "regressionOrigin": "26.32",
+  "expectedRelease": "26.32",
+  "development": false,
+  "qualifiedRelease": "26.32",
+  "generatedAt": "2026-09-28T18:31:20.289Z",
+  "status": "passed",
+  "checks": [
+    {
+      "name": "Root and nested online PWA metadata resolve without an application backend",
+      "status": "passed"
+    },
+    {
+      "name": "Editor runs at a nested URL on a plain static server",
+      "status": "passed"
+    },
+    {
+      "name": "A downloaded project reopens after relocation into a Unicode directory with spaces",
+      "status": "passed"
+    },
+    {
+      "name": "Explicit ZIP download works with a folder picker present and hidden hosting paths blocked",
+      "status": "passed"
+    }
+  ],
+  "observations": [
+    {
+      "name": "online-pwa-/",
+      "href": "http://127.0.0.1:51446/manifest.webmanifest",
+      "manifest": {
+        "name": "Nova_A",
+        "short_name": "Nova_A",
+        "id": "./",
+        "start_url": "./index.html",
+        "scope": "./",
+        "display": "standalone",
+        "background_color": "#101116",
+        "theme_color": "#101116",
+        "description": "Nova_A online landscape editor. Save projects before updating. Internet required for launch and loading tools.",
+        "icons": [
+          {
+            "src": "./nova-icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any"
+          },
+          {
+            "src": "./nova-icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
+          }
+        ]
+      },
+      "icons": [
+        {
+          "url": "http://127.0.0.1:51446/nova-icon-192.png",
+          "status": 200,
+          "bytes": 1938
+        },
+        {
+          "url": "http://127.0.0.1:51446/nova-icon-512.png",
+          "status": 200,
+          "bytes": 6147
+        }
+      ],
+      "registrations": 0,
+      "scope": "Actual loopback static HTTP manifest/icon requests. No service worker or offline reload support. Native home-screen installation and physical mobile devices not exercised."
+    },
+    {
+      "name": "online-pwa-/apps/nova/",
+      "href": "http://127.0.0.1:51446/apps/nova/manifest.webmanifest",
+      "manifest": {
+        "name": "Nova_A",
+        "short_name": "Nova_A",
+        "id": "./",
+        "start_url": "./index.html",
+        "scope": "./",
+        "display": "standalone",
+        "background_color": "#101116",
+        "theme_color": "#101116",
+        "description": "Nova_A online landscape editor. Save projects before updating. Internet required for launch and loading tools.",
+        "icons": [
+          {
+            "src": "./nova-icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any"
+          },
+          {
+            "src": "./nova-icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
+          }
+        ]
+      },
+      "icons": [
+        {
+          "url": "http://127.0.0.1:51446/apps/nova/nova-icon-192.png",
+          "status": 200,
+          "bytes": 1938
+        },
+        {
+          "url": "http://127.0.0.1:51446/apps/nova/nova-icon-512.png",
+          "status": 200,
+          "bytes": 6147
+        }
+      ],
+      "registrations": 0,
+      "scope": "Actual loopback static HTTP manifest/icon requests. No service worker or offline reload support. Native home-screen installation and physical mobile devices not exercised."
+    },
+    {
+      "name": "actual-project-download",
+      "file": "E:\\Nova_A\\reports\\phase2\\export\\v26.17-nested29-host.nova",
+      "bytes": 1826296
+    },
+    {
+      "name": "actual-project-download",
+      "file": "E:\\Nova_A\\reports\\phase2\\export\\v26.17-nested29-relocated.nova",
+      "bytes": 1826296
+    },
+    {
+      "name": "relocated-project-reopened",
+      "scope": "Actual local project file rename, Unicode/space directory and UI reopen/save; not an entire source checkout relocation or installation of an absent SDK."
+    },
+    {
+      "name": "exact-export-download",
+      "slug": "nested29-zip",
+      "artifact": "E:\\Nova_A\\reports\\phase2\\export\\v26.20-nested29-zip-authored-web.zip",
+      "bytes": 11031103,
+      "sha256": "8a1ad0a5a3cfffbe38aef9eceeabc7a26d60b6bb276657005c4b9024c0a530b2",
+      "files": 127,
+      "projectComparison": "All scene entities/components/connections equal the actual saved authoring project."
+    },
+    {
+      "name": "downloaded-inventory-native-wasm-parity",
+      "properties": {
+        "elapsed": 0,
+        "inventory": {
+          "coins": 1,
+          "items": [
+            "starter",
+            "reward"
+          ]
+        }
+      },
+      "commands": [
+        {
+          "type": "spawnAt",
+          "pendingId": "pending:inventory-output:0:1",
+          "prefab": "asset://690915c1-68d8-4023-af73-74d916aa8231",
+          "x": 2,
+          "y": 0,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        },
+        {
+          "type": "targetSetUiText",
+          "target": "inventory-hud",
+          "generation": 1,
+          "text": "Inventory coins: 1 | items: 2 | module + callback + spawned reward"
+        }
+      ],
+      "scope": "Execute exact downloaded root/helper sources in native/WASM and compare emitted commands and inventory. Actual hosted player startup is separately exercised."
+    },
+    {
+      "name": "static-host-request-log",
+      "requests": [
+        {
+          "path": "/index.html",
+          "status": 200,
+          "bytes": 1059
+        },
+        {
+          "path": "/assets/editor-BgYOJo7B.js",
+          "status": 200,
+          "bytes": 512
+        },
+        {
+          "path": "/assets/preload-helper-mg6Z-sIv.js",
+          "status": 200,
+          "bytes": 1976
+        },
+        {
+          "path": "/browser-capabilities.js",
+          "status": 200,
+          "bytes": 1384
+        },
+        {
+          "path": "/assets/main-0i1fT6bk.js",
+          "status": 200,
+          "bytes": 228284
+        },
+        {
+          "path": "/assets/vue-runtime-DrGdQr7e.js",
+          "status": 200,
+          "bytes": 80710
+        },
+        {
+          "path": "/assets/projectExternalChanges-D-ii0mEb.js",
+          "status": 200,
+          "bytes": 2692
+        },
+        {
+          "path": "/assets/crashReporter-DfrRmfbT.css",
+          "status": 200,
+          "bytes": 113702
+        },
+        {
+          "path": "/assets/crashReporter-tGVplTdg.js",
+          "status": 200,
+          "bytes": 2201081
+        },
+        {
+          "path": "/assets/core-DhEqZVGG.js",
+          "status": 200,
+          "bytes": 2441
+        },
+        {
+          "path": "/assets/nova-runtime-Bwg8Szc1.js",
+          "status": 200,
+          "bytes": 11496
+        },
+        {
+          "path": "/assets/main-DCCG0hoq.css",
+          "status": 200,
+          "bytes": 40022
+        },
+        {
+          "path": "/manifest.webmanifest",
+          "status": 200,
+          "bytes": 542
+        },
+        {
+          "path": "/assets/render-CoZn__R4.svg",
+          "status": 200,
+          "bytes": 2158
+        },
+        {
+          "path": "/nova-icon-192.png",
+          "status": 200,
+          "bytes": 1938
+        },
+        {
+          "path": "/assets/nova_core_bg-CcK2U0q1.wasm",
+          "status": 200,
+          "bytes": 3024033
+        },
+        {
+          "path": "/assets/noto-sans-sc-119-wght-normal-BfzSEbFz.woff2",
+          "status": 200,
+          "bytes": 76800
+        },
+        {
+          "path": "/assets/noto-sans-sc-118-wght-normal-BPEb0gM9.woff2",
+          "status": 200,
+          "bytes": 46192
+        },
+        {
+          "path": "/manifest.webmanifest",
+          "status": 200,
+          "bytes": 542
+        },
+        {
+          "path": "/nova-icon-192.png",
+          "status": 200,
+          "bytes": 1938
+        },
+        {
+          "path": "/nova-icon-512.png",
+          "status": 200,
+          "bytes": 6147
+        },
+        {
+          "path": "/apps/nova/index.html",
+          "status": 200,
+          "bytes": 1059
+        },
+        {
+          "path": "/apps/nova/assets/preload-helper-mg6Z-sIv.js",
+          "status": 200,
+          "bytes": 1976
+        },
+        {
+          "path": "/apps/nova/assets/editor-BgYOJo7B.js",
+          "status": 200,
+          "bytes": 512
+        },
+        {
+          "path": "/apps/nova/browser-capabilities.js",
+          "status": 200,
+          "bytes": 1384
+        },
+        {
+          "path": "/apps/nova/assets/vue-runtime-DrGdQr7e.js",
+          "status": 200,
+          "bytes": 80710
+        },
+        {
+          "path": "/apps/nova/assets/main-0i1fT6bk.js",
+          "status": 200,
+          "bytes": 228284
+        },
+        {
+          "path": "/apps/nova/assets/nova-runtime-Bwg8Szc1.js",
+          "status": 200,
+          "bytes": 11496
+        },
+        {
+          "path": "/apps/nova/assets/crashReporter-DfrRmfbT.css",
+          "status": 200,
+          "bytes": 113702
+        },
+        {
+          "path": "/apps/nova/assets/projectExternalChanges-D-ii0mEb.js",
+          "status": 200,
+          "bytes": 2692
+        },
+        {
+          "path": "/apps/nova/assets/main-DCCG0hoq.css",
+          "status": 200,
+          "bytes": 40022
+        },
+        {
+          "path": "/apps/nova/assets/crashReporter-tGVplTdg.js",
+          "status": 200,
+          "bytes": 2201081
+        },
+        {
+          "path": "/apps/nova/assets/core-DhEqZVGG.js",
+          "status": 200,
+          "bytes": 2441
+        },
+        {
+          "path": "/apps/nova/manifest.webmanifest",
+          "status": 200,
+          "bytes": 542
+        },
+        {
+          "path": "/apps/nova/assets/render-CoZn__R4.svg",
+          "status": 200,
+          "bytes": 2158
+        },
+        {
+          "path": "/apps/nova/nova-icon-192.png",
+          "status": 200,
+          "bytes": 1938
+        },
+        {
+          "path": "/apps/nova/assets/nova_core_bg-CcK2U0q1.wasm",
+          "status": 200,
+          "bytes": 3024033
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-119-wght-normal-BfzSEbFz.woff2",
+          "status": 200,
+          "bytes": 76800
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-118-wght-normal-BPEb0gM9.woff2",
+          "status": 200,
+          "bytes": 46192
+        },
+        {
+          "path": "/apps/nova/manifest.webmanifest",
+          "status": 200,
+          "bytes": 542
+        },
+        {
+          "path": "/apps/nova/nova-icon-192.png",
+          "status": 200,
+          "bytes": 1938
+        },
+        {
+          "path": "/apps/nova/nova-icon-512.png",
+          "status": 200,
+          "bytes": 6147
+        },
+        {
+          "path": "/apps/nova/index.html",
+          "status": 200,
+          "bytes": 1059
+        },
+        {
+          "path": "/apps/nova/assets/editor-BgYOJo7B.js",
+          "status": 200,
+          "bytes": 512
+        },
+        {
+          "path": "/apps/nova/browser-capabilities.js",
+          "status": 200,
+          "bytes": 1384
+        },
+        {
+          "path": "/apps/nova/assets/preload-helper-mg6Z-sIv.js",
+          "status": 200,
+          "bytes": 1976
+        },
+        {
+          "path": "/apps/nova/assets/vue-runtime-DrGdQr7e.js",
+          "status": 200,
+          "bytes": 80710
+        },
+        {
+          "path": "/apps/nova/assets/main-0i1fT6bk.js",
+          "status": 200,
+          "bytes": 228284
+        },
+        {
+          "path": "/apps/nova/assets/nova-runtime-Bwg8Szc1.js",
+          "status": 200,
+          "bytes": 11496
+        },
+        {
+          "path": "/apps/nova/assets/projectExternalChanges-D-ii0mEb.js",
+          "status": 200,
+          "bytes": 2692
+        },
+        {
+          "path": "/apps/nova/assets/crashReporter-DfrRmfbT.css",
+          "status": 200,
+          "bytes": 113702
+        },
+        {
+          "path": "/apps/nova/assets/main-DCCG0hoq.css",
+          "status": 200,
+          "bytes": 40022
+        },
+        {
+          "path": "/apps/nova/assets/crashReporter-tGVplTdg.js",
+          "status": 200,
+          "bytes": 2201081
+        },
+        {
+          "path": "/apps/nova/assets/core-DhEqZVGG.js",
+          "status": 200,
+          "bytes": 2441
+        },
+        {
+          "path": "/apps/nova/assets/nova_core_bg-CcK2U0q1.wasm",
+          "status": 200,
+          "bytes": 3024033
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-119-wght-normal-BfzSEbFz.woff2",
+          "status": 200,
+          "bytes": 76800
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-118-wght-normal-BPEb0gM9.woff2",
+          "status": 200,
+          "bytes": 46192
+        },
+        {
+          "path": "/apps/nova/manifest.webmanifest",
+          "status": 200,
+          "bytes": 542
+        },
+        {
+          "path": "/apps/nova/nova-icon-192.png",
+          "status": 200,
+          "bytes": 1938
+        },
+        {
+          "path": "/apps/nova/index.html",
+          "status": 200,
+          "bytes": 1059
+        },
+        {
+          "path": "/apps/nova/assets/preload-helper-mg6Z-sIv.js",
+          "status": 200,
+          "bytes": 1976
+        },
+        {
+          "path": "/apps/nova/browser-capabilities.js",
+          "status": 200,
+          "bytes": 1384
+        },
+        {
+          "path": "/apps/nova/assets/editor-BgYOJo7B.js",
+          "status": 200,
+          "bytes": 512
+        },
+        {
+          "path": "/apps/nova/assets/crashReporter-DfrRmfbT.css",
+          "status": 200,
+          "bytes": 113702
+        },
+        {
+          "path": "/apps/nova/assets/vue-runtime-DrGdQr7e.js",
+          "status": 200,
+          "bytes": 80710
+        },
+        {
+          "path": "/apps/nova/assets/nova-runtime-Bwg8Szc1.js",
+          "status": 200,
+          "bytes": 11496
+        },
+        {
+          "path": "/apps/nova/assets/main-0i1fT6bk.js",
+          "status": 200,
+          "bytes": 228284
+        },
+        {
+          "path": "/apps/nova/assets/projectExternalChanges-D-ii0mEb.js",
+          "status": 200,
+          "bytes": 2692
+        },
+        {
+          "path": "/apps/nova/assets/main-DCCG0hoq.css",
+          "status": 200,
+          "bytes": 40022
+        },
+        {
+          "path": "/apps/nova/assets/core-DhEqZVGG.js",
+          "status": 200,
+          "bytes": 2441
+        },
+        {
+          "path": "/apps/nova/assets/crashReporter-tGVplTdg.js",
+          "status": 200,
+          "bytes": 2201081
+        },
+        {
+          "path": "/apps/nova/manifest.webmanifest",
+          "status": 200,
+          "bytes": 542
+        },
+        {
+          "path": "/apps/nova/assets/render-CoZn__R4.svg",
+          "status": 200,
+          "bytes": 2158
+        },
+        {
+          "path": "/apps/nova/nova-icon-192.png",
+          "status": 200,
+          "bytes": 1938
+        },
+        {
+          "path": "/apps/nova/assets/nova_core_bg-CcK2U0q1.wasm",
+          "status": 200,
+          "bytes": 3024033
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-119-wght-normal-BfzSEbFz.woff2",
+          "status": 200,
+          "bytes": 76800
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-118-wght-normal-BPEb0gM9.woff2",
+          "status": 200,
+          "bytes": 46192
+        },
+        {
+          "path": "/apps/nova/assets/WorldCanvas-DbCF7P8d.css",
+          "status": 200,
+          "bytes": 3943
+        },
+        {
+          "path": "/apps/nova/assets/EditorLayout-CDuXGlRP.css",
+          "status": 200,
+          "bytes": 27092
+        },
+        {
+          "path": "/apps/nova/assets/EditorLayout-Bc2_heoH.js",
+          "status": 200,
+          "bytes": 140159
+        },
+        {
+          "path": "/apps/nova/assets/WorldCanvas-nM7ayBWW.js",
+          "status": 200,
+          "bytes": 446198
+        },
+        {
+          "path": "/apps/nova/assets/scriptTemplates-CP9ZmjGE.js",
+          "status": 200,
+          "bytes": 3187
+        },
+        {
+          "path": "/apps/nova/assets/StudioDraftConflict-CWHEgpEs.js",
+          "status": 200,
+          "bytes": 3832
+        },
+        {
+          "path": "/apps/nova/assets/projectInspectionSnapshot-DSAz2GWb.js",
+          "status": 200,
+          "bytes": 376
+        },
+        {
+          "path": "/apps/nova/assets/EditorBottomPanel-DG523jvO.js",
+          "status": 200,
+          "bytes": 122824
+        },
+        {
+          "path": "/apps/nova/assets/StudioDraftConflict-BppdTLKs.css",
+          "status": 200,
+          "bytes": 1178
+        },
+        {
+          "path": "/apps/nova/assets/resources-CbgBcgyS.js",
+          "status": 200,
+          "bytes": 7225
+        },
+        {
+          "path": "/apps/nova/assets/EditorBottomPanel-CmOvLWZG.css",
+          "status": 200,
+          "bytes": 15423
+        },
+        {
+          "path": "/apps/nova/assets/ConfigPanel-nR8J0Za2.js",
+          "status": 200,
+          "bytes": 266477
+        },
+        {
+          "path": "/apps/nova/assets/objectAuthorNavigation-DKMjnxBC.css",
+          "status": 200,
+          "bytes": 2021
+        },
+        {
+          "path": "/apps/nova/assets/objectAuthorNavigation-DJi8fEkA.js",
+          "status": 200,
+          "bytes": 31990
+        },
+        {
+          "path": "/apps/nova/assets/SimulationStatusPanel17-CH-3Js8f.js",
+          "status": 200,
+          "bytes": 8706
+        },
+        {
+          "path": "/apps/nova/assets/SimulationStatusPanel17-BHU74Xfk.css",
+          "status": 200,
+          "bytes": 1278
+        },
+        {
+          "path": "/apps/nova/assets/ConfigPanel-DxWZ2Y1b.css",
+          "status": 200,
+          "bytes": 22817
+        },
+        {
+          "path": "/apps/nova/assets/jetbrains-mono-latin-wght-normal-B9CIFXIH.woff2",
+          "status": 200,
+          "bytes": 40404
+        },
+        {
+          "path": "/apps/nova/index.html",
+          "status": 200,
+          "bytes": 1059
+        },
+        {
+          "path": "/apps/nova/assets/editor-BgYOJo7B.js",
+          "status": 200,
+          "bytes": 512
+        },
+        {
+          "path": "/apps/nova/assets/preload-helper-mg6Z-sIv.js",
+          "status": 200,
+          "bytes": 1976
+        },
+        {
+          "path": "/apps/nova/browser-capabilities.js",
+          "status": 200,
+          "bytes": 1384
+        },
+        {
+          "path": "/apps/nova/assets/main-0i1fT6bk.js",
+          "status": 200,
+          "bytes": 228284
+        },
+        {
+          "path": "/apps/nova/assets/vue-runtime-DrGdQr7e.js",
+          "status": 200,
+          "bytes": 80710
+        },
+        {
+          "path": "/apps/nova/assets/crashReporter-tGVplTdg.js",
+          "status": 200,
+          "bytes": 2201081
+        },
+        {
+          "path": "/apps/nova/assets/nova-runtime-Bwg8Szc1.js",
+          "status": 200,
+          "bytes": 11496
+        },
+        {
+          "path": "/apps/nova/assets/crashReporter-DfrRmfbT.css",
+          "status": 200,
+          "bytes": 113702
+        },
+        {
+          "path": "/apps/nova/assets/core-DhEqZVGG.js",
+          "status": 200,
+          "bytes": 2441
+        },
+        {
+          "path": "/apps/nova/assets/projectExternalChanges-D-ii0mEb.js",
+          "status": 200,
+          "bytes": 2692
+        },
+        {
+          "path": "/apps/nova/assets/main-DCCG0hoq.css",
+          "status": 200,
+          "bytes": 40022
+        },
+        {
+          "path": "/apps/nova/manifest.webmanifest",
+          "status": 200,
+          "bytes": 542
+        },
+        {
+          "path": "/apps/nova/assets/render-CoZn__R4.svg",
+          "status": 200,
+          "bytes": 2158
+        },
+        {
+          "path": "/apps/nova/nova-icon-192.png",
+          "status": 200,
+          "bytes": 1938
+        },
+        {
+          "path": "/apps/nova/assets/nova_core_bg-CcK2U0q1.wasm",
+          "status": 200,
+          "bytes": 3024033
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-118-wght-normal-BPEb0gM9.woff2",
+          "status": 200,
+          "bytes": 46192
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-119-wght-normal-BfzSEbFz.woff2",
+          "status": 200,
+          "bytes": 76800
+        },
+        {
+          "path": "/apps/nova/assets/EditorLayout-Bc2_heoH.js",
+          "status": 200,
+          "bytes": 140159
+        },
+        {
+          "path": "/apps/nova/assets/WorldCanvas-DbCF7P8d.css",
+          "status": 200,
+          "bytes": 3943
+        },
+        {
+          "path": "/apps/nova/assets/EditorLayout-CDuXGlRP.css",
+          "status": 200,
+          "bytes": 27092
+        },
+        {
+          "path": "/apps/nova/assets/WorldCanvas-nM7ayBWW.js",
+          "status": 200,
+          "bytes": 446198
+        },
+        {
+          "path": "/apps/nova/assets/projectInspectionSnapshot-DSAz2GWb.js",
+          "status": 200,
+          "bytes": 376
+        },
+        {
+          "path": "/apps/nova/assets/scriptTemplates-CP9ZmjGE.js",
+          "status": 200,
+          "bytes": 3187
+        },
+        {
+          "path": "/apps/nova/assets/EditorBottomPanel-DG523jvO.js",
+          "status": 200,
+          "bytes": 122824
+        },
+        {
+          "path": "/apps/nova/assets/StudioDraftConflict-CWHEgpEs.js",
+          "status": 200,
+          "bytes": 3832
+        },
+        {
+          "path": "/apps/nova/assets/StudioDraftConflict-BppdTLKs.css",
+          "status": 200,
+          "bytes": 1178
+        },
+        {
+          "path": "/apps/nova/assets/resources-CbgBcgyS.js",
+          "status": 200,
+          "bytes": 7225
+        },
+        {
+          "path": "/apps/nova/assets/EditorBottomPanel-CmOvLWZG.css",
+          "status": 200,
+          "bytes": 15423
+        },
+        {
+          "path": "/apps/nova/assets/objectAuthorNavigation-DKMjnxBC.css",
+          "status": 200,
+          "bytes": 2021
+        },
+        {
+          "path": "/apps/nova/assets/SimulationStatusPanel17-BHU74Xfk.css",
+          "status": 200,
+          "bytes": 1278
+        },
+        {
+          "path": "/apps/nova/assets/ConfigPanel-nR8J0Za2.js",
+          "status": 200,
+          "bytes": 266477
+        },
+        {
+          "path": "/apps/nova/assets/objectAuthorNavigation-DJi8fEkA.js",
+          "status": 200,
+          "bytes": 31990
+        },
+        {
+          "path": "/apps/nova/assets/SimulationStatusPanel17-CH-3Js8f.js",
+          "status": 200,
+          "bytes": 8706
+        },
+        {
+          "path": "/apps/nova/assets/ConfigPanel-DxWZ2Y1b.css",
+          "status": 200,
+          "bytes": 22817
+        },
+        {
+          "path": "/apps/nova/assets/jetbrains-mono-latin-wght-normal-B9CIFXIH.woff2",
+          "status": 200,
+          "bytes": 40404
+        },
+        {
+          "path": "/apps/nova/assets/ManageWorkspace-CojxJ9ao.js",
+          "status": 200,
+          "bytes": 4471
+        },
+        {
+          "path": "/apps/nova/assets/ManageWorkspace-mQ6u5qJ_.css",
+          "status": 200,
+          "bytes": 498
+        },
+        {
+          "path": "/apps/nova/assets/BuildSettingsPanel-V1bdlS0E.js",
+          "status": 200,
+          "bytes": 58105
+        },
+        {
+          "path": "/apps/nova/assets/gameExporter-YDXmyT9-.js",
+          "status": 200,
+          "bytes": 14776
+        },
+        {
+          "path": "/apps/nova/assets/novaPak-C0QjRefM.js",
+          "status": 200,
+          "bytes": 6922
+        },
+        {
+          "path": "/apps/nova/assets/releaseEngineering-DtZVJ6uS.js",
+          "status": 200,
+          "bytes": 5004
+        },
+        {
+          "path": "/apps/nova/assets/productionValidation-D0oKK4L9.js",
+          "status": 200,
+          "bytes": 11186
+        },
+        {
+          "path": "/apps/nova/assets/mediaProduction26-DRQwyHje.js",
+          "status": 200,
+          "bytes": 5590
+        },
+        {
+          "path": "/apps/nova/assets/shipping-B_BHjQM4.js",
+          "status": 200,
+          "bytes": 1541
+        },
+        {
+          "path": "/apps/nova/assets/cinematicProduction-CXJW6Goh.js",
+          "status": 200,
+          "bytes": 9710
+        },
+        {
+          "path": "/apps/nova/assets/BuildSettingsPanel-Wi82QWpv.css",
+          "status": 200,
+          "bytes": 21520
+        },
+        {
+          "path": "/apps/nova/player-manifest.json",
+          "status": 200,
+          "bytes": 90664
+        },
+        {
+          "path": "/apps/nova/player.html",
+          "status": 200,
+          "bytes": 1223
+        },
+        {
+          "path": "/apps/nova/assets/player-D-d16_7b.js",
+          "status": 200,
+          "bytes": 306
+        },
+        {
+          "path": "/apps/nova/assets/player-DLuZft3L.css",
+          "status": 200,
+          "bytes": 32143
+        },
+        {
+          "path": "/apps/nova/assets/preload-helper-mg6Z-sIv.js",
+          "status": 200,
+          "bytes": 1976
+        },
+        {
+          "path": "/apps/nova/assets/vue-runtime-DrGdQr7e.js",
+          "status": 200,
+          "bytes": 80710
+        },
+        {
+          "path": "/apps/nova/assets/PlayerApp-DSevbRSv.js",
+          "status": 200,
+          "bytes": 8102
+        },
+        {
+          "path": "/apps/nova/assets/PlayerApp-BgaCvp_Y.css",
+          "status": 200,
+          "bytes": 5490
+        },
+        {
+          "path": "/apps/nova/assets/WorldCanvas-nM7ayBWW.js",
+          "status": 200,
+          "bytes": 446198
+        },
+        {
+          "path": "/apps/nova/assets/WorldCanvas-DbCF7P8d.css",
+          "status": 200,
+          "bytes": 3943
+        },
+        {
+          "path": "/apps/nova/assets/crashReporter-tGVplTdg.js",
+          "status": 200,
+          "bytes": 2201081
+        },
+        {
+          "path": "/apps/nova/assets/crashReporter-DfrRmfbT.css",
+          "status": 200,
+          "bytes": 113702
+        },
+        {
+          "path": "/apps/nova/assets/nunito-sans-cyrillic-ext-wght-normal-7w74d1lj.woff2",
+          "status": 200,
+          "bytes": 21752
+        },
+        {
+          "path": "/apps/nova/assets/nunito-sans-cyrillic-wght-normal-B9hoeQUC.woff2",
+          "status": 200,
+          "bytes": 16388
+        },
+        {
+          "path": "/apps/nova/assets/nunito-sans-vietnamese-wght-normal-BhFYcaJr.woff2",
+          "status": 200,
+          "bytes": 10308
+        },
+        {
+          "path": "/apps/nova/assets/nunito-sans-latin-ext-wght-normal-DMEAsnHD.woff2",
+          "status": 200,
+          "bytes": 27908
+        },
+        {
+          "path": "/apps/nova/assets/nunito-sans-latin-wght-normal-BWQ3gi2K.woff2",
+          "status": 200,
+          "bytes": 31076
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-5-wght-normal-DI846rD9.woff2",
+          "status": 200,
+          "bytes": 20176
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-6-wght-normal-ozUCEY9O.woff2",
+          "status": 200,
+          "bytes": 11464
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-21-wght-normal-DIu_1ZBI.woff2",
+          "status": 200,
+          "bytes": 11356
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-22-wght-normal-VXjdYcT-.woff2",
+          "status": 200,
+          "bytes": 65384
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-23-wght-normal-4HrHKhpL.woff2",
+          "status": 200,
+          "bytes": 56792
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-24-wght-normal-B58DWgHS.woff2",
+          "status": 200,
+          "bytes": 62580
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-25-wght-normal-C3Jm6l7O.woff2",
+          "status": 200,
+          "bytes": 58320
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-26-wght-normal-YNOygvr_.woff2",
+          "status": 200,
+          "bytes": 50888
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-27-wght-normal-BP2pEGQH.woff2",
+          "status": 200,
+          "bytes": 47488
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-28-wght-normal-BWPKDbtH.woff2",
+          "status": 200,
+          "bytes": 50200
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-29-wght-normal-45aVmHn_.woff2",
+          "status": 200,
+          "bytes": 54008
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-30-wght-normal-B8_s30jZ.woff2",
+          "status": 200,
+          "bytes": 54656
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-31-wght-normal-DW0t445S.woff2",
+          "status": 200,
+          "bytes": 47220
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-32-wght-normal-ShbWPcei.woff2",
+          "status": 200,
+          "bytes": 52548
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-33-wght-normal-BOTZYTjM.woff2",
+          "status": 200,
+          "bytes": 47452
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-34-wght-normal-BF1rqDSt.woff2",
+          "status": 200,
+          "bytes": 46888
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-35-wght-normal-Bosspiyr.woff2",
+          "status": 200,
+          "bytes": 50688
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-36-wght-normal-CtU9CyKw.woff2",
+          "status": 200,
+          "bytes": 41832
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-37-wght-normal-ghDiyiuv.woff2",
+          "status": 200,
+          "bytes": 53528
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-38-wght-normal-4Nz8k_dt.woff2",
+          "status": 200,
+          "bytes": 54592
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-39-wght-normal-Ddtm1XVC.woff2",
+          "status": 200,
+          "bytes": 51784
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-40-wght-normal-BVn4-kgX.woff2",
+          "status": 200,
+          "bytes": 46628
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-41-wght-normal-CZqajZnl.woff2",
+          "status": 200,
+          "bytes": 36416
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-42-wght-normal-CQ4lY28u.woff2",
+          "status": 200,
+          "bytes": 45540
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-43-wght-normal-psppu0d8.woff2",
+          "status": 200,
+          "bytes": 46624
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-44-wght-normal-cbKJlTUe.woff2",
+          "status": 200,
+          "bytes": 54244
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-45-wght-normal-MKIEVRIC.woff2",
+          "status": 200,
+          "bytes": 67620
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-46-wght-normal-CErGc6Mt.woff2",
+          "status": 200,
+          "bytes": 57668
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-47-wght-normal-C5Kgg1_m.woff2",
+          "status": 200,
+          "bytes": 56156
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-48-wght-normal-DFMjDDY6.woff2",
+          "status": 200,
+          "bytes": 50764
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-49-wght-normal-B7l_3BZr.woff2",
+          "status": 200,
+          "bytes": 52844
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-50-wght-normal-C5KfAmFp.woff2",
+          "status": 200,
+          "bytes": 45876
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-51-wght-normal-C2bq6hC8.woff2",
+          "status": 200,
+          "bytes": 41616
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-52-wght-normal-P18e_Y0j.woff2",
+          "status": 200,
+          "bytes": 51840
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-53-wght-normal-Bgkuo2tF.woff2",
+          "status": 200,
+          "bytes": 43528
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-54-wght-normal-DL5lmlUd.woff2",
+          "status": 200,
+          "bytes": 52000
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-55-wght-normal-BV_Oy6IF.woff2",
+          "status": 200,
+          "bytes": 48132
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-56-wght-normal-B4L7Hj8f.woff2",
+          "status": 200,
+          "bytes": 53500
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-57-wght-normal-DU8YBsDj.woff2",
+          "status": 200,
+          "bytes": 55496
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-58-wght-normal-CE0BKS9u.woff2",
+          "status": 200,
+          "bytes": 57648
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-59-wght-normal-Azv2Ku9_.woff2",
+          "status": 200,
+          "bytes": 47676
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-60-wght-normal-C1lngC61.woff2",
+          "status": 200,
+          "bytes": 41432
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-61-wght-normal-BxWkGF5M.woff2",
+          "status": 200,
+          "bytes": 45276
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-62-wght-normal-CXXMAq-5.woff2",
+          "status": 200,
+          "bytes": 59112
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-63-wght-normal-4La5uKvS.woff2",
+          "status": 200,
+          "bytes": 49180
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-64-wght-normal-CbIuD2Eg.woff2",
+          "status": 200,
+          "bytes": 41540
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-65-wght-normal-BGqvKda2.woff2",
+          "status": 200,
+          "bytes": 41608
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-66-wght-normal-BvNozWOY.woff2",
+          "status": 200,
+          "bytes": 52868
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-67-wght-normal-CC-WRBV-.woff2",
+          "status": 200,
+          "bytes": 52584
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-68-wght-normal-c0FjfUaj.woff2",
+          "status": 200,
+          "bytes": 41568
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-69-wght-normal-D596Jjl2.woff2",
+          "status": 200,
+          "bytes": 55604
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-70-wght-normal-ColEcmtJ.woff2",
+          "status": 200,
+          "bytes": 42236
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-71-wght-normal-ChZfXpdg.woff2",
+          "status": 200,
+          "bytes": 47904
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-72-wght-normal-D1VyfEG3.woff2",
+          "status": 200,
+          "bytes": 47032
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-73-wght-normal-DwSJRYPJ.woff2",
+          "status": 200,
+          "bytes": 39312
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-74-wght-normal-Cte7o1QG.woff2",
+          "status": 200,
+          "bytes": 56424
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-75-wght-normal-B0qL41rF.woff2",
+          "status": 200,
+          "bytes": 43940
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-76-wght-normal-BPLMO_2x.woff2",
+          "status": 200,
+          "bytes": 48420
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-77-wght-normal-Dkbi3pye.woff2",
+          "status": 200,
+          "bytes": 36788
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-78-wght-normal-BFUXeSw6.woff2",
+          "status": 200,
+          "bytes": 49156
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-79-wght-normal-DoJG4UTB.woff2",
+          "status": 200,
+          "bytes": 41232
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-80-wght-normal-BEFypWOO.woff2",
+          "status": 200,
+          "bytes": 32632
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-81-wght-normal-ed_TZlfo.woff2",
+          "status": 200,
+          "bytes": 47548
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-82-wght-normal-DcxfR5OJ.woff2",
+          "status": 200,
+          "bytes": 46176
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-83-wght-normal-C9UjAcMM.woff2",
+          "status": 200,
+          "bytes": 43504
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-84-wght-normal-C7NxT478.woff2",
+          "status": 200,
+          "bytes": 32612
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-85-wght-normal-DBcDBu1n.woff2",
+          "status": 200,
+          "bytes": 26900
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-86-wght-normal-CLJIoPpl.woff2",
+          "status": 200,
+          "bytes": 33576
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-87-wght-normal-DYfJ-vGE.woff2",
+          "status": 200,
+          "bytes": 8012
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-88-wght-normal-ClNDOCGW.woff2",
+          "status": 200,
+          "bytes": 7336
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-89-wght-normal-IQU_KQA8.woff2",
+          "status": 200,
+          "bytes": 10984
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-90-wght-normal-BWcrRNoG.woff2",
+          "status": 200,
+          "bytes": 9344
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-91-wght-normal-CGekvDdH.woff2",
+          "status": 200,
+          "bytes": 8704
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-99-wght-normal-Q_IptJM5.woff2",
+          "status": 200,
+          "bytes": 9704
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-100-wght-normal-DrqXJETY.woff2",
+          "status": 200,
+          "bytes": 64548
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-101-wght-normal-c94LAl5p.woff2",
+          "status": 200,
+          "bytes": 58204
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-102-wght-normal-C1RtbCZr.woff2",
+          "status": 200,
+          "bytes": 60708
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-103-wght-normal-DGHo20nu.woff2",
+          "status": 200,
+          "bytes": 63864
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-104-wght-normal-CJT2ioDJ.woff2",
+          "status": 200,
+          "bytes": 61588
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-105-wght-normal-BFoiJwz2.woff2",
+          "status": 200,
+          "bytes": 61828
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-106-wght-normal-D6uUHw3w.woff2",
+          "status": 200,
+          "bytes": 62636
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-107-wght-normal-kFQzJDLH.woff2",
+          "status": 200,
+          "bytes": 61076
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-108-wght-normal-7aXvqIa2.woff2",
+          "status": 200,
+          "bytes": 64552
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-109-wght-normal-CnjNbNmw.woff2",
+          "status": 200,
+          "bytes": 60372
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-110-wght-normal-D2JBr045.woff2",
+          "status": 200,
+          "bytes": 61472
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-111-wght-normal-ClFr5QXM.woff2",
+          "status": 200,
+          "bytes": 62664
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-112-wght-normal-CiZxJMyY.woff2",
+          "status": 200,
+          "bytes": 57648
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-113-wght-normal-OgQXOX6x.woff2",
+          "status": 200,
+          "bytes": 58648
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-114-wght-normal-CRH9SDZu.woff2",
+          "status": 200,
+          "bytes": 57964
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-115-wght-normal-BN__2iBG.woff2",
+          "status": 200,
+          "bytes": 56508
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-116-wght-normal-vdFVzbO2.woff2",
+          "status": 200,
+          "bytes": 52984
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-117-wght-normal-Dsz3vkzU.woff2",
+          "status": 200,
+          "bytes": 52464
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-118-wght-normal-BPEb0gM9.woff2",
+          "status": 200,
+          "bytes": 46192
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-119-wght-normal-BfzSEbFz.woff2",
+          "status": 200,
+          "bytes": 76800
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-cyrillic-wght-normal-CRA5_Pf1.woff2",
+          "status": 200,
+          "bytes": 10008
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-vietnamese-wght-normal-y5SU35Rl.woff2",
+          "status": 200,
+          "bytes": 9096
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-latin-ext-wght-normal-CqPqLCfe.woff2",
+          "status": 200,
+          "bytes": 8244
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-latin-wght-normal-DYAKOyvl.woff2",
+          "status": 200,
+          "bytes": 25240
+        },
+        {
+          "path": "/apps/nova/assets/jetbrains-mono-cyrillic-wght-normal-D73BlboJ.woff2",
+          "status": 200,
+          "bytes": 12108
+        },
+        {
+          "path": "/apps/nova/assets/jetbrains-mono-greek-wght-normal-Bw9x6K1M.woff2",
+          "status": 200,
+          "bytes": 9004
+        },
+        {
+          "path": "/apps/nova/assets/jetbrains-mono-vietnamese-wght-normal-Bt-aOZkq.woff2",
+          "status": 200,
+          "bytes": 7504
+        },
+        {
+          "path": "/apps/nova/assets/jetbrains-mono-latin-ext-wght-normal-DBQx-q_a.woff2",
+          "status": 200,
+          "bytes": 15196
+        },
+        {
+          "path": "/apps/nova/assets/jetbrains-mono-latin-wght-normal-B9CIFXIH.woff2",
+          "status": 200,
+          "bytes": 40404
+        },
+        {
+          "path": "/apps/nova/assets/nova-runtime-Bwg8Szc1.js",
+          "status": 200,
+          "bytes": 11496
+        },
+        {
+          "path": "/apps/nova/assets/nova_core_bg-CcK2U0q1.wasm",
+          "status": 200,
+          "bytes": 3024033
+        },
+        {
+          "path": "/apps/nova/assets/core-DhEqZVGG.js",
+          "status": 200,
+          "bytes": 2441
+        },
+        {
+          "path": "/apps/nova/assets/projectExternalChanges-D-ii0mEb.js",
+          "status": 200,
+          "bytes": 2692
+        },
+        {
+          "path": "/apps/nova/assets/shipping-B_BHjQM4.js",
+          "status": 200,
+          "bytes": 1541
+        },
+        {
+          "path": "/apps/nova/assets/novaPak-C0QjRefM.js",
+          "status": 200,
+          "bytes": 6922
+        },
+        {
+          "path": "/apps/nova/assets/window-DQYDsu7Z.js",
+          "status": 200,
+          "bytes": 15301
+        },
+        {
+          "path": "/games/nova/index.html",
+          "status": 200,
+          "bytes": 1239
+        },
+        {
+          "path": "/games/nova/assets/player-D-d16_7b.js",
+          "status": 200,
+          "bytes": 306
+        },
+        {
+          "path": "/games/nova/assets/preload-helper-mg6Z-sIv.js",
+          "status": 200,
+          "bytes": 1976
+        },
+        {
+          "path": "/games/nova/assets/vue-runtime-DrGdQr7e.js",
+          "status": 200,
+          "bytes": 80710
+        },
+        {
+          "path": "/games/nova/assets/nova-runtime-Bwg8Szc1.js",
+          "status": 200,
+          "bytes": 11496
+        },
+        {
+          "path": "/games/nova/assets/novaPak-C0QjRefM.js",
+          "status": 200,
+          "bytes": 6922
+        },
+        {
+          "path": "/games/nova/assets/WorldCanvas-nM7ayBWW.js",
+          "status": 200,
+          "bytes": 446198
+        },
+        {
+          "path": "/games/nova/assets/crashReporter-tGVplTdg.js",
+          "status": 200,
+          "bytes": 2201081
+        },
+        {
+          "path": "/games/nova/assets/PlayerApp-DSevbRSv.js",
+          "status": 200,
+          "bytes": 8102
+        },
+        {
+          "path": "/games/nova/assets/crashReporter-DfrRmfbT.css",
+          "status": 200,
+          "bytes": 113702
+        },
+        {
+          "path": "/games/nova/assets/WorldCanvas-DbCF7P8d.css",
+          "status": 200,
+          "bytes": 3943
+        },
+        {
+          "path": "/games/nova/assets/PlayerApp-BgaCvp_Y.css",
+          "status": 200,
+          "bytes": 5490
+        },
+        {
+          "path": "/games/nova/assets/player-DLuZft3L.css",
+          "status": 200,
+          "bytes": 32143
+        },
+        {
+          "path": "/games/nova/assets/nova_core_bg-CcK2U0q1.wasm",
+          "status": 200,
+          "bytes": 3024033
+        },
+        {
+          "path": "/games/nova/game.nova-pak",
+          "status": 200,
+          "bytes": 223592
+        },
+        {
+          "path": "/favicon.ico",
+          "status": 404
+        }
+      ],
+      "scope": "No application backend or SPA fallback; actual editor Save and Build Web download, independent archive checks, nested-path player startup. Loopback HTTP, not public HTTPS/device certification."
+    }
+  ],
+  "captures": [
+    "v26.32-static-host-user-nested-editor.png",
+    "v26.32-static-host-user-nested29-zip-web-download.png",
+    "v26.32-static-host-user-nested-player.png"
+  ],
+  "consoleErrors": [],
+  "browser": {
+    "protocolVersion": "1.3",
+    "product": "Edg/147.0.3912.72",
+    "revision": "@d4380ba2b9dc3452fbccdc737e69d7f67a09122c",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/147.0.0.0 Safari/537.36 Edg/147.0.0.0",
+    "jsVersion": "14.7.25.7"
+  },
+  "commandTimeoutMs": 30000,
+  "scope": "Recorded real Edge input and DOM observations against production dist. Headless software rendering and download/file-input fallback; physical assistive technology and native OS picker behavior are not measured."
+}

@@ -69,6 +69,7 @@ try {
  })
 } finally {
  await writeFile(join(output,'navigation-frames.json'),JSON.stringify({generatedAt:new Date().toISOString(),scope:'Read-only rendered-frame observations around real input, including completed transitions from failed runs.',traces},null,2))
- const reportPath=join(process.cwd(),'release-audits/v26.32-ui-rebuild-navigation.json')
+ const reportRelease=process.argv.find(arg=>arg.startsWith('--qualification-release='))?.split('=')[1]||'26.32'
+ const reportPath=join(process.cwd(),`release-audits/v${reportRelease}-ui-rebuild-navigation.json`)
  try {const report=JSON.parse(await readFile(reportPath,'utf8'));await copyFile(reportPath,join(output,'navigation.json'));for(const name of report.captures)await copyFile(join(process.cwd(),'release-audits',name),join(output,name))}catch{}
 }

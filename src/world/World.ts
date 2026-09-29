@@ -22,7 +22,7 @@ import init, {
   engine_version,
   migrate_project_json
 } from '../../nova_core/pkg/nova_core.js'
-import { localPointToWorld, setWorldTransform, worldTransform } from './hierarchy'
+import { invalidateHierarchyIndex, localPointToWorld, setWorldTransform, worldTransform } from './hierarchy'
 import { TileMap2D } from './components'
 import { buildTileColliderDescriptors } from '../runtime/tilemap'
 import { assetState, readTextAsset } from '../assets/AssetDatabase'
@@ -672,6 +672,7 @@ export class World {
   }
 
   /** 清空求解器和对应句柄、差异记录、瓦片碰撞及计时缓存，重置运行句柄分配器。 */ invalidateRuntime(): void {
+    invalidateHierarchyIndex()
     this.runtime?.clear()
     this.bodyHandles.clear()
     this.connectionHandles.clear()

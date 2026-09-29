@@ -1,0 +1,35 @@
+{
+  "format": "nova-game-ui",
+  "version": 1,
+  "release": "26.28",
+  "engineVersion": "26.32.0",
+  "generatedAt": "2026-09-28T18:14:46.309Z",
+  "status": "passed",
+  "checks": [
+    {
+      "name": "Opening modal releases old focus/remap and blocks background keyboard activation",
+      "status": "passed"
+    },
+    {
+      "name": "Disabled input cannot consume stale keyboard focus or commit; IME remains native",
+      "status": "passed"
+    },
+    {
+      "name": "Held stick on first controller does not repeat because second controller is idle",
+      "status": "passed"
+    },
+    {
+      "name": "RTL slider pointer, filled bar and handle agree at both ends",
+      "status": "passed"
+    },
+    {
+      "name": "Keyboard and controller move RTL slider visually in the requested direction",
+      "status": "passed"
+    },
+    {
+      "name": "Accessible descriptions, values and tooltip use live locale with source fallback",
+      "status": "passed"
+    }
+  ],
+  "scope": "Actual GameUiRuntime/component/layout/localization/native bridge modules; host canvas recorder and simulated controller snapshots. Not physical controller, touch device, screen reader or OS IME acceptance."
+}

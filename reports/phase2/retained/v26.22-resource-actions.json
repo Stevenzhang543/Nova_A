@@ -1,0 +1,239 @@
+{
+  "format": "nova-v26.22-resource-actions",
+  "version": 1,
+  "release": "26.22",
+  "regressionOrigin": "26.22",
+  "engineVersion": "26.32.0",
+  "expectedRelease": "26.32",
+  "development": true,
+  "qualifiedRelease": null,
+  "generatedAt": "2026-09-28T18:10:48.005Z",
+  "status": "passed",
+  "scope": "Actual resource creation, metadata/profile and data Save APIs with named history and native reopen. Script records isolate import-setting persistence without claiming decoding/transcoding; output rendering and arbitrary schema rejection domains have separate evidence.",
+  "checks": [
+    {
+      "name": "Create animation asset preserves exact source and identity through transaction Undo Redo native reopen",
+      "status": "passed"
+    },
+    {
+      "name": "Create controller asset preserves exact source and identity through transaction Undo Redo native reopen",
+      "status": "passed"
+    },
+    {
+      "name": "Create animationMask asset preserves exact source and identity through transaction Undo Redo native reopen",
+      "status": "passed"
+    },
+    {
+      "name": "Create timeline asset preserves exact source and identity through transaction Undo Redo native reopen",
+      "status": "passed"
+    },
+    {
+      "name": "Create rig asset preserves exact source and identity through transaction Undo Redo native reopen",
+      "status": "passed"
+    },
+    {
+      "name": "Create skin asset preserves exact source and identity through transaction Undo Redo native reopen",
+      "status": "passed"
+    },
+    {
+      "name": "Create brushPreset asset preserves exact source and identity through transaction Undo Redo native reopen",
+      "status": "passed"
+    },
+    {
+      "name": "Create terrainRules asset preserves exact source and identity through transaction Undo Redo native reopen",
+      "status": "passed"
+    },
+    {
+      "name": "Create tilePalette asset preserves exact source and identity through transaction Undo Redo native reopen",
+      "status": "passed"
+    },
+    {
+      "name": "Create dataSchema asset preserves exact source and identity through transaction Undo Redo native reopen",
+      "status": "passed"
+    },
+    {
+      "name": "Create dataTable asset preserves exact source and identity through transaction Undo Redo native reopen",
+      "status": "passed"
+    },
+    {
+      "name": "Create resource Material asset preserves exact source and identity through transaction Undo Redo native reopen",
+      "status": "passed"
+    },
+    {
+      "name": "Create resource AnimationLibrary asset preserves exact source and identity through transaction Undo Redo native reopen",
+      "status": "passed"
+    },
+    {
+      "name": "Create resource InputMap asset preserves exact source and identity through transaction Undo Redo native reopen",
+      "status": "passed"
+    },
+    {
+      "name": "Create resource PhysicsMaterial asset preserves exact source and identity through transaction Undo Redo native reopen",
+      "status": "passed"
+    },
+    {
+      "name": "Create resource Theme asset preserves exact source and identity through transaction Undo Redo native reopen",
+      "status": "passed"
+    },
+    {
+      "name": "Create resource DataTable asset preserves exact source and identity through transaction Undo Redo native reopen",
+      "status": "passed"
+    },
+    {
+      "name": "Data schema and table Save retain the schema reference and typed row values",
+      "status": "passed"
+    },
+    {
+      "name": "Data row validation identifies missing keys duplicate identities and invalid numeric values",
+      "status": "passed"
+    },
+    {
+      "name": "Texture profile General applies explicit import fields and survives history",
+      "status": "passed"
+    },
+    {
+      "name": "Texture profile PixelArt applies explicit import fields and survives history",
+      "status": "passed"
+    },
+    {
+      "name": "Texture profile UI applies explicit import fields and survives history",
+      "status": "passed"
+    },
+    {
+      "name": "Texture profile NormalMap applies explicit import fields and survives history",
+      "status": "passed"
+    },
+    {
+      "name": "Audio profile SoundEffect preserves import intent without claiming transcoding",
+      "status": "passed"
+    },
+    {
+      "name": "Audio profile Music preserves import intent without claiming transcoding",
+      "status": "passed"
+    },
+    {
+      "name": "Audio profile Voice preserves import intent without claiming transcoding",
+      "status": "passed"
+    },
+    {
+      "name": "Audio profile Streaming preserves import intent without claiming transcoding",
+      "status": "passed"
+    },
+    {
+      "name": "Bulk metadata deduplicates tags and preserves independent asset identity",
+      "status": "passed"
+    },
+    {
+      "name": "Render preset Performance applies declared settings with reversible history",
+      "status": "passed"
+    },
+    {
+      "name": "Render preset Balanced applies declared settings with reversible history",
+      "status": "passed"
+    },
+    {
+      "name": "Render preset High applies declared settings with reversible history",
+      "status": "passed"
+    },
+    {
+      "name": "Render preset Ultra applies declared settings with reversible history",
+      "status": "passed"
+    },
+    {
+      "name": "Render preset PixelArt applies declared settings with reversible history",
+      "status": "passed"
+    },
+    {
+      "name": "Build profile debug synchronizes development flag and retains history",
+      "status": "passed"
+    },
+    {
+      "name": "Build profile release synchronizes development flag and retains history",
+      "status": "passed"
+    },
+    {
+      "name": "Build preset windows-release applies matching target profile and cache policy",
+      "status": "passed"
+    },
+    {
+      "name": "Build preset web-release applies matching target profile and cache policy",
+      "status": "passed"
+    },
+    {
+      "name": "Build preset desktop-debug applies matching target profile and cache policy",
+      "status": "passed"
+    },
+    {
+      "name": "Build preset headless-server applies matching target profile and cache policy",
+      "status": "passed"
+    },
+    {
+      "name": "Build preset linux-ci applies matching target profile and cache policy",
+      "status": "passed"
+    },
+    {
+      "name": "Build preset macos-ci applies matching target profile and cache policy",
+      "status": "passed"
+    },
+    {
+      "name": "Unknown build preset leaves all authored settings unchanged",
+      "status": "passed"
+    },
+    {
+      "name": "Trash restore preserves asset identity and source; purge removes only the recovery entry",
+      "status": "passed"
+    },
+    {
+      "name": "Team ownership task notes and build presets retain independent records through document history",
+      "status": "passed"
+    },
+    {
+      "name": "Binary asset locks reject another owner and release only the matching owner",
+      "status": "passed"
+    },
+    {
+      "name": "Tile layer duplicate isolates cell arrays and removal retains the original layer",
+      "status": "passed"
+    },
+    {
+      "name": "Tile clipboard and transforms apply to selected cells and survive document history",
+      "status": "passed"
+    },
+    {
+      "name": "Virtual control creation persists explicit action labels and independent identities",
+      "status": "passed"
+    },
+    {
+      "name": "Input rebinding rejects noninteger and nonfinite indices without changing bindings",
+      "status": "passed"
+    },
+    {
+      "name": "Embedded image deduplication and tileset creation retain the texture reference",
+      "status": "passed"
+    },
+    {
+      "name": "Verified-source recovery retains original text through transaction history",
+      "status": "passed"
+    },
+    {
+      "name": "Animation reimport retains the source reference and chosen sample rate",
+      "status": "passed"
+    },
+    {
+      "name": "Skin auto-weighting stores finite normalized bone weights through history",
+      "status": "passed"
+    },
+    {
+      "name": "Continuous tile stroke paints intermediate cells inside one document transaction",
+      "status": "passed"
+    },
+    {
+      "name": "Package quarantine is persisted and missing package update leaves document unchanged",
+      "status": "passed"
+    },
+    {
+      "name": "Batch file import preserves script bytes and cancelled import cannot create an asset",
+      "status": "passed"
+    }
+  ]
+}

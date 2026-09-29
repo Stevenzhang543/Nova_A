@@ -1,0 +1,30 @@
+{
+  "status": "failed",
+  "engineVersion": "26.32.0",
+  "checks": [
+    {
+      "name": "Every persisted primitive component kind has shared registry metadata",
+      "status": "failed",
+      "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:\n+ actual - expected\n\n+ [\n+   'WeldJoint2D',\n+   'RopeJoint2D',\n+   'MotorJoint2D'\n+ ]\n- []\n"
+    },
+    {
+      "name": "WeldJoint2D composes, toggles at runtime and roundtrips through project serialization",
+      "status": "failed",
+      "error": "Error: Unknown component requirement: WeldJoint2D."
+    },
+    {
+      "name": "MotorJoint2D composes, toggles at runtime and roundtrips through project serialization",
+      "status": "failed",
+      "error": "Error: Unknown component requirement: MotorJoint2D."
+    },
+    {
+      "name": "RopeJoint2D composes, toggles at runtime and roundtrips through project serialization",
+      "status": "failed",
+      "error": "Error: Unknown component requirement: RopeJoint2D."
+    }
+  ],
+  "sourceHashes": {
+    "src/world/componentRegistry.ts": "bb327d4261db304f8abceade8d14252f9781014e09e81ad67170679f97984b46"
+  },
+  "scope": "Real component registry/composition/mutation/project modules. Solver behavior remains covered separately."
+}

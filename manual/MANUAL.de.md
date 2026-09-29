@@ -1,9 +1,16 @@
-# Nova_A 26.32 – Vollständiges Handbuch
+# Nova_A 26.33 – Vollständiges Handbuch
+
+## 26.33 — Zuverlässige Bearbeitung und Spielstände
+
+Engine: 26.33.0.
+
+Während der Wiedergabe gehören Bewegungstasten dem Spiel. Stoppen Sie die Wiedergabe vor Editor-Transformationsbefehlen. Prüfen Sie nach einer Prefab-Änderung die Kindtransformationen, Rückgängig/Wiederholen sowie Speichern und erneutes Öffnen. Spielstand-Slots sind von Projektdateien getrennt. Behalten Sie beim Schreiben mehrerer Werte den gewählten Slot bei und behandeln Sie Schreibfehler. Die Wiederherstellung dient fehlgeschlagenen Ladevorgängen. Benutzerdefinierte Serialisierer stellen ihre gespeicherten Namensräume wieder her. WeldJoint2D, RopeJoint2D und MotorJoint2D verwenden das gemeinsame Komponentenregister. Prüfen Sie das exportierte Coin-Trail-Spiel mit sechs Kontrollpunkten und R zum Neustart.
+
 
 <!-- NOVA_V2630_LESSON -->
 ## 26.30 — Integriertes Authoring und Release-Prüfung
 
-Engine: **26.32.0** · Projektformat2/Schema29. Mit einer Projektkopie beginnen und das Migrationsbackup behalten. Project Health prüfen, ungültige Referenzen korrigieren, speichern und erneut öffnen. Die einzige alte Projektkopie nicht überschreiben.
+Engine: **26.33.0** · Projektformat2/Schema29. Mit einer Projektkopie beginnen und das Migrationsbackup behalten. Project Health prüfen, ungültige Referenzen korrigieren, speichern und erneut öffnen. Die einzige alte Projektkopie nicht überschreiben.
 
 Eine Vorlage aus Library anlegen, Hauptszene und Einstiegsskript finden und einen sichtbaren Wert ändern. Vorschau starten/stoppen, rückgängig machen/wiederholen, speichern und erneut öffnen. Ein Web-Spiel exportieren und den heruntergeladenen Player separat prüfen. Dies für jede tatsächlich verwendete Vorlage wiederholen; ein Katalogeintrag ist kein bestandener Durchlauf.
 

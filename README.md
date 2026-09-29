@@ -3,7 +3,10 @@
 
 # Nova_A 2D Game Engine & Editor
 
-**26.32 source / Engine 26.32.0:** [release notes](docs/RELEASE_NOTES_26_32.md), [every edit](docs/EDIT_LEDGER_26_32.md), [editor reference study](docs/COMPETITIVE_REVIEW_26_32.md), [form design](docs/FORM_DESIGN_26_32.md), [visual audit](docs/UI_AUDIT_PLAN_26_32.md), and [scope](docs/ISSUE_CLOSURE_26_32.md). The refreshed editor uses compact dock surfaces, attributed Godot SVG controls, bounded fields/sliders and responsive property layouts. Final source-bound reports establish release qualification.
+**26.33 development / Engine 26.33.0:** [release notes](docs/RELEASE_NOTES_26_33.md), [every edit](docs/engine/EDIT_LEDGER_26_33.md), [capability catalog](docs/engine/CAPABILITY_CATALOG.md), [audit and comparison](docs/engine/FEATURE_MATRIX.md), [verification](docs/engine/TEST_MATRIX.md). Release files are prepared under `releases/26.33`; source-bound evidence establishes final qualification.
+
+
+**Previous 26.32 source / Engine 26.32.0:** [release notes](docs/RELEASE_NOTES_26_32.md), [every edit](docs/EDIT_LEDGER_26_32.md), [editor reference study](docs/COMPETITIVE_REVIEW_26_32.md), [form design](docs/FORM_DESIGN_26_32.md), [visual audit](docs/UI_AUDIT_PLAN_26_32.md), and [scope](docs/ISSUE_CLOSURE_26_32.md). The refreshed editor uses compact dock surfaces, attributed Godot SVG controls, bounded fields/sliders and responsive property layouts. Final source-bound reports establish release qualification.
 
 **Previous source 26.31 / Engine 26.31.0:** [release notes](docs/RELEASE_NOTES_26_31.md), [every edit](docs/EDIT_LEDGER_26_31.md), [feature and binding inventory](docs/FEATURE_INVENTORY_26_31.md), [source map](docs/SOURCE_MAP_26_31.md), [panel inventory](docs/PANEL_INVENTORY_26_31.md), and [audit findings and limits](docs/ISSUE_CLOSURE_26_31.md). This release improves dock sizing, form readability and SVG controls. Source-bound release evidence, not historical reports, establishes final qualification.
 
@@ -16,7 +19,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE.md)
 [![Tier 1](https://img.shields.io/badge/Tier%201-Windows%20%7C%20Web-63c6ff)](./docs/PLATFORM_BUILD_MATRIX_5_0.md)
-[![Release](https://img.shields.io/badge/source-26.32-63c6ff)]()
+[![Release](https://img.shields.io/badge/source-26.33-63c6ff)]()
 
 <!-- NOVA_V2621_DEVELOPMENT -->
 **Next series (development):** [26.21–26.30 coding manual](docs/ROADMAP_26_21_TO_26_30.md), [current feature inventory](docs/FEATURE_INVENTORY_26_21.md), [source map](docs/SOURCE_MAP_26_21.md), [engine comparison](docs/COMPETITIVE_REVIEW_26_21.md), [panel audit](docs/PANEL_AUDIT_26_21.md), [open gaps](docs/GAP_REGISTER_26_21.md), and [every development edit](docs/EDIT_LEDGER_26_21.md). 26.21 source and localized teaching are implemented; release qualification is tracked in [the 26.21 acceptance tracker](docs/IMPLEMENTATION_TRACKER_26_21.md). A packaged release is accepted only with its source-bound evidence and verified checksums.

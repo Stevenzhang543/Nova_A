@@ -1,0 +1,43 @@
+{
+  "format": "nova-v26.29-world-audit",
+  "version": 1,
+  "release": "26.29",
+  "regressionOrigin": "26.29",
+  "engineVersion": "26.32.0",
+  "buildEngineVersion": "26.32.0",
+  "generatedAt": "2026-09-28T18:30:53.745Z",
+  "development": true,
+  "expectedRelease": "26.32",
+  "qualificationTarget": "26.29",
+  "qualifiedRelease": null,
+  "baselineVersion": "26.32.0",
+  "overlayVersion": "26.29.0",
+  "sourceRoots": [
+    "."
+  ],
+  "buildRoot": ".",
+  "status": "passed",
+  "checks": [
+    {
+      "name": "Retired streamed agents and regions release real navigation caches",
+      "status": "passed"
+    },
+    {
+      "name": "Missing target stops actual entity velocity immediately before repath deadline and rejoins safely",
+      "status": "passed"
+    },
+    {
+      "name": "Disabled target is not silently replaced with the agent itself",
+      "status": "passed"
+    },
+    {
+      "name": "Imported handoff cannot mutate unrelated cells or the owning cell root",
+      "status": "passed"
+    },
+    {
+      "name": "Partial handoff preserves disabled state and replay restores finite captured motion deterministically",
+      "status": "passed"
+    }
+  ],
+  "scope": "Production navigation cache/target lifecycle and streamed transform/velocity handoff ownership. Does not claim full world rollback, network replay or physical-device qualification."
+}

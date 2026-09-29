@@ -1,0 +1,51 @@
+{
+  "format": "nova-v26.22-identity",
+  "version": 1,
+  "release": "26.22",
+  "regressionOrigin": "26.22",
+  "engineVersion": "26.32.0",
+  "expectedRelease": "26.32",
+  "development": true,
+  "qualifiedRelease": null,
+  "generatedAt": "2026-09-28T18:09:35.541Z",
+  "status": "passed",
+  "scope": "Executed actual identity source in isolated host contexts. Normalization intentionally follows the current project contract (UUID versions1–5). Bounded distinctness is not a collision or cryptographic-security guarantee; the legacy Math.random fallback is tested only for shape and dispatch.",
+  "checks": [
+    {
+      "name": "Native crypto UUID creation emits valid distinct identifiers in a bounded sample",
+      "status": "passed",
+      "covers": [
+        "src/world/identity.ts#createUuid"
+      ]
+    },
+    {
+      "name": "UUID normalization preserves all currently supported version and variant combinations",
+      "status": "passed",
+      "covers": [
+        "src/world/identity.ts#normalizeUuid"
+      ]
+    },
+    {
+      "name": "Malformed or unsupported identities use a fresh generator without coercing objects",
+      "status": "passed",
+      "covers": [
+        "src/world/identity.ts#normalizeUuid",
+        "src/world/identity.ts#createUuid"
+      ]
+    },
+    {
+      "name": "Missing randomUUID uses random bytes with explicit UUID version and variant bits",
+      "status": "passed",
+      "covers": [
+        "src/world/identity.ts#createUuid"
+      ]
+    },
+    {
+      "name": "Legacy hosts without crypto still produce correctly shaped UUIDs",
+      "status": "passed",
+      "covers": [
+        "src/world/identity.ts#createUuid"
+      ]
+    }
+  ]
+}

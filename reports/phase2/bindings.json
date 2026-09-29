@@ -1,0 +1,205 @@
+{
+  "format": "nova-v26.17-bindings-audit",
+  "version": 1,
+  "release": "26.17",
+  "regressionOrigin": "26.17",
+  "engineVersion": "26.32.0",
+  "buildEngineVersion": "26.32.0",
+  "generatedAt": "2026-09-28T18:41:06.700Z",
+  "development": true,
+  "expectedRelease": "26.32",
+  "qualificationTarget": "26.17",
+  "qualifiedRelease": null,
+  "baselineVersion": "26.32.0",
+  "overlayVersion": "26.17.0",
+  "sourceRoots": [
+    "."
+  ],
+  "buildRoot": ".",
+  "status": "passed",
+  "scope": "Programmer fixtures invoking real World and compiled WASM, public lifecycle and AI modules; no browser interaction is claimed.",
+  "host": {
+    "platform": "win32",
+    "release": "10.0.26200",
+    "cpu": "AMD Ryzen 9 8945HX with Radeon Graphics        ",
+    "node": "v22.22.2"
+  },
+  "wasm": {
+    "bytes": 3024033,
+    "sha256": "35cd72a444d008eb04c0b6827843d05fa1a75eddd791aed3bddd7c7d1a08b55b"
+  },
+  "checks": [
+    {
+      "name": "Every scalar body/material/primary collider ABI binding accepts edits after body creation with the same native handle",
+      "status": "passed"
+    },
+    {
+      "name": "Joint and rope property edits reach retained connection records without stale rope data overwriting joint limits",
+      "status": "passed"
+    },
+    {
+      "name": "Animation ownership prevents a second physics integration and retains velocity for returning to Physics",
+      "status": "passed"
+    },
+    {
+      "name": "Parent scale determines automatic mass and material asset edits preserve inline authoring values",
+      "status": "passed"
+    },
+    {
+      "name": "Mirrored shape offsets and one-way normals survive normalization; concave geometry remains unchanged on repeated queries",
+      "status": "passed"
+    },
+    {
+      "name": "Area triggers work without effectors, honor scale and target monitorable, and emit exits on removal",
+      "status": "passed"
+    },
+    {
+      "name": "AI blackboard writes persist across ticks and authored revision/retirement resets Wait and overrides",
+      "status": "passed"
+    },
+    {
+      "name": "Perception uses world units, parent rotation, tags, deterministic distance ties and bounded results",
+      "status": "passed"
+    },
+    {
+      "name": "An acyclic shared-subtree amplification graph is bounded per tree and frame",
+      "status": "passed"
+    },
+    {
+      "name": "Reactive scene hosts preserve shared leases, persistent descendants and lifetime generations across unload/reload",
+      "status": "passed"
+    },
+    {
+      "name": "Malformed streamed handoff imports and cyclic/nonfinite saves preserve the previous saved state atomically",
+      "status": "passed"
+    },
+    {
+      "name": "Scene transition aligns new entities with shifted persistent objects and preserves origin-relative connections",
+      "status": "passed"
+    },
+    {
+      "name": "Seeded malformed geometry is bounded and never publishes nonfinite solver shapes",
+      "status": "passed"
+    },
+    {
+      "name": "Retained large-world physics/query replay preserves finite state without configuration rebuilds on unchanged bodies",
+      "status": "passed"
+    },
+    {
+      "name": "A broken component joint stays broken until explicitly disabled and re-enabled",
+      "status": "passed"
+    },
+    {
+      "name": "A persistent streamed rope is not translated again when its released scene is reopened",
+      "status": "passed"
+    },
+    {
+      "name": "Deferred AI machines consume a broadcast once when their budgeted tick arrives",
+      "status": "passed"
+    },
+    {
+      "name": "Top-down component input accelerates once per fixed tick, stops after release and respects collisions",
+      "status": "passed"
+    }
+  ],
+  "observations": [
+    {
+      "bodyAbiEdits": [
+        {
+          "path": "mass",
+          "index": 8
+        },
+        {
+          "path": "velocity.x",
+          "index": 4
+        },
+        {
+          "path": "velocity.y",
+          "index": 5
+        },
+        {
+          "path": "acceleration.x",
+          "index": 6
+        },
+        {
+          "path": "acceleration.y",
+          "index": 7
+        },
+        {
+          "path": "angularVelocity",
+          "index": 15
+        },
+        {
+          "path": "torque",
+          "index": 16
+        },
+        {
+          "path": "gravityScale",
+          "index": 17
+        },
+        {
+          "path": "linearDamping",
+          "index": 18
+        },
+        {
+          "path": "angularDamping",
+          "index": 19
+        },
+        {
+          "path": "force.x",
+          "index": 21
+        },
+        {
+          "path": "force.y",
+          "index": 22
+        },
+        {
+          "path": "localGravity",
+          "index": 23
+        },
+        {
+          "path": "autoInertia",
+          "index": 25
+        },
+        {
+          "path": "inertia",
+          "index": 26
+        },
+        {
+          "path": "freezeRotation",
+          "index": 46
+        },
+        {
+          "path": "sleepingAllowed",
+          "index": 48
+        },
+        {
+          "path": "sleeping",
+          "index": 49
+        },
+        {
+          "path": "sleepTimer",
+          "index": 50
+        }
+      ],
+      "nativeHandleRetained": true
+    },
+    {
+      "aiDAG": {
+        "entities": 24,
+        "nodeEvaluations": 65536,
+        "milliseconds": 196.65989999999965
+      }
+    },
+    {
+      "workload": {
+        "bodies": 1000,
+        "physicsFrames": 30,
+        "queries": 100,
+        "physicsMs": 1064.3961000000004,
+        "queryMs": 1240.8765999999996,
+        "configurationRebuilds": 1
+      }
+    }
+  ]
+}

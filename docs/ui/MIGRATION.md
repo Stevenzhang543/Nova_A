@@ -354,3 +354,7 @@ Source audit after migration:
 - Native button semantics remain for data rows, menu controllers, meaningful workflow confirmations and source editors; routine commands use the original SVG family. Native title tooltips and the full-selected-value overlay share the tooltip strategy.
 - Separate player CSS is retained; no second editor cascade remains.
 - Explicit user jobs/network hosting continue while hidden. Visibility-only observers, auditions, gestures, timers and measurement work pause; project replacement disposes caches.
+
+## 26.33 integration verification
+
+Retained the completed shared editor rebuild. The current 26.33 production bundle passed all ten layout checks over 197 actual routes, including 1366/1600/1920 desktop widths, translated/large-text layouts, conditional panels, pending edits and real save. Contact sheets for all 197 routes were visually reviewed. The engine fixes add no alternative control patterns. Final frozen-source qualification is recorded in the release evidence, separately from these development checks.

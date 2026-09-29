@@ -112,13 +112,13 @@ const recoveryCandidates = new Map<string, string>()
   serializers.set(key, serializer); return /** 结构说明（自动提取）：匿名回调；无显式参数；直接调用 serializers.get、serializers.delete。 */ () => { if (serializers.get(key) === serializer) serializers.delete(key) }
 }
 
-/** 结构说明（自动提取）：serializeCustomValues；输入 values；直接调用 sort、normalizeSaveValue、serializer.serialize；写入 result[…]；返回路径包含 result；包含循环处理。 */ function serializeCustomValues(values: Record<string, SaveValue>): Record<string, SaveValue> { const result = { ...values }; for (const [namespace, serializer] of [...serializers].sort(/* 调用 first.localeCompare(second) 并返回调用结果。 */ ([first], [second]) => first.localeCompare(second))) result[`@custom.${namespace}`] = normalizeSaveValue(serializer.serialize()); return result }
-/** 结构说明（自动提取）：deserializeCustomValues；输入 values；直接调用 serializer.deserialize；包含循环处理。 */ function deserializeCustomValues(values: Record<string, SaveValue>): void { for (const [namespace, serializer] of serializers) serializer.deserialize(values[`@custom.${namespace}`]) }
+/** 结构说明（自动提取）：serializeCustomValues；输入 values；直接调用 sort、normalizeSaveValue、serializer.serialize；写入 result[…]；返回路径包含 result；包含循环处理。 */ function serializeCustomValues(values: Record<string, SaveValue>): Record<string, SaveValue> { const result = { ...values }; for (const [namespace, serializer] of [...serializers].sort(/* 调用 first.localeCompare(second) 并返回调用结果。 */ ([first], [second]) => first.localeCompare(second))) result[`_custom.${namespace}`] = normalizeSaveValue(serializer.serialize()); return result }
+/** 结构说明（自动提取）：deserializeCustomValues；输入 values；直接调用 serializer.deserialize；包含循环处理。 */ function deserializeCustomValues(values: Record<string, SaveValue>): void { for (const [namespace, serializer] of serializers) serializer.deserialize(values[`_custom.${namespace}`]) }
 /** 结构说明（自动提取）：report；输入 progress、phase、value、message；直接调用 progress；写入 saveGameState.progress、saveGameState.progressMessage。 */ function report(progress: ((value: SaveProgress) => void) | undefined, phase: SaveProgress['phase'], value: number, message: string): void { saveGameState.progress = value; saveGameState.progressMessage = message; progress?.({ phase, progress: value, message }) }
 /** 结构说明（自动提取）：checkAbort；输入 signal；直接调用 DOMException；包含显式抛错路径。 */ function checkAbort(signal?: AbortSignal): void { if (signal?.aborted) throw new DOMException('Save operation was cancelled.', 'AbortError') }
 /** 结构说明（自动提取）：asyncCheckpoint；输入 signal；直接调用 checkAbort、Promise.resolve；等待异步结果。 */ async function asyncCheckpoint(signal?: AbortSignal): Promise<void> { checkAbort(signal); await Promise.resolve(); checkAbort(signal) }
 
-/** 结构说明（自动提取）：useSaveProject；输入 projectId、slot；直接调用 safeName、platformSaveLocation、loadSaveSlot；写入 saveGameState.platformLocation、saveGameState.projectId。 */ export function useSaveProject(projectId = projectSessionState.id, slot = 'slot1'): void {
+/** 结构说明（自动提取）：useSaveProject；输入 projectId、slot；直接调用 safeName、platformSaveLocation、loadSaveSlot；写入 saveGameState.platformLocation、saveGameState.projectId。 */ export function useSaveProject(projectId = projectSessionState.id, slot = safeName(projectId, 'project') === saveGameState.projectId ? saveGameState.slot : 'slot1'): void {
   const safeProject = safeName(projectId, 'project'), safeSlot = safeName(slot, 'slot1'); saveGameState.platformLocation = platformSaveLocation(safeProject)
   if (saveGameState.projectId === safeProject && saveGameState.slot === safeSlot) return
   saveGameState.projectId = safeProject; loadSaveSlot(safeSlot)
@@ -130,14 +130,22 @@ const recoveryCandidates = new Map<string, string>()
   return null
 }
 
+/** A verified primary save is authoritative even if optional transaction cleanup is denied. */
+function cleanupSaveTransaction(key: string): void {
+  for (const suffix of ['.tmp', '.journal']) {
+    try { localStorage.removeItem(`${key}${suffix}`) } catch { /* Keep the verified primary usable; retry cleanup on the next load. */ }
+  }
+}
+
 /** 结构说明（自动提取）：loadSaveSlot；输入 slot；直接调用 safeName、Object.assign、Error、storageKey、localStorage.getItem 等；写入 saveGameState.values、saveGameState.lastCommittedAt、saveGameState.dirty、saveGameState.recoveryAvailable 等；包含显式抛错路径。 */ export function loadSaveSlot(slot: string): boolean {
   const safeSlot = safeName(slot, 'slot1'), projectId = saveGameState.projectId || safeName(projectSessionState.id, 'project')
   Object.assign(saveGameState, { projectId, slot: safeSlot, error: '', recoveryAvailable: false, recoverySource: '', recoveryMessage: '' })
   try {
     if (typeof localStorage === 'undefined') throw new Error('Persistent storage is unavailable in this runtime.')
     const key = storageKey(projectId, safeSlot), source = localStorage.getItem(key)
+    recoveryCandidates.delete(key)
     if (source) {
-      try { const envelope = parseEnvelope(source), migrated = migrateSaveData(envelope.values, envelope.version); saveGameState.values = migrated.values; deserializeCustomValues(migrated.values); saveGameState.lastCommittedAt = envelope.savedAt; saveGameState.dirty = false; localStorage.removeItem(`${key}.journal`); localStorage.removeItem(`${key}.tmp`); return true }
+      try { const envelope = parseEnvelope(source), migrated = migrateSaveData(envelope.values, envelope.version); saveGameState.values = migrated.values; deserializeCustomValues(migrated.values); saveGameState.lastCommittedAt = envelope.savedAt; saveGameState.dirty = false; cleanupSaveTransaction(key); return true }
       catch (primaryError) { const candidate = recoveryCandidate(projectId, safeSlot); if (candidate) { recoveryCandidates.set(key, candidate.value); saveGameState.recoveryAvailable = true; saveGameState.recoverySource = candidate.source; saveGameState.recoveryMessage = `The primary save is invalid. A valid ${candidate.source} copy is available.` } throw primaryError }
     }
     const legacySource = localStorage.getItem(legacyStorageKey(projectId, safeSlot))
@@ -178,7 +186,8 @@ const recoveryCandidates = new Map<string, string>()
     localStorage.setItem(`${key}.tmp`, source); parseEnvelope(localStorage.getItem(`${key}.tmp`) ?? '')
     if (previous) localStorage.setItem(`${key}.backup`, previous)
     localStorage.setItem(key, source); parseEnvelope(localStorage.getItem(key) ?? '')
-    localStorage.removeItem(`${key}.tmp`); localStorage.removeItem(`${key}.journal`)
+    cleanupSaveTransaction(key)
+    recoveryCandidates.delete(key)
     saveGameState.values = migrated.values; saveGameState.dirty = false; saveGameState.lastCommittedAt = envelope.savedAt; return true
   } catch (error) { saveGameState.error = error instanceof Error ? error.message : String(error); return false }
 }

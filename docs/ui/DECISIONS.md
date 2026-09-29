@@ -217,3 +217,7 @@ Never; only the exact QA mechanism may change.
 **Evidence:** Browser checks retain console/profiler/source/graph state during navigation and reset cached console/profiler state after a real project replacement without page reload. Project save still blocks unsaved asset drafts; tests save those assets through their actual commands before saving the project.
 
 **Consequences:** Persistent navigation cannot leak drafts, filters or listeners between projects. A running network host is not made undiscoverable by merely hiding its configuration panel.
+
+## 26.33: preserve the integrated editor system
+
+The Phase II defects concern hierarchy identity, runtime save transactions, gameplay keyboard ownership and missing joint descriptors. Repair their owning systems rather than introducing parallel editor UI. Shared numeric controls, SVG commands and persistent panels remain authoritative. Play mode owns gameplay shortcuts; editor transform shortcuts resume when editing resumes.

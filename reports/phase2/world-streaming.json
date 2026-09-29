@@ -1,0 +1,126 @@
+{
+  "format": "nova-v26.17-world-streaming-audit",
+  "version": 1,
+  "release": "26.17",
+  "regressionOrigin": "26.17",
+  "engineVersion": "26.32.0",
+  "buildEngineVersion": "26.32.0",
+  "generatedAt": "2026-09-28T18:33:10.283Z",
+  "development": true,
+  "expectedRelease": "26.32",
+  "qualificationTarget": "26.17",
+  "qualifiedRelease": null,
+  "baselineVersion": "26.32.0",
+  "overlayVersion": "26.17.0",
+  "sourceRoots": [
+    "."
+  ],
+  "buildRoot": ".",
+  "measurements": [
+    {
+      "workload": "20scenes ×10entities ×5load/unload cycles",
+      "activations": 100,
+      "peakEntities": 10,
+      "finalEntities": 0,
+      "milliseconds": 244.20629999999983,
+      "cachedScenes": 0
+    }
+  ],
+  "host": {
+    "node": "v22.22.2",
+    "cpu": "AMD Ryzen 9 8945HX with Radeon Graphics        ",
+    "logicalCpus": 32,
+    "platform": "win32",
+    "os": "10.0.26200",
+    "architecture": "x64",
+    "memoryBytes": 34142187520
+  },
+  "status": "passed",
+  "scope": "Programmer fixtures invoking real World/gameplay/scene/stream modules with compiled WASM. Native attachment is explicit for the Node host, not user-input evidence.",
+  "wasm": {
+    "bytes": 3024033,
+    "sha256": "35cd72a444d008eb04c0b6827843d05fa1a75eddd791aed3bddd7c7d1a08b55b"
+  },
+  "checks": [
+    {
+      "name": "World origin translation retains native handles and counters, including parented bodies and query coordinates",
+      "status": "passed",
+      "milliseconds": 15.813599999999951
+    },
+    {
+      "name": "Gameplay origin shifts preserve navigation paths, absolute targets, cached grid and editor camera projection",
+      "status": "passed",
+      "milliseconds": 6.415700000000015
+    },
+    {
+      "name": "Compiled native rope positions and cached records shift together without rebuilding constraints",
+      "status": "passed",
+      "milliseconds": 4.68100000000004
+    },
+    {
+      "name": "Idle characters refresh removed floors through the gameplay path",
+      "status": "passed",
+      "milliseconds": 3.8063999999999396
+    },
+    {
+      "name": "Removed moving floors impart no stale platform velocity to idle characters",
+      "status": "passed",
+      "milliseconds": 1.093499999999949
+    },
+    {
+      "name": "Scene prefetch installs no simulation bodies; activation installs actual queryable bodies and preserves authored disabled objects",
+      "status": "passed",
+      "milliseconds": 5.006800000000112
+    },
+    {
+      "name": "Shared scene leases retain membership until the final active owner releases",
+      "status": "passed",
+      "milliseconds": 1.189600000000155
+    },
+    {
+      "name": "Released scene handoffs preserve UUID, velocity and relative coordinates across later origin shifts",
+      "status": "passed",
+      "milliseconds": 1.6445000000003347
+    },
+    {
+      "name": "Malformed scenes, missing parents and live UUID conflicts reject without replacing existing membership",
+      "status": "passed",
+      "milliseconds": 1.1567999999997483
+    },
+    {
+      "name": "Chunk activation reaches native queries, deactivation removes them and authored child flags survive",
+      "status": "passed",
+      "milliseconds": 6.192600000000311
+    },
+    {
+      "name": "Cancellation stays stopped across updates until Retry is requested",
+      "status": "passed",
+      "milliseconds": 4.438600000000406
+    },
+    {
+      "name": "Dependencies prefetch before activation, cycles and missing cells fail without retry loops",
+      "status": "passed",
+      "milliseconds": 3.258100000000013
+    },
+    {
+      "name": "In-flight admission waits for unload and never exceeds the authored memory budget",
+      "status": "passed",
+      "milliseconds": 1.8937999999998283
+    },
+    {
+      "name": "Source changes during a pending transition discard the old scene lease and activate the new source",
+      "status": "passed",
+      "milliseconds": 1.247599999999693
+    },
+    {
+      "name": "Portal arrival uses the committed destination transform, prevents immediate bounce and reports missing targets",
+      "status": "passed",
+      "milliseconds": 2.4897000000000844
+    },
+    {
+      "name": "Measured repeated scene activation retires all temporary membership and preserves identity on replay",
+      "status": "passed",
+      "milliseconds": 252.83929999999964
+    }
+  ]
+}

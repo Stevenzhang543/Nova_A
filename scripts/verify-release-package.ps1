@@ -111,7 +111,7 @@ $releaseCandidate = if ([string]::IsNullOrWhiteSpace($ReleaseDirectory)) { Join-
 $releaseRoot = (Resolve-Path -LiteralPath $releaseCandidate).Path
 $releaseParent = [IO.Path]::GetDirectoryName($releaseRoot).TrimEnd('\')
 $releaseLeaf = [IO.Path]::GetFileName($releaseRoot)
-if (-not $releaseParent.Equals($releasesRoot, [StringComparison]::OrdinalIgnoreCase) -or ($releaseLeaf -ne "v$Version" -and $releaseLeaf -notmatch "^\.v$([regex]::Escape($Version))-staging-[a-f0-9]{32}$")) {
+if (-not $releaseParent.Equals($releasesRoot, [StringComparison]::OrdinalIgnoreCase) -or ($releaseLeaf -ne $Version -and $releaseLeaf -ne "v$Version" -and $releaseLeaf -notmatch "^\.v$([regex]::Escape($Version))-staging-[a-f0-9]{32}$")) {
   throw "Release verification target must be the final release directory or an owned staging sibling: $releaseRoot"
 }
 $expected = @(

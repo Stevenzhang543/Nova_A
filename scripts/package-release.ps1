@@ -323,7 +323,8 @@ if ($requiresFrozenSnapshot) {
 $gitSafeDirectory = $projectRoot.Replace('\', '/')
 $sourceIdentity = Get-SourceIdentity -Root $projectRoot
 Assert-VersionAuthorities -Root $projectRoot -MachineVersion $MachineVersion
-$finalReleaseDirectory = Join-Path $projectRoot "releases\v$Version"
+$releaseFolderName = if ([version]$MachineVersion -ge [version]'26.31.0') { $Version } else { "v$Version" }
+$finalReleaseDirectory = Join-Path (Join-Path $projectRoot 'releases') $releaseFolderName
 if (Test-Path -LiteralPath $finalReleaseDirectory) { throw "Immutable release already exists: $finalReleaseDirectory" }
 $notesPath = Join-Path $projectRoot "release-audits\v$Version-release-notes.md"
 $ledgerPath = Join-Path $projectRoot "release-audits\v$Version-edit-ledger.md"
@@ -596,7 +597,7 @@ foreach ($line in Get-Content -LiteralPath $checksumPath) {
 
 $resolvedFinalRelease = [IO.Path]::GetFullPath($finalReleaseDirectory)
 $finalReleaseParent = [IO.Path]::GetDirectoryName($resolvedFinalRelease)
-if (-not $finalReleaseParent.Equals($releaseRoot, [StringComparison]::OrdinalIgnoreCase) -or [IO.Path]::GetFileName($resolvedFinalRelease) -ne "v$Version") { throw "Unsafe final release target: $resolvedFinalRelease" }
+if (-not $finalReleaseParent.Equals($releaseRoot, [StringComparison]::OrdinalIgnoreCase) -or [IO.Path]::GetFileName($resolvedFinalRelease) -ne $releaseFolderName) { throw "Unsafe final release target: $resolvedFinalRelease" }
 if ($requiresFrozenSnapshot) {
   & node (Join-Path $PSScriptRoot 'release-source-snapshot.mjs') "--verify=$snapshotPath" "--root=$projectRoot" | Out-Null
   if ($LASTEXITCODE -ne 0) { throw 'Source changed during packaging; discard this candidate and rebuild from its frozen source.' }

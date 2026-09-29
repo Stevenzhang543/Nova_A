@@ -36,20 +36,21 @@ async function connect(url, commandTimeoutMs = 30000) {
 
 /** 启动独立 Edge 和本机生产预览，执行可见输入审核；核对版本、保留失败证据并释放仅本次创建的服务和临时配置目录。 */
 export async function withBrowserAudit({ release, name, width = 1440, height = 900, commandTimeoutMs = 30000, root = process.env.NOVA_AUDIT_ROOT || process.cwd(), development = process.argv.includes('--development'), expectedRelease = development ? (process.env.NOVA_AUDIT_EXPECTED_RELEASE || '26.12') : release, initialUrl, readyExpression = "!!document.querySelector('.project-manager,.editor-root')", qualifyRelease = !development }, task) {
+  if (process.argv.some(arg => arg.startsWith('--qualification-release=')) && !development) qualifyRelease = true
   const regressionOrigin = release
   const qualificationTarget = process.argv.find(/* 调用 value.startsWith('--qualification-release=') 并返回调用结果。 */ value => value.startsWith('--qualification-release='))?.split('=')[1]
   if (qualificationTarget && qualificationTarget !== release) {
-    assert.match(qualificationTarget, /^26\.(?:2[0-9]|3[0-2])$/)
+    assert.match(qualificationTarget, /^26\.(?:2[0-9]|3[0-3])$/)
     assert.ok(Number(qualificationTarget.split('.')[1]) >= Number(release.split('.')[1]), 'Cannot qualify a future regression suite')
     assert.equal(JSON.parse(await readFile(join(root, 'package.json'), 'utf8')).version, qualificationTarget + '.0', 'Retained browser regression must target the actual source authority')
     release = qualificationTarget; expectedRelease = qualificationTarget
   }
-  assert.match(release, /^26\.(?:1[3-9]|2[0-9]|3[0-2])$/); assert.match(name, /^[a-z0-9-]+$/)
+  assert.match(release, /^26\.(?:1[3-9]|2[0-9]|3[0-3])$/); assert.match(name, /^[a-z0-9-]+$/)
   assert.ok(Number.isFinite(commandTimeoutMs) && commandTimeoutMs >= 30000 && commandTimeoutMs <= 180000, 'Bounded diagnostic command deadline');
   assert.match(expectedRelease, /^26\.\d{2}$/)
   if (!development) assert.equal(expectedRelease, release, 'Qualification must exercise its actual public version')
   root = resolve(root)
-  const evidence = join(root, 'release-audits'), captures = [], checks = [], observations = [], errors = []
+  const evidence = resolve(root, process.env.NOVA_AUDIT_REPORT_DIRECTORY || 'release-audits'), captures = [], checks = [], observations = [], errors = []
   let client, edge, server, profile, failure, browser, coverageMapper, coverageOrigin
   const operationCoverage = []
   /** 浏览器读取失败时附上有界表达式上下文，保留原异常；不延长超时或改变断言。 */
@@ -122,7 +123,7 @@ export async function withBrowserAudit({ release, name, width = 1440, height = 9
   } catch (error) { failure = error; process.exitCode = 1; console.error(error); if (client) try { await capture('failure') } catch {} }
   finally {
     await mkdir(evidence, { recursive: true })
-    await writeFile(join(evidence, `v${release}-${name}.json`), JSON.stringify({ format: `nova-v${release}-${name}-user-audit`, version: 1, release, regressionOrigin, expectedRelease, development, qualifiedRelease: qualifyRelease ? release : null, generatedAt: new Date().toISOString(), status: failure ? 'failed' : 'passed', checks, observations, captures, consoleErrors: errors, browser, commandTimeoutMs, ...(coverageMapper ? {operationCoverage, executionTracing: true, tracingScope: 'Positive V8 function-entry counters within named passing assertions; source, bundle and map hashes checked. Not input-domain coverage or performance qualification.'} : {}), error: failure?.stack, scope: (development ? 'Development source overlay only, not release qualification. ' : !qualifyRelease ? 'Development rebuild production bundle; not published-release qualification. ' : '') + 'Recorded real Edge input and DOM observations against production dist. Headless software rendering and download/file-input fallback; physical assistive technology and native OS picker behavior are not measured.' }, null, 2) + '\n')
+    await writeFile(join(evidence, `v${release}-${name}.json`), JSON.stringify({ format: `nova-v${release}-${name}-user-audit`, version: 1, release, regressionOrigin, expectedRelease, development, qualifiedRelease: qualifyRelease && !failure ? release : null, generatedAt: new Date().toISOString(), status: failure ? 'failed' : 'passed', checks, observations, captures, consoleErrors: errors, browser, commandTimeoutMs, ...(coverageMapper ? {operationCoverage, executionTracing: true, tracingScope: 'Positive V8 function-entry counters within named passing assertions; source, bundle and map hashes checked. Not input-domain coverage or performance qualification.'} : {}), error: failure?.stack, scope: (development ? 'Development source overlay only, not release qualification. ' : !qualifyRelease ? 'Development rebuild production bundle; not published-release qualification. ' : '') + 'Recorded real Edge input and DOM observations against production dist. Headless software rendering and download/file-input fallback; physical assistive technology and native OS picker behavior are not measured.' }, null, 2) + '\n')
     try { await client?.send('Browser.close') } catch {} client?.close(); if (edge && !edge.killed) edge.kill()
     if (server) await new Promise(/* 调用 server.httpServer.close(done) 并返回调用结果。 */ done => server.httpServer.close(done))
     if (profile) { const suffix = relative(resolve(tmpdir()), resolve(profile)); assert.ok(suffix && !suffix.startsWith('..') && !isAbsolute(suffix) && suffix.startsWith(`nova-v${release.replace('.', '')}-${name}-`)); await wait(200); await rm(resolve(profile), { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }) }

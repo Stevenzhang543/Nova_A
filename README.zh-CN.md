@@ -3,6 +3,9 @@
 
 # Nova_A 2D 游戏引擎与编辑器
 
+**26.33 development / Engine 26.33.0:** [release notes](docs/RELEASE_NOTES_26_33.md), [every edit](docs/engine/EDIT_LEDGER_26_33.md), [capability catalog](docs/engine/CAPABILITY_CATALOG.md), [audit and comparison](docs/engine/FEATURE_MATRIX.md), [verification](docs/engine/TEST_MATRIX.md). Release files are prepared under `releases/26.33`; source-bound evidence establishes final qualification.
+
+
 <!-- NOVA_V2630_OVERVIEW -->
 **当前开发源码26.30 / Engine 26.30.0：** [功能清单](docs/FEATURE_INVENTORY_26_30.md)、[面板清单](docs/PANEL_INVENTORY_26_30.md)、[对比差距](docs/COMPETITIVE_REVIEW_26_30.md)、[关闭边界](docs/ISSUE_CLOSURE_26_30.md)、[教学](docs/QUALIFICATION_LESSON_26_30.zh.md)。最终验收以冻结源码报告/校验和为准。原生JSONL仅物理，不是游戏服务器。Web为在线入口，不支持离线重载。
 

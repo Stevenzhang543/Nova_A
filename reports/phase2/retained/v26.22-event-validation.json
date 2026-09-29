@@ -1,0 +1,160 @@
+{
+  "format": "nova-v26.22-event-validation",
+  "version": 1,
+  "release": "26.22",
+  "regressionOrigin": "26.22",
+  "engineVersion": "26.32.0",
+  "expectedRelease": "26.32",
+  "development": true,
+  "qualifiedRelease": null,
+  "generatedAt": "2026-09-28T18:10:22.913Z",
+  "status": "passed",
+  "scope": "Actual event-sheet Save owner: rejected numeric domains, callback identifiers, event kinds and wrong destination types preserve the whole project and asset generation. Import normalization remains a separate legacy compatibility contract.",
+  "checks": [
+    {
+      "name": "priority rejects NaN (number) before mutation",
+      "status": "passed",
+      "field": "priority"
+    },
+    {
+      "name": "priority rejects Infinity (number) before mutation",
+      "status": "passed",
+      "field": "priority"
+    },
+    {
+      "name": "priority rejects -Infinity (number) before mutation",
+      "status": "passed",
+      "field": "priority"
+    },
+    {
+      "name": "priority rejects -1000001 (number) before mutation",
+      "status": "passed",
+      "field": "priority"
+    },
+    {
+      "name": "priority rejects 1000001 (number) before mutation",
+      "status": "passed",
+      "field": "priority"
+    },
+    {
+      "name": "priority rejects 1.5 (number) before mutation",
+      "status": "passed",
+      "field": "priority"
+    },
+    {
+      "name": "priority rejects 4 (string) before mutation",
+      "status": "passed",
+      "field": "priority"
+    },
+    {
+      "name": "priority rejects null (object) before mutation",
+      "status": "passed",
+      "field": "priority"
+    },
+    {
+      "name": "priority rejects true (boolean) before mutation",
+      "status": "passed",
+      "field": "priority"
+    },
+    {
+      "name": "deterministicSeed rejects NaN (number) before mutation",
+      "status": "passed",
+      "field": "deterministicSeed"
+    },
+    {
+      "name": "deterministicSeed rejects Infinity (number) before mutation",
+      "status": "passed",
+      "field": "deterministicSeed"
+    },
+    {
+      "name": "deterministicSeed rejects -Infinity (number) before mutation",
+      "status": "passed",
+      "field": "deterministicSeed"
+    },
+    {
+      "name": "deterministicSeed rejects 0 (number) before mutation",
+      "status": "passed",
+      "field": "deterministicSeed"
+    },
+    {
+      "name": "deterministicSeed rejects 2147483648 (number) before mutation",
+      "status": "passed",
+      "field": "deterministicSeed"
+    },
+    {
+      "name": "deterministicSeed rejects 1.5 (number) before mutation",
+      "status": "passed",
+      "field": "deterministicSeed"
+    },
+    {
+      "name": "deterministicSeed rejects 4 (string) before mutation",
+      "status": "passed",
+      "field": "deterministicSeed"
+    },
+    {
+      "name": "deterministicSeed rejects null (object) before mutation",
+      "status": "passed",
+      "field": "deterministicSeed"
+    },
+    {
+      "name": "deterministicSeed rejects true (boolean) before mutation",
+      "status": "passed",
+      "field": "deterministicSeed"
+    },
+    {
+      "name": "kind rejects unknown-event (string) before mutation",
+      "status": "passed",
+      "field": "kind"
+    },
+    {
+      "name": "kind rejects  (string) before mutation",
+      "status": "passed",
+      "field": "kind"
+    },
+    {
+      "name": "kind rejects null (object) before mutation",
+      "status": "passed",
+      "field": "kind"
+    },
+    {
+      "name": "callback rejects 123callback (string) before mutation",
+      "status": "passed",
+      "field": "callback"
+    },
+    {
+      "name": "callback rejects bad callback (string) before mutation",
+      "status": "passed",
+      "field": "callback"
+    },
+    {
+      "name": "callback rejects  (string) before mutation",
+      "status": "passed",
+      "field": "callback"
+    },
+    {
+      "name": "callback rejects null (object) before mutation",
+      "status": "passed",
+      "field": "callback"
+    },
+    {
+      "name": "Reject event save destination script",
+      "status": "passed"
+    },
+    {
+      "name": "Reject event save destination missing",
+      "status": "passed"
+    },
+    {
+      "name": "Accept exact integer boundaries -1000000/1",
+      "status": "passed"
+    },
+    {
+      "name": "Accept exact integer boundaries 1000000/2147483647",
+      "status": "passed"
+    },
+    {
+      "name": "Accept exact integer boundaries 0/63",
+      "status": "passed"
+    }
+  ]
+}

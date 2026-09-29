@@ -1,0 +1,201 @@
+{
+  "format": "nova-phase2-retained-tests",
+  "version": 1,
+  "scope": "Retained assertions executed against current source with development qualification; not legacy release qualification.",
+  "sourceFingerprint": "6141f913e92330c27ba4a23459b0a468937932115644ec16411c7b31cffb2ff5",
+  "status": "incomplete-or-failed",
+  "results": [
+    {
+      "name": "identity",
+      "command": [
+        "C:\\nvm4w\\nodejs\\node.exe",
+        "scripts/verify-v26.22-identity.mjs",
+        "--development"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 425,
+      "status": "passed"
+    },
+    {
+      "name": "entity-api",
+      "command": [
+        "C:\\nvm4w\\nodejs\\node.exe",
+        "scripts/verify-v26.22-entity-api.mjs",
+        "--development"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 3823,
+      "status": "passed"
+    },
+    {
+      "name": "component-primitives",
+      "command": [
+        "C:\\nvm4w\\nodejs\\node.exe",
+        "scripts/verify-v26.22-component-primitives.mjs",
+        "--development"
+      ],
+      "exitCode": 1,
+      "signal": null,
+      "elapsedMs": 1905,
+      "status": "failed"
+    },
+    {
+      "name": "component-order",
+      "command": [
+        "C:\\nvm4w\\nodejs\\node.exe",
+        "scripts/verify-v26.22-component-order.mjs",
+        "--development"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 10576,
+      "status": "passed"
+    },
+    {
+      "name": "history-core",
+      "command": [
+        "C:\\nvm4w\\nodejs\\node.exe",
+        "scripts/verify-v26.22-history-core.mjs",
+        "--development"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 459,
+      "status": "passed"
+    },
+    {
+      "name": "pending-drafts",
+      "command": [
+        "C:\\nvm4w\\nodejs\\node.exe",
+        "scripts/verify-v26.22-pending-drafts.mjs",
+        "--development"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 441,
+      "status": "passed"
+    },
+    {
+      "name": "document-boundaries",
+      "command": [
+        "C:\\nvm4w\\nodejs\\node.exe",
+        "scripts/verify-v26.22-document-boundaries.mjs",
+        "--development"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 7579,
+      "status": "passed"
+    },
+    {
+      "name": "scene-ownership",
+      "command": [
+        "C:\\nvm4w\\nodejs\\node.exe",
+        "scripts/verify-v26.22-scene-ownership.mjs",
+        "--development"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 4013,
+      "status": "passed"
+    },
+    {
+      "name": "reference-ownership",
+      "command": [
+        "C:\\nvm4w\\nodejs\\node.exe",
+        "scripts/verify-v26.22-reference-ownership.mjs",
+        "--development"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 4978,
+      "status": "passed"
+    },
+    {
+      "name": "tilemap-bake",
+      "command": [
+        "C:\\nvm4w\\nodejs\\node.exe",
+        "scripts/verify-v26.22-tilemap-bake.mjs",
+        "--development"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 3870,
+      "status": "passed"
+    },
+    {
+      "name": "audio-import-boundaries",
+      "command": [
+        "C:\\nvm4w\\nodejs\\node.exe",
+        "scripts/verify-v26.22-audio-import-boundaries.mjs",
+        "--development"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 4945,
+      "status": "passed"
+    },
+    {
+      "name": "rendering-recovery",
+      "command": [
+        "C:\\nvm4w\\nodejs\\node.exe",
+        "scripts/verify-v26.22-rendering-recovery.mjs",
+        "--development"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 427,
+      "status": "passed"
+    },
+    {
+      "name": "event-validation",
+      "command": [
+        "C:\\nvm4w\\nodejs\\node.exe",
+        "scripts/verify-v26.22-event-validation.mjs",
+        "--development"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 4400,
+      "status": "passed"
+    },
+    {
+      "name": "studio-save-boundary",
+      "command": [
+        "C:\\nvm4w\\nodejs\\node.exe",
+        "scripts/verify-v26.22-studio-save-boundary.mjs",
+        "--development"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 8804,
+      "status": "passed"
+    },
+    {
+      "name": "nested-component-corpus",
+      "command": [
+        "C:\\nvm4w\\nodejs\\node.exe",
+        "scripts/verify-v26.22-nested-component-corpus.mjs",
+        "--development"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 7245,
+      "status": "passed"
+    },
+    {
+      "name": "resource-actions",
+      "command": [
+        "C:\\nvm4w\\nodejs\\node.exe",
+        "scripts/verify-v26.22-resource-actions.mjs",
+        "--development"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 9038,
+      "status": "passed"
+    }
+  ]
+}

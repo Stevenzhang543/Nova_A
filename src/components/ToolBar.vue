@@ -111,7 +111,7 @@ const guideValue = ref('0')
 /** 按输入坐标添加指定方向参考线，成功后重置坐标输入。 */ function addGuide(axis: 'horizontal' | 'vertical') { if (addViewportGuide(axis, Number(guideValue.value))) guideValue.value = '0' }
 
 /** 处理创建对象和变换工具按键；普通工具选择跳过文本输入及其他修饰键事件。 */ function handleShortcut(event: KeyboardEvent) {
-  if (isEditableKeyboardTarget(event.target) || document.querySelector('[aria-modal="true"]') || estate.currentPage !== 'scene' || estate.activeWorkspace === 'ui') return
+  if (state.playMode !== 'editing' || isEditableKeyboardTarget(event.target) || document.querySelector('[aria-modal="true"]') || estate.currentPage !== 'scene' || estate.activeWorkspace === 'ui') return
   if (event.shiftKey && !event.ctrlKey && !event.metaKey && !event.altKey && event.key.toLowerCase() === 'a') { estate.createObjectPaletteOpen = true; event.preventDefault(); return }
   if (event.ctrlKey || event.metaKey || event.altKey) return
   const tag = (event.target as HTMLElement | null)?.tagName

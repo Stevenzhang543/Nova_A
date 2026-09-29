@@ -1,3 +1,4 @@
+const reportDirectory=process.env.NOVA_AUDIT_REPORT_DIRECTORY || 'release-audits'
 /** 26.28 游戏界面回归：执行真实运行时，隔离主机画布、存储和控制器输入。 */
 import assert from 'node:assert/strict'
 import {build} from 'vite'
@@ -59,5 +60,5 @@ await check('Accessible descriptions, values and tooltip use live locale with so
  for(const [language,text] of [['en','Help'],['de','Hilfe'],['zh','帮助']]){locale.localizationSettings.previewLocale=language;render(runtime,[canvas,button,tooltip]);const node=runtime.accessibilityNodes().find(/** 读取可访问节点。 */ n=>n.uuid===button.uuid);assert.equal(node.description,`${text}; Ready`);assert.equal(node.value,'Value');runtime.pointerMove({x:310,y:20});assert.ok(render(runtime,[canvas,button,tooltip],{preview:false}).calls.some(/** 真实提示绘制必须使用翻译。 */ call=>call[0]==='text'&&call[1]===text))}
  }finally{db.assetState.records.splice(0,db.assetState.records.length,...original);db.assetState.generation++;locale.localizationSettings.previewLocale='en'}
 })
-await mkdir('release-audits',{recursive:true});const report={format:'nova-game-ui',version:1,release:'26.28',engineVersion:JSON.parse(await readFile('package.json','utf8')).version,generatedAt:new Date().toISOString(),status:checks.every(/** 汇总实际检查结果。 */ c=>c.status==='passed')?'passed':'failed',checks,scope:'Actual GameUiRuntime/component/layout/localization/native bridge modules; host canvas recorder and simulated controller snapshots. Not physical controller, touch device, screen reader or OS IME acceptance.'};await writeFile('release-audits/v26.28-game-ui.json',JSON.stringify(report,null,2));console.log(JSON.stringify(report,null,2));if(report.status!=='passed')process.exitCode=1
+await mkdir(reportDirectory,{recursive:true});const report={format:'nova-game-ui',version:1,release:'26.28',engineVersion:JSON.parse(await readFile('package.json','utf8')).version,generatedAt:new Date().toISOString(),status:checks.every(/** 汇总实际检查结果。 */ c=>c.status==='passed')?'passed':'failed',checks,scope:'Actual GameUiRuntime/component/layout/localization/native bridge modules; host canvas recorder and simulated controller snapshots. Not physical controller, touch device, screen reader or OS IME acceptance.'};await writeFile(reportDirectory+'/v26.28-game-ui.json',JSON.stringify(report,null,2));console.log(JSON.stringify(report,null,2));if(report.status!=='passed')process.exitCode=1
 

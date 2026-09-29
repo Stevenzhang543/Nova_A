@@ -15,7 +15,8 @@ export interface WorldTransform2D {
   return { x: point.x * cosine - point.y * sine, y: point.x * sine + point.y * cosine }
 }
 
-interface HierarchyLookup { entities: readonly Entity[]; byUuid: Map<string, Entity>; length: number; first: Entity | undefined; last: Entity | undefined }
+interface HierarchyEntry { entity: Entity; index: number }
+interface HierarchyLookup { entities: readonly Entity[]; byUuid: Map<string, HierarchyEntry>; length: number; first: Entity | undefined; last: Entity | undefined }
 let preparedLookup: HierarchyLookup | null = null
 
 /** Build the hierarchy identity table once for a frame or batch operation.
@@ -23,14 +24,20 @@ let preparedLookup: HierarchyLookup | null = null
  * UUIDs are authoritative; structural array changes trigger a rebuild. */
 /** 按数组身份、长度和首尾对象复用标识索引；检测到这些结构变化时重新建立映射。 */ export function prepareHierarchyIndex(entities: readonly Entity[]): void {
   if (preparedLookup?.entities === entities && preparedLookup.length === entities.length && preparedLookup.first === entities[0] && preparedLookup.last === entities[entities.length - 1]) return
-  preparedLookup = { entities, byUuid: new Map(entities.map(/* 返回按声明顺序构造的数组 [entity.uuid, entity]。 */ entity => [entity.uuid, entity])), length: entities.length, first: entities[0], last: entities[entities.length - 1] }
+  preparedLookup = { entities, byUuid: new Map(entities.map((entity, index) => [entity.uuid, { entity, index }])), length: entities.length, first: entities[0], last: entities[entities.length - 1] }
 }
 
 /** 清空层级索引，使下一次查询重新读取实体集合。 */ export function invalidateHierarchyIndex(): void { preparedLookup = null }
 
-/** 确保当前实体集合已建立索引，并返回 UUID 到实体的映射。 */ function hierarchyLookup(entities: readonly Entity[]): Map<string, Entity> {
+/** Resolve current identity even when an in-place replacement preserves length and endpoints.
+ * Existing valid lookups stay O(1); a stale or missing identity rebuilds once for this query. */
+function hierarchyEntity(uuid: string, entities: readonly Entity[]): Entity | undefined {
   prepareHierarchyIndex(entities)
-  return preparedLookup!.byUuid
+  const entry = preparedLookup!.byUuid.get(uuid)
+  if (entry && entities[entry.index] === entry.entity) return entry.entity
+  invalidateHierarchyIndex()
+  prepareHierarchyIndex(entities)
+  return preparedLookup!.byUuid.get(uuid)?.entity
 }
 
 /** 递归合成祖先平移、旋转及带符号缩放；遇到缺失父级或环时退回当前局部变换。 */ export function worldTransform(entity: Entity, entities: readonly Entity[], visiting = new Set<string>()): WorldTransform2D {
@@ -44,7 +51,7 @@ let preparedLookup: HierarchyLookup | null = null
   }
   const parentUuid = entity.parentUuid
   if (!parentUuid || visiting.has(entity.uuid)) return local
-  const parent = hierarchyLookup(entities).get(parentUuid)
+  const parent = hierarchyEntity(parentUuid, entities)
   if (!parent || parent === entity) return local
   visiting.add(entity.uuid)
   const parentWorld = worldTransform(parent, entities, visiting)
@@ -82,7 +89,7 @@ let preparedLookup: HierarchyLookup | null = null
 }
 
 /** 把目标世界姿态逆变换为父级下的局部姿态；无父级时直接写入规范化姿态。 */ export function setWorldTransform(entity: Entity, value: WorldTransform2D, entities: readonly Entity[]): void {
-  const parent = entity.parentUuid ? hierarchyLookup(entities).get(entity.parentUuid) : null
+  const parent = entity.parentUuid ? hierarchyEntity(entity.parentUuid, entities) : null
   if (!parent) {
     entity.transform.position = { ...value.position }
     entity.transform.rotation = normalizeAngle(value.rotation)
@@ -109,19 +116,18 @@ let preparedLookup: HierarchyLookup | null = null
   if (!parentUuid) return false
   if (parentUuid === entity.uuid) return true
   const visited = new Set<string>([entity.uuid])
-  const byUuid = hierarchyLookup(entities)
-  let current = byUuid.get(parentUuid)
+  let current = hierarchyEntity(parentUuid, entities)
   while (current) {
     if (visited.has(current.uuid)) return true
     visited.add(current.uuid)
-    current = current.parentUuid ? byUuid.get(current.parentUuid) : undefined
+    current = current.parentUuid ? hierarchyEntity(current.parentUuid, entities) : undefined
   }
   return false
 }
 
 /** 拒绝产生环的父级变更；必要时将未知父级清空，并按选项保持原世界姿态。 */ export function setParent(entity: Entity, parentUuid: string | null, entities: readonly Entity[], preserveWorldTransform = true): boolean {
   if (wouldCreateParentCycle(entity, parentUuid, entities)) return false
-  const nextParentUuid = parentUuid && hierarchyLookup(entities).has(parentUuid) ? parentUuid : null
+  const nextParentUuid = parentUuid && hierarchyEntity(parentUuid, entities) ? parentUuid : null
   if (entity.parentUuid === nextParentUuid) return false
   const currentWorld = preserveWorldTransform ? worldTransform(entity, entities) : null
   entity.parentUuid = nextParentUuid

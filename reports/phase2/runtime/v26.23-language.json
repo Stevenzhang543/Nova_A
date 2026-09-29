@@ -1,0 +1,112 @@
+{
+  "engineVersion": "26.32.0",
+  "generatedAt": "2026-09-28T18:14:48.326Z",
+  "format": "nova-v26.23-language-verification",
+  "version": 1,
+  "release": "26.23",
+  "expectedRelease": "26.23",
+  "qualifiedRelease": null,
+  "development": true,
+  "scope": "Identical semantic examples executed in actual native/WASM VMs; logs and exported properties compared. Runtime modules and host integration are tested separately.",
+  "results": [
+    {
+      "name": "dynamic reassignment",
+      "status": "passed",
+      "logs": [
+        "two"
+      ]
+    },
+    {
+      "name": "array mutation",
+      "status": "passed",
+      "logs": [
+        "9"
+      ]
+    },
+    {
+      "name": "map mutation",
+      "status": "passed",
+      "logs": [
+        "3"
+      ]
+    },
+    {
+      "name": "shared closure capture",
+      "status": "passed",
+      "logs": [
+        "3",
+        "3"
+      ]
+    },
+    {
+      "name": "lexical shadowing",
+      "status": "passed",
+      "logs": [
+        "9",
+        "1"
+      ]
+    },
+    {
+      "name": "overload arity",
+      "status": "passed",
+      "logs": [
+        "3",
+        "5"
+      ]
+    },
+    {
+      "name": "method dispatch",
+      "status": "passed",
+      "logs": [
+        "8"
+      ]
+    },
+    {
+      "name": "caught exception",
+      "status": "passed",
+      "logs": [
+        "broken"
+      ]
+    },
+    {
+      "name": "function pointer",
+      "status": "passed",
+      "logs": [
+        "10"
+      ]
+    },
+    {
+      "name": "exported dynamic map",
+      "status": "passed",
+      "logs": [
+        "3"
+      ]
+    },
+    {
+      "name": "exported nested array",
+      "status": "passed",
+      "logs": [
+        "5"
+      ]
+    },
+    {
+      "name": "native imports denied",
+      "status": "passed",
+      "wasmError": "'import' is a reserved keyword (line 1, position 1)",
+      "nativeError": "'import' is a reserved keyword (line 1, position 1)"
+    },
+    {
+      "name": "eval denied",
+      "status": "passed",
+      "wasmError": "reserved keyword 'eval' is disabled (line 1, position 12)",
+      "nativeError": "reserved keyword 'eval' is disabled (line 1, position 12)"
+    },
+    {
+      "name": "operation budget",
+      "status": "passed",
+      "wasmError": "Too many operations",
+      "nativeError": "Too many operations"
+    }
+  ],
+  "status": "passed"
+}
