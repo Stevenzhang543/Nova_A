@@ -89,8 +89,8 @@ const recoveryCandidates = new Map<string, string>()
     visited.add(version)
     const migration = productionSettings.data.saveMigrations.find(/* 比较 item.fromVersion 与 version，返回严格相等的判断结果。 */ item => item.fromVersion === version)
     if (!migration || migration.toVersion <= version || migration.toVersion > targetVersion) throw new Error(`Save data requires a valid migration from schema ${version} to ${targetVersion}.`)
-    for (const [from, to] of Object.entries(migration.renames).sort(/* 调用 first.localeCompare(second) 并返回调用结果。 */ ([first], [second]) => first.localeCompare(second))) { if (Object.prototype.hasOwnProperty.call(values, from) && !Object.prototype.hasOwnProperty.call(values, to)) values[to] = values[from]; delete values[from] }
-    for (const [key, fallback] of Object.entries(migration.defaults).sort(/* 调用 first.localeCompare(second) 并返回调用结果。 */ ([first], [second]) => first.localeCompare(second))) if (!Object.prototype.hasOwnProperty.call(values, key)) values[key] = normalizeSaveValue(fallback)
+    for (const [from, to] of Object.entries(migration.renames).sort(/* 调用 first.localeCompare(second) 并返回调用结果。 */ ([first], [second]) => first.localeCompare(second))) { if (Object.prototype.hasOwnProperty.call(values, from) && !Object.prototype.hasOwnProperty.call(values, to)) defineSaveProperty(values, to, values[from]); delete values[from] }
+    for (const [key, fallback] of Object.entries(migration.defaults).sort(/* 调用 first.localeCompare(second) 并返回调用结果。 */ ([first], [second]) => first.localeCompare(second))) if (!Object.prototype.hasOwnProperty.call(values, key)) defineSaveProperty(values, key, normalizeSaveValue(fallback))
     for (const key of [...migration.remove].sort()) delete values[key]
     version = migration.toVersion
   }
@@ -102,8 +102,13 @@ const recoveryCandidates = new Map<string, string>()
   if (value === null || typeof value === 'boolean' || typeof value === 'string') return typeof value === 'string' ? value.slice(0, 1_000_000) : value
   if (typeof value === 'number') { if (!Number.isFinite(value)) throw new Error('Save data numbers must be finite.'); return value }
   if (Array.isArray(value)) { if (value.length > MAX_COLLECTION_SIZE) throw new Error(`Save arrays may contain at most ${MAX_COLLECTION_SIZE} items.`); return value.map(/* 调用 normalizeSaveValue(item, depth + 1) 并返回调用结果。 */ item => normalizeSaveValue(item, depth + 1)) }
-  if (value && typeof value === 'object') { const entries = Object.entries(value as Record<string, unknown>); if (entries.length > MAX_COLLECTION_SIZE) throw new Error(`Save maps may contain at most ${MAX_COLLECTION_SIZE} keys.`); return Object.fromEntries(entries.sort(/* 调用 first.localeCompare(second) 并返回调用结果。 */ ([first], [second]) => first.localeCompare(second)).map(/* 返回按声明顺序构造的数组 [safeName(key, 'key'), normalizeSaveValue(item, depth + 1)]。 */ ([key, item]) => [safeName(key, 'key'), normalizeSaveValue(item, depth + 1)])) }
+  if (value && typeof value === 'object') { const entries = Object.entries(value as Record<string, unknown>); if (entries.length > MAX_COLLECTION_SIZE) throw new Error(`Save maps may contain at most ${MAX_COLLECTION_SIZE} keys.`); return Object.fromEntries(entries.sort(/* 调用 first.localeCompare(second) 并返回调用结果。 */ ([first], [second]) => first.localeCompare(second)).map(([key, item]) => [key, normalizeSaveValue(item, depth + 1)])) }
   throw new Error('Save data only supports booleans, finite numbers, strings, null, arrays, and maps.')
+}
+
+/** Map keys are data: own properties avoid invoking the inherited __proto__ setter. */
+function defineSaveProperty(values: Record<string, SaveValue>, key: string, value: SaveValue): void {
+  Object.defineProperty(values, key, { value, writable: true, enumerable: true, configurable: true })
 }
 
 /** 结构说明（自动提取）：registerSaveSerializer；输入 namespace、serializer；直接调用 safeName、serializers.has、Error、serializers.set；包含显式抛错路径。 */ export function registerSaveSerializer(namespace: string, serializer: SaveSerializer): () => void {
@@ -117,6 +122,11 @@ const recoveryCandidates = new Map<string, string>()
 /** 结构说明（自动提取）：report；输入 progress、phase、value、message；直接调用 progress；写入 saveGameState.progress、saveGameState.progressMessage。 */ function report(progress: ((value: SaveProgress) => void) | undefined, phase: SaveProgress['phase'], value: number, message: string): void { saveGameState.progress = value; saveGameState.progressMessage = message; progress?.({ phase, progress: value, message }) }
 /** 结构说明（自动提取）：checkAbort；输入 signal；直接调用 DOMException；包含显式抛错路径。 */ function checkAbort(signal?: AbortSignal): void { if (signal?.aborted) throw new DOMException('Save operation was cancelled.', 'AbortError') }
 /** 结构说明（自动提取）：asyncCheckpoint；输入 signal；直接调用 checkAbort、Promise.resolve；等待异步结果。 */ async function asyncCheckpoint(signal?: AbortSignal): Promise<void> { checkAbort(signal); await Promise.resolve(); checkAbort(signal) }
+
+/** A prepared save belongs to the project/session that started the operation. */
+function checkSaveOperationProject(context: { sessionId: string; projectId: string }): void {
+  if (projectSessionState.id !== context.sessionId || saveGameState.projectId !== context.projectId) throw new DOMException('Save operation was cancelled because the active project changed.', 'AbortError')
+}
 
 /** 结构说明（自动提取）：useSaveProject；输入 projectId、slot；直接调用 safeName、platformSaveLocation、loadSaveSlot；写入 saveGameState.platformLocation、saveGameState.projectId。 */ export function useSaveProject(projectId = projectSessionState.id, slot = safeName(projectId, 'project') === saveGameState.projectId ? saveGameState.slot : 'slot1'): void {
   const safeProject = safeName(projectId, 'project'), safeSlot = safeName(slot, 'slot1'); saveGameState.platformLocation = platformSaveLocation(safeProject)
@@ -137,24 +147,58 @@ function cleanupSaveTransaction(key: string): void {
   }
 }
 
-/** 结构说明（自动提取）：loadSaveSlot；输入 slot；直接调用 safeName、Object.assign、Error、storageKey、localStorage.getItem 等；写入 saveGameState.values、saveGameState.lastCommittedAt、saveGameState.dirty、saveGameState.recoveryAvailable 等；包含显式抛错路径。 */ export function loadSaveSlot(slot: string): boolean {
-  const safeSlot = safeName(slot, 'slot1'), projectId = saveGameState.projectId || safeName(projectSessionState.id, 'project')
-  Object.assign(saveGameState, { projectId, slot: safeSlot, error: '', recoveryAvailable: false, recoverySource: '', recoveryMessage: '' })
+interface PreparedSaveLoad {
+  projectId: string
+  slot: string
+  values: Record<string, SaveValue>
+  dirty: boolean
+  lastCommittedAt: string | null
+  error: string
+  recoveryAvailable: boolean
+  recoverySource: '' | 'backup' | 'temporary'
+  recoveryMessage: string
+  loaded: boolean
+  recoveryValue: string | null
+  cleanup: boolean
+}
+
+/** Reading and migration are detached from live game state until the load is accepted. */
+function prepareSaveLoad(slot: string, projectId = saveGameState.projectId || safeName(projectSessionState.id, 'project')): PreparedSaveLoad {
+  const safeSlot = safeName(slot, 'slot1'), key = storageKey(projectId, safeSlot)
+  const prepared: PreparedSaveLoad = { projectId, slot: safeSlot, values: {}, dirty: false, lastCommittedAt: null, error: '', recoveryAvailable: false, recoverySource: '', recoveryMessage: '', loaded: false, recoveryValue: null, cleanup: false }
   try {
     if (typeof localStorage === 'undefined') throw new Error('Persistent storage is unavailable in this runtime.')
-    const key = storageKey(projectId, safeSlot), source = localStorage.getItem(key)
-    recoveryCandidates.delete(key)
+    const source = localStorage.getItem(key)
     if (source) {
-      try { const envelope = parseEnvelope(source), migrated = migrateSaveData(envelope.values, envelope.version); saveGameState.values = migrated.values; deserializeCustomValues(migrated.values); saveGameState.lastCommittedAt = envelope.savedAt; saveGameState.dirty = false; cleanupSaveTransaction(key); return true }
-      catch (primaryError) { const candidate = recoveryCandidate(projectId, safeSlot); if (candidate) { recoveryCandidates.set(key, candidate.value); saveGameState.recoveryAvailable = true; saveGameState.recoverySource = candidate.source; saveGameState.recoveryMessage = `The primary save is invalid. A valid ${candidate.source} copy is available.` } throw primaryError }
+      try { const envelope = parseEnvelope(source), migrated = migrateSaveData(envelope.values, envelope.version); prepared.values = migrated.values; prepared.lastCommittedAt = envelope.savedAt; prepared.loaded = true; prepared.cleanup = true; return prepared }
+      catch (primaryError) { const candidate = recoveryCandidate(projectId, safeSlot); if (candidate) { prepared.recoveryValue = candidate.value; prepared.recoveryAvailable = true; prepared.recoverySource = candidate.source; prepared.recoveryMessage = `The primary save is invalid. A valid ${candidate.source} copy is available.` } throw primaryError }
     }
     const legacySource = localStorage.getItem(legacyStorageKey(projectId, safeSlot))
-    if (legacySource) { const legacy = legacyEnvelope(JSON.parse(legacySource)), migrated = migrateSaveData(legacy.values, legacy.version); saveGameState.values = migrated.values; deserializeCustomValues(migrated.values); saveGameState.dirty = true; saveGameState.recoveryMessage = 'A legacy or unversioned save was loaded and will be upgraded on commit.'; return true }
+    if (legacySource) { const legacy = legacyEnvelope(JSON.parse(legacySource)), migrated = migrateSaveData(legacy.values, legacy.version); prepared.values = migrated.values; prepared.dirty = true; prepared.loaded = true; prepared.recoveryMessage = 'A legacy or unversioned save was loaded and will be upgraded on commit.'; return prepared }
     const interrupted = recoveryCandidate(projectId, safeSlot)
-    if (interrupted) { recoveryCandidates.set(key, interrupted.value); saveGameState.recoveryAvailable = true; saveGameState.recoverySource = interrupted.source; saveGameState.recoveryMessage = `An interrupted transaction left a valid ${interrupted.source} copy. Choose Recover to restore it.` }
-    saveGameState.values = {}; saveGameState.dirty = false; return false
-  } catch (error) { saveGameState.values = {}; saveGameState.dirty = false; saveGameState.error = error instanceof Error ? error.message : String(error); return false }
+    if (interrupted) { prepared.recoveryValue = interrupted.value; prepared.recoveryAvailable = true; prepared.recoverySource = interrupted.source; prepared.recoveryMessage = `An interrupted transaction left a valid ${interrupted.source} copy. Choose Recover to restore it.` }
+  } catch (error) { prepared.values = {}; prepared.error = error instanceof Error ? error.message : String(error) }
+  return prepared
 }
+
+/** Custom application callbacks run only after the final cancellation boundary. */
+function applySaveLoad(prepared: PreparedSaveLoad): boolean {
+  const { loaded, recoveryValue, cleanup, ...state } = prepared, key = storageKey(prepared.projectId, prepared.slot)
+  Object.assign(saveGameState, state)
+  recoveryCandidates.delete(key)
+  if (recoveryValue) recoveryCandidates.set(key, recoveryValue)
+  try {
+    if (loaded) deserializeCustomValues(prepared.values)
+    if (cleanup) cleanupSaveTransaction(key)
+    return loaded
+  } catch (error) {
+    saveGameState.values = {}; saveGameState.dirty = false; saveGameState.error = error instanceof Error ? error.message : String(error)
+    return false
+  }
+}
+
+/** Load a slot synchronously through the same detached preparation used by async loading. */
+export function loadSaveSlot(slot: string): boolean { return applySaveLoad(prepareSaveLoad(slot)) }
 
 /** 结构说明（自动提取）：recoverSaveSlot；输入 slot；直接调用 storageKey、safeName、recoveryCandidates.get、parseEnvelope、localStorage.setItem 等；写入 saveGameState.recoveryAvailable、saveGameState.error。 */ export function recoverSaveSlot(slot = saveGameState.slot): boolean {
   if (typeof localStorage === 'undefined') return false
@@ -163,38 +207,82 @@ function cleanupSaveTransaction(key: string): void {
   try { parseEnvelope(candidate); localStorage.setItem(key, candidate); recoveryCandidates.delete(key); saveGameState.recoveryAvailable = false; return loadSaveSlot(slot) } catch (error) { saveGameState.error = error instanceof Error ? error.message : String(error); return false }
 }
 
-/** 结构说明（自动提取）：loadSaveSlotAsync；输入 slot、options；直接调用 report、asyncCheckpoint、loadSaveSlot、checkAbort；写入 saveGameState.busy；返回路径包含 loaded；等待异步结果。 */ export async function loadSaveSlotAsync(slot: string, options: { signal?: AbortSignal; onProgress?: (value: SaveProgress) => void } = {}): Promise<boolean> {
+/** Prepare, validate, and migrate without mutating values or invoking custom callbacks on cancellation. */
+export async function loadSaveSlotAsync(slot: string, options: { signal?: AbortSignal; onProgress?: (value: SaveProgress) => void } = {}): Promise<boolean> {
+  const context = { sessionId: projectSessionState.id, projectId: saveGameState.projectId }
   saveGameState.busy = true
-  try { report(options.onProgress, 'reading', .1, 'Reading save slot'); await asyncCheckpoint(options.signal); report(options.onProgress, 'validating', .35, 'Validating checksum and journal'); await asyncCheckpoint(options.signal); const loaded = loadSaveSlot(slot); checkAbort(options.signal); report(options.onProgress, 'migrating', .75, 'Applying deterministic migrations'); await asyncCheckpoint(options.signal); report(options.onProgress, 'complete', 1, loaded ? 'Save loaded' : 'Empty slot loaded'); return loaded } finally { saveGameState.busy = false }
+  try {
+    report(options.onProgress, 'reading', .1, 'Reading save slot'); await asyncCheckpoint(options.signal)
+    report(options.onProgress, 'validating', .35, 'Validating checksum and journal'); await asyncCheckpoint(options.signal)
+    const prepared = prepareSaveLoad(slot)
+    report(options.onProgress, 'migrating', .75, 'Applying deterministic migrations'); await asyncCheckpoint(options.signal)
+    checkSaveOperationProject(context)
+    const loaded = applySaveLoad(prepared)
+    report(options.onProgress, 'complete', 1, loaded ? 'Save loaded' : prepared.error || 'Empty slot loaded')
+    return loaded
+  } finally { saveGameState.busy = false }
 }
 
 /** 结构说明（自动提取）：saveSnapshot；无显式参数；直接调用 useSaveProject、normalizeSaveValue。 */ export function saveSnapshot(): Record<string, SaveValue> { useSaveProject(); return normalizeSaveValue(saveGameState.values) as Record<string, SaveValue> }
-/** 结构说明（自动提取）：setSaveValue；输入 key、value；直接调用 useSaveProject、safeName、normalizeSaveValue；写入 saveGameState.values[…]、saveGameState.dirty。 */ export function setSaveValue(key: string, value: unknown): void { useSaveProject(); saveGameState.values[safeName(key, 'key')] = normalizeSaveValue(value); saveGameState.dirty = true }
+/** Computed own keys preserve prototype-looking data and notify reactive consumers. */ export function setSaveValue(key: string, value: unknown): void { useSaveProject(); saveGameState.values = { ...saveGameState.values, [safeName(key, 'key')]: normalizeSaveValue(value) }; saveGameState.dirty = true }
 /** 结构说明（自动提取）：deleteSaveValue；输入 key；直接调用 useSaveProject、safeName；写入 saveGameState.dirty。 */ export function deleteSaveValue(key: string): void { useSaveProject(); delete saveGameState.values[safeName(key, 'key')]; saveGameState.dirty = true }
 /** 结构说明（自动提取）：clearSaveValues；无显式参数；直接调用 useSaveProject；写入 saveGameState.values、saveGameState.dirty。 */ export function clearSaveValues(): void { useSaveProject(); saveGameState.values = {}; saveGameState.dirty = true }
 
-/** 结构说明（自动提取）：commitSaveSlot；输入 slot；直接调用 useSaveProject、safeName、Object.assign、Error、migrateSaveData 等；写入 saveGameState.values、saveGameState.dirty、saveGameState.lastCommittedAt、saveGameState.error；包含显式抛错路径。 */ export function commitSaveSlot(slot = saveGameState.slot): boolean {
-  useSaveProject(projectSessionState.id, saveGameState.slot)
-  const safeSlot = safeName(slot, 'slot1'), projectId = saveGameState.projectId
-  Object.assign(saveGameState, { slot: safeSlot, error: '', recoveryAvailable: false, recoverySource: '', recoveryMessage: '' })
+interface PreparedSaveCommit {
+  projectId: string
+  slot: string
+  values: Record<string, SaveValue>
+  envelope: SaveEnvelope
+  source: string
+}
+
+/** Capture each custom serializer once; validation and persistence use the same snapshot. */
+function prepareSaveCommit(slot: string): PreparedSaveCommit {
+  const safeSlot = safeName(slot, 'slot1'), projectId = safeName(projectSessionState.id, 'project')
+  const values = saveGameState.projectId === projectId ? saveGameState.values : prepareSaveLoad(saveGameState.slot, projectId).values
+  const migrated = migrateSaveData(serializeCustomValues(values), productionSettings.data.saveSchemaVersion), envelope = createEnvelope(projectId, safeSlot, migrated.values), source = JSON.stringify(envelope)
+  if (source.length * 2 > MAX_SAVE_BYTES) throw new Error(`Save data exceeds the ${MAX_SAVE_BYTES} byte limit.`)
+  return { projectId, slot: safeSlot, values: migrated.values, envelope, source }
+}
+
+function writeSaveCommit(prepared: PreparedSaveCommit): boolean {
+  const { projectId, slot, values, envelope, source } = prepared
+  Object.assign(saveGameState, { projectId, slot, error: '', recoveryAvailable: false, recoverySource: '', recoveryMessage: '' })
   try {
     if (typeof localStorage === 'undefined') throw new Error('Persistent storage is unavailable in this runtime.')
-    const migrated = migrateSaveData(serializeCustomValues(saveGameState.values), productionSettings.data.saveSchemaVersion), envelope = createEnvelope(projectId, safeSlot, migrated.values), source = JSON.stringify(envelope)
-    if (source.length * 2 > MAX_SAVE_BYTES) throw new Error(`Save data exceeds the ${MAX_SAVE_BYTES} byte limit.`)
-    const key = storageKey(projectId, safeSlot), previous = localStorage.getItem(key)
-    localStorage.setItem(`${key}.journal`, JSON.stringify({ format: 'nova-save-journal', version: 1, phase: 'prepared', slot: safeSlot, checksum: envelope.checksum, startedAt: new Date().toISOString() }))
+    const key = storageKey(projectId, slot), previous = localStorage.getItem(key)
+    localStorage.setItem(`${key}.journal`, JSON.stringify({ format: 'nova-save-journal', version: 1, phase: 'prepared', slot, checksum: envelope.checksum, startedAt: new Date().toISOString() }))
     localStorage.setItem(`${key}.tmp`, source); parseEnvelope(localStorage.getItem(`${key}.tmp`) ?? '')
     if (previous) localStorage.setItem(`${key}.backup`, previous)
     localStorage.setItem(key, source); parseEnvelope(localStorage.getItem(key) ?? '')
     cleanupSaveTransaction(key)
     recoveryCandidates.delete(key)
-    saveGameState.values = migrated.values; saveGameState.dirty = false; saveGameState.lastCommittedAt = envelope.savedAt; return true
+    saveGameState.values = values; saveGameState.dirty = false; saveGameState.lastCommittedAt = envelope.savedAt; return true
   } catch (error) { saveGameState.error = error instanceof Error ? error.message : String(error); return false }
 }
 
-/** 结构说明（自动提取）：commitSaveSlotAsync；输入 slot、options；直接调用 report、asyncCheckpoint、migrateSaveData、serializeCustomValues、checkAbort 等；写入 saveGameState.busy；返回路径包含 committed；等待异步结果。 */ export async function commitSaveSlotAsync(slot = saveGameState.slot, options: { signal?: AbortSignal; onProgress?: (value: SaveProgress) => void } = {}): Promise<boolean> {
+/** Commit the verified snapshot through the same transaction writer as async saving. */
+export function commitSaveSlot(slot = saveGameState.slot): boolean {
+  useSaveProject(projectSessionState.id, saveGameState.slot)
+  try { return writeSaveCommit(prepareSaveCommit(slot)) }
+  catch (error) { saveGameState.error = error instanceof Error ? error.message : String(error); return false }
+}
+
+/** Cancellation remains effective until the synchronous transaction write begins. */
+export async function commitSaveSlotAsync(slot = saveGameState.slot, options: { signal?: AbortSignal; onProgress?: (value: SaveProgress) => void } = {}): Promise<boolean> {
+  const context = { sessionId: projectSessionState.id, projectId: saveGameState.projectId }
   saveGameState.busy = true
-  try { report(options.onProgress, 'serializing', .1, 'Serializing structured save data'); await asyncCheckpoint(options.signal); report(options.onProgress, 'validating', .3, 'Validating schema and custom serializers'); migrateSaveData(serializeCustomValues(saveGameState.values), productionSettings.data.saveSchemaVersion); await asyncCheckpoint(options.signal); report(options.onProgress, 'writing', .55, 'Writing temporary transaction and checksum'); await asyncCheckpoint(options.signal); checkAbort(options.signal); const committed = commitSaveSlot(slot); report(options.onProgress, 'committing', .9, 'Verifying committed slot and backup'); await Promise.resolve(); report(options.onProgress, 'complete', 1, committed ? 'Save committed atomically' : 'Save failed'); return committed } finally { saveGameState.busy = false }
+  try {
+    report(options.onProgress, 'serializing', .1, 'Serializing structured save data'); await asyncCheckpoint(options.signal)
+    report(options.onProgress, 'validating', .3, 'Validating schema and custom serializers'); await asyncCheckpoint(options.signal)
+    const prepared = prepareSaveCommit(slot)
+    report(options.onProgress, 'writing', .55, 'Writing temporary transaction and checksum'); await asyncCheckpoint(options.signal)
+    checkSaveOperationProject(context)
+    const committed = writeSaveCommit(prepared)
+    report(options.onProgress, 'committing', .9, 'Verifying committed slot and backup')
+    report(options.onProgress, 'complete', 1, committed ? 'Save committed atomically' : 'Save failed')
+    return committed
+  } finally { saveGameState.busy = false }
 }
 
 /** 结构说明（自动提取）：listSaveSlots；输入 projectId；直接调用 safeName、localStorage.key、key.startsWith、test、localStorage.getItem 等；包含循环处理。 */ export function listSaveSlots(projectId = saveGameState.projectId || safeName(projectSessionState.id, 'project')): SaveSlotMetadata[] {

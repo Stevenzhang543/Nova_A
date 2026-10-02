@@ -1,7 +1,7 @@
 <!-- 命令面板：搜索并执行编辑命令，支持快速导航。 -->
 <template>
   <Teleport to="body">
-    <Transition name="palette">
+    <Transition :css="false" @enter="enter" @leave="leave" @enter-cancelled="cancel" @leave-cancelled="cancel">
       <div v-if="state.commandPaletteOpen" class="palette-scrim" role="presentation" @mousedown.self="close">
         <section ref="dialog" class="command-palette" role="dialog" aria-modal="true" v-modal-focus :aria-label="t('commandPalette')">
           <header>
@@ -47,6 +47,7 @@ import { gameplayRuntime } from '../runtime/GameplayRuntime'
 import { applyCurrentProjectRepair, previewCurrentProjectRepair, validateCurrentProject } from '../runtime/projectIntegrity'
 import { focusStableControl, stableControlInventory } from '../runtime/controlRegistry'
 import { simulationPreflight } from '../runtime/simulationAuthoring26'
+import { animatePresence, cancelMotion } from '../ui/motion'
 
 type TranslationKey = Parameters<typeof t>[0]
 interface EditorCommand { id: string; label: TranslationKey; group: TranslationKey; icon: string; shortcut?: string; keywords: string; run: () => void }
@@ -67,6 +68,31 @@ const query = ref('')
 const activeIndex = ref(0)
 const isEditing = computed(/* 比较 physicsState.playMode 与 'editing'，返回严格相等的判断结果。 */ () => physicsState.playMode === 'editing')
 const palettePlaceholder = computed(/** 根据快速、全局、上下文或命令模式返回面板标题。 */ () => t(state.commandPaletteMode === 'quick' ? 'quickOpen' : state.commandPaletteMode === 'global' ? 'globalSearch' : state.commandPaletteMode === 'context' ? 'contextSearch' : 'searchCommands'))
+
+// Search focus is immediate; a closing palette cannot receive another command.
+function enter(element: Element, done: () => void): void {
+  const root = element as HTMLElement
+  root.inert = false
+  root.removeAttribute('aria-hidden')
+  animatePresence(root, 'enter', undefined, { distance: 0, scale: 1, duration: 'standard' })
+  const palette = root.querySelector<HTMLElement>('.command-palette')
+  if (palette) animatePresence(palette, 'enter', done, { preset: 'smooth', duration: 'standard' })
+  else done()
+}
+function leave(element: Element, done: () => void): void {
+  const root = element as HTMLElement
+  root.inert = true
+  root.setAttribute('aria-hidden', 'true')
+  const palette = root.querySelector<HTMLElement>('.command-palette')
+  animatePresence(root, 'leave', () => { if (palette) cancelMotion(palette); done() }, { preset: 'snappy', distance: 0, scale: 1, duration: 'fast' })
+  if (palette) animatePresence(palette, 'leave', undefined, { preset: 'snappy', duration: 'fast' })
+}
+function cancel(element: Element): void {
+  const root = element as HTMLElement
+  cancelMotion(root)
+  const palette = root.querySelector<HTMLElement>('.command-palette')
+  if (palette) cancelMotion(palette)
+}
 
 /** 仅在编辑模式执行项目保存任务，显示保存完成或取消，异常记为任务失败。 */ async function saveFromPalette(): Promise<void> {
   if (!isEditing.value) return

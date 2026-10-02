@@ -1,13 +1,18 @@
 /** 运行相机坐标换算：计算可见世界范围，并把游戏屏幕点转换到世界空间。 */
 import type { CameraRenderView } from './types'
 
+/** Camera-local half extents shared by viewport bounds and follow dead zones. */
+export function cameraViewportHalfExtents(view: CameraRenderView, width: number, height: number): { x: number; y: number } {
+  const viewport = view.viewport ?? { x: 0, y: 0, width: 1, height: 1 }
+  const scale = Math.max(1e-9, view.scale)
+  return { x: width * Math.max(0, viewport.width) / scale * .5, y: height * Math.max(0, viewport.height) / scale * .5 }
+}
+
 /** Axis-aligned world bounds of the pixels owned by one camera viewport. */
 /* 按相机缩放、旋转及视口尺寸计算世界空间可见区域的轴对齐包围盒。 */
 export function visibleWorldBounds(view: CameraRenderView, width: number, height: number) {
   const center = view.position ?? { x: (width * .5 - view.offset.x) / view.scale, y: (view.offset.y - height * .5) / view.scale }
-  const viewport = view.viewport ?? { x: 0, y: 0, width: 1, height: 1 }
-  const halfWidth = width * Math.max(0, viewport.width) / Math.max(1e-9, view.scale) * .5
-  const halfHeight = height * Math.max(0, viewport.height) / Math.max(1e-9, view.scale) * .5
+  const { x: halfWidth, y: halfHeight } = cameraViewportHalfExtents(view, width, height)
   const rotation = view.rotation ?? 0
   const extentX = Math.abs(Math.cos(rotation)) * halfWidth + Math.abs(Math.sin(rotation)) * halfHeight
   const extentY = Math.abs(Math.sin(rotation)) * halfWidth + Math.abs(Math.cos(rotation)) * halfHeight

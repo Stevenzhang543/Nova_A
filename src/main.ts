@@ -9,9 +9,12 @@ import { installCrashReporter } from './runtime/crashReporter'
 import { reportFatalError } from './runtime/faultCenter'
 import { installExternalLinkGuard } from './runtime/externalLinks'
 import { installEditorUi } from './ui/register'
+import { installUiMotion } from './ui/motion'
 
 installCrashReporter('Nova_A Editor')
 installExternalLinkGuard()
+const disposeUiMotion = installUiMotion()
+if (import.meta.hot) import.meta.hot.dispose(disposeUiMotion)
 const app = createApp(App)
 installEditorUi(app)
 app.config.errorHandler = /** 执行时调用 reportFatalError(error, `Vue: ${info}`)；不显式返回调用结果。 */ (error, _instance, info) => { reportFatalError(error, `Vue: ${info}`) }

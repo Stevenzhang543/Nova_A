@@ -12,7 +12,7 @@ import { canvasMaterialColor, resolveMaterial } from './materials'
 import type { TextureFilter } from './types'
 import { deformSkin } from '../runtime/rigging'
 import { renderingSettings, updateActivePostProcess, updateActiveRenderQuality } from './renderSettings'
-import { visibleWorldBounds } from './cameraMath'
+import { cameraViewportHalfExtents, visibleWorldBounds } from './cameraMath'
 
 export { gameScreenToWorld, visibleWorldBounds } from './cameraMath'
 
@@ -92,11 +92,16 @@ export function activeGameCameras(entities: Entity[], width: number, height: num
       desired = { x: finite(desired.x, 0), y: finite(desired.y, 0) }
       if (sourceTransform) desired = { x: sourceTransform.position.x + (desired.x - sourceTransform.position.x) * cameraBlendWeight, y: sourceTransform.position.y + (desired.y - sourceTransform.position.y) * cameraBlendWeight }
       const previous = smoothedCameraPositions.get(component) ?? { ...desired }
+      const rotation = finite(sourceTransform ? sourceTransform.rotation + (transform.rotation - sourceTransform.rotation) * cameraBlendWeight : transform.rotation, 0)
       if (component.dragMargins.enabled && followed) {
-        const halfHeight = Math.max(.000001, finite(component.orthographicSize, 10)), halfWidth = halfHeight * safeWidth / safeHeight
-        const minX = previous.x - halfWidth * (1 - component.dragMargins.left), maxX = previous.x + halfWidth * (1 - component.dragMargins.right)
-        const minY = previous.y - halfHeight * (1 - component.dragMargins.bottom), maxY = previous.y + halfHeight * (1 - component.dragMargins.top)
-        desired = { x: desired.x < minX ? previous.x + desired.x - minX : desired.x > maxX ? previous.x + desired.x - maxX : previous.x, y: desired.y < minY ? previous.y + desired.y - minY : desired.y > maxY ? previous.y + desired.y - maxY : previous.y }
+        const extents = cameraViewportHalfExtents({ scale, offset: { x: 0, y: 0 }, viewport }, safeWidth, safeHeight)
+        const cosine = Math.cos(rotation), sine = Math.sin(rotation), dx = desired.x - previous.x, dy = desired.y - previous.y
+        const local = { x: dx * cosine + dy * sine, y: -dx * sine + dy * cosine }
+        const minX = -extents.x * (1 - component.dragMargins.left), maxX = extents.x * (1 - component.dragMargins.right)
+        const minY = -extents.y * (1 - component.dragMargins.bottom), maxY = extents.y * (1 - component.dragMargins.top)
+        const excessX = local.x < minX ? local.x - minX : local.x > maxX ? local.x - maxX : 0
+        const excessY = local.y < minY ? local.y - minY : local.y > maxY ? local.y - maxY : 0
+        desired = { x: previous.x + excessX * cosine - excessY * sine, y: previous.y + excessX * sine + excessY * cosine }
       }
       if (component.limits.enabled) desired = { x: Math.min(finite(component.limits.right, desired.x), Math.max(finite(component.limits.left, desired.x), desired.x)), y: Math.min(finite(component.limits.top, desired.y), Math.max(finite(component.limits.bottom, desired.y), desired.y)) }
       const blend = component.smoothing.enabled ? 1 - Math.exp(-Math.max(0, finite(component.smoothing.speed, 0)) * Math.max(0, finite(deltaSeconds ?? 0, 0))) : 1
@@ -105,7 +110,6 @@ export function activeGameCameras(entities: Entity[], width: number, height: num
       const position = pixelPerfect
         ? { x: Math.round(smoothed.x * scale) / scale, y: Math.round(smoothed.y * scale) / scale }
         : smoothed
-      const rotation = finite(sourceTransform ? sourceTransform.rotation + (transform.rotation - sourceTransform.rotation) * cameraBlendWeight : transform.rotation, 0)
       const background = sourceComponent ? { r: sourceComponent.backgroundColor.r + (component.backgroundColor.r - sourceComponent.backgroundColor.r) * cameraBlendWeight, g: sourceComponent.backgroundColor.g + (component.backgroundColor.g - sourceComponent.backgroundColor.g) * cameraBlendWeight, b: sourceComponent.backgroundColor.b + (component.backgroundColor.b - sourceComponent.backgroundColor.b) * cameraBlendWeight } : component.backgroundColor
       return [{ entity, component, view: { scale, offset: { x: safeWidth * .5, y: safeHeight * .5 }, position, rotation, viewport }, background: rgba(background) }]
     })

@@ -1,6 +1,6 @@
-# Official competitor research — Phase II / 26.33
+# Official competitor research — Phase II / 26.34
 
-Retrieved 2026-09-28. Research is in progress. Use documentation to identify categories and practical workflows, not to duplicate APIs or assume equivalent implementations. Current manual channels may change independently of an installed editor; release labels are not inferred from search-result dates.
+Initial retrieval2026-09-28; specific workflow contracts revisited2026-10-01. Research for the listed2D workflow scope is complete; unsupported comparator details remain explicit. Use documentation to identify categories and practical workflows, not to duplicate APIs or assume equivalent implementations. Current manual channels may change independently of an installed editor; release labels are not inferred from search-result dates.
 
 | Source | Evidence read | Implication for Nova_A |
 |---|---|---|
@@ -29,3 +29,28 @@ No competitor-wide COMPLETE judgement follows from these index pages. Granular m
 - [GameMaker physics](https://manual.gamemaker.io/monthly/en/GameMaker_Language/GML_Reference/Physics/Physics.htm): dedicated physics API family. API existence is not evidence of identical collision semantics.
 
 The Construct physics page repeatedly failed retrieval; no detailed claim is derived from that failure. Its successfully read navigation, tilemap and save/load documents remain valid comparison evidence. Unity's unversioned manual identifies 6000.6 on this retrieval; the separately cited 6000.3 workflow is explicitly versioned and is not labeled the latest stable release.
+
+## 26.34 workflow review — retrieved 2026-10-01
+
+| Official manual | Practical contract and decision |
+|---|---|
+| [Godot input events](https://docs.godotengine.org/en/stable/tutorials/inputs/inputevent.html) | InputMap and UI accept_event precede unhandled gameplay. Repair wheel consumption rather than global suppression. |
+| [Defold input](https://defold.com/manuals/input/) | Project bindings, focus stack and consumption are distinct; editor/native widgets must not emit game actions. |
+| [Unity6000.6 Runtime UI event system](https://docs.unity3d.com/6000.6/Documentation/Manual/UIE-Runtime-Event-System.html) | Pointer focus and propagation/default actions are distinct. Explicit versioned manual; no latest-release claim. |
+| [Godot containers](https://docs.godotengine.org/en/stable/tutorials/ui/gui_containers.html) | Parent containers own child layout; retain bounded shared editor controls. |
+| [Defold GUI layouts](https://defold.com/manuals/gui-layouts/) | Authored layout behavior needs runtime tests at varied viewport sizes. |
+| [Construct text input](https://www.construct.net/en/make-games/manuals/construct-3/plugin-reference/text-input) | Native text is a separate input/control path; gameplay must not consume its scrolling/typing. |
+| [Godot project settings](https://docs.godotengine.org/en/stable/tutorials/editor/project_settings.html) | Startup/settings discovery and persistence are separate from runtime state. |
+| [Defold project settings](https://defold.com/manuals/project-settings/) | Trace settings through project save and build rather than count inspector fields. |
+| [GameMaker debugger](https://manual.gamemaker.io/monthly/en/IDE_Tools/The_Debugger.htm) | Live debugging needs actual runtime ownership and actionable errors. |
+| [Construct debugger](https://www.construct.net/en/make-games/manuals/construct-3/interface/debugger) | Runtime inspection is distinct from designer output. |
+| [Godot profiler](https://docs.godotengine.org/en/stable/tutorials/scripting/debug/the_profiler.html) | Measurements are scoped to recorded work; no substitute for GPU/physical latency. |
+| [Unity6000.6 Profiler](https://docs.unity3d.com/6000.6/Documentation/Manual/Profiler.html) | Module/device measurements differ; unsupported telemetry must remain unavailable. |
+| [GameMaker profiler](https://manual.gamemaker.io/monthly/en/IDE_Tools/The_Debugger/The_Profiler.htm) | Expose measured cost and clear capture status. |
+| [Defold profiling](https://defold.com/manuals/profiling/) | Local sampling and runtime diagnostics do not imply all-hardware budgets. |
+| [GameMaker shortcuts](https://manual.gamemaker.io/monthly/en/IDE_Navigation/Keyboard_Shortcuts.htm) | Context matters; preserve editor shortcuts outside Play. |
+| [Defold editor](https://defold.com/manuals/editor/) | Contextual tools, reusable resources and practical navigation are useful patterns. |
+| [Defold editor scripting](https://defold.com/manuals/editor-scripts/) | Batch undoable actions; use existing project mutation/history owners. |
+| [Godot script editor](https://docs.godotengine.org/en/stable/tutorials/editor/script_editor.html) | Diagnostics and source navigation should preserve drafts and valid runtime state. |
+
+These are workflow inferences applied to Nova_A, not claims of copied implementations. This release adds no copied third-party code or dependency.

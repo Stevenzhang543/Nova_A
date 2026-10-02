@@ -1,0 +1,345 @@
+{
+  "format": "nova-v26.34-motion-baseline-user-audit",
+  "version": 1,
+  "release": "26.34",
+  "regressionOrigin": "26.34",
+  "expectedRelease": "26.34",
+  "development": false,
+  "qualifiedRelease": null,
+  "generatedAt": "2026-10-01T18:44:42.196Z",
+  "status": "passed",
+  "checks": [
+    {
+      "name": "launcher dialog click reaches visible focused state",
+      "status": "passed"
+    },
+    {
+      "name": "menu open and command palette typing remain immediate",
+      "status": "passed"
+    },
+    {
+      "name": "workspace navigation retains persistent editor shell",
+      "status": "passed"
+    },
+    {
+      "name": "panel resize follows pointer and releases capture",
+      "status": "passed"
+    },
+    {
+      "name": "native inspector scroll stays responsive",
+      "status": "passed"
+    },
+    {
+      "name": "system reduced-motion and animation inventory observed",
+      "status": "passed"
+    }
+  ],
+  "observations": [
+    {
+      "name": "baseline-authority",
+      "generatedAt": "2026-10-01T18:44:31.241Z",
+      "packageVersion": "26.34.0",
+      "indexSha256": "90cd07df40f512b882c6ced5c8207d54782c788011dbcd9afae8634045b59082"
+    },
+    {
+      "name": "actual-browser-capabilities",
+      "backdropFilter": true,
+      "webAnimations": true,
+      "pointerEvent": true,
+      "resizeObserver": true,
+      "requestAnimationFrame": true,
+      "reducedMotion": false,
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/147.0.0.0 Safari/537.36 Edg/147.0.0.0",
+      "navigation": [
+        {
+          "domContentLoadedMs": 195.70000000018626,
+          "loadMs": 225.90000000037253
+        }
+      ],
+      "tokens": {
+        "--motion-control": "80ms",
+        "--motion-panel": "0ms",
+        "--motion-dialog": "0ms"
+      }
+    },
+    {
+      "name": "shell-geometry-navigation",
+      "before": {
+        "x": 0,
+        "y": 0,
+        "width": 1600,
+        "height": 900,
+        "top": 0,
+        "right": 1600,
+        "bottom": 900,
+        "left": 0
+      },
+      "after": {
+        "x": 0,
+        "y": 0,
+        "width": 1600,
+        "height": 900,
+        "top": 0,
+        "right": 1600,
+        "bottom": 900,
+        "left": 0
+      }
+    },
+    {
+      "name": "resize-hit-test",
+      "point": {
+        "x": 40,
+        "y": 486.5
+      },
+      "hit": "<div data-v-20d5d7d6=\"\" data-v-c8210210=\"\" class=\"resize-handle panel-resize-handle vertical\" role=\"separator\" tabindex=\"0\" aria-label=\"Hierarchy — Resize; arrow keys, Shift for larger steps, Escape to cancel drag\" aria-orientation=\"vertical\" aria-valuenow=\"236\" aria-valuemin=\"0\" aria-valuemax=\"500\" aria-disabled=\"false\" title=\"Hierarchy — Resize; arrow keys, Shift for larger steps, Escape to cancel drag\"></div>",
+      "before": 236
+    },
+    {
+      "name": "resize-after-pointerdown",
+      "data": {
+        "dragging": true,
+        "cursor": "ew-resize"
+      }
+    },
+    {
+      "name": "resize-after-pointermove",
+      "data": {
+        "width": 284,
+        "dragging": true,
+        "evidence": {
+          "name": "sidebar-direct-resize",
+          "eventAt": 7341.299999999814,
+          "frameAt": 7340.2,
+          "timeout": false,
+          "eventToObservedFrameMs": 0
+        }
+      }
+    },
+    {
+      "name": "direct-resize",
+      "before": 236,
+      "after": 284,
+      "pointerDelta": 48
+    },
+    {
+      "name": "inspector-scroll",
+      "selector": ".config-panel",
+      "before": 0,
+      "x": 1430.5,
+      "y": 486.5,
+      "max": 2651,
+      "after": 140
+    },
+    {
+      "name": "reduced-motion-baseline",
+      "data": {
+        "dataset": {
+          "theme": "dark",
+          "palette": "midnight-blue",
+          "formLabelLayout": "auto",
+          "compact": "false",
+          "reduceMotion": "false",
+          "highContrast": "false",
+          "performanceProfile": "balanced",
+          "editorMotion": "off",
+          "editorPreview": "full",
+          "uiScale": "standard",
+          "mobileEditor": "false"
+        },
+        "buttonTransition": "0s",
+        "animations": []
+      }
+    },
+    {
+      "name": "timing-method",
+      "scope": "Actual browser input event observed by a capture listener to first requestAnimationFrame where the requested DOM state is present. This is event-to-observed-frame latency, not pixel scan-out or hardware input latency. Renderer counters from DevTools; GPU/device CPU unavailable. Independent loopback port; software-rendered headless Edge."
+    },
+    {
+      "name": "interaction-timings",
+      "data": [
+        {
+          "name": "launcher-dialog-open",
+          "eventAt": 2423.100000000559,
+          "frameAt": 2424.3,
+          "timeout": false,
+          "eventToObservedFrameMs": 1.1999999994413884
+        },
+        {
+          "name": "file-menu-open",
+          "eventAt": 3790.5,
+          "frameAt": 3802.6,
+          "timeout": false,
+          "eventToObservedFrameMs": 12.099999999999909
+        },
+        {
+          "name": "palette-typing",
+          "eventAt": 4193.5,
+          "frameAt": 4202.7,
+          "timeout": false,
+          "eventToObservedFrameMs": 9.199999999999818
+        },
+        {
+          "name": "workspace-1",
+          "eventAt": 5669,
+          "frameAt": 5673.5,
+          "timeout": false,
+          "eventToObservedFrameMs": 4.5
+        },
+        {
+          "name": "workspace-0",
+          "eventAt": 5795.5999999996275,
+          "frameAt": 5790.1,
+          "timeout": false,
+          "eventToObservedFrameMs": 0
+        },
+        {
+          "name": "workspace-2",
+          "eventAt": 6091.699999999255,
+          "frameAt": 6106.9,
+          "timeout": false,
+          "eventToObservedFrameMs": 15.200000000744694
+        },
+        {
+          "name": "workspace-0",
+          "eventAt": 6283.899999999441,
+          "frameAt": 6290.2,
+          "timeout": false,
+          "eventToObservedFrameMs": 6.300000000558612
+        },
+        {
+          "name": "sidebar-direct-resize",
+          "eventAt": 7341.299999999814,
+          "frameAt": 7340.2,
+          "timeout": false,
+          "eventToObservedFrameMs": 0
+        },
+        {
+          "name": "inspector-wheel-scroll",
+          "eventAt": 7688,
+          "frameAt": 7686,
+          "timeout": false,
+          "eventToObservedFrameMs": 0
+        }
+      ]
+    },
+    {
+      "name": "bounded-performance-windows",
+      "data": [
+        {
+          "name": "launcher-idle",
+          "durationMs": 1501,
+          "frameCount": 362,
+          "p50FrameIntervalMs": 4.199999999999818,
+          "p95FrameIntervalMs": 4.2999999999999545,
+          "maxFrameIntervalMs": 4.300000000000182,
+          "longTasks": [],
+          "shellMissingFrames": 0,
+          "shellReplacementFrames": 0,
+          "activeAnimations": 0,
+          "counterDelta": {
+            "TaskDuration": 0.02168,
+            "ScriptDuration": 0.004467,
+            "LayoutDuration": 0,
+            "RecalcStyleDuration": 0,
+            "LayoutCount": 0,
+            "RecalcStyleCount": 0,
+            "JSHeapUsedSize": 65696,
+            "Nodes": 0
+          },
+          "endHeapBytes": 6146720
+        },
+        {
+          "name": "editor-idle",
+          "durationMs": 1520.5000000007449,
+          "frameCount": 72,
+          "p50FrameIntervalMs": 20.800000000000182,
+          "p95FrameIntervalMs": 25,
+          "maxFrameIntervalMs": 25.09999999999991,
+          "longTasks": [],
+          "shellMissingFrames": 0,
+          "shellReplacementFrames": 0,
+          "activeAnimations": 0,
+          "counterDelta": {
+            "TaskDuration": 0.33094599999999996,
+            "ScriptDuration": 0.307171,
+            "LayoutDuration": 0,
+            "RecalcStyleDuration": 0,
+            "LayoutCount": 0,
+            "RecalcStyleCount": 0,
+            "JSHeapUsedSize": 15373000,
+            "Nodes": 0
+          },
+          "endHeapBytes": 57481520
+        },
+        {
+          "name": "palette-open-idle",
+          "durationMs": 1018.3000000003722,
+          "frameCount": 48,
+          "p50FrameIntervalMs": 20.899999999999636,
+          "p95FrameIntervalMs": 25,
+          "maxFrameIntervalMs": 58.30000000000018,
+          "longTasks": [
+            {
+              "start": 4624.5999999996275,
+              "duration": 56
+            }
+          ],
+          "shellMissingFrames": 0,
+          "shellReplacementFrames": 0,
+          "activeAnimations": 0,
+          "counterDelta": {
+            "TaskDuration": 0.2662849999999999,
+            "ScriptDuration": 0.2485250000000001,
+            "LayoutDuration": 0.00006799999999999862,
+            "RecalcStyleDuration": 0.000013999999999996654,
+            "LayoutCount": 1,
+            "RecalcStyleCount": 1,
+            "JSHeapUsedSize": 13565724,
+            "Nodes": 0
+          },
+          "endHeapBytes": 58744336
+        },
+        {
+          "name": "after-workspace-switches",
+          "durationMs": 764.1000000000004,
+          "frameCount": 33,
+          "p50FrameIntervalMs": 24.899999999999636,
+          "p95FrameIntervalMs": 25.100000000000364,
+          "maxFrameIntervalMs": 29.100000000000364,
+          "longTasks": [],
+          "shellMissingFrames": 0,
+          "shellReplacementFrames": 0,
+          "activeAnimations": 0,
+          "counterDelta": {
+            "TaskDuration": 0.16338700000000017,
+            "ScriptDuration": 0.15044400000000002,
+            "LayoutDuration": 0,
+            "RecalcStyleDuration": 0,
+            "LayoutCount": 0,
+            "RecalcStyleCount": 0,
+            "JSHeapUsedSize": 18902388,
+            "Nodes": 0
+          },
+          "endHeapBytes": 61003292
+        }
+      ]
+    }
+  ],
+  "captures": [
+    "v26.34-motion-baseline-launcher.png",
+    "v26.34-motion-baseline-creation-dialog.png",
+    "v26.34-motion-baseline-editor.png",
+    "v26.34-motion-baseline-file-menu.png",
+    "v26.34-motion-baseline-command-palette.png"
+  ],
+  "consoleErrors": [],
+  "browser": {
+    "protocolVersion": "1.3",
+    "product": "Edg/147.0.3912.72",
+    "revision": "@d4380ba2b9dc3452fbccdc737e69d7f67a09122c",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/147.0.0.0 Safari/537.36 Edg/147.0.0.0",
+    "jsVersion": "14.7.25.7"
+  },
+  "commandTimeoutMs": 30000,
+  "scope": "Development rebuild production bundle; not published-release qualification. Recorded real Edge input and DOM observations against production dist. Headless software rendering and download/file-input fallback; physical assistive technology and native OS picker behavior are not measured."
+}

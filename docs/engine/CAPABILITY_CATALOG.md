@@ -1,4 +1,4 @@
-# Nova_A current capability catalog — 26.33 development
+# Nova_A current capability catalog — 26.35.0
 
 Source declares 402 editor operations, 61 registered kinds (including the Rope2D scene connection), 169 Rhai API entries and 208 graph definitions. Primitive contracts describe 59 component kinds. Transform2D and scene connections have separate persistence owners.
 

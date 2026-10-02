@@ -1,0 +1,181 @@
+{
+  "format": "nova-phase3-motion-baseline",
+  "version": 1,
+  "generatedAt": "2026-10-01T18:45:30.647Z",
+  "packageVersion": "26.34.0",
+  "indexSha256": "90cd07df40f512b882c6ced5c8207d54782c788011dbcd9afae8634045b59082",
+  "timings": [
+    {
+      "name": "launcher-dialog-open",
+      "eventAt": 2501.699999999255,
+      "frameAt": 2528.5,
+      "timeout": false,
+      "animationFrameTimestamp": 2503.6,
+      "eventToObservedFrameMs": 26.800000000745058
+    },
+    {
+      "name": "file-menu-open",
+      "eventAt": 3806.5,
+      "frameAt": 3820,
+      "timeout": false,
+      "animationFrameTimestamp": 3814.7,
+      "eventToObservedFrameMs": 13.5
+    },
+    {
+      "name": "palette-typing",
+      "eventAt": 4149.0999999996275,
+      "frameAt": 4166.0999999996275,
+      "timeout": false,
+      "animationFrameTimestamp": 4160.5,
+      "eventToObservedFrameMs": 17
+    },
+    {
+      "name": "workspace-1",
+      "eventAt": 5671.799999999814,
+      "frameAt": 5701.699999999255,
+      "timeout": false,
+      "animationFrameTimestamp": 5693.9,
+      "eventToObservedFrameMs": 29.899999999441206
+    },
+    {
+      "name": "workspace-0",
+      "eventAt": 5810.299999999814,
+      "frameAt": 5976.899999999441,
+      "timeout": false,
+      "animationFrameTimestamp": 5889.7,
+      "eventToObservedFrameMs": 166.59999999962747
+    },
+    {
+      "name": "workspace-2",
+      "eventAt": 6077.399999999441,
+      "frameAt": 6146.399999999441,
+      "timeout": false,
+      "animationFrameTimestamp": 6093.8,
+      "eventToObservedFrameMs": 69
+    },
+    {
+      "name": "workspace-0",
+      "eventAt": 6267.299999999814,
+      "frameAt": 6318.199999999255,
+      "timeout": false,
+      "animationFrameTimestamp": 6268.9,
+      "eventToObservedFrameMs": 50.89999999944121
+    },
+    {
+      "name": "sidebar-direct-resize",
+      "eventAt": 7282.199999999255,
+      "frameAt": 7288.5,
+      "timeout": false,
+      "animationFrameTimestamp": 7281.3,
+      "eventToObservedFrameMs": 6.300000000745058
+    },
+    {
+      "name": "inspector-wheel-scroll",
+      "eventAt": 7729.199999999255,
+      "frameAt": 7734.5,
+      "timeout": false,
+      "animationFrameTimestamp": 7727.3,
+      "eventToObservedFrameMs": 5.300000000745058
+    }
+  ],
+  "metrics": [
+    {
+      "name": "launcher-idle",
+      "durationMs": 1503.4,
+      "frameCount": 362,
+      "p50FrameIntervalMs": 4.199999999999818,
+      "p95FrameIntervalMs": 4.200000000000273,
+      "maxFrameIntervalMs": 4.300000000000182,
+      "longTasks": [],
+      "shellMissingFrames": 0,
+      "shellReplacementFrames": 0,
+      "activeAnimations": 0,
+      "counterDelta": {
+        "TaskDuration": 0.02202,
+        "ScriptDuration": 0.004568,
+        "LayoutDuration": 0,
+        "RecalcStyleDuration": 0,
+        "LayoutCount": 0,
+        "RecalcStyleCount": 0,
+        "JSHeapUsedSize": 64344,
+        "Nodes": 0
+      },
+      "endHeapBytes": 6145728
+    },
+    {
+      "name": "editor-idle",
+      "durationMs": 1512.0000000007449,
+      "frameCount": 59,
+      "p50FrameIntervalMs": 25,
+      "p95FrameIntervalMs": 33.30000000000018,
+      "maxFrameIntervalMs": 33.30000000000018,
+      "longTasks": [],
+      "shellMissingFrames": 0,
+      "shellReplacementFrames": 0,
+      "activeAnimations": 0,
+      "counterDelta": {
+        "TaskDuration": 0.3365119999999999,
+        "ScriptDuration": 0.312182,
+        "LayoutDuration": 0,
+        "RecalcStyleDuration": 0,
+        "LayoutCount": 0,
+        "RecalcStyleCount": 0,
+        "JSHeapUsedSize": 7955388,
+        "Nodes": 0
+      },
+      "endHeapBytes": 55929460
+    },
+    {
+      "name": "palette-open-idle",
+      "durationMs": 1006.0000000001864,
+      "frameCount": 49,
+      "p50FrameIntervalMs": 20.800000000000182,
+      "p95FrameIntervalMs": 25,
+      "maxFrameIntervalMs": 50,
+      "longTasks": [
+        {
+          "start": 4577.699999999255,
+          "duration": 68
+        }
+      ],
+      "shellMissingFrames": 0,
+      "shellReplacementFrames": 0,
+      "activeAnimations": 0,
+      "counterDelta": {
+        "TaskDuration": 0.2913380000000001,
+        "ScriptDuration": 0.27262999999999993,
+        "LayoutDuration": 0.00008700000000000374,
+        "RecalcStyleDuration": 0.000022999999999998716,
+        "LayoutCount": 1,
+        "RecalcStyleCount": 1,
+        "JSHeapUsedSize": -9417280,
+        "Nodes": 0
+      },
+      "endHeapBytes": 34929480
+    },
+    {
+      "name": "after-workspace-switches",
+      "durationMs": 769.1000000003723,
+      "frameCount": 36,
+      "p50FrameIntervalMs": 20.800000000000182,
+      "p95FrameIntervalMs": 25.100000000000364,
+      "maxFrameIntervalMs": 25.100000000000364,
+      "longTasks": [],
+      "shellMissingFrames": 0,
+      "shellReplacementFrames": 0,
+      "activeAnimations": 0,
+      "counterDelta": {
+        "TaskDuration": 0.16211399999999987,
+        "ScriptDuration": 0.148822,
+        "LayoutDuration": 0,
+        "RecalcStyleDuration": 0,
+        "LayoutCount": 0,
+        "RecalcStyleCount": 0,
+        "JSHeapUsedSize": -5334312,
+        "Nodes": 0
+      },
+      "endHeapBytes": 49637096
+    }
+  ],
+  "scope": "Non-release baseline against unmodified 26.34 production bundle. Software-rendered Edge. Device CPU/GPU and physical input latency unavailable."
+}

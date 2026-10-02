@@ -1,13 +1,13 @@
-# UI V2 integration plan — 26.33
+# UI V2 integration — 26.34
 
-The completed UI rebuild remains the visual source. Phase II repaired engine integration rather than adding another editor shell. Core runtime/browser contracts are stable enough for this dedicated integration pass.
+Preserve docs/ui/UI_SPEC.md and the completed SVG/shared-token/persistent-shell rebuild. Phase II adds no competing shell or new design system.
 
-1. Preserve shared tokens, UiButton/UiSlider/UiTabs/UiDialog and persistent workspace hosts. Do not repeat the prior visual redesign.
-2. Verify repaired joint descriptors through the existing object composition controls and descriptions; no alternate joint editor.
-3. Verify runtime save controls and clear load/commit/recovery status in their existing runtime tools. Preserve distinction from project Save.
-4. Confirm editor shortcuts resume after Stop and do not consume game keys during Play/Pause.
-5. Re-run actual all-panel navigation, compact/stacked numeric controls, translations and scaling against the release candidate. Inspect captured images and nearby surfaces; fix observed defects only.
-6. Run real reference-game edit/undo/save/reopen/export and persistent-shell navigation checks. No screenshot-only functional claims.
-7. Record results in MIGRATION.md, DECISIONS.md and the 26.33 edit ledger. Final release evidence must match frozen source.
+1. Keep UiButton/UiSlider/UiTabs/UiDialog and standardized numeric fields. Existing settings/history/drafts remain authoritative.
+2. Imported font settings receive concise EN/DE/ZH availability text using the existing hint style; preserve serialized advanced options.
+3. Profiler cards distinguish measured, unavailable and estimated data; label input-to-CPU-submission according to its actual boundary. Keep legacy fields/capturev2 compatibility.
+4. Game UI owns handled wheel events; each cached viewport marks its own input surface. Native/editor scrolling stays separate.
+5. Execute actual nested authoring/history/save/reopen and game-UI form/scroll tests. Browser functionality and editor geometry are separate.
+6. Execute all available panel routes with populated fixtures, dock/maximize/disclosure, representative languages/scales/widths and draft/save/history. Inspect actual PNGs and nearby font/profiler surfaces.
+7. Record every file in EDIT_LEDGER_26_34.md; package only after source-bound gates pass.
 
-No new visual pattern or dependency is proposed. Game UI is separately verified through canvas text entry, checkbox interaction and the exported player; editor geometry cannot substitute for those checks.
+No icon family, major dependency, arbitrary geometry or routine text-button pattern is introduced. Source traces are not sufficient acceptance; final screenshot review is separate from build success.

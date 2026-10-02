@@ -1,583 +1,599 @@
-# Nova_A — Autonomous Complete UI/UX Rebuild
+# Nova_A — Phase III
+# Visual Refinement, Soft Geometry, Spatial Comfort & Motion System
 
-You are now responsible for a complete UI/UX redesign and reimplementation of the Nova_A editor.
+You are responsible for the next Nova_A editor refinement phase.
 
-For this task, act simultaneously as:
+Read the entire repository and all existing project/UI documentation before modifying implementation code.
 
-1. Lead Product Designer
-2. Senior Desktop UI/UX Engineer
-3. UI Architecture Engineer
-4. Visual QA Reviewer
-
-You have substantial design authority.
-
-Do not repeatedly ask the user how every button, panel, spacing value, or control should look.
-
-Use professional product-design judgment and create a coherent design language for Nova_A.
-
-## Mandatory repository instructions
-
-Before doing anything else, read:
-
+In particular read:
 - `AGENTS.md`
-- `docs/ui/UI_SPEC.md`
-- `docs/ui/UI_AUDIT.md`
-- `docs/ui/MIGRATION.md`
-- `docs/ui/DECISIONS.md`
+- current UI specification(s)
+- UI migration/history documents
+- engine/UX work completed in the previous phase
+- `docs/ui/UI_VISUAL_V3_SPEC.md`
+- `docs/ui/MOTION_SYSTEM_SPEC.md`
+- `docs/ui/UI_MOTION_IMPLEMENTATION_PLAN.md`
+- `docs/ui/MOTION_QA_CHECKLIST.md`
 
-Treat `docs/ui/UI_SPEC.md` as the UI/UX source of truth.
+If `AGENTS_UI_MOTION_APPEND.md` has not been merged into `AGENTS.md`, treat its contents as active instructions and recommend merging them.
 
-Treat `docs/ui/MIGRATION.md` as the live implementation tracker.
+## 1. Context
+The current Nova_A UI is already structurally successful.
 
-Treat `docs/ui/DECISIONS.md` as persistent design/architecture memory.
+Strengths:
+- clean information hierarchy
+- clear panel organization
+- restrained visual language
+- good readability
+- reduced clutter
 
----
+These strengths MUST be preserved.
 
-# CORE OBJECTIVE
+Do NOT interpret this task as another complete redesign.
 
-Completely rebuild the Nova_A editor interface into a coherent, compact, professional desktop development tool.
+Current problems:
+- slightly too plain
+- launch/welcome page underdesigned and text-heavy
+- surfaces/boundaries too rectangular
+- panels/controls mechanically rigid
+- spacing around text and controls sometimes too tight
+- some dense areas cramped
+- little decorative identity
+- transitions too static
+- dragging/reordering lacks tactile feedback
+- menus/panels/content changes could feel much more fluid
 
-This is NOT:
+Target evolution:
+CURRENT: clean + precise + rigid + minimal
+TARGET: clean + precise + soft + spacious + tactile + fluid + refined
 
-- a cosmetic refresh
-- a recoloring task
-- a CSS cleanup
-- a request to replace several text buttons with icons
-- a request to preserve the current layouts
-- a request to keep the existing widgets
-- a request to minimally modify the current interface
+## 2. Visual direction
+Preserve current information architecture.
 
-The current interface has fundamental issues involving:
+Evolve toward:
+- softer geometry
+- better whitespace
+- more generous text/control padding
+- clearer spacing rhythm
+- restrained rounded corners
+- subtle surface depth
+- intentional accent color blocks
+- coherent decorative motifs
+- polished visual states
+- richer but restrained launch-page composition
 
-- visual hierarchy
-- inconsistent control dimensions
-- excessive text buttons
-- excessive form-like controls
-- inconsistent sliders
-- inconsistent spacing
-- weak information architecture
-- poor visual cohesion
-- inefficient use of space
-- navigation flickering
-- layout jumping
-- duplicated UI patterns
-- inconsistent styling
-- weak professional-tool aesthetics
+Remain a serious professional desktop tool.
 
-Treat the existing UI primarily as a source of FUNCTIONAL REQUIREMENTS.
+Do NOT transform Nova_A into:
+- a phone interface
+- bubbles everywhere
+- a glassmorphism showcase
+- a marketing website
+- a toy
+- giant rounded cards
+- visually noisy concept art
 
-Do NOT treat the existing UI as the visual reference for the new design.
+## 3. Apple-quality motion — principle, not copy
+Take inspiration from high-quality Apple-platform interaction:
+- immediate direct manipulation
+- spring-like settling
+- smooth continuity
+- subtle depth
+- restrained translucency
+- polished opening/closing transitions
+- high-quality drag feedback
 
-Core principle:
+Do NOT literally copy iOS controls/layouts.
 
-**Preserve capability. Replace presentation.**
+Nova_A is mouse/keyboard desktop software.
 
----
+Most importantly:
+"Jelly" does NOT mean lag.
 
-# DEFINITION OF COMPLETE REBUILD
+Dragged content must track pointer immediately and accurately.
+Elasticity belongs primarily in:
+- release
+- settle
+- neighboring-item movement
+- docking preview
+- secondary visual response
 
-The following existing elements are NOT required to be preserved:
+Never introduce elastic delay between cursor and manipulated object.
 
-- layout structure
-- panel organization
-- toolbar structure
-- button styles
-- input styles
-- slider styles
-- property editors
-- navigation structure
+## 4. First action — audit before styling
+Before implementation:
+1. Build and test the current repository.
+2. Launch Nova_A.
+3. Establish visual/performance baseline.
+4. Inspect existing design system.
+5. Determine actual UI framework and rendering capabilities.
+6. Determine support for:
+   - opacity animation
+   - transforms
+   - layout animation
+   - clipping
+   - shadows
+   - blur/backdrop filtering
+   - compositor/GPU acceleration
+   - timers
+   - easing/spring APIs
+7. Audit every major screen for:
+   - cramped text
+   - insufficient padding
+   - excessive rectangularity
+   - excessive borders
+   - weak surface hierarchy
+   - missing visual identity
+   - abrupt state changes
+8. Audit drag/reorder interactions.
+9. Audit panel/window transitions.
+10. Update `UI_MOTION_IMPLEMENTATION_PLAN.md`.
+
+Do not guess about blur or animation capability.
+
+## 5. Evolve design tokens first
+Do not hand-edit dozens of panels first.
+
+Centralize/refine:
+
+### Radius
+Create:
+- xs
+- sm
+- md
+- lg
+- xl
+- pill where appropriate
+
+No arbitrary radii.
+
+### Spacing
+Use distinct spacing for:
+- tightly related controls
+- normal property rows
+- section separation
+- panel insets
+- major composition
+
+Do not globally enlarge everything.
+
+### Surfaces
+Define/refine:
+- app background
+- panel
+- raised
+- hover
+- selected
+- floating
+- overlay
+
+Use surface contrast to reduce border dependence.
+
+### Elevation
+Standardize:
+- border
+- separator
+- subtle shadow
+- floating shadow
+
+### Accent/decorative tokens
+Centralize branded color and decorative motif.
+
+## 6. Soften geometry without destroying density
+Rules:
+- docked panels still form one workspace
+- do not make every panel a floating card
+- do not add large gaps everywhere
+- do not make every tree/property row a pill
+- dense lists remain dense
+- inputs/buttons may become moderately rounder
+- floating/dialog/launch surfaces may use larger radii
+
+Goal: soft structure, not bubble UI.
+
+## 7. Improve whitespace and text comfort
+Increase room:
+- panel edge to content
+- around panel titles
+- section title to first property
+- between unrelated groups
+- inside text-bearing controls
+- icon-to-label
+- empty states
 - dialogs
-- visual hierarchy
+- welcome screen
+
+Preserve compactness inside tightly related property groups.
+
+## 8. Reduce boxiness
+Where appropriate replace excessive outlines with:
 - spacing
-- control dimensions
-- style infrastructure
-- reusable UI components
-- inspector layouts
-- tabs
+- subtle surface contrast
+- restrained separators
+- contextual elevation
+
+Do not make every region a visible rectangle.
+
+## 9. Add restrained visual identity
+Design one coherent Nova_A motif.
+
+Possible inspiration:
+- nodes
+- vectors
+- grid geometry
+- 2D engine primitives
+- connected points
+- abstract scene/transform shapes
+
+Use subtly in:
+- welcome screen
+- empty states
+- safe large inactive backgrounds
+- selected branded areas
+
+Do not scatter unrelated decorations across every panel.
+
+## 10. Refine launch/welcome experience
+Redesign composition while preserving simplicity.
+
+Evaluate:
+- Nova_A identity/logo/mark
+- concise product descriptor
+- Create Project
+- Open Project
+- Recent Projects
+- templates/quick-start options if supported
+- version/status information
+- restrained decorative background/motif
+
+Use stronger spatial composition and whitespace.
+Launch can be more expressive than editor.
+Add polished restrained entrance/hover motion.
+Do not make a marketing landing page.
+
+## 11. Create a real motion system first
+Do NOT scatter arbitrary `200ms ease` snippets.
+
+Implement/centralize reusable motion following `MOTION_SYSTEM_SPEC.md`.
+
+At minimum provide concepts equivalent to:
+- micro/instant
+- fast
+- standard
+- emphasized
+- spring.snappy
+- spring.smooth
+- spring.elastic
+
+Exact implementation depends on framework.
+
+## 12. Microinteractions
+
+### Buttons
+Hover: subtle surface/tint transition.
+Press: immediate feedback; optional tiny compression/depth.
+Release: fast natural settle.
+
+### Tabs
+Smooth active state/indicator movement.
+No flashing.
+
+### Expand/collapse
+Animate disclosure indicator and short content transition.
+
+### Focus
+Smooth focus state; never delayed.
+
+### Selection
+Transition selection states rather than harsh visual flashes.
+
+Keep all microinteractions fast.
+
+## 13. Panel/content transitions
+Use motion only where it communicates structure.
+
+Candidates:
+- bottom panel open/close
+- contextual inspector content
+- tool panels
+- side panes
+- workspace mode changes
+- secondary drawers
+
+Rules:
+- persistent shell stable
+- no entire-editor sliding
+- no cinematic transitions
+- no blank frame
+- no fade-to-black
+- no animation hiding slow loading
+
+Use small translations, opacity, clipped reveal, or spring size settling only when useful and efficient.
+
+## 14. Dragging is first-class
+Audit ALL drag operations:
+- hierarchy reorder
+- hierarchy reparent
+- asset drag
+- resource assignment
+- tab drag
+- panel docking
+- viewport manipulation
+- TileMap interactions
+- animation/keyframes
+
+### Direct manipulation
+Actual manipulated object must track pointer accurately and immediately.
+NO artificial elastic pointer lag.
+
+### While dragging
+Use subtle:
+- elevation
+- shadow
+- scale
+- transparency
+- drag preview
+- destination highlight
+
+### Reordering
+Neighbors should smoothly move out of the way where practical.
+
+### Drop
+Spring settle to final position.
+
+### Cancel
+Return cleanly.
+
+### Docking
+Show responsive docking preview and subtle target animation.
+
+Target feeling: tactile and jelly-like without imprecision.
+
+## 15. Blur/translucency/materials
+User wants fluid dynamic blur.
+
+First determine what the actual stack can support efficiently.
+
+Good candidates:
+- command palette
+- popovers
 - menus
-- visual grouping
+- modal backdrop
+- floating transient surfaces
+- welcome decorative material
+- temporary drag overlays
 
-You are explicitly authorized to:
+Do NOT blur every persistent panel.
 
-- delete old UI components
-- rewrite shared widgets
-- replace existing controls
-- restructure screens
-- reorganize navigation
-- redesign the editor shell
-- redesign the inspector
-- redesign the hierarchy
-- redesign toolbars
-- redesign dialogs
-- redesign property editors
-- redesign asset interfaces
-- redesign settings
-- consolidate duplicated functionality
-- move actions to more appropriate places
-- replace text controls with icon controls
-- introduce a centralized design system
-- remove obsolete legacy UI code
+Hierarchy, inspector, viewport remain crisp.
 
-Do NOT preserve a poor implementation merely because it already exists.
+If backdrop blur is unavailable/unstable/expensive, use:
+- tinted transparency
+- static/precomputed blur where appropriate
+- opaque material with subtle elevation
 
-Do NOT perform a cosmetic reskin.
+Do not sacrifice performance to satisfy the word "blur".
 
-For this project, minimizing diff size is NOT an objective.
+## 16. Do not confuse blur with motion blur
+Normal text and controls remain crisp during motion.
+Do not add cinematic motion blur to:
+- buttons
+- labels
+- panels
+- inspector controls
+- hierarchy rows
 
-Prefer a clean and coherent UI replacement over preserving poor UI architecture for the sake of a smaller patch.
+## 17. Spring physics
+Where framework permits, prefer coherent spring interpolation over arbitrary bounce keyframes.
 
-Do not unnecessarily rewrite unrelated engine/runtime systems.
-
----
-
-# PRODUCT DIRECTION
-
-Nova_A must feel like a serious desktop creative/development tool.
-
-Its visual character should be:
-
-- professional
-- compact
-- dark
-- restrained
-- low-saturation
-- technically precise
-- efficient
-- visually quiet
-- information-dense
-- modern
-- predictable
-- cohesive
-
-High-level inspiration may be taken from the interaction quality of Figma, VS Code, Blender, modern Godot, and JetBrains IDEs, but do not directly copy any of them.
-
-Nova_A must not feel like:
-
-- a website
-- a web dashboard
-- a mobile application
-- a settings form
-- a collection of cards
-- a collection of random widgets
-- a student project
-
----
-
-# PHASE 0 — AUDIT BEFORE IMPLEMENTATION
-
-Do NOT begin with random visual modifications.
-
-First perform a repository-wide UI audit and update `docs/ui/UI_AUDIT.md` with actual findings.
-
-Inspect:
-
-- every major editor screen
-- every editor mode
-- every toolbar
-- navigation mechanisms
-- dialogs and popups
-- inspectors/property editors
-- sliders
-- numerical inputs
-- text buttons
-- icons
-- trees/lists/tabs
-- asset interfaces
-- reusable UI components
-- hard-coded control dimensions
-- hard-coded colors
-- duplicated styles
-- inconsistent margins/padding
-- inconsistent control heights/widths
-- unnecessary large inputs
-- unnecessary text
-- excessive whitespace
-- overcrowded regions
-
-For every major screen, document:
-
-1. purpose
-2. existing functionality
-3. functionality that must survive
-4. UX problems
-5. visual problems
-6. architectural problems
-7. proposed replacement structure
-8. shared components required
-9. migration complexity
-10. regression risks
-
----
-
-# NAVIGATION FLICKER — P0 DEFECT
-
-Visible flickering during navigation is a P0 UI defect.
-
-Investigate the actual technical cause.
-
-Check for:
-
-- unnecessary component destruction
-- component remounting
-- full-window rebuilding
-- temporary empty states
-- theme reinitialization
-- style reloads
-- unnecessary repainting
-- layout invalidation
-- geometry recalculation
-- synchronous resource loading
-- parent container reconstruction
-- window resizing
-- state resets
-- expensive initialization during page switches
-
-Document evidence and root-cause candidates in `UI_AUDIT.md`.
-
-Do not hide the issue using animation.
-
-Fix the architectural cause.
-
----
-
-# DESIGN SYSTEM FIRST
-
-Before migrating the entire application, finalize and implement the shared design system described in `UI_SPEC.md`.
-
-At minimum, converge on shared implementations for:
-
-- semantic colors
-- typography
-- spacing tokens
-- SVG icons
-- icon button
-- text button
-- input
-- numeric input
-- slider
-- dropdown
-- checkbox
-- tabs
-- tree row
-- property row
-- property section
-- menu
-- tooltip
-- scrollbar
-- divider
-- dialog/popup
-- panel header
-
-Individual screens must not independently invent control geometry or styling.
-
----
-
-# ICON-FIRST ROUTINE ACTIONS
-
-Routine editor actions should normally use compact SVG icon buttons with tooltips.
+Named presets must be:
+- stable
+- interruption-safe
+- bounded
+- time-step safe
 
 Examples:
+- button: very snappy, near-zero overshoot
+- tab: snappy/smooth
+- panel: smooth
+- drag settle: slightly elastic
+- launch decoration: may be more elastic
 
-- New
-- Open
-- Save
-- Undo
-- Redo
-- Add
-- Remove
-- Delete
-- Duplicate
-- Play
-- Pause
-- Stop
-- Search
-- Visibility
-- Lock
-- Unlock
-- Refresh
-- Settings
-- Expand
-- Collapse
-- Move
-- More actions
+Do not bounce everything.
 
-Do not use emoji or random Unicode symbols as production icons.
+## 18. Interruptible animations required
+Handle:
+- open then immediately close
+- switch tab during transition
+- repeated selection changes
+- drag before hover completes
+- reopen panel before closing finishes
+- resize during transition
 
-Do not blindly eliminate useful text. Keep text where wording materially improves comprehension.
+Do not queue stale endpoint animations.
 
----
+Where possible animate from current presentation state to newest target.
 
-# NUMERIC CONTROLS AND SLIDERS
+Logical and visual states must not diverge.
 
-Redesign numeric property editing for desktop-tool workflows.
+## 19. Performance is hard requirement
+Before/after test:
+- typing latency
+- button response
+- hierarchy scrolling
+- asset scrolling
+- inspector scrolling
+- hierarchy drag
+- asset drag
+- panel resize
+- workspace switching
+- menu/dialog open
+- project launch
+- idle CPU/GPU
 
-Avoid giant full-width inputs for short values.
+Profile where available:
+- frame time
+- layout passes
+- repaint cost
+- GPU composition
+- blur cost
+- allocations
 
-Prefer compact aligned property rows.
+Prefer compositor-friendly transform/opacity when supported.
+Avoid expensive full layout/repaint every frame.
 
-All standard sliders must use one shared implementation and consistent geometry.
+If effect harms responsiveness, simplify it.
 
-Do not create giant standalone sliders.
+## 20. Reduced motion
+If technically reasonable:
+- remove strong overshoot
+- disable continuous decorative movement
+- minimize large translations
+- use fast fades/near-instant change
+- preserve hover/focus/selection
 
-When precision matters, pair the slider with a compact numeric input.
+Motion must never be required to understand state.
 
-Slider width must not unpredictably change between screens, values, labels, or parent layouts.
+## 21. Specialized editors
+Apply same V3 visual/motion language to:
+- animation editor
+- TileMap/TileSet
+- physics
+- game UI editor
+- input mapping
+- profiler/debugger
+- settings
+- project management
 
----
+Do not let each subsystem invent its own style or animation curves.
 
-# PERSISTENT EDITOR SHELL
+## 22. Visual QA
+Use `MOTION_QA_CHECKLIST.md`.
 
-Evaluate and rebuild the editor around a persistent shell where technically reasonable.
+Test representative sizes where practical:
+- 1920×1080
+- 1600×900
+- 1366×768
+- current minimum supported size
 
-Likely persistent regions:
+## 23. Visual baseline
+If practical, capture/reference:
+- launch screen
+- main editor
+- inspector
+- hierarchy
+- assets
+- animation
+- TileMap
+- settings
 
-- top toolbar/navigation
-- left dock
-- central workspace container
-- right inspector dock
-- bottom dock where applicable
+Do not introduce disproportionate screenshot infrastructure.
 
-Switching tools/pages should replace only the relevant content region.
+## 24. Do not reintroduce old UI problems
+Do not reintroduce:
+- giant controls
+- giant sliders
+- excessive text buttons
+- random icon styles
+- arbitrary panel dimensions
+- excessive card layouts
+- unnecessary instructional text
+- inconsistent input heights
+- navigation flicker
+- unstable geometry
 
-During navigation:
+Visual richness must not undo structural discipline.
 
-- no visible white flash
-- no visible black flash
-- no blank intermediate frame
-- no full-shell disappearance
-- no unrelated panel resize
-- no random geometry jump
+## 25. Development process
+For each milestone:
+1. inspect current implementation
+2. define intended visual/interaction change
+3. update shared tokens/components first
+4. implement
+5. build
+6. run tests
+7. launch Nova_A
+8. inspect actual result
+9. interact with controls
+10. test rapid/repeated interaction
+11. profile if motion/blur involved
+12. fix regressions
+13. update implementation plan
+14. inspect neighboring surfaces
+15. review diff
 
----
+Compilation is not UI validation.
 
-# INSPECTOR
+## 26. Autonomy
+Use professional product-design and UI-engineering judgment.
 
-Build a coherent reusable inspector/property system.
-
-Use compact property rows, concise labels, collapsible sections where appropriate, and shared numeric/slider controls.
-
-Avoid verbose labels and oversized inputs.
-
----
-
-# NO CARD HELL
-
-Do not redesign Nova_A as a collection of cards.
-
-Prefer:
-
-- panels
-- docks
-- sections
-- tabs
-- trees
-- lists
-- inspectors
-- property rows
-- toolbars
-- menus
-- dialogs
-
-Cards should exist only where they have clear semantic value.
-
----
-
-# AUTONOMY
-
-You are expected to make routine UI/UX decisions independently.
-
-Do not ask for approval for normal choices such as:
-
+You may independently decide:
+- exact token values
+- exact radii
 - exact padding
-- control alignment
-- icon placement
-- minor color tuning
-- ordinary component restructuring
-- reasonable panel dimensions
+- exact spring parameters
+- exact duration/easing presets
+- exact decorative motif
+- exact accent placement
+- component-level animation
 
-Use the design system and professional judgment.
+Do not ask for trivial design choices.
 
-Ask for user input only when a decision would:
+Ask only if a decision would:
+- materially alter successful information architecture
+- remove important functionality
+- require major new dependency
+- require major renderer/UI-framework rewrite
+- significantly affect platform compatibility
 
-- fundamentally change the product's purpose
-- remove significant existing functionality
-- introduce a major new dependency
-- significantly change a core workflow
-- require irreversible/destructive external action
+## 27. Definition of done
 
----
+### Static visual
+- clear hierarchy preserved
+- launch screen intentionally designed
+- editor less rigid
+- whitespace improved
+- cramped relationships fixed
+- rounded geometry coherent
+- panel treatment remains professional
+- restrained accent/decorative identity exists
+- richness does not become clutter
 
-# IMPLEMENTATION ORDER
+### Motion
+- shared motion system exists
+- microinteractions consistent
+- useful panel/content transitions polished
+- open/close behavior coherent
+- animations interruption-safe
+- animations never block input
 
-Use `docs/ui/MIGRATION.md` as the authoritative tracker.
+### Drag
+- pointer fidelity exact
+- tactile feedback clear
+- targets clear
+- reordering smooth where practical
+- drop/cancel settles naturally
+- no artificial cursor lag
 
-General order:
+### Blur/material
+- used selectively
+- persistent work surfaces readable
+- fallback exists
+- performance acceptable
 
-1. complete UI audit
-2. finalize specification
-3. implement design-system foundation
-4. implement SVG icon system
-5. rebuild persistent application shell
-6. eliminate navigation flicker/layout jumping
-7. migrate hierarchy/scene navigation
-8. migrate inspector/property editing
-9. migrate viewport/toolbar
-10. migrate asset interfaces
-11. migrate console/debug UI
-12. migrate animation UI
-13. migrate dialogs/contextual interfaces
-14. migrate project management UI
-15. migrate settings/secondary screens
-16. eradicate legacy UI
-17. perform complete visual QA/polish
+### Performance
+- no meaningful new typing/click/drag latency
+- no persistent animation hitching
+- no new navigation flicker
+- no unacceptable idle resource use
 
-You may adjust this sequence for strong technical reasons, but record that decision in `DECISIONS.md`.
+### Consistency
+- specialized editors use same V3 system
+- no major screen belongs to a different visual generation
+- no large collection of arbitrary animation constants
+- existing UI architectural quality has not regressed
 
----
+Final target:
+Nova_A's existing clean professional editor, matured into a softer, more spacious, tactile and highly fluid product — not replaced by a different product.
 
-# VISUAL QA IS PART OF CORRECTNESS
-
-A UI task is NOT complete simply because:
-
-- code compiles
-- tests pass
-- old functionality still exists
-
-For each significant screen, verify:
-
-- no oversized controls
-- no inconsistent input heights
-- no inconsistent button sizes
-- no giant standalone sliders
-- no inconsistent slider geometry
-- no unnecessary text buttons
-- no emoji icons
-- no mismatched SVG styles
-- no unexplained large empty areas
-- no overcrowded sections
-- no inconsistent padding/margins
-- no misaligned labels
-- no clipped text
-- no overlapping controls
-- no accidental horizontal scrolling
-- no unnecessary scrollbars
-- no controls touching panel boundaries
-- no duplicated actions without purpose
-- no unexpected layout jumps
-- no navigation flicker
-- no temporary blank frames
-- no arbitrary component dimensions
-- no screen that looks like it belongs to a different application
-
----
-
-# VISUAL ITERATION LOOP
-
-Whenever technically possible:
-
-Implement
--> Build
--> Launch Nova_A
--> Open the affected interface
--> Inspect the actual visual result
--> Compare against `UI_SPEC.md`
--> Identify inconsistencies
--> Fix them
--> Launch and inspect again
--> Verify functionality
--> Update migration status
--> Continue
-
-Do not use:
-
-Implement -> Build succeeds -> Done
-
-for significant UI work.
-
-If screenshot/visual regression testing is practical without disproportionate complexity, use it for major surfaces at representative desktop sizes such as:
-
-- 1920x1080
-- 1600x900
-- 1366x768
-
----
-
-# FUNCTIONAL SAFETY
-
-Before replacing an old screen:
-
-1. identify its user-facing functionality
-2. identify data flows and callbacks
-3. identify keyboard shortcuts/interactions
-4. identify important edge cases
-5. preserve required behavior
-6. replace the presentation
-
-Do not accidentally remove useful functionality because the old interface is being discarded.
-
----
-
-# LEGACY UI ERADICATION
-
-Near the end, systematically search for:
-
-- deprecated UI components
-- legacy style definitions
-- old sliders
-- old text-button implementations
-- hard-coded colors
-- arbitrary widths/heights
-- duplicate controls
-- old icon systems
-- obsolete panel implementations
-
-Remove or migrate them where safe.
-
-Important legacy components should ideally reach zero usages.
-
-Do not leave multiple competing UI systems active without a documented technical reason.
-
----
-
-# CONTINUOUS DOCUMENTATION
-
-During implementation:
-
-- keep `UI_AUDIT.md` accurate
-- update `MIGRATION.md` after every milestone
-- add significant decisions to `DECISIONS.md`
-- update `UI_SPEC.md` only when a deliberate system-level improvement is made
-
-Do not casually rewrite the design system during each screen migration.
-
----
-
-# FINAL DEFINITION OF DONE
-
-The Nova_A UI rebuild is complete only when:
-
-- major editor surfaces use the new design system
-- major legacy UI patterns are removed
-- controls have consistent geometry
-- routine commands use a coherent SVG icon system
-- numerical properties are compact and predictable
-- sliders are standardized
-- navigation flicker has been eliminated or any remaining technical limitation is explicitly documented
-- panel geometry is stable
-- the inspector is coherent
-- spacing and typography are consistent
-- no major screen visibly belongs to an older UI generation
-- relevant functionality still works
-- builds/tests pass
-- visual QA has been performed
-- `MIGRATION.md` accurately reflects completion
-
-The goal is not merely:
-
-"Nova_A looks better than before."
-
-The goal is:
-
-"Nova_A now has a coherent professional editor UI and a maintainable design system."
-
-Begin with the repository audit now. Once the audit and migration plan are coherent, proceed with implementation autonomously without asking for routine confirmation.
+Begin with the audit and baseline now. Do not immediately apply random styling changes.

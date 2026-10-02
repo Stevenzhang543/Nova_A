@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f3ee">
+  <title>Today — WortWerk</title>
+  <link rel="stylesheet" href="/style.css?v=20260909-3">
+  <script src="/app.js?v=20260909-3" defer></script>
+</head>
+<body data-page="dashboard">
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="topbar topbar-sticky">
+    <a class="brand" href="/dashboard.html"><span class="brand-mark">W</span>WortWerk</a>
+    <nav class="nav-actions" aria-label="Account">
+      <span id="nav-level" class="pill">Level 1</span>
+      <button class="icon-button theme-toggle" type="button" aria-label="Change color theme">◐</button>
+      <button id="logout-button" class="button button-small button-quiet" type="button">Sign out</button>
+    </nav>
+  </header>
+
+  <main id="main" class="dashboard shell" aria-busy="true">
+    <section class="dashboard-heading">
+      <div><p class="eyebrow" id="day-label">Your German today</p><h1 id="welcome-heading">Guten Tag.</h1></div>
+      <div class="goal-control"><label for="daily-goal">Daily target</label><select id="daily-goal"><option value="8">8 recalls</option><option value="15" selected>15 recalls</option><option value="25">25 recalls</option><option value="40">40 recalls</option></select></div>
+    </section>
+
+    <section class="today-grid" aria-label="Today's learning plan">
+      <article class="today-card primary-surface">
+        <div class="card-kicker"><span class="status-dot"></span><span>Smart session</span></div>
+        <div class="today-number"><strong id="due-count">—</strong><span>reviews due</span></div>
+        <p id="today-guidance">Preparing your shortest path to durable recall…</p>
+        <div class="today-actions">
+          <button class="button button-primary" type="button" data-start-mode="smart">Start today’s session</button>
+          <button id="resume-button" class="button button-quiet" type="button" hidden>Resume saved session</button>
+        </div>
+      </article>
+      <article class="rhythm-card card">
+        <div class="ring" id="goal-ring" aria-label="Daily goal progress"><span id="goal-percent">0%</span></div>
+        <div><p class="card-label">Daily rhythm</p><h2><span id="today-recalls">0</span> / <span id="goal-total">15</span></h2><p><strong id="streak-count">0</strong> day streak · consistency beats cramming</p></div>
+      </article>
+    </section>
+
+    <section class="stats-strip" aria-label="Learning statistics">
+      <div><span>Mastered</span><strong id="mastered-count">0</strong><small id="mastered-detail">of 0 words</small></div>
+      <div><span>In progress</span><strong id="learning-count">0</strong><small>still becoming durable</small></div>
+      <div><span>Accuracy</span><strong id="accuracy-value">0%</strong><small>all scored retrievals</small></div>
+      <div><span>Focus points</span><strong id="xp-value">0</strong><small id="xp-detail">Level 1</small></div>
+    </section>
+
+    <section class="section-block" aria-labelledby="train-title">
+      <div class="section-heading compact"><div><p class="eyebrow">Choose a focus</p><h2 id="train-title">Train the whole language</h2></div><p>Smart review is the default; focused modes are there when a skill needs attention.</p></div>
+      <div class="mode-grid">
+        <button class="mode-card" type="button" data-start-mode="smart"><span class="mode-icon">⌁</span><span><strong>Smart review</strong><small>Due and weak words, mixed automatically</small></span><span class="mode-meta" id="smart-meta">Recommended</span></button>
+        <button class="mode-card" type="button" data-start-mode="learn"><span class="mode-icon">＋</span><span><strong>Learn new</strong><small>Observe → recognize → recall → use</small></span><span class="mode-meta"><span id="new-count">0</span> available</span></button>
+        <button class="mode-card" type="button" data-start-mode="listen"><span class="mode-icon">◖</span><span><strong>Listening lab</strong><small>Hear German, then recover form and meaning</small></span><span class="mode-meta">5–8 min</span></button>
+        <button class="mode-card" type="button" data-start-mode="exam"><span class="mode-icon">◎</span><span><strong>Goethe mix</strong><small>Original A1-style tasks across all four skills</small></span><span class="mode-meta">8 tasks</span></button>
+      </div>
+      <div class="session-size"><label for="word-count">New words per learning session</label><input id="word-count" type="range" min="3" max="15" value="6"><output id="word-count-output" for="word-count">6 words</output></div>
+    </section>
+
+    <section class="section-block split-section" aria-labelledby="roadmap-title">
+      <div>
+        <div class="section-heading compact"><div><p class="eyebrow">A1 roadmap</p><h2 id="roadmap-title">From words to exam tasks</h2></div></div>
+        <ol class="roadmap">
+          <li class="is-current"><span>1</span><div><strong>Foundation</strong><p>High-frequency words, noun gender, core verb forms, sound–spelling links.</p></div><small>Now</small></li>
+          <li><span>2</span><div><strong>Meaningful input</strong><p>Short notices, messages, announcements, and slow everyday audio.</p></div><small>Reading · Listening</small></li>
+          <li><span>3</span><div><strong>Meaningful output</strong><p>Forms, short messages, personal questions, requests, and descriptions.</p></div><small>Writing · Speaking</small></li>
+          <li><span>4</span><div><strong>Timed simulation</strong><p>Separate skill modules, then complete exam-style rounds under time limits.</p></div><small>Goethe format</small></li>
+        </ol>
+      </div>
+      <aside class="skill-balance card">
+        <p class="card-label">Four-strand balance</p>
+        <h3>This week</h3>
+        <div class="skill-row"><span>Meaningful input</span><div><i id="bar-input"></i></div><strong id="skill-input">0</strong></div>
+        <div class="skill-row"><span>Meaningful output</span><div><i id="bar-output"></i></div><strong id="skill-output">0</strong></div>
+        <div class="skill-row"><span>Form focus</span><div><i id="bar-form"></i></div><strong id="skill-form">0</strong></div>
+        <div class="skill-row"><span>Fluency</span><div><i id="bar-fluency"></i></div><strong id="skill-fluency">0</strong></div>
+        <p class="field-note">Aim for balance over a week, not in every session.</p>
+      </aside>
+    </section>
+
+    <section class="section-block" aria-labelledby="history-title">
+      <div class="section-heading compact"><div><p class="eyebrow">Momentum</p><h2 id="history-title">Recent sessions</h2></div><button id="reset-button" class="text-button danger-text" type="button">Reset my learning data</button></div>
+      <div id="history-list" class="history-list" aria-live="polite"><p class="empty-state">Loading your history…</p></div>
+    </section>
+
+    <section id="admin-panel" class="section-block admin-panel" hidden aria-labelledby="admin-title">
+      <div class="section-heading compact"><div><p class="eyebrow">Private tools</p><h2 id="admin-title">Vocabulary editor</h2></div><div class="invite-chip">Invite <strong id="admin-code">••••••</strong></div></div>
+      <p>Add or correct source material. Changes affect every learner, so saved values are validated on the server.</p>
+      <div class="admin-actions"><button id="add-word-button" class="button button-primary" type="button">Add a word</button><button id="edit-word-button" class="button button-quiet" type="button">Find and edit</button></div>
+    </section>
+  </main>
+
+  <dialog id="word-dialog" class="dialog">
+    <form id="word-form" method="dialog">
+      <div class="dialog-heading"><div><p class="eyebrow">Vocabulary editor</p><h2 id="word-dialog-title">Add a word</h2></div><button id="close-word-dialog" class="icon-button" type="button" aria-label="Close">×</button></div>
+      <label for="word-type">Word type</label><select id="word-type"><option value="nouns">Noun</option><option value="verbs">Verb</option><option value="adjectives">Adjective or adverb</option><option value="prepositions">Preposition</option></select>
+      <div id="word-search-wrap" hidden><label for="word-search">Find a word</label><input id="word-search" autocomplete="off" placeholder="Start typing…"><div id="word-search-results" class="search-results"></div></div>
+      <div id="word-fields"></div>
+      <p id="word-form-message" class="form-message" role="status"></p>
+      <button id="save-word-button" class="button button-primary button-full" type="submit">Save word</button>
+    </form>
+  </dialog>
+
+  <dialog id="confirm-dialog" class="dialog dialog-small">
+    <form method="dialog"><h2>Reset all progress?</h2><p>This permanently removes your review schedule, learning history, saved session, and points. Your account remains.</p><div class="dialog-actions"><button class="button button-quiet" value="cancel">Cancel</button><button id="confirm-reset-button" class="button button-danger" value="confirm">Reset progress</button></div></form>
+  </dialog>
+</body>
+</html>

@@ -1,0 +1,169 @@
+{
+  "format": "nova-v26.35-website-online-user-audit",
+  "version": 1,
+  "release": "26.35",
+  "regressionOrigin": "26.35",
+  "expectedRelease": "26.35",
+  "development": false,
+  "qualifiedRelease": null,
+  "generatedAt": "2026-10-02T17:27:03.069Z",
+  "status": "passed",
+  "checks": [
+    {
+      "name": "Landing page and button resolve at /",
+      "status": "passed"
+    },
+    {
+      "name": "Theme and narrow button layout work at /",
+      "status": "passed"
+    },
+    {
+      "name": "Landing page and button resolve at /nova/",
+      "status": "passed"
+    },
+    {
+      "name": "Theme and narrow button layout work at /nova/",
+      "status": "passed"
+    },
+    {
+      "name": "Nested editor creates a project and initializes WebAssembly",
+      "status": "passed"
+    },
+    {
+      "name": "Both themes and mobile landing page render without missing assets",
+      "status": "passed"
+    }
+  ],
+  "observations": [
+    {
+      "prefix": "/",
+      "count": 1,
+      "label": "Try online mode",
+      "href": "http://127.0.0.1:4173/online/",
+      "previous": "https://github.com/Stevenzhang543/Nova_A/",
+      "css": "http://127.0.0.1:4173/style.css?v=20260910",
+      "js": "http://127.0.0.1:4173/app.js?v=20260910",
+      "styled": "flex",
+      "overflow": false
+    },
+    {
+      "prefix": "/",
+      "width": 390,
+      "overflow": false,
+      "buttons": [
+        {
+          "label": "View Nova_A on GitHub",
+          "left": 37,
+          "right": 267.703125,
+          "width": 230.703125,
+          "height": 56
+        },
+        {
+          "label": "Try online mode",
+          "left": 37,
+          "right": 209.515625,
+          "width": 172.515625,
+          "height": 56
+        }
+      ]
+    },
+    {
+      "prefix": "/",
+      "width": 320,
+      "overflow": false,
+      "buttons": [
+        {
+          "label": "View Nova_A on GitHub",
+          "left": 37,
+          "right": 267.703125,
+          "width": 230.703125,
+          "height": 56
+        },
+        {
+          "label": "Try online mode",
+          "left": 37,
+          "right": 209.515625,
+          "width": 172.515625,
+          "height": 56
+        }
+      ]
+    },
+    {
+      "prefix": "/nova/",
+      "count": 1,
+      "label": "Try online mode",
+      "href": "http://127.0.0.1:4173/nova/online/",
+      "previous": "https://github.com/Stevenzhang543/Nova_A/",
+      "css": "http://127.0.0.1:4173/nova/style.css?v=20260910",
+      "js": "http://127.0.0.1:4173/nova/app.js?v=20260910",
+      "styled": "flex",
+      "overflow": false
+    },
+    {
+      "prefix": "/nova/",
+      "width": 390,
+      "overflow": false,
+      "buttons": [
+        {
+          "label": "View Nova_A on GitHub",
+          "left": 37,
+          "right": 267.703125,
+          "width": 230.703125,
+          "height": 56
+        },
+        {
+          "label": "Try online mode",
+          "left": 37,
+          "right": 209.515625,
+          "width": 172.515625,
+          "height": 56
+        }
+      ]
+    },
+    {
+      "prefix": "/nova/",
+      "width": 320,
+      "overflow": false,
+      "buttons": [
+        {
+          "label": "View Nova_A on GitHub",
+          "left": 37,
+          "right": 267.703125,
+          "width": 230.703125,
+          "height": 56
+        },
+        {
+          "label": "Try online mode",
+          "left": 37,
+          "right": 209.515625,
+          "width": 172.515625,
+          "height": 56
+        }
+      ]
+    },
+    {
+      "networkResponses": 81,
+      "failedRequests": [],
+      "missingAssets": [],
+      "scope": "Published ZIP served unchanged; actual click, project creation and WASM load."
+    }
+  ],
+  "captures": [
+    "v26.35-website-online-root-launcher.png",
+    "v26.35-website-online-nested-launcher.png",
+    "v26.35-website-online-nested-editor.png",
+    "v26.35-website-online-landing-desktop.png",
+    "v26.35-website-online-landing-desktop-alternate-theme.png",
+    "v26.35-website-online-landing-mobile.png"
+  ],
+  "consoleErrors": [],
+  "browser": {
+    "protocolVersion": "1.3",
+    "product": "Edg/147.0.3912.72",
+    "revision": "@d4380ba2b9dc3452fbccdc737e69d7f67a09122c",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/147.0.0.0 Safari/537.36 Edg/147.0.0.0",
+    "jsVersion": "14.7.25.7"
+  },
+  "commandTimeoutMs": 30000,
+  "scope": "Copied Nova website and unchanged published v26.35 Web ZIP over loopback HTTP at / and /nova/. Real Edge input, launcher, new project, WASM loading, desktop/mobile composition and two themes. Headless software rendering; not public HTTPS, physical devices, every engine feature or full release qualification."
+}

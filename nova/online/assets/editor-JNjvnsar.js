@@ -1,0 +1,2 @@
+const __vite__mapDeps=(i,m=__vite__mapDeps,d=(m.f||(m.f=["./main-Cu47QhQv.js","./vue-runtime-D7l--P72.js","./preload-helper-mg6Z-sIv.js","./crashReporter-BUJSpWFR.js","./nova-runtime-YnQwU2rk.js","./crashReporter-DfrRmfbT.css","./projectExternalChanges-CgD4p9BH.js","./core-DhEqZVGG.js","./main-KCA-QUKw.css"])))=>i.map(i=>d[i]);
+import{_ as r}from"./preload-helper-mg6Z-sIv.js";window.novaBrowserSupported&&r(()=>import("./main-Cu47QhQv.js").then(o=>o.al),__vite__mapDeps([0,1,2,3,4,5,6,7,8]),import.meta.url);

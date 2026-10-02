@@ -42,7 +42,7 @@ onBeforeUnmount(/** 卸载时释放捕获和样式，不再向父组件发送更
 </script>
 
 <style scoped>
-.panel-resize-handle{position:absolute;z-index:12;touch-action:none;user-select:none;outline:none;border:0;background:transparent;transition:background 120ms}
+.panel-resize-handle{position:absolute;z-index:12;touch-action:none;user-select:none;outline:none;border:0;background:transparent;transition:background var(--motion-micro) var(--ease-standard)}
 .panel-resize-handle.vertical{top:0;bottom:0;width:8px;cursor:ew-resize}
 .panel-resize-handle.horizontal{left:0;right:0;height:8px;cursor:ns-resize}
 .panel-resize-handle::after{content:'';position:absolute;border-radius:4px;background:var(--border-strong);opacity:.85}

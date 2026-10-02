@@ -38,7 +38,13 @@ export interface PerformanceCapture {
   particles: { active: number; updateMs: number; budgetExceeded: boolean }
   budget: CaptureBudgetResult
 }
-export interface CaptureBudgetResult { passed: boolean; evaluatedAt: string; checks: Array<{ id: string; actual: number | null; limit: number; unit: string; passed: boolean }> }
+export type CaptureCheckStatus = 'passed' | 'failed' | 'unavailable' | 'estimated'
+export interface CaptureBudgetResult {
+  passed: boolean
+  status?: 'passed' | 'failed' | 'unavailable'
+  evaluatedAt: string
+  checks: Array<{ id: string; actual: number | null; limit: number; unit: string; passed: boolean; status?: CaptureCheckStatus; reason?: string }>
+}
 
 export interface CaptureComparison {
   first: string
@@ -74,18 +80,33 @@ const memoryWindow: Array<{ frame: number; timestamp: number; value: number }> =
 
 /* 返回具有所列字段的新对象 { ...stats, batchBreakReasons: { ...stats.batchBreakReasons } }。 */ function cloneStats(stats: RendererStats): RendererStats { return { ...stats, batchBreakReasons: { ...stats.batchBreakReasons } } }
 /* 根据 values.length 的真假，分别返回 values.reduce((total, value) => total + value, 0) / values.length 或 0。 */ function finiteAverage(values: number[]): number { return values.length ? values.reduce(/* 计算表达式 total + value 并返回结果，沿用操作数的原有类型规则。 */ (total, value) => total + value, 0) / values.length : 0 }
-/** 结构说明（自动提取）：evaluateCapture；输入 frames、renderer；直接调用 finiteAverage、frames.map、checks.every、toISOString、Date。 */ function evaluateCapture(frames: FrameProfile[], renderer: RendererStats): CaptureBudgetResult {
+/** Missing telemetry is not a zero-cost measurement; invalid telemetry remains a failed check. */
+function measuredCheck(id: string, actual: number | null, limit: number, unit: string, unavailable = ''): CaptureBudgetResult['checks'][number] {
+  if (actual === null && unavailable) return { id, actual: null, limit, unit, passed: false, status: 'unavailable', reason: unavailable }
+  const valid = typeof actual === 'number' && Number.isFinite(actual) && actual >= 0 && Number.isFinite(limit) && limit >= 0
+  const passed = valid && actual <= limit
+  return { id, actual: valid ? actual : null, limit, unit, passed, status: passed ? 'passed' : 'failed', ...(!valid ? { reason: 'Invalid or negative measurement/budget.' } : {}) }
+}
+
+/** Budget compliance evaluates recorded measurements; optional unavailable metrics and estimates stay explicit. */
+function evaluateCapture(frames: FrameProfile[], renderer: RendererStats): CaptureBudgetResult {
+  const timing = (id: string, key: 'frameMs' | 'renderingMs' | 'audioMs', limit: number) => {
+    if (!frames.length) return measuredCheck(id, null, limit, 'ms', 'No frame samples were recorded.')
+    const values = frames.map(frame => frame[key])
+    return measuredCheck(id, values.every(value => Number.isFinite(value) && value >= 0) ? finiteAverage(values) : NaN, limit, 'ms')
+  }
   const checks: CaptureBudgetResult['checks'] = [
-    { id: 'frame.average', actual: finiteAverage(frames.map(/* 返回 frame.frameMs 的当前值。 */ frame => frame.frameMs)), limit: productionSettings.performance.frameBudgetMs, unit: 'ms', passed: finiteAverage(frames.map(/* 返回 frame.frameMs 的当前值。 */ frame => frame.frameMs)) <= productionSettings.performance.frameBudgetMs },
-    { id: 'render.average', actual: finiteAverage(frames.map(/* 返回 frame.renderingMs 的当前值。 */ frame => frame.renderingMs)), limit: productionSettings.performance.renderingBudgetMs, unit: 'ms', passed: finiteAverage(frames.map(/* 返回 frame.renderingMs 的当前值。 */ frame => frame.renderingMs)) <= productionSettings.performance.renderingBudgetMs },
-    { id: 'audio.average', actual: finiteAverage(frames.map(/* 返回 frame.audioMs 的当前值。 */ frame => frame.audioMs)), limit: productionSettings.performance.audioBudgetMs, unit: 'ms', passed: finiteAverage(frames.map(/* 返回 frame.audioMs 的当前值。 */ frame => frame.audioMs)) <= productionSettings.performance.audioBudgetMs },
-    { id: 'gpu.frame', actual: renderer.gpuMs, limit: productionSettings.performance.gpuBudgetMs, unit: 'ms', passed: renderer.gpuMs === null || renderer.gpuMs <= productionSettings.performance.gpuBudgetMs },
-    { id: 'renderer.drawCalls', actual: renderer.drawCalls, limit: productionSettings.performance.drawCallBudget, unit: 'calls', passed: renderer.drawCalls <= productionSettings.performance.drawCallBudget },
-    { id: 'renderer.textureMemory', actual: renderer.textureMemoryBytes / 1048576, limit: productionSettings.performance.textureBudgetMb, unit: 'MB', passed: renderer.textureMemoryBytes / 1048576 <= productionSettings.performance.textureBudgetMb },
-    { id: 'particles.update', actual: particleDiagnostics.updateMs, limit: productionSettings.performance.particleBudgetMs, unit: 'ms', passed: particleDiagnostics.updateMs <= productionSettings.performance.particleBudgetMs },
-    { id: 'profiler.overhead', actual: profilerState.estimatedOverheadPercent, limit: productionSettings.performance.profilerOverheadBudgetPercent, unit: '%', passed: profilerState.estimatedOverheadPercent <= productionSettings.performance.profilerOverheadBudgetPercent }
+    timing('frame.average', 'frameMs', productionSettings.performance.frameBudgetMs),
+    timing('render.average', 'renderingMs', productionSettings.performance.renderingBudgetMs),
+    timing('audio.average', 'audioMs', productionSettings.performance.audioBudgetMs),
+    measuredCheck('gpu.frame', renderer.gpuMs, productionSettings.performance.gpuBudgetMs, 'ms', 'GPU timing is unavailable on this renderer.'),
+    measuredCheck('renderer.drawCalls', renderer.drawCalls, productionSettings.performance.drawCallBudget, 'calls'),
+    measuredCheck('renderer.textureMemory', renderer.textureMemoryBytes / 1048576, productionSettings.performance.textureBudgetMb, 'MB'),
+    measuredCheck('particles.update', particleDiagnostics.updateMs, productionSettings.performance.particleBudgetMs, 'ms'),
+    { id: 'profiler.overhead', actual: Number.isFinite(profilerState.estimatedOverheadPercent) ? profilerState.estimatedOverheadPercent : null, limit: productionSettings.performance.profilerOverheadBudgetPercent, unit: '%', passed: false, status: 'estimated', reason: 'Planning estimate; profiler overhead was not measured.' }
   ]
-  return { passed: checks.every(/* 返回 check.passed 的当前值。 */ check => check.passed), evaluatedAt: new Date().toISOString(), checks }
+  const status = checks.some(check => check.status === 'failed') ? 'failed' : frames.length ? 'passed' : 'unavailable'
+  return { passed: status === 'passed', status, evaluatedAt: new Date().toISOString(), checks }
 }
 
 /** 结构说明（自动提取）：recordLifetime；输入 frame、kind、id、action；直接调用 performanceToolsState.lifetimeEvents.push、performance.now、id.slice、performanceToolsState.lifetimeEvents.splice。 */ function recordLifetime(frame: number, kind: LifetimeEvent['kind'], id: string, action: LifetimeEvent['action']): void {
@@ -146,7 +167,7 @@ const memoryWindow: Array<{ frame: number; timestamp: number; value: number }> =
 /** 结构说明（自动提取）：comparePerformanceCaptures；输入 firstId、secondId；直接调用 performanceToolsState.captures.find、first.frames.map、second.frames.map、finiteAverage、Math.max 等；写入 performanceToolsState.comparison；返回路径包含 comparison。 */ export function comparePerformanceCaptures(firstId: string, secondId: string): CaptureComparison | null {
   const first = performanceToolsState.captures.find(/* 比较 capture.id 与 firstId，返回严格相等的判断结果。 */ capture => capture.id === firstId)
   const second = performanceToolsState.captures.find(/* 比较 capture.id 与 secondId，返回严格相等的判断结果。 */ capture => capture.id === secondId)
-  if (!first || !second || first.id === second.id) { performanceToolsState.comparison = null; return null }
+  if (!first || !second || first.id === second.id || !first.frames.length || !second.frames.length || [...first.frames, ...second.frames].some(frame => !Number.isFinite(frame.frameMs) || frame.frameMs < 0)) { performanceToolsState.comparison = null; return null }
   const firstFrames = first.frames.map(/* 返回 frame.frameMs 的当前值。 */ frame => frame.frameMs), secondFrames = second.frames.map(/* 返回 frame.frameMs 的当前值。 */ frame => frame.frameMs)
   const comparison: CaptureComparison = {
     first: first.id, second: second.id,
@@ -157,14 +178,17 @@ const memoryWindow: Array<{ frame: number; timestamp: number; value: number }> =
     gpuDeltaMs: first.renderer.gpuMs === null || second.renderer.gpuMs === null ? null : second.renderer.gpuMs - first.renderer.gpuMs,
     drawCallDelta: second.renderer.drawCalls - first.renderer.drawCalls,
     textureMemoryDeltaMb: (second.renderer.textureMemoryBytes - first.renderer.textureMemoryBytes) / 1048576,
-    budgetRegressions: second.budget.checks.filter(/** 结构说明（自动提取）：second.budget.checks.filter 回调；输入 check；直接调用 first.budget.checks.find；返回表达式求值结果。 */ check => !check.passed && first.budget.checks.find(/* 比较 item.id 与 check.id，返回严格相等的判断结果。 */ item => item.id === check.id)?.passed !== false).map(/* 返回 check.id 的当前值。 */ check => check.id)
+    budgetRegressions: second.budget.checks.filter(check => (check.status ? check.status === 'failed' : !check.passed) && first.budget.checks.find(item => item.id === check.id)?.passed === true).map(check => check.id)
   }
   performanceToolsState.comparison = comparison
   return comparison
 }
 
 /* 调用 JSON.stringify(capture, null, 2) 并返回调用结果。 */ export function serializePerformanceCapture(capture: PerformanceCapture): string { return JSON.stringify(capture, null, 2) }
-/** 构造并返回记录 { status: capture.budget.passed ? 'passed' : 'failed', engineVersion: capture.engineVersion, checks: capture.budget.checks }，字段按当前实参及捕获状态求值。 */ export function performanceCaptureCiReport(capture: PerformanceCapture): { status: 'passed' | 'failed'; engineVersion: string; checks: CaptureBudgetResult['checks'] } { return { status: capture.budget.passed ? 'passed' : 'failed', engineVersion: capture.engineVersion, checks: capture.budget.checks } }
+/** Legacy booleans remain readable; current reports distinguish no evidence from failed measured budgets. */
+export function performanceCaptureCiReport(capture: PerformanceCapture): { status: 'passed' | 'failed' | 'unavailable'; engineVersion: string; checks: CaptureBudgetResult['checks']; scope: string } {
+  return { status: capture.budget.status ?? (capture.budget.passed ? 'passed' : 'failed'), engineVersion: capture.engineVersion, checks: capture.budget.checks, scope: 'Available measured checks only; unavailable telemetry and planning estimates are not certified.' }
+}
 
 /** 结构说明（自动提取）：clearPerformanceTools；无显式参数；直接调用 knownEntities.clear、memoryWindow.splice、Object.assign、performanceToolsState.lifetimeEvents.splice。 */ export function clearPerformanceTools(): void {
   knownEntities.clear(); memoryWindow.splice(0)

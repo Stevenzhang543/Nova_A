@@ -1,0 +1,5 @@
+# Nova_A 26.35 Web Package
+
+Serve this directory from an HTTP(S) origin. Do not open index.html with ile://; WebAssembly modules, workers, ES modules, and the bundled manual require a web server. index.html opens the editor and player.html opens the standalone player. Preserve file names and MIME types, especially pplication/wasm for .wasm files. HTTPS is required for production networking and other secure browser APIs. See HOSTING.md when included for static deployment and explicit Web ZIP download. Use immutable long-lived caching for hashed files under ssets/, but revalidate HTML and elease-metadata.json. Cross-origin isolation is not required by this release; if a host enables it, configure COOP/COEP consistently for every asset. The locally qualified browser is the pinned Edge/Chromium identity in the evidence archive; Firefox remains an explicit external gate.
+
+Verify every packaged file against SHA256SUMS.txt. Release metadata is in elease-metadata.json.

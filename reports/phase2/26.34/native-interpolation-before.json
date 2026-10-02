@@ -1,0 +1,31 @@
+{
+  "format": "nova-v26.34-game-scenarios-audit",
+  "version": 1,
+  "release": "26.34",
+  "engineVersion": "26.34.0",
+  "generatedAt": "2026-10-01T17:42:03.401Z",
+  "status": "failed",
+  "subset": "Native",
+  "checks": [
+    {
+      "name": "Native motion survives interpolation and velocity/shape edits while intentional transforms, teleport and origin shift remain authoritative",
+      "status": "failed",
+      "error": "AssertionError [ERR_ASSERTION]: {\"interpolation\":\"Interpolate\",\"display\":{\"x\":0,\"y\":0},\"native\":{\"x\":0,\"y\":0.1166557298122545,\"rotation\":0},\"velocity\":{\"x\":0,\"y\":7}}\n    at file:///E:/Nova_A/scripts/verify-v26.34-game-scenarios.mjs:36:411\n    at test (file:///E:/Nova_A/scripts/verify-v26.34-game-scenarios.mjs:31:100)\n    at file:///E:/Nova_A/scripts/verify-v26.34-game-scenarios.mjs:36:8"
+    }
+  ],
+  "observations": [],
+  "sourceHashes": {
+    "src/projects/templates.ts": "fc9f90fd8315b61351a13ae86869f73cb9e21bf7c76643ed0ec5654359c8b65f",
+    "src/store/physics.ts": "546f89767bfdb3d689b05cf30322a0470ee8793b94fd63da0b383cbeed32fdbb",
+    "src/runtime/GameplayRuntime.ts": "cd0eb1bf00dad997ae11cee47f07b633f400fe0a8b97b93a5919fec653f85b20",
+    "src/runtime/gameUi.ts": "99f392782f093438cfec88413e6727230fab77cb95a7c31d9d8426f307006b60",
+    "src/runtime/tilemap.ts": "87d29c8483705ba30ab05a58ebbc549214a8b30d5f3177ad5e4bd3f9ab066a19",
+    "src/runtime/saveGame.ts": "c1f04fd02af55b55b70d7a4033dfb98bcb68ad0d4153c8cd1fd4be24b1cb39fb",
+    "scripts/verify-v26.34-game-scenarios.mjs": "bc79882ad8ec923b0ea5fc2d268e1de186238142af61bac254ef5c633b6cb0a6"
+  },
+  "scope": "Fresh production starter generation, actual project parser/migration/serializer and GameplayRuntime with compiled WASM physics+Rhai. Public InputManager handlers receive controlled keyboard events; game UI uses a Canvas command recorder, audio uses an observable media host, saves use isolated storage. No browser pixel/device, physical sound or full user-click E2E qualification.",
+  "deferred": [
+    "Starters do not cover every collision shape/joint, atlas rendering edge, controller transition, normal map or audio device. These are specialist retained regression scopes.",
+    "Responsive UI button/checkbox events are functional; a complete menu-to-game behavior, theme assignment and click-sound binding are demonstration-authoring gaps, not missing engine primitives."
+  ]
+}

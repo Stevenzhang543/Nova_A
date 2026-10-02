@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="Nova — Nova_A 2D physics and rendering engine, and Nova_v1 Python LLM training and chat project.">
+  <title>Nova — Engine + AI</title>
+  <link rel="stylesheet" href="./style.css?v=20260910">
+  <script src="./app.js?v=20260910" defer></script>
+</head>
+<body>
+<header class="site-header">
+  <div class="wrap nav">
+    <a class="brand" href="./" aria-label="Nova home"><span class="mark">N</span><span>Nova</span></a>
+    <nav class="nav-links" aria-label="Primary navigation">
+      <a href="#nova-a">Nova_A</a>
+      <a href="#nova-v1">Nova_v1</a>
+      <a href="https://whitelists.top/">Whitelists</a>
+      <button class="theme-toggle" data-theme-toggle type="button" aria-label="Toggle theme">◐</button>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="wrap hero">
+    <div>
+      <div class="eyebrow">Two branches · one project space</div>
+      <h1>Simulate it.<br>Train it.<em>Understand it.</em></h1>
+      <p class="lede">Nova is a home for low-level engine work and hands-on AI experimentation: Nova_A builds a 2D engine/editor stack with Rust, WebAssembly and Vue 3; Nova_v1 explores LLM training and chat in Python.</p>
+      <div class="actions">
+        <a class="btn primary" href="#nova-a">Explore Nova_A</a>
+        <a class="btn secondary" href="#nova-v1">Explore Nova_v1</a>
+      </div>
+    </div>
+    <aside class="hero-card">
+      <div class="orbit" aria-hidden="true"><span class="track"></span><span class="node n1"></span><span class="node n2"></span><span class="node n3"></span></div>
+      <div class="meta-row"><strong>From primitives to models.</strong><span>Rendering · editor · physics · LLM</span></div>
+    </aside>
+  </section>
+
+  <section class="section" id="nova-a">
+    <div class="wrap">
+      <div class="section-head">
+        <h2>Nova_A<br><span class="display-em">engine from scratch.</span></h2>
+        <p>Nova_A is an open-source 2D game engine and editor built with Rust, WebAssembly, Vue 3 and Tauri. Version 26.35 brings physics, rendering and game authoring to Windows and the web. Try the online editor directly in your browser.</p>
+      </div>
+      <div class="detail-grid">
+        <article class="detail">
+          <div class="kicker">Version 26.35</div>
+          <h3>Rendering + editor.</h3>
+          <ul>
+            <li>Rust physics core running through WebAssembly</li>
+            <li>Vue 3 editor with scene, asset and property tools</li>
+            <li>2D rendering with WebGL and Canvas support</li>
+            <li>Windows desktop and browser-based editing</li>
+            <li>Bundled English, German and Chinese manual</li>
+          </ul>
+          <div class="actions">
+            <a class="btn primary" href="https://github.com/Stevenzhang543/Nova_A/" rel="noopener noreferrer">View Nova_A on GitHub</a>
+            <a class="btn secondary" href="./online/">Try online mode</a>
+          </div>
+        </article>
+        <article class="detail">
+          <div class="kicker">Start creating</div>
+          <h3>Build your game.</h3>
+          <div class="timeline">
+            <div class="step"><b>01</b><span>Open the online editor and create or import a project.</span></div>
+            <div class="step"><b>02</b><span>Build scenes with sprites, physics and gameplay.</span></div>
+            <div class="step"><b>03</b><span>Run your game and refine it in the editor.</span></div>
+            <div class="step"><b>04</b><span>Save project backups and export a Web game ZIP.</span></div>
+          </div>
+        </article>
+      </div>
+      <div class="statement">
+        <strong>Engine work makes abstractions visible.</strong>
+        <span>Windowing, rendering, state, tooling and physics become systems you can inspect instead of black boxes you only call.</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="nova-v1">
+    <div class="wrap">
+      <div class="section-head">
+        <h2>Nova_v1<br><span class="display-em">LLM, hands on.</span></h2>
+        <p>Nova_v1 is described by its repository as a simple LLM training and chat application based on Python. This page intentionally keeps the description conservative and points to the repository for the exact implementation and current capabilities.</p>
+      </div>
+      <div class="detail-grid">
+        <article class="detail">
+          <div class="kicker">Training</div>
+          <h3>See the pipeline.</h3>
+          <p>Keep the training workflow understandable: inputs, configuration, model state and outputs should remain inspectable rather than hidden behind an opaque service.</p>
+          <div class="tags"><span class="tag">Python</span><span class="tag">LLM training</span><span class="tag">Experimentation</span></div>
+        </article>
+        <article class="detail">
+          <div class="kicker">Chat</div>
+          <h3>Use what you build.</h3>
+          <p>A chat surface closes the loop between model work and direct interaction, making it easier to test behavior and iterate on training experiments.</p>
+          <div class="actions"><a class="btn primary" href="https://github.com/Stevenzhang543/Nova_v1" rel="noopener noreferrer">View Nova_v1 on GitHub</a></div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="wrap">
+      <div class="section-head">
+        <h2>One principle.<br><span class="display-em">Learn by building.</span></h2>
+        <p>Nova_A works downward toward graphics, physics and editor primitives. Nova_v1 works upward toward model training and interaction. Both are useful because the implementation remains close enough to inspect, change and learn from.</p>
+      </div>
+      <div class="grid">
+        <div class="card"><div class="kicker">Inspect</div><h3>Know the layers.</h3><p>Prefer explicit systems and readable boundaries over hidden behavior.</p></div>
+        <div class="card"><div class="kicker">Iterate</div><h3>Ship small steps.</h3><p>Keep versions testable so every change can be verified and rolled back.</p></div>
+        <div class="card"><div class="kicker">Open</div><h3>Keep the code visible.</h3><p>Use the repositories as the source of truth for implementation details and progress.</p></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="wrap footer-row">
+    <span>© <span data-year></span> Nova / Whitelists</span>
+    <span><a href="https://whitelists.top/">Back to Whitelists</a></span>
+  </div>
+</footer>
+</body>
+</html>

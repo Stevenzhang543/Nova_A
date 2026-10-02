@@ -1,0 +1,1 @@
+import"./preload-helper-mg6Z-sIv.js";import{c as r}from"./vue-runtime-D7l--P72.js";import p from"./PlayerApp-DqnkzVhJ.js";import{i as o}from"./crashReporter-BUJSpWFR.js";import"./WorldCanvas-mTGJY71k.js";import"./nova-runtime-YnQwU2rk.js";import"./novaPak-CcOuVwbt.js";o("Nova Player");r(p).mount("#app");

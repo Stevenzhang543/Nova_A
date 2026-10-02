@@ -1,0 +1,290 @@
+{
+  "format": "nova-v26.35-native-drag-probe-user-audit",
+  "version": 1,
+  "release": "26.35",
+  "regressionOrigin": "26.35",
+  "expectedRelease": "26.35",
+  "development": false,
+  "qualifiedRelease": null,
+  "generatedAt": "2026-10-02T14:26:37.453Z",
+  "status": "passed",
+  "checks": [],
+  "observations": [
+    {
+      "name": "source-hit",
+      "selector": ".entity-list .entity-item .name",
+      "start": {
+        "x": 116.5,
+        "y": 341
+      },
+      "end": {
+        "x": 116.5,
+        "y": 293
+      },
+      "hit": {
+        "html": "<button data-v-a29fb623=\"\" type=\"button\" class=\"name\" aria-pressed=\"false\" title=\"Motion child — Double-click to rename\" data-surface=\"editor-shell\" data-testid=\"nova-editor-shell-button-1-77\" data-test-identity=\"structural\" data-test-path=\"button-1\">Motion child<small data-v-a29fb623=\"\">2</small></button>",
+        "draggable": false,
+        "parent": "<div data-v-a29fb623=\"\" class=\"ui-tree-row entity-item\" draggable=\"true\" style=\"--tree-depth: 0; height: 24px;\"><!----><!----><button data-v-a29fb623=\"\" class=\"disclosure placeholder\" aria-label=\"Collapse panel\" data-surface=\"editor-shell\" data-testid=\"nova-editor-shell-button-1-76\" data-test-identity=\"structural\" data-test-path=\"button-1\"><!----></button><svg data-v-8710152e=\"\" data-v-a29fb623=\"\" class=\"editor-icon shape-icon\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" focusable=\"false\"><g data-v-8710152e=\"\" transform=\"scale(.6666667)\"><path data-v-8710152e=\"\" d=\"M3 4h18v16H3z\"></path></g></svg><"
+      }
+    },
+    {
+      "name": "native-drag-result",
+      "selector": ".entity-list .entity-item .name",
+      "selected": false,
+      "intercepted": true,
+      "events": [
+        {
+          "type": "pointerdown",
+          "target": "<button data-v-a29fb623=\"\" type=\"button\" class=\"name\" aria-pressed=\"false\" title=\"Motion child — Double-click to rename\" data-surface=\"editor-shell\" data-testid=\"nova-editor-shell-button-1-77\" data-test-identity=\"structural\" data-test-path=\"button-1\">Motion child<small data-v-a29fb623=\"\">2</small></button>",
+          "buttons": 1,
+          "ctrlKey": false,
+          "shiftKey": false,
+          "defaultPrevented": false,
+          "types": [],
+          "sameSource": true,
+          "sourceConnected": true,
+          "sourceRect": {
+            "x": 36,
+            "y": 329,
+            "width": 225,
+            "height": 24,
+            "top": 329,
+            "right": 261,
+            "bottom": 353,
+            "left": 36
+          }
+        },
+        {
+          "type": "dragstart",
+          "target": "<div data-v-a29fb623=\"\" class=\"ui-tree-row entity-item\" draggable=\"true\" style=\"--tree-depth: 0; height: 24px;\"><!----><!----><button data-v-a29fb623=\"\" class=\"disclosure placeholder\" aria-label=\"Collapse panel\" data-surface=\"editor-shell\" data-testid=\"nova-editor-shell-button-1-76\" data-test-identity=\"structural\" data-test-path=\"button-1\"><!----><",
+          "buttons": 1,
+          "ctrlKey": false,
+          "shiftKey": false,
+          "defaultPrevented": false,
+          "types": [],
+          "sameSource": true,
+          "sourceConnected": true,
+          "sourceRect": {
+            "x": 36,
+            "y": 329,
+            "width": 225,
+            "height": 24,
+            "top": 329,
+            "right": 261,
+            "bottom": 353,
+            "left": 36
+          },
+          "preventedAfterHandlers": false,
+          "typesAfterHandlers": [
+            "text/plain"
+          ],
+          "connectedAfterHandlers": true,
+          "rectAfterHandlers": {
+            "x": 36,
+            "y": 329,
+            "width": 225,
+            "height": 24,
+            "top": 329,
+            "right": 261,
+            "bottom": 353,
+            "left": 36
+          }
+        }
+      ],
+      "dragging": "true"
+    },
+    {
+      "name": "target-feedback",
+      "html": "<div data-v-a29fb623=\"\" class=\"ui-tree-row entity-item drop-target\" draggable=\"true\" style=\"--tree-depth: 0; height: 24px;\" data-ui-drop=\"valid\"><!----><!----><button data-v-a29fb623=\"\" class=\"disclosure\" aria-label=\"Collapse panel\" data-surface=\"editor-shell\" data-testid=\"nova-editor-shell-button-1-64\" data-test-identity=\"structural\" data-test-path=\"button-1\"><svg data-v-8710152e=\"\" data-v-a29fb623=\"\" class=\"editor-icon\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" focusable=\"false\"><g data-v-8710152e=\"\" transform=\"scale(.6666667)\"><path data-v-8710152e=\"\" d=\"M5 9l7 7 7-7\"></path></g></svg></button"
+    },
+    {
+      "name": "source-hit",
+      "selector": ".entity-list .entity-item .shape-icon",
+      "start": {
+        "x": 70,
+        "y": 341
+      },
+      "end": {
+        "x": 116.5,
+        "y": 293
+      },
+      "hit": {
+        "html": "<div data-v-a29fb623=\"\" class=\"ui-tree-row entity-item\" draggable=\"true\" style=\"--tree-depth: 0; height: 24px;\"><!----><!----><button data-v-a29fb623=\"\" class=\"disclosure placeholder\" aria-label=\"Collapse panel\" data-surface=\"editor-shell\" data-testid=\"nova-editor-shell-button-1-76\" data-test-identity=\"structural\" data-test-path=\"button-1\"><!----></button><svg data-v-8710152e=\"\" data-v-a29fb623=\"\" class=\"editor-icon shape-icon\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" focusable=\"false\"><g data-v-8710152e=\"\" transform=\"scale(.6666667)\"><path data-v-8710152e=\"\" d=\"M3 4h18v16H3z\"></path></g></svg><",
+        "draggable": true,
+        "parent": "<div data-v-a29fb623=\"\" class=\"ui-tree-row entity-item\" draggable=\"true\" style=\"--tree-depth: 0; height: 24px;\"><!----><!----><button data-v-a29fb623=\"\" class=\"disclosure placeholder\" aria-label=\"Collapse panel\" data-surface=\"editor-shell\" data-testid=\"nova-editor-shell-button-1-76\" data-test-identity=\"structural\" data-test-path=\"button-1\"><!----></button><svg data-v-8710152e=\"\" data-v-a29fb623=\"\" class=\"editor-icon shape-icon\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" focusable=\"false\"><g data-v-8710152e=\"\" transform=\"scale(.6666667)\"><path data-v-8710152e=\"\" d=\"M3 4h18v16H3z\"></path></g></svg><"
+      }
+    },
+    {
+      "name": "native-drag-result",
+      "selector": ".entity-list .entity-item .shape-icon",
+      "selected": false,
+      "intercepted": true,
+      "events": [
+        {
+          "type": "pointerdown",
+          "target": "<div data-v-a29fb623=\"\" class=\"ui-tree-row entity-item\" draggable=\"true\" style=\"--tree-depth: 0; height: 24px;\"><!----><!----><button data-v-a29fb623=\"\" class=\"disclosure placeholder\" aria-label=\"Collapse panel\" data-surface=\"editor-shell\" data-testid=\"nova-editor-shell-button-1-76\" data-test-identity=\"structural\" data-test-path=\"button-1\"><!----><",
+          "buttons": 1,
+          "ctrlKey": false,
+          "shiftKey": false,
+          "defaultPrevented": false,
+          "types": [],
+          "sameSource": true,
+          "sourceConnected": true,
+          "sourceRect": {
+            "x": 36,
+            "y": 329,
+            "width": 225,
+            "height": 24,
+            "top": 329,
+            "right": 261,
+            "bottom": 353,
+            "left": 36
+          }
+        },
+        {
+          "type": "dragstart",
+          "target": "<div data-v-a29fb623=\"\" class=\"ui-tree-row entity-item\" draggable=\"true\" style=\"--tree-depth: 0; height: 24px;\"><!----><!----><button data-v-a29fb623=\"\" class=\"disclosure placeholder\" aria-label=\"Collapse panel\" data-surface=\"editor-shell\" data-testid=\"nova-editor-shell-button-1-76\" data-test-identity=\"structural\" data-test-path=\"button-1\"><!----><",
+          "buttons": 1,
+          "ctrlKey": false,
+          "shiftKey": false,
+          "defaultPrevented": false,
+          "types": [],
+          "sameSource": true,
+          "sourceConnected": true,
+          "sourceRect": {
+            "x": 36,
+            "y": 329,
+            "width": 225,
+            "height": 24,
+            "top": 329,
+            "right": 261,
+            "bottom": 353,
+            "left": 36
+          },
+          "preventedAfterHandlers": false,
+          "typesAfterHandlers": [
+            "text/plain"
+          ],
+          "connectedAfterHandlers": true,
+          "rectAfterHandlers": {
+            "x": 36,
+            "y": 329,
+            "width": 225,
+            "height": 24,
+            "top": 329,
+            "right": 261,
+            "bottom": 353,
+            "left": 36
+          }
+        }
+      ],
+      "dragging": "true"
+    },
+    {
+      "name": "target-feedback",
+      "html": "<div data-v-a29fb623=\"\" class=\"ui-tree-row entity-item drop-target\" draggable=\"true\" style=\"--tree-depth: 0; height: 24px;\" data-ui-drop=\"valid\"><!----><!----><button data-v-a29fb623=\"\" class=\"disclosure\" aria-label=\"Collapse panel\" data-surface=\"editor-shell\" data-testid=\"nova-editor-shell-button-1-64\" data-test-identity=\"structural\" data-test-path=\"button-1\"><svg data-v-8710152e=\"\" data-v-a29fb623=\"\" class=\"editor-icon\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" focusable=\"false\"><g data-v-8710152e=\"\" transform=\"scale(.6666667)\"><path data-v-8710152e=\"\" d=\"M5 9l7 7 7-7\"></path></g></svg></button"
+    },
+    {
+      "name": "source-hit",
+      "selector": ".entity-list .entity-item .name",
+      "start": {
+        "x": 116.5,
+        "y": 341
+      },
+      "end": {
+        "x": 116.5,
+        "y": 293
+      },
+      "hit": {
+        "html": "<button data-v-a29fb623=\"\" type=\"button\" class=\"name\" aria-pressed=\"true\" title=\"Motion child — Double-click to rename\" data-surface=\"editor-shell\" data-testid=\"nova-editor-shell-button-1-77\" data-test-identity=\"structural\" data-test-path=\"button-1\">Motion child<small data-v-a29fb623=\"\">2</small></button>",
+        "draggable": false,
+        "parent": "<div data-v-a29fb623=\"\" class=\"ui-tree-row selected entity-item selected primary\" draggable=\"true\" style=\"--tree-depth: 0; height: 24px;\"><!----><!----><button data-v-a29fb623=\"\" class=\"disclosure placeholder\" aria-label=\"Collapse panel\" data-surface=\"editor-shell\" data-testid=\"nova-editor-shell-button-1-76\" data-test-identity=\"structural\" data-test-path=\"button-1\"><!----></button><svg data-v-8710152e=\"\" data-v-a29fb623=\"\" class=\"editor-icon shape-icon\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" focusable=\"false\"><g data-v-8710152e=\"\" transform=\"scale(.6666667)\"><path data-v-8710152e=\"\" d=\"M3 4h18"
+      }
+    },
+    {
+      "name": "native-drag-result",
+      "selector": ".entity-list .entity-item .name",
+      "selected": true,
+      "intercepted": true,
+      "events": [
+        {
+          "type": "pointerdown",
+          "target": "<button data-v-a29fb623=\"\" type=\"button\" class=\"name\" aria-pressed=\"true\" title=\"Motion child — Double-click to rename\" data-surface=\"editor-shell\" data-testid=\"nova-editor-shell-button-1-77\" data-test-identity=\"structural\" data-test-path=\"button-1\">Motion child<small data-v-a29fb623=\"\">2</small></button>",
+          "buttons": 1,
+          "ctrlKey": false,
+          "shiftKey": false,
+          "defaultPrevented": false,
+          "types": [],
+          "sameSource": true,
+          "sourceConnected": true,
+          "sourceRect": {
+            "x": 36,
+            "y": 329,
+            "width": 225,
+            "height": 24,
+            "top": 329,
+            "right": 261,
+            "bottom": 353,
+            "left": 36
+          }
+        },
+        {
+          "type": "dragstart",
+          "target": "<div data-v-a29fb623=\"\" class=\"ui-tree-row selected entity-item selected primary\" draggable=\"true\" style=\"--tree-depth: 0; height: 24px;\"><!----><!----><button data-v-a29fb623=\"\" class=\"disclosure placeholder\" aria-label=\"Collapse panel\" data-surface=\"editor-shell\" data-testid=\"nova-editor-shell-button-1-76\" data-test-identity=\"structural\" data-tes",
+          "buttons": 1,
+          "ctrlKey": false,
+          "shiftKey": false,
+          "defaultPrevented": false,
+          "types": [],
+          "sameSource": true,
+          "sourceConnected": true,
+          "sourceRect": {
+            "x": 36,
+            "y": 329,
+            "width": 225,
+            "height": 24,
+            "top": 329,
+            "right": 261,
+            "bottom": 353,
+            "left": 36
+          },
+          "preventedAfterHandlers": false,
+          "typesAfterHandlers": [
+            "text/plain"
+          ],
+          "connectedAfterHandlers": true,
+          "rectAfterHandlers": {
+            "x": 36,
+            "y": 329,
+            "width": 225,
+            "height": 24,
+            "top": 329,
+            "right": 261,
+            "bottom": 353,
+            "left": 36
+          }
+        }
+      ],
+      "dragging": "true"
+    },
+    {
+      "name": "target-feedback",
+      "html": "<div data-v-a29fb623=\"\" class=\"ui-tree-row entity-item drop-target\" draggable=\"true\" style=\"--tree-depth: 0; height: 24px;\" data-ui-drop=\"valid\"><!----><!----><button data-v-a29fb623=\"\" class=\"disclosure\" aria-label=\"Collapse panel\" data-surface=\"editor-shell\" data-testid=\"nova-editor-shell-button-1-64\" data-test-identity=\"structural\" data-test-path=\"button-1\"><svg data-v-8710152e=\"\" data-v-a29fb623=\"\" class=\"editor-icon\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" focusable=\"false\"><g data-v-8710152e=\"\" transform=\"scale(.6666667)\"><path data-v-8710152e=\"\" d=\"M5 9l7 7 7-7\"></path></g></svg></button"
+    }
+  ],
+  "captures": [
+    "v26.35-native-drag-probe-native-drag.png",
+    "v26.35-native-drag-probe-native-drag.png",
+    "v26.35-native-drag-probe-native-drag.png"
+  ],
+  "consoleErrors": [],
+  "browser": {
+    "protocolVersion": "1.3",
+    "product": "Edg/147.0.3912.72",
+    "revision": "@d4380ba2b9dc3452fbccdc737e69d7f67a09122c",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/147.0.0.0 Safari/537.36 Edg/147.0.0.0",
+    "jsVersion": "14.7.25.7"
+  },
+  "commandTimeoutMs": 30000,
+  "scope": "Development rebuild production bundle; not published-release qualification. Recorded real Edge input and DOM observations against production dist. Headless software rendering and download/file-input fallback; physical assistive technology and native OS picker behavior are not measured."
+}

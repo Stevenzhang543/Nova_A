@@ -209,7 +209,8 @@ export class ParticleRuntime {
       emitterCount++
       const state = emitterState(component)
       cpuSimulated += state.particles.length
-      if (component.autoplay) {
+      // Completion belongs to this runtime session, never to the authored autoplay setting.
+      if (component.autoplay && (component.looping || !state.burstEmitted)) {
         if (!state.burstEmitted) { activeParticles += emit(entity, component, state, component.burst, entities, globalBudget - activeParticles); state.burstEmitted = true }
         state.emissionAccumulator += component.emissionRate * dt
         const count = Math.min(component.maxParticles, Math.floor(state.emissionAccumulator))
@@ -231,7 +232,6 @@ export class ParticleRuntime {
       activeParticles = Math.max(0, activeParticles - expired.length)
       const target = component.subEmitterUuid ? entities.flatMap(/** 结构说明（自动提取）：entities.flatMap 回调；输入 candidate；直接调用 candidate.getComponent。 */ candidate => { const emitter = candidate.getComponent<ParticleEmitter2D>('ParticleEmitter2D'); return emitter?.uuid === component.subEmitterUuid ? [{ entity: candidate, component: emitter }] : [] })[0] : null
       if (target && expired.length && activeParticles < globalBudget) { const targetState = emitterState(target.component); normalizeParticleEmitter(target.component); for (const particle of expired) { const amount = emit(target.entity, target.component, targetState, component.subEmitterCount, entities, globalBudget - activeParticles, component.worldSpace ? particle.position : localPointToWorld(entity, particle.position, entities)); activeParticles += amount; subemissions += amount; if (amount) this.noteEvent(component, 'subemit'); if (activeParticles >= globalBudget) break } }
-      if (!component.looping && state.burstEmitted) component.autoplay = false
     }
     for (const uuid of [...states.keys()]) if (!live.has(uuid)) states.delete(uuid)
     activeParticles = [...states.values()].reduce(/* 计算表达式 total + state.particles.length 并返回结果，沿用操作数的原有类型规则。 */ (total, state) => total + state.particles.length, 0)

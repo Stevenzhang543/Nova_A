@@ -1,9 +1,5 @@
-# Phase II UX roadmap — 26.33
+# UX roadmap — 26.34
 
-- Verified: fresh platformer, top-down and UI-heavy creation, saved project reopen and runtime interactions.
-- Fixed: editor W shortcut stealing gameplay input; secondary game-save slot selection and failure recovery; existing joint types missing from composition metadata.
-- Preserved: shared controls, SVG actions, persistent shell and compact numeric/slider geometry from the completed UI rebuild.
-- Current release gates: complete panel traversal, resized/localized forms, real reference-game code/graph round-trip, exported completion/restart and current Windows/Web/native-physics output checks.
-- Unmeasured external work: independent beginner/expert observation, physical assistive technology and low-end hardware. No claim of these tests follows from browser automation.
+Completed decisions: explicit game/editor wheel ownership, transactional save cancellation/session boundaries, truthful profiler telemetry labels, localized font availability and reuse of shared resource history. Relevant user gates exercise nested prefab creation/import/save/reopen, native forms/scrolling, fresh projects and exported gameplay. All-panel visual QA follows the actual final build.
 
-UI_V2_PLAN.md defines this integration scope. No extra convenience features were invented to fill the roadmap.
+Deferred: physical usability/accessibility/device certification, hardware-wide timing, arbitrary statement debugger and metadata-only advanced font renderers. These need actual implementations or matching devices, not cosmetic controls. Final execution status belongs to TEST_MATRIX and the source-bound evidence archive.

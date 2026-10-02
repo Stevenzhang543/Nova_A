@@ -1,17 +1,18 @@
-# Phase II UX audit — 26.33
+# Phase II UX audit — 26.34
 
-Dedicated integration review now follows the stable core-engine checks. Preserve the completed UI rebuild.
+Engine regressions were investigated first. Dedicated workflow review then traced discovery → editing → history → save/reopen → play → export using existing shared editor architecture.
 
-| User task | Evidence / finding | Action |
-|---|---|---|
-| Create a starter and reopen it | Three fresh starters save/reopen with every scene and semantic asset value preserved | Keep existing launcher/dialog flow |
-| Play while inspecting a character | Editor W shortcut swallowed game movement | Fixed editing-only shortcut ownership; actual W/S and Stop/Q/W pass |
-| Save runtime progress in a second slot | Subsequent script writes returned to slot1 | Fixed; editor-authored Rhai script proves browser slot2 persistence |
-| Restore custom game state | Namespace normalization prevented callbacks receiving saved values | Fixed in runtime owner; format-compatible module regression |
-| Recover an interrupted save | Cleanup refusal mislabeled valid data; stale recovery could overwrite newer commit | Fixed with failure-injected regressions; UI status follow-up pending |
-| Compose existing joint components | Three descriptors were absent despite solver support | Registry repaired; actual composition/toggle/roundtrip pass; UI follow-up pending |
-| Use multilingual game UI | Native text input and checkbox work in responsive starter | Real browser interaction passes |
-| Deliver a Web game | Actual ZIP validates and player starts in a nested static URL | Passed; does not certify public hosting or native installer |
-| Navigate compact editor panels | Prior rebuild established full-panel baseline | Final candidate visual/navigation rerun pending |
+| Task / friction | Decision and acceptance |
+|---|---|
+| Scroll an authored game panel | Consumed UI wheel never becomes named gameplay input; bare game canvas remains usable. Actual authored ScrollPanel/Rhai counter/browser gate |
+| Type/scroll a native field or inspector | Native/editor input stays local; gameplay keyboard still works on the game surface. Browser fixture covers ownership and Design/Game toggling |
+| Cancel load or change projects | Save transaction checks cancellation/session immediately before publish; old project cannot overwrite newly selected data.15 focused checks |
+| Preview particle settings | Runtime completion state replaces mutation of authored autoplay. Preview/reset/loop/one-shot serialization checks |
+| Frame a zoomed subviewport | Camera dead zones use actual visible extents and rotated axes. Numerical and representative camera tests |
+| Understand imported-font controls | EN/DE/ZH note clearly states which modes currently render and which are metadata. Existing controls/data retained |
+| Read performance capture | Empty/invalid results cannot appear as measured passes; missing GPU and estimated overhead are explicit; CPU submission label matches actual boundary |
+| Discover reusable assets and history | Existing shared mutation/draft router supports atomic resource history. Actual empty project/SVG/nested-prefab/override/revert/undo/save/reopen workflow |
+| Create and deliver a game | Three fresh starter workflows, saved normal projects and actual downloaded six-checkpoint game; no private engine patches |
+| Navigate specialist tools | Full-panel traversal plus representative translations/scales/docks and pending edits. Actual screenshots reviewed separately from geometry |
 
-Remaining dedicated review: resource discovery/inspector/commands, pending drafts and undo, actionable errors, progress/cancellation, saved layout, nearby visual consistency, and reference-game completion. Avoid speculative convenience features; only change demonstrated friction or broken tasks.
+Source-only discovery does not prove every mutation path. Callback-boundary debugging is supported; arbitrary statement stepping is deferred. Platform-effect settings, every responsive/AT/IME/device combination and every conditional plugin state remain limited to executed evidence. Avoid speculative convenience dependencies or duplicating the editor shell.

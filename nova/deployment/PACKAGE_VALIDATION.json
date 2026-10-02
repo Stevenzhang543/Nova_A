@@ -1,0 +1,190 @@
+{
+  "generatedAtUTC": "2026-10-02T17:24:37.897051+00:00",
+  "passed": true,
+  "scope": [
+    "Original www/nova index.html/style.css/app.js against provided baseline hashes",
+    "Every extracted release file byte-for-byte against v26.35 ZIP",
+    "Every extracted release file covered by release SHA256SUMS.txt",
+    "HTTP landing, button, all public release files and MIME at root and /nova/",
+    "Manifest scope/start URL/icon resolution",
+    "Missing-file real 404 and directory redirect/query preservation"
+  ],
+  "limitations": [
+    "Local preview server validation only; production hosting configuration not tested",
+    "This report does not claim visual, editor workflow, exported-game or cross-browser/mobile qualification"
+  ],
+  "release": {
+    "archive": "releases/v26.35/Nova_A-v26.35-web.zip",
+    "archiveSha256": "f944a930057073360b64bfe2fad0b1e6da51cb2af1da4cf8ed20562f48bb8343",
+    "fileCount": 272,
+    "uncompressedBytes": 23089919,
+    "zipFilesBytesVerified": 272,
+    "checksumManifestFilesVerified": 271,
+    "unexpectedExtractedFiles": [],
+    "missingExtractedFiles": []
+  },
+  "originalWebsite": [
+    {
+      "path": "www/nova/index.html",
+      "sha256": "a95eb1585f13ef5f1fe01f31a9dc0512c731e1c056d3f1ac4d10e3127ae0acdf",
+      "unchanged": true
+    },
+    {
+      "path": "www/nova/style.css",
+      "sha256": "605cea2bb68adf23d69324573c43bc059bb9525e109c9ee3ba1639648ad0ab0c",
+      "unchanged": true
+    },
+    {
+      "path": "www/nova/app.js",
+      "sha256": "e8580cef7b8933de063e773b2efebc63a5a70181478120a3765f51274074f2c7",
+      "unchanged": true
+    }
+  ],
+  "httpLayouts": [
+    {
+      "base": "http://127.0.0.1:4173/nova/",
+      "landingStatus": 200,
+      "onlineButtonTarget": "http://127.0.0.1:4173/nova/online/",
+      "onlineButtonStatus": 200,
+      "releaseFilesBytesVerified": 271,
+      "releaseFileMimesVerified": 260,
+      "hiddenFilesDeliberatelyBlocked": [
+        {
+          "path": ".vite/manifest.json",
+          "status": 404
+        }
+      ],
+      "landingAssets": [
+        {
+          "path": "style.css",
+          "status": 200,
+          "bytesMatch": true
+        },
+        {
+          "path": "app.js",
+          "status": 200,
+          "bytesMatch": true
+        }
+      ],
+      "missingAssetChecks": [
+        {
+          "path": "online/assets/missing-deployment-check.js",
+          "status": 404
+        },
+        {
+          "path": "online/assets/missing-deployment-check.wasm",
+          "status": 404
+        },
+        {
+          "path": "online/missing-deployment-check.json",
+          "status": 404
+        }
+      ],
+      "manifest": {
+        "start_url": "http://127.0.0.1:4173/nova/online/index.html",
+        "scope": "http://127.0.0.1:4173/nova/online/",
+        "icons": [
+          {
+            "url": "http://127.0.0.1:4173/nova/online/nova-icon-192.png",
+            "status": 200,
+            "mime": "image/png"
+          },
+          {
+            "url": "http://127.0.0.1:4173/nova/online/nova-icon-512.png",
+            "status": 200,
+            "mime": "image/png"
+          }
+        ]
+      }
+    },
+    {
+      "base": "http://127.0.0.1:4173/",
+      "landingStatus": 200,
+      "onlineButtonTarget": "http://127.0.0.1:4173/online/",
+      "onlineButtonStatus": 200,
+      "releaseFilesBytesVerified": 271,
+      "releaseFileMimesVerified": 260,
+      "hiddenFilesDeliberatelyBlocked": [
+        {
+          "path": ".vite/manifest.json",
+          "status": 404
+        }
+      ],
+      "landingAssets": [
+        {
+          "path": "style.css",
+          "status": 200,
+          "bytesMatch": true
+        },
+        {
+          "path": "app.js",
+          "status": 200,
+          "bytesMatch": true
+        }
+      ],
+      "missingAssetChecks": [
+        {
+          "path": "online/assets/missing-deployment-check.js",
+          "status": 404
+        },
+        {
+          "path": "online/assets/missing-deployment-check.wasm",
+          "status": 404
+        },
+        {
+          "path": "online/missing-deployment-check.json",
+          "status": 404
+        }
+      ],
+      "manifest": {
+        "start_url": "http://127.0.0.1:4173/online/index.html",
+        "scope": "http://127.0.0.1:4173/online/",
+        "icons": [
+          {
+            "url": "http://127.0.0.1:4173/online/nova-icon-192.png",
+            "status": 200,
+            "mime": "image/png"
+          },
+          {
+            "url": "http://127.0.0.1:4173/online/nova-icon-512.png",
+            "status": 200,
+            "mime": "image/png"
+          }
+        ]
+      }
+    }
+  ],
+  "redirects": [
+    {
+      "path": "/nova",
+      "status": 308,
+      "location": "/nova/"
+    },
+    {
+      "path": "/nova?check=1",
+      "status": 308,
+      "location": "/nova/?check=1"
+    },
+    {
+      "path": "/nova/online",
+      "status": 308,
+      "location": "/nova/online/"
+    },
+    {
+      "path": "/nova/online?check=1",
+      "status": 308,
+      "location": "/nova/online/?check=1"
+    },
+    {
+      "path": "/online",
+      "status": 308,
+      "location": "/online/"
+    },
+    {
+      "path": "/online?check=1",
+      "status": 308,
+      "location": "/online/?check=1"
+    }
+  ],
+  "failures": []
+}

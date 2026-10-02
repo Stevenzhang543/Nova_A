@@ -1,0 +1,3159 @@
+{
+  "nouns": [
+    {
+      "word": "Mann",
+      "article": "der",
+      "plural": "Männer",
+      "meaning": "man"
+    },
+    {
+      "word": "Frau",
+      "article": "die",
+      "plural": "Frauen",
+      "meaning": "woman"
+    },
+    {
+      "word": "Kind",
+      "article": "das",
+      "plural": "Kinder",
+      "meaning": "child"
+    },
+    {
+      "word": "Junge",
+      "article": "der",
+      "plural": "Jungen",
+      "meaning": "boy"
+    },
+    {
+      "word": "Mädchen",
+      "article": "das",
+      "plural": "Mädchen",
+      "meaning": "girl"
+    },
+    {
+      "word": "Mensch",
+      "article": "der",
+      "plural": "Menschen",
+      "meaning": "person"
+    },
+    {
+      "word": "Freund",
+      "article": "der",
+      "plural": "Freunde",
+      "meaning": "friend"
+    },
+    {
+      "word": "Vater",
+      "article": "der",
+      "plural": "Väter",
+      "meaning": "father"
+    },
+    {
+      "word": "Mutter",
+      "article": "die",
+      "plural": "Mütter",
+      "meaning": "mother"
+    },
+    {
+      "word": "Bruder",
+      "article": "der",
+      "plural": "Brüder",
+      "meaning": "brother"
+    },
+    {
+      "word": "Schwester",
+      "article": "die",
+      "plural": "Schwestern",
+      "meaning": "sister"
+    },
+    {
+      "word": "Familie",
+      "article": "die",
+      "plural": "Familien",
+      "meaning": "family"
+    },
+    {
+      "word": "Haus",
+      "article": "das",
+      "plural": "Häuser",
+      "meaning": "house"
+    },
+    {
+      "word": "Zimmer",
+      "article": "das",
+      "plural": "Zimmer",
+      "meaning": "room"
+    },
+    {
+      "word": "Tisch",
+      "article": "der",
+      "plural": "Tische",
+      "meaning": "table"
+    },
+    {
+      "word": "Stuhl",
+      "article": "der",
+      "plural": "Stühle",
+      "meaning": "chair"
+    },
+    {
+      "word": "Tür",
+      "article": "die",
+      "plural": "Türen",
+      "meaning": "door"
+    },
+    {
+      "word": "Schule",
+      "article": "die",
+      "plural": "Schulen",
+      "meaning": "school"
+    },
+    {
+      "word": "Lehrer",
+      "article": "der",
+      "plural": "Lehrer",
+      "meaning": "teacher"
+    },
+    {
+      "word": "Buch",
+      "article": "das",
+      "plural": "Bücher",
+      "meaning": "book"
+    },
+    {
+      "word": "Heft",
+      "article": "das",
+      "plural": "Hefte",
+      "meaning": "notebook"
+    },
+    {
+      "word": "Stift",
+      "article": "der",
+      "plural": "Stifte",
+      "meaning": "pen"
+    },
+    {
+      "word": "Bleistift",
+      "article": "der",
+      "plural": "Bleistifte",
+      "meaning": "pencil"
+    },
+    {
+      "word": "Papier",
+      "article": "das",
+      "plural": "Papiere",
+      "meaning": "paper"
+    },
+    {
+      "word": "Tasche",
+      "article": "die",
+      "plural": "Taschen",
+      "meaning": "bag"
+    },
+    {
+      "word": "Rucksack",
+      "article": "der",
+      "plural": "Rucksäcke",
+      "meaning": "backpack"
+    },
+    {
+      "word": "Wasser",
+      "article": "das",
+      "plural": "Wasser",
+      "meaning": "water"
+    },
+    {
+      "word": "Brot",
+      "article": "das",
+      "plural": "Brote",
+      "meaning": "bread"
+    },
+    {
+      "word": "Apfel",
+      "article": "der",
+      "plural": "Äpfel",
+      "meaning": "apple"
+    },
+    {
+      "word": "Banane",
+      "article": "die",
+      "plural": "Bananen",
+      "meaning": "banana"
+    },
+    {
+      "word": "Milch",
+      "article": "die",
+      "plural": "Milch",
+      "meaning": "milk"
+    },
+    {
+      "word": "Kaffee",
+      "article": "der",
+      "plural": "Kaffees",
+      "meaning": "coffee"
+    },
+    {
+      "word": "Tee",
+      "article": "der",
+      "plural": "Tees",
+      "meaning": "tea"
+    },
+    {
+      "word": "Saft",
+      "article": "der",
+      "plural": "Säfte",
+      "meaning": "juice"
+    },
+    {
+      "word": "Stadt",
+      "article": "die",
+      "plural": "Städte",
+      "meaning": "city"
+    },
+    {
+      "word": "Arbeit",
+      "article": "die",
+      "plural": "Arbeiten",
+      "meaning": "job"
+    },
+    {
+      "word": "Auto",
+      "article": "das",
+      "plural": "Autos",
+      "meaning": "car"
+    },
+    {
+      "word": "Name",
+      "article": "der",
+      "plural": "Namen",
+      "meaning": "name"
+    },
+    {
+      "word": "Tag",
+      "article": "der",
+      "plural": "Tage",
+      "meaning": "day"
+    },
+    {
+      "word": "Zeit",
+      "article": "die",
+      "plural": "Zeiten",
+      "meaning": "time"
+    },
+    {
+      "word": "Jahr",
+      "article": "das",
+      "plural": "Jahre",
+      "meaning": "year"
+    },
+    {
+      "word": "Wort",
+      "article": "das",
+      "plural": "Wörter",
+      "meaning": "word"
+    },
+    {
+      "word": "Kurs",
+      "article": "der",
+      "plural": "Kurse",
+      "meaning": "class"
+    },
+    {
+      "word": "Hafen",
+      "article": "der",
+      "plural": "Häfen",
+      "meaning": "dock"
+    },
+    {
+      "word": "Gruß",
+      "article": "der",
+      "plural": "Grüße",
+      "meaning": "greeting"
+    },
+    {
+      "word": "Museum",
+      "article": "das",
+      "plural": "Museen",
+      "meaning": "museum"
+    },
+    {
+      "word": "Garten",
+      "article": "der",
+      "plural": "Gärten",
+      "meaning": "garden"
+    },
+    {
+      "word": "Sport",
+      "article": "der",
+      "plural": "Sport",
+      "meaning": "sport"
+    },
+    {
+      "word": "Schokolade",
+      "article": "die",
+      "plural": "Schokoladen",
+      "meaning": "chocolate"
+    },
+    {
+      "word": "Messer",
+      "article": "das",
+      "plural": "Messer",
+      "meaning": "knife"
+    },
+    {
+      "word": "Natur",
+      "article": "die",
+      "plural": "Naturen",
+      "meaning": "nature"
+    },
+    {
+      "word": "Transport",
+      "article": "der",
+      "plural": "Transporte",
+      "meaning": "transport"
+    },
+    {
+      "word": "Kamera",
+      "article": "die",
+      "plural": "Kameras",
+      "meaning": "camera"
+    },
+    {
+      "word": "Technik",
+      "article": "die",
+      "plural": "Technik",
+      "meaning": "technique"
+    },
+    {
+      "word": "Musik",
+      "article": "die",
+      "plural": "Musiken",
+      "meaning": "music"
+    },
+    {
+      "word": "Foto",
+      "article": "das",
+      "plural": "Fotos",
+      "meaning": "photo"
+    },
+    {
+      "word": "Akzent",
+      "article": "der",
+      "plural": "Akzente",
+      "meaning": "accent"
+    },
+    {
+      "word": "Beispiel",
+      "article": "das",
+      "plural": "Beispiele",
+      "meaning": "example"
+    },
+    {
+      "word": "Karte",
+      "article": "die",
+      "plural": "Karten",
+      "meaning": "card"
+    },
+    {
+      "word": "Partner",
+      "article": "der",
+      "plural": "Partner",
+      "meaning": "partner"
+    },
+    {
+      "word": "Dialog",
+      "article": "der",
+      "plural": "Dialoge",
+      "meaning": "dialog"
+    },
+    {
+      "word": "Tafel",
+      "article": "die",
+      "plural": "Tafeln",
+      "meaning": "blackboard"
+    },
+    {
+      "word": "Uhr",
+      "article": "die",
+      "plural": "Uhren",
+      "meaning": "clock"
+    },
+    {
+      "word": "Plakat",
+      "article": "das",
+      "plural": "Plakate",
+      "meaning": "poster"
+    },
+    {
+      "word": "Laptop",
+      "article": "der",
+      "plural": "Laptops",
+      "meaning": "laptop"
+    },
+    {
+      "word": "Handy",
+      "article": "das",
+      "plural": "Handys",
+      "meaning": "phone"
+    },
+    {
+      "word": "Radiergummi",
+      "article": "der",
+      "plural": "Radiergummis",
+      "meaning": "eraser"
+    },
+    {
+      "word": "Gegenstand",
+      "article": "der",
+      "plural": "Gegenstände",
+      "meaning": "object"
+    },
+    {
+      "word": "Weisung",
+      "article": "die",
+      "plural": "Weisungen",
+      "meaning": "order"
+    },
+    {
+      "word": "Frühling",
+      "article": "der",
+      "plural": "Frühlinge",
+      "meaning": "spring"
+    },
+    {
+      "word": "Sommer",
+      "article": "der",
+      "plural": "Sommer",
+      "meaning": "summer"
+    },
+    {
+      "word": "Herbst",
+      "article": "der",
+      "plural": "Herbste",
+      "meaning": "autumn"
+    },
+    {
+      "word": "Winter",
+      "article": "der",
+      "plural": "Winter",
+      "meaning": "winter"
+    },
+    {
+      "word": "Überschrift",
+      "article": "die",
+      "plural": "Überschriften",
+      "meaning": "title"
+    },
+    {
+      "word": "Land",
+      "article": "das",
+      "plural": "Länder",
+      "meaning": "country"
+    },
+    {
+      "word": "Artikel",
+      "article": "der",
+      "plural": "Artikel",
+      "meaning": "article"
+    },
+    {
+      "word": "Text",
+      "article": "der",
+      "plural": "Texte",
+      "meaning": "text"
+    },
+    {
+      "word": "Information",
+      "article": "die",
+      "plural": "Informationen",
+      "meaning": "information"
+    },
+    {
+      "word": "Deutsch",
+      "article": "das",
+      "plural": "Deutschs",
+      "meaning": "German"
+    },
+    {
+      "word": "Deutschland",
+      "article": "das",
+      "plural": "Deutschland",
+      "meaning": "Germany"
+    },
+    {
+      "word": "Moment",
+      "article": "das",
+      "plural": "Momente",
+      "meaning": "moment"
+    },
+    {
+      "word": "Nachbar",
+      "article": "der",
+      "plural": "Nachbarn",
+      "meaning": "neighbor"
+    },
+    {
+      "word": "Anmeldung",
+      "article": "die",
+      "plural": "Anmeldungen",
+      "meaning": "register"
+    },
+    {
+      "word": "Satz",
+      "article": "der",
+      "plural": "Sätze",
+      "meaning": "sentence"
+    },
+    {
+      "word": "Ordner",
+      "article": "der",
+      "plural": "Ordner",
+      "meaning": "folder"
+    },
+    {
+      "word": "Theater",
+      "article": "das",
+      "plural": "Theater",
+      "meaning": "theater"
+    },
+    {
+      "word": "Brief",
+      "article": "der",
+      "plural": "Briefe",
+      "meaning": "letter"
+    },
+    {
+      "word": "Briefmarke",
+      "article": "die",
+      "plural": "Briefmarken",
+      "meaning": "stamp"
+    },
+    {
+      "word": "Stelle",
+      "article": "die",
+      "plural": "Stellen",
+      "meaning": "place"
+    },
+    {
+      "word": "Nehmer",
+      "article": "der",
+      "plural": "Nehmer",
+      "meaning": "receiver"
+    },
+    {
+      "word": "Tüte",
+      "article": "die",
+      "plural": "Tüten",
+      "meaning": "small bag"
+    },
+    {
+      "word": "Sack",
+      "article": "der",
+      "plural": "Sacke",
+      "meaning": "pocket"
+    },
+    {
+      "word": "Unterschied",
+      "article": "der",
+      "plural": "Unterschiede",
+      "meaning": "difference"
+    },
+    {
+      "word": "Studium",
+      "article": "das",
+      "plural": "Studien",
+      "meaning": "study"
+    },
+    {
+      "word": "Eis",
+      "article": "das",
+      "plural": "Eis",
+      "meaning": "ice"
+    },
+    {
+      "word": "Getränk",
+      "article": "das",
+      "plural": "Getränke",
+      "meaning": "drink"
+    },
+    {
+      "word": "Brille",
+      "article": "die",
+      "plural": "Brillen",
+      "meaning": "glasses"
+    },
+    {
+      "word": "Portemonnaie",
+      "article": "das",
+      "plural": "Portemonnaies",
+      "meaning": "wallet"
+    },
+    {
+      "word": "Tier",
+      "article": "das",
+      "plural": "Tiere",
+      "meaning": "animal"
+    },
+    {
+      "word": "Ahnung",
+      "article": "die",
+      "plural": "Ahnung",
+      "meaning": "idea"
+    },
+    {
+      "word": "Fleisch",
+      "article": "das",
+      "plural": "Fleisch",
+      "meaning": "meat"
+    },
+    {
+      "word": "Appetit",
+      "article": "der",
+      "plural": "Appetit",
+      "meaning": "appetite"
+    },
+    {
+      "word": "Kommentar",
+      "article": "der",
+      "plural": "Kommentare",
+      "meaning": "comment"
+    },
+    {
+      "word": "Kultur",
+      "article": "die",
+      "plural": "Kulturen",
+      "meaning": "culture"
+    },
+    {
+      "word": "Thema",
+      "article": "das",
+      "plural": "Themen",
+      "meaning": "theme"
+    },
+    {
+      "word": "Speisekarte",
+      "article": "die",
+      "plural": "Speisekarten",
+      "meaning": "menu"
+    },
+    {
+      "word": "Rind",
+      "article": "das",
+      "plural": "Rinden",
+      "meaning": "beef"
+    },
+    {
+      "word": "Schwein",
+      "article": "das",
+      "plural": "Schweine",
+      "meaning": "pig"
+    },
+    {
+      "word": "Huhn",
+      "article": "das",
+      "plural": "Hühner",
+      "meaning": "chicken"
+    },
+    {
+      "word": "Hähnchen",
+      "article": "das",
+      "plural": "Hähnchen",
+      "meaning": "chicken meat"
+    },
+    {
+      "word": "Fisch",
+      "article": "der",
+      "plural": "Fische",
+      "meaning": "fish"
+    },
+    {
+      "word": "Baguette",
+      "article": "das",
+      "plural": "Baguettes",
+      "meaning": "baguette"
+    },
+    {
+      "word": "Salat",
+      "article": "der",
+      "plural": "Salate",
+      "meaning": "salad"
+    },
+    {
+      "word": "Käse",
+      "article": "der",
+      "plural": "Käse",
+      "meaning": "cheese"
+    },
+    {
+      "word": "Tomate",
+      "article": "die",
+      "plural": "Tomaten",
+      "meaning": "tomato"
+    },
+    {
+      "word": "Olive",
+      "article": "die",
+      "plural": "Oliven",
+      "meaning": "olive"
+    },
+    {
+      "word": "Suppe",
+      "article": "die",
+      "plural": "Suppen",
+      "meaning": "soup"
+    },
+    {
+      "word": "Steak",
+      "article": "das",
+      "plural": "Steaks",
+      "meaning": "steak"
+    },
+    {
+      "word": "Kartoffel",
+      "article": "die",
+      "plural": "Kartoffeln",
+      "meaning": "potato"
+    },
+    {
+      "word": "Schnitzel",
+      "article": "das",
+      "plural": "Schnitzel",
+      "meaning": "cutlet"
+    },
+    {
+      "word": "Gemüse",
+      "article": "das",
+      "plural": "Gemüse",
+      "meaning": "vegetables"
+    },
+    {
+      "word": "Hamburger",
+      "article": "das",
+      "plural": "Hamburger",
+      "meaning": "hamburger"
+    },
+    {
+      "word": "Pommes",
+      "article": "die",
+      "plural": "Pommes",
+      "meaning": "fries"
+    },
+    {
+      "word": "Frites",
+      "article": "die",
+      "plural": "Frites",
+      "meaning": "fries"
+    },
+    {
+      "word": "Curry",
+      "article": "das",
+      "plural": "Currys",
+      "meaning": "curry"
+    },
+    {
+      "word": "Tofu",
+      "article": "der",
+      "plural": "Tofu",
+      "meaning": "tofu"
+    },
+    {
+      "word": "Reis",
+      "article": "der",
+      "plural": "Reis",
+      "meaning": "rice"
+    },
+    {
+      "word": "Verneinung",
+      "article": "die",
+      "plural": "Verneinungen",
+      "meaning": "negation"
+    },
+    {
+      "word": "Wurst",
+      "article": "die",
+      "plural": "Würste",
+      "meaning": "sausage"
+    },
+    {
+      "word": "Vokal",
+      "article": "der",
+      "plural": "Vokale",
+      "meaning": "vowel"
+    },
+    {
+      "word": "Schinken",
+      "article": "der",
+      "plural": "Schinken",
+      "meaning": "ham"
+    },
+    {
+      "word": "Archiv",
+      "article": "das",
+      "plural": "Archive",
+      "meaning": "archive"
+    },
+    {
+      "word": "Rezept",
+      "article": "das",
+      "plural": "Rezepte",
+      "meaning": "recipe"
+    },
+    {
+      "word": "Kuchen",
+      "article": "der",
+      "plural": "Kuchen",
+      "meaning": "cake"
+    },
+    {
+      "word": "Sieger",
+      "article": "der",
+      "plural": "Sieger",
+      "meaning": "winner"
+    },
+    {
+      "word": "Angabe",
+      "article": "die",
+      "plural": "Angaben",
+      "meaning": "report"
+    },
+    {
+      "word": "Termin",
+      "article": "der",
+      "plural": "Termine",
+      "meaning": "appointment"
+    },
+    {
+      "word": "Einladung",
+      "article": "die",
+      "plural": "Einladungen",
+      "meaning": "invitation"
+    },
+    {
+      "word": "Monat",
+      "article": "der",
+      "plural": "Monate",
+      "meaning": "month"
+    },
+    {
+      "word": "Weltzeituhr",
+      "article": "die",
+      "plural": "Weltzeituhren",
+      "meaning": "world clock"
+    },
+    {
+      "word": "Sekunde",
+      "article": "die",
+      "plural": "Sekunden",
+      "meaning": "second"
+    },
+    {
+      "word": "Minute",
+      "article": "die",
+      "plural": "Minuten",
+      "meaning": "minute"
+    },
+    {
+      "word": "Stunde",
+      "article": "die",
+      "plural": "Stunden",
+      "meaning": "hour"
+    },
+    {
+      "word": "Fahrplan",
+      "article": "der",
+      "plural": "Fahrpläne",
+      "meaning": "timetable"
+    },
+    {
+      "word": "Linie",
+      "article": "die",
+      "plural": "Linien",
+      "meaning": "line"
+    },
+    {
+      "word": "Tätigkeit",
+      "article": "die",
+      "plural": "Tätigkeiten",
+      "meaning": "activity"
+    },
+    {
+      "word": "Gast",
+      "article": "der",
+      "plural": "Gäste",
+      "meaning": "guest"
+    },
+    {
+      "word": "Lust",
+      "article": "die",
+      "plural": "Luste",
+      "meaning": "interest"
+    },
+    {
+      "word": "Kino",
+      "article": "das",
+      "plural": "Kinos",
+      "meaning": "cinema"
+    },
+    {
+      "word": "Etwas",
+      "article": "das",
+      "plural": "Etwas",
+      "meaning": "something"
+    },
+    {
+      "word": "Verkehrsmittel",
+      "article": "das",
+      "plural": "Verkehrsmittel",
+      "meaning": "transportation"
+    },
+    {
+      "word": "Lebensmittel",
+      "article": "das",
+      "plural": "Lebensmittel",
+      "meaning": "food"
+    },
+    {
+      "word": "Reich",
+      "article": "das",
+      "plural": "Reiche",
+      "meaning": "empire"
+    },
+    {
+      "word": "Punkt",
+      "article": "der",
+      "plural": "Punkte",
+      "meaning": "point"
+    },
+    {
+      "word": "Reise",
+      "article": "die",
+      "plural": "Reisen",
+      "meaning": "travel"
+    },
+    {
+      "word": "Schein",
+      "article": "der",
+      "plural": "Schein",
+      "meaning": "glow"
+    },
+    {
+      "word": "Sehenswürdigkeit",
+      "article": "die",
+      "plural": "Sehenswürdigkeiten",
+      "meaning": "sight"
+    },
+    {
+      "word": "Zug",
+      "article": "der",
+      "plural": "Züge",
+      "meaning": "train"
+    },
+    {
+      "word": "Aufzug",
+      "article": "der",
+      "plural": "Aufzüge",
+      "meaning": "elevator"
+    },
+    {
+      "word": "Auszug",
+      "article": "der",
+      "plural": "Auszüge",
+      "meaning": "departure"
+    },
+    {
+      "word": "Abzug",
+      "article": "der",
+      "plural": "Abzüge",
+      "meaning": "withdrawal"
+    },
+    {
+      "word": "Gruppe",
+      "article": "die",
+      "plural": "Gruppen",
+      "meaning": "group"
+    },
+    {
+      "word": "Dom",
+      "article": "der",
+      "plural": "Dome",
+      "meaning": "church"
+    },
+    {
+      "word": "Kirche",
+      "article": "die",
+      "plural": "Kirchen",
+      "meaning": "church"
+    },
+    {
+      "word": "Weg",
+      "article": "der",
+      "plural": "Wege",
+      "meaning": "way"
+    },
+    {
+      "word": "Sache",
+      "article": "die",
+      "plural": "Sachen",
+      "meaning": "thing"
+    },
+    {
+      "word": "Bahnhof",
+      "article": "der",
+      "plural": "Bahnhöfe",
+      "meaning": "train station"
+    },
+    {
+      "word": "Kreuzung",
+      "article": "die",
+      "plural": "Kreuzungen",
+      "meaning": "crossing"
+    },
+    {
+      "word": "Fahrrad",
+      "article": "das",
+      "plural": "Fahrräder",
+      "meaning": "bicycle"
+    },
+    {
+      "word": "Straße",
+      "article": "die",
+      "plural": "Straßen",
+      "meaning": "street"
+    },
+    {
+      "word": "Brücke",
+      "article": "die",
+      "plural": "Brücken",
+      "meaning": "bridge"
+    },
+    {
+      "word": "Ampel",
+      "article": "die",
+      "plural": "Ampeln",
+      "meaning": "traffic light"
+    },
+    {
+      "word": "Park",
+      "article": "der",
+      "plural": "Parks",
+      "meaning": "park"
+    },
+    {
+      "word": "Selfie",
+      "article": "das",
+      "plural": "Selfies",
+      "meaning": "selfie"
+    },
+    {
+      "word": "Fuß",
+      "article": "der",
+      "plural": "Fuße",
+      "meaning": "foot"
+    },
+    {
+      "word": "Hand",
+      "article": "die",
+      "plural": "Hande",
+      "meaning": "hand"
+    },
+    {
+      "word": "Kuppel",
+      "article": "die",
+      "plural": "Kuppeln",
+      "meaning": "dome"
+    },
+    {
+      "word": "Zoo",
+      "article": "der",
+      "plural": "Zoos",
+      "meaning": "zoo"
+    },
+    {
+      "word": "Tipp",
+      "article": "der",
+      "plural": "Tippe",
+      "meaning": "tip"
+    },
+    {
+      "word": "Platz",
+      "article": "der",
+      "plural": "Plätze",
+      "meaning": "place"
+    },
+    {
+      "word": "Treffpunkt",
+      "article": "der",
+      "plural": "Treffpunkte",
+      "meaning": "meeting point"
+    },
+    {
+      "word": "Weltzeit",
+      "article": "die",
+      "plural": "Weltzeiten",
+      "meaning": "world time"
+    },
+    {
+      "word": "Weltkarte",
+      "article": "die",
+      "plural": "Weltkarten",
+      "meaning": "world map"
+    },
+    {
+      "word": "Hobby",
+      "article": "der",
+      "plural": "Hobbys",
+      "meaning": "hobby"
+    },
+    {
+      "word": "Freizeit",
+      "article": "die",
+      "plural": "Freizeiten",
+      "meaning": "free time"
+    },
+    {
+      "word": "Tanz",
+      "article": "der",
+      "plural": "Tanz",
+      "meaning": "dance"
+    },
+    {
+      "word": "Musiker",
+      "article": "der",
+      "plural": "Musiker",
+      "meaning": "musician"
+    },
+    {
+      "word": "Campus",
+      "article": "der",
+      "plural": "Campus",
+      "meaning": "campus"
+    },
+    {
+      "word": "Bibliothek",
+      "article": "die",
+      "plural": "Bibliotheken",
+      "meaning": "library"
+    },
+    {
+      "word": "Gitarre",
+      "article": "die",
+      "plural": "Gitarren",
+      "meaning": "guitar"
+    },
+    {
+      "word": "Klavier",
+      "article": "das",
+      "plural": "Klaviere",
+      "meaning": "piano"
+    },
+    {
+      "word": "Yoga",
+      "article": "der",
+      "plural": "Yoga",
+      "meaning": "yoga"
+    },
+    {
+      "word": "Tourist",
+      "article": "der",
+      "plural": "Touristen",
+      "meaning": "tourist"
+    },
+    {
+      "word": "Berg",
+      "article": "der",
+      "plural": "Berge",
+      "meaning": "mountain"
+    },
+    {
+      "word": "Zentrum",
+      "article": "das",
+      "plural": "Zentrumen",
+      "meaning": "center"
+    },
+    {
+      "word": "Professor",
+      "article": "der",
+      "plural": "Professoren",
+      "meaning": "professor"
+    },
+    {
+      "word": "Kombination",
+      "article": "die",
+      "plural": "Kombinationen",
+      "meaning": "combination"
+    },
+    {
+      "word": "Lösung",
+      "article": "die",
+      "plural": "Lösungen",
+      "meaning": "solution"
+    },
+    {
+      "word": "Tennis",
+      "article": "der",
+      "plural": "Tennis",
+      "meaning": "tennis"
+    },
+    {
+      "word": "Fußball",
+      "article": "der",
+      "plural": "Fußball",
+      "meaning": "soccer"
+    },
+    {
+      "word": "Rad",
+      "article": "der",
+      "plural": "Rad",
+      "meaning": "wheel"
+    },
+    {
+      "word": "Schuh",
+      "article": "der",
+      "plural": "Schuhe",
+      "meaning": "shoe"
+    },
+    {
+      "word": "Ski",
+      "article": "das",
+      "plural": "Skier",
+      "meaning": "ski"
+    },
+    {
+      "word": "Schnee",
+      "article": "der",
+      "plural": "Schnee",
+      "meaning": "snow"
+    },
+    {
+      "word": "Aktuelles",
+      "article": "das",
+      "plural": "Aktuelles",
+      "meaning": "current events"
+    },
+    {
+      "word": "Nachrichten",
+      "article": "die",
+      "plural": "Nachrichtenen",
+      "meaning": "news"
+    },
+    {
+      "word": "Stadtzentrum",
+      "article": "das",
+      "plural": "Stadtzentrumen",
+      "meaning": "downtown"
+    },
+    {
+      "word": "Angebot",
+      "article": "das",
+      "plural": "Angebote",
+      "meaning": "offer"
+    },
+    {
+      "word": "Nachfrage",
+      "article": "die",
+      "plural": "Nachfragen",
+      "meaning": "demand"
+    },
+    {
+      "word": "Geld",
+      "article": "das",
+      "plural": "Geld",
+      "meaning": "money"
+    },
+    {
+      "word": "Preis",
+      "article": "der",
+      "plural": "Preise",
+      "meaning": "price"
+    },
+    {
+      "word": "Semester",
+      "article": "das",
+      "plural": "Semester",
+      "meaning": "semester"
+    },
+    {
+      "word": "Kontakt",
+      "article": "der",
+      "plural": "Kontakte",
+      "meaning": "contact"
+    },
+    {
+      "word": "Rodeln",
+      "article": "das",
+      "plural": "Rodeln",
+      "meaning": "sledding"
+    },
+    {
+      "word": "Föhn",
+      "article": "der",
+      "plural": "Föhn",
+      "meaning": "hair dryer"
+    },
+    {
+      "word": "Regenschirm",
+      "article": "der",
+      "plural": "Regenschirme",
+      "meaning": "umbrella"
+    },
+    {
+      "word": "Wechselspiel",
+      "article": "das",
+      "plural": "Wechselspiele",
+      "meaning": "interaction"
+    },
+    {
+      "word": "Wetter",
+      "article": "das",
+      "plural": "Wetter",
+      "meaning": "weather"
+    },
+    {
+      "word": "Seminar",
+      "article": "das",
+      "plural": "Seminare",
+      "meaning": "seminar"
+    },
+    {
+      "word": "Ergebnis",
+      "article": "das",
+      "plural": "Ergebnisse",
+      "meaning": "result"
+    },
+    {
+      "word": "Lektion",
+      "article": "die",
+      "plural": "Lektionen",
+      "meaning": "lesson"
+    },
+    {
+      "word": "Roulade",
+      "article": "die",
+      "plural": "Rouladen",
+      "meaning": "meat roll"
+    },
+    {
+      "word": "Kraut",
+      "article": "das",
+      "plural": "Kraut",
+      "meaning": "herb"
+    },
+    {
+      "word": "Aktivität",
+      "article": "die",
+      "plural": "Aktivitäten",
+      "meaning": "activity"
+    },
+    {
+      "word": "Beruf",
+      "article": "der",
+      "plural": "Berufe",
+      "meaning": "profession"
+    },
+    {
+      "word": "Paar",
+      "article": "das",
+      "plural": "Paare",
+      "meaning": "pair"
+    },
+    {
+      "word": "Komposita",
+      "article": "das",
+      "plural": "Komposita",
+      "meaning": "compound words(combined)"
+    },
+    {
+      "word": "Grundwert",
+      "article": "der",
+      "plural": "Grundwerte",
+      "meaning": "base value"
+    },
+    {
+      "word": "Prozent",
+      "article": "der",
+      "plural": "Prozente",
+      "meaning": "percent"
+    },
+    {
+      "word": "Kommode",
+      "article": "die",
+      "plural": "Kommoden",
+      "meaning": "dresser(table to dress)"
+    },
+    {
+      "word": "Schrank",
+      "article": "der",
+      "plural": "Schränke",
+      "meaning": "wardrobe"
+    },
+    {
+      "word": "Bild",
+      "article": "das",
+      "plural": "Bilder",
+      "meaning": "picture"
+    },
+    {
+      "word": "Lampe",
+      "article": "die",
+      "plural": "Lampen",
+      "meaning": "lamp"
+    },
+    {
+      "word": "Teppich",
+      "article": "der",
+      "plural": "Teppiche",
+      "meaning": "carpet"
+    },
+    {
+      "word": "Hypothese",
+      "article": "die",
+      "plural": "Hypothesen",
+      "meaning": "hypothesis"
+    },
+    {
+      "word": "Theorie",
+      "article": "die",
+      "plural": "Theorieen",
+      "meaning": "theory"
+    },
+    {
+      "word": "Kinderzimmer",
+      "article": "das",
+      "plural": "Kinderzimmer",
+      "meaning": "children's room"
+    },
+    {
+      "word": "Schlafzimmer",
+      "article": "das",
+      "plural": "Schlafzimmer",
+      "meaning": "bedroom"
+    },
+    {
+      "word": "Wohnzimmer",
+      "article": "das",
+      "plural": "Wohnzimmer",
+      "meaning": "living room"
+    },
+    {
+      "word": "Küche",
+      "article": "die",
+      "plural": "Küchen",
+      "meaning": "kitchen"
+    },
+    {
+      "word": "Badezimmer",
+      "article": "das",
+      "plural": "Badezimmer",
+      "meaning": "bathroom"
+    },
+    {
+      "word": "Film",
+      "article": "der",
+      "plural": "Filme",
+      "meaning": "film"
+    },
+    {
+      "word": "Fernsehen",
+      "article": "das",
+      "plural": "Fernsehen",
+      "meaning": "television"
+    },
+    {
+      "word": "Sessel",
+      "article": "der",
+      "plural": "Sessel",
+      "meaning": "armchair"
+    },
+    {
+      "word": "Sofa",
+      "article": "das",
+      "plural": "Sofas",
+      "meaning": "sofa"
+    },
+    {
+      "word": "Homeoffice",
+      "article": "das",
+      "plural": "Homeoffices",
+      "meaning": "home office"
+    },
+    {
+      "word": "Büro",
+      "article": "das",
+      "plural": "Büros",
+      "meaning": "office"
+    },
+    {
+      "word": "Balkon",
+      "article": "der",
+      "plural": "Balkone",
+      "meaning": "balcony"
+    },
+    {
+      "word": "Möbel",
+      "article": "die",
+      "plural": "Möbel",
+      "meaning": "furniture"
+    }
+  ],
+  "verbs": [
+    {
+      "word": "haben",
+      "present_3sg": "hat",
+      "past_3sg": "hatte",
+      "past_participle": "gehabt",
+      "meaning": "have"
+    },
+    {
+      "word": "gehen",
+      "present_3sg": "geht",
+      "past_3sg": "ging",
+      "past_participle": "gegangen",
+      "meaning": "go"
+    },
+    {
+      "word": "kommen",
+      "present_3sg": "kommt",
+      "past_3sg": "kam",
+      "past_participle": "gekommen",
+      "meaning": "come"
+    },
+    {
+      "word": "machen",
+      "present_3sg": "macht",
+      "past_3sg": "machte",
+      "past_participle": "gemacht",
+      "meaning": "make"
+    },
+    {
+      "word": "sagen",
+      "present_3sg": "sagt",
+      "past_3sg": "sagte",
+      "past_participle": "gesagt",
+      "meaning": "say"
+    },
+    {
+      "word": "sehen",
+      "present_3sg": "sieht",
+      "past_3sg": "sah",
+      "past_participle": "gesehen",
+      "meaning": "see"
+    },
+    {
+      "word": "geben",
+      "present_3sg": "gibt",
+      "past_3sg": "gab",
+      "past_participle": "gegeben",
+      "meaning": "give"
+    },
+    {
+      "word": "nehmen",
+      "present_3sg": "nimmt",
+      "past_3sg": "nahm",
+      "past_participle": "genommen",
+      "meaning": "take"
+    },
+    {
+      "word": "finden",
+      "present_3sg": "findet",
+      "past_3sg": "fand",
+      "past_participle": "gefunden",
+      "meaning": "find"
+    },
+    {
+      "word": "denken",
+      "present_3sg": "denkt",
+      "past_3sg": "dachte",
+      "past_participle": "gedacht",
+      "meaning": "think"
+    },
+    {
+      "word": "wissen",
+      "present_3sg": "weiß",
+      "past_3sg": "wusste",
+      "past_participle": "gewusst",
+      "meaning": "know"
+    },
+    {
+      "word": "lernen",
+      "present_3sg": "lernt",
+      "past_3sg": "lernte",
+      "past_participle": "gelernt",
+      "meaning": "learn"
+    },
+    {
+      "word": "arbeiten",
+      "present_3sg": "arbeitet",
+      "past_3sg": "arbeitete",
+      "past_participle": "gearbeitet",
+      "meaning": "work"
+    },
+    {
+      "word": "spielen",
+      "present_3sg": "spielt",
+      "past_3sg": "spielte",
+      "past_participle": "gespielt",
+      "meaning": "play"
+    },
+    {
+      "word": "wohnen",
+      "present_3sg": "wohnt",
+      "past_3sg": "wohnte",
+      "past_participle": "gewohnt",
+      "meaning": "live"
+    },
+    {
+      "word": "essen",
+      "present_3sg": "isst",
+      "past_3sg": "aß",
+      "past_participle": "gegessen",
+      "meaning": "eat"
+    },
+    {
+      "word": "trinken",
+      "present_3sg": "trinkt",
+      "past_3sg": "trank",
+      "past_participle": "getrunken",
+      "meaning": "drink"
+    },
+    {
+      "word": "schlafen",
+      "present_3sg": "schläft",
+      "past_3sg": "schlief",
+      "past_participle": "geschlafen",
+      "meaning": "sleep"
+    },
+    {
+      "word": "laufen",
+      "present_3sg": "läuft",
+      "past_3sg": "lief",
+      "past_participle": "gelaufen",
+      "meaning": "run"
+    },
+    {
+      "word": "fahren",
+      "present_3sg": "fährt",
+      "past_3sg": "fuhr",
+      "past_participle": "gefahren",
+      "meaning": "drive"
+    },
+    {
+      "word": "kaufen",
+      "present_3sg": "kauft",
+      "past_3sg": "kaufte",
+      "past_participle": "gekauft",
+      "meaning": "buy"
+    },
+    {
+      "word": "verkaufen",
+      "present_3sg": "verkauft",
+      "past_3sg": "verkaufte",
+      "past_participle": "verkauft",
+      "meaning": "sell"
+    },
+    {
+      "word": "fragen",
+      "present_3sg": "fragt",
+      "past_3sg": "fragte",
+      "past_participle": "gefragt",
+      "meaning": "ask"
+    },
+    {
+      "word": "antworten",
+      "present_3sg": "antwortet",
+      "past_3sg": "antwortete",
+      "past_participle": "geantwortet",
+      "meaning": "answer"
+    },
+    {
+      "word": "sprechen",
+      "present_3sg": "spricht",
+      "past_3sg": "sprach",
+      "past_participle": "gesprochen",
+      "meaning": "speak"
+    },
+    {
+      "word": "hören",
+      "present_3sg": "hört",
+      "past_3sg": "hörte",
+      "past_participle": "gehört",
+      "meaning": "hear"
+    },
+    {
+      "word": "öffnen",
+      "present_3sg": "öffnet",
+      "past_3sg": "öffnete",
+      "past_participle": "geöffnet",
+      "meaning": "open"
+    },
+    {
+      "word": "schließen",
+      "present_3sg": "schließt",
+      "past_3sg": "schloss",
+      "past_participle": "geschlossen",
+      "meaning": "close"
+    },
+    {
+      "word": "bringen",
+      "present_3sg": "bringt",
+      "past_3sg": "brachte",
+      "past_participle": "gebracht",
+      "meaning": "bring"
+    },
+    {
+      "word": "holen",
+      "present_3sg": "holt",
+      "past_3sg": "holte",
+      "past_participle": "geholt",
+      "meaning": "pick up"
+    },
+    {
+      "word": "bleiben",
+      "present_3sg": "bleibt",
+      "past_3sg": "blieb",
+      "past_participle": "geblieben",
+      "meaning": "stay"
+    },
+    {
+      "word": "warten",
+      "present_3sg": "wartet",
+      "past_3sg": "wartete",
+      "past_participle": "gewartet",
+      "meaning": "wait"
+    },
+    {
+      "word": "beginnen",
+      "present_3sg": "beginnt",
+      "past_3sg": "begann",
+      "past_participle": "begonnen",
+      "meaning": "begin"
+    },
+    {
+      "word": "enden",
+      "present_3sg": "endet",
+      "past_3sg": "endete",
+      "past_participle": "geendet",
+      "meaning": "end"
+    },
+    {
+      "word": "lieben",
+      "present_3sg": "liebt",
+      "past_3sg": "liebte",
+      "past_participle": "geliebt",
+      "meaning": "love"
+    },
+    {
+      "word": "brauchen",
+      "present_3sg": "braucht",
+      "past_3sg": "brauchte",
+      "past_participle": "gebraucht",
+      "meaning": "need"
+    },
+    {
+      "word": "versuchen",
+      "present_3sg": "versucht",
+      "past_3sg": "versuchte",
+      "past_participle": "versucht",
+      "meaning": "try"
+    },
+    {
+      "word": "helfen",
+      "present_3sg": "hilft",
+      "past_3sg": "half",
+      "past_participle": "geholfen",
+      "meaning": "help"
+    },
+    {
+      "word": "zeigen",
+      "present_3sg": "zeigt",
+      "past_3sg": "zeigte",
+      "past_participle": "gezeigt",
+      "meaning": "show"
+    },
+    {
+      "word": "reisen",
+      "present_3sg": "reist",
+      "past_3sg": "reiste",
+      "past_participle": "gereist",
+      "meaning": "travel"
+    },
+    {
+      "word": "treffen",
+      "present_3sg": "trifft",
+      "past_3sg": "traf",
+      "past_participle": "getroffen",
+      "meaning": "meet"
+    },
+    {
+      "word": "benutzen",
+      "present_3sg": "benutzt",
+      "past_3sg": "benutzte",
+      "past_participle": "benutzt",
+      "meaning": "use"
+    },
+    {
+      "word": "erklären",
+      "present_3sg": "erklärt",
+      "past_3sg": "erklärte",
+      "past_participle": "erklärt",
+      "meaning": "explain"
+    },
+    {
+      "word": "üben",
+      "present_3sg": "übt",
+      "past_3sg": "übte",
+      "past_participle": "geübt",
+      "meaning": "practice"
+    },
+    {
+      "word": "gewinnen",
+      "present_3sg": "gewinnt",
+      "past_3sg": "gewann",
+      "past_participle": "gewonnen",
+      "meaning": "win"
+    },
+    {
+      "word": "verlieren",
+      "present_3sg": "verliert",
+      "past_3sg": "verlor",
+      "past_participle": "verloren",
+      "meaning": "lose"
+    },
+    {
+      "word": "heißen",
+      "present_3sg": "heißt",
+      "past_3sg": "hieß",
+      "past_participle": "geheißen",
+      "meaning": "names"
+    },
+    {
+      "word": "begrüßen",
+      "present_3sg": "begrüßt",
+      "past_3sg": "begrüßte",
+      "past_participle": "begrüßt",
+      "meaning": "greet"
+    },
+    {
+      "word": "vorstellen",
+      "present_3sg": "stellt vor",
+      "past_3sg": "stellte vor",
+      "past_participle": "vorgestellt",
+      "meaning": "introduce"
+    },
+    {
+      "word": "vergleichen",
+      "present_3sg": "vergleicht",
+      "past_3sg": "verglich",
+      "past_participle": "verglichen",
+      "meaning": "compare"
+    },
+    {
+      "word": "buchstabieren",
+      "present_3sg": "buchstabiert",
+      "past_3sg": "buchstabierte",
+      "past_participle": "buchstabiert",
+      "meaning": "spell"
+    },
+    {
+      "word": "kennen",
+      "present_3sg": "kennt",
+      "past_3sg": "kannte",
+      "past_participle": "gekannt",
+      "meaning": "know"
+    },
+    {
+      "word": "ordnen",
+      "present_3sg": "ordnet",
+      "past_3sg": "ordnete",
+      "past_participle": "geordnet",
+      "meaning": "organize"
+    },
+    {
+      "word": "kontrollieren",
+      "present_3sg": "kontrolliert",
+      "past_3sg": "kontrollierte",
+      "past_participle": "kontrolliert",
+      "meaning": "control"
+    },
+    {
+      "word": "bitten",
+      "present_3sg": "bittet",
+      "past_3sg": "bat",
+      "past_participle": "gebeten",
+      "meaning": "ask"
+    },
+    {
+      "word": "markieren",
+      "present_3sg": "markiert",
+      "past_3sg": "markierte",
+      "past_participle": "markiert",
+      "meaning": "mark"
+    },
+    {
+      "word": "wiederholen",
+      "present_3sg": "wiederholt",
+      "past_3sg": "wiederholte",
+      "past_participle": "wiederholt",
+      "meaning": "repeat"
+    },
+    {
+      "word": "verstehen",
+      "present_3sg": "versteht",
+      "past_3sg": "verstand",
+      "past_participle": "verstanden",
+      "meaning": "understand"
+    },
+    {
+      "word": "ergänzen",
+      "present_3sg": "ergänzt",
+      "past_3sg": "ergänzte",
+      "past_participle": "ergänzt",
+      "meaning": "complete"
+    },
+    {
+      "word": "passen",
+      "present_3sg": "passt",
+      "past_3sg": "passte",
+      "past_participle": "gepasst",
+      "meaning": "fit"
+    },
+    {
+      "word": "wählen",
+      "present_3sg": "wählt",
+      "past_3sg": "wählte",
+      "past_participle": "gewählt",
+      "meaning": "choose"
+    },
+    {
+      "word": "klären",
+      "present_3sg": "klärt",
+      "past_3sg": "klärte",
+      "past_participle": "geklärt",
+      "meaning": "clarify"
+    },
+    {
+      "word": "telefonieren",
+      "present_3sg": "telefoniert",
+      "past_3sg": "telefonierte",
+      "past_participle": "telefoniert",
+      "meaning": "call"
+    },
+    {
+      "word": "recherchieren",
+      "present_3sg": "recherchiert",
+      "past_3sg": "recherchierte",
+      "past_participle": "recherchiert",
+      "meaning": "research"
+    },
+    {
+      "word": "notieren",
+      "present_3sg": "notiert",
+      "past_3sg": "notierte",
+      "past_participle": "notiert",
+      "meaning": "note"
+    },
+    {
+      "word": "fehlen",
+      "present_3sg": "fehlt",
+      "past_3sg": "fehlte",
+      "past_participle": "gefehlt",
+      "meaning": "lack"
+    },
+    {
+      "word": "variieren",
+      "present_3sg": "variiert",
+      "past_3sg": "variierte",
+      "past_participle": "variiert",
+      "meaning": "vary"
+    },
+    {
+      "word": "bestellen",
+      "present_3sg": "bestellt",
+      "past_3sg": "bestellte",
+      "past_participle": "bestellt",
+      "meaning": "order"
+    },
+    {
+      "word": "kreuzen",
+      "present_3sg": "kreuzt",
+      "past_3sg": "kreuzte",
+      "past_participle": "gekreuzt",
+      "meaning": "cross"
+    },
+    {
+      "word": "berichten",
+      "present_3sg": "berichtet",
+      "past_3sg": "berichtete",
+      "past_participle": "berichtet",
+      "meaning": "report"
+    },
+    {
+      "word": "mögen",
+      "present_3sg": "mochte",
+      "past_3sg": "mochte",
+      "past_participle": "gemocht",
+      "meaning": "like"
+    },
+    {
+      "word": "überprüfen",
+      "present_3sg": "überprüft",
+      "past_3sg": "überprüfte",
+      "past_participle": "überprüft",
+      "meaning": "check"
+    },
+    {
+      "word": "liegen",
+      "present_3sg": "liegt",
+      "past_3sg": "lag",
+      "past_participle": "gelegen",
+      "meaning": "lie"
+    },
+    {
+      "word": "bezahlen",
+      "present_3sg": "bezahlt",
+      "past_3sg": "bezahlte",
+      "past_participle": "bezahlt",
+      "meaning": "pay"
+    },
+    {
+      "word": "verabreden",
+      "present_3sg": "verabredet",
+      "past_3sg": "verabredete",
+      "past_participle": "verabredet",
+      "meaning": "make an appointment"
+    },
+    {
+      "word": "suchen",
+      "present_3sg": "sucht",
+      "past_3sg": "suchte",
+      "past_participle": "gesucht",
+      "meaning": "search"
+    },
+    {
+      "word": "legen",
+      "present_3sg": "legt",
+      "past_3sg": "legte",
+      "past_participle": "gelegt",
+      "meaning": "put on"
+    },
+    {
+      "word": "setzen",
+      "present_3sg": "setzt",
+      "past_3sg": "setzte",
+      "past_participle": "gesetzt",
+      "meaning": "put"
+    },
+    {
+      "word": "sitzen",
+      "present_3sg": "sitzt",
+      "past_3sg": "saß",
+      "past_participle": "gesessen",
+      "meaning": "sit"
+    },
+    {
+      "word": "stellen",
+      "present_3sg": "stellt",
+      "past_3sg": "stellte",
+      "past_participle": "gestellt",
+      "meaning": "put"
+    },
+    {
+      "word": "stehen",
+      "present_3sg": "steht",
+      "past_3sg": "stand",
+      "past_participle": "gestanden",
+      "meaning": "stand"
+    },
+    {
+      "word": "tun",
+      "present_3sg": "tut",
+      "past_3sg": "tat",
+      "past_participle": "getan",
+      "meaning": "do"
+    },
+    {
+      "word": "werden",
+      "present_3sg": "wird",
+      "past_3sg": "wurde",
+      "past_participle": "worden",
+      "meaning": "become"
+    },
+    {
+      "word": "werfen",
+      "present_3sg": "wirft",
+      "past_3sg": "warf",
+      "past_participle": "geworfen",
+      "meaning": "throw"
+    },
+    {
+      "word": "bekommen",
+      "present_3sg": "bekommt",
+      "past_3sg": "bekam",
+      "past_participle": "bekommen",
+      "meaning": "receive"
+    },
+    {
+      "word": "schmecken",
+      "present_3sg": "schmeckt",
+      "past_3sg": "schmeckte",
+      "past_participle": "geschmeckt",
+      "meaning": "taste"
+    },
+    {
+      "word": "posten",
+      "present_3sg": "postet",
+      "past_3sg": "postete",
+      "past_participle": "gepostet",
+      "meaning": "post"
+    },
+    {
+      "word": "nerven",
+      "present_3sg": "nervt",
+      "past_3sg": "nervte",
+      "past_participle": "genervt",
+      "meaning": "annoy"
+    },
+    {
+      "word": "dauern",
+      "present_3sg": "dauert",
+      "past_3sg": "dauerte",
+      "past_participle": "gedauert",
+      "meaning": "lasts"
+    },
+    {
+      "word": "kochen",
+      "present_3sg": "kocht",
+      "past_3sg": "kochte",
+      "past_participle": "gekocht",
+      "meaning": "cook"
+    },
+    {
+      "word": "nutzen",
+      "present_3sg": "nutzt",
+      "past_3sg": "nutzte",
+      "past_participle": "genutzt",
+      "meaning": "use"
+    },
+    {
+      "word": "einkaufen",
+      "present_3sg": "kauft ein",
+      "past_3sg": "kaufte ein",
+      "past_participle": "eingekauft",
+      "meaning": "shop"
+    },
+    {
+      "word": "fernsehen",
+      "present_3sg": "sieht fern",
+      "past_3sg": "sah fern",
+      "past_participle": "ferngesehen",
+      "meaning": "watch TV"
+    },
+    {
+      "word": "frühstücken",
+      "present_3sg": "frühstückt",
+      "past_3sg": "frühstückte",
+      "past_participle": "gefrühstückt",
+      "meaning": "have breakfast"
+    },
+    {
+      "word": "aufstehen",
+      "present_3sg": "steht auf",
+      "past_3sg": "stand auf",
+      "past_participle": "aufgestanden",
+      "meaning": "get up"
+    },
+    {
+      "word": "weggehen",
+      "present_3sg": "geht weg",
+      "past_3sg": "ging weg",
+      "past_participle": "weggegangen",
+      "meaning": "go away"
+    },
+    {
+      "word": "abholen",
+      "present_3sg": "holt ab",
+      "past_3sg": "holte ab",
+      "past_participle": "abgeholt",
+      "meaning": "pick up"
+    },
+    {
+      "word": "vorbereiten",
+      "present_3sg": "bereitet vor",
+      "past_3sg": "bereitete vor",
+      "past_participle": "vorbereitet",
+      "meaning": "prepare"
+    },
+    {
+      "word": "einladen",
+      "present_3sg": "lädt ein",
+      "past_3sg": "lud ein",
+      "past_participle": "eingeladen",
+      "meaning": "invite"
+    },
+    {
+      "word": "anfangen",
+      "present_3sg": "fängt an",
+      "past_3sg": "fing an",
+      "past_participle": "angefangen",
+      "meaning": "start"
+    },
+    {
+      "word": "stoppen",
+      "present_3sg": "stoppt",
+      "past_3sg": "stoppte",
+      "past_participle": "gestoppt",
+      "meaning": "stop"
+    },
+    {
+      "word": "mitbringen",
+      "present_3sg": "bringt mit",
+      "past_3sg": "brachte mit",
+      "past_participle": "mitgebracht",
+      "meaning": "bring along"
+    },
+    {
+      "word": "beschreiben",
+      "present_3sg": "beschreibt",
+      "past_3sg": "beschrieb",
+      "past_participle": "beschrieben",
+      "meaning": "describe"
+    },
+    {
+      "word": "ausschreiben",
+      "present_3sg": "schreibt aus",
+      "past_3sg": "schrieb aus",
+      "past_participle": "ausgeschrieben",
+      "meaning": "announce"
+    },
+    {
+      "word": "abschreiben",
+      "present_3sg": "schreibt ab",
+      "past_3sg": "schrieb ab",
+      "past_participle": "abgeschrieben",
+      "meaning": "copy"
+    },
+    {
+      "word": "führen",
+      "present_3sg": "führt",
+      "past_3sg": "führte",
+      "past_participle": "geführt",
+      "meaning": "lead"
+    },
+    {
+      "word": "tagen",
+      "present_3sg": "tagt",
+      "past_3sg": "tagte",
+      "past_participle": "getagt",
+      "meaning": "hold a meeting"
+    },
+    {
+      "word": "besichtigen",
+      "present_3sg": "besichtigt",
+      "past_3sg": "besichtigte",
+      "past_participle": "besichtigt",
+      "meaning": "inspect"
+    },
+    {
+      "word": "erinnern",
+      "present_3sg": "erinnert",
+      "past_3sg": "erinnerte",
+      "past_participle": "erinnert",
+      "meaning": "remember"
+    },
+    {
+      "word": "klettern",
+      "present_3sg": "klettert",
+      "past_3sg": "kletterte",
+      "past_participle": "geklettert",
+      "meaning": "climb"
+    },
+    {
+      "word": "schwimmen",
+      "present_3sg": "schwimmt",
+      "past_3sg": "schwamm",
+      "past_participle": "geschwommen",
+      "meaning": "swim"
+    },
+    {
+      "word": "tanzen",
+      "present_3sg": "tanzt",
+      "past_3sg": "tanzte",
+      "past_participle": "getanzt",
+      "meaning": "dance"
+    },
+    {
+      "word": "snowboarden",
+      "present_3sg": "snowboardet",
+      "past_3sg": "snowboardete",
+      "past_participle": "snowboardet",
+      "meaning": "snowboard"
+    },
+    {
+      "word": "malen",
+      "present_3sg": "malt",
+      "past_3sg": "malte",
+      "past_participle": "gemalt",
+      "meaning": "paint"
+    },
+    {
+      "word": "wandern",
+      "present_3sg": "wandert",
+      "past_3sg": "wanderte",
+      "past_participle": "gewandert",
+      "meaning": "hike"
+    },
+    {
+      "word": "reiten",
+      "present_3sg": "reitet",
+      "past_3sg": "ritt",
+      "past_participle": "geritten",
+      "meaning": "ride"
+    },
+    {
+      "word": "singen",
+      "present_3sg": "singt",
+      "past_3sg": "sang",
+      "past_participle": "gesungen",
+      "meaning": "sing"
+    },
+    {
+      "word": "kombinieren",
+      "present_3sg": "kombiniert",
+      "past_3sg": "kombinierte",
+      "past_participle": "kombiniert",
+      "meaning": "combine"
+    },
+    {
+      "word": "renovieren",
+      "present_3sg": "renoviert",
+      "past_3sg": "renovierte",
+      "past_participle": "renoviert",
+      "meaning": "renovate"
+    },
+    {
+      "word": "basteln",
+      "present_3sg": "bastelt",
+      "past_3sg": "bastelte",
+      "past_participle": "bastelt",
+      "meaning": "do crafts"
+    },
+    {
+      "word": "entspannen",
+      "present_3sg": "entspannt",
+      "past_3sg": "entspannte",
+      "past_participle": "entspannt",
+      "meaning": "relax"
+    },
+    {
+      "word": "reden",
+      "present_3sg": "redet",
+      "past_3sg": "redete",
+      "past_participle": "geredet",
+      "meaning": "talk"
+    },
+    {
+      "word": "diskutieren",
+      "present_3sg": "diskutiert",
+      "past_3sg": "diskutierte",
+      "past_participle": "diskutiert",
+      "meaning": "discuss"
+    },
+    {
+      "word": "unterhalten",
+      "present_3sg": "unterhält",
+      "past_3sg": "unterhielt",
+      "past_participle": "unterhalten",
+      "meaning": "entertain"
+    },
+    {
+      "word": "teilen",
+      "present_3sg": "teilt",
+      "past_3sg": "teilte",
+      "past_participle": "geteilt",
+      "meaning": "share"
+    },
+    {
+      "word": "schicken",
+      "present_3sg": "schickt",
+      "past_3sg": "schickte",
+      "past_participle": "geschickt",
+      "meaning": "send"
+    },
+    {
+      "word": "empfehlen",
+      "present_3sg": "empfiehlt",
+      "past_3sg": "empfahl",
+      "past_participle": "empfohlen",
+      "meaning": "recommend"
+    },
+    {
+      "word": "schenken",
+      "present_3sg": "schenkt",
+      "past_3sg": "schenkte",
+      "past_participle": "geschenkt",
+      "meaning": "give as a gift"
+    },
+    {
+      "word": "tauschen",
+      "present_3sg": "tauscht",
+      "past_3sg": "tauschte",
+      "past_participle": "getauscht",
+      "meaning": "exchange"
+    },
+    {
+      "word": "raten",
+      "present_3sg": "rät",
+      "past_3sg": "riet",
+      "past_participle": "geraten",
+      "meaning": "guess"
+    }
+  ],
+  "adjectives": [
+    {
+      "word": "gut",
+      "comparative": "besser",
+      "superlative": "am besten",
+      "meaning": "good"
+    },
+    {
+      "word": "schlecht",
+      "comparative": "schlechter",
+      "superlative": "am schlechtesten",
+      "meaning": "bad"
+    },
+    {
+      "word": "groß",
+      "comparative": "größer",
+      "superlative": "am größten",
+      "meaning": "big"
+    },
+    {
+      "word": "klein",
+      "comparative": "kleiner",
+      "superlative": "am kleinsten",
+      "meaning": "small"
+    },
+    {
+      "word": "alt",
+      "comparative": "älter",
+      "superlative": "am ältesten",
+      "meaning": "old"
+    },
+    {
+      "word": "jung",
+      "comparative": "jünger",
+      "superlative": "am jüngsten",
+      "meaning": "young"
+    },
+    {
+      "word": "neu",
+      "comparative": "neuer",
+      "superlative": "am neuesten",
+      "meaning": "new"
+    },
+    {
+      "word": "schön",
+      "comparative": "schöner",
+      "superlative": "am schönsten",
+      "meaning": "beautiful"
+    },
+    {
+      "word": "hässlich",
+      "comparative": "hässlicher",
+      "superlative": "am hässlichsten",
+      "meaning": "ugly"
+    },
+    {
+      "word": "schnell",
+      "comparative": "schneller",
+      "superlative": "am schnellsten",
+      "meaning": "fast"
+    },
+    {
+      "word": "langsam",
+      "comparative": "langsamer",
+      "superlative": "am langsamsten",
+      "meaning": "slow"
+    },
+    {
+      "word": "viel",
+      "comparative": "mehr",
+      "superlative": "am meisten",
+      "meaning": "much"
+    },
+    {
+      "word": "wenig",
+      "comparative": "weniger",
+      "superlative": "am wenigsten",
+      "meaning": "little"
+    },
+    {
+      "word": "hoch",
+      "comparative": "höher",
+      "superlative": "am höchsten",
+      "meaning": "high"
+    },
+    {
+      "word": "niedrig",
+      "comparative": "niedriger",
+      "superlative": "am niedrigsten",
+      "meaning": "low"
+    },
+    {
+      "word": "lang",
+      "comparative": "länger",
+      "superlative": "am längsten",
+      "meaning": "long"
+    },
+    {
+      "word": "kurz",
+      "comparative": "kürzer",
+      "superlative": "am kürzesten",
+      "meaning": "short"
+    },
+    {
+      "word": "breit",
+      "comparative": "breiter",
+      "superlative": "am breitesten",
+      "meaning": "wide"
+    },
+    {
+      "word": "eng",
+      "comparative": "enger",
+      "superlative": "am engsten",
+      "meaning": "narrow"
+    },
+    {
+      "word": "dick",
+      "comparative": "dicker",
+      "superlative": "am dicksten",
+      "meaning": "thick"
+    },
+    {
+      "word": "dünn",
+      "comparative": "dünner",
+      "superlative": "am dünnsten",
+      "meaning": "thin"
+    },
+    {
+      "word": "warm",
+      "comparative": "wärmer",
+      "superlative": "am wärmsten",
+      "meaning": "warm"
+    },
+    {
+      "word": "kalt",
+      "comparative": "kälter",
+      "superlative": "am kältesten",
+      "meaning": "cold"
+    },
+    {
+      "word": "heiß",
+      "comparative": "heißer",
+      "superlative": "am heißesten",
+      "meaning": "hot"
+    },
+    {
+      "word": "kühl",
+      "comparative": "kühler",
+      "superlative": "am kühlsten",
+      "meaning": "cool"
+    },
+    {
+      "word": "hell",
+      "comparative": "heller",
+      "superlative": "am hellsten",
+      "meaning": "bright"
+    },
+    {
+      "word": "dunkel",
+      "comparative": "dunkler",
+      "superlative": "am dunkelsten",
+      "meaning": "dark"
+    },
+    {
+      "word": "laut",
+      "comparative": "lauter",
+      "superlative": "am lautesten",
+      "meaning": "loud"
+    },
+    {
+      "word": "leise",
+      "comparative": "leiser",
+      "superlative": "am leisesten",
+      "meaning": "quiet"
+    },
+    {
+      "word": "stark",
+      "comparative": "stärker",
+      "superlative": "am stärksten",
+      "meaning": "strong"
+    },
+    {
+      "word": "schwach",
+      "comparative": "schwächer",
+      "superlative": "am schwächsten",
+      "meaning": "weak"
+    },
+    {
+      "word": "reich",
+      "comparative": "reicher",
+      "superlative": "am reichsten",
+      "meaning": "rich"
+    },
+    {
+      "word": "arm",
+      "comparative": "ärmer",
+      "superlative": "am ärmsten",
+      "meaning": "poor"
+    },
+    {
+      "word": "teuer",
+      "comparative": "teurer",
+      "superlative": "am teuersten",
+      "meaning": "expensive"
+    },
+    {
+      "word": "billig",
+      "comparative": "billiger",
+      "superlative": "am billigsten",
+      "meaning": "cheap"
+    },
+    {
+      "word": "richtig",
+      "comparative": "richtiger",
+      "superlative": "am richtigsten",
+      "meaning": "correct"
+    },
+    {
+      "word": "falsch",
+      "comparative": "falscher",
+      "superlative": "am falschesten",
+      "meaning": "wrong"
+    },
+    {
+      "word": "frei",
+      "comparative": "freier",
+      "superlative": "am freiesten",
+      "meaning": "free"
+    },
+    {
+      "word": "voll",
+      "comparative": "voller",
+      "superlative": "am vollsten",
+      "meaning": "full"
+    },
+    {
+      "word": "leer",
+      "comparative": "leerer",
+      "superlative": "am leersten",
+      "meaning": "empty"
+    },
+    {
+      "word": "wichtig",
+      "comparative": "wichtiger",
+      "superlative": "am wichtigsten",
+      "meaning": "important"
+    },
+    {
+      "word": "möglich",
+      "comparative": "",
+      "superlative": "",
+      "meaning": "possible"
+    },
+    {
+      "word": "fertig",
+      "comparative": "",
+      "superlative": "",
+      "meaning": "ready"
+    },
+    {
+      "word": "einfach",
+      "comparative": "einfacher",
+      "superlative": "am einfachsten",
+      "meaning": "easy"
+    },
+    {
+      "word": "schwer",
+      "comparative": "schwerer",
+      "superlative": "am schwersten",
+      "meaning": "difficult"
+    },
+    {
+      "word": "freundlich",
+      "comparative": "freundlicher",
+      "superlative": "am freundlichsten",
+      "meaning": "friendly"
+    },
+    {
+      "word": "nett",
+      "comparative": "netter",
+      "superlative": "am nettesten",
+      "meaning": "nice"
+    },
+    {
+      "word": "böse",
+      "comparative": "",
+      "superlative": "",
+      "meaning": "evil"
+    },
+    {
+      "word": "glücklich",
+      "comparative": "glücklicher",
+      "superlative": "am glücklichsten",
+      "meaning": "happy"
+    },
+    {
+      "word": "traurig",
+      "comparative": "trauriger",
+      "superlative": "am traurigsten",
+      "meaning": "sad"
+    },
+    {
+      "word": "komplett",
+      "comparative": "kompletter",
+      "superlative": "am komplettesten",
+      "meaning": "complete"
+    },
+    {
+      "word": "andere",
+      "comparative": "",
+      "superlative": "",
+      "meaning": "other"
+    },
+    {
+      "word": "langweilig",
+      "comparative": "langweiliger",
+      "superlative": "am langweiligsten",
+      "meaning": "boring"
+    },
+    {
+      "word": "klar",
+      "comparative": "klarer",
+      "superlative": "am klarsten",
+      "meaning": "clear"
+    },
+    {
+      "word": "noch",
+      "comparative": "",
+      "superlative": "",
+      "meaning": "still"
+    },
+    {
+      "word": "einmal",
+      "comparative": "",
+      "superlative": "",
+      "meaning": "once"
+    },
+    {
+      "word": "schwarz",
+      "comparative": "schwärzer",
+      "superlative": "am schwärzesten",
+      "meaning": "black"
+    },
+    {
+      "word": "gern",
+      "comparative": "lieber",
+      "superlative": "am liebsten",
+      "meaning": "like"
+    },
+    {
+      "word": "endlich",
+      "comparative": "",
+      "superlative": "",
+      "meaning": "finally"
+    },
+    {
+      "word": "oft",
+      "comparative": "",
+      "superlative": "",
+      "meaning": "often"
+    },
+    {
+      "word": "lecker",
+      "comparative": "leckerer",
+      "superlative": "am leckersten",
+      "meaning": "tasty"
+    },
+    {
+      "word": "toll",
+      "comparative": "toller",
+      "superlative": "am tollsten",
+      "meaning": "great"
+    },
+    {
+      "word": "allerlei",
+      "comparative": "",
+      "superlative": "",
+      "meaning": "all sorts"
+    },
+    {
+      "word": "informell",
+      "comparative": "informeller",
+      "superlative": "am informellsten",
+      "meaning": "informal"
+    },
+    {
+      "word": "gemeinsam",
+      "comparative": "",
+      "superlative": "",
+      "meaning": "together"
+    },
+    {
+      "word": "prima",
+      "comparative": "",
+      "superlative": "",
+      "meaning": "great"
+    },
+    {
+      "word": "trennbar",
+      "comparative": "",
+      "superlative": "",
+      "meaning": "separable"
+    },
+    {
+      "word": "bisschen",
+      "comparative": "",
+      "superlative": "",
+      "meaning": "a little"
+    },
+    {
+      "word": "pünktlich",
+      "comparative": "",
+      "superlative": "",
+      "meaning": "on time"
+    },
+    {
+      "word": "würdig",
+      "comparative": "",
+      "superlative": "",
+      "meaning": "valuable"
+    },
+    {
+      "word": "immer",
+      "comparative": "",
+      "superlative": "",
+      "meaning": "always"
+    },
+    {
+      "word": "öfter",
+      "comparative": "",
+      "superlative": "",
+      "meaning": "more often"
+    },
+    {
+      "word": "häufig",
+      "comparative": "",
+      "superlative": "",
+      "meaning": "more often"
+    },
+    {
+      "word": "manchmal",
+      "comparative": "",
+      "superlative": "",
+      "meaning": "sometimes"
+    },
+    {
+      "word": "nie",
+      "comparative": "",
+      "superlative": "",
+      "meaning": "never"
+    },
+    {
+      "word": "geradeaus",
+      "comparative": "",
+      "superlative": "",
+      "meaning": "straight"
+    },
+    {
+      "word": "links",
+      "comparative": "",
+      "superlative": "",
+      "meaning": "left"
+    },
+    {
+      "word": "rechts",
+      "comparative": "",
+      "superlative": "",
+      "meaning": "right"
+    },
+    {
+      "word": "aktuell",
+      "comparative": "",
+      "superlative": "",
+      "meaning": "current"
+    },
+    {
+      "word": "attraktiv",
+      "comparative": "",
+      "superlative": "",
+      "meaning": "attractive"
+    },
+    {
+      "word": "ideal",
+      "comparative": "",
+      "superlative": "",
+      "meaning": "ideal"
+    },
+    {
+      "word": "dort",
+      "comparative": "",
+      "superlative": "",
+      "meaning": "there"
+    },
+    {
+      "word": "ziemlich",
+      "comparative": "",
+      "superlative": "",
+      "meaning": "quite"
+    },
+    {
+      "word": "ganz",
+      "comparative": "",
+      "superlative": "",
+      "meaning": "whole"
+    },
+    {
+      "word": "normal",
+      "comparative": "normaler",
+      "superlative": "am normalsten",
+      "meaning": "normal"
+    },
+    {
+      "word": "echt",
+      "comparative": "",
+      "superlative": "",
+      "meaning": "real"
+    },
+    {
+      "word": "nass",
+      "comparative": "nasser",
+      "superlative": "am nassesten",
+      "meaning": "wet"
+    },
+    {
+      "word": "weltweit",
+      "comparative": "",
+      "superlative": "",
+      "meaning": "worldwide"
+    },
+    {
+      "word": "kaputt",
+      "comparative": "kaputter",
+      "superlative": "am kaputtesten",
+      "meaning": "broken"
+    },
+    {
+      "word": "geschlossen",
+      "comparative": "geschlossener",
+      "superlative": "am geschlossensten",
+      "meaning": "closed"
+    },
+    {
+      "word": "zuerst",
+      "comparative": "",
+      "superlative": "",
+      "meaning": "at first"
+    },
+    {
+      "word": "günstig",
+      "comparative": "günstiger",
+      "superlative": "am günstigsten",
+      "meaning": "cheap"
+    },
+    {
+      "word": "jeder",
+      "comparative": "",
+      "superlative": "",
+      "meaning": "every"
+    },
+    {
+      "word": "gemütlich",
+      "comparative": "gemütlicher",
+      "superlative": "am gemütlichsten",
+      "meaning": "comfort"
+    },
+    {
+      "word": "draußen",
+      "comparative": "",
+      "superlative": "",
+      "meaning": "outside"
+    }
+  ],
+  "prepositions": [
+    {
+      "word": "an",
+      "case": "A/D",
+      "meaning": "at"
+    },
+    {
+      "word": "auf",
+      "case": "A/D",
+      "meaning": "on"
+    },
+    {
+      "word": "in",
+      "case": "A/D",
+      "meaning": "in"
+    },
+    {
+      "word": "unter",
+      "case": "A/D",
+      "meaning": "under"
+    },
+    {
+      "word": "über",
+      "case": "A/D",
+      "meaning": "over"
+    },
+    {
+      "word": "vor",
+      "case": "A/D",
+      "meaning": "before"
+    },
+    {
+      "word": "hinter",
+      "case": "A/D",
+      "meaning": "behind"
+    },
+    {
+      "word": "neben",
+      "case": "A/D",
+      "meaning": "next to"
+    },
+    {
+      "word": "zwischen",
+      "case": "A/D",
+      "meaning": "between"
+    },
+    {
+      "word": "entlang",
+      "case": "A",
+      "meaning": "along"
+    },
+    {
+      "word": "mit",
+      "case": "D",
+      "meaning": "with"
+    },
+    {
+      "word": "nach",
+      "case": "D",
+      "meaning": "after"
+    },
+    {
+      "word": "bei",
+      "case": "D",
+      "meaning": "with"
+    },
+    {
+      "word": "von",
+      "case": "D",
+      "meaning": "from"
+    },
+    {
+      "word": "zu",
+      "case": "D",
+      "meaning": "to"
+    },
+    {
+      "word": "aus",
+      "case": "D",
+      "meaning": "from"
+    },
+    {
+      "word": "außer",
+      "case": "D",
+      "meaning": "except"
+    },
+    {
+      "word": "gegenüber",
+      "case": "D",
+      "meaning": "opposite"
+    },
+    {
+      "word": "seit",
+      "case": "D",
+      "meaning": "since"
+    },
+    {
+      "word": "entgegen",
+      "case": "D",
+      "meaning": "toward"
+    },
+    {
+      "word": "für",
+      "case": "A",
+      "meaning": "for"
+    },
+    {
+      "word": "ohne",
+      "case": "A",
+      "meaning": "without"
+    },
+    {
+      "word": "durch",
+      "case": "A",
+      "meaning": "through"
+    },
+    {
+      "word": "gegen",
+      "case": "A",
+      "meaning": "against"
+    },
+    {
+      "word": "um",
+      "case": "A",
+      "meaning": "around"
+    },
+    {
+      "word": "bis",
+      "case": "A",
+      "meaning": "until"
+    },
+    {
+      "word": "betreffend",
+      "case": "A",
+      "meaning": "concerning"
+    },
+    {
+      "word": "wider",
+      "case": "A",
+      "meaning": "against"
+    },
+    {
+      "word": "ab",
+      "case": "D",
+      "meaning": "from"
+    },
+    {
+      "word": "nahe",
+      "case": "D",
+      "meaning": "near"
+    },
+    {
+      "word": "fern",
+      "case": "D",
+      "meaning": "far from"
+    },
+    {
+      "word": "pro",
+      "case": "A",
+      "meaning": "per"
+    },
+    {
+      "word": "via",
+      "case": "A",
+      "meaning": "via"
+    },
+    {
+      "word": "plus",
+      "case": "A",
+      "meaning": "plus"
+    },
+    {
+      "word": "minus",
+      "case": "A",
+      "meaning": "minus"
+    }
+  ]
+}

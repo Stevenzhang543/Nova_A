@@ -323,7 +323,7 @@ if ($requiresFrozenSnapshot) {
 $gitSafeDirectory = $projectRoot.Replace('\', '/')
 $sourceIdentity = Get-SourceIdentity -Root $projectRoot
 Assert-VersionAuthorities -Root $projectRoot -MachineVersion $MachineVersion
-$releaseFolderName = if ([version]$MachineVersion -ge [version]'26.31.0') { $Version } else { "v$Version" }
+$releaseFolderName = if ([version]$MachineVersion -ge [version]'26.34.0') { "v$Version" } elseif ([version]$MachineVersion -ge [version]'26.31.0') { $Version } else { "v$Version" }
 $finalReleaseDirectory = Join-Path (Join-Path $projectRoot 'releases') $releaseFolderName
 if (Test-Path -LiteralPath $finalReleaseDirectory) { throw "Immutable release already exists: $finalReleaseDirectory" }
 $notesPath = Join-Path $projectRoot "release-audits\v$Version-release-notes.md"

@@ -1,15 +1,15 @@
 /* Shared editor form geometry. Domain canvases, tables and source editors keep their own layout. */
-.ui-section-list { display: flex; flex-direction: column; align-items: stretch; min-width: 0; gap: var(--space-2); }
-.ui-property-section { min-width: 0; margin: 0; border: 0; border-block-end: 1px solid var(--border-subtle); background: var(--surface-1); border-radius: 0; container: ui-properties / inline-size; }
-.ui-property-section > :is(header,summary) { display: flex; align-items: center; gap: var(--space-1); min-height: var(--ui-control-height); padding: var(--space-1) var(--space-2); background: var(--surface-2); color: var(--text-primary); font-size: var(--type-section); list-style: none; }
+.ui-section-list { display: flex; flex-direction: column; align-items: stretch; min-width: 0; gap: var(--ui-group-gap); }
+.ui-property-section { min-width: 0; margin: 0; border: 0; border-block-end: 1px solid var(--border-separator); background: var(--surface-panel); border-radius: 0; container: ui-properties / inline-size; }
+.ui-property-section > :is(header,summary) { display: flex; align-items: center; gap: var(--ui-icon-label-gap); min-height: var(--ui-control-height); padding: var(--space-1) var(--ui-header-inset); background: var(--surface-header); color: var(--text-primary); font-size: var(--type-section); list-style: none; }
 .ui-property-section > summary { cursor: pointer; }
 .ui-property-section > summary::-webkit-details-marker { display: none; }
 .ui-property-section > summary > .editor-icon { transform: rotate(-90deg); }
 .ui-property-section[open] > summary > .editor-icon { transform: none; }
 .ui-section-actions { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-1); margin-inline-start: auto; min-width: 0; color: var(--text-muted); }
-.ui-section-body { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; padding: var(--space-2); }
+.ui-section-body { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; padding: var(--space-2) var(--ui-panel-inset); }
 .ui-section-body > :is(p,small) { margin: var(--space-1) 0; color: var(--text-muted); overflow-wrap: anywhere; }
-.ui-property-row { display: grid; grid-template-columns: minmax(0, var(--ui-label-width)) minmax(0, 1fr); align-items: center; column-gap: var(--space-2); row-gap: var(--space-1); min-height: var(--ui-input-height); min-width: 0; padding-block: var(--space-0); color: var(--text-secondary); font-size: var(--type-dense); }
+.ui-property-row { display: grid; grid-template-columns: minmax(0, var(--ui-label-width)) minmax(0, 1fr); align-items: center; column-gap: var(--ui-label-value-gap); row-gap: var(--space-1); min-height: var(--ui-input-height); min-width: 0; padding-block: var(--space-0); color: var(--text-secondary); font-size: var(--type-dense); }
 .ui-property-label { min-width: 0; overflow-wrap: anywhere; display: flex; align-items: baseline; flex-wrap: wrap; gap: var(--space-1); }
 .ui-property-label > small { color: var(--text-muted); }
 .ui-property-control { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-1); min-width: 0; }
@@ -26,6 +26,8 @@
 .numeric-draft .numeric-value-row > input { width: 100%; min-width: 0; flex: 1 1 auto; text-align: end; font-variant-numeric: tabular-nums; }
 .numeric-steppers { display: flex; flex-direction: column-reverse; flex: 0 0 calc(var(--ui-icon-size) + var(--space-1)); }
 .numeric-steppers > button { display: grid; place-items: center; width: 100%; min-width: 0; height: calc(var(--ui-input-height) / 2); min-height: 0; padding: 0; border-radius: 0; }
+.numeric-steppers > button:first-child { border-end-end-radius: var(--radius-xs); }
+.numeric-steppers > button:last-child { border-start-end-radius: var(--radius-xs); }
 .numeric-steppers .editor-icon { width: calc(var(--ui-icon-size) - var(--space-1)); height: calc(var(--ui-icon-size) - var(--space-1)); }
 .numeric-draft > small, .path-text-draft > small { color: var(--danger); font-size: var(--type-caption); white-space: normal; overflow-wrap: anywhere; }
 .numeric-draft [aria-invalid=true], .path-text-draft [aria-invalid=true] { border-color: var(--danger); }
@@ -46,12 +48,12 @@
 .property-details { min-width: 0; color: var(--text-muted); font-size: var(--type-caption); overflow-wrap: anywhere; }
 .property-details small { display: block; }
 .component-tools { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: var(--space-1); }
-.inspector-empty { display: flex; flex-direction: column; gap: var(--space-2); align-items: flex-start; padding: var(--space-2); }
+.inspector-empty { display: flex; flex-direction: column; gap: var(--space-3); align-items: flex-start; padding: var(--ui-empty-inset); }
 .inspector-empty > .ui-panel-header { align-self: stretch; }
 .inspector-empty > p { color: var(--text-muted); }
 @container ui-properties (max-width: 340px) { .ui-property-row { grid-template-columns: minmax(0,1fr); padding-block: var(--space-1); } }
 /* Settings is a compact tool document, with searchable sections rather than tiles. */
-.settings-page { height: 100%; min-height: 0; overflow: auto; padding: var(--space-3); background: var(--surface-1); }
+.settings-page { height: 100%; min-height: 0; overflow: auto; padding: var(--space-4); background: var(--surface-panel); }
 .settings-page .page-header { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); margin-block-end: var(--space-2); }
 .settings-page h1 { margin: 0; font-size: var(--type-page); }
 .settings-page .eyebrow { color: var(--text-muted); font-size: var(--type-caption); }

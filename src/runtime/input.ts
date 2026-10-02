@@ -314,7 +314,13 @@ export class InputManager {
   readonly onMouseDown = /** 结构说明（自动提取）：匿名回调；输入 event；直接调用 acceptMouse、mouseButtons.add、setInputModality。 */ (event: MouseEvent) => { if (this.acceptMouse(event)) { this.mouseButtons.add(event.button); setInputModality('mouse') } }
   readonly onMouseUp = /** 结构说明（自动提取）：匿名回调；输入 event；直接调用 acceptMouse、mouseButtons.delete。 */ (event: MouseEvent) => { if (this.acceptMouse(event)) this.mouseButtons.delete(event.button) }
   readonly onMouseMove = /** 结构说明（自动提取）：匿名回调；输入 event；直接调用 acceptMouse、Math.abs、setInputModality；写入 clientX、clientY、movementX、movementY。 */ (event: MouseEvent) => { if (!this.acceptMouse(event)) return; this.clientX = event.clientX; this.clientY = event.clientY; this.movementX += event.movementX; this.movementY += event.movementY; if (Math.abs(event.movementX) + Math.abs(event.movementY) >= 1) setInputModality('mouse') }
-  readonly onWheel = /** 结构说明（自动提取）：匿名回调；输入 event；直接调用 Math.abs、setInputModality；写入 wheelX、wheelY。 */ (event: WheelEvent) => { this.wheelX += event.deltaX; this.wheelY += event.deltaY; if (Math.abs(event.deltaX) + Math.abs(event.deltaY) >= .5) setInputModality('mouse') }
+  /** Only unhandled game-surface wheel input belongs to gameplay; editor and native controls keep scrolling. */
+  readonly onWheel = (event: WheelEvent) => {
+    if (event.defaultPrevented || this.isTypingTarget(event.target)) return
+    if (typeof Element !== 'undefined' && event.target instanceof Element && !event.target.closest('[data-game-input-surface]')) return
+    this.wheelX += event.deltaX; this.wheelY += event.deltaY
+    if (Math.abs(event.deltaX) + Math.abs(event.deltaY) >= .5) setInputModality('mouse')
+  }
   readonly onFocusIn = /** 结构说明（自动提取）：匿名回调；输入 event；直接调用 isTypingTarget、keyboard.clear、logicalKeys.clear、modifiers.clear。 */ (event: FocusEvent) => { if (this.isTypingTarget(event.target)) { this.keyboard.clear(); this.logicalKeys.clear(); this.modifiers.clear() } }
   readonly onBlur = /* 调用 this.releaseTransientInput() 并返回调用结果。 */ () => this.releaseTransientInput()
   readonly onPageHide = /* 调用 this.releaseTransientInput() 并返回调用结果。 */ () => this.releaseTransientInput()

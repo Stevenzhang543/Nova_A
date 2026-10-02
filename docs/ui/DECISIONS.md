@@ -221,3 +221,31 @@ Never; only the exact QA mechanism may change.
 ## 26.33: preserve the integrated editor system
 
 The Phase II defects concern hierarchy identity, runtime save transactions, gameplay keyboard ownership and missing joint descriptors. Repair their owning systems rather than introducing parallel editor UI. Shared numeric controls, SVG commands and persistent panels remain authoritative. Play mode owns gameplay shortcuts; editor transform shortcuts resume when editing resumes.
+
+## UI-014 — Expose the actual evidence boundary
+
+Profiler GPU timing remains unavailable when the host cannot measure it. Estimated profiler overhead is labelled estimated and excluded from measured CI certification; empty/invalid frame captures cannot pass. The legacy inputToPixelMs field remains compatible while the user-facing label says Input to CPU submission. Font advanced modes remain saved metadata with EN/DE/ZH availability copy, instead of implying implemented rasterizers. Existing tokens/shared controls/hint styling are retained.
+
+## UI-015 — Each game surface owns unhandled wheel input
+
+Each cached WorldCanvas marks its game input surface. Game UI consumes handled scroll before named gameplay actions; unhandled bare-canvas wheel is forwarded once. Native fields/editor panels remain normal scrolling surfaces. A single mutable global canvas registration was rejected because cached Design/Game views can coexist. Real browser and module regressions verify routing without changing keyboard behavior.
+
+## UI-016 — Evolve geometry without changing spatial contracts (26.35)
+
+V3 supersedes the old rigid radius rules: shared 4/6/9/12/16 px radii distinguish controls, floating surfaces, dialogs and the welcome accent. Group/header insets and semantic spacing improve comfort; tree rows, slider tracks, numeric widths, native input semantics and scaled canvas coordinates retain their existing geometry. Docks stay connected and square. The launcher uses the existing N mark as an inert SVG and a quiet node motif, with Create/Open/Continue and all existing project actions retained.
+
+Actual large-text launcher inspection found fragmented Chinese template labels and a crowded German recent-project hint. Whole labels now wrap as units and the hint occupies its own row. The hierarchy resize separator is aligned to the actual right edge of its left dock; pointer mathematics are unchanged. Actual native drag input reproduced a 29 px source shift when selection inserted the breadcrumb row. The path band is now always reserved at a bounded central control-plus-scroll-gutter height; empty navigation is hidden/inert, while horizontal scrolling and immediate selection remain intact.
+
+## UI-017 — Finite springs after immediate state changes (26.35)
+
+Use src/ui/motion.ts and motion.css for shared presence, indicator continuity and post-commit FLIP. Sample a damped oscillator once per finite batch; animate transform/opacity through Web Animations, without an idle timer. Cancel superseded work. Dialogs, menus and the command palette become inert immediately when closing; focus and commands never wait for animation. Persistent workspace content remains unfaded and cached.
+
+Native dragging owns the pointer image; targets expose valid, invalid or insertion state. Hierarchy, asset/folder, dock and bottom-tab operations keep their existing validation, confirmation, GUID, history and persistence contracts. Viewport/tile/keyframe/graph/waveform/resize coordinates stay direct. General resource-field drop assignment, arbitrary floating-window positioning and clip dragging are currently absent. Keyframe neighbor settling is deferred because changing index identities cannot safely identify animated keys.
+
+Selective 10 px blur applies only to transient menu/palette surfaces, with opaque low-end, high-contrast, reduced-motion and unsupported-browser fallbacks. Live reduced-motion policy settles active jobs and disables decorative CSS. Software-browser diagnostics qualify their measured host scope; they do not certify physical pointer-image appearance, device GPU costs or prolonged comfort.
+
+## UI-018 — Preserve names in narrow hierarchy docks (26.35)
+
+Actual 200% text inspection found that disclosure and four inline actions consumed the selected object name. A font-relative container breakpoint replaces those actions with the existing shared SVG menu, containing Pin/Unpin, Visibility, Lock and Enabled. Scene and selection navigation use the same bounded overflow pattern. Empty disclosure placeholders and redundant row ID/status presentation yield space; full names, IDs and statuses remain available in tooltips and the object menu. Existing handlers, native drag targets, fixed virtual row heights and breadcrumb geometry remain authoritative. The hierarchy's edit guard now also honors the existing recovery read-only flag, matching the toolbar. Closing or hiding the owning interface, or deleting the menu's object UUID, disposes its transient menu; it never retargets actions to a new selection.
+
+Actual public read-only recovery testing exposed an all-disabled Scene menu whose trigger retained focus. The shared menu now focuses its existing keyboard-focusable root when no enabled entry exists. Escape remains usable without enabling a forbidden action or changing normal first-entry focus.

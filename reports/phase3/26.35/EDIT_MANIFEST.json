@@ -1,0 +1,1331 @@
+{
+  "format": "nova-phase3-edit-manifest",
+  "version": 1,
+  "release": "26.35",
+  "engineVersion": "26.35.0",
+  "baselineDigest": "a18116a63bfbb4ff8404563a55ffca4d5ef38039b046659e3dd81d345e3a24c0",
+  "baselineFiles": 3274,
+  "policy": "Exact filesystem delta from the pre-edit baseline, preserving earlier user changes. This manifest and its ledger are self-describing additions, excluded from their own recursive content hashes; final source snapshot binds both.",
+  "changes": [
+    {
+      "path": "Cargo.lock",
+      "change": "changed",
+      "before": {
+        "path": "Cargo.lock",
+        "bytes": 11971,
+        "sha256": "853d6b46c8f11a7a2e98ca4b0d03ce8b97d9eae2dd37a3b11b3bf3036ba06070"
+      },
+      "after": {
+        "path": "Cargo.lock",
+        "bytes": 11971,
+        "sha256": "527bc0b24a432b8ee3d264c7cbfb15326d70e0b06c55d86fa0047ca667aaef83"
+      },
+      "reason": "Advance existing machine/public release authority or migration version expectation to 26.35.0; project schema and dependencies unchanged."
+    },
+    {
+      "path": "Cargo.toml",
+      "change": "changed",
+      "before": {
+        "path": "Cargo.toml",
+        "bytes": 849,
+        "sha256": "baf304fd89ff45032fbee42c06cf732288289f06b7f0cab785fa47b02b33b767"
+      },
+      "after": {
+        "path": "Cargo.toml",
+        "bytes": 849,
+        "sha256": "7b1a4d3f474907a6d5dc87af6a5f7b886194b008515d6d7137404c745316eea1"
+      },
+      "reason": "Advance existing machine/public release authority or migration version expectation to 26.35.0; project schema and dependencies unchanged."
+    },
+    {
+      "path": "README.md",
+      "change": "changed",
+      "before": {
+        "path": "README.md",
+        "bytes": 81500,
+        "sha256": "e552f8fd42f2e43953edde4e201c275cb2c7d3b15b84efc20c682f887438fa19"
+      },
+      "after": {
+        "path": "README.md",
+        "bytes": 82570,
+        "sha256": "d7020efaf5c1500ce86fbca3846ea64f82d260a1c4e778d1ccec6ddd59417963"
+      },
+      "reason": "Point current release, V3 specifications, notes and ledger to 26.35; retain prior release history."
+    },
+    {
+      "path": "crates/nova_format/src/lib.rs",
+      "change": "changed",
+      "before": {
+        "path": "crates/nova_format/src/lib.rs",
+        "bytes": 256886,
+        "sha256": "4f370ce0399bf0370aa509b98c9b06144b377a513e509abc4ec6c5a01cc4dc6c"
+      },
+      "after": {
+        "path": "crates/nova_format/src/lib.rs",
+        "bytes": 256886,
+        "sha256": "3c6104f59bbe061d6bf4879e452f775a5b63bb95a265020fa9704c03fd2d907f"
+      },
+      "reason": "Advance existing machine/public release authority or migration version expectation to 26.35.0; project schema and dependencies unchanged."
+    },
+    {
+      "path": "docs/NATIVE_HEADLESS_26_35.md",
+      "change": "added",
+      "before": null,
+      "after": {
+        "path": "docs/NATIVE_HEADLESS_26_35.md",
+        "bytes": 3941,
+        "sha256": "bbb3b6ab6366b0af0125964401ccb12a67ca6ffbb560f17f4a36d24b4c341fae"
+      },
+      "reason": "Add current versioned deployment/protocol instructions; retain online-only Web and physics-only native utility boundaries."
+    },
+    {
+      "path": "docs/RELEASE_NOTES_26_35.md",
+      "change": "added",
+      "before": null,
+      "after": {
+        "path": "docs/RELEASE_NOTES_26_35.md",
+        "bytes": 3390,
+        "sha256": "4db9c82467d13b148374c8d4707b163d6449a7834c57c98cc550a923e4267cf1"
+      },
+      "reason": "Summarize compatible refinement, verified scope and limits, all eleven release files and independent packaging requirements."
+    },
+    {
+      "path": "docs/WEB_HOSTING_26_35.md",
+      "change": "added",
+      "before": null,
+      "after": {
+        "path": "docs/WEB_HOSTING_26_35.md",
+        "bytes": 5614,
+        "sha256": "1a5cc1ff9f021797fac8f0790774649d5a696ff49f022d59adc896aae05ddb6d"
+      },
+      "reason": "Add current versioned deployment/protocol instructions; retain online-only Web and physics-only native utility boundaries."
+    },
+    {
+      "path": "docs/engine/CAPABILITY_CATALOG.md",
+      "change": "changed",
+      "before": {
+        "path": "docs/engine/CAPABILITY_CATALOG.md",
+        "bytes": 145711,
+        "sha256": "471230ead647569f738873e3aaa38ea3a126de19d56ad3b94d4279f97a02f20f"
+      },
+      "after": {
+        "path": "docs/engine/CAPABILITY_CATALOG.md",
+        "bytes": 145711,
+        "sha256": "f6bb1652d5daa26219e876f2e70c0ab2f9357db851f959b43bec43cb4b099237"
+      },
+      "reason": "Regenerate current declared operations/kinds/Rhai/graph catalog without inventing new engine capabilities or pass status."
+    },
+    {
+      "path": "docs/engine/SOURCE_INVENTORY.json",
+      "change": "changed",
+      "before": {
+        "path": "docs/engine/SOURCE_INVENTORY.json",
+        "bytes": 1367302,
+        "sha256": "9df8b69a4a2bc33a9c150b6519ddddec1c8b9a205dd49bd528e10964dc4fdef6"
+      },
+      "after": {
+        "path": "docs/engine/SOURCE_INVENTORY.json",
+        "bytes": 1378918,
+        "sha256": "c612c9057b253799bd82d2389b5915918efb415b20f2fd7505f25187baefc240"
+      },
+      "reason": "Regenerate owned source hashes/imports/symbols/test entrypoints, including new motion/mark integrations; static inventory is discovery evidence, not all-branch execution."
+    },
+    {
+      "path": "docs/ui/DECISIONS.md",
+      "change": "changed",
+      "before": {
+        "path": "docs/ui/DECISIONS.md",
+        "bytes": 10723,
+        "sha256": "e257f334890473de643a19bca81ae1140c362008a6638d17205ebbe9cd1f5cfc"
+      },
+      "after": {
+        "path": "docs/ui/DECISIONS.md",
+        "bytes": 14547,
+        "sha256": "838107fa8bad784d313f67b02837e1f511ba4d4ce4f4b54e51f2fe0b3b8c5f14"
+      },
+      "reason": "Record applied V3 geometry/motion, immediate input, finite cancellation, real acceptance coverage and deferred/external boundaries; retain architecture and source-of-truth priority."
+    },
+    {
+      "path": "docs/ui/MIGRATION.md",
+      "change": "changed",
+      "before": {
+        "path": "docs/ui/MIGRATION.md",
+        "bytes": 11898,
+        "sha256": "f5d73a241ffc9551b96c3057ce7ef83f5b77ac92d1377b9771887c0f295a9077"
+      },
+      "after": {
+        "path": "docs/ui/MIGRATION.md",
+        "bytes": 13691,
+        "sha256": "8fc1a030993319a1044807ac984f5aeac3da256c58c970c5be671c12911eb38e"
+      },
+      "reason": "Record applied V3 geometry/motion, immediate input, finite cancellation, real acceptance coverage and deferred/external boundaries; retain architecture and source-of-truth priority."
+    },
+    {
+      "path": "docs/ui/MOTION_QA_CHECKLIST.md",
+      "change": "changed",
+      "before": {
+        "path": "docs/ui/MOTION_QA_CHECKLIST.md",
+        "bytes": 3067,
+        "sha256": "fd03c4b3e4302b8f7104998e810ef72c1a3590eed4c3d16f9ccae2ae79ee12c5"
+      },
+      "after": {
+        "path": "docs/ui/MOTION_QA_CHECKLIST.md",
+        "bytes": 4777,
+        "sha256": "74fe284a738fcec10c835be0e41bfc035a252399d5751dd4f2319f4248a7d0e0"
+      },
+      "reason": "Record applied V3 geometry/motion, immediate input, finite cancellation, real acceptance coverage and deferred/external boundaries; retain architecture and source-of-truth priority."
+    },
+    {
+      "path": "docs/ui/MOTION_SYSTEM_SPEC.md",
+      "change": "changed",
+      "before": {
+        "path": "docs/ui/MOTION_SYSTEM_SPEC.md",
+        "bytes": 5567,
+        "sha256": "1dedc1bf132ef3b5134d9d5f66264bb63afa865d030d463ca052ff96184a03bf"
+      },
+      "after": {
+        "path": "docs/ui/MOTION_SYSTEM_SPEC.md",
+        "bytes": 8398,
+        "sha256": "ae22cefdc5301a31c61559409cbd303c018f7d566f71220002ae24071a4b1429"
+      },
+      "reason": "Record applied V3 geometry/motion, immediate input, finite cancellation, real acceptance coverage and deferred/external boundaries; retain architecture and source-of-truth priority."
+    },
+    {
+      "path": "docs/ui/UI_MOTION_IMPLEMENTATION_PLAN.md",
+      "change": "changed",
+      "before": {
+        "path": "docs/ui/UI_MOTION_IMPLEMENTATION_PLAN.md",
+        "bytes": 3778,
+        "sha256": "24193bd2185a38cf0bac17cb2161283518d7cd1f04c1fa937ca43fc9b930bf5b"
+      },
+      "after": {
+        "path": "docs/ui/UI_MOTION_IMPLEMENTATION_PLAN.md",
+        "bytes": 7109,
+        "sha256": "cdbf4d505c4519bdeb35b27c9ae45376de35f2672b92f9b0191a7f22b26fa7d5"
+      },
+      "reason": "Record applied V3 geometry/motion, immediate input, finite cancellation, real acceptance coverage and deferred/external boundaries; retain architecture and source-of-truth priority."
+    },
+    {
+      "path": "docs/ui/UI_SPEC.md",
+      "change": "changed",
+      "before": {
+        "path": "docs/ui/UI_SPEC.md",
+        "bytes": 14310,
+        "sha256": "07969cd8013c0f8ef659fb5136f2ba433f9a3cd5878c8b76d5f2b0ccbd273b04"
+      },
+      "after": {
+        "path": "docs/ui/UI_SPEC.md",
+        "bytes": 14663,
+        "sha256": "7bf40ddf43b29e5d2bfdaa2591ba519302cb322bae1a7902bbfb12d6e7632986"
+      },
+      "reason": "Record applied V3 geometry/motion, immediate input, finite cancellation, real acceptance coverage and deferred/external boundaries; retain architecture and source-of-truth priority."
+    },
+    {
+      "path": "docs/ui/UI_VISUAL_V3_SPEC.md",
+      "change": "changed",
+      "before": {
+        "path": "docs/ui/UI_VISUAL_V3_SPEC.md",
+        "bytes": 5310,
+        "sha256": "993870813524548828191a8d1210949ba76650841f927255555b101460f8412b"
+      },
+      "after": {
+        "path": "docs/ui/UI_VISUAL_V3_SPEC.md",
+        "bytes": 6668,
+        "sha256": "49a9968fd0413bdb0235ab5503c152f57214d9324b08d7ad6b6d0275fb18e827"
+      },
+      "reason": "Record applied V3 geometry/motion, immediate input, finite cancellation, real acceptance coverage and deferred/external boundaries; retain architecture and source-of-truth priority."
+    },
+    {
+      "path": "manual/MANUAL.de.md",
+      "change": "changed",
+      "before": {
+        "path": "manual/MANUAL.de.md",
+        "bytes": 1351455,
+        "sha256": "28cf9a8c87ada7085fba235dfcef1e2741873f42efdb2ffb2002306c0629d544"
+      },
+      "after": {
+        "path": "manual/MANUAL.de.md",
+        "bytes": 1372302,
+        "sha256": "2c5623f8ddc4ee8331515c82f11c541a15e783e67afcac87d86c2dc5ca20c031"
+      },
+      "reason": "Add localized 26.35 geometry/motion/reduced-policy/gesture guidance and current engine identity, preserving prior lessons; initialize new HTML lessons before locale filtering."
+    },
+    {
+      "path": "manual/MANUAL.en.md",
+      "change": "changed",
+      "before": {
+        "path": "manual/MANUAL.en.md",
+        "bytes": 1294249,
+        "sha256": "9465e6584c68443da3cbed16879b67fe0ef5f72354c204e491e92a99e48696eb"
+      },
+      "after": {
+        "path": "manual/MANUAL.en.md",
+        "bytes": 1315301,
+        "sha256": "d057f95c1a7c01b4e63b215ccee56ba9a02224b3d92f3fae9e5920e89724a214"
+      },
+      "reason": "Add localized 26.35 geometry/motion/reduced-policy/gesture guidance and current engine identity, preserving prior lessons; initialize new HTML lessons before locale filtering."
+    },
+    {
+      "path": "manual/MANUAL.zh-CN.md",
+      "change": "changed",
+      "before": {
+        "path": "manual/MANUAL.zh-CN.md",
+        "bytes": 1198191,
+        "sha256": "0a65cb0ca87b0d4ccacf6580229db71c2683ecde3caaff2b3027b455668e6d30"
+      },
+      "after": {
+        "path": "manual/MANUAL.zh-CN.md",
+        "bytes": 1218927,
+        "sha256": "b7d814c1f0b9c8593f2b6748f4e5d1de3dd22a4bc8d6e06993f3fabc889a57a5"
+      },
+      "reason": "Add localized 26.35 geometry/motion/reduced-policy/gesture guidance and current engine identity, preserving prior lessons; initialize new HTML lessons before locale filtering."
+    },
+    {
+      "path": "manual/index.html",
+      "change": "changed",
+      "before": {
+        "path": "manual/index.html",
+        "bytes": 3985056,
+        "sha256": "7167049f7193efe2c3b7c2dc1d90fa27c21066c539916cec2c81307d8a53c298"
+      },
+      "after": {
+        "path": "manual/index.html",
+        "bytes": 3989366,
+        "sha256": "ed69f86bbc803f2023edb5b04b62be00cca71e982a2aa4ecf9bccbfc6d07ada2"
+      },
+      "reason": "Add localized 26.35 geometry/motion/reduced-policy/gesture guidance and current engine identity, preserving prior lessons; initialize new HTML lessons before locale filtering."
+    },
+    {
+      "path": "package.json",
+      "change": "changed",
+      "before": {
+        "path": "package.json",
+        "bytes": 42406,
+        "sha256": "513e48cd23c12ef2163d5f6607da54de1d1ff24b81b7542d7ff7809ec86030fb"
+      },
+      "after": {
+        "path": "package.json",
+        "bytes": 42406,
+        "sha256": "5a79ab337b5532f23a461e46b75292fe1f45232912aabaadacb33283869eac15"
+      },
+      "reason": "Advance existing machine/public release authority or migration version expectation to 26.35.0; project schema and dependencies unchanged."
+    },
+    {
+      "path": "reference-projects/projects/creator-v2635-mixed-game/README.md",
+      "change": "added",
+      "before": null,
+      "after": {
+        "path": "reference-projects/projects/creator-v2635-mixed-game/README.md",
+        "bytes": 3261,
+        "sha256": "64a42b881cc3afd0b5d8467fd30ec22d200b7e54e0400bba766fcaae264b8b67"
+      },
+      "reason": "Add current 26.35 copy of the existing mixed Coin Trail or renderer-disabled authority example with matching name/engine/control/expected metadata; preserve behavior, UUIDs and historical references."
+    },
+    {
+      "path": "reference-projects/projects/creator-v2635-mixed-game/expected-output.json",
+      "change": "added",
+      "before": null,
+      "after": {
+        "path": "reference-projects/projects/creator-v2635-mixed-game/expected-output.json",
+        "bytes": 3672,
+        "sha256": "33a4327620b55e229567997c2eb09b71ac7833be629bd8a458639bf640b760a9"
+      },
+      "reason": "Add current 26.35 copy of the existing mixed Coin Trail or renderer-disabled authority example with matching name/engine/control/expected metadata; preserve behavior, UUIDs and historical references."
+    },
+    {
+      "path": "reference-projects/projects/creator-v2635-mixed-game/project.nova",
+      "change": "added",
+      "before": null,
+      "after": {
+        "path": "reference-projects/projects/creator-v2635-mixed-game/project.nova",
+        "bytes": 1743323,
+        "sha256": "97e2d55cf3390701b71b674757e65ffac5463f8c7822376569f41dc5ff0d5ded"
+      },
+      "reason": "Add current 26.35 copy of the existing mixed Coin Trail or renderer-disabled authority example with matching name/engine/control/expected metadata; preserve behavior, UUIDs and historical references."
+    },
+    {
+      "path": "reference-projects/projects/creator-v2635-mixed-game/test-controls.json",
+      "change": "added",
+      "before": null,
+      "after": {
+        "path": "reference-projects/projects/creator-v2635-mixed-game/test-controls.json",
+        "bytes": 3817,
+        "sha256": "5c38bf1237b307e85883d99f869242341eacd163e9bff2f5d82fa16e7ba36d62"
+      },
+      "reason": "Add current 26.35 copy of the existing mixed Coin Trail or renderer-disabled authority example with matching name/engine/control/expected metadata; preserve behavior, UUIDs and historical references."
+    },
+    {
+      "path": "reference-projects/projects/server-v2635-headless-authority/README.md",
+      "change": "added",
+      "before": null,
+      "after": {
+        "path": "reference-projects/projects/server-v2635-headless-authority/README.md",
+        "bytes": 506,
+        "sha256": "65a24733db22d968c6ea3341afeb2dff016134aedcb16963cd2e0c9cce6d7b5c"
+      },
+      "reason": "Add current 26.35 copy of the existing mixed Coin Trail or renderer-disabled authority example with matching name/engine/control/expected metadata; preserve behavior, UUIDs and historical references."
+    },
+    {
+      "path": "reference-projects/projects/server-v2635-headless-authority/expected-output.json",
+      "change": "added",
+      "before": null,
+      "after": {
+        "path": "reference-projects/projects/server-v2635-headless-authority/expected-output.json",
+        "bytes": 525,
+        "sha256": "e83ce73db3f6c162d5c3ac9035a43d0cbf6029d3b6b3c0e1a9e28e631226b187"
+      },
+      "reason": "Add current 26.35 copy of the existing mixed Coin Trail or renderer-disabled authority example with matching name/engine/control/expected metadata; preserve behavior, UUIDs and historical references."
+    },
+    {
+      "path": "reference-projects/projects/server-v2635-headless-authority/project.nova",
+      "change": "added",
+      "before": null,
+      "after": {
+        "path": "reference-projects/projects/server-v2635-headless-authority/project.nova",
+        "bytes": 48372,
+        "sha256": "0d85b7bdf9459c6cdd078c25702232dcebabaffbb4c850a2bfcd019e39a6cfca"
+      },
+      "reason": "Add current 26.35 copy of the existing mixed Coin Trail or renderer-disabled authority example with matching name/engine/control/expected metadata; preserve behavior, UUIDs and historical references."
+    },
+    {
+      "path": "reference-projects/projects/server-v2635-headless-authority/test-controls.json",
+      "change": "added",
+      "before": null,
+      "after": {
+        "path": "reference-projects/projects/server-v2635-headless-authority/test-controls.json",
+        "bytes": 670,
+        "sha256": "88b3284bdfbfa9eac92d865568f13a2a4a78202b6d30b8b2080c55a40908ae23"
+      },
+      "reason": "Add current 26.35 copy of the existing mixed Coin Trail or renderer-disabled authority example with matching name/engine/control/expected metadata; preserve behavior, UUIDs and historical references."
+    },
+    {
+      "path": "reports/phase3/26.35/baseline/attempt1-selector-failure.json",
+      "change": "added",
+      "before": null,
+      "after": {
+        "path": "reports/phase3/26.35/baseline/attempt1-selector-failure.json",
+        "bytes": 3498,
+        "sha256": "3b537a00ec2e8a84834bcb75db2f84c54788d5c1799c0f3851543baf98cba70b"
+      },
+      "reason": "Preserve actual pre-edit 26.34 screenshot/measurement provenance; early harness/calibration failures remain explicitly separate from successful baseline checks."
+    },
+    {
+      "path": "reports/phase3/26.35/baseline/attempt2-resize-observation-failure.json",
+      "change": "added",
+      "before": null,
+      "after": {
+        "path": "reports/phase3/26.35/baseline/attempt2-resize-observation-failure.json",
+        "bytes": 3513,
+        "sha256": "04c423b47b3f7cff11f4c4d4d7f4b3bf1f3b9e3c418c21ef043e731ad86010d7"
+      },
+      "reason": "Preserve actual pre-edit 26.34 screenshot/measurement provenance; early harness/calibration failures remain explicitly separate from successful baseline checks."
+    },
+    {
+      "path": "reports/phase3/26.35/baseline/attempt3-raf-timestamp-calibration.json",
+      "change": "added",
+      "before": null,
+      "after": {
+        "path": "reports/phase3/26.35/baseline/attempt3-raf-timestamp-calibration.json",
+        "bytes": 10672,
+        "sha256": "ee96b92963148530b62fee97409c918a39dfc6d5cf41f1f379d2c4c682c6b32a"
+      },
+      "reason": "Preserve actual pre-edit 26.34 screenshot/measurement provenance; early harness/calibration failures remain explicitly separate from successful baseline checks."
+    },
+    {
+      "path": "reports/phase3/26.35/baseline/baseline-measurements.json",
+      "change": "added",
+      "before": null,
+      "after": {
+        "path": "reports/phase3/26.35/baseline/baseline-measurements.json",
+        "bytes": 5254,
+        "sha256": "6a816441740a251ce7bb9368547fc38b237a5d0fffb60e543e88adb6192ae7cd"
+      },
+      "reason": "Preserve actual pre-edit 26.34 screenshot/measurement provenance; early harness/calibration failures remain explicitly separate from successful baseline checks."
+    },
+    {
+      "path": "reports/phase3/26.35/baseline/baseline-ready.json",
+      "change": "added",
+      "before": null,
+      "after": {
+        "path": "reports/phase3/26.35/baseline/baseline-ready.json",
+        "bytes": 2200,
+        "sha256": "a08945934ef243bb80ca360d335756b27fdb2936f5ec19aa6567ab377c505998"
+      },
+      "reason": "Preserve actual pre-edit 26.34 screenshot/measurement provenance; early harness/calibration failures remain explicitly separate from successful baseline checks."
+    },
+    {
+      "path": "reports/phase3/26.35/baseline/v26.34-motion-baseline-command-palette.png",
+      "change": "added",
+      "before": null,
+      "after": {
+        "path": "reports/phase3/26.35/baseline/v26.34-motion-baseline-command-palette.png",
+        "bytes": 73657,
+        "sha256": "e1ae63fe8b3ffb6eed8711a37fc365541e30bacc27b94b8c73b3a19217c34c98"
+      },
+      "reason": "Preserve actual pre-edit 26.34 screenshot/measurement provenance; early harness/calibration failures remain explicitly separate from successful baseline checks."
+    },
+    {
+      "path": "reports/phase3/26.35/baseline/v26.34-motion-baseline-creation-dialog.png",
+      "change": "added",
+      "before": null,
+      "after": {
+        "path": "reports/phase3/26.35/baseline/v26.34-motion-baseline-creation-dialog.png",
+        "bytes": 109763,
+        "sha256": "abdd3d600e22ec0c34e0747588e13ccf1c2b9aad987ac409b3d4044e4e981c3a"
+      },
+      "reason": "Preserve actual pre-edit 26.34 screenshot/measurement provenance; early harness/calibration failures remain explicitly separate from successful baseline checks."
+    },
+    {
+      "path": "reports/phase3/26.35/baseline/v26.34-motion-baseline-editor.png",
+      "change": "added",
+      "before": null,
+      "after": {
+        "path": "reports/phase3/26.35/baseline/v26.34-motion-baseline-editor.png",
+        "bytes": 74679,
+        "sha256": "ac7b5524412cef74f7348da223b2e8b6a2d75b40e483df711930988973ba1db6"
+      },
+      "reason": "Preserve actual pre-edit 26.34 screenshot/measurement provenance; early harness/calibration failures remain explicitly separate from successful baseline checks."
+    },
+    {
+      "path": "reports/phase3/26.35/baseline/v26.34-motion-baseline-failure.png",
+      "change": "added",
+      "before": null,
+      "after": {
+        "path": "reports/phase3/26.35/baseline/v26.34-motion-baseline-failure.png",
+        "bytes": 68905,
+        "sha256": "24b22ab053e521f82a3f8639e50acd3a549e91d3d68f1d97e584279338e6ddec"
+      },
+      "reason": "Preserve actual pre-edit 26.34 screenshot/measurement provenance; early harness/calibration failures remain explicitly separate from successful baseline checks."
+    },
+    {
+      "path": "reports/phase3/26.35/baseline/v26.34-motion-baseline-file-menu.png",
+      "change": "added",
+      "before": null,
+      "after": {
+        "path": "reports/phase3/26.35/baseline/v26.34-motion-baseline-file-menu.png",
+        "bytes": 81991,
+        "sha256": "f2ff05e38eda73c02b2338a4eccdef7df2699dadd6feeca87c9b364dadbb99d1"
+      },
+      "reason": "Preserve actual pre-edit 26.34 screenshot/measurement provenance; early harness/calibration failures remain explicitly separate from successful baseline checks."
+    },
+    {
+      "path": "reports/phase3/26.35/baseline/v26.34-motion-baseline-launcher.png",
+      "change": "added",
+      "before": null,
+      "after": {
+        "path": "reports/phase3/26.35/baseline/v26.34-motion-baseline-launcher.png",
+        "bytes": 34982,
+        "sha256": "20e170e98b7fe0fad42168dfdb0a8afeda3baa5373ebc0500d46798026e5eb52"
+      },
+      "reason": "Preserve actual pre-edit 26.34 screenshot/measurement provenance; early harness/calibration failures remain explicitly separate from successful baseline checks."
+    },
+    {
+      "path": "reports/phase3/26.35/baseline/v26.34-motion-baseline.json",
+      "change": "added",
+      "before": null,
+      "after": {
+        "path": "reports/phase3/26.35/baseline/v26.34-motion-baseline.json",
+        "bytes": 11208,
+        "sha256": "fb6c77b433d8d575ab9e67df450b08d0c954e0952b4426e63c5296477c57f566"
+      },
+      "reason": "Preserve actual pre-edit 26.34 screenshot/measurement provenance; early harness/calibration failures remain explicitly separate from successful baseline checks."
+    },
+    {
+      "path": "reports/phase3/26.35/controls/v26.35-ui-form-controls-shared-controls.png",
+      "change": "added",
+      "before": null,
+      "after": {
+        "path": "reports/phase3/26.35/controls/v26.35-ui-form-controls-shared-controls.png",
+        "bytes": 12789,
+        "sha256": "3837c8ffa14f8bb5ede34595c3eefa6f9f60c95d885b054b240968f2b1fc62a3"
+      },
+      "reason": "Preserve actual shared-control development fixture geometry/editing/draft evidence; this report is not frozen-source release qualification."
+    },
+    {
+      "path": "reports/phase3/26.35/controls/v26.35-ui-form-controls.json",
+      "change": "added",
+      "before": null,
+      "after": {
+        "path": "reports/phase3/26.35/controls/v26.35-ui-form-controls.json",
+        "bytes": 2136,
+        "sha256": "2f16412883092df6bcb919291f63958a57b22bf0b344082e720770f19a06918d"
+      },
+      "reason": "Preserve actual shared-control development fixture geometry/editing/draft evidence; this report is not frozen-source release qualification."
+    },
+    {
+      "path": "reports/phase3/26.35/drag-regression/README.md",
+      "change": "added",
+      "before": null,
+      "after": {
+        "path": "reports/phase3/26.35/drag-regression/README.md",
+        "bytes": 2140,
+        "sha256": "4bf47e241ed988db517c76e506f2dafdc8fd21068bb446bc11c3b0cd26abd566"
+      },
+      "reason": "Preserve actual native before/after drag regression provenance for the selection breadcrumb shift, same connected source identity, source coordinates and real browser payload/cancel behavior; development evidence only."
+    },
+    {
+      "path": "reports/phase3/26.35/drag-regression/v26.35-long-breadcrumb-100.png",
+      "change": "added",
+      "before": null,
+      "after": {
+        "path": "reports/phase3/26.35/drag-regression/v26.35-long-breadcrumb-100.png",
+        "bytes": 121267,
+        "sha256": "688e3d19248118fed33d58a8030155253a2ce6d92253dbddf5e8f0c01d0f1e09"
+      },
+      "reason": "Preserve actual native before/after drag regression provenance for the selection breadcrumb shift, same connected source identity, source coordinates and real browser payload/cancel behavior; development evidence only."
+    },
+    {
+      "path": "reports/phase3/26.35/drag-regression/v26.35-long-breadcrumb-200.png",
+      "change": "added",
+      "before": null,
+      "after": {
+        "path": "reports/phase3/26.35/drag-regression/v26.35-long-breadcrumb-200.png",
+        "bytes": 128211,
+        "sha256": "b6c965a6eb122e337875a3a734e783e94e0473b1fe76ca5bf723cb88a8aa9f02"
+      },
+      "reason": "Preserve actual native before/after drag regression provenance for the selection breadcrumb shift, same connected source identity, source coordinates and real browser payload/cancel behavior; development evidence only."
+    },
+    {
+      "path": "reports/phase3/26.35/drag-regression/v26.35-long-breadcrumb-development.json",
+      "change": "added",
+      "before": null,
+      "after": {
+        "path": "reports/phase3/26.35/drag-regression/v26.35-long-breadcrumb-development.json",
+        "bytes": 4747,
+        "sha256": "89bc20a8f4527cfd640b149b6386110b9c479e88b6418a0d91440181a710779b"
+      },
+      "reason": "Preserve actual native before/after drag regression provenance for the selection breadcrumb shift, same connected source identity, source coordinates and real browser payload/cancel behavior; development evidence only."
+    },
+    {
+      "path": "reports/phase3/26.35/drag-regression/v26.35-native-drag-after-breadcrumb-fix.json",
+      "change": "added",
+      "before": null,
+      "after": {
+        "path": "reports/phase3/26.35/drag-regression/v26.35-native-drag-after-breadcrumb-fix.json",
+        "bytes": 15264,
+        "sha256": "ce25b62e6a86933b9ac8e83f2328f289119ad3a5272d87c5d96b262c08abe718"
+      },
+      "reason": "Preserve actual native before/after drag regression provenance for the selection breadcrumb shift, same connected source identity, source coordinates and real browser payload/cancel behavior; development evidence only."
+    },
+    {
+      "path": "reports/phase3/26.35/drag-regression/v26.35-native-drag-before-breadcrumb-fix.json",
+      "change": "added",
+      "before": null,
+      "after": {
+        "path": "reports/phase3/26.35/drag-regression/v26.35-native-drag-before-breadcrumb-fix.json",
+        "bytes": 15250,
+        "sha256": "a416af947682b072398ee3df2e56bb4836c82d6ab5d13894a2ee9640ca4ea02d"
+      },
+      "reason": "Preserve actual native before/after drag regression provenance for the selection breadcrumb shift, same connected source identity, source coordinates and real browser payload/cancel behavior; development evidence only."
+    },
+    {
+      "path": "reports/phase3/26.35/drag-regression/v26.35-native-drag-probe-native-drag.png",
+      "change": "added",
+      "before": null,
+      "after": {
+        "path": "reports/phase3/26.35/drag-regression/v26.35-native-drag-probe-native-drag.png",
+        "bytes": 118032,
+        "sha256": "a262aef67f6fbd9ce51e1998396ff02d0dc98ed5eda6e3048669a7d627519c75"
+      },
+      "reason": "Preserve actual native before/after drag regression provenance for the selection breadcrumb shift, same connected source identity, source coordinates and real browser payload/cancel behavior; development evidence only."
+    },
+    {
+      "path": "reports/phase3/26.35/hierarchy/v26.35-hierarchy-compact-default-100.png",
+      "change": "added",
+      "before": null,
+      "after": {
+        "path": "reports/phase3/26.35/hierarchy/v26.35-hierarchy-compact-default-100.png",
+        "bytes": 94834,
+        "sha256": "4aebfc97f676072e0c9a7d3e7b74699a3d0906913dc83b1fa648bab2a59f4db2"
+      },
+      "reason": "Preserve actual narrow hierarchy development input, shared overflow action/keyboard/lifecycle and native drag checks plus inspected large-text captures; original clipped-name diagnosis remains retained separately and frozen qualification is distinct."
+    },
+    {
+      "path": "reports/phase3/26.35/hierarchy/v26.35-hierarchy-compact-default-200.png",
+      "change": "added",
+      "before": null,
+      "after": {
+        "path": "reports/phase3/26.35/hierarchy/v26.35-hierarchy-compact-default-200.png",
+        "bytes": 149090,
+        "sha256": "c9bce270ed8f651eba4b2f2c6df91b1249b843cd43750314848b3f1b1de5194b"
+      },
+      "reason": "Preserve actual narrow hierarchy development input, shared overflow action/keyboard/lifecycle and native drag checks plus inspected large-text captures; original clipped-name diagnosis remains retained separately and frozen qualification is distinct."
+    },
+    {
+      "path": "reports/phase3/26.35/hierarchy/v26.35-hierarchy-compact-minimum-200.png",
+      "change": "added",
+      "before": null,
+      "after": {
+        "path": "reports/phase3/26.35/hierarchy/v26.35-hierarchy-compact-minimum-200.png",
+        "bytes": 75269,
+        "sha256": "9385ee7222d21e10dfc36c425e5be39b10573d2f7582f159e137f6af40f0e097"
+      },
+      "reason": "Preserve actual narrow hierarchy development input, shared overflow action/keyboard/lifecycle and native drag checks plus inspected large-text captures; original clipped-name diagnosis remains retained separately and frozen qualification is distinct."
+    },
+    {
+      "path": "reports/phase3/26.35/hierarchy/v26.35-hierarchy-compact-native-drag-200.png",
+      "change": "added",
+      "before": null,
+      "after": {
+        "path": "reports/phase3/26.35/hierarchy/v26.35-hierarchy-compact-native-drag-200.png",
+        "bytes": 140847,
+        "sha256": "c3df7486dca56930f284eb5489be71d8af667e6c49b4f00c61f172dbde617d33"
+      },
+      "reason": "Preserve actual narrow hierarchy development input, shared overflow action/keyboard/lifecycle and native drag checks plus inspected large-text captures; original clipped-name diagnosis remains retained separately and frozen qualification is distinct."
+    },
+    {
+      "path": "reports/phase3/26.35/hierarchy/v26.35-hierarchy-compact-object-actions-200.png",
+      "change": "added",
+      "before": null,
+      "after": {
+        "path": "reports/phase3/26.35/hierarchy/v26.35-hierarchy-compact-object-actions-200.png",
+        "bytes": 174305,
+        "sha256": "3b05508a117834052f9d2e89861e850fafc1061f88b1dcfb07d9ad40e45a2d7a"
+      },
+      "reason": "Preserve actual narrow hierarchy development input, shared overflow action/keyboard/lifecycle and native drag checks plus inspected large-text captures; original clipped-name diagnosis remains retained separately and frozen qualification is distinct."
+    },
+    {
+      "path": "reports/phase3/26.35/hierarchy/v26.35-hierarchy-compact-read-only-object-actions.png",
+      "change": "added",
+      "before": null,
+      "after": {
+        "path": "reports/phase3/26.35/hierarchy/v26.35-hierarchy-compact-read-only-object-actions.png",
+        "bytes": 148222,
+        "sha256": "54705eb8f2690196c51c6ca936163f06b420d42bbbded8e4a63ad6c812d8335a"
+      },
+      "reason": "Preserve actual narrow hierarchy development input, shared overflow action/keyboard/lifecycle and native drag checks plus inspected large-text captures; original clipped-name diagnosis remains retained separately and frozen qualification is distinct."
+    },
+    {
+      "path": "reports/phase3/26.35/hierarchy/v26.35-hierarchy-compact.json",
+      "change": "added",
+      "before": null,
+      "after": {
+        "path": "reports/phase3/26.35/hierarchy/v26.35-hierarchy-compact.json",
+        "bytes": 35189,
+        "sha256": "0488e52ef2bcb03952989d9ace5ef86e5d46d4de381496270d0a3a43a4efb252"
+      },
+      "reason": "Preserve actual narrow hierarchy development input, shared overflow action/keyboard/lifecycle and native drag checks plus inspected large-text captures; original clipped-name diagnosis remains retained separately and frozen qualification is distinct."
+    },
+    {
+      "path": "reports/phase3/26.35/visual/v26.35-visual-owner-launcher-contrast-creation.png",
+      "change": "added",
+      "before": null,
+      "after": {
+        "path": "reports/phase3/26.35/visual/v26.35-visual-owner-launcher-contrast-creation.png",
+        "bytes": 109960,
+        "sha256": "7e822cbc2254c0609b835da5eacb1d34ca2914b4440873738208c57c01dfd77d"
+      },
+      "reason": "Preserve inspected current launcher/creation large-text/theme development captures and checks; final release qualification is separate."
+    },
+    {
+      "path": "reports/phase3/26.35/visual/v26.35-visual-owner-launcher-contrast.png",
+      "change": "added",
+      "before": null,
+      "after": {
+        "path": "reports/phase3/26.35/visual/v26.35-visual-owner-launcher-contrast.png",
+        "bytes": 71063,
+        "sha256": "d91400f31b8c9b281ce533f1e7973e9e7620290e7697697318e6354cb3bc0a58"
+      },
+      "reason": "Preserve inspected current launcher/creation large-text/theme development captures and checks; final release qualification is separate."
+    },
+    {
+      "path": "reports/phase3/26.35/visual/v26.35-visual-owner-launcher-de-large-creation.png",
+      "change": "added",
+      "before": null,
+      "after": {
+        "path": "reports/phase3/26.35/visual/v26.35-visual-owner-launcher-de-large-creation.png",
+        "bytes": 155917,
+        "sha256": "f55c6e3a2c47e24423ae17434ea1a67272d13b4e00df18e02999639b4a597f4f"
+      },
+      "reason": "Preserve inspected current launcher/creation large-text/theme development captures and checks; final release qualification is separate."
+    },
+    {
+      "path": "reports/phase3/26.35/visual/v26.35-visual-owner-launcher-de-large.png",
+      "change": "added",
+      "before": null,
+      "after": {
+        "path": "reports/phase3/26.35/visual/v26.35-visual-owner-launcher-de-large.png",
+        "bytes": 110464,
+        "sha256": "cf143dd578025d2dd0549b4f4ac1cde1babe6ab616271f4da38cb42400256b8c"
+      },
+      "reason": "Preserve inspected current launcher/creation large-text/theme development captures and checks; final release qualification is separate."
+    },
+    {
+      "path": "reports/phase3/26.35/visual/v26.35-visual-owner-launcher-default-creation.png",
+      "change": "added",
+      "before": null,
+      "after": {
+        "path": "reports/phase3/26.35/visual/v26.35-visual-owner-launcher-default-creation.png",
+        "bytes": 110630,
+        "sha256": "0feeaf363e989ac0184df2df4166bb5b736ed2e9fc84a51641bf287464d1e04f"
+      },
+      "reason": "Preserve inspected current launcher/creation large-text/theme development captures and checks; final release qualification is separate."
+    },
+    {
+      "path": "reports/phase3/26.35/visual/v26.35-visual-owner-launcher-default.png",
+      "change": "added",
+      "before": null,
+      "after": {
+        "path": "reports/phase3/26.35/visual/v26.35-visual-owner-launcher-default.png",
+        "bytes": 70799,
+        "sha256": "de934a0df53ba23a7afcef61042727a96c91137593bf00d285b7dfd19611424f"
+      },
+      "reason": "Preserve inspected current launcher/creation large-text/theme development captures and checks; final release qualification is separate."
+    },
+    {
+      "path": "reports/phase3/26.35/visual/v26.35-visual-owner-launcher-light-creation.png",
+      "change": "added",
+      "before": null,
+      "after": {
+        "path": "reports/phase3/26.35/visual/v26.35-visual-owner-launcher-light-creation.png",
+        "bytes": 121517,
+        "sha256": "ed68458fe8d31f9e96d76bd918b61f6e11d6aac2a05d13952b02f7283c50ab6b"
+      },
+      "reason": "Preserve inspected current launcher/creation large-text/theme development captures and checks; final release qualification is separate."
+    },
+    {
+      "path": "reports/phase3/26.35/visual/v26.35-visual-owner-launcher-light.png",
+      "change": "added",
+      "before": null,
+      "after": {
+        "path": "reports/phase3/26.35/visual/v26.35-visual-owner-launcher-light.png",
+        "bytes": 70323,
+        "sha256": "711da16fc9869d1c4ecb36433f1d56554de88aadd08325ee03a616c6bc045bc8"
+      },
+      "reason": "Preserve inspected current launcher/creation large-text/theme development captures and checks; final release qualification is separate."
+    },
+    {
+      "path": "reports/phase3/26.35/visual/v26.35-visual-owner-launcher-minimum-creation.png",
+      "change": "added",
+      "before": null,
+      "after": {
+        "path": "reports/phase3/26.35/visual/v26.35-visual-owner-launcher-minimum-creation.png",
+        "bytes": 85612,
+        "sha256": "1ebd725696c547e19482af19f00e1fca6082de4646de8fc0a13aa6a7bef54f40"
+      },
+      "reason": "Preserve inspected current launcher/creation large-text/theme development captures and checks; final release qualification is separate."
+    },
+    {
+      "path": "reports/phase3/26.35/visual/v26.35-visual-owner-launcher-minimum.png",
+      "change": "added",
+      "before": null,
+      "after": {
+        "path": "reports/phase3/26.35/visual/v26.35-visual-owner-launcher-minimum.png",
+        "bytes": 62450,
+        "sha256": "80e07cead9e476516ff7defa4d467e200c3cc5f4af87514e1e73586ccec5f4a5"
+      },
+      "reason": "Preserve inspected current launcher/creation large-text/theme development captures and checks; final release qualification is separate."
+    },
+    {
+      "path": "reports/phase3/26.35/visual/v26.35-visual-owner-launcher-zh-large-creation-submit.png",
+      "change": "added",
+      "before": null,
+      "after": {
+        "path": "reports/phase3/26.35/visual/v26.35-visual-owner-launcher-zh-large-creation-submit.png",
+        "bytes": 185728,
+        "sha256": "50170d36fc4b70cb31414fe08bc3747e5d455beec1785eb636e0df5803cc3bbd"
+      },
+      "reason": "Preserve inspected current launcher/creation large-text/theme development captures and checks; final release qualification is separate."
+    },
+    {
+      "path": "reports/phase3/26.35/visual/v26.35-visual-owner-launcher-zh-large-creation.png",
+      "change": "added",
+      "before": null,
+      "after": {
+        "path": "reports/phase3/26.35/visual/v26.35-visual-owner-launcher-zh-large-creation.png",
+        "bytes": 185106,
+        "sha256": "cec1ba10c8ed6e921ee0081387ae0cdb378de6f5313e65a92975e01a12e15a69"
+      },
+      "reason": "Preserve inspected current launcher/creation large-text/theme development captures and checks; final release qualification is separate."
+    },
+    {
+      "path": "reports/phase3/26.35/visual/v26.35-visual-owner-launcher-zh-large.png",
+      "change": "added",
+      "before": null,
+      "after": {
+        "path": "reports/phase3/26.35/visual/v26.35-visual-owner-launcher-zh-large.png",
+        "bytes": 157653,
+        "sha256": "cb5b805643b7a9de67bc0d7d03ed47a67df400c081e12da4cb268f2906e85fc6"
+      },
+      "reason": "Preserve inspected current launcher/creation large-text/theme development captures and checks; final release qualification is separate."
+    },
+    {
+      "path": "reports/phase3/26.35/visual/v26.35-visual-owner.json",
+      "change": "added",
+      "before": null,
+      "after": {
+        "path": "reports/phase3/26.35/visual/v26.35-visual-owner.json",
+        "bytes": 17611,
+        "sha256": "3e547b8609ff85ba53720bf49ddfa59cc6898d1615d9162c3a6d6436b1b63390"
+      },
+      "reason": "Preserve inspected current launcher/creation large-text/theme development captures and checks; final release qualification is separate."
+    },
+    {
+      "path": "scripts/lib/browserUserAudit.mjs",
+      "change": "changed",
+      "before": {
+        "path": "scripts/lib/browserUserAudit.mjs",
+        "bytes": 17149,
+        "sha256": "2d1bc70340442f059e99f8d60ddb6d4412ccf25358a3056270b2b60c3baaabad"
+      },
+      "after": {
+        "path": "scripts/lib/browserUserAudit.mjs",
+        "bytes": 17147,
+        "sha256": "95291ef982df7f4fa4caa5109312c4d5127797f1594e9f27c5979a0488fd8bcb"
+      },
+      "reason": "Permit explicit retained-suite qualification through 26.35, asserting actual version and keeping regression origin; development remains unqualified."
+    },
+    {
+      "path": "scripts/lib/milestoneAuditContext.mjs",
+      "change": "changed",
+      "before": {
+        "path": "scripts/lib/milestoneAuditContext.mjs",
+        "bytes": 7009,
+        "sha256": "38135182dbf8a7131a0a4e7aa7c234db4d366308dbada045b98068cc8bffbde9"
+      },
+      "after": {
+        "path": "scripts/lib/milestoneAuditContext.mjs",
+        "bytes": 7007,
+        "sha256": "f4a1eba78ac39beb83fea7e10c2c04e12310fe5dfb63cb8e89ac6755fa339842"
+      },
+      "reason": "Extend bounded qualification target to 26.35 with actual source/build assertions and honest provenance."
+    },
+    {
+      "path": "scripts/prepare-release-26.35.mjs",
+      "change": "added",
+      "before": null,
+      "after": {
+        "path": "scripts/prepare-release-26.35.mjs",
+        "bytes": 5090,
+        "sha256": "4beee9bf1a8393beec532e58f17d4e899600771201c48ba68675475865860fdc"
+      },
+      "reason": "Prepare 14 explicit risk-linked gates and seven documented omissions, current reference identities and required delivery documentation; preserve full archive contracts."
+    },
+    {
+      "path": "scripts/qualify-v26.35-scoped.mjs",
+      "change": "added",
+      "before": null,
+      "after": {
+        "path": "scripts/qualify-v26.35-scoped.mjs",
+        "bytes": 3121,
+        "sha256": "fd12efa5a5ee90e4259c16ab958a8aa6b3e6387d7b4e16e0bacb1b5e967d36ed"
+      },
+      "reason": "Bind focused motion, all-panel/navigation, retained actual authoring/input/game/static-host and before/after performance reports to current 26.35 source; no universal certification claim."
+    },
+    {
+      "path": "scripts/verify-v26.34-authoring-user.mjs",
+      "change": "changed",
+      "before": {
+        "path": "scripts/verify-v26.34-authoring-user.mjs",
+        "bytes": 12401,
+        "sha256": "2cf7ec12ec8c9f4cd7e924b61fab20c7452e89e90d7e3e8ea7bb2da5431f21b9"
+      },
+      "after": {
+        "path": "scripts/verify-v26.34-authoring-user.mjs",
+        "bytes": 12548,
+        "sha256": "2e47b87abf8bd55993b38d58e2973e031463316b495bc7fa5f0a1f8847e9db3c"
+      },
+      "reason": "Allow explicit 34/35 current-version qualification of unchanged real nested authoring/history/save/reopen paths; retain suite origin."
+    },
+    {
+      "path": "scripts/verify-v26.34-native-headless.mjs",
+      "change": "changed",
+      "before": {
+        "path": "scripts/verify-v26.34-native-headless.mjs",
+        "bytes": 7676,
+        "sha256": "eea9df99892d2515756a266e3bd8715217d1d80515b0d29431a2c784972f3e77"
+      },
+      "after": {
+        "path": "scripts/verify-v26.34-native-headless.mjs",
+        "bytes": 7873,
+        "sha256": "3ccd19805679aa46c7a19fee67f763e18b97596c3b8ab59e3ee5d8926b8872f5"
+      },
+      "reason": "Qualify unchanged actual native physics protocol against explicit current 34/35 process identity and output report; no scripted-server expansion."
+    },
+    {
+      "path": "scripts/verify-v26.34-static-host-user.mjs",
+      "change": "changed",
+      "before": {
+        "path": "scripts/verify-v26.34-static-host-user.mjs",
+        "bytes": 10504,
+        "sha256": "ae54d5a8fe19f83e9781bd37731e101a75717735792c1e3120c0df9d15955e4b"
+      },
+      "after": {
+        "path": "scripts/verify-v26.34-static-host-user.mjs",
+        "bytes": 10575,
+        "sha256": "1c470c4dcdfa70559da8902e54df4795006a7184f4601fdcd199a5ef198a935d"
+      },
+      "reason": "Respect explicit current qualification target instead of mislabeling it as development; root/subpath/manual/static-host tests retain their scope."
+    },
+    {
+      "path": "scripts/verify-v26.35-motion-user.mjs",
+      "change": "added",
+      "before": null,
+      "after": {
+        "path": "scripts/verify-v26.35-motion-user.mjs",
+        "bytes": 38414,
+        "sha256": "c681f777f0e2a7ba60e40c4e3d89c3455db4bceb9ea11063a8f1827eceb4b98e"
+      },
+      "reason": "Exercise actual visible browser input, rapid interruption, persistent shell, native drag/cancel/dock, preference/blur fallbacks and bounded before/after renderer diagnostics; retain raw baseline and screenshots."
+    },
+    {
+      "path": "scripts/verify-v26.35-motion.mjs",
+      "change": "added",
+      "before": null,
+      "after": {
+        "path": "scripts/verify-v26.35-motion.mjs",
+        "bytes": 11133,
+        "sha256": "47749c31531011d5fbdd7c8f1eeb05ed2d658eb891b4c7de374539a94cb10013"
+      },
+      "reason": "Execute focused actual production-module spring, retargeting, transform, mounted-list bound, policy and cleanup checks; finite math is tested rather than mocked implementation duplication."
+    },
+    {
+      "path": "src-tauri/Cargo.lock",
+      "change": "changed",
+      "before": {
+        "path": "src-tauri/Cargo.lock",
+        "bytes": 121580,
+        "sha256": "925fa499d87942316c7306a72168e95a02871a80adfc7a2f32f394a234549b68"
+      },
+      "after": {
+        "path": "src-tauri/Cargo.lock",
+        "bytes": 121580,
+        "sha256": "46174716c4e49ef0c9672c757f1aac20967cad6f378ebc5845e507cb37c6af5d"
+      },
+      "reason": "Advance existing machine/public release authority or migration version expectation to 26.35.0; project schema and dependencies unchanged."
+    },
+    {
+      "path": "src-tauri/Cargo.toml",
+      "change": "changed",
+      "before": {
+        "path": "src-tauri/Cargo.toml",
+        "bytes": 1240,
+        "sha256": "e5f8bcff4aa664ea4a658c9035b09aa294ba58280624d545d60f8a47ac8364b4"
+      },
+      "after": {
+        "path": "src-tauri/Cargo.toml",
+        "bytes": 1240,
+        "sha256": "8237c76bf0ed0bc531d3c4c269e3a6b61e9619d2b42f213680ff752ef9e80eec"
+      },
+      "reason": "Advance existing machine/public release authority or migration version expectation to 26.35.0; project schema and dependencies unchanged."
+    },
+    {
+      "path": "src-tauri/tauri.conf.json",
+      "change": "changed",
+      "before": {
+        "path": "src-tauri/tauri.conf.json",
+        "bytes": 1102,
+        "sha256": "825b0b6ba9062d50900fe9d8719f25f40ef745c98cf12dcbd6ad91753dc55aaf"
+      },
+      "after": {
+        "path": "src-tauri/tauri.conf.json",
+        "bytes": 1102,
+        "sha256": "1afe0df7082a24d99cb07e20eb57a56a7ed65fcd72668409d90f9a9a0150ec3f"
+      },
+      "reason": "Advance existing machine/public release authority or migration version expectation to 26.35.0; project schema and dependencies unchanged."
+    },
+    {
+      "path": "src/components/BuildSettingsPanel.vue",
+      "change": "changed",
+      "before": {
+        "path": "src/components/BuildSettingsPanel.vue",
+        "bytes": 49690,
+        "sha256": "c49fef3ea478f1929ffd71d29587fad577b0145ef17921f7d65b2c264c10d94f"
+      },
+      "after": {
+        "path": "src/components/BuildSettingsPanel.vue",
+        "bytes": 49723,
+        "sha256": "90c7dc7d5b9c32284339257779af59468a1fab008bc3190c9b0665a060b30211"
+      },
+      "reason": "Use shared standard progress timing; build actions and measured progress data are unchanged."
+    },
+    {
+      "path": "src/components/CommandPalette.vue",
+      "change": "changed",
+      "before": {
+        "path": "src/components/CommandPalette.vue",
+        "bytes": 24920,
+        "sha256": "c66653b8d0c8b3f3566011ca66142ade56eb293ec6eb11f0fb61f8f53e189c5a"
+      },
+      "after": {
+        "path": "src/components/CommandPalette.vue",
+        "bytes": 26265,
+        "sha256": "86abbb1b5241f7e9aa7a7f427f8e3cb5da622c10fda721533764efc7af0b9ae7"
+      },
+      "reason": "Replace separate transition ownership with shared interruptible springs; immediately inert/aria-hide closing overlay and preserve partial child presentation during entry cancellation; command/query/keyboard behavior retained."
+    },
+    {
+      "path": "src/components/DeviceInputPanel.vue",
+      "change": "changed",
+      "before": {
+        "path": "src/components/DeviceInputPanel.vue",
+        "bytes": 32546,
+        "sha256": "5f07d2d350d509690f433ac36371cf32f3602d04fe37419356b884b2bcc0e731"
+      },
+      "after": {
+        "path": "src/components/DeviceInputPanel.vue",
+        "bytes": 32510,
+        "sha256": "79b2b171bd8d408a09699c0b8364ffdb9a0450985bce63486dae445529d6ee79"
+      },
+      "reason": "Remove preview width/aspect-ratio layout animation so visible geometry changes immediately; device calibration and input behavior unchanged."
+    },
+    {
+      "path": "src/components/EditorBottomPanel.vue",
+      "change": "changed",
+      "before": {
+        "path": "src/components/EditorBottomPanel.vue",
+        "bytes": 110813,
+        "sha256": "e52490362e5e3b59743a1e719fd41efd271572b86fdc573b643f2e6d31bf256b"
+      },
+      "after": {
+        "path": "src/components/EditorBottomPanel.vue",
+        "bytes": 113836,
+        "sha256": "6ed15b810ebba0ada4cc8f14a3d4703226536ae5a4b101f6ab33c8be38f559c3"
+      },
+      "reason": "Add asset/folder and tab source/target/cancel feedback and post-commit settle; preserve confirmation/GUID/history, drag-safe auto-hide and cached-view/session cleanup."
+    },
+    {
+      "path": "src/components/PanelResizeHandle.vue",
+      "change": "changed",
+      "before": {
+        "path": "src/components/PanelResizeHandle.vue",
+        "bytes": 6804,
+        "sha256": "acf3b87ff28eeed67703439a3b7f7114f13d19d6f56a0a6e3a9b219d75ab9375"
+      },
+      "after": {
+        "path": "src/components/PanelResizeHandle.vue",
+        "bytes": 6838,
+        "sha256": "e47df63ada2a071d0d0a5fe6e0518f72e77ddd75c99dff0e3980beaea4172544"
+      },
+      "reason": "Use shared micro hover timing; resize coordinates and keyboard commits remain immediate."
+    },
+    {
+      "path": "src/components/ProjectManager.vue",
+      "change": "changed",
+      "before": {
+        "path": "src/components/ProjectManager.vue",
+        "bytes": 36181,
+        "sha256": "88f8d0ff01d2550136837ede9c54d4f7110ee84fdecabe8ecbcd81d15920b20d"
+      },
+      "after": {
+        "path": "src/components/ProjectManager.vue",
+        "bytes": 41334,
+        "sha256": "8a0103ddf225d3ac6baa33aba6a45b370035675aa6734125db7751372be806f7"
+      },
+      "reason": "Compose welcome SVG/node motif, restrained finite presence and retained Create/Open/Continue/templates/recents/migration/recovery; fix whole-label wrapping, hint row and padded dialog containment at large text."
+    },
+    {
+      "path": "src/components/SceneSideBar.vue",
+      "change": "changed",
+      "before": {
+        "path": "src/components/SceneSideBar.vue",
+        "bytes": 34830,
+        "sha256": "f818a27392bc4437cb26cb34d1f269fbd59da4b6da6afa866e6ddd97876bc2cb"
+      },
+      "after": {
+        "path": "src/components/SceneSideBar.vue",
+        "bytes": 48041,
+        "sha256": "19a0761d2061271ed7cc312ed19e6a82c55213b4ddb1e7b738ea913d140f89b3"
+      },
+      "reason": "Validate native hierarchy source/targets, expose before/invalid state and committed neighbor settle, clean up before disposal; correct resize edge and reserve breadcrumb geometry so selection cannot cancel native dragging; use font-relative compact shared menus retaining scene/navigation and Pin/Visibility/Lock/Enabled actions, names/IDs/status access, history and keyboard focus; dispose when UI hides or target UUID disappears; honor existing recovery read-only edit guard; preserve native dragging and virtual row heights."
+    },
+    {
+      "path": "src/layout/EditorLayout.vue",
+      "change": "changed",
+      "before": {
+        "path": "src/layout/EditorLayout.vue",
+        "bytes": 16203,
+        "sha256": "25246ab2679442a7313f874d38a1d566d7f3588d49ec74ea359068c879e72d1e"
+      },
+      "after": {
+        "path": "src/layout/EditorLayout.vue",
+        "bytes": 17536,
+        "sha256": "7ec85f695bcbc4be709a1dded1a8c55cf9b525a3d7be172506a4e94fdd6bd112"
+      },
+      "reason": "Panel-specific native dock feedback and floating presence; check payload ownership before parent drag guard so nested hierarchy drags work; cleanup before disposal."
+    },
+    {
+      "path": "src/main.ts",
+      "change": "changed",
+      "before": {
+        "path": "src/main.ts",
+        "bytes": 1192,
+        "sha256": "3a522ee0d891f9a6e3ab74df41cff46d8af67867168bbccb7510bea844e931f9"
+      },
+      "after": {
+        "path": "src/main.ts",
+        "bytes": 1342,
+        "sha256": "aac987c983f24e86b061190c16d1171e554d0a2bc6ad29252462f6fc03a02921"
+      },
+      "reason": "Install shared motion policy once and dispose on hot reload; retain editor/player boot behavior."
+    },
+    {
+      "path": "src/projects/projectFormat.ts",
+      "change": "changed",
+      "before": {
+        "path": "src/projects/projectFormat.ts",
+        "bytes": 1093,
+        "sha256": "cc62bf88eb3650f1722495e8d27d7f6e74fbe6730a4ae186720386e1db8b307e"
+      },
+      "after": {
+        "path": "src/projects/projectFormat.ts",
+        "bytes": 1093,
+        "sha256": "0d8e919d8c6301f20b3796872e43ded48447fef620147801b2a83b7ea456d1fc"
+      },
+      "reason": "Advance existing machine/public release authority or migration version expectation to 26.35.0; project schema and dependencies unchanged."
+    },
+    {
+      "path": "src/ui/components/NovaMark.vue",
+      "change": "added",
+      "before": null,
+      "after": {
+        "path": "src/ui/components/NovaMark.vue",
+        "bytes": 473,
+        "sha256": "e6d55c82694dac42958da9cd339ec505d6d0d2b299319d8760c810f36fd445dc"
+      },
+      "reason": "Add inert SVG using the established Nova N silhouette for consistent launcher identity; no raster asset or new dependency."
+    },
+    {
+      "path": "src/ui/components/UiDialog.vue",
+      "change": "changed",
+      "before": {
+        "path": "src/ui/components/UiDialog.vue",
+        "bytes": 1103,
+        "sha256": "9d6d29069ca88dc56b26ee23e94354d7b99d2028a4b89d4f0eac625285605144"
+      },
+      "after": {
+        "path": "src/ui/components/UiDialog.vue",
+        "bytes": 2613,
+        "sha256": "3dd4c1790c6f2d6e277916d3d8083f18952c9dffb6348a01da39a9fcc67bc8df"
+      },
+      "reason": "Shared finite presence and one supervising leave completion, immediate focus and inert closing, child continuity on reversal; preserve dialog roles and dismissal."
+    },
+    {
+      "path": "src/ui/components/UiMenu.vue",
+      "change": "changed",
+      "before": {
+        "path": "src/ui/components/UiMenu.vue",
+        "bytes": 1088,
+        "sha256": "26311f7ed7f9f36068e7811e287e553e582a2904cad0f4fe09cae55af9df0ddc"
+      },
+      "after": {
+        "path": "src/ui/components/UiMenu.vue",
+        "bytes": 1847,
+        "sha256": "24b417e913ca540777f2aebaa5320144676800a563ac8f15503025c1442d9ce1"
+      },
+      "reason": "Shared compact presence/exit and immediate inert closing; preserve keyboard navigation and selection; focus the menu root when every action is disabled so Escape still closes it and restores its trigger."
+    },
+    {
+      "path": "src/ui/components/UiPropertySection.vue",
+      "change": "changed",
+      "before": {
+        "path": "src/ui/components/UiPropertySection.vue",
+        "bytes": 764,
+        "sha256": "dd50345fb61e421cf50ba2d0a05dbeb7a44304a9edcaf654ee21df45d6076d85"
+      },
+      "after": {
+        "path": "src/ui/components/UiPropertySection.vue",
+        "bytes": 1395,
+        "sha256": "c59902fa3d2bb132f4a222277ee2815df6c8d957233d1ec8810a901833e496f5"
+      },
+      "reason": "Animate short body reveal/disclosure while retaining native details state, keyboard semantics and immediate collapse."
+    },
+    {
+      "path": "src/ui/components/UiTabs.vue",
+      "change": "changed",
+      "before": {
+        "path": "src/ui/components/UiTabs.vue",
+        "bytes": 1780,
+        "sha256": "8b4d828be82f8a04cf6a35d614090371945528078a85577c35c6cf53b8da81f9"
+      },
+      "after": {
+        "path": "src/ui/components/UiTabs.vue",
+        "bytes": 3788,
+        "sha256": "9014a33492a9e35ec030fced38368dd385108ba7108e05d45c8d69a3004ea8e1"
+      },
+      "reason": "Add inert measured moving indicator using bounded FLIP and lifecycle ResizeObserver cancellation; hide stale indicators for invalid/empty models; preserve manual/automatic keyboard activation and actual selection."
+    },
+    {
+      "path": "src/ui/editor.css",
+      "change": "changed",
+      "before": {
+        "path": "src/ui/editor.css",
+        "bytes": 10788,
+        "sha256": "a8aab987e7cbb818b44c7c8c5759a4bac66265d17214d62310bd83e9f1612015"
+      },
+      "after": {
+        "path": "src/ui/editor.css",
+        "bytes": 11239,
+        "sha256": "8422a79d14c4f0de937f0cf47f455f6264741343038b28e6401f884857e8f306"
+      },
+      "reason": "Apply comfortable group/header/empty/dialog spacing, shared materials and active indicator ownership; retain connected docks and persistent workspace layout."
+    },
+    {
+      "path": "src/ui/forms.css",
+      "change": "changed",
+      "before": {
+        "path": "src/ui/forms.css",
+        "bytes": 7641,
+        "sha256": "3c9d14fd03bd37f49a450027e7d8fbe431b01cee80a1c65d295e9c057518c4ef"
+      },
+      "after": {
+        "path": "src/ui/forms.css",
+        "bytes": 7889,
+        "sha256": "a362cc1c3b3a00aa086fb7cb6d4d0aa3a22a903d089875e897aaa095f348a608"
+      },
+      "reason": "Apply central comfortable geometry without replacing native input/validation/model contracts or stretching bounded editors."
+    },
+    {
+      "path": "src/ui/motion.css",
+      "change": "added",
+      "before": null,
+      "after": {
+        "path": "src/ui/motion.css",
+        "bytes": 3475,
+        "sha256": "f067052ac67705b54b0116c2b8f6ea14ce75ba376f7c6212baddf36d8c2f4ffa"
+      },
+      "reason": "Centralize four duration families, feedback, tab indicator, native drop states and selective blur; preserve semantic button colors and disable legacy decorative CSS under effective editor-off policy."
+    },
+    {
+      "path": "src/ui/motion.ts",
+      "change": "added",
+      "before": null,
+      "after": {
+        "path": "src/ui/motion.ts",
+        "bytes": 9576,
+        "sha256": "df957258f5b5256428d6f9b046c1269680811a1d65442ffd6a1a5f0ad001cdad"
+      },
+      "reason": "Add finite sampled damped springs, interruption continuity, reduced-motion settlement, bounded FLIP, native drag preview and explicit cleanup; no project data or idle loop."
+    },
+    {
+      "path": "src/ui/tokens.css",
+      "change": "changed",
+      "before": {
+        "path": "src/ui/tokens.css",
+        "bytes": 10958,
+        "sha256": "72d6c713f8e224c5c70b020e0b558bf8aab5fe768178020fa36739511e926b2c"
+      },
+      "after": {
+        "path": "src/ui/tokens.css",
+        "bytes": 12717,
+        "sha256": "d3291e5949f4ef8f28cc3d1d591a70c25898263faedf6570a940b33293ef842e"
+      },
+      "reason": "Evolve shared radii, spacing and material roles; preserve compact control, virtual row, numeric and slider dimensions."
+    },
+    {
+      "path": "tests/fixtures/migrations/public-schema-expected.json",
+      "change": "changed",
+      "before": {
+        "path": "tests/fixtures/migrations/public-schema-expected.json",
+        "bytes": 326,
+        "sha256": "6423d10e23b1121970b8c961cd7ee779b8e565a5ae5e4afd44f10f0954288c29"
+      },
+      "after": {
+        "path": "tests/fixtures/migrations/public-schema-expected.json",
+        "bytes": 326,
+        "sha256": "f3c0c3a213793da89c356b33f014d73c3d8d59c064b7a8e274395c815d6ff7df"
+      },
+      "reason": "Advance existing machine/public release authority or migration version expectation to 26.35.0; project schema and dependencies unchanged."
+    }
+  ]
+}

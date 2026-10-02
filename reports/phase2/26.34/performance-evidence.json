@@ -1,0 +1,46 @@
+{
+  "format": "nova-performance-evidence",
+  "version": 1,
+  "engineVersion": "26.34.0",
+  "generatedAt": "2026-10-01T17:26:55.358Z",
+  "status": "passed",
+  "checks": [
+    {
+      "name": "An empty capture cannot produce a passing CI performance report",
+      "status": "passed"
+    },
+    {
+      "name": "Measured frame means and renderer budgets preserve successful CI behavior",
+      "status": "passed"
+    },
+    {
+      "name": "Unavailable GPU query is explicitly skipped while available CPU checks remain usable",
+      "status": "passed"
+    },
+    {
+      "name": "Profiler planning estimate cannot certify measured overhead compliance",
+      "status": "passed"
+    },
+    {
+      "name": "Nonfinite and negative required frame measurements fail instead of becoming zero",
+      "status": "passed"
+    },
+    {
+      "name": "Invalid renderer telemetry and measured budget excess remain failures",
+      "status": "passed"
+    },
+    {
+      "name": "Capture serialization retains legacy fields and detached measured samples",
+      "status": "passed"
+    },
+    {
+      "name": "Comparison refuses captures with no frame timing evidence",
+      "status": "passed"
+    }
+  ],
+  "sourceHashes": {
+    "src/runtime/performanceTools.ts": "1d4ff38900898f68dafbe22574b00066e3daeed7a6797faa2ad803a48f937337",
+    "src/components/ProfilerPanel.vue": "893284db22aab81fee9b6789ecd912d2610d2a177462cb4939a5621fe86e545f"
+  },
+  "scope": "Real production profiler/capture modules with specified timing and renderer telemetry inputs. These validate evidence semantics, not target-device performance."
+}

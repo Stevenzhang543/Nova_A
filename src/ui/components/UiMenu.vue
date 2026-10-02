@@ -1,10 +1,14 @@
-<template><div ref="menu" class="ui-menu" role="menu" tabindex="-1" @keydown="navigate"><slot /></div></template>
+<template><Transition appear :css="false" @enter="enter" @leave="leave" @enter-cancelled="cancel" @leave-cancelled="cancel"><div ref="menu" class="ui-menu" role="menu" tabindex="-1" @keydown="navigate"><slot /></div></Transition></template>
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { animatePresence, cancelMotion } from '../motion'
 const menu = ref<HTMLElement>()
 const emit = defineEmits<{ close: [] }>()
+function enter(element: Element, done: () => void) { const root = element as HTMLElement; root.inert = false; root.removeAttribute('aria-hidden'); animatePresence(root, 'enter', done, { preset: 'snappy', distance: 4, duration: 'fast' }) }
+function leave(element: Element, done: () => void) { const root = element as HTMLElement; root.inert = true; root.setAttribute('aria-hidden', 'true'); animatePresence(root, 'leave', done, { preset: 'snappy', distance: 4, duration: 'micro' }) }
+function cancel(element: Element) { cancelMotion(element as HTMLElement) }
 function entries() { return [...(menu.value?.querySelectorAll<HTMLElement>('button:not(:disabled),[role="menuitem"]:not([aria-disabled="true"])') ?? [])] }
-onMounted(() => { for (const item of entries()) { item.setAttribute('role', 'menuitem'); item.tabIndex = -1 } entries()[0]?.focus() })
+onMounted(() => { for (const item of entries()) { item.setAttribute('role', 'menuitem'); item.tabIndex = -1 } (entries()[0] ?? menu.value)?.focus() })
 function navigate(event: KeyboardEvent) {
   if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); emit('close'); return }
   if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return

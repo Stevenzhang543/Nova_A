@@ -358,3 +358,17 @@ Source audit after migration:
 ## 26.33 integration verification
 
 Retained the completed shared editor rebuild. The current 26.33 production bundle passed all ten layout checks over 197 actual routes, including 1366/1600/1920 desktop widths, translated/large-text layouts, conditional panels, pending edits and real save. Contact sheets for all 197 routes were visually reviewed. The engine fixes add no alternative control patterns. Final frozen-source qualification is recorded in the release evidence, separately from these development checks.
+
+## 26.34 Phase II integration
+
+Preserve the completed shared editor migration. Imported-font availability uses existing hint styling and localized copy; profiler labels/status rows distinguish measured, unavailable and estimated evidence. Game UI scroll ownership is exercised through actual canvas/native/editor inputs. The final candidate all-panel gate retains docked/maximized/disclosed routes, representative locales/scales, field/slider containment and pending edit/save/history checks. Its PNG review and frozen-source results are separate from prior development evidence. No legacy styling/component is introduced by these edits.
+
+## 26.35 — Phase III visual and motion refinement
+
+Implemented centralized softer geometry/materials, composed SVG launcher, bounded native controls, finite shared springs, immediate inert overlay closing, shared disclosure/tab continuity and validated hierarchy/assets/tabs/dock feedback. Removed the command palette's separate legacy transition ownership. Corrected the hierarchy separator edge and large-text launcher label wrapping. Reserved the hierarchy breadcrumb band to prevent the reproduced selection-induced native drag cancellation. Persistent navigation, editor/runtime separation, saved layouts, project schema and history remain intact.
+
+Narrow hierarchy layout now gives names and search fields room using font-relative containment and the shared overflow menu. Scene/navigation commands and all four row actions remain available; no object operation is removed. Earlier 200% captures remain diagnosis evidence, with the focused corrected layout review recorded separately.
+
+Baseline: reports/phase3/26.35/baseline includes actual pre-edit UI captures and measurements, with failed measurement calibration attempts retained explicitly. Shared-control and launcher development captures are separately labeled. Final source-bound all-panel, navigation, authoring, export, drag, reduced-mode and performance acceptance is authoritative only in releases/v26.35/Nova_A-v26.35-release-evidence.zip. No declaration here substitutes for executed gates.
+
+Deferred: generic resource-field drag assignment, free-position floating windows, animation clip dragging and unstable-index keyframe neighbor animation. Physical low-end hardware, assistive technology, native drag-image appearance, signing/clean installation and long-duration human comfort remain external validation scopes.

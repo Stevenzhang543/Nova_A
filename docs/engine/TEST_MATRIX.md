@@ -1,28 +1,27 @@
-# Phase II test matrix
+# Phase II test matrix — 26.34
 
-Evidence belongs to its executed source; historical reports are discovery aids. Baseline commit: 050ed885c9d1bdb151eef3ab136c98cd121c848f.
+Baseline da2182569b7dddb227e7623ce38bf92485d88807. Current baseline Rust all-target and real WASM/frontend build passed before edits. Logs:.cache/v2634-baseline-rust.log and v2634-baseline-build.log. Final candidate commands run sequentially against frozen source; all report freshness and source/artifact hashes are checked. Final authority: release-evidence archive.
 
-| Layer | Command / scope | Current result |
+| Risk / acceptance | Current test or release gate | Evidence scope |
 |---|---|---|
-| Rust unit/integration/examples | cargo test --workspace --all-targets | PASS: 185 tests; .cache/phase2-baseline-rust.log |
-| Rust lint | cargo clippy --workspace --all-targets -- -D warnings | PASS |
-| WASM + frontend | pnpm build | PASS; existing chunk-size advisory |
-| Native backend | cargo check --manifest-path src-tauri/Cargo.toml | PASS |
-| Docs and environment | pnpm audit:manual; pnpm audit:environment | PASS: three-language manual/web checks and five environment checks; hosted CI not executed |
-| Frontend foundational behavior | Hierarchy, component lifecycle, schema, assets, history, saves | Select applicable existing assertions, add regressions for reproduced defects |
-| Cross-system runtime | Physics events; animation/renderer; tile collision/nav; game UI/input; script host | PASS selected contracts; see counts and limits below |
-| Real editor workflows | Create/edit/duplicate/delete/undo/save/close/reopen/export | PASS starter creation/save/reopen/play/stop and actual Web export |
-| Representative platformer | Sprites/actions/character/tiles/camera/animation/audio/UI/scene transitions | Verified subset below; full combination not claimed |
-| Representative top-down | Movement/collision/animation/camera/navigation/interaction/UI | Verified subset below; full combination not claimed |
-| Representative UI-heavy game | Layout/buttons/text/settings/menu/runtime save/load | Verified subset below; full combination not claimed |
-| Stability/performance | Scene cycles, sprites/physics/tile stress, meaningful timing/memory | Verified subset below; full combination not claimed |
-| UI V2 visual regression | 1366/1600/1920, locales/scales/docks/new contextual workflows | PASS: 197 routes / ten assertions; contact sheets reviewed |
-| Release | Web and Windows outputs, dependency closure, reopen, hashes/artifact set | GATED |
+| Lossless nested saves, one snapshot, cancellation and project switches | verify-v26.34-save-transactions + verify-engine-save |15 new +10 retained actual-module checks; five original failures and two newly introduced staging races preserved before repair |
+| Read-only particle preview, zoomed/rotated/subviewport camera | verify-v26.34-render-media |9 numerical/runtime/serialized checks; initial five failures preserved |
+| Wheel UI/game ownership | verify-v26.34-input-ownership + verify-v26.34-input-user |7 module contracts plus actual normal project/ScrollPanel/native field/Inspector/Design/Game/keyboard input; no private state injection |
+| Profiler evidence correctness | verify-v26.34-performance-evidence |8 controlled telemetry tests, six before failures; estimates/unavailable GPU never become measured certification |
+| Hierarchy identity/prefab history | verify-engine-foundations + verify-v26.34-authoring-user |7 module cases; actual empty project/import/nested reuse/undo/redo/download/reopen |
+| Existing joints/components | verify-engine-component-registry |4 actual composition/toggle/serialized contracts |
+| Animation/audio/resource persistence | verify-v26.28-media + verify-v26.28-media-bindings |6 media +9 binding cases on current source; controlled audio host is explicit |
+| Game UI layout/focus/native forms/localization | verify-v26.28-game-ui + game-scenarios + browser workflows |6 module cases and actual responsive starter interactions; no physical AT/IME claim |
+| Scene/navigation lifetime | verify-v26.29-world + verify-v26.17-world-streaming |5 navigation/ownership +16 compiled-WASM scene/streaming checks; no full rollback/navmesh claim |
+| Platformer/top-down/UI-heavy integration | verify-v26.34-game-scenarios |Actual template generation/parser/migration/serializer/runtime/compiled WASM physics/Rhai; host canvas/audio/storage fixtures identified |
+| Fresh user workflows | verify-engine-workflows |3 launcher templates, actual saved project/reopen/game input/stop, Unicode input and Rhai secondary-slot save |
+| Actual authored game export | verify-v26.34-reference-game |Code/graph mode roundtrip, speed edit/undo/redo/save/reopen; exact packed source; screenshot-guided6-checkpoint completion and R restart |
+| Static hosting and relocation | verify-v26.34-static-host-user |Actual root/subpath editor/PWA files, Unicode/spaces moved project, ZIP/export/source native-WASM parity, independent player startup |
+| UI V2 containment and navigation | verify-ui-rebuild-layout-user --final |Actual docked/maximized/disclosed panel routes,1366/1600/1920, representative locales/scales/palettes, shared fields/sliders, pending save/undo; captured PNGs require visual review |
+| Engine/build/environment | native-build/rust/wasm/web/typescript/focus |Real current compilers, exact binary versions and actual runtime bridge; build warnings do not conceal failures |
+| Windows/native integration | windows/headless + verify-v26.34-native-headless |Real local Windows processes, export startup and native physics JSONL bounds/replay/disposal; no clean-install/non-Windows/full native-scripted-server claim |
+| Source/archive integrity/manual | hygiene/manual/product + independent packaging |Frozen source, fresh reports/attachments, three-language current manual, eleven artifact names and actual SHA256 checks |
 
-No aggregate COMPLETE result until required layers pass. Physics-only native tests are not substituted for an exported game test. Browser geometry is not a physical accessibility or native installer certification.
+Declared catalogs are discovery indexes, not executed tests. A passed controlled Canvas recorder does not establish browser pixels; module callbacks do not establish hardware audio. Before reports are retained separately; qualification never relabels old reports. Long-duration soak, unrelated vulnerability certification, duplicate historical geometry matrices and hardware-wide performance are explicitly omitted in the risk plan.
 
-Current production-module checks: foundations 7; runtime save 10; media 6; project transaction recovery 9; game UI 6; runtime/debugger 3; native/WASM Rhai semantics 14. Sixteen retained suites passed across the initial run and the component-primitives rerun (1,414 boundary checks). Initial failures remain preserved. These checks do not substitute for real browser workflows or exported-game qualification. Exact cases and scope: reports/phase2/.
-
-Additional current-source results: registry 4, world lifecycle 5, streaming 16, physics/gameplay bindings 18, representative browser workflows 3 (with actual movement/jump/UI interactions), editor-authored runtime-save scenario, and static Web export/relocation/player checks 4 all pass. The complete workflow run predates only the added save scenario; the targeted top-down rerun verifies that extension. Preserve both reports, not a fabricated aggregate run.
-
-Measurements: 20 scenes × 10 entities × 5 cycles = 100 activations in 244.2 ms in this Node/WASM fixture, ending at zero entities/cached scenes. A separate 1,000-body fixture took 1,064.4 ms for 30 physics frames and 1,240.9 ms for 100 queries, with one configuration rebuild. These are local observations, not realtime performance guarantees.
+Low-priority recorded follow-up: manually constructed valid-frame captures with nonfinite GPU/draw-call/texture telemetry may produce nonfinite comparison deltas. Their measured budgets correctly fail, current renderer telemetry is normalized, and no actual-user regression was observed. Harden arbitrary externally fabricated telemetry if capture import becomes supported; do not infer hardware timing from these fields.

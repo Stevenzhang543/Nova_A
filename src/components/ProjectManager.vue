@@ -2,27 +2,31 @@
 <template>
   <main class="project-manager">
     <header class="manager-header">
-      <a class="identity" href="https://whitelists.top" target="_blank" rel="noreferrer"><span>N</span><strong>Nova_A</strong></a>
+      <a class="identity" href="https://whitelists.top" target="_blank" rel="noreferrer"><NovaMark /><strong>Nova_A</strong></a>
       <nav :aria-label="libraryText.utilities">
         <select v-model="prefs.locale" :aria-label="t('language')"><option value="en">English</option><option value="de">Deutsch</option><option value="zh">中文</option></select>
-        <button class="manual-link" type="button" @click="openBundledManual">{{ t('learnNova') }}</button>
+        <UiButton class="manual-link" icon="help" @click="openBundledManual">{{ t('learnNova') }}</UiButton>
         <span class="version">{{ NOVA_RELEASE_NAME }}</span>
       </nav>
     </header>
 
     <section class="manager-shell">
       <div class="welcome">
-
-        <h1>{{ t('projectManager') }}</h1>
-        <p>{{ t('projectManagerDescription') }}</p>
-        <div class="quick-actions">
-          <button class="new-project" :disabled="state.busy" @click="creationOpen = true">{{ t('newProject') }}</button>
-          <button class="primary" :disabled="state.busy" @click="chooseProject('open')">{{ t('openProject') }}</button>
-
-
-
-          <button v-if="state.currentSnapshot" :disabled="state.busy" @click="continueCurrentProject">{{ t('continueProject') }}</button>
-
+        <div ref="welcomeIntro" class="welcome-intro">
+          <svg class="welcome-motif" viewBox="0 0 240 240" fill="none" aria-hidden="true" focusable="false">
+            <path class="motif-grid" d="M0 48H240M0 96H240M0 144H240M0 192H240M48 0V240M96 0V240M144 0V240M192 0V240" />
+            <path class="motif-vector" d="M48 168L96 72L192 120L144 192L48 168ZM96 72L144 192M48 168L192 120" />
+            <circle class="motif-node" cx="48" cy="168" r="5" /><circle class="motif-node" cx="96" cy="72" r="5" /><circle class="motif-node" cx="192" cy="120" r="5" /><circle class="motif-node" cx="144" cy="192" r="5" />
+          </svg>
+          <div class="welcome-brand"><NovaMark /><strong>Nova_A</strong></div>
+          <p class="welcome-eyebrow">{{ t('projectManager') }}</p>
+          <h1>{{ t('createSomethingPlayable') }}</h1>
+          <p class="welcome-description">{{ launcherDescription }}</p>
+        </div>
+        <div ref="welcomeActions" class="quick-actions main-project-actions">
+          <UiButton class="new-project" variant="primary" icon="add" :disabled="state.busy" @click="creationOpen = true">{{ t('newProject') }}</UiButton>
+          <UiButton class="primary open-project" icon="folder" :disabled="state.busy" @click="chooseProject('open')">{{ t('openProject') }}</UiButton>
+          <UiButton v-if="state.currentSnapshot" icon="forward" :disabled="state.busy" @click="continueCurrentProject">{{ t('continueProject') }}</UiButton>
         </div>
         <details class="more-project-actions"><summary>{{ moreActionsLabel }}</summary><div class="quick-actions"><button :disabled="state.busy" @click="chooseProject('add')">{{ t('addExistingProject') }}</button>
 <button :disabled="state.busy" @click="chooseProject('migrate')">{{ t('migrateOlderProject') }}</button>
@@ -66,7 +70,7 @@
           <small>{{ libraryText.captureHint }}</small>
         </section>
         </div><p class="template-selection" aria-live="polite">{{ selectedTemplateRecord ? `${libraryText.selected}: ${templateName(selectedTemplateRecord.id, selectedTemplateRecord.name)}` : t('noMatchingTemplates') }}</p>
-        <button class="create-button" :disabled="state.busy || Boolean(pathError) || !projectName.trim() || !selectedTemplateRecord" :title="pathError" @click="create">{{ state.busy ? t('preparingProject') : t('createProject') }}</button>
+        <UiButton class="create-button" variant="primary" icon="add" :disabled="state.busy || Boolean(pathError) || !projectName.trim() || !selectedTemplateRecord" :title="pathError" @click="create">{{ state.busy ? t('preparingProject') : t('createProject') }}</UiButton>
       </section>
 
       </UiDialog></Teleport>
@@ -83,7 +87,7 @@
             <UiButton class="remove-recent" icon="close" :label="t('removeRecent')" @click="removeRecentProject(recent.id)" />
           </article>
         </div>
-        <p v-else class="empty-recents">{{ t('noRecentProjects') }}</p>
+        <div v-else class="empty-recents"><EditorIcon name="folder" /><p>{{ t('noRecentProjects') }}</p></div>
       </section>
     </section>
 
@@ -118,8 +122,10 @@
 <script setup lang="ts">
 import UiDialog from '../ui/components/UiDialog.vue'
 import UiButton from '../ui/components/UiButton.vue'
+import NovaMark from '../ui/components/NovaMark.vue'
 import EditorIcon, { type EditorIconName } from './EditorIcon.vue'
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { animatePresence, cancelMotion } from '../ui/motion'
 import { t } from '../i18n'
 import { preferencesState as prefs } from '../store/preferences'
 import { applyPendingProjectUpgrade, cancelPendingProjectUpgrade, closeReadOnlyDocument, continueCurrentProject, createNewProject, downloadLastUpgradeRollback, downloadReadOnlyDocument, openProjectDocument, openRecentProject, projectManagerState as state, removeRecentProject } from '../projects/projectManager'
@@ -133,6 +139,15 @@ import { readProjectArchive } from '../projects/projectArchive'
 import { NOVA_RELEASE_NAME } from '../projects/projectFormat'
 
 const creationOpen = ref(false)
+const welcomeIntro = ref<HTMLElement | null>(null), welcomeActions = ref<HTMLElement | null>(null)
+const launcherDescription = computed(() => ({ en: 'A 2D physics and game engine.', de: 'Eine 2D-Physik- und Spiele-Engine.', zh: '二维物理与游戏引擎。' }[prefs.locale]))
+onMounted(() => {
+  for (const element of [welcomeIntro.value, welcomeActions.value]) if (element) {
+    const distance = Number.parseFloat(getComputedStyle(element).getPropertyValue('--space-tight')) || 0
+    animatePresence(element, 'enter', undefined, { preset: 'smooth', duration: 'emphasized', distance, scale: 1 })
+  }
+})
+onBeforeUnmount(() => { for (const element of [welcomeIntro.value, welcomeActions.value]) if (element) cancelMotion(element) })
 const moreActionsLabel = computed(/** 按偏好语言返回更多项目操作标签。 */ () => ({ en: 'More project actions', de: 'Weitere Projektaktionen', zh: '更多项目操作' }[prefs.locale]))
 /** 仅在没有忙碌操作时关闭创建面板。 */ function closeCreation() { if (!state.busy) creationOpen.value = false }
 const projectName = ref('My Game')
@@ -225,8 +240,49 @@ const pathError = computed(/** 校验项目位置非空、无非法字符或父�
 </script>
 
 <style scoped>
-.project-manager{height:100%;min-height:0;display:flex;flex-direction:column;background:var(--bg-base);color:var(--text-primary);overflow:auto}.manager-header{display:flex;justify-content:space-between;align-items:center;gap:var(--ui-space-lg);padding:var(--ui-space-sm) var(--ui-space-lg);border-bottom:1px solid var(--border-subtle);background:var(--surface-1);flex:none}.identity{display:flex;align-items:center;gap:var(--ui-space-sm);text-decoration:none;color:var(--text-primary)}.identity>span{color:var(--accent);font-weight:700}.manager-header nav{display:flex;align-items:center;gap:var(--ui-space-sm)}.version{color:var(--text-muted);font-size:var(--type-caption)}.manager-shell{width:min(110ch,100%);margin-inline:auto;display:grid;grid-template-columns:26ch minmax(0,1fr);gap:var(--ui-space-xl);padding:var(--ui-space-xl);flex:1;align-content:start}.welcome h1{font-size:var(--type-page);margin:0 0 var(--ui-space-sm)}.welcome>p{color:var(--text-muted);font-size:var(--type-dense);line-height:var(--line-body)}.quick-actions{display:flex;flex-direction:column;gap:var(--ui-space-sm);margin-block:var(--ui-space-lg)}.quick-actions button{text-align:left;justify-content:flex-start}.more-project-actions{border-top:1px solid var(--border-subtle);padding-top:var(--ui-space-sm)}.more-project-actions>summary{color:var(--text-muted);font-size:var(--type-caption)}.recents-card{min-width:0;border-left:1px solid var(--border-subtle);padding-left:var(--ui-space-xl)}.recents-card>header{display:flex;justify-content:space-between;gap:var(--ui-space-sm);align-items:center;flex-wrap:wrap;padding-block:var(--ui-space-sm);border-bottom:1px solid var(--border-subtle)}.recents-card>header>div{display:flex;gap:var(--ui-space-sm)}.recents-card>header small{color:var(--text-muted)}.recent-list>article{display:flex;align-items:center;gap:var(--ui-space-sm);border-bottom:1px solid var(--border-subtle)}.recent-main{flex:1;min-width:0;display:grid;grid-template-columns:var(--ui-control-height) minmax(0,1fr) auto;gap:var(--ui-space-sm);align-items:center;text-align:left;padding-block:var(--ui-space-sm);border:0;border-radius:0;background:transparent}.recent-mark{color:var(--accent);font-weight:600}.recent-main strong,.recent-main small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.recent-main small,.recent-main em{color:var(--text-muted);font-size:var(--type-caption);font-style:normal}.empty-recents{padding:var(--ui-space-lg);color:var(--text-muted)}.project-manager>footer{display:flex;justify-content:space-between;gap:var(--ui-space-lg);padding:var(--ui-space-sm) var(--ui-space-lg);border-top:1px solid var(--border-subtle);font-size:var(--type-caption);color:var(--text-muted)}
-.creation-dialog :deep(.ui-dialog){width:min(120ch,calc(100vw - var(--ui-space-xl)));max-height:calc(100vh - var(--ui-space-xl))}.creation-card{min-width:0;display:grid;gap:var(--ui-space-sm)}.creation-card>header{display:grid;grid-template-columns:1fr 2fr;gap:var(--ui-space-sm);align-items:center}.creation-card>header>div{display:none}.creation-card>header>label{grid-column:1/-1}.creation-card>header label,.project-location{display:grid;grid-template-columns:18ch minmax(0,1fr);align-items:center;gap:var(--ui-space-sm)}.project-location small{grid-column:2;color:var(--text-muted);font-size:var(--type-caption)}.template-categories{display:flex;gap:var(--ui-space-xs);overflow-x:auto;border-bottom:1px solid var(--border-subtle)}.template-categories button{display:flex;align-items:center;gap:var(--ui-space-xs);flex:none;border-color:transparent;border-radius:0;background:transparent}.template-categories small{color:var(--text-muted)}.category-description{font-size:var(--type-caption);color:var(--text-muted);margin:0}.template-library-tools{display:flex;align-items:center;gap:var(--ui-space-sm);flex-wrap:wrap}.template-library-tools>label{display:flex;align-items:center;gap:var(--ui-space-xs);min-width:0}.template-library-tools>label:first-child{flex:1}.template-library-tools input{min-width:12ch;width:100%}.template-library-tools>label>span{font-size:var(--type-caption);color:var(--text-muted)}.template-results{display:flex;justify-content:space-between;align-items:center;font-size:var(--type-caption);color:var(--text-muted)}.creation-library{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(24ch,1fr);gap:var(--ui-space-lg);min-height:0}.template-grid{display:flex;flex-direction:column;max-height:40vh;overflow:auto;gap:0;border-block:1px solid var(--border-subtle)}.template-grid>button{position:relative;display:grid;grid-template-columns:84px minmax(0,1fr);gap:var(--ui-space-xs) var(--ui-space-sm);text-align:left;padding:var(--ui-space-sm);border:0;border-bottom:1px solid var(--border-subtle);border-radius:0;background:transparent;flex:none}.template-grid>button.selected{background:var(--selection-bg)}.template-preview{grid-row:1/4;align-self:center;display:block}.template-preview img{width:84px;height:auto;aspect-ratio:16/9;object-fit:cover}.template-preview>small,.template-requirements,.feature-list{display:none}.template-grid>button>strong,.template-grid>button>small{min-width:0;white-space:normal}.template-grid>button>small{color:var(--text-muted);font-size:var(--type-caption)}.template-meta{display:flex;gap:var(--ui-space-sm);font-size:var(--type-caption);color:var(--text-muted)}.template-meta b{font-weight:500}.template-details{max-height:40vh;overflow:auto;padding-inline-start:var(--ui-space-sm);border-left:1px solid var(--border-subtle)}.template-details>header{display:grid;gap:var(--ui-space-xs)}.template-details small,.template-details p{font-size:var(--type-caption);color:var(--text-muted);overflow-wrap:anywhere}.template-instructions h3{font-size:var(--type-dense)}.template-help{display:flex;gap:var(--ui-space-xs);flex-wrap:wrap}.template-selection{margin:0;font-size:var(--type-caption);color:var(--text-muted)}.create-button{justify-self:end}.error,.path-error,.lock-warning{color:var(--danger)}.template-empty{padding:var(--ui-space-sm);color:var(--text-muted)}
+.project-manager { height: 100%; min-height: 0; display: flex; flex-direction: column; background: var(--surface-app); color: var(--text-primary); overflow: auto; }
+.manager-header { display: flex; justify-content: space-between; align-items: center; gap: var(--ui-space-lg); padding: var(--ui-space-sm) var(--ui-launcher-inset); border-bottom: var(--ui-border-width) solid var(--border-separator); background: var(--surface-panel); flex: none; }
+.identity { display: flex; align-items: center; gap: var(--ui-space-sm); text-decoration: none; color: var(--text-primary); }
+.identity .nova-mark { color: var(--brand-accent); }
+.manager-header nav { display: flex; align-items: center; gap: var(--ui-space-sm); min-width: 0; flex-wrap: wrap; justify-content: flex-end; }
+.manager-header select { width: auto; }
+.version { color: var(--text-muted); font-size: var(--type-caption); white-space: nowrap; }
+.manager-shell { width: min(var(--ui-launcher-width),100%); margin-inline: auto; display: grid; grid-template-columns: minmax(0,var(--ui-launcher-column)) minmax(0,1fr); gap: var(--ui-launcher-gap); padding: var(--ui-launcher-inset); flex: 1; align-content: start; }
+.welcome { min-width: 0; }
+.welcome-intro { position: relative; isolation: isolate; overflow: hidden; display: grid; gap: var(--ui-space-sm); padding: var(--ui-space-xl); border-radius: var(--radius-launch); background: var(--brand-gradient); }
+.welcome-intro > :not(.welcome-motif) { position: relative; z-index: 1; }
+.welcome-brand { display: flex; align-items: center; gap: var(--ui-space-sm); margin-block-end: var(--ui-space-md); }
+.welcome-brand .nova-mark { inline-size: var(--ui-brand-hero-size); block-size: var(--ui-brand-hero-size); color: var(--brand-accent); }
+.welcome-brand strong { font-family: var(--font-display); font-size: var(--type-page); }
+.welcome-eyebrow { color: var(--text-muted); font-size: var(--type-caption); }
+.welcome h1 { font-family: var(--font-display); font-size: var(--type-hero); font-weight: 600; line-height: var(--line-control); overflow-wrap: anywhere; text-wrap: balance; }
+.welcome-description { color: var(--text-secondary); font-size: var(--type-dense); line-height: var(--line-body); }
+.welcome-motif { position: absolute; z-index: 0; inset-block-start: 0; inset-inline-end: calc(-1 * var(--ui-space-xl)); inline-size: var(--ui-launcher-motif-size); block-size: var(--ui-launcher-motif-size); max-inline-size: 80%; opacity: var(--brand-motif-opacity); pointer-events: none; }
+.motif-grid { stroke: var(--brand-line); stroke-width: 1; opacity: var(--disabled-opacity); }
+.motif-vector { stroke: var(--brand-line); stroke-width: 1.5; }
+.motif-node { fill: var(--brand-accent); }
+.quick-actions { display: flex; flex-direction: column; gap: var(--ui-space-sm); margin-block: var(--ui-space-lg); }
+.quick-actions button { text-align: left; justify-content: flex-start; }
+.main-project-actions > button { min-height: var(--ui-standard-height); padding-inline: var(--ui-space-md); }
+.open-project { background: var(--surface-2); }
+.more-project-actions { padding-block-start: var(--ui-space-sm); border-top: var(--ui-border-width) solid var(--border-separator); }
+.more-project-actions > summary { color: var(--text-muted); font-size: var(--type-caption); }
+.recents-card { min-width: 0; padding-block-start: var(--ui-space-md); }
+.recents-card > header { display: flex; justify-content: space-between; gap: var(--ui-space-sm); align-items: center; flex-wrap: wrap; padding-block: var(--ui-space-sm) var(--ui-space-md); border-bottom: var(--ui-border-width) solid var(--border-separator); }
+.recents-card > header > div { display: flex; gap: var(--ui-space-sm); align-items: baseline; font-size: var(--type-section); }
+.recents-card > header > div > strong { font-size: var(--type-caption); color: var(--text-muted); }
+.recents-card > header small { flex-basis: 100%; color: var(--text-muted); font-size: var(--type-caption); }
+.recent-list > article { display: flex; align-items: center; gap: var(--ui-space-sm); border-bottom: var(--ui-border-width) solid var(--border-separator); }
+.recent-main { flex: 1; min-width: 0; display: grid; grid-template-columns: var(--ui-standard-height) minmax(0,1fr) auto; gap: var(--ui-space-sm); align-items: center; text-align: left; padding: var(--ui-space-md) var(--ui-space-xs); border: 0; border-radius: var(--radius-control); background: transparent; }
+.recent-mark { display: grid; place-items: center; inline-size: var(--ui-standard-height); block-size: var(--ui-standard-height); color: var(--accent); background: var(--accent-soft); border-radius: var(--radius-control); font-weight: 600; }
+.recent-main strong,.recent-main small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.recent-main small,.recent-main em { color: var(--text-muted); font-size: var(--type-caption); font-style: normal; }
+.empty-recents { display: flex; align-items: flex-start; gap: var(--ui-space-md); padding: var(--ui-empty-inset) var(--ui-space-xs); color: var(--text-muted); font-size: var(--type-dense); }
+.empty-recents > .editor-icon { color: var(--accent); margin-block-start: var(--ui-space-micro); }
+.empty-recents p { max-inline-size: 44ch; overflow-wrap: anywhere; }
+.project-manager > footer { display: flex; justify-content: space-between; gap: var(--ui-space-lg); padding: var(--ui-space-sm) var(--ui-launcher-inset); border-top: var(--ui-border-width) solid var(--border-separator); font-size: var(--type-caption); color: var(--text-muted); }
+
+.creation-dialog :deep(.ui-dialog){width:min(120ch,100%);max-height:calc(100vh - var(--ui-space-xl))}.creation-card{min-width:0;display:grid;gap:var(--ui-space-sm)}.creation-card>header{display:grid;grid-template-columns:1fr 2fr;gap:var(--ui-space-sm);align-items:center}.creation-card>header>div{display:none}.creation-card>header>label{grid-column:1/-1}.creation-card>header label,.project-location{display:grid;grid-template-columns:18ch minmax(0,1fr);align-items:center;gap:var(--ui-space-sm)}.project-location small{grid-column:2;color:var(--text-muted);font-size:var(--type-caption)}.template-categories{display:flex;gap:var(--ui-space-xs);overflow-x:auto;border-bottom:1px solid var(--border-subtle)}.template-categories button{display:flex;align-items:center;gap:var(--ui-icon-label-gap);flex:none;border-color:transparent;border-radius:var(--radius-xs) var(--radius-xs) 0 0;background:transparent}.template-categories small{color:var(--text-muted)}.category-description{font-size:var(--type-caption);color:var(--text-muted);margin:0}.template-library-tools{display:flex;align-items:center;gap:var(--ui-space-sm);flex-wrap:wrap}.template-library-tools>label{display:flex;align-items:center;gap:var(--ui-space-xs);min-width:0}.template-library-tools>label:first-child{flex:1 1 auto}.template-library-tools input{flex:1 1 auto;min-width:12ch;width:auto}.template-library-tools>label>span{flex:none;white-space:nowrap;font-size:var(--type-caption);color:var(--text-muted)}.template-results{display:flex;justify-content:space-between;align-items:center;font-size:var(--type-caption);color:var(--text-muted)}.creation-library{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(24ch,1fr);gap:var(--ui-space-lg);min-height:0}.template-grid{display:flex;flex-direction:column;max-height:40vh;overflow:auto;gap:0;border-block:1px solid var(--border-subtle)}.template-grid>button{position:relative;display:grid;grid-template-columns:84px minmax(0,1fr);gap:var(--ui-space-xs) var(--ui-space-sm);text-align:left;padding:var(--ui-space-sm);border:0;border-bottom:1px solid var(--border-subtle);border-radius:0;background:transparent;flex:none}.template-grid>button.selected{background:var(--selection-bg)}.template-preview{grid-row:1/4;align-self:center;display:block}.template-preview img{width:84px;height:auto;aspect-ratio:16/9;object-fit:cover;border-radius:var(--radius-xs)}.template-preview>small,.template-requirements,.feature-list{display:none}.template-grid>button>strong,.template-grid>button>small{min-width:0;white-space:normal}.template-grid>button>small{color:var(--text-muted);font-size:var(--type-caption)}.template-meta{display:flex;gap:var(--ui-space-sm);font-size:var(--type-caption);color:var(--text-muted)}.template-meta b{font-weight:500}.template-details{max-height:40vh;overflow:auto;padding-inline-start:var(--ui-space-sm);border-left:1px solid var(--border-subtle)}.template-details>header{display:grid;gap:var(--ui-space-xs);margin-block-end:var(--ui-space-sm)}.template-details small,.template-details p{font-size:var(--type-caption);color:var(--text-muted);overflow-wrap:anywhere}.template-instructions{display:grid;gap:var(--ui-space-sm);margin-block:var(--ui-space-md)}.template-instructions h3{font-size:var(--type-dense);margin-block-end:var(--ui-space-xs)}.template-help{display:flex;gap:var(--ui-space-xs);flex-wrap:wrap}.template-selection{margin:0;font-size:var(--type-caption);color:var(--text-muted)}.create-button{justify-self:end}.error,.path-error,.lock-warning{color:var(--danger)}.template-empty{padding:var(--ui-space-sm);color:var(--text-muted)}
 .upgrade-dialog{display:grid;gap:var(--ui-space-sm)}.upgrade-flow,.upgrade-stats{display:flex;gap:var(--ui-space-sm);flex-wrap:wrap;align-items:center}.compatibility-summary{display:grid;gap:var(--ui-space-xs)}.preflight>div{display:flex;gap:var(--ui-space-sm);align-items:center;border-bottom:1px solid var(--border-subtle)}.preflight p{display:grid;gap:var(--ui-space-xs)}.preflight small{color:var(--text-muted)}.preflight .passed{color:var(--success)}.preflight .blocked{color:var(--danger)}.preflight .warning{color:var(--warning)}.backup-choice{display:flex;gap:var(--ui-space-sm);align-items:center}.upgrade-dialog>footer{display:flex;justify-content:flex-end;gap:var(--ui-space-xs);flex-wrap:wrap}.read-only-dialog textarea{height:45vh;width:100%;font-family:var(--font-mono)}
-@media(max-width:720px){.manager-shell{grid-template-columns:minmax(0,1fr);padding:var(--ui-space-lg)}.quick-actions{flex-direction:row;flex-wrap:wrap}.recents-card{border-left:0;padding-left:0}.creation-library{grid-template-columns:minmax(0,1fr)}.template-details{border-left:0;max-height:30vh}.creation-card>header label,.project-location{grid-template-columns:minmax(0,1fr)}.project-location small{grid-column:1}.manager-header .version{display:none}}
+@media(max-width:720px){.manager-shell{grid-template-columns:minmax(0,1fr);gap:var(--ui-space-lg);padding:var(--ui-space-lg)}.manager-header,.project-manager>footer{padding-inline:var(--ui-space-lg)}.welcome-intro{padding:var(--ui-space-lg)}.main-project-actions{max-inline-size:var(--ui-launcher-column)}.recents-card{padding:0}.creation-library{grid-template-columns:minmax(0,1fr)}.template-details{border-left:0;max-height:30vh}.creation-card>header label,.project-location{grid-template-columns:minmax(0,1fr)}.project-location small{grid-column:1}.manager-header .version{display:none}}
 </style>

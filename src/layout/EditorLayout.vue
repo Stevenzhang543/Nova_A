@@ -11,13 +11,13 @@
 
     <div class="editor-main" :data-maximized-panel="workspaceState.maximizedPanel">
       <SideBar v-show="!state.distractionFree" :inert="Boolean(workspaceState.maximizedPanel)" />
-      <div v-show="!state.distractionFree" class="dock-group left-dock" :class="{ split: workspaceState.splitDocking }" :data-drop-target="dragTarget === 'left'" @dragover.prevent="dragTarget = 'left'" @dragleave="dragTarget = ''" @drop="dropPanel('left')">
+      <div v-show="!state.distractionFree" class="dock-group left-dock" :class="{ split: workspaceState.splitDocking }" :data-drop-target="dragTarget === 'left'" @dragover="previewPanelDrop($event, 'left')" @dragleave="leavePanelDrop" @drop="dropPanel($event, 'left')">
         <template v-for="panel in workspaceState.panelOrder" :key="panel">
           <SceneSideBar :inert="Boolean(workspaceState.maximizedPanel && workspaceState.maximizedPanel !== 'hierarchy')" v-if="panel === 'hierarchy' && state.hierarchyDock === 'left' && !isFloating('hierarchy')" v-show="showHierarchy" dock="left" draggable="true" @pointerdown.capture="preparePanelDrag" @dragstart="startPanelDrag($event, 'hierarchy')" @dragend="endPanelDrag" />
           <ConfigPanel :inert="Boolean(workspaceState.maximizedPanel && workspaceState.maximizedPanel !== 'inspector')" v-else-if="panel === 'inspector' && inspectorLoaded && state.inspectorDock === 'left' && !isFloating('inspector')" v-show="showInspector" dock="left" draggable="true" @pointerdown.capture="preparePanelDrag" @dragstart="startPanelDrag($event, 'inspector')" @dragend="endPanelDrag" />
         </template>
       </div>
-      <div class="editor-workspace" :inert="Boolean(workspaceState.maximizedPanel && workspaceState.maximizedPanel !== 'bottom')" :data-drop-target="dragTarget === 'floating'" @dragover.prevent="dragTarget = 'floating'" @dragleave="dragTarget = ''" @drop="dropPanel('floating')">
+      <div class="editor-workspace" :inert="Boolean(workspaceState.maximizedPanel && workspaceState.maximizedPanel !== 'bottom')" :data-drop-target="dragTarget === 'floating'" @dragover="previewPanelDrop($event, 'floating')" @dragleave="leavePanelDrop" @drop="dropPanel($event, 'floating')">
         <SceneTabs :inert="workspaceState.maximizedPanel === 'bottom'" v-show="state.currentPage === 'scene' && state.activeWorkspace === 'design' && !state.distractionFree" />
         <div class="editor-content" :inert="workspaceState.maximizedPanel === 'bottom'">
           <div :class="['persistent-viewport', `${state.currentPage}-view`, { inactive: displayedWorkspace !== 'canvas' }]">
@@ -28,7 +28,7 @@
         </div>
         <KeepAlive><EditorBottomPanel v-if="state.currentPage !== 'settings' && state.currentPage !== 'manage' && state.currentPage !== 'script' && state.bottomPanelVisible && !state.distractionFree" /></KeepAlive>
       </div>
-      <div v-show="!state.distractionFree" class="dock-group right-dock" :class="{ split: workspaceState.splitDocking }" :data-drop-target="dragTarget === 'right'" @dragover.prevent="dragTarget = 'right'" @dragleave="dragTarget = ''" @drop="dropPanel('right')">
+      <div v-show="!state.distractionFree" class="dock-group right-dock" :class="{ split: workspaceState.splitDocking }" :data-drop-target="dragTarget === 'right'" @dragover="previewPanelDrop($event, 'right')" @dragleave="leavePanelDrop" @drop="dropPanel($event, 'right')">
         <template v-for="panel in workspaceState.panelOrder" :key="panel">
           <SceneSideBar :inert="Boolean(workspaceState.maximizedPanel && workspaceState.maximizedPanel !== 'hierarchy')" v-if="panel === 'hierarchy' && state.hierarchyDock === 'right' && !isFloating('hierarchy')" v-show="showHierarchy" dock="right" draggable="true" @pointerdown.capture="preparePanelDrag" @dragstart="startPanelDrag($event, 'hierarchy')" @dragend="endPanelDrag" />
           <ConfigPanel :inert="Boolean(workspaceState.maximizedPanel && workspaceState.maximizedPanel !== 'inspector')" v-else-if="panel === 'inspector' && inspectorLoaded && state.inspectorDock === 'right' && !isFloating('inspector')" v-show="showInspector" dock="right" draggable="true" @pointerdown.capture="preparePanelDrag" @dragstart="startPanelDrag($event, 'inspector')" @dragend="endPanelDrag" />
@@ -66,7 +66,8 @@ import CreatorOnboarding from "../components/CreatorOnboarding.vue"
 import WorldCanvas from "../components/WorldCanvas.vue"
 import LayerBar from "../components/LayerBar.vue"
 import UiAsyncWorkspace from '../ui/components/UiAsyncWorkspace.vue'
-import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { animatePresence, beginNativeDrag, cancelMotion, endNativeDrag } from '../ui/motion'
 import { editorState as state, closeContextMenu } from "../store/editor"
 import { physicsState } from '../store/physics'
 import { dockEditorPanel, initializeEditorWorkspaces, restorePanelLayout, workspaceState } from '../editor/workspaces'
@@ -124,6 +125,8 @@ onBeforeUnmount(/** 卸载时取消预热并移除一次性输入监听。 */ ()
   cancelWarmupForInput()
   window.removeEventListener('pointerdown', cancelWarmupForInput)
   window.removeEventListener('keydown', cancelWarmupForInput)
+  endPanelDrag()
+  for (const element of document.querySelectorAll<HTMLElement>('.floating-dock')) cancelMotion(element)
 })
 const draggedPanel = ref<'hierarchy' | 'inspector' | ''>(''), dragTarget = ref('')
 /** 检查指定面板是否为浮动面板。 */ function isFloating(panel: 'hierarchy' | 'inspector'): boolean { return workspaceState.floatingPanels.includes(panel) }
@@ -131,9 +134,12 @@ let panelDragFromControl = false
 /** 记录拖拽起点是否为交互控件，避免控件操作误触面板拖动。 */ function preparePanelDrag(event: PointerEvent): void {
   panelDragFromControl = event.target instanceof Element && Boolean(event.target.closest('input,textarea,select,button,a,[role="slider"],[contenteditable="true"]'))
 }
-/** 只允许面板本体且非交互控件开始拖动，并设置面板拖拽数据。 */ function startPanelDrag(event: DragEvent, panel: 'hierarchy' | 'inspector'): void { if (panelDragFromControl) { event.preventDefault(); return } if (event.target !== event.currentTarget) return; draggedPanel.value = panel; event.dataTransfer?.setData('application/x-nova-panel', panel) }
-/** 清除面板拖动及目标状态。 */ function endPanelDrag(): void { draggedPanel.value = ''; dragTarget.value = '' }
-/** 有拖动面板时停靠到目标区域，然后清除拖动状态。 */ function dropPanel(destination: 'left' | 'right' | 'floating'): void { if (draggedPanel.value) dockEditorPanel(draggedPanel.value, destination); draggedPanel.value = ''; dragTarget.value = '' }
+/** Only a panel's own drag may be blocked by its control guard; nested hierarchy drags keep their payload. */ function startPanelDrag(event: DragEvent, panel: 'hierarchy' | 'inspector'): void { if (event.target !== event.currentTarget) return; if (panelDragFromControl) { event.preventDefault(); return } draggedPanel.value = panel; event.dataTransfer?.setData('application/x-nova-panel', panel); if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move'; beginNativeDrag(event, t(panel)) }
+/** Other payloads keep their own resource/hierarchy targets, without false docking previews. */
+function previewPanelDrop(event: DragEvent, destination: 'left' | 'right' | 'floating') { if (!draggedPanel.value || !event.dataTransfer?.types.includes('application/x-nova-panel')) return; event.preventDefault(); dragTarget.value = destination; event.dataTransfer.dropEffect = 'move' }
+function leavePanelDrop(event: DragEvent) { if (!(event.currentTarget as HTMLElement).contains(event.relatedTarget as Node | null)) dragTarget.value = '' }
+/** 清除面板拖动及目标状态。 */ function endPanelDrag(): void { draggedPanel.value = ''; dragTarget.value = ''; endNativeDrag() }
+/** Commit docking first, then settle only a newly floating surface. */ function dropPanel(event: DragEvent, destination: 'left' | 'right' | 'floating'): void { if (!draggedPanel.value || !event.dataTransfer?.types.includes('application/x-nova-panel')) return; event.preventDefault(); const panel = draggedPanel.value; dockEditorPanel(panel, destination); endPanelDrag(); if (destination === 'floating') void nextTick(() => { const element = document.querySelector<HTMLElement>(panel === 'hierarchy' ? '.hierarchy-float' : '.inspector-float'); if (element) animatePresence(element, 'enter', undefined, { preset: 'elastic', duration: 'standard', distance: 4, scale: 1 }) }) }
 </script>
 
 <style scoped>

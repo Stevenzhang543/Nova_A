@@ -1,0 +1,77 @@
+{
+  "generatedAt": "2026-10-01T18:45:19.546Z",
+  "packageVersion": "26.34.0",
+  "indexSha256": "90cd07df40f512b882c6ced5c8207d54782c788011dbcd9afae8634045b59082",
+  "captures": [
+    "v26.34-motion-baseline-launcher.png",
+    "v26.34-motion-baseline-editor.png"
+  ],
+  "capabilities": {
+    "backdropFilter": true,
+    "webAnimations": true,
+    "pointerEvent": true,
+    "resizeObserver": true,
+    "requestAnimationFrame": true,
+    "reducedMotion": false,
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/147.0.0.0 Safari/537.36 Edg/147.0.0.0",
+    "navigation": [
+      {
+        "domContentLoadedMs": 213.8999999994412,
+        "loadMs": 245.5
+      }
+    ],
+    "tokens": {
+      "--motion-control": "80ms",
+      "--motion-panel": "0ms",
+      "--motion-dialog": "0ms"
+    }
+  },
+  "metrics": [
+    {
+      "name": "launcher-idle",
+      "durationMs": 1503.4,
+      "frameCount": 362,
+      "p50FrameIntervalMs": 4.199999999999818,
+      "p95FrameIntervalMs": 4.200000000000273,
+      "maxFrameIntervalMs": 4.300000000000182,
+      "longTasks": [],
+      "shellMissingFrames": 0,
+      "shellReplacementFrames": 0,
+      "activeAnimations": 0,
+      "counterDelta": {
+        "TaskDuration": 0.02202,
+        "ScriptDuration": 0.004568,
+        "LayoutDuration": 0,
+        "RecalcStyleDuration": 0,
+        "LayoutCount": 0,
+        "RecalcStyleCount": 0,
+        "JSHeapUsedSize": 64344,
+        "Nodes": 0
+      },
+      "endHeapBytes": 6145728
+    },
+    {
+      "name": "editor-idle",
+      "durationMs": 1512.0000000007449,
+      "frameCount": 59,
+      "p50FrameIntervalMs": 25,
+      "p95FrameIntervalMs": 33.30000000000018,
+      "maxFrameIntervalMs": 33.30000000000018,
+      "longTasks": [],
+      "shellMissingFrames": 0,
+      "shellReplacementFrames": 0,
+      "activeAnimations": 0,
+      "counterDelta": {
+        "TaskDuration": 0.3365119999999999,
+        "ScriptDuration": 0.312182,
+        "LayoutDuration": 0,
+        "RecalcStyleDuration": 0,
+        "LayoutCount": 0,
+        "RecalcStyleCount": 0,
+        "JSHeapUsedSize": 7955388,
+        "Nodes": 0
+      },
+      "endHeapBytes": 55929460
+    }
+  ]
+}

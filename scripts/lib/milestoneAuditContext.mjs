@@ -7,11 +7,11 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 
 /** Qualification uses the integrated version only; staged overlays require explicit development authorization. */
 /** 校验版本及开发或资格模式，解析源码、构建和报告路径并生成审计上下文。 */ export function resolveMilestoneAuditContext(moduleUrl, { release, reportName, argv = process.argv.slice(2), env = process.env } = {}) {
-  assert.match(release, /^26\.(?:1[3-9]|2[0-9]|30)$/); assert.match(reportName, /^[a-z0-9-]+$/)
+  assert.match(release, /^26\.(?:1[3-9]|2[0-9]|3[0-5])$/); assert.match(reportName, /^[a-z0-9-]+$/)
   const scriptRoot = dirname(dirname(fileURLToPath(moduleUrl))), option = /* 调用 argv.find(value => value.startsWith(`--${name}=`))?.slice(name.length + 3) 并返回调用结果。 */ name => argv.find(/* 调用 value.startsWith(`--${name}=`) 并返回调用结果。 */ value => value.startsWith(`--${name}=`))?.slice(name.length + 3)
   const regressionOrigin = release, target = option('qualification-release')
   if (target) {
-    assert.match(target, /^26\.(?:2[0-9]|30)$/, 'Integrated regression targets are 26.20 through 26.30')
+    assert.match(target, /^26\.(?:2[0-9]|3[0-5])$/, 'Integrated regression targets are 26.20 through 26.35')
     assert.ok(Number(release.split('.')[1]) <= Number(target.split('.')[1]), 'Cannot qualify a future suite')
     release = target
   }

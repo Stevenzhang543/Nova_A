@@ -1,0 +1,58 @@
+{
+  "format": "nova-v26.34-render-media-audit",
+  "version": 1,
+  "release": "26.34",
+  "engineVersion": "26.33.0",
+  "generatedAt": "2026-10-01T17:17:08.871Z",
+  "status": "failed",
+  "scope": "Actual production camera/particle and entity serializer modules; inert browser host. This does not qualify GPU pixels or physical audio.",
+  "checks": [
+    {
+      "name": "Editing one-shot preview preserves authored emitter serialization",
+      "status": "failed",
+      "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\nfalse !== true\n\n    at file:///E:/Nova_A/scripts/verify-v26.34-render-media.mjs:19:238\n    at test (file:///E:/Nova_A/scripts/verify-v26.34-render-media.mjs:17:108)\n    at file:///E:/Nova_A/scripts/verify-v26.34-render-media.mjs:19:8"
+    },
+    {
+      "name": "Runtime one-shot emits once without rewriting autoplay; reset replays the same particles",
+      "status": "failed",
+      "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\nfalse !== true\n\n    at file:///E:/Nova_A/scripts/verify-v26.34-render-media.mjs:20:408\n    at test (file:///E:/Nova_A/scripts/verify-v26.34-render-media.mjs:17:108)\n    at file:///E:/Nova_A/scripts/verify-v26.34-render-media.mjs:20:8"
+    },
+    {
+      "name": "One-shot retains its initial rate window and looping emitters continue accumulating",
+      "status": "passed"
+    },
+    {
+      "name": "Disabled autoplay and disabled editor preview stay inert",
+      "status": "passed"
+    },
+    {
+      "name": "Fullscreen camera retains the existing centered margin convention",
+      "status": "passed"
+    },
+    {
+      "name": "Camera horizontal dead zone follows actual subviewport width and zoom",
+      "status": "failed",
+      "error": "AssertionError [ERR_ASSERTION]: 0 != 0.75\n    at near (file:///E:/Nova_A/scripts/verify-v26.34-render-media.mjs:11:55)\n    at file:///E:/Nova_A/scripts/verify-v26.34-render-media.mjs:24:232\n    at test (file:///E:/Nova_A/scripts/verify-v26.34-render-media.mjs:17:108)\n    at file:///E:/Nova_A/scripts/verify-v26.34-render-media.mjs:24:8"
+    },
+    {
+      "name": "Offset short viewport dead zone follows viewport height without shifting camera world origin",
+      "status": "failed",
+      "error": "AssertionError [ERR_ASSERTION]: 0 != 1.5\n    at near (file:///E:/Nova_A/scripts/verify-v26.34-render-media.mjs:11:55)\n    at file:///E:/Nova_A/scripts/verify-v26.34-render-media.mjs:25:262\n    at test (file:///E:/Nova_A/scripts/verify-v26.34-render-media.mjs:17:108)\n    at file:///E:/Nova_A/scripts/verify-v26.34-render-media.mjs:25:8"
+    },
+    {
+      "name": "Rotated camera applies dead zones in the same axes as its rendered viewport",
+      "status": "failed",
+      "error": "AssertionError [ERR_ASSERTION]: 0 != 0.75\n    at near (file:///E:/Nova_A/scripts/verify-v26.34-render-media.mjs:11:55)\n    at file:///E:/Nova_A/scripts/verify-v26.34-render-media.mjs:26:260\n    at test (file:///E:/Nova_A/scripts/verify-v26.34-render-media.mjs:17:108)\n    at file:///E:/Nova_A/scripts/verify-v26.34-render-media.mjs:26:8"
+    },
+    {
+      "name": "Camera reads do not advance smoothing and reset uses the current target",
+      "status": "passed"
+    }
+  ],
+  "sourceHashes": {
+    "src/runtime/particles.ts": "590768600bb05e4b460443205d1d10c8755aed9966a4e1a9da220e41dcea0f1e",
+    "src/renderer/cameraMath.ts": "bd36442764c93247536e02703a0a32d8838b874f475bfbf2bc44257e43776150",
+    "src/renderer/sceneRenderer.ts": "c556cd6c55c749f49c433dad8d597b989376cd0e8feeff3811529766de4905a2",
+    "scripts/verify-v26.34-render-media.mjs": "57764fb61b8ccaa02c9b0610e5d13e996d298b7ac919af9a80678e6dfacc78ca"
+  }
+}

@@ -13,6 +13,7 @@ const files=owned.map(file=>{
   const ast=ts.createSourceFile(file,script,ts.ScriptTarget.Latest,true)
   for(const n of ast.statements){
    if(ts.isImportDeclaration(n)&&ts.isStringLiteral(n.moduleSpecifier))imports.push(n.moduleSpecifier.text)
+   if(ts.isVariableStatement(n))for(const declaration of n.declarationList.declarations)if(ts.isIdentifier(declaration.name))symbols.push({name:declaration.name.text,kind:'VariableDeclaration',exported:!!n.modifiers?.some(m=>m.kind===ts.SyntaxKind.ExportKeyword)})
    if(n.name&&ts.isIdentifier(n.name))symbols.push({name:n.name.text,kind:ts.SyntaxKind[n.kind],exported:!!n.modifiers?.some(m=>m.kind===ts.SyntaxKind.ExportKeyword)})
   }
  }else if(file.endsWith('.rs')){

@@ -411,7 +411,18 @@ watch(/* 比较 renderingSettings.antiAliasing 与 'Off'，返回严格相等的
 }
 
 /** 将鼠标窗口坐标转换为画布逻辑坐标。 */ function screenPos(e: MouseEvent): Vec2 { const r = canvasRef.value!.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top } }
-/** 游戏视图转发滚轮到控件，编辑视图以指针为中心缩放。 */ function onWheel(e: WheelEvent) { wakeFrameLoop(); markPerformanceInput(); e.preventDefault(); if (editorState.currentPage === 'game') { gameUiRuntime.wheel(screenPos(e), e.deltaX, e.deltaY); return } const factor = Math.pow(1.1, prefs.zoomSensitivity); camera.zoomAt(screenPos(e), e.deltaY < 0 ? factor : 1 / factor) }
+/** Game controls own handled scroll; otherwise sample gameplay once before suppressing browser scroll. */
+function onWheel(e: WheelEvent) {
+  wakeFrameLoop(); markPerformanceInput()
+  if (e.defaultPrevented) return
+  if (editorState.currentPage === 'game') {
+    if (!gameUiRuntime.wheel(screenPos(e), e.deltaX, e.deltaY) && state.playMode !== 'editing') gameplayRuntime.input.onWheel(e)
+  } else {
+    const factor = Math.pow(1.1, prefs.zoomSensitivity)
+    camera.zoomAt(screenPos(e), e.deltaY < 0 ? factor : 1 / factor)
+  }
+  e.preventDefault(); e.stopPropagation()
+}
 /** 仅在编辑状态接受携带资源标识的拖放。 */ function onAssetDragOver(event: DragEvent) { if (state.playMode === 'editing' && event.dataTransfer?.types.includes('application/x-nova-asset-guid')) event.preventDefault() }
 /** 在落点实例化预制体，或按导入尺寸、轴心和过滤设置创建精灵并记录历史。 */ function onAssetDrop(event: DragEvent) {
   if (state.playMode !== 'editing') return
@@ -1522,7 +1533,7 @@ const drawTools = new Set(['rectangle', 'circle', 'triangle'])
 <template>
   <div ref="gameSurfaceRef" class="canvas-container" @dragover="onAssetDragOver" @drop="onAssetDrop">
     <canvas :key="renderCanvasKey" ref="renderCanvasRef" class="render-canvas" :style="{ filter: worldPostProcessFilter() }" aria-hidden="true" />
-    <canvas ref="canvasRef" class="overlay-canvas" tabindex="0" :aria-label="editorState.currentPage === 'game' ? t('game') : t('scene')" @touchstart="touchPointer !== null && $event.stopPropagation()" @touchmove="touchPointer !== null && $event.stopPropagation()" @pointerdown="onUiPointerDown" @pointermove="onUiPointerMove" @pointerup="onUiPointerUp" @pointercancel="onUiPointerCancel" @lostpointercapture="onUiPointerCancel" @mousedown="onMouseDown" @mousemove="onMouseMove" @mouseup="onMouseUp" @dblclick="onDoubleClick" @wheel="onWheel" @contextmenu.prevent />
+    <canvas ref="canvasRef" class="overlay-canvas" data-game-input-surface tabindex="0" :aria-label="editorState.currentPage === 'game' ? t('game') : t('scene')" @touchstart="touchPointer !== null && $event.stopPropagation()" @touchmove="touchPointer !== null && $event.stopPropagation()" @pointerdown="onUiPointerDown" @pointermove="onUiPointerMove" @pointerup="onUiPointerUp" @pointercancel="onUiPointerCancel" @lostpointercapture="onUiPointerCancel" @mousedown="onMouseDown" @mousemove="onMouseMove" @mouseup="onMouseUp" @dblclick="onDoubleClick" @wheel="onWheel" @contextmenu.prevent />
     <VirtualControlsOverlay v-if="editorState.currentPage === 'game'" />
     <div v-if="editorState.currentPage === 'game' && accessibilityNodes.length" class="game-ui-a11y" aria-label="Game UI">
       <div

@@ -114,7 +114,7 @@ try {
   const packager = await readFile(join(repo, 'scripts/package-release.ps1'), 'utf8')
   const publishGuard = packager.split(/\r?\n/).find(line => line.includes('throw "Unsafe final release target:'))
   check(publishGuard?.includes('-ne $releaseFolderName'), 'Publication validates the same selected folder name as construction')
-  const guardProbe = `$ErrorActionPreference='Stop'; $releaseRoot=[IO.Path]::GetFullPath('E:/Nova_A/releases'); foreach($releaseFolderName in @('26.33','v26.30')) { $resolvedFinalRelease=Join-Path $releaseRoot $releaseFolderName; $finalReleaseParent=[IO.Path]::GetDirectoryName($resolvedFinalRelease); ${publishGuard}; }; 'Publication folder guards passed'`
+  const guardProbe = `$ErrorActionPreference='Stop'; $releaseRoot=[IO.Path]::GetFullPath('E:/Nova_A/releases'); foreach($releaseFolderName in @('v26.34','26.33','v26.30')) { $resolvedFinalRelease=Join-Path $releaseRoot $releaseFolderName; $finalReleaseParent=[IO.Path]::GetDirectoryName($resolvedFinalRelease); ${publishGuard}; }; 'Publication folder guards passed'`
   check(execFileSync('pwsh.exe', ['-NoProfile','-NonInteractive','-Command',guardProbe], {encoding:'utf8',windowsHide:true}).includes('Publication folder guards passed'), 'Current and historical folder identities pass the actual publication guard')
   const parameters = packager.slice(packager.indexOf('param('), packager.indexOf("$ErrorActionPreference"))
   const manifestRead = packager.split(/\r?\n/).find(/* 调用 /Get-Content -LiteralPath \$snapshotPath -Raw \| ConvertFrom-Json/.test(line) 并返回调用结果。 */ line => /Get-Content -LiteralPath \$snapshotPath -Raw \| ConvertFrom-Json/.test(line))

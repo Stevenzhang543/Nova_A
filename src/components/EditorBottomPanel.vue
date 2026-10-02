@@ -5,8 +5,8 @@
     <header class="panel-tabs">
       <!-- 标签与固定操作分区，长译文只滚动标签，不挤压展开、固定和关闭按钮。 -->
       <select v-model="estate.bottomPanelTab" class="compact-tab-select" :aria-label="t('tools')" @change="estate.bottomPanelOpen = true"><option v-for="tab in tabs" :key="tab.id" :value="tab.id">{{ t(tab.label) }}</option></select>
-      <div class="panel-tab-strip">
-      <button v-for="tab in tabs" :key="tab.id" class="panel-tab" :class="{ active: estate.bottomPanelTab === tab.id }" draggable="true" :aria-pressed="estate.bottomPanelTab === tab.id" @dragstart="draggedTab = tab.id" @dragover.prevent @drop="dropTab(tab.id)" @click="openTab(tab.id)" :title="t(tab.label)"><EditorIcon :name="tab.icon" /><span class="tab-label">{{ t(tab.label) }}</span><i v-if="tabDirty(tab.id)" class="dirty-indicator"></i></button>
+      <div ref="tabStrip" class="panel-tab-strip">
+      <button v-for="tab in tabs" :key="tab.id" class="panel-tab" :class="{ active: estate.bottomPanelTab === tab.id }" :data-ui-drop="dropTabTarget === tab.id ? 'before' : undefined" draggable="true" :aria-pressed="estate.bottomPanelTab === tab.id" @dragstart="startTabDrag($event, tab.id)" @dragend="finishBottomDrag" @dragover="previewTabDrop($event, tab.id)" @dragleave="dropTabTarget = null" @drop="dropTab($event, tab.id)" @click="openTab(tab.id)" :title="t(tab.label)"><EditorIcon :name="tab.icon" /><span class="tab-label">{{ t(tab.label) }}</span><i v-if="tabDirty(tab.id)" class="dirty-indicator"></i></button>
       </div>
       <div class="panel-controls">
       <PanelMaximizeButton v-if="estate.bottomPanelOpen" panel="bottom" />
@@ -27,8 +27,10 @@
             :aria-label="folder"
             :style="{ paddingInlineStart: `${7 + Math.min(4, Math.max(0, folder.split('/').filter(Boolean).length - 1)) * 10}px` }"
             :class="{ active: assets.currentFolder === folder }"
+            :data-ui-drop="dropFolder === folder ? folderDropValid ? 'valid' : 'invalid' : undefined"
             @click="assets.currentFolder = folder"
-            @dragover.prevent
+            @dragover="previewFolderDrop($event, folder)"
+            @dragleave="leaveFolderDrop($event, folder)"
             @drop="dropOnFolder($event, folder)"
           ><EditorIcon name="forward" /><span class="folder-label">{{ folder.split('/').filter(Boolean).at(-1) ?? folder }}</span></button>
         </aside>
@@ -117,6 +119,7 @@
               @keydown.space.self.prevent="assets.selectedGuid = asset.uuid"
               draggable="true"
               @dragstart="dragAsset($event, asset.uuid)"
+              @dragend="finishBottomDrag"
               @click="assets.selectedGuid = asset.uuid"
               @dblclick="openAssetEditor(asset.uuid)"
             >
@@ -209,6 +212,7 @@
           </template>
           <template v-else-if="selectedAsset.assetType === 'font'">
             <label><span>{{ t('fontFamily') }}</span><b :style="{ fontFamily: selectedAsset.fontFamily }">Nova_A</b></label>
+            <p class="drag-hint" role="note" data-audit="font-rendering-availability">{{ fontImportAvailabilityCopy() }}</p>
             <label><span>{{ t('fontRenderMode') }}</span><select v-model="selectedAsset.settings.fontSettings.renderMode"><option>Scalable</option><option>Bitmap</option></select></label>
             <label v-if="selectedAsset.settings.fontSettings.renderMode === 'Bitmap'"><span>{{ t('bitmapSize') }}</span><NumericExpressionInput v-model="selectedAsset.settings.fontSettings.bitmapSize" :minimum="6" :maximum="512" :resource-key="selectedAsset.uuid + ':settings.fontSettings.bitmapSize'" /></label>
             <label><span>{{ t('fontOutline') }}</span><NumericExpressionInput v-model="selectedAsset.settings.fontSettings.outlineWidth" :minimum="0" :maximum="32" :step="0.25" :resource-key="selectedAsset.uuid + ':settings.fontSettings.outlineWidth'" /></label>
@@ -314,7 +318,7 @@
 
 <script setup lang="ts">
 import NumericExpressionInput from './NumericExpressionInput.vue'
-import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onDeactivated, onMounted, ref, watch } from 'vue'
 import PanelMaximizeButton from './PanelMaximizeButton.vue'
 import EditorIcon, { type EditorIconName } from './EditorIcon.vue'
 import UiButton from '../ui/components/UiButton.vue'
@@ -328,6 +332,7 @@ import { readAssetPixels } from '../assets/assetPixels'
 import { createSpriteFrameAnimation } from '../assets/assetFrameAnimation'
 import { assetWorkflowCopy as assetCopy } from '../assets/assetWorkflowCopy'
 import { t } from '../i18n'
+import { fontImportAvailabilityCopy } from '../editor/fontImportCopy'
 import { addEditorLog, editorState as estate } from '../store/editor'
 import { clearAssetReferences, countAssetReferences, getSceneJSON, physicsState as state, pushHistory, pushAssetReimportHistory, replaceAssetReferences } from '../store/physics'
 import { requestConfirmation } from '../store/dialog'
@@ -350,6 +355,7 @@ import { defaultVisualGraph } from '../visual/graphCatalog'
 import { openEventSheetAsset, openGraphAsset } from '../visual/graphStudioState'
 import { serializeGraphDocument } from '../visual/graphTypes'
 import { applyEditorWorkspace, reorderBottomTab, workspaceState } from '../editor/workspaces'
+import { animateReorder, beginNativeDrag, cancelMotion, captureRects, endNativeDrag } from '../ui/motion'
 import { instantiatePrefab, replaceEntitiesWithPrefab } from '../runtime/prefabs'
 import { createSceneAssetFromEntities, instantiateSceneAsset } from '../runtime/sceneInstances'
 import { reimportAnimationClip } from '../runtime/animation'
@@ -388,7 +394,7 @@ const permanentTabs = [
 const pluginAssetContributions = computed(/* 调用 pluginState.contributions.filter(item => item.kind === 'importers' || item.kind === 'assetEditors') 并返回调用结果。 */ () => pluginState.contributions.filter(/* 先计算 item.kind === 'importers'；仅当其为假值时求右侧 item.kind === 'assetEditors'，返回短路求值结果。 */ item => item.kind === 'importers' || item.kind === 'assetEditors'))
 const toolComponents = { console:ConsolePanel, profiler:ProfilerPanel, animation:AnimationPanel, audio:AudioSystemPanel, worldProduction:WorldToolsPanel, networkStudio:NetworkStudioPanel, ecosystem:EcosystemStudioPanel, tilemap:TilemapPanel }
 const activeTool = computed(()=>toolComponents[estate.bottomPanelTab as keyof typeof toolComponents] ?? null)
-watch(()=>projectSessionState.id,()=>{cancelAssetBatch();assetDetailMode.value=false;assetFullPage.value=false})
+watch(()=>projectSessionState.id,()=>{cancelAssetBatch();assetDetailMode.value=false;assetFullPage.value=false;finishBottomDrag()})
 const tabs = computed(/** 根据是否选中瓦片实体追加上下文标签，再按保存的标签顺序排列。 */ () => {
   const selected = state.world.entities.find(/* 比较 entity.id 与 state.selectedEntityId，返回严格相等的判断结果。 */ entity => entity.id === state.selectedEntityId)
   const contextual = selected?.hasComponent('TileMap2D') ? [{ id: 'tilemap' as const, icon: 'grid' as const, label: 'tilemap' as const }] : []
@@ -464,6 +470,24 @@ const importerTabs = ['source', 'import', 'dependencies', 'provenance', 'platfor
 const inspectorTab = ref<(typeof importerTabs)[number]>('source')
 const previousPipeline = ref<AssetPipelineMetadata | null>(null), importComparisonText = ref('')
 const draggedTab = ref<(typeof permanentTabs)[number]['id'] | 'tilemap' | null>(null)
+const tabStrip = ref<HTMLElement | null>(null)
+const dropTabTarget = ref<typeof draggedTab.value>(null)
+const draggedAssetGuid = ref(''), dropFolder = ref(''), folderDropValid = ref(false)
+function tabElements() { return tabStrip.value?.querySelectorAll<HTMLElement>('.panel-tab') ?? [] }
+function finishBottomDrag() { draggedTab.value = null; dropTabTarget.value = null; draggedAssetGuid.value = ''; dropFolder.value = ''; endNativeDrag() }
+function disposeBottomDrag() { for (const element of tabElements()) cancelMotion(element); finishBottomDrag() }
+onDeactivated(disposeBottomDrag)
+function startTabDrag(event: DragEvent, id: NonNullable<typeof draggedTab.value>) {
+  draggedTab.value = id
+  event.dataTransfer?.setData('application/x-nova-bottom-tab', id)
+  if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move'
+  beginNativeDrag(event, (event.currentTarget as HTMLElement).textContent?.trim() ?? id)
+}
+function previewTabDrop(event: DragEvent, id: NonNullable<typeof draggedTab.value>) {
+  if (!draggedTab.value || draggedTab.value === id) { dropTabTarget.value = null; return }
+  event.preventDefault(); dropTabTarget.value = id
+  if (event.dataTransfer) event.dataTransfer.dropEffect = 'move'
+}
 const filteredTypeFilters = computed(/* 调用 assetFilters.filter(filter => t(filter.label).toLowerCase().includes(filterQuery.value.trim().toLowerCase())) 并返回调用结果。 */ () => assetFilters.filter(/* 调用 t(filter.label).toLowerCase().includes(filterQuery.value.trim().toLowerCase()) 并返回调用结果。 */ filter => t(filter.label).toLowerCase().includes(filterQuery.value.trim().toLowerCase())))
 const activeFilterLabel = computed(/** 根据当前资源类型过滤项返回本地化标签。 */ () => t(assetFilters.find(/* 比较 filter.type 与 assets.typeFilter，返回严格相等的判断结果。 */ filter => filter.type === assets.typeFilter)?.label ?? 'allAssets'))
 const compatibleImportPresets = computed(/** 筛选适用于当前资源类型或全部资源的导入预设。 */ () => selectedAsset.value ? assets.importPresets.filter(/* 先计算 preset.assetType === 'all'；仅当其为假值时求右侧 preset.assetType === selectedAsset.value?.assetType，返回短路求值结果。 */ preset => preset.assetType === 'all' || preset.assetType === selectedAsset.value?.assetType) : [])
@@ -501,7 +525,7 @@ onMounted(/* 首次挂载连接当前元素；后续元素替换交给上面的�
   measureAssetViewport()
   if (typeof ResizeObserver !== 'undefined') { assetResizeObserver = new ResizeObserver(measureAssetViewport); if (assetGrid.value) assetResizeObserver.observe(assetGrid.value) }
 })
-onBeforeUnmount(/* 关闭底栏组件时释放全部元素观察，避免保留旧 DOM。 */ () => assetResizeObserver?.disconnect())
+onBeforeUnmount(/* 关闭底栏组件时释放全部元素观察，避免保留旧 DOM。 */ () => { assetResizeObserver?.disconnect(); disposeBottomDrag() })
 /* 根据 value 的真假，分别返回 JSON.parse(JSON.stringify(value)) as AssetPipelineMetadata 或 null。 */ function clonePipelineMetadata(value: AssetPipelineMetadata | undefined): AssetPipelineMetadata | null {
   // Asset records are exposed through Vue's reactive database. The import
   // metadata itself is JSON-owned project data, so clone it across that
@@ -511,12 +535,16 @@ onBeforeUnmount(/* 关闭底栏组件时释放全部元素观察，避免保留�
 watch(/* 返回 selectedAsset.value?.uuid 的当前值。 */ () => selectedAsset.value?.uuid, /** 选择变化时重置资源检查标签和导入比较，保存当前流水线基线。 */ () => { inspectorTab.value = 'source'; importComparisonText.value = ''; previousPipeline.value = clonePipelineMetadata(selectedAsset.value?.pipeline) })
 /** 切换指定底部标签并展开面板。 */ function openTab(id: (typeof permanentTabs)[number]['id'] | 'tilemap') { estate.bottomPanelTab = id; estate.bottomPanelOpen = true }
 /** 按资源、动画、音频或瓦片标签映射项目未保存范围。 */ function tabDirty(id:(typeof permanentTabs)[number]['id']|'tilemap'){return id==='assets'?projectScopeDirty('asset'):id==='animation'?projectScopeDirty('animation'):id==='audio'?projectScopeDirty('settings'):id==='tilemap'?projectScopeDirty('scene'):false}
-/** 有拖动标签时调整顺序，随后清除拖动状态。 */ function dropTab(target: (typeof permanentTabs)[number]['id'] | 'tilemap') {
-  if (draggedTab.value) reorderBottomTab(draggedTab.value, target)
-  draggedTab.value = null
+/** Commit tab order immediately; only the mounted neighbors settle afterward. */ function dropTab(event: DragEvent, target: (typeof permanentTabs)[number]['id'] | 'tilemap') {
+  if (!draggedTab.value || draggedTab.value === target) return
+  event.preventDefault()
+  const before = captureRects(tabElements())
+  reorderBottomTab(draggedTab.value, target)
+  finishBottomDrag()
+  void nextTick(() => animateReorder(before, tabElements()))
 }
 /** 未固定、未最大化且焦点不在底部面板时自动收起。 */ function autoHide() {
-  if (!estate.bottomPanelPinned && workspaceState.maximizedPanel!=='bottom' && !document.activeElement?.closest('.bottom-panel')) estate.bottomPanelOpen = false
+  if (!draggedTab.value && !draggedAssetGuid.value && !estate.bottomPanelPinned && workspaceState.maximizedPanel!=='bottom' && !document.activeElement?.closest('.bottom-panel')) estate.bottomPanelOpen = false
 }
 watch(/* 返回 estate.bottomPanelOpen 的当前值。 */ () => estate.bottomPanelOpen, /** 底部面板关闭时清除其最大化状态。 */ open => { if (!open && workspaceState.maximizedPanel==='bottom') workspaceState.maximizedPanel='' })
 /** 无批处理运行时导入选择文件，使用取消控制器和会话标识保护异步结果，成功选中新资源并记录历史。 */ async function importFiles(event: Event) {
@@ -528,10 +556,20 @@ watch(/* 返回 estate.bottomPanelOpen 的当前值。 */ () => estate.bottomPan
   }catch(error){assetOperationError.value=error instanceof Error?error.message:String(error)}finally{if(assetBatchController===controller)assetBatchController=null}
 }
 
-/** 设置资源拖拽标识和复制或移动许可。 */ function dragAsset(event: DragEvent, guid: string) { event.dataTransfer?.setData('application/x-nova-asset-guid', guid); if (event.dataTransfer) event.dataTransfer.effectAllowed = 'copyMove' }
+/** Native resource preview follows the cursor exactly, preserving the existing GUID payload. */ function dragAsset(event: DragEvent, guid: string) { draggedAssetGuid.value = guid; event.dataTransfer?.setData('application/x-nova-asset-guid', guid); if (event.dataTransfer) event.dataTransfer.effectAllowed = 'copyMove'; beginNativeDrag(event, assets.records.find(asset => asset.uuid === guid)?.name ?? guid) }
+function previewFolderDrop(event: DragEvent, folder: string) {
+  if (!draggedAssetGuid.value) return
+  const asset = assets.records.find(record => record.uuid === draggedAssetGuid.value)
+  dropFolder.value = folder
+  folderDropValid.value = Boolean(asset && !asset.path.startsWith('.nova/') && asset.path.slice(0, asset.path.lastIndexOf('/')) !== folder)
+  if (folderDropValid.value) event.preventDefault()
+  if (event.dataTransfer) event.dataTransfer.dropEffect = folderDropValid.value ? 'move' : 'none'
+}
+function leaveFolderDrop(event: DragEvent, folder: string) { if (!(event.currentTarget as HTMLElement).contains(event.relatedTarget as Node | null) && dropFolder.value === folder) dropFolder.value = '' }
 /** 确认资源移动预览及引用保留信息后移动，成功记录历史日志。 */ async function dropOnFolder(event: DragEvent, folder: string) {
   const guid = event.dataTransfer?.getData('application/x-nova-asset-guid'), asset = assets.records.find(/* 比较 record.uuid 与 guid，返回严格相等的判断结果。 */ record => record.uuid === guid)
-  if (!guid || !asset || asset.path.startsWith('.nova/')) return
+  if (!guid || !asset || asset.path.startsWith('.nova/') || asset.path.slice(0, asset.path.lastIndexOf('/')) === folder) { finishBottomDrag(); return }
+  event.preventDefault(); finishBottomDrag()
   const references = findAssetReferences(guid, assets.records, projectSnapshot.value)
   const approved = await requestConfirmation({ title: t('moveAssetPreview'), message: `${asset.path}\n→ ${folder}/${asset.name}\n\n${t('referencesPreserved', { count: references.length })}\n${references.slice(0,8).map(referenceName).join('\n')}`, confirmLabel: t('moveAsset'), cancelLabel: t('cancel'), destructive: false })
   if (approved && moveAsset(guid, folder)) { pushHistory('Move asset'); addEditorLog(t('assetMoved'), 'Assets') }

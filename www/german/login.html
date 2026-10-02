@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f3ee">
+  <title>Sign in — WortWerk</title>
+  <link rel="stylesheet" href="/style.css?v=20260909-3">
+  <script src="/app.js?v=20260909-3" defer></script>
+</head>
+<body data-page="login">
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="topbar">
+    <a class="brand" href="/"><span class="brand-mark">W</span>WortWerk</a>
+    <button class="icon-button theme-toggle" type="button" aria-label="Change color theme">◐</button>
+  </header>
+
+  <main id="main" class="auth-shell shell">
+    <section class="auth-intro">
+      <p class="eyebrow">Willkommen zurück</p>
+      <h1>Your next word is waiting.</h1>
+      <p>Short, focused sessions. Reviews arrive when your memory needs them—not when a random queue says so.</p>
+      <div class="auth-proof"><strong>4 skills</strong><span>Reading · Listening · Writing · Speaking</span></div>
+    </section>
+
+    <section class="auth-card" aria-labelledby="auth-title">
+      <div class="segmented" role="tablist" aria-label="Account action">
+        <button id="login-tab" class="segment is-active" type="button" role="tab" aria-selected="true" aria-controls="login-panel">Sign in</button>
+        <button id="register-tab" class="segment" type="button" role="tab" aria-selected="false" aria-controls="register-panel">Register</button>
+      </div>
+
+      <div id="login-panel" role="tabpanel" aria-labelledby="login-tab">
+        <h2 id="auth-title">Continue learning</h2>
+        <form id="login-form" novalidate>
+          <label for="login-username">Username</label>
+          <input id="login-username" name="username" autocomplete="username" minlength="3" maxlength="32" required>
+          <label for="login-password">Password</label>
+          <input id="login-password" name="password" type="password" autocomplete="current-password" maxlength="128" required>
+          <button class="button button-primary button-full" type="submit">Sign in</button>
+        </form>
+      </div>
+
+      <div id="register-panel" role="tabpanel" aria-labelledby="register-tab" hidden>
+        <h2>Create your account</h2>
+        <form id="register-form" novalidate>
+          <label for="register-username">Username</label>
+          <input id="register-username" name="username" autocomplete="username" minlength="3" maxlength="32" pattern="[A-Za-z0-9_-]+" required>
+          <p class="field-note">3–32 letters, numbers, underscores, or hyphens.</p>
+          <label for="register-password">Password</label>
+          <input id="register-password" name="password" type="password" autocomplete="new-password" minlength="10" maxlength="128" required>
+          <label for="register-invite">Invite code</label>
+          <input id="register-invite" name="inviteCode" autocomplete="one-time-code" maxlength="16" required>
+          <button class="button button-primary button-full" type="submit">Create account</button>
+        </form>
+      </div>
+      <p id="auth-message" class="form-message" role="status" aria-live="polite"></p>
+    </section>
+  </main>
+</body>
+</html>

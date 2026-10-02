@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f3ee">
+  <title>Practice — WortWerk</title>
+  <link rel="stylesheet" href="/style.css?v=20260909-3">
+  <script src="/app.js?v=20260909-3" defer></script>
+</head>
+<body data-page="practice">
+  <a class="skip-link" href="#question-card">Skip to question</a>
+  <header class="practice-topbar">
+    <a class="brand" href="/dashboard.html"><span class="brand-mark">W</span>WortWerk</a>
+    <div class="practice-progress-wrap">
+      <div class="practice-meta"><span id="session-label">Smart review</span><span id="question-progress">0 / 0</span></div>
+      <div class="progress-track"><span id="session-progress"></span></div>
+    </div>
+    <button id="pause-button" class="button button-small button-quiet" type="button">Pause</button>
+  </header>
+
+  <main id="main" class="practice-shell shell" aria-busy="true">
+    <section id="question-card" class="question-card" tabindex="-1" aria-labelledby="question-title">
+      <div class="question-heading">
+        <span id="skill-label" class="pill">Preparing</span>
+        <span id="memory-label" class="memory-badge"></span>
+      </div>
+      <div id="question-content">
+        <p class="question-instruction">Building your learning plan…</p>
+        <h1 id="question-title">Einen Moment.</h1>
+      </div>
+      <div id="answer-area" class="answer-area"></div>
+      <div id="feedback-area" class="feedback" role="status" aria-live="polite" hidden></div>
+      <div id="question-actions" class="question-actions">
+        <button id="submit-answer" class="button button-primary" type="button">Check answer</button>
+        <button id="dont-know" class="button button-quiet" type="button">I don’t know</button>
+        <button id="continue-button" class="button button-primary" type="button" hidden>Continue</button>
+      </div>
+      <p class="keyboard-hint">Press <kbd>Enter</kbd> to check · <kbd>1</kbd> to reveal</p>
+    </section>
+    <aside class="session-note"><strong>Remember:</strong> effortful recall is useful. A mistake adjusts the schedule; it does not break your streak.</aside>
+  </main>
+</body>
+</html>

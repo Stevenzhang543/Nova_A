@@ -350,6 +350,7 @@ export class World {
   private bodyHandles = new Map<number, number>()
   private connectionHandles = new Map<string, number>()
   private bodyRecords = new Map<number, Float64Array>()
+  private nativeBodyPoses = new Map<number, { x: number; y: number; rotation: number }>()
   private colliderChildRecords = new Map<number, Float64Array>()
   private connectionRecords = new Map<number, Float64Array>()
   private bodyOrders = new Map<number, number>()
@@ -600,6 +601,7 @@ export class World {
     try {
       const runtime = this.runtime as unknown as { teleport_body: (handle: number, x: number, y: number, angle: number) => void }
       runtime.teleport_body(handle, target.x, target.y, finiteNumber(angle, transform.rotation))
+      this.storeNativeBodyPose(handle, target.x, target.y, finiteNumber(angle, transform.rotation))
       return true
     } catch { return false }
   }
@@ -634,6 +636,9 @@ export class World {
       record[2] = result.position[0]
       record[3] = result.position[1]
     }
+    // Character translation leaves the solver angle unchanged; the entity may still display an older interpolated angle.
+    const nativeRotation = this.nativeBodyPoses.get(handle)?.rotation ?? worldTransform(entity, this.entities).rotation
+    this.storeNativeBodyPose(handle, result.position[0], result.position[1], nativeRotation)
     return result
   }
 
@@ -664,6 +669,7 @@ export class World {
     const bodies = /** 按刚体 ABI 步长移动每条缓存记录的位置字段。 */ (values: Float64Array) => { for (let at = 0; at + PHYSICS_STRIDE <= values.length; at += PHYSICS_STRIDE) { values[at + 2] -= offset.x; values[at + 3] -= offset.y } }
     const ropes = /** 按连接 ABI 步长及绳节点容量移动每个缓存绳节点的位置字段。 */ (values: Float64Array) => { for (let at = 0; at + CONNECTION_STRIDE <= values.length; at += CONNECTION_STRIDE) for (let node = 0; node < Math.min(ROPE_NODE_CAPACITY, values[at + 27]); node++) { const index = at + ROPE_NODE_DATA_OFFSET + node * 4; values[index] -= offset.x; values[index + 1] -= offset.y } }
     for (const record of this.bodyRecords.values()) bodies(record)
+    for (const pose of this.nativeBodyPoses.values()) { pose.x -= offset.x; pose.y -= offset.y }
     for (const record of this.connectionRecords.values()) ropes(record)
     bodies(this.previousBodyBuffer)
     const bodyLength = Math.min(this.activeBodies.length * PHYSICS_STRIDE, this.stateBuffer.length)
@@ -677,6 +683,7 @@ export class World {
     this.bodyHandles.clear()
     this.connectionHandles.clear()
     this.bodyRecords.clear()
+    this.nativeBodyPoses.clear()
     this.colliderChildRecords.clear()
     this.connectionRecords.clear()
     this.bodyOrders.clear()
@@ -743,7 +750,18 @@ export class World {
       writeEntityRecord(this.bodyScratch, 0, entity, this.entities, settings, handle, prepared.shapes)
       const cached = this.bodyRecords.get(handle)
       if (!cached || this.bodyOrders.get(handle) !== order || !recordsEqual(cached, this.bodyScratch)) {
+        // Interpolation is a display pose. A velocity/material/shape edit must not send
+        // that older pose back to the solver; explicit transform edits still take effect.
+        const x = this.bodyScratch[2], y = this.bodyScratch[3], rotation = this.bodyScratch[14]
+        const nativePose = this.nativeBodyPoses.get(handle)
+        if (cached && nativePose) {
+          if (Object.is(x, cached[2])) this.bodyScratch[2] = nativePose.x
+          if (Object.is(y, cached[3])) this.bodyScratch[3] = nativePose.y
+          if (Object.is(rotation, cached[14])) this.bodyScratch[14] = nativePose.rotation
+        }
         runtime.upsert_body(handle, order, this.bodyScratch)
+        this.storeNativeBodyPose(handle, this.bodyScratch[2], this.bodyScratch[3], this.bodyScratch[14])
+        this.bodyScratch[2] = x; this.bodyScratch[3] = y; this.bodyScratch[14] = rotation
         this.storeRecord(this.bodyRecords, handle, this.bodyScratch)
         this.bodyOrders.set(handle, order)
       }
@@ -759,6 +777,7 @@ export class World {
       runtime.destroy_body(handle)
       this.bodyHandles.delete(entityId)
       this.bodyRecords.delete(handle)
+      this.nativeBodyPoses.delete(handle)
       this.colliderChildRecords.delete(handle)
       this.bodyOrders.delete(handle)
     }
@@ -870,9 +889,10 @@ export class World {
     if (this.runtime.copy_state(this.stateBuffer) !== stateLength) return
     const previousLength = this.runtime.copy_previous_body_state(this.previousBodyBuffer)
     this.activeBodies.forEach(/** 恢复单个刚体状态，可选插值显示姿态，并缓存回写记录避免无变化的重复同步。 */ (entity, index) => {
+      const handle = this.bodyHandles.get(entity.id), offset = index * PHYSICS_STRIDE
+      if (handle !== undefined) this.storeNativeBodyPose(handle, this.stateBuffer[offset + 2], this.stateBuffer[offset + 3], this.stateBuffer[offset + 14])
       readEntityRecord(this.stateBuffer, index, entity, this.entities)
       if (settings.interpolation === 'Interpolate' && previousLength === bodyLength && alpha < 1) {
-        const offset = index * PHYSICS_STRIDE
         const transform = worldTransform(entity, this.entities)
         setWorldTransform(entity, {
           ...transform,
@@ -883,7 +903,6 @@ export class World {
           rotation: interpolateAngle(this.previousBodyBuffer[offset + 14], this.stateBuffer[offset + 14], alpha)
         }, this.entities)
       }
-      const handle = this.bodyHandles.get(entity.id)
       if (handle !== undefined) {
         this.bodyScratch.fill(0)
         writeEntityRecord(this.bodyScratch, 0, entity, this.entities, settings, handle)
@@ -927,6 +946,13 @@ export class World {
     } catch (error) {
       console.warn('Nova_A received malformed runtime diagnostics', error)
     }
+  }
+
+  /** Retain solver poses separately from the interpolated entity display without allocating every frame. */
+  private storeNativeBodyPose(handle: number, x: number, y: number, rotation: number): void {
+    const pose = this.nativeBodyPoses.get(handle)
+    if (pose) { pose.x = x; pose.y = y; pose.rotation = rotation }
+    else this.nativeBodyPoses.set(handle, { x, y, rotation })
   }
 
   /** 已有同长度缓存时原地复制，否则保存独立数组副本，避免缓存引用临时工作缓冲。 */ private storeRecord(records: Map<number, Float64Array>, handle: number, source: Float64Array): void {
