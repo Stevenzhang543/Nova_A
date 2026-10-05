@@ -1,6 +1,6 @@
 <!-- 场景层级侧栏：搜索、选择和编辑实体层级，并维护资源关联。 -->
 <template>
-  <aside class="sidebar-container" :style="{ width: isCollapsed ? '22px' : `${panelWidth}px` }" :class="[dock, { 'jelly-slide': !isDragging, 'no-transition': isDragging, 'panel-maximized': workspaceState.maximizedPanel==='hierarchy' }]">
+  <aside class="sidebar-container" :style="{ width: isCollapsed ? `${44 * preferencesState.uiScale}px` : `${panelWidth}px` }" :class="[dock, { 'jelly-slide': !isDragging, 'no-transition': isDragging, 'panel-maximized': workspaceState.maximizedPanel==='hierarchy' }]">
     <UiButton v-if="isCollapsed" class="expand" icon="forward" :label="t('expandPanel')" @click="expandPanel" />
     <div v-show="!isCollapsed" class="scene-sidebar">
       <section class="scene-manager">
@@ -25,7 +25,7 @@
 
       <div class="hierarchy-header">
         <div><span class="hierarchy-title" :title="t('hierarchy')">{{ t('hierarchy') }}</span><span class="hierarchy-actions"><small>{{ state.world.entities.length }}</small><UiButton class="hierarchy-direct-action" :label="t('previousSelection')" :disabled="selectionHistoryIndex <= 0" @click="navigateSelection(-1)" icon="back" /><UiButton class="hierarchy-direct-action" :label="t('nextSelection')" :disabled="selectionHistoryIndex >= selectionHistory.length - 1" @click="navigateSelection(1)" icon="forward" /><UiButton class="hierarchy-direct-action" :label="t('createObject')" :disabled="!canEdit" @click="editorState.createObjectPaletteOpen = true" icon="add" /><UiButton class="compact-action hierarchy-overflow" icon="more" :label="sidebarMenuLabels.hierarchy" aria-haspopup="menu" :aria-expanded="sidebarMenu?.kind === 'hierarchy'" @click.stop="openSidebarMenu($event, 'hierarchy')" /></span></div>
-        <div class="hierarchy-search-row"><label class="search"><EditorIcon name="search" /><input v-model="searchQuery" type="search" :aria-label="t('searchEntities')" :placeholder="t('searchEntities')"></label><details class="hierarchy-filter-menu"><summary :title="t('selectionFilter')" :aria-label="t('selectionFilter')"><EditorIcon name="filter" /></summary>
+        <div class="hierarchy-search-row"><label class="search"><EditorIcon name="search" /><input v-model="searchQuery" type="search" :aria-label="t('searchEntities')" :placeholder="t('searchEntities')"></label><details data-ui-motion-popover class="hierarchy-filter-menu"><summary :title="t('selectionFilter')" :aria-label="t('selectionFilter')"><EditorIcon name="filter" /></summary>
         <div class="hierarchy-filters"><select class="hierarchy-filter-wide" v-model="authoringState.selectionFilter" :aria-label="t('selectionFilter')"><option v-for="filter in selectionFilters" :key="filter" :value="filter">{{ t(`selection${filter}`) }}</option></select><select class="hierarchy-filter-wide" v-model="authoringState.tagFilter" :aria-label="t('tagFilter')"><option value="">{{ t('allTags') }}</option><option v-for="tag in availableTags" :key="tag" :value="tag"># {{ tag }}</option></select><select v-model="selectedSavedFilter" :aria-label="t('savedFilters')" @change="applySavedFilter"><option value="">{{ t('savedFilters') }}</option><option v-for="filter in authoringState.savedFilters" :key="filter.id" :value="filter.id">{{ filter.name }}</option></select><UiButton :label="t('saveFilter')" @click="saveCurrentFilter" icon="star" /><UiButton :class="{ active: authoringState.performanceMode }" :label="t('viewportPerformanceMode')" @click="authoringState.performanceMode = !authoringState.performanceMode" icon="bolt" /></div></details></div>
       </div>
 
@@ -60,10 +60,10 @@
           @dragover.stop="previewEntityDrop($event, row.entity)"
           @drop.prevent.stop="dropOnEntity($event, row.entity)"
         >
-          <button class="disclosure" :class="{ placeholder: !row.hasChildren }" :aria-label="row.expanded ? t('collapsePanel') : t('expandPanel')" @click.stop="toggleExpanded(row.entity.uuid)"><EditorIcon v-if="row.hasChildren" :name="row.expanded ? 'down' : 'forward'" /></button>
+          <button class="disclosure" :class="{ placeholder: !row.hasChildren }" :aria-expanded="row.hasChildren ? row.expanded : undefined" :aria-label="row.expanded ? t('collapsePanel') : t('expandPanel')" @click.stop="toggleExpanded(row.entity.uuid)"><EditorIcon v-if="row.hasChildren" name="down" data-ui-motion-chevron /></button>
           <EditorIcon class="shape-icon" :name="getIcon(row.entity.shapeType)" />
           <button v-if="editingId !== row.entity.id" type="button" class="name" :aria-pressed="state.selectedEntityIds.includes(row.entity.id)" @click.stop="selectEntity($event, row.entity)" :title="`${row.entity.name} (${row.entity.id}) — ${t('renameHint')}`" @dblclick.stop="startEdit(row.entity)"><span class="entity-name"><mark v-if="searchQuery && row.entity.name.toLocaleLowerCase().includes(searchQuery.toLocaleLowerCase())">{{ row.entity.name }}</mark><template v-else>{{ row.entity.name }}</template></span><small>{{ row.entity.id }}</small></button>
-          <input v-else v-model="editName" v-focus class="edit-input" @click.stop @blur="finishEdit(row.entity)" @keyup.enter="finishEdit(row.entity)" @keyup.escape="editingId = null">
+          <input v-else v-model="editName" v-focus class="edit-input" @click.stop @blur="finishEdit(row.entity)" @keyup.enter="finishEdit(row.entity)" @keyup.escape="cancelEdit">
           <span v-if="row.entity.prefabAsset" class="status-mark" :title="t('prefabInstance')">P</span><span v-if="row.entity.sceneLayers.length" class="status-mark scene" :title="t('sceneInstance')">S</span><span v-if="Object.keys(row.entity.prefabOverrides).length" class="status-mark override" :title="t('prefabOverrides')"><EditorIcon name="circle" /></span>
           <UiButton class="state-button pin" :class="{ active: authoringState.pinnedEntityUuids.includes(row.entity.uuid) }" :label="t('pinEntity')" @click.stop="toggleHierarchyPin(row.entity.uuid)" icon="pin" />
           <button class="state-button" :disabled="!canEdit" :title="row.entity.editorVisible ? t('hideEntity') : t('showEntity')" @click.stop="toggleVisibility(row.entity)"><EditorIcon :name="row.entity.editorVisible ? 'visible' : 'hidden'" /></button>
@@ -76,13 +76,13 @@
         <button v-if="draggingIds.length" class="root-drop" data-ui-drop="valid" @dragover="previewRootDrop" @drop.prevent.stop="dropOnRoot($event)">{{ t('reparentToRoot') }}</button>
       </div>
     </div>
-    <Teleport to="body"><div ref="sidebarMenuRoot" class="sidebar-action-menu" :style="{ left: `${sidebarMenuPosition.x}px`, top: `${sidebarMenuPosition.y}px` }" @click.stop @contextmenu.prevent>
-      <UiMenu v-if="sidebarMenu" :key="`${sidebarMenu.kind}:${sidebarMenu.entityUuid ?? ''}`" @close="closeSidebarMenu()">
-        <template v-if="sidebarMenu.kind === 'scene'">
+    <Teleport to="body"><div ref="sidebarMenuRoot" class="sidebar-action-menu" :inert="!sidebarMenu" :aria-hidden="!sidebarMenu" :style="{ left: `${sidebarMenuPosition.x}px`, top: `${sidebarMenuPosition.y}px`, pointerEvents: sidebarMenu ? 'auto' : 'none' }" @click.stop @contextmenu.prevent>
+      <UiMenu :open="Boolean(sidebarMenu)" @close="closeSidebarMenu()">
+        <template v-if="sidebarMenu?.kind === 'scene'">
           <UiButton class="scene-menu-reload" icon="refresh" :disabled="!canEdit" @click="runSidebarAction('reloadScene')">{{ t('reloadScene') }}</UiButton>
           <UiButton class="scene-menu-add" icon="add" :disabled="!canEdit" @click="runSidebarAction('addScene')">{{ t('addScene') }}</UiButton>
         </template>
-        <template v-else-if="sidebarMenu.kind === 'hierarchy'">
+        <template v-else-if="sidebarMenu?.kind === 'hierarchy'">
           <UiButton class="hierarchy-menu-previous" icon="back" :disabled="selectionHistoryIndex <= 0" @click="runSidebarAction('previous')">{{ t('previousSelection') }}</UiButton>
           <UiButton class="hierarchy-menu-next" icon="forward" :disabled="selectionHistoryIndex >= selectionHistory.length - 1" @click="runSidebarAction('next')">{{ t('nextSelection') }}</UiButton>
           <UiButton class="hierarchy-menu-create" icon="add" :disabled="!canEdit" @click="runSidebarAction('create')">{{ t('createObject') }}</UiButton>
@@ -98,7 +98,7 @@
         </template>
       </UiMenu>
     </div></Teleport>
-    <PanelResizeHandle v-show="!isCollapsed" v-model="panelWidth" orientation="vertical" :minimum="0" :maximum="500" :reset-value="236" :reverse="dock==='right'" :label="t('hierarchy')" :disabled="workspaceState.maximizedPanel==='hierarchy'" @dragging="isDragging=$event" @commit="commitPanelWidth" />
+    <PanelResizeHandle v-show="!isCollapsed" v-model="panelWidth" orientation="vertical" :minimum="0" :maximum="500" :reset-value="280" :reverse="dock==='right'" :label="t('hierarchy')" :disabled="workspaceState.maximizedPanel==='hierarchy'" @dragging="isDragging=$event" @commit="commitPanelWidth" />
   </aside>
 </template>
 
@@ -201,7 +201,7 @@ watch(() => [sceneManager.activeSceneUuid, state.playMode, editorState.currentPa
 const entityList = ref<HTMLElement | null>(null)
 const hierarchyScrollTop = ref(0)
 const hierarchyViewportHeight = ref(400)
-const hierarchyRowHeight = computed(/* 调用 Math.ceil(24 * preferencesState.uiScale) 并返回调用结果。 */ () => Math.ceil(24 * preferencesState.uiScale)), hierarchyOverscan = 12
+const hierarchyRowHeight = computed(/* 与共享 Comfortable40 / Compact28 行高一致；缩放一次并保留小数，避免累计漂移。 */ () => (preferencesState.compactMode ? 28 : 40) * preferencesState.uiScale), hierarchyOverscan = 12
 let hierarchyResizeObserver: ResizeObserver | null = null
 let lastSelectedId: number | null = null
 let applyingSelectionHistory = false
@@ -267,11 +267,12 @@ const hierarchyRows = computed(/** 建立父子映射及置顶排序，按搜索
   for (const entity of state.world.entities) visit(entity, 0, visited)
   return rows
 })
-const virtualStart = computed(/* 调用 Math.max(0, Math.floor(hierarchyScrollTop.value / hierarchyRowHeight.value) - hierarchyOverscan) 并返回调用结果。 */ () => Math.max(0, Math.floor(hierarchyScrollTop.value / hierarchyRowHeight.value) - hierarchyOverscan))
-const virtualEnd = computed(/** 根据滚动位置、视口和行高计算含预留行的虚拟列表末端。 */ () => Math.min(hierarchyRows.value.length, Math.ceil((hierarchyScrollTop.value + hierarchyViewportHeight.value) / hierarchyRowHeight.value) + hierarchyOverscan))
+const hierarchyContentInset = computed(() => (preferencesState.compactMode ? 12 : 20) * preferencesState.uiScale)
+const virtualStart = computed(() => Math.min(hierarchyRows.value.length, Math.max(0, Math.floor((hierarchyScrollTop.value - hierarchyContentInset.value) / hierarchyRowHeight.value) - hierarchyOverscan)))
+const virtualEnd = computed(() => Math.max(virtualStart.value, Math.min(hierarchyRows.value.length, Math.ceil((hierarchyScrollTop.value + hierarchyViewportHeight.value - hierarchyContentInset.value) / hierarchyRowHeight.value) + hierarchyOverscan)))
 const virtualHierarchyRows = computed(/* 调用 hierarchyRows.value.slice(virtualStart.value, virtualEnd.value) 并返回调用结果。 */ () => hierarchyRows.value.slice(virtualStart.value, virtualEnd.value))
-const virtualPaddingTop = computed(/* 计算表达式 virtualStart.value * hierarchyRowHeight.value + 5 并返回结果，沿用操作数的原有类型规则。 */ () => virtualStart.value * hierarchyRowHeight.value + 5)
-const virtualPaddingBottom = computed(/* 调用 Math.max(5, (hierarchyRows.value.length - virtualEnd.value) * hierarchyRowHeight.value + 5) 并返回调用结果。 */ () => Math.max(5, (hierarchyRows.value.length - virtualEnd.value) * hierarchyRowHeight.value + 5))
+const virtualPaddingTop = computed(() => virtualStart.value * hierarchyRowHeight.value + hierarchyContentInset.value)
+const virtualPaddingBottom = computed(() => (hierarchyRows.value.length - virtualEnd.value) * hierarchyRowHeight.value + hierarchyContentInset.value)
 /** 记录层级列表滚动位置。 */ function onHierarchyScroll(event: Event) { hierarchyScrollTop.value = (event.currentTarget as HTMLElement).scrollTop }
 /** 根据名称、编号、标签和组件种类匹配非空搜索词。 */ function matchesHierarchySearch(entity: Entity) { const query = searchQuery.value.trim().toLocaleLowerCase(); if (!query) return false; return `${entity.name} ${entity.id} ${entity.tags.join(' ')} ${entity.components.map(/* 返回 component.kind 的当前值。 */ component => component.kind).join(' ')}`.toLocaleLowerCase().includes(query) }
 /** 载入已保存的查询、标签和选择类型过滤设置。 */ function applySavedFilter() { const filter = authoringState.savedFilters.find(/* 比较 candidate.id 与 selectedSavedFilter.value，返回严格相等的判断结果。 */ candidate => candidate.id === selectedSavedFilter.value); if (!filter) return; searchQuery.value = filter.query; authoringState.tagFilter = filter.tagFilter; authoringState.selectionFilter = filter.selectionFilter }
@@ -319,7 +320,18 @@ const breadcrumbs = computed(/** 从选中实体沿父级向上构建面包屑�
 }
 /** 编辑模式开始指定场景的重命名。 */ function startSceneEdit(uuid: string, name: string) { if (!canEdit.value) return; editingSceneUuid.value = uuid; sceneName.value = name }
 /** 结束匹配场景的重命名，清理并限制有效名称长度，变更时记录历史。 */ function finishSceneEdit(uuid: string) { if (editingSceneUuid.value !== uuid) return; const scene = sceneManager.scenes.find(/* 比较 candidate.uuid 与 uuid，返回严格相等的判断结果。 */ candidate => candidate.uuid === uuid); const name = sceneName.value.trim(); if (scene && name && name !== scene.name) { scene.name = name.slice(0, 80); pushHistory('Rename scene') } editingSceneUuid.value = null }
-/** 仅对编辑模式下未锁定实体启动重命名。 */ function startEdit(entity: Entity) { if (!canEdit.value || entity.editorLocked) return; editingId.value = entity.id; editName.value = entity.name }
+/** 仅对编辑模式下未锁定实体启动重命名。 */ function startEdit(entity: Entity) {
+  if (!canEdit.value || entity.editorLocked) return
+  const index = hierarchyRows.value.findIndex(row => row.entity.id === entity.id), list = entityList.value
+  if (list && index >= 0) {
+    const top = hierarchyContentInset.value + index * hierarchyRowHeight.value, bottom = top + hierarchyRowHeight.value
+    if (top < list.scrollTop) list.scrollTop = top
+    else if (bottom > list.scrollTop + list.clientHeight) list.scrollTop = bottom - list.clientHeight
+    hierarchyScrollTop.value = list.scrollTop
+  }
+  editingId.value = entity.id; editName.value = entity.name
+}
+function cancelEdit() { editingId.value = null; editName.value = ''; editorState.renameRequestId = null }
 /** 提交有效实体名称并记录资源范围历史，随后清除重命名请求。 */ function finishEdit(entity: Entity) { if (editingId.value !== entity.id) return; const name = editName.value.trim(); if (name && name !== entity.name) { entity.name = name.slice(0, 80); pushHistory('Rename entity', `rename:${entity.uuid}`) } editingId.value = null; editorState.renameRequestId = null }
 /* 根据 type === 'Circle' 的真假，分别返回 '○' 或 type === 'Triangle' ? '△' : type === 'Box' ? '□' : '·'。 */ function getIcon(type: string) { return type === 'Circle' ? 'circle' : type === 'Triangle' ? 'triangle' : type === 'Box' ? 'rectangle' : 'design' }
 
@@ -336,7 +348,7 @@ const breadcrumbs = computed(/** 从选中实体沿父级向上构建面包屑�
   if (entity.layer !== editorState.activeLayer) setActiveLayer(entity.layer)
 }
 
-/** 复制展开集合后切换目标实体展开状态。 */ function toggleExpanded(uuid: string) { const next = new Set(expandedUuids.value); if (next.has(uuid)) next.delete(uuid); else next.add(uuid); expandedUuids.value = next }
+/** 复制展开集合后切换目标实体展开状态。 */ function toggleExpanded(uuid: string) { const before = captureRects(hierarchyElements()); const next = new Set(expandedUuids.value); if (next.has(uuid)) next.delete(uuid); else next.add(uuid); expandedUuids.value = next; settleHierarchy(before) }
 /** 编辑模式切换实体编辑可见性并记录历史。 */ function toggleVisibility(entity: Entity) { if (!canEdit.value) return; entity.editorVisible = !entity.editorVisible; pushHistory('Toggle editor visibility', `visibility:${entity.uuid}`) }
 /** 编辑模式切换实体锁定状态并记录历史。 */ function toggleLock(entity: Entity) { if (!canEdit.value) return; entity.editorLocked = !entity.editorLocked; pushHistory('Toggle editor lock', `lock:${entity.uuid}`) }
 /** 编辑模式切换实体运行启用状态并记录历史。 */ function toggleEnabled(entity: Entity) { if (!canEdit.value) return; entity.enabled = !entity.enabled; pushHistory('Toggle entity', `enabled:${entity.uuid}`) }
@@ -406,25 +418,31 @@ watch(/** 组合场景、选择集合及主选择为历史监听标记。 */ () 
   selectionHistoryIndex.value = selectionHistory.value.length - 1
 }, { immediate: true })
 
-const collapseThreshold = 118
-/** 结束宽度拖动，低于阈值则折叠，否则限制最小宽度并保存布局。 */ function commitPanelWidth(value:number) { isDragging.value=false;if(value<collapseThreshold){isCollapsed.value=true;panelWidth.value=0}else{panelWidth.value=Math.max(160,value);editorState.hierarchyWidth=panelWidth.value} }
-/** 展开面板并恢复已保存宽度或默认宽度。 */ function expandPanel() { isCollapsed.value = false; panelWidth.value = editorState.hierarchyWidth || 236 }
+const collapseThreshold = 140
+/** 结束宽度拖动，低于阈值则折叠，否则限制最小宽度并保存布局。 */ function commitPanelWidth(value:number) { isDragging.value=false;if(value<collapseThreshold){isCollapsed.value=true;panelWidth.value=0}else{panelWidth.value=Math.max(260,value);editorState.hierarchyWidth=panelWidth.value} }
+/** 展开面板并恢复已保存宽度或默认宽度。 */ function expandPanel() { isCollapsed.value = false; panelWidth.value = editorState.hierarchyWidth || 280 }
 onMounted(/** 挂载时记录层级视口高度并注册尺寸观察器。 */ () => { document.addEventListener('pointerdown', dismissSidebarMenu, true); document.addEventListener('keydown', leaveSidebarMenu, true); window.addEventListener('resize', resizeSidebarMenu); if (entityList.value) { hierarchyViewportHeight.value = entityList.value.clientHeight; hierarchyResizeObserver = new ResizeObserver(/** 从尺寸观察结果更新虚拟列表视口高度。 */ entries => { hierarchyViewportHeight.value = entries[0]?.contentRect.height ?? hierarchyViewportHeight.value }); hierarchyResizeObserver.observe(entityList.value) } })
 onBeforeUnmount(/** Release animations while the mounted row references are still available. */ () => { document.removeEventListener('pointerdown', dismissSidebarMenu, true); document.removeEventListener('keydown', leaveSidebarMenu, true); window.removeEventListener('resize', resizeSidebarMenu); closeSidebarMenu(false); hierarchyResizeObserver?.disconnect(); for (const element of hierarchyElements()) cancelMotion(element); finishEntityDrag() })
 </script>
 
 <style scoped>
-.sidebar-container{position:relative;height:100%;flex:none;display:flex;min-width:0;background:var(--ui-bg-1,var(--surface-1));border-inline-end:1px solid var(--border-subtle)}
+.sidebar-container{position:relative;height:100%;flex:none;display:flex;min-width:0;background:var(--ui-bg-1,var(--surface-1));border-inline-end:1px solid var(--border-subtle);
+ border-radius: var(--radius-panel);
+}
 .sidebar-container.left > .panel-resize-handle{inset-inline-end:0}
-.scene-sidebar{container: hierarchy-host / inline-size;min-width:0;flex:1;display:flex;flex-direction:column;overflow:hidden}.scene-manager{flex:none;border-bottom:1px solid var(--border-subtle)}
-.scene-list{max-height:calc(4 * var(--ui-tree-row-height));overflow:auto;padding:var(--ui-space-xs)}.scene-item{display:flex;align-items:center}.scene-main{display:flex;gap:var(--ui-space-xs);align-items:center;flex:1;min-width:0;min-height:var(--ui-tree-row-height);padding-inline:var(--ui-space-xs)}.scene-main span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.scene-main input{min-width:0;width:100%}.scene-item.active{background:var(--surface-active,var(--accent-soft))}.scene-item.unloaded{opacity:.5}
-.hierarchy-header{flex:none;border-bottom:1px solid var(--border-subtle);padding:var(--ui-space-xs)}.hierarchy-header>div:first-child{display:flex;align-items:center;justify-content:space-between}.hierarchy-actions{display:flex;align-items:center;gap:var(--ui-space-micro)}.hierarchy-search-row{display:flex;gap:var(--ui-space-xs);position:relative}.search{min-width:0;flex:1;display:flex;align-items:center;gap:var(--ui-space-xs)}.search input{width:100%;min-width:0}.hierarchy-filter-menu>summary{display:grid;place-items:center;inline-size:var(--ui-control-height);block-size:var(--ui-control-height);list-style:none;cursor:pointer}.hierarchy-filter-menu>summary::-webkit-details-marker{display:none}.hierarchy-filters{position:absolute;top:100%;inset-inline-end:0;z-index:30;display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:var(--ui-space-xs);padding:var(--ui-space-sm);width:min(100%,24rem);background:var(--surface-2);border:1px solid var(--border-subtle);box-shadow:var(--shadow-float)}.hierarchy-filter-wide{grid-column:1/-1}
-.breadcrumbs{display:flex;flex:none;align-items:flex-start;min-width:0;block-size:calc(var(--ui-control-height) + var(--ui-space-sm) + var(--ui-border-width));overflow:auto;gap:var(--ui-space-micro);border-bottom:var(--ui-border-width) solid var(--border-subtle)}.breadcrumbs.empty{visibility:hidden}.breadcrumbs button{display:flex;align-items:center;white-space:nowrap}.entity-list{min-height:0;flex:1;overflow:auto}.entity-item{position:relative;gap:var(--ui-space-micro)}.entity-item.disabled{opacity:.5}.entity-item.hidden .name{text-decoration:line-through}.entity-item.drop-target{outline:1px solid var(--accent);outline-offset:-1px}.entity-item.primary{box-shadow:inset 2px 0 var(--accent)}.name{min-width:0;flex:1;display:flex;align-items:center;gap:var(--ui-space-xs);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:transparent;border:0;text-align:start;padding:0;height:100%;min-height:0;font:inherit;color:inherit}.name small{color:var(--text-muted)}.name mark{color:inherit;background:var(--accent-soft)}.edit-input{min-width:0;flex:1}.disclosure,.state-button{flex:none;inline-size:var(--ui-tree-row-height);block-size:var(--ui-tree-row-height);min-inline-size:var(--ui-tree-row-height);min-height:0;padding:0;display:grid;place-items:center;border:0;background:transparent}.disclosure.placeholder{visibility:hidden}.state-button{opacity:0}.entity-item:hover .state-button,.entity-item:focus-within .state-button,.state-button.active,.entity-item.hidden .state-button,.entity-item.locked .state-button{opacity:1}.status-mark{font-size:var(--type-caption);color:var(--text-muted)}.empty-state{padding:var(--ui-space-sm);color:var(--text-muted)}.root-drop{margin:var(--ui-space-xs);border:1px dashed var(--accent)}.expand{position:absolute;inset-inline-start:0;top:50%}.right .panel-resize-handle{inset-inline-start:0}
+.scene-sidebar{container: hierarchy-host / inline-size;min-width:0;flex:1;display:flex;flex-direction:column;overflow:hidden;
+ border-radius: var(--radius-panel);
+}.scene-manager{flex:none;border-bottom:1px solid var(--border-subtle)}
+.scene-list{max-height:calc(4 * var(--ui-tree-row-height));overflow:auto;padding:var(--ui-panel-inset);}.scene-item{display:flex;align-items:center}.scene-main{display:flex;align-items:center;flex:1;min-width:0;min-height:var(--ui-tree-row-height);gap:var(--ui-control-gap);padding-inline:0;}.scene-main span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.scene-main input{min-width:0;width:100%}.scene-item.active{background:var(--surface-active,var(--accent-soft))}.scene-item.unloaded{opacity:.5}
+.hierarchy-header{flex:none;border-bottom:1px solid var(--border-subtle);
+ padding: var(--ui-panel-inset);
+}.hierarchy-header>div:first-child{display:flex;align-items:center;justify-content:space-between}.hierarchy-actions{display:flex;align-items:center;gap:var(--ui-control-gap)}.hierarchy-search-row{display:flex;position:relative;gap:var(--ui-control-gap);margin-top:var(--ui-heading-content-gap);}.search{min-width:0;flex:1;display:flex;align-items:center;gap:var(--ui-control-gap);}.search input{width:100%;min-width:0}.hierarchy-filter-menu>summary{display:grid;place-items:center;inline-size:var(--ui-control-height);block-size:var(--ui-control-height);list-style:none;cursor:pointer}.hierarchy-filter-menu>summary::-webkit-details-marker{display:none}.hierarchy-filters{position:absolute;top:100%;inset-inline-end:0;z-index:30;display:grid;grid-template-columns:minmax(0,1fr) auto auto;width:min(100%,24rem);background:var(--surface-2);border:1px solid var(--border-subtle);box-shadow:var(--shadow-float);gap:var(--ui-control-gap);padding:var(--space-3);border-radius:var(--radius-floating);}.hierarchy-filter-wide{grid-column:1/-1}
+.breadcrumbs{display:flex;flex:none;align-items:flex-start;min-width:0;block-size:calc(var(--ui-control-height) + var(--ui-space-sm) + var(--ui-border-width));overflow:auto;gap:var(--ui-space-micro);border-bottom:var(--ui-border-width) solid var(--border-subtle)}.breadcrumbs.empty{visibility:hidden}.breadcrumbs button{display:flex;align-items:center;white-space:nowrap}.entity-list{min-height:0;flex:1;overflow:auto}.entity-item{position:relative;gap:var(--ui-space-micro)}.entity-item.disabled{opacity:.5}.entity-item.hidden .name{text-decoration:line-through}.entity-item.drop-target{outline:1px solid var(--accent);outline-offset:-1px}.entity-item.primary{box-shadow:inset 2px 0 var(--accent)}.name{min-width:0;flex:1;display:flex;align-items:center;gap:var(--ui-space-xs);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:transparent;border:0;text-align:start;padding:0;height:100%;min-height:0;font:inherit;color:inherit}.name small{color:var(--text-muted)}.name mark{color:inherit;background:var(--accent-soft)}.edit-input{min-width:0;flex:1}.disclosure,.state-button{flex:none;inline-size:var(--ui-tree-row-height);block-size:var(--ui-tree-row-height);min-inline-size:var(--ui-tree-row-height);min-height:0;padding:0;display:grid;place-items:center;border:0;background:transparent}.disclosure.placeholder{visibility:hidden}.state-button{opacity:0}.entity-item:hover .state-button,.entity-item:focus-within .state-button,.state-button.active,.entity-item.hidden .state-button,.entity-item.locked .state-button{opacity:1}.status-mark{font-size:var(--type-caption);color:var(--text-muted)}.empty-state{color:var(--text-muted);padding:var(--ui-panel-inset);}.root-drop{margin:var(--ui-space-xs);border:1px dashed var(--accent)}.expand{position:absolute;inset-inline-start:0;top:50%}.right .panel-resize-handle{inset-inline-start:0}
 
 /* The host's font-relative breakpoint follows saved UI scale, never dock width. */
 .compact-action{display:none}
 .hierarchy-title{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.hierarchy-header>div:first-child{gap:var(--ui-space-xs)}
+.hierarchy-header>div:first-child{gap:var(--ui-control-gap)}
 .hierarchy-actions{flex:none}
 .search input{flex:1;min-width:0}
 .entity-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -441,8 +459,12 @@ onBeforeUnmount(/** Release animations while the mounted row references are stil
   .scene-direct-action,.hierarchy-direct-action,.entity-item>.state-button,.entity-item>.status-mark,.name small,.search>.editor-icon{display:none}
   .entity-item>.disclosure.placeholder{display:none}
   .entity-item{padding-inline-start:min(calc(var(--tree-depth,0) * var(--space-3)),var(--space-3))}
-  .hierarchy-filters{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .hierarchy-filters{grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--ui-control-gap);padding:var(--space-3);border-radius:var(--radius-floating);}
   .hierarchy-filters>select{grid-column:1/-1;width:100%}
   .hierarchy-filters>.ui-button{justify-self:start}
 }
+/* Row-local rename geometry matches the exact virtual stride. */
+.hierarchy-rows{padding-inline:var(--ui-panel-inset)}
+.edit-input,.scene-main input{height:var(--ui-tree-row-height);min-height:0;min-width:0;max-width:100%;font-size:var(--type-body);line-height:var(--line-control);padding-inline:var(--space-3);padding-block:max(0px,calc((var(--ui-tree-row-height) - var(--type-body) * var(--line-control) - 2 * var(--ui-border-width)) / 2));border-width:var(--ui-border-width);border-radius:var(--radius-input)}
+.edit-input{width:100%}
 </style>

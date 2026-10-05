@@ -13,9 +13,11 @@
       <SideBar v-show="!state.distractionFree" :inert="Boolean(workspaceState.maximizedPanel)" />
       <div v-show="!state.distractionFree" class="dock-group left-dock" :class="{ split: workspaceState.splitDocking }" :data-drop-target="dragTarget === 'left'" @dragover="previewPanelDrop($event, 'left')" @dragleave="leavePanelDrop" @drop="dropPanel($event, 'left')">
         <template v-for="panel in workspaceState.panelOrder" :key="panel">
+<UiMotionTransition>
           <SceneSideBar :inert="Boolean(workspaceState.maximizedPanel && workspaceState.maximizedPanel !== 'hierarchy')" v-if="panel === 'hierarchy' && state.hierarchyDock === 'left' && !isFloating('hierarchy')" v-show="showHierarchy" dock="left" draggable="true" @pointerdown.capture="preparePanelDrag" @dragstart="startPanelDrag($event, 'hierarchy')" @dragend="endPanelDrag" />
           <ConfigPanel :inert="Boolean(workspaceState.maximizedPanel && workspaceState.maximizedPanel !== 'inspector')" v-else-if="panel === 'inspector' && inspectorLoaded && state.inspectorDock === 'left' && !isFloating('inspector')" v-show="showInspector" dock="left" draggable="true" @pointerdown.capture="preparePanelDrag" @dragstart="startPanelDrag($event, 'inspector')" @dragend="endPanelDrag" />
-        </template>
+        </UiMotionTransition>
+</template>
       </div>
       <div class="editor-workspace" :inert="Boolean(workspaceState.maximizedPanel && workspaceState.maximizedPanel !== 'bottom')" :data-drop-target="dragTarget === 'floating'" @dragover="previewPanelDrop($event, 'floating')" @dragleave="leavePanelDrop" @drop="dropPanel($event, 'floating')">
         <SceneTabs :inert="workspaceState.maximizedPanel === 'bottom'" v-show="state.currentPage === 'scene' && state.activeWorkspace === 'design' && !state.distractionFree" />
@@ -26,19 +28,21 @@
           </div>
           <UiAsyncWorkspace :view="requestedWorkspace" :loaders="workspaceLoaders" @display="displayedWorkspace = $event" />
         </div>
-        <KeepAlive><EditorBottomPanel v-if="state.currentPage !== 'settings' && state.currentPage !== 'manage' && state.currentPage !== 'script' && state.bottomPanelVisible && !state.distractionFree" /></KeepAlive>
+        <UiMotionTransition><KeepAlive><EditorBottomPanel v-if="state.currentPage !== 'settings' && state.currentPage !== 'manage' && state.currentPage !== 'script' && state.bottomPanelVisible && !state.distractionFree" /></KeepAlive></UiMotionTransition>
       </div>
       <div v-show="!state.distractionFree" class="dock-group right-dock" :class="{ split: workspaceState.splitDocking }" :data-drop-target="dragTarget === 'right'" @dragover="previewPanelDrop($event, 'right')" @dragleave="leavePanelDrop" @drop="dropPanel($event, 'right')">
         <template v-for="panel in workspaceState.panelOrder" :key="panel">
+<UiMotionTransition>
           <SceneSideBar :inert="Boolean(workspaceState.maximizedPanel && workspaceState.maximizedPanel !== 'hierarchy')" v-if="panel === 'hierarchy' && state.hierarchyDock === 'right' && !isFloating('hierarchy')" v-show="showHierarchy" dock="right" draggable="true" @pointerdown.capture="preparePanelDrag" @dragstart="startPanelDrag($event, 'hierarchy')" @dragend="endPanelDrag" />
           <ConfigPanel :inert="Boolean(workspaceState.maximizedPanel && workspaceState.maximizedPanel !== 'inspector')" v-else-if="panel === 'inspector' && inspectorLoaded && state.inspectorDock === 'right' && !isFloating('inspector')" v-show="showInspector" dock="right" draggable="true" @pointerdown.capture="preparePanelDrag" @dragstart="startPanelDrag($event, 'inspector')" @dragend="endPanelDrag" />
-        </template>
+        </UiMotionTransition>
+</template>
       </div>
-      <section v-if="isFloating('hierarchy') && showHierarchy && !state.distractionFree" class="floating-dock hierarchy-float" :class="{ 'floating-maximized': workspaceState.maximizedPanel === 'hierarchy' }" :inert="Boolean(workspaceState.maximizedPanel && workspaceState.maximizedPanel !== 'hierarchy')"><header draggable="true" @pointerdown.capture="preparePanelDrag" @dragstart="startPanelDrag($event, 'hierarchy')" @dragend="endPanelDrag"><strong>{{ t('hierarchy') }}</strong><UiButton icon="back" :label="t('dockPanel')" @click="dockEditorPanel('hierarchy','left')" /></header><SceneSideBar dock="left" /></section>
-      <section v-if="isFloating('inspector') && inspectorLoaded && !state.distractionFree" v-show="showInspector" class="floating-dock inspector-float" :class="{ 'floating-maximized': workspaceState.maximizedPanel === 'inspector' }" :inert="Boolean(workspaceState.maximizedPanel && workspaceState.maximizedPanel !== 'inspector')"><header draggable="true" @pointerdown.capture="preparePanelDrag" @dragstart="startPanelDrag($event, 'inspector')" @dragend="endPanelDrag"><strong>{{ t('inspector') }}</strong><UiButton icon="forward" :label="t('dockPanel')" @click="dockEditorPanel('inspector','right')" /></header><ConfigPanel dock="right" /></section>
-      <Transition name="physics-panel">
+      <UiMotionTransition preset="elastic"><section v-if="isFloating('hierarchy') && showHierarchy && !state.distractionFree" class="floating-dock hierarchy-float" :class="{ 'floating-maximized': workspaceState.maximizedPanel === 'hierarchy' }" :inert="Boolean(workspaceState.maximizedPanel && workspaceState.maximizedPanel !== 'hierarchy')"><header draggable="true" @pointerdown.capture="preparePanelDrag" @dragstart="startPanelDrag($event, 'hierarchy')" @dragend="endPanelDrag"><strong>{{ t('hierarchy') }}</strong><UiButton icon="back" :label="t('dockPanel')" @click="dockEditorPanel('hierarchy','left')" /></header><SceneSideBar dock="left" /></section></UiMotionTransition>
+      <UiMotionTransition preset="elastic"><section v-if="isFloating('inspector') && inspectorLoaded && !state.distractionFree" v-show="showInspector" class="floating-dock inspector-float" :class="{ 'floating-maximized': workspaceState.maximizedPanel === 'inspector' }" :inert="Boolean(workspaceState.maximizedPanel && workspaceState.maximizedPanel !== 'inspector')"><header draggable="true" @pointerdown.capture="preparePanelDrag" @dragstart="startPanelDrag($event, 'inspector')" @dragend="endPanelDrag"><strong>{{ t('inspector') }}</strong><UiButton icon="forward" :label="t('dockPanel')" @click="dockEditorPanel('inspector','right')" /></header><ConfigPanel dock="right" /></section></UiMotionTransition>
+      <UiMotionTransition>
         <PhysicsRuntimePanel :inert="Boolean(workspaceState.maximizedPanel)" v-if="state.physicsMonitorOpen && state.activeWorkspace === 'debug' && physicsState.playMode !== 'editing' && !state.distractionFree" />
-      </Transition>
+      </UiMotionTransition>
     </div>
     
     <ContextMenu />
@@ -65,6 +69,7 @@ import CreateObjectPalette from "../components/CreateObjectPalette.vue"
 import CreatorOnboarding from "../components/CreatorOnboarding.vue"
 import WorldCanvas from "../components/WorldCanvas.vue"
 import LayerBar from "../components/LayerBar.vue"
+import UiMotionTransition from '../ui/components/UiMotionTransition.vue'
 import UiAsyncWorkspace from '../ui/components/UiAsyncWorkspace.vue'
 import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { animatePresence, beginNativeDrag, cancelMotion, endNativeDrag } from '../ui/motion'
@@ -145,16 +150,26 @@ function leavePanelDrop(event: DragEvent) { if (!(event.currentTarget as HTMLEle
 <style scoped>
 .editor-root { position: fixed; inset: 0; width: auto; max-width: none; display: flex; flex-direction: column; height: auto; min-width: 0; min-height: 0; overflow: hidden; background: var(--bg-base); color: var(--text-primary); }
 .read-only-banner{min-height:var(--ui-control-height);flex:0 0 var(--ui-control-height);display:grid;place-items:center;color:var(--warning);background:color-mix(in srgb,var(--warning) 12%,var(--surface-1));border-bottom:1px solid var(--warning);font-size:var(--type-dense)}.read-only :deep(.config-wrapper),.read-only .persistent-viewport{pointer-events:none;filter:saturate(.72)}
-.workspace-control-row { position:relative; z-index:600; min-width: 0; flex: 0 0 auto; min-height: var(--ui-toolbar-height); display: flex; align-items: stretch; overflow:visible; border-bottom: 1px solid var(--border-subtle); background: color-mix(in srgb, var(--surface-1) 94%, var(--bg-base)); isolation: isolate; }
+.workspace-control-row { position:relative; min-width: 0; flex: 0 0 auto; min-height: var(--ui-toolbar-height); display: flex; align-items: stretch; overflow:visible; border-bottom: 1px solid var(--border-subtle); background: color-mix(in srgb, var(--surface-1) 94%, var(--bg-base)); isolation: isolate; 
+ z-index: 190;
+}
 .workspace-control-row :deep(.workspace-bar) { min-width: 0; flex: 1; border-bottom: 0; }
 .workspace-control-row :deep(.actionbar) { flex: 0 0 auto; }
-.editor-main { position: relative; width: 100%; max-width: 100%; flex: 1; display: flex; min-width: 0; min-height: 0; overflow: hidden; }
+.editor-main { position: relative; width: 100%; max-width: 100%; flex: 1; display: flex; min-width: 0; min-height: 0; overflow: hidden; 
+ gap: var(--ui-panel-gutter);
+ padding: var(--ui-panel-gutter);
+}
 .dock-group { min-width: 0; display: flex; flex: 0 0 auto; }
 .dock-group[data-drop-target='true'], .editor-workspace[data-drop-target='true'] { outline: 2px solid var(--drag-target); outline-offset: -3px; background: color-mix(in srgb, var(--drag-target) 7%, transparent); }
 .dock-group.split{flex-direction:column;overflow:hidden}.dock-group.split>:deep(*){min-height:0;max-height:none;height:auto;flex:1 1 0}
 .scene-toolbar-row { flex: 0 0 auto; }
-.editor-workspace { min-width: 0; flex: 1; display: flex; flex-direction: column; }
-.editor-content { min-height: 0; flex: 1; position: relative; overflow: hidden; background: var(--bg-canvas); }
+.editor-workspace { min-width: 0; flex: 1; display: flex; flex-direction: column; 
+ min-height: 0;
+ gap: var(--ui-panel-gutter);
+}
+.editor-content { min-height: 0; flex: 1; position: relative; overflow: hidden; background: var(--bg-canvas); 
+ border-radius: var(--radius-panel);
+}
 .persistent-viewport { position: absolute; inset: 0; contain: layout paint; isolation: isolate; }
 .persistent-viewport.inactive { visibility: hidden; pointer-events: none; }
 .floating-dock{position:absolute;z-index:520;width:min(360px,35vw);height:min(620px,72vh);max-height:calc(100% - 60px);display:flex;flex-direction:column;overflow:hidden;border:1px solid var(--border-strong);border-radius:var(--radius-dialog);background:var(--surface-1);box-shadow:var(--shadow-lg)}.floating-dock>header{min-height:var(--ui-toolbar-height);padding:0 var(--space-2);display:flex;align-items:center;justify-content:space-between;cursor:grab;border-bottom:1px solid var(--border-subtle)}.floating-dock>:deep(.sidebar-container),.floating-dock>:deep(.config-wrapper){width:100%!important;max-width:none;height:auto;min-height:0;flex:1}.hierarchy-float{left:var(--ui-rail-width);top:var(--space-3)}.inspector-float{right:var(--space-3);top:var(--space-3)}

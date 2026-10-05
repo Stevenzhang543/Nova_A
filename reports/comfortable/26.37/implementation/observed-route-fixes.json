@@ -1,0 +1,123 @@
+{
+  "generatedAt": "2026-10-04T11:52:22.289Z",
+  "cause": "Actual170-route traversal, plus isolatedSimulation realAnimation stuckcurrentTime0 at1s and6s",
+  "records": [
+    {
+      "path": "src/ui/components/UiTabs.vue",
+      "before": "watch(() => [props.modelValue, props.items], () => { void updateIndicator() }, { deep: true, flush: 'post' })",
+      "after": "watch([() => props.modelValue, () => JSON.stringify(props.items.map(item => [item.id, item.label, item.icon, Boolean(item.disabled), item.tabId, item.controls]))], () => { void updateIndicator() }, { flush: 'post' })",
+      "purpose": "Watch stable semantic tab content rather than a new array identity from each live parent render; latest selection still updates immediately."
+    },
+    {
+      "path": "src/ui/components/UiTabs.vue",
+      "before": "indicatorBounds.value = { left: ar.left - rr.left + root.scrollLeft, width: ar.width }",
+      "after": "const target = { left: ar.left - rr.left + root.scrollLeft, width: ar.width }\n  if (animate && Math.abs(target.left - indicatorBounds.value.left) < .1 && Math.abs(target.width - indicatorBounds.value.width) < .1) return\n  indicatorBounds.value = target",
+      "purpose": "Avoid restarting a finite indicator toward the same logical geometry; real resize observers still cancel/recompute directly."
+    },
+    {
+      "path": "src/components/EditorBottomPanel.vue",
+      "before": ".importer-tabs button{flex:none;border-color:transparent;border-radius:0;background:transparent}",
+      "after": ".importer-tabs button{flex:none;border-color:transparent;border-radius:var(--radius-control);background:transparent}",
+      "purpose": "Round actual Source/Import tabs, preserving tab commands and scroll."
+    },
+    {
+      "path": "src/components/DeviceInputPanel.vue",
+      "before": ".frequency{width:min(280px,100%);min-width:0;display:flex;flex-direction:column;gap:var(--space-0);color:var(--text-muted)}",
+      "after": ".frequency{width:min(var(--ui-field-width),100%);min-width:0;display:flex;flex-direction:column;gap:var(--ui-label-control-gap);color:var(--text-secondary)}",
+      "purpose": "Replace the actual2px sensor label gap with12px stacked rhythm and scale-aware bounded field width."
+    },
+    {
+      "path": "src/components/CommandPalette.vue",
+      "before": "border:0;border-radius:0;background:transparent",
+      "after": "border:0;border-radius:var(--radius-control);background:transparent",
+      "purpose": "Round actual command result selection surfaces without changing listbox navigation."
+    },
+    {
+      "path": "src/components/ConsolePanel.vue",
+      "before": "padding: var(--space-1) var(--space-2); display: grid",
+      "after": "padding: var(--space-2) var(--space-4); display: grid",
+      "purpose": "Give code-log rows four-way breathing room while keeping their40px list stride."
+    },
+    {
+      "path": "src/components/ConsolePanel.vue",
+      "before": "gap: var(--space-2); align-items: center; overflow: hidden",
+      "after": "gap: var(--ui-control-gap); align-items: center; overflow: hidden",
+      "purpose": "Increase actual console columns from8 to12 gap."
+    },
+    {
+      "path": "src/components/ConsolePanel.vue",
+      "before": "border-radius: 0; color: var(--text-secondary)",
+      "after": "border-radius: var(--radius-xs); color: var(--text-secondary)",
+      "purpose": "Use8px semantic log-list selection corners."
+    },
+    {
+      "path": "src/components/ConsolePanel.vue",
+      "before": "text-align: left; font-size: var(--type-caption);",
+      "after": "text-align: left; font-size: var(--type-code); line-height: var(--line-body);",
+      "purpose": "Use explicit15px monospace/1.5 line metrics for the dense code-log exception."
+    },
+    {
+      "path": "src/components/ConsolePanel.vue",
+      "before": ":class=\"['log-entry', entry.level]\" @click",
+      "after": ":class=\"['log-entry', entry.level]\" :title=\"entry.source ? entry.message + ' · ' + entry.source : entry.message\" @click",
+      "purpose": "Expose full truncated log/source text through the actual native title while retaining the accessible text."
+    },
+    {
+      "path": "src/components/ScriptStudio.vue",
+      "before": "--source-line-height: 22px;",
+      "after": "--source-line-height: calc(24px * var(--ui-scale));",
+      "purpose": "Scale the actual shared gutter/textarea line box once; source navigation already uses computed lineHeight."
+    },
+    {
+      "path": "src/components/ScriptStudio.vue",
+      "before": "font: var(--type-caption)/var(--source-line-height) var(--font-mono);",
+      "after": "font: var(--type-code)/var(--source-line-height) var(--font-mono);",
+      "purpose": "Use15 logical pixel code line numbers."
+    },
+    {
+      "path": "src/components/ScriptStudio.vue",
+      "before": "font: var(--type-body)/var(--source-line-height) var(--font-mono);",
+      "after": "font: var(--type-code)/var(--source-line-height) var(--font-mono);",
+      "purpose": "Use the same15/24 scaled source metrics, preserving precise text/line alignment."
+    }
+  ],
+  "hashes": [
+    {
+      "path": "src/ui/components/UiTabs.vue",
+      "beforeSha256": "9014a33492a9e35ec030fced38368dd385108ba7108e05d45c8d69a3004ea8e1",
+      "afterSha256": "7c8d14516f0806fca310e10106d92ab4791561dce8d51f128d0300c46d682db9",
+      "businessScriptIdentical": false
+    },
+    {
+      "path": "src/components/EditorBottomPanel.vue",
+      "beforeSha256": "7d414cf407f417210761d2e47ae5e23508f0aea149be0496b5fc46aca6ad89e5",
+      "afterSha256": "9c468a9d32b0bdf97ef5b9e3fe41280fc167b0e5dd9a7cc2612640f29a6bddf5",
+      "businessScriptIdentical": true
+    },
+    {
+      "path": "src/components/DeviceInputPanel.vue",
+      "beforeSha256": "79b2b171bd8d408a09699c0b8364ffdb9a0450985bce63486dae445529d6ee79",
+      "afterSha256": "8642f860b81aab7652c89ca1b9bca1a54a362374e68684064844012a1eaa5414",
+      "businessScriptIdentical": true
+    },
+    {
+      "path": "src/components/CommandPalette.vue",
+      "beforeSha256": "86abbb1b5241f7e9aa7a7f427f8e3cb5da622c10fda721533764efc7af0b9ae7",
+      "afterSha256": "74c7b61b040cc5c01eb03db100d090f2b5926093c36761061fdc3ef70a31a5c3",
+      "businessScriptIdentical": true
+    },
+    {
+      "path": "src/components/ConsolePanel.vue",
+      "beforeSha256": "fa404390dd56c99ea491a5109a2391cd04ad0e1efb83efad5e2355c73509f6db",
+      "afterSha256": "eac058f1caf7011d39353c7cae8f95600900b7dea9d40e82e450db599f16dfaf",
+      "businessScriptIdentical": true
+    },
+    {
+      "path": "src/components/ScriptStudio.vue",
+      "beforeSha256": "935f04a52a521bceb2cd3bd74bd41cec27444e2ce6c7a246e2df387063aec71c",
+      "afterSha256": "1f622738d7467c5886e32fc037d41bdd21d82f011e01da970c9d18ce3ae5c6ea",
+      "businessScriptIdentical": true
+    }
+  ],
+  "verification": "All touched Vue files and scoped CSS compile; exact real simulation and full route reruns pending."
+}

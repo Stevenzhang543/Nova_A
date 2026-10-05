@@ -1,0 +1,589 @@
+# Nova_A26.37 — Every edit and consequence
+
+This ledger compares the exact protected26.36 filesystem baseline, including pre-existing uncommitted work, with this task. It does not claim earlier website/deployment work or restore user-revoked AGENTS files. Baseline d4d78307f673398e2437441e7af64e23e95e00b6439851e919b786d981ebb465; 4601 files. 171 recorded current edits; 0 removed source files. Generated outputs/caches/releases are excluded.
+
+Comfortable UI shows fewer fields per screen intentionally. Normal scrolling, responsive stacking, recoverable panel widths and explicit overflow preserve workflows. Finite motion changes presentation only: direct inputs, project data, undo/redo and game coordinates remain authoritative. Dependency/framework/schema changes and engine feature expansion are absent.
+
+The deterministic path-level manifest is EDIT_MANIFEST_26_37.json, containing per-path before/after SHA256. Its own hash and this ledger are bound by the final immutable snapshot. Detailed applied intermediate records are in reports/comfortable/26.37/implementation; final qualification receipts and reviewed screenshots are in the release-evidence archive. Failed development attempts remain recorded locally, never relabeled passed.
+
+## Files changed or added — every source file
+
+- `Cargo.lock` — changed: Synchronize current26.37/26.37.0 authority and migration expectation; retain dependencies, schema29/format2 and runtime implementation.
+- `Cargo.toml` — changed: Synchronize current26.37/26.37.0 authority and migration expectation; retain dependencies, schema29/format2 and runtime implementation.
+- `README.md` — changed: Link current37 notes, exhaustive edits, Web delivery and artifact destination while retaining prior release history.
+- `README.zh-CN.md` — changed: Link current37 notes, exhaustive edits, Web delivery and artifact destination while retaining prior release history.
+- `crates/nova_format/src/lib.rs` — changed: Synchronize current26.37/26.37.0 authority and migration expectation; retain dependencies, schema29/format2 and runtime implementation.
+- `docs/EDIT_LEDGER_26_37.md` — added: List every actual current-task source path and consequence plus granular214 local declarations; the final immutable source snapshot binds this self-referential document.
+- `docs/EDIT_MANIFEST_26_37.json` — added: Record deterministic before/after path hashes against the protected starting source, with self-reference hashes bound by the final snapshot.
+- `docs/NATIVE_HEADLESS_26_37.md` — added: Document current37 compatibility, UI/motion results and existing native/Web delivery distinctions with actual qualification evidence and explicit external limits.
+- `docs/RELEASE_NOTES_26_37.md` — added: Document current37 compatibility, UI/motion results and existing native/Web delivery distinctions with actual qualification evidence and explicit external limits.
+- `docs/WEB_HOSTING_26_37.md` — added: Document current37 compatibility, UI/motion results and existing native/Web delivery distinctions with actual qualification evidence and explicit external limits.
+- `docs/ui/DECISIONS.md` — changed: Update the existing relevant UI document: latest comfortable priority, real geometry/motion migration, truthful executed acceptance and external limitations; historical safety/architecture remains.
+- `docs/ui/MIGRATION.md` — changed: Update the existing relevant UI document: latest comfortable priority, real geometry/motion migration, truthful executed acceptance and external limitations; historical safety/architecture remains.
+- `docs/ui/MOTION_QA_CHECKLIST.md` — changed: Update the existing relevant UI document: latest comfortable priority, real geometry/motion migration, truthful executed acceptance and external limitations; historical safety/architecture remains.
+- `docs/ui/MOTION_SYSTEM_SPEC.md` — changed: Update the existing relevant UI document: latest comfortable priority, real geometry/motion migration, truthful executed acceptance and external limitations; historical safety/architecture remains.
+- `docs/ui/UI_MOTION_IMPLEMENTATION_PLAN.md` — changed: Update the existing relevant UI document: latest comfortable priority, real geometry/motion migration, truthful executed acceptance and external limitations; historical safety/architecture remains.
+- `docs/ui/UI_SPEC.md` — changed: Update the existing relevant UI document: latest comfortable priority, real geometry/motion migration, truthful executed acceptance and external limitations; historical safety/architecture remains.
+- `docs/ui/UI_VISUAL_V3_SPEC.md` — changed: Update the existing relevant UI document: latest comfortable priority, real geometry/motion migration, truthful executed acceptance and external limitations; historical safety/architecture remains.
+- `manual/MANUAL.de.md` — changed: Update current37 edition and concise translated comfortable/motion lesson; preserve existing tutorial and game/API contracts.
+- `manual/MANUAL.en.md` — changed: Update current37 edition and concise translated comfortable/motion lesson; preserve existing tutorial and game/API contracts.
+- `manual/MANUAL.zh-CN.md` — changed: Update current37 edition and concise translated comfortable/motion lesson; preserve existing tutorial and game/API contracts.
+- `manual/index.html` — changed: Update current37 edition and concise translated comfortable/motion lesson; preserve existing tutorial and game/API contracts.
+- `package.json` — changed: Synchronize engine26.37.0 and expose current preparation/check/qualification/release commands; preserve dependencies and historical commands.
+- `reference-projects/README.md` — changed: Register current37 delivery examples while retaining all historical references and the unchanged36 comparison fixture.
+- `reference-projects/projects/creator-v2637-mixed-game/README.md` — added: Add current26.37 identity copy of the existing reference with unchanged gameplay/entity/control semantics; retain the26.36 strict comparison fixture.
+- `reference-projects/projects/creator-v2637-mixed-game/expected-output.json` — added: Add current26.37 identity copy of the existing reference with unchanged gameplay/entity/control semantics; retain the26.36 strict comparison fixture.
+- `reference-projects/projects/creator-v2637-mixed-game/project.nova` — added: Add current26.37 identity copy of the existing reference with unchanged gameplay/entity/control semantics; retain the26.36 strict comparison fixture.
+- `reference-projects/projects/creator-v2637-mixed-game/test-controls.json` — added: Add current26.37 identity copy of the existing reference with unchanged gameplay/entity/control semantics; retain the26.36 strict comparison fixture.
+- `reference-projects/projects/server-v2637-headless-authority/README.md` — added: Add current26.37 identity copy of the existing reference with unchanged gameplay/entity/control semantics; retain the26.36 strict comparison fixture.
+- `reference-projects/projects/server-v2637-headless-authority/expected-output.json` — added: Add current26.37 identity copy of the existing reference with unchanged gameplay/entity/control semantics; retain the26.36 strict comparison fixture.
+- `reference-projects/projects/server-v2637-headless-authority/project.nova` — added: Add current26.37 identity copy of the existing reference with unchanged gameplay/entity/control semantics; retain the26.36 strict comparison fixture.
+- `reference-projects/projects/server-v2637-headless-authority/test-controls.json` — added: Add current26.37 identity copy of the existing reference with unchanged gameplay/entity/control semantics; retain the26.36 strict comparison fixture.
+- `reports/comfortable/26.37/baseline/before-measurements.json` — added: Archive actual unchanged26.36 before geometry/screenshots/raw timings and successful method source; not a current37 qualification receipt.
+- `reports/comfortable/26.37/baseline/dynamic-before-driver.mjs` — added: Archive actual unchanged26.36 before geometry/screenshots/raw timings and successful method source; not a current37 qualification receipt.
+- `reports/comfortable/26.37/baseline/dynamic-before.json` — added: Archive actual unchanged26.36 before geometry/screenshots/raw timings and successful method source; not a current37 qualification receipt.
+- `reports/comfortable/26.37/baseline/v26.36-comfortable-baseline-dialog.png` — added: Archive actual unchanged26.36 before geometry/screenshots/raw timings and successful method source; not a current37 qualification receipt.
+- `reports/comfortable/26.37/baseline/v26.36-comfortable-baseline-editor-inspector.png` — added: Archive actual unchanged26.36 before geometry/screenshots/raw timings and successful method source; not a current37 qualification receipt.
+- `reports/comfortable/26.37/baseline/v26.36-comfortable-baseline-inspector-top.png` — added: Archive actual unchanged26.36 before geometry/screenshots/raw timings and successful method source; not a current37 qualification receipt.
+- `reports/comfortable/26.37/baseline/v26.36-comfortable-baseline-launcher.png` — added: Archive actual unchanged26.36 before geometry/screenshots/raw timings and successful method source; not a current37 qualification receipt.
+- `reports/comfortable/26.37/baseline/v26.36-comfortable-baseline-settings.png` — added: Archive actual unchanged26.36 before geometry/screenshots/raw timings and successful method source; not a current37 qualification receipt.
+- `reports/comfortable/26.37/implementation/all-route-geometry-edit-report.json` — added: Archive granular applied changes and intermediate hashes for review; final per-path authority comes from the release source snapshot.
+- `reports/comfortable/26.37/implementation/conditional-owner-migration.json` — added: Archive granular applied changes and intermediate hashes for review; final per-path authority comes from the release source snapshot.
+- `reports/comfortable/26.37/implementation/final-documentation-edit-report.json` — added: Archive granular applied changes and intermediate hashes for review; final per-path authority comes from the release source snapshot.
+- `reports/comfortable/26.37/implementation/geometry-edit-report.json` — added: Archive granular applied changes and intermediate hashes for review; final per-path authority comes from the release source snapshot.
+- `reports/comfortable/26.37/implementation/important-label-edit-report.json` — added: Archive granular applied changes and intermediate hashes for review; final per-path authority comes from the release source snapshot.
+- `reports/comfortable/26.37/implementation/local-style-migration.json` — added: Archive granular applied changes and intermediate hashes for review; final per-path authority comes from the release source snapshot.
+- `reports/comfortable/26.37/implementation/motion-doc-edit-report.json` — added: Archive granular applied changes and intermediate hashes for review; final per-path authority comes from the release source snapshot.
+- `reports/comfortable/26.37/implementation/motion-lifecycle-edit-report.json` — added: Archive granular applied changes and intermediate hashes for review; final per-path authority comes from the release source snapshot.
+- `reports/comfortable/26.37/implementation/native-details-caller-edit-report.json` — added: Archive granular applied changes and intermediate hashes for review; final per-path authority comes from the release source snapshot.
+- `reports/comfortable/26.37/implementation/native-disclosures-audit-edit-report.json` — added: Archive granular applied changes and intermediate hashes for review; final per-path authority comes from the release source snapshot.
+- `reports/comfortable/26.37/implementation/native-popup-edit-report.json` — added: Archive granular applied changes and intermediate hashes for review; final per-path authority comes from the release source snapshot.
+- `reports/comfortable/26.37/implementation/native-popup-route-scope-edit.json` — added: Archive granular applied changes and intermediate hashes for review; final per-path authority comes from the release source snapshot.
+- `reports/comfortable/26.37/implementation/navigator-header-edit-report.json` — added: Archive granular applied changes and intermediate hashes for review; final per-path authority comes from the release source snapshot.
+- `reports/comfortable/26.37/implementation/network-channel-layout-fix-ledger.json` — added: Archive granular applied changes and intermediate hashes for review; final per-path authority comes from the release source snapshot.
+- `reports/comfortable/26.37/implementation/network-rpc-layout-fix-ledger.json` — added: Archive granular applied changes and intermediate hashes for review; final per-path authority comes from the release source snapshot.
+- `reports/comfortable/26.37/implementation/observed-assets-and-window-scope-fixes.json` — added: Archive granular applied changes and intermediate hashes for review; final per-path authority comes from the release source snapshot.
+- `reports/comfortable/26.37/implementation/observed-assets-toolbar-height-fix.json` — added: Archive granular applied changes and intermediate hashes for review; final per-path authority comes from the release source snapshot.
+- `reports/comfortable/26.37/implementation/observed-creation-dialog-fix.json` — added: Archive granular applied changes and intermediate hashes for review; final per-path authority comes from the release source snapshot.
+- `reports/comfortable/26.37/implementation/observed-editor-chrome-fix.json` — added: Archive granular applied changes and intermediate hashes for review; final per-path authority comes from the release source snapshot.
+- `reports/comfortable/26.37/implementation/observed-high-scale-navigation-fix.json` — added: Archive granular applied changes and intermediate hashes for review; final per-path authority comes from the release source snapshot.
+- `reports/comfortable/26.37/implementation/observed-launcher-fix.json` — added: Archive granular applied changes and intermediate hashes for review; final per-path authority comes from the release source snapshot.
+- `reports/comfortable/26.37/implementation/observed-minimum-assets-layout-fix.json` — added: Archive granular applied changes and intermediate hashes for review; final per-path authority comes from the release source snapshot.
+- `reports/comfortable/26.37/implementation/observed-navigation-and-tilemap-fix.json` — added: Archive granular applied changes and intermediate hashes for review; final per-path authority comes from the release source snapshot.
+- `reports/comfortable/26.37/implementation/observed-popup-geometry-fix.json` — added: Archive granular applied changes and intermediate hashes for review; final per-path authority comes from the release source snapshot.
+- `reports/comfortable/26.37/implementation/observed-route-fixes.json` — added: Archive granular applied changes and intermediate hashes for review; final per-path authority comes from the release source snapshot.
+- `reports/comfortable/26.37/implementation/qa-edit-report.json` — added: Archive granular applied changes and intermediate hashes for review; final per-path authority comes from the release source snapshot.
+- `reports/comfortable/26.37/implementation/release-evidence-review-edit-report.json` — added: Archive granular applied changes and intermediate hashes for review; final per-path authority comes from the release source snapshot.
+- `reports/comfortable/26.37/implementation/representative-layout-edit-report.json` — added: Archive granular applied changes and intermediate hashes for review; final per-path authority comes from the release source snapshot.
+- `reports/comfortable/26.37/implementation/route-override-fixes-ledger.json` — added: Archive granular applied changes and intermediate hashes for review; final per-path authority comes from the release source snapshot.
+- `reports/comfortable/26.37/implementation/settings-panel-refinement-ledger.json` — added: Archive granular applied changes and intermediate hashes for review; final per-path authority comes from the release source snapshot.
+- `reports/comfortable/26.37/implementation/surfaces-refinement-ledger.json` — added: Archive granular applied changes and intermediate hashes for review; final per-path authority comes from the release source snapshot.
+- `reports/comfortable/26.37/implementation/toast-dismissal-audit-fix.json` — added: Archive granular applied changes and intermediate hashes for review; final per-path authority comes from the release source snapshot.
+- `scripts/generate-sequential-release-evidence.mjs` — changed: For26.37, reconstruct qualified hash-checked review attachments as ordinary files so the actual gallery opens after extraction; retain source/execution binding and immutable evidence publication.
+- `scripts/lib/browserUserAudit.mjs` — changed: Permit explicit26.37 browser qualification authority while retaining real public DOM/input test contracts.
+- `scripts/lib/comfortableGeometryAudit.mjs` — added: Measure actual visible production fonts/heights/padding/gaps/radii/containment and explicitly named precision exceptions; hidden or virtual CodeMirror inputs are not cosmetic failures.
+- `scripts/lib/milestoneAuditBundle.mjs` — changed: Retain the actual current static HTML screenshot gallery with bounded hash-checked attachments, alongside existing raw reports and captures.
+- `scripts/lib/milestoneAuditContext.mjs` — changed: Extend the bounded current-release range through26.37; reject stale authority as before.
+- `scripts/lib/worldAudit17.mjs` — changed: Dismiss only live notifications with actual input and tolerate only an exact proven expiration race; restore retained-but-collapsed normal docks through their public expand control using actual visible/inert geometry, preserving strict failures and bounded termination.
+- `scripts/prepare-release-26.37.mjs` — added: Declare fourteen linked source-bound gates, exact current references/docs, all six build artifacts and eight explicit risk-based omissions; planning alone never marks a gate executed.
+- `scripts/qualify-v26.37-scoped.mjs` — added: Run linked CI/artwork/native identity, production motion, all-panel/navigation, authoring/input/export/static and actual comfort/performance checks; product authority derives only from fresh passed reports.
+- `scripts/verify-ui-rebuild-layout-user.mjs` — changed: Measure actual Comfortable computed geometry in every existing route root, normalize the savedUI scale while retaining raw pixels, and join failures to the existing independent all-route verdict; no new production behavior or blanket precision exemption.
+- `scripts/verify-v26.34-authoring-user.mjs` — changed: Allow the explicitly requested26.37 source authority in the retained actual authoring suite while keeping34/35 regression targets; preserve all UI/input/history/save/reopen assertions. The first frozen candidate stopped before these business tests because its old allowlist rejected37; the failed execution is retained, not promoted.
+- `scripts/verify-v26.34-native-headless.mjs` — changed: Permit fresh26.37 stdio smoke with the existing eight native/version checks; no runtime implementation change.
+- `scripts/verify-v26.36-branding-assets.mjs` — changed: Parameterize fresh36/37 qualification reports while retaining seven exact supplied-image/ICO/PE/installer checks and qualification skip prohibition.
+- `scripts/verify-v26.37-comfortable-user.mjs` — added: Exercise real editor geometry and native interaction/motion paths with unchanged fixture, before/after timing/counters, reduction, interruptions, drag, focus and cleanup. No app-state injection or hardware latency claim.
+- `scripts/verify-v26.37-motion.mjs` — added: Test actual production motion logic under a controllable animation host: spring/frame stability, policy, current-state reversal, ownership, cancellation/disposal and fallback; real DOM feedback is verified separately.
+- `scripts/verify-v26.37-native-disclosures-user.mjs` — added: Verify actual native editor content/menu motion through trusted input: latest reversal, immediate aria/inert state, bounded settlement, focus, reduction and project cleanup. No private app-state writes.
+- `scripts/verify-v26.37-select-tooltip-user.mjs` — added: Exercise the real selected-value tooltip through hover, keyboard navigation, source removal/project replacement and rapid latest-owner changes; require finite hidden state, ARIA cleanup and no remaining hint animation rather than merely recording diagnostic paths.
+- `src-tauri/Cargo.lock` — changed: Synchronize current26.37/26.37.0 authority and migration expectation; retain dependencies, schema29/format2 and runtime implementation.
+- `src-tauri/Cargo.toml` — changed: Synchronize current26.37/26.37.0 authority and migration expectation; retain dependencies, schema29/format2 and runtime implementation.
+- `src-tauri/tauri.conf.json` — changed: Synchronize current26.37/26.37.0 authority and migration expectation; retain dependencies, schema29/format2 and runtime implementation.
+- `src/components/AccessibilityEvidencePanel.vue` — changed: Migrate actual local control/text/spacing/radius overrides to Comfortable and/or attach conditional surfaces to the shared finite presence owner; retain business data, native events and precise tool coordinates. Exact declarations/owners are recorded below and in the implementation reports.
+- `src/components/AndroidDeliveryPanel.vue` — changed: Migrate actual local control/text/spacing/radius overrides to Comfortable and/or attach conditional surfaces to the shared finite presence owner; retain business data, native events and precise tool coordinates. Exact declarations/owners are recorded below and in the implementation reports.
+- `src/components/AnimationPanel.vue` — changed: Migrate actual local control/text/spacing/radius overrides to Comfortable and/or attach conditional surfaces to the shared finite presence owner; retain business data, native events and precise tool coordinates. Exact declarations/owners are recorded below and in the implementation reports.
+- `src/components/AutomationStudio.vue` — changed: Migrate actual local control/text/spacing/radius overrides to Comfortable and/or attach conditional surfaces to the shared finite presence owner; retain business data, native events and precise tool coordinates. Exact declarations/owners are recorded below and in the implementation reports.
+- `src/components/BuildSettingsPanel.vue` — changed: Migrate actual local control/text/spacing/radius overrides to Comfortable and/or attach conditional surfaces to the shared finite presence owner; retain business data, native events and precise tool coordinates. Exact declarations/owners are recorded below and in the implementation reports.
+- `src/components/CommandPalette.vue` — changed: Migrate actual local control/text/spacing/radius overrides to Comfortable and/or attach conditional surfaces to the shared finite presence owner; retain business data, native events and precise tool coordinates. Exact declarations/owners are recorded below and in the implementation reports.
+- `src/components/ConfigPanel.vue` — changed: Remove stale header height/paint constraints and invisible overlapping area;380 default/320 minimum,20 inset, readable fields, responsive compound/component-picker controls and real modal/menu open owners. Object state and scroll remain stable.
+- `src/components/ConfirmDialog.vue` — changed: Migrate actual local control/text/spacing/radius overrides to Comfortable and/or attach conditional surfaces to the shared finite presence owner; retain business data, native events and precise tool coordinates. Exact declarations/owners are recorded below and in the implementation reports.
+- `src/components/ConnectionBuilder.vue` — changed: Migrate actual local control/text/spacing/radius overrides to Comfortable and/or attach conditional surfaces to the shared finite presence owner; retain business data, native events and precise tool coordinates. Exact declarations/owners are recorded below and in the implementation reports.
+- `src/components/ConsolePanel.vue` — changed: Migrate actual local control/text/spacing/radius overrides to Comfortable and/or attach conditional surfaces to the shared finite presence owner; retain business data, native events and precise tool coordinates. Exact declarations/owners are recorded below and in the implementation reports.
+- `src/components/ContentAssetInspector.vue` — changed: Migrate actual local control/text/spacing/radius overrides to Comfortable and/or attach conditional surfaces to the shared finite presence owner; retain business data, native events and precise tool coordinates. Exact declarations/owners are recorded below and in the implementation reports.
+- `src/components/CreateObjectPalette.vue` — changed: Migrate actual local control/text/spacing/radius overrides to Comfortable and/or attach conditional surfaces to the shared finite presence owner; retain business data, native events and precise tool coordinates. Exact declarations/owners are recorded below and in the implementation reports.
+- `src/components/CreatorLearningCenter.vue` — changed: Migrate actual local control/text/spacing/radius overrides to Comfortable and/or attach conditional surfaces to the shared finite presence owner; retain business data, native events and precise tool coordinates. Exact declarations/owners are recorded below and in the implementation reports.
+- `src/components/CreatorOnboarding.vue` — changed: Use the shared blocking-modal transition and finite step feedback; opening actions remain immediate.
+- `src/components/DeviceInputPanel.vue` — changed: Migrate actual local control/text/spacing/radius overrides to Comfortable and/or attach conditional surfaces to the shared finite presence owner; retain business data, native events and precise tool coordinates. Exact declarations/owners are recorded below and in the implementation reports.
+- `src/components/EcosystemStudioPanel.vue` — changed: Migrate actual local control/text/spacing/radius overrides to Comfortable and/or attach conditional surfaces to the shared finite presence owner; retain business data, native events and precise tool coordinates. Exact declarations/owners are recorded below and in the implementation reports.
+- `src/components/EditorBottomPanel.vue` — changed: Migrate44/56 dock chrome, rounded shell, spacing and real filter-popover; interruptible open-only height animation retains/directly resizes real contents, rejects closed input and preserves loaded workspaces.
+- `src/components/EditorFeedback.vue` — changed: Connect real banners/toasts/status surfaces and toast reordering; closing notifications reject input, use readable geometry and only active queued/running tasks spin.
+- `src/components/ErrorRecovery.vue` — changed: Migrate actual local control/text/spacing/radius overrides to Comfortable and/or attach conditional surfaces to the shared finite presence owner; retain business data, native events and precise tool coordinates. Exact declarations/owners are recorded below and in the implementation reports.
+- `src/components/EventSheetEditor.vue` — changed: Migrate actual local control/text/spacing/radius overrides to Comfortable and/or attach conditional surfaces to the shared finite presence owner; retain business data, native events and precise tool coordinates. Exact declarations/owners are recorded below and in the implementation reports.
+- `src/components/ExternalChangeDialog.vue` — changed: Migrate actual local control/text/spacing/radius overrides to Comfortable and/or attach conditional surfaces to the shared finite presence owner; retain business data, native events and precise tool coordinates. Exact declarations/owners are recorded below and in the implementation reports.
+- `src/components/GraphProductionPanel.vue` — changed: Migrate actual local control/text/spacing/radius overrides to Comfortable and/or attach conditional surfaces to the shared finite presence owner; retain business data, native events and precise tool coordinates. Exact declarations/owners are recorded below and in the implementation reports.
+- `src/components/MaterialGraphEditor.vue` — changed: Migrate actual local control/text/spacing/radius overrides to Comfortable and/or attach conditional surfaces to the shared finite presence owner; retain business data, native events and precise tool coordinates. Exact declarations/owners are recorded below and in the implementation reports.
+- `src/components/NetworkStudioPanel.vue` — changed: Migrate actual local control/text/spacing/radius overrides to Comfortable and/or attach conditional surfaces to the shared finite presence owner; retain business data, native events and precise tool coordinates. Exact declarations/owners are recorded below and in the implementation reports.
+- `src/components/ObjectBlueprintEditor.vue` — changed: Migrate actual local control/text/spacing/radius overrides to Comfortable and/or attach conditional surfaces to the shared finite presence owner; retain business data, native events and precise tool coordinates. Exact declarations/owners are recorded below and in the implementation reports.
+- `src/components/ObjectOwnershipPanel.vue` — changed: Migrate actual local control/text/spacing/radius overrides to Comfortable and/or attach conditional surfaces to the shared finite presence owner; retain business data, native events and precise tool coordinates. Exact declarations/owners are recorded below and in the implementation reports.
+- `src/components/PackageManagerPanel.vue` — changed: Migrate actual local control/text/spacing/radius overrides to Comfortable and/or attach conditional surfaces to the shared finite presence owner; retain business data, native events and precise tool coordinates. Exact declarations/owners are recorded below and in the implementation reports.
+- `src/components/PanelMaximizeButton.vue` — changed: Remove local30px/15px/6px!important overrides; use actual shared44 icon-button/12 radius geometry without changing maximize commands.
+- `src/components/ParticleGraphEditor.vue` — changed: Migrate actual local control/text/spacing/radius overrides to Comfortable and/or attach conditional surfaces to the shared finite presence owner; retain business data, native events and precise tool coordinates. Exact declarations/owners are recorded below and in the implementation reports.
+- `src/components/PhysicsRuntimePanel.vue` — changed: Migrate actual local control/text/spacing/radius overrides to Comfortable and/or attach conditional surfaces to the shared finite presence owner; retain business data, native events and precise tool coordinates. Exact declarations/owners are recorded below and in the implementation reports.
+- `src/components/PhysicsSettingsPanel.vue` — changed: Migrate actual local control/text/spacing/radius overrides to Comfortable and/or attach conditional surfaces to the shared finite presence owner; retain business data, native events and precise tool coordinates. Exact declarations/owners are recorded below and in the implementation reports.
+- `src/components/PluginSettings.vue` — changed: Migrate actual local control/text/spacing/radius overrides to Comfortable and/or attach conditional surfaces to the shared finite presence owner; retain business data, native events and precise tool coordinates. Exact declarations/owners are recorded below and in the implementation reports.
+- `src/components/PresentationPanel.vue` — changed: Migrate actual local control/text/spacing/radius overrides to Comfortable and/or attach conditional surfaces to the shared finite presence owner; retain business data, native events and precise tool coordinates. Exact declarations/owners are recorded below and in the implementation reports.
+- `src/components/ProfilerPanel.vue` — changed: Migrate actual local control/text/spacing/radius overrides to Comfortable and/or attach conditional surfaces to the shared finite presence owner; retain business data, native events and precise tool coordinates. Exact declarations/owners are recorded below and in the implementation reports.
+- `src/components/ProjectHealthPanel.vue` — changed: Migrate actual local control/text/spacing/radius overrides to Comfortable and/or attach conditional surfaces to the shared finite presence owner; retain business data, native events and precise tool coordinates. Exact declarations/owners are recorded below and in the implementation reports.
+- `src/components/ProjectManager.vue` — changed: Migrate launcher geometry and real dialogs while retaining finite three-region entry choreography; recent-project hover lifts softly, no redundant whole-page animation.
+- `src/components/RecoveryCenter.vue` — changed: Migrate actual local control/text/spacing/radius overrides to Comfortable and/or attach conditional surfaces to the shared finite presence owner; retain business data, native events and precise tool coordinates. Exact declarations/owners are recorded below and in the implementation reports.
+- `src/components/RenderingPanel.vue` — changed: Migrate actual local control/text/spacing/radius overrides to Comfortable and/or attach conditional surfaces to the shared finite presence owner; retain business data, native events and precise tool coordinates. Exact declarations/owners are recorded below and in the implementation reports.
+- `src/components/RuntimeComponentsInspector.vue` — changed: Migrate actual local control/text/spacing/radius overrides to Comfortable and/or attach conditional surfaces to the shared finite presence owner; retain business data, native events and precise tool coordinates. Exact declarations/owners are recorded below and in the implementation reports.
+- `src/components/SaveDataSettings.vue` — changed: Migrate actual local control/text/spacing/radius overrides to Comfortable and/or attach conditional surfaces to the shared finite presence owner; retain business data, native events and precise tool coordinates. Exact declarations/owners are recorded below and in the implementation reports.
+- `src/components/SceneSideBar.vue` — changed: Use scaled40/Compact28 virtual rows with matching offset/inset and rename geometry; enlarge recoverable sidebar defaults, round shell, animate mounted row feedback/chevrons without springing pointer or virtual coordinates.
+- `src/components/SceneTabs.vue` — changed: Migrate actual local control/text/spacing/radius overrides to Comfortable and/or attach conditional surfaces to the shared finite presence owner; retain business data, native events and precise tool coordinates. Exact declarations/owners are recorded below and in the implementation reports.
+- `src/components/ScriptConversionPanel.vue` — changed: Migrate actual local control/text/spacing/radius overrides to Comfortable and/or attach conditional surfaces to the shared finite presence owner; retain business data, native events and precise tool coordinates. Exact declarations/owners are recorded below and in the implementation reports.
+- `src/components/ScriptStudio.vue` — changed: Migrate actual local control/text/spacing/radius overrides to Comfortable and/or attach conditional surfaces to the shared finite presence owner; retain business data, native events and precise tool coordinates. Exact declarations/owners are recorded below and in the implementation reports.
+- `src/components/ScriptWorkspace.vue` — changed: Migrate actual local control/text/spacing/radius overrides to Comfortable and/or attach conditional surfaces to the shared finite presence owner; retain business data, native events and precise tool coordinates. Exact declarations/owners are recorded below and in the implementation reports.
+- `src/components/ShortcutEditor.vue` — changed: Migrate actual local control/text/spacing/radius overrides to Comfortable and/or attach conditional surfaces to the shared finite presence owner; retain business data, native events and precise tool coordinates. Exact declarations/owners are recorded below and in the implementation reports.
+- `src/components/SimulationStatusPanel17.vue` — changed: Migrate actual local control/text/spacing/radius overrides to Comfortable and/or attach conditional surfaces to the shared finite presence owner; retain business data, native events and precise tool coordinates. Exact declarations/owners are recorded below and in the implementation reports.
+- `src/components/StudioDraftConflict.vue` — changed: Migrate actual local control/text/spacing/radius overrides to Comfortable and/or attach conditional surfaces to the shared finite presence owner; retain business data, native events and precise tool coordinates. Exact declarations/owners are recorded below and in the implementation reports.
+- `src/components/StudioStatusDialog.vue` — changed: Migrate actual local control/text/spacing/radius overrides to Comfortable and/or attach conditional surfaces to the shared finite presence owner; retain business data, native events and precise tool coordinates. Exact declarations/owners are recorded below and in the implementation reports.
+- `src/components/TeamWorkflowPanel.vue` — changed: Migrate actual local control/text/spacing/radius overrides to Comfortable and/or attach conditional surfaces to the shared finite presence owner; retain business data, native events and precise tool coordinates. Exact declarations/owners are recorded below and in the implementation reports.
+- `src/components/TilemapPanel.vue` — changed: Migrate actual local control/text/spacing/radius overrides to Comfortable and/or attach conditional surfaces to the shared finite presence owner; retain business data, native events and precise tool coordinates. Exact declarations/owners are recorded below and in the implementation reports.
+- `src/components/TimelineButtonAction.vue` — changed: Migrate actual local control/text/spacing/radius overrides to Comfortable and/or attach conditional surfaces to the shared finite presence owner; retain business data, native events and precise tool coordinates. Exact declarations/owners are recorded below and in the implementation reports.
+- `src/components/ToolBar.vue` — changed: Migrate actual local control/text/spacing/radius overrides to Comfortable and/or attach conditional surfaces to the shared finite presence owner; retain business data, native events and precise tool coordinates. Exact declarations/owners are recorded below and in the implementation reports.
+- `src/components/UiScenePreview.vue` — changed: Migrate actual local control/text/spacing/radius overrides to Comfortable and/or attach conditional surfaces to the shared finite presence owner; retain business data, native events and precise tool coordinates. Exact declarations/owners are recorded below and in the implementation reports.
+- `src/components/UndoHistoryPanel.vue` — changed: Migrate actual local control/text/spacing/radius overrides to Comfortable and/or attach conditional surfaces to the shared finite presence owner; retain business data, native events and precise tool coordinates. Exact declarations/owners are recorded below and in the implementation reports.
+- `src/components/VisualGraphEditor.vue` — changed: Migrate external chrome and Inspector to Comfortable; document independently zoomed16-value/14-code node geometry and coherent fixed port/input math instead of scaling graph coordinates with UI scale.
+- `src/components/WorkspaceBar.vue` — changed: Migrate actual local control/text/spacing/radius overrides to Comfortable and/or attach conditional surfaces to the shared finite presence owner; retain business data, native events and precise tool coordinates. Exact declarations/owners are recorded below and in the implementation reports.
+- `src/components/WorkspaceManager.vue` — changed: Migrate actual local control/text/spacing/radius overrides to Comfortable and/or attach conditional surfaces to the shared finite presence owner; retain business data, native events and precise tool coordinates. Exact declarations/owners are recorded below and in the implementation reports.
+- `src/components/WorldComponentsInspector.vue` — changed: Migrate actual local control/text/spacing/radius overrides to Comfortable and/or attach conditional surfaces to the shared finite presence owner; retain business data, native events and precise tool coordinates. Exact declarations/owners are recorded below and in the implementation reports.
+- `src/components/WorldToolsPanel.vue` — changed: Migrate actual local control/text/spacing/radius overrides to Comfortable and/or attach conditional surfaces to the shared finite presence owner; retain business data, native events and precise tool coordinates. Exact declarations/owners are recorded below and in the implementation reports.
+- `src/editor/selectValueDetails.ts` — changed: Make selected-value hints finite/reversible, remove stale ARIA immediately, clear hidden/removed or focus-abandoned owners through active-only observation and intent, dispose cleanly and exclude authored game controls. Actual four-path browser regression protects latest ownership and cleanup.
+- `src/editor/workspaces.ts` — changed: Use280/380/280 for new/reset workspace layouts so readable controls have room; preserve saved custom layouts and panel semantics.
+- `src/layout/EditorLayout.vue` — changed: Add visible8 gutters and16 rounded viewport; correct workspace versus top-menu stacking; connect real side/floating/bottom presence owners while preserving KeepAlive/state.
+- `src/layout/StatusBar.vue` — changed: Make the real Task center action body16/line1.5 and12 gap while retaining secondary status copy14 and exact action behavior.
+- `src/layout/TopBar.vue` — changed: Bound and round actual dropdowns at the new geometry, preserving menu commands and layering.
+- `src/panels/SettingsPanel.vue` — changed: Migrate the real input-mapping Settings path:44 icon/actions/disclosure rows,16 important labels,12/20/28 rhythm, responsive real binding grids and existing shared details motion. Preserve its complete business script, modifiers and immediate values.
+- `src/projects/projectFormat.ts` — changed: Synchronize current26.37/26.37.0 authority and migration expectation; retain dependencies, schema29/format2 and runtime implementation.
+- `src/store/editor.ts` — changed: Increase default hierarchy/Inspector/bottom widths and height to280/380/280; preserve existing reactive state and persisted workflow.
+- `src/store/preferences.ts` — changed: Expose actual comfortable/compact DOM density and distinguish user/system reduction from the light decoration budget; keep existing saved preference schema.
+- `src/ui/components/UiAsyncWorkspace.vue` — changed: Animate actual asynchronously displayed workspace changes without rebuilding the editor shell or delaying logical selection/loading cancellation.
+- `src/ui/components/UiDialog.vue` — changed: Add explicit open/self-or-parent owner contract and finite reversible presence; closing inner controls stop responding while the modal scrim continues blocking click-through, with focus restored and tasks disposed.
+- `src/ui/components/UiMenu.vue` — changed: Add explicit open state for actual leave ownership and keyboard focus initialization; keep menu navigation and native actions immediate.
+- `src/ui/components/UiMotionTransition.vue` — added: Add one reusable production transition owner with latest-generation cancellation and optional blocking-modal scrim semantics, preserving existing v-if type guards and component state.
+- `src/ui/components/UiPropertySection.vue` — changed: Route actual open prop and summary state through the shared disclosure owner, avoid double animation and dispose jobs; retain semantic native details.
+- `src/ui/components/UiTabs.vue` — changed: Stop real Simulation parent refreshes from restarting the settled indicator: watch canonical semantic tab fields and avoid unchanged geometry targets; actual selection, keyboard and resize behavior remain immediate.
+- `src/ui/editor.css` — changed: Apply coherent native input/button padding and line boxes, rounded shared chrome, bounded menus/dialogs, and optional Compact overrides; retain visible reduced focus/state tint rather than globally zeroing all transitions.
+- `src/ui/forms.css` — changed: Replace compressed property/setting geometry with12 label,20 field,28 section rhythm and real responsive stacking; retain native numeric modifiers,44 controls and deliberate22 half-step buttons.
+- `src/ui/motion.css` — changed: Centralize durations/easing and real editor control/slider/switch/chevron/drag/material feedback; scope out authored game controls, respect reduction/light policy and bound decorative effects.
+- `src/ui/motion.ts` — changed: Reuse finite analytic springs with perceptible presets; latest-owner/reversal/WA fallback, direct input, native feedback, reversible disclosure, drag release/cancel, removed-node cleanup and diagnostics. No project-state or logical-coordinate animation.
+- `src/ui/tokens.css` — changed: Raise default type/line metrics, four-direction spacing, scaled 44 controls/40 tree rows/56 headers and semantic12/16/20/24 radii; shared geometry replaces old compact constants. Compact remains an explicit choice.
+- `tests/fixtures/migrations/public-schema-expected.json` — changed: Synchronize current26.37/26.37.0 authority and migration expectation; retain dependencies, schema29/format2 and runtime implementation.
+
+## Every migrated local declaration (214)
+
+- `src/components/AccessibilityEvidencePanel.vue` · `.semantic-card header>span` · `gap`: `["var(--ui-space-xs)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/AccessibilityEvidencePanel.vue` · `.actions` · `gap`: `["var(--ui-space-xs)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/AndroidDeliveryPanel.vue` · `.package-row,.device-row,.device-actions` · `gap`: `["var(--ui-space-xs)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/AndroidDeliveryPanel.vue` · `.permissions label` · `gap`: `["var(--ui-space-xs)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/AnimationPanel.vue` · `.studio-toolbar,.transport,.studio-modes` · `gap`: `["var(--ui-space-xs)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/AnimationPanel.vue` · `.transport label` · `gap`: `["var(--ui-space-xs)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/AnimationPanel.vue` · `.authoring-status label` · `gap`: `["var(--ui-space-xs)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/AnimationPanel.vue` · `.command-track>header` · `gap`: `["var(--ui-space-xs)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/AnimationPanel.vue` · `.time-ruler i,.sequencer-ruler i` · `font-size`: `["11px"]` → `var(--type-caption)` (readable-local-type).
+- `src/components/AnimationPanel.vue` · `.state-node small` · `font-size`: `["11px"]` → `var(--type-caption)` (readable-local-type).
+- `src/components/BuildSettingsPanel.vue` · `.build-header nav` · `gap`: `["var(--space-0)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/BuildSettingsPanel.vue` · `.field-grid .check` · `min-height`: `["32px"]` → `var(--ui-control-height)` (native-hit-area).
+- `src/components/BuildSettingsPanel.vue` · `.scenes-card>header,.scenes-card article` · `gap`: `["var(--space-1)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/BuildSettingsPanel.vue` · `.option-grid>label` · `gap`: `["var(--ui-space-xs)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/BuildSettingsPanel.vue` · `.option-grid>label>span` · `gap`: `["var(--ui-space-micro)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/ConfigPanel.vue` · `.settings-content` · `padding`: `["var(--ui-section-gap) var(--ui-panel-inset) var(--ui-panel-inset)"]` → `var(--ui-section-gap) 0 var(--ui-panel-inset)` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `.settings-content` · `gap`: `["var(--ui-field-gap)"]` → `var(--ui-section-gap)` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `.inspector-categories` · `gap`: `["var(--space-0)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/ConfigPanel.vue` · `.empty-ui-actions` · `gap`: `["var(--space-1)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/ConfigPanel.vue` · `.compound-shapes` · `border-radius`: `[]` → `var(--radius-control)` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `.compound-shapes>summary` · `min-height`: `["31px"]` → `var(--ui-control-height)` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `.compound-shapes>summary` · `padding`: `["var(--space-0) var(--space-1) var(--space-0) var(--space-2)"]` → `var(--ui-input-padding-block) var(--space-4)` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `.compound-shapes>summary` · `font-size`: `[]` → `var(--type-body)` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `.compound-shapes>summary` · `line-height`: `[]` → `var(--line-body)` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `.compound-shapes>summary` · `border-radius`: `[]` → `var(--radius-control)` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `.compound-shapes article` · `margin`: `["var(--space-1)"]` → `var(--space-3)` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `.compound-shapes article` · `padding`: `["var(--space-2)"]` → `0` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `.compound-shapes article` · `gap`: `["var(--space-1)"]` → `var(--ui-field-gap)` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `.compound-shapes article header` · `grid-template-columns`: `["minmax(0,1fr) auto 25px"]` → `minmax(0,1fr) var(--ui-control-height)` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `.compound-shapes article header` · `gap`: `["var(--space-1)"]` → `var(--ui-control-gap)` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `.compound-shapes article header` · `min-height`: `[]` → `var(--ui-panel-header-height)` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `:deep(.diagnostic-row)` · `min-height`: `["30px"]` → `var(--ui-control-height)` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `:deep(.diagnostic-row)` · `gap`: `["var(--space-2)"]` → `var(--ui-control-gap)` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `:deep(.diagnostic-row)` · `padding`: `[]` → `var(--space-3) var(--space-4)` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `:deep(.diagnostic-row)` · `font-size`: `[]` → `var(--type-caption)` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `:deep(.diagnostic-row)` · `border-radius`: `[]` → `var(--radius-control)` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `.color-well` · `width`: `["48px"]` → `var(--ui-control-height)` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `.color-well` · `height`: `["25px"]` → `var(--ui-control-height)` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `.color-well` · `border-radius`: `[]` → `var(--radius-control)` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `.primary-action, .secondary-action` · `min-height`: `["33px"]` → `var(--ui-control-height)` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `.primary-action, .secondary-action` · `gap`: `["var(--space-1)"]` → `var(--ui-control-gap)` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `.primary-action, .secondary-action` · `font-size`: `[]` → `var(--type-body)` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `.primary-action, .secondary-action` · `border-radius`: `[]` → `var(--radius-control)` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `.prefab-actions` · `gap`: `["var(--space-1)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/ConfigPanel.vue` · `.script-property-group` · `gap`: `["var(--space-1)"]` → `var(--ui-field-gap)` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `.script-property-group` · `padding-top`: `["var(--space-1)"]` → `var(--ui-heading-content-gap)` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `.script-property-help` · `margin`: `["-var(--space-0) var(--space-1) var(--space-1)"]` → `0` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `.script-property-help` · `font-size`: `[]` → `var(--type-caption)` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `.script-property-help` · `line-height`: `["1.35"]` → `var(--line-body)` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `.plugin-inspector-actions` · `gap`: `["var(--space-1)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/ConfigPanel.vue` · `.color-modal` · `width`: `["250px"]` → `min(calc(340px * var(--ui-scale)),calc(100vw - 2 * var(--ui-panel-inset)))` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `.color-modal` · `padding`: `["var(--space-4)"]` → `var(--ui-dialog-inset)` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `.color-modal` · `border-radius`: `[]` → `var(--radius-dialog)` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `.component-picker` · `width`: `["min(620px, calc(100vw - 30px))"]` → `min(calc(720px * var(--ui-scale)), calc(100vw - 2 * var(--space-5)))` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `.component-picker` · `padding`: `["var(--space-3)"]` → `var(--space-6)` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `.component-picker` · `gap`: `["var(--space-2)"]` → `var(--ui-field-gap)` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `.component-picker` · `border-radius`: `[]` → `var(--radius-dialog)` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `.component-picker-list>section` · `grid-template-columns`: `["1fr 1fr"]` → `repeat(auto-fit,minmax(min(100%,calc(260px * var(--ui-scale))),1fr))` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `.component-picker-list>section` · `gap`: `["var(--space-1)"]` → `var(--ui-control-gap)` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `.component-main` · `min-height`: `["52px"]` → `var(--ui-panel-header-height)` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `.component-main` · `padding`: `["var(--space-1) var(--space-6) var(--space-1) var(--space-2)"]` → `var(--space-3) calc(var(--ui-control-height) + var(--space-3)) var(--space-3) var(--space-4)` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `.component-main` · `grid-template-columns`: `["29px 1fr 18px"]` → `calc(28px * var(--ui-scale)) minmax(0,1fr) var(--ui-icon-size)` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `.component-main` · `gap`: `["var(--space-2)"]` → `var(--ui-control-gap)` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `.component-main` · `font-size`: `[]` → `var(--type-body)` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `.component-main` · `line-height`: `[]` → `var(--line-body)` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `.component-main>span:first-child` · `width`: `["28px"]` → `calc(28px * var(--ui-scale))` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `.component-main>span:first-child` · `height`: `["28px"]` → `calc(28px * var(--ui-scale))` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `.component-main>span:first-child` · `font`: `["600 11px/1 var(--font-mono)"]` → `600 var(--type-caption)/var(--line-body) var(--font-mono)` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `.component-main strong` · `white-space`: `["nowrap"]` → `normal` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `.component-main strong` · `overflow-wrap`: `[]` → `anywhere` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `.component-main small` · `font-size`: `[]` → `var(--type-caption)` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `.component-main small` · `line-height`: `["1.25"]` → `var(--line-body)` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `.component-favorite` · `width`: `["25px"]` → `var(--ui-control-height)` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `.component-favorite` · `height`: `["25px"]` → `var(--ui-control-height)` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `.component-favorite` · `right`: `["3px"]` → `var(--space-1)` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `.component-favorite` · `top`: `["3px"]` → `var(--space-1)` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `.component-favorite` · `padding`: `[]` → `0` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `.component-favorite` · `border-radius`: `[]` → `var(--radius-control)` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `.property-menu` · `width`: `["220px"]` → `min(calc(320px * var(--ui-scale)),calc(100vw - 2 * var(--ui-panel-inset)))` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `.property-menu` · `padding`: `["var(--space-2)"]` → `var(--space-3)` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `.property-menu` · `max-height`: `[]` → `calc(100vh - 2 * var(--ui-panel-inset))` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `.property-menu` · `overflow`: `[]` → `auto` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `.property-menu` · `border-radius`: `[]` → `var(--radius-floating)` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `.property-menu` · `gap`: `["var(--space-0)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/ConfigPanel.vue` · `.property-menu>strong` · `font`: `["600 11px/1.3 var(--font-mono)"]` → `600 var(--type-body)/var(--line-body) var(--font-mono)` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `.component-picker-list>section` · `grid-template-columns`: `["1fr"]` → `repeat(auto-fit,minmax(min(100%,calc(260px * var(--ui-scale))),1fr))` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `.component-picker-list>section` · `gap`: `[]` → `var(--ui-control-gap)` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `.compound-shapes` · `border-radius`: `[]` → `var(--radius-control)` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `.compound-shapes article` · `margin`: `[]` → `var(--space-3)` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `.compound-shapes article` · `padding`: `[]` → `0` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `.compound-shapes article` · `gap`: `[]` → `var(--ui-field-gap)` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `.compound-shapes article header` · `grid-template-columns`: `["minmax(0,1fr) 30px"]` → `minmax(0,1fr) var(--ui-control-height)` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `.compound-shapes article header` · `gap`: `[]` → `var(--ui-control-gap)` (explicit-reviewed).
+- `src/components/ConfigPanel.vue` · `.compound-shapes article header` · `min-height`: `[]` → `var(--ui-panel-header-height)` (explicit-reviewed).
+- `src/components/ContentAssetInspector.vue` · `.content-pane label` · `gap`: `["var(--ui-space-xs)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/ContentAssetInspector.vue` · `.slice-pane>header,.dependency-pane>header,.pipeline-pane>header` · `gap`: `["var(--ui-space-xs)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/CreatorLearningCenter.vue` · `.catalog-filters label` · `gap`: `["var(--space-1)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/EcosystemStudioPanel.vue` · `.card > header > div` · `gap`: `["var(--space-1)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/EcosystemStudioPanel.vue` · `.field-grid label, .signing-card label, .connector-editor label, .security-card label, .updater-card > label:not(.toggle)` · `gap`: `["var(--space-1)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/EditorBottomPanel.vue` · `.bottom-panel` · `border-radius`: `[]` → `var(--radius-panel)` (explicit-reviewed).
+- `src/components/EditorBottomPanel.vue` · `.bottom-panel` · `overflow`: `[]` → `clip` (explicit-reviewed).
+- `src/components/EditorBottomPanel.vue` · `.panel-tabs` · `gap`: `["var(--ui-space-xs)"]` → `var(--ui-control-gap)` (explicit-reviewed).
+- `src/components/EditorBottomPanel.vue` · `.panel-tabs` · `min-height`: `[]` → `var(--ui-panel-header-height)` (explicit-reviewed).
+- `src/components/EditorBottomPanel.vue` · `.panel-tabs` · `padding`: `[]` → `var(--space-1) var(--space-3)` (explicit-reviewed).
+- `src/components/EditorBottomPanel.vue` · `.panel-tab` · `gap`: `["var(--ui-space-xs)"]` → `var(--ui-control-gap)` (explicit-reviewed).
+- `src/components/EditorBottomPanel.vue` · `.panel-tab` · `border-radius`: `["0"]` → `var(--radius-control)` (explicit-reviewed).
+- `src/components/EditorBottomPanel.vue` · `.panel-controls` · `gap`: `["var(--ui-space-micro)"]` → `var(--ui-control-gap)` (explicit-reviewed).
+- `src/components/EditorBottomPanel.vue` · `.panel-controls` · `padding-inline`: `[]` → `var(--space-3)` (explicit-reviewed).
+- `src/components/EditorBottomPanel.vue` · `.compact-tab-select` · `font-size`: `[]` → `var(--type-body)` (explicit-reviewed).
+- `src/components/EditorBottomPanel.vue` · `.compact-tab-select` · `height`: `[]` → `var(--ui-control-height)` (explicit-reviewed).
+- `src/components/EditorBottomPanel.vue` · `.folder-tree,.asset-inspector` · `padding`: `["var(--ui-space-xs)"]` → `var(--ui-panel-inset)` (explicit-reviewed).
+- `src/components/EditorBottomPanel.vue` · `.folder-tree button` · `border-radius`: `["0"]` → `var(--radius-xs)` (explicit-reviewed).
+- `src/components/EditorBottomPanel.vue` · `.asset-toolbar` · `gap`: `["var(--ui-space-xs)"]` → `var(--ui-control-gap)` (explicit-reviewed).
+- `src/components/EditorBottomPanel.vue` · `.asset-toolbar` · `padding`: `["var(--ui-space-xs)"]` → `var(--ui-panel-inset)` (explicit-reviewed).
+- `src/components/EditorBottomPanel.vue` · `.asset-actions-row,.asset-filters,.asset-diagnostics` · `gap`: `["var(--ui-space-xs)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/EditorBottomPanel.vue` · `.asset-diagnostics button` · `font-size`: `["var(--type-caption)"]` → `var(--type-body)` (explicit-reviewed).
+- `src/components/EditorBottomPanel.vue` · `.asset-overflow-menu,.filter-popover` · `gap`: `["var(--ui-space-xs)"]` → `var(--ui-control-gap)` (explicit-reviewed).
+- `src/components/EditorBottomPanel.vue` · `.asset-overflow-menu,.filter-popover` · `padding`: `["var(--ui-space-sm)"]` → `var(--space-3)` (explicit-reviewed).
+- `src/components/EditorBottomPanel.vue` · `.asset-overflow-menu,.filter-popover` · `border-radius`: `[]` → `var(--radius-floating)` (explicit-reviewed).
+- `src/components/EditorBottomPanel.vue` · `.asset-inspector>header` · `gap`: `["var(--ui-space-xs)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/EditorBottomPanel.vue` · `.asset-inspector label` · `grid-template-columns`: `["minmax(8ch,1fr) minmax(0,1fr)"]` → `minmax(0,1fr)` (explicit-reviewed).
+- `src/components/EditorBottomPanel.vue` · `.asset-inspector label` · `gap`: `["var(--ui-space-xs)"]` → `var(--ui-label-control-gap)` (explicit-reviewed).
+- `src/components/EditorBottomPanel.vue` · `.asset-inspector label` · `padding-block`: `["var(--ui-space-xs)"]` → `var(--space-3)` (explicit-reviewed).
+- `src/components/EditorBottomPanel.vue` · `.asset-inspector label>div` · `gap`: `["var(--ui-space-xs)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/EditorBottomPanel.vue` · `.provenance-actions,.asset-actions,.batch-actions` · `gap`: `["var(--ui-space-xs)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/EditorBottomPanel.vue` · `.compact-tab-select` · `font-size`: `[]` → `var(--type-body)` (explicit-reviewed).
+- `src/components/EditorBottomPanel.vue` · `.compact-tab-select` · `height`: `[]` → `var(--ui-control-height)` (explicit-reviewed).
+- `src/components/EditorBottomPanel.vue` · `explicit-overflow` · `rule`: `"asset-dock (max-width:400px)"` → `asset-dock (max-width: 36em)` (explicit-overflow).
+- `src/components/EventSheetEditor.vue` · `.sheet-browser > header,.event-details section > header` · `gap`: `["var(--space-1)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/EventSheetEditor.vue` · `.object-context > div,.object-context label` · `gap`: `["var(--space-1)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/EventSheetEditor.vue` · `.seed label` · `gap`: `["var(--space-1)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/GraphProductionPanel.vue` · `.production-content > header, .subhead` · `gap`: `["var(--space-1)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/GraphProductionPanel.vue` · `.checks label` · `gap`: `["var(--space-1)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/NetworkStudioPanel.vue` · `.studio-header nav` · `gap`: `["var(--space-1)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/NetworkStudioPanel.vue` · `.instance-card-actions` · `gap`: `["var(--space-1)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/ObjectBlueprintEditor.vue` · `.component-columns label` · `gap`: `["var(--ui-space-xs)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/ObjectOwnershipPanel.vue` · `.ownership-actions` · `gap`: `["var(--space-1)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/ObjectOwnershipPanel.vue` · `.ownership-source,.ownership-property` · `gap`: `["var(--space-1)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/PackageManagerPanel.vue` · `.offline,.package-list label` · `gap`: `["var(--space-1)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/ParticleGraphEditor.vue` · `main > label` · `gap`: `["var(--space-1)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/PhysicsRuntimePanel.vue` · `header` · `gap`: `["var(--ui-space-xs)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/PhysicsRuntimePanel.vue` · `.table-controls` · `gap`: `["var(--ui-space-xs)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/PhysicsRuntimePanel.vue` · `.table-controls label` · `gap`: `["var(--ui-space-xs)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/PhysicsSettingsPanel.vue` · `.matrix-header,.matrix-row` · `gap`: `["var(--space-0)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/PhysicsSettingsPanel.vue` · `.matrix-row button` · `height`: `["18px"]` → `var(--ui-control-height)` (native-hit-area).
+- `src/components/PluginSettings.vue` · `.plugin-list label` · `gap`: `["var(--ui-space-xs)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/PresentationPanel.vue` · `.presentation-header nav` · `gap`: `["var(--space-1)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/PresentationPanel.vue` · `.master-controls` · `gap`: `["var(--space-1)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/PresentationPanel.vue` · `.bus-list article>header` · `gap`: `["var(--space-1)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/PresentationPanel.vue` · `.waveform-tools` · `gap`: `["var(--space-1)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/ProfilerPanel.vue` · `.card label > div` · `gap`: `["var(--space-1)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/ProfilerPanel.vue` · `.button-row, .data-editor > header > div, .property-toggles` · `gap`: `["var(--space-1)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/ProfilerPanel.vue` · `.assertion-list article, .field-list article` · `gap`: `["var(--space-1)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/ProjectHealthPanel.vue` · `.data-actions,footer` · `gap`: `["var(--space-1)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/ProjectManager.vue` · `.template-library-tools>label` · `gap`: `["var(--ui-space-xs)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/ProjectManager.vue` · `.template-details>header` · `gap`: `["var(--ui-space-xs)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/RenderingPanel.vue` · `.studio-header>div` · `gap`: `["var(--space-0)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/RenderingPanel.vue` · `.studio-header nav` · `gap`: `["var(--space-1)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/RenderingPanel.vue` · `.shader-options>label` · `gap`: `["var(--space-1)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/RenderingPanel.vue` · `.layer-actions` · `gap`: `["var(--space-1)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/RenderingPanel.vue` · `.quality-volumes .volume-card>header` · `gap`: `["var(--space-1)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/RenderingPanel.vue` · `.production-summary>header>div` · `gap`: `["var(--space-0)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/RenderingPanel.vue` · `.profile-choice,.capture-actions` · `gap`: `["var(--space-1)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/SaveDataSettings.vue` · `.actions` · `gap`: `["var(--ui-space-xs)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/SaveDataSettings.vue` · `.save-settings details>button` · `gap`: `["var(--ui-space-xs)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/SceneSideBar.vue` · `.hierarchy-actions` · `gap`: `["var(--ui-space-micro)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/SceneSideBar.vue` · `.hierarchy-header>div:first-child` · `gap`: `["var(--ui-space-xs)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/SceneTabs.vue` · `.scene-tabs` · `gap`: `["var(--ui-space-xs)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/ScriptConversionPanel.vue` · `.conversion-actions` · `gap`: `["var(--ui-space-xs)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/ScriptStudio.vue` · `.toolbar-actions` · `gap`: `["var(--space-1)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/ScriptStudio.vue` · `.breakpoint-detail > label` · `gap`: `["var(--space-1)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/ShortcutEditor.vue` · `.scope,.profiles,.actions,.io,footer` · `gap`: `["var(--ui-space-xs)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/ShortcutEditor.vue` · `.manager-grid label` · `gap`: `["var(--ui-space-xs)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/ShortcutEditor.vue` · `.dock-grid fieldset` · `gap`: `["var(--ui-space-xs)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/ShortcutEditor.vue` · `.privacy-review label` · `gap`: `["var(--ui-space-xs)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/SimulationStatusPanel17.vue` · `.actions,.status` · `gap`: `["var(--ui-space-xs)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/StudioDraftConflict.vue` · `.versions label` · `gap`: `["var(--space-1)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/StudioStatusDialog.vue` · `.scope,.profiles,.actions,.io,footer` · `gap`: `["var(--ui-space-xs)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/StudioStatusDialog.vue` · `.manager-grid label` · `gap`: `["var(--ui-space-xs)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/StudioStatusDialog.vue` · `.dock-grid fieldset` · `gap`: `["var(--ui-space-xs)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/StudioStatusDialog.vue` · `.privacy-review label` · `gap`: `["var(--ui-space-xs)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/TeamWorkflowPanel.vue` · `.changes-card footer,.lock-actions,.conflict-summary` · `gap`: `["var(--ui-space-xs)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/TilemapPanel.vue` · `.tilemap-setup-controls,.tilemap-toolbar` · `gap`: `["var(--space-1)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/TilemapPanel.vue` · `.tilemap-toolbar label,.tilemap-setup-controls label` · `gap`: `["var(--space-1)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/TilemapPanel.vue` · `.layers>div,.region-settings :deep(.ui-property-control>div)` · `gap`: `["var(--space-1)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/TilemapPanel.vue` · `.bake-actions` · `gap`: `["var(--space-1)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/ToolBar.vue` · `.toolbar-content` · `gap`: `["var(--ui-space-xs)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/ToolBar.vue` · `.checks label,.guide-controls label` · `gap`: `["var(--ui-space-xs)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/ToolBar.vue` · `.segmented,.quick-settings,.custom-resolution,.guide-controls>div` · `gap`: `["var(--ui-space-xs)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/ToolBar.vue` · `.guide-controls` · `gap`: `["var(--ui-space-xs)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/UiScenePreview.vue` · `.ui-scene-preview figcaption` · `font-size`: `["12px"]` → `var(--type-body)` (readable-local-type).
+- `src/components/UndoHistoryPanel.vue` · `.history-actions` · `gap`: `["var(--ui-space-xs)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/VisualGraphEditor.vue` · `.primary-actions,.authoring-switch` · `gap`: `["var(--space-1)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/VisualGraphEditor.vue` · `.editing-actions` · `gap`: `["var(--space-1)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/VisualGraphEditor.vue` · `.graph-summary label,.syntax-fields label` · `gap`: `["var(--space-1)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/VisualGraphEditor.vue` · `.variables > header,.diagnostics > header` · `gap`: `["var(--space-1)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/VisualGraphEditor.vue` · `.variables article label` · `gap`: `["var(--space-1)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/VisualGraphEditor.vue` · `.canvas-controls` · `gap`: `["var(--space-0)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/VisualGraphEditor.vue` · `.graph-node>header strong` · `font-size`: `["11px"]` → `var(--type-body)` (readable-local-type).
+- `src/components/VisualGraphEditor.vue` · `.syntax-card>header strong` · `font-size`: `["12px"]` → `var(--type-body)` (readable-local-type).
+- `src/components/WorkspaceBar.vue` · `.workspace-list,.history-controls` · `gap`: `["var(--ui-space-micro)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/WorkspaceManager.vue` · `.scope,.profiles,.actions,.io,footer` · `gap`: `["var(--ui-space-xs)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/WorkspaceManager.vue` · `.manager-grid label` · `gap`: `["var(--ui-space-xs)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/WorkspaceManager.vue` · `.dock-grid fieldset` · `gap`: `["var(--ui-space-xs)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/WorkspaceManager.vue` · `.privacy-review label` · `gap`: `["var(--ui-space-xs)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/WorldComponentsInspector.vue` · `.actions` · `gap`: `["var(--space-1)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/WorldComponentsInspector.vue` · `.package` · `min-height`: `["30px"]` → `var(--ui-control-height)` (native-hit-area).
+- `src/components/WorldToolsPanel.vue` · `.asset-actions` · `gap`: `["var(--space-1)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/WorldToolsPanel.vue` · `.world-tools>header` · `gap`: `["var(--space-1)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/components/WorldToolsPanel.vue` · `.coordinate-field` · `gap`: `["var(--space-1)"]` → `var(--ui-control-gap)` (semantic-control-gap).
+- `src/layout/TopBar.vue` · `.dropdown` · `padding`: `["var(--ui-space-xs)"]` → `var(--space-3)` (explicit-reviewed).
+- `src/layout/TopBar.vue` · `.dropdown` · `border-radius`: `[]` → `var(--radius-floating)` (explicit-reviewed).
+- `src/layout/TopBar.vue` · `.dropdown` · `max-width`: `["min(54ch,calc(100vw - var(--ui-space-lg)))"]` → `min(54ch,calc(100vw - 2 * var(--ui-panel-inset)))` (explicit-reviewed).
+- `src/layout/TopBar.vue` · `.dropdown` · `max-height`: `["calc(100vh - 2 * var(--ui-control-height))"]` → `calc(100vh - var(--ui-control-height) - var(--ui-panel-inset))` (explicit-reviewed).
+
+## Every follow-up surface refinement (116)
+
+- `src/components/ConfigPanel.vue` · `binding/layout/exception` · `source`: `"<UiDialog v-if=\"showColorPicker\""` → `<UiDialog :open="Boolean(showColorPicker)"` — Keep the real color dialog mounted for shared presence reversal.
+- `src/components/ConfigPanel.vue` · `binding/layout/exception` · `source`: `"<UiDialog v-if=\"estate.componentPickerOpen && selectedEntity\""` → `<UiDialog :open="Boolean(estate.componentPickerOpen && selectedEntity)"` — Keep component picker presence connected to actual panel state.
+- `src/components/ConfigPanel.vue` · `binding/layout/exception` · `source`: `":title=\"t('addComponent') + ' · ' + selectedEntity.name\""` → `:title="t('addComponent') + ' · ' + (selectedEntity?.name ?? '')"` — Persistent dialog title is safe when selection disappears.
+- `src/components/ConfigPanel.vue` · `binding/layout/exception` · `source`: `"<UiMenu v-if=\"propertyMenu.visible\""` → `<UiMenu :open="propertyMenu.visible"` — Use the existing menu leave/reversal lifecycle.
+- `src/components/ConfigPanel.vue` · `.pair` · `display`: `["flex"]` → `grid` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/ConfigPanel.vue` · `.pair` · `grid-template-columns`: `[]` → `repeat(auto-fit,minmax(min(100%,calc(144px * var(--ui-scale))),1fr))` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/ConfigPanel.vue` · `.compound-shapes article header` · `grid-template-columns`: `["minmax(0,1fr) var(--ui-control-height)"]` → `minmax(0,1fr) auto var(--ui-control-height)` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/ConfigPanel.vue` · `.compound-shapes article header` · `grid-template-columns`: `["minmax(0,1fr) var(--ui-control-height)"]` → `minmax(0,1fr) auto var(--ui-control-height)` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/ConfigPanel.vue` · `.compound-shapes` · `container-name`: `[]` → `nova-compound` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/ConfigPanel.vue` · `.compound-shapes` · `container-name`: `[]` → `nova-compound` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/ConfigPanel.vue` · `.component-picker-list article` · `container`: `[]` → `component-choice / inline-size` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/ConfigPanel.vue` · `.component-main` · `grid-template-columns`: `["calc(28px * var(--ui-scale)) minmax(0,1fr) var(--ui-icon-size)"]` → `var(--ui-icon-size) minmax(0,1fr) var(--ui-icon-size)` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/ConfigPanel.vue` · `binding/layout/exception` · `source`: `".component-main>span:first-child{display:grid;place-items:center;color:var(--accent);background:var(--surface-3);width: calc(28px * var(--ui-scale));height: calc(28px * var(--ui-scale));font: 600 var(--type-caption)/var(--line-body) var(--font-mono)}"` → `` — Unreachable old span selector; the first component child is an SVG.
+- `src/components/ConfigPanel.vue` · `.component-main>span:nth-child(2)` · `gap`: `["var(--space-0)"]` → `var(--space-2)` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/ConfigPanel.vue` · `binding/layout/exception` · `source`: `"nova-inspector (max-width: 360px)"` → `nova-inspector (max-width: 22em)` — Font-relative responsive threshold follows saved UI scale.
+- `src/components/ConfigPanel.vue` · `binding/layout/exception` · `source`: `""` → `.component-main>.editor-icon:first-child{color:var(--accent);justify-self:center}.component-main>.editor-icon:last-child{justify-self:center}.compound-shapes article header>label{min-width:0;display:flex;align-items:center;gap:var(--ui-control-gap);font-size:var(--type-body);line-height:var(--line-body)}.compound-shapes article header>select{width:100%;min-width:0}
+@container nova-compound (max-width:22em){.compound-shapes article header{grid-template-columns:minmax(0,1fr)}.compound-shapes article header>.ui-button{inline-size:var(--ui-control-height);justify-self:end}}
+@container component-choice (max-width:22em){.component-main{grid-template-columns:var(--ui-icon-size) minmax(0,1fr);grid-template-rows:var(--ui-control-height) auto;column-gap:0;row-gap:var(--ui-control-gap);padding-inline:var(--space-4)}.component-main>.editor-icon:first-child{grid-column:1;grid-row:1}.component-main>.editor-icon:last-child{grid-column:2;grid-row:1;justify-self:start}.component-main>span:nth-child(2){grid-column:1/-1;grid-row:2}}` — Use actual card width after Teleport, retain the separate 44px favorite target, and stack compound controls without reducing readable text.
+- `src/components/SceneSideBar.vue` · `binding/layout/exception` · `source`: `":aria-label=\"row.expanded ? t('collapsePanel') : t('expandPanel')\""` → `:aria-expanded="row.hasChildren ? row.expanded : undefined" :aria-label="row.expanded ? t('collapsePanel') : t('expandPanel')"` — Real disclosure state drives the shared chevron.
+- `src/components/SceneSideBar.vue` · `binding/layout/exception` · `source`: `"<EditorIcon v-if=\"row.hasChildren\" :name=\"row.expanded ? 'down' : 'forward'\" />"` → `<EditorIcon v-if="row.hasChildren" name="down" data-ui-motion-chevron />` — Rotate a persistent chevron instead of replacing its glyph.
+- `src/components/SceneSideBar.vue` · `binding/layout/exception` · `source`: `"@keyup.escape=\"editingId = null\""` → `@keyup.escape="cancelEdit"` — Clear the rename request without a history edit so another F2 on the same entity works.
+- `src/components/SceneSideBar.vue` · `binding/layout/exception` · `source`: `"class=\"sidebar-action-menu\" :style=\"{ left: `${sidebarMenuPosition.x}px`, top: `${sidebarMenuPosition.y}px` }\""` → `class="sidebar-action-menu" :inert="!sidebarMenu" :aria-hidden="!sidebarMenu" :style="{ left: `${sidebarMenuPosition.x}px`, top: `${sidebarMenuPosition.y}px`, pointerEvents: sidebarMenu ? 'auto' : 'none' }"` — Closed menu wrappers must not intercept pointer input during leave.
+- `src/components/SceneSideBar.vue` · `binding/layout/exception` · `source`: `"<UiMenu v-if=\"sidebarMenu\" :key=\"`${sidebarMenu.kind}:${sidebarMenu.entityUuid ?? ''}`\""` → `<UiMenu :open="Boolean(sidebarMenu)"` — Preserve the existing menu controller across interrupted open/close.
+- `src/components/SceneSideBar.vue` · `binding/layout/exception` · `source`: `"<template v-if=\"sidebarMenu.kind === 'scene'\">"` → `<template v-if="sidebarMenu?.kind === 'scene'">` — Safely evaluate persistent menu context after close.
+- `src/components/SceneSideBar.vue` · `binding/layout/exception` · `source`: `"<template v-else-if=\"sidebarMenu.kind === 'hierarchy'\">"` → `<template v-else-if="sidebarMenu?.kind === 'hierarchy'">` — Safely evaluate persistent menu context after close.
+- `src/components/SceneSideBar.vue` · `binding/layout/exception` · `source`: `"const virtualStart = computed(/* 调用 Math.max(0, Math.floor(hierarchyScrollTop.value / hierarchyRowHeight.value) - hierarchyOverscan) 并返回调用结果。 */ () => Math.max(0, Math.floor(hierarchyScrollTop.value / hierarchyRowHeight.value) - hierarchyOverscan))"` → `const hierarchyContentInset = computed(() => (preferencesState.compactMode ? 12 : 20) * preferencesState.uiScale)
+const virtualStart = computed(() => Math.min(hierarchyRows.value.length, Math.max(0, Math.floor((hierarchyScrollTop.value - hierarchyContentInset.value) / hierarchyRowHeight.value) - hierarchyOverscan)))` — Use the same once-scaled inset in virtual indexing; bound stale scroll positions when search shrinks the list.
+- `src/components/SceneSideBar.vue` · `binding/layout/exception` · `source`: `"const virtualEnd = computed(/** 根据滚动位置、视口和行高计算含预留行的虚拟列表末端。 */ () => Math.min(hierarchyRows.value.length, Math.ceil((hierarchyScrollTop.value + hierarchyViewportHeight.value) / hierarchyRowHeight.value) + hierarchyOverscan))"` → `const virtualEnd = computed(() => Math.max(virtualStart.value, Math.min(hierarchyRows.value.length, Math.ceil((hierarchyScrollTop.value + hierarchyViewportHeight.value - hierarchyContentInset.value) / hierarchyRowHeight.value) + hierarchyOverscan)))` — Keep the end ordered and bounded.
+- `src/components/SceneSideBar.vue` · `binding/layout/exception` · `source`: `"const virtualPaddingTop = computed(/* 计算表达式 virtualStart.value * hierarchyRowHeight.value + 5 并返回结果，沿用操作数的原有类型规则。 */ () => virtualStart.value * hierarchyRowHeight.value + 5)"` → `const virtualPaddingTop = computed(() => virtualStart.value * hierarchyRowHeight.value + hierarchyContentInset.value)` — Use exact fractional row stride and shared inset.
+- `src/components/SceneSideBar.vue` · `binding/layout/exception` · `source`: `"const virtualPaddingBottom = computed(/* 调用 Math.max(5, (hierarchyRows.value.length - virtualEnd.value) * hierarchyRowHeight.value + 5) 并返回调用结果。 */ () => Math.max(5, (hierarchyRows.value.length - virtualEnd.value) * hierarchyRowHeight.value + 5))"` → `const virtualPaddingBottom = computed(() => (hierarchyRows.value.length - virtualEnd.value) * hierarchyRowHeight.value + hierarchyContentInset.value)` — Keep scroll content height equal to row count times stride plus two insets.
+- `src/components/SceneSideBar.vue` · `binding/layout/exception` · `source`: `"function startEdit(entity: Entity) { if (!canEdit.value || entity.editorLocked) return; editingId.value = entity.id; editName.value = entity.name }"` → `function startEdit(entity: Entity) {
+  if (!canEdit.value || entity.editorLocked) return
+  const index = hierarchyRows.value.findIndex(row => row.entity.id === entity.id), list = entityList.value
+  if (list && index >= 0) {
+    const top = hierarchyContentInset.value + index * hierarchyRowHeight.value, bottom = top + hierarchyRowHeight.value
+    if (top < list.scrollTop) list.scrollTop = top
+    else if (bottom > list.scrollTop + list.clientHeight) list.scrollTop = bottom - list.clientHeight
+    hierarchyScrollTop.value = list.scrollTop
+  }
+  editingId.value = entity.id; editName.value = entity.name
+}
+function cancelEdit() { editingId.value = null; editName.value = ''; editorState.renameRequestId = null }` — Bring a requested virtual row into view before mounting its focused input. Cancel changes only editor UI state.
+- `src/components/SceneSideBar.vue` · `binding/layout/exception` · `source`: `"function toggleExpanded(uuid: string) { const next = new Set(expandedUuids.value); if (next.has(uuid)) next.delete(uuid); else next.add(uuid); expandedUuids.value = next }"` → `function toggleExpanded(uuid: string) { const before = captureRects(hierarchyElements()); const next = new Set(expandedUuids.value); if (next.has(uuid)) next.delete(uuid); else next.add(uuid); expandedUuids.value = next; settleHierarchy(before) }` — Commit disclosure immediately, then reuse bounded mounted-neighbor FLIP. Removed virtual children unmount immediately.
+- `src/components/SceneSideBar.vue` · `.scene-list` · `padding`: `["var(--ui-space-xs)"]` → `var(--ui-panel-inset)` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/SceneSideBar.vue` · `.scene-main` · `gap`: `["var(--ui-space-xs)"]` → `var(--ui-control-gap)` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/SceneSideBar.vue` · `.scene-main` · `padding-inline`: `["var(--ui-space-xs)"]` → `0` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/SceneSideBar.vue` · `.hierarchy-search-row` · `gap`: `["var(--ui-space-xs)"]` → `var(--ui-control-gap)` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/SceneSideBar.vue` · `.hierarchy-search-row` · `margin-top`: `[]` → `var(--ui-heading-content-gap)` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/SceneSideBar.vue` · `.search` · `gap`: `["var(--ui-space-xs)"]` → `var(--ui-control-gap)` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/SceneSideBar.vue` · `.hierarchy-filters` · `gap`: `["var(--ui-space-xs)"]` → `var(--ui-control-gap)` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/SceneSideBar.vue` · `.hierarchy-filters` · `padding`: `["var(--ui-space-sm)"]` → `var(--space-3)` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/SceneSideBar.vue` · `.hierarchy-filters` · `border-radius`: `[]` → `var(--radius-floating)` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/SceneSideBar.vue` · `.hierarchy-filters` · `gap`: `[]` → `var(--ui-control-gap)` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/SceneSideBar.vue` · `.hierarchy-filters` · `padding`: `[]` → `var(--space-3)` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/SceneSideBar.vue` · `.hierarchy-filters` · `border-radius`: `[]` → `var(--radius-floating)` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/SceneSideBar.vue` · `.empty-state` · `padding`: `["var(--ui-space-sm)"]` → `var(--ui-panel-inset)` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/SceneSideBar.vue` · `binding/layout/exception` · `source`: `""` → `/* Row-local rename geometry matches the exact virtual stride. */
+.hierarchy-rows{padding-inline:var(--ui-panel-inset)}
+.edit-input,.scene-main input{height:var(--ui-tree-row-height);min-height:0;min-width:0;max-width:100%;font-size:var(--type-body);line-height:var(--line-control);padding-inline:var(--space-3);padding-block:max(0px,calc((var(--ui-tree-row-height) - var(--type-body) * var(--line-control) - 2 * var(--ui-border-width)) / 2));border-width:var(--ui-border-width);border-radius:var(--radius-input)}.edit-input{width:100%}` — The rename editor fits 40px Comfortable/28px Compact tree rows, including fractional scale, instead of inheriting a 44px property-field minimum.
+- `src/components/VisualGraphEditor.vue` · `binding/layout/exception` · `source`: `"{{ wireMessage || layoutLabels.keyboardHelp }}"` → `{{ wireMessage || layoutLabels.keyboardHelp }} · {{ t('graphZoom') }} {{ Math.round(activeScope.viewport.zoom * 100) }}%` — Explain diagram zoom alongside existing keyboard help.
+- `src/components/VisualGraphEditor.vue` · `binding/layout/exception` · `source`: `"<details class=\"graph-more\""` → `<details data-ui-motion-disclosure class="graph-more"` — Connect the real disclosure to the shared motion controller.
+- `src/components/VisualGraphEditor.vue` · `binding/layout/exception` · `source`: `"<details class=\"graph-conversion\""` → `<details data-ui-motion-disclosure class="graph-conversion"` — Connect the real disclosure to the shared motion controller.
+- `src/components/VisualGraphEditor.vue` · `binding/layout/exception` · `source`: `"<details class=\"wire-inspector\""` → `<details data-ui-motion-disclosure class="wire-inspector"` — Connect the real disclosure to the shared motion controller.
+- `src/components/VisualGraphEditor.vue` · `.graph-palette > header,.graph-details > header` · `min-height`: `["var(--ui-toolbar-height)"]` → `var(--ui-panel-header-height)` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/VisualGraphEditor.vue` · `.graph-palette > header,.graph-details > header` · `padding`: `["var(--space-1) var(--space-2)"]` → `var(--space-1) var(--ui-panel-inset)` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/VisualGraphEditor.vue` · `.graph-palette > header,.graph-details > header` · `gap`: `["var(--space-2)"]` → `var(--ui-control-gap)` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/VisualGraphEditor.vue` · `.graph-palette > input` · `margin`: `["var(--space-2)"]` → `var(--ui-panel-inset)` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/VisualGraphEditor.vue` · `.graph-palette > input` · `max-width`: `["calc(100% - 2 * var(--space-2))"]` → `calc(100% - 2 * var(--ui-panel-inset))` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/VisualGraphEditor.vue` · `.block-categories` · `padding`: `["var(--space-1)"]` → `var(--ui-panel-inset)` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/VisualGraphEditor.vue` · `.block-categories` · `gap`: `["var(--space-0)"]` → `var(--ui-control-gap)` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/VisualGraphEditor.vue` · `.block-categories` · `grid-template-columns`: `["repeat(2,minmax(0,1fr))"]` → `repeat(auto-fit,minmax(min(100%,calc(120px * var(--ui-scale))),1fr))` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/VisualGraphEditor.vue` · `.block-categories button` · `font-size`: `["var(--type-caption)"]` → `var(--type-body)` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/VisualGraphEditor.vue` · `.block-categories button` · `gap`: `["var(--space-1)"]` → `var(--ui-control-gap)` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/VisualGraphEditor.vue` · `.block-categories button` · `white-space`: `[]` → `normal` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/VisualGraphEditor.vue` · `.asset-list` · `padding`: `["var(--space-1)"]` → `var(--ui-panel-inset)` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/VisualGraphEditor.vue` · `.asset-list button,.palette-list button` · `padding`: `["var(--space-1)"]` → `var(--space-3)` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/VisualGraphEditor.vue` · `.asset-list button,.palette-list button` · `gap`: `["var(--space-2)"]` → `var(--ui-control-gap)` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/VisualGraphEditor.vue` · `.asset-list span,.palette-list span` · `gap`: `["var(--space-0)"]` → `var(--space-2)` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/VisualGraphEditor.vue` · `.palette-list` · `padding`: `["var(--space-1)"]` → `var(--ui-panel-inset)` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/VisualGraphEditor.vue` · `.palette-list h3` · `margin`: `["var(--space-2) var(--space-1)"]` → `var(--ui-section-gap) 0 var(--ui-heading-content-gap)` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/VisualGraphEditor.vue` · `.graph-summary,.variables,.diagnostics,.syntax-fields,.graph-symbol-search,.wire-inspector` · `padding`: `["var(--space-2)"]` → `var(--ui-panel-inset)` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/VisualGraphEditor.vue` · `.graph-summary,.variables,.diagnostics,.syntax-fields,.graph-symbol-search,.wire-inspector` · `gap`: `["var(--space-2)"]` → `var(--ui-field-gap)` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/VisualGraphEditor.vue` · `.graph-summary label,.syntax-fields label` · `gap`: `["var(--ui-control-gap)"]` → `var(--ui-label-control-gap)` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/VisualGraphEditor.vue` · `.variables article` · `gap`: `["var(--space-1)"]` → `var(--ui-field-gap)` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/VisualGraphEditor.vue` · `.variables article` · `padding-block`: `["var(--space-2)"]` → `var(--ui-field-gap)` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/VisualGraphEditor.vue` · `.variables article > div:first-child` · `display`: `["flex"]` → `grid` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/VisualGraphEditor.vue` · `.variables article > div:first-child` · `grid-template-columns`: `[]` → `repeat(auto-fit,minmax(min(100%,calc(144px * var(--ui-scale))),1fr))` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/VisualGraphEditor.vue` · `.variables article > div:first-child` · `gap`: `["var(--space-1)"]` → `var(--ui-control-gap)` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/VisualGraphEditor.vue` · `.variables article label` · `font-size`: `["var(--type-caption)"]` → `var(--type-body)` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/VisualGraphEditor.vue` · `.number-metadata` · `display`: `["flex"]` → `grid` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/VisualGraphEditor.vue` · `.number-metadata` · `grid-template-columns`: `[]` → `repeat(auto-fit,minmax(min(100%,calc(144px * var(--ui-scale))),1fr))` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/VisualGraphEditor.vue` · `.number-metadata` · `gap`: `["var(--space-1)"]` → `var(--ui-control-gap)` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/VisualGraphEditor.vue` · `.syntax-child-list` · `gap`: `["var(--space-1)"]` → `var(--ui-field-gap)` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/VisualGraphEditor.vue` · `.syntax-child-list` · `padding-top`: `["var(--space-2)"]` → `var(--ui-heading-content-gap)` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/VisualGraphEditor.vue` · `.syntax-child-list article` · `gap`: `["var(--space-1)"]` → `var(--ui-control-gap)` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/VisualGraphEditor.vue` · `.syntax-child-list article > div` · `gap`: `["var(--space-1)"]` → `var(--ui-control-gap)` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/VisualGraphEditor.vue` · `.syntax-child-list article > div` · `flex-wrap`: `[]` → `wrap` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/VisualGraphEditor.vue` · `.reroute-row` · `grid-template-columns`: `["minmax(0,1fr) minmax(0,1fr) var(--ui-control-height)"]` → `repeat(auto-fit,minmax(min(100%,calc(144px * var(--ui-scale))),1fr))` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/VisualGraphEditor.vue` · `.reroute-row` · `gap`: `["var(--space-1)"]` → `var(--ui-control-gap)` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/VisualGraphEditor.vue` · `.diagnostics pre` · `font-size`: `["var(--type-caption)"]` → `var(--type-code)` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/VisualGraphEditor.vue` · `.diagnostics pre` · `line-height`: `[]` → `var(--line-body)` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/VisualGraphEditor.vue` · `.diagnostics pre` · `padding`: `["var(--space-2)"]` → `var(--space-3)` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/VisualGraphEditor.vue` · `.editing-actions` · `padding`: `["var(--space-1)"]` → `var(--space-3)` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/VisualGraphEditor.vue` · `.editing-actions` · `border-radius`: `["var(--radius-control)"]` → `var(--radius-floating)` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/VisualGraphEditor.vue` · `.canvas-controls` · `border-radius`: `["var(--radius-control)"]` → `var(--radius-floating)` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/VisualGraphEditor.vue` · `.canvas-controls` · `padding`: `[]` → `var(--space-1)` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/VisualGraphEditor.vue` · `binding/layout/exception` · `source`: `"graph-studio (max-width: 760px)"` → `graph-studio (max-width: 48em)` — Font-relative responsive threshold follows saved UI scale.
+- `src/components/VisualGraphEditor.vue` · `.graph-transform` · `--type-body`: `[]` → `16px` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/VisualGraphEditor.vue` · `.graph-transform` · `--type-dense`: `[]` → `16px` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/VisualGraphEditor.vue` · `.graph-transform` · `--type-caption`: `[]` → `14px` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/VisualGraphEditor.vue` · `.graph-transform` · `--type-code`: `[]` → `14px` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/VisualGraphEditor.vue` · `.graph-transform` · `--ui-icon-size`: `[]` → `20px` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/VisualGraphEditor.vue` · `.graph-transform` · `--line-body`: `[]` → `1.5` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/VisualGraphEditor.vue` · `.graph-transform` · `--line-control`: `[]` → `1.5` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/VisualGraphEditor.vue` · `.node-pin input[type=text],.node-pin input[type=number],.graph-node>select` · `min-height`: `[]` → `28px` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/VisualGraphEditor.vue` · `.node-pin input[type=text],.node-pin input[type=number],.graph-node>select` · `height`: `["28px"]` → `28px` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/VisualGraphEditor.vue` · `.node-pin input[type=text],.node-pin input[type=number],.graph-node>select` · `padding`: `["3px 6px"]` → `1px 6px` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/VisualGraphEditor.vue` · `.node-pin input[type=text],.node-pin input[type=number],.graph-node>select` · `border-width`: `[]` → `1px` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/VisualGraphEditor.vue` · `.node-pin input[type=text],.node-pin input[type=number],.graph-node>select` · `font-size`: `["var(--type-caption)"]` → `16px` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/VisualGraphEditor.vue` · `.node-pin input[type=text],.node-pin input[type=number],.graph-node>select` · `line-height`: `[]` → `24px` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/VisualGraphEditor.vue` · `.graph-comment input` · `height`: `[]` → `28px` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/VisualGraphEditor.vue` · `.graph-comment input` · `min-height`: `["28px"]` → `28px` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/VisualGraphEditor.vue` · `.graph-comment input` · `padding`: `[]` → `2px 6px` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/VisualGraphEditor.vue` · `.graph-comment input` · `font-size`: `[]` → `16px` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/VisualGraphEditor.vue` · `.graph-comment input` · `line-height`: `[]` → `24px` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/VisualGraphEditor.vue` · `.node-source textarea` · `font`: `["var(--type-caption)/1.45 var(--font-mono)"]` → `14px/1.5 var(--font-mono)` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/VisualGraphEditor.vue` · `.node-source button` · `padding`: `[]` → `0 6px` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/VisualGraphEditor.vue` · `.node-source button` · `line-height`: `[]` → `21px` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/VisualGraphEditor.vue` · `.node-source button` · `font-size`: `["var(--type-caption)"]` → `14px` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/VisualGraphEditor.vue` · `.syntax-pin-fallback` · `font`: `["11px/1.35 var(--font-mono)"]` → `14px/1.5 var(--font-mono)` — Shared comfortable geometry, with explicit local coordinate exceptions.
+- `src/components/VisualGraphEditor.vue` · `binding/layout/exception` · `source`: `""` → `.reroute-row>label{min-width:0;display:grid;gap:var(--ui-label-control-gap)}.reroute-row>label input,.number-metadata input,.variables article>div:first-child>input,.variables article>div:first-child>select{width:100%;min-width:0}.reroute-row>.ui-button,.variables article>div:first-child>.ui-button{grid-column:1/-1;inline-size:var(--ui-control-height);justify-self:end}
+/* Diagram typography uses graph zoom; precise node/port/router coordinates stay local. */
+.graph-transform :is(button,input,select){min-height:0;min-width:0}.graph-transform button{padding:0}.graph-transform .node-source button{padding:0 6px;min-height:25px}` — Retain coordinate-sized diagram controls and local 16px editable values/14px code help; all external graph UI follows Comfortable dimensions.
+- `docs/ui/UI_SPEC.md` · `binding/layout/exception` · `source`: `""` → `
+### v26.37 diagram coordinate exception
+
+The Visual Graph diagram uses its independent zoom (0.1–4); saved UI scale applies to external toolbars, palette and property panels. Diagram titles and editable values use fixed logical 16px text; pin/code help uses 14px. Existing node, header, port, routing and hit-test coordinates stay unchanged. A diagram value editor remains 28px high: 16px/24px text, 1px vertical padding and 1px borders. The graph help displays its zoom. This exception applies only to the diagram, not its normal property editor.
+
+Hierarchy rename editors match the exact 40px Comfortable / 28px Compact virtual stride, with once-scaled text and padding. Virtual insets and index calculations use the same panel inset. Disclosure commits immediately; retained mounted neighbors use shared FLIP motion, while removed virtual children unmount immediately. Escape cancels rename UI state and leaves history untouched.
+` — Record the exact local coordinate-density exceptions in the existing UI document.
+
+## Additional affected input-mapping, important labels and navigator edits
+
+- `important-label-edit-report.json` — Every applied before/after declaration/binding, source hashes, removals and compilation checks are archived in reports/comfortable/26.37/implementation and embedded in EDIT_MANIFEST_26_37.json.
+- `settings-panel-refinement-ledger.json` — Every applied before/after declaration/binding, source hashes, removals and compilation checks are archived in reports/comfortable/26.37/implementation and embedded in EDIT_MANIFEST_26_37.json.
+- `navigator-header-edit-report.json` — Every applied before/after declaration/binding, source hashes, removals and compilation checks are archived in reports/comfortable/26.37/implementation and embedded in EDIT_MANIFEST_26_37.json.
+- `observed-launcher-fix.json` — Every applied before/after declaration/binding, source hashes, removals and compilation checks are archived in reports/comfortable/26.37/implementation and embedded in EDIT_MANIFEST_26_37.json.
+- `observed-creation-dialog-fix.json` — Every applied before/after declaration/binding, source hashes, removals and compilation checks are archived in reports/comfortable/26.37/implementation and embedded in EDIT_MANIFEST_26_37.json.
+- `observed-editor-chrome-fix.json` — Every applied before/after declaration/binding, source hashes, removals and compilation checks are archived in reports/comfortable/26.37/implementation and embedded in EDIT_MANIFEST_26_37.json.
+- `all-route-geometry-edit-report.json` — Every applied before/after declaration/binding, source hashes, removals and compilation checks are archived in reports/comfortable/26.37/implementation and embedded in EDIT_MANIFEST_26_37.json.
+- `observed-route-fixes.json` — Every applied before/after declaration/binding, source hashes, removals and compilation checks are archived in reports/comfortable/26.37/implementation and embedded in EDIT_MANIFEST_26_37.json.
+- `route-override-fixes-ledger.json` — Every applied before/after declaration/binding, source hashes, removals and compilation checks are archived in reports/comfortable/26.37/implementation and embedded in EDIT_MANIFEST_26_37.json.
+- `network-channel-layout-fix-ledger.json` — Every applied before/after declaration/binding, source hashes, removals and compilation checks are archived in reports/comfortable/26.37/implementation and embedded in EDIT_MANIFEST_26_37.json.
+- `observed-assets-and-window-scope-fixes.json` — Every applied before/after declaration/binding, source hashes, removals and compilation checks are archived in reports/comfortable/26.37/implementation and embedded in EDIT_MANIFEST_26_37.json.
+- `native-popup-route-scope-edit.json` — Every applied before/after declaration/binding, source hashes, removals and compilation checks are archived in reports/comfortable/26.37/implementation and embedded in EDIT_MANIFEST_26_37.json.
+- `motion-doc-edit-report.json` — Every applied before/after declaration/binding, source hashes, removals and compilation checks are archived in reports/comfortable/26.37/implementation and embedded in EDIT_MANIFEST_26_37.json.
+- `native-popup-edit-report.json` — Every applied before/after declaration/binding, source hashes, removals and compilation checks are archived in reports/comfortable/26.37/implementation and embedded in EDIT_MANIFEST_26_37.json.
+- `native-details-caller-edit-report.json` — Every applied before/after declaration/binding, source hashes, removals and compilation checks are archived in reports/comfortable/26.37/implementation and embedded in EDIT_MANIFEST_26_37.json.
+- `native-disclosures-audit-edit-report.json` — Every applied before/after declaration/binding, source hashes, removals and compilation checks are archived in reports/comfortable/26.37/implementation and embedded in EDIT_MANIFEST_26_37.json.
+- `release-evidence-review-edit-report.json` — Every applied before/after declaration/binding, source hashes, removals and compilation checks are archived in reports/comfortable/26.37/implementation and embedded in EDIT_MANIFEST_26_37.json.
+- `toast-dismissal-audit-fix.json` — Every applied before/after declaration/binding, source hashes, removals and compilation checks are archived in reports/comfortable/26.37/implementation and embedded in EDIT_MANIFEST_26_37.json.
+- `observed-high-scale-navigation-fix.json` — Every applied before/after declaration/binding, source hashes, removals and compilation checks are archived in reports/comfortable/26.37/implementation and embedded in EDIT_MANIFEST_26_37.json.
+- `network-rpc-layout-fix-ledger.json` — Every applied before/after declaration/binding, source hashes, removals and compilation checks are archived in reports/comfortable/26.37/implementation and embedded in EDIT_MANIFEST_26_37.json.
+- `observed-minimum-assets-layout-fix.json` — Every applied before/after declaration/binding, source hashes, removals and compilation checks are archived in reports/comfortable/26.37/implementation and embedded in EDIT_MANIFEST_26_37.json.
+- `observed-popup-geometry-fix.json` — Every applied before/after declaration/binding, source hashes, removals and compilation checks are archived in reports/comfortable/26.37/implementation and embedded in EDIT_MANIFEST_26_37.json.
+- `final-documentation-edit-report.json` — Every applied before/after declaration/binding, source hashes, removals and compilation checks are archived in reports/comfortable/26.37/implementation and embedded in EDIT_MANIFEST_26_37.json.
+- `observed-navigation-and-tilemap-fix.json` — Every applied before/after declaration/binding, source hashes, removals and compilation checks are archived in reports/comfortable/26.37/implementation and embedded in EDIT_MANIFEST_26_37.json.
+- `observed-assets-toolbar-height-fix.json` — Every applied before/after declaration/binding, source hashes, removals and compilation checks are archived in reports/comfortable/26.37/implementation and embedded in EDIT_MANIFEST_26_37.json.
+
+## Real conditional presence owners (15)
+
+- `src/components/ConfirmDialog.vue` · `UiDialog .confirm-dialog` · `state.visible` → blocking-modal-parent.
+- `src/components/CreateObjectPalette.vue` · `UiDialog .authoring-dialog` · `estate.createObjectPaletteOpen` → blocking-modal-parent.
+- `src/components/EditorBottomPanel.vue` · `section .filter-popover` · `filterMenuOpen` → finite-surface-parent.
+- `src/components/ErrorRecovery.vue` · `UiDialog` · `fault` → blocking-modal-parent.
+- `src/components/ExternalChangeDialog.vue` · `UiDialog` · `state.visible` → blocking-modal-parent.
+- `src/components/ProjectManager.vue` · `UiDialog .creation-dialog` · `creationOpen` → blocking-modal-parent.
+- `src/components/ProjectManager.vue` · `UiDialog` · `state.pendingUpgrade` → blocking-modal-parent.
+- `src/components/ProjectManager.vue` · `UiDialog` · `state.readOnlyDocument` → blocking-modal-parent.
+- `src/components/ProjectManager.vue` · `startup-entry` · `undefined` → startup-entry.
+- `src/components/RecoveryCenter.vue` · `UiDialog` · `recovery.visible` → blocking-modal-parent.
+- `src/components/RuntimeComponentsInspector.vue` · `section .ui-palette` · `componentVisible('Canvas', t('createGameUi'))` → finite-surface-parent.
+- `src/components/ScriptStudio.vue` · `div .completion-popover` · `completionOpen` → finite-surface-parent.
+- `src/components/ShortcutEditor.vue` · `UiDialog` · `state.shortcutEditorOpen` → blocking-modal-parent.
+- `src/components/StudioStatusDialog.vue` · `UiDialog` · `state.visible` → blocking-modal-parent.
+- `src/components/WorkspaceManager.vue` · `UiDialog` · `state.workspaceManagerOpen` → blocking-modal-parent.
+
+External limits: software Edge does not certify physicalGPU/DPI/input-to-display latency, visible platform drag-image rasterization, native assistive technology, long human comfort/soak, signing or clean-machine installation. Unsupported pre-existing drag features are not added or presented as verified. Prior release files remain unchanged.

@@ -6,7 +6,7 @@ import { withBrowserAudit, wait } from './lib/browserUserAudit.mjs'
 import { worldUserControls17 } from './lib/worldAudit17.mjs'
 
 const release = process.argv.find(arg => arg.startsWith('--qualification-release='))?.split('=')[1] ?? '26.34'
-assert.match(release, /^26\.(?:34|35)$/)
+assert.match(release, /^26\.(?:34|35|37)$/)
 assert.equal(JSON.parse(await readFile('package.json', 'utf8')).version, release + '.0')
 const semanticAssets = assets => assets.map(asset => { let source = asset.source; try { source = JSON.parse(source) } catch {} return { ...asset, source } })
 const activeEntities = document => document.scenes.find(scene => scene.uuid === document.activeSceneUuid).entities
@@ -50,7 +50,9 @@ await withBrowserAudit({ release, name: 'authoring-user', width: 1600, height: 1
     if (selectionName) { await u.entity(selectionName); await u.expandInspector() }
   }
   async function capture(label) {
-    while (await a.evaluate("!!document.querySelector('.toast-stack article button:last-child')")) await a.click('.toast-stack article button:last-child')
+    // Observe real automatic expiry and finite exit; clicking between two DOM reads races expiry.
+    // Persistent error notifications still fail this bounded wait rather than being dismissed.
+    await a.until("!document.querySelector('.toast-stack article')", 10000)
     await a.evaluate("document.querySelector('[data-property-path=\"Transform.position\"]')?.scrollIntoView({block:'center'})")
     await a.capture(label)
   }

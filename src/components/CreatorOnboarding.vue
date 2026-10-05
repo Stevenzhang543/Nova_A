@@ -1,11 +1,11 @@
 <!-- 创作者引导：管理步骤、焦点、键盘翻页及学习入口。 -->
 <template>
-  <Transition name="onboarding">
+  <UiMotionTransition modal>
     <div v-if="learning.onboardingVisible" ref="dialog" class="onboarding-scrim" role="dialog" aria-modal="true" v-modal-focus tabindex="-1" :aria-labelledby="`onboarding-title-${learning.onboardingStep}`" @keydown="onKeyDown">
       <section class="onboarding-card">
         <header><span>Nova_A {{ NOVA_RELEASE_NAME }} · {{ t('firstRunOnboarding') }}</span><UiButton icon="close" :label="t('close')" @click="finishCreatorOnboarding" /></header>
         <div class="step-visual" aria-hidden="true"><EditorIcon :name="current.icon" /><i v-for="(_, index) in steps" :key="index" :class="{ active: index <= learning.onboardingStep }"></i></div>
-        <main>
+        <main data-ui-motion-surface="smooth" :data-ui-motion-key="learning.onboardingStep">
           <small>{{ t('stepOf', { current: learning.onboardingStep + 1, total: steps.length }) }}</small>
           <h2 :id="`onboarding-title-${learning.onboardingStep}`">{{ t(current.title) }}</h2>
           <p>{{ t(current.description) }}</p>
@@ -14,11 +14,12 @@
         <footer><button :disabled="learning.onboardingStep === 0" @click="learning.onboardingStep--">{{ t('back') }}</button><button @click="finishCreatorOnboarding">{{ t('skipForNow') }}</button><button class="primary" @click="next">{{ t(learning.onboardingStep === steps.length - 1 ? 'startCreating' : 'next') }}</button></footer>
       </section>
     </div>
-  </Transition>
+  </UiMotionTransition>
 </template>
 
 <script setup lang="ts">
 import EditorIcon, { type EditorIconName } from './EditorIcon.vue'
+import UiMotionTransition from '../ui/components/UiMotionTransition.vue'
 import UiButton from '../ui/components/UiButton.vue'
 import { vModalFocus } from '../editor/modalFocus'
 import { computed, nextTick, ref, watch } from 'vue'

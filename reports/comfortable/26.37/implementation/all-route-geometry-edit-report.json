@@ -1,0 +1,18 @@
+{
+  "generatedAt": "2026-10-04T11:43:06.399Z",
+  "edits": [
+    {
+      "path": "scripts/lib/comfortableGeometryAudit.mjs",
+      "beforeSha256": "9344ff4f4209e24d0faf2782145b867b3109e85dd2b54e16150ec25dfc128482",
+      "afterSha256": "2958c62cc8665c5350fd05aa05b38d1e872ec770c5505bf5fc1c9653347a4d23",
+      "consequence": "Test-only actual route-root scope and UI-scale normalized geometry; retain raw pixels and existing failure aggregation, strict ordinary44/16 controls with narrow coordinate/row/stepper/game exceptions."
+    },
+    {
+      "path": "scripts/verify-ui-rebuild-layout-user.mjs",
+      "beforeSha256": "f5c858c22c889c64bad8f8fb7d36b9deb3e34eb9eef48976f675b2aa426eba76",
+      "afterSha256": "fbc87af979fe5b4037e99d14d1f05b3fbecfd201e159cf6eabc498ef81d8f71b",
+      "consequence": "Test-only actual route-root scope and UI-scale normalized geometry; retain raw pixels and existing failure aggregation, strict ordinary44/16 controls with narrow coordinate/row/stepper/game exceptions."
+    }
+  ],
+  "verified": "Syntax only before actual traversal; not a visual acceptance receipt."
+}

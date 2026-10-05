@@ -1,244 +1,50 @@
 # Nova_A UI Visual V3 Specification
 
-## Purpose
-This document evolves the existing Nova_A editor without discarding its successful information hierarchy.
+Active26.37 refinement: the latest user Comfortable requirements replace the earlier compact geometry. Preserve the successful information hierarchy and major workflows.
 
-The current UI is already clean, structured, readable, and appropriately minimal.
-V3 should make the same interface feel less rigid, less cramped, more tactile, more spacious, and more visually authored.
+## Character
+Soft, spacious, fluid, tactile, calm, refined, coherent and professional. Primary reading/control type is16px; a comfortable desktop tool is not measured by the maximum number of properties on one screen.
 
-## Design keywords
-Primary:
-- Soft
-- Spacious
-- Fluid
-- Tactile
-- Calm
-- Refined
-- Coherent
+Keep supplied light/dark Nova marks and existing palettes. Use deliberate text hierarchy, whitespace, surface contrast and soft separators. The launcher may be more expressive than the persistent workspace.
 
-Secondary:
-- Technical
-- Compact
-- Precise
-- Confident
-- Contemporary
+## Shared sizes
+UI_SPEC.md and src/ui/tokens.css own the dimensions:44px controls,40px tree/list rows,56px headers,16px labels/values,14px help,18px panel titles,22px section headings,34px launcher heading and15px monospace.
 
-Avoid:
-- childish styling
-- bubbles everywhere
-- exaggerated glassmorphism
-- excessive gradients
-- excessive transparency
-- neon
-- enormous spacing
-- mobile-first proportions
-- decoration without function
+All are logical CSS units. Device DPI is handled by the browser; saved UI scale applies exactly once. No whole-app transform or zoom substitutes for real layout.
 
-## Core principle
-Preserve hierarchy, soften geometry.
+## Spacing
+Increase all five relationships together:
+-12px stacked label-to-control;
+-20px between fields;
+-28px between sections;
+-16px inline label/control and title/content;
+-20px panel inset and24px dialog inset.
 
-## Radius system
-Create semantic radius tokens rather than hardcoded values.
+Inputs use24px line boxes,9px vertical and16px horizontal padding plus1px borders in a44px total height. Related field pairs have12px gaps. Nested surfaces need one inset owner rather than repeated padding.
 
-Suggested starting range:
-- radius.xs: 4
-- radius.sm: 6
-- radius.md: 9
-- radius.lg: 12
-- radius.xl: 16
-- radius.pill: only where semantically appropriate
+Scrolling and meaningful folding are acceptable. Do not restore old small type to regain previous single-screen field counts.
 
-Use small radii for dense controls, larger radii for floating/dialog/launch surfaces.
-Do not round every dense row independently.
+## Radius and contours
+Use8px list-state backgrounds,12px controls/tabs,16px main panel contours,20px floating surfaces and24px dialogs/launcher accents. A shared8px gutter exposes dock radii without changing the information hierarchy.
 
-## Spacing system
-Suggested baseline:
-- 2 micro
-- 4 very tight
-- 6 tight
-- 8 compact
-- 12 normal
-- 16 comfortable
-- 20 section
-- 24 large section
-- 32 major composition
-- 40/48 launch-page only where justified
+Internal property sections remain grouped regions, not cards/pills per field. Clip descendant backgrounds deliberately; keep focus outlines, scrollbars, popovers and drag previews visible.
 
-Increase whitespace especially in:
-- panel headers
-- section headings
-- launch page
-- empty states
-- inspector group boundaries
-- tab-to-content boundaries
-- toolbar group separators
-- dialogs
+## Surfaces and decoration
+Use existing app/dock/panel/header/raised/hover/selection/floating/overlay semantic surfaces. De-emphasize repeated borders through whitespace and mild luminance differences. Reserve shadows for true elevation.
 
-Do not blindly increase every row height.
+Retain restrained Nova grid/node/orbit motifs behind content. Decorative elements cannot block input, compete with the viewport or simulate controls. No permanent blur on text/property surfaces. Temporary layers may use selective material blur with opaque/high-contrast/reduced-motion fallbacks.
 
-## Text spacing
-Text should never appear trapped against borders, icons, neighboring labels, or panel edges.
-Define consistent:
-- horizontal content padding
-- vertical content padding
-- icon-to-label gap
-- label-to-value gap
-- section-title spacing
+## Layout
+Use readable Inspector/hierarchy widths, wrapping toolbars and accessible overflow surfaces. Never clip a core command silently. Content should scroll and preserve user state rather than shrink into legacy fixed heights.
 
-## Surface system
-Define layered surfaces:
-- app background
-- dock background
-- panel surface
-- raised surface
-- hover surface
-- selected surface
-- floating surface
-- modal/overlay surface
+Keep persistent shell/content alive, deliberate responsive constraints and directly controlled resize/drag geometry. Motion must not conceal architectural flicker.
 
-Keep the established palette unless there is a reason to change it.
-Use subtle luminance/tint differences rather than thick borders everywhere.
+## Motion
+The existing shared Snappy/Smooth/Elastic system owns state-feedback, presence, selection, disclosure and drag-release behavior. See MOTION_SYSTEM_SPEC.md. Normal motion is enabled; Reduced Motion retains state/focus feedback with fewer translations and no strong overshoot.
 
-## Accent blocks and decoration
-Suitable uses:
-- launch-page hero
-- selected project accent
-- subtle section marker
-- active tool tint
-- status chips
-- restrained background motifs
+No text deformation during input, pointer-follow lag, logical overshoot or perpetual decorative simulation. Each main real panel and control category requires integration evidence.
 
-Possible motifs:
-- soft abstract geometry
-- grid/particle motifs
-- node/graph-inspired diagrams
-- subtle gradient haze
-- line patterns
+## Acceptance
+Compare the same populated project/selected object at matching window, UI scale and DPR. Check launcher, shell, hierarchy, Inspector, Assets, Settings, Dialog and all present specialized editors.
 
-Rules:
-- low opacity
-- never obscure text
-- never compete with the viewport
-- never look interactive if they are not
-- use one coherent motif across the product
-
-## Borders and separators
-Reduce the "box inside box inside box" feeling.
-Prefer spacing, surface contrast, subtle 1px separators, and selective strokes.
-
-## Shadows
-Use shadows only for actual elevation:
-- menus
-- popovers
-- dragged objects
-- floating panels
-- dialogs
-
-Docked panels should not look like floating cards.
-
-## Inputs
-Inputs should be softer and more comfortable without becoming large.
-Requirements:
-- consistent radius
-- comfortable inner padding
-- clear focus state
-- clear disabled state
-- stable height
-- readable label gap
-- no cramped text
-
-Numeric fields remain compact.
-
-## Buttons
-Icon buttons retain compact editor geometry, but gain polished hover/press/focus states.
-Primary text actions may use clearer accent treatment and comfortable horizontal padding.
-Pressed feedback may include tiny compression or depth response if rendering stays crisp.
-
-## Panels
-Panel anatomy:
-- header
-- header controls
-- content inset
-- section rhythm
-- footer/status area where applicable
-
-Increase content breathing room.
-Avoid turning docked panels into disconnected rounded cards.
-
-## Tabs
-Possible treatment:
-- subtle animated active indicator
-- rounded active background
-- balanced horizontal padding
-- smooth state transition
-
-Avoid excessive pill styling.
-
-## Lists and trees
-Keep hierarchy views efficient.
-Improve:
-- hover
-- selected state
-- indentation rhythm
-- icon spacing
-- rename field spacing
-- drag target indicators
-
-Do not increase row height so much that density becomes poor.
-
-## Inspector
-Use:
-- better section spacing
-- clearer section headers
-- softer control geometry
-- consistent label column
-- comfortable property-row gap
-- clear component boundaries
-
-Do not wrap every property in a card.
-
-## Launch / welcome screen
-Evolve from thin text into an intentionally composed entry experience.
-
-Include as appropriate:
-- Nova_A identity/logo/mark
-- concise welcome/hero area
-- Create Project
-- Open Project
-- Recent Projects
-- optional templates
-- subtle decorative motif
-- version/status info
-- restrained dynamic background/accent
-
-Avoid marketing-site layout and excessive animation.
-
-## Color usage
-Keep the neutral dark base.
-Use accent color for:
-- selection
-- active tools
-- primary actions
-- state
-- sparse decorative identity
-
-Avoid giving every panel a different color.
-
-## Definition of success
-V3 succeeds when:
-- current clarity is preserved
-- text no longer feels cramped
-- major surfaces breathe
-- UI feels less mechanically rectangular
-- controls feel tactile
-- visual interest exists without distraction
-- launch screen feels intentionally designed
-- editor remains professional after hours of use
-
-## 26.35 applied geometry
-
-Central tokens now define 4/6/9/12/16 px radii, control 6 px, floating 9 px, dialog 12 px and launch accent 16 px. Header/group insets use 12 px; dialog body 16 px and empty-state space 24 px. Semantic larger steps support launcher composition. The existing 28 px command, 24 px compact command/tree row, 88 px numeric field and 128 px slider retain their bounded scaled geometry. Do not substitute these with full-panel stretched fields.
-
-Surfaces share app/dock/panel/header/floating/overlay roles, softer separators and restrained floating shadow. Docks remain square and adjoining. The inert Nova mark and node motif appear only in welcome composition; no continuous idle decoration is introduced. Large-text project labels stay whole and wrap at the control boundary. Actual all-panel route captures and scaled/translated theme checks are recorded separately from functional authoring acceptance.
-
-Hierarchy containment follows the dock's actual font-relative width. Narrow hosts use the shared SVG overflow menu for scene/navigation and all four object actions, instead of reducing names to zero width. Search stays bounded, full names and IDs remain discoverable, and virtual rows retain their existing scaled height. Reserve breadcrumb geometry independently of selection so native drag sources do not move when selected.
+Verify type/line-height/control math, label/field/section spacing, readable translations, scroll ownership, exposed radii, clipped corners, focus outlines and narrow-window recovery. Inspect dynamic state changes as well as settled screenshots. Document actual tested and unverified conditions; build success alone is insufficient.

@@ -1,0 +1,2183 @@
+{
+  "format": "nova-v26.36-branding-user-audit",
+  "version": 1,
+  "release": "26.36",
+  "regressionOrigin": "26.36",
+  "expectedRelease": "26.36",
+  "development": true,
+  "qualifiedRelease": null,
+  "generatedAt": "2026-10-03T10:57:56.128Z",
+  "status": "passed",
+  "checks": [
+    {
+      "name": "Default dark launcher shows both loaded, bounded supplied brand images and PNG favicon",
+      "status": "passed"
+    },
+    {
+      "name": "Visible Clear Scene creation reaches the editor with the shared dark brand",
+      "status": "passed"
+    },
+    {
+      "name": "Actual theme buttons and all five palettes update brand and favicon without remount or geometry shift",
+      "status": "passed"
+    },
+    {
+      "name": "At 1024 by 640 and 200 percent scale, editor and launcher brands stay loaded and bounded",
+      "status": "passed"
+    },
+    {
+      "name": "A real reload preserves the selected light logo, favicon and 200 percent preference",
+      "status": "passed"
+    },
+    {
+      "name": "Unmodified root and nested static deployments resolve branded PNGs, manifest and default dark icons",
+      "status": "passed"
+    },
+    {
+      "name": "The independent nested manual toggles and persists its supplied brand without replacing the fixed header box",
+      "status": "passed"
+    },
+    {
+      "name": "Brand assets incur no failed browser requests or unexpected paths",
+      "status": "passed"
+    }
+  ],
+  "observations": [
+    {
+      "name": "scope",
+      "sourceSha256": "74b2fb802030b7b49b8fbd91835d9fa64227ac65d3063bf1cec405ac8e757873",
+      "text": "Real visible theme/palette/range/menu actions and DOM/image observations against current production dist. Public root and nested static requests. No private engine/editor state injection. About remains an external project link and is not followed; native executable icon identity and shell installation are separate packaging evidence. Software-rendered Edge is not physical GPU/DPI/native favicon cache certification."
+    },
+    {
+      "name": "launcher-default",
+      "images": [
+        {
+          "src": "http://127.0.0.1:20234/branding/nova-dark-256.png",
+          "theme": "dark",
+          "naturalWidth": 256,
+          "naturalHeight": 256,
+          "width": 24,
+          "height": 24,
+          "left": 32,
+          "top": 10,
+          "right": 56,
+          "bottom": 34,
+          "parentLeft": 32,
+          "parentRight": 56,
+          "parentTop": 10,
+          "parentBottom": 34,
+          "alt": "",
+          "hidden": "true",
+          "draggable": false,
+          "siblingVariants": [
+            {
+              "theme": "light",
+              "complete": true,
+              "width": 256,
+              "height": 256
+            },
+            {
+              "theme": "dark",
+              "complete": true,
+              "width": 256,
+              "height": 256
+            }
+          ],
+          "viewportWidth": 1440,
+          "viewportHeight": 900
+        },
+        {
+          "src": "http://127.0.0.1:20234/branding/nova-dark-256.png",
+          "theme": "dark",
+          "naturalWidth": 256,
+          "naturalHeight": 256,
+          "width": 32,
+          "height": 32,
+          "left": 362.53125,
+          "top": 101.19985961914062,
+          "right": 394.53125,
+          "bottom": 133.19985961914062,
+          "parentLeft": 362.53125,
+          "parentRight": 394.53125,
+          "parentTop": 101.19985961914062,
+          "parentBottom": 133.19985961914062,
+          "alt": "",
+          "hidden": "true",
+          "draggable": false,
+          "siblingVariants": [
+            {
+              "theme": "light",
+              "complete": true,
+              "width": 256,
+              "height": 256
+            },
+            {
+              "theme": "dark",
+              "complete": true,
+              "width": 256,
+              "height": 256
+            }
+          ],
+          "viewportWidth": 1440,
+          "viewportHeight": 900
+        }
+      ],
+      "icon": {
+        "url": "http://127.0.0.1:20234/nova-icon-32.png",
+        "status": 200,
+        "type": "image/png",
+        "bytes": 2326,
+        "signature": [
+          137,
+          80,
+          78,
+          71,
+          13,
+          10,
+          26,
+          10
+        ],
+        "headerWidth": 32,
+        "headerHeight": 32,
+        "decodedWidth": 32,
+        "decodedHeight": 32
+      }
+    },
+    {
+      "name": "editor-default",
+      "images": [
+        {
+          "src": "http://127.0.0.1:20234/branding/nova-dark-256.png",
+          "theme": "dark",
+          "naturalWidth": 256,
+          "naturalHeight": 256,
+          "width": 24,
+          "height": 24,
+          "left": 8,
+          "top": 2,
+          "right": 32,
+          "bottom": 26,
+          "parentLeft": 8,
+          "parentRight": 32,
+          "parentTop": 2,
+          "parentBottom": 26,
+          "alt": "",
+          "hidden": "true",
+          "draggable": false,
+          "siblingVariants": [
+            {
+              "theme": "light",
+              "complete": true,
+              "width": 256,
+              "height": 256
+            },
+            {
+              "theme": "dark",
+              "complete": true,
+              "width": 256,
+              "height": 256
+            }
+          ],
+          "viewportWidth": 1440,
+          "viewportHeight": 900
+        }
+      ],
+      "icon": {
+        "url": "http://127.0.0.1:20234/nova-icon-32.png",
+        "status": 200,
+        "type": "image/png",
+        "bytes": 2326,
+        "signature": [
+          137,
+          80,
+          78,
+          71,
+          13,
+          10,
+          26,
+          10
+        ],
+        "headerWidth": 32,
+        "headerHeight": 32,
+        "decodedWidth": 32,
+        "decodedHeight": 32
+      }
+    },
+    {
+      "name": "theme-button-Light",
+      "mode": "light",
+      "images": [
+        {
+          "src": "http://127.0.0.1:20234/branding/nova-light-256.png",
+          "theme": "light",
+          "naturalWidth": 256,
+          "naturalHeight": 256,
+          "width": 24,
+          "height": 24,
+          "left": 8,
+          "top": 2,
+          "right": 32,
+          "bottom": 26,
+          "parentLeft": 8,
+          "parentRight": 32,
+          "parentTop": 2,
+          "parentBottom": 26,
+          "alt": "",
+          "hidden": "true",
+          "draggable": false,
+          "siblingVariants": [
+            {
+              "theme": "light",
+              "complete": true,
+              "width": 256,
+              "height": 256
+            },
+            {
+              "theme": "dark",
+              "complete": true,
+              "width": 256,
+              "height": 256
+            }
+          ],
+          "viewportWidth": 1440,
+          "viewportHeight": 900
+        }
+      ],
+      "icon": {
+        "url": "http://127.0.0.1:20234/nova-icon-light-32.png",
+        "status": 200,
+        "type": "image/png",
+        "bytes": 1638,
+        "signature": [
+          137,
+          80,
+          78,
+          71,
+          13,
+          10,
+          26,
+          10
+        ],
+        "headerWidth": 32,
+        "headerHeight": 32,
+        "decodedWidth": 32,
+        "decodedHeight": 32
+      },
+      "continuity": {
+        "done": true,
+        "frames": 114,
+        "shellMissingFrames": 0,
+        "shellReplacementFrames": 0,
+        "markMissingFrames": 0,
+        "markReplacementFrames": 0,
+        "loadingFrames": 0,
+        "maxGeometryShift": 0
+      }
+    },
+    {
+      "name": "theme-button-Dark",
+      "mode": "dark",
+      "images": [
+        {
+          "src": "http://127.0.0.1:20234/branding/nova-dark-256.png",
+          "theme": "dark",
+          "naturalWidth": 256,
+          "naturalHeight": 256,
+          "width": 24,
+          "height": 24,
+          "left": 8,
+          "top": 2,
+          "right": 32,
+          "bottom": 26,
+          "parentLeft": 8,
+          "parentRight": 32,
+          "parentTop": 2,
+          "parentBottom": 26,
+          "alt": "",
+          "hidden": "true",
+          "draggable": false,
+          "siblingVariants": [
+            {
+              "theme": "light",
+              "complete": true,
+              "width": 256,
+              "height": 256
+            },
+            {
+              "theme": "dark",
+              "complete": true,
+              "width": 256,
+              "height": 256
+            }
+          ],
+          "viewportWidth": 1440,
+          "viewportHeight": 900
+        }
+      ],
+      "icon": {
+        "url": "http://127.0.0.1:20234/nova-icon-32.png",
+        "status": 200,
+        "type": "image/png",
+        "bytes": 2326,
+        "signature": [
+          137,
+          80,
+          78,
+          71,
+          13,
+          10,
+          26,
+          10
+        ],
+        "headerWidth": 32,
+        "headerHeight": 32,
+        "decodedWidth": 32,
+        "decodedHeight": 32
+      },
+      "continuity": {
+        "done": true,
+        "frames": 138,
+        "shellMissingFrames": 0,
+        "shellReplacementFrames": 0,
+        "markMissingFrames": 0,
+        "markReplacementFrames": 0,
+        "loadingFrames": 0,
+        "maxGeometryShift": 0
+      }
+    },
+    {
+      "name": "palette-cloud-blue",
+      "mode": "light",
+      "images": [
+        {
+          "src": "http://127.0.0.1:20234/branding/nova-light-256.png",
+          "theme": "light",
+          "naturalWidth": 256,
+          "naturalHeight": 256,
+          "width": 24,
+          "height": 24,
+          "left": 8,
+          "top": 2,
+          "right": 32,
+          "bottom": 26,
+          "parentLeft": 8,
+          "parentRight": 32,
+          "parentTop": 2,
+          "parentBottom": 26,
+          "alt": "",
+          "hidden": "true",
+          "draggable": false,
+          "siblingVariants": [
+            {
+              "theme": "light",
+              "complete": true,
+              "width": 256,
+              "height": 256
+            },
+            {
+              "theme": "dark",
+              "complete": true,
+              "width": 256,
+              "height": 256
+            }
+          ],
+          "viewportWidth": 1440,
+          "viewportHeight": 900
+        }
+      ],
+      "icon": {
+        "url": "http://127.0.0.1:20234/nova-icon-light-32.png",
+        "status": 200,
+        "type": "image/png",
+        "bytes": 1638,
+        "signature": [
+          137,
+          80,
+          78,
+          71,
+          13,
+          10,
+          26,
+          10
+        ],
+        "headerWidth": 32,
+        "headerHeight": 32,
+        "decodedWidth": 32,
+        "decodedHeight": 32
+      },
+      "continuity": {
+        "done": true,
+        "frames": 114,
+        "shellMissingFrames": 0,
+        "shellReplacementFrames": 0,
+        "markMissingFrames": 0,
+        "markReplacementFrames": 0,
+        "loadingFrames": 0,
+        "maxGeometryShift": 0
+      }
+    },
+    {
+      "name": "palette-meadow-cream",
+      "mode": "light",
+      "images": [
+        {
+          "src": "http://127.0.0.1:20234/branding/nova-light-256.png",
+          "theme": "light",
+          "naturalWidth": 256,
+          "naturalHeight": 256,
+          "width": 24,
+          "height": 24,
+          "left": 8,
+          "top": 2,
+          "right": 32,
+          "bottom": 26,
+          "parentLeft": 8,
+          "parentRight": 32,
+          "parentTop": 2,
+          "parentBottom": 26,
+          "alt": "",
+          "hidden": "true",
+          "draggable": false,
+          "siblingVariants": [
+            {
+              "theme": "light",
+              "complete": true,
+              "width": 256,
+              "height": 256
+            },
+            {
+              "theme": "dark",
+              "complete": true,
+              "width": 256,
+              "height": 256
+            }
+          ],
+          "viewportWidth": 1440,
+          "viewportHeight": 900
+        }
+      ],
+      "icon": {
+        "url": "http://127.0.0.1:20234/nova-icon-light-32.png",
+        "status": 200,
+        "type": "image/png",
+        "bytes": 1638,
+        "signature": [
+          137,
+          80,
+          78,
+          71,
+          13,
+          10,
+          26,
+          10
+        ],
+        "headerWidth": 32,
+        "headerHeight": 32,
+        "decodedWidth": 32,
+        "decodedHeight": 32
+      },
+      "continuity": {
+        "done": true,
+        "frames": 141,
+        "shellMissingFrames": 0,
+        "shellReplacementFrames": 0,
+        "markMissingFrames": 0,
+        "markReplacementFrames": 0,
+        "loadingFrames": 0,
+        "maxGeometryShift": 0
+      }
+    },
+    {
+      "name": "palette-blush-berry",
+      "mode": "light",
+      "images": [
+        {
+          "src": "http://127.0.0.1:20234/branding/nova-light-256.png",
+          "theme": "light",
+          "naturalWidth": 256,
+          "naturalHeight": 256,
+          "width": 24,
+          "height": 24,
+          "left": 8,
+          "top": 2,
+          "right": 32,
+          "bottom": 26,
+          "parentLeft": 8,
+          "parentRight": 32,
+          "parentTop": 2,
+          "parentBottom": 26,
+          "alt": "",
+          "hidden": "true",
+          "draggable": false,
+          "siblingVariants": [
+            {
+              "theme": "light",
+              "complete": true,
+              "width": 256,
+              "height": 256
+            },
+            {
+              "theme": "dark",
+              "complete": true,
+              "width": 256,
+              "height": 256
+            }
+          ],
+          "viewportWidth": 1440,
+          "viewportHeight": 900
+        }
+      ],
+      "icon": {
+        "url": "http://127.0.0.1:20234/nova-icon-light-32.png",
+        "status": 200,
+        "type": "image/png",
+        "bytes": 1638,
+        "signature": [
+          137,
+          80,
+          78,
+          71,
+          13,
+          10,
+          26,
+          10
+        ],
+        "headerWidth": 32,
+        "headerHeight": 32,
+        "decodedWidth": 32,
+        "decodedHeight": 32
+      },
+      "continuity": {
+        "done": true,
+        "frames": 107,
+        "shellMissingFrames": 0,
+        "shellReplacementFrames": 0,
+        "markMissingFrames": 0,
+        "markReplacementFrames": 0,
+        "loadingFrames": 0,
+        "maxGeometryShift": 0
+      }
+    },
+    {
+      "name": "palette-midnight-blue",
+      "mode": "dark",
+      "images": [
+        {
+          "src": "http://127.0.0.1:20234/branding/nova-dark-256.png",
+          "theme": "dark",
+          "naturalWidth": 256,
+          "naturalHeight": 256,
+          "width": 24,
+          "height": 24,
+          "left": 8,
+          "top": 2,
+          "right": 32,
+          "bottom": 26,
+          "parentLeft": 8,
+          "parentRight": 32,
+          "parentTop": 2,
+          "parentBottom": 26,
+          "alt": "",
+          "hidden": "true",
+          "draggable": false,
+          "siblingVariants": [
+            {
+              "theme": "light",
+              "complete": true,
+              "width": 256,
+              "height": 256
+            },
+            {
+              "theme": "dark",
+              "complete": true,
+              "width": 256,
+              "height": 256
+            }
+          ],
+          "viewportWidth": 1440,
+          "viewportHeight": 900
+        }
+      ],
+      "icon": {
+        "url": "http://127.0.0.1:20234/nova-icon-32.png",
+        "status": 200,
+        "type": "image/png",
+        "bytes": 2326,
+        "signature": [
+          137,
+          80,
+          78,
+          71,
+          13,
+          10,
+          26,
+          10
+        ],
+        "headerWidth": 32,
+        "headerHeight": 32,
+        "decodedWidth": 32,
+        "decodedHeight": 32
+      },
+      "continuity": {
+        "done": true,
+        "frames": 94,
+        "shellMissingFrames": 0,
+        "shellReplacementFrames": 0,
+        "markMissingFrames": 0,
+        "markReplacementFrames": 0,
+        "loadingFrames": 0,
+        "maxGeometryShift": 0
+      }
+    },
+    {
+      "name": "palette-night-garden",
+      "mode": "dark",
+      "images": [
+        {
+          "src": "http://127.0.0.1:20234/branding/nova-dark-256.png",
+          "theme": "dark",
+          "naturalWidth": 256,
+          "naturalHeight": 256,
+          "width": 24,
+          "height": 24,
+          "left": 8,
+          "top": 2,
+          "right": 32,
+          "bottom": 26,
+          "parentLeft": 8,
+          "parentRight": 32,
+          "parentTop": 2,
+          "parentBottom": 26,
+          "alt": "",
+          "hidden": "true",
+          "draggable": false,
+          "siblingVariants": [
+            {
+              "theme": "light",
+              "complete": true,
+              "width": 256,
+              "height": 256
+            },
+            {
+              "theme": "dark",
+              "complete": true,
+              "width": 256,
+              "height": 256
+            }
+          ],
+          "viewportWidth": 1440,
+          "viewportHeight": 900
+        }
+      ],
+      "icon": {
+        "url": "http://127.0.0.1:20234/nova-icon-32.png",
+        "status": 200,
+        "type": "image/png",
+        "bytes": 2326,
+        "signature": [
+          137,
+          80,
+          78,
+          71,
+          13,
+          10,
+          26,
+          10
+        ],
+        "headerWidth": 32,
+        "headerHeight": 32,
+        "decodedWidth": 32,
+        "decodedHeight": 32
+      },
+      "continuity": {
+        "done": true,
+        "frames": 56,
+        "shellMissingFrames": 0,
+        "shellReplacementFrames": 0,
+        "markMissingFrames": 0,
+        "markReplacementFrames": 0,
+        "loadingFrames": 0,
+        "maxGeometryShift": 0
+      }
+    },
+    {
+      "name": "theme-button-Light",
+      "mode": "light",
+      "images": [
+        {
+          "src": "http://127.0.0.1:20234/branding/nova-light-256.png",
+          "theme": "light",
+          "naturalWidth": 256,
+          "naturalHeight": 256,
+          "width": 24,
+          "height": 24,
+          "left": 8,
+          "top": 2,
+          "right": 32,
+          "bottom": 26,
+          "parentLeft": 8,
+          "parentRight": 32,
+          "parentTop": 2,
+          "parentBottom": 26,
+          "alt": "",
+          "hidden": "true",
+          "draggable": false,
+          "siblingVariants": [
+            {
+              "theme": "light",
+              "complete": true,
+              "width": 256,
+              "height": 256
+            },
+            {
+              "theme": "dark",
+              "complete": true,
+              "width": 256,
+              "height": 256
+            }
+          ],
+          "viewportWidth": 1440,
+          "viewportHeight": 900
+        }
+      ],
+      "icon": {
+        "url": "http://127.0.0.1:20234/nova-icon-light-32.png",
+        "status": 200,
+        "type": "image/png",
+        "bytes": 1638,
+        "signature": [
+          137,
+          80,
+          78,
+          71,
+          13,
+          10,
+          26,
+          10
+        ],
+        "headerWidth": 32,
+        "headerHeight": 32,
+        "decodedWidth": 32,
+        "decodedHeight": 32
+      },
+      "continuity": {
+        "done": true,
+        "frames": 135,
+        "shellMissingFrames": 0,
+        "shellReplacementFrames": 0,
+        "markMissingFrames": 0,
+        "markReplacementFrames": 0,
+        "loadingFrames": 0,
+        "maxGeometryShift": 0
+      }
+    },
+    {
+      "name": "minimum-editor-200",
+      "images": [
+        {
+          "src": "http://127.0.0.1:20234/branding/nova-light-256.png",
+          "theme": "light",
+          "naturalWidth": 256,
+          "naturalHeight": 256,
+          "width": 48,
+          "height": 48,
+          "left": 8,
+          "top": 4,
+          "right": 56,
+          "bottom": 52,
+          "parentLeft": 8,
+          "parentRight": 56,
+          "parentTop": 4,
+          "parentBottom": 52,
+          "alt": "",
+          "hidden": "true",
+          "draggable": false,
+          "siblingVariants": [
+            {
+              "theme": "light",
+              "complete": true,
+              "width": 256,
+              "height": 256
+            },
+            {
+              "theme": "dark",
+              "complete": true,
+              "width": 256,
+              "height": 256
+            }
+          ],
+          "viewportWidth": 1024,
+          "viewportHeight": 640
+        }
+      ]
+    },
+    {
+      "name": "launcher-menu-real-hit",
+      "x": 340.6875,
+      "y": 90,
+      "available": true,
+      "inside": true,
+      "targetMatches": false,
+      "hit": "<nav data-v-d159ae42=\"\" data-v-51a5da77=\"\" class=\"workspace-bar\" role=\"toolbar\" aria-label=\"Workspaces\"><div data-v-d159ae42=\"\" class=\"workspace-list\"><button data-v-d159ae42=\"\" type=\"button\" class=\"ui-button ui-button--default\" title=\"Design · Works"
+    },
+    {
+      "name": "inherited-menu-pointer-limitation",
+      "status": "not-passed",
+      "text": "The first File-menu item center is covered by the workspace toolbar. Parent/toolbar z-index600 and header-height tokens match the pre26.36 source baseline. Actual pointer failure is retained in development3 cache evidence. This icon-only audit continues with public focus+Enter; it does not certify this pointer menu entry or change navigation source.",
+      "x": 340.6875,
+      "y": 90,
+      "available": true,
+      "inside": true,
+      "targetMatches": false,
+      "hit": "<nav data-v-d159ae42=\"\" data-v-51a5da77=\"\" class=\"workspace-bar\" role=\"toolbar\" aria-label=\"Workspaces\"><div data-v-d159ae42=\"\" class=\"workspace-list\"><button data-v-d159ae42=\"\" type=\"button\" class=\"ui-button ui-button--default\" title=\"Design · Works"
+    },
+    {
+      "name": "minimum-launcher-200",
+      "images": [
+        {
+          "src": "http://127.0.0.1:20234/branding/nova-light-256.png",
+          "theme": "light",
+          "naturalWidth": 256,
+          "naturalHeight": 256,
+          "width": 48,
+          "height": 48,
+          "left": 32,
+          "top": 12,
+          "right": 80,
+          "bottom": 60,
+          "parentLeft": 32,
+          "parentRight": 80,
+          "parentTop": 12,
+          "parentBottom": 60,
+          "alt": "",
+          "hidden": "true",
+          "draggable": false,
+          "siblingVariants": [
+            {
+              "theme": "light",
+              "complete": true,
+              "width": 256,
+              "height": 256
+            },
+            {
+              "theme": "dark",
+              "complete": true,
+              "width": 256,
+              "height": 256
+            }
+          ],
+          "viewportWidth": 1024,
+          "viewportHeight": 640
+        },
+        {
+          "src": "http://127.0.0.1:20234/branding/nova-light-256.png",
+          "theme": "light",
+          "naturalWidth": 256,
+          "naturalHeight": 256,
+          "width": 64,
+          "height": 64,
+          "left": 56,
+          "top": 134.95452880859375,
+          "right": 120,
+          "bottom": 198.95452880859375,
+          "parentLeft": 56,
+          "parentRight": 120,
+          "parentTop": 134.95452880859375,
+          "parentBottom": 198.95452880859375,
+          "alt": "",
+          "hidden": "true",
+          "draggable": false,
+          "siblingVariants": [
+            {
+              "theme": "light",
+              "complete": true,
+              "width": 256,
+              "height": 256
+            },
+            {
+              "theme": "dark",
+              "complete": true,
+              "width": 256,
+              "height": 256
+            }
+          ],
+          "viewportWidth": 1024,
+          "viewportHeight": 640
+        }
+      ],
+      "icon": {
+        "url": "http://127.0.0.1:20234/nova-icon-light-32.png",
+        "status": 200,
+        "type": "image/png",
+        "bytes": 1638,
+        "signature": [
+          137,
+          80,
+          78,
+          71,
+          13,
+          10,
+          26,
+          10
+        ],
+        "headerWidth": 32,
+        "headerHeight": 32,
+        "decodedWidth": 32,
+        "decodedHeight": 32
+      }
+    },
+    {
+      "name": "saved-launcher-light",
+      "images": [
+        {
+          "src": "http://127.0.0.1:20234/branding/nova-light-256.png",
+          "theme": "light",
+          "naturalWidth": 256,
+          "naturalHeight": 256,
+          "width": 48,
+          "height": 48,
+          "left": 32,
+          "top": 12,
+          "right": 80,
+          "bottom": 60,
+          "parentLeft": 32,
+          "parentRight": 80,
+          "parentTop": 12,
+          "parentBottom": 60,
+          "alt": "",
+          "hidden": "true",
+          "draggable": false,
+          "siblingVariants": [
+            {
+              "theme": "light",
+              "complete": true,
+              "width": 256,
+              "height": 256
+            },
+            {
+              "theme": "dark",
+              "complete": true,
+              "width": 256,
+              "height": 256
+            }
+          ],
+          "viewportWidth": 1024,
+          "viewportHeight": 640
+        },
+        {
+          "src": "http://127.0.0.1:20234/branding/nova-light-256.png",
+          "theme": "light",
+          "naturalWidth": 256,
+          "naturalHeight": 256,
+          "width": 64,
+          "height": 64,
+          "left": 56,
+          "top": 133.91693115234375,
+          "right": 120,
+          "bottom": 197.91693115234375,
+          "parentLeft": 56,
+          "parentRight": 120,
+          "parentTop": 133.91693115234375,
+          "parentBottom": 197.91693115234375,
+          "alt": "",
+          "hidden": "true",
+          "draggable": false,
+          "siblingVariants": [
+            {
+              "theme": "light",
+              "complete": true,
+              "width": 256,
+              "height": 256
+            },
+            {
+              "theme": "dark",
+              "complete": true,
+              "width": 256,
+              "height": 256
+            }
+          ],
+          "viewportWidth": 1024,
+          "viewportHeight": 640
+        }
+      ],
+      "icon": {
+        "url": "http://127.0.0.1:20234/nova-icon-light-32.png",
+        "status": 200,
+        "type": "image/png",
+        "bytes": 1638,
+        "signature": [
+          137,
+          80,
+          78,
+          71,
+          13,
+          10,
+          26,
+          10
+        ],
+        "headerWidth": 32,
+        "headerHeight": 32,
+        "decodedWidth": 32,
+        "decodedHeight": 32
+      }
+    },
+    {
+      "name": "static-root",
+      "images": [
+        {
+          "src": "http://127.0.0.1:20233/branding/nova-dark-256.png",
+          "theme": "dark",
+          "naturalWidth": 256,
+          "naturalHeight": 256,
+          "width": 24,
+          "height": 24,
+          "left": 32,
+          "top": 10,
+          "right": 56,
+          "bottom": 34,
+          "parentLeft": 32,
+          "parentRight": 56,
+          "parentTop": 10,
+          "parentBottom": 34,
+          "alt": "",
+          "hidden": "true",
+          "draggable": false,
+          "siblingVariants": [
+            {
+              "theme": "light",
+              "complete": true,
+              "width": 256,
+              "height": 256
+            },
+            {
+              "theme": "dark",
+              "complete": true,
+              "width": 256,
+              "height": 256
+            }
+          ],
+          "viewportWidth": 1440,
+          "viewportHeight": 900
+        },
+        {
+          "src": "http://127.0.0.1:20233/branding/nova-dark-256.png",
+          "theme": "dark",
+          "naturalWidth": 256,
+          "naturalHeight": 256,
+          "width": 32,
+          "height": 32,
+          "left": 362.53125,
+          "top": 106.56710815429688,
+          "right": 394.53125,
+          "bottom": 138.56710815429688,
+          "parentLeft": 362.53125,
+          "parentRight": 394.53125,
+          "parentTop": 106.56710815429688,
+          "parentBottom": 138.56710815429688,
+          "alt": "",
+          "hidden": "true",
+          "draggable": false,
+          "siblingVariants": [
+            {
+              "theme": "light",
+              "complete": true,
+              "width": 256,
+              "height": 256
+            },
+            {
+              "theme": "dark",
+              "complete": true,
+              "width": 256,
+              "height": 256
+            }
+          ],
+          "viewportWidth": 1440,
+          "viewportHeight": 900
+        }
+      ],
+      "icon": {
+        "url": "http://127.0.0.1:20233/nova-icon-32.png",
+        "status": 200,
+        "type": "image/png",
+        "bytes": 2326,
+        "signature": [
+          137,
+          80,
+          78,
+          71,
+          13,
+          10,
+          26,
+          10
+        ],
+        "headerWidth": 32,
+        "headerHeight": 32,
+        "decodedWidth": 32,
+        "decodedHeight": 32
+      },
+      "metadata": {
+        "href": "http://127.0.0.1:20233/manifest.webmanifest",
+        "status": 200,
+        "type": "application/manifest+json",
+        "manifest": {
+          "name": "Nova_A",
+          "short_name": "Nova_A",
+          "id": "./",
+          "start_url": "./index.html",
+          "scope": "./",
+          "display": "standalone",
+          "background_color": "#101116",
+          "theme_color": "#101116",
+          "description": "Nova_A online landscape editor. Save projects before updating. Internet required for launch and loading tools.",
+          "icons": [
+            {
+              "src": "./nova-icon-192.png",
+              "sizes": "192x192",
+              "type": "image/png",
+              "purpose": "any"
+            },
+            {
+              "src": "./nova-icon-512.png",
+              "sizes": "512x512",
+              "type": "image/png",
+              "purpose": "any"
+            }
+          ]
+        },
+        "touch": "http://127.0.0.1:20233/nova-icon-192.png"
+      },
+      "assets": [
+        {
+          "url": "http://127.0.0.1:20233/nova-icon-192.png",
+          "status": 200,
+          "type": "image/png",
+          "bytes": 38474,
+          "signature": [
+            137,
+            80,
+            78,
+            71,
+            13,
+            10,
+            26,
+            10
+          ],
+          "headerWidth": 192,
+          "headerHeight": 192,
+          "decodedWidth": 192,
+          "decodedHeight": 192
+        },
+        {
+          "url": "http://127.0.0.1:20233/nova-icon-512.png",
+          "status": 200,
+          "type": "image/png",
+          "bytes": 248787,
+          "signature": [
+            137,
+            80,
+            78,
+            71,
+            13,
+            10,
+            26,
+            10
+          ],
+          "headerWidth": 512,
+          "headerHeight": 512,
+          "decodedWidth": 512,
+          "decodedHeight": 512
+        },
+        {
+          "url": "http://127.0.0.1:20233/branding/nova-dark-256.png",
+          "status": 200,
+          "type": "image/png",
+          "bytes": 63853,
+          "signature": [
+            137,
+            80,
+            78,
+            71,
+            13,
+            10,
+            26,
+            10
+          ],
+          "headerWidth": 256,
+          "headerHeight": 256,
+          "decodedWidth": 256,
+          "decodedHeight": 256
+        },
+        {
+          "url": "http://127.0.0.1:20233/branding/nova-light-256.png",
+          "status": 200,
+          "type": "image/png",
+          "bytes": 51643,
+          "signature": [
+            137,
+            80,
+            78,
+            71,
+            13,
+            10,
+            26,
+            10
+          ],
+          "headerWidth": 256,
+          "headerHeight": 256,
+          "decodedWidth": 256,
+          "decodedHeight": 256
+        },
+        {
+          "url": "http://127.0.0.1:20233/nova-icon-32.png",
+          "status": 200,
+          "type": "image/png",
+          "bytes": 2326,
+          "signature": [
+            137,
+            80,
+            78,
+            71,
+            13,
+            10,
+            26,
+            10
+          ],
+          "headerWidth": 32,
+          "headerHeight": 32,
+          "decodedWidth": 32,
+          "decodedHeight": 32
+        },
+        {
+          "url": "http://127.0.0.1:20233/nova-icon-light-32.png",
+          "status": 200,
+          "type": "image/png",
+          "bytes": 1638,
+          "signature": [
+            137,
+            80,
+            78,
+            71,
+            13,
+            10,
+            26,
+            10
+          ],
+          "headerWidth": 32,
+          "headerHeight": 32,
+          "decodedWidth": 32,
+          "decodedHeight": 32
+        }
+      ]
+    },
+    {
+      "name": "static-nested",
+      "images": [
+        {
+          "src": "http://127.0.0.1:20233/apps/nova/branding/nova-dark-256.png",
+          "theme": "dark",
+          "naturalWidth": 256,
+          "naturalHeight": 256,
+          "width": 24,
+          "height": 24,
+          "left": 32,
+          "top": 10,
+          "right": 56,
+          "bottom": 34,
+          "parentLeft": 32,
+          "parentRight": 56,
+          "parentTop": 10,
+          "parentBottom": 34,
+          "alt": "",
+          "hidden": "true",
+          "draggable": false,
+          "siblingVariants": [
+            {
+              "theme": "light",
+              "complete": true,
+              "width": 256,
+              "height": 256
+            },
+            {
+              "theme": "dark",
+              "complete": true,
+              "width": 256,
+              "height": 256
+            }
+          ],
+          "viewportWidth": 1440,
+          "viewportHeight": 900
+        },
+        {
+          "src": "http://127.0.0.1:20233/apps/nova/branding/nova-dark-256.png",
+          "theme": "dark",
+          "naturalWidth": 256,
+          "naturalHeight": 256,
+          "width": 32,
+          "height": 32,
+          "left": 362.53125,
+          "top": 106.95401000976562,
+          "right": 394.53125,
+          "bottom": 138.95401000976562,
+          "parentLeft": 362.53125,
+          "parentRight": 394.53125,
+          "parentTop": 106.95401000976562,
+          "parentBottom": 138.95401000976562,
+          "alt": "",
+          "hidden": "true",
+          "draggable": false,
+          "siblingVariants": [
+            {
+              "theme": "light",
+              "complete": true,
+              "width": 256,
+              "height": 256
+            },
+            {
+              "theme": "dark",
+              "complete": true,
+              "width": 256,
+              "height": 256
+            }
+          ],
+          "viewportWidth": 1440,
+          "viewportHeight": 900
+        }
+      ],
+      "icon": {
+        "url": "http://127.0.0.1:20233/apps/nova/nova-icon-32.png",
+        "status": 200,
+        "type": "image/png",
+        "bytes": 2326,
+        "signature": [
+          137,
+          80,
+          78,
+          71,
+          13,
+          10,
+          26,
+          10
+        ],
+        "headerWidth": 32,
+        "headerHeight": 32,
+        "decodedWidth": 32,
+        "decodedHeight": 32
+      },
+      "metadata": {
+        "href": "http://127.0.0.1:20233/apps/nova/manifest.webmanifest",
+        "status": 200,
+        "type": "application/manifest+json",
+        "manifest": {
+          "name": "Nova_A",
+          "short_name": "Nova_A",
+          "id": "./",
+          "start_url": "./index.html",
+          "scope": "./",
+          "display": "standalone",
+          "background_color": "#101116",
+          "theme_color": "#101116",
+          "description": "Nova_A online landscape editor. Save projects before updating. Internet required for launch and loading tools.",
+          "icons": [
+            {
+              "src": "./nova-icon-192.png",
+              "sizes": "192x192",
+              "type": "image/png",
+              "purpose": "any"
+            },
+            {
+              "src": "./nova-icon-512.png",
+              "sizes": "512x512",
+              "type": "image/png",
+              "purpose": "any"
+            }
+          ]
+        },
+        "touch": "http://127.0.0.1:20233/apps/nova/nova-icon-192.png"
+      },
+      "assets": [
+        {
+          "url": "http://127.0.0.1:20233/apps/nova/nova-icon-192.png",
+          "status": 200,
+          "type": "image/png",
+          "bytes": 38474,
+          "signature": [
+            137,
+            80,
+            78,
+            71,
+            13,
+            10,
+            26,
+            10
+          ],
+          "headerWidth": 192,
+          "headerHeight": 192,
+          "decodedWidth": 192,
+          "decodedHeight": 192
+        },
+        {
+          "url": "http://127.0.0.1:20233/apps/nova/nova-icon-512.png",
+          "status": 200,
+          "type": "image/png",
+          "bytes": 248787,
+          "signature": [
+            137,
+            80,
+            78,
+            71,
+            13,
+            10,
+            26,
+            10
+          ],
+          "headerWidth": 512,
+          "headerHeight": 512,
+          "decodedWidth": 512,
+          "decodedHeight": 512
+        },
+        {
+          "url": "http://127.0.0.1:20233/apps/nova/branding/nova-dark-256.png",
+          "status": 200,
+          "type": "image/png",
+          "bytes": 63853,
+          "signature": [
+            137,
+            80,
+            78,
+            71,
+            13,
+            10,
+            26,
+            10
+          ],
+          "headerWidth": 256,
+          "headerHeight": 256,
+          "decodedWidth": 256,
+          "decodedHeight": 256
+        },
+        {
+          "url": "http://127.0.0.1:20233/apps/nova/branding/nova-light-256.png",
+          "status": 200,
+          "type": "image/png",
+          "bytes": 51643,
+          "signature": [
+            137,
+            80,
+            78,
+            71,
+            13,
+            10,
+            26,
+            10
+          ],
+          "headerWidth": 256,
+          "headerHeight": 256,
+          "decodedWidth": 256,
+          "decodedHeight": 256
+        },
+        {
+          "url": "http://127.0.0.1:20233/apps/nova/nova-icon-32.png",
+          "status": 200,
+          "type": "image/png",
+          "bytes": 2326,
+          "signature": [
+            137,
+            80,
+            78,
+            71,
+            13,
+            10,
+            26,
+            10
+          ],
+          "headerWidth": 32,
+          "headerHeight": 32,
+          "decodedWidth": 32,
+          "decodedHeight": 32
+        },
+        {
+          "url": "http://127.0.0.1:20233/apps/nova/nova-icon-light-32.png",
+          "status": 200,
+          "type": "image/png",
+          "bytes": 1638,
+          "signature": [
+            137,
+            80,
+            78,
+            71,
+            13,
+            10,
+            26,
+            10
+          ],
+          "headerWidth": 32,
+          "headerHeight": 32,
+          "decodedWidth": 32,
+          "decodedHeight": 32
+        }
+      ]
+    },
+    {
+      "name": "independent-manual-theme",
+      "currentLesson": {
+        "ordinarySection": true,
+        "heading": "26.36 — Supplied light and dark branding",
+        "engineText": "Nova_A 26.36 · Engine 26.36.0 · Project Format 2/schema 29.",
+        "currentMarker": true,
+        "obsoleteSupplement": false
+      },
+      "dark": {
+        "theme": "dark",
+        "src": "http://127.0.0.1:20233/apps/nova/assets/nova-dark-256-D9wShpcF.png",
+        "alt": "",
+        "hidden": "true",
+        "width": 34,
+        "height": 34,
+        "left": 24,
+        "top": 14.5,
+        "icon": "http://127.0.0.1:20233/apps/nova/assets/nova-dark-256-D9wShpcF.png",
+        "type": "image/png",
+        "stored": null,
+        "sameWrapper": true,
+        "decoded": {
+          "url": "http://127.0.0.1:20233/apps/nova/assets/nova-dark-256-D9wShpcF.png",
+          "status": 200,
+          "type": "image/png",
+          "bytes": 63853,
+          "signature": [
+            137,
+            80,
+            78,
+            71,
+            13,
+            10,
+            26,
+            10
+          ],
+          "headerWidth": 256,
+          "headerHeight": 256,
+          "decodedWidth": 256,
+          "decodedHeight": 256
+        }
+      },
+      "light": {
+        "theme": "light",
+        "src": "http://127.0.0.1:20233/apps/nova/assets/nova-light-256-D1Q_vNI0.png",
+        "alt": "",
+        "hidden": "true",
+        "width": 34,
+        "height": 34,
+        "left": 24,
+        "top": 14.5,
+        "icon": "http://127.0.0.1:20233/apps/nova/assets/nova-light-256-D1Q_vNI0.png",
+        "type": "image/png",
+        "stored": "light",
+        "sameWrapper": true,
+        "decoded": {
+          "url": "http://127.0.0.1:20233/apps/nova/assets/nova-light-256-D1Q_vNI0.png",
+          "status": 200,
+          "type": "image/png",
+          "bytes": 51643,
+          "signature": [
+            137,
+            80,
+            78,
+            71,
+            13,
+            10,
+            26,
+            10
+          ],
+          "headerWidth": 256,
+          "headerHeight": 256,
+          "decodedWidth": 256,
+          "decodedHeight": 256
+        }
+      },
+      "reopened": {
+        "theme": "light",
+        "src": "http://127.0.0.1:20233/apps/nova/assets/nova-light-256-D1Q_vNI0.png",
+        "alt": "",
+        "hidden": "true",
+        "width": 34,
+        "height": 34,
+        "left": 24,
+        "top": 14.5,
+        "icon": "http://127.0.0.1:20233/apps/nova/assets/nova-light-256-D1Q_vNI0.png",
+        "type": "image/png",
+        "stored": "light",
+        "sameWrapper": true,
+        "decoded": {
+          "url": "http://127.0.0.1:20233/apps/nova/assets/nova-light-256-D1Q_vNI0.png",
+          "status": 200,
+          "type": "image/png",
+          "bytes": 51643,
+          "signature": [
+            137,
+            80,
+            78,
+            71,
+            13,
+            10,
+            26,
+            10
+          ],
+          "headerWidth": 256,
+          "headerHeight": 256,
+          "decodedWidth": 256,
+          "decodedHeight": 256
+        }
+      },
+      "scope": "The manual uses its visible256px source as favicon; the editor uses separate32px favicons. Actual local manual input/reload only; print and native browser shell caching are outside this check."
+    },
+    {
+      "name": "actual-static-requests",
+      "requests": [
+        {
+          "path": "/index.html",
+          "status": 200,
+          "type": "text/html",
+          "bytes": 1064
+        },
+        {
+          "path": "/assets/editor-v946F098.js",
+          "status": 200,
+          "type": "text/javascript",
+          "bytes": 512
+        },
+        {
+          "path": "/assets/preload-helper-mg6Z-sIv.js",
+          "status": 200,
+          "type": "text/javascript",
+          "bytes": 1976
+        },
+        {
+          "path": "/browser-capabilities.js",
+          "status": 200,
+          "type": "text/javascript",
+          "bytes": 1384
+        },
+        {
+          "path": "/assets/main-CTeIyMMy.js",
+          "status": 200,
+          "type": "text/javascript",
+          "bytes": 237136
+        },
+        {
+          "path": "/assets/vue-runtime-DjyP-PKP.js",
+          "status": 200,
+          "type": "text/javascript",
+          "bytes": 80705
+        },
+        {
+          "path": "/assets/crashReporter-DfrRmfbT.css",
+          "status": 200,
+          "type": "text/css",
+          "bytes": 113702
+        },
+        {
+          "path": "/assets/nova-runtime-B6IyzGCg.js",
+          "status": 200,
+          "type": "text/javascript",
+          "bytes": 11496
+        },
+        {
+          "path": "/assets/projectExternalChanges-Bsbar24w.js",
+          "status": 200,
+          "type": "text/javascript",
+          "bytes": 2692
+        },
+        {
+          "path": "/assets/core-DhEqZVGG.js",
+          "status": 200,
+          "type": "text/javascript",
+          "bytes": 2441
+        },
+        {
+          "path": "/assets/crashReporter-ByriSo4S.js",
+          "status": 200,
+          "type": "text/javascript",
+          "bytes": 2205240
+        },
+        {
+          "path": "/assets/main-D5-JTwG2.css",
+          "status": 200,
+          "type": "text/css",
+          "bytes": 48685
+        },
+        {
+          "path": "/manifest.webmanifest",
+          "status": 200,
+          "type": "application/manifest+json",
+          "bytes": 542
+        },
+        {
+          "path": "/nova-icon-32.png",
+          "status": 200,
+          "type": "image/png",
+          "bytes": 2326
+        },
+        {
+          "path": "/nova-icon-192.png",
+          "status": 200,
+          "type": "image/png",
+          "bytes": 38474
+        },
+        {
+          "path": "/assets/nova_core_bg-o33KNGaQ.wasm",
+          "status": 200,
+          "type": "application/wasm",
+          "bytes": 3024024
+        },
+        {
+          "path": "/branding/nova-dark-256.png",
+          "status": 200,
+          "type": "image/png",
+          "bytes": 63853
+        },
+        {
+          "path": "/assets/noto-sans-sc-119-wght-normal-BfzSEbFz.woff2",
+          "status": 200,
+          "type": "font/woff2",
+          "bytes": 76800
+        },
+        {
+          "path": "/branding/nova-light-256.png",
+          "status": 200,
+          "type": "image/png",
+          "bytes": 51643
+        },
+        {
+          "path": "/assets/noto-sans-sc-118-wght-normal-BPEb0gM9.woff2",
+          "status": 200,
+          "type": "font/woff2",
+          "bytes": 46192
+        },
+        {
+          "path": "/nova-icon-32.png",
+          "status": 200,
+          "type": "image/png",
+          "bytes": 2326
+        },
+        {
+          "path": "/nova-icon-32.png",
+          "status": 200,
+          "type": "image/png",
+          "bytes": 2326
+        },
+        {
+          "path": "/manifest.webmanifest",
+          "status": 200,
+          "type": "application/manifest+json",
+          "bytes": 542
+        },
+        {
+          "path": "/nova-icon-192.png",
+          "status": 200,
+          "type": "image/png",
+          "bytes": 38474
+        },
+        {
+          "path": "/nova-icon-192.png",
+          "status": 200,
+          "type": "image/png",
+          "bytes": 38474
+        },
+        {
+          "path": "/nova-icon-512.png",
+          "status": 200,
+          "type": "image/png",
+          "bytes": 248787
+        },
+        {
+          "path": "/nova-icon-512.png",
+          "status": 200,
+          "type": "image/png",
+          "bytes": 248787
+        },
+        {
+          "path": "/branding/nova-dark-256.png",
+          "status": 200,
+          "type": "image/png",
+          "bytes": 63853
+        },
+        {
+          "path": "/branding/nova-dark-256.png",
+          "status": 200,
+          "type": "image/png",
+          "bytes": 63853
+        },
+        {
+          "path": "/branding/nova-light-256.png",
+          "status": 200,
+          "type": "image/png",
+          "bytes": 51643
+        },
+        {
+          "path": "/branding/nova-light-256.png",
+          "status": 200,
+          "type": "image/png",
+          "bytes": 51643
+        },
+        {
+          "path": "/nova-icon-32.png",
+          "status": 200,
+          "type": "image/png",
+          "bytes": 2326
+        },
+        {
+          "path": "/nova-icon-32.png",
+          "status": 200,
+          "type": "image/png",
+          "bytes": 2326
+        },
+        {
+          "path": "/nova-icon-light-32.png",
+          "status": 200,
+          "type": "image/png",
+          "bytes": 1638
+        },
+        {
+          "path": "/nova-icon-light-32.png",
+          "status": 200,
+          "type": "image/png",
+          "bytes": 1638
+        },
+        {
+          "path": "/apps/nova/index.html",
+          "status": 200,
+          "type": "text/html",
+          "bytes": 1064
+        },
+        {
+          "path": "/apps/nova/assets/preload-helper-mg6Z-sIv.js",
+          "status": 200,
+          "type": "text/javascript",
+          "bytes": 1976
+        },
+        {
+          "path": "/apps/nova/assets/editor-v946F098.js",
+          "status": 200,
+          "type": "text/javascript",
+          "bytes": 512
+        },
+        {
+          "path": "/apps/nova/browser-capabilities.js",
+          "status": 200,
+          "type": "text/javascript",
+          "bytes": 1384
+        },
+        {
+          "path": "/apps/nova/assets/vue-runtime-DjyP-PKP.js",
+          "status": 200,
+          "type": "text/javascript",
+          "bytes": 80705
+        },
+        {
+          "path": "/apps/nova/assets/nova-runtime-B6IyzGCg.js",
+          "status": 200,
+          "type": "text/javascript",
+          "bytes": 11496
+        },
+        {
+          "path": "/apps/nova/assets/main-CTeIyMMy.js",
+          "status": 200,
+          "type": "text/javascript",
+          "bytes": 237136
+        },
+        {
+          "path": "/apps/nova/assets/crashReporter-DfrRmfbT.css",
+          "status": 200,
+          "type": "text/css",
+          "bytes": 113702
+        },
+        {
+          "path": "/apps/nova/assets/projectExternalChanges-Bsbar24w.js",
+          "status": 200,
+          "type": "text/javascript",
+          "bytes": 2692
+        },
+        {
+          "path": "/apps/nova/assets/crashReporter-ByriSo4S.js",
+          "status": 200,
+          "type": "text/javascript",
+          "bytes": 2205240
+        },
+        {
+          "path": "/apps/nova/assets/core-DhEqZVGG.js",
+          "status": 200,
+          "type": "text/javascript",
+          "bytes": 2441
+        },
+        {
+          "path": "/apps/nova/assets/main-D5-JTwG2.css",
+          "status": 200,
+          "type": "text/css",
+          "bytes": 48685
+        },
+        {
+          "path": "/apps/nova/manifest.webmanifest",
+          "status": 200,
+          "type": "application/manifest+json",
+          "bytes": 542
+        },
+        {
+          "path": "/apps/nova/nova-icon-32.png",
+          "status": 200,
+          "type": "image/png",
+          "bytes": 2326
+        },
+        {
+          "path": "/apps/nova/nova-icon-192.png",
+          "status": 200,
+          "type": "image/png",
+          "bytes": 38474
+        },
+        {
+          "path": "/apps/nova/assets/nova_core_bg-o33KNGaQ.wasm",
+          "status": 200,
+          "type": "application/wasm",
+          "bytes": 3024024
+        },
+        {
+          "path": "/apps/nova/branding/nova-light-256.png",
+          "status": 200,
+          "type": "image/png",
+          "bytes": 51643
+        },
+        {
+          "path": "/apps/nova/branding/nova-dark-256.png",
+          "status": 200,
+          "type": "image/png",
+          "bytes": 63853
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-119-wght-normal-BfzSEbFz.woff2",
+          "status": 200,
+          "type": "font/woff2",
+          "bytes": 76800
+        },
+        {
+          "path": "/apps/nova/assets/noto-sans-sc-118-wght-normal-BPEb0gM9.woff2",
+          "status": 200,
+          "type": "font/woff2",
+          "bytes": 46192
+        },
+        {
+          "path": "/apps/nova/nova-icon-32.png",
+          "status": 200,
+          "type": "image/png",
+          "bytes": 2326
+        },
+        {
+          "path": "/apps/nova/nova-icon-32.png",
+          "status": 200,
+          "type": "image/png",
+          "bytes": 2326
+        },
+        {
+          "path": "/apps/nova/manifest.webmanifest",
+          "status": 200,
+          "type": "application/manifest+json",
+          "bytes": 542
+        },
+        {
+          "path": "/apps/nova/nova-icon-192.png",
+          "status": 200,
+          "type": "image/png",
+          "bytes": 38474
+        },
+        {
+          "path": "/apps/nova/nova-icon-192.png",
+          "status": 200,
+          "type": "image/png",
+          "bytes": 38474
+        },
+        {
+          "path": "/apps/nova/nova-icon-512.png",
+          "status": 200,
+          "type": "image/png",
+          "bytes": 248787
+        },
+        {
+          "path": "/apps/nova/nova-icon-512.png",
+          "status": 200,
+          "type": "image/png",
+          "bytes": 248787
+        },
+        {
+          "path": "/apps/nova/branding/nova-dark-256.png",
+          "status": 200,
+          "type": "image/png",
+          "bytes": 63853
+        },
+        {
+          "path": "/apps/nova/branding/nova-dark-256.png",
+          "status": 200,
+          "type": "image/png",
+          "bytes": 63853
+        },
+        {
+          "path": "/apps/nova/branding/nova-light-256.png",
+          "status": 200,
+          "type": "image/png",
+          "bytes": 51643
+        },
+        {
+          "path": "/apps/nova/branding/nova-light-256.png",
+          "status": 200,
+          "type": "image/png",
+          "bytes": 51643
+        },
+        {
+          "path": "/apps/nova/nova-icon-32.png",
+          "status": 200,
+          "type": "image/png",
+          "bytes": 2326
+        },
+        {
+          "path": "/apps/nova/nova-icon-32.png",
+          "status": 200,
+          "type": "image/png",
+          "bytes": 2326
+        },
+        {
+          "path": "/apps/nova/nova-icon-light-32.png",
+          "status": 200,
+          "type": "image/png",
+          "bytes": 1638
+        },
+        {
+          "path": "/apps/nova/nova-icon-light-32.png",
+          "status": 200,
+          "type": "image/png",
+          "bytes": 1638
+        },
+        {
+          "path": "/apps/nova/manual/index.html",
+          "status": 200,
+          "type": "text/html",
+          "bytes": 3992445
+        },
+        {
+          "path": "/apps/nova/assets/nova-dark-256-D9wShpcF.png",
+          "status": 200,
+          "type": "image/png",
+          "bytes": 63853
+        },
+        {
+          "path": "/apps/nova/assets/nova-light-256-D1Q_vNI0.png",
+          "status": 200,
+          "type": "image/png",
+          "bytes": 51643
+        },
+        {
+          "path": "/apps/nova/assets/nova-dark-256-D9wShpcF.png",
+          "status": 200,
+          "type": "image/png",
+          "bytes": 63853
+        },
+        {
+          "path": "/apps/nova/assets/nova-dark-256-D9wShpcF.png",
+          "status": 200,
+          "type": "image/png",
+          "bytes": 63853
+        },
+        {
+          "path": "/apps/nova/assets/nova-dark-256-D9wShpcF.png",
+          "status": 200,
+          "type": "image/png",
+          "bytes": 63853
+        },
+        {
+          "path": "/apps/nova/assets/nova-light-256-D1Q_vNI0.png",
+          "status": 200,
+          "type": "image/png",
+          "bytes": 51643
+        },
+        {
+          "path": "/apps/nova/assets/nova-light-256-D1Q_vNI0.png",
+          "status": 200,
+          "type": "image/png",
+          "bytes": 51643
+        },
+        {
+          "path": "/apps/nova/assets/nova-light-256-D1Q_vNI0.png",
+          "status": 200,
+          "type": "image/png",
+          "bytes": 51643
+        },
+        {
+          "path": "/apps/nova/manual/index.html",
+          "status": 200,
+          "type": "text/html",
+          "bytes": 3992445
+        },
+        {
+          "path": "/apps/nova/assets/nova-dark-256-D9wShpcF.png",
+          "status": 200,
+          "type": "image/png",
+          "bytes": 63853
+        },
+        {
+          "path": "/apps/nova/assets/nova-light-256-D1Q_vNI0.png",
+          "status": 200,
+          "type": "image/png",
+          "bytes": 51643
+        },
+        {
+          "path": "/apps/nova/assets/nova-light-256-D1Q_vNI0.png",
+          "status": 200,
+          "type": "image/png",
+          "bytes": 51643
+        },
+        {
+          "path": "/apps/nova/assets/nova-light-256-D1Q_vNI0.png",
+          "status": 200,
+          "type": "image/png",
+          "bytes": 51643
+        },
+        {
+          "path": "/apps/nova/assets/nova-light-256-D1Q_vNI0.png",
+          "status": 200,
+          "type": "image/png",
+          "bytes": 51643
+        }
+      ],
+      "brandFailures": []
+    }
+  ],
+  "captures": [
+    "v26.36-branding-user-launcher-dark.png",
+    "v26.36-branding-user-editor-dark.png",
+    "v26.36-branding-user-editor-light.png",
+    "v26.36-branding-user-editor-light-minimum-200.png",
+    "v26.36-branding-user-launcher-light-minimum-200.png",
+    "v26.36-branding-user-launcher-light-reloaded.png",
+    "v26.36-branding-user-static-root-launcher.png",
+    "v26.36-branding-user-static-nested-launcher.png",
+    "v26.36-branding-user-manual-dark.png",
+    "v26.36-branding-user-manual-light.png",
+    "v26.36-branding-user-manual-light-reloaded.png"
+  ],
+  "consoleErrors": [],
+  "browser": {
+    "protocolVersion": "1.3",
+    "product": "Edg/147.0.3912.72",
+    "revision": "@d4380ba2b9dc3452fbccdc737e69d7f67a09122c",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/147.0.0.0 Safari/537.36 Edg/147.0.0.0",
+    "jsVersion": "14.7.25.7"
+  },
+  "commandTimeoutMs": 30000,
+  "scope": "Development source overlay only, not release qualification. Recorded real Edge input and DOM observations against production dist. Headless software rendering and download/file-input fallback; physical assistive technology and native OS picker behavior are not measured.",
+  "engineVersion": "26.36.0",
+  "buildEngineVersion": "26.36.0",
+  "qualificationTarget": "26.36",
+  "baselineVersion": "26.36.0",
+  "overlayVersion": "26.36.0",
+  "sourceRoots": [
+    "."
+  ],
+  "buildRoot": ".",
+  "sourceSha256": "74b2fb802030b7b49b8fbd91835d9fa64227ac65d3063bf1cec405ac8e757873"
+}

@@ -1,4 +1,25 @@
-# Nova_A 7.0 reference projects
+# Nova_A reference projects
+
+<!-- NOVA_V2637_REFERENCES -->
+## Current26.37 delivery references
+
+Engine26.37.0 · Project Format2/schema29. Current mixed-authoring and renderer-disabled authority copies retain their game semantics. Native stdio remains physics-only. The unchanged26.36 Coin Trail fixture is retained for the strict before/after UI comparison.
+
+- [Coin Trail — mixed](projects/creator-v2637-mixed-game/README.md)
+- [Renderer-disabled authority](projects/server-v2637-headless-authority/README.md)
+
+
+<!-- NOVA_V2636_REFERENCES -->
+## Current26.36 delivery references
+
+Engine26.36.0 · Project Format2/schema29. The current Coin Trail mixed-authoring and renderer-disabled WebView authority references retain their existing behavior with current release identities. Generation is separate from executed release qualification. The native stdio executable packaged beside these references is physics-only.
+
+- [Coin Trail — mixed](projects/creator-v2636-mixed-game/README.md)
+- [Renderer-disabled authority](projects/server-v2636-headless-authority/README.md)
+- [26.36 release notes and scope](../docs/RELEASE_NOTES_26_36.md)
+
+Historical projects and their expected outputs below remain unchanged.
+<!-- NOVA_V2636_REFERENCES_END -->
 
 <!-- NOVA_V2617_REFERENCES -->
 ## Nova_A26.17 physics and world references

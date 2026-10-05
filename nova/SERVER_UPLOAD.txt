@@ -1,0 +1,332 @@
+NOVA_A — YOUR SERVER UPLOAD AND UPDATE GUIDE
+2 October 2026
+
+Local folder:      E:\Nova_A\nova\
+SSH account:       whitelist@whitelists.top
+Remote folder:     /srv/whitelists/nova/
+Public Nova page:  https://nova.whitelists.top/
+Initial editor:    https://nova.whitelists.top/online/
+
+Your Nginx site should use this remote folder as the Nova subdomain's document
+root, matching the destination you provided. Upload the local
+folder's CONTENTS into it; do not add another nova directory. The domain and
+SSH host are different names, which is normal for this setup. No server files
+have been changed by this work.
+
+A. CHECK THE PACKAGE AND TRANSFER THE WHOLE FOLDER
+
+Use Windows PowerShell. The prepared archive is nova-v26.35-site.tar.gz in
+E:\Nova_A\, with a companion SHA-256 file. It includes the full nova folder's
+contents, including .vite metadata, licenses, manual and local QA tools.
+
+If you change any local files, recreate that archive before uploading:
+
+  Set-Location E:\Nova_A
+  node .\nova\deployment\verify-package.mjs
+  if ($LASTEXITCODE -ne 0) { throw 'Local package verification failed.' }
+  tar.exe -czf nova-v26.35-site.tar.gz -C .\nova .
+  if ($LASTEXITCODE -ne 0) { throw 'Archive creation failed.' }
+  $archiveHash = (Get-FileHash .\nova-v26.35-site.tar.gz -Algorithm SHA256).Hash.ToLowerInvariant()
+  "$archiveHash  nova-v26.35-site.tar.gz" | Set-Content .\nova-v26.35-site.tar.gz.sha256 -Encoding ascii
+
+Upload the archive and its checksum into the account's home directory:
+
+  Set-Location E:\Nova_A
+  scp .\nova-v26.35-site.tar.gz .\nova-v26.35-site.tar.gz.sha256 whitelist@whitelists.top:
+  if ($LASTEXITCODE -ne 0) { throw 'Upload failed.' }
+  ssh whitelist@whitelists.top
+
+The final colon in the SCP destination selects the account's home directory.
+Use the password or SSH key you normally use. On a first SSH connection, verify
+the displayed host fingerprint against your server's known fingerprint. If
+your SSH port differs from 22, use scp -P PORT and ssh -p PORT.
+
+B. VERIFY, STAGE AND PUBLISH THE FIRST WEB DEPLOYMENT
+
+The following commands run INSIDE the Linux SSH session, not in PowerShell.
+They assume your account can write /srv/whitelists and the existing nova folder
+is a normal directory, as is typical for this downloaded site. If permission
+checks fail, have the server administrator perform the publication steps using
+your existing deployment permissions. Do not use chmod 777 or change global
+ownership. If nova is a symlink or a mounted directory, use the server's
+existing release/deployment mechanism instead of these directory moves.
+
+This first-deployment recipe stages the complete folder, checks it and saves a
+private backup. Its two directory renames cause a brief interval where the Nova
+URL may be unavailable. Run it during a quiet moment. It is not an atomic swap.
+Subsequent versioned updates in section D avoid replacing the Nova directory.
+
+Paste this block in the SSH session:
+
+  set -eu
+  cd "$HOME"
+  sha256sum -c nova-v26.35-site.tar.gz.sha256
+
+  site=/srv/whitelists/nova
+  parent=/srv/whitelists
+  stamp=$(date +%Y%m%d-%H%M%S)
+  stage="$parent/.nova-stage-$stamp"
+  previous="$parent/.nova-previous-$stamp"
+  backup="$HOME/nova-backups/nova-before-v26.35-$stamp"
+
+  test -w "$parent"
+  test -d "$site"
+  test ! -L "$site"
+  if command -v mountpoint >/dev/null 2>&1 && mountpoint -q "$site"; then
+    echo 'Nova is a mount point: use your existing deployment mechanism.' >&2
+    exit 1
+  fi
+  test ! -e "$stage"
+  test ! -L "$stage"
+  test ! -e "$previous"
+  test ! -L "$previous"
+  if test -e "$site/online" || test -L "$site/online"; then
+    echo 'An online release already exists. Use versioned updates in section D.' >&2
+    exit 1
+  fi
+
+  mkdir "$stage"
+  tar -xzf "$HOME/nova-v26.35-site.tar.gz" -C "$stage"
+  test -f "$stage/index.html"
+  test -f "$stage/online/index.html"
+  (cd "$stage/online" && sha256sum -c SHA256SUMS.txt)
+  find "$stage" -type d -exec chmod 755 {} +
+  find "$stage" -type f -exec chmod 644 {} +
+  mkdir -p "$HOME/nova-backups"
+  chmod 700 "$HOME/nova-backups"
+  test ! -e "$backup"
+  test ! -L "$backup"
+
+  restore_on_failure() {
+    result=$?
+    trap - EXIT
+    if test ! -e "$site" && test ! -L "$site" && test -d "$previous"; then
+      mv -T "$previous" "$site"
+    fi
+    exit "$result"
+  }
+  trap restore_on_failure EXIT
+  trap 'exit 130' INT
+  trap 'exit 129' HUP
+  trap 'exit 143' TERM
+  printf 'Staging: %s\nPrevious directory during cutover: %s\nFinal private backup: %s\n' "$stage" "$previous" "$backup"
+  mv -T "$site" "$previous"
+  mv -T "$stage" "$site"
+  trap - EXIT INT HUP TERM
+  mv -T "$previous" "$backup"
+  printf 'Published: %s\nBackup: %s\n' "$site" "$backup"
+
+All extraction/checks happen before the existing website is moved. A failed
+cutover restores the previous directory if the target is absent. Backups end
+up under your private home directory, outside the served website tree. Keep
+the printed backup path. SIGKILL, disk failure or a server crash cannot be
+handled by a shell trap; if the live folder is absent after such an interruption,
+the previous folder remains at the printed .nova-previous path for restoration.
+No Nginx reload is required merely to replace static files.
+
+C. VERIFY THE ACTUAL PUBLIC DEPLOYMENT
+
+Back in Windows PowerShell (the local nova folder must match what you uploaded):
+
+  Set-Location E:\Nova_A
+  node .\nova\deployment\verify-deployed.mjs https://nova.whitelists.top/
+
+The command fails if any required public file is missing, differs from the local
+package, uses a wrong critical MIME type, lacks its directory index/redirect, or
+returns a non-404 response for a missing engine asset. It downloads about 23 MB
+for this release. The result is nova/deployment/DEPLOYED_VALIDATION.json. For
+26.35, expect 274 public file comparisons: 3 website files + 271 engine files.
+The hidden .vite manifest is verified by server sha256sum, not required publicly.
+
+Then open https://nova.whitelists.top/ in a fresh browser tab:
+
+  1) Click Try online mode and confirm version 26.35 appears.
+  2) Create a disposable starter project and dismiss/follow the first-run guide.
+  3) Make an edit, save a project backup, and reopen it.
+  4) Check the bundled manual and the browser's Network/Console panels.
+  5) If you will publish games, export a disposable Web game ZIP and test it in
+     a separate game directory; that full workflow is beyond file-integrity QA.
+
+The files and browser startup were already tested locally. Public correctness
+depends on your server settings and upload, so it is only confirmed after these
+post-upload checks pass. No claim of future success replaces that check.
+
+Your current host reports Nginx. Keep the existing domain/TLS configuration.
+Ensure this Nova virtual host uses root /srv/whitelists/nova and index index.html,
+serves WASM as application/wasm, and returns 404 for missing static files. A
+catch-all SPA rewrite must not return index.html for missing engine assets.
+Revalidate landing HTML and engine bootstrap/manifests; do not mark them
+immutable. The release requires no backend and no mandatory COOP/COEP headers.
+See DEPLOYMENT.txt section 6 for MIME/cache details and optional config examples.
+
+D. UPDATE USING VERSIONED URLS AND RETAIN PREVIOUS ASSETS
+
+Example below: version 26.36. Substitute your actual version in folder names,
+archive names, ZIP path and version text. You only need the future release's
+complete Web ZIP. Do not rebuild it or edit compiled assets.
+
+Keep each release at a different URL:
+
+  /srv/whitelists/nova/
+    index.html                 Button chooses the active release
+    online/                    Original 26.35, retained
+    online-v26.36/             New 26.36, complete and unchanged
+    online-v26.37/             Later release, when available
+
+1) Prepare the new release locally, in Windows PowerShell:
+
+  Set-Location E:\Nova_A
+  if (Test-Path .\nova\online-v26.36) { throw 'Use a new empty version folder.' }
+  Expand-Archive -LiteralPath .\releases\v26.36\Nova_A-v26.36-web.zip -DestinationPath .\nova\online-v26.36
+  node .\nova\deployment\verify-package.mjs .\nova\online-v26.36
+  if ($LASTEXITCODE -ne 0) { throw 'New engine package verification failed.' }
+
+The verifier checks the selected new folder against its own manifest. The
+existing online/ release stays intact. Confirm the ZIP extracts directly to
+online-v26.36/index.html; if a future ZIP adds an outer folder, adjust the
+extraction layout before proceeding.
+
+2) Back up nova/index.html locally. Edit ONLY the landing page's online button
+and visible engine version text to match the new release:
+
+  <a class="btn secondary" href="./online-v26.36/">Try online mode</a>
+
+Check any capability wording against that new release's README. Preserve the
+new release's manifest and compiled files. This relative link resolves to
+https://nova.whitelists.top/online-v26.36/ on your server.
+
+The preview tool can serve versioned folders without changes:
+
+  node .\nova\deployment\preview.mjs
+
+Visit http://127.0.0.1:4173/, click the button, and check the new engine. Run:
+
+  node .\nova\deployment\verify-package.mjs
+
+Without a folder argument, it now follows the local landing button. The
+historical 26.35 Edge audit is version-specific; do not claim it qualifies a
+future version. Test the new release's own browser workflows.
+
+3) Archive/upload the NEW ENGINE FOLDER and the updated landing HTML:
+
+  tar.exe -czf nova-engine-v26.36.tar.gz -C .\nova online-v26.36
+  if ($LASTEXITCODE -ne 0) { throw 'Archive creation failed.' }
+  $archiveHash = (Get-FileHash .\nova-engine-v26.36.tar.gz -Algorithm SHA256).Hash.ToLowerInvariant()
+  "$archiveHash  nova-engine-v26.36.tar.gz" | Set-Content .\nova-engine-v26.36.tar.gz.sha256 -Encoding ascii
+  scp .\nova-engine-v26.36.tar.gz .\nova-engine-v26.36.tar.gz.sha256 whitelist@whitelists.top:
+  if ($LASTEXITCODE -ne 0) { throw 'Engine upload failed.' }
+  scp .\nova\index.html whitelist@whitelists.top:nova-index-v26.36.html
+  if ($LASTEXITCODE -ne 0) { throw 'Landing page upload failed.' }
+  ssh whitelist@whitelists.top
+
+4) In the Linux SSH session, publish the new engine folder FIRST:
+
+  set -eu
+  cd "$HOME"
+  sha256sum -c nova-engine-v26.36.tar.gz.sha256
+  site=/srv/whitelists/nova
+  stamp=$(date +%Y%m%d-%H%M%S)
+  stage="$site/.online-v26.36-stage-$stamp"
+  test -d "$site"
+  test -w "$site"
+  test ! -e "$site/online-v26.36"
+  test ! -L "$site/online-v26.36"
+  test ! -e "$stage"
+  test ! -L "$stage"
+  mkdir "$stage"
+  tar -xzf "$HOME/nova-engine-v26.36.tar.gz" -C "$stage"
+  (cd "$stage/online-v26.36" && sha256sum -c SHA256SUMS.txt)
+  find "$stage/online-v26.36" -type d -exec chmod 755 {} +
+  find "$stage/online-v26.36" -type f -exec chmod 644 {} +
+  mv -T "$stage/online-v26.36" "$site/online-v26.36"
+  rmdir "$stage"
+
+This adds the new directory with one rename on the same filesystem. Nothing
+overwrites online/ or the old landing page. The new engine is reachable at
+https://nova.whitelists.top/online-v26.36/ for testing before you switch users.
+
+5) Keep that SSH terminal open. Before changing the button publicly, run this
+from a SECOND, local Windows PowerShell terminal:
+
+  node .\nova\deployment\verify-deployed.mjs https://nova.whitelists.top/ --engine=online-v26.36 --engine-only
+
+This checks the future engine URL while the public landing page still links to
+the previous version. It saves ENGINE_DEPLOYED_VALIDATION.json. Open the new
+URL in a browser too; create/save/reopen a disposable project with that version.
+
+6) After the new release passes, in the SAME SSH session publish the updated
+landing HTML with a single file rename, keeping a private rollback copy:
+
+  mkdir -p "$HOME/nova-backups"
+  chmod 700 "$HOME/nova-backups"
+  backup="$HOME/nova-backups/index-before-v26.36-$stamp.html"
+  test ! -e "$backup"
+  test ! -L "$backup"
+  cp "$site/index.html" "$backup"
+  test ! -e "$site/.index-v26.36-$stamp.html"
+  test ! -L "$site/.index-v26.36-$stamp.html"
+  cp "$HOME/nova-index-v26.36.html" "$site/.index-v26.36-$stamp.html"
+  chmod 644 "$site/.index-v26.36-$stamp.html"
+  mv -fT "$site/.index-v26.36-$stamp.html" "$site/index.html"
+  printf 'Previous landing HTML: %s\n' "$backup"
+
+Revalidate/invalidate only the landing HTML in any CDN cache. Then run the
+normal public checker from Windows:
+
+  node .\nova\deployment\verify-deployed.mjs https://nova.whitelists.top/
+
+It follows the current local button and validates the new deployment. New
+visitors use the new version; old tabs keep their original assets, manifests,
+worker URLs and manual under their original version directory. Each version
+also has its own relative install scope. Tell existing users to save project
+backups before deliberately moving to a newer engine.
+
+Version folders isolate asset URLs and manifest scopes, but not browser data:
+these releases share preferences, recovery/autosave and recent-project storage
+on the same origin. Download project backups, and avoid editing the same project
+simultaneously in different engine versions. Retaining folders does not isolate
+data migrations or competing autosave writers.
+
+For later releases repeat the same steps using a new online-vVERSION directory.
+Do not overwrite a previously published version directory. Retain old folders
+for as long as users need old tabs, saved installation links or rollback.
+
+E. ROLLBACK
+
+For a future versioned update, restore only the previous landing HTML. All old
+engine folders are still present. In SSH use the EXACT printed backup filename:
+
+  set -eu
+  site=/srv/whitelists/nova
+  backup="$HOME/nova-backups/index-before-v26.36-TIMESTAMP.html"
+  test -f "$backup"
+  stamp=$(date +%Y%m%d-%H%M%S)
+  test ! -e "$site/.index-rollback-$stamp.html"
+  test ! -L "$site/.index-rollback-$stamp.html"
+  cp "$backup" "$site/.index-rollback-$stamp.html"
+  chmod 644 "$site/.index-rollback-$stamp.html"
+  mv -fT "$site/.index-rollback-$stamp.html" "$site/index.html"
+
+Revalidate landing HTML and restore the matching old local index.html before
+running the public comparison checker again. This switches the button back;
+it does not rewrite any user's project files or undo project-schema migrations.
+
+For the very first whole-site deployment, the backup is a complete directory
+under $HOME/nova-backups/nova-before-v26.35-TIMESTAMP. Preserve the failed live
+deployment separately, stage a copy of that backup beside the live directory,
+and use the same guarded directory-switch procedure from section B. That
+whole-directory rollback also has a brief URL gap.
+
+F. REFERENCES AND LIMITS
+
+The local package and loopback browser tests pass. The actual public root was
+reachable and served the original website through Nginx when inspected; the
+new release has not been uploaded here. No SSH login or production changes
+were performed by this work. Post-upload HTTP plus browser checks are required
+to establish that your deployment works. Server-specific permissions, TLS,
+cache and Nginx behavior cannot be guaranteed from a downloaded folder alone.
+
+Transfer syntax references:
+  https://man.openbsd.org/scp
+  https://learn.microsoft.com/en-us/windows-server/administration/openssh/openssh-overview
+Full engine/static-host manual: DEPLOYMENT.txt and online/HOSTING.md.

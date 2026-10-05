@@ -1,0 +1,42 @@
+{
+  "generatedAtUTC": "2026-10-02T17:56:21.9795461Z",
+  "scope": "Read-only pre-upload public status. No SSH session or production changes. This is not a post-deployment qualification.",
+  "observations": [
+    {
+      "url": "https://nova.whitelists.top/",
+      "status": 200,
+      "contentType": "text/html",
+      "server": "nginx",
+      "bytes": 6566,
+      "sha256": "a95eb1585f13ef5f1fe01f31a9dc0512c731e1c056d3f1ac4d10e3127ae0acdf",
+      "hasOnlineButton": false
+    },
+    {
+      "url": "https://nova.whitelists.top/style.css",
+      "status": 200,
+      "contentType": "text/css",
+      "server": "nginx",
+      "bytes": 8379,
+      "sha256": "605cea2bb68adf23d69324573c43bc059bb9525e109c9ee3ba1639648ad0ab0c",
+      "hasOnlineButton": false
+    },
+    {
+      "url": "https://nova.whitelists.top/app.js",
+      "status": 200,
+      "contentType": "application/javascript",
+      "server": "nginx",
+      "bytes": 983,
+      "sha256": "e8580cef7b8933de063e773b2efebc63a5a70181478120a3765f51274074f2c7",
+      "hasOnlineButton": false
+    },
+    {
+      "url": "https://nova.whitelists.top/online/",
+      "status": 404,
+      "contentType": "text/html",
+      "server": "nginx",
+      "bytes": 146,
+      "sha256": "55f7d9e99b8e2d4e0e193b2f0275501e6d9c1ebd29cadbea6a0da48a8587e3e0",
+      "hasOnlineButton": false
+    }
+  ]
+}

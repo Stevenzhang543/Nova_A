@@ -1,12 +1,14 @@
 <!-- 确认对话框：呈现共享确认请求，管理默认取消焦点、退出键和确认结果。 -->
 <template>
-  <Teleport to="body"><UiDialog role="alertdialog" v-if="state.visible" :title="state.title" class="confirm-dialog" dismiss-on-backdrop @close="finish(false)">
+  <Teleport to="body"><UiMotionTransition modal><UiDialog motion-owner="parent" role="alertdialog" v-if="state.visible" :title="state.title" class="confirm-dialog" dismiss-on-backdrop @close="finish(false)">
     <div class="confirm-copy"><EditorIcon :name="state.destructive ? 'warning' : 'help'" /><p>{{ state.message }}</p></div>
     <template #footer><button ref="cancelButton" @click="finish(false)">{{ state.cancelLabel }}</button><UiButton :variant="state.destructive ? 'danger' : 'primary'" @click="finish(true)">{{ state.confirmLabel }}</UiButton></template>
-  </UiDialog></Teleport>
+  </UiDialog></UiMotionTransition></Teleport>
 </template>
 
 <script setup lang="ts">
+import UiMotionTransition from '../ui/components/UiMotionTransition.vue'
+
 import UiDialog from '../ui/components/UiDialog.vue'
 import UiButton from '../ui/components/UiButton.vue'
 import EditorIcon from './EditorIcon.vue'

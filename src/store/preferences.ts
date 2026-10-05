@@ -157,9 +157,13 @@ motionMedia?.addEventListener('change', updateSystemMotion)
   root.dataset.palette = paletteForMode(preferencesState.theme === 'light' ? preferencesState.lightPalette : preferencesState.darkPalette, preferencesState.theme)
   root.dataset.formLabelLayout = preferencesState.formLabelLayout
   root.dataset.compact = String(preferencesState.compactMode)
+  root.dataset.density = preferencesState.compactMode ? 'compact' : 'comfortable'
   root.dataset.reduceMotion = String(preferencesState.reduceMotion)
   root.dataset.highContrast = String(preferencesState.highContrast)
   root.dataset.performanceProfile = preferencesState.performanceProfile
+  // Accessibility reduces movement; the performance budget only reduces decoration.
+  root.dataset.uiMotion = preferencesState.reduceMotion || systemReducedMotion.value
+    ? 'reduced' : editorPerformancePreferences.value.decorativeMotion ? 'on' : 'light'
   root.dataset.editorMotion = editorPerformancePreferences.value.decorativeMotion ? 'on' : 'off'
   root.dataset.editorPreview = editorPerformancePreferences.value.previewBounded ? 'bounded' : 'full'
   root.style.setProperty('--ui-scale', String(preferencesState.uiScale))

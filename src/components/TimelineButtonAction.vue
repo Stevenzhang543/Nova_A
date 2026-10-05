@@ -1,6 +1,6 @@
 <!-- 按钮时间轴动作设置：切换标准时间轴命令和自定义回调。 -->
 <template>
-  <details class="timeline-button-action" open><summary>{{ copy.title }}</summary>
+  <details data-ui-motion-disclosure class="timeline-button-action" open><summary>{{ copy.title }}</summary>
     <UiPropertyRow :label="copy.title"><select :value="action" @change="changeAction"><option value="">{{ copy.custom }}</option><option v-for="kind in timelineUiActions" :key="kind" :value="kind">{{ copy[kind] }}</option></select></UiPropertyRow>
     <p>{{ copy.hint }}</p><p v-if="action"><strong>{{ copy.owner }}:</strong> {{ owner.owner?.name || copy.missing }}</p><p v-else>{{ copy.callback }}</p>
   </details>

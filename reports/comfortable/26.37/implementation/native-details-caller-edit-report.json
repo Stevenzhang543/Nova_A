@@ -1,0 +1,2308 @@
+{
+  "generatedAt": "2026-10-04T12:58:20.415Z",
+  "version": "26.37",
+  "task": "Native disclosure and popup motion integration in actual Vue callers",
+  "scope": "94 native details inventoried; editor-only authored Vue components; shared UiPropertySection exact-element owner is excluded. No motion system, CSS, tests, docs, build, browser, game, physics, network or project schema edits.",
+  "counts": {
+    "nativeDetails": 94,
+    "changedFiles": 36,
+    "changedTags": 87,
+    "editRecords": 91,
+    "finalClassification": {
+      "content-disclosure": 74,
+      "native-absolute-popup": 12,
+      "already-owned": 6,
+      "content-disclosure-with-toggle-consumer": 1,
+      "shared-element-owned": 1
+    }
+  },
+  "actualControllerContract": {
+    "contentEvent": "ui-disclosure-change",
+    "popupEvent": "ui-popover-change",
+    "logicalState": "dataset/summary aria-expanded changes immediately; native open remains true during outgoing presentation; outgoing bodies become inert immediately; native open=false only when exit settles",
+    "popupSurfaces": "All direct HTMLElement children except summary; no details height or popup overflow animation"
+  },
+  "consequencesChecked": [
+    "Existing open/v-if/ref/action/value bindings and scripts are preserved by AST-offset edits and reversible template/script comparisons.",
+    "VisualGraphEditor graph-more is outside graph-transform; only its direct absolute header menu uses popup presence, with node/port/wire/pointer mathematics unchanged.",
+    "Object Ownership runtime refresh follows the immediate logical intent; outgoing provenance content remains mounted only until final native close.",
+    "Nested details keep independent disclosure owners; static ancestors with their own panel/dialog transitions do not suppress their children.",
+    "Shared UiPropertySection exact-element controller is not marked twice."
+  ],
+  "checks": {
+    "allChangedVueTemplatesCompiled": true,
+    "allChangedVueCssCompiled": true,
+    "originalStylesByteIdentical": true,
+    "allBusinessScriptsByteIdenticalExceptDocumentedUiConsumer": true,
+    "allNonMotionTemplateBindingsReversiblyIdentical": true
+  },
+  "notYetVerified": [
+    "Parent will type-check, rebuild and exercise public-input interruption/keyboard/focus/project-switch cleanup in the real GUI.",
+    "Object Ownership now calls nextTick refreshDisclosure to remeasure the shared latest target after lazy mounting; public-input first-open/reversal validation remains pending.",
+    "No claim of visually observed animation smoothness is made by this source-only migration."
+  ],
+  "exclusions": [
+    {
+      "file": "src/ui/components/UiPropertySection.vue",
+      "line": 2,
+      "reason": "Shared UiPropertySection owns this exact native element; no duplicate caller marker."
+    }
+  ],
+  "classification": [
+    {
+      "file": "src/components/AndroidDeliveryPanel.vue",
+      "line": 42,
+      "kind": "content-disclosure",
+      "originalTag": "<details open>",
+      "summary": "<summary>{{ l('permissions') }} <b>{{ permissionIssues.length }}</b></summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/AndroidDeliveryPanel.vue",
+      "line": 43,
+      "kind": "content-disclosure",
+      "originalTag": "<details>",
+      "summary": "<summary>{{ l('manifest') }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/AndroidDeliveryPanel.vue",
+      "line": 44,
+      "kind": "content-disclosure",
+      "originalTag": "<details open>",
+      "summary": "<summary>{{ l('devices') }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/AndroidDeliveryPanel.vue",
+      "line": 45,
+      "kind": "content-disclosure",
+      "originalTag": "<details v-if=\"androidDeliveryState.output\" open>",
+      "summary": "<summary>{{ l('output') }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/AnimationPanel.vue",
+      "line": 5,
+      "kind": "native-absolute-popup",
+      "originalTag": "<details v-transient-popover class=\"create-menu\">",
+      "summary": "<summary :title=\"t('add')\" :aria-label=\"t('add')\"><EditorIcon name=\"add\" /></summary>",
+      "proof": "Actual direct popup children are separate surfaces; opacity/transform presence must not animate details height or alter popup overflow."
+    },
+    {
+      "file": "src/components/AnimationPanel.vue",
+      "line": 18,
+      "kind": "content-disclosure",
+      "originalTag": "<details v-if=\"selectedAsset\" class=\"binding-details\">",
+      "summary": "<summary>{{ copy.asset }} · {{ selectedAsset.name }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/AnimationPanel.vue",
+      "line": 24,
+      "kind": "content-disclosure",
+      "originalTag": "<details v-if=\"draftInspection.issues.length\">",
+      "summary": "<summary>{{ copy.validation }} ({{ draftInspection.issues.length }})</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/AnimationPanel.vue",
+      "line": 92,
+      "kind": "content-disclosure",
+      "originalTag": "<details v-if=\"editingToolsOpen\" open class=\"editing-tools\">",
+      "summary": "<summary>{{ t('editingTools') }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/AnimationPanel.vue",
+      "line": 100,
+      "kind": "content-disclosure",
+      "originalTag": "<details :open=\"clip.events.length > 0\">",
+      "summary": "<summary>{{ t('animationEvents') }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/AnimationPanel.vue",
+      "line": 101,
+      "kind": "content-disclosure",
+      "originalTag": "<details :open=\"clip.markers.length > 0\">",
+      "summary": "<summary>{{ t('markers') }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/AnimationPanel.vue",
+      "line": 102,
+      "kind": "content-disclosure",
+      "originalTag": "<details :open=\"clip.commandTracks.length > 0\">",
+      "summary": "<summary>{{ t('commandTracks') }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/AnimationPanel.vue",
+      "line": 103,
+      "kind": "content-disclosure",
+      "originalTag": "<details :open=\"clip.spriteFrames.length > 0\">",
+      "summary": "<summary>{{ t('spriteFrames') }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/AnimationPanel.vue",
+      "line": 105,
+      "kind": "content-disclosure",
+      "originalTag": "<details :open=\"selectedAnimationIssues.length > 0\">",
+      "summary": "<summary>{{ t('validation') }} ({{ selectedAnimationIssues.length }})</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/AnimationPanel.vue",
+      "line": 144,
+      "kind": "content-disclosure",
+      "originalTag": "<details open>",
+      "summary": "<summary>{{ t('runtimeInspection') }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/AnimationPanel.vue",
+      "line": 147,
+      "kind": "content-disclosure",
+      "originalTag": "<details>",
+      "summary": "<summary>{{ t('conditions') }} ({{ transition.conditions.length }})</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/AnimationPanel.vue",
+      "line": 156,
+      "kind": "content-disclosure",
+      "originalTag": "<details open>",
+      "summary": "<summary>{{ t('retargetPreview') }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/AnimationPanel.vue",
+      "line": 156,
+      "kind": "content-disclosure",
+      "originalTag": "<details v-if=\"rig.attachments.length\">",
+      "summary": "<summary>{{ t('attachments') }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/AnimationPanel.vue",
+      "line": 165,
+      "kind": "content-disclosure",
+      "originalTag": "<details open>",
+      "summary": "<summary>{{ t('markers') }} ({{ timeline.markers.length }})</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/AnimationPanel.vue",
+      "line": 165,
+      "kind": "content-disclosure",
+      "originalTag": "<details open class=\"timeline-diagnostics\">",
+      "summary": "<summary>{{ t('diagnostics') }} ({{ cinematicIssues.length }})</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/AutomationStudio.vue",
+      "line": 10,
+      "kind": "content-disclosure",
+      "originalTag": "<details class=\"permissions\" open>",
+      "summary": "<summary>{{ t('permissionReview') }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/ConfigPanel.vue",
+      "line": 80,
+      "kind": "content-disclosure",
+      "originalTag": "<details v-if=\"prefabComparison.length\" class=\"prefab-compare\">",
+      "summary": "<summary>{{ t('comparePrefabOverrides') }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/ConfigPanel.vue",
+      "line": 84,
+      "kind": "content-disclosure",
+      "originalTag": "<details v-if=\"prefabConflicts.length\" class=\"prefab-compare prefab-conflicts\" open>",
+      "summary": "<summary>{{ t('prefabConflicts') }} · {{ prefabConflicts.length }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/ConfigPanel.vue",
+      "line": 290,
+      "kind": "already-owned",
+      "originalTag": "<details data-ui-motion-disclosure class=\"compound-shapes\">",
+      "summary": "<summary :title=\"text17('radiusHint')\"><span>{{ t('additionalShapes') }} ({{ selectedEntity.collider.shapes.length }})</span><UiButton icon=\"add\" type=\"button\" :disabled=\"selectedEntity.collider.shapes.length >= 32\" @click.prevent=\"addColliderShape\" :label=\"t('add')\" /></summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/ConnectionBuilder.vue",
+      "line": 60,
+      "kind": "content-disclosure",
+      "originalTag": "<details v-if=\"drawingComplete\" class=\"advanced-physics\">",
+      "summary": "<summary>{{ t('connectionPhysics') }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/ContentAssetInspector.vue",
+      "line": 37,
+      "kind": "content-disclosure",
+      "originalTag": "<details v-if=\"frameError\" class=\"resource-error\" open>",
+      "summary": "<summary>{{ assetCopy('operationFailed') }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/EditorBottomPanel.vue",
+      "line": 47,
+      "kind": "native-absolute-popup",
+      "originalTag": "<details ref=\"assetOverflow\" class=\"asset-overflow\">",
+      "summary": "<summary :title=\"t('moreActions')\" :aria-label=\"t('moreActions')\"><EditorIcon name=\"more\" /></summary>",
+      "proof": "Actual direct popup children are separate surfaces; opacity/transform presence must not animate details height or alter popup overflow."
+    },
+    {
+      "file": "src/components/EditorBottomPanel.vue",
+      "line": 77,
+      "kind": "content-disclosure",
+      "originalTag": "<details v-if=\"importJobs.length\" class=\"import-queue\" :open=\"importJobs.some(job=>!['complete','cancelled','failed'].includes(job.status))\" aria-live=\"polite\">",
+      "summary": "<summary>{{ t('importLog') }} · {{ importJobs.length }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/EditorBottomPanel.vue",
+      "line": 84,
+      "kind": "content-disclosure",
+      "originalTag": "<details v-if=\"job.logs.length\">",
+      "summary": "<summary>{{ assetImportTechnicalLabel(preferencesState.locale) }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/EditorBottomPanel.vue",
+      "line": 106,
+      "kind": "content-disclosure",
+      "originalTag": "<details v-if=\"assetBatch.failed\">",
+      "summary": "<summary>{{ assetCopy('failed') }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/EditorBottomPanel.vue",
+      "line": 106,
+      "kind": "content-disclosure",
+      "originalTag": "<details>",
+      "summary": "<summary>{{ assetImportTechnicalLabel(preferencesState.locale) }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/EditorBottomPanel.vue",
+      "line": 146,
+      "kind": "content-disclosure",
+      "originalTag": "<details v-if=\"assetOperationError\" class=\"pipeline-error\" open>",
+      "summary": "<summary>{{ assetCopy('operationFailed') }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/EditorBottomPanel.vue",
+      "line": 146,
+      "kind": "content-disclosure",
+      "originalTag": "<details>",
+      "summary": "<summary>{{ assetImportTechnicalLabel(preferencesState.locale) }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/EditorBottomPanel.vue",
+      "line": 155,
+      "kind": "content-disclosure",
+      "originalTag": "<details class=\"collection-membership\">",
+      "summary": "<summary>{{ t('collections') }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/EditorBottomPanel.vue",
+      "line": 161,
+      "kind": "content-disclosure",
+      "originalTag": "<details class=\"asset-technical\">",
+      "summary": "<summary>{{ t('technicalDetails') }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/EditorBottomPanel.vue",
+      "line": 284,
+      "kind": "content-disclosure",
+      "originalTag": "<details class=\"mapping-editor\">",
+      "summary": "<summary>{{ t('trackMappings') }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/EditorBottomPanel.vue",
+      "line": 305,
+      "kind": "content-disclosure",
+      "originalTag": "<details v-if=\"selectedContentClosure.length\" class=\"content-closure\">",
+      "summary": "<summary>{{ t('contentClosure') }} · {{ selectedContentClosure.length }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/EditorFeedback.vue",
+      "line": 11,
+      "kind": "content-disclosure",
+      "originalTag": "<details v-if=\"task.error || task.logs.length || task.resources.length\">",
+      "summary": "<summary>{{ t('taskDetails') }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/ErrorRecovery.vue",
+      "line": 6,
+      "kind": "content-disclosure",
+      "originalTag": "<details v-if=\"fault.stack\">",
+      "summary": "<summary>{{ t('technicalDetails') }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/EventSheetEditor.vue",
+      "line": 29,
+      "kind": "content-disclosure",
+      "originalTag": "<details class=\"event-provenance\">",
+      "summary": "<summary>{{ provenanceCopy.title }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/ExternalChangeDialog.vue",
+      "line": 3,
+      "kind": "content-disclosure",
+      "originalTag": "<details open>",
+      "summary": "<summary>{{ t('compare') }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/MaterialGraphEditor.vue",
+      "line": 44,
+      "kind": "content-disclosure",
+      "originalTag": "<details class=\"generated-source\">",
+      "summary": "<summary>{{ t('deterministicSource') }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "line": 43,
+      "kind": "content-disclosure",
+      "originalTag": "<details>",
+      "summary": "<summary>{{ nl18('technicalDetails') }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/ObjectBlueprintEditor.vue",
+      "line": 20,
+      "kind": "content-disclosure",
+      "originalTag": "<details data-blueprint-field=\"composition\" class=\"blueprint-composition\">",
+      "summary": "<summary>{{ labels.composition }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/ObjectBlueprintEditor.vue",
+      "line": 22,
+      "kind": "content-disclosure",
+      "originalTag": "<details class=\"blueprint-provenance\" open>",
+      "summary": "<summary>{{ provenanceCopy.provenance }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/ObjectOwnershipPanel.vue",
+      "line": 3,
+      "kind": "content-disclosure-with-toggle-consumer",
+      "originalTag": "<details class=\"object-ownership\" @toggle=\"expanded=($event.target as HTMLDetailsElement).open\" @change.stop>",
+      "summary": "<summary>{{ labels.title }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/ObjectOwnershipPanel.vue",
+      "line": 12,
+      "kind": "content-disclosure",
+      "originalTag": "<details open>",
+      "summary": "<summary>{{ labels.sources }} · {{ view.sources.length }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/ObjectOwnershipPanel.vue",
+      "line": 13,
+      "kind": "content-disclosure",
+      "originalTag": "<details v-if=\"view.composition.length\">",
+      "summary": "<summary>{{ labels.composition }} · {{ view.composition.length }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/ObjectOwnershipPanel.vue",
+      "line": 14,
+      "kind": "content-disclosure",
+      "originalTag": "<details open>",
+      "summary": "<summary>{{ labels.properties }} · {{ matchingProperties.length }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/ObjectOwnershipPanel.vue",
+      "line": 15,
+      "kind": "content-disclosure",
+      "originalTag": "<details>",
+      "summary": "<summary>{{ labels.events }} · {{ matchingEvents.length }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/ObjectOwnershipPanel.vue",
+      "line": 16,
+      "kind": "content-disclosure",
+      "originalTag": "<details v-if=\"view.runtime.active\">",
+      "summary": "<summary>{{ labels.runtime }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/PhysicsSettingsPanel.vue",
+      "line": 65,
+      "kind": "content-disclosure",
+      "originalTag": "<details class=\"advanced-matrix\">",
+      "summary": "<summary>{{ t('advancedCollisionMatrix') }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/PresentationPanel.vue",
+      "line": 14,
+      "kind": "content-disclosure",
+      "originalTag": "<details open class=\"ui-hierarchy\">",
+      "summary": "<summary>{{ t('uiHierarchy') }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/PresentationPanel.vue",
+      "line": 40,
+      "kind": "content-disclosure",
+      "originalTag": "<details>",
+      "summary": "<summary>{{ t('themeTokens') }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/PresentationPanel.vue",
+      "line": 79,
+      "kind": "content-disclosure",
+      "originalTag": "<details class=\"audition-mix\">",
+      "summary": "<summary>{{ audioCopy.previewMix }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/PresentationPanel.vue",
+      "line": 82,
+      "kind": "content-disclosure",
+      "originalTag": "<details>",
+      "summary": "<summary>{{ t('effects') }} ({{ bus.effects.length }})</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/PresentationPanel.vue",
+      "line": 83,
+      "kind": "content-disclosure",
+      "originalTag": "<details>",
+      "summary": "<summary>{{ t('sends') }} ({{ bus.sends.length }})</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/PresentationPanel.vue",
+      "line": 84,
+      "kind": "content-disclosure",
+      "originalTag": "<details>",
+      "summary": "<summary>{{ t('automation') }} ({{ bus.automation.length }})</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/PresentationPanel.vue",
+      "line": 91,
+      "kind": "content-disclosure",
+      "originalTag": "<details open class=\"audio-clock\">",
+      "summary": "<summary>{{ audioCopy.clock }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/PresentationPanel.vue",
+      "line": 98,
+      "kind": "content-disclosure",
+      "originalTag": "<details open>",
+      "summary": "<summary>{{ t('automaticInputPrompts') }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/PresentationPanel.vue",
+      "line": 99,
+      "kind": "content-disclosure",
+      "originalTag": "<details open>",
+      "summary": "<summary>{{ t('focusTraversal') }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/ProjectHealthPanel.vue",
+      "line": 24,
+      "kind": "content-disclosure",
+      "originalTag": "<details>",
+      "summary": "<summary>{{ t('sceneDependencyGraph') }} · {{ sceneDependencies.length }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/ProjectHealthPanel.vue",
+      "line": 31,
+      "kind": "content-disclosure",
+      "originalTag": "<details v-if=\"trash.items.length\" open>",
+      "summary": "<summary>{{ t('projectTrash') }} · {{ trash.items.length }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/ProjectManager.vue",
+      "line": 31,
+      "kind": "already-owned",
+      "originalTag": "<details class=\"more-project-actions\" data-ui-motion-disclosure>",
+      "summary": "<summary>{{ moreActionsLabel }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/ProjectManager.vue",
+      "line": 102,
+      "kind": "content-disclosure",
+      "originalTag": "<details v-if=\"state.pendingUpgrade.preview.migrationSteps.length\" class=\"migration-steps\">",
+      "summary": "<summary>{{ t('migrationPlan') }} · {{ state.pendingUpgrade.preview.migrationSteps.length }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/RenderingPanel.vue",
+      "line": 53,
+      "kind": "content-disclosure",
+      "originalTag": "<details v-if=\"advancedMode\" open>",
+      "summary": "<summary>{{ t('advancedJsonViews') }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/RenderingPanel.vue",
+      "line": 104,
+      "kind": "content-disclosure",
+      "originalTag": "<details>",
+      "summary": "<summary>{{ t('textureImports') }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/SaveDataSettings.vue",
+      "line": 12,
+      "kind": "content-disclosure",
+      "originalTag": "<details>",
+      "summary": "<summary>{{ t('saveSlot') }} · {{ slots.length }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/SceneSideBar.vue",
+      "line": 28,
+      "kind": "native-absolute-popup",
+      "originalTag": "<details class=\"hierarchy-filter-menu\">",
+      "summary": "<summary :title=\"t('selectionFilter')\" :aria-label=\"t('selectionFilter')\"><EditorIcon name=\"filter\" /></summary>",
+      "proof": "Actual direct popup children are separate surfaces; opacity/transform presence must not animate details height or alter popup overflow."
+    },
+    {
+      "file": "src/components/SceneTabs.vue",
+      "line": 13,
+      "kind": "native-absolute-popup",
+      "originalTag": "<details ref=\"createMenu\" class=\"scene-menu\">",
+      "summary": "<summary :title=\"t('newSceneFromTemplate')\" :aria-label=\"t('newSceneFromTemplate')\"><EditorIcon name=\"add\" /></summary>",
+      "proof": "Actual direct popup children are separate surfaces; opacity/transform presence must not animate details height or alter popup overflow."
+    },
+    {
+      "file": "src/components/ScriptConversionPanel.vue",
+      "line": 13,
+      "kind": "content-disclosure",
+      "originalTag": "<details v-if=\"graphDiagnosticMessage(diagnostic,preferencesState.locale)!==diagnostic.message\">",
+      "summary": "<summary>{{ graphDiagnosticDetailsLabel(preferencesState.locale) }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/ScriptConversionPanel.vue",
+      "line": 17,
+      "kind": "content-disclosure",
+      "originalTag": "<details :open=\"gate !== 'ready'\">",
+      "summary": "<summary>{{ copy.structural }} / {{ copy.sourceBacked }} · {{ assessment.regions.length }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/ScriptStudio.vue",
+      "line": 14,
+      "kind": "native-absolute-popup",
+      "originalTag": "<details class=\"studio-more\" v-transient-popover>",
+      "summary": "<summary>{{ layoutLabels.commands }}</summary>",
+      "proof": "Actual direct popup children are separate surfaces; opacity/transform presence must not animate details height or alter popup overflow."
+    },
+    {
+      "file": "src/components/ScriptStudio.vue",
+      "line": 131,
+      "kind": "content-disclosure",
+      "originalTag": "<details v-if=\"reloadHistory.length\">",
+      "summary": "<summary>{{ t('reloadHistory') }} · {{ reloadHistory.length }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/ScriptWorkspace.vue",
+      "line": 6,
+      "kind": "content-disclosure",
+      "originalTag": "<details class=\"logic-help\">",
+      "summary": "<summary>{{ t('help') }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/SimulationStatusPanel17.vue",
+      "line": 4,
+      "kind": "content-disclosure",
+      "originalTag": "<details>",
+      "summary": "<summary>{{ text('title') }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/StudioDraftConflict.vue",
+      "line": 5,
+      "kind": "content-disclosure",
+      "originalTag": "<details>",
+      "summary": "<summary>{{ labels.review }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/TeamWorkflowPanel.vue",
+      "line": 20,
+      "kind": "content-disclosure",
+      "originalTag": "<details>",
+      "summary": "<summary>{{ deliveryLabel19('base') }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/TilemapPanel.vue",
+      "line": 5,
+      "kind": "content-disclosure",
+      "originalTag": "<details class=\"tilemap-setup\">",
+      "summary": "<summary>{{ t('atlasSources') }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/TimelineButtonAction.vue",
+      "line": 3,
+      "kind": "content-disclosure",
+      "originalTag": "<details class=\"timeline-button-action\" open>",
+      "summary": "<summary>{{ copy.title }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/ToolBar.vue",
+      "line": 9,
+      "kind": "native-absolute-popup",
+      "originalTag": "<details class=\"tool-menu authoring-menu\">",
+      "summary": "<summary :title=\"t('authoringTools')\" :aria-label=\"t('authoringTools')\"><EditorIcon name=\"tools\" /></summary>",
+      "proof": "Actual direct popup children are separate surfaces; opacity/transform presence must not animate details height or alter popup overflow."
+    },
+    {
+      "file": "src/components/ToolBar.vue",
+      "line": 31,
+      "kind": "native-absolute-popup",
+      "originalTag": "<details class=\"tool-menu\">",
+      "summary": "<summary :title=\"t('transformActions')\" :aria-label=\"t('transformActions')\"><EditorIcon name=\"align\" /></summary>",
+      "proof": "Actual direct popup children are separate surfaces; opacity/transform presence must not animate details height or alter popup overflow."
+    },
+    {
+      "file": "src/components/ToolBar.vue",
+      "line": 43,
+      "kind": "native-absolute-popup",
+      "originalTag": "<details class=\"tool-menu snap-menu\">",
+      "summary": "<summary :title=\"t('snapping')\" :aria-label=\"t('snapping')\"><EditorIcon name=\"snap\" /></summary>",
+      "proof": "Actual direct popup children are separate surfaces; opacity/transform presence must not animate details height or alter popup overflow."
+    },
+    {
+      "file": "src/components/ToolBar.vue",
+      "line": 50,
+      "kind": "native-absolute-popup",
+      "originalTag": "<details class=\"tool-menu guide-menu\">",
+      "summary": "<summary :title=\"t('viewportSettings')\" :aria-label=\"t('viewportSettings')\"><EditorIcon name=\"settings\" /></summary>",
+      "proof": "Actual direct popup children are separate surfaces; opacity/transform presence must not animate details height or alter popup overflow."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "line": 16,
+      "kind": "native-absolute-popup",
+      "originalTag": "<details data-ui-motion-disclosure class=\"graph-more\">",
+      "summary": "<summary>{{ layoutLabels.commands }}</summary>",
+      "proof": "Header child outside graph-transform; direct .editing-actions is position:absolute, z-index:40, top:100%; pointer/data graph geometry is untouched."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "line": 107,
+      "kind": "already-owned",
+      "originalTag": "<details data-ui-motion-disclosure class=\"wire-inspector\" :open=\"!!selectedEdge\">",
+      "summary": "<summary>{{ layoutLabels.wires }} · {{ activeScope.edges.length }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "line": 134,
+      "kind": "already-owned",
+      "originalTag": "<details data-ui-motion-disclosure class=\"graph-conversion\">",
+      "summary": "<summary>{{ conversionLabels.title }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "line": 142,
+      "kind": "content-disclosure",
+      "originalTag": "<details v-if=\"graphDiagnosticMessage(diagnostic,preferencesState.locale)!==diagnostic.message\">",
+      "summary": "<summary>{{ graphDiagnosticDetailsLabel(preferencesState.locale) }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/WorkspaceBar.vue",
+      "line": 21,
+      "kind": "native-absolute-popup",
+      "originalTag": "<details v-transient-popover class=\"workspace-menu layout-menu\">",
+      "summary": "<summary :aria-label=\"t('layoutPanels')\" :title=\"t('layoutPanels')\"><EditorIcon name=\"layout\" /><span>{{ t('layout') }}</span></summary>",
+      "proof": "Actual direct popup children are separate surfaces; opacity/transform presence must not animate details height or alter popup overflow."
+    },
+    {
+      "file": "src/components/WorkspaceBar.vue",
+      "line": 32,
+      "kind": "native-absolute-popup",
+      "originalTag": "<details v-transient-popover class=\"workspace-menu command-menu\">",
+      "summary": "<summary :aria-label=\"t('commands')\" :title=\"t('commands')\"><EditorIcon name=\"search\" /><span>{{ t('commands') }}</span></summary>",
+      "proof": "Actual direct popup children are separate surfaces; opacity/transform presence must not animate details height or alter popup overflow."
+    },
+    {
+      "file": "src/components/WorldComponentsInspector.vue",
+      "line": 17,
+      "kind": "content-disclosure",
+      "originalTag": "<details>",
+      "summary": "<summary>{{ t('navigationLinks') }} · {{ region.links.length }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/components/WorldToolsPanel.vue",
+      "line": 49,
+      "kind": "content-disclosure",
+      "originalTag": "<details v-if=\"check.status !== 'ready'\">",
+      "summary": "<summary>{{ t('howToFix') }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "line": 119,
+      "kind": "already-owned",
+      "originalTag": "<details data-ui-motion-disclosure v-if=\"!compactInputMap\" class=\"action-advanced\">",
+      "summary": "<summary>{{ t('actionBehavior') }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "line": 148,
+      "kind": "already-owned",
+      "originalTag": "<details data-ui-motion-disclosure v-if=\"!compactInputMap\" class=\"binding-advanced\">",
+      "summary": "<summary>{{ t('advanced') }}</summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    },
+    {
+      "file": "src/ui/components/UiPropertySection.vue",
+      "line": 2,
+      "kind": "shared-element-owned",
+      "originalTag": "<details v-if=\"collapsible\" ref=\"disclosure\" class=\"ui-property-section\" :open=\"open\" @toggle=\"reveal\">",
+      "summary": "<summary><EditorIcon name=\"down\" /><strong>{{ title }}</strong><span class=\"ui-section-actions\"><slot name=\"actions\" /></span></summary>",
+      "proof": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction."
+    }
+  ],
+  "files": [
+    {
+      "file": "src/components/AndroidDeliveryPanel.vue",
+      "beforeSha256": "a4458f93b91aa6d289e2eeb98d099d4bc7bf2bda66ba78a3897b2e69366d673a",
+      "afterSha256": "d9dfc5c4b483fa2a73ba564cfd0b067b24d40b6088a9f26981e7982d9705259e",
+      "scriptsBeforeSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "01c18147dff5e7d59b31948c4f31dfba2b8e61d3c27b7b95d961437143fad813"
+      ],
+      "scriptsAfterSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "01c18147dff5e7d59b31948c4f31dfba2b8e61d3c27b7b95d961437143fad813"
+      ],
+      "stylesUnchanged": true,
+      "businessScriptUnchanged": true,
+      "scriptDifference": "Byte-identical",
+      "templateDifference": "Motion marker attributes only; original template proven identical after removing markers.",
+      "vueTemplateCompiled": true,
+      "vueCssCompiled": true
+    },
+    {
+      "file": "src/components/AnimationPanel.vue",
+      "beforeSha256": "1009a09b871760bd1b4e1a6a55ca913f4ab6ff2c6a4b9ddf183050fdb735c91c",
+      "afterSha256": "545104024e625630a80c002e6141eff598f2b04514318f9e061aba00ab1283c3",
+      "scriptsBeforeSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "e6368138a424011fe1521c52410ff96443f93956aed3b81f9c6e922f71ff36be"
+      ],
+      "scriptsAfterSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "e6368138a424011fe1521c52410ff96443f93956aed3b81f9c6e922f71ff36be"
+      ],
+      "stylesUnchanged": true,
+      "businessScriptUnchanged": true,
+      "scriptDifference": "Byte-identical",
+      "templateDifference": "Motion marker attributes only; original template proven identical after removing markers.",
+      "vueTemplateCompiled": true,
+      "vueCssCompiled": true
+    },
+    {
+      "file": "src/components/AutomationStudio.vue",
+      "beforeSha256": "efc296bc78dadd00b9b84fb76407df85081358466012e697a8b4ba890fc54526",
+      "afterSha256": "c26400cd345d1ebe44d25059e1d0ace7b7077b52f6cce05d3c2419361487b698",
+      "scriptsBeforeSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "148ef56e84eae30909000855fb7c10e448359b551d10f25688c75a622d2d8612"
+      ],
+      "scriptsAfterSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "148ef56e84eae30909000855fb7c10e448359b551d10f25688c75a622d2d8612"
+      ],
+      "stylesUnchanged": true,
+      "businessScriptUnchanged": true,
+      "scriptDifference": "Byte-identical",
+      "templateDifference": "Motion marker attributes only; original template proven identical after removing markers.",
+      "vueTemplateCompiled": true,
+      "vueCssCompiled": true
+    },
+    {
+      "file": "src/components/ConfigPanel.vue",
+      "beforeSha256": "38cba073be7909483686e8b1105c1ba7d532276c84fc529aba416f9e068e8a94",
+      "afterSha256": "7f436b443a3fae70c106efaaef6c9d807bd0e00c94a4b3ff357691f427c05743",
+      "scriptsBeforeSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "dd21a2331842aa636a1d087c248e8b80065897812a4853f35a2b3a73bb43d192"
+      ],
+      "scriptsAfterSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "dd21a2331842aa636a1d087c248e8b80065897812a4853f35a2b3a73bb43d192"
+      ],
+      "stylesUnchanged": true,
+      "businessScriptUnchanged": true,
+      "scriptDifference": "Byte-identical",
+      "templateDifference": "Motion marker attributes only; original template proven identical after removing markers.",
+      "vueTemplateCompiled": true,
+      "vueCssCompiled": true
+    },
+    {
+      "file": "src/components/ConnectionBuilder.vue",
+      "beforeSha256": "ea42b86ee31b42d26280429fa367bd4a803ed57cfa4e576309927d7660b79062",
+      "afterSha256": "f38be652a4c78fcfbae19b00866f1fe509de4239945372171de5e87d5aa85c20",
+      "scriptsBeforeSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "0a42f4f5c52047d51bc98af87aa899db00ee9040bde2bdb0ce141e428048301e"
+      ],
+      "scriptsAfterSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "0a42f4f5c52047d51bc98af87aa899db00ee9040bde2bdb0ce141e428048301e"
+      ],
+      "stylesUnchanged": true,
+      "businessScriptUnchanged": true,
+      "scriptDifference": "Byte-identical",
+      "templateDifference": "Motion marker attributes only; original template proven identical after removing markers.",
+      "vueTemplateCompiled": true,
+      "vueCssCompiled": true
+    },
+    {
+      "file": "src/components/ContentAssetInspector.vue",
+      "beforeSha256": "47f94f231ff93346274b8ac05ad804ecb6001a2f6db67465a7db3acb77785984",
+      "afterSha256": "5a06375476ce5717b43f754621fa775e500e7ee57ba9d42f462cd5ae3157c55d",
+      "scriptsBeforeSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "39be55385465ed1c6f951f1d93a0bbf67d5679674042b92cb89dee2466f17ce0"
+      ],
+      "scriptsAfterSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "39be55385465ed1c6f951f1d93a0bbf67d5679674042b92cb89dee2466f17ce0"
+      ],
+      "stylesUnchanged": true,
+      "businessScriptUnchanged": true,
+      "scriptDifference": "Byte-identical",
+      "templateDifference": "Motion marker attributes only; original template proven identical after removing markers.",
+      "vueTemplateCompiled": true,
+      "vueCssCompiled": true
+    },
+    {
+      "file": "src/components/EditorBottomPanel.vue",
+      "beforeSha256": "3c0a178af278bb8d637df16ac8f2da0894a3d50908dff66cab8041de7a6e75ea",
+      "afterSha256": "bc2036395f532d558276b19cbe584042e1c49291dfc62cd095e8a7813daff5a1",
+      "scriptsBeforeSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "08a32b4248edece61ee6d546d749727915185036314470a1826914d9152107cb"
+      ],
+      "scriptsAfterSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "08a32b4248edece61ee6d546d749727915185036314470a1826914d9152107cb"
+      ],
+      "stylesUnchanged": true,
+      "businessScriptUnchanged": true,
+      "scriptDifference": "Byte-identical",
+      "templateDifference": "Motion marker attributes only; original template proven identical after removing markers.",
+      "vueTemplateCompiled": true,
+      "vueCssCompiled": true
+    },
+    {
+      "file": "src/components/EditorFeedback.vue",
+      "beforeSha256": "559e2893e17babb89e9bff946f2d809831fb57666a5bca23c9c19440586a164b",
+      "afterSha256": "d7eafe230bdf6fd45f1bd87cc7cfcc5a03cf829fb853475b10960337022c1734",
+      "scriptsBeforeSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "3666199f96867591055211a9a13856e591bf8828b19bddf8508c550ed1f85116"
+      ],
+      "scriptsAfterSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "3666199f96867591055211a9a13856e591bf8828b19bddf8508c550ed1f85116"
+      ],
+      "stylesUnchanged": true,
+      "businessScriptUnchanged": true,
+      "scriptDifference": "Byte-identical",
+      "templateDifference": "Motion marker attributes only; original template proven identical after removing markers.",
+      "vueTemplateCompiled": true,
+      "vueCssCompiled": true
+    },
+    {
+      "file": "src/components/ErrorRecovery.vue",
+      "beforeSha256": "005f94b14dc3c968fd080f24ef1d6b467bcef32adca382fb49c27abc7995c27f",
+      "afterSha256": "3aa412be7ade6f35e1a100bb382a42f167634e8be05cd051d3cfed84fda262c7",
+      "scriptsBeforeSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "204fc39e0e563f4987df07a9c795b0c01f00339c790522a2cdc298f1c292ac45"
+      ],
+      "scriptsAfterSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "204fc39e0e563f4987df07a9c795b0c01f00339c790522a2cdc298f1c292ac45"
+      ],
+      "stylesUnchanged": true,
+      "businessScriptUnchanged": true,
+      "scriptDifference": "Byte-identical",
+      "templateDifference": "Motion marker attributes only; original template proven identical after removing markers.",
+      "vueTemplateCompiled": true,
+      "vueCssCompiled": true
+    },
+    {
+      "file": "src/components/EventSheetEditor.vue",
+      "beforeSha256": "e43b84820ebcf1bf727130779a34916ffb94a441d9283d1bbc761349f352f79f",
+      "afterSha256": "0cd944ff36086358e6115d6741dc8758ae840e3bc0c13a2d834240a5ef58fad5",
+      "scriptsBeforeSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "2b613d241d528db58b31e66fe2b6754d251fa58f9f0f8474a01147f43d02dd6c"
+      ],
+      "scriptsAfterSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "2b613d241d528db58b31e66fe2b6754d251fa58f9f0f8474a01147f43d02dd6c"
+      ],
+      "stylesUnchanged": true,
+      "businessScriptUnchanged": true,
+      "scriptDifference": "Byte-identical",
+      "templateDifference": "Motion marker attributes only; original template proven identical after removing markers.",
+      "vueTemplateCompiled": true,
+      "vueCssCompiled": true
+    },
+    {
+      "file": "src/components/ExternalChangeDialog.vue",
+      "beforeSha256": "ea4b0f476d73c4b6cb0def210e8a4ef7e74d239d461cef760f98a8f6f9101e98",
+      "afterSha256": "d3eb555523f6662e81b7bd5756fcb7a5414a1c9290200a96d70fb5470b191d6c",
+      "scriptsBeforeSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "4913b9cb9cf310910a268c0532d569a49a620cd90a8f51823da2c5ecbb09fdea"
+      ],
+      "scriptsAfterSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "4913b9cb9cf310910a268c0532d569a49a620cd90a8f51823da2c5ecbb09fdea"
+      ],
+      "stylesUnchanged": true,
+      "businessScriptUnchanged": true,
+      "scriptDifference": "Byte-identical",
+      "templateDifference": "Motion marker attributes only; original template proven identical after removing markers.",
+      "vueTemplateCompiled": true,
+      "vueCssCompiled": true
+    },
+    {
+      "file": "src/components/MaterialGraphEditor.vue",
+      "beforeSha256": "5b1672ecc701bece2f08f7694a08d6c3ea6ceb4255913c4e9325616a311fd8a5",
+      "afterSha256": "33a2a9ae6386685598d4043ccc11395e750a6a2a5bc43bf4325c37024a228fd8",
+      "scriptsBeforeSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "713ec77d3b3e6dcb97becd33b2e722c014610fb4ded2f7d8cba5a5ffdeedf8ed"
+      ],
+      "scriptsAfterSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "713ec77d3b3e6dcb97becd33b2e722c014610fb4ded2f7d8cba5a5ffdeedf8ed"
+      ],
+      "stylesUnchanged": true,
+      "businessScriptUnchanged": true,
+      "scriptDifference": "Byte-identical",
+      "templateDifference": "Motion marker attributes only; original template proven identical after removing markers.",
+      "vueTemplateCompiled": true,
+      "vueCssCompiled": true
+    },
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "beforeSha256": "2cdd210dfd77b70654df09100e956e305adc4cc1a2d27f37fef2378cc1197e0a",
+      "afterSha256": "88a31345919e161686fc3139c1e1f48126a77a12b210ed4476b80aeabb5e0bf2",
+      "scriptsBeforeSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "0bd13507432f7fa06ecfd24afbefacf5de87f6de1f3cb38150071d2a54f80e67"
+      ],
+      "scriptsAfterSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "0bd13507432f7fa06ecfd24afbefacf5de87f6de1f3cb38150071d2a54f80e67"
+      ],
+      "stylesUnchanged": true,
+      "businessScriptUnchanged": true,
+      "scriptDifference": "Byte-identical",
+      "templateDifference": "Motion marker attributes only; original template proven identical after removing markers.",
+      "vueTemplateCompiled": true,
+      "vueCssCompiled": true
+    },
+    {
+      "file": "src/components/ObjectBlueprintEditor.vue",
+      "beforeSha256": "9028f741017cedc9c3247731b5289b8d3f1cc9822e2d57ba40e3ad407798dc10",
+      "afterSha256": "fdfe9bff02245959172c15861aa7f5c4d69afbe17dfa72794af01d78088c2586",
+      "scriptsBeforeSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "4bef67f03165d1669fb0f47b2083c3f570c9c32644f1894481e516ef8480650a"
+      ],
+      "scriptsAfterSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "4bef67f03165d1669fb0f47b2083c3f570c9c32644f1894481e516ef8480650a"
+      ],
+      "stylesUnchanged": true,
+      "businessScriptUnchanged": true,
+      "scriptDifference": "Byte-identical",
+      "templateDifference": "Motion marker attributes only; original template proven identical after removing markers.",
+      "vueTemplateCompiled": true,
+      "vueCssCompiled": true
+    },
+    {
+      "file": "src/components/ObjectOwnershipPanel.vue",
+      "beforeSha256": "d3d1572c56c8c56036aaa1de2f104cf197371ee1e64944aa95d842b73a37fece",
+      "afterSha256": "d6bb65c365f8ee5d19dd405d0fd383f01898e2eacae9994fc3f0da3857e4e54e",
+      "scriptsBeforeSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "a503f85d972411e179ca9842fd55dd252865dc56ae4021bcabdad2bcd7e48207"
+      ],
+      "scriptsAfterSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "9fb70f24d5724c6a4e16b6fc57a5dca38a3e273399caf55312ccabbc64448b1e"
+      ],
+      "stylesUnchanged": true,
+      "businessScriptUnchanged": false,
+      "scriptDifference": "Only shared refreshDisclosure/nextTick imports, bodyVisible UI ref and two logical/native UI lifecycle handlers; original business script proven identical after removing these additions.",
+      "templateDifference": "Motion markers plus root UI lifecycle handler and lazy exit visibility; original template proven identical after reversing these specific edits.",
+      "vueTemplateCompiled": true,
+      "vueCssCompiled": true
+    },
+    {
+      "file": "src/components/PhysicsSettingsPanel.vue",
+      "beforeSha256": "feea34cc3dd95d710ff7ca9869aabca516f916c829bd32c937db602ebc960114",
+      "afterSha256": "ca4a9e1249fa7a7d816b2411bd4d2938ef0596aaed99ff1b0534b332c5717211",
+      "scriptsBeforeSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "0dde4280aec8108332dcf83351a9ae96b45145e04271af846bbcc94a2340458e"
+      ],
+      "scriptsAfterSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "0dde4280aec8108332dcf83351a9ae96b45145e04271af846bbcc94a2340458e"
+      ],
+      "stylesUnchanged": true,
+      "businessScriptUnchanged": true,
+      "scriptDifference": "Byte-identical",
+      "templateDifference": "Motion marker attributes only; original template proven identical after removing markers.",
+      "vueTemplateCompiled": true,
+      "vueCssCompiled": true
+    },
+    {
+      "file": "src/components/PresentationPanel.vue",
+      "beforeSha256": "fa1379857179555d46c346efe1903d7bc7ab43222dbfdf71083aa125f6c22747",
+      "afterSha256": "aca5292dc547c11ca9b2ca0d7ba0d189d9f906e502ada66c8e50f1f4a854c9a5",
+      "scriptsBeforeSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "d229e28196b02e55ea9712eb276ca8197ca042348a153e31d5ef7284d78bd0a9"
+      ],
+      "scriptsAfterSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "d229e28196b02e55ea9712eb276ca8197ca042348a153e31d5ef7284d78bd0a9"
+      ],
+      "stylesUnchanged": true,
+      "businessScriptUnchanged": true,
+      "scriptDifference": "Byte-identical",
+      "templateDifference": "Motion marker attributes only; original template proven identical after removing markers.",
+      "vueTemplateCompiled": true,
+      "vueCssCompiled": true
+    },
+    {
+      "file": "src/components/ProjectHealthPanel.vue",
+      "beforeSha256": "3ac341c60ea28975644b29e74156d90fbb71bc4e657d0c574ba851f13f1a6e8b",
+      "afterSha256": "7d1d1006868e18672bc2c944be8d30084f81f89954a7d567b268c36ecb7733bd",
+      "scriptsBeforeSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "2dc5766c1dc554e3bf5036810b9e6a24659e34d98df7cb327d3cb17e954dd5ab"
+      ],
+      "scriptsAfterSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "2dc5766c1dc554e3bf5036810b9e6a24659e34d98df7cb327d3cb17e954dd5ab"
+      ],
+      "stylesUnchanged": true,
+      "businessScriptUnchanged": true,
+      "scriptDifference": "Byte-identical",
+      "templateDifference": "Motion marker attributes only; original template proven identical after removing markers.",
+      "vueTemplateCompiled": true,
+      "vueCssCompiled": true
+    },
+    {
+      "file": "src/components/ProjectManager.vue",
+      "beforeSha256": "c155c24233f92a4e3ac6d2ab45195438b77a9c05060ac2144069a5861b46846c",
+      "afterSha256": "e4889dbaa7506bf0bb717fed9003086aa0c9beda5167e4cb254494d6679c5e7e",
+      "scriptsBeforeSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "c841f757c0861e900222c1b2d01b9ae922d5beaa1a2ee4b3eb9ac75c80b6690a"
+      ],
+      "scriptsAfterSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "c841f757c0861e900222c1b2d01b9ae922d5beaa1a2ee4b3eb9ac75c80b6690a"
+      ],
+      "stylesUnchanged": true,
+      "businessScriptUnchanged": true,
+      "scriptDifference": "Byte-identical",
+      "templateDifference": "Motion marker attributes only; original template proven identical after removing markers.",
+      "vueTemplateCompiled": true,
+      "vueCssCompiled": true
+    },
+    {
+      "file": "src/components/RenderingPanel.vue",
+      "beforeSha256": "cc99300974fb0973070051152520c5a56295fc474bc330b0b339700a8f26f39f",
+      "afterSha256": "0696cca5f17a709867dcefd39cacad5ff823427323f3327f9176e0d3ceca6ac8",
+      "scriptsBeforeSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "7e51dba4fa0fd25d4f2cc717ee2dd13491db1d0f87fac22b1f74a8fc599fbb63"
+      ],
+      "scriptsAfterSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "7e51dba4fa0fd25d4f2cc717ee2dd13491db1d0f87fac22b1f74a8fc599fbb63"
+      ],
+      "stylesUnchanged": true,
+      "businessScriptUnchanged": true,
+      "scriptDifference": "Byte-identical",
+      "templateDifference": "Motion marker attributes only; original template proven identical after removing markers.",
+      "vueTemplateCompiled": true,
+      "vueCssCompiled": true
+    },
+    {
+      "file": "src/components/SaveDataSettings.vue",
+      "beforeSha256": "fa13f66be7ca4febd1534c6da0c6ef795f2883d958e33ccdd1aed3d668d1093e",
+      "afterSha256": "3e24060749be5a4289f49dddb4649fd5bc3f9c3e6c2401feb764559a6e86cd49",
+      "scriptsBeforeSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "e4bc7267dce044570d2811d239313c91a33519f07257649261e0c56970813bbc"
+      ],
+      "scriptsAfterSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "e4bc7267dce044570d2811d239313c91a33519f07257649261e0c56970813bbc"
+      ],
+      "stylesUnchanged": true,
+      "businessScriptUnchanged": true,
+      "scriptDifference": "Byte-identical",
+      "templateDifference": "Motion marker attributes only; original template proven identical after removing markers.",
+      "vueTemplateCompiled": true,
+      "vueCssCompiled": true
+    },
+    {
+      "file": "src/components/SceneSideBar.vue",
+      "beforeSha256": "67959af002330467c27f70ca2259e50337573d53bf8549cc523eccc6af063031",
+      "afterSha256": "474b13f40716946fe22a1aaab55444fd406644aa78b7232521c6535ff66ca17b",
+      "scriptsBeforeSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "1cda027fa8b9707ad41e0769e59f5f9774aecb58aece51962bb538f38a9a484d"
+      ],
+      "scriptsAfterSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "1cda027fa8b9707ad41e0769e59f5f9774aecb58aece51962bb538f38a9a484d"
+      ],
+      "stylesUnchanged": true,
+      "businessScriptUnchanged": true,
+      "scriptDifference": "Byte-identical",
+      "templateDifference": "Motion marker attributes only; original template proven identical after removing markers.",
+      "vueTemplateCompiled": true,
+      "vueCssCompiled": true
+    },
+    {
+      "file": "src/components/SceneTabs.vue",
+      "beforeSha256": "9c8214d28b8a3414c5106d0669e568e3ddd3d791de025bca269705457b72a250",
+      "afterSha256": "06094c94bdf9c67342341ef9649bb315687e33d31cbed152bdc8d59a331dc4e1",
+      "scriptsBeforeSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "d160c1496e6366eb3847f0a93525469cb90ed184c2bc08d3d88890b62189d1e6"
+      ],
+      "scriptsAfterSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "d160c1496e6366eb3847f0a93525469cb90ed184c2bc08d3d88890b62189d1e6"
+      ],
+      "stylesUnchanged": true,
+      "businessScriptUnchanged": true,
+      "scriptDifference": "Byte-identical",
+      "templateDifference": "Motion marker attributes only; original template proven identical after removing markers.",
+      "vueTemplateCompiled": true,
+      "vueCssCompiled": true
+    },
+    {
+      "file": "src/components/ScriptConversionPanel.vue",
+      "beforeSha256": "adcfbea27eb0517d9bafbf062870f2d1983e3ed575b364a5e1d37b97aa8a6916",
+      "afterSha256": "760d7ef1c9b095b1f0d54109447172c3871965d96d8dd5579501e2381a07eb50",
+      "scriptsBeforeSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "6c8ead87cde015c85d447d248098c426195ac383d41dd8cb85165e4b1460fca0"
+      ],
+      "scriptsAfterSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "6c8ead87cde015c85d447d248098c426195ac383d41dd8cb85165e4b1460fca0"
+      ],
+      "stylesUnchanged": true,
+      "businessScriptUnchanged": true,
+      "scriptDifference": "Byte-identical",
+      "templateDifference": "Motion marker attributes only; original template proven identical after removing markers.",
+      "vueTemplateCompiled": true,
+      "vueCssCompiled": true
+    },
+    {
+      "file": "src/components/ScriptStudio.vue",
+      "beforeSha256": "1f622738d7467c5886e32fc037d41bdd21d82f011e01da970c9d18ce3ae5c6ea",
+      "afterSha256": "f25c795731e41109a3e9316fce11b5eef84517842427ad3bcc1bb95c9ba36c2c",
+      "scriptsBeforeSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "1ffa020b30f107317188d281a6006d881bb3fb0f0dd005c9b9d52eb2d31a54bc"
+      ],
+      "scriptsAfterSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "1ffa020b30f107317188d281a6006d881bb3fb0f0dd005c9b9d52eb2d31a54bc"
+      ],
+      "stylesUnchanged": true,
+      "businessScriptUnchanged": true,
+      "scriptDifference": "Byte-identical",
+      "templateDifference": "Motion marker attributes only; original template proven identical after removing markers.",
+      "vueTemplateCompiled": true,
+      "vueCssCompiled": true
+    },
+    {
+      "file": "src/components/ScriptWorkspace.vue",
+      "beforeSha256": "59ba65f053a4aea1a7d3ef4645cae11f228b3a2a6ac77b1301ee850f28c4843d",
+      "afterSha256": "cdd634c7b3b62acefcabebb85995956407e17d51b8dcf6dbfc37d01d2bf0fb43",
+      "scriptsBeforeSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "f49950735a900c45979d3347e4b73ccb715e46a15e4d024b5668a8c8e7d9e53e"
+      ],
+      "scriptsAfterSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "f49950735a900c45979d3347e4b73ccb715e46a15e4d024b5668a8c8e7d9e53e"
+      ],
+      "stylesUnchanged": true,
+      "businessScriptUnchanged": true,
+      "scriptDifference": "Byte-identical",
+      "templateDifference": "Motion marker attributes only; original template proven identical after removing markers.",
+      "vueTemplateCompiled": true,
+      "vueCssCompiled": true
+    },
+    {
+      "file": "src/components/SimulationStatusPanel17.vue",
+      "beforeSha256": "7f25c38ef1acf18ffc496bf498f24e4d273006727071347a1564354e9ded0da5",
+      "afterSha256": "158d3ad11543655afb00e96e26091322344aae5c35378e43c0eada54550c4b59",
+      "scriptsBeforeSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "8def6bdf1f4d6b920127ba41a081e8fa0f29e68fb612108d6f0a98fb0a8e36fa"
+      ],
+      "scriptsAfterSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "8def6bdf1f4d6b920127ba41a081e8fa0f29e68fb612108d6f0a98fb0a8e36fa"
+      ],
+      "stylesUnchanged": true,
+      "businessScriptUnchanged": true,
+      "scriptDifference": "Byte-identical",
+      "templateDifference": "Motion marker attributes only; original template proven identical after removing markers.",
+      "vueTemplateCompiled": true,
+      "vueCssCompiled": true
+    },
+    {
+      "file": "src/components/StudioDraftConflict.vue",
+      "beforeSha256": "3aebed9924483065fd31ee4c72a1bd1235f422462e8b7dbe3e4f65c6ddd70812",
+      "afterSha256": "cbe83a66c1fafd551fb1204169c0be659d3e1122fd60a15c79ca2e1d5d88a4b1",
+      "scriptsBeforeSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "fb282d016907a4ccbefbd077d3db0fd972119475f00770f46e2884415f987b93"
+      ],
+      "scriptsAfterSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "fb282d016907a4ccbefbd077d3db0fd972119475f00770f46e2884415f987b93"
+      ],
+      "stylesUnchanged": true,
+      "businessScriptUnchanged": true,
+      "scriptDifference": "Byte-identical",
+      "templateDifference": "Motion marker attributes only; original template proven identical after removing markers.",
+      "vueTemplateCompiled": true,
+      "vueCssCompiled": true
+    },
+    {
+      "file": "src/components/TeamWorkflowPanel.vue",
+      "beforeSha256": "d4c7d4413f090e2516e8feaa26d2789a38262770fc56dca82d419ca55abbb1d5",
+      "afterSha256": "730c5616d497b5b458687c62bb367984964547a4dfc0949fa5605f1c3c30acdf",
+      "scriptsBeforeSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "08e470723441016247a8e77ec1518f9886c27aa87b549113c4741e5ec60bdfbe"
+      ],
+      "scriptsAfterSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "08e470723441016247a8e77ec1518f9886c27aa87b549113c4741e5ec60bdfbe"
+      ],
+      "stylesUnchanged": true,
+      "businessScriptUnchanged": true,
+      "scriptDifference": "Byte-identical",
+      "templateDifference": "Motion marker attributes only; original template proven identical after removing markers.",
+      "vueTemplateCompiled": true,
+      "vueCssCompiled": true
+    },
+    {
+      "file": "src/components/TilemapPanel.vue",
+      "beforeSha256": "6f34ed9dcc2ed0347d9e07f22b03891281b00fc19d14e166da2a0459a435aee2",
+      "afterSha256": "eff71e60eec5cac3717babf48ed79a8ea38dfc2560e4cb1188a3c9aeb69e9d6e",
+      "scriptsBeforeSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "d51cde11e086c32f621c8ee84d35ad3e221659f6c065dbacbc48f0e6e7088d51"
+      ],
+      "scriptsAfterSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "d51cde11e086c32f621c8ee84d35ad3e221659f6c065dbacbc48f0e6e7088d51"
+      ],
+      "stylesUnchanged": true,
+      "businessScriptUnchanged": true,
+      "scriptDifference": "Byte-identical",
+      "templateDifference": "Motion marker attributes only; original template proven identical after removing markers.",
+      "vueTemplateCompiled": true,
+      "vueCssCompiled": true
+    },
+    {
+      "file": "src/components/TimelineButtonAction.vue",
+      "beforeSha256": "c3ba5ed60e3c4b44d4480e515f53e9f2180fb00aab41e521de038a562231f8fa",
+      "afterSha256": "161e89c799d65f771145867b226b2e5c4b928b21cd132fc02a7dd2a05cf5e948",
+      "scriptsBeforeSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "340d69459f45fb962eab3522f0e69c7670d178731ead523e4ddd44808ac693db"
+      ],
+      "scriptsAfterSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "340d69459f45fb962eab3522f0e69c7670d178731ead523e4ddd44808ac693db"
+      ],
+      "stylesUnchanged": true,
+      "businessScriptUnchanged": true,
+      "scriptDifference": "Byte-identical",
+      "templateDifference": "Motion marker attributes only; original template proven identical after removing markers.",
+      "vueTemplateCompiled": true,
+      "vueCssCompiled": true
+    },
+    {
+      "file": "src/components/ToolBar.vue",
+      "beforeSha256": "78e6385adef62b656b295116deb455b5f29437d3ed7d64c59fb7f0f5749afca7",
+      "afterSha256": "41ced364811b9b245e015f4d637a999cc789894a34cf231e176f5c9bd0743298",
+      "scriptsBeforeSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "b7d310f024b5ad916593267cdfcf40a0208204139b7c65b180786881d4c17d69"
+      ],
+      "scriptsAfterSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "b7d310f024b5ad916593267cdfcf40a0208204139b7c65b180786881d4c17d69"
+      ],
+      "stylesUnchanged": true,
+      "businessScriptUnchanged": true,
+      "scriptDifference": "Byte-identical",
+      "templateDifference": "Motion marker attributes only; original template proven identical after removing markers.",
+      "vueTemplateCompiled": true,
+      "vueCssCompiled": true
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "beforeSha256": "6fa794e85c5f43b222a9eb58b779371c379634c97aa518fb1f5152c8616cbbef",
+      "afterSha256": "c03a5bdd2dded0112c62ab272f3be82115bbd24a6e496463b3b08e9c85b75403",
+      "scriptsBeforeSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "587823ea177762ddaf188fd1c4734d3e5e03f03278009a41881d7dc1a0c86cf9"
+      ],
+      "scriptsAfterSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "587823ea177762ddaf188fd1c4734d3e5e03f03278009a41881d7dc1a0c86cf9"
+      ],
+      "stylesUnchanged": true,
+      "businessScriptUnchanged": true,
+      "scriptDifference": "Byte-identical",
+      "templateDifference": "Motion marker attributes only; original template proven identical after removing markers.",
+      "vueTemplateCompiled": true,
+      "vueCssCompiled": true
+    },
+    {
+      "file": "src/components/WorkspaceBar.vue",
+      "beforeSha256": "c0579f3d737597ba5629a1bd8602f94895d78ecbc4c1e826f6f5abb90d1d00a6",
+      "afterSha256": "2354819b214dd6780144aad43b35a8c9c2e5c141907b21305c5bc4152c04da11",
+      "scriptsBeforeSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "ed34bafbecdfa5897b65f60a5cdecfb6f40b1ec6e91ae2c4f656858329adf38d"
+      ],
+      "scriptsAfterSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "ed34bafbecdfa5897b65f60a5cdecfb6f40b1ec6e91ae2c4f656858329adf38d"
+      ],
+      "stylesUnchanged": true,
+      "businessScriptUnchanged": true,
+      "scriptDifference": "Byte-identical",
+      "templateDifference": "Motion marker attributes only; original template proven identical after removing markers.",
+      "vueTemplateCompiled": true,
+      "vueCssCompiled": true
+    },
+    {
+      "file": "src/components/WorldComponentsInspector.vue",
+      "beforeSha256": "1a48986c292734154de5c7f970f2e913c6ed4cb4c73d21215d32304a8276e9b4",
+      "afterSha256": "db5897252514018a38a162a395b3e485dfad7e75ca2a5840c75e0abdbed723ae",
+      "scriptsBeforeSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "ef25ad61875c9a7fd77447b4cc71507a2551e9ba821bbe9ba4a072f6560caa0a"
+      ],
+      "scriptsAfterSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "ef25ad61875c9a7fd77447b4cc71507a2551e9ba821bbe9ba4a072f6560caa0a"
+      ],
+      "stylesUnchanged": true,
+      "businessScriptUnchanged": true,
+      "scriptDifference": "Byte-identical",
+      "templateDifference": "Motion marker attributes only; original template proven identical after removing markers.",
+      "vueTemplateCompiled": true,
+      "vueCssCompiled": true
+    },
+    {
+      "file": "src/components/WorldToolsPanel.vue",
+      "beforeSha256": "52596db09781a7d2984b1aecbbe505c7ef00eeecee14c3892a4ba19319b02be7",
+      "afterSha256": "993c67932f49aff69b04f9c8ba5c10d69aa51e1f8c8a182a997e6b746ccb20ba",
+      "scriptsBeforeSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "ecb73f5b046304338b3b38587af5107374026ee1c664095841380c5f685c2f63"
+      ],
+      "scriptsAfterSha256": [
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "ecb73f5b046304338b3b38587af5107374026ee1c664095841380c5f685c2f63"
+      ],
+      "stylesUnchanged": true,
+      "businessScriptUnchanged": true,
+      "scriptDifference": "Byte-identical",
+      "templateDifference": "Motion marker attributes only; original template proven identical after removing markers.",
+      "vueTemplateCompiled": true,
+      "vueCssCompiled": true
+    }
+  ],
+  "edits": [
+    {
+      "file": "src/components/AndroidDeliveryPanel.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 42,
+      "before": "<details open>",
+      "after": "<details data-ui-motion-disclosure open>",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/AndroidDeliveryPanel.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 43,
+      "before": "<details>",
+      "after": "<details data-ui-motion-disclosure>",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/AndroidDeliveryPanel.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 44,
+      "before": "<details open>",
+      "after": "<details data-ui-motion-disclosure open>",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/AndroidDeliveryPanel.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 45,
+      "before": "<details v-if=\"androidDeliveryState.output\" open>",
+      "after": "<details data-ui-motion-disclosure v-if=\"androidDeliveryState.output\" open>",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/AnimationPanel.vue",
+      "kind": "native-popup-marker",
+      "lineBefore": 5,
+      "before": "<details v-transient-popover class=\"create-menu\">",
+      "after": "<details data-ui-motion-popover v-transient-popover class=\"create-menu\">",
+      "reason": "Actual direct popup children are separate surfaces; opacity/transform presence must not animate details height or alter popup overflow.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/AnimationPanel.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 18,
+      "before": "<details v-if=\"selectedAsset\" class=\"binding-details\">",
+      "after": "<details data-ui-motion-disclosure v-if=\"selectedAsset\" class=\"binding-details\">",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/AnimationPanel.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 24,
+      "before": "<details v-if=\"draftInspection.issues.length\">",
+      "after": "<details data-ui-motion-disclosure v-if=\"draftInspection.issues.length\">",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/AnimationPanel.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 92,
+      "before": "<details v-if=\"editingToolsOpen\" open class=\"editing-tools\">",
+      "after": "<details data-ui-motion-disclosure v-if=\"editingToolsOpen\" open class=\"editing-tools\">",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/AnimationPanel.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 100,
+      "before": "<details :open=\"clip.events.length > 0\">",
+      "after": "<details data-ui-motion-disclosure :open=\"clip.events.length > 0\">",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/AnimationPanel.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 101,
+      "before": "<details :open=\"clip.markers.length > 0\">",
+      "after": "<details data-ui-motion-disclosure :open=\"clip.markers.length > 0\">",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/AnimationPanel.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 102,
+      "before": "<details :open=\"clip.commandTracks.length > 0\">",
+      "after": "<details data-ui-motion-disclosure :open=\"clip.commandTracks.length > 0\">",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/AnimationPanel.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 103,
+      "before": "<details :open=\"clip.spriteFrames.length > 0\">",
+      "after": "<details data-ui-motion-disclosure :open=\"clip.spriteFrames.length > 0\">",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/AnimationPanel.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 105,
+      "before": "<details :open=\"selectedAnimationIssues.length > 0\">",
+      "after": "<details data-ui-motion-disclosure :open=\"selectedAnimationIssues.length > 0\">",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/AnimationPanel.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 144,
+      "before": "<details open>",
+      "after": "<details data-ui-motion-disclosure open>",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/AnimationPanel.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 147,
+      "before": "<details>",
+      "after": "<details data-ui-motion-disclosure>",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/AnimationPanel.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 156,
+      "before": "<details open>",
+      "after": "<details data-ui-motion-disclosure open>",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/AnimationPanel.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 156,
+      "before": "<details v-if=\"rig.attachments.length\">",
+      "after": "<details data-ui-motion-disclosure v-if=\"rig.attachments.length\">",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/AnimationPanel.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 165,
+      "before": "<details open>",
+      "after": "<details data-ui-motion-disclosure open>",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/AnimationPanel.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 165,
+      "before": "<details open class=\"timeline-diagnostics\">",
+      "after": "<details data-ui-motion-disclosure open class=\"timeline-diagnostics\">",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/AutomationStudio.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 10,
+      "before": "<details class=\"permissions\" open>",
+      "after": "<details data-ui-motion-disclosure class=\"permissions\" open>",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/ConfigPanel.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 80,
+      "before": "<details v-if=\"prefabComparison.length\" class=\"prefab-compare\">",
+      "after": "<details data-ui-motion-disclosure v-if=\"prefabComparison.length\" class=\"prefab-compare\">",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/ConfigPanel.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 84,
+      "before": "<details v-if=\"prefabConflicts.length\" class=\"prefab-compare prefab-conflicts\" open>",
+      "after": "<details data-ui-motion-disclosure v-if=\"prefabConflicts.length\" class=\"prefab-compare prefab-conflicts\" open>",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/ConnectionBuilder.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 60,
+      "before": "<details v-if=\"drawingComplete\" class=\"advanced-physics\">",
+      "after": "<details data-ui-motion-disclosure v-if=\"drawingComplete\" class=\"advanced-physics\">",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/ContentAssetInspector.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 37,
+      "before": "<details v-if=\"frameError\" class=\"resource-error\" open>",
+      "after": "<details data-ui-motion-disclosure v-if=\"frameError\" class=\"resource-error\" open>",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/EditorBottomPanel.vue",
+      "kind": "native-popup-marker",
+      "lineBefore": 47,
+      "before": "<details ref=\"assetOverflow\" class=\"asset-overflow\">",
+      "after": "<details data-ui-motion-popover ref=\"assetOverflow\" class=\"asset-overflow\">",
+      "reason": "Actual direct popup children are separate surfaces; opacity/transform presence must not animate details height or alter popup overflow.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/EditorBottomPanel.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 77,
+      "before": "<details v-if=\"importJobs.length\" class=\"import-queue\" :open=\"importJobs.some(job=>!['complete','cancelled','failed'].includes(job.status))\" aria-live=\"polite\">",
+      "after": "<details data-ui-motion-disclosure v-if=\"importJobs.length\" class=\"import-queue\" :open=\"importJobs.some(job=>!['complete','cancelled','failed'].includes(job.status))\" aria-live=\"polite\">",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/EditorBottomPanel.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 84,
+      "before": "<details v-if=\"job.logs.length\">",
+      "after": "<details data-ui-motion-disclosure v-if=\"job.logs.length\">",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/EditorBottomPanel.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 106,
+      "before": "<details v-if=\"assetBatch.failed\">",
+      "after": "<details data-ui-motion-disclosure v-if=\"assetBatch.failed\">",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/EditorBottomPanel.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 106,
+      "before": "<details>",
+      "after": "<details data-ui-motion-disclosure>",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/EditorBottomPanel.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 146,
+      "before": "<details v-if=\"assetOperationError\" class=\"pipeline-error\" open>",
+      "after": "<details data-ui-motion-disclosure v-if=\"assetOperationError\" class=\"pipeline-error\" open>",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/EditorBottomPanel.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 146,
+      "before": "<details>",
+      "after": "<details data-ui-motion-disclosure>",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/EditorBottomPanel.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 155,
+      "before": "<details class=\"collection-membership\">",
+      "after": "<details data-ui-motion-disclosure class=\"collection-membership\">",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/EditorBottomPanel.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 161,
+      "before": "<details class=\"asset-technical\">",
+      "after": "<details data-ui-motion-disclosure class=\"asset-technical\">",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/EditorBottomPanel.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 284,
+      "before": "<details class=\"mapping-editor\">",
+      "after": "<details data-ui-motion-disclosure class=\"mapping-editor\">",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/EditorBottomPanel.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 305,
+      "before": "<details v-if=\"selectedContentClosure.length\" class=\"content-closure\">",
+      "after": "<details data-ui-motion-disclosure v-if=\"selectedContentClosure.length\" class=\"content-closure\">",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/EditorFeedback.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 11,
+      "before": "<details v-if=\"task.error || task.logs.length || task.resources.length\">",
+      "after": "<details data-ui-motion-disclosure v-if=\"task.error || task.logs.length || task.resources.length\">",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/ErrorRecovery.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 6,
+      "before": "<details v-if=\"fault.stack\">",
+      "after": "<details data-ui-motion-disclosure v-if=\"fault.stack\">",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/EventSheetEditor.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 29,
+      "before": "<details class=\"event-provenance\">",
+      "after": "<details data-ui-motion-disclosure class=\"event-provenance\">",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/ExternalChangeDialog.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 3,
+      "before": "<details open>",
+      "after": "<details data-ui-motion-disclosure open>",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/MaterialGraphEditor.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 44,
+      "before": "<details class=\"generated-source\">",
+      "after": "<details data-ui-motion-disclosure class=\"generated-source\">",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 43,
+      "before": "<details>",
+      "after": "<details data-ui-motion-disclosure>",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/ObjectBlueprintEditor.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 20,
+      "before": "<details data-blueprint-field=\"composition\" class=\"blueprint-composition\">",
+      "after": "<details data-ui-motion-disclosure data-blueprint-field=\"composition\" class=\"blueprint-composition\">",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/ObjectBlueprintEditor.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 22,
+      "before": "<details class=\"blueprint-provenance\" open>",
+      "after": "<details data-ui-motion-disclosure class=\"blueprint-provenance\" open>",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/ObjectOwnershipPanel.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 3,
+      "before": "<details class=\"object-ownership\" @toggle=\"expanded=($event.target as HTMLDetailsElement).open\" @change.stop>",
+      "after": "<details data-ui-motion-disclosure class=\"object-ownership\" @ui-disclosure-change=\"ownershipDisclosureChanged\" @toggle=\"ownershipDisclosureToggled\" @change.stop>",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/ObjectOwnershipPanel.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 12,
+      "before": "<details open>",
+      "after": "<details data-ui-motion-disclosure open>",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/ObjectOwnershipPanel.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 13,
+      "before": "<details v-if=\"view.composition.length\">",
+      "after": "<details data-ui-motion-disclosure v-if=\"view.composition.length\">",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/ObjectOwnershipPanel.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 14,
+      "before": "<details open>",
+      "after": "<details data-ui-motion-disclosure open>",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/ObjectOwnershipPanel.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 15,
+      "before": "<details>",
+      "after": "<details data-ui-motion-disclosure>",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/ObjectOwnershipPanel.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 16,
+      "before": "<details v-if=\"view.runtime.active\">",
+      "after": "<details data-ui-motion-disclosure v-if=\"view.runtime.active\">",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/ObjectOwnershipPanel.vue",
+      "kind": "lazy-owner-refresh-import",
+      "lineBefore": 22,
+      "before": "import { computed, onBeforeUnmount, ref } from 'vue'",
+      "after": "import { computed, nextTick, onBeforeUnmount, ref } from 'vue'\r\nimport { refreshDisclosure } from '../ui/motion'",
+      "reason": "Reuse the existing shared height owner after Vue mounts the lazy body; refresh reads the latest desired state and does not dispatch another logical event."
+    },
+    {
+      "file": "src/components/ObjectOwnershipPanel.vue",
+      "kind": "lazy-exit-presence",
+      "lineBefore": 5,
+      "before": "v-if=\"expanded\" class=\"ownership-body\"",
+      "after": "v-if=\"bodyVisible\" class=\"ownership-body\"",
+      "reason": "Keep outgoing lazy body mounted until native open=false after the shared exit; do not turn a visual exit into an immediate unmount."
+    },
+    {
+      "file": "src/components/ObjectOwnershipPanel.vue",
+      "kind": "consumer-ui-state",
+      "lineBefore": 36,
+      "before": "const expanded=ref(false),revision=ref(0)",
+      "after": "const expanded=ref(false),bodyVisible=ref(false),revision=ref(0)",
+      "reason": "Separate immediately committed logical expanded state from outgoing rendered body visibility."
+    },
+    {
+      "file": "src/components/ObjectOwnershipPanel.vue",
+      "kind": "consumer-ui-state",
+      "lineBefore": 37,
+      "before": "const canEdit=computed",
+      "after": "/** 同步最新展开意图；关闭时保留出场内容，运行时刷新立即跟随逻辑状态。 */\r\nfunction ownershipDisclosureChanged(event: Event) {\r\n  if (event.target !== event.currentTarget) return\r\n  const { open } = (event as CustomEvent<{ open: boolean }>).detail\r\n  expanded.value = open\r\n  if (open) {\r\n    const details = event.currentTarget as HTMLDetailsElement\r\n    bodyVisible.value = true\r\n    void nextTick(() => refreshDisclosure(details))\r\n  }\r\n}\r\n/** 原生最终关闭后卸载惰性内容；共享控制器出场期间的 open 不覆盖逻辑关闭意图。 */\r\nfunction ownershipDisclosureToggled(event: Event) {\r\n  if (event.target !== event.currentTarget) return\r\n  const details = event.currentTarget as HTMLDetailsElement\r\n  expanded.value = details.dataset.uiDisclosureOpen === undefined ? details.open : details.dataset.uiDisclosureOpen === 'true'\r\n  bodyVisible.value = details.open\r\n}\r\nconst canEdit=computed",
+      "reason": "Handle the shared synchronous logical intent and final native close separately; guard descendant events; existing timer and provenance/data commands remain unchanged."
+    },
+    {
+      "file": "src/components/PhysicsSettingsPanel.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 65,
+      "before": "<details class=\"advanced-matrix\">",
+      "after": "<details data-ui-motion-disclosure class=\"advanced-matrix\">",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/PresentationPanel.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 14,
+      "before": "<details open class=\"ui-hierarchy\">",
+      "after": "<details data-ui-motion-disclosure open class=\"ui-hierarchy\">",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/PresentationPanel.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 40,
+      "before": "<details>",
+      "after": "<details data-ui-motion-disclosure>",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/PresentationPanel.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 79,
+      "before": "<details class=\"audition-mix\">",
+      "after": "<details data-ui-motion-disclosure class=\"audition-mix\">",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/PresentationPanel.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 82,
+      "before": "<details>",
+      "after": "<details data-ui-motion-disclosure>",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/PresentationPanel.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 83,
+      "before": "<details>",
+      "after": "<details data-ui-motion-disclosure>",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/PresentationPanel.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 84,
+      "before": "<details>",
+      "after": "<details data-ui-motion-disclosure>",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/PresentationPanel.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 91,
+      "before": "<details open class=\"audio-clock\">",
+      "after": "<details data-ui-motion-disclosure open class=\"audio-clock\">",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/PresentationPanel.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 98,
+      "before": "<details open>",
+      "after": "<details data-ui-motion-disclosure open>",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/PresentationPanel.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 99,
+      "before": "<details open>",
+      "after": "<details data-ui-motion-disclosure open>",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/ProjectHealthPanel.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 24,
+      "before": "<details>",
+      "after": "<details data-ui-motion-disclosure>",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/ProjectHealthPanel.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 31,
+      "before": "<details v-if=\"trash.items.length\" open>",
+      "after": "<details data-ui-motion-disclosure v-if=\"trash.items.length\" open>",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/ProjectManager.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 102,
+      "before": "<details v-if=\"state.pendingUpgrade.preview.migrationSteps.length\" class=\"migration-steps\">",
+      "after": "<details data-ui-motion-disclosure v-if=\"state.pendingUpgrade.preview.migrationSteps.length\" class=\"migration-steps\">",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/RenderingPanel.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 53,
+      "before": "<details v-if=\"advancedMode\" open>",
+      "after": "<details data-ui-motion-disclosure v-if=\"advancedMode\" open>",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/RenderingPanel.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 104,
+      "before": "<details>",
+      "after": "<details data-ui-motion-disclosure>",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/SaveDataSettings.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 12,
+      "before": "<details>",
+      "after": "<details data-ui-motion-disclosure>",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/SceneSideBar.vue",
+      "kind": "native-popup-marker",
+      "lineBefore": 28,
+      "before": "<details class=\"hierarchy-filter-menu\">",
+      "after": "<details data-ui-motion-popover class=\"hierarchy-filter-menu\">",
+      "reason": "Actual direct popup children are separate surfaces; opacity/transform presence must not animate details height or alter popup overflow.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/SceneTabs.vue",
+      "kind": "native-popup-marker",
+      "lineBefore": 13,
+      "before": "<details ref=\"createMenu\" class=\"scene-menu\">",
+      "after": "<details data-ui-motion-popover ref=\"createMenu\" class=\"scene-menu\">",
+      "reason": "Actual direct popup children are separate surfaces; opacity/transform presence must not animate details height or alter popup overflow.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/ScriptConversionPanel.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 13,
+      "before": "<details v-if=\"graphDiagnosticMessage(diagnostic,preferencesState.locale)!==diagnostic.message\">",
+      "after": "<details data-ui-motion-disclosure v-if=\"graphDiagnosticMessage(diagnostic,preferencesState.locale)!==diagnostic.message\">",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/ScriptConversionPanel.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 17,
+      "before": "<details :open=\"gate !== 'ready'\">",
+      "after": "<details data-ui-motion-disclosure :open=\"gate !== 'ready'\">",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/ScriptStudio.vue",
+      "kind": "native-popup-marker",
+      "lineBefore": 14,
+      "before": "<details class=\"studio-more\" v-transient-popover>",
+      "after": "<details data-ui-motion-popover class=\"studio-more\" v-transient-popover>",
+      "reason": "Actual direct popup children are separate surfaces; opacity/transform presence must not animate details height or alter popup overflow.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/ScriptStudio.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 131,
+      "before": "<details v-if=\"reloadHistory.length\">",
+      "after": "<details data-ui-motion-disclosure v-if=\"reloadHistory.length\">",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/ScriptWorkspace.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 6,
+      "before": "<details class=\"logic-help\">",
+      "after": "<details data-ui-motion-disclosure class=\"logic-help\">",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/SimulationStatusPanel17.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 4,
+      "before": "<details>",
+      "after": "<details data-ui-motion-disclosure>",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/StudioDraftConflict.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 5,
+      "before": "<details>",
+      "after": "<details data-ui-motion-disclosure>",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/TeamWorkflowPanel.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 20,
+      "before": "<details>",
+      "after": "<details data-ui-motion-disclosure>",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/TilemapPanel.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 5,
+      "before": "<details class=\"tilemap-setup\">",
+      "after": "<details data-ui-motion-disclosure class=\"tilemap-setup\">",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/TimelineButtonAction.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 3,
+      "before": "<details class=\"timeline-button-action\" open>",
+      "after": "<details data-ui-motion-disclosure class=\"timeline-button-action\" open>",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/ToolBar.vue",
+      "kind": "native-popup-marker",
+      "lineBefore": 9,
+      "before": "<details class=\"tool-menu authoring-menu\">",
+      "after": "<details data-ui-motion-popover class=\"tool-menu authoring-menu\">",
+      "reason": "Actual direct popup children are separate surfaces; opacity/transform presence must not animate details height or alter popup overflow.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/ToolBar.vue",
+      "kind": "native-popup-marker",
+      "lineBefore": 31,
+      "before": "<details class=\"tool-menu\">",
+      "after": "<details data-ui-motion-popover class=\"tool-menu\">",
+      "reason": "Actual direct popup children are separate surfaces; opacity/transform presence must not animate details height or alter popup overflow.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/ToolBar.vue",
+      "kind": "native-popup-marker",
+      "lineBefore": 43,
+      "before": "<details class=\"tool-menu snap-menu\">",
+      "after": "<details data-ui-motion-popover class=\"tool-menu snap-menu\">",
+      "reason": "Actual direct popup children are separate surfaces; opacity/transform presence must not animate details height or alter popup overflow.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/ToolBar.vue",
+      "kind": "native-popup-marker",
+      "lineBefore": 50,
+      "before": "<details class=\"tool-menu guide-menu\">",
+      "after": "<details data-ui-motion-popover class=\"tool-menu guide-menu\">",
+      "reason": "Actual direct popup children are separate surfaces; opacity/transform presence must not animate details height or alter popup overflow.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "kind": "native-popup-marker",
+      "lineBefore": 16,
+      "before": "<details data-ui-motion-disclosure class=\"graph-more\">",
+      "after": "<details data-ui-motion-popover class=\"graph-more\">",
+      "reason": "Header child outside graph-transform; direct .editing-actions is position:absolute, z-index:40, top:100%; pointer/data graph geometry is untouched.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 142,
+      "before": "<details v-if=\"graphDiagnosticMessage(diagnostic,preferencesState.locale)!==diagnostic.message\">",
+      "after": "<details data-ui-motion-disclosure v-if=\"graphDiagnosticMessage(diagnostic,preferencesState.locale)!==diagnostic.message\">",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/WorkspaceBar.vue",
+      "kind": "native-popup-marker",
+      "lineBefore": 21,
+      "before": "<details v-transient-popover class=\"workspace-menu layout-menu\">",
+      "after": "<details data-ui-motion-popover v-transient-popover class=\"workspace-menu layout-menu\">",
+      "reason": "Actual direct popup children are separate surfaces; opacity/transform presence must not animate details height or alter popup overflow.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/WorkspaceBar.vue",
+      "kind": "native-popup-marker",
+      "lineBefore": 32,
+      "before": "<details v-transient-popover class=\"workspace-menu command-menu\">",
+      "after": "<details data-ui-motion-popover v-transient-popover class=\"workspace-menu command-menu\">",
+      "reason": "Actual direct popup children are separate surfaces; opacity/transform presence must not animate details height or alter popup overflow.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/WorldComponentsInspector.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 17,
+      "before": "<details>",
+      "after": "<details data-ui-motion-disclosure>",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    },
+    {
+      "file": "src/components/WorldToolsPanel.vue",
+      "kind": "native-content-marker",
+      "lineBefore": 49,
+      "before": "<details v-if=\"check.status !== 'ready'\">",
+      "after": "<details data-ui-motion-disclosure v-if=\"check.status !== 'ready'\">",
+      "reason": "This exact native content element owns independent disclosure; ancestor panel/modal presence is a different interaction.",
+      "invariant": "All original open/conditional refs, action handlers, bindings and business values remain unchanged, apart from the explicitly logged ownership UI consumer."
+    }
+  ]
+}

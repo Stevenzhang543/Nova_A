@@ -22,7 +22,9 @@ async function updateIndicator(animate = true) {
   if (!root.getBoundingClientRect().width) return
   const before = captureRects([bar])
   const rr = root.getBoundingClientRect(), ar = active.getBoundingClientRect()
-  indicatorBounds.value = { left: ar.left - rr.left + root.scrollLeft, width: ar.width }
+  const target = { left: ar.left - rr.left + root.scrollLeft, width: ar.width }
+  if (animate && Math.abs(target.left - indicatorBounds.value.left) < .1 && Math.abs(target.width - indicatorBounds.value.width) < .1) return
+  indicatorBounds.value = target
   await nextTick()
   if (revision !== generation || suspended) return
   if (animate) animateReorder(before, [bar])
@@ -41,7 +43,7 @@ onMounted(observe)
 onActivated(observe)
 onDeactivated(suspend)
 onBeforeUnmount(suspend)
-watch(() => [props.modelValue, props.items], () => { void updateIndicator() }, { deep: true, flush: 'post' })
+watch([() => props.modelValue, () => JSON.stringify(props.items.map(item => [item.id, item.label, item.icon, Boolean(item.disabled), item.tabId, item.controls]))], () => { void updateIndicator() }, { flush: 'post' })
 function select(value: string) { emit('update:modelValue', value); emit('change', value) }
 function navigate(event: KeyboardEvent) {
   if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return

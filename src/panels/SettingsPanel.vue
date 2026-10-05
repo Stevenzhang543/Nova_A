@@ -116,7 +116,7 @@
               <UiButton icon="clear" class="icon-action danger" :title="t('removeInputAction')" @click="removeInputAction(actionIndex)" />
               <UiButton icon="duplicate" class="icon-action" :label="t('duplicate')" @click="duplicateInputAction(actionIndex)" />
             </div>
-            <details v-if="!compactInputMap" class="action-advanced">
+            <details data-ui-motion-disclosure v-if="!compactInputMap" class="action-advanced">
               <summary>{{ t('actionBehavior') }}</summary>
               <div class="action-advanced-grid">
                 <UiPropertyRow :label="t('enabled')"><input v-model="action.enabled" type="checkbox" @change="commitInputMap"></UiPropertyRow>
@@ -145,7 +145,7 @@
               <UiPropertyRow :label="t('gamepadIndex')" v-if="binding.device.startsWith('gamepad')" class="binding-field"><NumericExpressionInput v-model="binding.gamepad" :aria-label="t('gamepadIndex')" :minimum="0" :maximum="15" :step="1" @change="commitInputMap" :resource-key="'project:input:' + action.name + ':' + actionIndex + ':binding:' + bindingIndex + ':binding.gamepad'" /></UiPropertyRow>
               <UiPropertyRow :label="t('deadzone')" v-if="binding.device === 'gamepad-axis'" class="binding-field"><NumericExpressionInput v-model="binding.deadzone" :aria-label="t('deadzone')" :minimum="0" :maximum="0.99" :step="0.01" @change="commitInputMap" :resource-key="'project:input:' + action.name + ':' + actionIndex + ':binding:' + bindingIndex + ':binding.deadzone'" /></UiPropertyRow>
               <UiButton icon="clear" class="icon-action danger" :title="t('removeBinding')" @click="removeInputBinding(actionIndex, bindingIndex)" />
-              <details v-if="!compactInputMap" class="binding-advanced"><summary>{{ t('advanced') }}</summary><UiPropertyRow :label="(t('threshold'))"><NumericExpressionInput v-model="binding.threshold" :minimum="0" :maximum="1" :step="0.01" @change="commitInputMap" :resource-key="'project:input:' + action.name + ':' + actionIndex + ':binding:' + bindingIndex + ':binding.threshold'" /></UiPropertyRow><UiPropertyRow :label="(t('invert'))"><input v-model="binding.invert" type="checkbox" @change="commitInputMap"></UiPropertyRow><UiPropertyRow :label="(t('responseCurve'))"><select v-model="binding.responseCurve" @change="commitInputMap"><option>linear</option><option>square</option><option>cubic</option><option>exponential</option></select></UiPropertyRow><UiPropertyRow :label="(t('deviceIdentity'))"><input v-model="binding.deviceId" @change="commitInputMap"></UiPropertyRow><UiPropertyRow :label="(t('modifiers'))"><input :value="binding.modifiers.join(', ')" @change="setBindingList(binding,'modifiers',$event)"></UiPropertyRow><UiPropertyRow :label="(t('chord'))"><input :value="binding.chord.join(', ')" @change="setBindingList(binding,'chord',$event)"></UiPropertyRow></details>
+              <details data-ui-motion-disclosure v-if="!compactInputMap" class="binding-advanced"><summary>{{ t('advanced') }}</summary><UiPropertyRow :label="(t('threshold'))"><NumericExpressionInput v-model="binding.threshold" :minimum="0" :maximum="1" :step="0.01" @change="commitInputMap" :resource-key="'project:input:' + action.name + ':' + actionIndex + ':binding:' + bindingIndex + ':binding.threshold'" /></UiPropertyRow><UiPropertyRow :label="(t('invert'))"><input v-model="binding.invert" type="checkbox" @change="commitInputMap"></UiPropertyRow><UiPropertyRow :label="(t('responseCurve'))"><select v-model="binding.responseCurve" @change="commitInputMap"><option>linear</option><option>square</option><option>cubic</option><option>exponential</option></select></UiPropertyRow><UiPropertyRow :label="(t('deviceIdentity'))"><input v-model="binding.deviceId" @change="commitInputMap"></UiPropertyRow><UiPropertyRow :label="(t('modifiers'))"><input :value="binding.modifiers.join(', ')" @change="setBindingList(binding,'modifiers',$event)"></UiPropertyRow><UiPropertyRow :label="(t('chord'))"><input :value="binding.chord.join(', ')" @change="setBindingList(binding,'chord',$event)"></UiPropertyRow></details>
             </div>
             <UiButton icon="add" class="secondary-action compact-action" @click="addInputBinding(actionIndex)">{{ t('addBinding') }}</UiButton>
           </article>
@@ -326,10 +326,10 @@ watch(/* 返回 prefs.locale 的当前值。 */ () => prefs.locale, /** 偏好�
 </script>
 
 <style scoped>
-.matrix-card { grid-column: 1 / -1; }.related-tools .secondary-action{margin-top:var(--space-1)}.related-tools p{margin-left:var(--space-6)}
-.icon-action { width: 28px; height: 28px; padding: 0; border: 1px solid var(--border-subtle); color: var(--text-muted); background: var(--surface-3); }
+.matrix-card { grid-column: 1 / -1; }.related-tools .secondary-action{ margin-top: 0;}.related-tools p{ margin-left: 0;}
+.icon-action { padding: 0; border: 1px solid var(--border-subtle); color: var(--text-muted); background: var(--surface-3); width: var(--ui-control-height); height: var(--ui-control-height); min-height: var(--ui-control-height); min-width: var(--ui-control-height); border-radius: var(--radius-control); }
 .icon-action.danger:hover { color: var(--danger); border-color: var(--danger); }
-.compact-action { min-height: 29px; margin-top: var(--space-1); }
+.compact-action { min-height: var(--ui-control-height); margin-top: 0; }
 .matrix-card p { margin-bottom: var(--space-3); }
 .matrix-scroll { max-width: 100%; padding: var(--space-2); overflow: auto; border: 1px solid var(--border-subtle); background: var(--surface-2); }
 .matrix-header, .matrix-row { width: max-content; display: grid; grid-template-columns: 28px repeat(32, 18px); gap: var(--space-0); align-items: center; }
@@ -339,22 +339,32 @@ watch(/* 返回 prefs.locale 的当前值。 */ () => prefs.locale, /** 偏好�
 .matrix-row button { width: 18px; height: 18px; padding: 0; border: 1px solid var(--border-subtle); background: var(--surface-3); }
 .matrix-row button.active { border-color: color-mix(in srgb, var(--accent) 76%, white); background: var(--accent); }
 h2 { margin: 0; }
-p { margin: 0 0 var(--space-2) var(--space-6); color: var(--text-muted); line-height: 1.55; }
-.value-control { width: max-content; max-width: 100%; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
-.value-control output { text-align: right; color: var(--text-primary); font-variant-numeric: tabular-nums; }
-.metric-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); margin-top: var(--space-1); }
-.metric-grid > div { min-width: 0; padding: var(--space-2); display: flex; flex-direction: column; gap: var(--space-1); border: 1px solid var(--border-subtle); background: var(--surface-2); }
-.metric-grid span { overflow: hidden; color: var(--text-muted); text-overflow: ellipsis; white-space: nowrap; }
+p { color: var(--text-muted); margin: 0; font-size: var(--type-caption); line-height: var(--line-body); }
+.value-control { width: max-content; max-width: 100%; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: var(--ui-control-gap); }
+.value-control output { text-align: right; color: var(--text-primary); font-variant-numeric: tabular-nums; font-size: var(--type-body); line-height: var(--line-body); }
+.metric-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,calc(160px * var(--ui-scale))),1fr)); gap: var(--ui-control-gap); margin-top: 0; }
+.metric-grid > div { min-width: 0; display: flex; flex-direction: column; border: 1px solid var(--border-subtle); background: var(--surface-2); padding: var(--ui-panel-inset); gap: var(--ui-control-gap); border-radius: var(--radius-panel); }
+.metric-grid span { overflow: hidden; color: var(--text-muted); text-overflow: ellipsis; white-space: normal; overflow-wrap: anywhere; }
 .metric-grid strong, :deep(output) { color: var(--text-primary); font-variant-numeric: tabular-nums; }
-.secondary-action, .danger-action { align-self: flex-start; margin-top: var(--space-2); min-height: var(--ui-control-height); border: 1px solid var(--border-subtle); background: var(--surface-3); }
+.secondary-action, .danger-action { align-self: flex-start; min-height: var(--ui-control-height); border: 1px solid var(--border-subtle); background: var(--surface-3); margin-top: 0; font-size: var(--type-body); line-height: var(--line-control); border-radius: var(--radius-control); }
 .secondary-action:hover { border-color: var(--accent); background: var(--accent-soft); }
 .danger-action { color: var(--danger); background: var(--danger-soft); }
-.danger-action:hover { border-color: var(--danger); }.connected-devices{display:flex;gap:var(--space-1);flex-wrap:wrap;margin-bottom:var(--space-2)}.connected-devices span{padding:var(--space-0) var(--space-2);border:1px solid var(--border-subtle);color:var(--text-muted)}.binding-advanced{grid-column:1/-1;padding:var(--space-1);border:1px solid var(--border-subtle)}.binding-advanced summary{cursor:pointer;color:var(--accent)}
-.binding-advanced summary{min-height:20px;display:flex;align-items:center;line-height:18px}
-.action-advanced{margin-bottom:var(--space-2);padding:var(--space-2);border:1px solid var(--border-subtle);background:color-mix(in srgb,var(--surface-3) 55%,transparent)}.action-advanced>summary{min-height:24px;display:flex;align-items:center;cursor:pointer;color:var(--accent)}.action-advanced-grid{display:grid;grid-template-columns:repeat(3,minmax(150px,1fr));gap:var(--space-2);padding-top:var(--space-2)}
-@media (max-width: 800px) {.binding-advanced{grid-column:1/-1}.action-advanced-grid{grid-template-columns:1fr} }
+.danger-action:hover { border-color: var(--danger); }.connected-devices{display:flex;flex-wrap:wrap;gap: var(--ui-control-gap);margin-bottom: 0;}.connected-devices span{border:1px solid var(--border-subtle);color:var(--text-muted);padding: var(--space-2) var(--space-3);border-radius: var(--radius-control);font-size: var(--type-caption);line-height: var(--line-body);overflow-wrap: anywhere;}.binding-advanced{grid-column:1/-1;display: grid;grid-template-columns: repeat(auto-fit,minmax(min(100%,calc(240px * var(--ui-scale))),1fr));padding: 0;gap: var(--ui-field-gap);border: 0;border-top: var(--ui-border-width) solid var(--border-separator);padding-top: var(--ui-heading-content-gap);}.binding-advanced summary{cursor:pointer;color:var(--accent);min-height: var(--ui-control-height);line-height: var(--line-control);font-size: var(--type-body);padding: var(--ui-input-padding-block) var(--ui-control-padding);grid-column: 1/-1;gap: var(--ui-control-gap);border-radius: var(--radius-control);}
+.binding-advanced summary{display:flex;align-items:center;min-height: var(--ui-control-height);line-height: var(--line-control);font-size: var(--type-body);padding: var(--ui-input-padding-block) var(--ui-control-padding);grid-column: 1/-1;gap: var(--ui-control-gap);border-radius: var(--radius-control);}
+.action-advanced{margin-bottom: 0;padding: 0;border: 0;border-bottom: var(--ui-border-width) solid var(--border-separator);background: transparent;}.action-advanced>summary{display:flex;align-items:center;cursor:pointer;color:var(--accent);min-height: var(--ui-control-height);line-height: var(--line-control);font-size: var(--type-body);padding: var(--ui-input-padding-block) var(--ui-control-padding);gap: var(--ui-control-gap);border-radius: var(--radius-control);}.action-advanced-grid{display:grid;grid-template-columns: repeat(auto-fit,minmax(min(100%,calc(240px * var(--ui-scale))),1fr));gap: var(--ui-field-gap);padding-top: var(--ui-heading-content-gap);padding-bottom: var(--ui-panel-inset);}
 /* Binding labels remain attached to their fields when the card reflows. */
 .binding-field>span{color:var(--text-muted);overflow-wrap:anywhere}
-@container nova-form (max-width:600px){.action-advanced-grid{grid-template-columns:minmax(0,1fr)}}
-.action-advanced-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,calc(14em + 64px)),1fr))}
+/* Actual input mapping fields keep labels attached and use one comfortable spacing rhythm. */
+.input-map-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:var(--ui-control-gap)}
+.input-map-toolbar>label{display:flex;align-items:center;gap:var(--ui-control-gap);font-size:var(--type-body);line-height:var(--line-body)}
+.input-actions{display:grid;gap:var(--ui-section-gap)}
+.input-action{min-width:0;display:grid;gap:var(--ui-field-gap);padding-block:var(--ui-field-gap);border-block-end:var(--ui-border-width) solid var(--border-separator)}
+.input-action-heading{min-width:0;display:flex;flex-wrap:wrap;align-items:center;gap:var(--ui-control-gap)}
+.input-action-heading>input{flex:1 1 calc(200px * var(--ui-scale));max-width:var(--ui-field-width)}
+.input-action-heading>select{width:min(100%,calc(160px * var(--ui-scale)))}
+.input-action-heading>.icon-action{flex:0 0 var(--ui-control-height)}
+.input-binding{min-width:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,calc(240px * var(--ui-scale))),1fr));gap:var(--ui-field-gap);padding-block:var(--ui-field-gap);border-block-end:var(--ui-border-width) solid var(--border-separator)}
+.input-binding>.icon-action{justify-self:end;align-self:end}
+:deep(.binding-field.ui-property-row),.action-advanced-grid :deep(.ui-property-row),.binding-advanced :deep(.ui-property-row){grid-template-columns:minmax(0,1fr);align-items:start;row-gap:var(--ui-label-control-gap)}
+.input-conflicts{min-width:0;display:grid;gap:var(--ui-control-gap);padding:var(--ui-panel-inset);border-inline-start:var(--ui-border-width) solid var(--warning);border-radius:var(--radius-control);background:var(--warning-soft);font-size:var(--type-body);line-height:var(--line-body);overflow-wrap:anywhere}
 </style>

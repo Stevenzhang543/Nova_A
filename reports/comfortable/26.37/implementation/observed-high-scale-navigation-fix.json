@@ -1,0 +1,13 @@
+{
+  "path":"src/components/WorkspaceBar.vue",
+  "cause":"Actual German200%1366x768 screenshot showed the workspace strip nearly zero wide; mouse targeting Manage hit the neighboring Back command instead.",
+  "records":[
+    {"before":"Responsive labels depend only on physical viewport media widths","after":"Named inline-size container uses actual toolbar width and inherited em metrics","consequence":"At enlarged type, optional context/menu labels yield room to primary workspace commands; font and44px logical hit areas remain unchanged."},
+    {"before":"Workspace strip may flex-shrink below one usable control","after":"Reserve two logical control widths plus their gap and retain horizontal scrolling","consequence":"Every workspace remains reachable through actual pointer/keyboard navigation instead of placing centers behind neighboring buttons."},
+    {"before":"Desktop viewport1300+ always retains long toolbar labels despite200%type","after":"64em hides redundant context/menu labels;56em uses labelled-by-aria/title workspace icons","consequence":"Retain all commands, existing shortcuts, state/history and button handlers. No core operation is silently removed."},
+    {"before":"Inline Back/Forward also consume scarce narrow-toolbar width","after":"Below40em move both operations into the existing Commands menu; explicit localized labels, disabled state and Alt shortcuts are preserved","consequence":"The visible workspace strip keeps its hit area at large scale/minimum width. Commands remain recoverable; no state API changes."},
+    {"before":"No overflow History actions","after":"Two shared UiButton actions call the existing navigateHistory API then request normal native menu close","consequence":"Actual navigation commits immediately; exit uses the shared owner. No new project/game feature or dependency."},
+    {"before":"No history-overflow styling","after":"Default hidden group; under40em use shared control-gap grid and hide only duplicated inline history","consequence":"Ordinary desktop arrangement retains existing direct buttons; narrow layout has an explicit menu destination."}
+  ],
+  "verification":"Actual high-scale navigation and minimum/default dimensions are rerun after production rebuild; no keyboard-only bypass is used to hide the pointer defect."
+}

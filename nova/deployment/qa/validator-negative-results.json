@@ -1,0 +1,36 @@
+{
+  "generatedAtUTC": "2026-10-02T18:00:41.187Z",
+  "scope": "Temporary loopback proxy only; production and packaged engine files were untouched.",
+  "passed": true,
+  "results": [
+    {
+      "scenario": "wrong-wasm-mime",
+      "passed": true,
+      "exitCode": 1,
+      "injectedFile": "/online/assets/nova_core_bg-BPfUDJj2.wasm",
+      "bytesChanged": false,
+      "diagnostics": [
+        "assets/nova_core_bg-BPfUDJj2.wasm: assets/nova_core_bg-BPfUDJj2.wasm: unexpected MIME application/octet-stream",
+        "FAIL Every public engine file matches the local release: 1 engine files failed verification",
+        "FAIL 270 public files compared; report: deployment/ENGINE_DEPLOYED_VALIDATION.json"
+      ]
+    },
+    {
+      "scenario": "missing-js-html-fallback",
+      "passed": true,
+      "exitCode": 1,
+      "injectedFile": "/online/assets/nova-file-that-does-not-exist.js",
+      "injectedStatus": 200,
+      "diagnostics": [
+        "FAIL Missing engine assets return real 404 responses: assets/nova-file-that-does-not-exist.js",
+        "FAIL 271 public files compared; report: deployment/ENGINE_DEPLOYED_VALIDATION.json"
+      ]
+    },
+    {
+      "scenario": "passing-local-rehearsal-restored",
+      "passed": true,
+      "exitCode": 0,
+      "summary": "PASS 271 public files compared; report: deployment/ENGINE_DEPLOYED_VALIDATION.json"
+    }
+  ]
+}

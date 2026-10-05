@@ -1,0 +1,53 @@
+{
+  "generatedAt": "2026-10-03T18:46:32.875Z",
+  "edits": [
+    {
+      "file": "src/ui/components/UiDialog.vue",
+      "reason": "Add open/self-parent ownership, guard closing actions, preserve modal scrim blocking and dispose only live owned animations",
+      "beforeSha256": "80be7a9de185be9f7e9214eaf9b010c3358539e002c7b83a636c7a51d0960534",
+      "afterSha256": "c8ad3ed7276419b66d68f44f8b01393da13f22a68ba55674db24138efc3d8e10"
+    },
+    {
+      "file": "src/ui/components/UiMotionTransition.vue",
+      "reason": "Add modal exit lock and restore semantics; delete completed/cancelled owned nodes instead of retaining every mounted surface",
+      "beforeSha256": "5005b7e4aeaad46eaaf43df089c02702e86f1a9b6e52d10e9e14736ff49686bd",
+      "afterSha256": "cc7656bc21c9b0bc1e5037bfd777ffcd26cf5f4134e417c83c3967c0aaff5928"
+    },
+    {
+      "file": "src/ui/motion.ts",
+      "reason": "Expose finite block-size animation and testable modal exit lock; release prior press state only when a real editor native drag starts",
+      "beforeSha256": "333f3f82d6c4e6ae50104d365018446e0e9cd02f1afb6e7edbd087d99c66f6ff",
+      "afterSha256": "cc57975260fa1f791c0630a1420612c98ea6e5bd6096d0c04086286dc72c2716"
+    },
+    {
+      "file": "src/components/EditorBottomPanel.vue",
+      "reason": "Animate only actual dock open/close heights, keep exiting contents mounted and inert, retarget reversals, cancel for precise separator edits/resize and dispose KeepAlive jobs",
+      "beforeSha256": "c1e8a11bb184797449a5f7520c5d67df56ae312f2e74f5fc3b85daf2f8297feb",
+      "afterSha256": "75c555c9b1d518116315c6a3602dd594c326167269410f1cddfba148eae9ce65"
+    },
+    {
+      "file": "scripts/verify-v26.37-motion.mjs",
+      "reason": "Add actual production controller DOM/event/observer tests, modal scrim snapshots, native value isolation, disclosure reversal/removal and block-size interrupt ownership",
+      "beforeSha256": "7959cb3ab2486eb293a21e7dc2525b9012637f4301aeb220ce53e432157218dc",
+      "afterSha256": "b44a0b1e73eee1660e31ebca170c982f3c816bb83b7babc16ceff85634a25c76"
+    },
+    {
+      "file": "src/ui/motion.ts",
+      "reason": "Respect actual native/external close interrupting an active disclosure opening",
+      "beforeSha256": "cc57975260fa1f791c0630a1420612c98ea6e5bd6096d0c04086286dc72c2716",
+      "afterSha256": "3d69dde55c9447d59ab7758ed949dd00edc4288f70269793f6ef2d5891c4ecd7"
+    },
+    {
+      "file": "src/components/EditorBottomPanel.vue",
+      "reason": "Align separator double-click reset with the comfortable 280px dock default",
+      "beforeSha256": "75c555c9b1d518116315c6a3602dd594c326167269410f1cddfba148eae9ce65",
+      "afterSha256": "fb6c595bb8054b1f0fb3035ec69949c1846b46ca4c7697a7ea075afa198ca4c1"
+    },
+    {
+      "file": "src/ui/components/UiMotionTransition.vue",
+      "reason": "Keep modal scrim geometry fixed at viewport edges; animate its real dialog surface separately under one parent owner and clean surface tracking",
+      "beforeSha256": "cc7656bc21c9b0bc1e5037bfd777ffcd26cf5f4134e417c83c3967c0aaff5928",
+      "afterSha256": "c5448352253468f0c1dae14d7eb210c0a4fe2a65729b2fea12f71de9d75cb70f"
+    }
+  ]
+}

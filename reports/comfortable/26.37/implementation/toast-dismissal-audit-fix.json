@@ -1,0 +1,43 @@
+{
+  "path": "scripts/lib/worldAudit17.mjs",
+  "cause": "Third all-route run measured170 routes with zero geometry defects, then a notification auto-expired between observation and pointer targeting.",
+  "records": [
+    {
+      "before": "Repeatedly target every toast including inert exiting rows",
+      "after": "Target only interactive toast dismissal buttons; require bounded termination",
+      "consequence": "Do not repeat clicks on already closing rows."
+    },
+    {
+      "before": "An auto-expired notification fails unrelated panel navigation",
+      "after": "Accept only exact missing-dismiss-button errors when a fresh DOM read proves the button is absent; rethrow all other errors",
+      "consequence": "Preserve actual input, geometry and application failures."
+    },
+    {
+      "before": "Continue navigation while outgoing notification remains mounted",
+      "after": "Wait for actual toast removal after real dismissal/expiration",
+      "consequence": "No transparent outgoing row can intercept the next panel action; no app-state writes."
+    },
+    {
+      "before": "Bottom-panel recovery inferred openness from panel-content DOM existence",
+      "after": "Recover only when the logical collapsed class is present; otherwise await rendered height, non-inert content and finite normal Dock settlement",
+      "consequence": "Retained v-show contents are not mistaken for visible tools, and temporary zero height during opening cannot trigger a second toggle that closes the Dock. Actual failed diagnostics are preserved. No maximize, product-source change, state injection or font/density compromise."
+    }
+  ],
+  "verification": "Final frozen-source browser/layout/data checks rerun this shared helper; the failed170-route attempt is retained in .cache/comfortable26.37/all-route-attempt3.",
+  "authoringCaptureFollowup": {
+    "source": "scripts/verify-v26.34-authoring-user.mjs",
+    "beforeSha256": "38ac56efc17d812108788f4e29136049924e11c097f375711a2342b28a704319",
+    "afterSha256": "e46c851fcb21aae429c4a03290e959c6deb2c1c92efc2ace8fa9b999645d166a",
+    "change": "Replace repeated close-button lookup/click during screenshot preparation with a bounded actual-DOM disappearance condition. Normal 4200ms/7000ms notification expiry and finite exit remain enabled. Persistent error notifications fail; all authoring/save/history/reopen assertions remain unchanged.",
+    "observedFailure": {
+      "candidate": 4,
+      "sourceInputDigest": "89854a804fdb8f695fe986ae6088858dbd717e97d12d3e989cac14e0150caef8",
+      "gate": "user-interactions",
+      "reason": "Missing .toast-stack article button:last-child after automatic expiry between DOM lookup and pointer targeting.",
+      "archive": ".cache/comfortable26.37/candidate4-authoring-expiry-failure",
+      "priorChecksPassed": 4,
+      "failedStatusPreserved": true
+    },
+    "consequence": "Test-only race correction; no editor, notification timer, motion or game behavior changes. Final new-source qualification still required."
+  }
+}

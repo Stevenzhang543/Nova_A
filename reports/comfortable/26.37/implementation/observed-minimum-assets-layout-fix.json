@@ -1,0 +1,29 @@
+{
+  "path": "src/components/EditorBottomPanel.vue",
+  "beforeSha256": "bc2036395f532d558276b19cbe584042e1c49291dfc62cd095e8a7813daff5a1",
+  "afterSha256": "6a7af18d124bd04b07b9b816943ffc84455b0b581c5634bfba0ca0e8808a8be6",
+  "cause": "Actual1024x640 normal Dock clips wrapped resource controls below its folder row; keyboard activation scrolls hidden containers and invalidates a pre-scroll geometry baseline",
+  "records": [
+    {
+      "before": "Narrow two-row grid retains overflow:hidden",
+      "after": "Narrow resource browser uses one normal vertically scrollable block",
+      "consequence": "Every toolbar/list region remains reachable by wheel and keyboard; no dock maximize or font reduction."
+    },
+    {
+      "before": "Resource workspace clips tall toolbar",
+      "after": "Only the narrow branch permits visible natural toolbar flow inside the parent scroll boundary",
+      "consequence": "Persistent panels retain their outer rounded clipping; existing popup top layer remains independent."
+    },
+    {
+      "before": "Asset-grid flex size loses usable height under tall toolbar",
+      "after": "Use a bounded40vh/six-control viewport in the narrow branch",
+      "consequence": "Keep native asset-grid virtualization/scroll geometry bounded; ordinary desktop sizing is unchanged."
+    },
+    {
+      "before": "Native More summary has browser marker and inconsistent geometry",
+      "after": "Use the existing SVG More in shared44 square,12 radius; hide redundant native marker",
+      "consequence": "Accessible aria/title and same native popup handler remain; no operation or data change."
+    }
+  ],
+  "verification": "Vue style compiler passed; business script/template byte-identical. Actual minimum menu and all-route QA must be rerun."
+}

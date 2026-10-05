@@ -1,6 +1,6 @@
 <!-- 面板最大化按钮：共享工作区展开状态，并提供当前语言的恢复或展开说明。 -->
 <template>
-  <button type="button" class="panel-maximize" :data-panel-maximize="panel" :aria-label="label" :title="label" :aria-pressed="active" @click.stop="togglePanelMaximize(panel)"><EditorIcon :name="active ? 'restore' : 'maximize'" /></button>
+  <button type="button" class="panel-maximize ui-button ui-icon-button" :data-panel-maximize="panel" :aria-label="label" :title="label" :aria-pressed="active" @click.stop="togglePanelMaximize(panel)"><EditorIcon :name="active ? 'restore' : 'maximize'" /></button>
 </template>
 <script setup lang="ts">
 import { computed } from 'vue'
@@ -13,6 +13,6 @@ const copy={en:{maximize:'Maximize panel',restore:'Restore panel layout'},de:{ma
 const label=computed(/** 按展开状态与界面语言选择可访问名称。 */ ()=>copy[preferencesState.locale][active.value?'restore':'maximize'])
 </script>
 <style scoped>
-.panel-maximize{flex:0 0 auto;min-width:calc(30px * var(--ui-scale))!important;min-height:calc(30px * var(--ui-scale))!important;height:auto!important;padding:3px 6px!important;border:1px solid var(--border-subtle)!important;border-radius:6px!important;background:var(--surface-2)!important;color:var(--text-primary)!important;font:calc(15px * var(--ui-scale))/1 var(--font-ui)!important}
+.panel-maximize{flex:0 0 auto;border:var(--ui-border-width) solid var(--border-subtle);background:var(--surface-2);color:var(--text-primary)}
 .panel-maximize[aria-pressed=true]{border-color:var(--accent)!important;background:var(--accent-soft)!important}
 </style>

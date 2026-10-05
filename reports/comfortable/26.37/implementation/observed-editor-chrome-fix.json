@@ -1,0 +1,67 @@
+{
+  "generatedAt": "2026-10-04T11:12:02.453Z",
+  "edits": [
+    {
+      "path": "src/components/PanelMaximizeButton.vue",
+      "before": "class=\"panel-maximize\"",
+      "after": "class=\"panel-maximize ui-button ui-icon-button\"",
+      "reason": "Use actual shared44px native icon-button geometry and feedback without changing commands."
+    },
+    {
+      "path": "src/components/PanelMaximizeButton.vue",
+      "before": ".panel-maximize{flex:0 0 auto;min-width:calc(30px * var(--ui-scale))!important;min-height:calc(30px * var(--ui-scale))!important;height:auto!important;padding:3px 6px!important;border:1px solid var(--border-subtle)!important;border-radius:6px!important;background:var(--surface-2)!important;color:var(--text-primary)!important;font:calc(15px * var(--ui-scale))/1 var(--font-ui)!important}",
+      "after": ".panel-maximize{flex:0 0 auto;border:var(--ui-border-width) solid var(--border-subtle);background:var(--surface-2);color:var(--text-primary)}",
+      "reason": "Remove obsolete30px/15px/6px!important size/font/radius overrides; shared layout owns all default geometry."
+    },
+    {
+      "path": "src/components/EditorBottomPanel.vue",
+      "before": "<button :class=\"{ active: estate.bottomPanelPinned }\"",
+      "after": "<button class=\"ui-button ui-icon-button\" :class=\"{ active: estate.bottomPanelPinned }\"",
+      "reason": "Pin control has full44x44 hit area with native handler preserved."
+    },
+    {
+      "path": "src/components/EditorBottomPanel.vue",
+      "before": "<button v-if=\"estate.bottomPanelTab === 'console' && estate.bottomPanelOpen\"",
+      "after": "<button class=\"ui-button ui-icon-button\" v-if=\"estate.bottomPanelTab === 'console' && estate.bottomPanelOpen\"",
+      "reason": "Console clear uses the same real icon-button geometry."
+    },
+    {
+      "path": "src/components/EditorBottomPanel.vue",
+      "before": "<button :aria-label=\"t(estate.bottomPanelOpen ?",
+      "after": "<button class=\"ui-button ui-icon-button\" :aria-label=\"t(estate.bottomPanelOpen ?",
+      "reason": "Dock collapse/restore uses the same real icon-button geometry."
+    },
+    {
+      "path": "src/components/EditorBottomPanel.vue",
+      "before": ".panel-controls>button{padding-inline:var(--ui-space-xs)}",
+      "after": ".panel-controls>button{padding:0}",
+      "reason": "Do not compress icon width with legacy inline padding."
+    },
+    {
+      "path": "src/layout/StatusBar.vue",
+      "before": ".task-status{margin-left:auto;display:flex;align-items:center;gap:var(--space-1);color:var(--text-muted);font-size:var(--type-caption)}",
+      "after": ".task-status{margin-left:auto;display:flex;align-items:center;gap:var(--ui-control-gap);color:var(--text-muted);font-size:var(--type-body);line-height:var(--line-body)}",
+      "reason": "Task center is an ordinary action, measured14px; use16px and12px icon/count spacing while secondary status copy stays14px."
+    }
+  ],
+  "hashes": [
+    {
+      "path": "src/components/PanelMaximizeButton.vue",
+      "beforeSha256": "eafa24f13d8d9c72a50bc4b27539e66a5e5f3ab4997c834edb3c1bebdffb60b5",
+      "afterSha256": "34255ff9e5c3aa824f950cf86f2cd46d177d522cb83b99c8dadc3cf99d283fc9"
+    },
+    {
+      "path": "src/components/EditorBottomPanel.vue",
+      "beforeSha256": "fb6c595bb8054b1f0fb3035ec69949c1846b46ca4c7697a7ea075afa198ca4c1",
+      "afterSha256": "7d414cf407f417210761d2e47ae5e23508f0aea149be0496b5fc46aca6ad89e5"
+    },
+    {
+      "path": "src/layout/StatusBar.vue",
+      "beforeSha256": "ca8bd3b2ca0d952f4d74329d0b1003b062fe06b80fe8b92fbf6034128c0b0f0f",
+      "afterSha256": "5ed0caca2c48e37aa62850c629e37ce7602e74b2473c9f3ca3b535182bc25a2c"
+    }
+  ],
+  "scripts": "byte-identical",
+  "css": "compiled",
+  "visual": "rerun pending"
+}

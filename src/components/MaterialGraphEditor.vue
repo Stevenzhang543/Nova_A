@@ -41,7 +41,7 @@
         <p :class="capability.fallbackNodes.length ? 'warning' : 'good'">{{ capabilityRecommendation }}</p>
       </aside>
     </div>
-    <details class="generated-source"><summary>{{ t('deterministicSource') }}</summary><pre>{{ compiledSource }}</pre></details>
+    <details data-ui-motion-disclosure class="generated-source"><summary>{{ t('deterministicSource') }}</summary><pre>{{ compiledSource }}</pre></details>
 <!-- 诊断严重程度回调检测错误；消息映射回调提取各诊断文本供页脚显示。 -->    <footer><span :class="diagnostics.some(item => item.severity === 'error') ? 'error' : 'good'">{{ diagnostics.length ? diagnostics.map(item => item.message).join(' · ') : t('graphReady') }}</span><UiButton icon="reset" :label="t('resetGraph')" @click="resetGraph" /></footer>
   </section>
 </template>
@@ -103,7 +103,7 @@ const lines = computed(/** 把有效连接转换为可绘制的贝塞尔路径�
 
 <style scoped>
 .material-graph-editor { container: nova-material / inline-size; height: 100%; min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; background: var(--surface-1); }
-.target-field { display: flex; align-items: center; gap: var(--space-2); font-size: var(--type-caption); }.target-field select { width: auto; }
+.target-field { display: flex; align-items: center; gap: var(--ui-control-gap); font-size: var(--type-body); line-height: var(--line-body); }.target-field select { width: auto; }
 .graph-workspace { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(14ch, .65fr) minmax(0, 2fr) minmax(20ch, 1fr); overflow: auto; }
 .graph-workspace > aside { min-width: 0; padding: var(--space-2); display: flex; flex-direction: column; gap: var(--space-1); overflow: auto; border-right: var(--ui-border-width) solid var(--border-subtle); }
 .graph-workspace > aside > button { justify-content: start; text-align: start; white-space: normal; overflow-wrap: anywhere; }

@@ -1,0 +1,2287 @@
+{
+  "status": "applied",
+  "generatedAt": "2026-10-03T18:15:55.569Z",
+  "files": [
+    {
+      "path": "src/components/AccessibilityEvidencePanel.vue",
+      "beforeSha256": "6e34b0978f8b77e3e7c7a1f479bf26a369366335e5f490d09a99fde1b16908c5",
+      "afterSha256": "48feb3d6f7a8e5ab4f6765ca05aefe038f0b6fdf727d4145c0bea2f6adaec47e"
+    },
+    {
+      "path": "src/components/AndroidDeliveryPanel.vue",
+      "beforeSha256": "939f4deff56da42a0f42c31c05b43152de9c605e1c5772da6d6b72c9afecc323",
+      "afterSha256": "a4458f93b91aa6d289e2eeb98d099d4bc7bf2bda66ba78a3897b2e69366d673a"
+    },
+    {
+      "path": "src/components/AnimationPanel.vue",
+      "beforeSha256": "7da820063fe6dc5fc48fa705e9e552daadae261b8e9a4db114f61f47a974f55e",
+      "afterSha256": "1009a09b871760bd1b4e1a6a55ca913f4ab6ff2c6a4b9ddf183050fdb735c91c"
+    },
+    {
+      "path": "src/components/BuildSettingsPanel.vue",
+      "beforeSha256": "90c7dc7d5b9c32284339257779af59468a1fab008bc3190c9b0665a060b30211",
+      "afterSha256": "bb6c8b28ac8a76144da546168d1f589fc2a5fa0db8cf0fa78df392a9440e38e3"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "beforeSha256": "594fb9d9c5a292dfa03abb5b6f350f62a5b3708da8f7f1b87277ba7807a2aa8d",
+      "afterSha256": "66eb3882788135e131aa6360bfc730fa3f1ff3d6dd835976da514b7698886b35"
+    },
+    {
+      "path": "src/components/ContentAssetInspector.vue",
+      "beforeSha256": "0eb43c0703a46c48d6186cbba9893bcfceb307ef90d09d5988d45c24caccb4fd",
+      "afterSha256": "180658e6f83e428cb60354171d043b23409cbb4f142ab1bec3e432691f9b4f65"
+    },
+    {
+      "path": "src/components/CreatorLearningCenter.vue",
+      "beforeSha256": "6f4e65ba4fa01dac07b59f1037e9cc5ae760115575c44301ecbbc079711dfbca",
+      "afterSha256": "36445140cd72e56759e89ce7c812a02e5f88db7bef2e97f15fc0a62ea4a597d5"
+    },
+    {
+      "path": "src/components/EcosystemStudioPanel.vue",
+      "beforeSha256": "fadb56320e7c14d00d17b763185f7948c524dba575b728b73632af0f5887dda2",
+      "afterSha256": "3a38c4e59a2ad0288253c396031126bf912ccddba5853d225d6512ef42052e7f"
+    },
+    {
+      "path": "src/components/EditorBottomPanel.vue",
+      "beforeSha256": "6ed15b810ebba0ada4cc8f14a3d4703226536ae5a4b101f6ab33c8be38f559c3",
+      "afterSha256": "aa2551e1ff752b65208dddfe04946ae5c95dcea99bd3a9924475f72a68497e09"
+    },
+    {
+      "path": "src/components/EventSheetEditor.vue",
+      "beforeSha256": "6ea00d75fce0e9773badf007a850cb36193739baac4ad54bb8a3b9d0e948c61b",
+      "afterSha256": "e43b84820ebcf1bf727130779a34916ffb94a441d9283d1bbc761349f352f79f"
+    },
+    {
+      "path": "src/components/GraphProductionPanel.vue",
+      "beforeSha256": "f2237cf1ec3c4c58faca76d786646d6f96dd0845f872adc8a2786aa5f99f33a7",
+      "afterSha256": "1aff97273b6193a61ccc49c5104b2dc2f1ef9d2f4f0169eb6f4d2e4cd6883dec"
+    },
+    {
+      "path": "src/components/NetworkStudioPanel.vue",
+      "beforeSha256": "1c0e6d48e956c47ae4ff3504e59465c1b8e6b657ecda8b27d52ec4bfaf970c47",
+      "afterSha256": "e3daaf261c9fba5104a47c68bd7eaed6029a498f30ac5b8b245d445730c9cf31"
+    },
+    {
+      "path": "src/components/ObjectBlueprintEditor.vue",
+      "beforeSha256": "659a91ecf5dfc4b74e12a29d708b1baf045e297c46ea88899df9fa8dc5917ab7",
+      "afterSha256": "9028f741017cedc9c3247731b5289b8d3f1cc9822e2d57ba40e3ad407798dc10"
+    },
+    {
+      "path": "src/components/ObjectOwnershipPanel.vue",
+      "beforeSha256": "f7007da27edb037470432c7942caa68d78c4f95ede4b31d664e26a5303de2426",
+      "afterSha256": "d3d1572c56c8c56036aaa1de2f104cf197371ee1e64944aa95d842b73a37fece"
+    },
+    {
+      "path": "src/components/PackageManagerPanel.vue",
+      "beforeSha256": "9808583f0708fc99a85f8d4a12652b5f3a55e9a8085c9eeb176fd0dc0184faa3",
+      "afterSha256": "f7be95d30541cdceaaaf18a313f4f80f5186cf0be3de99931bdec1c2d2285264"
+    },
+    {
+      "path": "src/components/ParticleGraphEditor.vue",
+      "beforeSha256": "e3793d32be3a065de54d86a9c3eef0e0bdc83f829ae029b81de17fbb5a6b1ddb",
+      "afterSha256": "a1095959ec32eed90f9cac597692ab5a476979114098d436ccdc1b3719b60bc7"
+    },
+    {
+      "path": "src/components/PhysicsRuntimePanel.vue",
+      "beforeSha256": "7b0d03298a652fa184bd76782ef8bfa015746f9d41f71d9d707972a070ef382e",
+      "afterSha256": "cd4b17fc77b760aea4f2826f51e516eb42a36431eef83d2ada4623f69eb155ef"
+    },
+    {
+      "path": "src/components/PhysicsSettingsPanel.vue",
+      "beforeSha256": "4308cc2c13a13b454af294cbd47fd20a69d2df94f6e2ba0694f6b01baa71405e",
+      "afterSha256": "feea34cc3dd95d710ff7ca9869aabca516f916c829bd32c937db602ebc960114"
+    },
+    {
+      "path": "src/components/PluginSettings.vue",
+      "beforeSha256": "682330868dd05ec815de75f250d7fb9cf69edcc80108996396ac1ff5446db682",
+      "afterSha256": "d3b6972b9a99ae29ef7394b9b0440b0f4e93cf0a9800de5197835b9240a6d82e"
+    },
+    {
+      "path": "src/components/PresentationPanel.vue",
+      "beforeSha256": "806a021b4393a4dfd0faf8fa7d635fffb9b6c3e407f72d647585c456782e54e7",
+      "afterSha256": "4126bafaa671734c16eaf395042922fb94094baed42fdab18482b9313a80a984"
+    },
+    {
+      "path": "src/components/ProfilerPanel.vue",
+      "beforeSha256": "893284db22aab81fee9b6789ecd912d2610d2a177462cb4939a5621fe86e545f",
+      "afterSha256": "a97bb3a90cc1b7d382e7fc187e7fbe298112ae80aadcddf1843d27915ee93923"
+    },
+    {
+      "path": "src/components/ProjectHealthPanel.vue",
+      "beforeSha256": "34db173b1511a7f869e1fead1c4a5ec17cfe85aea2db6e06bcdea4b5dc621d44",
+      "afterSha256": "3ac341c60ea28975644b29e74156d90fbb71bc4e657d0c574ba851f13f1a6e8b"
+    },
+    {
+      "path": "src/components/ProjectManager.vue",
+      "beforeSha256": "8a0103ddf225d3ac6baa33aba6a45b370035675aa6734125db7751372be806f7",
+      "afterSha256": "f5474900f2f7244afc01c525cc1eb812b5da501fe71e35c67ef90e2c439065a3"
+    },
+    {
+      "path": "src/components/RenderingPanel.vue",
+      "beforeSha256": "14db66f50992acc4f0836708c9a88e4646a21fec0b66d0cbbe9f3d7290838e86",
+      "afterSha256": "cc99300974fb0973070051152520c5a56295fc474bc330b0b339700a8f26f39f"
+    },
+    {
+      "path": "src/components/SaveDataSettings.vue",
+      "beforeSha256": "041718eb253bc31fd1ae55f3a050069710aec4052948566356b5c8c573acac16",
+      "afterSha256": "fa13f66be7ca4febd1534c6da0c6ef795f2883d958e33ccdd1aed3d668d1093e"
+    },
+    {
+      "path": "src/components/SceneSideBar.vue",
+      "beforeSha256": "46eaff6e20c513c1915111be099491241badab459e09d1f44c0ee3ca90c759b6",
+      "afterSha256": "6bc6126fb16780987c0c4c15c51f479fe56e8741bee079825fbd2f99aa85cc63"
+    },
+    {
+      "path": "src/components/SceneTabs.vue",
+      "beforeSha256": "56fb2ecdf7a05cf7a9d8d1617c88efe6d6140a5ae72938e3a197ac27f15b61ee",
+      "afterSha256": "9c8214d28b8a3414c5106d0669e568e3ddd3d791de025bca269705457b72a250"
+    },
+    {
+      "path": "src/components/ScriptConversionPanel.vue",
+      "beforeSha256": "ba713f972b167f7fdc6806d28d9ad7f55b738ceafe58bb93b4152d4ace51e10e",
+      "afterSha256": "adcfbea27eb0517d9bafbf062870f2d1983e3ed575b364a5e1d37b97aa8a6916"
+    },
+    {
+      "path": "src/components/ScriptStudio.vue",
+      "beforeSha256": "3f7b489f709c2e92dc6297d32a4d7df4133cc3944a5a5daabdc0f686fbdc24fc",
+      "afterSha256": "5851c04794aa1448466a181dd64f12647822479603b0810dd2c3bba5e87f09a3"
+    },
+    {
+      "path": "src/components/ShortcutEditor.vue",
+      "beforeSha256": "9608ddb1994c1b687358783bad13356719d376e96afcdb5990033c4d75629197",
+      "afterSha256": "886d8093e463efbb7cce5ae97570227538fa449525a4f61c5fa441014df9ba42"
+    },
+    {
+      "path": "src/components/SimulationStatusPanel17.vue",
+      "beforeSha256": "714a2daa81784e61c7dd6c63152c78b10975da5fce18fd327ce51bbcd0f047ea",
+      "afterSha256": "7f25c38ef1acf18ffc496bf498f24e4d273006727071347a1564354e9ded0da5"
+    },
+    {
+      "path": "src/components/StudioDraftConflict.vue",
+      "beforeSha256": "62f2d5a2987e64d3f4a54f9c1e89dd05b288771b0107a5166d4db899f0f962ab",
+      "afterSha256": "3aebed9924483065fd31ee4c72a1bd1235f422462e8b7dbe3e4f65c6ddd70812"
+    },
+    {
+      "path": "src/components/StudioStatusDialog.vue",
+      "beforeSha256": "636ae847dccbaac7850def7af2d06425ad28ec692f8dbdff83fa42fc776219fc",
+      "afterSha256": "75083c70d84c530d60b0d71e39fd9d821f297c62bd0bc0f239b86d15941fee86"
+    },
+    {
+      "path": "src/components/TeamWorkflowPanel.vue",
+      "beforeSha256": "b35b23d459508ffc4ba185b1844dd9d3a01124693c15d17687f550271d62dfce",
+      "afterSha256": "d4c7d4413f090e2516e8feaa26d2789a38262770fc56dca82d419ca55abbb1d5"
+    },
+    {
+      "path": "src/components/TilemapPanel.vue",
+      "beforeSha256": "2664207feb1b708a402c165328ecccf151da089e1493175e57a58886e2ec7cb1",
+      "afterSha256": "6f34ed9dcc2ed0347d9e07f22b03891281b00fc19d14e166da2a0459a435aee2"
+    },
+    {
+      "path": "src/components/ToolBar.vue",
+      "beforeSha256": "b7ffe9f44d30d686d9b4a18bee0d5defdce3c6266acaae568a148a6bdd960731",
+      "afterSha256": "78e6385adef62b656b295116deb455b5f29437d3ed7d64c59fb7f0f5749afca7"
+    },
+    {
+      "path": "src/components/UiScenePreview.vue",
+      "beforeSha256": "cb7b102078cc7a2528cf33095a50ff7a864adc1c0de55b8e511c418354e0e253",
+      "afterSha256": "86b04c07d4be225faa23f392b190a40637a91e77c68532b6daed8bad8c12fb95"
+    },
+    {
+      "path": "src/components/UndoHistoryPanel.vue",
+      "beforeSha256": "ea0dcba189bdcb2702ee6da10e57e8b49f879cb9edc4ca86588b4d53da7f150e",
+      "afterSha256": "f937440cd72104e4fe4be0019fc5466efb62876159d346806923f189b54056e6"
+    },
+    {
+      "path": "src/components/VisualGraphEditor.vue",
+      "beforeSha256": "0e45fe5dc2eaf3d9c85b97b9c527a39c9839eb1e2d3a75fd9d127e919fc3b302",
+      "afterSha256": "9db8289873c9bf14f212bbb0c3072bbb2eb0e32e477eee189bb1ea212f7e3469"
+    },
+    {
+      "path": "src/components/WorkspaceBar.vue",
+      "beforeSha256": "ad13c2939ec8037af9a8d5b5dee388d72b2f2bd9fe0e16b6232ef8eb2145885e",
+      "afterSha256": "c0579f3d737597ba5629a1bd8602f94895d78ecbc4c1e826f6f5abb90d1d00a6"
+    },
+    {
+      "path": "src/components/WorkspaceManager.vue",
+      "beforeSha256": "22cef2bfbdd5f60df27005bcea79b5664faa67c6195aca5264d4d62f4c86390f",
+      "afterSha256": "5f26a5578fb36168d678d6bd3dcc7cbb56a3f57c59bc338d175f1332469d2508"
+    },
+    {
+      "path": "src/components/WorldComponentsInspector.vue",
+      "beforeSha256": "2cbd03e519a65912b00ce3389bcef4da728eb0ab7c97cbecc0ddba83d1ff676c",
+      "afterSha256": "1a48986c292734154de5c7f970f2e913c6ed4cb4c73d21215d32304a8276e9b4"
+    },
+    {
+      "path": "src/components/WorldToolsPanel.vue",
+      "beforeSha256": "d0ab19537d06c561043dbd0d8dd5b6f179a99aca2e3582313c96d44625816339",
+      "afterSha256": "5468bfad98fcb42e24187fab7ad2e2c5eaf1b07c67951c77b35ea28d44677739"
+    },
+    {
+      "path": "src/layout/TopBar.vue",
+      "beforeSha256": "36b202e58949c3a31b7ddf472008dadc3086ef0d7212ca2b2bf4fe9d6155eadb",
+      "afterSha256": "f1165639fad92033806a3b8c62d5b9f0f31518689ee6e51d9927566705c06142"
+    }
+  ],
+  "changes": [
+    {
+      "path": "src/components/AccessibilityEvidencePanel.vue",
+      "selector": ".semantic-card header>span",
+      "property": "gap",
+      "before": [
+        "var(--ui-space-xs)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/AccessibilityEvidencePanel.vue",
+      "selector": ".actions",
+      "property": "gap",
+      "before": [
+        "var(--ui-space-xs)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/AndroidDeliveryPanel.vue",
+      "selector": ".package-row,.device-row,.device-actions",
+      "property": "gap",
+      "before": [
+        "var(--ui-space-xs)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/AndroidDeliveryPanel.vue",
+      "selector": ".permissions label",
+      "property": "gap",
+      "before": [
+        "var(--ui-space-xs)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/AnimationPanel.vue",
+      "selector": ".studio-toolbar,.transport,.studio-modes",
+      "property": "gap",
+      "before": [
+        "var(--ui-space-xs)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/AnimationPanel.vue",
+      "selector": ".transport label",
+      "property": "gap",
+      "before": [
+        "var(--ui-space-xs)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/AnimationPanel.vue",
+      "selector": ".authoring-status label",
+      "property": "gap",
+      "before": [
+        "var(--ui-space-xs)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/AnimationPanel.vue",
+      "selector": ".command-track>header",
+      "property": "gap",
+      "before": [
+        "var(--ui-space-xs)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/AnimationPanel.vue",
+      "selector": ".time-ruler i,.sequencer-ruler i",
+      "property": "font-size",
+      "before": [
+        "11px"
+      ],
+      "after": "var(--type-caption)",
+      "kind": "readable-local-type"
+    },
+    {
+      "path": "src/components/AnimationPanel.vue",
+      "selector": ".state-node small",
+      "property": "font-size",
+      "before": [
+        "11px"
+      ],
+      "after": "var(--type-caption)",
+      "kind": "readable-local-type"
+    },
+    {
+      "path": "src/components/BuildSettingsPanel.vue",
+      "selector": ".build-header nav",
+      "property": "gap",
+      "before": [
+        "var(--space-0)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/BuildSettingsPanel.vue",
+      "selector": ".field-grid .check",
+      "property": "min-height",
+      "before": [
+        "32px"
+      ],
+      "after": "var(--ui-control-height)",
+      "kind": "native-hit-area"
+    },
+    {
+      "path": "src/components/BuildSettingsPanel.vue",
+      "selector": ".scenes-card>header,.scenes-card article",
+      "property": "gap",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/BuildSettingsPanel.vue",
+      "selector": ".option-grid>label",
+      "property": "gap",
+      "before": [
+        "var(--ui-space-xs)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/BuildSettingsPanel.vue",
+      "selector": ".option-grid>label>span",
+      "property": "gap",
+      "before": [
+        "var(--ui-space-micro)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".settings-content",
+      "property": "padding",
+      "before": [
+        "var(--ui-section-gap) var(--ui-panel-inset) var(--ui-panel-inset)"
+      ],
+      "after": "var(--ui-section-gap) 0 var(--ui-panel-inset)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".settings-content",
+      "property": "gap",
+      "before": [
+        "var(--ui-field-gap)"
+      ],
+      "after": "var(--ui-section-gap)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".inspector-categories",
+      "property": "gap",
+      "before": [
+        "var(--space-0)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".empty-ui-actions",
+      "property": "gap",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".compound-shapes",
+      "property": "border-radius",
+      "before": [],
+      "after": "var(--radius-control)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".compound-shapes>summary",
+      "property": "min-height",
+      "before": [
+        "31px"
+      ],
+      "after": "var(--ui-control-height)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".compound-shapes>summary",
+      "property": "padding",
+      "before": [
+        "var(--space-0) var(--space-1) var(--space-0) var(--space-2)"
+      ],
+      "after": "var(--ui-input-padding-block) var(--space-4)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".compound-shapes>summary",
+      "property": "font-size",
+      "before": [],
+      "after": "var(--type-body)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".compound-shapes>summary",
+      "property": "line-height",
+      "before": [],
+      "after": "var(--line-body)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".compound-shapes>summary",
+      "property": "border-radius",
+      "before": [],
+      "after": "var(--radius-control)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".compound-shapes article",
+      "property": "margin",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "var(--space-3)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".compound-shapes article",
+      "property": "padding",
+      "before": [
+        "var(--space-2)"
+      ],
+      "after": "0",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".compound-shapes article",
+      "property": "gap",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "var(--ui-field-gap)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".compound-shapes article header",
+      "property": "grid-template-columns",
+      "before": [
+        "minmax(0,1fr) auto 25px"
+      ],
+      "after": "minmax(0,1fr) var(--ui-control-height)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".compound-shapes article header",
+      "property": "gap",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".compound-shapes article header",
+      "property": "min-height",
+      "before": [],
+      "after": "var(--ui-panel-header-height)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ":deep(.diagnostic-row)",
+      "property": "min-height",
+      "before": [
+        "30px"
+      ],
+      "after": "var(--ui-control-height)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ":deep(.diagnostic-row)",
+      "property": "gap",
+      "before": [
+        "var(--space-2)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ":deep(.diagnostic-row)",
+      "property": "padding",
+      "before": [],
+      "after": "var(--space-3) var(--space-4)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ":deep(.diagnostic-row)",
+      "property": "font-size",
+      "before": [],
+      "after": "var(--type-caption)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ":deep(.diagnostic-row)",
+      "property": "border-radius",
+      "before": [],
+      "after": "var(--radius-control)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".color-well",
+      "property": "width",
+      "before": [
+        "48px"
+      ],
+      "after": "var(--ui-control-height)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".color-well",
+      "property": "height",
+      "before": [
+        "25px"
+      ],
+      "after": "var(--ui-control-height)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".color-well",
+      "property": "border-radius",
+      "before": [],
+      "after": "var(--radius-control)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".primary-action, .secondary-action",
+      "property": "min-height",
+      "before": [
+        "33px"
+      ],
+      "after": "var(--ui-control-height)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".primary-action, .secondary-action",
+      "property": "gap",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".primary-action, .secondary-action",
+      "property": "font-size",
+      "before": [],
+      "after": "var(--type-body)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".primary-action, .secondary-action",
+      "property": "border-radius",
+      "before": [],
+      "after": "var(--radius-control)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".prefab-actions",
+      "property": "gap",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".script-property-group",
+      "property": "gap",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "var(--ui-field-gap)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".script-property-group",
+      "property": "padding-top",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "var(--ui-heading-content-gap)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".script-property-help",
+      "property": "margin",
+      "before": [
+        "-var(--space-0) var(--space-1) var(--space-1)"
+      ],
+      "after": "0",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".script-property-help",
+      "property": "font-size",
+      "before": [],
+      "after": "var(--type-caption)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".script-property-help",
+      "property": "line-height",
+      "before": [
+        "1.35"
+      ],
+      "after": "var(--line-body)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".plugin-inspector-actions",
+      "property": "gap",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".color-modal",
+      "property": "width",
+      "before": [
+        "250px"
+      ],
+      "after": "min(calc(340px * var(--ui-scale)),calc(100vw - 2 * var(--ui-panel-inset)))",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".color-modal",
+      "property": "padding",
+      "before": [
+        "var(--space-4)"
+      ],
+      "after": "var(--ui-dialog-inset)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".color-modal",
+      "property": "border-radius",
+      "before": [],
+      "after": "var(--radius-dialog)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".component-picker",
+      "property": "width",
+      "before": [
+        "min(620px, calc(100vw - 30px))"
+      ],
+      "after": "min(calc(720px * var(--ui-scale)), calc(100vw - 2 * var(--space-5)))",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".component-picker",
+      "property": "padding",
+      "before": [
+        "var(--space-3)"
+      ],
+      "after": "var(--space-6)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".component-picker",
+      "property": "gap",
+      "before": [
+        "var(--space-2)"
+      ],
+      "after": "var(--ui-field-gap)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".component-picker",
+      "property": "border-radius",
+      "before": [],
+      "after": "var(--radius-dialog)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".component-picker-list>section",
+      "property": "grid-template-columns",
+      "before": [
+        "1fr 1fr"
+      ],
+      "after": "repeat(auto-fit,minmax(min(100%,calc(260px * var(--ui-scale))),1fr))",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".component-picker-list>section",
+      "property": "gap",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".component-main",
+      "property": "min-height",
+      "before": [
+        "52px"
+      ],
+      "after": "var(--ui-panel-header-height)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".component-main",
+      "property": "padding",
+      "before": [
+        "var(--space-1) var(--space-6) var(--space-1) var(--space-2)"
+      ],
+      "after": "var(--space-3) calc(var(--ui-control-height) + var(--space-3)) var(--space-3) var(--space-4)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".component-main",
+      "property": "grid-template-columns",
+      "before": [
+        "29px 1fr 18px"
+      ],
+      "after": "calc(28px * var(--ui-scale)) minmax(0,1fr) var(--ui-icon-size)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".component-main",
+      "property": "gap",
+      "before": [
+        "var(--space-2)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".component-main",
+      "property": "font-size",
+      "before": [],
+      "after": "var(--type-body)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".component-main",
+      "property": "line-height",
+      "before": [],
+      "after": "var(--line-body)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".component-main>span:first-child",
+      "property": "width",
+      "before": [
+        "28px"
+      ],
+      "after": "calc(28px * var(--ui-scale))",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".component-main>span:first-child",
+      "property": "height",
+      "before": [
+        "28px"
+      ],
+      "after": "calc(28px * var(--ui-scale))",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".component-main>span:first-child",
+      "property": "font",
+      "before": [
+        "600 11px/1 var(--font-mono)"
+      ],
+      "after": "600 var(--type-caption)/var(--line-body) var(--font-mono)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".component-main strong",
+      "property": "white-space",
+      "before": [
+        "nowrap"
+      ],
+      "after": "normal",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".component-main strong",
+      "property": "overflow-wrap",
+      "before": [],
+      "after": "anywhere",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".component-main small",
+      "property": "font-size",
+      "before": [],
+      "after": "var(--type-caption)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".component-main small",
+      "property": "line-height",
+      "before": [
+        "1.25"
+      ],
+      "after": "var(--line-body)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".component-favorite",
+      "property": "width",
+      "before": [
+        "25px"
+      ],
+      "after": "var(--ui-control-height)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".component-favorite",
+      "property": "height",
+      "before": [
+        "25px"
+      ],
+      "after": "var(--ui-control-height)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".component-favorite",
+      "property": "right",
+      "before": [
+        "3px"
+      ],
+      "after": "var(--space-1)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".component-favorite",
+      "property": "top",
+      "before": [
+        "3px"
+      ],
+      "after": "var(--space-1)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".component-favorite",
+      "property": "padding",
+      "before": [],
+      "after": "0",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".component-favorite",
+      "property": "border-radius",
+      "before": [],
+      "after": "var(--radius-control)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".property-menu",
+      "property": "width",
+      "before": [
+        "220px"
+      ],
+      "after": "min(calc(320px * var(--ui-scale)),calc(100vw - 2 * var(--ui-panel-inset)))",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".property-menu",
+      "property": "padding",
+      "before": [
+        "var(--space-2)"
+      ],
+      "after": "var(--space-3)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".property-menu",
+      "property": "max-height",
+      "before": [],
+      "after": "calc(100vh - 2 * var(--ui-panel-inset))",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".property-menu",
+      "property": "overflow",
+      "before": [],
+      "after": "auto",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".property-menu",
+      "property": "border-radius",
+      "before": [],
+      "after": "var(--radius-floating)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".property-menu",
+      "property": "gap",
+      "before": [
+        "var(--space-0)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".property-menu>strong",
+      "property": "font",
+      "before": [
+        "600 11px/1.3 var(--font-mono)"
+      ],
+      "after": "600 var(--type-body)/var(--line-body) var(--font-mono)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".component-picker-list>section",
+      "property": "grid-template-columns",
+      "before": [
+        "1fr"
+      ],
+      "after": "repeat(auto-fit,minmax(min(100%,calc(260px * var(--ui-scale))),1fr))",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".component-picker-list>section",
+      "property": "gap",
+      "before": [],
+      "after": "var(--ui-control-gap)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".compound-shapes",
+      "property": "border-radius",
+      "before": [],
+      "after": "var(--radius-control)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".compound-shapes article",
+      "property": "margin",
+      "before": [],
+      "after": "var(--space-3)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".compound-shapes article",
+      "property": "padding",
+      "before": [],
+      "after": "0",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".compound-shapes article",
+      "property": "gap",
+      "before": [],
+      "after": "var(--ui-field-gap)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".compound-shapes article header",
+      "property": "grid-template-columns",
+      "before": [
+        "minmax(0,1fr) 30px"
+      ],
+      "after": "minmax(0,1fr) var(--ui-control-height)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".compound-shapes article header",
+      "property": "gap",
+      "before": [],
+      "after": "var(--ui-control-gap)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".compound-shapes article header",
+      "property": "min-height",
+      "before": [],
+      "after": "var(--ui-panel-header-height)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/ContentAssetInspector.vue",
+      "selector": ".content-pane label",
+      "property": "gap",
+      "before": [
+        "var(--ui-space-xs)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/ContentAssetInspector.vue",
+      "selector": ".slice-pane>header,.dependency-pane>header,.pipeline-pane>header",
+      "property": "gap",
+      "before": [
+        "var(--ui-space-xs)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/CreatorLearningCenter.vue",
+      "selector": ".catalog-filters label",
+      "property": "gap",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/EcosystemStudioPanel.vue",
+      "selector": ".card > header > div",
+      "property": "gap",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/EcosystemStudioPanel.vue",
+      "selector": ".field-grid label, .signing-card label, .connector-editor label, .security-card label, .updater-card > label:not(.toggle)",
+      "property": "gap",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/EditorBottomPanel.vue",
+      "selector": ".bottom-panel",
+      "property": "border-radius",
+      "before": [],
+      "after": "var(--radius-panel)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/EditorBottomPanel.vue",
+      "selector": ".bottom-panel",
+      "property": "overflow",
+      "before": [],
+      "after": "clip",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/EditorBottomPanel.vue",
+      "selector": ".panel-tabs",
+      "property": "gap",
+      "before": [
+        "var(--ui-space-xs)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/EditorBottomPanel.vue",
+      "selector": ".panel-tabs",
+      "property": "min-height",
+      "before": [],
+      "after": "var(--ui-panel-header-height)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/EditorBottomPanel.vue",
+      "selector": ".panel-tabs",
+      "property": "padding",
+      "before": [],
+      "after": "var(--space-1) var(--space-3)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/EditorBottomPanel.vue",
+      "selector": ".panel-tab",
+      "property": "gap",
+      "before": [
+        "var(--ui-space-xs)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/EditorBottomPanel.vue",
+      "selector": ".panel-tab",
+      "property": "border-radius",
+      "before": [
+        "0"
+      ],
+      "after": "var(--radius-control)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/EditorBottomPanel.vue",
+      "selector": ".panel-controls",
+      "property": "gap",
+      "before": [
+        "var(--ui-space-micro)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/EditorBottomPanel.vue",
+      "selector": ".panel-controls",
+      "property": "padding-inline",
+      "before": [],
+      "after": "var(--space-3)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/EditorBottomPanel.vue",
+      "selector": ".compact-tab-select",
+      "property": "font-size",
+      "before": [],
+      "after": "var(--type-body)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/EditorBottomPanel.vue",
+      "selector": ".compact-tab-select",
+      "property": "height",
+      "before": [],
+      "after": "var(--ui-control-height)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/EditorBottomPanel.vue",
+      "selector": ".folder-tree,.asset-inspector",
+      "property": "padding",
+      "before": [
+        "var(--ui-space-xs)"
+      ],
+      "after": "var(--ui-panel-inset)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/EditorBottomPanel.vue",
+      "selector": ".folder-tree button",
+      "property": "border-radius",
+      "before": [
+        "0"
+      ],
+      "after": "var(--radius-xs)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/EditorBottomPanel.vue",
+      "selector": ".asset-toolbar",
+      "property": "gap",
+      "before": [
+        "var(--ui-space-xs)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/EditorBottomPanel.vue",
+      "selector": ".asset-toolbar",
+      "property": "padding",
+      "before": [
+        "var(--ui-space-xs)"
+      ],
+      "after": "var(--ui-panel-inset)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/EditorBottomPanel.vue",
+      "selector": ".asset-actions-row,.asset-filters,.asset-diagnostics",
+      "property": "gap",
+      "before": [
+        "var(--ui-space-xs)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/EditorBottomPanel.vue",
+      "selector": ".asset-diagnostics button",
+      "property": "font-size",
+      "before": [
+        "var(--type-caption)"
+      ],
+      "after": "var(--type-body)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/EditorBottomPanel.vue",
+      "selector": ".asset-overflow-menu,.filter-popover",
+      "property": "gap",
+      "before": [
+        "var(--ui-space-xs)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/EditorBottomPanel.vue",
+      "selector": ".asset-overflow-menu,.filter-popover",
+      "property": "padding",
+      "before": [
+        "var(--ui-space-sm)"
+      ],
+      "after": "var(--space-3)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/EditorBottomPanel.vue",
+      "selector": ".asset-overflow-menu,.filter-popover",
+      "property": "border-radius",
+      "before": [],
+      "after": "var(--radius-floating)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/EditorBottomPanel.vue",
+      "selector": ".asset-inspector>header",
+      "property": "gap",
+      "before": [
+        "var(--ui-space-xs)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/EditorBottomPanel.vue",
+      "selector": ".asset-inspector label",
+      "property": "grid-template-columns",
+      "before": [
+        "minmax(8ch,1fr) minmax(0,1fr)"
+      ],
+      "after": "minmax(0,1fr)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/EditorBottomPanel.vue",
+      "selector": ".asset-inspector label",
+      "property": "gap",
+      "before": [
+        "var(--ui-space-xs)"
+      ],
+      "after": "var(--ui-label-control-gap)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/EditorBottomPanel.vue",
+      "selector": ".asset-inspector label",
+      "property": "padding-block",
+      "before": [
+        "var(--ui-space-xs)"
+      ],
+      "after": "var(--space-3)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/EditorBottomPanel.vue",
+      "selector": ".asset-inspector label>div",
+      "property": "gap",
+      "before": [
+        "var(--ui-space-xs)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/EditorBottomPanel.vue",
+      "selector": ".provenance-actions,.asset-actions,.batch-actions",
+      "property": "gap",
+      "before": [
+        "var(--ui-space-xs)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/EditorBottomPanel.vue",
+      "selector": ".compact-tab-select",
+      "property": "font-size",
+      "before": [],
+      "after": "var(--type-body)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/EditorBottomPanel.vue",
+      "selector": ".compact-tab-select",
+      "property": "height",
+      "before": [],
+      "after": "var(--ui-control-height)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/components/EditorBottomPanel.vue",
+      "before": "asset-dock (max-width:400px)",
+      "after": "asset-dock (max-width: 36em)",
+      "kind": "explicit-overflow"
+    },
+    {
+      "path": "src/components/EventSheetEditor.vue",
+      "selector": ".sheet-browser > header,.event-details section > header",
+      "property": "gap",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/EventSheetEditor.vue",
+      "selector": ".object-context > div,.object-context label",
+      "property": "gap",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/EventSheetEditor.vue",
+      "selector": ".seed label",
+      "property": "gap",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/GraphProductionPanel.vue",
+      "selector": ".production-content > header, .subhead",
+      "property": "gap",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/GraphProductionPanel.vue",
+      "selector": ".checks label",
+      "property": "gap",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/NetworkStudioPanel.vue",
+      "selector": ".studio-header nav",
+      "property": "gap",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/NetworkStudioPanel.vue",
+      "selector": ".instance-card-actions",
+      "property": "gap",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/ObjectBlueprintEditor.vue",
+      "selector": ".component-columns label",
+      "property": "gap",
+      "before": [
+        "var(--ui-space-xs)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/ObjectOwnershipPanel.vue",
+      "selector": ".ownership-actions",
+      "property": "gap",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/ObjectOwnershipPanel.vue",
+      "selector": ".ownership-source,.ownership-property",
+      "property": "gap",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/PackageManagerPanel.vue",
+      "selector": ".offline,.package-list label",
+      "property": "gap",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/ParticleGraphEditor.vue",
+      "selector": "main > label",
+      "property": "gap",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/PhysicsRuntimePanel.vue",
+      "selector": "header",
+      "property": "gap",
+      "before": [
+        "var(--ui-space-xs)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/PhysicsRuntimePanel.vue",
+      "selector": ".table-controls",
+      "property": "gap",
+      "before": [
+        "var(--ui-space-xs)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/PhysicsRuntimePanel.vue",
+      "selector": ".table-controls label",
+      "property": "gap",
+      "before": [
+        "var(--ui-space-xs)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/PhysicsSettingsPanel.vue",
+      "selector": ".matrix-header,.matrix-row",
+      "property": "gap",
+      "before": [
+        "var(--space-0)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/PhysicsSettingsPanel.vue",
+      "selector": ".matrix-row button",
+      "property": "height",
+      "before": [
+        "18px"
+      ],
+      "after": "var(--ui-control-height)",
+      "kind": "native-hit-area"
+    },
+    {
+      "path": "src/components/PluginSettings.vue",
+      "selector": ".plugin-list label",
+      "property": "gap",
+      "before": [
+        "var(--ui-space-xs)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/PresentationPanel.vue",
+      "selector": ".presentation-header nav",
+      "property": "gap",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/PresentationPanel.vue",
+      "selector": ".master-controls",
+      "property": "gap",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/PresentationPanel.vue",
+      "selector": ".bus-list article>header",
+      "property": "gap",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/PresentationPanel.vue",
+      "selector": ".waveform-tools",
+      "property": "gap",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/ProfilerPanel.vue",
+      "selector": ".card label > div",
+      "property": "gap",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/ProfilerPanel.vue",
+      "selector": ".button-row, .data-editor > header > div, .property-toggles",
+      "property": "gap",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/ProfilerPanel.vue",
+      "selector": ".assertion-list article, .field-list article",
+      "property": "gap",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/ProjectHealthPanel.vue",
+      "selector": ".data-actions,footer",
+      "property": "gap",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/ProjectManager.vue",
+      "selector": ".template-library-tools>label",
+      "property": "gap",
+      "before": [
+        "var(--ui-space-xs)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/ProjectManager.vue",
+      "selector": ".template-details>header",
+      "property": "gap",
+      "before": [
+        "var(--ui-space-xs)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/RenderingPanel.vue",
+      "selector": ".studio-header>div",
+      "property": "gap",
+      "before": [
+        "var(--space-0)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/RenderingPanel.vue",
+      "selector": ".studio-header nav",
+      "property": "gap",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/RenderingPanel.vue",
+      "selector": ".shader-options>label",
+      "property": "gap",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/RenderingPanel.vue",
+      "selector": ".layer-actions",
+      "property": "gap",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/RenderingPanel.vue",
+      "selector": ".quality-volumes .volume-card>header",
+      "property": "gap",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/RenderingPanel.vue",
+      "selector": ".production-summary>header>div",
+      "property": "gap",
+      "before": [
+        "var(--space-0)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/RenderingPanel.vue",
+      "selector": ".profile-choice,.capture-actions",
+      "property": "gap",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/SaveDataSettings.vue",
+      "selector": ".actions",
+      "property": "gap",
+      "before": [
+        "var(--ui-space-xs)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/SaveDataSettings.vue",
+      "selector": ".save-settings details>button",
+      "property": "gap",
+      "before": [
+        "var(--ui-space-xs)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/SceneSideBar.vue",
+      "selector": ".hierarchy-actions",
+      "property": "gap",
+      "before": [
+        "var(--ui-space-micro)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/SceneSideBar.vue",
+      "selector": ".hierarchy-header>div:first-child",
+      "property": "gap",
+      "before": [
+        "var(--ui-space-xs)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/SceneTabs.vue",
+      "selector": ".scene-tabs",
+      "property": "gap",
+      "before": [
+        "var(--ui-space-xs)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/ScriptConversionPanel.vue",
+      "selector": ".conversion-actions",
+      "property": "gap",
+      "before": [
+        "var(--ui-space-xs)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/ScriptStudio.vue",
+      "selector": ".toolbar-actions",
+      "property": "gap",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/ScriptStudio.vue",
+      "selector": ".breakpoint-detail > label",
+      "property": "gap",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/ShortcutEditor.vue",
+      "selector": ".scope,.profiles,.actions,.io,footer",
+      "property": "gap",
+      "before": [
+        "var(--ui-space-xs)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/ShortcutEditor.vue",
+      "selector": ".manager-grid label",
+      "property": "gap",
+      "before": [
+        "var(--ui-space-xs)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/ShortcutEditor.vue",
+      "selector": ".dock-grid fieldset",
+      "property": "gap",
+      "before": [
+        "var(--ui-space-xs)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/ShortcutEditor.vue",
+      "selector": ".privacy-review label",
+      "property": "gap",
+      "before": [
+        "var(--ui-space-xs)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/SimulationStatusPanel17.vue",
+      "selector": ".actions,.status",
+      "property": "gap",
+      "before": [
+        "var(--ui-space-xs)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/StudioDraftConflict.vue",
+      "selector": ".versions label",
+      "property": "gap",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/StudioStatusDialog.vue",
+      "selector": ".scope,.profiles,.actions,.io,footer",
+      "property": "gap",
+      "before": [
+        "var(--ui-space-xs)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/StudioStatusDialog.vue",
+      "selector": ".manager-grid label",
+      "property": "gap",
+      "before": [
+        "var(--ui-space-xs)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/StudioStatusDialog.vue",
+      "selector": ".dock-grid fieldset",
+      "property": "gap",
+      "before": [
+        "var(--ui-space-xs)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/StudioStatusDialog.vue",
+      "selector": ".privacy-review label",
+      "property": "gap",
+      "before": [
+        "var(--ui-space-xs)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/TeamWorkflowPanel.vue",
+      "selector": ".changes-card footer,.lock-actions,.conflict-summary",
+      "property": "gap",
+      "before": [
+        "var(--ui-space-xs)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/TilemapPanel.vue",
+      "selector": ".tilemap-setup-controls,.tilemap-toolbar",
+      "property": "gap",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/TilemapPanel.vue",
+      "selector": ".tilemap-toolbar label,.tilemap-setup-controls label",
+      "property": "gap",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/TilemapPanel.vue",
+      "selector": ".layers>div,.region-settings :deep(.ui-property-control>div)",
+      "property": "gap",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/TilemapPanel.vue",
+      "selector": ".bake-actions",
+      "property": "gap",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/ToolBar.vue",
+      "selector": ".toolbar-content",
+      "property": "gap",
+      "before": [
+        "var(--ui-space-xs)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/ToolBar.vue",
+      "selector": ".checks label,.guide-controls label",
+      "property": "gap",
+      "before": [
+        "var(--ui-space-xs)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/ToolBar.vue",
+      "selector": ".segmented,.quick-settings,.custom-resolution,.guide-controls>div",
+      "property": "gap",
+      "before": [
+        "var(--ui-space-xs)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/ToolBar.vue",
+      "selector": ".guide-controls",
+      "property": "gap",
+      "before": [
+        "var(--ui-space-xs)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/UiScenePreview.vue",
+      "selector": ".ui-scene-preview figcaption",
+      "property": "font-size",
+      "before": [
+        "12px"
+      ],
+      "after": "var(--type-body)",
+      "kind": "readable-local-type"
+    },
+    {
+      "path": "src/components/UndoHistoryPanel.vue",
+      "selector": ".history-actions",
+      "property": "gap",
+      "before": [
+        "var(--ui-space-xs)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/VisualGraphEditor.vue",
+      "selector": ".primary-actions,.authoring-switch",
+      "property": "gap",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/VisualGraphEditor.vue",
+      "selector": ".editing-actions",
+      "property": "gap",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/VisualGraphEditor.vue",
+      "selector": ".graph-summary label,.syntax-fields label",
+      "property": "gap",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/VisualGraphEditor.vue",
+      "selector": ".variables > header,.diagnostics > header",
+      "property": "gap",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/VisualGraphEditor.vue",
+      "selector": ".variables article label",
+      "property": "gap",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/VisualGraphEditor.vue",
+      "selector": ".canvas-controls",
+      "property": "gap",
+      "before": [
+        "var(--space-0)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/VisualGraphEditor.vue",
+      "selector": ".graph-node>header strong",
+      "property": "font-size",
+      "before": [
+        "11px"
+      ],
+      "after": "var(--type-body)",
+      "kind": "readable-local-type"
+    },
+    {
+      "path": "src/components/VisualGraphEditor.vue",
+      "selector": ".syntax-card>header strong",
+      "property": "font-size",
+      "before": [
+        "12px"
+      ],
+      "after": "var(--type-body)",
+      "kind": "readable-local-type"
+    },
+    {
+      "path": "src/components/WorkspaceBar.vue",
+      "selector": ".workspace-list,.history-controls",
+      "property": "gap",
+      "before": [
+        "var(--ui-space-micro)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/WorkspaceManager.vue",
+      "selector": ".scope,.profiles,.actions,.io,footer",
+      "property": "gap",
+      "before": [
+        "var(--ui-space-xs)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/WorkspaceManager.vue",
+      "selector": ".manager-grid label",
+      "property": "gap",
+      "before": [
+        "var(--ui-space-xs)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/WorkspaceManager.vue",
+      "selector": ".dock-grid fieldset",
+      "property": "gap",
+      "before": [
+        "var(--ui-space-xs)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/WorkspaceManager.vue",
+      "selector": ".privacy-review label",
+      "property": "gap",
+      "before": [
+        "var(--ui-space-xs)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/WorldComponentsInspector.vue",
+      "selector": ".actions",
+      "property": "gap",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/WorldComponentsInspector.vue",
+      "selector": ".package",
+      "property": "min-height",
+      "before": [
+        "30px"
+      ],
+      "after": "var(--ui-control-height)",
+      "kind": "native-hit-area"
+    },
+    {
+      "path": "src/components/WorldToolsPanel.vue",
+      "selector": ".asset-actions",
+      "property": "gap",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/WorldToolsPanel.vue",
+      "selector": ".world-tools>header",
+      "property": "gap",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/components/WorldToolsPanel.vue",
+      "selector": ".coordinate-field",
+      "property": "gap",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "kind": "semantic-control-gap"
+    },
+    {
+      "path": "src/layout/TopBar.vue",
+      "selector": ".dropdown",
+      "property": "padding",
+      "before": [
+        "var(--ui-space-xs)"
+      ],
+      "after": "var(--space-3)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/layout/TopBar.vue",
+      "selector": ".dropdown",
+      "property": "border-radius",
+      "before": [],
+      "after": "var(--radius-floating)",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/layout/TopBar.vue",
+      "selector": ".dropdown",
+      "property": "max-width",
+      "before": [
+        "min(54ch,calc(100vw - var(--ui-space-lg)))"
+      ],
+      "after": "min(54ch,calc(100vw - 2 * var(--ui-panel-inset)))",
+      "kind": "explicit-reviewed"
+    },
+    {
+      "path": "src/layout/TopBar.vue",
+      "selector": ".dropdown",
+      "property": "max-height",
+      "before": [
+        "calc(100vh - 2 * var(--ui-control-height))"
+      ],
+      "after": "calc(100vh - var(--ui-control-height) - var(--ui-panel-inset))",
+      "kind": "explicit-reviewed"
+    }
+  ],
+  "excluded": [
+    "Authored game canvas/native geometry",
+    "Timeline keyframe coordinates",
+    "VisualScript graph metrics pending explicit review"
+  ]
+}

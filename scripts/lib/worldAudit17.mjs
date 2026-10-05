@@ -16,14 +16,23 @@ import {wait} from './browserUserAudit.mjs'
  const entity=/** 进入设计工作区，按不含附属标签的完整实体名选择对象。 */ async(name)=>{await workspace('Design');const index=await evaluate(`[...document.querySelectorAll('.entity-list .entity-item .name')].findIndex(e=>[...e.childNodes].filter(n=>n.nodeName!=='SMALL').map(n=>n.textContent).join('').trim()===${JSON.stringify(name)})`);assert.ok(index>=0,'Entity '+name);await click('.entity-list .entity-item .name',index);await wait(160)};
  /** 通过当前可见标签或紧凑选择器打开底栏；先记录并关闭提示，必要时显式展开已选中的折叠页。 */
  const bottom=async(id,label)=>{
-  while(await evaluate("!!document.querySelector('.toast-stack article button:last-child')")){
+  const dismissSelector='.toast-stack article:not([inert]) button:last-child';let dismissed=0
+  while(await evaluate(`!!document.querySelector(${JSON.stringify(dismissSelector)})`)){
+   assert.ok(dismissed++<20,'Notification dismissal must terminate')
    a.observations.push({name:'dismissed-notification',text:await evaluate("document.querySelector('.toast-stack article')?.textContent")})
-   await click('.toast-stack article button:last-child')
+   try{await click(dismissSelector)}catch(error){
+    if(!String(error.message).includes('Missing '+dismissSelector)||await evaluate(`!!document.querySelector(${JSON.stringify(dismissSelector)})`))throw error
+    a.observations.push({name:'notification-auto-expired-before-pointer',scope:'Only an already absent notification is accepted; no action or geometry failure is suppressed.'})
+   }
   }
+  await until("!document.querySelector('.toast-stack article')")
   if(await evaluate("!!document.querySelector('.compact-tab-select')?.getBoundingClientRect().width"))await a.select('.compact-tab-select',id)
   else await clickText('.bottom-panel .panel-tab',label,true)
-  if(!await evaluate("!!document.querySelector('.bottom-panel .panel-content')"))await click('.bottom-panel .panel-controls > button:last-child')
-  await until("!!document.querySelector('.bottom-panel .panel-content')")
+  if(await evaluate("!!document.querySelector('.bottom-panel.collapsed')")){
+   await click('.bottom-panel .panel-controls > button:last-child')
+   a.observations.push({name:'restored-collapsed-bottom-panel',scope:'Actual public expand control restores the normal dock; no maximize, state injection or density change.'})
+  }
+  await until("(()=>{const root=document.querySelector('.bottom-panel'),content=root?.querySelector('.panel-content');return !!root&&!root.classList.contains('collapsed')&&!!content?.getBoundingClientRect().height&&!content.inert&&!root.getAnimations().some(a=>a.playState==='running')})()")
  };
  const world=/** 用当前可见的底栏入口打开世界工具，再选择指定子页。 */ async(tab)=>{if(await evaluate("!!document.querySelector('.compact-tab-select')?.getBoundingClientRect().width"))await a.select('.compact-tab-select','worldProduction');else await clickText('.bottom-tabs button,.panel-tabs button','World Studio');await until("!!document.querySelector('.world-tools')");if(tab)await clickText('.world-tools>header nav button',tab,true);await wait(150)};
  const expandInspector=/** 通过键盘逐个展开检查器折叠组，最多处理四十项。 */ async()=>{for(let i=0;i<40;i++){const at=await evaluate("[...document.querySelectorAll('.config-panel details.inspector-section>summary')].findIndex(e=>!e.parentElement.open)");if(at<0)break;await activate('.config-panel details.inspector-section>summary',at)}};

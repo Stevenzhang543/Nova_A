@@ -1,0 +1,73 @@
+{
+  "generatedAt": "2026-10-04T16:21:44.151Z",
+  "path": "src/components/EditorBottomPanel.vue",
+  "beforeSha256": "6a7af18d124bd04b07b9b816943ffc84455b0b581c5634bfba0ca0e8808a8be6",
+  "afterSha256": "90aa6ccd4dedcc8de92a4010e178238671642a24a277de8bb68826698175c7cc",
+  "cause": "Actual current22-group Comfortable test failed at representative asset wheel because1600x900/default280 Dock multiline toolbar consumed the216px body and flex1/min-height0 made asset-grid height0. The earlier <=36em whole-Dock fallback did not cover medium actual workspace width.",
+  "failedAttempt": ".cache/comfortable26.37/v26.37-comfortable-user-attempt70",
+  "edits": [
+    {
+      "before": ".asset-workspace{min-width:0;min-height:0;position:relative;display:flex;flex-direction:column;overflow:hidden}",
+      "after": ".asset-workspace{min-width:0;min-height:0;position:relative;display:flex;flex-direction:column;overflow:auto;scrollbar-gutter:stable;container:asset-tools/inline-size}",
+      "reason": "Use real available workspace width and normal vertical overflow when comfortable toolbar wraps; preserve the existing asset virtual-list scroll owner."
+    },
+    {
+      "before": ".asset-grid{flex:1;min-height:0;overflow:auto}",
+      "after": ".asset-grid{flex:1 0 min(40vh,calc(6 * var(--ui-control-height)));min-height:min(40vh,calc(6 * var(--ui-control-height)));overflow:auto}",
+      "reason": "Reuse the existing minimum-window bounded grid geometry at every width. Grow when space exists; do not collapse the resource viewport to zero."
+    },
+    {
+      "before": ".asset-detail-back{display:inline-flex}.asset-toolbar .path{display:none}}",
+      "after": ".asset-detail-back{display:inline-flex}}\n@container asset-tools (max-width:56em){.asset-toolbar .path{display:none}}",
+      "reason": "Move the existing optional breadcrumb visibility decision to actual toolbar container width. Keep every action, accessible name, search, folder tree and data binding."
+    }
+  ],
+  "consequence": "Presentation geometry/normal scrolling only. Exact business script/template identity proved; asset IDs, virtualizer ResizeObserver and scroll calculations, native drag events, history and folder commands are unchanged. No font/control shrink or core action hiding.",
+  "verification": {
+    "scopedCss": "compiled successfully",
+    "businessScriptAndTemplate": "byte-identical",
+    "actualResourceWheelAndDrag": {
+      "status": "passed",
+      "groups": 22,
+      "report": "release-audits/v26.37-comfortable-user.json",
+      "qualifiedRelease": null,
+      "checks": [
+        {
+          "name": "representative hierarchy and assets scroll without artificial inertia",
+          "status": "passed"
+        },
+        {
+          "name": "native asset drop confirms a stable source UUID and cleanup",
+          "status": "passed"
+        },
+        {
+          "name": "bottom native tab reordering keeps interaction and content ownership",
+          "status": "passed"
+        },
+        {
+          "name": "canceled native tab drag preserves committed order",
+          "status": "passed"
+        },
+        {
+          "name": "native panel docking and floating return preserve hierarchy ownership",
+          "status": "passed"
+        }
+      ]
+    },
+    "sourceFrozen": false,
+    "publication": false,
+    "actualNativeMenus": {
+      "status": "passed",
+      "groups": 9,
+      "minimumPopups": 12,
+      "report": "release-audits/v26.37-native-disclosures-user.json",
+      "qualifiedRelease": null
+    },
+    "actualFixture": {
+      "name": "normal-project-fixture",
+      "file": "E:\\Nova_A\\release-audits\\v26.37-motion-user-fixture.nova",
+      "entities": 110,
+      "assets": 100
+    }
+  }
+}

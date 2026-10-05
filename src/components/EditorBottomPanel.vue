@@ -1,7 +1,7 @@
 <!-- 编辑器底栏：统一承载资源、日志与生产工具，标签切换不改变项目内容。 -->
 <template>
-  <section class="bottom-panel" data-control-scope="transient-bottom-dock" :class="{ collapsed: !estate.bottomPanelOpen, unpinned: !estate.bottomPanelPinned, 'panel-maximized': workspaceState.maximizedPanel==='bottom' }" :style="panelStyle" @mouseleave="autoHide">
-    <PanelResizeHandle v-if="estate.bottomPanelOpen" v-model="estate.bottomPanelHeight" orientation="horizontal" :minimum="120" :maximum="520" :reset-value="240" reverse :label="t('bottomPanel')" :disabled="workspaceState.maximizedPanel==='bottom'" />
+  <section ref="dockRoot" class="bottom-panel" data-control-scope="transient-bottom-dock" @pointerdown.capture="prepareDockPrecision" @keydown.capture="prepareDockPrecision" @dblclick.capture="prepareDockPrecision" :class="{ collapsed: !estate.bottomPanelOpen, unpinned: !estate.bottomPanelPinned, 'panel-maximized': workspaceState.maximizedPanel==='bottom' }" :style="panelStyle" @mouseleave="autoHide">
+    <PanelResizeHandle v-if="estate.bottomPanelOpen" v-model="estate.bottomPanelHeight" orientation="horizontal" :minimum="120" :maximum="520" :reset-value="280" @dragging="onDockDragging" @commit="settleDockMotion" reverse :label="t('bottomPanel')" :disabled="workspaceState.maximizedPanel==='bottom'" />
     <header class="panel-tabs">
       <!-- 标签与固定操作分区，长译文只滚动标签，不挤压展开、固定和关闭按钮。 -->
       <select v-model="estate.bottomPanelTab" class="compact-tab-select" :aria-label="t('tools')" @change="estate.bottomPanelOpen = true"><option v-for="tab in tabs" :key="tab.id" :value="tab.id">{{ t(tab.label) }}</option></select>
@@ -10,13 +10,13 @@
       </div>
       <div class="panel-controls">
       <PanelMaximizeButton v-if="estate.bottomPanelOpen" panel="bottom" />
-      <button :class="{ active: estate.bottomPanelPinned }" :aria-pressed="estate.bottomPanelPinned" :aria-label="t(estate.bottomPanelPinned ? 'unpinPanel' : 'pinPanel')" :title="t(estate.bottomPanelPinned ? 'unpinPanel' : 'pinPanel')" @click="estate.bottomPanelPinned = !estate.bottomPanelPinned"><EditorIcon :name="estate.bottomPanelPinned ? 'unpin' : 'pin'" /></button>
-      <button v-if="estate.bottomPanelTab === 'console' && estate.bottomPanelOpen" :aria-label="t('clearConsole')" :title="t('clearConsole')" @click="estate.logs.splice(0)"><EditorIcon name="clear" /></button>
-      <button :aria-label="t(estate.bottomPanelOpen ? 'collapsePanel' : 'expandPanel')" :aria-expanded="estate.bottomPanelOpen" :title="t(estate.bottomPanelOpen ? 'collapsePanel' : 'expandPanel')" @click="estate.bottomPanelOpen = !estate.bottomPanelOpen"><EditorIcon :name="estate.bottomPanelOpen ? 'down' : 'up'" /></button>
+      <button class="ui-button ui-icon-button" :class="{ active: estate.bottomPanelPinned }" :aria-pressed="estate.bottomPanelPinned" :aria-label="t(estate.bottomPanelPinned ? 'unpinPanel' : 'pinPanel')" :title="t(estate.bottomPanelPinned ? 'unpinPanel' : 'pinPanel')" @click="estate.bottomPanelPinned = !estate.bottomPanelPinned"><EditorIcon :name="estate.bottomPanelPinned ? 'unpin' : 'pin'" /></button>
+      <button class="ui-button ui-icon-button" v-if="estate.bottomPanelTab === 'console' && estate.bottomPanelOpen" :aria-label="t('clearConsole')" :title="t('clearConsole')" @click="estate.logs.splice(0)"><EditorIcon name="clear" /></button>
+      <button class="ui-button ui-icon-button" :aria-label="t(estate.bottomPanelOpen ? 'collapsePanel' : 'expandPanel')" :aria-expanded="estate.bottomPanelOpen" :title="t(estate.bottomPanelOpen ? 'collapsePanel' : 'expandPanel')" @click="estate.bottomPanelOpen = !estate.bottomPanelOpen"><EditorIcon :name="estate.bottomPanelOpen ? 'down' : 'up'" /></button>
       </div>
     </header>
 
-    <div v-show="estate.bottomPanelOpen" class="panel-content">
+    <div ref="dockContent" v-show="dockContentVisible" :inert="!estate.bottomPanelOpen" class="panel-content">
       <div v-show="estate.bottomPanelTab === 'assets'" class="asset-browser" :class="{ inspecting: selectedAsset, 'details-visible': assetDetailMode && selectedAsset, 'full-page-details': assetFullPage && selectedAsset }">
         <aside class="folder-tree">
           <strong>{{ t('projectFiles') }}</strong>
@@ -44,7 +44,7 @@
               <UiButton @click="createVisualGraphAsset" icon="graph" :label="t('visualGraph')" />
               <UiButton :disabled="!state.selectedEntityIds.length" @click="createSceneAssetFromSelection" icon="design" :label="t('createSceneAsset')" />
               <UiButton @click="creatingFolder = !creatingFolder" icon="folder" :label="t('newFolder')" />
-              <details ref="assetOverflow" class="asset-overflow"><summary :title="t('moreActions')" :aria-label="t('moreActions')"><EditorIcon name="more" /></summary><section class="asset-overflow-menu"><strong>{{ t('newSharedResource') }}</strong><button v-for="kind in resourceKinds" :key="kind" type="button" :aria-label="`+ ${t(`resource_${kind}`)}`" @click="createSharedResource(kind); closeAssetOverflow()">+ {{ t(`resource_${kind}`) }}</button><button type="button" @click="exportFolder(); closeAssetOverflow()">{{ t('exportProjectFolder') }}</button><button type="button" :disabled="assetBatch.active" @click="batchReimportVisible(); closeAssetOverflow()">{{ t('batchReimport') }}</button><button type="button" :disabled="!selectedAsset" @click="bulkApplyVisible(); closeAssetOverflow()">{{ t('bulkApplyVisible') }}</button><button v-for="item in pluginAssetContributions" :key="`${item.pluginId}:${item.kind}:${item.id}`" type="button" :title="`${item.pluginName} · ${item.description ?? ''}`" @click="pluginRuntime.invokeContribution(item.kind,item.id,item.pluginId); closeAssetOverflow()">{{ item.label }}</button></section></details>
+              <details data-ui-motion-popover ref="assetOverflow" class="asset-overflow"><summary :title="t('moreActions')" :aria-label="t('moreActions')"><EditorIcon name="more" /></summary><section class="asset-overflow-menu"><strong>{{ t('newSharedResource') }}</strong><button v-for="kind in resourceKinds" :key="kind" type="button" :aria-label="`+ ${t(`resource_${kind}`)}`" @click="createSharedResource(kind); closeAssetOverflow()">+ {{ t(`resource_${kind}`) }}</button><button type="button" @click="exportFolder(); closeAssetOverflow()">{{ t('exportProjectFolder') }}</button><button type="button" :disabled="assetBatch.active" @click="batchReimportVisible(); closeAssetOverflow()">{{ t('batchReimport') }}</button><button type="button" :disabled="!selectedAsset" @click="bulkApplyVisible(); closeAssetOverflow()">{{ t('bulkApplyVisible') }}</button><button v-for="item in pluginAssetContributions" :key="`${item.pluginId}:${item.kind}:${item.id}`" type="button" :title="`${item.pluginName} · ${item.description ?? ''}`" @click="pluginRuntime.invokeContribution(item.kind,item.id,item.pluginId); closeAssetOverflow()">{{ item.label }}</button></section></details>
               <input v-if="creatingFolder" v-model="newFolderName" class="folder-input" :placeholder="t('folderName')" @keydown.enter="createFolder" @keydown.escape="creatingFolder = false">
               <span class="path" :title="assets.currentFolder">{{ assets.currentFolder }}</span>
               <input v-model="assets.search" :aria-label="t('searchAssets')" type="search" :placeholder="t('searchAssets')">
@@ -52,7 +52,7 @@
             </div>
             <div class="filter-menu" :aria-label="t('assetType')">
               <button :class="{ active: assets.typeFilter !== 'all' || assets.favoritesOnly }" @click="filterMenuOpen = !filterMenuOpen"><EditorIcon name="filter" /> {{ activeFilterLabel }} <EditorIcon name="down" /></button>
-              <section v-if="filterMenuOpen" class="filter-popover">
+              <UiMotionTransition><section v-if="filterMenuOpen" class="filter-popover">
                 <input v-model="filterQuery" type="search" :placeholder="t('searchFilters')">
                 <button v-for="filter in filteredTypeFilters" :key="filter.type" :class="{ active: assets.typeFilter === filter.type }" @click="assets.typeFilter = filter.type; filterMenuOpen = false">{{ t(filter.label) }}</button>
                 <button :class="{ active: assets.favoritesOnly }" @click="assets.favoritesOnly = !assets.favoritesOnly"><EditorIcon name="star" /> {{ t('favoritesOnly') }}</button>
@@ -60,7 +60,7 @@
                 <select v-model="assets.selectedCollectionId"><option value="">{{ t('allCollections') }}</option><option v-for="collection in assets.collections" :key="collection.id" :value="collection.id">{{ collection.name }}</option></select>
                 <select :value="''" @change="applySavedFilter(($event.target as HTMLSelectElement).value)"><option value="">{{ t('savedFilters') }}</option><option v-for="filter in assets.savedFilters" :key="filter.id" :value="filter.id">{{ filter.name }}</option></select>
                 <div><input v-model="savedFilterName" :placeholder="t('filterName')" @keydown.enter="saveFilter"><button @click="saveFilter"><EditorIcon name="add" /></button></div>
-              </section>
+              </section></UiMotionTransition>
             </div>
             <div class="asset-diagnostics">
               <UiButton @click="reportUnusedAssets" icon="check" :label="t('unusedAssetReport')" />
@@ -74,14 +74,14 @@
             <article v-for="change in externalChanges" :key="change.id"><span><strong>{{ t('externalAssetChanged') }}</strong><small>{{ change.name }}</small></span><button @click="resolveExternal(change.id, 'reimport')">{{ t('reimportAsset') }}</button><button @click="resolveExternal(change.id, 'keep')">{{ t('keepCurrent') }}</button><button @click="resolveExternal(change.id, 'duplicate')">{{ t('importAsCopy') }}</button></article>
           </section>
 
-<!-- 导入队列展开检查回调判断是否仍有未完成、未取消且未失败的作业。 -->          <details v-if="importJobs.length" class="import-queue" :open="importJobs.some(job=>!['complete','cancelled','failed'].includes(job.status))" aria-live="polite">
+<!-- 导入队列展开检查回调判断是否仍有未完成、未取消且未失败的作业。 -->          <details data-ui-motion-disclosure v-if="importJobs.length" class="import-queue" :open="importJobs.some(job=>!['complete','cancelled','failed'].includes(job.status))" aria-live="polite">
             <summary>{{ t('importLog') }} · {{ importJobs.length }}</summary>
             <article v-for="job in importJobs" :key="job.id">
               <span><strong>{{ job.name }}</strong><small>{{ t(`importStatus_${job.status}`) }}</small></span>
               <progress :value="job.progress" max="1"></progress>
               <button v-if="!['complete','cancelled','failed'].includes(job.status)" @click="cancelAssetImport(job.id)">{{ t('cancel') }}</button>
               <button v-else-if="job.retryable" @click="retryImport(job.id)">{{ t('retry') }}</button>
-              <p v-if="job.status==='failed'" role="alert">{{ assetImportFailureSummary(job.logs.join(' ' ),preferencesState.locale) }}</p><details v-if="job.logs.length"><summary>{{ assetImportTechnicalLabel(preferencesState.locale) }}</summary><code v-for="(line,index) in job.logs" :key="index">{{ line }}</code></details>
+              <p v-if="job.status==='failed'" role="alert">{{ assetImportFailureSummary(job.logs.join(' ' ),preferencesState.locale) }}</p><details data-ui-motion-disclosure v-if="job.logs.length"><summary>{{ assetImportTechnicalLabel(preferencesState.locale) }}</summary><code v-for="(line,index) in job.logs" :key="index">{{ line }}</code></details>
             </article>
           </details>
 
@@ -103,7 +103,7 @@
             <header><strong>{{ assetCopy('progress') }} {{ assetBatch.done }}/{{ assetBatch.total }}</strong><button v-if="assetBatch.active" type="button" @click="cancelAssetBatch">{{ assetCopy('cancel') }}</button></header>
             <progress :value="assetBatch.done" :max="assetBatch.total" :aria-label="assetCopy('progress')"></progress>
             <p role="status">{{ assetBatch.name }} · {{ assetCopy('completed') }} {{ assetBatch.completed }} · {{ assetCopy('failed') }} {{ assetBatch.failed }} · {{ assetCopy('cancelled') }} {{ assetBatch.cancelled }}</p>
-<!-- 批处理结果过滤回调仅保留失败项以显示错误详情。 -->            <details v-if="assetBatch.failed"><summary>{{ assetCopy('failed') }}</summary><section v-for="(item,index) in assetBatch.results.filter(v=>v.status==='failed')" :key="index"><strong>{{ item.name }}</strong><p role="alert">{{ assetImportFailureSummary(item.message,preferencesState.locale) }}</p><details><summary>{{ assetImportTechnicalLabel(preferencesState.locale) }}</summary><code>{{ item.message }}</code></details></section></details>
+<!-- 批处理结果过滤回调仅保留失败项以显示错误详情。 -->            <details data-ui-motion-disclosure v-if="assetBatch.failed"><summary>{{ assetCopy('failed') }}</summary><section v-for="(item,index) in assetBatch.results.filter(v=>v.status==='failed')" :key="index"><strong>{{ item.name }}</strong><p role="alert">{{ assetImportFailureSummary(item.message,preferencesState.locale) }}</p><details data-ui-motion-disclosure><summary>{{ assetImportTechnicalLabel(preferencesState.locale) }}</summary><code>{{ item.message }}</code></details></section></details>
           </section>
           <div ref="assetGrid" class="asset-grid" :class="`asset-${assets.viewMode}`" @scroll.passive="updateAssetWindow">
             <!-- 占位间距属于内容，不属于被观察的滚动视口，避免虚拟高度反馈到可见行数。 -->
@@ -143,7 +143,7 @@
           <audio v-else-if="selectedAsset.assetType === 'audio'" class="asset-media-preview" :src="selectedAsset.source" controls preload="metadata"></audio>
           <div v-else-if="selectedAsset.assetType === 'font'" class="font-preview" :style="{ fontFamily: selectedAsset.fontFamily }">Nova_A Aa 123</div>
           <ContentAssetInspector :asset="selectedAsset" @open-animation="openAnimationAsset" @select-asset="assets.selectedGuid=$event" />
-          <details v-if="assetOperationError" class="pipeline-error" open><summary>{{ assetCopy('operationFailed') }}</summary><p role="alert">{{ assetImportFailureSummary(assetOperationError,preferencesState.locale) }}</p><details><summary>{{ assetImportTechnicalLabel(preferencesState.locale) }}</summary><code>{{ assetOperationError }}</code></details></details>
+          <details data-ui-motion-disclosure v-if="assetOperationError" class="pipeline-error" open><summary>{{ assetCopy('operationFailed') }}</summary><p role="alert">{{ assetImportFailureSummary(assetOperationError,preferencesState.locale) }}</p><details data-ui-motion-disclosure><summary>{{ assetImportTechnicalLabel(preferencesState.locale) }}</summary><code>{{ assetOperationError }}</code></details></details>
           <section v-show="inspectorTab === 'source'" class="inspector-pane">
             <label><span>GUID</span><code>{{ selectedAsset.uuid.slice(0, 13) }}…</code></label>
             <label><span>{{ t('assetPath') }}</span><code>{{ selectedAsset.path }}</code></label>
@@ -152,13 +152,13 @@
             <label class="region-field"><span>{{ t('tags') }}</span><input v-model="selectedAssetTags" :placeholder="t('tagsPlaceholder')"></label>
             <label><span>{{ t('contentGroup') }}</span><select v-model="selectedAsset.contentGroup"><option v-for="group in assets.contentGroups" :key="group.id" :value="group.id">{{ group.name }} · {{ t(group.mode) }}</option></select></label>
             <label><span>{{ t('editorOnly') }}</span><input v-model="selectedAsset.editorOnly" type="checkbox"></label>
-            <details class="collection-membership"><summary>{{ t('collections') }}</summary><button v-for="collection in assets.collections" :key="collection.id" :class="{ active: collection.assetUuids.includes(selectedAsset.uuid) }" @click="toggleSelectedCollection(collection.id)"><i :style="{ background: collection.color }"></i>{{ collection.name }}</button><div><input v-model="collectionName" :placeholder="t('newCollection')"><button @click="createCollection"><EditorIcon name="add" /></button></div></details>
+            <details data-ui-motion-disclosure class="collection-membership"><summary>{{ t('collections') }}</summary><button v-for="collection in assets.collections" :key="collection.id" :class="{ active: collection.assetUuids.includes(selectedAsset.uuid) }" @click="toggleSelectedCollection(collection.id)"><i :style="{ background: collection.color }"></i>{{ collection.name }}</button><div><input v-model="collectionName" :placeholder="t('newCollection')"><button @click="createCollection"><EditorIcon name="add" /></button></div></details>
             <button class="save-script secondary" @click="startRename(selectedAsset.uuid, selectedAsset.name)">{{ t('renameAsset') }}</button>
           </section>
           <section v-show="inspectorTab === 'provenance'" class="inspector-pane provenance-pane">
             <p v-if="!selectedAsset.pipeline" class="pipeline-error">{{ t('missingProvenance') }}</p>
             <template v-else><label><span>{{ t('importer') }}</span><code>{{ selectedAsset.pipeline.importerId }}@{{ selectedAsset.pipeline.importerVersion }}</code></label><label><span>{{ t('preset') }}</span><code>{{ selectedAsset.pipeline.presetId }}</code></label><label><span>{{ t('importCache') }}</span><code>{{ selectedAsset.pipeline.cacheHit ? t('cacheHit') : t('cacheWritten') }}</code></label><label><span>{{ t('cacheInvalidation') }}</span><code>{{ selectedAsset.pipeline.invalidationReason }}</code></label><label><span>{{ t('reproducible') }}</span><b :class="{ dangerText: !selectedAsset.pipeline.reproducible }">{{ selectedAsset.pipeline.reproducible ? t('yes') : t('no') }}</b></label></template>
-          <details class="asset-technical">
+          <details data-ui-motion-disclosure class="asset-technical">
             <summary>{{ t('technicalDetails') }}</summary>
             <div><span>GUID</span><code>{{ selectedAsset.uuid }}</code><button type="button" :title="t('copy')" @click="copyAssetDetail(selectedAsset.uuid)"><EditorIcon name="copy" /></button></div>
             <div><span>{{ t('assetPath') }}</span><code>{{ selectedAsset.path }}</code><button type="button" :title="t('copy')" @click="copyAssetDetail(selectedAsset.path)"><EditorIcon name="copy" /></button></div>
@@ -281,7 +281,7 @@
             <label><span>{{ t('sourceAnimation') }}</span><select v-model="selectedAsset.animationImport.sourceAsset"><option :value="null">{{ t('none') }}</option><option v-for="asset in animationSources" :key="asset.uuid" :value="assetReference(asset.uuid)">{{ asset.name }}</option></select></label>
             <label><span>{{ t('sourceFrameRate') }}</span><NumericExpressionInput v-model="selectedAsset.animationImport.sourceFrameRate" :minimum="1" :maximum="240" :resource-key="selectedAsset.uuid + ':animationImport.sourceFrameRate'" /></label>
             <label><span>{{ t('sampleRate') }}</span><NumericExpressionInput v-model="selectedAsset.animationImport.sampleRate" :minimum="1" :maximum="240" :resource-key="selectedAsset.uuid + ':animationImport.sampleRate'" /></label>
-            <details class="mapping-editor"><summary>{{ t('trackMappings') }}</summary><label v-for="(mapping,index) in selectedAsset.animationImport.trackMappings" :key="index"><input v-model="mapping.source" :placeholder="t('sourceProperty')"><input v-model="mapping.target" :placeholder="t('targetProperty')"><button @click="selectedAsset.animationImport!.trackMappings.splice(index,1)"><EditorIcon name="close" /></button></label><button @click="selectedAsset.animationImport.trackMappings.push({source:'Transform.position.x',target:'Transform.position.x'})">+ {{ t('trackMapping') }}</button></details>
+            <details data-ui-motion-disclosure class="mapping-editor"><summary>{{ t('trackMappings') }}</summary><label v-for="(mapping,index) in selectedAsset.animationImport.trackMappings" :key="index"><input v-model="mapping.source" :placeholder="t('sourceProperty')"><input v-model="mapping.target" :placeholder="t('targetProperty')"><button @click="selectedAsset.animationImport!.trackMappings.splice(index,1)"><EditorIcon name="close" /></button></label><button @click="selectedAsset.animationImport.trackMappings.push({source:'Transform.position.x',target:'Transform.position.x'})">+ {{ t('trackMapping') }}</button></details>
             <button class="save-script" @click="reimportAnimation">{{ t('reimportAnimation') }}</button>
           </template>
           <template v-else-if="selectedAsset.assetType === 'prefab'"><button class="save-script" @click="instantiateSelectedPrefab">{{ t('instantiatePrefabAction') }}</button><button v-if="state.selectedEntityIds.length" class="save-script secondary" @click="replaceSelectionWithSelectedPrefab">{{ t('replaceSelectionWithPrefab') }}</button></template>
@@ -302,7 +302,7 @@
             <p v-if="selectedInclusion.length">{{ selectedInclusion.join(' · ') }}</p>
             <p v-else>{{ t('excludedFromBuild') }}</p>
             <p>{{ t('dependencyCycles') }}: {{ productionGraph.cycles.length }} · {{ t('duplicateSources') }}: {{ productionGraph.duplicateSources.length }} · {{ t('missingReferences') }}: {{ productionGraph.missingReferences.length }}</p>
-            <details v-if="selectedContentClosure.length" class="content-closure"><summary>{{ t('contentClosure') }} · {{ selectedContentClosure.length }}</summary><article v-for="entry in selectedContentClosure.slice(0,32)" :key="entry.uuid" :class="{ invalid: entry.mode === 'excluded' }"><button @click="navigateAssetReference(entry.uuid)">{{ entry.path }}</button><small>{{ entry.groupId }} · {{ t(entry.mode) }}</small></article><p v-for="issue in selectedClosureIssues" :key="issue.uuid" class="pipeline-error">{{ issue.message }}</p></details>
+            <details data-ui-motion-disclosure v-if="selectedContentClosure.length" class="content-closure"><summary>{{ t('contentClosure') }} · {{ selectedContentClosure.length }}</summary><article v-for="entry in selectedContentClosure.slice(0,32)" :key="entry.uuid" :class="{ invalid: entry.mode === 'excluded' }"><button @click="navigateAssetReference(entry.uuid)">{{ entry.path }}</button><small>{{ entry.groupId }} · {{ t(entry.mode) }}</small></article><p v-for="issue in selectedClosureIssues" :key="issue.uuid" class="pipeline-error">{{ issue.message }}</p></details>
           </section>
           <section v-show="inspectorTab === 'platform'" class="platform-overrides inspector-pane"><article v-for="platform in compressionPlatforms" :key="platform"><header><strong>{{ t(platform) }}</strong><input :checked="Boolean(selectedAsset.settings.platformOverrides[platform]?.enabled)" type="checkbox" @change="togglePlatformOverride(platform, $event)"></header><template v-if="selectedAsset.settings.platformOverrides[platform]?.enabled"><label><span>{{ t('compression') }}</span><select v-model="selectedAsset.settings.platformOverrides[platform]!.compression"><option>None</option><option>Lossless</option><option>Optimized</option></select></label><label><span>{{ t('maxSize') }}</span><select v-model.number="selectedAsset.settings.platformOverrides[platform]!.maxSize"><option :value="512">512</option><option :value="1024">1024</option><option :value="2048">2048</option><option :value="4096">4096</option><option :value="8192">8192</option></select></label><label><span>{{ t('format') }}</span><select v-model="selectedAsset.settings.platformOverrides[platform]!.format"><option>Auto</option><option>RGBA8</option><option>BC7</option><option>ASTC</option><option>ETC2</option></select></label></template></article></section>
           <div class="asset-actions"><button @click="reimportInput?.click()">{{ t('reimportAsset') }}</button><button @click="linkSelectedSource">{{ t('linkSource') }}</button><button @click="revealAsset">{{ t('revealAsset') }}</button><button class="danger" @click="removeSelectedAsset">{{ t('deleteAsset') }}</button></div>
@@ -311,14 +311,16 @@
         </aside>
       </div>
 
-      <KeepAlive :key="projectSessionState.id"><component v-if="estate.bottomPanelOpen && activeTool" :is="activeTool" :key="estate.bottomPanelTab" /></KeepAlive>
+      <KeepAlive :key="projectSessionState.id"><component v-if="dockContentVisible && activeTool" :is="activeTool" :key="estate.bottomPanelTab" /></KeepAlive>
     </div>
   </section>
 </template>
 
 <script setup lang="ts">
+import UiMotionTransition from '../ui/components/UiMotionTransition.vue'
+
 import NumericExpressionInput from './NumericExpressionInput.vue'
-import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onDeactivated, onMounted, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, nextTick, onActivated, onBeforeUnmount, onDeactivated, onMounted, ref, watch } from 'vue'
 import PanelMaximizeButton from './PanelMaximizeButton.vue'
 import EditorIcon, { type EditorIconName } from './EditorIcon.vue'
 import UiButton from '../ui/components/UiButton.vue'
@@ -355,7 +357,7 @@ import { defaultVisualGraph } from '../visual/graphCatalog'
 import { openEventSheetAsset, openGraphAsset } from '../visual/graphStudioState'
 import { serializeGraphDocument } from '../visual/graphTypes'
 import { applyEditorWorkspace, reorderBottomTab, workspaceState } from '../editor/workspaces'
-import { animateReorder, beginNativeDrag, cancelMotion, captureRects, endNativeDrag } from '../ui/motion'
+import { animateBlockSize, animateReorder, beginNativeDrag, cancelMotion, captureRects, endNativeDrag } from '../ui/motion'
 import { instantiatePrefab, replaceEntitiesWithPrefab } from '../runtime/prefabs'
 import { createSceneAssetFromEntities, instantiateSceneAsset } from '../runtime/sceneInstances'
 import { reimportAnimationClip } from '../runtime/animation'
@@ -418,7 +420,68 @@ const pivotPresets = [
   { id: 'left', label: 'pivotLeft', value: { x: 0, y: .5 } }, { id: 'center', label: 'center', value: { x: .5, y: .5 } }, { id: 'right', label: 'pivotRight', value: { x: 1, y: .5 } },
   { id: 'bottom-left', label: 'pivotBottomLeft', value: { x: 0, y: 1 } }, { id: 'bottom', label: 'pivotBottom', value: { x: .5, y: 1 } }, { id: 'bottom-right', label: 'pivotBottomRight', value: { x: 1, y: 1 } }
 ] as const
-const panelStyle = computed(/** Collapsed docks size to their actual translated/scaled controls. */ () => ({ height: estate.bottomPanelOpen ? `min(${estate.bottomPanelHeight}px, 42vh)` : 'auto' }))
+// Only open/close changes animate; stored sizes and separator edits stay immediate.
+const dockRoot = ref<HTMLElement | null>(null)
+const dockContent = ref<HTMLElement | null>(null)
+const dockContentVisible = ref(estate.bottomPanelOpen)
+const dockHeldHeight = ref<string | null>(null)
+let dockMotionGeneration = 0
+function dockNaturalHeight() { return estate.bottomPanelOpen ? `min(${estate.bottomPanelHeight}px, 42vh)` : 'auto' }
+function settleDockMotion() {
+  ++dockMotionGeneration
+  const root = dockRoot.value
+  if (root) cancelMotion(root)
+  dockHeldHeight.value = null
+  dockContentVisible.value = estate.bottomPanelOpen
+  if (root) root.style.height = dockNaturalHeight()
+  if (dockContent.value) {
+    dockContent.value.inert = !estate.bottomPanelOpen
+    dockContent.value.style.display = estate.bottomPanelOpen ? '' : 'none'
+  }
+}
+function prepareDockPrecision(event: Event) {
+  const target = event.target instanceof Element ? event.target : null
+  if (target?.closest('.panel-resize-handle')?.parentElement === dockRoot.value) settleDockMotion()
+}
+function onDockDragging(dragging: boolean) { if (dragging) settleDockMotion() }
+watch(() => estate.bottomPanelOpen, async open => {
+  const root = dockRoot.value
+  if (!root || !root.isConnected) { dockContentVisible.value = open; return }
+  const from = Number.parseFloat(getComputedStyle(root).height) || root.offsetHeight
+  const generation = ++dockMotionGeneration
+  cancelMotion(root)
+  dockHeldHeight.value = from + 'px'
+  dockContentVisible.value = true
+  if (dockContent.value) {
+    dockContent.value.inert = !open
+    if (!open && dockContent.value.contains(document.activeElement)) root.querySelector<HTMLElement>('.panel-controls button[aria-expanded]')?.focus({ preventScroll: true })
+  }
+  await nextTick()
+  if (generation !== dockMotionGeneration || !root.isConnected) return
+  if (open && workspaceState.maximizedPanel === 'bottom') { settleDockMotion(); return }
+  // Measure natural layout in the same task, then let WAAPI present the old height.
+  root.style.height = open ? dockNaturalHeight() : 'auto'
+  const style = getComputedStyle(root), number = (value: string) => Number.parseFloat(value) || 0
+  const chrome = root.querySelector<HTMLElement>('.panel-tabs')?.offsetHeight ?? 0
+  const collapsed = chrome + (style.boxSizing === 'border-box' ? number(style.paddingTop) + number(style.paddingBottom) + number(style.borderTopWidth) + number(style.borderBottomWidth) : 0)
+  const to = open ? number(style.height) || root.offsetHeight : collapsed
+  root.style.height = to + 'px'
+  dockHeldHeight.value = to + 'px'
+  animateBlockSize(root, from, to, () => {
+    if (generation !== dockMotionGeneration) return
+    dockHeldHeight.value = null
+    dockContentVisible.value = estate.bottomPanelOpen
+    if (dockContent.value) dockContent.value.inert = !estate.bottomPanelOpen
+  })
+}, { flush: 'pre' })
+function bindDockResize() { window.addEventListener('resize', settleDockMotion) }
+function unbindDockResize() { window.removeEventListener('resize', settleDockMotion) }
+onMounted(bindDockResize)
+onActivated(bindDockResize)
+onDeactivated(() => { unbindDockResize(); settleDockMotion() })
+onBeforeUnmount(() => { unbindDockResize(); settleDockMotion() })
+
+const panelStyle = computed(() => ({ height: dockHeldHeight.value ?? dockNaturalHeight() }))
 const assetGrid = ref<HTMLElement | null>(null)
 const assetScrollTop = ref(0)
 const assetViewportHeight = ref(320)
@@ -800,12 +863,15 @@ function leaveFolderDrop(event: DragEvent, folder: string) { if (!(event.current
 </script>
 
 <style scoped>
-.bottom-panel{position:relative;flex:none;min-height:var(--ui-control-height);display:flex;flex-direction:column;border-top:1px solid var(--border-subtle);background:var(--surface-1);container:asset-dock/inline-size}.panel-tabs{display:flex;align-items:center;gap:var(--ui-space-xs);padding-inline:var(--ui-space-xs);flex:none;border-bottom:1px solid var(--border-subtle)}.panel-tab-strip{display:flex;flex:1;min-width:0;overflow-x:auto;scrollbar-width:thin}.panel-tab{display:flex;align-items:center;gap:var(--ui-space-xs);flex:none;border-color:transparent;border-radius:0;background:transparent;white-space:nowrap}.panel-tab.active{box-shadow:inset 0 -2px var(--accent)}.panel-controls{display:flex;flex:none;align-items:center;gap:var(--ui-space-micro);border-left:1px solid var(--border-subtle);padding-inline-start:var(--ui-space-xs)}.panel-controls>button{padding-inline:var(--ui-space-xs)}.dirty-indicator{inline-size:var(--ui-space-xs);block-size:var(--ui-space-xs);border-radius:50%;background:var(--warning)}.compact-tab-select{display:none;min-width:0;flex:1}.panel-content{flex:1;min-width:0;min-height:0;overflow:hidden}
-.asset-browser{height:100%;display:grid;grid-template-columns:minmax(12ch,16%) minmax(0,1fr);overflow:hidden;min-height:0}.asset-browser.inspecting{grid-template-columns:minmax(12ch,16%) minmax(0,1fr) minmax(24ch,28%)}.folder-tree,.asset-inspector{min-width:0;min-height:0;overflow:auto;padding:var(--ui-space-xs)}.folder-tree{border-right:1px solid var(--border-subtle)}.folder-tree>strong{display:block;padding:var(--ui-space-xs);font-size:var(--type-caption);color:var(--text-muted)}.folder-tree button{display:flex;align-items:center;gap:var(--ui-space-xs);min-width:max-content;width:100%;border-color:transparent;background:transparent;border-radius:0;white-space:nowrap;text-align:left}.folder-label{min-width:10ch}.asset-workspace{min-width:0;min-height:0;position:relative;display:flex;flex-direction:column;overflow:hidden}.asset-toolbar{display:flex;align-items:center;gap:var(--ui-space-xs);flex-wrap:wrap;padding:var(--ui-space-xs);border-bottom:1px solid var(--border-subtle);flex:none}.asset-actions-row,.asset-filters,.asset-diagnostics{display:flex;align-items:center;gap:var(--ui-space-xs);min-width:0}.asset-actions-row{flex:none}.asset-toolbar .path{min-width:0;max-width:20ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-muted)}.asset-toolbar input[type=search]{min-width:12ch;max-width:28ch;flex:1}.asset-toolbar .folder-input{width:16ch}.asset-diagnostics{margin-inline-start:auto}.asset-diagnostics button{max-width:20ch;font-size:var(--type-caption)}.asset-diagnostics .atlas-error{color:var(--danger);max-width:16ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.asset-overflow,.filter-menu{position:relative}.asset-overflow-menu,.filter-popover{position:absolute;top:100%;left:0;z-index:20;display:grid;gap:var(--ui-space-xs);min-width:24ch;max-width:min(40ch,90vw);max-height:50vh;overflow:auto;padding:var(--ui-space-sm);border:1px solid var(--border-strong);background:var(--surface-popover);box-shadow:var(--shadow-md)}.asset-overflow-menu button,.filter-popover button{text-align:left}.filter-popover>div{display:flex}.filter-menu>button{display:flex;align-items:center;gap:var(--ui-space-xs)}
-.asset-grid{flex:1;min-height:0;overflow:auto}.asset-grid-window{display:grid;align-content:start;padding-inline:var(--ui-space-sm)}.asset-grid article{position:relative;min-width:0;min-height:0;display:grid;grid-template-columns:var(--asset-thumbnail-size) minmax(0,1fr);grid-template-rows:1fr 1fr;gap:0 var(--ui-space-xs);align-items:center;padding:var(--ui-space-xs);border:1px solid transparent;border-radius:var(--radius-control);cursor:pointer}.asset-grid article.selected{background:var(--selection-bg);border-color:var(--accent)}.asset-grid article>strong,.asset-grid article>small{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-inline-end:var(--ui-control-height)}.asset-grid article>strong{align-self:end;font-size:var(--type-dense)}.asset-grid article>small{align-self:start;font-size:var(--type-caption);color:var(--text-muted)}.asset-preview{grid-row:1/3;width:var(--asset-thumbnail-size);height:var(--asset-thumbnail-size);object-fit:contain}.asset-icon{display:grid;place-items:center;color:var(--text-muted);background:var(--surface-2)}.favorite-button{position:absolute;right:0;top:0;border-color:transparent;background:transparent;padding:var(--ui-space-micro)}.source-badge{position:absolute;left:0;top:0;font-size:var(--type-caption);color:var(--warning)}.asset-window-status,.empty{grid-column:1/-1;color:var(--text-muted);font-size:var(--type-caption);padding:var(--ui-space-xs)}
-.asset-inspector{border-left:1px solid var(--border-subtle);container:asset-properties/inline-size}.asset-inspector>header{display:flex;align-items:center;gap:var(--ui-space-xs);flex-wrap:wrap;border-bottom:1px solid var(--border-subtle);padding-bottom:var(--ui-space-xs)}.asset-inspector>header>strong{overflow-wrap:anywhere}.asset-inspector>header>span{font-size:var(--type-caption);color:var(--text-muted)}.asset-detail-back{display:none}.importer-tabs{display:flex;overflow-x:auto;border-bottom:1px solid var(--border-subtle);margin-block:var(--ui-space-xs)}.importer-tabs button{flex:none;border-color:transparent;border-radius:0;background:transparent}.large-preview{width:100%;max-height:160px;object-fit:contain}.asset-media-preview{width:100%;max-width:100%}.asset-inspector label{display:grid;grid-template-columns:minmax(8ch,1fr) minmax(0,1fr);gap:var(--ui-space-xs);align-items:center;padding-block:var(--ui-space-xs);min-width:0}.asset-inspector label>div{display:flex;gap:var(--ui-space-xs);min-width:0}.asset-inspector .region-field{grid-template-columns:minmax(0,1fr)}.asset-inspector code,.asset-inspector p{overflow-wrap:anywhere}.asset-inspector pre{white-space:pre-wrap;overflow-wrap:anywhere}.asset-inspector details{border-bottom:1px solid var(--border-subtle);padding-block:var(--ui-space-xs)}.asset-technical>div{display:grid;grid-template-columns:minmax(0,1fr) var(--ui-control-height);gap:var(--ui-space-xs);padding-block:var(--ui-space-xs)}.asset-technical code{grid-column:1}.asset-technical button{grid-column:2;grid-row:span 2}.provenance-actions,.asset-actions,.batch-actions{display:flex;flex-wrap:wrap;gap:var(--ui-space-xs)}.pipeline-error,.dangerText{color:var(--danger)}.provenance-diagnostic{padding:var(--ui-space-xs);border-left:2px solid var(--warning);overflow-wrap:anywhere}.font-preview{font-size:var(--type-page);padding:var(--ui-space-sm)}
+.bottom-panel{position:relative;flex:none;min-height:var(--ui-control-height);display:flex;flex-direction:column;border-top:1px solid var(--border-subtle);background:var(--surface-1);container:asset-dock/inline-size;border-radius:var(--radius-panel);overflow:clip}.panel-tabs{display:flex;align-items:center;padding-inline:var(--ui-space-xs);flex:none;border-bottom:1px solid var(--border-subtle);gap:var(--ui-control-gap);min-height:var(--ui-panel-header-height);padding:var(--space-1) var(--space-3)}.panel-tab-strip{display:flex;flex:1;min-width:0;overflow-x:auto;scrollbar-width:thin}.panel-tab{display:flex;align-items:center;flex:none;border-color:transparent;background:transparent;white-space:nowrap;gap:var(--ui-control-gap);border-radius:var(--radius-control)}.panel-tab.active{box-shadow:inset 0 -2px var(--accent)}.panel-controls{display:flex;flex:none;align-items:center;border-left:1px solid var(--border-subtle);padding-inline-start:var(--ui-space-xs);gap:var(--ui-control-gap);padding-inline:var(--space-3)}.panel-controls>button{padding:0}.dirty-indicator{inline-size:var(--ui-space-xs);block-size:var(--ui-space-xs);border-radius:50%;background:var(--warning)}.compact-tab-select{display:none;min-width:0;flex:1;font-size:var(--type-body);height:var(--ui-control-height)}.panel-content{flex:1;min-width:0;min-height:0;overflow:hidden}
+.asset-browser{height:100%;display:grid;grid-template-columns:minmax(12ch,16%) minmax(0,1fr);overflow:hidden;min-height:0}.asset-browser.inspecting{grid-template-columns:minmax(12ch,16%) minmax(0,1fr) minmax(24ch,28%)}.folder-tree,.asset-inspector{min-width:0;min-height:0;overflow:auto;padding:var(--ui-panel-inset)}.folder-tree{border-right:1px solid var(--border-subtle)}.folder-tree>strong{display:block;padding:var(--ui-space-xs);font-size:var(--type-caption);color:var(--text-muted)}.folder-tree button{display:flex;align-items:center;gap:var(--ui-space-xs);min-width:max-content;width:100%;border-color:transparent;background:transparent;white-space:nowrap;text-align:left;border-radius:var(--radius-xs)}.folder-label{min-width:10ch}.asset-workspace{min-width:0;min-height:0;position:relative;display:flex;flex-direction:column;overflow:auto;scrollbar-gutter:stable;container:asset-tools/inline-size}.asset-toolbar{display:flex;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--border-subtle);flex:none;gap:var(--ui-control-gap);padding:var(--ui-panel-inset)}.asset-actions-row,.asset-filters,.asset-diagnostics{display:flex;align-items:center;gap:var(--ui-control-gap);min-width:0}.asset-actions-row{flex:1 1 auto;flex-wrap:wrap;max-width:100%}.asset-toolbar .path{min-width:0;max-width:20ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-muted)}.asset-toolbar input[type=search]{min-width:min(12ch,100%);max-width:min(28ch,100%);flex:1 1 12ch}.asset-toolbar .folder-input{width:16ch}.asset-diagnostics{margin-inline-start:auto}.asset-diagnostics button{max-width:20ch;font-size:var(--type-body)}.asset-diagnostics .atlas-error{color:var(--danger);max-width:16ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.asset-overflow,.filter-menu{position:relative}.asset-overflow-menu,.filter-popover{position:absolute;top:100%;left:0;z-index:20;display:grid;min-width:24ch;max-width:min(40ch,90vw);max-height:50vh;overflow:auto;border:1px solid var(--border-strong);background:var(--surface-popover);box-shadow:var(--shadow-md);gap:var(--ui-control-gap);padding:var(--space-3);border-radius:var(--radius-floating)}.asset-overflow-menu button,.filter-popover button{text-align:left}.filter-popover>div{display:flex}.filter-menu>button{display:flex;align-items:center;gap:var(--ui-space-xs)}
+.asset-grid{flex:1 0 min(40vh,calc(6 * var(--ui-control-height)));min-height:min(40vh,calc(6 * var(--ui-control-height)));overflow:auto}.asset-grid-window{display:grid;align-content:start;padding-inline:var(--ui-space-sm)}.asset-grid article{position:relative;min-width:0;min-height:0;display:grid;grid-template-columns:var(--asset-thumbnail-size) minmax(0,1fr);grid-template-rows:1fr 1fr;gap:0 var(--ui-space-xs);align-items:center;padding:var(--ui-space-xs);border:1px solid transparent;border-radius:var(--radius-control);cursor:pointer}.asset-grid article.selected{background:var(--selection-bg);border-color:var(--accent)}.asset-grid article>strong,.asset-grid article>small{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-inline-end:var(--ui-control-height)}.asset-grid article>strong{align-self:end;font-size:var(--type-dense)}.asset-grid article>small{align-self:start;font-size:var(--type-caption);color:var(--text-muted)}.asset-preview{grid-row:1/3;width:var(--asset-thumbnail-size);height:var(--asset-thumbnail-size);object-fit:contain}.asset-icon{display:grid;place-items:center;color:var(--text-muted);background:var(--surface-2)}.favorite-button{position:absolute;right:0;top:0;border-color:transparent;background:transparent;padding:var(--ui-space-micro)}.source-badge{position:absolute;left:0;top:0;font-size:var(--type-caption);color:var(--warning)}.asset-window-status,.empty{grid-column:1/-1;color:var(--text-muted);font-size:var(--type-caption);padding:var(--ui-space-xs)}
+.asset-inspector{border-left:1px solid var(--border-subtle);container:asset-properties/inline-size}.asset-inspector>header{display:flex;align-items:center;gap:var(--ui-control-gap);flex-wrap:wrap;border-bottom:1px solid var(--border-subtle);padding-bottom:var(--ui-space-xs)}.asset-inspector>header>strong{overflow-wrap:anywhere}.asset-inspector>header>span{font-size:var(--type-caption);color:var(--text-muted)}.asset-detail-back{display:none}.importer-tabs{display:flex;overflow-x:auto;border-bottom:1px solid var(--border-subtle);margin-block:var(--ui-space-xs)}.importer-tabs button{flex:none;border-color:transparent;border-radius:var(--radius-control);background:transparent}.large-preview{width:100%;max-height:160px;object-fit:contain}.asset-media-preview{width:100%;max-width:100%}.asset-inspector label{display:grid;align-items:center;min-width:0;grid-template-columns:minmax(0,1fr);gap:var(--ui-label-control-gap);padding-block:var(--space-3)}.asset-inspector label>div{display:flex;gap:var(--ui-control-gap);min-width:0}.asset-inspector .region-field{grid-template-columns:minmax(0,1fr)}.asset-inspector code,.asset-inspector p{overflow-wrap:anywhere}.asset-inspector pre{white-space:pre-wrap;overflow-wrap:anywhere}.asset-inspector details{border-bottom:1px solid var(--border-subtle);padding-block:var(--ui-space-xs)}.asset-technical>div{display:grid;grid-template-columns:minmax(0,1fr) var(--ui-control-height);gap:var(--ui-space-xs);padding-block:var(--ui-space-xs)}.asset-technical code{grid-column:1}.asset-technical button{grid-column:2;grid-row:span 2}.provenance-actions,.asset-actions,.batch-actions{display:flex;flex-wrap:wrap;gap:var(--ui-control-gap)}.pipeline-error,.dangerText{color:var(--danger)}.provenance-diagnostic{padding:var(--ui-space-xs);border-left:2px solid var(--warning);overflow-wrap:anywhere}.font-preview{font-size:var(--type-page);padding:var(--ui-space-sm)}
 .import-queue,.external-changes,.missing-repair,.asset-batch{flex:none;max-height:30vh;overflow:auto;padding:var(--ui-space-xs) var(--ui-space-sm);border-bottom:1px solid var(--border-subtle)}.import-queue>article,.external-changes>article,.missing-repair{display:flex;gap:var(--ui-space-xs);align-items:center;flex-wrap:wrap}.import-queue>article>span{display:grid;min-width:0}.import-queue details,.import-queue p{flex-basis:100%}.import-queue code{display:block;overflow-wrap:anywhere}.asset-batch header{display:flex;justify-content:space-between}.asset-batch progress{width:100%}.missing-repair select{max-width:28ch;min-width:0}.external-changes small{display:block}
 .asset-browser.full-page-details{grid-template-columns:minmax(0,1fr)}.asset-browser.full-page-details>.folder-tree,.asset-browser.full-page-details>.asset-workspace{display:none}.asset-browser.full-page-details>.asset-inspector{display:block;border:0}.full-page-details .asset-detail-back{display:inline-flex}.panel-maximized{height:100%!important}
-@container asset-dock (max-width:700px){.asset-browser.inspecting{grid-template-columns:minmax(10ch,20%) minmax(0,1fr)}.asset-browser.inspecting>.asset-inspector{display:none}.asset-browser.details-visible{grid-template-columns:minmax(0,1fr)}.asset-browser.details-visible>.folder-tree,.asset-browser.details-visible>.asset-workspace{display:none}.asset-browser.details-visible>.asset-inspector{display:block}.asset-detail-back{display:inline-flex}.asset-toolbar .path{display:none}}
-@container asset-dock (max-width:400px){.panel-tab-strip{display:none}.compact-tab-select{display:block}.asset-browser{grid-template-columns:minmax(0,1fr)}.folder-tree{max-height:100px;border-right:0;border-bottom:1px solid var(--border-subtle)}.asset-browser.inspecting{grid-template-columns:minmax(0,1fr)}}
+@container asset-dock (max-width:700px){.asset-browser.inspecting{grid-template-columns:minmax(10ch,20%) minmax(0,1fr)}.asset-browser.inspecting>.asset-inspector{display:none}.asset-browser.details-visible{grid-template-columns:minmax(0,1fr)}.asset-browser.details-visible>.folder-tree,.asset-browser.details-visible>.asset-workspace{display:none}.asset-browser.details-visible>.asset-inspector{display:block}.asset-detail-back{display:inline-flex}}
+@container asset-tools (max-width:56em){.asset-toolbar .path{display:none}}
+@container asset-dock (max-width: 36em){.panel-tab-strip{display:none}.compact-tab-select{display:block;font-size:var(--type-body);height:var(--ui-control-height)}.asset-browser,.asset-browser.inspecting{display:block;overflow:auto;scrollbar-gutter:stable}.folder-tree{max-height:100px;border-right:0;border-bottom:1px solid var(--border-subtle)}.asset-workspace{overflow:visible}.asset-grid{flex:none;block-size:min(40vh,calc(6 * var(--ui-control-height)))}}
+.asset-overflow>summary{display:grid;place-items:center;inline-size:var(--ui-control-height);block-size:var(--ui-control-height);min-inline-size:var(--ui-control-height);padding:0;list-style:none;border:1px solid var(--border-subtle);border-radius:var(--radius-control);background:var(--surface-2);cursor:pointer}
+.asset-overflow>summary::-webkit-details-marker{display:none}
 </style>

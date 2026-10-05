@@ -25,7 +25,7 @@ export async function writeAuditBundle(root, release, kind, executions) {
     const absolute = resolve(root, path), local = relative(join(root, 'release-audits'), absolute).replaceAll('\\', '/')
     assert.ok(local && !isAbsolute(local) && !local.startsWith('..') && !local.includes('/../'), 'Audit attachment stays inside release-audits')
     if (attachments.has(local)) return
-    assert.match(local, /\.(?:png|nova|nova-workspaces|zip)$/)
+    assert.match(local, /\.(?:png|nova|nova-workspaces|zip|html)$/)
     const bytes = await readFile(absolute); total += bytes.length
     assert.ok(bytes.length <= 32 * 1024 * 1024 && total <= 256 * 1024 * 1024, 'Bounded self-contained audit attachments')
     attachments.set(local, { path: local, bytes: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex'), base64: bytes.toString('base64') })
@@ -51,8 +51,15 @@ export async function writeAuditBundle(root, release, kind, executions) {
         await attach(join('release-audits', file))
       }
       for (const observation of report.observations ?? []) {
+        if (release === '26.37' && observation.name === 'true-before-evidence') {
+          assert.ok(Array.isArray(observation.captures) && observation.captures.length === 5, 'Comfortable comparison retains all five actual baseline images')
+          for (const file of observation.captures) {
+            assert.match(file, /^v26\.37-before-v26\.36-comfortable-baseline-(?:launcher|dialog|editor-inspector|inspector-top|settings)\.png$/)
+            await attach(join('release-audits', file))
+          }
+        }
         const file = observation.artifact ?? observation.file
-        if (typeof file === 'string' && /\.(?:nova|nova-workspaces|zip)$/.test(file)) await attach(file)
+        if (typeof file === 'string' && /\.(?:nova|nova-workspaces|zip|html)$/.test(file)) await attach(file.endsWith('.html') && !isAbsolute(file) && !file.includes('/') && !file.includes('\\') ? join('release-audits', file) : file)
       }
     }
   }

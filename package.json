@@ -1,7 +1,7 @@
 {
   "name": "nova_a",
   "private": true,
-  "version": "26.35.0",
+  "version": "26.37.0",
   "homepage": "https://github.com/Stevenzhang543/Nova_A/",
   "repository": {
     "type": "git",
@@ -14,6 +14,12 @@
     "pnpm": "10.30.0"
   },
   "scripts": {
+    "version:v26.36": "node scripts/set-calendar-release.mjs --release=26.36",
+    "prepare:v26.36": "node scripts/prepare-release-26.36.mjs",
+    "qualify:v26.36": "node scripts/release-qualification.mjs --plan=release-audits/v26.36-qualification-plan.json",
+    "verify:v26.36:branding": "node scripts/verify-v26.36-branding-assets.mjs",
+    "verify:v26.36:branding-user": "node scripts/verify-v26.36-branding-user.mjs",
+    "release:v26.36": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-release.ps1 -Version 26.36.0 -ReleaseLabel 26.36",
     "build:wasm": "wasm-pack build crates/nova_wasm --target web --out-dir ../../nova_core/pkg --out-name nova_core --release",
     "build:wasm:dev": "wasm-pack build crates/nova_wasm --target web --out-dir ../../nova_core/pkg --out-name nova_core --dev",
     "test:core": "cargo test --workspace --all-targets",
@@ -534,7 +540,13 @@
     "audit:v26.10": "node scripts/audit-calendar-milestone.mjs --release=26.10 --engine=26.10.0",
     "evidence:v26.10": "node scripts/generate-calendar-release-evidence.mjs --release=26.10 --engine=26.10.0",
     "prepare:v26.10": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/prepare-calendar-release.ps1 -Release 26.10",
-    "release:v26.10": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-release.ps1 -Version 26.10.0 -ReleaseLabel 26.10"
+    "release:v26.10": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-release.ps1 -Version 26.10.0 -ReleaseLabel 26.10",
+    "version:v26.37": "node scripts/set-calendar-release.mjs --release=26.37",
+    "prepare:v26.37": "node scripts/prepare-release-26.37.mjs",
+    "qualify:v26.37": "node scripts/release-qualification.mjs --plan=release-audits/v26.37-qualification-plan.json",
+    "verify:v26.37:motion": "node scripts/verify-v26.37-motion.mjs",
+    "verify:v26.37:comfortable-user": "node scripts/verify-v26.37-comfortable-user.mjs",
+    "release:v26.37": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-release.ps1 -Version 26.37.0 -ReleaseLabel 26.37"
   },
   "dependencies": {
     "@fontsource-variable/jetbrains-mono": "^5.3.0",

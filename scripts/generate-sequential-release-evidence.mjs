@@ -1,7 +1,7 @@
 /** 汇集发布报告与产物文件，生成带来源记录的发布证据。 */
-import { cp, lstat, mkdir, readFile, rename } from 'node:fs/promises'
+import { cp, lstat, mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import { dirname, join, relative, resolve } from 'node:path'
-import { randomUUID } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import { fileURLToPath } from 'node:url'
 import { confinedPath, fileRecord, filesBelow, verifyExecutedGates, writeJson } from './release-qualification.mjs'
 import { verifyReleaseSnapshot } from './release-source-snapshot.mjs'
@@ -27,6 +27,21 @@ import { verifyReleaseSnapshot } from './release-source-snapshot.mjs'
   if (!/Files (changed|added)/.test(ledger) || !ledger.includes('deterministic path-level manifest')) throw new Error('Authored edit ledger must contain the exhaustive Files changed/added section and identify its deterministic path-level manifest.')
   for (const folder of ['build', 'manual', 'documentation', 'external', 'qualification']) await mkdir(join(evidence, folder), { recursive: true })
   for (const target of reports.keys()) { await mkdir(dirname(join(evidence, target)), { recursive: true }); await cp(join(runRoot, 'reports', target), join(evidence, target)) }
+  // Current UI release also exposes the already qualified, hash-checked attachments
+  // as ordinary files, so its screenshot gallery works directly after extraction.
+  if (release === '26.37') for (const target of reports.keys()) {
+    const bundle = await readReport(target)
+    if (!Array.isArray(bundle.attachments)) continue
+    let total = 0
+    for (const attachment of bundle.attachments) {
+      const bytes = Buffer.from(attachment.base64 ?? '', 'base64')
+      total += bytes.length
+      if (bytes.length !== attachment.bytes || bytes.length > 32 * 1024 * 1024 || total > 256 * 1024 * 1024 || createHash('sha256').update(bytes).digest('hex') !== attachment.sha256 || !/\.(?:png|nova|nova-workspaces|zip|html)$/.test(attachment.path)) throw new Error('Qualified review attachment is invalid: ' + attachment.path)
+      const destination = confinedPath(evidence, 'review/' + target.replace(/\.json$/, '') + '/' + attachment.path)
+      await mkdir(dirname(destination), { recursive: true })
+      await writeFile(destination, bytes, { flag: 'wx' })
+    }
+  }
   for (const name of ['MANUAL.en.md', 'MANUAL.de.md', 'MANUAL.zh-CN.md', 'index.html']) await cp(join(root, 'manual', name), join(evidence, 'manual', name))
   for (const path of plan.documentation ?? []) {
     const target = join(evidence, 'documentation', path); await mkdir(dirname(target), { recursive: true }); await cp(confinedPath(root, path), target)

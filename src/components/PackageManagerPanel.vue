@@ -202,7 +202,7 @@ const visiblePackages = computed(/* 调用 packages.installed.filter(item => mat
 <style scoped>
 .package-manager{height:100%;min-width:0;min-height:0;display:flex;flex-direction:column;overflow:hidden;container-type:inline-size}
 .plugin-manager-tools{min-height:0;flex:1;padding:var(--space-3);overflow:auto}
-.offline,.package-list label{display:flex;align-items:center;gap:var(--space-1);color:var(--text-secondary)}
+.offline,.package-list label{display:flex;align-items:center;gap:var(--ui-control-gap);color:var(--text-secondary)}
 .package-layout,.registry-layout{min-height:0;flex:1;display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);overflow:hidden}
 .package-list,.registry-list,.package-inspector,.registry-inspector{min-width:0;min-height:0;overflow:auto;scrollbar-gutter:stable}
 .package-list,.registry-list{padding:var(--space-2)}

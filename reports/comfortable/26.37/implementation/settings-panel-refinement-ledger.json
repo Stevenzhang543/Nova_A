@@ -1,0 +1,734 @@
+{
+  "version": "26.37",
+  "file": "src/panels/SettingsPanel.vue",
+  "timestamp": "2026-10-03T19:23:21.249Z",
+  "beforeSha256": "93290b11d6350735de42a166c753ff23109751383249d40cedbcff2c146fa6a7",
+  "afterSha256": "47654fcdb11169e342dee684036cca7bb4d03462199c78f47eb60bc36fae0c89",
+  "edits": [
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "before": "<details v-if=\"!compactInputMap\" class=\"action-advanced\"",
+      "after": "<details data-ui-motion-disclosure v-if=\"!compactInputMap\" class=\"action-advanced\"",
+      "reason": "Connect the actual action/binding disclosure to the shared interruptible motion controller."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "before": "<details v-if=\"!compactInputMap\" class=\"binding-advanced\"",
+      "after": "<details data-ui-motion-disclosure v-if=\"!compactInputMap\" class=\"binding-advanced\"",
+      "reason": "Connect the actual action/binding disclosure to the shared interruptible motion controller."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".icon-action",
+      "property": "width",
+      "before": [
+        "28px"
+      ],
+      "after": "var(--ui-control-height)",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".icon-action",
+      "property": "height",
+      "before": [
+        "28px"
+      ],
+      "after": "var(--ui-control-height)",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".icon-action",
+      "property": "min-height",
+      "before": [],
+      "after": "var(--ui-control-height)",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".icon-action",
+      "property": "min-width",
+      "before": [],
+      "after": "var(--ui-control-height)",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".icon-action",
+      "property": "border-radius",
+      "before": [],
+      "after": "var(--radius-control)",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".compact-action",
+      "property": "min-height",
+      "before": [
+        "29px"
+      ],
+      "after": "var(--ui-control-height)",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".compact-action",
+      "property": "margin-top",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "0",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": "p",
+      "property": "margin",
+      "before": [
+        "0 0 var(--space-2) var(--space-6)"
+      ],
+      "after": "0",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": "p",
+      "property": "font-size",
+      "before": [],
+      "after": "var(--type-caption)",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": "p",
+      "property": "line-height",
+      "before": [
+        "1.55"
+      ],
+      "after": "var(--line-body)",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".related-tools p",
+      "property": "margin-left",
+      "before": [
+        "var(--space-6)"
+      ],
+      "after": "0",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".related-tools .secondary-action",
+      "property": "margin-top",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "0",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".value-control",
+      "property": "gap",
+      "before": [
+        "var(--space-2)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".value-control output",
+      "property": "font-size",
+      "before": [],
+      "after": "var(--type-body)",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".value-control output",
+      "property": "line-height",
+      "before": [],
+      "after": "var(--line-body)",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".metric-grid",
+      "property": "grid-template-columns",
+      "before": [
+        "repeat(2, minmax(0, 1fr))"
+      ],
+      "after": "repeat(auto-fit,minmax(min(100%,calc(160px * var(--ui-scale))),1fr))",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".metric-grid",
+      "property": "gap",
+      "before": [
+        "var(--space-2)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".metric-grid",
+      "property": "margin-top",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "0",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".metric-grid > div",
+      "property": "padding",
+      "before": [
+        "var(--space-2)"
+      ],
+      "after": "var(--ui-panel-inset)",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".metric-grid > div",
+      "property": "gap",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".metric-grid > div",
+      "property": "border-radius",
+      "before": [],
+      "after": "var(--radius-panel)",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".metric-grid span",
+      "property": "white-space",
+      "before": [
+        "nowrap"
+      ],
+      "after": "normal",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".metric-grid span",
+      "property": "overflow-wrap",
+      "before": [],
+      "after": "anywhere",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".secondary-action, .danger-action",
+      "property": "margin-top",
+      "before": [
+        "var(--space-2)"
+      ],
+      "after": "0",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".secondary-action, .danger-action",
+      "property": "font-size",
+      "before": [],
+      "after": "var(--type-body)",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".secondary-action, .danger-action",
+      "property": "line-height",
+      "before": [],
+      "after": "var(--line-control)",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".secondary-action, .danger-action",
+      "property": "border-radius",
+      "before": [],
+      "after": "var(--radius-control)",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".connected-devices",
+      "property": "gap",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".connected-devices",
+      "property": "margin-bottom",
+      "before": [
+        "var(--space-2)"
+      ],
+      "after": "0",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".connected-devices span",
+      "property": "padding",
+      "before": [
+        "var(--space-0) var(--space-2)"
+      ],
+      "after": "var(--space-2) var(--space-3)",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".connected-devices span",
+      "property": "border-radius",
+      "before": [],
+      "after": "var(--radius-control)",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".connected-devices span",
+      "property": "font-size",
+      "before": [],
+      "after": "var(--type-caption)",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".connected-devices span",
+      "property": "line-height",
+      "before": [],
+      "after": "var(--line-body)",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".connected-devices span",
+      "property": "overflow-wrap",
+      "before": [],
+      "after": "anywhere",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".binding-advanced",
+      "property": "display",
+      "before": [],
+      "after": "grid",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".binding-advanced",
+      "property": "grid-template-columns",
+      "before": [],
+      "after": "repeat(auto-fit,minmax(min(100%,calc(240px * var(--ui-scale))),1fr))",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".binding-advanced",
+      "property": "padding",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "0",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".binding-advanced",
+      "property": "gap",
+      "before": [],
+      "after": "var(--ui-field-gap)",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".binding-advanced",
+      "property": "border",
+      "before": [
+        "1px solid var(--border-subtle)"
+      ],
+      "after": "0",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".binding-advanced",
+      "property": "border-top",
+      "before": [],
+      "after": "var(--ui-border-width) solid var(--border-separator)",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".binding-advanced",
+      "property": "padding-top",
+      "before": [],
+      "after": "var(--ui-heading-content-gap)",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".binding-advanced",
+      "property": "display",
+      "before": [],
+      "after": "grid",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".binding-advanced",
+      "property": "grid-template-columns",
+      "before": [],
+      "after": "repeat(auto-fit,minmax(min(100%,calc(240px * var(--ui-scale))),1fr))",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".binding-advanced",
+      "property": "padding",
+      "before": [],
+      "after": "0",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".binding-advanced",
+      "property": "gap",
+      "before": [],
+      "after": "var(--ui-field-gap)",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".binding-advanced",
+      "property": "border",
+      "before": [],
+      "after": "0",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".binding-advanced",
+      "property": "border-top",
+      "before": [],
+      "after": "var(--ui-border-width) solid var(--border-separator)",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".binding-advanced",
+      "property": "padding-top",
+      "before": [],
+      "after": "var(--ui-heading-content-gap)",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".binding-advanced summary",
+      "property": "min-height",
+      "before": [],
+      "after": "var(--ui-control-height)",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".binding-advanced summary",
+      "property": "line-height",
+      "before": [],
+      "after": "var(--line-control)",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".binding-advanced summary",
+      "property": "font-size",
+      "before": [],
+      "after": "var(--type-body)",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".binding-advanced summary",
+      "property": "padding",
+      "before": [],
+      "after": "var(--ui-input-padding-block) var(--ui-control-padding)",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".binding-advanced summary",
+      "property": "grid-column",
+      "before": [],
+      "after": "1/-1",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".binding-advanced summary",
+      "property": "gap",
+      "before": [],
+      "after": "var(--ui-control-gap)",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".binding-advanced summary",
+      "property": "border-radius",
+      "before": [],
+      "after": "var(--radius-control)",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".binding-advanced summary",
+      "property": "min-height",
+      "before": [
+        "20px"
+      ],
+      "after": "var(--ui-control-height)",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".binding-advanced summary",
+      "property": "line-height",
+      "before": [
+        "18px"
+      ],
+      "after": "var(--line-control)",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".binding-advanced summary",
+      "property": "font-size",
+      "before": [],
+      "after": "var(--type-body)",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".binding-advanced summary",
+      "property": "padding",
+      "before": [],
+      "after": "var(--ui-input-padding-block) var(--ui-control-padding)",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".binding-advanced summary",
+      "property": "grid-column",
+      "before": [],
+      "after": "1/-1",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".binding-advanced summary",
+      "property": "gap",
+      "before": [],
+      "after": "var(--ui-control-gap)",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".binding-advanced summary",
+      "property": "border-radius",
+      "before": [],
+      "after": "var(--radius-control)",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".action-advanced",
+      "property": "margin-bottom",
+      "before": [
+        "var(--space-2)"
+      ],
+      "after": "0",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".action-advanced",
+      "property": "padding",
+      "before": [
+        "var(--space-2)"
+      ],
+      "after": "0",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".action-advanced",
+      "property": "border",
+      "before": [
+        "1px solid var(--border-subtle)"
+      ],
+      "after": "0",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".action-advanced",
+      "property": "border-bottom",
+      "before": [],
+      "after": "var(--ui-border-width) solid var(--border-separator)",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".action-advanced",
+      "property": "background",
+      "before": [
+        "color-mix(in srgb,var(--surface-3) 55%,transparent)"
+      ],
+      "after": "transparent",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".action-advanced>summary",
+      "property": "min-height",
+      "before": [
+        "24px"
+      ],
+      "after": "var(--ui-control-height)",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".action-advanced>summary",
+      "property": "line-height",
+      "before": [],
+      "after": "var(--line-control)",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".action-advanced>summary",
+      "property": "font-size",
+      "before": [],
+      "after": "var(--type-body)",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".action-advanced>summary",
+      "property": "padding",
+      "before": [],
+      "after": "var(--ui-input-padding-block) var(--ui-control-padding)",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".action-advanced>summary",
+      "property": "gap",
+      "before": [],
+      "after": "var(--ui-control-gap)",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".action-advanced>summary",
+      "property": "border-radius",
+      "before": [],
+      "after": "var(--radius-control)",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "before": "@media (max-width: 800px) {.binding-advanced{grid-column:1/-1;display: grid;grid-template-columns: repeat(auto-fit,minmax(min(100%,calc(240px * var(--ui-scale))),1fr));padding: 0;gap: var(--ui-field-gap);border: 0;border-top: var(--ui-border-width) solid var(--border-separator);padding-top: var(--ui-heading-content-gap);}.action-advanced-grid{grid-template-columns:1fr} }",
+      "after": "",
+      "reason": "The action fields now reflow from their own actual scaled width; remove obsolete window and nonexistent-container overrides."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "before": "@container nova-form (max-width:600px){.action-advanced-grid{grid-template-columns:minmax(0,1fr)}}",
+      "after": "",
+      "reason": "The action fields now reflow from their own actual scaled width; remove obsolete window and nonexistent-container overrides."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "before": ".action-advanced-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,calc(14em + 64px)),1fr))}",
+      "after": "",
+      "reason": "Consolidate duplicate action-grid sizing into its active shared rule."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".action-advanced-grid",
+      "property": "grid-template-columns",
+      "before": [
+        "repeat(3,minmax(150px,1fr))"
+      ],
+      "after": "repeat(auto-fit,minmax(min(100%,calc(240px * var(--ui-scale))),1fr))",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".action-advanced-grid",
+      "property": "gap",
+      "before": [
+        "var(--space-2)"
+      ],
+      "after": "var(--ui-field-gap)",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".action-advanced-grid",
+      "property": "padding-top",
+      "before": [
+        "var(--space-2)"
+      ],
+      "after": "var(--ui-heading-content-gap)",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "selector": ".action-advanced-grid",
+      "property": "padding-bottom",
+      "before": [],
+      "after": "var(--ui-panel-inset)",
+      "reason": "Use the one shared Comfortable geometry and readable field spacing without changing input map semantics."
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "before": "",
+      "after": "/* Actual input mapping fields keep labels attached and use one comfortable spacing rhythm. */\n.input-map-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:var(--ui-control-gap)}.input-map-toolbar>label{display:flex;align-items:center;gap:var(--ui-control-gap);font-size:var(--type-body);line-height:var(--line-body)}\n.input-actions{display:grid;gap:var(--ui-section-gap)}.input-action{min-width:0;display:grid;gap:var(--ui-field-gap);padding-block:var(--ui-field-gap);border-block-end:var(--ui-border-width) solid var(--border-separator)}\n.input-action-heading{min-width:0;display:flex;flex-wrap:wrap;align-items:center;gap:var(--ui-control-gap)}.input-action-heading>input{flex:1 1 calc(200px * var(--ui-scale));max-width:var(--ui-field-width)}.input-action-heading>select{width:min(100%,calc(160px * var(--ui-scale)))}.input-action-heading>.icon-action{flex:0 0 var(--ui-control-height)}\n.input-binding{min-width:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,calc(240px * var(--ui-scale))),1fr));gap:var(--ui-field-gap);padding-block:var(--ui-field-gap);border-block-end:var(--ui-border-width) solid var(--border-separator)}.input-binding>.icon-action{justify-self:end;align-self:end}\n:deep(.binding-field.ui-property-row),.action-advanced-grid :deep(.ui-property-row),.binding-advanced :deep(.ui-property-row){grid-template-columns:minmax(0,1fr);align-items:start;row-gap:var(--ui-label-control-gap)}\n.input-conflicts{min-width:0;display:grid;gap:var(--ui-control-gap);padding:var(--ui-panel-inset);border-inline-start:var(--ui-border-width) solid var(--warning);border-radius:var(--radius-control);background:var(--warning-soft);font-size:var(--type-body);line-height:var(--line-body);overflow-wrap:anywhere}",
+      "reason": "Supply the previously missing actual input action/binding layout; use real available width, 20px field and 12px label gaps, and retain all native inputs and direct edit handlers."
+    }
+  ],
+  "checks": {
+    "template": "pass",
+    "scopedCss": "pass",
+    "businessScript": "byte-identical",
+    "businessBindings": "unchanged"
+  },
+  "notVerified": [
+    "Live input mapping at 100% and 200% scale",
+    "Rapid action and binding disclosure reversal",
+    "Keyboard and modifier editing in the running app"
+  ]
+}

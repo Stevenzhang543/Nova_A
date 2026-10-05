@@ -1,9 +1,13 @@
 <!-- 项目入口说明：区分当前开发源码、已完成发布与历史版本材料。 -->
+
+**26.37 / Engine26.37.0：** [版本说明](docs/RELEASE_NOTES_26_37.md)、[逐项修改](docs/EDIT_LEDGER_26_37.md)、[网页部署](docs/WEB_HOSTING_26_37.md)。默认舒适字号、四向留白与圆润几何；真实编辑器复用统一有限动效。完整发行文件位于 releases/v26.37，最终验收绑定冻结源码，并单独注明真实设备限制。
 **语言：** 中文 | [English](./README.md)
 
 # Nova_A 2D 游戏引擎与编辑器
 
-**26.33 development / Engine 26.33.0:** [release notes](docs/RELEASE_NOTES_26_33.md), [every edit](docs/engine/EDIT_LEDGER_26_33.md), [capability catalog](docs/engine/CAPABILITY_CATALOG.md), [audit and comparison](docs/engine/FEATURE_MATRIX.md), [verification](docs/engine/TEST_MATRIX.md). Release files are prepared under `releases/26.33`; source-bound evidence establishes final qualification.
+**26.36 / Engine26.36.0：** [版本说明](docs/RELEASE_NOTES_26_36.md)、[逐项修改](docs/EDIT_LEDGER_26_36.md)、[网页部署](docs/WEB_HOSTING_26_36.md)。用户提供的浅色与深色 PNG 标识随编辑器和手册主题切换；Windows/Web 发布文件和参考项目位于 `releases/v26.36`。最终验收以绑定冻结源码的新鲜证据和校验和为准。
+
+**此前26.33 development / Engine 26.33.0:** [release notes](docs/RELEASE_NOTES_26_33.md), [every edit](docs/engine/EDIT_LEDGER_26_33.md), [capability catalog](docs/engine/CAPABILITY_CATALOG.md), [audit and comparison](docs/engine/FEATURE_MATRIX.md), [verification](docs/engine/TEST_MATRIX.md). Release files are prepared under `releases/26.33`; source-bound evidence establishes final qualification.
 
 
 <!-- NOVA_V2630_OVERVIEW -->

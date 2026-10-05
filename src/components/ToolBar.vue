@@ -6,7 +6,7 @@
       <i class="divider"></i>
       <UiButton v-for="tool in transformTools" :key="tool.id" :icon="tool.id" :label="`${t(tool.title)} (${tool.key.toUpperCase()})`" :aria-pressed="state.activeTool === tool.id" :class="{active:state.activeTool===tool.id}" @click="state.activeTool=tool.id" />
 
-    <details class="tool-menu authoring-menu">
+    <details data-ui-motion-popover class="tool-menu authoring-menu">
       <summary :title="t('authoringTools')" :aria-label="t('authoringTools')"><EditorIcon name="tools" /></summary>
       <div class="menu-popover authoring-popover">
         <section>
@@ -28,7 +28,7 @@
         </section>
       </div>
     </details>
-    <details class="tool-menu">
+    <details data-ui-motion-popover class="tool-menu">
       <summary :title="t('transformActions')" :aria-label="t('transformActions')"><EditorIcon name="align" /></summary>
       <div class="menu-popover action-grid">
         <button @click="alignSelection('left')">{{ t('alignLeft') }}</button><button @click="alignSelection('center-x')">{{ t('alignCenterX') }}</button><button @click="alignSelection('right')">{{ t('alignRight') }}</button>
@@ -40,14 +40,14 @@
         <button @click="requestViewport('focus-camera')">{{ t('focusCamera') }}</button><button @click="groupSelection">{{ t('groupSelection') }}</button>
       </div>
     </details>
-    <details class="tool-menu snap-menu">
+    <details data-ui-motion-popover class="tool-menu snap-menu">
       <summary :title="t('snapping')" :aria-label="t('snapping')"><EditorIcon name="snap" /></summary>
       <div class="menu-popover checks">
         <label v-for="snap in snapOptions" :key="snap.key"><input v-model="authoringState.snap[snap.key]" type="checkbox">{{ t(snap.label) }}</label>
         <p class="snap-explanation">{{ t('snappingExplanation') }}</p>
       </div>
     </details>
-    <details class="tool-menu guide-menu">
+    <details data-ui-motion-popover class="tool-menu guide-menu">
       <summary :title="t('viewportSettings')" :aria-label="t('viewportSettings')"><EditorIcon name="settings" /></summary>
       <div class="menu-popover viewport-popover">
         <section><h3>{{ t('transformReference') }}</h3>
@@ -127,5 +127,5 @@ onBeforeUnmount(/** 卸载时移除工具键盘监听。 */ () => window.removeE
 </script>
 
 <style scoped>
-.toolbar{flex:none;min-width:0;border-bottom:1px solid var(--border-subtle);background:var(--surface-1)}.toolbar-content{display:flex;align-items:center;gap:var(--ui-space-xs);padding:var(--ui-space-xs) var(--ui-space-sm)}.divider{height:var(--ui-icon-size);width:1px;background:var(--border-subtle);margin-inline:var(--ui-space-xs)}.tool-menu{position:relative}.tool-menu>summary{width:var(--ui-control-height);height:var(--ui-control-height);display:grid;place-items:center;list-style:none;cursor:pointer;border:1px solid transparent}.tool-menu>summary::-webkit-details-marker{display:none}.tool-menu[open]>summary{background:var(--accent-soft);color:var(--accent)}.menu-popover{position:absolute;top:100%;left:0;z-index:1200;max-width:calc(100vw - var(--ui-space-xl));padding:var(--ui-space-sm);border:1px solid var(--border-subtle);background:var(--surface-2);box-shadow:var(--shadow-float)}.menu-popover h3{font:inherit;font-weight:600;margin:0 0 var(--ui-space-xs);color:var(--text-muted)}.tool-grid,.action-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--ui-space-micro);min-width:30ch}.tool-grid button,.action-grid button{display:flex;align-items:center;justify-content:flex-start;gap:var(--ui-space-xs);text-align:start;white-space:nowrap}.authoring-popover{display:grid;gap:var(--ui-space-sm)}.checks{min-width:24ch}.checks label,.guide-controls label{display:flex;align-items:center;gap:var(--ui-space-xs);min-height:var(--ui-control-height)}.snap-explanation{max-width:32ch;color:var(--text-muted);font-size:var(--type-caption)}.viewport-popover{min-width:36ch;display:grid;gap:var(--ui-space-sm)}.segmented,.quick-settings,.custom-resolution,.guide-controls>div{display:flex;align-items:center;gap:var(--ui-space-xs)}.quick-settings{flex-wrap:wrap}.quick-settings h3{width:100%}.guide-controls{display:grid;gap:var(--ui-space-xs)}.guide-controls input,.custom-resolution input{min-width:0;width:10ch}.custom-resolution{flex-wrap:nowrap}
+.toolbar{flex:none;min-width:0;border-bottom:1px solid var(--border-subtle);background:var(--surface-1)}.toolbar-content{display:flex;align-items:center;gap:var(--ui-control-gap);padding:var(--ui-space-xs) var(--ui-space-sm)}.divider{height:var(--ui-icon-size);width:1px;background:var(--border-subtle);margin-inline:var(--ui-space-xs)}.tool-menu{position:relative}.tool-menu>summary{width:var(--ui-control-height);height:var(--ui-control-height);display:grid;place-items:center;list-style:none;cursor:pointer;border:1px solid transparent}.tool-menu>summary::-webkit-details-marker{display:none}.tool-menu[open]>summary{background:var(--accent-soft);color:var(--accent)}.menu-popover{position:absolute;top:100%;left:0;z-index:1200;max-width:calc(100vw - var(--ui-space-xl));padding:var(--ui-space-sm);border:1px solid var(--border-subtle);background:var(--surface-2);box-shadow:var(--shadow-float)}.menu-popover h3{font:inherit;font-weight:600;margin:0 0 var(--ui-space-xs);color:var(--text-muted)}.tool-grid,.action-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--ui-space-micro);min-width:30ch}.tool-grid button,.action-grid button{display:flex;align-items:center;justify-content:flex-start;gap:var(--ui-space-xs);text-align:start;white-space:nowrap}.authoring-popover{display:grid;gap:var(--ui-space-sm)}.checks{min-width:24ch}.checks label,.guide-controls label{display:flex;align-items:center;gap:var(--ui-control-gap);min-height:var(--ui-control-height)}.snap-explanation{max-width:32ch;color:var(--text-muted);font-size:var(--type-caption)}.viewport-popover{min-width:36ch;display:grid;gap:var(--ui-space-sm)}.segmented,.quick-settings,.custom-resolution,.guide-controls>div{display:flex;align-items:center;gap:var(--ui-control-gap)}.quick-settings{flex-wrap:wrap}.quick-settings h3{width:100%}.guide-controls{display:grid;gap:var(--ui-control-gap)}.guide-controls input,.custom-resolution input{min-width:0;width:10ch}.custom-resolution{flex-wrap:nowrap}
 </style>

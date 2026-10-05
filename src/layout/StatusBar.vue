@@ -13,6 +13,6 @@ const failedTasks = computed(/** 合计失败的后台任务、导入及构建�
 <style scoped>
 .status-bar{min-height:var(--ui-control-height);flex:0 0 auto;padding:0 var(--space-2);display:flex;align-items:center;gap:var(--space-2);color:var(--text-muted);background:var(--surface-1);border-top:1px solid var(--border-subtle);font-size:var(--type-caption);z-index:200}
 .status{min-width:0;display:flex;align-items:center;gap:var(--space-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.status i{width:var(--space-1);height:var(--space-1);flex:0 0 var(--space-1);border-radius:50%;background:var(--success)}
-.task-status{margin-left:auto;display:flex;align-items:center;gap:var(--space-1);color:var(--text-muted);font-size:var(--type-caption)}.task-status.busy{color:var(--accent)}.task-status b{padding:0 var(--space-1);color:var(--danger);font-size:var(--type-caption)}.tag{white-space:nowrap}
+.task-status{margin-left:auto;display:flex;align-items:center;gap:var(--ui-control-gap);color:var(--text-muted);font-size:var(--type-body);line-height:var(--line-body)}.task-status.busy{color:var(--accent)}.task-status b{padding:0 var(--space-1);color:var(--danger);font-size:var(--type-caption)}.tag{white-space:nowrap}
 @media(max-width:600px){.tag{display:none}}
 </style>

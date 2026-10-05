@@ -1,7 +1,7 @@
 <!-- 项目恢复中心：预览快照并恢复版本、打开副本或安全重启。 -->
 <template>
   <Teleport to="body">
-    <UiDialog v-if="recovery.visible" :title="t('crashRecovery')" @close="dismissRecovery"><p class="dialog-hint">{{ t('crashRecoveryHint') }}</p>
+    <UiMotionTransition modal><UiDialog motion-owner="parent" v-if="recovery.visible" :title="t('crashRecovery')" @close="dismissRecovery"><p class="dialog-hint">{{ t('crashRecoveryHint') }}</p>
         <p v-if="recovery.invalidSnapshots" class="warning">{{ t('invalidSnapshotsSkipped', { count: recovery.invalidSnapshots }) }}</p>
         <div class="recovery-layout">
           <nav>
@@ -15,10 +15,12 @@
           </main>
         </div>
         <footer><button @click="dismissRecovery">{{ t('skipRecovery') }}</button><button :disabled="!selected" class="danger" @click="discard">{{ t('discardSnapshot') }}</button><button :disabled="!selected" @click="openCopy">{{ t('openRecoveryCopy') }}</button><button :disabled="!selected" @click="openSafe">{{ t('openInSafeMode') }}</button><button :disabled="!selected || preview?.valid === false" class="primary" @click="restore">{{ t('restoreSnapshot') }}</button></footer>
-    </UiDialog>
+    </UiDialog></UiMotionTransition>
   </Teleport>
 </template>
 <script setup lang="ts">
+import UiMotionTransition from '../ui/components/UiMotionTransition.vue'
+
 import UiDialog from '../ui/components/UiDialog.vue'
 import { computed, ref, watch } from 'vue'
 import { t } from '../i18n'

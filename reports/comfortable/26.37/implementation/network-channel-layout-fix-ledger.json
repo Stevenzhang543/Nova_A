@@ -1,0 +1,247 @@
+{
+  "version": "26.37",
+  "file": "src/components/NetworkStudioPanel.vue",
+  "actualEvidence": "release-audits/v26.37-ui-rebuild-layout-final.json populated-network/1:13 normalized defects; .cache/comfortable26.37/all-route-attempt2/summary.json",
+  "timestamp": "2026-10-04T12:41:57.153Z",
+  "beforeSha256": "e3daaf261c9fba5104a47c68bd7eaed6029a498f30ac5b8b245d445730c9cf31",
+  "afterSha256": "2cdd210dfd77b70654df09100e956e305adc4cc1a2d27f37fef2378cc1197e0a",
+  "edits": [
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "kind": "scope-conflict-removal",
+      "before": ".channel-row,\r\n.rpc-row,\r\n.replication-row",
+      "after": ".rpc-row, .replication-row",
+      "parent": "root",
+      "reason": "Channels use their own scaled layout; retain the identical existing RPC/replication declarations."
+    },
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "kind": "scope-conflict-removal",
+      "before": ".channel-row,\r\n  .rpc-row,\r\n  .replication-row",
+      "after": ".rpc-row, .replication-row",
+      "parent": "(max-width: 880px)",
+      "reason": "Channels use their own scaled layout; retain the identical existing RPC/replication declarations."
+    },
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "kind": "scope-conflict-removal",
+      "before": ".channel-row,\r\n  .rpc-row,\r\n  .replication-row",
+      "after": ".rpc-row, .replication-row",
+      "parent": "(max-width: 620px)",
+      "reason": "Channels use their own scaled layout; retain the identical existing RPC/replication declarations."
+    },
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "kind": "scope-conflict-removal",
+      "before": ".channel-row, .rpc-row, .replication-row",
+      "after": ".rpc-row, .replication-row",
+      "parent": "root",
+      "reason": "Channels use their own scaled layout; retain the identical existing RPC/replication declarations."
+    },
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "selector": ".channel-row",
+      "property": "min-width",
+      "before": [],
+      "after": "0",
+      "reason": "Replace the actual unscaled fixed/12rem channel table with readable fields that reflow within their current parent."
+    },
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "selector": ".channel-row",
+      "property": "max-width",
+      "before": [],
+      "after": "100%",
+      "reason": "Replace the actual unscaled fixed/12rem channel table with readable fields that reflow within their current parent."
+    },
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "selector": ".channel-row",
+      "property": "width",
+      "before": [],
+      "after": "100%",
+      "reason": "Replace the actual unscaled fixed/12rem channel table with readable fields that reflow within their current parent."
+    },
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "selector": ".channel-row",
+      "property": "display",
+      "before": [],
+      "after": "grid",
+      "reason": "Replace the actual unscaled fixed/12rem channel table with readable fields that reflow within their current parent."
+    },
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "selector": ".channel-row",
+      "property": "grid-template-columns",
+      "before": [
+        "120px 160px 1fr 1fr 1fr 28px"
+      ],
+      "after": "repeat(auto-fit,minmax(min(100%,calc(240px * var(--ui-scale))),1fr))",
+      "reason": "Replace the actual unscaled fixed/12rem channel table with readable fields that reflow within their current parent."
+    },
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "selector": ".channel-row",
+      "property": "align-items",
+      "before": [],
+      "after": "start",
+      "reason": "Replace the actual unscaled fixed/12rem channel table with readable fields that reflow within their current parent."
+    },
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "selector": ".channel-row",
+      "property": "gap",
+      "before": [],
+      "after": "var(--ui-field-gap) var(--space-4)",
+      "reason": "Replace the actual unscaled fixed/12rem channel table with readable fields that reflow within their current parent."
+    },
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "selector": ".channel-row",
+      "property": "padding",
+      "before": [],
+      "after": "var(--ui-field-gap) 0",
+      "reason": "Replace the actual unscaled fixed/12rem channel table with readable fields that reflow within their current parent."
+    },
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "selector": ".channel-row",
+      "property": "border-bottom",
+      "before": [],
+      "after": "var(--ui-border-width) solid var(--border-separator)",
+      "reason": "Replace the actual unscaled fixed/12rem channel table with readable fields that reflow within their current parent."
+    },
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "selector": ".channel-row :deep(.ui-property-row)",
+      "property": "grid-template-columns",
+      "before": [
+        "shared property-row/control or native button default"
+      ],
+      "after": "minmax(0,1fr)",
+      "reason": "A visible channel label occupies its own line, leaving the full cell for the unchanged16px/44px input and a12px label gap. Remove remains a44px action."
+    },
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "selector": ".channel-row :deep(.ui-property-row)",
+      "property": "align-items",
+      "before": [
+        "shared property-row/control or native button default"
+      ],
+      "after": "start",
+      "reason": "A visible channel label occupies its own line, leaving the full cell for the unchanged16px/44px input and a12px label gap. Remove remains a44px action."
+    },
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "selector": ".channel-row :deep(.ui-property-row)",
+      "property": "row-gap",
+      "before": [
+        "shared property-row/control or native button default"
+      ],
+      "after": "var(--ui-label-control-gap)",
+      "reason": "A visible channel label occupies its own line, leaving the full cell for the unchanged16px/44px input and a12px label gap. Remove remains a44px action."
+    },
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "selector": ".channel-row :deep(.ui-property-row)",
+      "property": "min-width",
+      "before": [
+        "shared property-row/control or native button default"
+      ],
+      "after": "0",
+      "reason": "A visible channel label occupies its own line, leaving the full cell for the unchanged16px/44px input and a12px label gap. Remove remains a44px action."
+    },
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "selector": ".channel-row :deep(.ui-property-row)",
+      "property": "max-width",
+      "before": [
+        "shared property-row/control or native button default"
+      ],
+      "after": "100%",
+      "reason": "A visible channel label occupies its own line, leaving the full cell for the unchanged16px/44px input and a12px label gap. Remove remains a44px action."
+    },
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "selector": ".channel-row :deep(.ui-property-control)",
+      "property": "min-width",
+      "before": [
+        "shared property-row/control or native button default"
+      ],
+      "after": "0",
+      "reason": "A visible channel label occupies its own line, leaving the full cell for the unchanged16px/44px input and a12px label gap. Remove remains a44px action."
+    },
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "selector": ".channel-row :deep(.ui-property-control)",
+      "property": "max-width",
+      "before": [
+        "shared property-row/control or native button default"
+      ],
+      "after": "100%",
+      "reason": "A visible channel label occupies its own line, leaving the full cell for the unchanged16px/44px input and a12px label gap. Remove remains a44px action."
+    },
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "selector": ".channel-row :deep(.ui-property-control>input),.channel-row :deep(.ui-property-control>select)",
+      "property": "min-width",
+      "before": [
+        "shared property-row/control or native button default"
+      ],
+      "after": "0",
+      "reason": "A visible channel label occupies its own line, leaving the full cell for the unchanged16px/44px input and a12px label gap. Remove remains a44px action."
+    },
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "selector": ".channel-row :deep(.ui-property-control>input),.channel-row :deep(.ui-property-control>select)",
+      "property": "max-width",
+      "before": [
+        "shared property-row/control or native button default"
+      ],
+      "after": "100%",
+      "reason": "A visible channel label occupies its own line, leaving the full cell for the unchanged16px/44px input and a12px label gap. Remove remains a44px action."
+    },
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "selector": ".channel-row>button",
+      "property": "align-self",
+      "before": [
+        "shared property-row/control or native button default"
+      ],
+      "after": "end",
+      "reason": "A visible channel label occupies its own line, leaving the full cell for the unchanged16px/44px input and a12px label gap. Remove remains a44px action."
+    },
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "selector": ".channel-row>button",
+      "property": "justify-self",
+      "before": [
+        "shared property-row/control or native button default"
+      ],
+      "after": "end",
+      "reason": "A visible channel label occupies its own line, leaving the full cell for the unchanged16px/44px input and a12px label gap. Remove remains a44px action."
+    },
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "selector": ".channel-row>button",
+      "property": "width",
+      "before": [
+        "shared property-row/control or native button default"
+      ],
+      "after": "auto",
+      "reason": "A visible channel label occupies its own line, leaving the full cell for the unchanged16px/44px input and a12px label gap. Remove remains a44px action."
+    }
+  ],
+  "checks": {
+    "vueTemplate": "pass",
+    "scopedCss": "pass",
+    "networkScript": "byte-identical",
+    "templateEventsModelsModifiers": "byte-identical"
+  },
+  "notVerified": [
+    "Actual rebuilt populated-network channel geometry",
+    "All-route third pass",
+    "New screenshot evidence"
+  ]
+}

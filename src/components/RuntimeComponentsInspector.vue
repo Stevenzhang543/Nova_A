@@ -228,14 +228,16 @@
   <UiPropertySection :title="(t('uiCheckbox'))" v-if="checkbox && componentVisible('Checkbox', t('uiCheckbox'))" ><template #actions><UiButton icon="clear" @click="remove('Checkbox')" :label="t('remove')" /></template><UiPropertyRow :label="t('label')"><input v-model="checkbox.label"></UiPropertyRow><UiPropertyRow :label="t('localizationKey')"><input v-model="checkbox.localizationKey"></UiPropertyRow><UiPropertyRow :label="t('checked')"><input v-model="checkbox.checked" type="checkbox"></UiPropertyRow><UiPropertyRow :label="t('interactable')"><input v-model="checkbox.interactable" type="checkbox"></UiPropertyRow><UiPropertyRow :label="t('uiStyleClass')"><input v-model="checkbox.styleClass"></UiPropertyRow></UiPropertySection>
   <UiPropertySection :title="(t('uiTextInput'))" v-if="textInput && componentVisible('TextInput', t('uiTextInput'))" ><template #actions><UiButton icon="clear" @click="remove('TextInput')" :label="t('remove')" /></template><UiPropertyRow :label="t('value')"><input v-model="textInput.value"></UiPropertyRow><UiPropertyRow :label="t('placeholder')"><input v-model="textInput.placeholder"></UiPropertyRow><UiPropertyRow :label="t('maxLength')"><NumericExpressionInput v-model="textInput.maxLength" :minimum="0" :step="1" :resource-key="entity.uuid + ':' + textInput.uuid + ':maxLength'" /></UiPropertyRow><UiPropertyRow :label="t('password')"><input v-model="textInput.password" type="checkbox"></UiPropertyRow><UiPropertyRow :label="t('uiStyleClass')"><input v-model="textInput.styleClass"></UiPropertyRow></UiPropertySection>
 
-  <section v-if="componentVisible('Canvas', t('createGameUi'))" class="ui-palette">
+  <UiMotionTransition><section v-if="componentVisible('Canvas', t('createGameUi'))" class="ui-palette">
     <strong>{{ t('createGameUi') }}</strong>
     <p>{{ t('uiEditorHint') }}</p>
     <div><UiButton icon="add" v-for="kind in uiKinds" :key="kind" @click="create(kind)">{{ t(`create${kind}`) }}</UiButton></div>
-  </section>
+  </section></UiMotionTransition>
 </template>
 
 <script setup lang="ts">
+import UiMotionTransition from '../ui/components/UiMotionTransition.vue'
+
 import EditorIcon from './EditorIcon.vue'
 import NumericExpressionInput from './NumericExpressionInput.vue'
 import LimitNumberInput from './LimitNumberInput.vue'

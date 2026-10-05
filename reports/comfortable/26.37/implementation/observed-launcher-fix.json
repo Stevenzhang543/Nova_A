@@ -1,0 +1,31 @@
+{
+  "generatedAt": "2026-10-03T19:29:38.080Z",
+  "observed": "Trusted actual launcher geometry: More project actions14px/21px line inside44px control; first attempt failed, not accepted.",
+  "edits": [
+    {
+      "path": "src/components/ProjectManager.vue",
+      "before": ".more-project-actions > summary { color: var(--text-muted); font-size: var(--type-caption); }",
+      "after": ".more-project-actions > summary { color: var(--text-muted); font-size: var(--type-body); line-height: var(--line-body); }",
+      "reason": "Actual launcher action heading measured14px; use16px ordinary action type.",
+      "beforeSha256": "2c4be4a0e48d2150d97a017372998a2cbea06601a38cdd59455c0614224ff1ea",
+      "afterSha256": "45ac6ace51439a5735eec24174a0296e47f4e0ab26602f456a715097631969f4"
+    },
+    {
+      "path": "src/components/ProjectManager.vue",
+      "before": "<details class=\"more-project-actions\">",
+      "after": "<details class=\"more-project-actions\" data-ui-motion-disclosure>",
+      "reason": "Connect the real flowing project-action disclosure to the shared finite owner.",
+      "beforeSha256": "45ac6ace51439a5735eec24174a0296e47f4e0ab26602f456a715097631969f4",
+      "afterSha256": "59d58a2656b5e8679a642d15f907bd29ddd658589be524aa5926b7df0ab4d615"
+    },
+    {
+      "path": "src/ui/editor.css",
+      "before": "button, summary { color: inherit; }",
+      "after": "button, summary { color: inherit; }\n:where(button,summary,[role=\"button\"]):not(.canvas-container *,.player-root *,[data-game-ui-control],.graph-transform *,.timeline-ruler *) { font-size: var(--type-body); line-height: var(--line-body); }",
+      "reason": "Ordinary native action values must not inherit help-caption type; preserve explicit scoped precision controls and authored game font ownership.",
+      "beforeSha256": "8ce9c696a56e3b73ce09018e202418dc67df80efc788ea770425a37f1067cc26",
+      "afterSha256": "e3be721801df419f21e6460577df7364da09b327a9f183653e9e01e2c14d3a96"
+    }
+  ],
+  "visual": "rerun pending"
+}

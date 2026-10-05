@@ -1,15 +1,17 @@
 <!-- 故障恢复提示：显示受控错误，提供诊断复制、下载和安全重启。 -->
 <template>
   <Teleport to="body">
-    <UiDialog role="alertdialog" v-if="fault" :title="t('fatalErrorTitle')" @close="dismissActiveFault"><p class="dialog-hint">{{ t('fatalErrorContained') }}</p>
+    <UiMotionTransition modal><UiDialog motion-owner="parent" role="alertdialog" v-if="fault" :title="t('fatalErrorTitle')" @close="dismissActiveFault"><p class="dialog-hint">{{ t('fatalErrorContained') }}</p>
         <p>{{ fault.message }}</p><code>{{ fault.context }} · {{ timestamp }}</code>
-        <details v-if="fault.stack"><summary>{{ t('technicalDetails') }}</summary><pre>{{ fault.stack }}</pre></details>
+        <details data-ui-motion-disclosure v-if="fault.stack"><summary>{{ t('technicalDetails') }}</summary><pre>{{ fault.stack }}</pre></details>
         <footer><button @click="copy">{{ copied ? t('copied') : t('copyDiagnostics') }}</button><button @click="download">{{ t('downloadDiagnostics') }}</button><button @click="dismissActiveFault">{{ t('continueSafely') }}</button><button class="primary" @click="safeRestart">{{ t('restartSafeMode') }}</button></footer>
-    </UiDialog>
+    </UiDialog></UiMotionTransition>
   </Teleport>
 </template>
 
 <script setup lang="ts">
+import UiMotionTransition from '../ui/components/UiMotionTransition.vue'
+
 import UiDialog from '../ui/components/UiDialog.vue'
 import { computed, ref } from 'vue'
 import { t } from '../i18n'

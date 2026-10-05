@@ -1,9 +1,9 @@
 <!-- 对象属性检查器：编辑实体组件、资源绑定及场景属性，协调验证和历史。 -->
 <template>
   <div class="config-wrapper" data-doc="manual/inspector" :class="[dock,{'panel-maximized':workspaceState.maximizedPanel==='inspector'}]" :style="{ width: `${panelWidth}px` }">
-    <PanelResizeHandle v-model="panelWidth" orientation="vertical" :minimum="252" :maximum="480" :reset-value="340" :reverse="dock==='right'" :label="t('inspector')" :disabled="workspaceState.maximizedPanel==='inspector'" @commit="estate.inspectorWidth=$event" />
+    <PanelResizeHandle v-model="panelWidth" orientation="vertical" :minimum="320" :maximum="560" :reset-value="380" :reverse="dock==='right'" :label="t('inspector')" :disabled="workspaceState.maximizedPanel==='inspector'" @commit="estate.inspectorWidth=$event" />
     <PanelMaximizeButton panel="inspector" class="inspector-maximize" />
-    <aside :data-resource-key="numericResourceKey" class="config-panel" :class="{ runtime: !canEdit }" :inert="!canEdit">
+    <aside :data-resource-key="numericResourceKey" class="config-panel" data-ui-motion-surface="smooth" :data-ui-motion-key="numericResourceKey" :class="{ runtime: !canEdit }" :inert="!canEdit">
       <div v-if="selectedEntities.length" class="inspector-sticky">
         <header class="inspector-header">
           <span class="eyebrow">{{ t('entitySettings') }}</span>
@@ -77,11 +77,11 @@
           <template v-if="selectedEntity.prefabAsset">
             <DiagnosticRow :label="t('prefabInstance')" :value="selectedEntity.prefabAsset" active />
             <DiagnosticRow :label="t('prefabOverrides')" :value="String(prefabOverrideCount)" />
-            <details v-if="prefabComparison.length" class="prefab-compare">
+            <details data-ui-motion-disclosure v-if="prefabComparison.length" class="prefab-compare">
               <summary>{{ t('comparePrefabOverrides') }}</summary>
               <article v-for="override in prefabComparison" :key="override.path"><code>{{ override.path }}</code><button @click="resetSelectedPrefabOverride(override.path)">{{ t('resetOverride') }}</button></article>
             </details>
-            <details v-if="prefabConflicts.length" class="prefab-compare prefab-conflicts" open>
+            <details data-ui-motion-disclosure v-if="prefabConflicts.length" class="prefab-compare prefab-conflicts" open>
               <summary>{{ t('prefabConflicts') }} · {{ prefabConflicts.length }}</summary>
               <article v-for="conflict in prefabConflicts" :key="`${conflict.code}:${conflict.path ?? ''}`" :class="conflict.severity"><span>{{ conflict.message }}</span></article>
             </details>
@@ -287,7 +287,7 @@
           <ComponentTools :kind="selectedEntity.collider.kind" />
           <PropertyRow :label="t('colliderShape')"><select v-model="colliderShapeModel"><option v-for="kind in colliderShapeKinds" :key="kind" :value="kind">{{ kind }}</option></select></PropertyRow>
           <p class="physics-support-note">{{ colliderShapeSupport }}</p>
-          <details class="compound-shapes">
+          <details data-ui-motion-disclosure class="compound-shapes">
             <summary :title="text17('radiusHint')"><span>{{ t('additionalShapes') }} ({{ selectedEntity.collider.shapes.length }})</span><UiButton icon="add" type="button" :disabled="selectedEntity.collider.shapes.length >= 32" @click.prevent="addColliderShape" :label="t('add')" /></summary>
             <article v-for="(shape, index) in selectedEntity.collider.shapes" :key="shape.id">
               <header><select v-model="shape.kind" :aria-label="t('colliderShape')"><option v-for="kind in colliderShapeKinds" :key="kind">{{ kind }}</option></select><label><input v-model="shape.enabled" type="checkbox">{{ t('componentEnabled') }}</label><UiButton icon="clear" type="button" @click="removeColliderShape(index)" :label="t('remove')" /></header>
@@ -340,17 +340,17 @@
       <div v-else class="inspector-empty"><UiPanelHeader :title="t('inspector')" /><p>{{ ({en:'No object selected',de:'Kein Objekt ausgewählt',zh:'未选择对象'})[prefs.locale] }}</p><UiButton icon="add" :label="t('createObject')" @click="estate.createObjectPaletteOpen = true">{{ t('createObject') }}</UiButton></div>
     </aside>
 
-    <Teleport to="body"><UiDialog v-if="showColorPicker" :title="t('selectColor')" dismiss-on-backdrop @close="showColorPicker = false"><input v-model="tempColor" type="color" :aria-label="t('selectColor')"><template #footer><UiButton @click="showColorPicker = false">{{ t('cancel') }}</UiButton><UiButton variant="primary" @click="applyColor">{{ t('apply') }}</UiButton></template></UiDialog></Teleport>
+    <Teleport to="body"><UiDialog :open="Boolean(showColorPicker)" :title="t('selectColor')" dismiss-on-backdrop @close="showColorPicker = false"><input v-model="tempColor" type="color" :aria-label="t('selectColor')"><template #footer><UiButton @click="showColorPicker = false">{{ t('cancel') }}</UiButton><UiButton variant="primary" @click="applyColor">{{ t('apply') }}</UiButton></template></UiDialog></Teleport>
     <ObjectBlueprintEditor v-if="blueprintEditorUuid" :key="blueprintEditorUuid" :asset-uuid="blueprintEditorUuid" @close="blueprintEditorUuid=null" @derive="deriveOwnedBlueprint" />
     <Teleport to="body">
-      <UiDialog v-if="estate.componentPickerOpen && selectedEntity" :title="t('addComponent') + ' · ' + selectedEntity.name" dismiss-on-backdrop @close="closeComponentPicker">
+      <UiDialog :open="Boolean(estate.componentPickerOpen && selectedEntity)" :title="t('addComponent') + ' · ' + (selectedEntity?.name ?? '')" dismiss-on-backdrop @close="closeComponentPicker">
           <input ref="componentSearchInput" v-model="componentSearch" type="search" :placeholder="t('searchComponents')">
           <div class="component-picker-list">
             <section v-for="group in componentGroups" :key="group.name"><h5>{{ group.name }} <small>{{ group.kinds.length }}</small></h5><article v-for="kind in group.kinds" :key="kind"><button class="component-main" @click="chooseComponent(kind)"><EditorIcon :name="componentIcon(kind)" /><span><strong>{{ componentTitle(kind) }}</strong><small>{{ componentPaletteMetadata(kind).category }} · {{ t(`compatibility${componentPaletteMetadata(kind).compatibility}`) }}<template v-if="componentAuthoringRule(kind).required.length"> · {{ t('requires') }} {{ componentAuthoringRule(kind).required.join(', ') }}</template><template v-if="componentAuthoringRule(kind).conflicts.length"> · {{ t('conflictsWith') }} {{ componentAuthoringRule(kind).conflicts.join(', ') }}</template></small><small>{{ componentPaletteMetadata(kind).summary }}</small></span><EditorIcon name="add" /></button><button class="component-favorite" :class="{ active: componentPaletteState.favorites.includes(kind) }" :title="`${t('favorite')} · ${componentAuthoringRule(kind).documentation}`" @click="toggleComponentFavorite(kind)"><EditorIcon name="pin" /></button></article></section>
             <p v-if="!componentGroups.length">{{ t('noComponentsFound') }}</p>
           </div>
       </UiDialog>
-      <UiMenu v-if="propertyMenu.visible" class="property-menu" @close="closePropertyMenu" :style="{ left: `${propertyMenu.x}px`, top: `${propertyMenu.y}px` }"><strong>{{ propertyMenu.path }}</strong><UiButton icon="reset" @click="resetPropertyValue">{{ t('resetProperty') }}</UiButton><UiButton icon="undo" @click="revertPropertyOverride">{{ t('revertOverride') }}</UiButton><button @click="copyPropertyValue">{{ t('copyValue') }}</button><button :disabled="!propertyClipboard" @click="pastePropertyValue">{{ t('pasteValue') }}</button><button @click="copyPropertyPath">{{ t('copyPropertyPath') }}</button><UiButton icon="animation" @click="keyframeProperty">{{ t('keyframeProperty') }}</UiButton><UiButton icon="pin" @click="togglePropertyPin">{{ isCurrentPropertyPinned ? t('unpinProperty') : t('pinProperty') }}</UiButton><p v-if="currentPropertyMetadata">{{ currentPropertyMetadata.help }}<template v-if="currentPropertyMetadata.unit"> · {{ currentPropertyMetadata.unit }}</template><template v-if="currentPropertyMetadata.minimum !== undefined"> · {{ currentPropertyMetadata.minimum }}…{{ currentPropertyMetadata.maximum ?? '∞' }}</template></p></UiMenu>
+      <UiMenu :open="propertyMenu.visible" class="property-menu" @close="closePropertyMenu" :style="{ left: `${propertyMenu.x}px`, top: `${propertyMenu.y}px` }"><strong>{{ propertyMenu.path }}</strong><UiButton icon="reset" @click="resetPropertyValue">{{ t('resetProperty') }}</UiButton><UiButton icon="undo" @click="revertPropertyOverride">{{ t('revertOverride') }}</UiButton><button @click="copyPropertyValue">{{ t('copyValue') }}</button><button :disabled="!propertyClipboard" @click="pastePropertyValue">{{ t('pasteValue') }}</button><button @click="copyPropertyPath">{{ t('copyPropertyPath') }}</button><UiButton icon="animation" @click="keyframeProperty">{{ t('keyframeProperty') }}</UiButton><UiButton icon="pin" @click="togglePropertyPin">{{ isCurrentPropertyPinned ? t('unpinProperty') : t('pinProperty') }}</UiButton><p v-if="currentPropertyMetadata">{{ currentPropertyMetadata.help }}<template v-if="currentPropertyMetadata.unit"> · {{ currentPropertyMetadata.unit }}</template><template v-if="currentPropertyMetadata.minimum !== undefined"> · {{ currentPropertyMetadata.minimum }}…{{ currentPropertyMetadata.maximum ?? '∞' }}</template></p></UiMenu>
     </Teleport>
     <ConnectionBuilder v-if="selectedEntity && builderOpen" :selected-id="selectedEntity.id" :connection-id="editingConnectionId" @close="builderOpen = false" />
   </div>
@@ -1106,50 +1106,103 @@ const commonComponentKinds = computed(/** 计算所有选中实体共同拥有�
 </script>
 
 <style scoped>
-.config-wrapper { position: relative; min-width: 252px; max-width: 38vw; flex: 0 0 auto; z-index: 180; background: var(--surface-1); }.config-wrapper.right{border-left:1px solid var(--border-subtle)}.config-wrapper.left{border-right:1px solid var(--border-subtle)}
+.config-wrapper { position: relative; flex: 0 0 auto; z-index: 180; background: var(--surface-1);
+ min-width: 0;
+ max-width: none;
+ border-radius: var(--radius-panel);
+}.config-wrapper.right{border-left:1px solid var(--border-subtle)}.config-wrapper.left{border-right:1px solid var(--border-subtle)}
 .resize-handle { position: absolute; inset: 0 auto 0 0; width: 8px; cursor: ew-resize; z-index: 6; }
 .config-wrapper.left .resize-handle { inset: 0 0 0 auto; }
-.config-panel { position: absolute; inset: 0; overflow: auto; scroll-padding-block: min(230px, 40%) 12px; contain: layout paint; color: var(--text-secondary); background: var(--surface-1); }
+.config-panel { position: absolute; inset: 0; overflow: auto; color: var(--text-secondary); background: var(--surface-1);
+ scroll-padding-block: var(--ui-panel-inset);
+ border-radius: var(--radius-panel);
+}
 .config-panel.runtime { pointer-events: none; opacity: .72; }
-.settings-content { min-height: 100%; padding: var(--space-2) var(--space-3) var(--space-6); display: flex; flex-direction: column; gap: var(--space-2); }
-.inspector-sticky { position: sticky; top: 0; z-index: 12; box-sizing: border-box; max-height: min(230px, 40%); overflow: auto; overscroll-behavior: contain; padding: var(--space-2) var(--space-3) var(--space-2); border-bottom: 1px solid var(--border-subtle); background: color-mix(in srgb, var(--surface-1) 96%, transparent); }
-.inspector-search-row { display: flex; gap: var(--space-1); }.add-component-trigger { min-width: 96px; min-height: 30px; padding: 0 var(--space-2); border: 1px solid var(--accent); color: var(--accent-contrast); background: var(--accent); white-space: nowrap; }
-.inspector-categories { margin-top: var(--space-2); display: flex; gap: var(--space-0); overflow-x: auto; scrollbar-width: none; }.inspector-categories::-webkit-scrollbar { display: none; }
-.inspector-view-controls{margin-top:var(--space-1);display:flex;gap:var(--space-1)}
-.empty-inspector { height: 100%; padding: var(--space-4); display: flex; flex-direction: column; justify-content: center; align-items: center; color: var(--text-muted); text-align: center; }.empty-inspector > strong { margin-top: var(--space-3); color: var(--text-secondary); }.empty-ui-actions { width: 100%; margin-top: var(--space-2); display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-1); }.runtime-note { color: var(--text-muted); line-height: 1.45; }
+.settings-content { min-height: 100%; display: flex; flex-direction: column;
+ padding: var(--ui-section-gap) 0 var(--ui-panel-inset);
+ gap: var(--ui-section-gap);
+}
+.inspector-sticky { box-sizing: border-box; overscroll-behavior: contain; border-bottom: 1px solid var(--border-subtle);
+ position: relative;
+ max-height: none;
+ overflow: visible;
+ padding: var(--ui-panel-inset) var(--ui-panel-inset) 0;
+ background: var(--surface-1);
+}
+.inspector-search-row { display: flex;
+ gap: var(--ui-control-gap);
+ flex-wrap: wrap;
+}.add-component-trigger { min-width: 96px; border: 1px solid var(--accent); color: var(--accent-contrast); background: var(--accent); white-space: nowrap;
+ min-height: var(--ui-control-height);
+ height: var(--ui-control-height);
+ padding: 0 var(--space-4);
+ font-size: var(--type-body);
+ line-height: var(--line-control);
+ border-radius: var(--radius-control);
+}
+.inspector-categories { margin-top: var(--space-2); display: flex; gap: var(--ui-control-gap); overflow-x: auto; scrollbar-width: none; }.inspector-categories::-webkit-scrollbar { display: none; }
+.inspector-view-controls{display:flex;
+ gap: var(--ui-control-gap);
+ margin-top: var(--ui-control-gap);
+ flex-wrap: wrap;
+}
+.empty-inspector { height: 100%; padding: var(--space-4); display: flex; flex-direction: column; justify-content: center; align-items: center; color: var(--text-muted); text-align: center; }.empty-inspector > strong { margin-top: var(--space-3); color: var(--text-secondary); }.empty-ui-actions { width: 100%; margin-top: var(--space-2); display: grid; grid-template-columns: 1fr 1fr; gap: var(--ui-control-gap); }.runtime-note { color: var(--text-muted); line-height: 1.45; }
 .authoring-validation{padding:var(--space-2);display:grid;gap:var(--space-1);border:1px solid color-mix(in srgb,var(--warning) 40%,var(--border-subtle));background:color-mix(in srgb,var(--warning) 7%,transparent)}.authoring-validation strong{color:var(--warning)}
-.batch-toggle { min-width: 76px; height: 28px; border: 1px solid var(--border-subtle); color: var(--accent); background: var(--surface-3); }
+.batch-toggle { min-width: 76px; border: 1px solid var(--border-subtle); color: var(--accent); background: var(--surface-3);
+ height: var(--ui-control-height);
+ min-height: var(--ui-control-height);
+ font-size: var(--type-body);
+ border-radius: var(--radius-control);
+}
 .inspector-header { padding: 0 var(--space-0) var(--space-2); }.eyebrow { color: var(--accent); }h3 { margin: var(--space-0) 0 0; color: var(--text-primary); line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }h3 small { color: var(--text-muted); }
-:deep(.component-tools) { min-height: 31px; display: flex; align-items: center; justify-content: flex-end; gap: var(--space-1); }
-.pair { width: 100%; display: flex; gap: var(--space-1); }
+:deep(.component-tools) { display: flex; align-items: center; justify-content: flex-end;
+ min-height: var(--ui-control-height);
+ gap: var(--ui-control-gap);
+ flex-wrap: wrap;
+}
+.pair { width: 100%;
+ gap: var(--ui-control-gap);
+ flex-wrap: wrap;
+ display: grid;
+ grid-template-columns: repeat(auto-fit,minmax(min(100%,calc(144px * var(--ui-scale))),1fr));
+}
 .physics-support-note { margin: -var(--space-0) 0 var(--space-0); padding: var(--space-2) var(--space-2); overflow-wrap: anywhere; border: 1px solid var(--border-subtle); color: var(--text-muted); background: var(--surface-1); line-height: 1.4; }
-.compound-shapes { border: 1px solid var(--border-subtle); background: var(--surface-1); }.compound-shapes>summary{min-height:31px;padding:var(--space-0) var(--space-1) var(--space-0) var(--space-2);display:flex;align-items:center;justify-content:space-between;list-style:none;color:var(--text-secondary);cursor:pointer}.compound-shapes>summary::-webkit-details-marker{display:none}.compound-shapes article{margin:var(--space-1);padding:var(--space-2);display:grid;gap:var(--space-1);border:1px solid var(--border-subtle)}.compound-shapes article header{display:grid;grid-template-columns:minmax(0,1fr) auto 25px;align-items:center;gap:var(--space-1)}.compound-shapes>p{margin:var(--space-1) var(--space-2) var(--space-2);color:var(--text-muted);line-height:1.4}
-:deep(.diagnostic-row) { min-height: 30px; display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); color: var(--text-muted); }:deep(.diagnostic-row code) { color: var(--accent); }:deep(.diagnostic-row.active code) { color: var(--warning); }
-.stacked-field { display: flex; flex-direction: column; gap: var(--space-1); color: var(--text-secondary); }
-.color-well { width: 48px; height: 25px; border: 3px solid var(--surface-3); }
-.primary-action, .secondary-action { min-height: 33px; width: 100%; display: flex; align-items: center; justify-content: center; gap: var(--space-1); border: 1px solid var(--accent); color: var(--accent-contrast); background: var(--accent); }.secondary-action { border-color: var(--border-subtle); color: var(--text-secondary); background: var(--surface-3); }
-.prefab-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-1); }
+.compound-shapes { border: 1px solid var(--border-subtle); background: var(--surface-1); border-radius: var(--radius-control); container-name: nova-compound; }.compound-shapes>summary{display:flex;align-items:center;justify-content:space-between;list-style:none;color:var(--text-secondary);cursor:pointer;min-height: var(--ui-control-height);padding: var(--ui-input-padding-block) var(--space-4);font-size: var(--type-body);line-height: var(--line-body);border-radius: var(--radius-control)}.compound-shapes>summary::-webkit-details-marker{display:none}.compound-shapes article{display:grid;border:1px solid var(--border-subtle);margin: var(--space-3);padding: 0;gap: var(--ui-field-gap)}.compound-shapes article header{display:grid;align-items:center;gap: var(--ui-control-gap);min-height: var(--ui-panel-header-height);grid-template-columns: minmax(0,1fr) auto var(--ui-control-height);}.compound-shapes>p{margin:var(--space-1) var(--space-2) var(--space-2);color:var(--text-muted);line-height:1.4}
+:deep(.diagnostic-row) { display: flex; align-items: center; justify-content: space-between; color: var(--text-muted); min-height: var(--ui-control-height); gap: var(--ui-control-gap); padding: var(--space-3) var(--space-4); font-size: var(--type-caption); border-radius: var(--radius-control); }:deep(.diagnostic-row code) { color: var(--accent); }:deep(.diagnostic-row.active code) { color: var(--warning); }
+.stacked-field { display: flex; flex-direction: column; color: var(--text-secondary);
+ gap: var(--ui-label-control-gap);
+}
+.color-well { border: 3px solid var(--surface-3); width: var(--ui-control-height); height: var(--ui-control-height); border-radius: var(--radius-control); }
+.primary-action, .secondary-action { width: 100%; display: flex; align-items: center; justify-content: center; border: 1px solid var(--accent); color: var(--accent-contrast); background: var(--accent); min-height: var(--ui-control-height); gap: var(--ui-control-gap); font-size: var(--type-body); border-radius: var(--radius-control); }.secondary-action { border-color: var(--border-subtle); color: var(--text-secondary); background: var(--surface-3); }
+.prefab-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--ui-control-gap); }
 .prefab-compare{padding:var(--space-1);border:1px solid var(--border-subtle)}.prefab-compare summary{cursor:pointer;color:var(--text-secondary)}.prefab-compare article{min-width:0;display:flex;align-items:center;gap:var(--space-1);padding-top:var(--space-1)}.prefab-compare code{min-width:0;flex:1;overflow:hidden;color:var(--accent);text-overflow:ellipsis;white-space:nowrap}.prefab-conflicts article{line-height:1.35}.prefab-conflicts article.error{color:var(--danger)}.prefab-conflicts article.warning{color:var(--warning)}
 .script-error { margin: 0; padding: var(--space-2); overflow-wrap: anywhere; border: 1px solid color-mix(in srgb, var(--danger) 50%, var(--border-subtle)); color: var(--danger); background: var(--danger-soft); line-height: 1.45; }
-.script-property-group{display:grid;gap:var(--space-1);padding-top:var(--space-1)}.script-property-group h4{margin:0;padding:var(--space-2) var(--space-0) var(--space-0);border-bottom:1px solid var(--border-subtle);color:var(--text-muted)}.script-property-help{display:block;margin:-var(--space-0) var(--space-1) var(--space-1);color:var(--text-muted);line-height:1.35;overflow-wrap:anywhere}
+.script-property-group{display:grid;gap: var(--ui-field-gap);padding-top: var(--ui-heading-content-gap)}.script-property-group h4{margin:0;padding:var(--space-2) var(--space-0) var(--space-0);border-bottom:1px solid var(--border-subtle);color:var(--text-muted)}.script-property-help{display:block;color:var(--text-muted);overflow-wrap:anywhere;margin: 0;font-size: var(--type-caption);line-height: var(--line-body)}
 .inspector-no-results { margin: var(--space-3) var(--space-1); padding: var(--space-4) var(--space-2); border: 1px dashed var(--border-strong); color: var(--text-muted); text-align: center; line-height: 1.45; }
-.plugin-inspector-actions { display: grid; gap: var(--space-1); }.plugin-inspector-actions span, .plugin-inspector-actions small { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.plugin-inspector-actions small { color: var(--text-muted); }
+.plugin-inspector-actions { display: grid; gap: var(--ui-control-gap); }.plugin-inspector-actions span, .plugin-inspector-actions small { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.plugin-inspector-actions small { color: var(--text-muted); }
 .empty-state { margin: var(--space-1) 0; color: var(--text-muted); text-align: center; }.connection-list { display: flex; flex-direction: column; gap: var(--space-1); }.connection-item { display: flex; align-items: center; border: 1px solid var(--border-subtle); background: var(--surface-1); }.connection-main { min-width: 0; flex: 1; padding: var(--space-2); display: flex; align-items: center; gap: var(--space-2); border: 0; background: transparent; text-align: left; }.connection-main > span:last-child { min-width: 0; display: flex; flex-direction: column; }.connection-main strong, .connection-main small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.connection-main strong { color: var(--text-primary); }.connection-main small { color: var(--text-muted); }.connection-dot { width: 8px; height: 8px; flex: 0 0 8px; background: var(--connection); }.connection-item.snapped .connection-dot, .connection-item.torn .connection-dot { background: var(--connection-broken); }
-.modal-scrim { position: fixed; inset: 0; z-index: 1300; display: grid; place-items: center; background: var(--scrim); pointer-events: auto; }.color-modal { width: 250px; padding: var(--space-4); display: flex; flex-direction: column; align-items: center; gap: var(--space-3); border: 1px solid var(--border-subtle); background: var(--surface-2); }.color-modal h4 { margin: 0; }.color-modal > div { width: 100%; display: flex; gap: var(--space-2); }
-.component-picker-scrim { z-index: 1400; }.component-picker { width: min(620px, calc(100vw - 30px)); max-height: min(700px, calc(100vh - 60px)); padding: var(--space-3); display: flex; flex-direction: column; gap: var(--space-2); overflow: hidden; border: 1px solid var(--border-strong); background: var(--surface-1); }.component-picker > header { display: flex; align-items: center; justify-content: space-between; }.component-picker > header h4 { margin: var(--space-0) 0 0; }.component-picker-list { min-height: 60px;overflow:auto;display:block}.component-picker-list>section{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-1)}.component-picker-list h5{grid-column:1/-1;margin:var(--space-2) var(--space-0) var(--space-0);color:var(--text-muted)}.component-picker-list h5 small{padding:var(--space-0) var(--space-1);background:var(--surface-3)}.component-picker-list article{position:relative;min-width:0}.component-main{width:100%;min-width:0;min-height:52px;padding:var(--space-1) var(--space-6) var(--space-1) var(--space-2);display:grid;grid-template-columns:29px 1fr 18px;align-items:center;gap:var(--space-2);border:1px solid var(--border-subtle);color:var(--text-secondary);background:var(--surface-2);text-align:left}.component-main:hover{border-color:color-mix(in srgb,var(--accent) 55%,var(--border-subtle));background:var(--accent-soft)}.component-main>span:first-child{width:28px;height:28px;display:grid;place-items:center;color:var(--accent);background:var(--surface-3);font:600 11px/1 var(--font-mono)}.component-main>span:nth-child(2){min-width:0;display:flex;flex-direction:column;gap:var(--space-0)}.component-main strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.component-main small{color:var(--text-muted);line-height:1.25}.component-main i{color:var(--accent);font-style:normal}.component-favorite{position:absolute;right:3px;top:3px;width:25px;height:25px;border:0;color:var(--text-muted);background:transparent;opacity:.4}.component-favorite.active{color:#f4c95d;opacity:1}.component-picker-list>p{padding:var(--space-6);color:var(--text-muted);text-align:center}
-.property-menu{position:fixed;z-index:1600;width:220px;padding:var(--space-2);display:flex;flex-direction:column;gap:var(--space-0);border:1px solid var(--border-strong);background:var(--surface-1)}.property-menu>strong{padding:var(--space-1) var(--space-2);color:var(--accent);font:600 11px/1.3 var(--font-mono);overflow-wrap:anywhere}.property-menu>p{margin:var(--space-1);padding:var(--space-2);border-top:1px solid var(--border-subtle);color:var(--text-muted);line-height:1.4}
-@media (max-width: 760px) { .config-wrapper { max-width: 46vw; } }
-@media (max-width: 560px) { .component-picker-list>section { grid-template-columns: 1fr; } }
+.modal-scrim { position: fixed; inset: 0; z-index: 1300; display: grid; place-items: center; background: var(--scrim); pointer-events: auto; }.color-modal { display: flex; flex-direction: column; align-items: center; gap: var(--space-3); border: 1px solid var(--border-subtle); background: var(--surface-2); width: min(calc(340px * var(--ui-scale)),calc(100vw - 2 * var(--ui-panel-inset))); padding: var(--ui-dialog-inset); border-radius: var(--radius-dialog); }.color-modal h4 { margin: 0; }.color-modal > div { width: 100%; display: flex; gap: var(--space-2); }
+.component-picker-scrim { z-index: 1400; }.component-picker { max-height: min(700px, calc(100vh - 60px)); display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--border-strong); background: var(--surface-1); width: min(calc(720px * var(--ui-scale)), calc(100vw - 2 * var(--space-5))); padding: var(--space-6); gap: var(--ui-field-gap); border-radius: var(--radius-dialog); }.component-picker > header { display: flex; align-items: center; justify-content: space-between; }.component-picker > header h4 { margin: var(--space-0) 0 0; }.component-picker-list { min-height: 60px;overflow:auto;display:block}.component-picker-list>section{display:grid;grid-template-columns: repeat(auto-fit,minmax(min(100%,calc(260px * var(--ui-scale))),1fr));gap: var(--ui-control-gap)}.component-picker-list h5{grid-column:1/-1;margin:var(--space-2) var(--space-0) var(--space-0);color:var(--text-muted)}.component-picker-list h5 small{padding:var(--space-0) var(--space-1);background:var(--surface-3)}.component-picker-list article{position:relative;min-width:0;container: component-choice / inline-size;}.component-main{width:100%;min-width:0;display:grid;align-items:center;border:1px solid var(--border-subtle);color:var(--text-secondary);background:var(--surface-2);text-align:left;min-height: var(--ui-panel-header-height);padding: var(--space-3) calc(var(--ui-control-height) + var(--space-3)) var(--space-3) var(--space-4);gap: var(--ui-control-gap);font-size: var(--type-body);line-height: var(--line-body);grid-template-columns: var(--ui-icon-size) minmax(0,1fr) var(--ui-icon-size);}.component-main:hover{border-color:color-mix(in srgb,var(--accent) 55%,var(--border-subtle));background:var(--accent-soft)}.component-main>span:nth-child(2){min-width:0;display:flex;flex-direction:column;gap: var(--space-2);}.component-main strong{overflow:hidden;text-overflow:ellipsis;white-space: normal;overflow-wrap: anywhere}.component-main small{color:var(--text-muted);font-size: var(--type-caption);line-height: var(--line-body)}.component-main i{color:var(--accent);font-style:normal}.component-favorite{position:absolute;border:0;color:var(--text-muted);background:transparent;opacity:.4;width: var(--ui-control-height);height: var(--ui-control-height);right: var(--space-1);top: var(--space-1);padding: 0;border-radius: var(--radius-control)}.component-favorite.active{color:#f4c95d;opacity:1}.component-picker-list>p{padding:var(--space-6);color:var(--text-muted);text-align:center}
+.property-menu{position:fixed;z-index:1600;display:flex;flex-direction:column;gap:var(--ui-control-gap);border:1px solid var(--border-strong);background:var(--surface-1);width: min(calc(320px * var(--ui-scale)),calc(100vw - 2 * var(--ui-panel-inset)));padding: var(--space-3);max-height: calc(100vh - 2 * var(--ui-panel-inset));overflow: auto;border-radius: var(--radius-floating)}.property-menu>strong{padding:var(--space-1) var(--space-2);color:var(--accent);overflow-wrap:anywhere;font: 600 var(--type-body)/var(--line-body) var(--font-mono)}.property-menu>p{margin:var(--space-1);padding:var(--space-2);border-top:1px solid var(--border-subtle);color:var(--text-muted);line-height:1.4}
+
+@media (max-width: 560px) { .component-picker-list>section { grid-template-columns: repeat(auto-fit,minmax(min(100%,calc(260px * var(--ui-scale))),1fr)); gap: var(--ui-control-gap); } }
 /* Dock width, not window width, determines when labels need their own line. */
 .config-wrapper { container: nova-inspector / inline-size; }
 .inspector-categories { scrollbar-width: thin; }
 .inspector-categories::-webkit-scrollbar { display: initial; height: 5px; }
-@container nova-inspector (max-width: 360px) {
+@container nova-inspector (max-width: 22em) {
   .inspector-search-row { flex-wrap: wrap; }
   .inspector-view-controls { flex-wrap: wrap; }
   .prefab-actions, .empty-ui-actions { grid-template-columns: 1fr; }
   :deep(.component-tools) { flex-wrap: wrap; }
 }
-.compound-shapes{container-type:inline-size}.compound-shapes article{min-width:0}
-.compound-shapes article header{grid-template-columns:minmax(0,1fr) 30px}
+.compound-shapes{container-type:inline-size;border-radius: var(--radius-control);container-name: nova-compound;}.compound-shapes article{min-width:0;margin: var(--space-3);padding: 0;gap: var(--ui-field-gap)}
+.compound-shapes article header{ gap: var(--ui-control-gap); min-height: var(--ui-panel-header-height); grid-template-columns: minmax(0,1fr) auto var(--ui-control-height);}
+.settings-content > :not(.ui-property-section):not(.inspector-section){margin-inline:var(--ui-panel-inset)}
+.component-main>.editor-icon:first-child{color:var(--accent);justify-self:center}
+.component-main>.editor-icon:last-child{justify-self:center}
+.compound-shapes article header>label{min-width:0;display:flex;align-items:center;gap:var(--ui-control-gap);font-size:var(--type-body);line-height:var(--line-body)}
+.compound-shapes article header>select{width:100%;min-width:0}
+@container nova-compound (max-width:22em){.compound-shapes article header{grid-template-columns:minmax(0,1fr)}.compound-shapes article header>.ui-button{inline-size:var(--ui-control-height);justify-self:end}}
+@container component-choice (max-width:22em){.component-main{grid-template-columns:var(--ui-icon-size) minmax(0,1fr);grid-template-rows:var(--ui-control-height) auto;column-gap:0;row-gap:var(--ui-control-gap);padding-inline:var(--space-4)}.component-main>.editor-icon:first-child{grid-column:1;grid-row:1}.component-main>.editor-icon:last-child{grid-column:2;grid-row:1;justify-self:start}.component-main>span:nth-child(2){grid-column:1/-1;grid-row:2}}
 </style>

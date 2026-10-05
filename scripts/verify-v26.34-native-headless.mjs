@@ -5,7 +5,7 @@ import {readFileSync,mkdirSync,writeFileSync} from 'node:fs'
 import {createHash} from 'node:crypto'
 const exe='target/release/nova_headless.exe',checks=[]
 const release=process.argv.find(arg=>arg.startsWith('--qualification-release='))?.split('=')[1]??'26.34'
-assert.match(release,/^26\.(?:34|35)$/)
+assert.match(release,/^26\.(?:34|35|36|37)$/)
 const engineVersion=release+'.0'
 /** 构建与当前锁文件一致的真实发布二进制。 */
 const build=spawnSync('cargo',['build','-p','nova_headless','--release','--locked'],{encoding:'utf8',windowsHide:true,timeout:180000,env:{...process.env,CARGO_NET_OFFLINE:'true',CARGO_BUILD_JOBS:'2'}})

@@ -10,7 +10,7 @@
     </header>
     <div class="console-list">
       <p v-if="!visible.length" class="empty">{{ t('noConsoleMessages') }}</p>
-      <button v-for="entry in visible" :key="entry.id" :class="['log-entry', entry.level]" @click="openSource(entry.source)">
+      <button v-for="entry in visible" :key="entry.id" :class="['log-entry', entry.level]" :title="entry.source ? entry.message + ' · ' + entry.source : entry.message" @click="openSource(entry.source)">
         <time>{{ entry.timestamp }}</time><b>{{ levelLabel(entry.level) }}</b><strong>{{ entry.category }}</strong><span>{{ entry.message }}</span><code v-if="entry.source">{{ entry.source }}</code>
       </button>
     </div>
@@ -52,7 +52,7 @@ const visible = computed(/** 规范化搜索词，并根据等级、分类和文
 .console-filters { padding: var(--space-1) var(--space-2); display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-1); border-bottom: 1px solid var(--border-subtle); }
 .console-filters input { min-width: 0; flex: 1 1 24ch; } .console-filters select { width: 16ch; min-width: 0; } .console-filters>span { margin-left: auto; color: var(--text-muted); font-size: var(--type-caption); }
 .console-list { min-height: 0; flex: 1; overflow: auto; font-family: var(--font-mono); }
-.log-entry { width: 100%; min-width: 0; min-height: var(--ui-tree-row-height); padding: var(--space-1) var(--space-2); display: grid; grid-template-columns: 9ch 8ch 10ch minmax(0, 1fr) minmax(0, auto); gap: var(--space-2); align-items: center; overflow: hidden; border: 0; border-bottom: 1px solid var(--border-subtle); border-radius: 0; color: var(--text-secondary); background: transparent; text-align: left; font-size: var(--type-caption); }
+.log-entry { width: 100%; min-width: 0; min-height: var(--ui-tree-row-height); padding: var(--space-2) var(--space-4); display: grid; grid-template-columns: 9ch 8ch 10ch minmax(0, 1fr) minmax(0, auto); gap: var(--ui-control-gap); align-items: center; overflow: hidden; border: 0; border-bottom: 1px solid var(--border-subtle); border-radius: var(--radius-xs); color: var(--text-secondary); background: transparent; text-align: left; font-size: var(--type-code); line-height: var(--line-body); }
 .log-entry:hover { background: var(--surface-hover); }.log-entry time, .log-entry code, .log-entry b, .log-entry strong, .log-entry span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.log-entry time, .log-entry code { color: var(--text-muted); }.log-entry b { color: var(--text-muted); }.log-entry strong { color: var(--accent); }.log-entry.warning b, .log-entry.warning strong { color: var(--warning); }.log-entry.error b, .log-entry.error strong, .log-entry.fatal b, .log-entry.fatal strong { color: var(--danger); }.log-entry.fatal { background: var(--danger-soft); }
 .empty { padding: var(--space-3); color: var(--text-muted); font: var(--type-caption) var(--font-ui); }
 @media (max-width: 760px) { .log-entry { grid-template-columns: 8ch 7ch 8ch minmax(12ch, 1fr); }.log-entry code { display: none; } }

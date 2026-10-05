@@ -58,7 +58,7 @@ const editableSelected = computed(/** 判断选中模块是否属于提供通用
 
 <style scoped>
 .particle-graph-editor { container: nova-particle / inline-size; min-width: 0; min-height: 0; display: flex; flex-direction: column; background: var(--surface-1); }
-.backend-field { display: flex; align-items: center; gap: var(--space-2); font-size: var(--type-caption); color: var(--text-secondary); }
+.backend-field { display: flex; align-items: center; gap: var(--ui-control-gap); font-size: var(--type-body); line-height: var(--line-body); color: var(--text-secondary); }
 .backend-field select { width: auto; }
 .particle-layout { display: grid; grid-template-columns: minmax(14ch, 1fr) minmax(0, 2fr) minmax(18ch, 1fr); min-height: 0; flex: 1; overflow: auto; }
 .particle-layout > aside, .particle-layout > main { min-width: 0; padding: var(--space-2); overflow: auto; }
@@ -81,5 +81,5 @@ main > label { display: grid; grid-template-columns: minmax(0, var(--ui-label-wi
 .good { color: var(--success); }.warning { color: var(--warning); }.error { color: var(--danger); }
 @container nova-particle (max-width: 760px) { .particle-layout { grid-template-columns: minmax(14ch, 1fr) minmax(0, 2fr); }.particle-preview { grid-column: 1 / -1; border-top: var(--ui-border-width) solid var(--border-subtle); } }
 @container nova-particle (max-width: 480px) { .particle-layout { grid-template-columns: minmax(0, 1fr); }.particle-layout > aside:first-child { max-height: calc(6 * var(--ui-tree-row-height)); }.particle-layout > :not(:last-child) { border-right: 0; border-bottom: var(--ui-border-width) solid var(--border-subtle); }.backend-field { flex-wrap: wrap; } }
-@container nova-particle-fields (max-width: 280px) { main > label { grid-template-columns: minmax(0, 1fr); gap: var(--space-1); } }
+@container nova-particle-fields (max-width: 280px) { main > label { grid-template-columns: minmax(0, 1fr); gap: var(--ui-control-gap); } }
 </style>

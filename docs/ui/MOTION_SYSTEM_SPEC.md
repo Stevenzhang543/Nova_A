@@ -1,270 +1,82 @@
-# Nova_A Motion & Interaction System Specification
+# Nova_A Motion & Interaction System — 26.37
 
-## Goal
-Create one reusable motion system for Nova_A inspired by high-quality Apple-platform interaction:
-- immediate response
-- direct manipulation
-- spring-like settling
-- spatial continuity
-- restrained translucency
-- polished transitions
+## Active priorities
 
-Do not copy iOS literally. Nova_A is a desktop editor.
+The current user requirement replaces the compact, nearly imperceptible motion rules from 26.35. Comfortable geometry and readable type remain enabled during animation. Input, focus, selection, history and domain coordinates commit immediately. Motion communicates the resulting UI state and never changes project or game data.
 
-## Principles
-1. Immediate input response.
-2. Natural settling.
-3. Preserve spatial continuity.
-4. Short by default.
-5. Motion communicates hierarchy/state.
-6. Large motion is rarer than small motion.
-7. No animation blocks productivity.
-8. Repeated actions should remain fast.
-9. Prefer interruption-safe animations.
-10. User interaction always outranks animation.
+Reuse `src/ui/motion.ts` and `src/ui/motion.css`. One finite presentation job owns each element; a newer action retargets the current visual state. No `transition: all`, queued obsolete actions, continuously running idle spring simulation, or independent panel easing families.
 
-## Motion tokens
-Create shared semantic families.
+## Shared presets and timing
 
-### Micro
-For hover tint, press state, focus ring, tiny state changes.
-Suggested: 60–110 ms.
+The implemented normalized spring families and semantic durations are:
 
-### Fast
-For tooltip, tab indicator, small opacity transitions.
-Suggested: 110–170 ms.
+| Preset | Stiffness / damping / mass | Production use |
+|---|---|---|
+| Snappy | 700 / 34 / 1 | Button release, selection marks, short closing feedback |
+| Smooth | 360 / 28 / 1 | Disclosure height, tabs/FLIP, panel expansion, menus and dialogs |
+| Elastic | 480 / 22 / 1 | Bounded drag release/cancel settle feedback and selected launcher feedback |
 
-### Standard
-For popover, section expand/collapse, small layout change.
-Suggested: 170–240 ms.
+| Shared duration | Value |
+|---|---|
+| micro | 120ms |
+| fast | 180ms |
+| standard | 240ms |
+| emphasized | 320ms |
 
-### Emphasized
-For dialogs, welcome composition, major contextual panes.
-Suggested: 220–340 ms.
+`sampleSpring()` samples the analytical damped response once, with at most 61 normalized keyframes and a final target of exactly 1. WAAPI plays those frames using the selected semantic duration; the returned oscillator settling horizon is not an extra wait or an idle simulation. CSS tokens use the same four durations. Inputs and precise pointer edits do not wait for animation.
 
-Use framework-native spring parameters when appropriate.
+## Production coverage and owners
 
-## Spring presets
+| Family | Actual production owner and behavior |
+|---|---|
+| Buttons, native fields, checkbox/radio/toggle, slider | Shared CSS plus the finite delegated controller installed by `installUiMotion()`. Press is immediate; release is bounded. Fields animate surface/border/validation, rather than their text. Toggle knobs and range thumbs provide feedback while native state/value updates immediately. |
+| Tabs, trees and lists | `UiTabs` uses measured indicator/content feedback; committed reorders use `captureRects()` / `animateReorder()` for at most 80 mounted neighbors. Hierarchy changes immediately update virtual rows; no long-list stagger is added. |
+| Inspector and property groups | `UiPropertySection` and explicitly marked native details use `animateDisclosure()`. Object selection/content owners reuse shared presence without remounting the whole shell or changing project selection semantics. |
+| Panels and bottom dock | Real visibility owners use `UiMotionTransition`. `EditorBottomPanel` animates open/close block height, retains outgoing content until completion and makes it inert immediately. Separator edits and window resize cancel height presentation and apply natural geometry directly. |
+| Menus, popovers and dialogs | `UiMenu`, `UiDialog` and explicit conditional `UiMotionTransition` callers retain their outgoing DOM for a real exit. Self/parent ownership prevents duplicate animations. Modal scrims stay fixed and hit-testable; only the dialog surface may move. |
+|12 native popup callers | Explicit `data-ui-motion-popover` uses `animateNativePopover()` on direct non-summary surfaces, with finite presence, immediate logical aria/inert, feature-detected manual top layer and bounded inline fallback. Summary remains available for reversal. |
+| Tooltips, toast and status feedback | `selectValueDetails.ts` owns the custom selected-value tooltip; `EditorFeedback.vue` owns banner/status presence and toast entry/exit/reorder. Native browser `title` tooltips and native select popup windows remain browser/OS owned; no custom fade is claimed for them. |
+| Launcher and specialized tools | Project-manager and real editor surfaces use the same control rules and marked presence owners. Existing animation, tile, physics, game-UI authoring, input-map, resource, settings and debugger/profiler controls inherit shared feedback; their exact timeline/canvas/data positions are excluded from spring delay. |
 
-### spring.snappy
-Use for:
-- button release
-- active indicator
-- small dragged-item settle
-- compact contextual motion
-Quick, little overshoot, strongly damped.
+This table records implemented source ownership. The caller classification is74 ordinary disclosures, one Object Ownership lazy consumer,12 native popups, six already-owned details and one shared property-section owner:94 inventoried elements without duplicate owners. Current complete rendered/dynamic and frozen-source acceptance remain separate from this inventory.
 
-### spring.smooth
-Use for:
-- panel expansion
-- rearrangement
-- popovers
-- moderate layout transitions
-Smooth, controlled, minimal overshoot.
+## Precision, drag and state boundaries
 
-### spring.elastic
-Use sparingly for:
-- drag/drop settle
-- docking preview
-- playful launch accent
-Noticeable but restrained overshoot.
+The delegated controller excludes `.canvas-container`, `.player-root` and `[data-game-ui-control]`. Authored game controls and game motion are not editor motion. Slider values, viewport objects, keyframes, tile/graph/waveform coordinates, resize separators and native drag anchors follow input directly.
 
-Do not use elastic everywhere.
+Content details are `details.ui-property-section` and `details[data-ui-motion-disclosure]`. Latest `data-ui-disclosure-open`, summary `aria-expanded` and `ui-disclosure-change` update immediately. Native `open` may remain true only for outgoing height; direct content is inert while closing. Completion restores natural styles/final native state. Object Ownership consumes logical intent, keeps its lazy body through exit and uses `refreshDisclosure()` after Vue mounting to remeasure the latest target without redispatching intent. Nested sections retain independent owners; already-owned elements are not assigned a second controller.
 
-## Component states
-Reusable interactive components should define:
-- idle
-- hover
-- pressed
-- focused
-- selected
-- disabled
-- loading if applicable
-- drag source
-- drag target
+Native popup details are `details[data-ui-motion-popover]`. Latest `data-ui-popover-open`, summary aria and `ui-popover-change` update immediately. Closing direct surfaces become inert/pointer-blocked/aria-hidden while summary remains available to reverse the desired target. Native open/layer removal waits only for finite exit. Existing external native close, outside pointer/focus and Escape converge on this owner without queuing obsolete exits. Escape restores the trigger; outside-focus close preserves the new focused target.
 
-## Buttons
-Hover: subtle surface/color transition.
-Press: immediate feedback; optional tiny visual compression.
-Release: snappy return.
-Do not blur text/icons through poor transforms.
+Feature-detected `showPopover()`/`hidePopover()` gives direct surfaces a manual top layer without Teleport, DOM reparenting or model changes. Placement follows the trigger directly, clamps/flips within the viewport and bounds long content with scrolling; older engines retain an explicit clipped-region inline fallback. `data-ui-popover-layer` and actual `:popover-open` identify the route. Native-layer text inherits live theme color; explicit author color expressions/priorities and original styles are preserved/restored. ResizeObserver watches summary/surface size only while logically open; async sizing, viewport resize and scrolling reposition directly. Close/cancel/removal/disposal disconnects observation. Real fallback-host rendering still needs its own evidence.
 
-## Panel motion
-Use only for meaningful structural changes.
-During manual resize: geometry follows pointer immediately, no spring lag.
-After release: optional tiny settle if helpful.
+Existing hierarchy/object reparenting, asset insertion, scene/bottom tab ordering and panel docking retain their existing commit/undo/data owners. The platform drag image follows the native pointer. Sources and existing valid/invalid targets provide feedback; a non-interactive release/cancel ring can settle at the captured destination or source rectangle after the logical action. FLIP affects mounted neighbors after a commit, not pointer hit testing. Resource-field drops, free-floating movement and clip-drag routes that were not implemented are not represented as new features.
 
-## Expand/collapse
-Animate:
-- disclosure indicator
-- content reveal
-- very subtle opacity if useful
-Keep short.
+## Policy, material and lifecycle
 
-## Tabs and selection
-Use continuity:
-- active indicator glides
-- selected surface transitions quickly
-- tiny content crossfade/shift if useful
-Avoid large page slides.
+Normal motion is enabled by default. `getUiMotionPolicy()` returns:
 
-## Menus and popovers
-Open:
-- opacity + tiny scale/translation
-- optional selective material effect
-Close slightly faster.
-No exaggerated zoom.
+- `on`: normal interaction feedback and eligible transient decoration.
+- `light`: a constrained decorative budget, including low-end or explicit decorative-motion off, keeps interaction feedback and reduces presence displacement/scale amplitude to 0.6 of normal. Expensive material decoration is reduced.
+- `reduced`: persisted user Reduced Motion or the system preference settles current owned jobs to their latest completion immediately and skips subsequent WAAPI motion. Necessary focus, selection and validation states remain visible.
 
-## Dialogs
-Backdrop:
-- restrained fade
-- selective tint/blur where supported
+Decorative budget is not an accessibility Reduced Motion signal. Persistent panels remain crisp; transient blur has an opaque fallback. No text motion blur, authored game-animation cancellation or geometry rollback is introduced.
 
-Dialog:
-- subtle opacity + scale/vertical movement
-- smooth/emphasized spring
-Keyboard focus must not be delayed.
+`cancelMotion()` captures current presentation before cancelling. Presence uses that captured state on reentry; obsolete finish/cancel callbacks cannot affect a successor. Component owners use generations, restore their original inert/pointer/accessibility state, and clear completed, cancelled and unmounted jobs. Modal exit locks keep the scrim covering the viewport, reject repeated closing input and deactivate its inner controls until removal; existing modal-focus ownership remains responsible for keyboard focus.
 
-## Drag and drop: "jelly" without lag
+The controller removes registrations for genuinely disconnected nodes, preserves connected reparented nodes, and disposes its event listeners, observers, pressed/range state, content/native-popup records and drag feedback. Top-layer/style snapshots restore on removal. There is no spring RAF loop at idle. Missing or rejected Web Animations support completes safely. Precise resize, KeepAlive deactivation and project/component exit cancel relevant presentation work.
 
-### While dragging
-- drag visual follows pointer 1:1
-- source may lift slightly
-- shadow/elevation may increase
-- scale may increase slightly where appropriate
-- valid targets react quickly
-- insertion indicators move smoothly
+## Evidence and limits
 
-### Reordering
-Neighboring rows/items move smoothly into predicted positions where practical.
+The protected current26.36 baseline is archived in `reports/comfortable/26.37/baseline`, digest `d4d78307f673398e2437441e7af64e23e95e00b6439851e919b786d981ebb465`. Five screens and nine timing/four raw counter windows use the same unchanged populated Player project,1600x900,UIscale1,DPR1. Shared-only representative1 exposed legacy Inspector clipping; source repairs and main-panel migration are implemented, with fresh current rendering acceptance separate.
 
-### Drop
-Use snappy/smooth spring settle.
+Current46/46 deterministic production motion/controller host checks and Vue/TypeScript check passed; `reports/comfortable/26.37/implementation/observed-navigation-and-tilemap-fix.json` records actual source/test SHA and scope. The real module executes against controlled WAAPI/DOMMatrix/DOM/event/observer boundaries. Coverage includes bounded springs/variable time steps, current-state reversal/latest ownership, cancellation/disposal, live user/system/light policy, unsupported APIs, content focus/external close/lazy refresh, connected reparenting/removal, native values/game exclusions, modal/block-size interruption and native-layer placement/reversal/direct resize-scroll/fallback/style restoration. Added cases cover live inherited color, logically-open-only size observer cleanup and outside-focus closing. Old28-test cache receipts apply to their recorded source only.
 
-### Cancel
-Return predictably with a short spring.
+Host checks do not establish compositor or real pointer/platform-event behavior. An earlier development GUI revision passed22/22 groups, actual drag/reorder/dock/cancel, minimum layout, Reduced Motion and history/save/reopen. Five strict captures and nine/four raw observations are in `release-audits/v26.37-comfortable-user.json` and `release-audits/v26.37-comfortable-performance.json`; later source changes require fresh execution. Current actual native-disclosures development execution passed9/9: eight1600x900 lifecycle groups plus all12 native menus at1024x640/DPR1/UIscale1, with real viewport/rounded-valid midpoint/every enabled-control hit and normal dock size. `release-audits/v26.37-native-disclosures-user.json` records that source-specific result; no private app state was injected or registry pass inferred. Failed attempts1–4 remain diagnosis. Remaining full-route acceptance is still separate. The actual fourteen source-bound gates and independent exact-eleven-file package verification establish final acceptance; development receipts cannot establish freeze or publication.
 
-### Docking
-Show responsive docking preview; final panel settles after drop.
+Latest rebuilt native9 also measured all12 popup corner radii>=16 and content inset>=20 (observed20), alongside actual minimum-window hit/reachability. The partial `v26.37-ui-rebuild-layout-remainder.json` receipt passed the last four groups over34 routes/41 captures with zero console exceptions; it does not replace the full ten-group layout gate. Frozen-source executed evidence remains authoritative.
 
-### Never
-- delayed elastic tether between cursor and object
-- imprecise hit testing
-- visual position differing from logical drag position
+Headless software Edge timing/layout/style/idle observations do not certify physical display latency, hardware GPU/raster/blur cost, native drag-image pixels, multiple displays/DPI, touch/pen or assistive technology. Native installer execution, signing and clean-machine installation require their own evidence. Historical 26.35 results apply only to that release.
 
-## Scrolling
-Keep wheel/trackpad response immediate.
-Do not force artificial mobile inertial scrolling if the desktop framework already handles it.
 
-## Blur and translucency
-Good candidates:
-- modal backdrop
-- command palette
-- popup/menu
-- transient floating inspector
-- launch decorative layer
-
-Poor candidates:
-- hierarchy panel all the time
-- inspector text background
-- every toolbar/panel simultaneously
-
-Blur must degrade gracefully.
-Fallback: tinted/opaque material.
-
-## Motion blur
-Do not add camera-style motion blur to normal UI controls.
-Controls should remain crisp while moving.
-
-## Workspace switching
-Persistent shell remains stable.
-Possible:
-- fast crossfade
-- tiny indicator motion
-- restrained translation
-
-Never:
-- blank frame
-- fade-to-black
-- full-shell reconstruction
-- slow cinematic transitions
-
-## Launch-screen motion
-Can be more expressive:
-- slow decorative gradient drift
-- subtle parallax
-- soft floating motif
-- entrance choreography
-- hover lift on project items
-
-Constraints:
-- settle quickly
-- no endless bouncing
-- no high idle GPU usage
-- no interference with opening a project
-
-## Notifications
-Short slide/fade; stable reading time; clean exit.
-Errors should not wobble/bounce for attention.
-
-## Performance budget
-Verify:
-- no input delay
-- smooth drag
-- smooth panel transitions
-- smooth menu/dialogs
-- no persistent high idle CPU/GPU
-- no heavy repeated allocation during animation
-
-Profile where possible:
-- frame time
-- UI update time
-- layout passes
-- repaint cost
-- blur cost
-
-## Reduced motion
-If practical:
-- remove overshoot
-- replace large translations with opacity
-- near-instant drag settle
-- disable decorative background movement
-- preserve focus/selection feedback
-
-## Motion QA
-Test:
-- launch screen
-- project opening
-- workspace switching
-- panel open/close
-- panel drag/dock
-- hierarchy drag
-- asset drag
-- inspector expand/collapse
-- tabs
-- menus/popovers
-- dialogs
-- tooltips
-- notifications
-- resizing
-- rapid repeated input
-
-Animations must be interruptible.
-
-## 26.35 implementation contract
-
-Shared implementation: src/ui/motion.ts and src/ui/motion.css, installed once by main.ts with an explicit disposer. Families are micro 80 ms, fast 140 ms, standard 200 ms and emphasized 280 ms. CSS tint/focus uses the shared easing token; presence and FLIP use actual sampled damped spring responses through finite linear Web Animations. No continuous decorative simulation runs at idle.
-
-| Preset | Stiffness | Damping | Mass | Application |
-|---|---:|---:|---:|---|
-| snappy | 700 | 48 | 1 | Compact presence and short exit |
-| smooth | 360 | 36 | 1 | Dialog/palette entrance and committed neighbor settling |
-| elastic | 480 | 32 | 1 | Restrained optional contextual settle; not direct pointer coordinates |
-
-Input and state commit immediately. Pending animation is cancelled or retargeted from displayed geometry; only one completion owns surface removal. Native focus remains immediate and closing overlays become inert and aria-hidden. Reduced motion, editor motion off and low-end policy settle active jobs and remove decorative transitions. Unsupported Web Animations completes synchronously. High contrast removes blur; reduced/system-reduced motion and unsupported backdrop filters also use opaque material.
-
-FLIP measures at most 80 mounted elements, not an entire virtual list. Native hierarchy/assets/tabs/docks expose source/valid/invalid/insertion feedback. Native drag images use newly created inert DOM previews; see the [platform drag-image contract](https://developer.mozilla.org/en-US/docs/Web/API/DataTransfer/setDragImage). Physical cursor-image rasterization still needs visible host observation. Direct viewport, graph, tile, timeline, waveform and resize interactions retain their domain geometry. Resource-field drops, arbitrary floating-window dragging and animation clip dragging are unavailable; keyframe neighbor motion is deferred pending stable key identity.
-
-Presence is integrated in shared menus/dialogs, command palette, shared property sections, moving tab indicator, launcher and floating docks. Native inspector details retain their immediate disclosure semantics. Tooltips/notifications keep their existing immediate presentation and shared surface/state styles; no delay or bouncing is added. Workspace switching retains persistent content without full-shell presence.
-
-Blur is limited to menu/palette material, 10 px at 96% surface opacity. The executed motion report retains raw baseline/refined timings, renderer layout/style/task counters, idle and blur-on windows, and functional blur-off fallback assertions. Paint/raster/GPU costs and paired quantitative blur costs remain unavailable. Browser rAF and event-to-observed-frame data are software-renderer diagnostics, not physical input-to-display, system CPU/GPU or universal frame-rate guarantees.
+Current linked follow-up: opacity-preserving finite workspace handoff passed all15 actual frame traces with zero blank samples and six navigation/state groups. Real TileMap fieldset/section geometry now uses20px field gaps,28px groups and20px four-way inset; its original populated conditional group and geometry assertion passed. Hover-only selected-value hints now clear removed/inactive ownership, and four actual keyboard/project-removal/latest-reentry groups passed. These development receipts are explicitly unqualified; the complete frozen-source fourteen gates and eleven-file delivery remain the release authority. Granular edits, source hashes and intermediate failed-candidate context: reports/comfortable/26.37/implementation/observed-navigation-and-tilemap-fix.json.

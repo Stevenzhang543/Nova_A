@@ -2,7 +2,7 @@
 <template>
   <section class="studio-draft-conflict" role="alert">
     <strong>{{ labels.title }}</strong><p>{{ labels.message }}</p>
-    <details><summary>{{ labels.review }}</summary><div class="versions"><label>{{ labels.saved }}<pre>{{ previews.saved }}</pre></label><label>{{ labels.draft }}<pre>{{ previews.draft }}</pre></label></div></details>
+    <details data-ui-motion-disclosure><summary>{{ labels.review }}</summary><div class="versions"><label>{{ labels.saved }}<pre>{{ previews.saved }}</pre></label><label>{{ labels.draft }}<pre>{{ previews.draft }}</pre></label></div></details>
     <div class="actions"><UiButton variant="primary" @click="$emit('keep')">{{ labels.keep }}</UiButton><UiButton variant="danger" @click="$emit('discard')">{{ labels.discard }}</UiButton></div>
   </section>
 </template>
@@ -21,5 +21,5 @@ const labels=computed(/* 返回 copy[preferencesState.locale] 的当前值。 */
 const previews=computed(/** 分别生成已保存源内容和当前草稿的可读预览。 */ ()=>({saved:preview(props.savedSource),draft:preview(props.draftSource)}))
 </script>
 <style scoped>
-.studio-draft-conflict{flex:0 0 auto;max-height:45%;overflow:hidden;padding:var(--space-2) var(--space-3);display:flex;flex-direction:column;gap:var(--space-2);border-block:1px solid var(--warning);color:var(--text-primary);background:var(--surface-1);font-size:var(--type-dense)}strong,p,.actions{flex:0 0 auto}details{min-height:0;overflow:auto;flex:0 1 auto}p{overflow-wrap:anywhere}.versions{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(var(--ui-field-width),100%),1fr));gap:var(--space-3)}.versions label{min-width:0;display:grid;align-content:start;gap:var(--space-1)}pre{min-width:0;max-height:calc(6 * var(--ui-control-height));overflow:auto;margin:0;padding:var(--space-2);border:1px solid var(--border-subtle);background:var(--bg-canvas);font:var(--type-code)/var(--line-body) var(--font-mono);white-space:pre}.actions{display:flex;gap:var(--space-2);flex-wrap:wrap}.actions :deep(.ui-button){white-space:normal;text-align:start;height:auto;padding-block:var(--space-1)}
+.studio-draft-conflict{flex:0 0 auto;max-height:45%;overflow:hidden;padding:var(--space-2) var(--space-3);display:flex;flex-direction:column;gap:var(--space-2);border-block:1px solid var(--warning);color:var(--text-primary);background:var(--surface-1);font-size:var(--type-dense)}strong,p,.actions{flex:0 0 auto}details{min-height:0;overflow:auto;flex:0 1 auto}p{overflow-wrap:anywhere}.versions{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(var(--ui-field-width),100%),1fr));gap:var(--space-3)}.versions label{min-width:0;display:grid;align-content:start;gap:var(--ui-control-gap)}pre{min-width:0;max-height:calc(6 * var(--ui-control-height));overflow:auto;margin:0;padding:var(--space-2);border:1px solid var(--border-subtle);background:var(--bg-canvas);font:var(--type-code)/var(--line-body) var(--font-mono);white-space:pre}.actions{display:flex;gap:var(--space-2);flex-wrap:wrap}.actions :deep(.ui-button){white-space:normal;text-align:start;height:auto;padding-block:var(--space-1)}
 </style>

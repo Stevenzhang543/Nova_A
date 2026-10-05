@@ -84,6 +84,10 @@ await withBrowserAudit({
     await clickSettled('.creation-card .create-button');
     await a.until("!!document.querySelector('.editor-root')&&!document.querySelector('.project-manager')", 30000);
     await wait(1000);
+    if (await a.evaluate("!!document.querySelector('.onboarding-scrim')")) {
+      await a.clickText('.onboarding-scrim button', 'Skip for now', true);
+      await a.until("!document.querySelector('.onboarding-scrim')");
+    }
     assert.equal(await a.evaluate("!!document.querySelector('.fault-overlay,.player-error')"), false);
     assert.ok(responses.some(r => r.url.endsWith('.wasm') && r.status === 200 && r.mime === 'application/wasm'));
     await a.capture('nested-editor');

@@ -38,8 +38,8 @@ export interface CustomWorkspace extends WorkspaceLayout {
 
 const safeDesignLayout: WorkspaceLayout = {
   page: 'scene', hierarchyVisible: true, inspectorVisible: true, bottomPanelVisible: true,
-  bottomPanelOpen: false, bottomPanelTab: 'assets', bottomPanelHeight: 240,
-  hierarchyWidth: 236, inspectorWidth: 340, hierarchyDock: 'left', inspectorDock: 'right',
+  bottomPanelOpen: false, bottomPanelTab: 'assets', bottomPanelHeight: 280,
+  hierarchyWidth: 280, inspectorWidth: 380, hierarchyDock: 'left', inspectorDock: 'right',
   hierarchyPinned: true, inspectorPinned: true, bottomPanelPinned: true,
   panelOrder: ['hierarchy', 'inspector'], bottomTabOrder: ['assets', 'console', 'animation', 'audio', 'worldProduction', 'networkStudio', 'ecosystem', 'profiler', 'tilemap'],
   floatingPanels: [], splitDocking: false

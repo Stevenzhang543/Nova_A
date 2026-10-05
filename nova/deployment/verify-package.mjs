@@ -5,7 +5,11 @@ import { readFile, readdir } from 'node:fs/promises';
 import { resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const root = fileURLToPath(new URL('../online/', import.meta.url));
+const siteRoot = fileURLToPath(new URL('../', import.meta.url));
+const page = await readFile(resolve(siteRoot, 'index.html'), 'utf8');
+const link = /href="\.\/([A-Za-z0-9_-][A-Za-z0-9._-]*)\/">Try online mode<\/a>/.exec(page);
+assert.ok(link, 'Relative Try online mode link');
+const root = process.argv[2] ? resolve(process.argv[2]) : resolve(siteRoot, link[1]);
 const manifest = await readFile(resolve(root, 'SHA256SUMS.txt'), 'utf8');
 const expected = new Set(['SHA256SUMS.txt']);
 for (const line of manifest.trim().split(/\r?\n/)) {
@@ -30,8 +34,6 @@ async function files(directory, prefix = '') {
   return result;
 }
 assert.deepEqual((await files(root)).sort(), [...expected].sort(), 'Complete release file inventory');
-const page = await readFile(fileURLToPath(new URL('../index.html', import.meta.url)), 'utf8');
-assert.match(page, /href="\.\/online\/">Try online mode<\/a>/);
 assert.match(page, /href="\.\/style\.css/);
 assert.match(page, /src="\.\/app\.js/);
 console.log(`PASS: ${expected.size - 1} engine checksums; complete ${expected.size}-file release; relative webpage links.`);

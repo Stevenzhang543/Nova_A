@@ -1,4 +1,14 @@
-# Nova_A 26.35 – Vollständiges Handbuch
+# Nova_A 26.37 – Vollständiges Handbuch
+
+Engine: **26.37.0** · Project Format 2/schema 29.
+
+<!-- NOVA_V2636_BRANDING -->
+## 26.36 — Geliefertes Logo für helle und dunkle Oberflächen
+
+Engine: **26.36.0** · Project Format 2/schema 29.
+
+Startfenster, Editor und dieses Handbuch verwenden die gelieferten Nova_A-PNGs. Ein Wechsel des Editor- oder Handbuchfarbschemas wählt das passende helle oder dunkle Logo und Favicon. Windows und installierte Web-Apps verwenden eine feste Variante des dunklen Logos, da das Betriebssystem seinen Hintergrund selbst bestimmt. Bedienelementgrößen, Arbeitsabläufe, Spielrendering, gespeicherte Projekte und reduzierte Bewegung bleiben erhalten. Einen Web-Build stets vollständig bereitstellen. Nur frische, an die eingefrorene Quelle gebundene Nachweise qualifizieren die Release-Dateien; eine Sichtprüfung bestätigt weder echte Geräte noch eine Neuinstallation.
+<!-- NOVA_V2636_BRANDING_END -->
 
 ## 26.35 — Weichere Oberfläche, unmittelbare Bedienung
 
@@ -19884,3 +19894,10 @@ Mit diesem Ablauf ein vollständiges Projekt lernen, migrieren, prüfen und ausl
 
 <!-- NOVA_V6_TEACHING_END -->
 
+
+
+## 26.37 — Comfortable editor
+
+Engine **26.37.0** · Project Format2/schema29.
+
+Comfortable ist Standard: Text und Werte16, Eingaben und Schaltflächen44, Panelradius16 und Dialogradius24. Snappy/Smooth/Elastic teilen eine endliche, abbrechbare Bewegungssteuerung; Eingabewerte und Zeigerpositionen reagieren direkt. Reduzierte Bewegung berücksichtigt gespeicherte und System-Einstellungen. Geräte- und Softwarebrowser-Nachweise bleiben getrennt.

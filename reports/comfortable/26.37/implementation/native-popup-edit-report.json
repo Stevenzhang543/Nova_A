@@ -1,0 +1,118 @@
+{
+  "generatedAt": "2026-10-04T14:33:13.024Z",
+  "edits": [
+    {
+      "file": "src/ui/motion.ts",
+      "reason": "Add explicit native popup finite inner-surface owner, latest desired summary state, guarded native open retention/external-close observation, game exclusion, reduced/cancel/removed/dispose cleanup",
+      "consequence": "Only details[data-ui-motion-popover] are enrolled; logical state/native values stay immediate, absolute popup geometry is not height-clipped; real caller markers and current GUI verification remain separate pending work",
+      "risk": "Coalesced native toggle/attribute events and interrupted/replaced surfaces require focused production lifecycle and subsequent actual-browser verification",
+      "beforeSha256": "3d69dde55c9447d59ab7758ed949dd00edc4288f70269793f6ef2d5891c4ecd7",
+      "afterSha256": "e3924b2a330ef80eab8cda6c986ba8ba1f5332a304c8a2486aabfaf441edfc19"
+    },
+    {
+      "file": "src/ui/motion.ts",
+      "reason": "Hold already-completed outgoing popup surfaces transparent until every sibling exits, restore exact authored opacity on completion/reopen/dispose",
+      "consequence": "Explicit popup presentation only; no data, logic-coordinate or game changes",
+      "risk": "Native browser event/compositor observations remain required after host logic passes",
+      "beforeSha256": "e3924b2a330ef80eab8cda6c986ba8ba1f5332a304c8a2486aabfaf441edfc19",
+      "afterSha256": "cddf897a18ef6abd2e7a911955bf46d5b04b522d8cec7a63918c4cddf943cf52"
+    },
+    {
+      "file": "scripts/verify-v26.37-motion.mjs",
+      "reason": "Add eight actual production native-popup controller tests for initial geometry, current-state reverse, external/coalesced toggle guard, cancel/latest ownership, multiple surfaces/Reduced Motion, removal/game exclusion, content replacement and platform fallback",
+      "consequence": "Explicit popup presentation only; no data, logic-coordinate or game changes",
+      "risk": "Native browser event/compositor observations remain required after host logic passes",
+      "beforeSha256": "b44a0b1e73eee1660e31ebca170c982f3c816bb83b7babc16ceff85634a25c76",
+      "afterSha256": "b5c2e982b1bff9487dacd20cba14f8c1b9838374a984674ee93a51fe14a5afa4"
+    },
+    {
+      "file": "src/ui/motion.ts",
+      "reason": "Fix repeated external close during finite exit: restore retained nativeopen without restarting or reversing the current latest leave",
+      "consequence": "A repeated outside/native close cannot prematurely hide the popup or queue another exit; logical closed state and inert controls stay immediate",
+      "risk": "First production-host run caught this defect; rerun is required before source readiness",
+      "beforeSha256": "cddf897a18ef6abd2e7a911955bf46d5b04b522d8cec7a63918c4cddf943cf52",
+      "afterSha256": "8048107a93312e13f4e9ce84af3a458f53cd5756afa3455bf587775181450b70"
+    },
+    {
+      "file": "src/ui/motion.ts",
+      "reason": "Expose same-owner refreshDisclosure for a caller Vue nextTick after lazy body commit; suppress repeat logical intent during remeasurement",
+      "consequence": "Logical desired/aria state still changes synchronously; only presentation height remeasurement waits for the existing Vue DOM commit; a late refresh reads the latest target and cannot revive a stale open",
+      "risk": "Lazy mounted content snapshots and reversal must remain controlled by the shared owner, validated with production host tests and pending current actual-browser gate",
+      "beforeSha256": "8048107a93312e13f4e9ce84af3a458f53cd5756afa3455bf587775181450b70",
+      "afterSha256": "777ab8e8794eec82c71b0d148ad67d4e625dda7e50a31169cb45716d73d96bef"
+    },
+    {
+      "file": "scripts/verify-v26.37-motion.mjs",
+      "reason": "Add two production lazy disclosure DOM-commit/late-refresh tests",
+      "consequence": "The tests exercise the real production owner, current height cancellation, no intent loop, latest closed state and detached cleanup using deterministic host boundaries",
+      "risk": "Host tests do not certify browser layout/raster/event scheduling or native GPU costs",
+      "beforeSha256": "b5c2e982b1bff9487dacd20cba14f8c1b9838374a984674ee93a51fe14a5afa4",
+      "afterSha256": "88f8e6769b3b674e84313f78254adfcdc25f6ca36a07c37253a6a6da8c5a7711"
+    },
+    {
+      "file": "src/ui/motion.ts",
+      "reason": "Lift explicitly marked native popup inner surfaces into feature-detected manual Popover top layer, bound and flip placement synchronously, close outside/Escape and restore snapshots",
+      "consequence": "All 12 existing native menu markers share the existing finite presentation owner; DOM/Vue relationships and ancestor clipping/rounded layouts remain unchanged; logical close and inert state stay immediate while the layer is retained only for exit",
+      "risk": "Legacy engines without native top layer retain inline placement and clipped-region scroll bounds; browser all-12 edge/hit/lifecycle validation remains required",
+      "beforeSha256": "777ab8e8794eec82c71b0d148ad67d4e625dda7e50a31169cb45716d73d96bef",
+      "afterSha256": "625dffff5e933792d52099cc237a56e6fe425edd5d4d3b713ce689040eb5bda8"
+    },
+    {
+      "file": "scripts/verify-v26.37-motion.mjs",
+      "reason": "Extend deterministic native layer host and add four production top-layer placement, interrupted close/reopen, direct resize/scroll, outside/Escape, snapshot and legacy fallback tests",
+      "consequence": "Real shared production owner executes against controlled host Popover and viewport boundaries; no browser/compositor result is inferred",
+      "risk": "Actual CSS dimensions/top-layer hit testing and coalesced native platform events remain assigned to the real browser gate",
+      "beforeSha256": "88f8e6769b3b674e84313f78254adfcdc25f6ca36a07c37253a6a6da8c5a7711",
+      "afterSha256": "b309f0b241d116a349c2bdcf8165cb8762ebc088363e58eb6c0b78c042987e65"
+    },
+    {
+      "file": "scripts/verify-v26.37-motion.mjs",
+      "reason": "Use the real CSSStyleDeclaration getter to verify legacy inline position preservation in the deterministic host",
+      "consequence": "Corrects a host missing-field assertion; production implementation is unchanged",
+      "risk": "The host models CSS property values, not rendered layout or browser clipping",
+      "beforeSha256": "b309f0b241d116a349c2bdcf8165cb8762ebc088363e58eb6c0b78c042987e65",
+      "afterSha256": "d1101549f95ec05e55f91381ab773fef1cdf3261d69f3fea7ae3df50e9ac8770"
+    },
+    {
+      "file": "src/ui/motion.ts",
+      "reason": "Keep native top-layer menu text theme-responsive using inherited color, preserve explicit inline color expressions/priority and restore original authored styles",
+      "consequence": "Shared UI presentation only; no model, history, game coordinate, schema or dependency change",
+      "risk": "Actual browser hit testing, scheduling and theme appearance require separate GUI evidence",
+      "beforeSha256": "625dffff5e933792d52099cc237a56e6fe425edd5d4d3b713ce689040eb5bda8",
+      "afterSha256": "dbedebfb1e1a0339f6fddf1581df27da8a28bcc404da7ada323a4a1bb0da9144",
+      "hashScope": "Finalization group before and after hashes"
+    },
+    {
+      "file": "src/ui/motion.ts",
+      "reason": "Observe summary and surface dimensions only while logically open; follow async size changes directly; disconnect on close, cancel/removal and disposal",
+      "consequence": "Shared UI presentation only; no model, history, game coordinate, schema or dependency change",
+      "risk": "Actual browser hit testing, scheduling and theme appearance require separate GUI evidence",
+      "beforeSha256": "625dffff5e933792d52099cc237a56e6fe425edd5d4d3b713ce689040eb5bda8",
+      "afterSha256": "dbedebfb1e1a0339f6fddf1581df27da8a28bcc404da7ada323a4a1bb0da9144",
+      "hashScope": "Finalization group before and after hashes"
+    },
+    {
+      "file": "src/ui/motion.ts",
+      "reason": "Close a native menu when keyboard focus enters an outside target, blocking outgoing content immediately while retaining the new target focus",
+      "consequence": "Shared UI presentation only; no model, history, game coordinate, schema or dependency change",
+      "risk": "Actual browser hit testing, scheduling and theme appearance require separate GUI evidence",
+      "beforeSha256": "625dffff5e933792d52099cc237a56e6fe425edd5d4d3b713ce689040eb5bda8",
+      "afterSha256": "dbedebfb1e1a0339f6fddf1581df27da8a28bcc404da7ada323a4a1bb0da9144",
+      "hashScope": "Finalization group before and after hashes"
+    },
+    {
+      "file": "scripts/verify-v26.37-motion.mjs",
+      "reason": "Extend the controlled host with ResizeObserver/color state and three actual production lifecycle tests; correct authored-color setup to occur before ownership, not midway through a managed snapshot",
+      "consequence": "45 controlled production-module tests; test setup correction did not alter product logic",
+      "risk": "Host evidence does not establish real GUI appearance, DPI or GPU performance",
+      "beforeSha256": "d1101549f95ec05e55f91381ab773fef1cdf3261d69f3fea7ae3df50e9ac8770",
+      "afterSha256": "477f9e4053500cc6144f8767fea4e6b5bf2c3c21e6a09e3d8ff36edbf6e60a9c"
+    }
+  ],
+  "tests": "Actual45/45 motion host checks and Vue/TypeScript check passed. Real GUI and final qualification remain separate; neither is claimed passed by this record.",
+  "sourceFrozen": false,
+  "publicReport": "reports/comfortable/26.37/implementation/native-popup-edit-report.json",
+  "currentSourceSha256": "dbedebfb1e1a0339f6fddf1581df27da8a28bcc404da7ada323a4a1bb0da9144",
+  "currentTestSha256": "477f9e4053500cc6144f8767fea4e6b5bf2c3c21e6a09e3d8ff36edbf6e60a9c",
+  "publicationStatus": "Not released; no immutable source snapshot yet"
+}

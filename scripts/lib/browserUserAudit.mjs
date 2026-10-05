@@ -40,12 +40,12 @@ export async function withBrowserAudit({ release, name, width = 1440, height = 9
   const regressionOrigin = release
   const qualificationTarget = process.argv.find(/* 调用 value.startsWith('--qualification-release=') 并返回调用结果。 */ value => value.startsWith('--qualification-release='))?.split('=')[1]
   if (qualificationTarget && qualificationTarget !== release) {
-    assert.match(qualificationTarget, /^26\.(?:2[0-9]|3[0-5])$/)
+    assert.match(qualificationTarget, /^26\.(?:2[0-9]|3[0-7])$/)
     assert.ok(Number(qualificationTarget.split('.')[1]) >= Number(release.split('.')[1]), 'Cannot qualify a future regression suite')
     assert.equal(JSON.parse(await readFile(join(root, 'package.json'), 'utf8')).version, qualificationTarget + '.0', 'Retained browser regression must target the actual source authority')
     release = qualificationTarget; expectedRelease = qualificationTarget
   }
-  assert.match(release, /^26\.(?:1[3-9]|2[0-9]|3[0-5])$/); assert.match(name, /^[a-z0-9-]+$/)
+  assert.match(release, /^26\.(?:1[3-9]|2[0-9]|3[0-7])$/); assert.match(name, /^[a-z0-9-]+$/)
   assert.ok(Number.isFinite(commandTimeoutMs) && commandTimeoutMs >= 30000 && commandTimeoutMs <= 180000, 'Bounded diagnostic command deadline');
   assert.match(expectedRelease, /^26\.\d{2}$/)
   if (!development) assert.equal(expectedRelease, release, 'Qualification must exercise its actual public version')

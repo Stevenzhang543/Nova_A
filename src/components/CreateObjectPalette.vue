@@ -1,7 +1,7 @@
 <!-- 对象创建面板：搜索分类、收藏和最近对象，并在画布位置创建对象。 -->
 <template>
   <Teleport to="body">
-    <UiDialog v-if="estate.createObjectPaletteOpen" :title="t('createObject')" class="authoring-dialog" dismiss-on-backdrop @close="close">
+    <UiMotionTransition modal><UiDialog motion-owner="parent" v-if="estate.createObjectPaletteOpen" :title="t('createObject')" class="authoring-dialog" dismiss-on-backdrop @close="close">
         <div class="palette-search">
           <EditorIcon name="search" /><input ref="searchInput" v-model="authoringState.query" type="search" :placeholder="t('searchObjectTypes')">
         </div>
@@ -27,11 +27,13 @@
           <p>{{ selected?.required.length ? `${t('requiredComponents')}: ${selected.required.join(', ')}` : t('transformIncluded') }}</p>
           <div><button @click="close">{{ t('cancel') }}</button><button class="primary" :disabled="!selected" @click="selected && choose(selected.kind)">{{ t('createObject') }}</button></div>
         </footer>
-    </UiDialog>
+    </UiDialog></UiMotionTransition>
   </Teleport>
 </template>
 
 <script setup lang="ts">
+import UiMotionTransition from '../ui/components/UiMotionTransition.vue'
+
 import UiDialog from '../ui/components/UiDialog.vue'
 import UiButton from '../ui/components/UiButton.vue'
 import EditorIcon, { type EditorIconName } from './EditorIcon.vue'

@@ -36,5 +36,5 @@ onBeforeUnmount(/** 卸载时取消帧并重置预览运行时。 */ () => { can
   </figure>
 </template>
 <style scoped>
-.ui-scene-preview{margin:10px 0;min-width:0}.ui-scene-preview figcaption{font-size:12px;font-weight:650;margin-bottom:6px}.ui-scene-preview canvas{display:block;width:100%;max-height:380px;object-fit:contain;background:#151b24;border:1px solid var(--border-subtle);border-radius:9px}.ui-scene-preview p,.ui-scene-preview small{display:block;overflow-wrap:anywhere;line-height:1.45;color:var(--text-muted);margin-top:6px}.ui-scene-preview [role=alert]{color:var(--danger)}
+.ui-scene-preview{margin:10px 0;min-width:0}.ui-scene-preview figcaption{font-size:var(--type-body);font-weight:650;margin-bottom:6px}.ui-scene-preview canvas{display:block;width:100%;max-height:380px;object-fit:contain;background:#151b24;border:1px solid var(--border-subtle);border-radius:9px}.ui-scene-preview p,.ui-scene-preview small{display:block;overflow-wrap:anywhere;line-height:1.45;color:var(--text-muted);margin-top:6px}.ui-scene-preview [role=alert]{color:var(--danger)}
 </style>

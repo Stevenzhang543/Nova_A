@@ -1,5 +1,5 @@
 <template>
-  <section class="ui-workspace-host" :aria-busy="pending || undefined" :data-displayed-view="displayed">
+  <section class="ui-workspace-host" data-ui-motion-surface="smooth" data-ui-motion-opacity="preserve" :data-ui-motion-key="displayed" :aria-busy="pending || undefined" :data-displayed-view="displayed">
     <KeepAlive v-if="cache" :max="12"><component :is="current" v-if="current" :key="displayed" :inert="pending || undefined" /></KeepAlive>
     <component :is="current" v-else-if="current" :key="displayed" :inert="pending || undefined" />
     <div v-if="pending" class="ui-loading-line" role="status">{{ t('loading') }}</div>

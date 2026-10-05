@@ -1,0 +1,1049 @@
+{
+  "version": "26.37",
+  "timestamp": "2026-10-03T19:13:55.340Z",
+  "files": [
+    {
+      "file": "src/components/ConfigPanel.vue",
+      "beforeSha256": "430786dda9b9decf1f945b6c3ca5a2f7eeb0f5dc35470b51a6365e357e038056",
+      "afterSha256": "227a0ebc32023b492e4e29e19f8adb05982a00ba61852c4db60ec04ebf99b8d9"
+    },
+    {
+      "file": "src/components/SceneSideBar.vue",
+      "beforeSha256": "6bc6126fb16780987c0c4c15c51f479fe56e8741bee079825fbd2f99aa85cc63",
+      "afterSha256": "67959af002330467c27f70ca2259e50337573d53bf8549cc523eccc6af063031"
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "beforeSha256": "9db8289873c9bf14f212bbb0c3072bbb2eb0e32e477eee189bb1ea212f7e3469",
+      "afterSha256": "0c50ea373c14800baecb80046b0126f22c0a60b3bd107796fddd3f179d604358"
+    },
+    {
+      "file": "docs/ui/UI_SPEC.md",
+      "beforeSha256": "274e738cf29d63c7df13a7532bc6f954242ebf76d7a80472baa2a54d5231fcb0",
+      "afterSha256": "4340f3b3be02fad3f8b632fce2b580cdd4cfea2eacd0c6a0a2135efe1be1ca5b"
+    }
+  ],
+  "edits": [
+    {
+      "file": "src/components/ConfigPanel.vue",
+      "before": "<UiDialog v-if=\"showColorPicker\"",
+      "after": "<UiDialog :open=\"Boolean(showColorPicker)\"",
+      "reason": "Keep the real color dialog mounted for shared presence reversal."
+    },
+    {
+      "file": "src/components/ConfigPanel.vue",
+      "before": "<UiDialog v-if=\"estate.componentPickerOpen && selectedEntity\"",
+      "after": "<UiDialog :open=\"Boolean(estate.componentPickerOpen && selectedEntity)\"",
+      "reason": "Keep component picker presence connected to actual panel state."
+    },
+    {
+      "file": "src/components/ConfigPanel.vue",
+      "before": ":title=\"t('addComponent') + ' · ' + selectedEntity.name\"",
+      "after": ":title=\"t('addComponent') + ' · ' + (selectedEntity?.name ?? '')\"",
+      "reason": "Persistent dialog title is safe when selection disappears."
+    },
+    {
+      "file": "src/components/ConfigPanel.vue",
+      "before": "<UiMenu v-if=\"propertyMenu.visible\"",
+      "after": "<UiMenu :open=\"propertyMenu.visible\"",
+      "reason": "Use the existing menu leave/reversal lifecycle."
+    },
+    {
+      "file": "src/components/ConfigPanel.vue",
+      "selector": ".pair",
+      "property": "display",
+      "before": [
+        "flex"
+      ],
+      "after": "grid",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/ConfigPanel.vue",
+      "selector": ".pair",
+      "property": "grid-template-columns",
+      "before": [],
+      "after": "repeat(auto-fit,minmax(min(100%,calc(144px * var(--ui-scale))),1fr))",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/ConfigPanel.vue",
+      "selector": ".compound-shapes article header",
+      "property": "grid-template-columns",
+      "before": [
+        "minmax(0,1fr) var(--ui-control-height)"
+      ],
+      "after": "minmax(0,1fr) auto var(--ui-control-height)",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/ConfigPanel.vue",
+      "selector": ".compound-shapes article header",
+      "property": "grid-template-columns",
+      "before": [
+        "minmax(0,1fr) var(--ui-control-height)"
+      ],
+      "after": "minmax(0,1fr) auto var(--ui-control-height)",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/ConfigPanel.vue",
+      "selector": ".compound-shapes",
+      "property": "container-name",
+      "before": [],
+      "after": "nova-compound",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/ConfigPanel.vue",
+      "selector": ".compound-shapes",
+      "property": "container-name",
+      "before": [],
+      "after": "nova-compound",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/ConfigPanel.vue",
+      "selector": ".component-picker-list article",
+      "property": "container",
+      "before": [],
+      "after": "component-choice / inline-size",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/ConfigPanel.vue",
+      "selector": ".component-main",
+      "property": "grid-template-columns",
+      "before": [
+        "calc(28px * var(--ui-scale)) minmax(0,1fr) var(--ui-icon-size)"
+      ],
+      "after": "var(--ui-icon-size) minmax(0,1fr) var(--ui-icon-size)",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/ConfigPanel.vue",
+      "before": ".component-main>span:first-child{display:grid;place-items:center;color:var(--accent);background:var(--surface-3);width: calc(28px * var(--ui-scale));height: calc(28px * var(--ui-scale));font: 600 var(--type-caption)/var(--line-body) var(--font-mono)}",
+      "after": "",
+      "reason": "Unreachable old span selector; the first component child is an SVG."
+    },
+    {
+      "file": "src/components/ConfigPanel.vue",
+      "selector": ".component-main>span:nth-child(2)",
+      "property": "gap",
+      "before": [
+        "var(--space-0)"
+      ],
+      "after": "var(--space-2)",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/ConfigPanel.vue",
+      "before": "nova-inspector (max-width: 360px)",
+      "after": "nova-inspector (max-width: 22em)",
+      "reason": "Font-relative responsive threshold follows saved UI scale."
+    },
+    {
+      "file": "src/components/ConfigPanel.vue",
+      "before": "",
+      "after": ".component-main>.editor-icon:first-child{color:var(--accent);justify-self:center}.component-main>.editor-icon:last-child{justify-self:center}.compound-shapes article header>label{min-width:0;display:flex;align-items:center;gap:var(--ui-control-gap);font-size:var(--type-body);line-height:var(--line-body)}.compound-shapes article header>select{width:100%;min-width:0}\n@container nova-compound (max-width:22em){.compound-shapes article header{grid-template-columns:minmax(0,1fr)}.compound-shapes article header>.ui-button{inline-size:var(--ui-control-height);justify-self:end}}\n@container component-choice (max-width:22em){.component-main{grid-template-columns:var(--ui-icon-size) minmax(0,1fr);grid-template-rows:var(--ui-control-height) auto;column-gap:0;row-gap:var(--ui-control-gap);padding-inline:var(--space-4)}.component-main>.editor-icon:first-child{grid-column:1;grid-row:1}.component-main>.editor-icon:last-child{grid-column:2;grid-row:1;justify-self:start}.component-main>span:nth-child(2){grid-column:1/-1;grid-row:2}}",
+      "reason": "Use actual card width after Teleport, retain the separate 44px favorite target, and stack compound controls without reducing readable text."
+    },
+    {
+      "file": "src/components/SceneSideBar.vue",
+      "before": ":aria-label=\"row.expanded ? t('collapsePanel') : t('expandPanel')\"",
+      "after": ":aria-expanded=\"row.hasChildren ? row.expanded : undefined\" :aria-label=\"row.expanded ? t('collapsePanel') : t('expandPanel')\"",
+      "reason": "Real disclosure state drives the shared chevron."
+    },
+    {
+      "file": "src/components/SceneSideBar.vue",
+      "before": "<EditorIcon v-if=\"row.hasChildren\" :name=\"row.expanded ? 'down' : 'forward'\" />",
+      "after": "<EditorIcon v-if=\"row.hasChildren\" name=\"down\" data-ui-motion-chevron />",
+      "reason": "Rotate a persistent chevron instead of replacing its glyph."
+    },
+    {
+      "file": "src/components/SceneSideBar.vue",
+      "before": "@keyup.escape=\"editingId = null\"",
+      "after": "@keyup.escape=\"cancelEdit\"",
+      "reason": "Clear the rename request without a history edit so another F2 on the same entity works."
+    },
+    {
+      "file": "src/components/SceneSideBar.vue",
+      "before": "class=\"sidebar-action-menu\" :style=\"{ left: `${sidebarMenuPosition.x}px`, top: `${sidebarMenuPosition.y}px` }\"",
+      "after": "class=\"sidebar-action-menu\" :inert=\"!sidebarMenu\" :aria-hidden=\"!sidebarMenu\" :style=\"{ left: `${sidebarMenuPosition.x}px`, top: `${sidebarMenuPosition.y}px`, pointerEvents: sidebarMenu ? 'auto' : 'none' }\"",
+      "reason": "Closed menu wrappers must not intercept pointer input during leave."
+    },
+    {
+      "file": "src/components/SceneSideBar.vue",
+      "before": "<UiMenu v-if=\"sidebarMenu\" :key=\"`${sidebarMenu.kind}:${sidebarMenu.entityUuid ?? ''}`\"",
+      "after": "<UiMenu :open=\"Boolean(sidebarMenu)\"",
+      "reason": "Preserve the existing menu controller across interrupted open/close."
+    },
+    {
+      "file": "src/components/SceneSideBar.vue",
+      "before": "<template v-if=\"sidebarMenu.kind === 'scene'\">",
+      "after": "<template v-if=\"sidebarMenu?.kind === 'scene'\">",
+      "reason": "Safely evaluate persistent menu context after close."
+    },
+    {
+      "file": "src/components/SceneSideBar.vue",
+      "before": "<template v-else-if=\"sidebarMenu.kind === 'hierarchy'\">",
+      "after": "<template v-else-if=\"sidebarMenu?.kind === 'hierarchy'\">",
+      "reason": "Safely evaluate persistent menu context after close."
+    },
+    {
+      "file": "src/components/SceneSideBar.vue",
+      "before": "const virtualStart = computed(/* 调用 Math.max(0, Math.floor(hierarchyScrollTop.value / hierarchyRowHeight.value) - hierarchyOverscan) 并返回调用结果。 */ () => Math.max(0, Math.floor(hierarchyScrollTop.value / hierarchyRowHeight.value) - hierarchyOverscan))",
+      "after": "const hierarchyContentInset = computed(() => (preferencesState.compactMode ? 12 : 20) * preferencesState.uiScale)\nconst virtualStart = computed(() => Math.min(hierarchyRows.value.length, Math.max(0, Math.floor((hierarchyScrollTop.value - hierarchyContentInset.value) / hierarchyRowHeight.value) - hierarchyOverscan)))",
+      "reason": "Use the same once-scaled inset in virtual indexing; bound stale scroll positions when search shrinks the list."
+    },
+    {
+      "file": "src/components/SceneSideBar.vue",
+      "before": "const virtualEnd = computed(/** 根据滚动位置、视口和行高计算含预留行的虚拟列表末端。 */ () => Math.min(hierarchyRows.value.length, Math.ceil((hierarchyScrollTop.value + hierarchyViewportHeight.value) / hierarchyRowHeight.value) + hierarchyOverscan))",
+      "after": "const virtualEnd = computed(() => Math.max(virtualStart.value, Math.min(hierarchyRows.value.length, Math.ceil((hierarchyScrollTop.value + hierarchyViewportHeight.value - hierarchyContentInset.value) / hierarchyRowHeight.value) + hierarchyOverscan)))",
+      "reason": "Keep the end ordered and bounded."
+    },
+    {
+      "file": "src/components/SceneSideBar.vue",
+      "before": "const virtualPaddingTop = computed(/* 计算表达式 virtualStart.value * hierarchyRowHeight.value + 5 并返回结果，沿用操作数的原有类型规则。 */ () => virtualStart.value * hierarchyRowHeight.value + 5)",
+      "after": "const virtualPaddingTop = computed(() => virtualStart.value * hierarchyRowHeight.value + hierarchyContentInset.value)",
+      "reason": "Use exact fractional row stride and shared inset."
+    },
+    {
+      "file": "src/components/SceneSideBar.vue",
+      "before": "const virtualPaddingBottom = computed(/* 调用 Math.max(5, (hierarchyRows.value.length - virtualEnd.value) * hierarchyRowHeight.value + 5) 并返回调用结果。 */ () => Math.max(5, (hierarchyRows.value.length - virtualEnd.value) * hierarchyRowHeight.value + 5))",
+      "after": "const virtualPaddingBottom = computed(() => (hierarchyRows.value.length - virtualEnd.value) * hierarchyRowHeight.value + hierarchyContentInset.value)",
+      "reason": "Keep scroll content height equal to row count times stride plus two insets."
+    },
+    {
+      "file": "src/components/SceneSideBar.vue",
+      "before": "function startEdit(entity: Entity) { if (!canEdit.value || entity.editorLocked) return; editingId.value = entity.id; editName.value = entity.name }",
+      "after": "function startEdit(entity: Entity) {\n  if (!canEdit.value || entity.editorLocked) return\n  const index = hierarchyRows.value.findIndex(row => row.entity.id === entity.id), list = entityList.value\n  if (list && index >= 0) {\n    const top = hierarchyContentInset.value + index * hierarchyRowHeight.value, bottom = top + hierarchyRowHeight.value\n    if (top < list.scrollTop) list.scrollTop = top\n    else if (bottom > list.scrollTop + list.clientHeight) list.scrollTop = bottom - list.clientHeight\n    hierarchyScrollTop.value = list.scrollTop\n  }\n  editingId.value = entity.id; editName.value = entity.name\n}\nfunction cancelEdit() { editingId.value = null; editName.value = ''; editorState.renameRequestId = null }",
+      "reason": "Bring a requested virtual row into view before mounting its focused input. Cancel changes only editor UI state."
+    },
+    {
+      "file": "src/components/SceneSideBar.vue",
+      "before": "function toggleExpanded(uuid: string) { const next = new Set(expandedUuids.value); if (next.has(uuid)) next.delete(uuid); else next.add(uuid); expandedUuids.value = next }",
+      "after": "function toggleExpanded(uuid: string) { const before = captureRects(hierarchyElements()); const next = new Set(expandedUuids.value); if (next.has(uuid)) next.delete(uuid); else next.add(uuid); expandedUuids.value = next; settleHierarchy(before) }",
+      "reason": "Commit disclosure immediately, then reuse bounded mounted-neighbor FLIP. Removed virtual children unmount immediately."
+    },
+    {
+      "file": "src/components/SceneSideBar.vue",
+      "selector": ".scene-list",
+      "property": "padding",
+      "before": [
+        "var(--ui-space-xs)"
+      ],
+      "after": "var(--ui-panel-inset)",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/SceneSideBar.vue",
+      "selector": ".scene-main",
+      "property": "gap",
+      "before": [
+        "var(--ui-space-xs)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/SceneSideBar.vue",
+      "selector": ".scene-main",
+      "property": "padding-inline",
+      "before": [
+        "var(--ui-space-xs)"
+      ],
+      "after": "0",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/SceneSideBar.vue",
+      "selector": ".hierarchy-search-row",
+      "property": "gap",
+      "before": [
+        "var(--ui-space-xs)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/SceneSideBar.vue",
+      "selector": ".hierarchy-search-row",
+      "property": "margin-top",
+      "before": [],
+      "after": "var(--ui-heading-content-gap)",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/SceneSideBar.vue",
+      "selector": ".search",
+      "property": "gap",
+      "before": [
+        "var(--ui-space-xs)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/SceneSideBar.vue",
+      "selector": ".hierarchy-filters",
+      "property": "gap",
+      "before": [
+        "var(--ui-space-xs)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/SceneSideBar.vue",
+      "selector": ".hierarchy-filters",
+      "property": "padding",
+      "before": [
+        "var(--ui-space-sm)"
+      ],
+      "after": "var(--space-3)",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/SceneSideBar.vue",
+      "selector": ".hierarchy-filters",
+      "property": "border-radius",
+      "before": [],
+      "after": "var(--radius-floating)",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/SceneSideBar.vue",
+      "selector": ".hierarchy-filters",
+      "property": "gap",
+      "before": [],
+      "after": "var(--ui-control-gap)",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/SceneSideBar.vue",
+      "selector": ".hierarchy-filters",
+      "property": "padding",
+      "before": [],
+      "after": "var(--space-3)",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/SceneSideBar.vue",
+      "selector": ".hierarchy-filters",
+      "property": "border-radius",
+      "before": [],
+      "after": "var(--radius-floating)",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/SceneSideBar.vue",
+      "selector": ".empty-state",
+      "property": "padding",
+      "before": [
+        "var(--ui-space-sm)"
+      ],
+      "after": "var(--ui-panel-inset)",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/SceneSideBar.vue",
+      "before": "",
+      "after": "/* Row-local rename geometry matches the exact virtual stride. */\n.hierarchy-rows{padding-inline:var(--ui-panel-inset)}\n.edit-input,.scene-main input{height:var(--ui-tree-row-height);min-height:0;min-width:0;max-width:100%;font-size:var(--type-body);line-height:var(--line-control);padding-inline:var(--space-3);padding-block:max(0px,calc((var(--ui-tree-row-height) - var(--type-body) * var(--line-control) - 2 * var(--ui-border-width)) / 2));border-width:var(--ui-border-width);border-radius:var(--radius-input)}.edit-input{width:100%}",
+      "reason": "The rename editor fits 40px Comfortable/28px Compact tree rows, including fractional scale, instead of inheriting a 44px property-field minimum."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "before": "{{ wireMessage || layoutLabels.keyboardHelp }}",
+      "after": "{{ wireMessage || layoutLabels.keyboardHelp }} · {{ t('graphZoom') }} {{ Math.round(activeScope.viewport.zoom * 100) }}%",
+      "reason": "Explain diagram zoom alongside existing keyboard help."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "before": "<details class=\"graph-more\"",
+      "after": "<details data-ui-motion-disclosure class=\"graph-more\"",
+      "reason": "Connect the real disclosure to the shared motion controller."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "before": "<details class=\"graph-conversion\"",
+      "after": "<details data-ui-motion-disclosure class=\"graph-conversion\"",
+      "reason": "Connect the real disclosure to the shared motion controller."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "before": "<details class=\"wire-inspector\"",
+      "after": "<details data-ui-motion-disclosure class=\"wire-inspector\"",
+      "reason": "Connect the real disclosure to the shared motion controller."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "selector": ".graph-palette > header,.graph-details > header",
+      "property": "min-height",
+      "before": [
+        "var(--ui-toolbar-height)"
+      ],
+      "after": "var(--ui-panel-header-height)",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "selector": ".graph-palette > header,.graph-details > header",
+      "property": "padding",
+      "before": [
+        "var(--space-1) var(--space-2)"
+      ],
+      "after": "var(--space-1) var(--ui-panel-inset)",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "selector": ".graph-palette > header,.graph-details > header",
+      "property": "gap",
+      "before": [
+        "var(--space-2)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "selector": ".graph-palette > input",
+      "property": "margin",
+      "before": [
+        "var(--space-2)"
+      ],
+      "after": "var(--ui-panel-inset)",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "selector": ".graph-palette > input",
+      "property": "max-width",
+      "before": [
+        "calc(100% - 2 * var(--space-2))"
+      ],
+      "after": "calc(100% - 2 * var(--ui-panel-inset))",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "selector": ".block-categories",
+      "property": "padding",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "var(--ui-panel-inset)",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "selector": ".block-categories",
+      "property": "gap",
+      "before": [
+        "var(--space-0)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "selector": ".block-categories",
+      "property": "grid-template-columns",
+      "before": [
+        "repeat(2,minmax(0,1fr))"
+      ],
+      "after": "repeat(auto-fit,minmax(min(100%,calc(120px * var(--ui-scale))),1fr))",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "selector": ".block-categories button",
+      "property": "font-size",
+      "before": [
+        "var(--type-caption)"
+      ],
+      "after": "var(--type-body)",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "selector": ".block-categories button",
+      "property": "gap",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "selector": ".block-categories button",
+      "property": "white-space",
+      "before": [],
+      "after": "normal",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "selector": ".asset-list",
+      "property": "padding",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "var(--ui-panel-inset)",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "selector": ".asset-list button,.palette-list button",
+      "property": "padding",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "var(--space-3)",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "selector": ".asset-list button,.palette-list button",
+      "property": "gap",
+      "before": [
+        "var(--space-2)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "selector": ".asset-list span,.palette-list span",
+      "property": "gap",
+      "before": [
+        "var(--space-0)"
+      ],
+      "after": "var(--space-2)",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "selector": ".palette-list",
+      "property": "padding",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "var(--ui-panel-inset)",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "selector": ".palette-list h3",
+      "property": "margin",
+      "before": [
+        "var(--space-2) var(--space-1)"
+      ],
+      "after": "var(--ui-section-gap) 0 var(--ui-heading-content-gap)",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "selector": ".graph-summary,.variables,.diagnostics,.syntax-fields,.graph-symbol-search,.wire-inspector",
+      "property": "padding",
+      "before": [
+        "var(--space-2)"
+      ],
+      "after": "var(--ui-panel-inset)",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "selector": ".graph-summary,.variables,.diagnostics,.syntax-fields,.graph-symbol-search,.wire-inspector",
+      "property": "gap",
+      "before": [
+        "var(--space-2)"
+      ],
+      "after": "var(--ui-field-gap)",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "selector": ".graph-summary label,.syntax-fields label",
+      "property": "gap",
+      "before": [
+        "var(--ui-control-gap)"
+      ],
+      "after": "var(--ui-label-control-gap)",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "selector": ".variables article",
+      "property": "gap",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "var(--ui-field-gap)",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "selector": ".variables article",
+      "property": "padding-block",
+      "before": [
+        "var(--space-2)"
+      ],
+      "after": "var(--ui-field-gap)",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "selector": ".variables article > div:first-child",
+      "property": "display",
+      "before": [
+        "flex"
+      ],
+      "after": "grid",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "selector": ".variables article > div:first-child",
+      "property": "grid-template-columns",
+      "before": [],
+      "after": "repeat(auto-fit,minmax(min(100%,calc(144px * var(--ui-scale))),1fr))",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "selector": ".variables article > div:first-child",
+      "property": "gap",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "selector": ".variables article label",
+      "property": "font-size",
+      "before": [
+        "var(--type-caption)"
+      ],
+      "after": "var(--type-body)",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "selector": ".number-metadata",
+      "property": "display",
+      "before": [
+        "flex"
+      ],
+      "after": "grid",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "selector": ".number-metadata",
+      "property": "grid-template-columns",
+      "before": [],
+      "after": "repeat(auto-fit,minmax(min(100%,calc(144px * var(--ui-scale))),1fr))",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "selector": ".number-metadata",
+      "property": "gap",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "selector": ".syntax-child-list",
+      "property": "gap",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "var(--ui-field-gap)",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "selector": ".syntax-child-list",
+      "property": "padding-top",
+      "before": [
+        "var(--space-2)"
+      ],
+      "after": "var(--ui-heading-content-gap)",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "selector": ".syntax-child-list article",
+      "property": "gap",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "selector": ".syntax-child-list article > div",
+      "property": "gap",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "selector": ".syntax-child-list article > div",
+      "property": "flex-wrap",
+      "before": [],
+      "after": "wrap",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "selector": ".reroute-row",
+      "property": "grid-template-columns",
+      "before": [
+        "minmax(0,1fr) minmax(0,1fr) var(--ui-control-height)"
+      ],
+      "after": "repeat(auto-fit,minmax(min(100%,calc(144px * var(--ui-scale))),1fr))",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "selector": ".reroute-row",
+      "property": "gap",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "selector": ".diagnostics pre",
+      "property": "font-size",
+      "before": [
+        "var(--type-caption)"
+      ],
+      "after": "var(--type-code)",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "selector": ".diagnostics pre",
+      "property": "line-height",
+      "before": [],
+      "after": "var(--line-body)",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "selector": ".diagnostics pre",
+      "property": "padding",
+      "before": [
+        "var(--space-2)"
+      ],
+      "after": "var(--space-3)",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "selector": ".editing-actions",
+      "property": "padding",
+      "before": [
+        "var(--space-1)"
+      ],
+      "after": "var(--space-3)",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "selector": ".editing-actions",
+      "property": "border-radius",
+      "before": [
+        "var(--radius-control)"
+      ],
+      "after": "var(--radius-floating)",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "selector": ".canvas-controls",
+      "property": "border-radius",
+      "before": [
+        "var(--radius-control)"
+      ],
+      "after": "var(--radius-floating)",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "selector": ".canvas-controls",
+      "property": "padding",
+      "before": [],
+      "after": "var(--space-1)",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "before": "graph-studio (max-width: 760px)",
+      "after": "graph-studio (max-width: 48em)",
+      "reason": "Font-relative responsive threshold follows saved UI scale."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "selector": ".graph-transform",
+      "property": "--type-body",
+      "before": [],
+      "after": "16px",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "selector": ".graph-transform",
+      "property": "--type-dense",
+      "before": [],
+      "after": "16px",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "selector": ".graph-transform",
+      "property": "--type-caption",
+      "before": [],
+      "after": "14px",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "selector": ".graph-transform",
+      "property": "--type-code",
+      "before": [],
+      "after": "14px",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "selector": ".graph-transform",
+      "property": "--ui-icon-size",
+      "before": [],
+      "after": "20px",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "selector": ".graph-transform",
+      "property": "--line-body",
+      "before": [],
+      "after": "1.5",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "selector": ".graph-transform",
+      "property": "--line-control",
+      "before": [],
+      "after": "1.5",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "selector": ".node-pin input[type=text],.node-pin input[type=number],.graph-node>select",
+      "property": "min-height",
+      "before": [],
+      "after": "28px",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "selector": ".node-pin input[type=text],.node-pin input[type=number],.graph-node>select",
+      "property": "height",
+      "before": [
+        "28px"
+      ],
+      "after": "28px",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "selector": ".node-pin input[type=text],.node-pin input[type=number],.graph-node>select",
+      "property": "padding",
+      "before": [
+        "3px 6px"
+      ],
+      "after": "1px 6px",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "selector": ".node-pin input[type=text],.node-pin input[type=number],.graph-node>select",
+      "property": "border-width",
+      "before": [],
+      "after": "1px",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "selector": ".node-pin input[type=text],.node-pin input[type=number],.graph-node>select",
+      "property": "font-size",
+      "before": [
+        "var(--type-caption)"
+      ],
+      "after": "16px",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "selector": ".node-pin input[type=text],.node-pin input[type=number],.graph-node>select",
+      "property": "line-height",
+      "before": [],
+      "after": "24px",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "selector": ".graph-comment input",
+      "property": "height",
+      "before": [],
+      "after": "28px",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "selector": ".graph-comment input",
+      "property": "min-height",
+      "before": [
+        "28px"
+      ],
+      "after": "28px",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "selector": ".graph-comment input",
+      "property": "padding",
+      "before": [],
+      "after": "2px 6px",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "selector": ".graph-comment input",
+      "property": "font-size",
+      "before": [],
+      "after": "16px",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "selector": ".graph-comment input",
+      "property": "line-height",
+      "before": [],
+      "after": "24px",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "selector": ".node-source textarea",
+      "property": "font",
+      "before": [
+        "var(--type-caption)/1.45 var(--font-mono)"
+      ],
+      "after": "14px/1.5 var(--font-mono)",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "selector": ".node-source button",
+      "property": "padding",
+      "before": [],
+      "after": "0 6px",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "selector": ".node-source button",
+      "property": "line-height",
+      "before": [],
+      "after": "21px",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "selector": ".node-source button",
+      "property": "font-size",
+      "before": [
+        "var(--type-caption)"
+      ],
+      "after": "14px",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "selector": ".syntax-pin-fallback",
+      "property": "font",
+      "before": [
+        "11px/1.35 var(--font-mono)"
+      ],
+      "after": "14px/1.5 var(--font-mono)",
+      "reason": "Shared comfortable geometry, with explicit local coordinate exceptions."
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "before": "",
+      "after": ".reroute-row>label{min-width:0;display:grid;gap:var(--ui-label-control-gap)}.reroute-row>label input,.number-metadata input,.variables article>div:first-child>input,.variables article>div:first-child>select{width:100%;min-width:0}.reroute-row>.ui-button,.variables article>div:first-child>.ui-button{grid-column:1/-1;inline-size:var(--ui-control-height);justify-self:end}\n/* Diagram typography uses graph zoom; precise node/port/router coordinates stay local. */\n.graph-transform :is(button,input,select){min-height:0;min-width:0}.graph-transform button{padding:0}.graph-transform .node-source button{padding:0 6px;min-height:25px}",
+      "reason": "Retain coordinate-sized diagram controls and local 16px editable values/14px code help; all external graph UI follows Comfortable dimensions."
+    },
+    {
+      "file": "docs/ui/UI_SPEC.md",
+      "before": "",
+      "after": "\n### v26.37 diagram coordinate exception\n\nThe Visual Graph diagram uses its independent zoom (0.1–4); saved UI scale applies to external toolbars, palette and property panels. Diagram titles and editable values use fixed logical 16px text; pin/code help uses 14px. Existing node, header, port, routing and hit-test coordinates stay unchanged. A diagram value editor remains 28px high: 16px/24px text, 1px vertical padding and 1px borders. The graph help displays its zoom. This exception applies only to the diagram, not its normal property editor.\n\nHierarchy rename editors match the exact 40px Comfortable / 28px Compact virtual stride, with once-scaled text and padding. Virtual insets and index calculations use the same panel inset. Disclosure commits immediately; retained mounted neighbors use shared FLIP motion, while removed virtual children unmount immediately. Escape cancels rename UI state and leaves history untouched.\n",
+      "reason": "Record the exact local coordinate-density exceptions in the existing UI document."
+    }
+  ],
+  "checks": [
+    {
+      "file": "src/components/ConfigPanel.vue",
+      "template": "pass",
+      "style": "pass",
+      "script": "byte-identical"
+    },
+    {
+      "file": "src/components/SceneSideBar.vue",
+      "template": "pass",
+      "style": "pass",
+      "script": "Only virtual indexing, rename UI state and disclosure feedback changed"
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "template": "pass",
+      "style": "pass",
+      "script": "byte-identical"
+    },
+    {
+      "name": "Virtual bounds, exact fractional stride and total height",
+      "cases": 384,
+      "result": "pass"
+    },
+    {
+      "name": "Diagram line/padding/border sum fits 28px",
+      "result": "pass"
+    }
+  ],
+  "notVerified": [
+    "Live UI at 100% and 200% scale",
+    "Menu reversal and focus",
+    "Tree rename and graph pin bounds",
+    "Frame time and latency"
+  ]
+}

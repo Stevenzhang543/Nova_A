@@ -1,0 +1,528 @@
+{
+  "generatedAt": "2026-10-04T14:59:18.967Z",
+  "version": "26.37",
+  "task": "Related documentation reconciliation before current browser acceptance and immutable qualification",
+  "edits": [
+    {
+      "path": "docs/RELEASE_NOTES_26_37.md",
+      "action": "modified",
+      "beforeSha256": "10ac99c065c6b70b625fdd535ae79deee28004a72cdf4d602de13dcbf6c4412b",
+      "afterSha256": "aabca8a31a8e5fba7bb9e0a88e87deea2d5bf4baba75da9becb5b9b5f4f9543c",
+      "reason": "Replace stale28/in-progress migration summary with actual implementation and45 host proof; keep current GUI/frozen qualification unclaimed.",
+      "impact": "Existing documentation only; no source behavior, test assertions, runtime/schema/dependencies, baseline or release artifacts changed.",
+      "paragraphs": [
+        {
+          "index": 1,
+          "before": "Shared tokens and controls, actual panel/layout migration, finite Snappy/Smooth/Elastic presets, native control feedback, interruptible disclosures, transient surfaces and direct drag feedback are implemented. Exact path-level edits and before/after hashes are in the edit ledger and manifest.",
+          "after": "Shared tokens and controls, actual panel/layout migration, finite Snappy/Smooth/Elastic presets, native control feedback, interruptible disclosures, transient surfaces and direct drag feedback are implemented. Exact path-level edits and before/after hashes are in the edit ledger and manifest.\n\nThe native caller inventory is74 ordinary content disclosures, one Object Ownership lazy-body consumer,12 popup menus, six already-owned details and one shared property-section owner. All12 popup callers share the existing finite owner. Feature-detected manual Popover top-layer surfaces preserve DOM/Vue relationships while escaping ancestor clipping; direct placement clamps/flips and bounds long-menu scrolling, with an explicit inline fallback for older browsers. Logical state/summary aria and outgoing inert state update immediately. The trigger remains available for reversal; native open and the layer persist only for finite exit. Theme color inherits live, authored styles restore correctly, size observers exist only while logically open, and outside pointer/focus or Escape closes through the same owner. Ownership keeps lazy content through exit and refreshes the same owner after Vue mounts it.",
+          "reason": "Replace stale28/in-progress migration summary with actual implementation and45 host proof; keep current GUI/frozen qualification unclaimed.",
+          "impact": "Accurate source/host/current-browser/frozen qualification distinction; no unexecuted pass or published status introduced."
+        },
+        {
+          "index": 2,
+          "before": "Implementation and final qualification are distinct. The current in-progress record has a real unchanged26.36 populated-project baseline, nine input timing paths/four counter windows, four representative migration iterations and28 passing production animation logic checks. Final all-panel/scaled/translated motion and native/Web release checks are pending; this paragraph must be replaced with final evidence before publication.",
+          "after": "Implementation and final qualification are distinct. The protected unchanged26.36 populated Player baseline includes five same-condition screens and nine input timing paths/four raw counter windows at1600x900,DPR1,UIscale1; public evidence is in reports/comfortable/26.37/baseline. Current production motion passed45/45 deterministic WAAPI/DOM/event/observer host checks and Vue/TypeScript checking, with actual source/test identities recorded in implementation/native-popup-edit-report.json. These host checks do not certify browser layout, platform event ordering or compositor costs. Earlier22/22 real development interaction results apply to their recorded source revision; later changes require fresh execution.\n\nThe separate native-disclosures browser script implements nine groups: eight1600x900 interaction/lifecycle groups and one all12-menu matrix at the supported1024x640 minimum,DPR1,UIscale1. It checks real viewport/mid-edge and enabled-control hits in normal panels without maximizing away clipping or clicking create/delete actions. The current complete native-popup and remaining all-route acceptance are still being checked and are not declared passed here.\n\nRelease acceptance is established by the actual fourteen source-bound executed gates and independent verification of all eleven source/Web/evidence/native/checksum files in releases/v26.37. Implementation receipts, a planned gate list or successful build do not establish source freeze, completed qualification or publication.",
+          "reason": "Replace stale28/in-progress migration summary with actual implementation and45 host proof; keep current GUI/frozen qualification unclaimed.",
+          "impact": "Accurate source/host/current-browser/frozen qualification distinction; no unexecuted pass or published status introduced."
+        },
+        {
+          "index": 3,
+          "stage": "ObservedMinimumAssetsLayout",
+          "reason": "Describe actual minimum Assets vertical-scroll/bounded-grid/44x44r12 More source repair; compilation passed, GUI was not yet recorded at this step.",
+          "impact": "Existing documentation only; actual evidence/scope is updated without modifying production, audits or historical archives.",
+          "before": "Shared tokens and controls, actual panel/layout migration, finite Snappy/Smooth/Elastic presets, native control feedback, interruptible disclosures, transient surfaces and direct drag feedback are implemented. Exact path-level edits and before/after hashes are in the edit ledger and manifest.",
+          "after": "Shared tokens and controls, actual panel/layout migration, finite Snappy/Smooth/Elastic presets, native control feedback, interruptible disclosures, transient surfaces and direct drag feedback are implemented. Exact path-level edits and before/after hashes are in the edit ledger and manifest.\n\nAt the supported minimum, narrow Assets now uses normal vertical scrolling and a bounded asset-grid height so the directory and multiline toolbar remain reachable. The More SVG control keeps44x44/r12 geometry. Business bindings are unchanged and the scoped CSS compiled; the new actual browser layout is still being checked, rather than claimed passed."
+        },
+        {
+          "index": 4,
+          "stage": "ActualNineGroupDevelopmentPass",
+          "reason": "Record the read actual current9/9 development receipt and all12 minimum-window hits; retained failed attempts and full-route/frozen qualification remain separate.",
+          "impact": "Existing documentation only; actual evidence/scope is updated without modifying production, audits or historical archives.",
+          "before": "At the supported minimum, narrow Assets now uses normal vertical scrolling and a bounded asset-grid height so the directory and multiline toolbar remain reachable. The More SVG control keeps44x44/r12 geometry. Business bindings are unchanged and the scoped CSS compiled; the new actual browser layout is still being checked, rather than claimed passed.",
+          "after": "At the supported minimum, narrow Assets uses normal vertical scrolling and a bounded asset-grid height so the directory and multiline toolbar remain reachable. More retains44x44/r12 SVG geometry; business bindings are unchanged. Scoped CSS compiled and actual minimum-window native-menu reachability passed. Complete Assets/all-route acceptance remains separate."
+        },
+        {
+          "index": 5,
+          "stage": "ActualNineGroupDevelopmentPass",
+          "reason": "Record the read actual current9/9 development receipt and all12 minimum-window hits; retained failed attempts and full-route/frozen qualification remain separate.",
+          "impact": "Existing documentation only; actual evidence/scope is updated without modifying production, audits or historical archives.",
+          "before": "The separate native-disclosures browser script implements nine groups: eight1600x900 interaction/lifecycle groups and one all12-menu matrix at the supported1024x640 minimum,DPR1,UIscale1. It checks real viewport/mid-edge and enabled-control hits in normal panels without maximizing away clipping or clicking create/delete actions. The current complete native-popup and remaining all-route acceptance are still being checked and are not declared passed here.",
+          "after": "The current actual native-disclosures development browser run passed9/9 groups: eight1600x900 interaction/lifecycle groups and one all12-menu matrix at the supported1024x640 minimum,DPR1,UIscale1. Actual viewport/mid-edge and every enabled-control hit passed in normal panels, without maximizing away clipping or clicking create/delete actions. The report is release-audits/v26.37-native-disclosures-user.json; failed attempts1–4 remain diagnosis. This current development pass is not frozen-source qualification. Remaining full-route acceptance is still being checked."
+        },
+        {
+          "index": 6,
+          "stage": "LatestNativeGeometryAndPartialLayoutDevelopment",
+          "reason": "Record latest rebuilt actual9 native geometry and bounded last-four layout receipt while retaining final source qualification requirements.",
+          "impact": "Documentation evidence only; no production, test, historical source or release artifact edits.",
+          "before": "The current actual native-disclosures development browser run passed9/9 groups: eight1600x900 interaction/lifecycle groups and one all12-menu matrix at the supported1024x640 minimum,DPR1,UIscale1. Actual viewport/mid-edge and every enabled-control hit passed in normal panels, without maximizing away clipping or clicking create/delete actions. The report is release-audits/v26.37-native-disclosures-user.json; failed attempts1–4 remain diagnosis. This current development pass is not frozen-source qualification. Remaining full-route acceptance is still being checked.",
+          "after": "The current actual native-disclosures development browser run passed9/9 groups: eight1600x900 interaction/lifecycle groups and one all12-menu matrix at the supported1024x640 minimum,DPR1,UIscale1. Actual viewport/mid-edge and every enabled-control hit passed in normal panels, without maximizing away clipping or clicking create/delete actions. The report is release-audits/v26.37-native-disclosures-user.json; failed attempts1–4 remain diagnosis. This current development pass is not frozen-source qualification. Remaining full-route acceptance is still being checked.\n\nThe latest rebuilt native9 run also verified every popup corner radius>=16 and four-way content inset>=20, with20px inset observed. The last four partial layout groups passed4/4 over34 routes/41 captures with zero console exceptions in release-audits/v26.37-ui-rebuild-layout-remainder.json. That partial receipt is not the complete ten-group layout gate or final fourteen-gate qualification."
+        }
+      ],
+      "followupUpdates": [
+        {
+          "stage": "ObservedMinimumAssetsLayout",
+          "beforeSha256": "7ee5dc6508c283a86990e856b1eed6c0cdf9fa4bf1ed46eda1ecaf11acb05685",
+          "afterSha256": "dccad21da201445f0cad1fad27d4dccf31726583d91d97acf3b52f2864013d62",
+          "reason": "Describe actual minimum Assets vertical-scroll/bounded-grid/44x44r12 More source repair; compilation passed, GUI was not yet recorded at this step."
+        },
+        {
+          "stage": "ActualNineGroupDevelopmentPass",
+          "beforeSha256": "dccad21da201445f0cad1fad27d4dccf31726583d91d97acf3b52f2864013d62",
+          "afterSha256": "478a32a2164a76e6a85c7561138e2f612360797e6d584e665201ec73dd9ff4fc",
+          "reason": "Record the read actual current9/9 development receipt and all12 minimum-window hits; retained failed attempts and full-route/frozen qualification remain separate."
+        },
+        {
+          "stage": "LatestNativeGeometryAndPartialLayoutDevelopment",
+          "beforeSha256": "478a32a2164a76e6a85c7561138e2f612360797e6d584e665201ec73dd9ff4fc",
+          "afterSha256": "aabca8a31a8e5fba7bb9e0a88e87deea2d5bf4baba75da9becb5b9b5f4f9543c",
+          "reason": "All12 minimum-window native popup geometries passed; partial4/4 is explicitly distinguished from full10/fresh14 qualification."
+        }
+      ]
+    },
+    {
+      "path": "docs/ui/MIGRATION.md",
+      "action": "modified",
+      "beforeSha256": "c9bd026dab2cd8869425683b652f5e9cc7f921c583c3de64ae3758a013e34246",
+      "afterSha256": "90caaa337356a68ceff0fd46a095c66e0fa9292312c2b087bc7df8620823ae78",
+      "reason": "Update only26.37 source status, archived actual baseline and precise caller classification while preserving historical authored release sections.",
+      "impact": "Existing documentation only; no source behavior, test assertions, runtime/schema/dependencies, baseline or release artifacts changed.",
+      "paragraphs": [
+        {
+          "index": 1,
+          "before": "Status: IN PROGRESS — baseline verified; shared system migration underway. Latest user Comfortable requirements replace conflicting old defaults; major workflows and runtime contracts remain.",
+          "after": "Status: IMPLEMENTED — the shared system and actual main/specialized panel geometry/control migration are complete in source. Latest Comfortable priorities replace conflicting compact defaults while existing safety, architecture, workflows and runtime contracts remain. Current rendered acceptance and frozen-source release qualification are separate.",
+          "reason": "Update only26.37 source status, archived actual baseline and precise caller classification while preserving historical authored release sections.",
+          "impact": "Accurate source/host/current-browser/frozen qualification distinction; no unexecuted pass or published status introduced."
+        },
+        {
+          "index": 2,
+          "before": "- Verified baseline: actual26.36 source digestd4d78307f673398e2437441e7af64e23e95e00b6439851e919b786d981ebb465; fresh build, typecheck and existing motion logic tests passed. Five actual-browser screens use the populated creator-v2636-mixed-game/Player,1600x900,DPR1,UI scale1. Cache evidence: .cache/comfortable26.37/baseline.\n- Shared geometry:16px primary type,44px controls,12px stacked-label gap,20px field gap,28px section gap and stronger semantic radii; native event/model contracts preserved.\n- Pending: representative visual acceptance, all major panel legacy-override migration, complete real motion integration, interruption/cleanup/precise-drag tests, narrow/translated/scaled UI QA, measured performance and source-bound26.37 release qualification.",
+          "after": "- Verified baseline: actual26.36 source digestd4d78307f673398e2437441e7af64e23e95e00b6439851e919b786d981ebb465,4601 files including protected user changes; actual build/type/motion baseline passed. Five browser screens and nine/four raw dynamic observations use unchanged creator-v2636-mixed-game/Player,1600x900,DPR1,UIscale1. Public archive: reports/comfortable/26.37/baseline.\n- Shared geometry:16px primary type,44px controls,12px stacked-label gap,20px field gap,28px section gap and stronger semantic radii; native event/model contracts preserved.\n- Implemented migration: local old overrides, visible round gutters, panel widths, responsive overflow and code-line/virtual-row metrics are repaired. One shared finite motion system covers actual controls, lists/tabs/selection, dock/panels, modal/menu/tooltip/toast and existing drag feedback. Larger controls intentionally use scrolling/folding rather than reduced type.\n- Native caller coverage:74 ordinary disclosures plus the Object Ownership lazy consumer,12 popup menus, six already-owned details and one shared property-section owner. Feature-detected manual top layer preserves DOM/Vue relationships, escapes ancestor clips and directly clamps/flips/bounds scrolling. Logical aria/inert state is immediate; lazy content remains through exit. Live inherited color, logically-open-only size observers and outside-focus close share the existing lifecycle owner.\n- Verified current production logic:45/45 deterministic motion/controller host checks and Vue/TypeScript check passed; source/test identities and per-edit consequences are recorded in reports/comfortable/26.37/implementation/native-popup-edit-report.json. The older28-test cache is historical. Earlier22/22 actual editor GUI/nine timings/four windows belongs to that revision; host tests cannot replace current browser/compositor evidence.\n- Current acceptance: the new native-disclosures script implements eight1600x900 lifecycle groups plus one all12-popup1024x640/DPR1/UIscale1 matrix in normal panels. Its complete current execution and remaining all-route/scaled/translated rendering are not declared passed here. Actual fourteen frozen-source gates and independent exact-eleven-file source/artifact/evidence/checksum verification establish the candidate, rather than implementation status.",
+          "reason": "Update only26.37 source status, archived actual baseline and precise caller classification while preserving historical authored release sections.",
+          "impact": "Accurate source/host/current-browser/frozen qualification distinction; no unexecuted pass or published status introduced."
+        },
+        {
+          "index": 3,
+          "stage": "ObservedMinimumAssetsLayout",
+          "reason": "Describe actual minimum Assets vertical-scroll/bounded-grid/44x44r12 More source repair; compilation passed, GUI was not yet recorded at this step.",
+          "impact": "Existing documentation only; actual evidence/scope is updated without modifying production, audits or historical archives.",
+          "before": "- Implemented migration: local old overrides, visible round gutters, panel widths, responsive overflow and code-line/virtual-row metrics are repaired. One shared finite motion system covers actual controls, lists/tabs/selection, dock/panels, modal/menu/tooltip/toast and existing drag feedback. Larger controls intentionally use scrolling/folding rather than reduced type.",
+          "after": "- Implemented migration: local old overrides, visible round gutters, panel widths, responsive overflow and code-line/virtual-row metrics are repaired. One shared finite motion system covers actual controls, lists/tabs/selection, dock/panels, modal/menu/tooltip/toast and existing drag feedback. Larger controls intentionally use scrolling/folding rather than reduced type.\n- Observed minimum Assets repair: narrow layout uses normal vertical scrolling with a bounded grid, keeping directory/multiline toolbar reachable and the SVG More control44x44/r12. Business script/template bindings remain unchanged. Scoped CSS compilation passed; fresh real GUI acceptance remains separate."
+        },
+        {
+          "index": 4,
+          "stage": "ActualNineGroupDevelopmentPass",
+          "reason": "Record the read actual current9/9 development receipt and all12 minimum-window hits; retained failed attempts and full-route/frozen qualification remain separate.",
+          "impact": "Existing documentation only; actual evidence/scope is updated without modifying production, audits or historical archives.",
+          "before": "- Observed minimum Assets repair: narrow layout uses normal vertical scrolling with a bounded grid, keeping directory/multiline toolbar reachable and the SVG More control44x44/r12. Business script/template bindings remain unchanged. Scoped CSS compilation passed; fresh real GUI acceptance remains separate.",
+          "after": "- Observed minimum Assets repair: normal vertical scrolling and a bounded grid keep the directory/multiline toolbar reachable; More keeps44x44/r12 SVG geometry with business script/template bindings unchanged. Scoped CSS compilation and actual minimum native-menu hit/reachability passed; complete Assets/all-route validation remains separate."
+        },
+        {
+          "index": 5,
+          "stage": "ActualNineGroupDevelopmentPass",
+          "reason": "Record the read actual current9/9 development receipt and all12 minimum-window hits; retained failed attempts and full-route/frozen qualification remain separate.",
+          "impact": "Existing documentation only; actual evidence/scope is updated without modifying production, audits or historical archives.",
+          "before": "- Current acceptance: the new native-disclosures script implements eight1600x900 lifecycle groups plus one all12-popup1024x640/DPR1/UIscale1 matrix in normal panels. Its complete current execution and remaining all-route/scaled/translated rendering are not declared passed here. Actual fourteen frozen-source gates and independent exact-eleven-file source/artifact/evidence/checksum verification establish the candidate, rather than implementation status.",
+          "after": "- Current development acceptance: actual native-disclosures passed9/9, including eight1600x900 lifecycle groups plus every one of12 native popups at1024x640/DPR1/UIscale1 in normal panels. Actual bounds, rounded-valid midpoint hits and each enabled control were reachable without maximizing or create/delete actions. Receipt: release-audits/v26.37-native-disclosures-user.json; failed attempts1–4 remain diagnosis. Remaining all-route/scaled/translated acceptance is separate and still under checking. Actual fourteen frozen-source gates and independent exact-eleven-file verification establish the candidate; no frozen/released pass is inferred from this development result."
+        },
+        {
+          "index": 6,
+          "stage": "LatestNativeGeometryAndPartialLayoutDevelopment",
+          "reason": "Record latest rebuilt actual9 native geometry and bounded last-four layout receipt while retaining final source qualification requirements.",
+          "impact": "Documentation evidence only; no production, test, historical source or release artifact edits.",
+          "before": "- Current development acceptance: actual native-disclosures passed9/9, including eight1600x900 lifecycle groups plus every one of12 native popups at1024x640/DPR1/UIscale1 in normal panels. Actual bounds, rounded-valid midpoint hits and each enabled control were reachable without maximizing or create/delete actions. Receipt: release-audits/v26.37-native-disclosures-user.json; failed attempts1–4 remain diagnosis. Remaining all-route/scaled/translated acceptance is separate and still under checking. Actual fourteen frozen-source gates and independent exact-eleven-file verification establish the candidate; no frozen/released pass is inferred from this development result.",
+          "after": "- Current development acceptance: actual native-disclosures passed9/9, including eight1600x900 lifecycle groups plus every one of12 native popups at1024x640/DPR1/UIscale1 in normal panels. Actual bounds, rounded-valid midpoint hits and each enabled control were reachable without maximizing or create/delete actions. Receipt: release-audits/v26.37-native-disclosures-user.json; failed attempts1–4 remain diagnosis. Remaining all-route/scaled/translated acceptance is separate and still under checking. Actual fourteen frozen-source gates and independent exact-eleven-file verification establish the candidate; no frozen/released pass is inferred from this development result.\n- Latest development follow-up: rebuilt native9 also passed all12 popup computed corner radii>=16 and four-way inset>=20 (observed20), making their soft contours/padding real. Partial layout remainder passed4/4,34 routes,41 captures and zero console exceptions; receipt release-audits/v26.37-ui-rebuild-layout-remainder.json explicitly has no qualified release. It is not the complete ten-group layout or fourteen-gate final qualification."
+        }
+      ],
+      "followupUpdates": [
+        {
+          "stage": "ObservedMinimumAssetsLayout",
+          "beforeSha256": "87ddd1970c1010330fcaf313566a41cf71dbd1ed764440e093a0b97abaf2221d",
+          "afterSha256": "6df14249c2429b0aabbcf4e33a543af47aa7f2a1681dde8d195f1307ea3e61ad",
+          "reason": "Describe actual minimum Assets vertical-scroll/bounded-grid/44x44r12 More source repair; compilation passed, GUI was not yet recorded at this step."
+        },
+        {
+          "stage": "ActualNineGroupDevelopmentPass",
+          "beforeSha256": "6df14249c2429b0aabbcf4e33a543af47aa7f2a1681dde8d195f1307ea3e61ad",
+          "afterSha256": "81f113ae976b682773512633e504b33daa0c0036298656bd3114dca7de6da038",
+          "reason": "Record the read actual current9/9 development receipt and all12 minimum-window hits; retained failed attempts and full-route/frozen qualification remain separate."
+        },
+        {
+          "stage": "LatestNativeGeometryAndPartialLayoutDevelopment",
+          "beforeSha256": "81f113ae976b682773512633e504b33daa0c0036298656bd3114dca7de6da038",
+          "afterSha256": "90caaa337356a68ceff0fd46a095c66e0fa9292312c2b087bc7df8620823ae78",
+          "reason": "All12 minimum-window native popup geometries passed; partial4/4 is explicitly distinguished from full10/fresh14 qualification."
+        }
+      ]
+    },
+    {
+      "path": "docs/ui/MOTION_SYSTEM_SPEC.md",
+      "action": "modified",
+      "beforeSha256": "e7f2186b7464a6a9c0e5467872ea2930a528d9c605942be77ed5b7905e84dd1a",
+      "afterSha256": "57a57c85ac90d70e64fdd6b593225708c092680b55fc8e00acd6cc62e2b679d7",
+      "reason": "Document actual native/content/conditional ownership, top-layer/fallback/logic versus native state and color/open-only observer/focus lifecycle.",
+      "impact": "Existing documentation only; no source behavior, test assertions, runtime/schema/dependencies, baseline or release artifacts changed.",
+      "paragraphs": [
+        {
+          "index": 1,
+          "before": "| Menus, popovers and dialogs | `UiMenu`, `UiDialog` and explicit conditional `UiMotionTransition` callers retain their outgoing DOM for a real exit. Self/parent ownership prevents duplicate animations. Modal scrims stay fixed and hit-testable; only the dialog surface may move. |",
+          "after": "| Menus, popovers and dialogs | `UiMenu`, `UiDialog` and explicit conditional `UiMotionTransition` callers retain their outgoing DOM for a real exit. Self/parent ownership prevents duplicate animations. Modal scrims stay fixed and hit-testable; only the dialog surface may move. |\n|12 native popup callers | Explicit `data-ui-motion-popover` uses `animateNativePopover()` on direct non-summary surfaces, with finite presence, immediate logical aria/inert, feature-detected manual top layer and bounded inline fallback. Summary remains available for reversal. |",
+          "reason": "Document actual native/content/conditional ownership, top-layer/fallback/logic versus native state and color/open-only observer/focus lifecycle.",
+          "impact": "Accurate source/host/current-browser/frozen qualification distinction; no unexecuted pass or published status introduced."
+        },
+        {
+          "index": 2,
+          "before": "This table records implemented source ownership. Final all-route rendered and dynamic acceptance remains pending.",
+          "after": "This table records implemented source ownership. The caller classification is74 ordinary disclosures, one Object Ownership lazy consumer,12 native popups, six already-owned details and one shared property-section owner:94 inventoried elements without duplicate owners. Current complete rendered/dynamic and frozen-source acceptance remain separate from this inventory.",
+          "reason": "Document actual native/content/conditional ownership, top-layer/fallback/logic versus native state and color/open-only observer/focus lifecycle.",
+          "impact": "Accurate source/host/current-browser/frozen qualification distinction; no unexecuted pass or published status introduced."
+        },
+        {
+          "index": 3,
+          "before": "Eligible details are `details.ui-property-section` and `details[data-ui-motion-disclosure]`. Their latest logical target is exposed immediately through `data-ui-disclosure-open`, summary `aria-expanded` and `ui-disclosure-change`. Native `open` may temporarily remain true only to render the closing height; outgoing content becomes inert and cannot receive input. The latest completion restores natural styles and the final native state. Unmarked details keep native behavior.",
+          "after": "Content details are `details.ui-property-section` and `details[data-ui-motion-disclosure]`. Latest `data-ui-disclosure-open`, summary `aria-expanded` and `ui-disclosure-change` update immediately. Native `open` may remain true only for outgoing height; direct content is inert while closing. Completion restores natural styles/final native state. Object Ownership consumes logical intent, keeps its lazy body through exit and uses `refreshDisclosure()` after Vue mounting to remeasure the latest target without redispatching intent. Nested sections retain independent owners; already-owned elements are not assigned a second controller.\n\nNative popup details are `details[data-ui-motion-popover]`. Latest `data-ui-popover-open`, summary aria and `ui-popover-change` update immediately. Closing direct surfaces become inert/pointer-blocked/aria-hidden while summary remains available to reverse the desired target. Native open/layer removal waits only for finite exit. Existing external native close, outside pointer/focus and Escape converge on this owner without queuing obsolete exits. Escape restores the trigger; outside-focus close preserves the new focused target.\n\nFeature-detected `showPopover()`/`hidePopover()` gives direct surfaces a manual top layer without Teleport, DOM reparenting or model changes. Placement follows the trigger directly, clamps/flips within the viewport and bounds long content with scrolling; older engines retain an explicit clipped-region inline fallback. `data-ui-popover-layer` and actual `:popover-open` identify the route. Native-layer text inherits live theme color; explicit author color expressions/priorities and original styles are preserved/restored. ResizeObserver watches summary/surface size only while logically open; async sizing, viewport resize and scrolling reposition directly. Close/cancel/removal/disposal disconnects observation. Real fallback-host rendering still needs its own evidence.",
+          "reason": "Document actual native/content/conditional ownership, top-layer/fallback/logic versus native state and color/open-only observer/focus lifecycle.",
+          "impact": "Accurate source/host/current-browser/frozen qualification distinction; no unexecuted pass or published status introduced."
+        },
+        {
+          "index": 4,
+          "before": "The controller removes registrations for genuinely disconnected nodes, preserves connected reparented nodes, and disposes its event listeners, observers, pressed/range state, disclosure records and drag feedback. There is no spring RAF loop at idle. Missing or rejected Web Animations support completes safely. Precise resize, KeepAlive deactivation and project/component exit cancel relevant presentation work.",
+          "after": "The controller removes registrations for genuinely disconnected nodes, preserves connected reparented nodes, and disposes its event listeners, observers, pressed/range state, content/native-popup records and drag feedback. Top-layer/style snapshots restore on removal. There is no spring RAF loop at idle. Missing or rejected Web Animations support completes safely. Precise resize, KeepAlive deactivation and project/component exit cancel relevant presentation work.",
+          "reason": "Document actual native/content/conditional ownership, top-layer/fallback/logic versus native state and color/open-only observer/focus lifecycle.",
+          "impact": "Accurate source/host/current-browser/frozen qualification distinction; no unexecuted pass or published status introduced."
+        },
+        {
+          "index": 5,
+          "before": "The current 26.36 baseline is `.cache/comfortable26.37/baseline`, digest `d4d78307f673398e2437441e7af64e23e95e00b6439851e919b786d981ebb465`. The first comparison uses the same populated Player project, 1600×900, saved UI scale 1 and observed DPR 1. Shared-only representative1 exposed legacy Inspector clipping; subsequent source repairs are implemented, with final rendering acceptance pending.",
+          "after": "The protected current26.36 baseline is archived in `reports/comfortable/26.37/baseline`, digest `d4d78307f673398e2437441e7af64e23e95e00b6439851e919b786d981ebb465`. Five screens and nine timing/four raw counter windows use the same unchanged populated Player project,1600x900,UIscale1,DPR1. Shared-only representative1 exposed legacy Inspector clipping; source repairs and main-panel migration are implemented, with fresh current rendering acceptance separate.",
+          "reason": "Document actual native/content/conditional ownership, top-layer/fallback/logic versus native state and color/open-only observer/focus lifecycle.",
+          "impact": "Accurate source/host/current-browser/frozen qualification distinction; no unexecuted pass or published status introduced."
+        },
+        {
+          "index": 6,
+          "before": "`.cache/comfortable26.37/motion-lifecycle-unit.json` records 28/28 passed checks against its recorded motion-source SHA-256. The production module executes with deterministic WAAPI/DOMMatrix and DOM/event/observer host boundaries. It covers bounded springs/variable time steps, current-state reversal, latest-owner completion, cancellation/disposal, live user/system reduction, light-budget feedback, unsupported platform behavior, disclosure focus/reversal/external close, connected reparenting/removal cleanup, native values/game exclusions, modal exit-lock restoration and block-size interruption.",
+          "after": "Current45/45 deterministic production motion/controller host checks and Vue/TypeScript check passed; `reports/comfortable/26.37/implementation/native-popup-edit-report.json` records actual source/test SHA and scope. The real module executes against controlled WAAPI/DOMMatrix/DOM/event/observer boundaries. Coverage includes bounded springs/variable time steps, current-state reversal/latest ownership, cancellation/disposal, live user/system/light policy, unsupported APIs, content focus/external close/lazy refresh, connected reparenting/removal, native values/game exclusions, modal/block-size interruption and native-layer placement/reversal/direct resize-scroll/fallback/style restoration. Added cases cover live inherited color, logically-open-only size observer cleanup and outside-focus closing. Old28-test cache receipts apply to their recorded source only.",
+          "reason": "Document actual native/content/conditional ownership, top-layer/fallback/logic versus native state and color/open-only observer/focus lifecycle.",
+          "impact": "Accurate source/host/current-browser/frozen qualification distinction; no unexecuted pass or published status introduced."
+        },
+        {
+          "index": 7,
+          "before": "These deterministic tests do not substitute for real compositor or native pointer observations. The latest development GUI suite passed 22/22 groups, including actual drag/reorder/docking/cancellation, minimum 1024×640 layout, Reduced Motion and history/save/reopen paths. Five strict same-condition captures and nine timing observations/four raw windows are recorded in `release-audits/v26.37-comfortable-user.json` and `release-audits/v26.37-comfortable-performance.json`. Earlier test-label mismatch runs are diagnostic history. Complete-route auditing is running; fresh final frozen-source native/Web qualification is still pending. Development evidence is not a final-source certification, and frozen-source executed release evidence remains authoritative.",
+          "after": "Host checks do not establish compositor or real pointer/platform-event behavior. An earlier development GUI revision passed22/22 groups, actual drag/reorder/dock/cancel, minimum layout, Reduced Motion and history/save/reopen. Five strict captures and nine/four raw observations are recorded in `release-audits/v26.37-comfortable-user.json` and `release-audits/v26.37-comfortable-performance.json`; later source changes require fresh execution. The separate native-disclosures script implements eight1600x900 lifecycle groups plus one all12-menu1024x640/DPR1/UIscale1 matrix, with actual viewport/rounded-valid midpoint/control hits and normal dock size. Its complete current execution and remaining all-route acceptance are not declared passed here. Failed attempts remain diagnosis. The actual fourteen source-bound gates and independent exact-eleven-file package verification establish final acceptance; development receipts and prose cannot establish source freeze or publication.",
+          "reason": "Document actual native/content/conditional ownership, top-layer/fallback/logic versus native state and color/open-only observer/focus lifecycle.",
+          "impact": "Accurate source/host/current-browser/frozen qualification distinction; no unexecuted pass or published status introduced."
+        },
+        {
+          "index": 8,
+          "stage": "ActualNineGroupDevelopmentPass",
+          "reason": "Record the read actual current9/9 development receipt and all12 minimum-window hits; retained failed attempts and full-route/frozen qualification remain separate.",
+          "impact": "Existing documentation only; actual evidence/scope is updated without modifying production, audits or historical archives.",
+          "before": "Host checks do not establish compositor or real pointer/platform-event behavior. An earlier development GUI revision passed22/22 groups, actual drag/reorder/dock/cancel, minimum layout, Reduced Motion and history/save/reopen. Five strict captures and nine/four raw observations are recorded in `release-audits/v26.37-comfortable-user.json` and `release-audits/v26.37-comfortable-performance.json`; later source changes require fresh execution. The separate native-disclosures script implements eight1600x900 lifecycle groups plus one all12-menu1024x640/DPR1/UIscale1 matrix, with actual viewport/rounded-valid midpoint/control hits and normal dock size. Its complete current execution and remaining all-route acceptance are not declared passed here. Failed attempts remain diagnosis. The actual fourteen source-bound gates and independent exact-eleven-file package verification establish final acceptance; development receipts and prose cannot establish source freeze or publication.",
+          "after": "Host checks do not establish compositor or real pointer/platform-event behavior. An earlier development GUI revision passed22/22 groups, actual drag/reorder/dock/cancel, minimum layout, Reduced Motion and history/save/reopen. Five strict captures and nine/four raw observations are in `release-audits/v26.37-comfortable-user.json` and `release-audits/v26.37-comfortable-performance.json`; later source changes require fresh execution. Current actual native-disclosures development execution passed9/9: eight1600x900 lifecycle groups plus all12 native menus at1024x640/DPR1/UIscale1, with real viewport/rounded-valid midpoint/every enabled-control hit and normal dock size. `release-audits/v26.37-native-disclosures-user.json` records that source-specific result; no private app state was injected or registry pass inferred. Failed attempts1–4 remain diagnosis. Remaining full-route acceptance is still separate. The actual fourteen source-bound gates and independent exact-eleven-file package verification establish final acceptance; development receipts cannot establish freeze or publication."
+        },
+        {
+          "index": 9,
+          "stage": "LatestNativeGeometryAndPartialLayoutDevelopment",
+          "reason": "Record latest rebuilt actual9 native geometry and bounded last-four layout receipt while retaining final source qualification requirements.",
+          "impact": "Documentation evidence only; no production, test, historical source or release artifact edits.",
+          "before": "Host checks do not establish compositor or real pointer/platform-event behavior. An earlier development GUI revision passed22/22 groups, actual drag/reorder/dock/cancel, minimum layout, Reduced Motion and history/save/reopen. Five strict captures and nine/four raw observations are in `release-audits/v26.37-comfortable-user.json` and `release-audits/v26.37-comfortable-performance.json`; later source changes require fresh execution. Current actual native-disclosures development execution passed9/9: eight1600x900 lifecycle groups plus all12 native menus at1024x640/DPR1/UIscale1, with real viewport/rounded-valid midpoint/every enabled-control hit and normal dock size. `release-audits/v26.37-native-disclosures-user.json` records that source-specific result; no private app state was injected or registry pass inferred. Failed attempts1–4 remain diagnosis. Remaining full-route acceptance is still separate. The actual fourteen source-bound gates and independent exact-eleven-file package verification establish final acceptance; development receipts cannot establish freeze or publication.",
+          "after": "Host checks do not establish compositor or real pointer/platform-event behavior. An earlier development GUI revision passed22/22 groups, actual drag/reorder/dock/cancel, minimum layout, Reduced Motion and history/save/reopen. Five strict captures and nine/four raw observations are in `release-audits/v26.37-comfortable-user.json` and `release-audits/v26.37-comfortable-performance.json`; later source changes require fresh execution. Current actual native-disclosures development execution passed9/9: eight1600x900 lifecycle groups plus all12 native menus at1024x640/DPR1/UIscale1, with real viewport/rounded-valid midpoint/every enabled-control hit and normal dock size. `release-audits/v26.37-native-disclosures-user.json` records that source-specific result; no private app state was injected or registry pass inferred. Failed attempts1–4 remain diagnosis. Remaining full-route acceptance is still separate. The actual fourteen source-bound gates and independent exact-eleven-file package verification establish final acceptance; development receipts cannot establish freeze or publication.\n\nLatest rebuilt native9 also measured all12 popup corner radii>=16 and content inset>=20 (observed20), alongside actual minimum-window hit/reachability. The partial `v26.37-ui-rebuild-layout-remainder.json` receipt passed the last four groups over34 routes/41 captures with zero console exceptions; it does not replace the full ten-group layout gate. Frozen-source executed evidence remains authoritative."
+        }
+      ],
+      "followupUpdates": [
+        {
+          "stage": "ActualNineGroupDevelopmentPass",
+          "beforeSha256": "c71b24a1cda6e6d15d0c5ef151b791686e51eeffbb6346c588100cd05118c7f6",
+          "afterSha256": "44a2ad5c250f5cdfeac42cee41c6dd344d45300d9a1fac626db1bd9d922d7134",
+          "reason": "Record the read actual current9/9 development receipt and all12 minimum-window hits; retained failed attempts and full-route/frozen qualification remain separate."
+        },
+        {
+          "stage": "LatestNativeGeometryAndPartialLayoutDevelopment",
+          "beforeSha256": "44a2ad5c250f5cdfeac42cee41c6dd344d45300d9a1fac626db1bd9d922d7134",
+          "afterSha256": "57a57c85ac90d70e64fdd6b593225708c092680b55fc8e00acd6cc62e2b679d7",
+          "reason": "All12 minimum-window native popup geometries passed; partial4/4 is explicitly distinguished from full10/fresh14 qualification."
+        }
+      ]
+    },
+    {
+      "path": "docs/ui/UI_MOTION_IMPLEMENTATION_PLAN.md",
+      "action": "modified",
+      "beforeSha256": "68331a7d2398fda28857d9e32ab19321d11783f307cfa8b6308abd0142f89679",
+      "afterSha256": "adb5689d5d8d778fb2bbcfe50f24b08877d8ce9305b17e5c83cd440f871a13d1",
+      "reason": "Reconcile implemented stages and current45 host checks with revision-specific earlier GUI and pending actual acceptance.",
+      "impact": "Existing documentation only; no source behavior, test assertions, runtime/schema/dependencies, baseline or release artifacts changed.",
+      "paragraphs": [
+        {
+          "index": 1,
+          "before": "| 3 Representative views | Historical shared-only captures exposed legacy Inspector clipping/local overrides. The repaired development GUI now passed 22/22 groups with five strict same-condition captures; representative1 remains diagnostic history. Final frozen-source acceptance is pending. |\n| 4 Full migration | Production geometry/control migration, local override repairs, gutters, widths and responsive overflow are implemented. Important launcher/material/particle/graph-production/script labels were separately aligned to body text and compiled. All-panel/specialized-tool rendered validation remains pending. |\n| 5 Motion integration | Implemented shared springs (700/34/1, 360/28/1, 480/22/1), 120/180/240/320ms semantic durations and on/light/reduced policies. Actual native/shared controls, details, tabs/virtual neighbors, selection, panel/dock owners, menu/modal exits, custom tooltip/toast and launcher/tool surfaces are wired. Modal scrims stay fixed; precise input/game areas are excluded. The recorded production motion/controller suite passed 28/28 with deterministic host boundaries. |\n| 6 Regression | Recorded Vue/TypeScript and 28/28 focused production module/controller checks passed. Latest actual development GUI passed 22/22 groups, five strict same-condition captures, nine timings/four raw windows, real drag/cancel/tab reorder/docking, minimum layout, Reduced Motion and history/save/reopen. Complete-route audit is running; fresh frozen-source native/Web qualification remains pending. |",
+          "after": "| 3 Representative views | Shared-only defects led to actual source repairs. Earlier real development revision passed22/22 groups with five strict comparisons; representative1 remains diagnosis. Current source needs fresh browser/frozen acceptance. |\n| 4 Full migration | Actual main/specialized geometry/control migration, old override repairs, gutters, widths, code-line metrics, important labels and responsive overflow are implemented. Current full-route/scaled/translated rendered acceptance remains separate. |\n| 5 Motion integration | Shared spring/duration/on-light-reduced contract is implemented in actual controls, tabs/neighbors, selection, panels/dock, modal/tooltip/toast/drag.74 ordinary disclosures, Ownership lazy consumer and12 native popup callers share explicit owners; current45/45 production host checks passed. |\n| 6 Regression | Current Vue/TypeScript and45/45 deterministic host logic passed. Earlier22-group GUI/nine timings/four windows is revision-specific. The new nine-group native disclosure run and remaining complete-route acceptance are being checked; no final pass is inferred. |",
+          "reason": "Reconcile implemented stages and current45 host checks with revision-specific earlier GUI and pending actual acceptance.",
+          "impact": "Accurate source/host/current-browser/frozen qualification distinction; no unexecuted pass or published status introduced."
+        },
+        {
+          "index": 2,
+          "before": "`src/ui/motion.ts` and `motion.css` remain the single shared system. Finite WAAPI jobs retarget current presentation; generations and job ownership suppress obsolete completions. `animateDisclosure()` exposes the latest state immediately and clips only presentation height while closing content is inert. `animateBlockSize()` supports the actual bottom-dock owner; separators, resize and KeepAlive exit cancel rather than lag behind input.",
+          "after": "`src/ui/motion.ts` and `motion.css` remain the single shared system. Finite WAAPI jobs retarget current presentation; generations and job ownership suppress obsolete completions. `animateDisclosure()` exposes the latest state immediately and clips only presentation height while closing content is inert. `animateBlockSize()` supports the actual bottom-dock owner; separators, resize and KeepAlive exit cancel rather than lag behind input.\n\nThe caller inventory is74 ordinary details, one Object Ownership lazy consumer,12 native popup menus, six already-owned details and one shared property-section owner. Ownership retains outgoing content and `refreshDisclosure()` remeasures latest intent after Vue mounting. Native `data-ui-motion-popover` uses finite direct-surface presence with immediate aria/inert and trigger reversal. Feature-detected manual Popover top layer preserves DOM/Vue relationships while escaping ancestor clips; direct placement clamps/flips/bounds scrolling, with an explicit inline fallback. Live inherited color/authored-style restoration, logically-open-only size observers and outside-focus/pointer/Escape close use the same lifecycle owner.",
+          "reason": "Reconcile implemented stages and current45 host checks with revision-specific earlier GUI and pending actual acceptance.",
+          "impact": "Accurate source/host/current-browser/frozen qualification distinction; no unexecuted pass or published status introduced."
+        },
+        {
+          "index": 3,
+          "before": "- `.cache/comfortable26.37/baseline`: protected start inventory/diff, baseline build/test logs, measurements and actual before captures.",
+          "after": "- `reports/comfortable/26.37/baseline`: protected36 identity/measurements, five actual before captures and nine timing/four raw counter-window observations.",
+          "reason": "Reconcile implemented stages and current45 host checks with revision-specific earlier GUI and pending actual acceptance.",
+          "impact": "Accurate source/host/current-browser/frozen qualification distinction; no unexecuted pass or published status introduced."
+        },
+        {
+          "index": 4,
+          "before": "- `.cache/comfortable26.37/motion-lifecycle-unit.json`: 28/28 production motion/controller checks, with recorded source SHA-256 and deterministic host limitations.",
+          "after": "- `reports/comfortable/26.37/implementation/native-popup-edit-report.json`: current45/45 production host logic and typecheck receipt with source/test SHA and deterministic host limitations; the older28 cache is historical.",
+          "reason": "Reconcile implemented stages and current45 host checks with revision-specific earlier GUI and pending actual acceptance.",
+          "impact": "Accurate source/host/current-browser/frozen qualification distinction; no unexecuted pass or published status introduced."
+        },
+        {
+          "index": 5,
+          "before": "- `release-audits/v26.37-comfortable-user.json` and `release-audits/v26.37-comfortable-performance.json`: passed development GUI 22/22 groups, five strict captures and nine timings/four raw windows; final release-source qualification remains pending.",
+          "after": "- `release-audits/v26.37-comfortable-user.json` and `release-audits/v26.37-comfortable-performance.json`: earlier22/22 actual development groups, five strict captures and nine/four raw observations; later source changes require fresh reports.\n- `scripts/verify-v26.37-native-disclosures-user.mjs` and the public implementation edit report: nine real-input groups, eight at1600x900 and one all12-menu1024x640/DPR1/UIscale1 matrix. It inspects normal dock surfaces and enabled-control hits without maximizing or activating create/delete commands. The complete current browser run is not claimed passed here.",
+          "reason": "Reconcile implemented stages and current45 host checks with revision-specific earlier GUI and pending actual acceptance.",
+          "impact": "Accurate source/host/current-browser/frozen qualification distinction; no unexecuted pass or published status introduced."
+        },
+        {
+          "index": 6,
+          "before": "Final release evidence must contain current frozen-source checks, reviewed comparisons and complete execution status. Do not ship a private unfiltered working-tree patch, or convert partial/headless results into claims of hardware, AT or installer certification.",
+          "after": "Final release evidence must contain the actual fourteen source-bound gates, reviewed current comparisons and independent exact-eleven-file source/Web/evidence/native/checksum verification. Explicitly omitted unrelated audits are not marked passed. No source freeze, complete qualification or publication is inferred from this implementation plan. Do not ship a private unfiltered patch or turn partial/headless results into hardware, AT or installer certification.",
+          "reason": "Reconcile implemented stages and current45 host checks with revision-specific earlier GUI and pending actual acceptance.",
+          "impact": "Accurate source/host/current-browser/frozen qualification distinction; no unexecuted pass or published status introduced."
+        },
+        {
+          "index": 7,
+          "stage": "ActualNineGroupDevelopmentPass",
+          "reason": "Record the read actual current9/9 development receipt and all12 minimum-window hits; retained failed attempts and full-route/frozen qualification remain separate.",
+          "impact": "Existing documentation only; actual evidence/scope is updated without modifying production, audits or historical archives.",
+          "before": "| 6 Regression | Current Vue/TypeScript and45/45 deterministic host logic passed. Earlier22-group GUI/nine timings/four windows is revision-specific. The new nine-group native disclosure run and remaining complete-route acceptance are being checked; no final pass is inferred. |",
+          "after": "| 6 Regression | Current Vue/TypeScript and45/45 deterministic host logic passed. Earlier22-group GUI/nine timings/four windows is revision-specific. Current actual native disclosure development run passed9/9, including all12 menus at1024x640; remaining complete-route and frozen-source qualification are separate. |"
+        },
+        {
+          "index": 8,
+          "stage": "ActualNineGroupDevelopmentPass",
+          "reason": "Record the read actual current9/9 development receipt and all12 minimum-window hits; retained failed attempts and full-route/frozen qualification remain separate.",
+          "impact": "Existing documentation only; actual evidence/scope is updated without modifying production, audits or historical archives.",
+          "before": "- `scripts/verify-v26.37-native-disclosures-user.mjs` and the public implementation edit report: nine real-input groups, eight at1600x900 and one all12-menu1024x640/DPR1/UIscale1 matrix. It inspects normal dock surfaces and enabled-control hits without maximizing or activating create/delete commands. The complete current browser run is not claimed passed here.",
+          "after": "- `release-audits/v26.37-native-disclosures-user.json`: current actual development9/9 passed, eight groups at1600x900 and all12 menus at1024x640/DPR1/UIscale1. Normal-panel viewport/midpoint/every enabled-control hits passed with no maximize or create/delete action. Script/method corrections have public per-edit receipts; failed attempts1–4 remain diagnosis. This is not frozen-source qualification."
+        },
+        {
+          "index": 9,
+          "stage": "LatestNativeGeometryAndPartialLayoutDevelopment",
+          "reason": "Record latest rebuilt actual9 native geometry and bounded last-four layout receipt while retaining final source qualification requirements.",
+          "impact": "Documentation evidence only; no production, test, historical source or release artifact edits.",
+          "before": "| 6 Regression | Current Vue/TypeScript and45/45 deterministic host logic passed. Earlier22-group GUI/nine timings/four windows is revision-specific. Current actual native disclosure development run passed9/9, including all12 menus at1024x640; remaining complete-route and frozen-source qualification are separate. |",
+          "after": "| 6 Regression | Current Vue/TypeScript and45/45 deterministic host logic passed. Earlier22-group GUI/nine timings/four windows is revision-specific. Current actual native disclosure development run passed9/9, including all12 menus at1024x640; remaining complete-route and frozen-source qualification are separate. |\n| Latest bounded development follow-up | Rebuilt native9 passed actual all12 popup radius>=16/inset>=20 (observed20) and minimum-window hits. Layout remainder passed4/4,34 routes/41 captures/zero console exceptions; this is not the full ten-group layout or fourteen-gate final qualification. |"
+        },
+        {
+          "index": 10,
+          "stage": "LatestNativeGeometryAndPartialLayoutDevelopment",
+          "reason": "Record latest rebuilt actual9 native geometry and bounded last-four layout receipt while retaining final source qualification requirements.",
+          "impact": "Documentation evidence only; no production, test, historical source or release artifact edits.",
+          "before": "- `release-audits/v26.37-native-disclosures-user.json`: current actual development9/9 passed, eight groups at1600x900 and all12 menus at1024x640/DPR1/UIscale1. Normal-panel viewport/midpoint/every enabled-control hits passed with no maximize or create/delete action. Script/method corrections have public per-edit receipts; failed attempts1–4 remain diagnosis. This is not frozen-source qualification.",
+          "after": "- `release-audits/v26.37-native-disclosures-user.json`: current actual development9/9 passed, eight groups at1600x900 and all12 menus at1024x640/DPR1/UIscale1. Normal-panel viewport/midpoint/every enabled-control hits passed with no maximize or create/delete action. Script/method corrections have public per-edit receipts; failed attempts1–4 remain diagnosis. This is not frozen-source qualification.\n- `release-audits/v26.37-ui-rebuild-layout-remainder.json`: latest partial development4/4,34 routes/41 captures and zero console exceptions, qualifiedRelease null. Full ten-group layout and all fourteen fresh frozen-source gates remain required."
+        }
+      ],
+      "followupUpdates": [
+        {
+          "stage": "ActualNineGroupDevelopmentPass",
+          "beforeSha256": "5d30dd3f8bd9f57cad2547e44e693d1546587cf4c4d2de46fbc5ccbd7ad5d9e5",
+          "afterSha256": "e23c3a3c6e6d77fc0aded0c13fdb94ca458c32ef374dfa778ccb20ae97b5d835",
+          "reason": "Record the read actual current9/9 development receipt and all12 minimum-window hits; retained failed attempts and full-route/frozen qualification remain separate."
+        },
+        {
+          "stage": "LatestNativeGeometryAndPartialLayoutDevelopment",
+          "beforeSha256": "e23c3a3c6e6d77fc0aded0c13fdb94ca458c32ef374dfa778ccb20ae97b5d835",
+          "afterSha256": "adb5689d5d8d778fb2bbcfe50f24b08877d8ce9305b17e5c83cd440f871a13d1",
+          "reason": "All12 minimum-window native popup geometries passed; partial4/4 is explicitly distinguished from full10/fresh14 qualification."
+        }
+      ]
+    },
+    {
+      "path": "docs/ui/MOTION_QA_CHECKLIST.md",
+      "action": "modified",
+      "beforeSha256": "87fd6068f05fcf5653b8663763db920be6cd30628fee43278d649d5e41bec8a4",
+      "afterSha256": "cbf4f1603fc6a4b575a3b04c41b890b1c413272f142ba56fa55c9f6be52fcc62",
+      "reason": "Separate implemented coverage from observed development and required frozen checks; retain strict all12 geometry/input/native delivery boundaries.",
+      "impact": "Existing documentation only; no source behavior, test assertions, runtime/schema/dependencies, baseline or release artifacts changed.",
+      "paragraphs": [
+        {
+          "index": 1,
+          "before": "- [x] Recorded production motion/controller test execution: 28/28 passed in `.cache/comfortable26.37/motion-lifecycle-unit.json`, with its recorded source SHA-256.",
+          "after": "- [x] Current45/45 production motion/controller deterministic host checks and Vue/TypeScript check passed; current source/test SHA and scope are in public `implementation/native-popup-edit-report.json`. The old28-test cache remains source-specific history.",
+          "reason": "Separate implemented coverage from observed development and required frozen checks; retain strict all12 geometry/input/native delivery boundaries.",
+          "impact": "Accurate source/host/current-browser/frozen qualification distinction; no unexecuted pass or published status introduced."
+        },
+        {
+          "index": 2,
+          "before": "- [x] Deterministic host checks cover modal exit-lock pointer interception/attribute restoration and block-size reversal/latest completion. These are not actual browser hit-testing/compositor checks.",
+          "after": "- [x] Deterministic host checks cover modal exit-lock pointer interception/attribute restoration and block-size reversal/latest completion. These are not actual browser hit-testing/compositor checks.\n- [x] Production host cases cover native manual top-layer placement/reversal/direct resize-scroll/outside-Escape/style restoration/inline fallback, Ownership lazy refresh, live inherited color, logically-open-only size observation/cleanup and outside-focus close. These do not certify real native compositor or platform-event ordering.",
+          "reason": "Separate implemented coverage from observed development and required frozen checks; retain strict all12 geometry/input/native delivery boundaries.",
+          "impact": "Accurate source/host/current-browser/frozen qualification distinction; no unexecuted pass or published status introduced."
+        },
+        {
+          "index": 3,
+          "before": "- [x] Latest actual development GUI execution passed 22/22 groups; five strict same-condition snapshots, nine timing observations/four raw windows, actual drag/cancel/tab reorder/panel docking, minimum 1024×640, Reduced Motion and history/save/reopen were exercised. Reports: `release-audits/v26.37-comfortable-user.json` and `release-audits/v26.37-comfortable-performance.json`.",
+          "after": "- [x] Earlier real development GUI revision passed22/22 groups with five strict same-condition captures, nine timings/four raw windows, drag/cancel/reorder/dock, minimum layout, Reduced Motion and history/save/reopen. Actual reports are `release-audits/v26.37-comfortable-user.json` and comfortable-performance.json; later source changes require fresh execution.\n- [ ] Current native-disclosures nine-group run: eight1600x900 lifecycle groups plus one all12-popup1024x640/DPR1/UIscale1 matrix, preserving normal panel sizes and inspecting real viewport/mid-edge/each enabled-control hit. Its complete current execution is not declared passed here.",
+          "reason": "Separate implemented coverage from observed development and required frozen checks; retain strict all12 geometry/input/native delivery boundaries.",
+          "impact": "Accurate source/host/current-browser/frozen qualification distinction; no unexecuted pass or published status introduced."
+        },
+        {
+          "index": 4,
+          "before": "Earlier incomplete test-label mismatch runs remain diagnostic history. Complete-route auditing is running and fresh final frozen-source native/Web qualification is pending. Development GUI/28-test results do not automatically certify the final release snapshot; the final-source checks below remain required.",
+          "after": "Earlier incomplete attempts remain diagnostic history. Current complete native-popup/all-route rendered acceptance and fresh fourteen-gate frozen-source qualification remain distinct from earlier GUI or45-test host evidence; none is inferred from marker counts or a build.",
+          "reason": "Separate implemented coverage from observed development and required frozen checks; retain strict all12 geometry/input/native delivery boundaries.",
+          "impact": "Accurate source/host/current-browser/frozen qualification distinction; no unexecuted pass or published status introduced."
+        },
+        {
+          "index": 5,
+          "before": "- [x] Menu/popover/dialog actual exits have explicit owners; self/parent mode avoids double jobs. Fixed modal scrims remain hit-testable with inert inner controls.",
+          "after": "- [x] Menu/popover/dialog actual exits have explicit owners; self/parent mode avoids double jobs. Fixed modal scrims remain hit-testable with inert inner controls.\n- [x] Native callers are74 ordinary disclosures plus Ownership,12 popup menus, six already-owned details and one shared property-section owner, without duplicate ownership. Logical aria/intent is immediate; outgoing/lazy bodies remain inert through finite exit, and nested sections retain independent owners.\n- [x] Native popup top layer is feature-detected with viewport clamp/flip/scroll and explicit inline fallback; trigger reversal, live color/author-style restoration, open-only size observation and outside-focus/Escape/pointer close are implemented.",
+          "reason": "Separate implemented coverage from observed development and required frozen checks; retain strict all12 geometry/input/native delivery boundaries.",
+          "impact": "Accurate source/host/current-browser/frozen qualification distinction; no unexecuted pass or published status introduced."
+        },
+        {
+          "index": 6,
+          "before": "- [ ] Real browser component/panel feedback: normal elastic response, fast close/reopen, tab/object changes, native disclosure reversal, precision resize, undo/project change and loading-close behavior.",
+          "after": "- [ ] Real browser component/panel feedback: normal elastic response, fast close/reopen, tab/object changes, native disclosure reversal, precision resize, undo/project change and loading-close behavior.\n- [ ] All12 native popups at the supported minimum: actual layer/viewport containment, rounded-valid center/four-edge midpoint hits, every enabled control after normal scrolling, immediate aria/inert, finite settle and unchanged summary geometry; no maximize or create/delete workaround.",
+          "reason": "Separate implemented coverage from observed development and required frozen checks; retain strict all12 geometry/input/native delivery boundaries.",
+          "impact": "Accurate source/host/current-browser/frozen qualification distinction; no unexecuted pass or published status introduced."
+        },
+        {
+          "index": 7,
+          "before": "- [ ] Relevant core authoring/history/save/reopen/export/game routes, fresh native/WASM/Web/type/build and source-bound package/version/hygiene checks.",
+          "after": "- [ ] Retained authoring/history/save/reopen/input/export/reference/static-host routes and fresh native/WASM/Web/type/build/version/hygiene pass the actual fourteen-gate linked-risk contract; unrelated omissions remain explicitly not run.",
+          "reason": "Separate implemented coverage from observed development and required frozen checks; retain strict all12 geometry/input/native delivery boundaries.",
+          "impact": "Accurate source/host/current-browser/frozen qualification distinction; no unexecuted pass or published status introduced."
+        },
+        {
+          "index": 8,
+          "stage": "ActualNineGroupDevelopmentPass",
+          "reason": "Record the read actual current9/9 development receipt and all12 minimum-window hits; retained failed attempts and full-route/frozen qualification remain separate.",
+          "impact": "Existing documentation only; actual evidence/scope is updated without modifying production, audits or historical archives.",
+          "before": "- [ ] Current native-disclosures nine-group run: eight1600x900 lifecycle groups plus one all12-popup1024x640/DPR1/UIscale1 matrix, preserving normal panel sizes and inspecting real viewport/mid-edge/each enabled-control hit. Its complete current execution is not declared passed here.",
+          "after": "- [x] Current actual native-disclosures development run passed9/9: eight1600x900 lifecycle groups plus all12 menus at1024x640/DPR1/UIscale1. Real viewport/rounded-valid midpoint/each enabled-control hits passed in normal panels without maximize/create/delete actions. Receipt: release-audits/v26.37-native-disclosures-user.json. It remains source-specific development evidence, not frozen qualification."
+        },
+        {
+          "index": 9,
+          "stage": "ActualNineGroupDevelopmentPass",
+          "reason": "Record the read actual current9/9 development receipt and all12 minimum-window hits; retained failed attempts and full-route/frozen qualification remain separate.",
+          "impact": "Existing documentation only; actual evidence/scope is updated without modifying production, audits or historical archives.",
+          "before": "Earlier incomplete attempts remain diagnostic history. Current complete native-popup/all-route rendered acceptance and fresh fourteen-gate frozen-source qualification remain distinct from earlier GUI or45-test host evidence; none is inferred from marker counts or a build.",
+          "after": "Failed native attempts1–4 and earlier incomplete GUI runs remain diagnostic history. Remaining current all-route rendered acceptance and fresh fourteen-gate frozen-source qualification remain distinct from the current9-group, earlier22-group or45-test host receipts; none is inferred from markers or a build."
+        },
+        {
+          "index": 10,
+          "stage": "LatestNativeGeometryAndPartialLayoutDevelopment",
+          "reason": "Record latest rebuilt actual9 native geometry and bounded last-four layout receipt while retaining final source qualification requirements.",
+          "impact": "Documentation evidence only; no production, test, historical source or release artifact edits.",
+          "before": "- [x] Current actual native-disclosures development run passed9/9: eight1600x900 lifecycle groups plus all12 menus at1024x640/DPR1/UIscale1. Real viewport/rounded-valid midpoint/each enabled-control hits passed in normal panels without maximize/create/delete actions. Receipt: release-audits/v26.37-native-disclosures-user.json. It remains source-specific development evidence, not frozen qualification.",
+          "after": "- [x] Current actual native-disclosures development run passed9/9: eight1600x900 lifecycle groups plus all12 menus at1024x640/DPR1/UIscale1. Real viewport/rounded-valid midpoint/each enabled-control hits passed in normal panels without maximize/create/delete actions. Receipt: release-audits/v26.37-native-disclosures-user.json. It remains source-specific development evidence, not frozen qualification.\n- [x] Latest rebuilt native9 verified computed corner radii>=16 and four-way inset>=20 (observed20) for every popup. Partial last-four layout groups passed4/4,34 routes/41 captures/zero console exceptions in release-audits/v26.37-ui-rebuild-layout-remainder.json; it is explicitly not complete ten-group layout or fourteen-gate final qualification."
+        }
+      ],
+      "followupUpdates": [
+        {
+          "stage": "ActualNineGroupDevelopmentPass",
+          "beforeSha256": "f9df1653a937833eb544e206e52bfdc3ec4e2eb45f3efd29f51c64ce9f2a913f",
+          "afterSha256": "d9b28c0313e9cca7615156580a5bd3ad41885b6f6fa1b57cdf8115af89b0469a",
+          "reason": "Record the read actual current9/9 development receipt and all12 minimum-window hits; retained failed attempts and full-route/frozen qualification remain separate."
+        },
+        {
+          "stage": "LatestNativeGeometryAndPartialLayoutDevelopment",
+          "beforeSha256": "d9b28c0313e9cca7615156580a5bd3ad41885b6f6fa1b57cdf8115af89b0469a",
+          "afterSha256": "cbf4f1603fc6a4b575a3b04c41b890b1c413272f142ba56fa55c9f6be52fcc62",
+          "reason": "All12 minimum-window native popup geometries passed; partial4/4 is explicitly distinguished from full10/fresh14 qualification."
+        }
+      ]
+    }
+  ],
+  "counts": {
+    "files": 5,
+    "changedParagraphBlocks": 41
+  },
+  "sourceEvidence": {
+    "motionSourceSha256": "dbedebfb1e1a0339f6fddf1581df27da8a28bcc404da7ada323a4a1bb0da9144",
+    "productionHostLogic": "45/45 actual root execution; deterministic WAAPI/DOM/event/observer host boundaries",
+    "typeCheck": "passed actual root execution",
+    "earlierRealGUI": "22/22 on recorded earlier revision; not a current-source claim",
+    "currentNativeGUI": {
+      "report": "release-audits/v26.37-native-disclosures-user.json",
+      "status": "passed",
+      "engineVersion": "26.37.0",
+      "generatedAt": "2026-10-04T14:52:19.204Z",
+      "checks": 9,
+      "nativePopupCallers": 12,
+      "minimum": {
+        "width": 1024,
+        "height": 640,
+        "dpr": 1,
+        "uiScale": 1
+      },
+      "geometryIssues": [],
+      "testSourceSha256": "da0e6bd6aec9f1633b43490139dc222f4b97735ac212f5ab73e61157eecf3553",
+      "sourceQualification": "Development production bundle only; final source-bound gate reexecution still required",
+      "popupGeometry": {
+        "popupCallers": 12,
+        "cornerSamples": 48,
+        "radiusMinimum": 20,
+        "radiusMaximum": 20,
+        "insetSamples": 48,
+        "insetMinimum": 20,
+        "insetMaximum": 20
+      }
+    },
+    "partialLayout": {
+      "report": "release-audits/v26.37-ui-rebuild-layout-remainder.json",
+      "status": "passed",
+      "generatedAt": "2026-10-04T14:47:41.468Z",
+      "groups": 4,
+      "routes": 34,
+      "captures": 41,
+      "consoleErrors": [],
+      "qualifiedRelease": null,
+      "scope": "Last four partial development groups only; not full ten-group layout or fourteen-gate frozen qualification."
+    }
+  },
+  "validation": {
+    "appliedPatch": "passed; original/final filesystem SHA recorded",
+    "testsRunByThisDocumentationTask": false,
+    "nineGroupBrowser": "Latest rebuilt actual9/9 development plus all12 minimum-menu geometry/hits passed, radius20/inset20; no source-bound qualification inferred",
+    "remainingAllRoute": "Partial last-four4/4 development passed; full ten-group fresh final gate remains required",
+    "fourteenFrozenSourceGates": "not claimed passed",
+    "sourceFreeze": "not claimed",
+    "exactElevenPackageVerification": "not claimed",
+    "publication": "not claimed",
+    "historicalMigration": "Only current26.37 authored suffix touched; historical release artifact/evidence archives unchanged",
+    "finalHashes": "All five final filesystem SHA verified after latest geometry/layout followup; no duplicate content patch after interruption"
+  },
+  "ownership": "Completed authorized five-documents/public-report task; all file ownership released to root after this report update.",
+  "finalCheckpointWording": {
+    "generatedAt": "2026-10-04T15:00:40.429Z",
+    "records": [
+      {
+        "path": "docs/RELEASE_NOTES_26_37.md",
+        "before": "Remaining full-route acceptance is still being checked.",
+        "after": "The complete ten-group all-route gate is independently required for release.",
+        "beforeSha256": "aabca8a31a8e5fba7bb9e0a88e87deea2d5bf4baba75da9becb5b9b5f4f9543c",
+        "afterSha256": "9b30d0e3261b219b1f4977c817877bedd022b697578af275180913888707855e",
+        "alreadyAppliedByDocumentationAgent": true,
+        "consequence": "Keep development observations as a checkpoint while defining final acceptance through actual independent executed receipts; no future pass, freeze or publication assertion."
+      },
+      {
+        "path": "docs/ui/MIGRATION.md",
+        "before": "Remaining all-route/scaled/translated acceptance is separate and still under checking.",
+        "after": "Complete all-route/scaled/translated acceptance is established separately by the final executed layout gate.",
+        "beforeSha256": "90caaa337356a68ceff0fd46a095c66e0fa9292312c2b087bc7df8620823ae78",
+        "afterSha256": "cbfaded9210d8a6168ebd23bf09fa7cd623c9b06fd155becabf075ec99830be0",
+        "alreadyAppliedByDocumentationAgent": true,
+        "consequence": "Keep development observations as a checkpoint while defining final acceptance through actual independent executed receipts; no future pass, freeze or publication assertion."
+      }
+    ],
+    "sourceFreezeClaim": false,
+    "releaseQualificationClaim": false
+  }
+}

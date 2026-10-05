@@ -2,7 +2,7 @@
 <template>
   <header ref="topBar" class="top-bar" :style="{ '--menu-left': `${menuLeft}px` }">
     <a class="brand" href="https://whitelists.top" target="_blank" rel="noreferrer" aria-label="Nova_A by Whitelist">
-      <span class="brand-mark">N</span><span>Nova_A</span>
+      <NovaMark /><span>Nova_A</span>
     </a>
     <nav class="menu-container" @scroll="closeMenu">
       <div class="menu-item">
@@ -99,6 +99,7 @@
 
 <script setup lang="ts">
 import EditorIcon from '../components/EditorIcon.vue'
+import NovaMark from '../ui/components/NovaMark.vue'
 import { installTransientPopover } from '../editor/transientPopover'
 import { openExternalUrl } from '../runtime/externalLinks'
 import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
@@ -249,7 +250,7 @@ onUnmounted(/** 卸载时移除键盘和尺寸监听并释放弹出菜单行为�
 </script>
 
 <style scoped>
-.top-bar{min-height:var(--ui-control-height);display:flex;align-items:center;gap:var(--ui-space-sm);padding-inline:var(--ui-space-sm);border-bottom:1px solid var(--border-subtle);background:var(--surface-1);position:relative;z-index:600;flex:none}.brand{display:flex;gap:var(--ui-space-xs);align-items:center;color:var(--text-primary);text-decoration:none;font-weight:600;white-space:nowrap}.brand-mark{color:var(--accent)}.menu-container{display:flex;min-width:0;overflow-x:auto}.menu-item{flex:none}.menu-item>button{border-color:transparent;background:transparent}.top-spacer{flex:1}.release-pill,.safe-pill,.dirty-pill{font-size:var(--type-caption);white-space:nowrap;color:var(--text-muted)}.dirty-pill{color:var(--warning)}.safe-pill{color:var(--danger)}
-.dropdown{position:fixed;top:calc(var(--ui-control-height) + 1px);left:var(--menu-left);z-index:650;display:flex;flex-direction:column;min-width:26ch;max-width:min(54ch,calc(100vw - var(--ui-space-lg)));max-height:calc(100vh - 2 * var(--ui-control-height));overflow:auto;padding:var(--ui-space-xs);border:1px solid var(--border-strong);background:var(--surface-popover);box-shadow:var(--shadow-md)}.dropdown button{display:flex;justify-content:space-between;gap:var(--ui-space-lg);text-align:left;border-color:transparent;background:transparent}.dropdown kbd{color:var(--text-muted);font-size:var(--type-caption);margin-inline-start:auto}.dropdown hr{inline-size:100%;border:0;border-top:1px solid var(--border-subtle);margin-block:var(--ui-space-xs)}.danger{color:var(--danger)}
+.top-bar{min-height:var(--ui-control-height);display:flex;align-items:center;gap:var(--ui-space-sm);padding-inline:var(--ui-space-sm);border-bottom:1px solid var(--border-subtle);background:var(--surface-1);position:relative;z-index:600;flex:none}.brand{display:flex;gap:var(--ui-space-xs);align-items:center;color:var(--text-primary);text-decoration:none;font-weight:600;white-space:nowrap}.menu-container{display:flex;min-width:0;overflow-x:auto}.menu-item{flex:none}.menu-item>button{border-color:transparent;background:transparent}.top-spacer{flex:1}.release-pill,.safe-pill,.dirty-pill{font-size:var(--type-caption);white-space:nowrap;color:var(--text-muted)}.dirty-pill{color:var(--warning)}.safe-pill{color:var(--danger)}
+.dropdown{position:fixed;top:calc(var(--ui-control-height) + 1px);left:var(--menu-left);z-index:650;display:flex;flex-direction:column;min-width:26ch;overflow:auto;border:1px solid var(--border-strong);background:var(--surface-popover);box-shadow:var(--shadow-md);padding:var(--space-3);border-radius:var(--radius-floating);max-width:min(54ch,calc(100vw - 2 * var(--ui-panel-inset)));max-height:calc(100vh - var(--ui-control-height) - var(--ui-panel-inset))}.dropdown button{display:flex;justify-content:space-between;gap:var(--ui-space-lg);text-align:left;border-color:transparent;background:transparent}.dropdown kbd{color:var(--text-muted);font-size:var(--type-caption);margin-inline-start:auto}.dropdown hr{inline-size:100%;border:0;border-top:1px solid var(--border-subtle);margin-block:var(--ui-space-xs)}.danger{color:var(--danger)}
 @media(max-width:900px){.release-pill{display:none}.brand>span:last-child{display:none}}
 </style>

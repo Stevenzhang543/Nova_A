@@ -18,7 +18,7 @@
       <UiButton :aria-label="t('navigateBack')" :disabled="!workspaceState.navigationBack.length" :title="`${t('navigateBack')} (Alt+←)`" data-doc="manual/navigation-history" @click="navigateHistory('back')"><EditorIcon name="back" /><span class="control-label">{{ t('back') }}</span></UiButton>
       <UiButton :aria-label="t('navigateForward')" :disabled="!workspaceState.navigationForward.length" :title="`${t('navigateForward')} (Alt+→)`" data-doc="manual/navigation-history" @click="navigateHistory('forward')"><EditorIcon name="forward" /><span class="control-label">{{ t('forward') }}</span></UiButton>
     </div>
-    <details v-transient-popover class="workspace-menu layout-menu">
+    <details data-ui-motion-popover v-transient-popover class="workspace-menu layout-menu">
       <summary :aria-label="t('layoutPanels')" :title="t('layoutPanels')"><EditorIcon name="layout" /><span>{{ t('layout') }}</span></summary>
       <div class="workspace-popover" role="group" :aria-label="t('layoutPanels')">
         <h3>{{ t('layoutPanels') }}</h3>
@@ -29,12 +29,16 @@
         <UiButton :title="`${t('manageWorkspaces')} (Ctrl+Alt+W)`" data-doc="manual/workspaces" @click="state.workspaceManagerOpen = true"><EditorIcon name="manage" /><span>{{ t('manageWorkspaces') }}</span><i></i></UiButton>
       </div>
     </details>
-    <details v-transient-popover class="workspace-menu command-menu">
+    <details data-ui-motion-popover v-transient-popover class="workspace-menu command-menu">
       <summary :aria-label="t('commands')" :title="t('commands')"><EditorIcon name="search" /><span>{{ t('commands') }}</span></summary>
       <div class="workspace-popover command-popover" role="group" :aria-label="t('commands')">
         <h3>{{ t('commandsAndSearch') }}</h3>
         <UiButton class="quick-trigger" data-shortcut="Ctrl+P" @click="openPalette('quick')"><EditorIcon name="search" /><span>{{ t('quickOpen') }}</span><kbd>Ctrl P</kbd></UiButton>
         <UiButton class="command-trigger" data-shortcut="Ctrl+Shift+P" @click="openPalette('commands')"><EditorIcon name="command" /><span>{{ t('commandPalette') }}</span><kbd>Ctrl Shift P</kbd></UiButton>
+        <div class="history-overflow" :aria-label="t('navigationHistory')">
+          <UiButton data-doc="manual/navigation-history" :disabled="!workspaceState.navigationBack.length" :title="`${t('navigateBack')} (Alt+←)`" @click="navigateHistory('back'); ($event.currentTarget as HTMLElement).closest('details')?.removeAttribute('open')"><EditorIcon name="back" /><span>{{ t('navigateBack') }}</span><kbd>Alt ←</kbd></UiButton>
+          <UiButton data-doc="manual/navigation-history" :disabled="!workspaceState.navigationForward.length" :title="`${t('navigateForward')} (Alt+→)`" @click="navigateHistory('forward'); ($event.currentTarget as HTMLElement).closest('details')?.removeAttribute('open')"><EditorIcon name="forward" /><span>{{ t('navigateForward') }}</span><kbd>Alt →</kbd></UiButton>
+        </div>
       </div>
     </details>
   </nav>
@@ -69,9 +73,9 @@ const contextTitle = computed(/** 生成项目与当前栏目、选中实体或�
 </script>
 
 <style scoped>
-.workspace-bar { flex:1 1 auto; min-width:0; display:flex; align-items:center; gap:var(--ui-space-xs); padding-inline:var(--ui-space-xs); overflow:visible; z-index:350; }
-.workspace-list,.history-controls { display:flex; align-items:center; gap:var(--ui-space-micro); min-width:0; }
-.workspace-list { overflow-x:auto; scrollbar-width:thin; }.workspace-list .ui-button { flex:none; }.workspace-spacer{flex:1}
+.workspace-bar { flex:1 1 auto; min-width:0; display:flex; align-items:center; gap:var(--ui-space-xs); padding-inline:var(--ui-space-xs); overflow:visible; z-index:350; container:workspace-chrome/inline-size; }
+.workspace-list,.history-controls { display:flex; align-items:center; gap:var(--ui-control-gap); min-width:0; }
+.workspace-list { min-width:calc(2 * var(--ui-control-height) + var(--ui-control-gap)); overflow-x:auto; scrollbar-width:thin; }.workspace-list .ui-button { flex:none; }.workspace-spacer{flex:1}
 .workspace-list .active{box-shadow:inset 0 -2px var(--accent)}
 .dirty{inline-size:var(--ui-space-xs);block-size:var(--ui-space-xs);border-radius:50%;background:var(--warning);flex:none}
 .context-title{min-width:0;max-width:24ch;display:grid;padding-inline:var(--ui-space-sm);border-left:1px solid var(--border-subtle)}
@@ -80,7 +84,11 @@ const contextTitle = computed(/** 生成项目与当前栏目、选中实体或�
 .workspace-menu{position:relative;flex:none}.workspace-menu summary{display:flex;align-items:center;gap:var(--ui-space-xs)}
 .workspace-popover{position:absolute;top:100%;right:0;min-width:24ch;max-width:min(38ch,90vw);padding:var(--ui-space-xs);display:grid;gap:var(--ui-space-micro);border:1px solid var(--border-strong);background:var(--surface-popover);box-shadow:var(--shadow-md);z-index:500}
 .workspace-popover h3{font-size:var(--type-caption);color:var(--text-muted);margin:var(--ui-space-xs)}.workspace-popover .ui-button{justify-content:flex-start}.workspace-popover .ui-button>span{flex:1;text-align:left}.workspace-popover kbd{margin-left:auto;font-size:var(--type-caption)}
+.history-overflow{display:none;gap:var(--ui-control-gap)}
 @media(max-width:1280px){.context-title{display:none}.workspace-menu summary>span{display:none}}
 @media(max-width:1100px){.workspace-list .label{display:none}.workspace-list .ui-button{padding-inline:var(--ui-space-xs)}}
 @media(max-width:680px){.history-controls{display:none}}
+@container workspace-chrome (max-width:64em){.context-title{display:none}.workspace-menu summary>span{display:none}}
+@container workspace-chrome (max-width:56em){.workspace-list .label{display:none}.workspace-list .ui-button{padding-inline:var(--ui-space-xs)}}
+@container workspace-chrome (max-width:40em){.history-controls{display:none}.history-overflow{display:grid}}
 </style>

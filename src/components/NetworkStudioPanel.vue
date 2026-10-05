@@ -40,7 +40,7 @@
         <div class="button-row"><button class="primary" :disabled="networkBusy || !canConnect" @click="connect">{{ t('connect') }}</button><button :disabled="networkBusy || !canConnect" @click="reconnect18">{{ nl18('reconnect') }}</button><button :disabled="networkBusy || networkState?.status === 'disabled'" @click="disconnect">{{ t('disconnect') }}</button></div>
         <div v-if="settings.networking.sessionMode === 'local'" class="button-row"><button :disabled="networkBusy || !canConnect" @click="hostLocalLobby">{{ t('hostLocalLobby') }}</button><button :disabled="!settings.networking.permissionGranted" @click="discoverLocalLobbies">{{ t('discoverLocalLobbies') }}</button></div>
         <p :class="securityGuidance.severity">{{ securityGuidance.message }}</p>
-        <div v-if="networkState?.lastError" class="danger breakable" role="alert"><p>{{ networkFailure18(networkState.lastError) }}</p><details><summary>{{ nl18('technicalDetails') }}</summary><pre>{{ networkState.lastError }}</pre></details></div>
+        <div v-if="networkState?.lastError" class="danger breakable" role="alert"><p>{{ networkFailure18(networkState.lastError) }}</p><details data-ui-motion-disclosure><summary>{{ nl18('technicalDetails') }}</summary><pre>{{ networkState.lastError }}</pre></details></div>
       </UiPropertySection>
       <UiPropertySection :title="t('peers')" class="peers-card">
         <template #actions><span>{{ networkState?.peers ?? 0 }}/{{ settings.networking.maxPeers }}</span></template>
@@ -447,7 +447,7 @@ onBeforeUnmount(/* 调用 stopLocalLobbyDirectory() 并返回调用结果。 */ 
   min-width: 0;
   display: grid;
   grid-template-columns: repeat(6, minmax(76px, 1fr));
-  gap: var(--space-1);
+  gap: var(--ui-control-gap);
   overflow-x: auto;
   overscroll-behavior-inline: contain;
 }
@@ -492,20 +492,7 @@ onBeforeUnmount(/* 调用 stopLocalLobbyDirectory() 并返回调用结果。 */ 
 .event-list,
 .packet-list,
 .timeline-list { max-width: 100%; max-height: 310px; overflow: auto; overscroll-behavior: contain; }
-.channel-row,
-.rpc-row,
-.replication-row {
-  min-width: 720px;
-  padding: var(--space-1) 0;
-  display: grid;
-  gap: var(--space-1);
-  align-items: center;
-  border-bottom: 1px solid var(--border-subtle);
-}
-.channel-row { grid-template-columns: 120px 160px 1fr 1fr 1fr 28px; }
-.rpc-row { grid-template-columns: 120px 105px 145px 90px 85px 90px 75px 28px; }
-.replication-row { min-width: 880px; grid-template-columns: minmax(120px, 1fr) 90px minmax(210px, 1.4fr) 88px 72px 105px 86px 28px; }
-.replication-row > div { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+.channel-row { min-width:0; max-width:100%; width:100%; display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,calc(240px * var(--ui-scale))),1fr)); align-items:start; gap:var(--ui-field-gap) var(--space-4); padding:var(--ui-field-gap) 0; border-bottom:var(--ui-border-width) solid var(--border-separator); }
 .peers-card article,
 .lobby-list article { padding: var(--space-2); display: flex; justify-content: space-between; gap: var(--space-2); border-bottom: 1px solid var(--border-subtle); }
 .peers-card article span,
@@ -540,7 +527,7 @@ onBeforeUnmount(/* 调用 stopLocalLobbyDirectory() 并返回调用结果。 */ 
 .instance-card-title output.running { color: var(--success); border-color: color-mix(in srgb, var(--success) 45%, var(--border-subtle)); }
 .instance-card-title output.exited,
 .instance-card-title output.stopped { color: var(--text-muted); }
-.instance-card-actions { margin-top: var(--space-1); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-1); }
+.instance-card-actions { margin-top: var(--space-1); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--ui-control-gap); }
 .instance-detail { margin-top: var(--space-2); padding: var(--space-2); border: 1px solid var(--border-subtle); background: var(--surface-1); }
 .instance-detail > header { display: flex; justify-content: space-between; gap: var(--space-2); }
 .instance-detail > header span { display: flex; flex-direction: column; min-width: 0; }
@@ -566,21 +553,7 @@ onBeforeUnmount(/* 调用 stopLocalLobbyDirectory() 并返回调用结果。 */ 
 
 @container (max-width: 880px) {
   .service-selector-grid { grid-template-columns: 1fr; }
-  .channel-row,
-  .rpc-row,
-  .replication-row {
-    min-width: 0;
-    margin-bottom: var(--space-2);
-    padding: var(--space-2);
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    border: 1px solid var(--border-subtle);
-    background: var(--surface-3);
-  }
-  .channel-row > *,
-  .rpc-row > *,
-  .replication-row > * { min-width: 0; width: 100%; }
-  .replication-row > strong,
-  .replication-row > div { grid-column: 1 / -1; }
+  .channel-row > * { min-width: 0; width: 100%; }
 }
 
 @container (max-width: 620px) {
@@ -594,11 +567,6 @@ onBeforeUnmount(/* 调用 stopLocalLobbyDirectory() 并返回调用结果。 */ 
   .metrics-card dl { grid-template-columns: 1fr; }
   .instance-detail dl { grid-template-columns: 1fr; }
   .table-scroll { max-height: 360px; }
-  .channel-row,
-  .rpc-row,
-  .replication-row { display: flex; flex-wrap: wrap; }
-  .replication-row > strong,
-  .replication-row > div { flex-basis: 100%; }
   .event-list article,
   .timeline-list article { grid-template-columns: 62px minmax(0, 1fr); }
   .event-list article span,
@@ -617,8 +585,13 @@ onBeforeUnmount(/* 调用 stopLocalLobbyDirectory() 并返回调用结果。 */ 
 .network-draft-error { flex: 0 0 auto; max-height: 25%; overflow: auto; margin: 0; padding: var(--space-2) var(--space-3); color: var(--danger); overflow-wrap: anywhere; }
 .studio-header nav { grid-template-columns: repeat(6, minmax(max-content, 1fr)); }
 .table-scroll { max-height: none; overflow: visible; }
-.channel-row, .rpc-row, .replication-row { min-width: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); align-items: start; gap: var(--space-3); padding: var(--space-3) 0; }
 .replication-row > strong, .replication-row > fieldset { grid-column: 1 / -1; min-width: 0; overflow-wrap: anywhere; }
 .replication-row fieldset { display: flex; flex-wrap: wrap; gap: var(--space-2); border: 1px solid var(--border-subtle); padding: var(--space-2); }
 .replication-row > .toggle-field { flex-direction: row; align-items: center; }
+/* Populated channel rows reflow independently of the wider protocol section. */
+.rpc-row, .replication-row{min-width:0;max-width:100%;width:100%;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,calc(240px * var(--ui-scale))),1fr));align-items:start;gap:var(--ui-field-gap) var(--space-4);padding:var(--ui-field-gap) 0;border-bottom:var(--ui-border-width) solid var(--border-separator);}
+.channel-row :deep(.ui-property-row), .rpc-row :deep(.ui-property-row), .replication-row :deep(.ui-property-row){grid-template-columns:minmax(0,1fr);align-items:start;row-gap:var(--ui-label-control-gap);min-width:0;max-width:100%}
+.channel-row :deep(.ui-property-control), .rpc-row :deep(.ui-property-control), .replication-row :deep(.ui-property-control){min-width:0;max-width:100%}
+.channel-row :deep(.ui-property-control>input), .channel-row :deep(.ui-property-control>select), .rpc-row :deep(.ui-property-control>input), .rpc-row :deep(.ui-property-control>select), .replication-row :deep(.ui-property-control>input), .replication-row :deep(.ui-property-control>select){min-width:0;max-width:100%}
+.channel-row>button, .rpc-row>button, .replication-row>button{align-self:end;justify-self:end;width:auto}
 </style>

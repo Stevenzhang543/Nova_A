@@ -1,4 +1,14 @@
-# Nova_A 26.35 Complete Manual
+# Nova_A 26.37 Complete Manual
+
+Engine: **26.37.0** · Project Format 2/schema 29.
+
+<!-- NOVA_V2636_BRANDING -->
+## 26.36 — Supplied light and dark branding
+
+Engine: **26.36.0** · Project Format 2/schema 29.
+
+The launcher, editor chrome and this manual use the supplied Nova_A PNG artwork. Changing the editor or manual color theme selects the matching light or dark mark and favicon. Windows and installed Web icons use a fixed dark artwork derivative because the operating system chooses its own background. Control sizes, editor workflows, game rendering, saved projects and reduced-motion behavior remain unchanged. Keep the complete Web build together when deploying an update. Only fresh source-bound release evidence qualifies the packaged artifacts; visual inspection does not certify physical devices or clean installation.
+<!-- NOVA_V2636_BRANDING_END -->
 
 ## 26.35 — Softer editor, immediate interaction
 
@@ -20151,3 +20161,10 @@ Use this release workflow to learn, migrate, verify and ship a complete project 
 
 <!-- NOVA_V6_TEACHING_END -->
 
+
+
+## 26.37 — Comfortable editor
+
+Engine **26.37.0** · Project Format2/schema29.
+
+Comfortable is the default: text and values16, inputs and buttons44, panel radius16 and dialog radius24. Snappy/Smooth/Elastic share finite, interruptible presentation; values and pointer coordinates respond directly. Reduced Motion persists and respects the system setting. Release evidence distinguishes implementation, software-browser verification and physical-device limits.

@@ -249,3 +249,21 @@ Selective 10 px blur applies only to transient menu/palette surfaces, with opaqu
 Actual 200% text inspection found that disclosure and four inline actions consumed the selected object name. A font-relative container breakpoint replaces those actions with the existing shared SVG menu, containing Pin/Unpin, Visibility, Lock and Enabled. Scene and selection navigation use the same bounded overflow pattern. Empty disclosure placeholders and redundant row ID/status presentation yield space; full names, IDs and statuses remain available in tooltips and the object menu. Existing handlers, native drag targets, fixed virtual row heights and breadcrumb geometry remain authoritative. The hierarchy's edit guard now also honors the existing recovery read-only flag, matching the toolbar. Closing or hiding the owning interface, or deleting the menu's object UUID, disposes its transient menu; it never retargets actions to a new selection.
 
 Actual public read-only recovery testing exposed an all-disabled Scene menu whose trigger retained focus. The shared menu now focuses its existing keyboard-focusable root when no enabled entry exists. Escape remains usable without enabling a forbidden action or changing normal first-entry focus.
+
+## 26.36 — Preserve supplied PNG branding and its theme variants
+
+**Decision:** The supplied light/dark PNG artwork is the brand source. Use bounded resized derivatives for launcher/editor/manual identity, live theme-matching browser favicons, and a fixed dark derivative for Windows/PWA/exported-player icons. Preserve the existing logo/control geometry and accessible application names; decorative images have empty alternatives. The manual follows its own existing theme preference, independently of editor state.
+
+**Rationale:** Theme-specific supplied artwork preserves the requested identity without redrawing it or mixing it with the old literal N/vector mark. Operating-system icon backgrounds are not controlled by the editor theme.
+
+**Alternatives considered:** A newly drawn vector approximation or another wholesale UI redesign. Rejected because neither is requested and either can alter the supplied identity or existing workflows.
+
+**Consequences:** Original PNGs and derivative provenance/identity are retained; complete Web packages must carry the corresponding image files. Focused actual-browser theme/manual/minimum/large-text checks and native/Web packaging qualify only this change. No engine feature, UI geometry, dependency or permission expansion.
+
+**Reconsider only if:** The user supplies replacement artwork or a concrete platform decoding/contrast defect requires a bounded derivative correction. Final qualification is authoritative only in the26.36 frozen-source release evidence.
+
+## 26.37 — Comfortable is the default, with immediate shared motion
+
+The latest user requirements supersede compact typography/control geometry and square connected docks. Adopt16px primary labels/values,44px controls with24px line +9px block padding +2px border,40px rows,56px headers,12/20/28px label/field/section spacing and20px panel insets. Use12px controls,16px panels,20px floating surfaces and24px dialogs, exposing dock contours with8px shared gutters. All type and geometry use logical CSS units and the existing saved scale exactly once. Compact remains explicit opt-in; density is derived from the existing boolean preference, without changing its storage schema.
+
+Larger scrollable/foldable regions and accessible toolbar overflow replace compression. Retain IA, data/state owners, undo/save/shortcuts and game behavior. Extend the existing finite Snappy/Smooth/Elastic motion system through real controls; do not create a parallel system or delay logical input. Reduced Motion remains persisted and system-aware. Before/after observations use the same populated36 mixed reference/Player at1600x900, UI scale1 and observed DPR1; baseline check/build/motion tests passed. Implementation and final verification are tracked separately in MIGRATION.md and release evidence.

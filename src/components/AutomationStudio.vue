@@ -7,7 +7,7 @@
         <header><strong>{{ t('automationSource') }}</strong><select v-model="template" :aria-label="t('automationSource')" @change="applyTemplate"><option v-for="item in templates" :key="item.id" :value="item.id">{{ t(item.label) }}</option></select></header>
         <UiPropertyRow :label="t('automationName')"><input v-model="state.origin" maxlength="120" :placeholder="t('automationName')"></UiPropertyRow>
         <textarea v-model="state.source" :aria-label="t('automationSource')" spellcheck="false" autocomplete="off" @input="invalidate"></textarea>
-        <details class="permissions" open><summary>{{ t('permissionReview') }}</summary><label v-for="permission in permissions" :key="permission"><input v-model="state.granted" type="checkbox" :value="permission" @change="invalidate"><span>{{ permission }}</span></label></details>
+        <details data-ui-motion-disclosure class="permissions" open><summary>{{ t('permissionReview') }}</summary><label v-for="permission in permissions" :key="permission"><input v-model="state.granted" type="checkbox" :value="permission" @change="invalidate"><span>{{ permission }}</span></label></details>
         <p v-if="state.error" class="error" role="alert">{{ state.error }}</p><p v-else class="status" role="status">{{ t(`automationPhase_${state.phase}` as Parameters<typeof t>[0]) }}<template v-if="state.lastRunAt"> · {{ state.lastRunAt }}</template></p>
       </section>
       <aside class="automation-results"><UiTabs v-model="resultsView" :items="[{ id: 'preview', label: t('transactionDiff') }, { id: 'trace', label: t('automationTrace') }]" />

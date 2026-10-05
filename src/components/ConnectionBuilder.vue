@@ -57,7 +57,7 @@
               <p :class="{ error: drawMessage }">{{ drawMessage || t('anchorHint') }}</p>
               <button v-if="drawingComplete" class="redraw-button" @click="clearDrawing"><EditorIcon name="refresh" /> {{ t('redraw') }}</button>
             </div>
-            <details v-if="drawingComplete" class="advanced-physics">
+            <details data-ui-motion-disclosure v-if="drawingComplete" class="advanced-physics">
               <summary>{{ t('connectionPhysics') }}</summary>
               <p class="rope-units17">{{ simulationLabel17('ropeUnits') }}</p>
               <div class="physics-grid">

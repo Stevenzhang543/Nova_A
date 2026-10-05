@@ -3,7 +3,7 @@
   <section class="script-workspace">
     <div class="logic-mode" :aria-busy="switching" :inert="switching || undefined">
       <UiTabs class="logic-tabs" :aria-label="t('logicAuthoringMode')" :items="modeTabs" :model-value="studio.mode" @update:model-value="setMode($event as 'code' | 'graph' | 'events')" />
-      <details class="logic-help"><summary>{{ t('help') }}</summary><p>{{ studio.mode === 'graph' ? t('visualGraphContract') : studio.mode === 'events' ? t('eventSheetContract') : t('rhaiContract') }}</p></details>
+      <details data-ui-motion-disclosure class="logic-help"><summary>{{ t('help') }}</summary><p>{{ studio.mode === 'graph' ? t('visualGraphContract') : studio.mode === 'events' ? t('eventSheetContract') : t('rhaiContract') }}</p></details>
     </div>
     <section v-if="preview" class="conversion-review" :aria-label="copy.title">
       <div class="conversion-review-actions"><UiButton v-if="conversionGate(preview.assessment) === 'review'" :disabled="switching" variant="primary" @click="continueConversion">{{ copy.continue }}</UiButton><UiButton @click="preview = null">{{ copy.cancel }}</UiButton></div>

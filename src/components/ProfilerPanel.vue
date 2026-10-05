@@ -402,10 +402,10 @@ function captureStatusKey(status: 'passed' | 'failed' | 'unavailable' | 'estimat
 .card p { margin-block: var(--space-2); line-height: var(--line-body); }
 .card label { min-height: var(--ui-standard-height); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-1) var(--space-2); padding-block: var(--space-1); color: var(--text-secondary); font-size: var(--type-dense); }
 .card label > span { flex: 1 1 var(--ui-label-width); }
-.card label > div { display: flex; flex-wrap: wrap; gap: var(--space-1); min-width: 0; }
+.card label > div { display: flex; flex-wrap: wrap; gap: var(--ui-control-gap); min-width: 0; }
 .annotation-control { flex: 1 1 var(--ui-field-width); }
 .annotation-control input { flex: 1 1 12ch; width: 0; }
-.button-row, .data-editor > header > div, .property-toggles { display: flex; flex-wrap: wrap; gap: var(--space-1); }
+.button-row, .data-editor > header > div, .property-toggles { display: flex; flex-wrap: wrap; gap: var(--ui-control-gap); }
 .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 19ch), 1fr)); gap: 0 var(--space-3); }
 .metrics article, .card dl div { min-width: 0; min-height: var(--ui-tree-row-height); display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-2); border-bottom: var(--ui-border-width) solid var(--border-subtle); font-size: var(--type-caption); }
 .metrics span { color: var(--text-muted); }.metrics strong, .card dd { margin: 0; font-variant-numeric: tabular-nums; }
@@ -419,7 +419,7 @@ function captureStatusKey(status: 'passed' | 'failed' | 'unavailable' | 'estimat
 .event-list em { font-style: normal; color: var(--text-muted); overflow-wrap: anywhere; }
 .test-list, .data-assets { display: flex; flex-direction: column; gap: var(--space-1); }.test-list > button { display: flex; flex-direction: column; align-items: start; text-align: start; }.test-list > button span { font-size: var(--type-caption); }
 .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 18ch), 1fr)); gap: var(--space-2); }.form-grid label { display: grid; align-content: start; justify-content: stretch; }.form-grid .check { display: flex; }
-.assertion-list article, .field-list article { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1); margin-block: var(--space-1); }.assertion-list article > :not(button), .field-list article > :not(button) { flex: 1 1 12ch; min-width: 0; }
+.assertion-list article, .field-list article { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ui-control-gap); margin-block: var(--space-1); }.assertion-list article > :not(button), .field-list article > :not(button) { flex: 1 1 12ch; min-width: 0; }
 .results-card > article { padding-block: var(--space-2); display: grid; gap: var(--space-1); border-bottom: var(--ui-border-width) solid var(--border-subtle); font-size: var(--type-caption); }.results-card img { max-width: 100%; }.results-card .passed { color: var(--success); }.results-card :is(.failed,.error,.timeout), .danger, .danger-button { color: var(--danger); }
 .issue-list article { display: grid; grid-template-columns: 5ch 9ch minmax(0, 1fr); gap: var(--space-1); font-size: var(--type-caption); }
 .replication-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); padding-block: var(--space-2); border-bottom: var(--ui-border-width) solid var(--border-subtle); }.replication-row > strong { flex: 1 1 16ch; }.replication-row select { width: auto; }.replication-row label { justify-content: start; }
