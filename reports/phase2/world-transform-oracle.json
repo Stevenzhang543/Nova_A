@@ -1,0 +1,23 @@
+{
+  "generatedAt": "2026-10-16T18:18:05.030Z",
+  "purpose": "Independent reference semantics that any batch or cached transform path must match exactly.",
+  "checks": [
+    {
+      "name": "Product composition matches an independently written composition",
+      "status": "passed"
+    },
+    {
+      "name": "Repeated calls are stable, so a frame-scoped cache can be compared against them",
+      "status": "passed"
+    },
+    {
+      "name": "A parent edit is visible on the next call (the property a global cache would break)",
+      "status": "passed"
+    },
+    {
+      "name": "Reparenting changes the composed result and matches the oracle",
+      "status": "passed"
+    }
+  ],
+  "status": "passed"
+}
