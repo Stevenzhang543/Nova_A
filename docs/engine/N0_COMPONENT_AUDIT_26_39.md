@@ -914,7 +914,47 @@ pnpm check                                                  # vue-tsc + tsc
 
 合计 **51 项断言**，报告写入 `reports/phase2/*.json`。
 
-### 18.2 待替换的渲染抽取调用点（已解冻范围）
+## 19. 批次进展日志（N1–N8）
+
+### 19.1 批次 A：N1 类型与文档契约（A1–A3 完成）
+
+- **A1**：生成器重写为可读形式并扩展，产出 `src/world/componentFieldDescriptions.ts`（59 kind / 595 字段 / **515 带静态默认值**）。既有 `componentPrimitiveTypes.ts` **逐字节不变**（`--check` + `git diff` 双重证明）。
+- **A2**：`componentFieldSchema.ts` 改为派生自新生成物，暴露 `optional` 与 `defaultValue`；校验器断言这两者**必须来自生成物**。
+- **A3**：`componentFieldPresentation.ts` 由类型与命名推导控件、由登记表推导分组；**数值范围/步进/单位一律留空**并写明需要源码证据。
+
+**确认的事实**：`Transform2D` **不是已登记的组件 kind**（在 `hierarchy.ts` 中），因此 `Core` 分组为空。Node 门面设计必须尊重这一点，不能把它硬塞成组件。
+
+契约层校验器现有 **13 项**全部通过。
+
+### 19.2 批次 B1：渲染抽取全部改用批量世界变换
+
+**改动**（`src/renderer/sceneRenderer.ts`，已解冻范围）：
+
+1. 批量求解不再以"存在 YSort 实体"为条件，**每帧无条件求解一次** `worldTransformsFor(entities, positioned)`，排序键与绘制循环**共用同一张表**。
+2. `submitSprite` / `submitText` 增加**可选** `worldTransforms` 参数，缺省时退回单次查询（行为保持）。
+3. 绘制循环内 shape 变换与其排序键改用该表。
+4. 纹理预加载循环改用该表（candidates 中未进入 positioned 的实体仍走回退）。
+
+**实测（合成基准）**：
+
+| 场景 | 原路径 | 每实体预计算 | 批量（本批次） | 总提速 |
+|---|---|---|---|---|
+| n=1000, depth=10 | 26.35 ms | 2.65 ms | **1.55 ms** | **17.0×** |
+| n=1000, depth=50 | 140.51 ms | 9.14 ms | **0.97 ms** | **144.2×** |
+
+**仍为逐实体调用且判定为可接受的位置**：
+- `:77/:80/:89` —— **相机**函数，按相机数量（个位数）调用，不是逐实体；
+- `:158` —— `authoredOrder` 的**回退分支**，热路径已全部显式传入 `worldY`；
+- `:249` —— **剔除判定本身**，它在 `positioned` 形成**之前**运行，此时批量表尚不存在，无法使用；
+- `:183/:220/:337/:368` —— 均已有表查询，回退分支仅在实体确实不在表内时触发（如 :368 遍历的 candidates 含被剔除实体）。
+
+**验证**：27 项变换相关检查全部通过；`pnpm check` 退出码 0。
+
+---
+
+## 20. 历史：交接锚点（round 27 记录）
+
+### 20.1 待替换的渲染抽取调用点（已解冻范围）
 
 `src/renderer/sceneRenderer.ts` 中**逐实体** `worldTransform` 调用，应改用已验证的 `worldTransformsFor`（`src/world/hierarchy.ts`）：
 

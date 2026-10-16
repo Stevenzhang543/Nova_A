@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-16T18:24:36.274Z",
+  "generatedAt": "2026-10-16T18:42:51.943Z",
   "purpose": "Independent reference semantics that any batch or cached transform path must match exactly.",
   "checks": [
     {

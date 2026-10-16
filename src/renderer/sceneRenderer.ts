@@ -3,7 +3,7 @@ import { compoundGeometries } from '../world/compoundGeometry'
 import type { Connection } from '../world/Connection'
 import type { Camera2D, ParticleEmitter2D, ShapeRenderer2D, SpriteRenderer2D, TextRenderer2D, TileMap2D } from '../world/components'
 import type { Entity } from '../world/Entity'
-import { worldTransform, worldTransformsFor } from '../world/hierarchy'
+import { worldTransform, worldTransformsFor, type WorldTransform2D } from '../world/hierarchy'
 import type { CameraRenderView, RenderColor, Renderer2D, RendererStats } from './types'
 import { canvasMaterialColor, resolveMaterial } from './materials'
 import type { TextureFilter } from './types'
@@ -175,12 +175,12 @@ function frameSpriteMesh(entity: Entity, sprite: SpriteRenderer2D, meshes: Frame
   return meshes.get(entity) ?? null
 }
 
-function submitSprite(renderer: Renderer2D, entity: Entity, sprite: SpriteRenderer2D, entities: Entity[], view: CameraRenderView, meshes: FrameSpriteMeshes, environment: SceneRendererEnvironment): void {
+function submitSprite(renderer: Renderer2D, entity: Entity, sprite: SpriteRenderer2D, entities: Entity[], view: CameraRenderView, meshes: FrameSpriteMeshes, environment: SceneRendererEnvironment, worldTransforms?: ReadonlyMap<string, WorldTransform2D>): void {
   if (!sprite.enabled || sprite.removed || !sprite.spriteAsset) return
   const state = renderState(sprite.material, sprite.filterMode, environment)
   const texture = environment.assets.resolveTexture(sprite.spriteAsset, state.sampling)
   if (!texture) return
-  const transform = worldTransform(entity, entities)
+  const transform = worldTransforms?.get(entity.uuid) ?? worldTransform(entity, entities)
   const base = authoringPosition(entity, transform.position, entities, view), parallaxLayer = ancestorParallax(entity, entities), parallax = parallaxLayer?.authoring.parallax
   const repeatX = parallax && parallax.repeat.x > 0 ? [-1, 0, 1] : [0], repeatY = parallax && parallax.repeat.y > 0 ? [-1, 0, 1] : [0]
   const mesh = frameSpriteMesh(entity, sprite, meshes, environment)
@@ -215,9 +215,9 @@ function renderedPathVertices(entity: Entity): Array<{ x: number; y: number }> {
 }
 
 /* 解析导入字体及回退字体，提交包含描边、对齐和作者层级的文本命令。 */
-function submitText(renderer: Renderer2D, entity: Entity, text: TextRenderer2D, entities: Entity[], view: CameraRenderView, environment: SceneRendererEnvironment): void {
+function submitText(renderer: Renderer2D, entity: Entity, text: TextRenderer2D, entities: Entity[], view: CameraRenderView, environment: SceneRendererEnvironment, worldTransforms?: ReadonlyMap<string, WorldTransform2D>): void {
   if (!text.enabled || text.removed || !text.text) return
-  const transform = worldTransform(entity, entities)
+  const transform = worldTransforms?.get(entity.uuid) ?? worldTransform(entity, entities)
   const importedFont = environment.fontMetadata(text.fontAsset)
   const fallbacks = importedFont?.fallbackFamilies.map(cssFontFamily).filter(Boolean) ?? []
   const primaryFamily = cssFontFamily(importedFont?.family || text.fontFamily) || 'sans-serif'
@@ -321,8 +321,10 @@ export function renderWorld(renderer: Renderer2D, entities: Entity[], options: S
     // 在比较器内求值会把它重复 O(n log n) 次；按实体预计算一次后降为每帧 O(n) 次，排序结果不变。
     // YSort 实体需要世界 Y 作为排序键。逐实体查询会让世界变换被重复求解；这里按拓扑序批量
     // 求解一次，使每个祖先只算一次，键值与排序结果都不变。无 YSort 实体时完全跳过。
-    const needsWorldY = positioned.some(/* 仅当存在 YSort 实体时才付出批量求解成本。 */ entity => entity.authoring.sortMode === 'YSort')
-    const worldTransforms = needsWorldY ? worldTransformsFor(entities, positioned) : null
+    // 世界变换按拓扑序批量求解一次，排序键与随后的绘制循环共用同一张表。
+    // 实测 worldTransform 为 O(depth)（约 323ns/层），逐实体查询会让每个祖先被重复求解；
+    // 批量求解每个祖先只算一次，结果与逐次调用逐字段相等（见 verify-engine-world-transform-oracle）。
+    const worldTransforms = worldTransformsFor(entities, positioned)
     const orderKeys = new Map<number, number>()
     for (const entity of positioned) orderKeys.set(entity.id, authoredOrder(entity, entity.renderer.orderInLayer, entities, worldTransforms?.get(entity.uuid)?.position.y))
     // 上面的循环已覆盖 positioned 的每个实体，回退值不可达；保留它只是避免在渲染热路径抛出。
@@ -332,20 +334,20 @@ export function renderWorld(renderer: Renderer2D, entities: Entity[], options: S
       if (tileMap) for (const chunk of environment.tileChunkCommands(entity, tileMap, entities, visibleBounds, camera.view.position)) renderer.submitTileChunk(chunk)
       const shape = entity.getComponent<ShapeRenderer2D>('ShapeRenderer2D')
       if (shape) {
-        const transform = worldTransform(entity, entities)
+        const transform = worldTransforms.get(entity.uuid) ?? worldTransform(entity, entities)
         const materialState = renderState(shape.material, shape.filterMode, environment)
         renderer.submitShape({
           shape: shape.shape, position: authoringPosition(entity, transform.position, entities, camera.view), rotation: transform.rotation, scale: transform.scale,
           vertices: renderedPathVertices(entity), radiusX: shape.radiusX, radiusY: shape.radiusY,
           fill: renderer.stats.backend === 'Canvas2D' && materialState.material ? canvasMaterialColor(materialState.material, rgba(shape.color, shape.opacity)) : rgba(shape.color, shape.opacity), stroke: rgba(shape.strokeColor, compoundMembers.has(entity.id) ? 0 : shape.strokeOpacity),
           strokeWidth: shape.strokeWidth, texture: environment.assets.resolveTexture(shape.textureAsset, materialState.sampling),
-          sortingLayer: shape.sortingLayer, orderInLayer: authoredOrder(entity, shape.orderInLayer, entities), material: shape.material, blendMode: materialState.blendMode
+          sortingLayer: shape.sortingLayer, orderInLayer: authoredOrder(entity, shape.orderInLayer, entities, worldTransforms.get(entity.uuid)?.position.y), material: shape.material, blendMode: materialState.blendMode
         })
       }
       const sprite = entity.getComponent<SpriteRenderer2D>('SpriteRenderer2D')
-      if (sprite) submitSprite(renderer, entity, sprite, entities, camera.view, spriteMeshes, environment)
+      if (sprite) submitSprite(renderer, entity, sprite, entities, camera.view, spriteMeshes, environment, worldTransforms)
       const text = entity.getComponent<TextRenderer2D>('TextRenderer2D')
-      if (text) submitText(renderer, entity, text, entities, camera.view, environment)
+      if (text) submitText(renderer, entity, text, entities, camera.view, environment, worldTransforms)
     }
     environment.submitParticles(renderer, visible, entities)
     for (const compound of compounds) {
@@ -363,7 +365,7 @@ export function renderWorld(renderer: Renderer2D, entities: Entity[], options: S
       for (const entity of candidates) {
         if (preloadJobs.length >= 256) break
         if (drawn.has(entity)) continue
-        const position = worldTransform(entity, entities).position
+        const position = (worldTransforms.get(entity.uuid) ?? worldTransform(entity, entities)).position
         if (position.x < bounds.minX || position.x > bounds.maxX || position.y < bounds.minY || position.y > bounds.maxY) continue
         preloadJobs.push(/* 预加载实体精灵、形状、粒子及相关材质使用的纹理。 */ () => {
           const sprite = entity.spriteRenderer, shape = entity.getComponent<ShapeRenderer2D>('ShapeRenderer2D'), particles = entity.getComponent<ParticleEmitter2D>('ParticleEmitter2D')
