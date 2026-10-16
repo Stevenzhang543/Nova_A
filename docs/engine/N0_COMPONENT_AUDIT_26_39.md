@@ -137,7 +137,7 @@
 ## 8. 结论与本轮起点
 
 1. **可运行基线成立且干净**：工作区 == 已发布 26.38 源码（4090 文件逐字节一致），14 项门禁与 11 文件发行包均已独立验证。
-2. **生产实现的前置条件**：门槛 2、3 满足；门槛 1 部分满足；**门槛 4（交接 commit）与门槛 5（Owner/冲突清单）未满足** → 在补齐前，触及 Runtime/Worker/ABI/Renderer/调度/锁文件的改动标 `BLOCKED_UPSTREAM`。
+2. **生产实现的前置条件**：门槛 2、3 满足；门槛 4（交接 commit `5917d0d`）与门槛 5（冻结面 Owner/冲突清单，§10）**已于本轮补齐**；**仅门槛 1（Player 依赖边界）仍为 PARTIAL**，已列为 N2/N7 工作项。冻结面（§10.1）内的改动仍标 `BLOCKED_UPSTREAM`，须先显式解冻。
 3. **本轮 N1 起手点**（不依赖被阻塞区域，可立即进行）：
    - 建立统一 TypeDescriptor / 属性 schema / 信号契约源（§6），先覆盖 Sprite2D、Camera2D、CharacterBody2D、Area2D、Control、Timer；
    - 补齐 C02 与 C10 的测试地基（当前为零覆盖）；
@@ -261,3 +261,27 @@
 4. **证明与 Rust 侧 `nova_format` 既有 schema 一致而非重复权威**（字段名/类型/可选性对齐；冲突必须报错而不是静默二选一）。
 5. **补齐主指令要求但完全缺失的 2 项**：`Timer`（模拟时间 vs 真实时间、暂停模式；现仅 `Cooldown2D`/`Lifetime2D`）与 `Control` 相对 `Node2D` 的显式语义分离。
 6. **为 C02（变换/reparent）与 C10（Y-Sort）建立测试地基**——两者现有测试文件数为 **0**。
+
+---
+
+## 12. 附录：D 范围（资源 / VFS / 导出 / Player / 上游文档）审计结论
+
+| # | 项 | 状态 | 关键证据 | 本轮动作 |
+|---|---|---|---|---|
+| 1 | 图片/音频导入器 | PARTIAL | `src/assets/importPipeline.ts:169`；缓存键 :82、原子写 :121、取消 :249 齐全；**产物为原始字节 :202/218，无变体**；watcher 为 1s 轮询 :278 | INTEGRATE |
+| 2 | 资源数据库 | PARTIAL | `src/assets/AssetDatabase.ts:65,698,721`；generation :40、事务回滚 :379；**无租约表** | REUSE |
+| 3 | 侧车元数据契约 | PARTIAL | `src/assets/projectFolder.ts:55,56`；**只写无读回路径** | DEFER_WITH_REASON |
+| 4 | 图集 / 精灵稳定 ID | PARTIAL | `src/runtime/runtimeAtlas.ts:38`；**图集不序列化、导出不烘焙，无端到端证据** | INTEGRATE |
+| 5 | **VFS `res:// user:// cache://`** | **MISSING** | `src/` 内三种 scheme 匹配 **0**；等效面为 `asset://`(AssetDatabase.ts:698) 与 PAK | IMPLEMENT（限 assetId + PAK 索引路由） |
+| 6 | 资源缓存与租约 | PARTIAL | `runtimeMediaOwner.ts:58,44,205`、`requiredResourceUpload.ts:106`；**缺 Scene 级租约与统一迟到结果 epoch 门** | INTEGRATE |
+| 7 | nova-pak 包格式 | **COMPLETE_VERIFIED** | `novaPak.ts:58`、`runtime_pak_preflight.rs:88`；TS/Rust 双实现 + 黄金语料 | REUSE |
+| 8 | Web 导出 | PARTIAL | `gameExporter.ts:197`；依赖 `store/editor`、`store/physics` :7-8；**无单 HTML 产物** | REUSE |
+| 9 | 原生导出 / Player 模板 | PARTIAL | `src-tauri/src/lib.rs:2685,2709`；EXE 仍为 WebView2 宿主 | REUSE |
+| 10 | **独立 Player（门槛 1）** | **BROKEN（边界）** | `PlayerApp.vue:73,45,50,62` import 编辑器 store / WorldCanvas / adapter / AssetDatabase；`player.ts:25` 自述 M1 gap；Editor 与 Player 共用 Tauri 标识 | REPAIR |
+| 11 | 构建设置 | PARTIAL | `buildSettings.ts:74-125`；`FEATURE_MATRIX.md:27` 记 U=PARTIAL | REUSE |
+
+**本轮新增执行脚本**：`scripts/verify-engine-component-schema.mjs`（8 项检查，全部通过；报告 `reports/phase2/component-schema-baseline.json`），机械固定登记表 / 生成式字段契约 / 世界声明 / Inspector 分支四者不漂移，并**记录**而非隐藏登记表缺口（`CanvasLayer`、`ParallaxLayer`、`Path` 被 Inspector 支持但未登记进 `STABLE_COMPONENTS`）。
+
+**新增缺口记录（登记表 vs Inspector）**：`CanvasLayer`、`ParallaxLayer`、`Path` 在 `src/world/Entity.ts:33-34` 的实体种类联合中存在，Inspector 也有分支，但**不在 `STABLE_COMPONENTS`**。N1 必须决定：登记它们，或移除分支；不得两套权威并存（§31）。
+
+**上游明示未完成（本轮不得假设已完成）**：WebGPU NOT PRESENT；compiled Worker 生产入口未完成；原生与 Web Player 隔离未完成；QualityLocked / AdaptiveExperience 分别 NOT_TESTED；Linux、签名、clean-machine NOT_TESTED；`FEATURE_MATRIX` 停 26.34。
