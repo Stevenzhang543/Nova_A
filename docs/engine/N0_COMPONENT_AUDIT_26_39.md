@@ -368,3 +368,49 @@
 3. **G2 投影失效收敛**、**G4 信号预算与 C04**、**G5 输入仲裁源**、**G9 active list** 均落在**冻结面**内，须先解冻。
 
 > 交叉印证：A、B 两路审计**独立**得出同一条结论——"Player 依赖边界未闭合"是唯一的硬门槛缺口；且都指出活动集/脏标记缺失（A 的 Transform dirty、B 的 active list），二者在缓存与失效策略上应一并设计，而不是各修一处。
+
+---
+
+## 15. 附录：C 范围（编辑器信息架构与工作流）审计结论
+
+> 记录说明：C 组结论在上一轮已收到，但当时未写入本文件；此处补录，并更正上一轮"四路已全部归档"的失实表述。
+
+**判定口径**：静态阅读源码 + 主指令 §21–§25/§30；**运行期结论一律 NOT_TESTED**。
+
+### 15.1 结构性阻塞（按严重度）
+
+| # | 缺口 | 证据 | 违反 |
+|---|---|---|---|
+| **G1** | **Command Registry 完全缺失**：`src/editor/commands.ts` 实为 Undo 历史（execute/undo/redo/merge），非 §22.2 注册表；`commandId`/`enabledWhen`/`visibleWhen` 全仓仅两处无关命中；**同一动作重复实现于 TopBar / CommandPalette / ContextMenu / ActionBar / ProfilerPanel 五处** | `commands.ts:20-81`；播放逻辑 `ActionBar.vue:40-47`、`CommandPalette.vue:110-121`、`ProfilerPanel.vue:378` | §22.2 |
+| **G5** | **Play 未建独立世界**：物理直接跑在 `physicsState.world` 上，**Stop 依赖 `loadProject` 整份快照字符串复原**；**无 "Apply Runtime Changes"（全库 0 命中）**；Preview 无独立模式 | `store/physics.ts:83,846-855,857-863` | §24、§5.3 —— **架构性违背** |
+| **G6** | **事务成本与取消不安全**：事务粒度 = **整份 `getSceneJSON` 字符串**，提交时前后各驻留一份；**编辑态 Escape 只置 `gizmoDrag=null`，不还原基准快照、不 pushHistory** → 已写入位移成为**不可撤销的残留** | `physics.ts:1120-1138`；`WorldCanvas.vue:622,720,938-943` | §24 —— **唯一会静默损坏用户数据的缺陷** |
+| **G7** | **Signals 层完全缺失**：全仓无 Godot 式信号注册/连接/签名校验（`"signal"` 仅出现在 AreaEffector 参数、组件摘要、i18n 标签）；`ConnectionBuilder.vue` 实为**物理路径连接**对话框（anchors/restLengths），语义不同。Groups 仅 `entity.groups` 字段，无组管理面板 | `componentRegistry.ts:53-68`；`simulationAuthoring26.ts:113-119` | §5.3、§23.4 |
+| **G3** | **关键动作图标化**：61 个纯图标 `UiButton`，含**添加/导入/新建脚本/新建文件夹/建场景资源**等 §22.1 明令需文字的动作 | `EditorBottomPanel.vue:41-46`；`ToolBar.vue:113-123` | §22.1 |
+| **G4** | 运行项目 / 运行当前场景 / 导出**无顶层文字入口、无快捷键**；可改快捷键仅 10 条，保存/撤销/删除/工具/运行全部硬编码 | `shortcuts.ts:7-18`；`TopBar.vue:223-246` | §22 |
+| **G2** | **顶层 IA 语义重叠**：菜单"调试"（`i18n.ts:146`）与工作区"调试"（`i18n.ts:267`）同名不同层；命令面板标 `Ctrl K`（`TopBar.vue:78`）而实际绑定为 `Ctrl+Shift+P`（`shortcuts.ts:8`），`WorkspaceBar.vue:37` 又写第三种 | 同上 | §21 |
+| **G8** | Inspector 无 Local/Remote 标注与远程只读语义（0 命中；Play 时仅整面板 inert，显示的仍是同一文档对象）；**无滚动位置保持**（0 命中） | `ConfigPanel.vue:7-19,369` | §23.3 |
+
+补充：`SceneSideBar.vue` 无 **Keep World/Local** 重挂选择（0 命中）；`createAuthoringObject(kind, position)` **无 parent 参数**，只能建根节点，无"添加到选中节点下"。
+
+### 15.2 已验证可复用
+
+- **动效与 Comfortable token 逐值核对一致**（主字号 14/16/18、控件 44、树行 40、图标 22、圆角 8–24、间距 4–32；Snappy/Smooth/Elastic 700/34、360/28、480/22 与 120/180/240/320ms；Reduced Motion 双通道）→ REUSE
+- ToolBar 变换工具全set（Q/W/E/R、吸附、Local/World、pivot、frame、对齐分布、参考线）→ REUSE
+- 工具模式工具栏、工作区持久化与导航历史、Inspector 分组/草稿/预制体覆盖、Undo 事务的 mergeKey/嵌套回滚/上限 → 均 PARTIAL 但基础可用
+
+### 15.3 §30 可用性走查（工程师走查，非新手研究）
+
+| 检查 | 判定 |
+|---|---|
+| 不懂类名能否搜到 | 部分（添加节点按用途/摘要/依赖搜；但列表仍用 `kind` 而非用途名） |
+| 能否区分项目/场景/资源/运行实例 | **一般**（有项目名与场景脏点/P 标记，**无 Local/Remote 与运行实例视图**） |
+| 不靠 tooltip 看懂关键按钮 | **否**（61 个纯图标，含添加/导入/新建） |
+| 能否找到六个关键动作 | 部分（添加节点 4 入口；实例化在资源详情；附加脚本未文字化；**连接信号 MISSING**；**运行当前场景 MISSING**；导出藏在溢出菜单） |
+| Inspector 保持分组/草稿/滚动 | 分组与草稿可；**滚动无实现**（未验证） |
+| 缺失项能否定位并给出修复路径 | 部分（`issue.fix` 文案已存在但**入口只显示 code**） |
+| 键盘可达性 | 部分（焦点环 + 4 处焦点陷阱；**运行/停止无快捷键**） |
+| 后台任务时即时反馈 | 部分（状态栏计数 + 任务中心；**重负载拖拽 NOT_TESTED**） |
+
+### 15.4 四路审计的合并结论
+
+C 组与 B 组**独立**判定"信号层缺失/无预算"；C 组的 G5（Play 未隔离世界）与 A/B 的 Player 边界问题是**同一根源**的两个表现（Runtime 与 Editor 世界未分离）。**唯一会静默损坏用户数据的是 G6（Escape 取消不还原）**，故列为下一轮最高优先级。
