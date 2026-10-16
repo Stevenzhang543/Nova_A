@@ -46,6 +46,7 @@ import { activeGameCameras, resetCameraSmoothing } from '../renderer/sceneRender
 import { activeRenderQuality, renderingSettings } from '../renderer/renderSettings'
 import { prepareColliderSet } from '../runtime/physicsGeometry'
 import { recordEntityProperties } from '../editor/animationStudioState'
+import { captureVertexBaseline, restoreVertexBaseline, type VertexBaseline } from '../editor/vertexDrag'
 import { navigationPaths, worldGameplayState } from '../runtime/worldGameplay'
 import { aiDebugState } from '../runtime/aiTools'
 import { worldStreamingState } from '../runtime/worldStreaming'
@@ -175,7 +176,7 @@ let idleFrameTimer: ReturnType<typeof setTimeout> | null = null
 let performanceSampleCounter = 0, profileFrameCounter = 0, cachedPerformanceSample = { allocations: 0, assetJobs: 0 }
 
 let hoveredVertex: { entityId: number, index: number, target: 'shape' | 'renderer' | 'collider', virtualPos?: Vec2 } | null = null
-let dragMeta: { initialScaleX: number, initialScaleY: number, initialDist: number } | null = null
+let dragMeta: { initialScaleX: number, initialScaleY: number, initialDist: number, vertexBaseline: VertexBaseline } | null = null
 let dragEntityId: number | null = null; 
 let canvasDragMode: 'none' | 'draw' | 'marquee' = 'none'
 let marqueeSelectionMode: 'replace' | 'add' | 'toggle' = 'replace'
@@ -319,7 +320,7 @@ watch(/* 返回 editorState.currentPage 的当前值。 */ () => editorState.cur
   event.preventDefault(); event.stopPropagation(); gameUiRuntime.pointerUp(screenPos(event)); touchPointer = null
   if (canvasRef.value?.hasPointerCapture(event.pointerId)) canvasRef.value.releasePointerCapture(event.pointerId)
 }
-/** 当前指针取消时终止交互并清空触摸状态。 */ function onUiPointerCancel(event: PointerEvent) { if (event.pointerId === touchPointer) { gameUiRuntime.pointerCancel(); touchPointer = null } if (gizmoDrag) cancelActiveCanvasDrag() }
+/** 当前指针取消时终止交互并清空触摸状态。 */ function onUiPointerCancel(event: PointerEvent) { if (event.pointerId === touchPointer) { gameUiRuntime.pointerCancel(); touchPointer = null } if (gizmoDrag || isVertexDragging) cancelActiveCanvasDrag() }
 
 let canvasLogicalWidth = 0, canvasLogicalHeight = 0
 /** 综合设备像素比、画质上限、自适应比例和分辨率缩放计算有界像素比。 */ function desiredCanvasPixelRatio(width: number, height: number) {
@@ -619,7 +620,7 @@ function onWheel(e: WheelEvent) {
     isManualDrawing = false
     editorState.statusText = t('ready')
   }
-  if (gizmoDrag) { cancelActiveCanvasDrag(); return }
+  if (gizmoDrag || isVertexDragging) { cancelActiveCanvasDrag(); return }
   gizmoDrag = null
   canvasDragMode = 'none'
 }
@@ -733,7 +734,8 @@ const drawTools = new Set(['rectangle', 'circle', 'triangle'])
   dragMeta = {
     initialScaleX: entity.transform.scale.x,
     initialScaleY: entity.transform.scale.y,
-    initialDist: Math.max(0.1, Math.hypot(point.x - position.x, point.y - position.y))
+    initialDist: Math.max(0.1, Math.hypot(point.x - position.x, point.y - position.y)),
+    vertexBaseline: captureVertexBaseline(entity)
   }
   return true
 }
@@ -926,6 +928,15 @@ function cancelActiveCanvasDrag() {
     restoreTransforms(gizmoDrag.snapshots, world.entities)
     recordEntityProperties(gizmoDrag.snapshots.map(/* 收集被还原的实体以刷新属性显示。 */ snapshot => snapshot.entity))
     editorState.statusText = t('ready')
+  }
+  // 顶点拖动同样直接改写文档几何，取消时必须整体还原，否则位移成为不可撤销的残留。
+  if (isVertexDragging && dragEntityId !== null && dragMeta) {
+    const entity = world.entities.find(/* 比较 candidate.id 与 dragEntityId，返回严格相等的判断结果。 */ candidate => candidate.id === dragEntityId)
+    if (entity) {
+      restoreVertexBaseline(entity, dragMeta.vertexBaseline)
+      recordEntityProperties([entity])
+      editorState.statusText = t('ready')
+    }
   }
   finishCanvasDrag()
 }

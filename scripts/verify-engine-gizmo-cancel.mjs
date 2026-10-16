@@ -10,8 +10,8 @@ async function test(name, run) {
 }
 
 const opened = await openMediaAuditModules({ repository: process.cwd(), bases: [process.cwd()] },
-  { gizmo: 'editor/gizmo', box: 'world/BoxEntity', hierarchy: 'world/hierarchy' })
-const { gizmo, box, hierarchy } = opened.modules
+  { gizmo: 'editor/gizmo', box: 'world/BoxEntity', hierarchy: 'world/hierarchy', vertexDrag: 'editor/vertexDrag' })
+const { gizmo, box, hierarchy, vertexDrag } = opened.modules
 const canvasSource = fs.readFileSync('src/components/WorldCanvas.vue', 'utf8').replaceAll('\r\n', '\n')
 
 const makeWorld = () => [new box.BoxEntity(1, { x: 10, y: 20 }, { x: 1, y: 1 }), new box.BoxEntity(2, { x: -5, y: 7 }, { x: 2, y: 3 })]
@@ -73,8 +73,54 @@ await test('The editor Escape path cancels through the restore helper', () => {
   const start = canvasSource.indexOf("if (event.key !== 'Escape') return")
   assert.ok(start >= 0, 'the Escape branch must exist')
   const escapeBlock = canvasSource.slice(start, start + 600)
-  assert.ok(/if \(gizmoDrag\) \{ cancelActiveCanvasDrag\(\); return \}/.test(escapeBlock),
-    'Escape must cancel an active gizmo drag through the shared helper')
+  assert.ok(/if \(gizmoDrag \|\| isVertexDragging\) \{ cancelActiveCanvasDrag\(\); return \}/.test(escapeBlock),
+    'Escape must cancel an active gizmo or vertex drag through the shared helper')
+})
+
+await test('Vertex drag cancel restores geometry and scale to the captured baseline', () => {
+  const entity = new box.BoxEntity(1, { x: 3, y: 4 }, { x: 1, y: 1 })
+  const baseline = vertexDrag.captureVertexBaseline(entity)
+  const before = JSON.parse(JSON.stringify({
+    scale: { x: entity.transform.scale.x, y: entity.transform.scale.y },
+    vertices: entity.vertices,
+    rendererVertices: entity.renderer.vertices,
+    colliderVertices: entity.collider.vertices ?? [],
+    pathPoints: entity.authoring.path.points,
+  }))
+  // Simulate what a vertex drag writes straight into the document.
+  entity.transform.scale.x = 7
+  entity.transform.scale.y = 0.25
+  entity.vertices = entity.vertices.map(/** 位移基础顶点。 */ v => ({ x: v.x + 11, y: v.y - 3 }))
+  entity.renderer.vertices = entity.renderer.vertices.map(/** 位移渲染顶点。 */ v => ({ x: v.x + 5, y: v.y + 9 }))
+  if (entity.collider.vertices) entity.collider.vertices = entity.collider.vertices.map(/** 位移碰撞顶点。 */ v => ({ x: v.x - 2, y: v.y + 6 }))
+  entity.authoring.path.points = entity.authoring.path.points.map(/** 位移路径点。 */ p => ({ x: p.x + 1, y: p.y + 2 }))
+  vertexDrag.restoreVertexBaseline(entity, baseline)
+  assert.equal(entity.transform.scale.x, before.scale.x)
+  assert.equal(entity.transform.scale.y, before.scale.y)
+  assert.deepEqual(entity.vertices, before.vertices)
+  assert.deepEqual(entity.renderer.vertices, before.rendererVertices)
+  assert.deepEqual(entity.authoring.path.points, before.pathPoints)
+  if (entity.collider.vertices) assert.deepEqual(entity.collider.vertices, before.colliderVertices)
+})
+
+await test('Vertex baseline is a copy: later edits cannot corrupt what will be restored', () => {
+  const entity = new box.BoxEntity(2, { x: 0, y: 0 }, { x: 1, y: 1 })
+  const baseline = vertexDrag.captureVertexBaseline(entity)
+  entity.renderer.vertices = entity.renderer.vertices.map(/** 破坏当前几何。 */ v => ({ x: 999, y: 999 }))
+  entity.vertices = entity.vertices.map(/** 破坏当前基础顶点。 */ v => ({ x: 777, y: 777 }))
+  vertexDrag.restoreVertexBaseline(entity, baseline)
+  assert.ok(entity.renderer.vertices.every(/** 还原后不应残留破坏值。 */ v => v.x !== 999 && v.y !== 999))
+  assert.ok(entity.vertices.every(/** 还原后不应残留破坏值。 */ v => v.x !== 777 && v.y !== 777))
+})
+
+await test('Vertex drag capture and cancel are wired into the editor paths', () => {
+  assert.ok(canvasSource.includes('vertexBaseline: captureVertexBaseline(entity)'), 'beginVertexDrag must capture the baseline')
+  const helper = canvasSource.slice(canvasSource.indexOf('function cancelActiveCanvasDrag()'))
+  const body = helper.slice(0, helper.indexOf('\n}'))
+  assert.ok(body.includes('restoreVertexBaseline(entity, dragMeta.vertexBaseline)'), 'cancel must restore vertex geometry')
+  assert.ok(body.indexOf('restoreVertexBaseline') < body.indexOf('finishCanvasDrag()'), 'restore must precede teardown')
+  assert.ok(/if \(gizmoDrag \|\| isVertexDragging\) \{ cancelActiveCanvasDrag\(\); return \}/.test(canvasSource), 'Escape must cover vertex drags')
+  assert.ok(canvasSource.includes('if (gizmoDrag || isVertexDragging) cancelActiveCanvasDrag()'), 'pointercancel must cover vertex drags')
 })
 
 await test('Both cancel entry points share one restore helper', () => {
@@ -85,8 +131,8 @@ await test('Both cancel entry points share one restore helper', () => {
   assert.ok(body.includes('finishCanvasDrag()'), 'the helper must still clear the drag state')
   assert.ok(body.indexOf('restoreTransforms') < body.indexOf('finishCanvasDrag()'), 'restore must precede clearing')
   // Escape and pointercancel must both route through it rather than reimplementing the teardown.
-  assert.ok(/if \(gizmoDrag\) \{ cancelActiveCanvasDrag\(\); return \}/.test(canvasSource), 'Escape must call the helper')
-  assert.ok(canvasSource.includes('if (gizmoDrag) cancelActiveCanvasDrag()'), 'pointercancel and lostpointercapture must call the helper')
+  assert.ok(/if \(gizmoDrag \|\| isVertexDragging\) \{ cancelActiveCanvasDrag\(\); return \}/.test(canvasSource), 'Escape must call the helper')
+  assert.ok(canvasSource.includes('if (gizmoDrag || isVertexDragging) cancelActiveCanvasDrag()'), 'pointercancel and lostpointercapture must call the helper')
   const cancelHandler = canvasSource.slice(canvasSource.indexOf('function onUiPointerCancel'))
   assert.ok(cancelHandler.slice(0, 260).includes('cancelActiveCanvasDrag()'), 'the pointer cancel handler must route to the helper')
 })

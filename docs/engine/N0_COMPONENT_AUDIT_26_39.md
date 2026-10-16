@@ -455,4 +455,22 @@ C 组与 B 组**独立**判定"信号层缺失/无预算"；C 组的 G5（Play �
 
 **状态**：`IMPLEMENTED`（有行为证据），仍**未**在真实 GUI 中人工触发一次 pointercancel 走查，故不标 VERIFIED。
 
-**本轮明确未处理（不掩盖）**：**顶点拖动（vertex drag）的取消仍不还原**——`isVertexDragging` 在 `finishCanvasDrag` 中仅被复位，其基准保存在 `dragMeta`/比例中，未纳入还原路径。这与 G6 同类（直接改写 `renderer.vertices` 与 `authoring.path.points`），但需要的基准信息不同，留作下一轮独立处理。
+### 16.3 G6 最后一面已闭合：顶点拖动取消还原
+
+**问题**：顶点拖动在移动中**直接改写** `entity.vertices` / `entity.renderer.vertices` / `entity.collider.vertices` / `authoring.path.points` 与 transform scale，而 `dragMeta` 只保存了右键缩放模式需要的 `initialScaleX/Y` 与 `initialDist`。取消时 `finishCanvasDrag()` 仅把 `isVertexDragging` 复位 → 几何改动同样被遗留且不入历史。**与 G6 是同一缺陷的第三面。**
+
+**修复**：
+1. 新增 `src/editor/vertexDrag.ts`（**独立模块以便行为验证**，不再内联在 SFC 中）：`captureVertexBaseline(entity)` 复制 scale 与四个几何数组；`restoreVertexBaseline(entity, baseline)` 整体写回。
+2. `beginVertexDrag` 在开始拖动时捕获基准，存入 `dragMeta.vertexBaseline`。
+3. `cancelActiveCanvasDrag` 在变换还原之外增加顶点还原；两个入口（Escape / pointercancel）的条件放宽为 `gizmoDrag || isVertexDragging`。
+
+**类型正确性（由 `pnpm check` 捕获）**：初版把 `vertices` 当作 `Entity` 的固有字段，`vue-tsc` 报 **TS2339 `Property 'vertices' does not exist on type 'Entity'`**——`vertices` 只存在于形状实体。已改为显式结构化访问（`readShapeVertices` + `Array.isArray` 守卫），**不是用 `as any` 掩盖**，因此非形状实体不会被误写。
+
+**证据**：`scripts/verify-engine-gizmo-cancel.mjs` 扩展到 **9 项全部通过**，其中顶点相关 3 项：
+- 拖动写入 commit 后 restore，**五个几何维度与 scale 全部精确还原**；
+- **基准是副本**：破坏当前几何后仍能正确还原（证明捕获不是引用别名）；
+- 源码级守护：`beginVertexDrag` 确实捕获、`cancelActiveCanvasDrag` 确实先还原后 teardown、两个入口都覆盖顶点拖动。
+
+`pnpm check` 退出码 0。
+
+**状态**：`IMPLEMENTED`（有行为证据）。仍未在真实 GUI 中人工走查，故不标 VERIFIED。至此 **Escape / pointercancel 两条取消入口 × 变换 / 顶点两类拖动**共四条路径全部纳入还原语义。

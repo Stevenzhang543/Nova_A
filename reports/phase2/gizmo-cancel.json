@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-16T18:00:56.725Z",
+  "generatedAt": "2026-10-16T18:03:41.847Z",
   "checks": [
     {
       "name": "A committed translation produces one snapshot per selection root",
@@ -19,6 +19,18 @@
     },
     {
       "name": "The editor Escape path cancels through the restore helper",
+      "status": "passed"
+    },
+    {
+      "name": "Vertex drag cancel restores geometry and scale to the captured baseline",
+      "status": "passed"
+    },
+    {
+      "name": "Vertex baseline is a copy: later edits cannot corrupt what will be restored",
+      "status": "passed"
+    },
+    {
+      "name": "Vertex drag capture and cancel are wired into the editor paths",
       "status": "passed"
     },
     {
