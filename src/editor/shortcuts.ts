@@ -2,8 +2,10 @@
 import { reactive } from 'vue'
 
 export type ShortcutCommand = 'commandPalette' | 'quickOpen' | 'globalSearch' | 'contextSearch' | 'fullscreen' | 'navigateBack' | 'navigateForward' | 'shortcutEditor' | 'workspaceManager' | 'statusCenter' | 'saveProject' | 'undo' | 'redo' | 'undoHistory' | 'copySelection' | 'pasteSelection' | 'duplicateSelection' | 'renameSelection' | 'deleteSelection' | 'deselectAll'
-export interface ShortcutDefinition { id: ShortcutCommand; label: string; defaultBinding: string; binding: string }
+export interface ShortcutDefinition { id: ShortcutCommand; label: string; defaultBinding: string; binding: string; defaultAliases?: string[] }
 const STORAGE_KEY = 'nova-a-editor-shortcuts-v1'
+/** 紧凑显示名：绑定语义不变，只影响界面文案。 */
+const DISPLAY_ALIASES: Record<string, string> = { Escape: 'Esc', Delete: 'Del', ArrowLeft: '←', ArrowRight: '→', ArrowUp: '↑', ArrowDown: '↓' }
 const defaults: Array<Omit<ShortcutDefinition, 'binding'>> = [
   { id: 'commandPalette', label: 'commandPalette', defaultBinding: 'Ctrl+Shift+P' },
   { id: 'quickOpen', label: 'quickOpen', defaultBinding: 'Ctrl+P' },
@@ -20,13 +22,13 @@ const defaults: Array<Omit<ShortcutDefinition, 'binding'>> = [
   // 而本表每个命令只有一个绑定。此处登记主绑定，别名仍由 TopBar 保留，待多绑定契约落地后统一。
   { id: 'saveProject', label: 'saveProject', defaultBinding: 'Ctrl+S' },
   { id: 'undo', label: 'undo', defaultBinding: 'Ctrl+Z' },
-  { id: 'redo', label: 'redo', defaultBinding: 'Ctrl+Y' },
+  { id: 'redo', label: 'redo', defaultBinding: 'Ctrl+Y', defaultAliases: ['Ctrl+Shift+Z'] },
   { id: 'undoHistory', label: 'undoHistory', defaultBinding: 'Ctrl+Alt+H' },
   { id: 'copySelection', label: 'copy', defaultBinding: 'Ctrl+C' },
   { id: 'pasteSelection', label: 'paste', defaultBinding: 'Ctrl+V' },
   { id: 'duplicateSelection', label: 'duplicate', defaultBinding: 'Ctrl+D' },
   { id: 'renameSelection', label: 'rename', defaultBinding: 'F2' },
-  { id: 'deleteSelection', label: 'deleteSelected', defaultBinding: 'Delete' },
+  { id: 'deleteSelection', label: 'deleteSelected', defaultBinding: 'Delete', defaultAliases: ['Backspace'] },
   { id: 'deselectAll', label: 'deselectAll', defaultBinding: 'Escape' }
 ]
 
@@ -48,10 +50,23 @@ export const shortcutState = reactive({ definitions: defaults.map(/** 构造并�
 export function shortcutLabel(command: ShortcutCommand, style: 'kbd' | 'inline' = 'kbd'): string {
   const definition = shortcutState.definitions.find(/* 比较 item.id 与 command，返回严格相等的判断结果。 */ item => item.id === command)
   if (!definition) return ''
-  return style === 'kbd' ? definition.binding.split('+').join(' ') : definition.binding
+  const shown = style === 'kbd' ? definition.binding.split('+').join(' ') : definition.binding
+  return shown.split(' ').map(/* 用紧凑写法渲染常见按键名，保持既有 UI 密度。 */ part => DISPLAY_ALIASES[part] ?? part).join(' ')
 }
 
-/** 按命令查找当前绑定，并以不区分大小写的规范化事件字符串比较。 */ export function shortcutMatches(event: KeyboardEvent, command: ShortcutCommand): boolean { const definition = shortcutState.definitions.find(/* 比较 item.id 与 command，返回严格相等的判断结果。 */ item => item.id === command); return Boolean(definition && shortcutFromEvent(event).toLocaleLowerCase() === definition.binding.toLocaleLowerCase()) }
+/** 别名只在默认绑定之外补充额外按键；它们不参与改键，因此不会与主绑定冲突。 */
+export function shortcutAliases(command: ShortcutCommand): readonly string[] {
+  const definition = defaults.find(/* 比较 item.id 与 command，返回严格相等的判断结果。 */ item => item.id === command)
+  return definition?.defaultAliases ?? []
+}
+
+/** 按命令查找当前绑定，并以不区分大小写的规范化事件字符串比较。 */ export function shortcutMatches(event: KeyboardEvent, command: ShortcutCommand): boolean {
+  const definition = shortcutState.definitions.find(/* 比较 item.id 与 command，返回严格相等的判断结果。 */ item => item.id === command)
+  if (!definition) return false
+  const pressed = shortcutFromEvent(event).toLocaleLowerCase()
+  if (pressed === definition.binding.toLocaleLowerCase()) return true
+  return shortcutAliases(command).some(/* 保留默认别名，例如重做的 Ctrl+Shift+Z 与删除的 Backspace。 */ alias => alias.toLocaleLowerCase() === pressed)
+}
 /** 更新已知命令的非空绑定并限制文本长度，随后保存用户配置。 */ export function setShortcut(command: ShortcutCommand, binding: string): boolean { const item = shortcutState.definitions.find(/* 比较 value.id 与 command，返回严格相等的判断结果。 */ value => value.id === command); const safe = binding.trim().slice(0, 80); if (!item || !safe) return false; item.binding = safe; persistShortcuts(); return true }
 /** 列出使用相同绑定的其他命令，比较时忽略大小写。 */ export function shortcutConflicts(binding: string, except?: ShortcutCommand): ShortcutDefinition[] { return shortcutState.definitions.filter(/* 先计算 item.id !== except；仅当其为真值时求右侧 item.binding.toLocaleLowerCase() === binding.toLocaleLowerCase()，返回短路求值结果。 */ item => item.id !== except && item.binding.toLocaleLowerCase() === binding.toLocaleLowerCase()) }
 /** 将所有命令恢复默认快捷键并持久化。 */ export function resetShortcuts(): void { for (const item of shortcutState.definitions) item.binding = item.defaultBinding; persistShortcuts() }

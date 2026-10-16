@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-16T18:09:03.949Z",
+  "generatedAt": "2026-10-16T18:10:27.809Z",
   "checks": [
     {
       "name": "A label is derived from the live binding of the requested command",
@@ -27,6 +27,18 @@
     },
     {
       "name": "Save is dispatched through the shortcut source rather than a literal key test",
+      "status": "passed"
+    },
+    {
+      "name": "Alias bindings survive the migration",
+      "status": "passed"
+    },
+    {
+      "name": "Display aliases keep the existing compact key chips",
+      "status": "passed"
+    },
+    {
+      "name": "Every core command is dispatched through the shortcut source",
       "status": "passed"
     }
   ],

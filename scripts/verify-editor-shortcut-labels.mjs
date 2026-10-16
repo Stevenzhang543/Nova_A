@@ -10,7 +10,7 @@ async function test(name, run) {
 }
 
 const opened = await openMediaAuditModules({ repository: process.cwd(), bases: [process.cwd()] }, { shortcuts: 'editor/shortcuts' })
-const { shortcutLabel, shortcutState, setShortcut, resetShortcuts } = opened.modules.shortcuts
+const { shortcutLabel, shortcutState, setShortcut, resetShortcuts, shortcutMatches, shortcutAliases } = opened.modules.shortcuts
 const read = path => fs.readFileSync(path, 'utf8').replaceAll('\r\n', '\n')
 const topBar = read('src/layout/TopBar.vue')
 const workspaceBar = read('src/components/WorkspaceBar.vue')
@@ -59,7 +59,10 @@ await test('The core editing commands are registered, so they become editable', 
   const core = ['saveProject', 'undo', 'redo', 'undoHistory', 'copySelection', 'pasteSelection', 'duplicateSelection', 'renameSelection', 'deleteSelection', 'deselectAll']
   for (const id of core) {
     assert.ok(bindingOf(id), id + ' must be registered in the shortcut source')
-    assert.equal(shortcutLabel(id), bindingOf(id).split('+').join(' '), id + ' label must derive from its binding')
+    // Labels derive from the live binding, then pass through the documented compact display map.
+    const DISPLAY = { Escape: 'Esc', Delete: 'Del', ArrowLeft: '←', ArrowRight: '→', ArrowUp: '↑', ArrowDown: '↓' }
+    const expected = bindingOf(id).split('+').join(' ').split(' ').map(/** 应用既有的紧凑显示映射。 */ part => DISPLAY[part] ?? part).join(' ')
+    assert.equal(shortcutLabel(id), expected, id + ' label must derive from its binding')
   }
   assert.ok(!/Ctrl S<\/kbd>/.test(topBar), 'the save key must be rendered from the source, not hardcoded')
   assert.ok(topBar.includes("shortcutLabel('saveProject')"), 'TopBar must render the save key from the source')
@@ -68,6 +71,32 @@ await test('The core editing commands are registered, so they become editable', 
 await test('Save is dispatched through the shortcut source rather than a literal key test', () => {
   assert.ok(topBar.includes("shortcutMatches(event, 'saveProject')"), 'save must match through the registry')
   assert.ok(!/event\.key\.toLowerCase\(\) === 's'/.test(topBar), 'the literal save key test must be gone')
+})
+
+await test('Alias bindings survive the migration', () => {
+  const press = (/** 构造只含匹配所需字段的按键对象。 */ over) => Object.assign({ ctrlKey: false, metaKey: false, altKey: false, shiftKey: false, key: '' }, over)
+  assert.deepEqual([...shortcutAliases('redo')], ['Ctrl+Shift+Z'])
+  assert.deepEqual([...shortcutAliases('deleteSelection')], ['Backspace'])
+  assert.ok(shortcutMatches(press({ ctrlKey: true, key: 'y' }), 'redo'), 'Ctrl+Y must still redo')
+  assert.ok(shortcutMatches(press({ ctrlKey: true, shiftKey: true, key: 'z' }), 'redo'), 'Ctrl+Shift+Z must still redo')
+  assert.ok(shortcutMatches(press({ ctrlKey: true, key: 'z' }), 'undo'), 'Ctrl+Z must still undo')
+  assert.ok(shortcutMatches(press({ key: 'Delete' }), 'deleteSelection'), 'Delete must delete')
+  assert.ok(shortcutMatches(press({ key: 'Backspace' }), 'deleteSelection'), 'Backspace must still delete')
+  assert.ok(!shortcutMatches(press({ key: 'Backspace' }), 'undo'), 'aliases must not leak across commands')
+})
+
+await test('Display aliases keep the existing compact key chips', () => {
+  assert.equal(shortcutLabel('deselectAll'), 'Esc')
+  assert.equal(shortcutLabel('deleteSelection'), 'Del')
+  assert.equal(shortcutLabel('renameSelection'), 'F2')
+  assert.equal(shortcutLabel('saveProject'), 'Ctrl S')
+})
+
+await test('Every core command is dispatched through the shortcut source', () => {
+  const core = ['saveProject', 'undo', 'redo', 'undoHistory', 'copySelection', 'pasteSelection', 'duplicateSelection', 'renameSelection', 'deleteSelection', 'deselectAll']
+  for (const id of core) assert.ok(topBar.includes("shortcutMatches(event, '" + id + "')"), 'TopBar must dispatch ' + id + ' through the source')
+  assert.ok(!/event\.key\.toLowerCase\(\) === '[a-z]'/.test(topBar), 'no literal letter key tests may remain')
+  assert.ok(!/event\.key === 'F2'|event\.key === 'Delete'|event\.key === 'Escape'/.test(topBar), 'no literal special-key tests may remain')
 })
 
 const out = process.env.NOVA_SHORTCUT_LABEL_REPORT || 'reports/phase2/shortcut-labels.json'

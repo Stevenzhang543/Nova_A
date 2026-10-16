@@ -39,16 +39,16 @@
           <hr><button class="danger" :disabled="!isEditing" @click="handleClearScene"><span>{{ t('clearScene') }}</span></button>
         </div>
           <div v-else-if="activeMenu === 'edit'" :key="'edit'" class="dropdown">
-          <button :disabled="!isEditing || !historyState.canUndo" @click="handleUndo"><span>{{ historyState.undoLabel ? `${t('undo')} · ${historyState.undoLabel}` : t('undo') }}</span><kbd>Ctrl Z</kbd></button>
-          <button :disabled="!isEditing || !historyState.canRedo" @click="handleRedo"><span>{{ historyState.redoLabel ? `${t('redo')} · ${historyState.redoLabel}` : t('redo') }}</span><kbd>Ctrl Y</kbd></button>
-          <button @click="handleUndoHistory"><span>{{ t('undoHistory') }}</span><kbd>Ctrl Alt H</kbd></button>
-          <hr><button :disabled="!isEditing || !physicsState.selectedEntityIds.length" @click="handleCopy"><span>{{ t('copy') }}</span><kbd>Ctrl C</kbd></button>
-          <button :disabled="!isEditing" @click="handlePaste"><span>{{ t('paste') }}</span><kbd>Ctrl V</kbd></button>
-          <button :disabled="!isEditing || !physicsState.selectedEntityIds.length" @click="handleDuplicate"><span>{{ t('duplicate') }}</span><kbd>Ctrl D</kbd></button>
-          <button :disabled="!isEditing || physicsState.selectedEntityId === null" @click="handleRename"><span>{{ t('rename') }}</span><kbd>F2</kbd></button>
-          <hr><button :disabled="!isEditing || !physicsState.selectedEntityIds.length" @click="handleDelete"><span>{{ t('deleteSelected') }}</span><kbd>Del</kbd></button>
+          <button :disabled="!isEditing || !historyState.canUndo" @click="handleUndo"><span>{{ historyState.undoLabel ? `${t('undo')} · ${historyState.undoLabel}` : t('undo') }}</span><kbd>{{ shortcutLabel('undo') }}</kbd></button>
+          <button :disabled="!isEditing || !historyState.canRedo" @click="handleRedo"><span>{{ historyState.redoLabel ? `${t('redo')} · ${historyState.redoLabel}` : t('redo') }}</span><kbd>{{ shortcutLabel('redo') }}</kbd></button>
+          <button @click="handleUndoHistory"><span>{{ t('undoHistory') }}</span><kbd>{{ shortcutLabel('undoHistory') }}</kbd></button>
+          <hr><button :disabled="!isEditing || !physicsState.selectedEntityIds.length" @click="handleCopy"><span>{{ t('copy') }}</span><kbd>{{ shortcutLabel('copySelection') }}</kbd></button>
+          <button :disabled="!isEditing" @click="handlePaste"><span>{{ t('paste') }}</span><kbd>{{ shortcutLabel('pasteSelection') }}</kbd></button>
+          <button :disabled="!isEditing || !physicsState.selectedEntityIds.length" @click="handleDuplicate"><span>{{ t('duplicate') }}</span><kbd>{{ shortcutLabel('duplicateSelection') }}</kbd></button>
+          <button :disabled="!isEditing || physicsState.selectedEntityId === null" @click="handleRename"><span>{{ t('rename') }}</span><kbd>{{ shortcutLabel('renameSelection') }}</kbd></button>
+          <hr><button :disabled="!isEditing || !physicsState.selectedEntityIds.length" @click="handleDelete"><span>{{ t('deleteSelected') }}</span><kbd>{{ shortcutLabel('deleteSelection') }}</kbd></button>
           <button class="danger" :disabled="!isEditing" @click="handleDeleteAll"><span>{{ t('deleteAll') }}</span></button>
-          <hr><button @click="handleDeselect"><span>{{ t('deselectAll') }}</span><kbd>Esc</kbd></button>
+          <hr><button @click="handleDeselect"><span>{{ t('deselectAll') }}</span><kbd>{{ shortcutLabel('deselectAll') }}</kbd></button>
         </div>
           <div v-else-if="activeMenu === 'project'" :key="'project'" class="dropdown">
           <button @click="openBottomPanel('project')"><span>{{ t('projectHealth') }}</span></button>
@@ -224,7 +224,6 @@ const isEditing = computed(/** 只有编辑模式且非只读恢复会话才允�
 /** 优先处理保存并使失焦字段提交；避开文本输入的原生快捷键，处理撤销、复制、删除等编辑命令。 */ function handleKeyDown(event: KeyboardEvent) {
   if (event.defaultPrevented) return
   if (confirmDialogState.visible) return
-  const commandKey = event.ctrlKey || event.metaKey
   if (shortcutMatches(event, 'saveProject') && !event.isComposing) {
     event.preventDefault()
     // Commit blur-based fields before serializing; keep native text editing shortcuts.
@@ -234,16 +233,16 @@ const isEditing = computed(/** 只有编辑模式且非只读恢复会话才允�
   }
   const tag = document.activeElement?.tagName
   if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
-  if (commandKey && event.shiftKey && event.key.toLowerCase() === 'z') { event.preventDefault(); handleRedo() }
-  else if (commandKey && event.key.toLowerCase() === 'z') { event.preventDefault(); handleUndo() }
-  else if (commandKey && event.key.toLowerCase() === 'y') { event.preventDefault(); handleRedo() }
-  else if (commandKey && event.altKey && event.key.toLowerCase() === 'h') { event.preventDefault(); handleUndoHistory() }
-  else if (commandKey && event.key.toLowerCase() === 'c') { event.preventDefault(); handleCopy() }
-  else if (commandKey && event.key.toLowerCase() === 'v') { event.preventDefault(); handlePaste() }
-  else if (commandKey && event.key.toLowerCase() === 'd') { event.preventDefault(); handleDuplicate() }
-  else if (event.key === 'Delete' || event.key === 'Backspace') { void handleDelete() }
-  else if (event.key === 'F2') { event.preventDefault(); handleRename() }
-  else if (event.key === 'Escape') { selectEntities([], 'replace'); activeMenu.value = null }
+  // 全部核心编辑命令统一经快捷键源匹配，别名（重做 Ctrl+Shift+Z、删除 Backspace）由源保留。
+  if (shortcutMatches(event, 'redo')) { event.preventDefault(); handleRedo() }
+  else if (shortcutMatches(event, 'undo')) { event.preventDefault(); handleUndo() }
+  else if (shortcutMatches(event, 'undoHistory')) { event.preventDefault(); handleUndoHistory() }
+  else if (shortcutMatches(event, 'copySelection')) { event.preventDefault(); handleCopy() }
+  else if (shortcutMatches(event, 'pasteSelection')) { event.preventDefault(); handlePaste() }
+  else if (shortcutMatches(event, 'duplicateSelection')) { event.preventDefault(); handleDuplicate() }
+  else if (shortcutMatches(event, 'deleteSelection')) { void handleDelete() }
+  else if (shortcutMatches(event, 'renameSelection')) { event.preventDefault(); handleRename() }
+  else if (shortcutMatches(event, 'deselectAll')) { selectEntities([], 'replace'); activeMenu.value = null }
 }
 
 onMounted(/** 挂载时注册具有容错区域的短暂弹出菜单行为及全局监听，并记录初始历史。 */ () => { disposeMenu = installTransientPopover({ isOpen: /* 比较 activeMenu.value 与 null，返回严格不等的判断结果。 */ () => activeMenu.value !== null, regions: /** 返回菜单容器及尚可交互的下拉区域作为指针容错范围。 */ () => Array.from(topBar.value?.querySelectorAll<HTMLElement>('.menu-container, .dropdown:not([inert])') ?? []), close: /** 关闭弹出菜单，按请求把焦点还给原活动菜单按钮。 */ restoreFocus => { const button = topBar.value?.querySelector<HTMLElement>('.menu-item > button.active'); closeMenu(); if (restoreFocus) button?.focus() } }); window.addEventListener('keydown', handleKeyDown); window.addEventListener('resize', closeMenu); pushHistory() })

@@ -556,3 +556,27 @@ C 组与 B 组**独立**判定"信号层缺失/无预算"；C 组的 G5（Play �
 **状态**：`IMPLEMENTED`（1/10 迁移完成，9/10 因契约限制明确延后并给出理由）。
 
 **过程中的一次自伤与修复**：编辑 `ShortcutCommand` 联合类型时我用了**被截断的 `old_string`**，导致行尾残留 `ter'`，构建立即报 `Expected ";" but found "ter"`。已修复。教训：`old_string` 必须是完整且唯一的最小片段，不能是前缀。
+
+### 16.7 C 组 G4 完成：10 个核心编辑命令全部迁移到可改键源
+
+**前置契约扩展**（上一轮识别出的阻塞）：`ShortcutDefinition` 增加 `defaultAliases`，并新增 `shortcutAliases(command)`；`shortcutMatches` 先比主绑定、再比别名。这样**别名不会因为迁移而丢失**：
+
+| 命令 | 主绑定（可改） | 别名（保留） |
+|---|---|---|
+| `redo` | `Ctrl+Y` | `Ctrl+Shift+Z` |
+| `deleteSelection` | `Delete` | `Backspace` |
+
+**紧凑显示映射**：新增 `DISPLAY_ALIASES`（`Escape→Esc`、`Delete→Del`、`ArrowLeft→←` …），只影响文案、不改变绑定语义，因此既有的紧凑按键胶囊样式得以保留（`Esc`/`Del` 仍是旧写法）。
+
+**迁移结果**：`TopBar.handleKeyDown` 中 **9 处字面量按键判断全部替换为 `shortcutMatches(event, id)`**；`TopBar` 的 **10 处 `<kbd>` 全部改为 `{{ shortcutLabel(id) }}`**。实测 **TopBar 中仅剩 1 处硬编码 `<kbd>`**，且那是手册版本号（`5.0 · 离线`），**不是快捷键**。
+
+**证据**：`scripts/verify-editor-shortcut-labels.mjs` 扩展到 **10 项全部通过**，新增三项：
+- **别名存活**：`Ctrl+Y` 与 `Ctrl+Shift+Z` 均可重做、`Delete` 与 `Backspace` 均可删除、且 `Backspace` **不会**误触发撤销（别名不跨命令泄漏）；
+- 紧凑显示名 `Esc`/`Del`/`F2`/`Ctrl S` 保持；
+- 10 个命令全部经 `shortcutMatches` 派发，且 `TopBar` 中**不再存在任何字面量字母键或特殊键判断**。
+
+四个校验脚本合计 **32 项全部通过**；`pnpm check` 退出码 0。
+
+**由检查工具捕获的真实缺陷**：迁移后 `commandKey` 变为未使用，`vue-tsc` 报 **TS6133 `'commandKey' is declared but its value is never read`**，已删除该变量。
+
+**状态**：`IMPLEMENTED`（行为由模块级测试覆盖，但**未在真实 GUI 中逐键走查**，故不标 VERIFIED）。
