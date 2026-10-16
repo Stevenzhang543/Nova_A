@@ -1,0 +1,51 @@
+{
+  "generatedAt": "2026-10-16T18:14:10.669Z",
+  "covers": [
+    "local/world composition",
+    "parent motion propagation",
+    "keep-world reparent",
+    "keep-local reparent",
+    "mirrored parent",
+    "degenerate scale finiteness",
+    "cycle rejection",
+    "subtree enumeration"
+  ],
+  "notCovered": [
+    "interpolation history reset on reparent (runtime-side, not exercised here)"
+  ],
+  "checks": [
+    {
+      "name": "A child inherits its parent position when the local transform is kept",
+      "status": "passed"
+    },
+    {
+      "name": "Moving the parent moves the child world transform",
+      "status": "passed"
+    },
+    {
+      "name": "Reparenting with preserve-world keeps the world transform",
+      "status": "passed"
+    },
+    {
+      "name": "Reparenting without preserve-world keeps the local transform instead",
+      "status": "passed"
+    },
+    {
+      "name": "A mirrored parent mirrors the child world position",
+      "status": "passed"
+    },
+    {
+      "name": "A degenerate parent scale never produces a non-finite world transform",
+      "status": "passed"
+    },
+    {
+      "name": "A parent cycle is rejected before it can be created",
+      "status": "passed"
+    },
+    {
+      "name": "Descendants are reported for the whole subtree",
+      "status": "passed"
+    }
+  ],
+  "status": "passed"
+}
