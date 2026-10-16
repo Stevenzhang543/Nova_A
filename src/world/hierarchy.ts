@@ -72,6 +72,24 @@ export function composeWorldTransform(parentWorld: WorldTransform2D, local: Worl
   }
 }
 
+/** 检测层级环：沿 parentUuid 上溯，当前路径上重复出现同一实体即为环。
+ * 环状文档没有合法的世界变换（实测递归版与批量版会给出不同且互不自洽的结果），
+ * 因此调用方应据此拒绝或修复文档，而不是依赖任意一个变换结果。本函数只做检测，不修改数据。 */
+export function hierarchyHasCycle(entities: readonly Entity[]): boolean {
+  const byUuid = new Map(entities.map(/* 建立 uuid 到实体的映射以保持线性成本。 */ entity => [entity.uuid, entity]))
+  for (const start of entities) {
+    const seen = new Set<string>()
+    let current: Entity | undefined = start
+    while (current && byUuid.has(current.uuid)) {
+      if (seen.has(current.uuid)) return true
+      seen.add(current.uuid)
+      const parentUuid: string | null = current.parentUuid
+      current = parentUuid ? byUuid.get(parentUuid) : undefined
+    }
+  }
+  return false
+}
+
 /** 递归合成祖先平移、旋转及带符号缩放；遇到缺失父级或环时退回当前局部变换。 */ export function worldTransform(entity: Entity, entities: readonly Entity[], visiting = new Set<string>()): WorldTransform2D {
   const local = localTransform(entity)
   const parentUuid = entity.parentUuid

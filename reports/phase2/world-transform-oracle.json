@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-16T18:23:43.247Z",
+  "generatedAt": "2026-10-16T18:24:36.274Z",
   "purpose": "Independent reference semantics that any batch or cached transform path must match exactly.",
   "checks": [
     {
@@ -36,6 +36,10 @@
     },
     {
       "name": "A missing parent falls back to the local transform in both paths",
+      "status": "passed"
+    },
+    {
+      "name": "The cycle detector finds cycles and accepts every valid shape",
       "status": "passed"
     }
   ],

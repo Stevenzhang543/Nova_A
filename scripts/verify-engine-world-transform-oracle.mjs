@@ -167,6 +167,28 @@ await test('A missing parent falls back to the local transform in both paths', (
   assert.ok(near(batch.get(orphan.uuid).position.x, 7), 'a missing parent must fall back to the local transform')
 })
 
+await test('The cycle detector finds cycles and accepts every valid shape', () => {
+  const { entities } = chain3()
+  assert.equal(hierarchy.hierarchyHasCycle(entities), false, 'a valid chain must not be reported as a cycle')
+
+  const orphan = new box.BoxEntity(9, { x: 0, y: 0 }, { x: 1, y: 1 })
+  orphan.parentUuid = 'missing-uuid'
+  assert.equal(hierarchy.hierarchyHasCycle([orphan]), false, 'a missing parent is not a cycle')
+
+  const self = new box.BoxEntity(8, { x: 0, y: 0 }, { x: 1, y: 1 })
+  self.parentUuid = self.uuid
+  assert.equal(hierarchy.hierarchyHasCycle([self]), true, 'an entity parented to itself is a cycle')
+
+  const a = new box.BoxEntity(1, { x: 0, y: 0 }, { x: 1, y: 1 })
+  const b = new box.BoxEntity(2, { x: 0, y: 0 }, { x: 1, y: 1 })
+  a.parentUuid = b.uuid
+  b.parentUuid = a.uuid
+  assert.equal(hierarchy.hierarchyHasCycle([a, b]), true, 'a two-node loop is a cycle')
+
+  const detached = [new box.BoxEntity(1, { x: 0, y: 0 }, { x: 1, y: 1 }), new box.BoxEntity(2, { x: 0, y: 0 }, { x: 1, y: 1 })]
+  assert.equal(hierarchy.hierarchyHasCycle(detached), false, 'independent roots are not a cycle')
+})
+
 const out = process.env.NOVA_WORLD_ORACLE_REPORT || 'reports/phase2/world-transform-oracle.json'
 fs.mkdirSync(out.slice(0, out.lastIndexOf('/')), { recursive: true })
 fs.writeFileSync(out, JSON.stringify({
