@@ -1,4 +1,4 @@
-# 历史 5.0.1 发布流程：依次执行版本、构建、审计与发布步骤，失败立即停止。
+﻿# 历史 5.0.1 发布流程：依次执行版本、构建、审计与发布步骤，失败立即停止。
 [CmdletBinding()]
 param(
   [switch]$SkipDependencyRestore,

@@ -1,4 +1,4 @@
-# Windows 启动前只读检查：无需启动 WebView、不下载或安装依赖，输出可保存的 JSON 诊断。
+﻿# Windows 启动前只读检查：无需启动 WebView、不下载或安装依赖，输出可保存的 JSON 诊断。
 [CmdletBinding()]
 param()
 $ErrorActionPreference = 'Stop'

@@ -7,7 +7,7 @@ const read = /* 调用 readFile(resolve(root, path), 'utf8') 并返回调用结�
 const assert = /* 条件不满足时抛出带动画审计前缀的错误，停止当前检查。 */ (condition, message) => { if (!condition) throw new Error(`Animation audit failed: ${message}`) }
 const [panel, animation, rigging, timeline, gameplay, state, renderer, geometry, canvas, components, inspector, assets, bottom, format, pak, i18n] = await Promise.all([
   read('src/components/AnimationPanel.vue'), read('src/runtime/animation.ts'), read('src/runtime/rigging.ts'), read('src/runtime/timeline.ts'),
-  read('src/runtime/GameplayRuntime.ts'), read('src/editor/animationStudioState.ts'), read('src/renderer/sceneRenderer.ts'), read('src/renderer/geometry.ts'),
+  read('src/runtime/GameplayRuntimeCore.ts'), read('src/editor/animationStudioState.ts'), read('src/renderer/sceneRenderer.ts'), read('src/renderer/geometry.ts'),
   read('src/renderer/Canvas2DRenderer.ts'), read('src/world/components.ts'), read('src/components/RuntimeComponentsInspector.vue'),
   read('src/assets/AssetDatabase.ts'), read('src/components/EditorBottomPanel.vue'), read('crates/nova_format/src/lib.rs'), read('src/runtime/novaPak.ts'), read('src/i18n.ts')
 ])

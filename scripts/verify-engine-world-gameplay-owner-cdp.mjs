@@ -1,0 +1,88 @@
+/** Narrow public WorldGameplay Editor smoke. Immutable artifact, original nonempty platform scene, no performance/motion qualification. */
+import assert from 'node:assert/strict'
+import {readFile,writeFile,mkdir} from 'node:fs/promises'
+import {createHash} from 'node:crypto'
+import {resolve,join,relative,isAbsolute,dirname} from 'node:path'
+import {withBrowserAudit,wait} from './lib/browserUserAudit.mjs'
+import {worldUserControls17} from './lib/worldAudit17.mjs'
+const arg=name=>{const value=process.argv.find(s=>s.startsWith(`--${name}=`))?.slice(name.length+3);assert.ok(value,`Explicit --${name} required`);return value}
+const root=resolve(process.cwd()),dist=resolve(root,arg('dist')),output=resolve(root,arg('output')),sha=bytes=>createHash('sha256').update(bytes).digest('hex')
+for(const path of [dist,output]){const suffix=relative(root,path);assert.ok(suffix&&!suffix.startsWith('..')&&!isAbsolute(suffix))}
+assert.ok(relative(root,output).replaceAll('\\','/').startsWith('.cache/engine-overhaul/world-gameplay/gui/'))
+const manifestBytes=await readFile(join(dist,'engine-build-manifest.json')),manifest=JSON.parse(manifestBytes)
+assert.equal(sha(manifestBytes),arg('manifest-sha'));assert.equal(manifest.buildId,arg('build-id'));assert.equal(manifest.sourceHash,arg('source-hash'));assert.equal(manifest.mode,'optimized-profiling');assert.equal(manifest.profilingApiEnabled,true)
+for(const artifact of manifest.artifacts)assert.equal(sha(await readFile(join(dist,artifact.path))),artifact.sha256)
+const receiptPath=resolve(root,arg('receipt'));assert.ok(!relative(root,receiptPath).startsWith('..')&&!isAbsolute(relative(root,receiptPath)))
+const receiptBytes=await readFile(receiptPath),receipt=JSON.parse(receiptBytes)
+assert.equal(sha(receiptBytes),arg('receipt-sha'));assert.equal(receipt.buildId,manifest.buildId);assert.equal(receipt.sourceHash,manifest.sourceHash);assert.equal(receipt.manifestSha256,sha(manifestBytes));assert.equal(resolve(receipt.immutableDirectory),dist)
+// Exact frozen source/asset matching uses no live workspace dependency for browser behavior.
+const selectorCandidates=[],tileSelectorCandidates=[]
+for(const artifact of manifest.artifacts.filter(artifact=>artifact.path.endsWith('.js'))){const code=(await readFile(join(dist,artifact.path))).toString('utf8');for(const [needle,rows]of [['.navigationPaths()',selectorCandidates],['.tileSceneRuntimeSnapshot()',tileSelectorCandidates]]){let offset=code.indexOf(needle);while(offset>=0){rows.push({path:artifact.path,sha256:artifact.sha256,offsetUtf16:offset,needle,snippet:code.slice(Math.max(0,offset-60),offset+70)});offset=code.indexOf(needle,offset+needle.length)}}}
+assert.equal(selectorCandidates.length,1,'The navigation facade call must have a uniquely attributable immutable asset position')
+const project=join(root,'.cache/engine-overhaul/device-comfortable-ui-a4211-attempt1/v26.17-device-comfortable.nova'),projectBytes=await readFile(project),original=JSON.parse(projectBytes)
+assert.equal(sha(projectBytes),'aba83b30b8fc5563bdd82fb73268c0642774769210f6d6051504486578a470ec')
+const referencePath=join(root,'reference-projects/projects/physics-v2617-platformer/project.nova'),referenceSha=sha(await readFile(referencePath));assert.equal(referenceSha,'9b070ae2eb8cff968f0735eec07aae99807df32b864a5090b737c55a360530ba')
+const fixture=structuredClone(original),asset=fixture.assets.find(value=>value.uuid==='f239103a-24ff-4666-8239-103a24ff5666'),oldSource=asset.source
+assert.ok(oldSource.includes('fn update(dt) {'));assert.ok(!oldSource.includes('fn awake('))
+const prelude=`// Ephemeral, bounded observation only; the original movement/readout remains below.
+let audit_ticks = 0;
+fn awake() { audit_ticks = 0; print("NOVA_WORLD_OWNER|awake"); }
+`
+const update=`
+  if audit_ticks < 160 {
+    audit_ticks += 1;
+    let pose = transform(); let audit_x = pose.position_x; let audit_y = pose.position_y;
+    let axis = input_axis("MoveHorizontal"); let jump = input_pressed("Jump");
+    print(\`NOVA_WORLD_OWNER|pose|sample=\${audit_ticks}|x=\${audit_x}|y=\${audit_y}|axis=\${axis}|jump=\${jump}\`);
+  }
+`
+asset.source=prelude+oldSource.replace('fn update(dt) {','fn update(dt) {\n'+update);asset.byteLength=Buffer.byteLength(asset.source)
+for(const key of ['sourceHash','artifactHash','contentHash','cacheKey','settingsHash','artifactSettingsHash'])asset.pipeline[key]=sha(asset.source)
+asset.pipeline.lastValidSource=asset.source
+const differences=(before,after,path='$',rows=[])=>{if(Object.is(before,after))return rows;if(before&&after&&typeof before==='object'&&typeof after==='object'&&Array.isArray(before)===Array.isArray(after)){for(const key of new Set([...Object.keys(before),...Object.keys(after)]))differences(before[key],after[key],`${path}.${key}`,rows)}else rows.push({path,before,after});return rows}
+const changes=differences(original,fixture);assert.equal(changes.length,9);assert.deepEqual(fixture.scenes,original.scenes);assert.deepEqual(fixture.projectSettings,original.projectSettings)
+const allComponents=fixture.scenes[0].entities.flatMap(entity=>entity.components);assert.equal(fixture.scenes[0].entities.length,11);assert.equal(allComponents.length,59);assert.equal(allComponents.filter(component=>!component.removed).length,41)
+await mkdir(dirname(output),{recursive:true});await mkdir(output)
+const fixturePath=join(output,'ephemeral-world-gameplay-owner.nova'),fixtureBytes=Buffer.from(JSON.stringify(fixture,null,2)+'\n')
+await writeFile(fixturePath,fixtureBytes);await writeFile(join(output,'fixture-changes.json'),JSON.stringify({original:project,originalSha256:sha(projectBytes),fixture:fixturePath,fixtureSha256:sha(fixtureBytes),originalSourceSha256:sha(oldSource),probeSourceSha256:sha(asset.source),changes},null,2)+'\n');await writeFile(join(output,'driver-source.mjs'),await readFile(new URL(import.meta.url)));await writeFile(join(output,'profile-build-manifest.json'),manifestBytes);await writeFile(join(output,'integration-receipt.json'),receiptBytes)
+process.env.NOVA_AUDIT_DIST_DIRECTORY=relative(root,dist);process.env.NOVA_AUDIT_REPORT_DIRECTORY=relative(root,output)
+const raw={scope:'SHORT_SMOKE_PUBLIC_WORLD_GAMEPLAY_OWNER',buildId:manifest.buildId,artifactSourceHash:manifest.sourceHash,manifestSha256:sha(manifestBytes),receiptSha256:sha(receiptBytes),projectSha256:sha(projectBytes),fixtureSha256:sha(fixtureBytes),counts:{entities:11,serializedComponents:59,notRemovedComponents:41},selectorCandidates,tileSelectorCandidates,operations:[],poseObservations:[],selectorObservations:[],screenshots:[],checks:[],notTested:['tileSceneRuntimeSnapshot has only facade/Owner definitions and no public production UI consumer. Its emitted facade call is absent; no private direct call is substituted.','The original scene has no NavigationAgent2D; function-entry proof covers the empty navigation selector branch, not pathfinding or nonempty path correctness.','Direct/concurrent World identity, independent service/session isolation, Tauri/native/physical foreground/hardware GPU and formal performance/Motion are outside this GUI smoke. Old failed evidence remains unchanged.'],diagnosticPerturbation:'V8 precise function coverage changes optimization and screenshot/CDP controls disturb timings. Positive counters are function-entry evidence only, not frame/CPU/GPU/display measurements.'}
+const persist=()=>writeFile(join(output,'world-gameplay-owner-gui-raw.json'),JSON.stringify(raw,null,2)+'\n')
+try{
+ await withBrowserAudit({root,release:'26.37',name:'engine-world-gameplay-owner',width:1600,height:900,development:true,expectedRelease:'26.37',qualifyRelease:false},async a=>{
+  const ui=worldUserControls17(a),rows=()=>a.evaluate("[...document.querySelectorAll('.console-list .log-entry')].map(e=>({message:e.querySelector('span')?.textContent,level:e.querySelector('b')?.textContent,category:e.querySelector('strong')?.textContent}))"),navCheckbox='.world-tools .workspace aside .ui-property-row[aria-label="Debug overlay"] input[type=checkbox]'
+  let coverageActive=false,navigationDebugInitially=null
+  const prepareConsole=async()=>{await ui.workspace('Debug');await ui.bottom('console','Console');await a.fill('.console-filters input[type=search]','');await a.until("!!document.querySelector('.console-list')")}
+  const poses=async()=>{const actual=await rows(),error=actual.find(row=>row.category==='Script'&&/error|fatal/i.test(row.level));if(error)throw Error(`Actual Script error: ${error.message}`);return actual.filter(row=>row.message?.includes('NOVA_WORLD_OWNER|pose|')).map(row=>{const fields=Object.fromEntries(row.message.slice(row.message.indexOf('NOVA_WORLD_OWNER|')).split('|').slice(2).map(field=>{const i=field.indexOf('=');return[field.slice(0,i),field.slice(i+1)]}));return{sample:Number(fields.sample),x:Number(fields.x),y:Number(fields.y),axis:Number(fields.axis),jump:fields.jump==='true',message:row.message}})}
+  const awaitPose=async predicate=>{const deadline=Date.now()+15000;let found;while(Date.now()<deadline){const actual=await poses();found=predicate(actual);if(found)return found;await wait(75)}throw Error('Missing actual Runtime pose/input observation')}
+  const play=async()=>{await a.click('.sidebar nav button',0);await a.click('.actionbar button',0);await a.until("document.querySelector('.actionbar button')?.getAttribute('aria-pressed')==='true'");raw.operations.push({action:'public-Play',at:new Date().toISOString()});await awaitPose(values=>values.length?values.at(-1):null)}
+  const stop=async()=>{await a.click('.actionbar button',3);await a.until("document.querySelector('.actionbar button')?.getAttribute('aria-pressed')==='false'");raw.operations.push({action:'public-Stop',at:new Date().toISOString()})}
+  const input=async(key,ms)=>{await a.click('canvas[data-game-input-surface]');assert.equal(await a.evaluate("document.activeElement?.matches('canvas[data-game-input-surface]')"),true);raw.operations.push({action:'actual-key-down-up',key,durationMs:ms,at:new Date().toISOString()});await a.press(key,0,ms)}
+  const movement=async label=>{const before=await awaitPose(values=>values.at(-1));await input('d',600);const moved=await awaitPose(values=>values.find(value=>value.sample>before.sample&&value.axis>0&&value.x>before.x+.02));const beforeJump=await awaitPose(values=>values.at(-1));await input('Space',0);const jumpEdge=await awaitPose(values=>values.find(value=>value.sample>beforeJump.sample&&value.jump));const jumped=await awaitPose(values=>values.find(value=>value.sample>=jumpEdge.sample&&value.y>beforeJump.y+.02));raw.poseObservations.push({label,before,moved,beforeJump,jumpEdge,jumped,scope:'Actual host update input snapshot and native transform() query; no world/store reads or synthetic state.'});await persist()}
+  const nav=async()=>{await ui.bottom('worldProduction','World Studio');await a.clickText('.world-tools>.ui-tabs button','Navigation',true);await a.until(`!!document.querySelector(${JSON.stringify(navCheckbox)})`)}
+  const coverage=async(label)=>{const result=await a.client.send('Profiler.takePreciseCoverage'),candidate=selectorCandidates[0],functions=[];for(const script of result.result){let path;try{path=decodeURIComponent(new URL(script.url).pathname).slice(1)}catch{continue}if(path!==candidate.path)continue;for(const fn of script.functions){const range=fn.ranges[0];if(range&&range.startOffset<=candidate.offsetUtf16&&range.endOffset>candidate.offsetUtf16)functions.push({functionName:fn.functionName,startOffset:range.startOffset,endOffset:range.endOffset,count:range.count})}}functions.sort((a,b)=>(a.endOffset-a.startOffset)-(b.endOffset-b.startOffset));const proof={label,candidate,functions,narrowest: functions[0]??null};raw.selectorObservations.push(proof);await persist();return proof}
+  const shot=async(label)=>{const file=await a.capture(label);raw.screenshots.push({file,scope:'Actual static scene/Console/UI evidence only.'})}
+  try{
+   await ui.open(fixturePath);raw.metadata=await a.evaluate('window.novaPerformanceDiagnosticsV1.metadata()');assert.equal(raw.metadata.buildId,manifest.buildId)
+   raw.actualContext=await a.evaluate("(()=>{const c=document.querySelector('canvas.render-canvas'),g=c.getContext('webgl2'),e=g.getExtension('WEBGL_debug_renderer_info');return {backend:'WebGL2',renderer:g.getParameter(e?e.UNMASKED_RENDERER_WEBGL:g.RENDERER),lost:g.isContextLost(),dpr:devicePixelRatio,cssWidth:c.getBoundingClientRect().width,cssHeight:c.getBoundingClientRect().height,backingWidth:c.width,backingHeight:c.height,physicalDpi:null,physicalForeground:false}})()");assert.match(raw.actualContext.renderer,/SwiftShader/)
+   const baseline=await ui.save('world-gameplay-before-play');raw.beforeSave={file:baseline.file,sha256:sha(await readFile(baseline.file))}
+   await prepareConsole();await a.check('actual Play, original movement and Space jump reach native pose through the new WorldGameplay composition',async()=>{await play();await movement('first-play');await a.evaluate("document.querySelector('.console-list .log-entry:last-child')?.scrollIntoView({block:'nearest'})");await shot('actual-movement-and-space-native-pose')})
+   await a.client.send('Profiler.enable');await a.client.send('Profiler.startPreciseCoverage',{callCount:true,detailed:true});coverageActive=true
+   await nav();navigationDebugInitially=await a.evaluate(`document.querySelector(${JSON.stringify(navCheckbox)}).checked`)
+   await a.check('public Navigation Debug overlay reaches the exact immutable navigationPaths facade through a real admitted draw',async()=>{
+    raw.navigationUi={selectedTab:await a.evaluate("document.querySelector('.world-tools>.ui-tabs button[aria-selected=true]')?.textContent.trim()"),checkboxBefore:navigationDebugInitially,metrics:await a.evaluate("document.querySelector('.world-tools .workspace aside dl')?.textContent")};assert.equal(raw.navigationUi.selectedTab,'Navigation')
+    const baseline=await coverage('before-public-overlay-enable');raw.navigationUi.baselineCounter=baseline.narrowest?.count??null
+    if(!navigationDebugInitially)await a.click(navCheckbox);await a.until(`document.querySelector(${JSON.stringify(navCheckbox)}).checked`)
+    let proof;for(let attempt=0;attempt<20;attempt++){await wait(250);proof=await coverage('public-overlay-enabled-'+attempt);if(proof.narrowest?.count>0)break}
+    assert.ok(proof?.narrowest?.count>0,'Positive actual V8 selector entry is required; checkbox reflection alone is insufficient');raw.navigationUi.actualSelectorProof=proof;await shot('actual-public-navigation-debug-selector')
+    if(!navigationDebugInitially)await a.click(navCheckbox);await a.until(`document.querySelector(${JSON.stringify(navCheckbox)}).checked===${navigationDebugInitially}`)
+   })
+   await a.client.send('Profiler.stopPreciseCoverage');coverageActive=false;await a.client.send('Profiler.disable')
+   await a.check('Stop and public Save preserve the authored nonempty scene, settings and all resource content',async()=>{await stop();const saved=await ui.save('world-gameplay-after-stop');raw.afterSave={file:saved.file,sha256:sha(await readFile(saved.file)),differences:differences(baseline.document,saved.document)};assert.deepEqual(saved.document.scenes,baseline.document.scenes);assert.deepEqual(saved.document.projectSettings,baseline.document.projectSettings);assert.deepEqual(saved.document.assets,baseline.document.assets);raw.reopenFile=saved.file})
+   await a.check('fresh public chooser reopen creates a functioning Editor world again and leaves its authoring save unchanged',async()=>{await ui.open(raw.reopenFile);await prepareConsole();await play();await movement('fresh-reopen');await shot('actual-fresh-reopen-gameplay');await stop();const saved=await ui.save('world-gameplay-after-fresh-reopen');raw.afterReopenSave={file:saved.file,sha256:sha(await readFile(saved.file)),differences:differences(baseline.document,saved.document)};assert.deepEqual(saved.document.scenes,baseline.document.scenes);assert.deepEqual(saved.document.projectSettings,baseline.document.projectSettings);assert.deepEqual(saved.document.assets,baseline.document.assets)})
+   raw.browser=await a.client.send('Browser.getVersion');raw.status='VERIFIED_NARROW_PUBLIC_GUI_SCOPE';raw.completedAt=new Date().toISOString()
+  }catch(error){raw.failure={message:error.message,stack:error.stack,consoleRows:await rows().catch(()=>[]),publicPageDiagnostics:await a.evaluate("({title:document.title,visibleText:document.body?.innerText,technicalDetails:[...document.querySelectorAll('details')].map(e=>({summary:e.querySelector('summary')?.textContent,text:e.textContent,open:e.open}))})").catch(()=>null)};throw error}
+  finally{if(coverageActive)try{await a.client.send('Profiler.stopPreciseCoverage');await a.client.send('Profiler.disable')}catch(error){raw.coverageCleanupError=String(error)}try{if(await a.evaluate("document.querySelector('.actionbar button')?.getAttribute('aria-pressed')==='true'"))await stop()}catch(error){raw.stopCleanupError=String(error)}raw.checks=a.checks;await persist()}
+ })
+}finally{raw.projectPreserved=sha(await readFile(project))===raw.projectSha256;raw.referencePreserved=sha(await readFile(referencePath))===referenceSha;raw.manifestPreserved=sha(await readFile(join(dist,'engine-build-manifest.json')))===raw.manifestSha256;raw.driverSha256=sha(await readFile(new URL(import.meta.url)));await persist();assert.ok(raw.projectPreserved&&raw.referencePreserved&&raw.manifestPreserved)}
+console.log(JSON.stringify({status:raw.status,checks:raw.checks.length,output,driverSha256:raw.driverSha256,rawSha256:sha(await readFile(join(output,'world-gameplay-owner-gui-raw.json')))}))

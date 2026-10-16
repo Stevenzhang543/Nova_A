@@ -8,7 +8,7 @@ import {worldUserControls17} from './lib/worldAudit17.mjs'
 
 const fixture = join(process.cwd(), '.cache/v2634-input-ownership.nova')
 const ids = {root:mediaUuid(263401),panel:mediaUuid(263402),marker:mediaUuid(263403),counter:mediaUuid(263404),input:mediaUuid(263405),controller:mediaUuid(263406)}
-const opened = await openMediaAuditModules({repository:process.cwd(),bases:[process.cwd()]},{physics:'store/physics',templates:'projects/templates',box:'world/BoxEntity',components:'world/components',assets:'assets/AssetDatabase',input:'runtime/input',projectData:'projects/projectData'})
+const opened = await openMediaAuditModules({repository:process.cwd(),bases:[process.cwd()]},{physics:'store/physics',templates:'projects/templates',box:'world/BoxEntity',components:'world/components',assets:'assets/AssetDatabase',input:'runtime/input',projectData:'projects/projectData',worldGameplayAdapter:'editor/worldGameplayAdapter'})
 try {
   const {physics:p,templates,box,components:c,assets,input}=opened.modules, wasm=await opened.wasm()
   assert.ok(p.loadProject(wasm.module.migrate_project_json(templates.createTemplateProjectJson('empty','Wheel ownership acceptance'))))
@@ -93,7 +93,7 @@ await withBrowserAudit({release:'26.34',name:'input-user',qualifyRelease:false,e
     await a.evaluate("document.querySelector('.production-panel .settings-card').scrollIntoView({block:'center'})")
     const traceText=await a.evaluate("document.querySelector('.production-panel').innerText");assert.ok(traceText.includes('Estimated profiler overhead'));assert.ok(traceText.includes('Planning estimate only'))
     assert.ok(traceText.includes('Input to CPU submission'));await a.capture('profiler-estimate-and-cpu-scope')
-    await a.click('.production-panel .metrics-card button[aria-label="Capture"]');await a.clickText('.production-panel .ui-tabs button','Memory & lifetimes',true)
+    await u.activate('.production-panel .metrics-card button[aria-label="Capture"]');await a.clickText('.production-panel .ui-tabs button','Memory & lifetimes',true)
     await a.until("!!document.querySelector('[data-audit=performance-evidence]')")
     await a.evaluate("document.querySelector('[data-audit=performance-evidence]').scrollIntoView({block:'center'})")
     const evidence=await a.evaluate("document.querySelector('[data-audit=performance-evidence]').innerText")

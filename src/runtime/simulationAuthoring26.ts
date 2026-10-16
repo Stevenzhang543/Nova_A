@@ -6,8 +6,11 @@ import { connectionSharesLayer, type Connection } from '../world/Connection'
 import { PHYSICS_UNITS, PHYSICS_SHAPE_SUPPORT } from './physicsProduction'
 import { blackboardSnapshot, normalizeBehaviorTree, normalizeStateMachine, type BehaviorTreeDocument, type StateMachineDocument } from './aiTools'
 import type { NavigationAgent2D, NavigationRegion2D } from '../world/components'
-import { worldTransform } from '../world/hierarchy'
 import { prepareColliderSet } from './physicsGeometry'
+import { captureSimulationEvidenceIntoState, clearSimulationEvidenceState, computeSimulationStateChecksum, createInitialSimulationEvidenceState, type SimulationEvidenceChecksumPort, type SimulationEvidenceState } from './simulationEvidenceOwner'
+
+// Transitional authoring API uses the actual legacy AI blackboard; it does not claim AI isolation.
+const legacyChecksumPort: SimulationEvidenceChecksumPort = { scope: 'shared-legacy-ai', blackboardSnapshot }
 
 export type SimulationCheckStatus = 'ready' | 'review' | 'blocked'
 export interface SimulationLocalizedText { key: string; params: Record<string, string | number> }
@@ -37,31 +40,13 @@ export interface SimulationProductionReport {
   checksum: string
 }
 
-const MAX_EVIDENCE_FRAMES = 600
+
 const finite = /* 调用 Number.isFinite(value) 并返回调用结果。 */ (value: number): boolean => Number.isFinite(value)
-const fixed = /* 计算表达式 Math.round((Number.isFinite(value) ? value : 0) * 1e9) / 1e9 并返回结果，沿用操作数的原有类型规则。 */ (value: number): number => Math.round((Number.isFinite(value) ? value : 0) * 1e9) / 1e9
 
-/** 结构说明（自动提取）：stableFingerprint；输入 value；直接调用 JSON.stringify、source.charCodeAt、Math.imul、padStart、first.toString 等；写入 first、second；包含循环处理。 */ function stableFingerprint(value: unknown): string {
-  const source = JSON.stringify(value); let first = 0x811c9dc5, second = 0x9e3779b9
-  for (let index = 0; index < source.length; index++) { const code = source.charCodeAt(index); first = Math.imul(first ^ code, 0x01000193) >>> 0; second = Math.imul(second ^ code, 0x85ebca6b) >>> 0 }
-  return `${first.toString(16).padStart(8, '0')}${second.toString(16).padStart(8, '0')}`
-}
 
-/** 结构说明（自动提取）：simulationStateChecksum；输入 entities、connections；直接调用 stableFingerprint、map、sort。 */ export function simulationStateChecksum(entities: readonly Entity[], connections: readonly Connection[]): string {
-  return stableFingerprint({
-    entities: [...entities].sort(/* 调用 a.uuid.localeCompare(b.uuid) 并返回调用结果。 */ (a, b) => a.uuid.localeCompare(b.uuid)).map(/** 结构说明（自动提取）：map 回调；输入 entity；直接调用 worldTransform、entity.getComponent、map、sort、Object.entries 等。 */ entity => {
-      const transform = worldTransform(entity, entities as Entity[]), agent = entity.getComponent<NavigationAgent2D>('NavigationAgent2D')
-      const behavior = entity.getComponent<import('../world/components').BehaviorTree2D>('BehaviorTree2D'), machine = entity.getComponent<import('../world/components').StateMachine2D>('StateMachine2D')
-      const board = Object.entries(blackboardSnapshot(entity.uuid)).sort(/* 调用 first.localeCompare(second) 并返回调用结果。 */ ([first], [second]) => first.localeCompare(second)).map(/* 返回按声明顺序构造的数组 [key, typeof value === 'number' ? fixed(value) : value]。 */ ([key, value]) => [key, typeof value === 'number' ? fixed(value) : value])
-      return [
-        entity.uuid, entity.enabled, fixed(transform.position.x), fixed(transform.position.y), fixed(transform.rotation), fixed(entity.velocity.x), fixed(entity.velocity.y), fixed(entity.angularVelocity), entity.rigidBody.sleeping,
-        agent ? [agent.pathStatus, agent.pathIndex, fixed(agent.velocity.x), fixed(agent.velocity.y), fixed(agent.targetPosition.x), fixed(agent.targetPosition.y), agent.targetEntityUuid ?? '', agent.path.map(/* 返回按声明顺序构造的数组 [fixed(point.x), fixed(point.y)]。 */ point => [fixed(point.x), fixed(point.y)])] : null,
-        behavior ? [behavior.currentNode, board] : null, machine?.currentState ?? ''
-      ]
-    }),
-    connections: [...connections].sort(/* 调用 a.uuid.localeCompare(b.uuid) 并返回调用结果。 */ (a, b) => a.uuid.localeCompare(b.uuid)).map(/** 结构说明（自动提取）：map 回调；输入 connection；直接调用 fixed、connection.ropeNodes.map；返回表达式求值结果。 */ connection => [connection.uuid, connection.enabled, connection.componentType, connection.breakState, connection.breakLink, fixed(connection.tension), fixed(connection.strain), connection.ropeNodes.map(/* 返回按声明顺序构造的数组 [fixed(node.position.x), fixed(node.position.y), fixed(node.velocity.x), fixed(node.velocity.y)]。 */ node => [fixed(node.position.x), fixed(node.position.y), fixed(node.velocity.x), fixed(node.velocity.y)])])
-  })
-}
+/** 结构说明（自动提取）：stableFingerprint；输入 value；直接调用 JSON.stringify、source.charCodeAt、Math.imul、padStart、first.toString 等；写入 first、second；包含循环处理。 */
+
+/** 结构说明（自动提取）：simulationStateChecksum；输入 entities、connections；直接调用 stableFingerprint、map、sort。 */ export function simulationStateChecksum(entities: readonly Entity[], connections: readonly Connection[]): string { return computeSimulationStateChecksum(entities, connections, legacyChecksumPort) }
 
 /** 结构说明（自动提取）：ropeNetworks；输入 connections；直接调用 connections.filter、Map、rope.anchors.map、adjacency.get、Set 等；写入 edges；返回路径包含 networks；包含循环处理。 */ function ropeNetworks(connections: readonly Connection[]): number {
   const ropes = connections.filter(/* 先计算 connection.enabled && connection.componentType === 'Rope2D'；仅当其为真值时求右侧 connection.breakState === 'intact'，返回短路求值结果。 */ connection => connection.enabled && connection.componentType === 'Rope2D' && connection.breakState === 'intact'), adjacency = new Map<number, Set<number>>()
@@ -197,15 +182,10 @@ const issueTranslationStems: Readonly<Record<string, string>> = {
   return { report, blocked: report.issues.filter(/* 比较 issue.status 与 'blocked'，返回严格相等的判断结果。 */ issue => issue.status === 'blocked'), reviews: report.issues.filter(/* 比较 issue.status 与 'review'，返回严格相等的判断结果。 */ issue => issue.status === 'review') }
 }
 
-export const simulationEvidenceState = reactive({ enabled: false, frames: [] as Array<{ frame: number; checksum: string }>, lastChecksum: '', divergentFrame: -1 })
+const rawSimulationEvidenceState = createInitialSimulationEvidenceState()
+export const simulationEvidenceState = reactive(rawSimulationEvidenceState)
+export function getLegacySimulationEvidenceRawState(): SimulationEvidenceState { return rawSimulationEvidenceState }
 
-/** 结构说明（自动提取）：captureSimulationEvidence；输入 frame、entities、connections；直接调用 simulationStateChecksum、simulationEvidenceState.frames.find、simulationEvidenceState.frames.push；写入 simulationEvidenceState.lastChecksum、simulationEvidenceState.divergentFrame；返回路径包含 simulationEvidenceState.lastChecksum、checksum。 */ export function captureSimulationEvidence(frame: number, entities: readonly Entity[], connections: readonly Connection[]): string {
-  if (!simulationEvidenceState.enabled) return simulationEvidenceState.lastChecksum
-  const checksum = simulationStateChecksum(entities, connections); simulationEvidenceState.lastChecksum = checksum
-  const existing = simulationEvidenceState.frames.find(/* 比较 item.frame 与 frame，返回严格相等的判断结果。 */ item => item.frame === frame)
-  if (existing && existing.checksum !== checksum && simulationEvidenceState.divergentFrame < 0) simulationEvidenceState.divergentFrame = frame
-  if (!existing && simulationEvidenceState.frames.length < MAX_EVIDENCE_FRAMES) simulationEvidenceState.frames.push({ frame, checksum })
-  return checksum
-}
+/** 结构说明（自动提取）：captureSimulationEvidence；输入 frame、entities、connections；直接调用 simulationStateChecksum、simulationEvidenceState.frames.find、simulationEvidenceState.frames.push；写入 simulationEvidenceState.lastChecksum、simulationEvidenceState.divergentFrame；返回路径包含 simulationEvidenceState.lastChecksum、checksum。 */ export function captureSimulationEvidence(frame: number, entities: readonly Entity[], connections: readonly Connection[]): string { return captureSimulationEvidenceIntoState(simulationEvidenceState, frame, entities, connections, legacyChecksumPort) }
 
-/** 结构说明（自动提取）：clearSimulationEvidence；无显式参数；直接调用 simulationEvidenceState.frames.splice；写入 simulationEvidenceState.lastChecksum、simulationEvidenceState.divergentFrame。 */ export function clearSimulationEvidence(): void { simulationEvidenceState.frames.splice(0); simulationEvidenceState.lastChecksum = ''; simulationEvidenceState.divergentFrame = -1 }
+/** 结构说明（自动提取）：clearSimulationEvidence；无显式参数；直接调用 simulationEvidenceState.frames.splice；写入 simulationEvidenceState.lastChecksum、simulationEvidenceState.divergentFrame。 */ export function clearSimulationEvidence(): void { clearSimulationEvidenceState(simulationEvidenceState) }

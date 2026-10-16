@@ -1,38 +1,12 @@
 /** 外部资源格式互通：识别图集、切片及地图输入，转换规范数据并验证导入元信息。 */
 import type { AssetType } from './types'
+import { MAX_SOURCE_BYTES, MAX_SLICES, object, list, text, integer, unit, stableId, frameRectangle, polygon } from '../runtime/contentInterchangeMetadata'
+import type { InterchangeFormat, InterchangeSlice, ContentInterchangeMetadata } from '../runtime/contentInterchangeMetadata'
+export { validateInterchangeMetadata } from '../runtime/contentInterchangeMetadata'
+export type { InterchangeFormat, InterchangeSlice, ContentInterchangeMetadata } from '../runtime/contentInterchangeMetadata'
 import { BoundedImportCache } from './importRetention'
 import { sha256Text } from './contentHash'
 import { convertTiledMap, convertTiledTileSet } from './tiledInterchange'
-
-export type InterchangeFormat = 'aseprite-json' | 'texturepacker-json' | 'tiled-json' | 'tiled-xml' | 'atlas-json' | 'nova-native'
-export interface InterchangeSlice {
-  id: string
-  sourceKey: string
-  /** Original playback order, independent of deterministic metadata sorting. */
-  sourceIndex?: number
-  name: string
-  frame: { x: number; y: number; width: number; height: number }
-  sourceSize: { width: number; height: number }
-  trimOffset?: { x: number; y: number }
-  pivot: { x: number; y: number }
-  rotated: boolean
-  trimmed: boolean
-  durationMs: number
-  tags: string[]
-  collider: Array<{ x: number; y: number }>
-}
-export interface ContentInterchangeMetadata {
-  version: 1
-  format: InterchangeFormat
-  sourceName: string
-  /** Original bounded interchange text for repeatable reimport after save/reopen. */
-  originalSource?: string
-  sourceHash: string
-  texturePath: string
-  mapSize: { width: number; height: number } | null
-  slices: InterchangeSlice[]
-  diagnostics: Array<{ severity: 'info' | 'warning' | 'error'; code: string; message: string }>
-}
 export interface ContentInterchangeResult {
   assetType: Extract<AssetType, 'atlas' | 'tileset'>
   mimeType: string
@@ -40,35 +14,13 @@ export interface ContentInterchangeResult {
   metadata: ContentInterchangeMetadata
 }
 const resultCache = new BoundedImportCache<string, ContentInterchangeResult>(32, 64 * 1024 * 1024)
-
-const MAX_SOURCE_BYTES = 16 * 1024 * 1024
-const MAX_SLICES = 65_536
 const ordinal=/* 根据 first<second 的真假，分别返回 -1 或 first>second?1:0。 */ (first:string,second:string)=>first<second?-1:first>second?1:0
-
-/* 根据 value && typeof value === 'object' && !Array.isArray(value) 的真假，分别返回 value as Record<string, unknown> 或 {}。 */ function object(value: unknown): Record<string, unknown> { return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {} }
-/* 根据 Array.isArray(value) 的真假，分别返回 value 或 []。 */ function list(value: unknown): unknown[] { return Array.isArray(value) ? value : [] }
-/* 根据 typeof value === 'string' 的真假，分别返回 value.slice(0, limit) 或 fallback。 */ function text(value: unknown, fallback = '', limit = 512): string { return typeof value === 'string' ? value.slice(0, limit) : fallback }
-/** 转换并限制数值为给定范围内整数，非有限输入使用默认值。 */ function integer(value: unknown, fallback = 0, minimum = 0, maximum = 1_000_000): number { const number = Number(value); return Math.round(Math.min(maximum, Math.max(minimum, Number.isFinite(number) ? number : fallback))) }
-/** 把数值限制在零到一范围，非有限输入使用默认值。 */ function unit(value: unknown, fallback = .5): number { const number = Number(value); return Math.min(1, Math.max(0, Number.isFinite(number) ? number : fallback)) }
 /** 按稳定对象键顺序序列化交换文档，保留数组顺序。 */ function stable(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(stable).join(',')}]`
   if (value && typeof value === 'object') return `{${Object.entries(value as Record<string, unknown>).sort(/* 调用 ordinal(a,b) 并返回调用结果。 */ ([a], [b]) => ordinal(a,b)).map(/** 按模板 `${JSON.stringify(key)}:${stable(item)}` 生成并返回字符串。 */ ([key, item]) => `${JSON.stringify(key)}:${stable(item)}`).join(',')}}`
   return JSON.stringify(value)
 }
-/** 从来源帧键生成稳定双摘要身份，便于重导入维持帧引用。 */ function stableId(value: string): string {
-  let first = 0x811c9dc5, second = 0x9e3779b9
-  for (let index = 0; index < value.length; index++) { const code = value.charCodeAt(index); first = Math.imul(first ^ code, 0x01000193); second = Math.imul(second ^ (code + index), 0x85ebca6b) }
-  return `slice-${(first >>> 0).toString(16).padStart(8, '0')}${(second >>> 0).toString(16).padStart(8, '0')}`
-}
 /* 调用 sha256Text(value) 并返回调用结果。 */ function hashText(value:string):string{return sha256Text(value)}
-
-/** 兼容宽高字段别名并生成有界非零尺寸帧矩形。 */ function frameRectangle(value: unknown): InterchangeSlice['frame'] {
-  const frame = object(value)
-  return { x: integer(frame.x), y: integer(frame.y), width: integer(frame.w ?? frame.width, 1, 1), height: integer(frame.h ?? frame.height, 1, 1) }
-}
-/** 在顶点数量上限内保留具有有限二维坐标的点。 */ function polygon(value: unknown): Array<{ x: number; y: number }> {
-  return list(value).slice(0, 256).flatMap(/** 只接受有限二维坐标，丢弃无效交换多边形点。 */ item => { const point = object(item); const x = Number(point.x), y = Number(point.y); return Number.isFinite(x) && Number.isFinite(y) ? [{ x, y }] : [] })
-}
 /** 展开有界动画标签帧区间，生成每个帧索引对应的标签列表。 */ function frameTags(document: Record<string, unknown>): Map<number, string[]> {
   const tags = new Map<number, string[]>(), meta = object(document.meta)
   for (const raw of list(meta.frameTags).slice(0, 4_096)) {
@@ -156,15 +108,124 @@ const ordinal=/* 根据 first<second 的真假，分别返回 -1 或 first>secon
   return result
 }
 
-/** Uses an isolated worker for metadata large enough to affect pointer latency; small files avoid worker startup cost. */
-/** 小文档或无 Worker 时同步转换，大文档委派带十秒超时的独立 Worker。 */ export async function importContentInterchangeAsync(fileName:string,source:string,previous?:ContentInterchangeMetadata|null):Promise<ContentInterchangeResult|null>{
-  if(typeof Worker==='undefined'||source.length<131_072)return importContentInterchange(fileName,source,previous)
-  const worker=new Worker(new URL('./contentInteroperability.worker.ts',import.meta.url),{type:'module'}),requestId=stableId(`${fileName}:${source.length}:${performance.now()}`)
-  return new Promise(/** 登记交换转换 Worker 超时、回复及错误处理，并发送带请求身份的转换数据。 */ (resolve,reject)=>{const timeout=window.setTimeout(/** 超时后终止交换转换 Worker 并拒绝等待，避免无限挂起。 */ ()=>{worker.terminate();reject(new Error('CONTENT_IMPORT_TIMEOUT: Metadata processing exceeded 10 seconds.'))},10_000);worker.onmessage=/** 忽略非本次回复，完成时清理超时并终止 Worker，再交付结果或错误。 */ event=>{if(event.data?.id!==requestId)return;window.clearTimeout(timeout);worker.terminate();if(event.data.error)reject(new Error(event.data.error));else resolve(event.data.result as ContentInterchangeResult|null)};worker.onerror=/** 清理超时并终止失败 Worker，将错误消息交给调用者。 */ event=>{window.clearTimeout(timeout);worker.terminate();reject(new Error(event.message))};worker.postMessage({id:requestId,fileName,source,previous})})
+/** Optional host identity/cancellation preserves the existing three-argument converter API. */
+export interface ContentInterchangeAsyncOptions {
+  signal?: AbortSignal
+  isCurrent?: () => boolean
+  sourceIdentity?: string
+  inputRevision?: number
+  preparationStartedAtMs?: number
 }
-
-/** 验证交换格式版本并规范化切片、原始源、地图尺寸及有界诊断列表。 */ export function validateInterchangeMetadata(value: ContentInterchangeMetadata | null | undefined): ContentInterchangeMetadata | null {
-  if (!value || value.version !== 1 || !['aseprite-json', 'texturepacker-json', 'tiled-json', 'tiled-xml', 'atlas-json', 'nova-native'].includes(value.format)) return null
-  const slices = list(value.slices).slice(0, MAX_SLICES).flatMap(/** 规范化单个恢复切片的身份、来源索引、几何、轴心、时长及标签碰撞数据。 */ (raw, index) => { const item = object(raw), sourceKey = text(item.sourceKey, `frame-${index}`, 512), rectangle = frameRectangle(item.frame); return [{ id: text(item.id, stableId(sourceKey), 80), sourceKey, sourceIndex: integer(item.sourceIndex, index, 0, MAX_SLICES - 1), name: text(item.name, sourceKey, 240), frame: rectangle, trimOffset: { x: integer(object(item.trimOffset).x), y: integer(object(item.trimOffset).y) }, sourceSize: { width: integer(object(item.sourceSize).width, rectangle.width, 1), height: integer(object(item.sourceSize).height, rectangle.height, 1) }, pivot: { x: unit(object(item.pivot).x), y: unit(object(item.pivot).y) }, rotated: item.rotated === true, trimmed: item.trimmed === true, durationMs: integer(item.durationMs, 0, 0, 3_600_000), tags: [...new Set(list(item.tags).map(/* 调用 text(tag, '', 120) 并返回调用结果。 */ tag => text(tag, '', 120)).filter(Boolean))].sort(), collider: polygon(item.collider) }] })
-  return { version: 1, format: value.format, sourceName: text(value.sourceName, 'source', 240), sourceHash: text(value.sourceHash, '', 128), ...(typeof value.originalSource === 'string' && new TextEncoder().encode(value.originalSource).byteLength <= MAX_SOURCE_BYTES ? {originalSource: value.originalSource} : {}), texturePath: text(value.texturePath, '', 1024), mapSize: value.mapSize ? { width: integer(value.mapSize.width, 1, 1), height: integer(value.mapSize.height, 1, 1) } : null, slices, diagnostics: list(value.diagnostics).slice(0, 512).flatMap(/** 规范化交换诊断严重性并限制代码与消息长度。 */ raw => { const item = object(raw), severity = ['warning', 'error'].includes(text(item.severity)) ? text(item.severity) as 'warning' | 'error' : 'info'; return [{ severity, code: text(item.code, 'CONTENT_INFO', 80), message: text(item.message, '', 2_000) }] }) }
+/** Reject oversized raw UTF-8 before creating a whole decoded string; preserve the decoder's leading BOM behavior. */
+export function decodeContentInterchangeSource(fileName: string, bytes: ArrayBuffer): string {
+  if (bytes.byteLength > MAX_SOURCE_BYTES) {
+    const prefix = new Uint8Array(bytes, 0, Math.min(3, bytes.byteLength))
+    if (bytes.byteLength > MAX_SOURCE_BYTES + 3 || prefix[0] !== 0xef || prefix[1] !== 0xbb || prefix[2] !== 0xbf) throw new Error(`CONTENT_SOURCE_LIMIT: ${fileName} exceeds the 16 MiB metadata limit.`)
+  }
+  return new TextDecoder().decode(bytes)
+}
+function contentImportAborted(): Error { const error = new Error('Content import cancelled or source replaced.'); error.name = 'AbortError'; return error }
+/** Count UTF-8 without allocating a second whole-source byte buffer; reject at the original limit. */
+function contentUtf8Bytes(value: string, maximum: number): number {
+  if (value.length > maximum) throw new Error('CONTENT_INPUT_LIMIT: Input exceeds the configured byte budget.')
+  let bytes = 0
+  for (let index = 0; index < value.length; index++) {
+    const code = value.charCodeAt(index)
+    if (code < 0x80) bytes++
+    else if (code < 0x800) bytes += 2
+    else if (code >= 0xd800 && code <= 0xdbff && index + 1 < value.length && value.charCodeAt(index + 1) >= 0xdc00 && value.charCodeAt(index + 1) <= 0xdfff) { bytes += 4; index++ }
+    else bytes += 3
+    if (bytes > maximum) throw new Error('CONTENT_INPUT_LIMIT: Input exceeds the configured byte budget.')
+  }
+  return bytes
+}
+/** Conservative clone/retained-data estimate, not a physical JS heap upper bound. */
+function contentRetainedBytes(value: unknown, maximum: number): number {
+  let bytes = 0
+  const ancestors = new WeakSet<object>()
+  const add = (size: number): void => { bytes += size; if (!Number.isSafeInteger(bytes) || bytes > maximum) throw new Error('CONTENT_INPUT_LIMIT: Metadata exceeds the configured byte budget.') }
+  const visit = (item: unknown, depth: number): void => {
+    if (depth > 32) throw new Error('CONTENT_INPUT_STRUCTURE: Metadata nesting exceeds its plain schema.')
+    if (typeof item === 'string') { add(item.length * 2); add(contentUtf8Bytes(item, maximum - bytes)); return }
+    if (item === null || item === undefined || typeof item === 'number' || typeof item === 'boolean') { add(16); return }
+    if (typeof item !== 'object' || ancestors.has(item)) throw new Error('CONTENT_INPUT_STRUCTURE: Expected acyclic plain metadata.')
+    add(Array.isArray(item) ? 32 + item.length * 8 : 32)
+    ancestors.add(item)
+    for (const key in item) {
+      if (!Object.prototype.hasOwnProperty.call(item, key)) continue
+      const property = Object.getOwnPropertyDescriptor(item, key)
+      if (!property || !('value' in property)) throw new Error('CONTENT_INPUT_STRUCTURE: Metadata accessors cannot be cloned safely.')
+      add(key.length * 2); add(contentUtf8Bytes(key, maximum - bytes)); visit(property.value, depth + 1)
+    }
+    ancestors.delete(item)
+  }
+  visit(value, 0)
+  return bytes
+}
+/** Global asset admission precedes conversion, Worker construction and postMessage clone. */
+export async function importContentInterchangeAsync(fileName: string, source: string, previous?: ContentInterchangeMetadata | null, options: ContentInterchangeAsyncOptions = {}): Promise<ContentInterchangeResult | null> {
+  const enteredAtMs = performance.now()
+  const preparationStartedAtMs = options.preparationStartedAtMs
+  const requestedAtMs = preparationStartedAtMs !== undefined && Number.isFinite(preparationStartedAtMs) && preparationStartedAtMs >= 0 && preparationStartedAtMs <= enteredAtMs ? preparationStartedAtMs : enteredAtMs
+  const current = (): void => { if (options.signal?.aborted || options.isCurrent && !options.isCurrent()) throw contentImportAborted() }
+  current()
+  // The synchronous converter is also imported inside the Worker. Only the parent async path loads its existing singleton.
+  const { auxiliaryWork, performanceCoordinator } = await import('../runtime/performance/services')
+  current()
+  const epoch = performanceCoordinator.snapshot.sessionEpoch
+  let sourceBytes: number
+  try { sourceBytes = contentUtf8Bytes(source, MAX_SOURCE_BYTES) }
+  catch { throw new Error(`CONTENT_SOURCE_LIMIT: ${fileName} exceeds the 16 MiB metadata limit.`) }
+  const maximumInput = performanceCoordinator.config.maxQueueBytes
+  const retainedSourceBytes = sourceBytes + source.length * 2
+  const inputBytes = retainedSourceBytes + contentRetainedBytes({ fileName, previous }, maximumInput - retainedSourceBytes)
+  const identity = options.sourceIdentity ?? `content:${fileName.slice(0, 240)}`
+  const work = auxiliaryWork.schedule<ContentInterchangeResult | null>({
+    name: `content:${fileName.slice(0, 240)}`, owner: 'asset', workClass: 'required', epoch, inputRevision: options.inputRevision,
+    inputBytes, scratchBytes: inputBytes * 8 + MAX_SOURCE_BYTES * 16, outputBytes: inputBytes + MAX_SOURCE_BYTES * 12,
+    readSet: [identity], writeSet: [], requestedAtMs, cooperative: false, cancelStrategy: typeof Worker === 'undefined' || source.length < 131_072 ? 'discard-after-completion' : 'retire-independent-worker'
+  }, async context => {
+    const valid = (): void => { current(); if (context.signal.aborted || context.epoch !== performanceCoordinator.snapshot.sessionEpoch) throw contentImportAborted() }
+    valid()
+    if (typeof Worker === 'undefined' || source.length < 131_072) {
+      const startedAt = performanceCoordinator.now()
+      const result = importContentInterchange(fileName, source, previous)
+      context.reportPhases({ postMessageMs: null, workerExecutionMs: null, localExecutionMs: Math.max(0, performanceCoordinator.now() - startedAt), transportAndReturnMs: null, mergeMs: null })
+      valid(); return result
+    }
+    const worker = new Worker(new URL('./contentInteroperability.worker.ts', import.meta.url), { type: 'module' })
+    const requestId = stableId(`${fileName}:${source.length}:${performance.now()}`)
+    return new Promise<ContentInterchangeResult | null>((resolve, reject) => {
+      let terminal = false, timeout: ReturnType<typeof setTimeout> | undefined
+      let postedAt: number | null = null, postMessageMs: number | null = null
+      const finish = async (result: ContentInterchangeResult | null, error?: unknown): Promise<void> => {
+        if (terminal) return
+        terminal = true
+        if (timeout !== undefined) clearTimeout(timeout)
+        context.signal.removeEventListener('abort', cancel)
+        worker.onmessage = null; worker.onerror = null
+        try {
+          // DOM terminate returns void. Hosts with observable termination (Node tests) return a completion Promise.
+          await worker.terminate()
+          context.reportPhases({ postMessageMs, workerExecutionMs: null, transportAndReturnMs: null, mergeMs: null })
+          if (error !== undefined) throw error
+          valid(); resolve(result)
+        } catch (failure) { reject(failure) }
+      }
+      const cancel = (): void => { void finish(null, contentImportAborted()) }
+      context.signal.addEventListener('abort', cancel, { once: true })
+      if (context.signal.aborted) { cancel(); return }
+      timeout = setTimeout(() => { void finish(null, new Error('CONTENT_IMPORT_TIMEOUT: Metadata processing exceeded 10 seconds.')) }, 10_000)
+      worker.onmessage = event => { if (event.data?.id !== requestId || terminal) return; void finish(event.data.result as ContentInterchangeResult | null, event.data.error ? new Error(String(event.data.error)) : undefined) }
+      worker.onerror = event => { void finish(null, new Error(event.message)) }
+      try { valid(); postedAt = performanceCoordinator.now(); worker.postMessage({ id: requestId, fileName, source, previous }); postMessageMs = Math.max(0, performanceCoordinator.now() - postedAt) }
+      catch (error) { void finish(null, error) }
+    })
+  })
+  const cancelWork = (): void => { work.cancel('Content import cancelled') }
+  options.signal?.addEventListener('abort', cancelWork, { once: true })
+  if (options.signal?.aborted) cancelWork()
+  try { const result = await work.promise; current(); return result }
+  catch (error) { if (options.signal?.aborted) throw contentImportAborted(); throw error }
+  finally { options.signal?.removeEventListener('abort', cancelWork) }
 }

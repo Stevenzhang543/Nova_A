@@ -1,7 +1,7 @@
 /** 结构化数据资源：读取、规范和校验可供脚本及组件使用的数据文档。 */
 import { createTextAsset, readTextAsset, updateTextAsset } from '../assets/AssetDatabase'
 import type { AssetRecord } from '../assets/types'
-import { scheduleJob } from './jobScheduler'
+import { scheduleJob, type JobExecutor } from './jobScheduler'
 
 export type DataFieldType = 'string' | 'number' | 'integer' | 'boolean' | 'json'
 export interface DataFieldSchema { name: string; type: DataFieldType; required: boolean; default: string | number | boolean | null }
@@ -75,19 +75,23 @@ export interface DataValidationIssue { row: number; field: string; message: stri
 /* 调用 updateTextAsset(reference, JSON.stringify(normalizeDataSchema(schema), null, 2)) 并返回调用结果。 */ export function saveDataSchema(reference: string, schema: DataSchemaResource): boolean { return updateTextAsset(reference, JSON.stringify(normalizeDataSchema(schema), null, 2)) }
 /* 调用 updateTextAsset(reference, JSON.stringify(normalizeDataTable(table), null, 2)) 并返回调用结果。 */ export function saveDataTable(reference: string, table: DataTableResource): boolean { return updateTextAsset(reference, JSON.stringify(normalizeDataTable(table), null, 2)) }
 
-/** 通过任务调度解析 CSV 或 JSON，转换表头或抽取行数组后执行模式校验。 */ export async function importDataText(source: string, type: 'csv' | 'json' | 'database', schema: DataSchemaResource): Promise<{ rows: Array<Record<string, unknown>>; issues: DataValidationIssue[] }> {
-  let rows: unknown[]
-  if (type === 'csv') {
-    const parsed = await scheduleJob<string[][]>('parseCsv', source).promise
-    const [headers = [], ...values] = parsed
-    rows = values.map(/* 调用 Object.fromEntries(headers.map((header, index) => [safeName(header, `column_${index + 1}`), columns[index] ?? ''])) 并返回调用结果。 */ columns => Object.fromEntries(headers.map(/* 返回按声明顺序构造的数组 [safeName(header, `column_${index + 1}`), columns[index] ?? '']。 */ (header, index) => [safeName(header, `column_${index + 1}`), columns[index] ?? ''])))
-  } else {
-    const parsed = await scheduleJob<unknown>('parseJson', source).promise
-    const document = object(parsed)
-    const candidate = Array.isArray(parsed) ? parsed : Array.isArray(document.rows) ? document.rows : Array.isArray(document.records) ? document.records : []
-    rows = candidate
-  }
-  return validateDataRows(rows, schema)
+/** 通过任务调度解析 CSV 或 JSON，转换表头或抽取行数组后执行模式校验。 */ export async function importDataText(source: string, type: 'csv' | 'json' | 'database', schema: DataSchemaResource, options: { executor?: JobExecutor } = {}): Promise<{ rows: Array<Record<string, unknown>>; issues: DataValidationIssue[] }> {
+  // Normalization remains in the task's reservation and wall-time accounting. Authoring commits stay with the caller.
+  return scheduleJob<{ rows: Array<Record<string, unknown>>; issues: DataValidationIssue[] }>(type === 'csv' ? 'parseCsv' : 'parseJson', source, {
+    // Measured JSON clone/return/merge cost exceeded the serial path. CSV retains the existing helper policy.
+    // An explicit auto override allows separate, source-paired experiments; it does not increase the global budget.
+    workClass: 'required', executor: options.executor ?? (type === 'csv' ? 'auto' : 'serial'), merge: parsed => {
+      let rows: unknown[]
+      if (type === 'csv') {
+        const [headers = [], ...values] = parsed as string[][]
+        rows = values.map(columns => Object.fromEntries(headers.map((header, index) => [safeName(header, `column_${index + 1}`), columns[index] ?? ''])))
+      } else {
+        const document = object(parsed)
+        rows = Array.isArray(parsed) ? parsed : Array.isArray(document.rows) ? document.rows : Array.isArray(document.records) ? document.records : []
+      }
+      return validateDataRows(rows, schema)
+    }
+  }).promise
 }
 
 /** 根据规范数据模式生成 TypeScript 接口及按主键建立只读索引的代码文本。 */ export function generateTypedDataAccessors(schemaValue: unknown): string {

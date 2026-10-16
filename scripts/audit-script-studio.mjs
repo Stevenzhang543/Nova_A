@@ -5,9 +5,10 @@ const read = /* 调用 readFileSync(new URL(`../${path}`, import.meta.url), 'utf
 const assert = /* 条件不满足时抛出带脚本工作区审计前缀的错误。 */ (condition, message) => { if (!condition) throw new Error(`Script Studio audit failed: ${message}`) }
 
 const studio = read('src/components/ScriptStudio.vue')
-const api = read('src/editor/scriptApi.ts')
-const language = read('src/editor/scriptLanguage.ts')
-const runtime = read('src/runtime/GameplayRuntime.ts')
+const api = read('src/runtime/scriptApiCatalog.ts')
+// Semantic algorithms and Editor workspace/Worker owner remain separately implemented.
+const language = [read('src/runtime/scriptAnalysis.ts'), read('src/editor/scriptLanguage.ts')].join('\n')
+const runtime = read('src/runtime/GameplayRuntimeCore.ts')
 const rust = read('crates/nova_script/src/lib.rs')
 const wasm = read('crates/nova_wasm/src/lib.rs')
 const format = read('crates/nova_format/src/lib.rs')

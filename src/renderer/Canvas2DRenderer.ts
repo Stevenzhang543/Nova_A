@@ -97,6 +97,7 @@ export class Canvas2DRenderer implements Renderer2D {
   }
   /* 开始新帧，重置命令与统计，设置高质量采样并填充清屏颜色。 */
   beginFrame(options: FrameOptions): void {
+    this.stats.cpuSubmissionAtMs = null
     this.frameSerial++
     this.frame = boundedFrame(options)
     const { width, height, pixelRatio } = this.frame
@@ -182,6 +183,7 @@ export class Canvas2DRenderer implements Renderer2D {
     if (cameraSaved) context.restore()
     this.stats.batches = this.stats.drawCalls
     this.stats.batchBreaks = Math.max(0, this.stats.batches - 1)
+    this.stats.cpuSubmissionAtMs = performance.now()
     return { ...this.stats }
   }
   /* 清空待绘制命令并释放着色纹理的画布缓存。 */

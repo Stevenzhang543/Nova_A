@@ -29,12 +29,16 @@ try {
     build: {
       ssr: true, outDir: compiled, emptyOutDir: false,
       rollupOptions: {
-        input: { jobs: join(root, 'src/runtime/jobScheduler.ts'), jobWorker: join(root, 'src/runtime/jobScheduler.worker.ts'), performance: join(root, 'src/runtime/largeWorldPerformance.ts') },
+        input: { jobs: join(root, 'src/runtime/jobScheduler.ts'), jobWorker: join(root, 'src/runtime/jobScheduler.worker.ts'), performance: join(root, 'src/runtime/largeWorldPerformance.ts'), budgets: join(root, 'src/runtime/performance/services.ts') },
         output: { entryFileNames: '[name].mjs', chunkFileNames: 'chunks/[name]-[hash].mjs' }
       }
     }
   })
-  const load = /* 调用 import(`${pathToFileURL(join(compiled, `${name}.mjs`)).href}?v=${Date.now()}`) 并返回调用结果。 */ name => import(`${pathToFileURL(join(compiled, `${name}.mjs`)).href}?v=${Date.now()}`)
+  // A unique compiled directory already isolates each run. Query aliases would create a second singleton Owner.
+  const load = name => import(pathToFileURL(join(compiled, `${name}.mjs`)).href)
+  // This fixture exercises a two-slot pool. Unknown hardware now intentionally starts with one slot.
+  const budgets = await load('budgets')
+  budgets.performanceCoordinator.configure({}, 8)
   const jobs = await load('jobs')
   const runtime = await load('performance')
 
@@ -81,7 +85,7 @@ try {
   const queued = jobs.scheduleJob('hash', 'queued')
   queued.cancel()
   await assert.rejects(queued.promise, /cancelled/i)
-  assert.equal(jobs.jobSchedulerState.queued, 0, 'queued cancellation must remove the job immediately')
+  assert.equal(jobs.jobSchedulerState.queued, 0, 'queued cancellation must remove the job immediately: ' + JSON.stringify({ state: jobs.jobSchedulerState, budget: budgets.performanceCoordinator.snapshot, workers: ControlledWorker.instances.length }))
   blocker.cancel()
   await assert.rejects(blocker.promise, /cancelled/i)
 

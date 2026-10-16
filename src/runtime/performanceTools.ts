@@ -3,11 +3,14 @@ import { reactive } from 'vue'
 import { assetState } from '../assets/AssetDatabase'
 import type { RendererStats } from '../renderer'
 import { productionSettings } from './production'
-import { profilerState, type FrameProfile, type ProfilerAnnotation, type ProfilerCounter, type ProfilerMarker } from './profiler'
+import { currentPerformanceSamplingScope, currentScriptProfileCollection, profilerState, type FrameProfile, type PerformanceSamplingScope, type ProfilerAnnotation, type ProfilerCounter, type ProfilerMarker } from './profiler'
+import type { ScriptProfileCollectionEvidence } from './profilerCollectionBudget'
 import { jobSchedulerState } from './jobScheduler'
 import { audioRuntime } from './audio'
 import { particleDiagnostics } from './particles'
 import { NOVA_ENGINE_VERSION } from '../projects/projectFormat'
+import { migrateFrameObservation, type BenchmarkMode } from './performance/observability'
+import { currentPerformanceStartupObservation, performanceRuntimeSettings, performanceRuntimeState, type PerformanceStartupObservation } from './largeWorldPerformance'
 
 export interface LifetimeEvent {
   frame: number
@@ -18,7 +21,16 @@ export interface LifetimeEvent {
 }
 export interface PerformanceCapture {
   format: 'nova-performance-capture'
-  version: 2
+  version: 2 | 3 | 4
+  measurementSchema?: 'nova-frame-observation-v1'
+  /** Added in v4; v2/v3 do not certify startup or retained-history sampling metadata. */
+  startup?: Readonly<PerformanceStartupObservation>
+  samplingScope?: PerformanceSamplingScope
+  /** Optional diagnostic collection evidence; archived captures without it have unknown limits/rejections. */
+  scriptCollection?: Readonly<ScriptProfileCollectionEvidence>
+  legacyStartupMetrics?: { coldStartupMs?: unknown; warmStartupMs?: unknown }
+  benchmarkMode?: BenchmarkMode
+  policyRevision?: number
   engineVersion: string
   id: string
   name: string
@@ -90,13 +102,15 @@ function measuredCheck(id: string, actual: number | null, limit: number, unit: s
 
 /** Budget compliance evaluates recorded measurements; optional unavailable metrics and estimates stay explicit. */
 function evaluateCapture(frames: FrameProfile[], renderer: RendererStats): CaptureBudgetResult {
-  const timing = (id: string, key: 'frameMs' | 'renderingMs' | 'audioMs', limit: number) => {
+  const timing = (id: string, key: 'rafIntervalMs' | 'renderingMs' | 'audioMs', limit: number) => {
     if (!frames.length) return measuredCheck(id, null, limit, 'ms', 'No frame samples were recorded.')
     const values = frames.map(frame => frame[key])
-    return measuredCheck(id, values.every(value => Number.isFinite(value) && value >= 0) ? finiteAverage(values) : NaN, limit, 'ms')
+    if (values.every(value => value === null || value === undefined)) return measuredCheck(id, null, limit, 'ms', 'No observed interval samples were recorded; historical CPU fields cannot substitute.')
+    const measured = values.filter((value): value is number => value !== null && value !== undefined)
+    return measuredCheck(id, measured.every(value => Number.isFinite(value) && (key === 'rafIntervalMs' ? value > 0 : value >= 0)) ? finiteAverage(measured) : NaN, limit, 'ms')
   }
   const checks: CaptureBudgetResult['checks'] = [
-    timing('frame.average', 'frameMs', productionSettings.performance.frameBudgetMs),
+    timing('frame.average', 'rafIntervalMs', productionSettings.performance.frameBudgetMs),
     timing('render.average', 'renderingMs', productionSettings.performance.renderingBudgetMs),
     timing('audio.average', 'audioMs', productionSettings.performance.audioBudgetMs),
     measuredCheck('gpu.frame', renderer.gpuMs, productionSettings.performance.gpuBudgetMs, 'ms', 'GPU timing is unavailable on this renderer.'),
@@ -105,7 +119,7 @@ function evaluateCapture(frames: FrameProfile[], renderer: RendererStats): Captu
     measuredCheck('particles.update', particleDiagnostics.updateMs, productionSettings.performance.particleBudgetMs, 'ms'),
     { id: 'profiler.overhead', actual: Number.isFinite(profilerState.estimatedOverheadPercent) ? profilerState.estimatedOverheadPercent : null, limit: productionSettings.performance.profilerOverheadBudgetPercent, unit: '%', passed: false, status: 'estimated', reason: 'Planning estimate; profiler overhead was not measured.' }
   ]
-  const status = checks.some(check => check.status === 'failed') ? 'failed' : frames.length ? 'passed' : 'unavailable'
+  const status = checks.some(check => check.status === 'failed') ? 'failed' : checks.find(check => check.id === 'frame.average')?.status === 'unavailable' ? 'unavailable' : frames.length ? 'passed' : 'unavailable'
   return { passed: status === 'passed', status, evaluatedAt: new Date().toISOString(), checks }
 }
 
@@ -150,7 +164,10 @@ function evaluateCapture(frames: FrameProfile[], renderer: RendererStats): Captu
 
 /** 结构说明（自动提取）：capturePerformance；输入 name、renderer；直接调用 toString、Date.now、slice、name.trim、toISOString 等；返回路径包含 capture。 */ export function capturePerformance(name = `Capture ${performanceToolsState.captures.length + 1}`, renderer: RendererStats): PerformanceCapture {
   const capture: PerformanceCapture = {
-    format: 'nova-performance-capture', version: 2, engineVersion: NOVA_ENGINE_VERSION,
+    format: 'nova-performance-capture', version: 4, measurementSchema: 'nova-frame-observation-v1',
+    startup: currentPerformanceStartupObservation(), samplingScope: currentPerformanceSamplingScope(performanceRuntimeSettings.reactivePublishInterval),
+    scriptCollection: currentScriptProfileCollection(),
+    benchmarkMode: performanceRuntimeState.benchmarkMode, policyRevision: performanceRuntimeState.policyRevision, engineVersion: NOVA_ENGINE_VERSION,
     id: `capture-${Date.now().toString(36)}-${performanceToolsState.captures.length}`,
     name: name.trim().slice(0, 120) || 'Capture', createdAt: new Date().toISOString(),
     frames: profilerState.samples.slice(-productionSettings.performance.traceCapacity).map(/** 构造并返回记录 { ...frame }，字段按当前实参及捕获状态求值。 */ frame => ({ ...frame })),
@@ -167,8 +184,11 @@ function evaluateCapture(frames: FrameProfile[], renderer: RendererStats): Captu
 /** 结构说明（自动提取）：comparePerformanceCaptures；输入 firstId、secondId；直接调用 performanceToolsState.captures.find、first.frames.map、second.frames.map、finiteAverage、Math.max 等；写入 performanceToolsState.comparison；返回路径包含 comparison。 */ export function comparePerformanceCaptures(firstId: string, secondId: string): CaptureComparison | null {
   const first = performanceToolsState.captures.find(/* 比较 capture.id 与 firstId，返回严格相等的判断结果。 */ capture => capture.id === firstId)
   const second = performanceToolsState.captures.find(/* 比较 capture.id 与 secondId，返回严格相等的判断结果。 */ capture => capture.id === secondId)
-  if (!first || !second || first.id === second.id || !first.frames.length || !second.frames.length || [...first.frames, ...second.frames].some(frame => !Number.isFinite(frame.frameMs) || frame.frameMs < 0)) { performanceToolsState.comparison = null; return null }
-  const firstFrames = first.frames.map(/* 返回 frame.frameMs 的当前值。 */ frame => frame.frameMs), secondFrames = second.frames.map(/* 返回 frame.frameMs 的当前值。 */ frame => frame.frameMs)
+  if (!first || !second || first.id === second.id || first.benchmarkMode !== second.benchmarkMode || ![3, 4].includes(first.version) || ![3, 4].includes(second.version)) { performanceToolsState.comparison = null; return null }
+  if ([first, second].some(capture => capture.frames.some(frame => frame.rafIntervalMs !== null && frame.rafIntervalMs !== undefined && (!Number.isFinite(frame.rafIntervalMs) || frame.rafIntervalMs <= 0)))) { performanceToolsState.comparison = null; return null }
+  const observed = (capture: PerformanceCapture) => capture.frames.map(frame => migrateFrameObservation(frame as unknown as Record<string, unknown>).rafIntervalMs).filter((value): value is number => value !== null && value > 0)
+  const firstFrames = observed(first), secondFrames = observed(second)
+  if (!firstFrames.length || !secondFrames.length) { performanceToolsState.comparison = null; return null }
   const comparison: CaptureComparison = {
     first: first.id, second: second.id,
     averageFrameDeltaMs: finiteAverage(secondFrames) - finiteAverage(firstFrames),
@@ -184,7 +204,21 @@ function evaluateCapture(frames: FrameProfile[], renderer: RendererStats): Captu
   return comparison
 }
 
-/* 调用 JSON.stringify(capture, null, 2) 并返回调用结果。 */ export function serializePerformanceCapture(capture: PerformanceCapture): string { return JSON.stringify(capture, null, 2) }
+/** Older capture versions had no qualified startup boundaries; do not promote their aliases into measured startup. */
+export function performanceCaptureStartupObservation(capture: PerformanceCapture): Readonly<PerformanceStartupObservation> {
+  const source = capture.version === 4 && capture.startup?.schema === 'nova-startup-observation-v1' ? capture.startup : undefined
+  const metric = (value: unknown) => typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null
+  return Object.freeze({ schema: 'nova-startup-observation-v1', coldStartupMs: null, warmStartupMs: null,
+    moduleToFirstHostFrameWallMs: metric(source?.moduleToFirstHostFrameWallMs), workspacePrefetchWallMs: metric(source?.workspacePrefetchWallMs) })
+}
+/** Preserve legacy numbers for inspection while marking the corrected telemetry unavailable. */
+export function serializePerformanceCapture(capture: PerformanceCapture): string {
+  const source = capture as PerformanceCapture & { coldStartupMs?: unknown; warmStartupMs?: unknown }
+  const hasLegacyStartup = capture.version < 4 && ('coldStartupMs' in source || 'warmStartupMs' in source)
+  return JSON.stringify({ ...capture, startup: performanceCaptureStartupObservation(capture),
+    ...(hasLegacyStartup ? { legacyStartupMetrics: { ...capture.legacyStartupMetrics, coldStartupMs: source.coldStartupMs, warmStartupMs: source.warmStartupMs }, coldStartupMs: null, warmStartupMs: null } : {}),
+    frames: capture.frames.map(frame => ({ ...frame, ...migrateFrameObservation(frame as unknown as Record<string, unknown>), ...(capture.version === 2 ? { legacyMetrics: { inputToPixelMs: frame.inputToPixelMs, onePercentLowFps: frame.onePercentLowFps }, onePercentLowFps: null } : {}) })) }, null, 2)
+}
 /** Legacy booleans remain readable; current reports distinguish no evidence from failed measured budgets. */
 export function performanceCaptureCiReport(capture: PerformanceCapture): { status: 'passed' | 'failed' | 'unavailable'; engineVersion: string; checks: CaptureBudgetResult['checks']; scope: string } {
   return { status: capture.budget.status ?? (capture.budget.passed ? 'passed' : 'failed'), engineVersion: capture.engineVersion, checks: capture.budget.checks, scope: 'Available measured checks only; unavailable telemetry and planning estimates are not certified.' }

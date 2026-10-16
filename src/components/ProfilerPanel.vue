@@ -9,17 +9,17 @@
         <header><strong>{{ t('frameTrace') }}</strong><span>{{ profilerState.samples.length }}/{{ settings.performance.traceCapacity }}</span></header>
         <div class="metrics">
           <article v-for="metric in timingMetrics" :key="metric.label"><span>{{ t(metric.label) }}</span><strong>{{ metric.value.toFixed(2) }} ms</strong></article>
-          <article><span>{{ t('fps') }}</span><strong>{{ current.fps.toFixed(0) }}</strong></article>
+          <article><span>{{ t('fps') }}</span><strong>{{ current.fps === null ? measurementCopy.unavailable : current.fps.toFixed(0) }}</strong></article>
           <article><span>{{ t('memory') }}</span><strong>{{ current.memoryMb === null ? 'n/a' : `${current.memoryMb.toFixed(1)} MB` }}</strong></article>
           <article><span>{{ t('gpuPasses') }}</span><strong>{{ current.gpuPasses }}</strong></article>
           <article><span>{{ t('lifetimeChanges') }}</span><strong>{{ current.allocations }}</strong></article>
           <article><span>{{ t('assetJobs') }}</span><strong>{{ current.assetJobs }}</strong></article>
-          <article><span>{{ t('mainThreadTime') }}</span><strong>{{ current.mainThreadMs.toFixed(2) }} ms</strong></article>
+          <article><span>{{ t('mainThreadTime') }}</span><strong>{{ current.mainThreadMs === null ? measurementCopy.unavailable : current.mainThreadMs.toFixed(2) + ' ms' }}</strong></article>
           <article><span>{{ t('workerTime') }}</span><strong>{{ current.workerMs.toFixed(2) }} ms</strong></article>
           <article><span>{{ t('queueWaitTime') }}</span><strong>{{ current.queueWaitMs.toFixed(2) }} ms</strong></article>
           <article><span>{{ t('cacheHitRate') }}</span><strong>{{ (current.cacheHitRate * 100).toFixed(0) }}%</strong></article>
-          <article><span>{{ t('onePercentLow') }}</span><strong>{{ current.onePercentLowFps.toFixed(0) }} FPS</strong></article>
-          <article><span :title="t('inputToCpuSubmitHint')">{{ t('inputToCpuSubmit') }}</span><strong>{{ current.inputToPixelMs.toFixed(2) }} ms</strong></article>
+          <article><span>{{ t('onePercentLow') }}</span><strong>{{ current.onePercentLowFps === null ? measurementCopy.unavailable : current.onePercentLowFps.toFixed(0) + ' FPS' }}</strong></article>
+          <article><span :title="t('inputToCpuSubmitHint')">{{ t('inputToCpuSubmit') }}</span><strong>{{ current.inputToSubmitMs === null ? measurementCopy.unavailable : current.inputToSubmitMs.toFixed(2) + ' ms' }}</strong></article>
           <article><span>{{ t('drawCalls') }}</span><strong>{{ editorState.rendererStats.drawCalls }}</strong></article>
           <article><span>{{ t('runtimeBodies') }}</span><strong>{{ physicsState.engineDiagnostics.bodyCount }}</strong></article>
           <article><span>{{ t('activeContacts') }}</span><strong>{{ activeContacts }}</strong></article>
@@ -33,9 +33,12 @@
         <section class="presentation-diagnostics" data-audit="profiler-measurement">
           <h3>{{ measurementCopy.title }}</h3>
           <p>{{ measurementCopy.interval }}: median {{ intervalSummary.median }} ms · p95 {{ intervalSummary.p95 }} ms · p99 {{ intervalSummary.p99 }} ms ({{ intervalSummary.count }})</p>
-          <p>{{ measurementCopy.scope }}</p>
+          <p data-audit="profiler-sampling-window">{{ samplingWindowCopy.profiler }}</p>
+          <p data-audit="runtime-sampling-window">{{ samplingWindowCopy.runtime }}</p>
           <dl><div><dt>{{ measurementCopy.backend }}</dt><dd>{{ presentationStats.backend }}</dd></div><div><dt>{{ measurementCopy.resolution }}</dt><dd>{{ presentationStats.backingWidth ?? '—' }} × {{ presentationStats.backingHeight ?? '—' }}</dd></div><div><dt>{{ measurementCopy.samples }}</dt><dd>{{ presentationStats.antiAliasingSamples ?? '—' }}</dd></div><div><dt>{{ measurementCopy.fallback }}</dt><dd>{{ presentationStats.antiAliasingLimited ? t('yes') : t('no') }} / {{ presentationStats.shaderFallbacks }}</dd></div><div><dt>{{ measurementCopy.gpu }}</dt><dd>{{ presentationStats.gpuMs === null ? measurementCopy.unavailable : presentationStats.gpuMs.toFixed(2) + ' ms' }}</dd></div><div><dt>{{ measurementCopy.budget }}</dt><dd>{{ (presentationStats.textureMemoryBytes / 1048576).toFixed(1) }} / {{ (presentationStats.textureBudgetBytes / 1048576).toFixed(1) }} MB</dd></div></dl>
-          <table><thead><tr><th>{{ measurementCopy.pass }}</th><th>{{ measurementCopy.cpu }}</th><th>{{ t('drawCalls') }}</th></tr></thead><tbody><tr v-for="pass in renderGraphState.passes" :key="pass.name"><th>{{ pass.name }}</th><td>{{ pass.enabled ? pass.durationMs.toFixed(2) + ' ms' : measurementCopy.disabled }}</td><td>{{ pass.drawCalls }}</td></tr></tbody></table>
+          <p data-audit="render-request-status">{{ renderRequestStatusCopy }}</p>
+          <table data-audit="render-current-request"><caption>{{ t('renderLatestRequest') }}</caption><thead><tr><th>{{ measurementCopy.pass }}</th><th>{{ measurementCopy.cpu }}</th><th>{{ t('drawCalls') }}</th></tr></thead><tbody><tr v-for="pass in renderGraphState.passes" :key="pass.name"><th>{{ pass.name }}</th><td>{{ renderGraphState.request.status === 'not-submitted' ? t('renderNotSubmitted') : pass.enabled ? pass.durationMs.toFixed(2) + ' ms' : measurementCopy.disabled }}</td><td>{{ pass.drawCalls }}</td></tr></tbody></table>
+          <template v-if="renderGraphState.lastWorldSubmission && renderGraphState.request.status !== 'world-cpu-submitted'"><p data-audit="render-historical-submission">{{ t('renderHistoricalWorldSubmission', { frame: renderGraphState.lastWorldSubmission.requestFrame }) }}</p><table data-audit="render-historical-passes"><thead><tr><th>{{ measurementCopy.pass }}</th><th>{{ measurementCopy.cpu }}</th><th>{{ t('drawCalls') }}</th></tr></thead><tbody><tr v-for="pass in renderGraphState.lastWorldSubmission.passes" :key="pass.name"><th>{{ pass.name }}</th><td>{{ pass.enabled ? pass.durationMs.toFixed(2) + ' ms' : measurementCopy.disabled }}</td><td>{{ pass.drawCalls }}</td></tr></tbody></table></template>
           <p>{{ measurementCopy.quality }}</p><p>{{ measurementCopy.memory }}</p>
         </section>
         <svg class="trace-chart" viewBox="0 0 600 110" preserveAspectRatio="none" :aria-label="t('frameHistory')"><line x1="0" y1="93.3" x2="600" y2="93.3"/><line x1="0" y1="76.7" x2="600" y2="76.7"/><polyline :points="chartPoints" /></svg>
@@ -97,7 +100,7 @@
         <button :disabled="!captureA || !captureB || captureA === captureB" @click="compareCaptures">{{ t('compareCaptures') }}</button>
         <button :disabled="!selectedPerformanceCapture" @click="exportPerformanceCapture">{{ t('exportCaptureCi') }}</button>
         <dl v-if="tools.comparison"><div><dt>{{ t('averageFrameDelta') }}</dt><dd>{{ signed(tools.comparison.averageFrameDeltaMs) }} ms</dd></div><div><dt>{{ t('peakFrameDelta') }}</dt><dd>{{ signed(tools.comparison.peakFrameDeltaMs) }} ms</dd></div><div><dt>GPU delta</dt><dd>{{ tools.comparison.gpuDeltaMs === null ? 'n/a' : `${signed(tools.comparison.gpuDeltaMs)} ms` }}</dd></div><div><dt>Draw-call delta</dt><dd>{{ signedInteger(tools.comparison.drawCallDelta) }}</dd></div><div><dt>Texture delta</dt><dd>{{ signed(tools.comparison.textureMemoryDeltaMb) }} MB</dd></div><div><dt>{{ t('memoryDelta') }}</dt><dd>{{ tools.comparison.memoryDeltaMb === null ? 'n/a' : `${signed(tools.comparison.memoryDeltaMb)} MB` }}</dd></div><div><dt>{{ t('assetDelta') }}</dt><dd>{{ signed(tools.comparison.assetDeltaMb) }} MB</dd></div><div><dt>{{ t('entityDelta') }}</dt><dd>{{ signed(tools.comparison.entityDelta) }}</dd></div></dl>
-        <div v-if="selectedPerformanceCapture" class="budget-checks" data-audit="performance-evidence"><strong :class="{ danger: selectedPerformanceCapture.budget.status === 'failed' || !selectedPerformanceCapture.budget.status && !selectedPerformanceCapture.budget.passed }">CI {{ t(captureStatusKey(performanceCaptureCiReport(selectedPerformanceCapture).status)) }}</strong><p>{{ t('performanceEvidenceScope') }}</p><article v-for="check in selectedPerformanceCapture.budget.checks" :key="check.id" :class="{ danger: check.status === 'failed' || !check.status && !check.passed }"><span>{{ check.id }} · {{ t(captureStatusKey(check.status ?? (check.passed ? 'passed' : 'failed'))) }}</span><output>{{ check.actual === null ? t('performanceUnavailable') : check.actual.toFixed(2) }} / {{ check.limit }} {{ check.unit }}</output></article></div>
+        <div v-if="selectedPerformanceCapture" class="budget-checks" data-audit="performance-evidence"><strong :class="{ danger: selectedPerformanceCapture.budget.status === 'failed' || !selectedPerformanceCapture.budget.status && !selectedPerformanceCapture.budget.passed }">CI {{ t(captureStatusKey(performanceCaptureCiReport(selectedPerformanceCapture).status)) }}</strong><p>{{ t('performanceEvidenceScope') }}</p><p data-audit="performance-capture-script-collection">{{ performanceCaptureCollectionCopy }}</p><article v-for="check in selectedPerformanceCapture.budget.checks" :key="check.id" :class="{ danger: check.status === 'failed' || !check.status && !check.passed }"><span>{{ check.id }} · {{ t(captureStatusKey(check.status ?? (check.passed ? 'passed' : 'failed'))) }}</span><output>{{ check.actual === null ? t('performanceUnavailable') : check.actual.toFixed(2) }} / {{ check.limit }} {{ check.unit }}</output></article></div>
       </section>
       <section class="card lifetime-card">
         <header><strong>{{ t('objectLifetimes') }}</strong><span>{{ tools.lifetimeEvents.length }}</span></header>
@@ -182,9 +185,13 @@
         <label><span>{{ t('jobTimeout') }}</span><input v-model.number="settings.jobs.timeoutMs" type="number" min="100" max="120000" @change="commit"></label>
         <dl><div><dt>{{ t('active') }}</dt><dd>{{ jobs.active }}</dd></div><div><dt>{{ t('queued') }}</dt><dd>{{ jobs.queued }}</dd></div><div><dt>{{ t('completed') }}</dt><dd>{{ jobs.completed }}</dd></div><div><dt>{{ t('failed') }}</dt><dd>{{ jobs.failed }}</dd></div><div><dt>{{ t('cancelled') }}</dt><dd>{{ jobs.cancelled }}</dd></div><div><dt>{{ t('staleResults') }}</dt><dd>{{ jobs.stale }}</dd></div><div><dt>{{ t('queueWaitTime') }}</dt><dd>{{ jobs.queueWaitMs.toFixed(2) }} ms</dd></div><div><dt>{{ t('workerFallbacks') }}</dt><dd>{{ jobs.fallbackCount }}</dd></div><div><dt>{{ t('averageTime') }}</dt><dd>{{ jobs.averageMs.toFixed(2) }} ms</dd></div></dl>
       </section>
+      <PerformancePolicyPanel />
       <section class="card">
         <header><strong>{{ t('largeWorldRuntime') }}</strong><span>{{ runtimePerformance.entityCount }} / {{ runtimePerformance.componentCount }}</span></header>
-        <dl><div><dt>{{ t('dirtyTransforms') }}</dt><dd>{{ runtimePerformance.dirtyTransforms }}</dd></div><div><dt>{{ t('cacheHitRate') }}</dt><dd>{{ (runtimePerformance.cacheHitRate * 100).toFixed(1) }}%</dd></div><div><dt>{{ t('worstFrame') }}</dt><dd>{{ runtimePerformance.worstFrameMs.toFixed(2) }} ms</dd></div><div><dt>{{ t('onePercentLow') }}</dt><dd>{{ runtimePerformance.onePercentLowFps.toFixed(1) }} FPS</dd></div><div><dt :title="t('inputToCpuSubmitHint')">{{ t('inputToCpuSubmit') }}</dt><dd>{{ runtimePerformance.inputToPixelMs.toFixed(2) }} ms</dd></div><div><dt>{{ t('streamingDeferred') }}</dt><dd>{{ runtimePerformance.streamingDeferred }}</dd></div><div><dt>{{ t('adaptiveTier') }}</dt><dd>{{ runtimePerformance.adaptiveTier }}</dd></div><div><dt>{{ t('coldStartup') }}</dt><dd>{{ runtimePerformance.coldStartupMs.toFixed(1) }} ms</dd></div><div><dt>{{ t('warmStartup') }}</dt><dd>{{ runtimePerformance.warmStartupMs.toFixed(1) }} ms</dd></div></dl>
+        <dl><div><dt>{{ t('dirtyTransforms') }}</dt><dd>{{ runtimePerformance.dirtyTransforms }}</dd></div><div><dt>{{ t('cacheHitRate') }}</dt><dd>{{ (runtimePerformance.cacheHitRate * 100).toFixed(1) }}%</dd></div><div><dt>{{ t('worstFrame') }}</dt><dd>{{ formatMeasuredValue(runtimePerformance.worstFrameMs, 'ms', measurementCopy.unavailable) }}</dd></div><div><dt>{{ t('onePercentLow') }}</dt><dd>{{ formatMeasuredValue(runtimePerformance.onePercentLowFps, 'FPS', measurementCopy.unavailable, 1) }}</dd></div><div><dt :title="t('inputToCpuSubmitHint')">{{ t('inputToCpuSubmit') }}</dt><dd>{{ formatMeasuredValue(runtimePerformance.inputToSubmitMs, 'ms', measurementCopy.unavailable) }}</dd></div><div><dt>{{ t('streamingDeferred') }}</dt><dd>{{ runtimePerformance.streamingDeferred }}</dd></div><div><dt>{{ t('adaptiveTier') }}</dt><dd>{{ runtimePerformance.adaptiveTier }}</dd></div><div><dt>{{ t('coldStartup') }}</dt><dd data-audit="cold-startup">{{ formatMeasuredValue(runtimePerformance.coldStartupMs, 'ms', measurementCopy.unavailable, 1) }}</dd></div><div><dt>{{ t('warmStartup') }}</dt><dd data-audit="warm-startup">{{ formatMeasuredValue(runtimePerformance.warmStartupMs, 'ms', measurementCopy.unavailable, 1) }}</dd></div><div><dt>{{ startupCopy.moduleWall }}</dt><dd data-audit="module-first-host-wall">{{ formatMeasuredValue(runtimePerformance.moduleToFirstHostFrameWallMs, 'ms', measurementCopy.unavailable, 1) }}</dd></div><div><dt>{{ startupCopy.prefetchWall }}</dt><dd data-audit="workspace-prefetch-wall">{{ formatMeasuredValue(runtimePerformance.workspacePrefetchWallMs, 'ms', measurementCopy.unavailable, 1) }}</dd></div></dl>
+        <p data-audit="startup-measurement-scope">{{ startupCopy.scope }}</p>
+        <p data-audit="profiler-sampling-window">{{ samplingWindowCopy.profiler }}</p>
+        <p data-audit="runtime-sampling-window">{{ samplingWindowCopy.runtime }}</p>
         <div class="button-row"><button @click="runJob('hash')">{{ t('testHashJob') }}</button><button @click="runJob('parseJson')">{{ t('testJsonJob') }}</button><button :disabled="!cancelJob" @click="cancelActiveJob">{{ t('cancelJob') }}</button></div>
         <p>{{ jobResult || jobs.lastError || t('jobSchedulerHint') }}</p>
       </section>
@@ -194,16 +201,20 @@
       <section class="card script-profile-table">
         <header><strong>{{ t('scriptProfiler') }}</strong><span>{{ profilerState.scriptFunctions.length }} {{ t('functions') }}</span></header>
         <div class="button-row"><button @click="takeScriptCapture">{{ t('capturePerformance') }}</button><button :disabled="!profilerState.scriptFunctions.length" @click="exportCurrentScriptProfile">{{ t('exportJson') }}</button><button @click="clearProfiler">{{ t('clearSamples') }}</button></div>
+        <p data-audit="script-collection-budget">{{ scriptCollectionCopy }}</p>
+        <p data-audit="script-allocation-estimate-scope">{{ scriptAllocationEstimateCopy[preferencesState.locale] }}</p>
         <div class="profile-heading"><span>{{ t('function') }}</span><span>{{ t('calls') }}</span><span>{{ t('totalTime') }}</span><span>{{ t('maximumTime') }}</span><span>{{ t('allocationEstimate') }}</span></div>
-        <article v-for="entry in profilerState.scriptFunctions" :key="`${entry.scriptUuid}:${entry.functionName}`" class="profile-row"><span><strong>{{ entry.functionName }}</strong><small>{{ entry.scriptName }}</small></span><output>{{ entry.calls }}</output><output>{{ entry.totalMs.toFixed(3) }} ms</output><output>{{ entry.maximumMs.toFixed(3) }} ms</output><output>{{ entry.allocationEstimateBytes }} B</output></article>
+        <article v-for="entry in profilerState.scriptFunctions" :key="`${entry.scriptUuid}:${entry.functionName}`" class="profile-row"><span><strong>{{ entry.functionName }}</strong><small>{{ entry.scriptName }}</small></span><output>{{ entry.calls }}</output><output>{{ entry.totalMs.toFixed(3) }} ms</output><output>{{ entry.maximumMs.toFixed(3) }} ms</output><output>{{ entry.allocationEstimateBytes }}</output></article>
         <p v-if="!profilerState.scriptFunctions.length">{{ t('scriptProfilerEmpty') }}</p>
       </section>
       <section class="card script-capture-card">
         <header><strong>{{ t('captureComparison') }}</strong><span>{{ profilerState.scriptCaptures.length }}</span></header>
         <label><span>A</span><select v-model.number="scriptCaptureA"><option :value="-1">{{ t('none') }}</option><option v-for="(capture, index) in profilerState.scriptCaptures" :key="capture.createdAt" :value="index">{{ new Date(capture.createdAt).toLocaleTimeString() }}</option></select></label>
         <label><span>B</span><select v-model.number="scriptCaptureB"><option :value="-1">{{ t('none') }}</option><option v-for="(capture, index) in profilerState.scriptCaptures" :key="capture.createdAt" :value="index">{{ new Date(capture.createdAt).toLocaleTimeString() }}</option></select></label>
+        <p v-if="scriptCaptureA >= 0" data-audit="script-capture-collection-a">A: {{ scriptCaptureCollectionCopy(scriptCaptureA) }}</p>
+        <p v-if="scriptCaptureB >= 0" data-audit="script-capture-collection-b">B: {{ scriptCaptureCollectionCopy(scriptCaptureB) }}</p>
         <button :disabled="scriptCaptureA < 0 || scriptCaptureB < 0 || scriptCaptureA === scriptCaptureB" @click="compareScriptCaptures">{{ t('compareCaptures') }}</button>
-        <div class="profile-comparison"><article v-for="entry in scriptComparison" :key="entry.key"><strong>{{ entry.key }}</strong><span>{{ t('calls') }} {{ signedInteger(entry.callsDelta) }}</span><span>{{ t('totalTime') }} {{ signed(entry.totalMsDelta) }} ms</span><span>{{ t('allocationEstimate') }} {{ signedInteger(entry.allocationDelta) }} B</span></article></div>
+        <div class="profile-comparison"><article v-for="entry in scriptComparison" :key="entry.key"><strong>{{ entry.key }}</strong><span>{{ t('calls') }} {{ signedInteger(entry.callsDelta) }}</span><span>{{ t('totalTime') }} {{ signed(entry.totalMsDelta) }} ms</span><span>{{ t('allocationEstimate') }} {{ signedInteger(entry.allocationDelta) }}</span></article></div>
       </section>
     </div>
 
@@ -261,7 +272,7 @@ import UiButton from '../ui/components/UiButton.vue'
 import UiTabs from '../ui/components/UiTabs.vue'
 import UiPanelHeader from '../ui/components/UiPanelHeader.vue'
 import { computed, ref, shallowRef, watch } from 'vue'
-import { profilerMeasurementCopy } from '../editor/profilerMeasurementCopy'
+import { formatMeasuredValue, profilerMeasurementCopy, profilerSamplingWindowCopy, profilerStartupCopy, scriptAllocationEstimateCopy, scriptProfileCollectionCopy } from '../editor/profilerMeasurementCopy'
 import { preferencesState } from '../store/preferences'
 import type { RendererStats } from '../renderer/types'
 import { renderGraphState } from '../renderer/renderGraph'
@@ -270,10 +281,10 @@ import type { DataFieldSchema, DataSchemaResource, DataTableResource, DataValida
 import { createDataSchemaAsset, createDataTableAsset, generateTypedDataAccessors, importDataText, readDataSchema, readDataTable, saveDataSchema, saveDataTable } from '../runtime/dataResources'
 import { gameplayRuntime } from '../runtime/GameplayRuntime'
 import { faultCenterState, faultDiagnostics, reportRecoverableError } from '../runtime/faultCenter'
-import { jobSchedulerState as jobs, scheduleJob } from '../runtime/jobScheduler'
+import { jobSchedulerState as jobs, scheduleJob } from '../editor/jobSchedulerAdapter'
 import { comparePerformanceCaptures, capturePerformance, clearPerformanceTools, performanceCaptureCiReport, performanceToolsState as tools, serializePerformanceCapture } from '../runtime/performanceTools'
 import { physicsDebugState } from '../runtime/physicsDebug'
-import { addProfilerAnnotation, captureScriptProfile, clearProfiler, compareScriptProfiles, profilerState } from '../runtime/profiler'
+import { addProfilerAnnotation, captureScriptProfile, clearProfiler, compareScriptProfiles, currentPerformanceSamplingScope, PROFILER_INTERVAL_SUMMARY_CAPACITY, profilerState, scriptProfileCaptureCollectionEvidence } from '../runtime/profiler'
 import { loadProductionSettings, productionSettings as settings, serializeProductionSettings } from '../runtime/production'
 import { networkingModule as loadProductionNetworkingModule, startProductionNetworking, stopProductionNetworking } from '../runtime/productionRuntime'
 import { enableOfficialPackage, OFFICIAL_NETWORKING_PACKAGE_ID, packageEnabled } from '../runtime/packages'
@@ -285,17 +296,27 @@ import { requestConfirmation } from '../store/dialog'
 import { editorState } from '../store/editor'
 import { getSceneJSON, loadProject, physicsState, pushHistory, sceneManager, toggleSimulation } from '../store/physics'
 import SaveDataSettings from './SaveDataSettings.vue'
+import PerformancePolicyPanel from './PerformancePolicyPanel.vue'
 import { feedbackDiagnostics } from '../runtime/editorFeedback'
 import { recoveryDiagnostics } from '../runtime/recovery'
-import { performanceRuntimeState as runtimePerformance } from '../runtime/largeWorldPerformance'
+import { performanceRuntimeSettings, performanceRuntimeState as runtimePerformance } from '../runtime/largeWorldPerformance'
 
 type TabId = 'trace' | 'memory' | 'replay' | 'tests' | 'data' | 'jobs' | 'scripts' | 'runtime' | 'network'
 const activeTab = ref<TabId>('trace')
 const current = computed(/* 返回 profilerState.current 的当前值。 */ () => profilerState.current)
 const measurementCopy=computed(/** 读取当前语言的实测与不可用提示。 */ ()=>profilerMeasurementCopy[preferencesState.locale])
+const startupCopy=computed(()=>profilerStartupCopy[preferencesState.locale])
+const samplingWindowCopy=computed(()=>profilerSamplingWindowCopy(currentPerformanceSamplingScope(performanceRuntimeSettings.reactivePublishInterval), preferencesState.locale))
+const scriptCollectionCopy=computed(()=>scriptProfileCollectionCopy(profilerState.scriptCollection, preferencesState.locale))
 const presentationStats=computed(/** 读取实际渲染器最近发布的统计，不用项目请求值冒充实际后端结果。 */ ()=>editorState.rendererStats as RendererStats)
+const renderRequestStatusCopy = computed(() => {
+  const status = renderGraphState.request.status
+  return t(status === 'world-cpu-submitted' ? 'renderWorldCpuSubmitted' : status === 'not-submitted'
+    ? renderGraphState.lastWorldSubmission ? 'renderNotSubmittedRetained' : 'renderNotSubmittedNoHistory'
+    : status === 'pending' ? 'renderRequestPending' : status === 'unmeasured' ? 'renderSubmissionUnmeasured' : 'renderNoRequest')
+})
 const intervalSummary=computed(/** 对最多240个真实记录帧做有限排序，空样本明确显示不可用。 */ ()=>{
- const values=profilerState.samples.slice(-240).map(/** 提取引擎记录的帧间隔。 */ sample=>sample.frameMs).filter(/** 丢弃无效或负间隔。 */ value=>Number.isFinite(value)&&value>=0).sort(/** 升序排序以计算样本分位。 */ (a,b)=>a-b)
+ const values=profilerState.samples.slice(-PROFILER_INTERVAL_SUMMARY_CAPACITY).map(sample=>sample.rafIntervalMs).filter((value):value is number=>value!==null&&Number.isFinite(value)&&value>0).sort((a,b)=>a-b)
  /** 没有样本时返回短横线，否则给出两位小数分位数。 */ const at=(quantile:number)=>values.length?values[Math.floor((values.length-1)*quantile)].toFixed(2):'—'
  return{count:values.length,median:at(.5),p95:at(.95),p99:at(.99)}
 })
@@ -310,6 +331,7 @@ const recentLifetimeEvents = computed(/* 调用 tools.lifetimeEvents.slice(-200)
 const captureA = ref(''), captureB = ref('')
 const annotationDraft = ref('')
 const selectedPerformanceCapture = computed(/** 优先取得比较项 B，否则使用 A 对应捕获。 */ () => tools.captures.find(/* 比较 capture.id 与 (captureB.value || captureA.value)，返回严格相等的判断结果。 */ capture => capture.id === (captureB.value || captureA.value)) ?? null)
+const performanceCaptureCollectionCopy = computed(() => scriptProfileCollectionCopy(scriptProfileCaptureCollectionEvidence({ collection: selectedPerformanceCapture.value?.scriptCollection }), preferencesState.locale))
 const replayAssets = computed(/** 筛选重放资源。 */ () => assetState.records.filter(/* 比较 asset.assetType 与 'replay'，返回严格相等的判断结果。 */ asset => asset.assetType === 'replay'))
 const selectedReplay = ref('')
 const selectedTestId = ref(settings.testing.tests[0]?.id ?? '')
@@ -331,6 +353,10 @@ const tabs = computed<Array<{ id: TabId; label: Parameters<typeof t>[0] }>>(/** 
 const diagnosticsCopied = ref(false)
 const scriptCaptureA = ref(-1), scriptCaptureB = ref(-1)
 const scriptComparison = ref<ReturnType<typeof compareScriptProfiles>>([])
+function scriptCaptureCollectionCopy(index: number): string {
+  const capture = profilerState.scriptCaptures[index]
+  return scriptProfileCollectionCopy(capture ? scriptProfileCaptureCollectionEvidence(capture) : null, preferencesState.locale)
+}
 
 watch(schemaGuid, /** 模式资源选择变化时加载或清空模式草稿。 */ guid => { schemaDraft.value = guid ? readDataSchema(guid) : null }, { immediate: true })
 watch(tableGuid, /** 数据表选择变化时加载或清空表草稿。 */ guid => { tableDraft.value = guid ? readDataTable(guid) : null }, { immediate: true })

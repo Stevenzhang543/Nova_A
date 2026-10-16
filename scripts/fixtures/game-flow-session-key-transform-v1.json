@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "path": "src/runtime/gameFlowOwner.ts",
+  "beforeSha256": "4879d6cd5da8ede5bf9c6ef77de3a8c6746f580c177fb5d7f6caf7296c8a1696",
+  "afterSha256": "670a645b6770458285e75bf38ade5be4fa9c3cd25cfa5c72649faa9dc40ccdf8",
+  "from": "  setSessionValue(key: string, value: unknown): boolean { const clean = key.trim().slice(0, 80), safe = safeValue(value); if (!clean || safe === null || Object.keys(this.state.session).length >= 512 && !(clean in this.state.session)) return false; this.state.session[clean] = safe; return true }",
+  "to": "  setSessionValue(key: string, value: unknown): boolean {\n    const clean = key.trim().slice(0, 80), safe = safeValue(value), session = this.state.session\n    if (!clean || safe === null || Object.keys(session).length >= 512 && !Object.prototype.hasOwnProperty.call(session, clean)) return false\n    if (clean === '__proto__') {\n      // An own data key must survive JSON without invoking Object.prototype's setter.\n      // Replace through the state field so the Editor's same-raw Vue view notifies watchers.\n      const next = { ...session }\n      Object.defineProperty(next, clean, { value: safe, writable: true, enumerable: true, configurable: true })\n      this.state.session = next\n    } else session[clean] = safe\n    return true\n  }",
+  "count": 1,
+  "scope": "Only confirmed own-key capacity and __proto__ data/JSON/reactive notification correction; original 80/64000/null/512 constraints remain."
+}

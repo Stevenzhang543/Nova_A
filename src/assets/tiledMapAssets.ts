@@ -2,7 +2,7 @@
 import type { AssetRecord } from './types'
 import { assetSourceText } from './assetReferences'
 import { TILED_LIMITS } from './tiledInterchange'
-import type { TileSetDocument } from '../runtime/tilemap'
+import type { TileSetDocument } from '../runtime/tileSetValues'
 import type { TileMap2D, TileCellTransform2D } from '../world/components'
 type Obj=Record<string,any>
 const fail=/** 抛出带 Tiled 依赖前缀的资源绑定错误。 */ (message:string):never=>{throw new Error('TILED_DEPENDENCY: '+message)}

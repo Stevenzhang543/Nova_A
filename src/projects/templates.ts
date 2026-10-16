@@ -1,5 +1,6 @@
 /** 内置示例项目生成：组装实体、资源和场景，生成游戏及渲染模板并检查项目结构。 */
 import { templateGuide } from './templateGuides'
+import { DEFAULT_MAX_CATCH_UP_STEPS } from '../runtime/engineTiming'
 import { defaultAudioSettings } from '../runtime/audio'
 import { defaultInputMap } from '../runtime/input'
 import { defaultCollisionMatrix } from '../world/World'
@@ -199,7 +200,7 @@ type JsonRecord = Record<string, unknown>
   return {
     uuid: stableUuid(`scene:${seed}`), name, loaded: true, layers: [1], activeLayer: 1, renderLayer: 'all',
     authoringSettings: defaultSceneAuthoringSettings(1),
-    globalSettings: { gravity: 9.80665, airFriction: .01, timeScale: 1, tickRate: 60, maxCatchUpSteps: 8, collisionMatrix: defaultCollisionMatrix(), interpolation: 'Interpolate', layers: defaultPhysicsLayers() },
+    globalSettings: { gravity: 9.80665, airFriction: .01, timeScale: 1, tickRate: 60, maxCatchUpSteps: DEFAULT_MAX_CATCH_UP_STEPS, collisionMatrix: defaultCollisionMatrix(), interpolation: 'Interpolate', layers: defaultPhysicsLayers() },
     entities, connections
   }
 }

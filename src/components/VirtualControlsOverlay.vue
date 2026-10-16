@@ -1,15 +1,19 @@
 <!-- 虚拟输入覆盖层：处理触摸和键盘按钮或摇杆输入，合并动作并负责释放。 -->
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, reactive } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, watch } from 'vue'
 import { gameplayRuntime } from '../runtime/GameplayRuntime'
 import { deviceInputSettings, deviceRuntimeState, performHaptic, refreshDeviceCapabilities, type VirtualControlSettings } from '../runtime/deviceInput'
 import { physicsState } from '../store/physics'
+import { createVirtualControlsInputOwner, type VirtualControlsRuntime } from '../runtime/virtualControlsInputOwner'
+import type { InputAction } from '../runtime/input'
+
+const props = defineProps<{ runtime?: VirtualControlsRuntime; world?: object; inputActions?: readonly InputAction[] }>()
 
 type VectorValue = { x: number; y: number }
 const controlValues = reactive<Record<string, VectorValue>>({})
 const pointerOwners = new Map<string, number>()
 const visible = computed(/** 检查虚拟输入开关、控件数量与当前设备显示策略。 */ () => deviceInputSettings.virtualControlsEnabled && deviceInputSettings.virtualControls.length > 0 && (deviceInputSettings.showVirtualControls === 'always' || deviceRuntimeState.capabilities.touch))
-const actionKinds = computed(/** 将输入映射转换为动作名称到类型的查找表。 */ () => new Map(physicsState.inputMap.map(/** 提取动作名称和类型作为映射条目。 */ action => [action.name, action.kind])))
+const actionKinds = computed(/** 将输入映射转换为动作名称到类型的查找表。 */ () => new Map((props.inputActions ?? physicsState.inputMap).map(/** 提取动作名称和类型作为映射条目。 */ action => [action.name, action.kind])))
 
 /** 根据自定义、关闭或自动模式返回安全区边距。 */ function safeInsets() {
   return deviceInputSettings.safeAreaMode === 'custom' ? deviceInputSettings.customSafeArea : deviceInputSettings.safeAreaMode === 'off' ? { left: 0, top: 0, right: 0, bottom: 0 } : deviceRuntimeState.capabilities.safeArea
@@ -23,18 +27,7 @@ const actionKinds = computed(/** 将输入映射转换为动作名称到类型�
   return style
 }
 /** 读取控件当前向量，未记录时返回零向量。 */ function current(control: VirtualControlSettings): VectorValue { return controlValues[control.id] ?? { x: 0, y: 0 } }
-/** 累加同动作控件输入并限幅，近零时释放动作，否则按向量或标量类型提交。 */ function recomputeAction(action: string): void {
-  let x = 0, y = 0
-  for (const control of deviceInputSettings.virtualControls) {
-    if (control.action !== action) continue
-    const value = current(control); x += value.x; y += value.y
-  }
-  x = Math.min(1, Math.max(-1, x)); y = Math.min(1, Math.max(-1, y))
-  const kind = actionKinds.value.get(action)
-  if (Math.abs(x) < 1e-4 && Math.abs(y) < 1e-4) gameplayRuntime.input.releaseVirtualAction(action)
-  else if (kind === 'vector2') gameplayRuntime.input.setVirtualAction(action, [x, y])
-  else gameplayRuntime.input.setVirtualAction(action, Math.abs(x) >= Math.abs(y) ? x : y)
-}
+/** Recompute through the captured input Owner of the selected Runtime. */ function recomputeAction(action: string): void { inputOwner.recomputeAction(action) }
 /** 记录控件值并重新计算关联动作。 */ function setValue(control: VirtualControlSettings, value: VectorValue): void {
   controlValues[control.id] = value
   recomputeAction(control.action)
@@ -76,14 +69,28 @@ const actionKinds = computed(/** 将输入映射转换为动作名称到类型�
     setValue(control, value)
   }
 }
-/** 归零全部控件并释放运行时虚拟动作。 */ function releaseAll(): void {
-  for (const control of deviceInputSettings.virtualControls) end(control)
-  gameplayRuntime.input.releaseAllVirtualActions()
+/** Reset visuals and release only virtual actions set by this captured input Owner. */ function releaseAll(): void {
+  for (const id of Object.keys(controlValues)) delete controlValues[id]
+  pointerOwners.clear()
+  inputOwner.releaseAll()
 }
+function bindInputOwner() {
+  const runtime = props.runtime ?? gameplayRuntime
+  return createVirtualControlsInputOwner(runtime, props.world ?? runtime.presentation.world, {
+    controls: () => deviceInputSettings.virtualControls,
+    current: control => controlValues[control.id] ?? { x: 0, y: 0 },
+    actionKinds: () => actionKinds.value
+  })
+}
+let inputOwner = bindInputOwner()
+// A component's two props update together; bind only after the complete tuple is available.
+watch(() => [props.runtime, props.world], () => { releaseAll(); inputOwner.dispose(); inputOwner = bindInputOwner() }, { flush: 'pre' })
+watch(() => JSON.stringify(deviceInputSettings.virtualControls.map(control => [control.id, control.action])), releaseAll, { flush: 'sync' })
+function releaseHidden(): void { if (document.hidden) releaseAll() }
 /** 刷新设备能力与安全区信息。 */ function refresh(): void { refreshDeviceCapabilities() }
 
-onMounted(/** 挂载时刷新能力并监听尺寸及方向变化。 */ () => { refresh(); window.addEventListener('resize', refresh, { passive: true }); window.addEventListener('orientationchange', refresh, { passive: true }) })
-onBeforeUnmount(/** 卸载时释放输入并移除设备变化监听。 */ () => { releaseAll(); window.removeEventListener('resize', refresh); window.removeEventListener('orientationchange', refresh) })
+onMounted(/** 挂载时刷新能力并监听尺寸及方向变化。 */ () => { refresh(); window.addEventListener('resize', refresh, { passive: true }); window.addEventListener('orientationchange', refresh, { passive: true }); window.addEventListener('blur', releaseAll); window.addEventListener('pagehide', releaseAll); document.addEventListener('visibilitychange', releaseHidden) })
+onBeforeUnmount(/** 卸载时释放输入并移除设备变化监听。 */ () => { releaseAll(); inputOwner.dispose(); window.removeEventListener('resize', refresh); window.removeEventListener('orientationchange', refresh); window.removeEventListener('blur', releaseAll); window.removeEventListener('pagehide', releaseAll); document.removeEventListener('visibilitychange', releaseHidden) })
 </script>
 
 <template>

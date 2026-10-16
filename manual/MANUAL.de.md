@@ -1,6 +1,6 @@
-# Nova_A 26.37 – Vollständiges Handbuch
+# Nova_A 26.38 – Vollständiges Handbuch
 
-Engine: **26.37.0** · Project Format 2/schema 29.
+Engine: **26.38.0** · Project Format 2/schema 29.
 
 <!-- NOVA_V2636_BRANDING -->
 ## 26.36 — Geliefertes Logo für helle und dunkle Oberflächen
@@ -19901,3 +19901,10 @@ Mit diesem Ablauf ein vollständiges Projekt lernen, migrieren, prüfen und ausl
 Engine **26.37.0** · Project Format2/schema29.
 
 Comfortable ist Standard: Text und Werte16, Eingaben und Schaltflächen44, Panelradius16 und Dialogradius24. Snappy/Smooth/Elastic teilen eine endliche, abbrechbare Bewegungssteuerung; Eingabewerte und Zeigerpositionen reagieren direkt. Reduzierte Bewegung berücksichtigt gespeicherte und System-Einstellungen. Geräte- und Softwarebrowser-Nachweise bleiben getrennt.
+
+## 26.38 — Wartung der Release-Werkzeuge
+
+Engine **26.38.0** · Projektformat2/Schema29.
+
+Die Release-Werkzeuge akzeptieren nun das aktuelle und künftige Kalenderkennzeichen statt bei26.37 zu enden, sodass dieselben integrierten Regressionstests diese Version qualifizieren können. Rust-Formatierung und Lint-Prüfungen sind im gesamten Arbeitsbereich wieder sauber. Editorverhalten, Projektformat, Rendering und Gameplay bleiben unverändert.
+

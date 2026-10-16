@@ -1,0 +1,415 @@
+{
+  "schema": "nova-script-hot-reload-owner-transform-v1",
+  "files": [
+    {
+      "path": "src/runtime/scriptHotReloadOwner.ts",
+      "beforeSha256": null,
+      "afterSha256": "4499f57e1ec45b1da0bd353cb5037ce4ad69a968652db5290d1218ffa068c889",
+      "bytes": 10070,
+      "candidatePath": "E:\\Nova_A\\.cache\\engine-overhaul\\script-hot-reload-owner-preparation\\implementation-ILvNNs\\candidate\\src\\runtime\\scriptHotReloadOwner.ts",
+      "new": true,
+      "sha256": "4499f57e1ec45b1da0bd353cb5037ce4ad69a968652db5290d1218ffa068c889",
+      "steps": [],
+      "approvedHistoricalBeforeSha256": []
+    },
+    {
+      "path": "src/runtime/scriptHotReload.ts",
+      "beforeSha256": "709bcf00ab54b3cba844d64d41ecd611fe0cd9c4ee0883e98fad9250ceb1f7ff",
+      "afterSha256": "0d06ac7fa59854d587789030ecdbb08da598e129ff2fa52f0723eaf4277a10ff",
+      "bytes": 4209,
+      "candidatePath": "E:\\Nova_A\\.cache\\engine-overhaul\\script-hot-reload-owner-preparation\\implementation-ILvNNs\\candidate\\src\\runtime\\scriptHotReload.ts",
+      "new": false,
+      "sha256": "0d06ac7fa59854d587789030ecdbb08da598e129ff2fa52f0723eaf4277a10ff",
+      "steps": [
+        {
+          "from": "/** 脚本热重载：比较候选脚本与当前实例，保留兼容状态并协调重载队列。 */\nimport { analyzeScript } from './scriptAnalysis'\n\nexport type HotReloadCompatibility = 'compatible' | 'recreate-instances' | 'restart-required' | 'rejected'\nexport interface HotReloadExportShape { name: string; valueType: string; serialized: boolean }\nexport interface HotReloadPlan {\n  id: string\n  scriptUuid: string\n  requestedAt: string\n  previousHash: string\n  candidateHash: string\n  classification: HotReloadCompatibility\n  reasons: string[]\n  transfer: Array<{ property: string; action: 'preserve' | 'initialize' | 'drop' }>\n  previousSource: string\n  candidateSource: string\n}\nexport interface HotReloadHistoryEntry extends Omit<HotReloadPlan, 'previousSource' | 'candidateSource'> {\n  status: 'prepared' | 'committed' | 'rolled-back' | 'rejected'\n  completedAt: string | null\n  message: string\n}\n\nexport let scriptHotReloadState = {\n  activePlan: null as HotReloadPlan | null,\n  restartRequired: false,\n  history: [] as HotReloadHistoryEntry[],\n  rollbackSources: {} as Record<string, string>\n}\n\nlet stateAdapterInstalled = false\n/** Bootstrap preflight only; the aggregate installer owns production installation. */\nexport function isScriptHotReloadStateAdapterInstalled(): boolean { return stateAdapterInstalled }\n/** Internal bootstrap: the aggregate installer stages all four views before committing. */\nexport function installScriptHotReloadStateAdapter(adapter: (target: typeof scriptHotReloadState) => typeof scriptHotReloadState): void {\n  if (stateAdapterInstalled) return\n  const view = adapter(scriptHotReloadState)\n  if (!view || typeof view !== 'object') throw new TypeError('Script state adapter must wrap the existing scriptHotReloadState target')\n  scriptHotReloadState = view\n  stateAdapterInstalled = true\n}\n\n\nlet planSerial = 0\n\n/** 计算源码快速变化摘要以关联热重载前后版本。 */ function sourceHash(source: string): string {\n  let hash = 2166136261\n  for (const character of source) hash = Math.imul(hash ^ character.charCodeAt(0), 16777619) >>> 0\n  return hash.toString(16).padStart(8, '0')\n}\n\n/** 在热重载历史头部插入记录并保留最近二百条。 */ function append(entry: HotReloadHistoryEntry): void {\n  scriptHotReloadState.history.unshift(entry)\n  if (scriptHotReloadState.history.length > 200) scriptHotReloadState.history.splice(200)\n}\n\n/** 分析候选脚本并比较导出属性类型与生命周期，形成保留、初始化或删除计划及兼容性分类。 */ export function prepareHotReload(\n  scriptUuid: string,\n  previousSource: string,\n  candidateSource: string,\n  previousExports: readonly HotReloadExportShape[],\n  candidateExports: readonly HotReloadExportShape[],\n  policy: 'preserve' | 'recreate' | 'disabled'\n): HotReloadPlan {\n  const analysis = analyzeScript(candidateSource)\n  const reasons: string[] = []\n  const previous = new Map(previousExports.map(/* 返回按声明顺序构造的数组 [item.name, item]。 */ item => [item.name, item]))\n  const candidate = new Map(candidateExports.map(/* 返回按声明顺序构造的数组 [item.name, item]。 */ item => [item.name, item]))\n  const transfer: HotReloadPlan['transfer'] = []\n  let classification: HotReloadCompatibility = 'compatible'\n\n  if (policy === 'disabled') { classification = 'rejected'; reasons.push('Reload policy is disabled for this script.') }\n  if (analysis.diagnostics.some(/* 比较 item.severity 与 'error'，返回严格相等的判断结果。 */ item => item.severity === 'error')) { classification = 'rejected'; reasons.push('Parser or semantic analysis failed.') }\n  for (const [name, next] of candidate) {\n    const before = previous.get(name)\n    if (!before) { transfer.push({ property: name, action: 'initialize' }); continue }\n    if (before.valueType !== next.valueType || before.serialized !== next.serialized) {\n      if (classification !== 'rejected') classification = 'restart-required'\n      reasons.push(`Export ${name} changed type or serialization lifetime.`); transfer.push({ property: name, action: 'initialize' })\n    } else transfer.push({ property: name, action: 'preserve' })\n  }\n  for (const [name, before] of previous) if (!candidate.has(name)) {\n    transfer.push({ property: name, action: 'drop' })\n    if (before.serialized) { if (classification !== 'rejected') classification = 'restart-required'; reasons.push(`Serialized export ${name} was removed.`) }\n  }\n  if (policy === 'recreate' && classification === 'compatible') { classification = 'recreate-instances'; reasons.push('The script requests instance recreation.') }\n  if (!reasons.length) reasons.push('Function bodies and exported property layout are compatible.')\n\n  const plan: HotReloadPlan = {\n    id: `reload-${Date.now()}-${++planSerial}-${sourceHash(candidateSource)}`,\n    scriptUuid, requestedAt: new Date().toISOString(), previousHash: sourceHash(previousSource), candidateHash: sourceHash(candidateSource),\n    classification, reasons, transfer, previousSource, candidateSource\n  }\n  scriptHotReloadState.activePlan = plan\n  scriptHotReloadState.restartRequired = classification === 'restart-required'\n  const { previousSource: _previousSource, candidateSource: _candidateSource, ...metadata } = plan\n  append({ ...metadata, reasons: [...reasons], transfer: transfer.map(/** 构造并返回记录 { ...change }，字段按当前实参及捕获状态求值。 */ change => ({ ...change })), status: 'prepared', completedAt: null, message: reasons.join(' ') })\n  return plan\n}\n\n/** 保存旧文档供回滚，将对应历史标记为已提交并清除匹配的活动计划。 */ export function commitHotReload(plan: HotReloadPlan, previousDocument = plan.previousSource): void {\n  scriptHotReloadState.rollbackSources[plan.scriptUuid] = previousDocument\n  const entry = scriptHotReloadState.history.find(/* 比较 item.id 与 plan.id，返回严格相等的判断结果。 */ item => item.id === plan.id)\n  if (entry) { entry.status = 'committed'; entry.completedAt = new Date().toISOString(); entry.message = `Committed ${plan.candidateHash}; rollback ${plan.previousHash} retained.` }\n  if (scriptHotReloadState.activePlan?.id === plan.id) {\n    scriptHotReloadState.activePlan = null\n    scriptHotReloadState.restartRequired = false\n  }\n}\n\n/** 将计划标记拒绝并记录原因，清除活动计划但保留需要重启的提示状态。 */ export function rejectHotReload(plan: HotReloadPlan, message: string): void {\n  const entry = scriptHotReloadState.history.find(/* 比较 item.id 与 plan.id，返回严格相等的判断结果。 */ item => item.id === plan.id)\n  if (entry) { entry.status = 'rejected'; entry.completedAt = new Date().toISOString(); entry.message = message }\n  if (scriptHotReloadState.activePlan?.id === plan.id) {\n    scriptHotReloadState.activePlan = null\n    scriptHotReloadState.restartRequired = plan.classification === 'restart-required'\n  }\n}\n\n/** 读取旧文档和最近已提交历史身份，不修改回滚缓存。 */ export function peekHotReloadRollback(scriptUuid: string): { source: string; historyId: string | null } | null {\n  const source = scriptHotReloadState.rollbackSources[scriptUuid]\n  if (source === undefined) return null\n  const latest = scriptHotReloadState.history.find(/* 先计算 item.scriptUuid === scriptUuid；仅当其为真值时求右侧 item.status === 'committed'，返回短路求值结果。 */ item => item.scriptUuid === scriptUuid && item.status === 'committed')\n  return { source, historyId: latest?.id ?? null }\n}\n\n/** 将匹配的已提交历史标记为已回滚并记录完成时间。 */ export function completeHotReloadRollback(historyId: string | null): void {\n  const entry = scriptHotReloadState.history.find(/* 先计算 item.id === historyId；仅当其为真值时求右侧 item.status === 'committed'，返回短路求值结果。 */ item => item.id === historyId && item.status === 'committed')\n  if (entry) { entry.status = 'rolled-back'; entry.completedAt = new Date().toISOString(); entry.message = `Rolled back to ${entry.previousHash}.` }\n}\n\n/** 取出回滚源码、更新历史并删除缓存，返回需由调用方恢复的文档。 */ export function rollbackHotReload(scriptUuid: string): string | null {\n  const rollback = peekHotReloadRollback(scriptUuid)\n  if (!rollback) return null\n  completeHotReloadRollback(rollback.historyId)\n  delete scriptHotReloadState.rollbackSources[scriptUuid]\n  return rollback.source\n}\n\n/** 按可选脚本身份过滤历史，复制原因和属性转移列表后返回。 */ export function hotReloadHistory(scriptUuid?: string): HotReloadHistoryEntry[] {\n  return scriptHotReloadState.history.filter(/* 先计算 !scriptUuid；仅当其为假值时求右侧 item.scriptUuid === scriptUuid，返回短路求值结果。 */ item => !scriptUuid || item.scriptUuid === scriptUuid).map(/** 构造并返回记录 { ...item, reasons: [...item.reasons], transfer: item.transfer.map(change => ({ ...change })) }，字段按当前实参及捕获状态求值。 */ item => ({ ...item, reasons: [...item.reasons], transfer: item.transfer.map(/** 构造并返回记录 { ...change }，字段按当前实参及捕获状态求值。 */ change => ({ ...change })) }))\n}\n\n/** Rollback source belongs to the running session; retain only metadata afterwards. */\n/** 清除活动计划、重启提示和回滚源码，但保留历史记录。 */ export function clearHotReloadSession(): void {\n  scriptHotReloadState.activePlan = null\n  scriptHotReloadState.restartRequired = false\n  scriptHotReloadState.rollbackSources = {}\n}\n",
+          "to": "/** Temporary lazy Editor facade; each Core owns its fixed-World transaction metadata. */\nimport { ScriptHotReloadOwner,createInitialScriptHotReloadState,type ScriptHotReloadState } from './scriptHotReloadOwner'\nexport type { HotReloadCompatibility,HotReloadExportShape,HotReloadPlan,HotReloadHistoryEntry,ScriptHotReloadWorld,ScriptHotReloadState } from './scriptHotReloadOwner'\nconst legacyRaw=createInitialScriptHotReloadState()\nexport let scriptHotReloadState=legacyRaw\nlet stateAdapterInstalled = false\n\n/** Bootstrap preflight only; the aggregate installer owns production installation. */\nexport function isScriptHotReloadStateAdapterInstalled(): boolean { return stateAdapterInstalled }\n/** Internal bootstrap: the aggregate installer stages all four views before committing. */\nexport function installScriptHotReloadStateAdapter(adapter: (target: typeof scriptHotReloadState) => typeof scriptHotReloadState): void {\n  if (stateAdapterInstalled) return\n  const view = adapter(scriptHotReloadState)\n  if (!view || typeof view !== 'object') throw new TypeError('Script state adapter must wrap the existing scriptHotReloadState target')\n  scriptHotReloadState = view\n  stateAdapterInstalled = true\n}\nexport function getLegacyScriptHotReloadRawState():ScriptHotReloadState { return legacyRaw }\ninterface LegacyScriptHotReloadPort { stateView:ScriptHotReloadState;unwrapState(value:ScriptHotReloadState):ScriptHotReloadState;getOwner():ScriptHotReloadOwner }\nlet legacyPort:LegacyScriptHotReloadPort|null=null\n/** Register the unique singleton lazily; the existing aggregate installer still wraps the same raw. */\nexport function installLegacyScriptHotReloadPort(port:LegacyScriptHotReloadPort):void {\n if(!port||typeof port.getOwner!=='function'||typeof port.unwrapState!=='function'||port.unwrapState(port.stateView)!==legacyRaw)throw new Error('HOT_RELOAD_LEGACY_SAME_RAW_REQUIRED')\n if(legacyPort)throw new Error('HOT_RELOAD_LEGACY_PORT_ALREADY_INSTALLED')\n legacyPort=port\n}\nfunction requireLegacyScriptHotReloadOwner():ScriptHotReloadOwner {\n if(!legacyPort)throw new Error('HOT_RELOAD_LEGACY_PORT_REQUIRED: Install the actual unique Editor singleton provider.')\n const owner=legacyPort.getOwner()\n if(!(owner instanceof ScriptHotReloadOwner)||legacyPort.unwrapState(owner.state)!==legacyRaw)throw new Error('HOT_RELOAD_LEGACY_OWNER_REQUIRED')\n return owner\n}\nexport function prepareHotReload(...args:Parameters<ScriptHotReloadOwner['prepareHotReload']>):ReturnType<ScriptHotReloadOwner['prepareHotReload']> { return requireLegacyScriptHotReloadOwner().prepareHotReload(...args) }\nexport function commitHotReload(...args:Parameters<ScriptHotReloadOwner['commitHotReload']>):ReturnType<ScriptHotReloadOwner['commitHotReload']> { return requireLegacyScriptHotReloadOwner().commitHotReload(...args) }\nexport function rejectHotReload(...args:Parameters<ScriptHotReloadOwner['rejectHotReload']>):ReturnType<ScriptHotReloadOwner['rejectHotReload']> { return requireLegacyScriptHotReloadOwner().rejectHotReload(...args) }\nexport function peekHotReloadRollback(...args:Parameters<ScriptHotReloadOwner['peekHotReloadRollback']>):ReturnType<ScriptHotReloadOwner['peekHotReloadRollback']> { return requireLegacyScriptHotReloadOwner().peekHotReloadRollback(...args) }\nexport function completeHotReloadRollback(...args:Parameters<ScriptHotReloadOwner['completeHotReloadRollback']>):ReturnType<ScriptHotReloadOwner['completeHotReloadRollback']> { return requireLegacyScriptHotReloadOwner().completeHotReloadRollback(...args) }\nexport function rollbackHotReload(...args:Parameters<ScriptHotReloadOwner['rollbackHotReload']>):ReturnType<ScriptHotReloadOwner['rollbackHotReload']> { return requireLegacyScriptHotReloadOwner().rollbackHotReload(...args) }\nexport function hotReloadHistory(...args:Parameters<ScriptHotReloadOwner['hotReloadHistory']>):ReturnType<ScriptHotReloadOwner['hotReloadHistory']> { return requireLegacyScriptHotReloadOwner().hotReloadHistory(...args) }\nexport function clearHotReloadSession(...args:Parameters<ScriptHotReloadOwner['clearHotReloadSession']>):ReturnType<ScriptHotReloadOwner['clearHotReloadSession']> { return requireLegacyScriptHotReloadOwner().clearHotReloadSession(...args) }\n",
+          "count": 1,
+          "label": "original module to pure same-raw lazy facade; algorithms relocated once"
+        }
+      ],
+      "approvedHistoricalBeforeSha256": [
+        "709bcf00ab54b3cba844d64d41ecd611fe0cd9c4ee0883e98fad9250ceb1f7ff",
+        "709bcf00ab54b3cba844d64d41ecd611fe0cd9c4ee0883e98fad9250ceb1f7ff"
+      ]
+    },
+    {
+      "path": "src/editor/scriptHotReloadAdapter.ts",
+      "beforeSha256": null,
+      "afterSha256": "b84f0bb38c8ccaac6a665247e640a3bf99e6559d15af216473ea7aaeb4e1b256",
+      "bytes": 1478,
+      "candidatePath": "E:\\Nova_A\\.cache\\engine-overhaul\\script-hot-reload-owner-preparation\\implementation-ILvNNs\\candidate\\src\\editor\\scriptHotReloadAdapter.ts",
+      "new": true,
+      "sha256": "b84f0bb38c8ccaac6a665247e640a3bf99e6559d15af216473ea7aaeb4e1b256",
+      "steps": [],
+      "approvedHistoricalBeforeSha256": []
+    },
+    {
+      "path": "src/runtime/gameplayWorldHost.ts",
+      "beforeSha256": "f8e8cce9bb43b5f5a3d845a97bd3b2d2e8b2298d80660140612b71d68bd97bca",
+      "afterSha256": "8d7c7eb619145a680088175ab2414ee226d9009b5b74d248efa68f7d65988a7c",
+      "bytes": 3945,
+      "candidatePath": "E:\\Nova_A\\.cache\\engine-overhaul\\script-hot-reload-owner-preparation\\implementation-ILvNNs\\candidate\\src\\runtime\\gameplayWorldHost.ts",
+      "new": false,
+      "sha256": "8d7c7eb619145a680088175ab2414ee226d9009b5b74d248efa68f7d65988a7c",
+      "steps": [
+        {
+          "from": "import type { ScriptDebugOwner } from './scriptDebugOwner'",
+          "to": "import type { ScriptDebugOwner } from './scriptDebugOwner'\nimport type { ScriptHotReloadOwner } from './scriptHotReloadOwner'",
+          "count": 1,
+          "label": "required Hot owner type"
+        },
+        {
+          "from": "  createScriptDebugOwner(scriptServices: GameplayScriptServices): ScriptDebugOwner",
+          "to": "  createScriptDebugOwner(scriptServices: GameplayScriptServices): ScriptDebugOwner\n  createScriptHotReloadOwner(scriptServices: GameplayScriptServices): ScriptHotReloadOwner",
+          "count": 1,
+          "label": "required Hot capability"
+        }
+      ],
+      "approvedHistoricalBeforeSha256": [
+        "f8e8cce9bb43b5f5a3d845a97bd3b2d2e8b2298d80660140612b71d68bd97bca",
+        "9a16a0a9837fb5f7864342c983252e25e078674f3ddbf2f871eb972d07cb1bc7"
+      ]
+    },
+    {
+      "path": "src/editor/gameplayWorldHost.ts",
+      "beforeSha256": "70a81792a87000059807d6b8637b41a7a0fd207b45fa0795f9a33b1ae344f9d5",
+      "afterSha256": "d6ead077439f2171f022ddde3c0b7dc9cb56fb6ddb0ffd42bf835b73962257dd",
+      "bytes": 5612,
+      "candidatePath": "E:\\Nova_A\\.cache\\engine-overhaul\\script-hot-reload-owner-preparation\\implementation-ILvNNs\\candidate\\src\\editor\\gameplayWorldHost.ts",
+      "new": false,
+      "sha256": "d6ead077439f2171f022ddde3c0b7dc9cb56fb6ddb0ffd42bf835b73962257dd",
+      "steps": [
+        {
+          "from": "import { createEditorScriptDebugOwner } from './scriptDebugAdapter'",
+          "to": "import { createEditorScriptDebugOwner } from './scriptDebugAdapter'\nimport { createEditorScriptHotReloadOwner } from './scriptHotReloadAdapter'",
+          "count": 1,
+          "label": "Editor Hot composition import"
+        },
+        {
+          "from": "    createScriptDebugOwner(scriptServices) { return createEditorScriptDebugOwner(this.state.world,scriptServices,{legacyRoot:options.legacyDebugRoot===true}) },",
+          "to": "    createScriptDebugOwner(scriptServices) { return createEditorScriptDebugOwner(this.state.world,scriptServices,{legacyRoot:options.legacyDebugRoot===true}) },\n    createScriptHotReloadOwner(scriptServices) { return createEditorScriptHotReloadOwner(this,scriptServices,{legacyRoot:options.legacyDebugRoot===true}) },",
+          "count": 1,
+          "label": "actual receiver Hot factory"
+        }
+      ],
+      "approvedHistoricalBeforeSha256": [
+        "70a81792a87000059807d6b8637b41a7a0fd207b45fa0795f9a33b1ae344f9d5",
+        "949bcc82a20624d036b06f57ab210c20c64472e15dae21b158ad3f1dfd03bb39"
+      ]
+    },
+    {
+      "path": "src/runtime/GameplayRuntime.ts",
+      "beforeSha256": "c1156149dc2df1c6feb18e511e61007b2cc9a4481d4305147f6c59684b3ad79f",
+      "afterSha256": "6628641acd7904ab3392966c022a410d2e24aec9db74c511c716792c46c5966e",
+      "bytes": 1648,
+      "candidatePath": "E:\\Nova_A\\.cache\\engine-overhaul\\script-hot-reload-owner-preparation\\implementation-ILvNNs\\candidate\\src\\runtime\\GameplayRuntime.ts",
+      "new": false,
+      "sha256": "6628641acd7904ab3392966c022a410d2e24aec9db74c511c716792c46c5966e",
+      "steps": [
+        {
+          "from": "import { installEditorScriptDebugOwnerProvider } from '../editor/scriptDebugAdapter'",
+          "to": "import { installEditorScriptDebugOwnerProvider } from '../editor/scriptDebugAdapter'\nimport { installEditorScriptHotReloadOwnerProvider } from '../editor/scriptHotReloadAdapter'",
+          "count": 1,
+          "label": "compat lazy Hot provider import"
+        },
+        {
+          "from": "installEditorScriptDebugOwnerProvider(()=>gameplayRuntime.scriptDebugger)",
+          "to": "installEditorScriptDebugOwnerProvider(()=>gameplayRuntime.scriptDebugger)\ninstallEditorScriptHotReloadOwnerProvider(()=>gameplayRuntime.scriptHotReload)",
+          "count": 1,
+          "label": "unique singleton actual Hot provider"
+        }
+      ],
+      "approvedHistoricalBeforeSha256": [
+        "c1156149dc2df1c6feb18e511e61007b2cc9a4481d4305147f6c59684b3ad79f",
+        "a648e886003b3a2d6a6762c0f71d879b1650a3d3fd66b30c8e6e0b9f38b69eb8"
+      ]
+    },
+    {
+      "path": "src/runtime/GameplayRuntimeCore.ts",
+      "beforeSha256": "35b6c81222eff7b3d5a02056b132182ab2080632e586a3f749c824aac3785bd5",
+      "afterSha256": "209a4d517e75da5629f2bf1d9867b1234bf373be4c9b61f6812d5822cad932cc",
+      "bytes": 165755,
+      "candidatePath": "E:\\Nova_A\\.cache\\engine-overhaul\\script-hot-reload-owner-preparation\\implementation-ILvNNs\\candidate\\src\\runtime\\GameplayRuntimeCore.ts",
+      "new": false,
+      "sha256": "209a4d517e75da5629f2bf1d9867b1234bf373be4c9b61f6812d5822cad932cc",
+      "steps": [
+        {
+          "from": "import { scriptDebugState } from './scriptDebug'\nimport { ScriptDebugOwner, debugSourceRevision, evaluateDebugExpression, type DebugStepMode, type ScriptTestResult } from './scriptDebugOwner'\r\n",
+          "to": "import { ScriptDebugOwner, debugSourceRevision, evaluateDebugExpression, type DebugStepMode, type ScriptTestResult } from './scriptDebugOwner'\r\n",
+          "count": 1,
+          "label": "remove final global debug dependency"
+        },
+        {
+          "from": "import { clearHotReloadSession, commitHotReload, completeHotReloadRollback, peekHotReloadRollback, prepareHotReload, rejectHotReload } from './scriptHotReload'",
+          "to": "import { ScriptHotReloadOwner,type HotReloadPlan } from './scriptHotReloadOwner'",
+          "count": 1,
+          "label": "pure Hot import"
+        },
+        {
+          "from": "export class GameplayRuntime {\n",
+          "to": "export class GameplayRuntime {\n  private readonly scriptHotReloadOwner: ScriptHotReloadOwner\n  get scriptHotReload(): ScriptHotReloadOwner {\n    if(this.scriptHotReloadOwner.world!==this.worldHost.state.world)throw new Error('HOT_RELOAD_WORLD_OWNER_CHANGED: Stop and recreate the Core before replacing its World.')\n    return this.scriptHotReloadOwner\n  }\n\n",
+          "count": 1,
+          "label": "fixed Hot field and guard"
+        },
+        {
+          "from": "'createScriptDebugOwner', 'createAnimationTimelineOwner'",
+          "to": "'createScriptDebugOwner', 'createScriptHotReloadOwner', 'createAnimationTimelineOwner'",
+          "count": 1,
+          "label": "required admission"
+        },
+        {
+          "from": "      createScriptDebugOwner: worldHost.createScriptDebugOwner.bind(worldHost),",
+          "to": "      createScriptDebugOwner: worldHost.createScriptDebugOwner.bind(worldHost),\n      createScriptHotReloadOwner: worldHost.createScriptHotReloadOwner.bind(worldHost),",
+          "count": 1,
+          "label": "bound actual receiver"
+        },
+        {
+          "from": "    this.scriptDebugOwner=scriptDebugOwner",
+          "to": "    this.scriptDebugOwner=scriptDebugOwner\n    const scriptHotReloadOwner=this.worldHost.createScriptHotReloadOwner(scriptServices)\n    if(!(scriptHotReloadOwner instanceof ScriptHotReloadOwner)||scriptHotReloadOwner.world!==this.worldHost.state.world||scriptHotReloadOwner.catalogIdentity!==scriptServices)throw new Error('HOT_RELOAD_WORLD_CATALOG_OWNER_MISMATCH: Supply the actual fixed World/catalog transaction owner.')\n    this.scriptHotReloadOwner=scriptHotReloadOwner",
+          "count": 1,
+          "label": "ctor fixed catalog/world before input or WASM"
+        },
+        {
+          "from": "      scriptDebugState.hotReload = { status: committed ? 'applied' : 'rejected', scriptUuid: requestedUuid, message, frame: this.time.value.frame }\r",
+          "to": "      this.scriptDebugger.state.hotReload = { status: committed ? 'applied' : 'rejected', scriptUuid: requestedUuid, message, frame: this.time.value.frame }\r",
+          "count": 1,
+          "label": "one actual status write"
+        },
+        {
+          "from": "      if (!committed) for (const plan of plans) rejectHotReload(plan, message)\r",
+          "to": "      if (!committed) for (const plan of plans) this.scriptHotReload.rejectHotReload(plan, message)\r",
+          "count": 1,
+          "label": "one actual transaction call"
+        },
+        {
+          "from": "      scriptDebugState.hotReload = { status: 'applied', scriptUuid: requestedUuid, message, frame: this.time.value.frame }\r",
+          "to": "      this.scriptDebugger.state.hotReload = { status: 'applied', scriptUuid: requestedUuid, message, frame: this.time.value.frame }\r",
+          "count": 1,
+          "label": "one actual status write"
+        },
+        {
+          "from": "      for (const historyId of rollbackHistory.values()) completeHotReloadRollback(historyId)\r",
+          "to": "      for (const historyId of rollbackHistory.values()) this.scriptHotReload.completeHotReloadRollback(historyId)\r",
+          "count": 1,
+          "label": "one actual transaction call"
+        },
+        {
+          "from": "      for (const plan of plans) commitHotReload(plan, candidates.get(plan.scriptUuid)!.previousDocument)\r",
+          "to": "      for (const plan of plans) this.scriptHotReload.commitHotReload(plan, candidates.get(plan.scriptUuid)!.previousDocument)\r",
+          "count": 1,
+          "label": "one actual transaction call"
+        },
+        {
+          "from": "        const plan = prepareHotReload(uuid, candidate.previousSource, candidate.source, previous.exports, candidate.exports, this.scriptServices.resolveAsset(uuid)?.script?.reloadPolicy ?? 'preserve')\r",
+          "to": "        const plan = this.scriptHotReload.prepareHotReload(uuid, candidate.previousSource, candidate.source, previous.exports, candidate.exports, this.scriptServices.resolveAsset(uuid)?.script?.reloadPolicy ?? 'preserve')\r",
+          "count": 1,
+          "label": "one actual transaction call"
+        },
+        {
+          "from": "      scriptDebugState.hotReload = { status: 'disabled', scriptUuid: requestedUuid, message: 'Project hot reload was disabled before the queued frame-boundary apply.', frame: this.time.value.frame }\r",
+          "to": "      this.scriptDebugger.state.hotReload = { status: 'disabled', scriptUuid: requestedUuid, message: 'Project hot reload was disabled before the queued frame-boundary apply.', frame: this.time.value.frame }\r",
+          "count": 1,
+          "label": "one actual status write"
+        },
+        {
+          "from": "    scriptDebugState.hotReload = { status: 'pending', scriptUuid, message: 'Rollback source queued for transactional apply', frame: this.time.value.frame }\r",
+          "to": "    this.scriptDebugger.state.hotReload = { status: 'pending', scriptUuid, message: 'Rollback source queued for transactional apply', frame: this.time.value.frame }\r",
+          "count": 1,
+          "label": "one actual status write"
+        },
+        {
+          "from": "      scriptDebugState.hotReload = { status: 'rejected', scriptUuid, message: 'This root document did not change in that generation. Roll back the changed imported module to restore its dependent scripts together.', frame: this.time.value.frame }\r",
+          "to": "      this.scriptDebugger.state.hotReload = { status: 'rejected', scriptUuid, message: 'This root document did not change in that generation. Roll back the changed imported module to restore its dependent scripts together.', frame: this.time.value.frame }\r",
+          "count": 1,
+          "label": "one actual status write"
+        },
+        {
+          "from": "    const rollback = peekHotReloadRollback(scriptUuid)\r",
+          "to": "    const rollback = this.scriptHotReload.peekHotReloadRollback(scriptUuid)\r",
+          "count": 1,
+          "label": "one actual transaction call"
+        },
+        {
+          "from": "      scriptDebugState.hotReload = { status: 'rejected', scriptUuid, message: `Visual graph hot reload rejected: ${this.errorMessage(error)}`, frame: this.time.value.frame }\r",
+          "to": "      this.scriptDebugger.state.hotReload = { status: 'rejected', scriptUuid, message: `Visual graph hot reload rejected: ${this.errorMessage(error)}`, frame: this.time.value.frame }\r",
+          "count": 1,
+          "label": "one actual status write"
+        },
+        {
+          "from": "      scriptDebugState.hotReload = { status: 'pending', scriptUuid, message: `Visual graph queued with ${Object.keys(graphPlan.preserved).length} compatible state values preserved`, frame: this.time.value.frame }\r",
+          "to": "      this.scriptDebugger.state.hotReload = { status: 'pending', scriptUuid, message: `Visual graph queued with ${Object.keys(graphPlan.preserved).length} compatible state values preserved`, frame: this.time.value.frame }\r",
+          "count": 1,
+          "label": "one actual status write"
+        },
+        {
+          "from": "        scriptDebugState.hotReload = { status: 'rejected', scriptUuid, message, frame: this.time.value.frame }\r",
+          "to": "        this.scriptDebugger.state.hotReload = { status: 'rejected', scriptUuid, message, frame: this.time.value.frame }\r",
+          "count": 1,
+          "label": "one actual status write"
+        },
+        {
+          "from": "  /** 结构说明（自动提取）：queueGraphHotReload；输入 scriptUuid、candidateSource、previousSource；直接调用 pendingReloads.delete、pendingRollbackHistory.delete、planGraphHotReload、graphStateValues、graphPlan.reasons.join 等；写入 scriptDebugState.hotReload；包含显式抛错路径。 */ queueGraphHotReload(scriptUuid: string, candidateSource: string, previousSource: string): void {\r\n    // A newer request supersedes even a previously valid queued draft.\r\n    this.pendingReloads.delete(scriptUuid)\r\n    this.pendingRollbackHistory.delete(scriptUuid)\r\n    if (!scriptProjectSettings.hotReloadEnabled) {\r\n      scriptDebugState.hotReload = { status: 'disabled', scriptUuid, message: 'Project hot reload is disabled', frame: this.time.value.frame }\r",
+          "to": "  /** 结构说明（自动提取）：queueGraphHotReload；输入 scriptUuid、candidateSource、previousSource；直接调用 pendingReloads.delete、pendingRollbackHistory.delete、planGraphHotReload、graphStateValues、graphPlan.reasons.join 等；写入 scriptDebugState.hotReload；包含显式抛错路径。 */ queueGraphHotReload(scriptUuid: string, candidateSource: string, previousSource: string): void {\r\n    // A newer request supersedes even a previously valid queued draft.\r\n    this.pendingReloads.delete(scriptUuid)\r\n    this.pendingRollbackHistory.delete(scriptUuid)\r\n    if (!scriptProjectSettings.hotReloadEnabled) {\r\n      this.scriptDebugger.state.hotReload = { status: 'disabled', scriptUuid, message: 'Project hot reload is disabled', frame: this.time.value.frame }\r",
+          "count": 1,
+          "label": "one actual status write"
+        },
+        {
+          "from": "    scriptDebugState.hotReload = { status: 'pending', scriptUuid, message: 'Analyzed candidate queued for a transactional frame-boundary swap', frame: this.time.value.frame }\r",
+          "to": "    this.scriptDebugger.state.hotReload = { status: 'pending', scriptUuid, message: 'Analyzed candidate queued for a transactional frame-boundary swap', frame: this.time.value.frame }\r",
+          "count": 1,
+          "label": "one actual status write"
+        },
+        {
+          "from": "      scriptDebugState.hotReload = { status: 'rejected', scriptUuid, message: `Candidate rejected before apply: ${validation.error}`, frame: this.time.value.frame }\r",
+          "to": "      this.scriptDebugger.state.hotReload = { status: 'rejected', scriptUuid, message: `Candidate rejected before apply: ${validation.error}`, frame: this.time.value.frame }\r",
+          "count": 1,
+          "label": "one actual status write"
+        },
+        {
+          "from": "  /** 结构说明（自动提取）：queueHotReload；输入 scriptUuid、source；直接调用 pendingReloads.delete、pendingRollbackHistory.delete、validateModuleSource、pendingReloads.set；写入 scriptDebugState.hotReload。 */ queueHotReload(scriptUuid: string, source: string): void {\r\n    // A newer request supersedes even a previously valid queued draft.\r\n    this.pendingReloads.delete(scriptUuid)\r\n    this.pendingRollbackHistory.delete(scriptUuid)\r\n    if (!scriptProjectSettings.hotReloadEnabled) {\r\n      scriptDebugState.hotReload = { status: 'disabled', scriptUuid, message: 'Project hot reload is disabled', frame: this.time.value.frame }\r",
+          "to": "  /** 结构说明（自动提取）：queueHotReload；输入 scriptUuid、source；直接调用 pendingReloads.delete、pendingRollbackHistory.delete、validateModuleSource、pendingReloads.set；写入 scriptDebugState.hotReload。 */ queueHotReload(scriptUuid: string, source: string): void {\r\n    // A newer request supersedes even a previously valid queued draft.\r\n    this.pendingReloads.delete(scriptUuid)\r\n    this.pendingRollbackHistory.delete(scriptUuid)\r\n    if (!scriptProjectSettings.hotReloadEnabled) {\r\n      this.scriptDebugger.state.hotReload = { status: 'disabled', scriptUuid, message: 'Project hot reload is disabled', frame: this.time.value.frame }\r",
+          "count": 1,
+          "label": "one actual status write"
+        },
+        {
+          "from": "    clearHotReloadSession()\r",
+          "to": "    this.scriptHotReloadOwner.clearHotReloadSession()\r",
+          "count": 1,
+          "label": "one actual transaction call"
+        },
+        {
+          "from": "ReturnType<typeof prepareHotReload>[]",
+          "to": "HotReloadPlan[]",
+          "count": 1,
+          "label": "pure original plan type"
+        }
+      ],
+      "approvedHistoricalBeforeSha256": [
+        "35b6c81222eff7b3d5a02056b132182ab2080632e586a3f749c824aac3785bd5",
+        "5e3ee03513df2d1ea98e788148ebbd6da8fce2cfa4a81ba510b365929ce52075"
+      ]
+    }
+  ],
+  "originalFunctions": [
+    {
+      "name": "isScriptHotReloadStateAdapterInstalled",
+      "body": "{ return stateAdapterInstalled }",
+      "bodySha256": "7e1c87bbfa51e2cff881b2862ce66fc1b2312a510126ab84a6434263356e954b"
+    },
+    {
+      "name": "installScriptHotReloadStateAdapter",
+      "body": "{\n  if (stateAdapterInstalled) return\n  const view = adapter(scriptHotReloadState)\n  if (!view || typeof view !== 'object') throw new TypeError('Script state adapter must wrap the existing scriptHotReloadState target')\n  scriptHotReloadState = view\n  stateAdapterInstalled = true\n}",
+      "bodySha256": "418d595e665f2b3fb0f23fda6b22f68b2cf9155156d74a04bf4370c8bdf7dfff"
+    },
+    {
+      "name": "sourceHash",
+      "body": "{\n  let hash = 2166136261\n  for (const character of source) hash = Math.imul(hash ^ character.charCodeAt(0), 16777619) >>> 0\n  return hash.toString(16).padStart(8, '0')\n}",
+      "bodySha256": "3b75dd3ac74323f0a1537f957643c4f7d19cd2cd695763328412406653d24bab"
+    },
+    {
+      "name": "append",
+      "body": "{\n  scriptHotReloadState.history.unshift(entry)\n  if (scriptHotReloadState.history.length > 200) scriptHotReloadState.history.splice(200)\n}",
+      "bodySha256": "18f288c923c1fd40e66fc71f408dbdf596ffe87eb3ba6e3bf688edc708a06205"
+    },
+    {
+      "name": "prepareHotReload",
+      "body": "{\n  const analysis = analyzeScript(candidateSource)\n  const reasons: string[] = []\n  const previous = new Map(previousExports.map(/* 返回按声明顺序构造的数组 [item.name, item]。 */ item => [item.name, item]))\n  const candidate = new Map(candidateExports.map(/* 返回按声明顺序构造的数组 [item.name, item]。 */ item => [item.name, item]))\n  const transfer: HotReloadPlan['transfer'] = []\n  let classification: HotReloadCompatibility = 'compatible'\n\n  if (policy === 'disabled') { classification = 'rejected'; reasons.push('Reload policy is disabled for this script.') }\n  if (analysis.diagnostics.some(/* 比较 item.severity 与 'error'，返回严格相等的判断结果。 */ item => item.severity === 'error')) { classification = 'rejected'; reasons.push('Parser or semantic analysis failed.') }\n  for (const [name, next] of candidate) {\n    const before = previous.get(name)\n    if (!before) { transfer.push({ property: name, action: 'initialize' }); continue }\n    if (before.valueType !== next.valueType || before.serialized !== next.serialized) {\n      if (classification !== 'rejected') classification = 'restart-required'\n      reasons.push(`Export ${name} changed type or serialization lifetime.`); transfer.push({ property: name, action: 'initialize' })\n    } else transfer.push({ property: name, action: 'preserve' })\n  }\n  for (const [name, before] of previous) if (!candidate.has(name)) {\n    transfer.push({ property: name, action: 'drop' })\n    if (before.serialized) { if (classification !== 'rejected') classification = 'restart-required'; reasons.push(`Serialized export ${name} was removed.`) }\n  }\n  if (policy === 'recreate' && classification === 'compatible') { classification = 'recreate-instances'; reasons.push('The script requests instance recreation.') }\n  if (!reasons.length) reasons.push('Function bodies and exported property layout are compatible.')\n\n  const plan: HotReloadPlan = {\n    id: `reload-${Date.now()}-${++planSerial}-${sourceHash(candidateSource)}`,\n    scriptUuid, requestedAt: new Date().toISOString(), previousHash: sourceHash(previousSource), candidateHash: sourceHash(candidateSource),\n    classification, reasons, transfer, previousSource, candidateSource\n  }\n  scriptHotReloadState.activePlan = plan\n  scriptHotReloadState.restartRequired = classification === 'restart-required'\n  const { previousSource: _previousSource, candidateSource: _candidateSource, ...metadata } = plan\n  append({ ...metadata, reasons: [...reasons], transfer: transfer.map(/** 构造并返回记录 { ...change }，字段按当前实参及捕获状态求值。 */ change => ({ ...change })), status: 'prepared', completedAt: null, message: reasons.join(' ') })\n  return plan\n}",
+      "bodySha256": "fb9e0b2cabbd62a07b006cc10e0e977b6d42a47dcb190fafda84417df43aa8ff"
+    },
+    {
+      "name": "commitHotReload",
+      "body": "{\n  scriptHotReloadState.rollbackSources[plan.scriptUuid] = previousDocument\n  const entry = scriptHotReloadState.history.find(/* 比较 item.id 与 plan.id，返回严格相等的判断结果。 */ item => item.id === plan.id)\n  if (entry) { entry.status = 'committed'; entry.completedAt = new Date().toISOString(); entry.message = `Committed ${plan.candidateHash}; rollback ${plan.previousHash} retained.` }\n  if (scriptHotReloadState.activePlan?.id === plan.id) {\n    scriptHotReloadState.activePlan = null\n    scriptHotReloadState.restartRequired = false\n  }\n}",
+      "bodySha256": "496025509469fecc372f1c0ec935afe96cbb0f1f6ece89233cf2787dc00a478a"
+    },
+    {
+      "name": "rejectHotReload",
+      "body": "{\n  const entry = scriptHotReloadState.history.find(/* 比较 item.id 与 plan.id，返回严格相等的判断结果。 */ item => item.id === plan.id)\n  if (entry) { entry.status = 'rejected'; entry.completedAt = new Date().toISOString(); entry.message = message }\n  if (scriptHotReloadState.activePlan?.id === plan.id) {\n    scriptHotReloadState.activePlan = null\n    scriptHotReloadState.restartRequired = plan.classification === 'restart-required'\n  }\n}",
+      "bodySha256": "cea502f20fc222c204d37f8ce1e9a477a93be773407d6ddb115131a21bf33e62"
+    },
+    {
+      "name": "peekHotReloadRollback",
+      "body": "{\n  const source = scriptHotReloadState.rollbackSources[scriptUuid]\n  if (source === undefined) return null\n  const latest = scriptHotReloadState.history.find(/* 先计算 item.scriptUuid === scriptUuid；仅当其为真值时求右侧 item.status === 'committed'，返回短路求值结果。 */ item => item.scriptUuid === scriptUuid && item.status === 'committed')\n  return { source, historyId: latest?.id ?? null }\n}",
+      "bodySha256": "4ddbe21348a7cd9c9157ec6e2288ad7ca401f6bee83bbfe925ac13c1a28793b2"
+    },
+    {
+      "name": "completeHotReloadRollback",
+      "body": "{\n  const entry = scriptHotReloadState.history.find(/* 先计算 item.id === historyId；仅当其为真值时求右侧 item.status === 'committed'，返回短路求值结果。 */ item => item.id === historyId && item.status === 'committed')\n  if (entry) { entry.status = 'rolled-back'; entry.completedAt = new Date().toISOString(); entry.message = `Rolled back to ${entry.previousHash}.` }\n}",
+      "bodySha256": "8887b6d55c96a574b4d0a6620f16d57a05a9263e95782b82084c1ba228c2b0e9"
+    },
+    {
+      "name": "rollbackHotReload",
+      "body": "{\n  const rollback = peekHotReloadRollback(scriptUuid)\n  if (!rollback) return null\n  completeHotReloadRollback(rollback.historyId)\n  delete scriptHotReloadState.rollbackSources[scriptUuid]\n  return rollback.source\n}",
+      "bodySha256": "1c06dd589d10777ddfb3b4c7338c2349df477e05ef36ed5b264afa0af8565bc6"
+    },
+    {
+      "name": "hotReloadHistory",
+      "body": "{\n  return scriptHotReloadState.history.filter(/* 先计算 !scriptUuid；仅当其为假值时求右侧 item.scriptUuid === scriptUuid，返回短路求值结果。 */ item => !scriptUuid || item.scriptUuid === scriptUuid).map(/** 构造并返回记录 { ...item, reasons: [...item.reasons], transfer: item.transfer.map(change => ({ ...change })) }，字段按当前实参及捕获状态求值。 */ item => ({ ...item, reasons: [...item.reasons], transfer: item.transfer.map(/** 构造并返回记录 { ...change }，字段按当前实参及捕获状态求值。 */ change => ({ ...change })) }))\n}",
+      "bodySha256": "7b272e9a1c81298572c5aed7675e864ca09b97ed02269f00b097323bd526fd58"
+    },
+    {
+      "name": "clearHotReloadSession",
+      "body": "{\n  scriptHotReloadState.activePlan = null\n  scriptHotReloadState.restartRequired = false\n  scriptHotReloadState.rollbackSources = {}\n}",
+      "bodySha256": "407e47e7d98686904b311557b96981b610ea2a0f72250a582d7290cdb12502ea"
+    }
+  ],
+  "initialLiteral": "{\n  activePlan: null as HotReloadPlan | null,\n  restartRequired: false,\n  history: [] as HotReloadHistoryEntry[],\n  rollbackSources: {} as Record<string, string>\n}",
+  "initialFields": [
+    "activePlan: null as HotReloadPlan | null",
+    "restartRequired: false",
+    "history: [] as HotReloadHistoryEntry[]",
+    "rollbackSources: {} as Record<string, string>"
+  ],
+  "approvedHistoricalProvenance": [
+    {
+      "path": "E:\\Nova_A\\.cache\\engine-overhaul\\script-hot-reload-owner-preparation\\attempt1-U2BSkh\\before663/source.json",
+      "sha256": "7814fa5001d6a3413cf3006aeeb404afbcbd4b653df49f87d1e776a298a0414c",
+      "count": 663
+    },
+    {
+      "path": "E:/Nova_A/.cache/engine-overhaul/root-integration-next/merged-19a57fb5c0d0/source.json",
+      "sha256": "6f8356a03da8c00aa0533999553e1b708111d7cea022000c28f40edab8a0ce59",
+      "count": 661
+    }
+  ],
+  "scope": "Independent HotReload7 exact665 -> Debug663 layer, with separate exact-byte UI read-dependency guard.",
+  "bootstrapFunctionNames": [
+    "isScriptHotReloadStateAdapterInstalled",
+    "installScriptHotReloadStateAdapter"
+  ],
+  "algorithmNames": [
+    "sourceHash",
+    "append",
+    "prepareHotReload",
+    "commitHotReload",
+    "rejectHotReload",
+    "peekHotReloadRollback",
+    "completeHotReloadRollback",
+    "rollbackHotReload",
+    "hotReloadHistory",
+    "clearHotReloadSession"
+  ],
+  "ui": {
+    "path": "src/components/ScriptStudio.vue",
+    "beforeSha256": "f25c795731e41109a3e9316fce11b5eef84517842427ad3bcc1bb95c9ba36c2c",
+    "afterSha256": "29ae2c39b16bb5c503c0d67854aef238f484a4cce2b82f0083c90349b159b302",
+    "from": "Boolean(activeAsset.value && Object.prototype.hasOwnProperty.call(scriptHotReloadState.rollbackSources, activeAsset.value.uuid))",
+    "to": "Boolean(activeAsset.value && (activeAsset.value.uuid in scriptHotReloadState.rollbackSources) && Object.prototype.hasOwnProperty.call(scriptHotReloadState.rollbackSources, activeAsset.value.uuid))",
+    "wholeInverse": true,
+    "algorithmEdits": 0,
+    "explanation": "Track Vue has while retaining original own-property and activeAsset short-circuit semantics; handles own nonenumerable and excludes inherited properties.",
+    "new": false,
+    "sha256": "29ae2c39b16bb5c503c0d67854aef238f484a4cce2b82f0083c90349b159b302",
+    "steps": [
+      {
+        "from": "Boolean(activeAsset.value && Object.prototype.hasOwnProperty.call(scriptHotReloadState.rollbackSources, activeAsset.value.uuid))",
+        "to": "Boolean(activeAsset.value && (activeAsset.value.uuid in scriptHotReloadState.rollbackSources) && Object.prototype.hasOwnProperty.call(scriptHotReloadState.rollbackSources, activeAsset.value.uuid))",
+        "count": 1,
+        "label": "Vue has dependency retains original own-property semantics"
+      }
+    ],
+    "approvedHistoricalBeforeSha256": [
+      "f25c795731e41109a3e9316fce11b5eef84517842427ad3bcc1bb95c9ba36c2c"
+    ]
+  }
+}

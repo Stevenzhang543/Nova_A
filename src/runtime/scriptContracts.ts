@@ -1,6 +1,6 @@
 /** 脚本契约检查：验证回调和导出字段符合引擎与组件的调用约定。 */
-import { SCRIPT_API_V2_MANIFEST, type ScriptApiDeterminism, type ScriptApiThreadRule } from '../editor/scriptApi'
-import { analyzeScript } from '../editor/scriptLanguage'
+import { SCRIPT_API_V2_MANIFEST, type ScriptApiDeterminism, type ScriptApiThreadRule } from './scriptApiCatalog'
+import { analyzeScript } from './scriptAnalysis'
 
 export const NOVA_SCRIPT_CONTRACT_VERSION = 1 as const
 export const DEFAULT_SCRIPT_COMMAND_BUDGET = 4096

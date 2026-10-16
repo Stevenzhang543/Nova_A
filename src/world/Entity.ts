@@ -14,7 +14,7 @@ import {
   type ComponentKind,
   type EntityComponent
 } from './components'
-import type { EntityOwnership, RuntimePersistencePolicy } from '../editor/sceneAuthoring'
+import type { EntityOwnership, RuntimePersistencePolicy } from './sceneOwnership'
 
 export interface PrefabInstanceLayer {
   asset: string

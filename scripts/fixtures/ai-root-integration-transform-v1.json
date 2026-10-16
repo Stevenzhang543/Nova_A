@@ -1,0 +1,96 @@
+{
+  "schema": "nova-ai-root-integration-transform-v1",
+  "files": [
+    {
+      "path": "src/runtime/worldGameplayOwner.ts",
+      "beforeSha256": "818faae6a411f9eecb61824e3f1f8152a4bef923ff069d1cdd8aecd314424256",
+      "afterSha256": "1297e17ba2ec6c2cc4094c3c71b5b56bd4d1fadc8a62403614d864d5db1abe12",
+      "bytesBefore": 27587,
+      "bytesAfter": 27773,
+      "edits": [
+        {
+          "before": "export interface WorldGameplayAi {",
+          "after": "export interface WorldGameplayAi {\n  readonly world: { readonly entities: readonly Entity[] }"
+        },
+        {
+          "before": "module => { this.aiModule = module }",
+          "after": "module => { if (module.world !== this.world) throw new Error('WORLD_GAMEPLAY_AI_WORLD_MISMATCH: Load the AI Owner for this fixed World.'); this.aiModule = module }"
+        }
+      ]
+    },
+    {
+      "path": "src/editor/worldGameplayAdapter.ts",
+      "beforeSha256": "9de9a8b2a0e31fb5eff02f5184a2453d2d6f7e6afd5f0349c72730bb5983c83b",
+      "afterSha256": "d527e08afb33a02093c999d5082af0cf03894c72520d3424d3ac95714a8f604a",
+      "bytesBefore": 5643,
+      "bytesAfter": 6301,
+      "edits": [
+        {
+          "before": "import { createEditorSimulationEvidenceOwner } from './simulationEvidenceAdapter'",
+          "after": "import { createEditorSimulationEvidenceOwner } from './simulationEvidenceAdapter'\nimport { createEditorAiOwner, installEditorAiOwnerProvider } from './aiAdapter'\nimport type { AiOwner } from '../runtime/aiOwner'"
+        },
+        {
+          "before": "const owners = new WeakMap<EditorWorldGameplayHost, WorldGameplayOwner>()",
+          "after": "const owners = new WeakMap<EditorWorldGameplayHost, WorldGameplayOwner>()\nconst aiOwners = new WeakMap<WorldGameplayOwner, AiOwner>()"
+        },
+        {
+          "before": "const ports: Omit<WorldGameplayPorts, 'evidence'> = {",
+          "after": "const ports: Omit<WorldGameplayPorts, 'evidence' | 'loadAi'> = {"
+        },
+        {
+          "before": "  loadAi: () => import('../runtime/aiTools'),",
+          "after": "",
+          "inverseBoundary": {
+            "prefix": "D), objectPoolEnabled: () => packageEnabled(OFFICIAL_OBJECT_POOL_PACKAGE_ID) },\n",
+            "suffix": "\n  runtimeObjects: {\r\n    readPrefab: getRuntimePrefabRecord, createEntity: crea"
+          }
+        },
+        {
+          "before": "  const portsForOwner: WorldGameplayPorts = { ...ports, evidence: createEditorSimulationEvidenceOwner(world, options) }",
+          "after": "  const ai = createEditorAiOwner(world, options)\n  const portsForOwner: WorldGameplayPorts = { ...ports, loadAi: async () => ai, evidence: createEditorSimulationEvidenceOwner(world, options, ai) }"
+        },
+        {
+          "before": "  if (options.legacyRoot) legacyOwner = owner",
+          "after": "  aiOwners.set(owner, ai)\n  if (options.legacyRoot) legacyOwner = owner"
+        },
+        {
+          "before": "installLegacyWorldGameplayPort({ stateView, unwrapState: toRaw, getOwner: getEditorWorldGameplayOwner })",
+          "after": "installLegacyWorldGameplayPort({ stateView, unwrapState: toRaw, getOwner: getEditorWorldGameplayOwner })\n\n/** The same fixed instance serves the WGO and its checksum port. */\nexport function getEditorAiOwner(): AiOwner {\n  const owner = getEditorWorldGameplayOwner(), ai = aiOwners.get(owner)\n  if (!ai || ai.world !== owner.world) throw new Error('WORLD_GAMEPLAY_AI_WORLD_MISMATCH: Resolve the AI Owner from the current Editor composition.')\n  return ai\n}\ninstallEditorAiOwnerProvider(getEditorAiOwner)"
+        }
+      ]
+    },
+    {
+      "path": "src/editor/simulationEvidenceAdapter.ts",
+      "beforeSha256": "f423c2d72e4e2936ec405ba64ee2474f0c1f69b42b898bbb257c6f2933669e83",
+      "afterSha256": "63dc0ade1817bf009770536dab05a90ebc5f7a299b0180b1ef40136603eb5951",
+      "bytesBefore": 1448,
+      "bytesAfter": 1699,
+      "edits": [
+        {
+          "before": "/** Explicit Editor composition of bounded evidence history. AI blackboards remain shared. */",
+          "after": "/** Explicit Editor composition of bounded history and the same fixed-World AI checksum port. */"
+        },
+        {
+          "before": "import { blackboardSnapshot } from '../runtime/aiTools'",
+          "after": "import type { AiOwner } from '../runtime/aiOwner'"
+        },
+        {
+          "before": "options: { legacyRoot: boolean }): SimulationEvidenceOwner",
+          "after": "options: { legacyRoot: boolean }, ai: Pick<AiOwner, 'world' | 'blackboardSnapshot'>): SimulationEvidenceOwner"
+        },
+        {
+          "before": "  if (options.legacyRoot) {",
+          "after": "  if (!ai || ai.world !== world || typeof ai.blackboardSnapshot !== 'function') throw new Error('SIMULATION_EVIDENCE_AI_WORLD_REQUIRED: Bind this history to its fixed AI Owner.')\n  const aiPort = { scope: 'fixed-world' as const, world, blackboardSnapshot: ai.blackboardSnapshot.bind(ai) }\n  if (options.legacyRoot) {"
+        },
+        {
+          "before": "{ scope: 'shared-legacy-ai', blackboardSnapshot }, simulationEvidenceState",
+          "after": "aiPort, simulationEvidenceState"
+        },
+        {
+          "before": "{ scope: 'shared-legacy-ai', blackboardSnapshot })",
+          "after": "aiPort)"
+        }
+      ]
+    }
+  ]
+}

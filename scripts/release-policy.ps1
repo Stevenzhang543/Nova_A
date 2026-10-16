@@ -1,4 +1,4 @@
-# 共享发布策略：公开版本转换和 Windows 产物版本核验；加载本文件无发布副作用。
+﻿# 共享发布策略：公开版本转换和 Windows 产物版本核验；加载本文件无发布副作用。
 # Shared release-label and native artifact checks. Loading this file has no side effects.
 # 解析公开日历版本标签并生成对应三段机器版本。
 function Get-CalendarReleaseInfo {

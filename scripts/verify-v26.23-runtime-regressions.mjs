@@ -5,12 +5,13 @@ import { build } from 'vite'
 import { readFile, writeFile, mkdir } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { watch } from 'vue'
+import { reactive, toRaw, watch } from 'vue'
 const root=process.cwd(), out=resolve('.cache/verification-v26.23/runtime'), checks=[]
 const version=JSON.parse(await readFile('package.json','utf8')).version
 await build({configFile:false,root,logLevel:'error',plugins:[{name:'profiler-test-settings',enforce:'pre',/** 结构说明（自动提取）：resolveId；输入 source、importer；直接调用 endsWith、importer.replaceAll、includes。 */ resolveId(source,importer){if(importer?.replaceAll('\\','/').endsWith('/src/runtime/profiler.ts')&&['./production','../projects/projectFormat'].includes(source))return '\0settings23:'+source},/** 结构说明（自动提取）：load；输入 id；直接调用 JSON.stringify。 */ load(id){if(id==='\0settings23:./production')return 'export const productionSettings={performance:{traceCapacity:180}}';if(id==='\0settings23:../projects/projectFormat')return `export const NOVA_ENGINE_VERSION=${JSON.stringify(version)}`}}],build:{ssr:true,outDir:out,emptyOutDir:false,rollupOptions:{input:Object.fromEntries(['scriptHotReload','scriptDebug','dynamicInspection','profiler'].map(/* 返回按声明顺序构造的数组 [name,resolve('src/runtime',name+'.ts')]。 */ name=>[name,resolve('src/runtime',name+'.ts')])),output:{entryFileNames:'[name].mjs'}}}})
 const load=/* 调用 import(pathToFileURL(resolve(out,name+'.mjs'))) 并返回调用结果。 */ name=>import(pathToFileURL(resolve(out,name+'.mjs')))
 const [reload,debug,inspection,profiler]=await Promise.all(['scriptHotReload','scriptDebug','dynamicInspection','profiler'].map(load))
+profiler.installProfilerStateAdapter({ wrap: target => reactive(target), unwrap: toRaw })
 const check=/** 结构说明（自动提取）：check；输入 name、run；直接调用 run、checks.push、console.log、String、console.error。 */ (name,run)=>{try{run();checks.push({name,status:'passed'});console.log('PASS '+name)}catch(error){checks.push({name,status:'failed',error:String(error)});console.error('FAIL '+name+': '+error)}}
 check('Concurrent reload metadata is independent and empty previous source remains rollbackable',/** 结构说明（自动提取）：check 回调；无显式参数；直接调用 reload.prepareHotReload、assert.notEqual、reload.commitHotReload、assert.equal、reload.hotReloadHistory 等；写入 Date.now、a、b、b.reasons[…]。 */ ()=>{
  const now=Date.now;let a,b;try{Date.now=/* 返回固定值 123456789。 */ ()=>123456789;a=reload.prepareHotReload('a','','fn start(){}',[],[],'preserve');b=reload.prepareHotReload('b','','fn start(){}',[],[],'preserve')}finally{Date.now=now}

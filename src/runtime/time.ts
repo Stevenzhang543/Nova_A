@@ -1,4 +1,5 @@
 /** 游戏时间状态：处理帧时间、缩放与计时操作，向运行子系统提供一致时间信息。 */
+import { normalizeSimulationFrameDelta } from './engineTiming'
 export interface TimeSnapshot {
   delta: number
   fixedDelta: number
@@ -37,7 +38,7 @@ export class RuntimeTime {
   /** 规范化倍率、固定步长和帧时长，累计缩放时间及帧号并推进计时器。 */ beginFrame(frameDelta: number, tickRate: number, scale: number): TimerExpiration[] {
     this.value.scale = Number.isFinite(scale) ? Math.min(100, Math.max(0, scale)) : 1
     this.value.fixedDelta = 1 / Math.min(1000, Math.max(1, Number.isFinite(tickRate) ? tickRate : 60))
-    this.value.delta = Math.min(.25, Math.max(0, Number.isFinite(frameDelta) ? frameDelta : 0)) * this.value.scale
+    this.value.delta = normalizeSimulationFrameDelta(frameDelta) * this.value.scale
     this.value.elapsed += this.value.delta
     this.value.frame = Math.min(Number.MAX_SAFE_INTEGER, this.value.frame + 1)
     return this.advanceTimers(this.value.delta)

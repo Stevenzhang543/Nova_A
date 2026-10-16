@@ -159,3 +159,13 @@ function hierarchyEntity(uuid: string, entities: readonly Entity[]): Entity | un
     position: { x: transform.position.x + delta.x, y: transform.position.y + delta.y }
   }, entities)
 }
+
+/** Collect roots and descendants in scene order, preserving the original entity references. */
+export function subtreeEntities(rootIds: readonly number[], entities: Entity[]): Entity[] {
+  const selected = new Set(rootIds), included = new Set<number>()
+  for (const root of entities.filter(entity => selected.has(entity.id))) {
+    included.add(root.id)
+    for (const child of descendantsOf(root, entities)) included.add(child.id)
+  }
+  return entities.filter(entity => included.has(entity.id))
+}

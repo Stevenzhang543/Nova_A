@@ -68,6 +68,41 @@ export interface InputSnapshot {
   contexts: string[]
   maps: string[]
   scheme: string
+  /** Ordered digital action transitions; legacy booleans aggregate this sample. */
+  edges?: InputActionEdge[]
+}
+
+export interface InputActionEdge { action: string; down: boolean; sequence: number; timeMs: number }
+export const INPUT_EDGE_CAPACITY = 256
+type DigitalInputEdge = { device: 'key' | 'mouse' | 'release'; code: string; key: string; button: number; down: boolean; modifiers: InputModifier[]; sequence: number; timeMs: number }
+
+export type InputObservationResetReason = 'observer-attached' | 'observer-disposed' | 'release' | 'blur' | 'hidden' | 'focus' | 'overflow' | 'stop' | 'session' | 'pause' | 'resume' | 'replay'
+/** Receipt time is host monotonic milliseconds, never DOM event.timeStamp or replay time. */
+export interface InputReceiptObservation {
+  readonly inputEpoch: number
+  readonly sequence: number
+  readonly receivedAtMs: number
+  readonly device: 'keyboard' | 'mouse-button'
+}
+export interface InputSampleObservation {
+  readonly inputEpoch: number
+  readonly sampleSequence: number
+  readonly receipts: readonly InputReceiptObservation[]
+  readonly latestReceipt: InputReceiptObservation
+}
+/** Profiling opt-in only. An injected clock must share the submission clock's normalized origin. */
+export interface InputObservationCallbacks {
+  receipt(receipt: InputReceiptObservation): void
+  reset?(inputEpoch: number, reason: InputObservationResetReason): void
+  nowMs?(): number
+}
+interface InputObservationState {
+  callbacks: InputObservationCallbacks
+  epoch: number
+  sampleSequence: number
+  lastClockAtMs: number
+  receipts: Map<number, InputReceiptObservation>
+  consumed: InputSampleObservation | null
 }
 
 export interface InputDeviceIdentity { id: string; kind: InputDeviceKind; index: number; connected: boolean; mapping: string }
@@ -262,7 +297,7 @@ const defaultDeadzone = /* 根据 device === 'pen-pressure' || device === 'pen-t
 
 /** 结构说明（自动提取）：cloneSnapshot；输入 snapshot；直接调用 Object.fromEntries、map、Object.entries、snapshot.devices.map。 */ function cloneSnapshot(snapshot: InputSnapshot): InputSnapshot {
   return {
-    down: { ...snapshot.down }, pressed: { ...snapshot.pressed }, released: { ...snapshot.released }, performed: { ...snapshot.performed }, cancelled: { ...snapshot.cancelled }, phases: { ...snapshot.phases }, durations: { ...snapshot.durations }, tapCounts: { ...snapshot.tapCounts }, consumed: { ...snapshot.consumed }, axes: { ...snapshot.axes },
+    down: { ...snapshot.down }, pressed: { ...snapshot.pressed }, released: { ...snapshot.released }, performed: { ...snapshot.performed }, cancelled: { ...snapshot.cancelled }, phases: { ...snapshot.phases }, durations: { ...snapshot.durations }, tapCounts: { ...snapshot.tapCounts }, consumed: { ...snapshot.consumed }, axes: { ...snapshot.axes }, edges: (Array.isArray(snapshot.edges) ? snapshot.edges : []).slice(0, INPUT_EDGE_CAPACITY * 128).filter(edge => edge && typeof edge.action === 'string' && typeof edge.down === 'boolean' && Number.isSafeInteger(edge.sequence) && edge.sequence >= 0 && Number.isFinite(edge.timeMs)).map(edge => ({ action: edge.action.slice(0, 160), down: edge.down, sequence: edge.sequence, timeMs: Math.max(0, edge.timeMs) })),
     vectors: Object.fromEntries(Object.entries(snapshot.vectors).map(/* 返回按声明顺序构造的数组 [key, [...value] as [number, number]]。 */ ([key, value]) => [key, [...value] as [number, number]])),
     mousePosition: [...snapshot.mousePosition], mouseWorldPosition: [...snapshot.mouseWorldPosition], viewBounds: [...snapshot.viewBounds], viewportSize: [...snapshot.viewportSize], wheel: [...snapshot.wheel], pointerDelta: [...snapshot.pointerDelta], touches: snapshot.touches,
     devices: snapshot.devices.map(/** 构造并返回记录 { ...device }，字段按当前实参及捕获状态求值。 */ device => ({ ...device })), contexts: [...snapshot.contexts], maps: [...snapshot.maps], scheme: snapshot.scheme
@@ -278,6 +313,16 @@ export class InputManager {
   private logicalKeys = new Set<string>()
   private modifiers = new Set<InputModifier>()
   private mouseButtons = new Set<number>()
+  private sampledKeyboard = new Set<string>()
+  private sampledLogicalKeys = new Set<string>()
+  private sampledModifiers = new Set<InputModifier>()
+  private sampledMouseButtons = new Set<number>()
+  private digitalEdges: DigitalInputEdge[] = []
+  private edgeOverflowed = false
+  readonly edgeDiagnostics = { capacity: INPUT_EDGE_CAPACITY, queued: 0, sequence: 0, overflows: 0, dropped: 0, resynchronizations: 0 }
+  private observation: InputObservationState | null = null
+  private nextObservationEpoch = 0
+  readonly observationDiagnostics = { invalidClock: 0, callbackErrors: 0, lastFailure: null as string | null }
   private touches = new Map<number, { x: number; y: number; previousX: number; previousY: number; startX: number; startY: number; startedAt: number }>()
   private pens = new Map<number, PenInputState>()
   private lastPenPointerId: number | null = null
@@ -308,11 +353,16 @@ export class InputManager {
   private replay: { recording: InputRecording; startedAt: number; index: number; loop: boolean } | null = null
 
   readonly onKeyDown = /** 结构说明（自动提取）：匿名回调；输入 event；直接调用 isTypingTarget、keyboard.add、logicalKeys.add、logicalKey、updateModifiers 等。 */ (event: KeyboardEvent) => {
-    if (!event.defaultPrevented && !event.isComposing && event.keyCode !== 229 && !this.isTypingTarget(event.target)) { this.keyboard.add(event.code); this.logicalKeys.add(logicalKey(event.key)); this.updateModifiers(event); if (!event.repeat) setInputModality('keyboard') }
+    if (!event.defaultPrevented && !event.isComposing && event.keyCode !== 229 && !this.isTypingTarget(event.target) && !this.edgeOverflowed) {
+      const changed = !this.keyboard.has(event.code)
+      this.keyboard.add(event.code); this.logicalKeys.add(logicalKey(event.key)); this.updateModifiers(event)
+      if (changed && !event.repeat) this.recordDigitalEdge('key', event.code, logicalKey(event.key), 0, true)
+      if (!event.repeat) setInputModality('keyboard')
+    }
   }
-  readonly onKeyUp = /** 结构说明（自动提取）：匿名回调；输入 event；直接调用 keyboard.delete、logicalKeys.delete、logicalKey、updateModifiers。 */ (event: KeyboardEvent) => { this.keyboard.delete(event.code); this.logicalKeys.delete(logicalKey(event.key)); this.updateModifiers(event) }
-  readonly onMouseDown = /** 结构说明（自动提取）：匿名回调；输入 event；直接调用 acceptMouse、mouseButtons.add、setInputModality。 */ (event: MouseEvent) => { if (this.acceptMouse(event)) { this.mouseButtons.add(event.button); setInputModality('mouse') } }
-  readonly onMouseUp = /** 结构说明（自动提取）：匿名回调；输入 event；直接调用 acceptMouse、mouseButtons.delete。 */ (event: MouseEvent) => { if (this.acceptMouse(event)) this.mouseButtons.delete(event.button) }
+  readonly onKeyUp = (event: KeyboardEvent) => { const changed = this.keyboard.delete(event.code); this.logicalKeys.delete(logicalKey(event.key)); this.updateModifiers(event); if (changed) this.recordDigitalEdge('key', event.code, logicalKey(event.key), 0, false, !this.observation || !event.defaultPrevented && !event.isComposing && event.keyCode !== 229 && !this.isTypingTarget(event.target)) }
+  readonly onMouseDown = (event: MouseEvent) => { if (this.acceptMouse(event) && !this.edgeOverflowed) { const changed = !this.mouseButtons.has(event.button); this.mouseButtons.add(event.button); if (changed) this.recordDigitalEdge('mouse', '', '', event.button, true, !this.observation || !event.defaultPrevented && !this.isTypingTarget(event.target)); setInputModality('mouse') } }
+  readonly onMouseUp = (event: MouseEvent) => { if (this.acceptMouse(event) && this.mouseButtons.delete(event.button)) this.recordDigitalEdge('mouse', '', '', event.button, false, !this.observation || !event.defaultPrevented && !this.isTypingTarget(event.target)) }
   readonly onMouseMove = /** 结构说明（自动提取）：匿名回调；输入 event；直接调用 acceptMouse、Math.abs、setInputModality；写入 clientX、clientY、movementX、movementY。 */ (event: MouseEvent) => { if (!this.acceptMouse(event)) return; this.clientX = event.clientX; this.clientY = event.clientY; this.movementX += event.movementX; this.movementY += event.movementY; if (Math.abs(event.movementX) + Math.abs(event.movementY) >= 1) setInputModality('mouse') }
   /** Only unhandled game-surface wheel input belongs to gameplay; editor and native controls keep scrolling. */
   readonly onWheel = (event: WheelEvent) => {
@@ -321,10 +371,10 @@ export class InputManager {
     this.wheelX += event.deltaX; this.wheelY += event.deltaY
     if (Math.abs(event.deltaX) + Math.abs(event.deltaY) >= .5) setInputModality('mouse')
   }
-  readonly onFocusIn = /** 结构说明（自动提取）：匿名回调；输入 event；直接调用 isTypingTarget、keyboard.clear、logicalKeys.clear、modifiers.clear。 */ (event: FocusEvent) => { if (this.isTypingTarget(event.target)) { this.keyboard.clear(); this.logicalKeys.clear(); this.modifiers.clear() } }
-  readonly onBlur = /* 调用 this.releaseTransientInput() 并返回调用结果。 */ () => this.releaseTransientInput()
-  readonly onPageHide = /* 调用 this.releaseTransientInput() 并返回调用结果。 */ () => this.releaseTransientInput()
-  readonly onVisibilityChange = /** 结构说明（自动提取）：匿名回调；无显式参数；直接调用 releaseTransientInput。 */ () => { if (typeof document !== 'undefined' && document.hidden) this.releaseTransientInput() }
+  readonly onFocusIn = (event: FocusEvent) => { if (this.isTypingTarget(event.target)) this.releaseAllInputs('focus') }
+  readonly onBlur = /* 调用 this.releaseTransientInput() 并返回调用结果。 */ () => this.releaseTransientInput('blur')
+  readonly onPageHide = /* 调用 this.releaseTransientInput() 并返回调用结果。 */ () => this.releaseTransientInput('hidden')
+  readonly onVisibilityChange = /** 结构说明（自动提取）：匿名回调；无显式参数；直接调用 releaseTransientInput。 */ () => { if (typeof document !== 'undefined' && document.hidden) this.releaseTransientInput('hidden') }
   readonly onTouchStart = /** 结构说明（自动提取）：匿名回调；输入 event；直接调用 performance.now、mouseButtons.clear、Array.from、pointerDeduplicator.recordTouch、touches.set 等；写入 clientX、clientY；包含循环处理。 */ (event: TouchEvent) => {
     const now = performance.now()
     this.mouseButtons.clear()
@@ -403,8 +453,8 @@ export class InputManager {
   }
 
   /** 结构说明（自动提取）：stop；无显式参数；直接调用 window.removeEventListener、document.removeEventListener、releaseAllInputs、devices.clear、previousDown.clear 等；写入 attached、sampledGamepads、lastGamepadInventoryAt、gamepadInventorySignature 等。 */ stop(): void {
-    if (!this.attached) return
-    this.attached = false
+    if (this.attached) {
+      this.attached = false
     window.removeEventListener('keydown', this.onKeyDown)
     window.removeEventListener('focusin', this.onFocusIn)
     window.removeEventListener('keyup', this.onKeyUp)
@@ -426,7 +476,10 @@ export class InputManager {
     window.removeEventListener('blur', this.onBlur)
     window.removeEventListener('pagehide', this.onPageHide)
     document.removeEventListener('visibilitychange', this.onVisibilityChange)
-    this.releaseAllInputs()
+    }
+    this.releaseAllInputs('stop')
+    this.digitalEdges = []; this.edgeDiagnostics.queued = 0; this.edgeOverflowed = false
+    this.sampledKeyboard.clear(); this.sampledLogicalKeys.clear(); this.sampledModifiers.clear(); this.sampledMouseButtons.clear()
     this.devices.clear()
     this.sampledGamepads = []
     this.lastGamepadInventoryAt = -Infinity
@@ -442,8 +495,9 @@ export class InputManager {
   }
 
   /** 结构说明（自动提取）：sample；输入 actions、viewport；直接调用 sampleReplay、actions.some、some、devices.values、readGamepads 等；写入 current、sampledGamepads、snapshot.mousePosition、snapshot.wheel 等；返回路径包含 replayed、snapshot；包含循环处理。 */ sample(actions: InputAction[], viewport?: DOMRect): InputSnapshot {
+    if (this.observation) { this.observation.consumed = null; this.observation.sampleSequence++ }
     const replayed = this.sampleReplay()
-    if (replayed) { this.current = replayed; return replayed }
+    if (replayed) { this.observation?.receipts.clear(); this.current = replayed; return replayed }
     const samplesGamepad = actions.some(/* 调用 action.bindings.some(binding => binding.device === 'gamepad-button' || binding.device === 'gamepad-axis') 并返回调用结果。 */ action => action.bindings.some(/* 先计算 binding.device === 'gamepad-button'；仅当其为假值时求右侧 binding.device === 'gamepad-axis'，返回短路求值结果。 */ binding => binding.device === 'gamepad-button' || binding.device === 'gamepad-axis')) || [...this.devices.values()].some(/* 先计算 device.kind === 'gamepad'；仅当其为真值时求右侧 device.connected，返回短路求值结果。 */ device => device.kind === 'gamepad' && device.connected)
     this.sampledGamepads = samplesGamepad ? this.readGamepads() : []
     if (samplesGamepad) { this.synchronizeGamepadInventory(this.sampledGamepads); this.detectMeaningfulGamepadActivity(this.sampledGamepads) }
@@ -465,6 +519,8 @@ export class InputManager {
       return contextDelta || second.priority - first.priority || first.name.localeCompare(second.name)
     })
     const now = performance.now() / 1_000
+    const transitions = this.consumeDigitalEdges(ordered, activeContexts)
+    snapshot.edges = [...transitions].flatMap(([action, edges]) => edges.map(edge => ({ action, ...edge }))).sort((a, b) => a.sequence - b.sequence)
     const nowMs = now * 1_000
     for (const touch of this.touches.values()) if (nowMs - touch.startedAt >= 500 && Math.hypot(touch.x - touch.startX, touch.y - touch.startY) < 18) this.gestures.set('long-press', 1)
     for (const action of ordered) {
@@ -489,30 +545,35 @@ export class InputManager {
       }
       const threshold = Math.min(...action.bindings.map(/* 返回 binding.threshold 的当前值。 */ binding => binding.threshold), .0001)
       const down = Math.abs(snapshot.axes[action.name] ?? 0) > threshold
-      const previous = this.previousDown.get(action.name) ?? false
+      let previous = this.previousDown.get(action.name) ?? false
       const state = this.interactionState.get(action.name) ?? { startedAt: now, lastTapAt: -Infinity, taps: 0, performed: false }
-      let phase: InputPhase = down ? 'started' : 'idle', performed = false, cancelled = false
-      if (down && !previous) { state.startedAt = now; state.performed = false; phase = 'started' }
-      const duration = down ? Math.max(0, now - state.startedAt) : 0
-      if (action.interaction === 'press') performed = down && !previous
-      else if (action.interaction === 'hold') {
-        performed = down && !state.performed && duration >= action.holdSeconds
-        cancelled = !down && previous && !state.performed
-      } else if (!down && previous) {
-        const validTap = now - state.startedAt <= action.tapSeconds
-        if (action.interaction === 'tap') { performed = validTap; cancelled = !validTap }
-        else if (validTap) {
-          state.taps = now - state.lastTapAt <= action.tapSeconds * 2 ? state.taps + 1 : 1
-          state.lastTapAt = now
-          performed = state.taps >= action.multiTapCount
-          if (performed) state.taps = 0
-        } else { state.taps = 0; cancelled = true }
+      let phase: InputPhase = down ? 'started' : 'idle', performed = false, cancelled = false, pressed = false, released = false
+      const changes = [...(transitions.get(action.name) ?? []), { down, timeMs: now * 1_000, sequence: this.edgeDiagnostics.sequence }]
+      for (const change of changes) {
+        const at = change.timeMs / 1_000, held = change.down
+        let justPerformed = false
+        if (held && !previous) { state.startedAt = at; state.performed = false; phase = 'started'; pressed = true }
+        if (!held && previous) released = true
+        if (action.interaction === 'press') justPerformed = held && !previous
+        else if (action.interaction === 'hold') {
+          justPerformed = (held || previous) && !state.performed && Math.max(0, at - state.startedAt) >= action.holdSeconds
+          cancelled ||= !held && previous && !state.performed && !justPerformed
+        } else if (!held && previous) {
+          const validTap = at - state.startedAt <= action.tapSeconds
+          if (action.interaction === 'tap') { justPerformed = validTap; cancelled ||= !validTap }
+          else if (validTap) { state.taps = at - state.lastTapAt <= action.tapSeconds * 2 ? state.taps + 1 : 1; state.lastTapAt = at; if (state.taps >= action.multiTapCount) { justPerformed = true; state.taps = 0 } }
+          else { state.taps = 0; cancelled = true }
+        }
+        performed ||= justPerformed
+        if (justPerformed) state.performed = true
+        previous = held
       }
-      if (performed) { state.performed = true; phase = 'performed' }
+      const duration = down ? Math.max(0, now - state.startedAt) : 0
+      if (performed) phase = 'performed'
       else if (cancelled) phase = 'cancelled'
       snapshot.down[action.name] = down
-      snapshot.pressed[action.name] = action.interaction === 'press' ? down && !previous : performed
-      snapshot.released[action.name] = !down && previous
+      snapshot.pressed[action.name] = action.interaction === 'press' ? pressed : performed
+      snapshot.released[action.name] = released
       snapshot.performed[action.name] = performed
       snapshot.cancelled[action.name] = cancelled
       snapshot.phases[action.name] = phase
@@ -530,12 +591,51 @@ export class InputManager {
     this.movementX = 0
     this.movementY = 0
     this.gestures.clear()
+    this.sampledKeyboard = new Set(this.keyboard); this.sampledLogicalKeys = new Set(this.logicalKeys)
+    this.sampledModifiers = new Set(this.modifiers); this.sampledMouseButtons = new Set(this.mouseButtons)
+    this.edgeOverflowed = false
     this.current = snapshot
     if (this.recording) this.recording.frames.push({ time: Math.max(0, performance.now() - this.recording.startedAt) / 1000, snapshot: cloneSnapshot(snapshot) })
     return snapshot
   }
 
   /* 返回 this.current 的当前值。 */ snapshot(): InputSnapshot { return this.current }
+
+  get observationEpoch(): number | null { return this.observation?.epoch ?? null }
+  /** Read-only, current sample only. Reading does not drain actions or fixed-step input. */
+  get lastConsumedInputObservation(): InputSampleObservation | null { return this.observation?.consumed ?? null }
+
+  setObservationCallbacks(callbacks: InputObservationCallbacks): () => void {
+    const state: InputObservationState = { callbacks, epoch: ++this.nextObservationEpoch, sampleSequence: 0, lastClockAtMs: -Infinity, receipts: new Map(), consumed: null }
+    this.observation = state
+    this.notifyObservationReset(state, 'observer-attached')
+    let disposed = false
+    return () => {
+      if (disposed) return
+      disposed = true
+      if (this.observation !== state) return
+      this.observation = null; state.receipts.clear(); state.consumed = null
+      state.epoch = ++this.nextObservationEpoch
+      this.notifyObservationReset(state, 'observer-disposed')
+    }
+  }
+
+  /** Observation invalidation never changes held state, mappings, or simulation input. */
+  resetObservation(reason: InputObservationResetReason = 'release'): void {
+    const state = this.observation; if (!state) return
+    state.epoch = ++this.nextObservationEpoch; state.receipts.clear(); state.consumed = null
+    this.notifyObservationReset(state, reason)
+  }
+
+  private notifyObservationReset(state: InputObservationState, reason: InputObservationResetReason): void {
+    try { state.callbacks.reset?.(state.epoch, reason) } catch (error) { this.failObservation(state, 'reset', error) }
+  }
+
+  private failObservation(state: InputObservationState, phase: string, error: unknown): void {
+    this.observationDiagnostics.callbackErrors++
+    this.observationDiagnostics.lastFailure = `${phase}: ${error instanceof Error ? error.message : String(error)}`.slice(0, 240)
+    if (this.observation === state) { this.observation = null; this.nextObservationEpoch++; state.receipts.clear(); state.consumed = null }
+  }
 
   /** 结构说明（自动提取）：setVirtualAction；输入 actionName、value；直接调用 slice、actionName.trim、Array.isArray、virtualActions.set、Math.min 等。 */ setVirtualAction(actionName: string, value: number | [number, number]): boolean {
     const name = actionName.trim().slice(0, 80); if (!name) return false
@@ -565,11 +665,20 @@ export class InputManager {
 
   /** 结构说明（自动提取）：beginRecording；无显式参数；直接调用 performance.now；写入 recording、replay。 */ beginRecording(): void { this.recording = { startedAt: performance.now(), frames: [] }; this.replay = null }
   /** 结构说明（自动提取）：endRecording；无显式参数；直接调用 frames.map；写入 recording。 */ endRecording(): InputRecording { const frames = this.recording?.frames ?? []; this.recording = null; return { version: 1, duration: frames[frames.length - 1]?.time ?? 0, frames: frames.map(/** 构造并返回记录 { time: frame.time, snapshot: cloneSnapshot(frame.snapshot) }，字段按当前实参及捕获状态求值。 */ frame => ({ time: frame.time, snapshot: cloneSnapshot(frame.snapshot) })) } }
-  /** 结构说明（自动提取）：playRecording；输入 recording、loop；直接调用 normalizeInputRecording、performance.now；写入 recording、replay。 */ playRecording(recording: InputRecording, loop = false): boolean { const normalized = normalizeInputRecording(recording); if (!normalized.frames.length) return false; this.recording = null; this.replay = { recording: normalized, startedAt: performance.now(), index: 0, loop }; return true }
-  /** 将 null 赋给 this.replay，不显式返回值。 */ stopReplay(): void { this.replay = null }
+  /** 结构说明（自动提取）：playRecording；输入 recording、loop；直接调用 normalizeInputRecording、performance.now；写入 recording、replay。 */ playRecording(recording: InputRecording, loop = false): boolean { const normalized = normalizeInputRecording(recording); if (!normalized.frames.length) return false; this.resetObservation('replay'); this.recording = null; this.replay = { recording: normalized, startedAt: performance.now(), index: 0, loop }; return true }
+  /** 将 null 赋给 this.replay，不显式返回值。 */ stopReplay(): void { this.replay = null; this.resetObservation('replay') }
 
   /** Releases held transient state without erasing action history, so the next sample reports releases/cancellation. */
-  /** 结构说明（自动提取）：releaseAllInputs；无显式参数；直接调用 keyboard.clear、logicalKeys.clear、modifiers.clear、mouseButtons.clear、touches.clear 等；写入 lastPenPointerId、pairGesture、lastTouchTapAt、wheelX 等。 */ releaseAllInputs(): void {
+  /** 结构说明（自动提取）：releaseAllInputs；无显式参数；直接调用 keyboard.clear、logicalKeys.clear、modifiers.clear、mouseButtons.clear、touches.clear 等；写入 lastPenPointerId、pairGesture、lastTouchTapAt、wheelX 等。 */ releaseAllInputs(reason: InputObservationResetReason = 'release'): void {
+    this.resetObservation(reason)
+    // Input collected while host simulation is suspended must not become a
+    // down/up pulse on resume. Keep sampled history so held actions still release.
+    if (reason === 'hidden' || reason === 'pause' || reason === 'resume' || reason === 'stop') { this.digitalEdges = []; this.edgeDiagnostics.queued = 0; this.edgeOverflowed = false }
+    this.recordDigitalEdge('release', '', '', 0, false)
+    this.clearHeldInputs()
+  }
+
+  private clearHeldInputs(): void {
     this.keyboard.clear()
     this.logicalKeys.clear()
     this.modifiers.clear()
@@ -586,6 +695,97 @@ export class InputManager {
     this.movementX = 0
     this.movementY = 0
     this.pointerDeduplicator.clear()
+  }
+
+  private recordDigitalEdge(device: DigitalInputEdge['device'], code: string, key: string, button: number, down: boolean, observable = true): void {
+    if (this.edgeOverflowed) return
+    const sequence = ++this.edgeDiagnostics.sequence, timeMs = performance.now()
+    if (this.digitalEdges.length >= INPUT_EDGE_CAPACITY) {
+      this.edgeDiagnostics.overflows++; this.edgeDiagnostics.dropped += this.digitalEdges.length + 1
+      this.edgeDiagnostics.resynchronizations++; this.edgeOverflowed = true
+      this.resetObservation('overflow')
+      this.digitalEdges = [{ device: 'release', code: '', key: '', button: 0, down: false, modifiers: [], sequence, timeMs }]
+      this.clearHeldInputs()
+    } else {
+      this.digitalEdges.push({ device, code: code.slice(0, 64), key: key.slice(0, 64), button, down, modifiers: [...this.modifiers], sequence, timeMs })
+      const state = this.observation
+      if (state && observable && device !== 'release' && !this.replay) {
+        let receivedAtMs = Number.NaN
+        try { receivedAtMs = state.callbacks.nowMs ? state.callbacks.nowMs() : performance.now() } catch (error) { this.failObservation(state, 'clock', error) }
+        if (this.observation !== state) { /* Faulty/replaced observers never interfere with edge delivery. */ }
+        else if (!Number.isFinite(receivedAtMs) || receivedAtMs < 0 || receivedAtMs < state.lastClockAtMs) this.observationDiagnostics.invalidClock++
+        else {
+          state.lastClockAtMs = receivedAtMs
+          const receipt: InputReceiptObservation = Object.freeze({ inputEpoch: state.epoch, sequence, receivedAtMs, device: device === 'key' ? 'keyboard' : 'mouse-button' })
+          state.receipts.set(sequence, receipt)
+          try { state.callbacks.receipt(receipt) } catch (error) { this.failObservation(state, 'receipt', error) }
+        }
+      }
+    }
+    this.edgeDiagnostics.queued = this.digitalEdges.length
+  }
+
+  /** Replay only bounded digital edges, using the same binding and consumption rules as held sampling. */
+  private consumeDigitalEdges(actions: InputAction[], contexts: Map<string, { consume: boolean }>): Map<string, Array<Omit<InputActionEdge, 'action'>>> {
+    const result = new Map<string, Array<Omit<InputActionEdge, 'action'>>>()
+    const batch = this.digitalEdges.splice(0); this.edgeDiagnostics.queued = 0
+    if (!batch.length) return result
+    const live = { keyboard: this.keyboard, logical: this.logicalKeys, modifiers: this.modifiers, mouse: this.mouseButtons }
+    this.keyboard = new Set(this.sampledKeyboard); this.logicalKeys = new Set(this.sampledLogicalKeys)
+    this.modifiers = new Set(this.sampledModifiers); this.mouseButtons = new Set(this.sampledMouseButtons)
+    const previous = new Map(actions.map(action => [action.name, this.previousDown.get(action.name) ?? false]))
+    const observation = this.observation
+    const observed = observation ? new Map<number, InputReceiptObservation>() : null
+    try {
+      for (const edge of batch) {
+        const receipt = observation?.receipts.get(edge.sequence)
+        // Comparing the same action before/after this raw edge excludes newly polled
+        // gamepad/virtual state that merely coincides with an unrelated keyboard event.
+        const before = receipt ? this.observationDigitalDown(actions, contexts) : null
+        if (edge.device === 'release') { this.keyboard.clear(); this.logicalKeys.clear(); this.modifiers.clear(); this.mouseButtons.clear() }
+        else if (edge.device === 'key') { if (edge.down) { this.keyboard.add(edge.code); this.logicalKeys.add(edge.key) } else { this.keyboard.delete(edge.code); this.logicalKeys.delete(edge.key) }; this.modifiers = new Set(edge.modifiers) }
+        else if (edge.down) this.mouseButtons.add(edge.button)
+        else this.mouseButtons.delete(edge.button)
+        const consumed = new Set<string>()
+        for (const action of actions) {
+          if (!action.bindings.some(binding => ['keyboard', 'physical-key', 'mouse-button'].includes(binding.device))) continue
+          const values = action.bindings.map(binding => consumed.has(bindingSignature(binding)) ? 0 : this.bindingValue(binding))
+          const down = this.digitalActionDown(action, values)
+          if (down !== previous.get(action.name)) {
+            const changes = result.get(action.name) ?? []; changes.push({ down, sequence: edge.sequence, timeMs: edge.timeMs }); result.set(action.name, changes); previous.set(action.name, down)
+            if (receipt && before?.get(action.name) !== down && receipt.inputEpoch === observation!.epoch) observed!.set(receipt.sequence, receipt)
+          }
+          if ((action.consume || contexts.get(action.context)?.consume) && down) action.bindings.forEach((binding, index) => { if (values[index]) consumed.add(bindingSignature(binding)) })
+        }
+      }
+    } finally { this.keyboard = live.keyboard; this.logicalKeys = live.logical; this.modifiers = live.modifiers; this.mouseButtons = live.mouse }
+    if (observation && this.observation === observation) {
+      observation.receipts.clear()
+      if (observed!.size) {
+        const receipts = Object.freeze([...observed!.values()].sort((a, b) => a.sequence - b.sequence))
+        observation.consumed = Object.freeze({ inputEpoch: observation.epoch, sampleSequence: observation.sampleSequence, receipts, latestReceipt: receipts[receipts.length - 1] })
+      }
+    }
+    return result
+  }
+
+  private digitalActionDown(action: InputAction, values: number[]): boolean {
+    let amount = 0
+    const virtual = this.virtualActions.get(action.name)
+    if (action.kind === 'vector2') { let x = 0, y = 0; action.bindings.forEach((binding, index) => { x += values[index] * binding.x; y += values[index] * binding.y }); const length = Math.hypot(x, y); if (length > 1) { x /= length; y /= length }; if (Array.isArray(virtual)) { x += virtual[0]; y += virtual[1] }; amount = Math.min(1, Math.hypot(x, y)) }
+    else amount = action.bindings.reduce((total, binding, index) => total + values[index] * binding.scale, 0) + (typeof virtual === 'number' ? virtual : 0)
+    return Math.abs(amount) > Math.min(...action.bindings.map(binding => binding.threshold), .0001)
+  }
+
+  private observationDigitalDown(actions: InputAction[], contexts: Map<string, { consume: boolean }>): Map<string, boolean> {
+    const result = new Map<string, boolean>(), consumed = new Set<string>()
+    for (const action of actions) {
+      if (!action.bindings.some(binding => ['keyboard', 'physical-key', 'mouse-button'].includes(binding.device))) continue
+      const values = action.bindings.map(binding => consumed.has(bindingSignature(binding)) ? 0 : this.bindingValue(binding))
+      const down = this.digitalActionDown(action, values); result.set(action.name, down)
+      if ((action.consume || contexts.get(action.context)?.consume) && down) action.bindings.forEach((binding, index) => { if (values[index]) consumed.add(bindingSignature(binding)) })
+    }
+    return result
   }
 
   /** 结构说明（自动提取）：bindingValue；输入 binding；直接调用 binding.modifiers.every、binding.chord.every、logicalKeys.has、logicalKey、looksLikePhysicalKeyCode 等；写入 value。 */ private bindingValue(binding: InputBinding): number {
@@ -618,7 +818,7 @@ export class InputManager {
   }
 
   /** 结构说明（自动提取）：updateModifiers；输入 event；直接调用 modifiers.clear、modifiers.add。 */ private updateModifiers(event: KeyboardEvent): void { this.modifiers.clear(); if (event.ctrlKey) this.modifiers.add('Control'); if (event.shiftKey) this.modifiers.add('Shift'); if (event.altKey) this.modifiers.add('Alt'); if (event.metaKey) this.modifiers.add('Meta') }
-  /** 执行时调用 this.releaseAllInputs()；不显式返回调用结果。 */ private releaseTransientInput(): void { this.releaseAllInputs() }
+  /** 执行时调用 this.releaseAllInputs()；不显式返回调用结果。 */ private releaseTransientInput(reason: InputObservationResetReason): void { this.releaseAllInputs(reason) }
   /** 结构说明（自动提取）：updatePen；输入 event；直接调用 pens.get、finite、Math.max、Math.round、Math.min 等；写入 movementX、movementY、clientX、clientY 等。 */ private updatePen(event: PointerEvent): void {
     const previous = this.pens.get(event.pointerId)
     if (previous) { this.movementX += event.clientX - previous.x; this.movementY += event.clientY - previous.y }

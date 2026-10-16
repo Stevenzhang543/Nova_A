@@ -1,6 +1,6 @@
-# Nova_A 26.37 Complete Manual
+# Nova_A 26.38 Complete Manual
 
-Engine: **26.37.0** · Project Format 2/schema 29.
+Engine: **26.38.0** · Project Format 2/schema 29.
 
 <!-- NOVA_V2636_BRANDING -->
 ## 26.36 — Supplied light and dark branding
@@ -20168,3 +20168,10 @@ Use this release workflow to learn, migrate, verify and ship a complete project 
 Engine **26.37.0** · Project Format2/schema29.
 
 Comfortable is the default: text and values16, inputs and buttons44, panel radius16 and dialog radius24. Snappy/Smooth/Elastic share finite, interruptible presentation; values and pointer coordinates respond directly. Reduced Motion persists and respects the system setting. Release evidence distinguishes implementation, software-browser verification and physical-device limits.
+
+## 26.38 — Release engineering maintenance
+
+Engine **26.38.0** · Project Format2/schema29.
+
+The release tooling accepts the current and future calendar labels instead of stopping at26.37, so the same integrated regression suites can qualify this release. Rust formatting and lint checks are clean across the whole workspace again. Editor behaviour, project format, rendering and gameplay are unchanged.
+

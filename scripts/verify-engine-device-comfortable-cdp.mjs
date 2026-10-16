@@ -1,0 +1,67 @@
+/** Next immutable cohort: actual public Device layout/history/save and visible collection copy. No benchmark or motion sampling. */
+import assert from 'node:assert/strict'
+import {readFile,writeFile,mkdir} from 'node:fs/promises'
+import {createHash} from 'node:crypto'
+import {join,resolve,relative} from 'node:path'
+import {withBrowserAudit} from './lib/browserUserAudit.mjs'
+import {worldUserControls17} from './lib/worldAudit17.mjs'
+const arg=name=>{const v=process.argv.find(s=>s.startsWith(`--${name}=`))?.slice(name.length+3);assert.ok(v,`Explicit --${name} is required`);return v}
+const root=resolve(process.cwd()),dist=resolve(root,arg('dist')),output=resolve(root,arg('output')),sha=b=>createHash('sha256').update(b).digest('hex')
+assert.ok(relative(root,dist)&&!relative(root,dist).startsWith('..'));assert.ok(relative(root,output)&&!relative(root,output).startsWith('..'))
+const mb=await readFile(join(dist,'engine-build-manifest.json')),manifest=JSON.parse(mb)
+assert.equal(sha(mb),arg('manifest-sha'));assert.equal(manifest.buildId,arg('build-id'));assert.equal(manifest.sourceHash,arg('source-hash'));assert.equal(manifest.mode,'optimized-profiling');assert.equal(manifest.profilingApiEnabled,true)
+for(const f of manifest.artifacts)assert.equal(sha(await readFile(join(dist,f.path))),f.sha256)
+const project=join(root,'.cache/engine-overhaul/input-collection-ui-a1d6f-attempt2/v26.17-a1d6f-input-collection.nova'),pb=await readFile(project),original=JSON.parse(pb)
+assert.equal(sha(pb),'aba83b30b8fc5563bdd82fb73268c0642774769210f6d6051504486578a470ec')
+await mkdir(output);await writeFile(join(output,'profile-build-manifest.json'),mb);await writeFile(join(output,'driver-source.mjs'),await readFile(new URL(import.meta.url)))
+process.env.NOVA_AUDIT_DIST_DIRECTORY=relative(root,dist);process.env.NOVA_AUDIT_REPORT_DIRECTORY=relative(root,output)
+const raw={scope:'SHORT_SMOKE_PUBLIC_DEVICE_LAYOUT_AND_VISIBLE_COLLECTION_COPY',buildId:manifest.buildId,artifactSourceHash:manifest.sourceHash,manifestSha256:sha(mb),projectSha256:sha(pb),counts:{entities:11,serializedComponents:59,runtimeNotRemovedComponents:41},geometry:[],screenshots:[],checks:[],notTested:['Formal performance/CI gates, physical display/native Tauri, sensors/haptics, full motion coverage. Old A1 strict3s FAIL retained.','Historical capture import and over-capacity collection are not exposed/induced by this unchanged small project.']}
+await withBrowserAudit({root,release:'26.37',name:'engine-device-comfortable',width:1600,height:900,development:true,expectedRelease:'26.37',qualifyRelease:false},async a=>{
+ const ui=worldUserControls17(a),nsel=label=>`.device-studio .control-card .ui-property-row[aria-label=${JSON.stringify(label)}] input[data-numeric-expression]`
+ const settings=async query=>{await ui.workspace('Manage');await a.click('.manage-body>nav button',1);await a.until("!!document.querySelector('.settings-page')");await a.fill('.settings-search input',query)}
+ const virtual=async()=>{await settings('deviceInput');await a.clickText('.device-studio>.ui-tabs button','Virtual controls',true);await a.until("!!document.querySelector('.device-studio .control-card')")}
+ const viewport=async(width,height=900)=>{await a.client.send('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:false});await a.until(`innerWidth===${width}&&innerHeight===${height}&&devicePixelRatio===1`)}
+ const scale=async value=>{await settings('interfaceScale');await a.fill('.settings-page .ui-property-row[aria-label="Interface scale"] input[data-numeric-expression]',value);await a.until(`Number(getComputedStyle(document.documentElement).getPropertyValue('--ui-scale'))===${value}`)}
+ const selectedTab=()=>a.evaluate("document.querySelector('.production-panel>.ui-tabs button[aria-selected=true]')?.textContent.trim()")
+ const visible=selectors=>a.evaluate(`(()=>{return ${JSON.stringify(selectors)}.map(selector=>{const e=document.querySelector(selector);if(!e)return {selector,exists:false};const r=e.getBoundingClientRect();let top=0,left=0,right=innerWidth,bottom=innerHeight;for(let p=e.parentElement;p;p=p.parentElement){const s=getComputedStyle(p),q=p.getBoundingClientRect();if(/auto|scroll|hidden|clip/.test(s.overflowY)){top=Math.max(top,q.top);bottom=Math.min(bottom,q.bottom)}if(/auto|scroll|hidden|clip/.test(s.overflowX)){left=Math.max(left,q.left);right=Math.min(right,q.right)}}return {selector,exists:true,text:e.textContent.trim(),rect:{top:r.top,bottom:r.bottom,left:r.left,right:r.right,width:r.width,height:r.height},clip:{top,bottom,left,right},fullyVisible:r.width>0&&r.height>0&&r.top>=top-1&&r.bottom<=bottom+1&&r.left>=left-1&&r.right<=right+1}})})()`)
+ const screenshot=async(label,tab,selectors)=>{
+  const before={tab:await selectedTab(),targets:await visible(selectors)};assert.equal(before.tab,tab);assert.ok(before.targets.every(t=>t.fullyVisible),`Targets must actually be fully visible before ${label}`)
+  const file=await a.capture(label),after={tab:await selectedTab(),targets:await visible(selectors)};raw.screenshots.push({file,before,after})
+  assert.equal(after.tab,tab);assert.ok(after.targets.every(t=>t.fullyVisible));assert.deepEqual(after.targets.map(t=>t.text),before.targets.map(t=>t.text),'The actual selected copy must be stable across screenshot')
+ }
+ const geometry=async(label,width,height,expectedScale)=>{
+  const value=await a.evaluate(`(()=>{const measure=e=>{const r=e.getBoundingClientRect(),s=getComputedStyle(e);return {width:r.width,height:r.height,clientWidth:e.clientWidth,scrollWidth:e.scrollWidth,overflowX:s.overflowX,gridTemplateColumns:s.gridTemplateColumns,gap:s.gap,font:parseFloat(s.fontSize),paddingLeft:parseFloat(s.paddingLeft),paddingRight:parseFloat(s.paddingRight)}};const f=document.querySelector('.device-studio .control-card .fields');return {viewport:{width:innerWidth,height:innerHeight,dpr:devicePixelRatio},rootZoom:getComputedStyle(document.documentElement).zoom,uiScale:Number(getComputedStyle(document.documentElement).getPropertyValue('--ui-scale')),fields:measure(f),card:measure(f.parentElement),rows:[...f.querySelectorAll('.ui-property-row')].map(e=>({label:e.getAttribute('aria-label'),row:measure(e),control:measure(e.querySelector('.ui-property-control')),inputs:[...e.querySelectorAll('input,select')].map(i=>({...measure(i),value:i.value,ariaLabel:i.getAttribute('aria-label')}))}))}})()`)
+  value.label=label;raw.geometry.push(value);assert.equal(value.viewport.width,width);assert.equal(value.viewport.height,height);assert.equal(value.viewport.dpr,1);assert.equal(value.rootZoom,'1');assert.equal(value.uiScale,expectedScale)
+  for(const box of [value.fields,value.card,...value.rows.map(r=>r.row),...value.rows.map(r=>r.control)])assert.ok(box.scrollWidth<=box.clientWidth+1,`${label}: horizontal overflow`)
+  for(const row of value.rows)for(const input of row.inputs){assert.ok(input.scrollWidth<=input.clientWidth+1,`${label}: clipped value ${row.label}`);assert.ok(Math.abs(input.font-16*expectedScale)<.1);assert.ok(input.height>=44*expectedScale-.1);assert.ok(input.paddingLeft>=16*expectedScale-.1);assert.ok(input.paddingRight>=16*expectedScale-.1);assert.ok(input.width>input.paddingLeft+input.paddingRight+34*expectedScale)}
+  await a.evaluate("document.querySelector('.device-studio .control-card .fields').scrollIntoView({block:'start'})");value.screenshot=await a.capture(label)
+  const lastVisible=await visible(['.device-studio .control-card .ui-property-row:last-child']);value.lastRowFullyVisible=lastVisible[0].fullyVisible
+  if(!value.lastRowFullyVisible){await a.evaluate("document.querySelector('.device-studio .control-card .ui-property-row:last-child').scrollIntoView({block:'center'})");value.lastRowScreenshot=await a.capture(label+'-last-row')}
+ }
+ const history=async action=>{await a.click('.menu-item>button',1);await a.clickText('.menu-item .dropdown button',action);await a.until(`Number(document.querySelector(${JSON.stringify(nsel('Size'))}).value)===${action==='Redo'?104:96}`)}
+ try{
+  await ui.open(project);raw.metadata=await a.evaluate('window.novaPerformanceDiagnosticsV1.metadata()');assert.equal(raw.metadata.buildId,manifest.buildId)
+  raw.actualContext=await a.evaluate(`(()=>{const c=document.querySelector('canvas.render-canvas'),g=c.getContext('webgl2'),e=g.getExtension('WEBGL_debug_renderer_info');return {backend:'WebGL2',lost:g.isContextLost(),renderer:g.getParameter(e?e.UNMASKED_RENDERER_WEBGL:g.RENDERER),dpr:devicePixelRatio,cssWidth:c.getBoundingClientRect().width,cssHeight:c.getBoundingClientRect().height,backingWidth:c.width,backingHeight:c.height,physicalMonitorDpi:null}})()`);assert.ok(raw.actualContext.renderer.includes('SwiftShader'))
+  await ui.workspace('Debug');await ui.bottom('profiler','Profiler');await a.click('.bottom-panel .panel-controls>button',0);await a.until("!!document.querySelector('.bottom-panel.panel-maximized')")
+  await a.click('.actionbar button',0);await a.until("document.querySelector('.actionbar button')?.getAttribute('aria-pressed')==='true'");await a.clickText('.production-panel>.ui-tabs button','Scripts',true);await a.until("document.querySelectorAll('.script-profile-table .profile-row').length>0")
+  await a.clickText('.script-profile-table button','Capture',true);await a.clickText('.script-profile-table button','Capture',true);await a.until("!!document.querySelector('[data-audit=script-capture-collection-b]')")
+  await a.check('actual Scripts budget, heuristic and A/B scope are visible in stable selected-tab screenshots',async()=>{
+   await a.evaluate("document.querySelector('[data-audit=script-collection-budget]').scrollIntoView({block:'center'})");await screenshot('visible-scripts-current-budget-and-heuristic','Scripts',['[data-audit=script-collection-budget]','[data-audit=script-allocation-estimate-scope]'])
+   await a.evaluate("document.querySelector('[data-audit=script-capture-collection-a]').scrollIntoView({block:'center'})");await screenshot('visible-scripts-a-and-b-capture-scope','Scripts',['[data-audit=script-capture-collection-a]','[data-audit=script-capture-collection-b]'])
+  })
+  await a.clickText('.production-panel>.ui-tabs button','Memory & lifetimes',true);await a.click('.capture-card header button');await a.until("!!document.querySelector('[data-audit=performance-capture-script-collection]')")
+  await a.check('general capture collection scope is fully visible on the actual Memory tab',async()=>{await a.evaluate("document.querySelector('[data-audit=performance-capture-script-collection]').scrollIntoView({block:'center'})");await screenshot('visible-general-capture-collection-scope','Memory & lifetimes',['[data-audit=performance-capture-script-collection]'])})
+  await a.click('.actionbar button',3);await a.until("document.querySelector('.actionbar button')?.getAttribute('aria-pressed')==='false'")
+  await virtual()
+  await a.check('Device baseline values are readable without horizontal overflow at 1600x900 and 100%',()=>geometry('device-baseline-1600-scale100',1600,900,1))
+  await a.check('actual Device numeric typing preserves undo and redo semantics',async()=>{assert.equal(await a.evaluate(`Number(document.querySelector(${JSON.stringify(nsel('Size'))}).value)`),96);await a.fill(nsel('Size'),104);await history('Undo');await history('Redo');await history('Undo');raw.history={before:96,edited:104,undo:96,redo:104,finalUndo:96,scope:'Actual public text entry and Edit menu; no history/store assignment.'}})
+  await a.fill('.settings-search input','');const saved=await ui.save('device-comfortable');raw.saved={file:saved.file,sha256:sha(await readFile(saved.file)),deviceInput:saved.document.projectSettings.deviceInput};assert.deepEqual(saved.document.projectSettings.deviceInput,original.projectSettings.deviceInput);assert.equal(saved.document.scenes[0].entities.length,11);assert.equal(saved.document.scenes[0].entities.reduce((n,e)=>n+e.components.length,0),59)
+  await ui.open(saved.file);await virtual();await a.check('actual Save and fresh file chooser reopen preserve all original configured Device values',async()=>{assert.equal(await a.evaluate(`Number(document.querySelector(${JSON.stringify(nsel('Size'))}).value)`),96);assert.equal(await a.evaluate("document.querySelector('.device-studio .control-card .fields input').value"),'UI smoke Move')})
+  await viewport(1024,640);await a.check('Device values stay readable at the supported 1024x640 minimum dimensions and 100%',()=>geometry('device-minimum-1024x640-scale100',1024,640,1))
+  await viewport(1600);await scale(1.25);await virtual();await a.check('public Interface scale 125% retains Comfortable geometry and readable values',()=>geometry('device-wide-1600-scale125',1600,900,1.25))
+  await viewport(1024,640);await a.check('the supported minimum dimensions and public 125% setting do not clip Device values',()=>geometry('device-minimum-1024x640-scale125',1024,640,1.25))
+  await viewport(1600);await scale(1);raw.browser=await a.client.send('Browser.getVersion');raw.completedAt=new Date().toISOString()
+ }finally{raw.checks=a.checks;await writeFile(join(output,'device-comfortable-gui-raw.json'),JSON.stringify(raw,null,2)+'\n')}
+})
+assert.equal(sha(await readFile(project)),raw.projectSha256);assert.equal(sha(await readFile(join(dist,'engine-build-manifest.json'))),raw.manifestSha256)
+console.log(JSON.stringify({scope:raw.scope,buildId:raw.buildId,output,status:process.exitCode?'failed':'verified'}))

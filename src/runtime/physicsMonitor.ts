@@ -1,5 +1,6 @@
 /** 物理运行监控：收集求解状态、异常和性能指标，供调试面板查看。 */
 import { reactive } from 'vue'
+import { DEFAULT_MAX_CATCH_UP_STEPS } from './engineTiming'
 import { NOVA_ENGINE_VERSION } from '../projects/projectFormat'
 import type { Entity } from '../world/Entity'
 import type { Connection } from '../world/Connection'
@@ -244,7 +245,7 @@ export const physicsMonitorState = reactive({
     breakLink: connection.breakLink
   })).sort(/* 先计算 a.name.localeCompare(b.name)；仅当其为假值时求右侧 a.uuid.localeCompare(b.uuid)，返回短路求值结果。 */ (a, b) => a.name.localeCompare(b.name) || a.uuid.localeCompare(b.uuid)))
 
-  const activeProfile = profile ?? { id: 'Balanced', name: 'Balanced', tickRate, maxCatchUpSteps: 8, minimumSubsteps: 8, velocityIterations: 20, positionIterations: 16, interpolation: 'Interpolate', droppedTimePolicy: 'Drop', sleepLinearThreshold: .001, sleepAngularThreshold: .001, timeToSleep: .5, physicsBudgetMs: 4 }
+  const activeProfile = profile ?? { id: 'Balanced', name: 'Balanced', tickRate, maxCatchUpSteps: DEFAULT_MAX_CATCH_UP_STEPS, minimumSubsteps: 8, velocityIterations: 20, positionIterations: 16, interpolation: 'Interpolate', droppedTimePolicy: 'Drop', sleepLinearThreshold: .001, sleepAngularThreshold: .001, timeToSleep: .5, physicsBudgetMs: 4 }
   physicsMonitorState.warnings.splice(0, physicsMonitorState.warnings.length, ...physicsInstabilityWarnings({ bodyCount: diagnostics.bodyCount, contactCount: monitored.reduce(/* 计算表达式 total + entity.contactCount 并返回结果，沿用操作数的原有类型规则。 */ (total, entity) => total + entity.contactCount, 0) / 2, connectionCount: diagnostics.connectionCount, droppedSeconds: diagnostics.droppedSeconds, elapsedMs, profile: activeProfile }))
 
   const names = new Map(entities.map(/* 返回按声明顺序构造的数组 [entity.uuid, entity.name]。 */ entity => [entity.uuid, entity.name]))

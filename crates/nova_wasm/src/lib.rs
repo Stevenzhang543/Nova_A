@@ -4,6 +4,45 @@
 use nova_runtime::{DroppedTimePolicy, FixedTimeSettings, RuntimeWorld};
 use nova_script::{ScriptContext, ScriptRuntime};
 use wasm_bindgen::prelude::*;
+use wasm_bindgen::JsCast;
+
+// Bind the standard constructors through the existing wasm-bindgen dependency.
+#[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(js_name = Float64Array, typescript_type = "Float64Array")]
+    type RuntimeStateView;
+    #[wasm_bindgen(constructor, js_class = Float64Array, catch)]
+    fn new_with_byte_offset_and_length(
+        buffer: &JsValue,
+        byte_offset: u32,
+        length: u32,
+    ) -> Result<RuntimeStateView, JsValue>;
+    #[wasm_bindgen(js_namespace = WebAssembly, js_name = Memory)]
+    type RuntimeMemory;
+    #[wasm_bindgen(method, getter, js_namespace = WebAssembly)]
+    fn buffer(this: &RuntimeMemory) -> JsValue;
+}
+
+fn current_memory_buffer() -> JsValue {
+    wasm_bindgen::memory()
+        .unchecked_into::<RuntimeMemory>()
+        .buffer()
+}
+
+/// The host must read/copy synchronously and never write or retain this borrowed view.
+/// Any world mutation, destruction, Vec movement, or memory growth ends the borrow.
+fn borrow_state_view(state: &[f64]) -> Result<JsValue, JsValue> {
+    let pointer = u32::try_from(state.as_ptr() as usize)
+        .map_err(|_| JsValue::from_str("state pointer exceeds wasm32"))?;
+    let length =
+        u32::try_from(state.len()).map_err(|_| JsValue::from_str("state length exceeds wasm32"))?;
+    length
+        .checked_mul(8)
+        .and_then(|bytes| pointer.checked_add(bytes))
+        .ok_or_else(|| JsValue::from_str("state view byte range overflow"))?;
+    RuntimeStateView::new_with_byte_offset_and_length(&current_memory_buffer(), pointer, length)
+        .map(Into::into)
+}
 
 // 安装 WebAssembly panic 处理器，将 Rust 错误位置传到浏览器异常。
 /// Surface Rust panic locations to the editor console instead of leaving users
@@ -375,6 +414,11 @@ impl WasmRuntimeWorld {
         self.inner.prepare_advance(frame_delta).steps
     }
 
+    /// Host frame-boundary suspension/resume; preserves the authoritative world and events.
+    pub fn reset_frame_clock(&mut self) {
+        self.inner.reset_frame_clock();
+    }
+
     // 执行一个固定物理步并同步时间计数与物理事件。
     pub fn advance_fixed_tick(&mut self, gravity: f64, air_friction: f64) {
         self.inner.advance_fixed_tick(gravity, air_friction);
@@ -417,6 +461,20 @@ impl WasmRuntimeWorld {
         let length = state.len().min(target.len());
         target[..length].copy_from_slice(&state[..length]);
         length
+    }
+
+    /// Borrow only until the next mutable world call; production immediately copies to JS-owned storage.
+    pub fn state_view(&self) -> Result<JsValue, JsValue> {
+        borrow_state_view(self.inner.physics().state())
+    }
+
+    pub fn previous_body_state_view(&self) -> Result<JsValue, JsValue> {
+        borrow_state_view(self.inner.physics().previous_body_state())
+    }
+
+    /// A non-mutating identity check for the synchronous borrowing helper.
+    pub fn memory_buffer(&self) -> JsValue {
+        current_memory_buffer()
     }
 
     // 对物理状态生成可重现校验值，用于回放一致性检查。
@@ -549,6 +607,104 @@ impl WasmScriptRuntime {
             /* 把错误消息转换为 JavaScript 可接收的异常值。 */
             |error| JsValue::from_str(&error.to_string()),
         )
+    }
+
+    /// Stateful gameplay invocation, guarded by the session epoch and entity lifetime.
+    pub fn execute_instance_json(
+        &mut self,
+        script_id: &str,
+        function: &str,
+        epoch: u32,
+        generation: u32,
+        context_json: &str,
+    ) -> Result<String, JsValue> {
+        let context: ScriptContext = serde_json::from_str(context_json)
+            .map_err(|error| JsValue::from_str(&format!("invalid script context: {error}")))?;
+        let result = self
+            .inner
+            .execute_instance(script_id, function, epoch, generation, context)
+            .map_err(|error| JsValue::from_str(&error))?;
+        serde_json::to_string(&result).map_err(|error| JsValue::from_str(&error.to_string()))
+    }
+
+    pub fn publish_world_context_json(
+        &mut self,
+        epoch: u32,
+        revision: u32,
+        snapshot_json: &str,
+    ) -> Result<(), JsValue> {
+        if snapshot_json.len() > 16 * 1024 * 1024 {
+            return Err(JsValue::from_str(
+                "script world context exceeded the 16 MB bridge limit",
+            ));
+        }
+        let snapshot: nova_script::ScriptWorldSnapshot = serde_json::from_str(snapshot_json)
+            .map_err(|error| JsValue::from_str(&error.to_string()))?;
+        self.inner
+            .publish_world_context(epoch, revision, snapshot)
+            .map_err(|error| JsValue::from_str(&error))
+    }
+
+    pub fn apply_world_delta_json(
+        &mut self,
+        epoch: u32,
+        base_revision: u32,
+        revision: u32,
+        delta_json: &str,
+    ) -> Result<(), JsValue> {
+        if delta_json.len() > 16 * 1024 * 1024 {
+            return Err(JsValue::from_str(
+                "script world delta exceeded the 16 MB bridge limit",
+            ));
+        }
+        let delta: Vec<nova_script::SceneEntitySnapshot> = serde_json::from_str(delta_json)
+            .map_err(|error| JsValue::from_str(&error.to_string()))?;
+        self.inner
+            .apply_world_delta(epoch, base_revision, revision, delta)
+            .map_err(|error| JsValue::from_str(&error))
+    }
+
+    pub fn execute_instance_context_json(
+        &mut self,
+        script_id: &str,
+        function: &str,
+        epoch: u32,
+        revision: u32,
+        generation: u32,
+        context_json: &str,
+    ) -> Result<String, JsValue> {
+        if context_json.len() > 16 * 1024 * 1024 {
+            return Err(JsValue::from_str(
+                "script callback context exceeded the 16 MB bridge limit",
+            ));
+        }
+        let context: ScriptContext = serde_json::from_str(context_json)
+            .map_err(|error| JsValue::from_str(&error.to_string()))?;
+        let result = self
+            .inner
+            .execute_instance_context(script_id, function, epoch, revision, generation, context)
+            .map_err(|error| JsValue::from_str(&error))?;
+        serde_json::to_string(&result).map_err(|error| JsValue::from_str(&error.to_string()))
+    }
+
+    pub fn clear_instances(&mut self, epoch: u32) -> Result<(), JsValue> {
+        self.inner
+            .clear_instances(epoch)
+            .map_err(|error| JsValue::from_str(&error))
+    }
+    pub fn remove_entity_instances(&mut self, epoch: u32, entity: &str) -> bool {
+        self.inner.remove_entity_instances(epoch, entity)
+    }
+    pub fn reset_script_instances(&mut self, script: &str) {
+        self.inner.reset_script_instances(script);
+    }
+    pub fn take_instances_from(
+        &mut self,
+        source: &mut WasmScriptRuntime,
+    ) -> Result<usize, JsValue> {
+        self.inner
+            .take_instances_from(&mut source.inner)
+            .map_err(|error| JsValue::from_str(&error))
     }
 
     // 移除指定脚本编译缓存并返回是否存在。

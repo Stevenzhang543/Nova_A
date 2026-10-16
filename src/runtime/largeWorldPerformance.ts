@@ -1,8 +1,8 @@
 /** 大世界性能工具：计算工作集与预算，提供分块场景的性能观察和优化资料。 */
-import { reactive } from 'vue'
 import type { Entity } from '../world/Entity'
 import type { Component2D, ComponentKind } from '../world/components'
 import type { Vec2 } from '../world/types'
+import { FrameObservability, type BenchmarkMode, type FrameObservation } from './performance/observability'
 
 export interface PerformanceRuntimeSettings {
   enabled: boolean
@@ -19,6 +19,13 @@ export interface SpatialBounds2D { minX: number; minY: number; maxX: number; max
 export interface SpatialEntry2D { id: string; bounds: SpatialBounds2D }
 export interface BatchedCommand { sequence: number; key: string; generation: number; run: () => void }
 export interface FrameBudgetTask { id: string; priority: number; generation: number; run: () => void | Promise<void>; cancelled?: boolean }
+export interface PerformanceStartupObservation {
+  schema: 'nova-startup-observation-v1'
+  coldStartupMs: number | null
+  warmStartupMs: number | null
+  moduleToFirstHostFrameWallMs: number | null
+  workspacePrefetchWallMs: number | null
+}
 
 const DEFAULT_SETTINGS: PerformanceRuntimeSettings = Object.freeze({
   enabled: true,
@@ -31,21 +38,33 @@ const DEFAULT_SETTINGS: PerformanceRuntimeSettings = Object.freeze({
   spatialCellSize: 16
 })
 
-export const performanceRuntimeSettings = reactive<PerformanceRuntimeSettings>({ ...DEFAULT_SETTINGS })
-export const performanceRuntimeState = reactive({
+export let performanceRuntimeSettings: PerformanceRuntimeSettings = { ...DEFAULT_SETTINGS }
+export let performanceRuntimeState = {
   frame: 0,
-  mainThreadMs: 0,
+  mainThreadMs: null as number | null,
   workerMs: 0,
   queueWaitMs: 0,
   cacheHits: 0,
   cacheMisses: 0,
   cacheHitRate: 1,
   allocations: 0,
-  worstFrameMs: 0,
-  onePercentLowFps: 0,
-  inputToPixelMs: 0,
-  coldStartupMs: 0,
-  warmStartupMs: 0,
+  worstFrameMs: null as number | null,
+  onePercentLowFps: null as number | null,
+  inputToSubmitMs: null as number | null,
+  /** Retained for historical capture readers; display latency was never measured. */
+  inputToPixelMs: null as number | null,
+  rafIntervalMs: null as number | null,
+  submissionIntervalMs: null as number | null,
+  cpuFrameMs: null as number | null,
+  gpuMs: null as number | null,
+  benchmarkMode: 'off' as BenchmarkMode,
+  policyRevision: 0,
+  policyReason: 'Uncalibrated: presentation remains at authored quality',
+  /** Request-to-Ready cold/warm startup has no measured owner boundary yet. */
+  coldStartupMs: null as number | null,
+  warmStartupMs: null as number | null,
+  moduleToFirstHostFrameWallMs: null as number | null,
+  workspacePrefetchWallMs: null as number | null,
   queuedCommands: 0,
   deferredCommands: 0,
   streamingProcessed: 0,
@@ -60,14 +79,33 @@ export const performanceRuntimeState = reactive({
   adaptiveTier: 0,
   adaptivePixelRatioScale: 1,
   adaptiveParticleScale: 1
-})
+}
 
-const frameSamples = new Float64Array(600)
-const inputSamples = new Float64Array(240)
-let frameSampleCount = 0, frameSampleCursor = 0, inputSampleCount = 0, inputSampleCursor = 0
-let frameStarted = performance.now(), startupStarted = performance.now(), firstFrameAt = 0, pendingInputAt = 0
+export type PerformanceStateAdapter = <T extends object>(target: T) => T
+let performanceStateAdapterInstalled = false
+/** The optional UI host wraps the same targets once; pure Runtime/Player owners keep plain state. */
+export function installPerformanceStateAdapter(adapter: PerformanceStateAdapter): void {
+  if (performanceStateAdapterInstalled) return
+  // Publish both live bindings together only after adapter construction succeeds.
+  const settings = adapter(performanceRuntimeSettings), state = adapter(performanceRuntimeState)
+  if (!settings || typeof settings !== 'object' || !state || typeof state !== 'object') throw new TypeError('Performance state adapter must wrap both existing object targets')
+  performanceRuntimeSettings = settings; performanceRuntimeState = state
+  performanceStateAdapterInstalled = true
+}
+
+const frameObservability = new FrameObservability()
+const performanceObservers = new Set<(observation: Readonly<FrameObservation>, observedAtMs: number) => void>()
+let performanceObserverFailures = 0
+export function performanceObservationDiagnostics() { return Object.freeze({ subscribers: performanceObservers.size, observerFailures: performanceObserverFailures }) }
+/** Explicit profiling subscriptions observe owner timestamps; they never write world or schedule frames. */
+export function subscribePerformanceObservations(observer: (observation: Readonly<FrameObservation>, observedAtMs: number) => void): () => void {
+  if (performanceObservers.size >= 4) throw new Error('Performance observation subscribers are limited to four')
+  performanceObservers.add(observer)
+  return () => { performanceObservers.delete(observer) }
+}
+const moduleLoadedAtMs = performance.now()
+let firstHostFrameObserved = false
 let publishedCacheHits = 0, publishedCacheMisses = 0, pendingAllocations = 0
-let adaptiveGoodFrames = 0, adaptiveBadFrames = 0
 
 /** 结构说明（自动提取）：finite；输入 value、fallback、minimum、maximum；直接调用 Number.isFinite、Math.min、Math.max。 */ function finite(value: unknown, fallback: number, minimum: number, maximum: number): number {
   const number = typeof value === 'number' && Number.isFinite(value) ? value : fallback
@@ -91,36 +129,25 @@ let adaptiveGoodFrames = 0, adaptiveBadFrames = 0
 /** 执行时调用 Object.assign(performanceRuntimeSettings, normalizePerformanceRuntimeSettings(value))；不显式返回调用结果。 */ export function loadPerformanceRuntimeSettings(value: unknown): void { Object.assign(performanceRuntimeSettings, normalizePerformanceRuntimeSettings(value)) }
 /* 返回具有所列字段的新对象 { ...normalizePerformanceRuntimeSettings(performanceRuntimeSettings) }。 */ export function serializePerformanceRuntimeSettings(): PerformanceRuntimeSettings { return { ...normalizePerformanceRuntimeSettings(performanceRuntimeSettings) } }
 
-/** 结构说明（自动提取）：percentile；输入 values、count、percentileValue；直接调用 sort、Array.from、values.slice、Math.min、Math.max 等；返回路径包含 copy[…]。 */ function percentile(values: Float64Array, count: number, percentileValue: number): number {
-  if (!count) return 0
-  const copy = Array.from(values.slice(0, count)).sort(/* 计算表达式 a - b 并返回结果，沿用操作数的原有类型规则。 */ (a, b) => a - b)
-  return copy[Math.min(copy.length - 1, Math.max(0, Math.floor((copy.length - 1) * percentileValue)))]
+/** Only the shared coordinator may change presentation budgets; CPU function cost is not frame pacing. */
+export function applyPerformancePresentationPolicy(policy: { benchmarkMode: BenchmarkMode; tier: number; renderScale: number; particleScale: number; revision: number; reason: string }): void {
+  if (!Number.isInteger(policy.revision) || policy.revision < performanceRuntimeState.policyRevision) return
+  const adaptive = policy.benchmarkMode === 'adaptive-experience' && performanceRuntimeSettings.adaptiveQuality
+  performanceRuntimeState.benchmarkMode = policy.benchmarkMode
+  performanceRuntimeState.policyRevision = policy.revision
+  performanceRuntimeState.policyReason = policy.reason.slice(0, 240)
+  performanceRuntimeState.adaptiveTier = adaptive ? Math.round(finite(policy.tier, 0, 0, 2)) : 0
+  performanceRuntimeState.adaptivePixelRatioScale = adaptive ? finite(policy.renderScale, 1, .5, 1) : 1
+  performanceRuntimeState.adaptiveParticleScale = adaptive ? finite(policy.particleScale, 1, .5, 1) : 1
 }
 
-/** 结构说明（自动提取）：updateAdaptiveQuality；输入 frameMs；直接调用 Math.max；写入 performanceRuntimeState.adaptiveTier、performanceRuntimeState.adaptivePixelRatioScale、performanceRuntimeState.adaptiveParticleScale、adaptiveGoodFrames 等。 */ function updateAdaptiveQuality(frameMs: number): void {
-  if (!performanceRuntimeSettings.adaptiveQuality) {
-    performanceRuntimeState.adaptiveTier = 0
-    performanceRuntimeState.adaptivePixelRatioScale = 1
-    performanceRuntimeState.adaptiveParticleScale = 1
-    adaptiveGoodFrames = adaptiveBadFrames = 0
-    return
-  }
-  const target = performanceRuntimeSettings.targetFrameMs
-  if (frameMs > target * 1.2) { adaptiveBadFrames++; adaptiveGoodFrames = 0 }
-  else if (frameMs < target * .78) { adaptiveGoodFrames++; adaptiveBadFrames = 0 }
-  else { adaptiveBadFrames = Math.max(0, adaptiveBadFrames - 1); adaptiveGoodFrames = Math.max(0, adaptiveGoodFrames - 1) }
-  let tier = performanceRuntimeState.adaptiveTier
-  if (adaptiveBadFrames >= 24 && tier < 2) { tier++; adaptiveBadFrames = 0 }
-  if (adaptiveGoodFrames >= 180 && tier > 0) { tier--; adaptiveGoodFrames = 0 }
-  performanceRuntimeState.adaptiveTier = tier
-  // Presentation budgets only. Fixed timestep, simulation, scripts, animation
-  // clocks, authored values and feature availability are never changed.
-  performanceRuntimeState.adaptivePixelRatioScale = tier === 2 ? .72 : tier === 1 ? .86 : 1
-  performanceRuntimeState.adaptiveParticleScale = tier === 2 ? .65 : tier === 1 ? .82 : 1
-}
-
-/** 将 now 赋给 frameStarted，不显式返回值。 */ export function beginPerformanceFrame(now = performance.now()): void { frameStarted = now }
-/** 将 now 赋给 pendingInputAt，不显式返回值。 */ export function markPerformanceInput(now = performance.now()): void { pendingInputAt = now }
+export function beginPerformanceFrame(now = performance.now(), rafTimestamp?: number): void { frameObservability.begin(now, rafTimestamp) }
+export function markPerformanceInput(now = performance.now()): number | null { return frameObservability.receipt(now) }
+export function forgetPerformanceInput(sequence: number): void { frameObservability.forgetInput(sequence) }
+export function rebasePerformanceFrameContinuity(): void { frameObservability.rebaseFrameContinuity() }
+/** Called after the renderer's CPU API submission, never GPU completion or display presentation. */
+export function markPerformanceSubmission(now = performance.now(), consumedInputSequence?: number): void { frameObservability.submission(now, consumedInputSequence) }
+export function currentPerformanceFrameObservation() { return { ...frameObservability.current } }
 /** 结构说明（自动提取）：recordWorkerPerformance；输入 workerMs、queueWaitMs、fallback、stale；直接调用 Math.max、finite；写入 performanceRuntimeState.workerMs、performanceRuntimeState.queueWaitMs。 */ export function recordWorkerPerformance(workerMs: number, queueWaitMs: number, fallback = false, stale = false): void {
   performanceRuntimeState.workerMs = Math.max(0, finite(workerMs, 0, 0, 60_000))
   performanceRuntimeState.queueWaitMs = Math.max(0, finite(queueWaitMs, 0, 0, 60_000))
@@ -132,22 +159,27 @@ let adaptiveGoodFrames = 0, adaptiveBadFrames = 0
   publishedCacheHits += Math.max(0, Math.round(hits)); publishedCacheMisses += Math.max(0, Math.round(misses)); pendingAllocations += Math.max(0, Math.round(allocations))
 }
 
-/** 结构说明（自动提取）：completePerformanceFrame；输入 now；直接调用 Math.max、Math.min、updateAdaptiveQuality、Array.from、frameSamples.slice 等；写入 frameSamples[…]、frameSampleCursor、frameSampleCount、pendingInputAt 等。 */ export function completePerformanceFrame(now = performance.now()): void {
-  const frameMs = Math.max(0, now - frameStarted)
-  frameSamples[frameSampleCursor] = frameMs; frameSampleCursor = (frameSampleCursor + 1) % frameSamples.length; frameSampleCount = Math.min(frameSamples.length, frameSampleCount + 1)
-  if (pendingInputAt > 0) {
-    const latency = Math.max(0, now - pendingInputAt); pendingInputAt = 0
-    inputSamples[inputSampleCursor] = latency; inputSampleCursor = (inputSampleCursor + 1) % inputSamples.length; inputSampleCount = Math.min(inputSamples.length, inputSampleCount + 1)
-    performanceRuntimeState.inputToPixelMs = latency
+/** Publish actual owner observations at a bounded Editor refresh rate. */ export function completePerformanceFrame(now = performance.now()): void {
+  const observation = frameObservability.complete(now)
+  if (performanceObservers.size && Number.isFinite(now)) {
+    const snapshot = Object.freeze({ ...observation })
+    for (const observer of performanceObservers) {
+      try { observer(snapshot, now) }
+      catch { performanceObserverFailures++; performanceObservers.delete(observer) }
+    }
   }
-  if (!firstFrameAt) { firstFrameAt = now; performanceRuntimeState.coldStartupMs = Math.max(0, now - startupStarted) }
+  if (!firstHostFrameObserved && Number.isFinite(now) && now >= moduleLoadedAtMs) {
+    firstHostFrameObserved = true
+    // This includes Launcher wait and ends at host completion, without checking Ready or renderer submission.
+    performanceRuntimeState.moduleToFirstHostFrameWallMs = now - moduleLoadedAtMs
+  }
   performanceRuntimeState.frame++
-  updateAdaptiveQuality(frameMs)
   if (performanceRuntimeState.frame % performanceRuntimeSettings.reactivePublishInterval !== 0) return
-  performanceRuntimeState.mainThreadMs = frameMs
-  performanceRuntimeState.worstFrameMs = Math.max(...Array.from(frameSamples.slice(0, frameSampleCount)))
-  const slowFrameMs = percentile(frameSamples, frameSampleCount, .99)
-  performanceRuntimeState.onePercentLowFps = slowFrameMs > 0 ? 1000 / slowFrameMs : 0
+  Object.assign(performanceRuntimeState, observation)
+  performanceRuntimeState.mainThreadMs = observation.cpuFrameMs
+  const intervals = frameObservability.rafStatistics()
+  performanceRuntimeState.worstFrameMs = intervals.worstMs
+  performanceRuntimeState.onePercentLowFps = intervals.onePercentLowFps
   const totalCache = publishedCacheHits + publishedCacheMisses
   performanceRuntimeState.cacheHits += publishedCacheHits; performanceRuntimeState.cacheMisses += publishedCacheMisses
   performanceRuntimeState.cacheHitRate = totalCache ? publishedCacheHits / totalCache : performanceRuntimeState.cacheHitRate
@@ -156,8 +188,17 @@ let adaptiveGoodFrames = 0, adaptiveBadFrames = 0
   performanceRuntimeState.reactivePublications++
 }
 
-/** 将 Math.max(0, now - startedAt) 赋给 performanceRuntimeState.warmStartupMs，不显式返回值。 */ export function recordWarmStartup(startedAt: number, now = performance.now()): void { performanceRuntimeState.warmStartupMs = Math.max(0, now - startedAt) }
-/* 调用 percentile(inputSamples, inputSampleCount, finite(percentileValue, .95, 0, 1)) 并返回调用结果。 */ export function performanceLatencyPercentile(percentileValue = .95): number { return percentile(inputSamples, inputSampleCount, finite(percentileValue, .95, 0, 1)) }
+/** Existing workspace owner reports wall time including idle waits; it does not certify Ready or successful loads. */
+export function recordWorkspacePrefetchWall(startedAt: number, now = performance.now()): void {
+  performanceRuntimeState.workspacePrefetchWallMs = Number.isFinite(startedAt) && startedAt >= 0 && Number.isFinite(now) && now >= startedAt ? now - startedAt : null
+}
+/** @deprecated Historical API name; records only workspace-prefetch wall time, never warm startup. */
+export function recordWarmStartup(startedAt: number, now = performance.now()): void { recordWorkspacePrefetchWall(startedAt, now) }
+export function currentPerformanceStartupObservation(): Readonly<PerformanceStartupObservation> {
+  return Object.freeze({ schema: 'nova-startup-observation-v1', coldStartupMs: null, warmStartupMs: null,
+    moduleToFirstHostFrameWallMs: performanceRuntimeState.moduleToFirstHostFrameWallMs, workspacePrefetchWallMs: performanceRuntimeState.workspacePrefetchWallMs })
+}
+export function performanceLatencyPercentile(percentileValue = .95): number | null { return frameObservability.latencyPercentile(percentileValue) }
 
 /** Reused typed component columns keep stable entity order and avoid allocating
  * per-frame wrapper objects. They are observational: gameplay components stay
@@ -295,9 +336,10 @@ export const performanceBackgroundQueue = new FrameBudgetQueue()
   performanceCommandQueue.flush()
 }
 
-/** 结构说明（自动提取）：resetPerformanceRuntime；无显式参数；直接调用 frameSamples.fill、inputSamples.fill、performance.now、performanceCommandQueue.clear、performanceBackgroundQueue.clear 等；写入 frameSampleCount、frameSampleCursor、inputSampleCount、inputSampleCursor 等。 */ export function resetPerformanceRuntime(): void {
-  frameSamples.fill(0); inputSamples.fill(0); frameSampleCount = frameSampleCursor = inputSampleCount = inputSampleCursor = 0
-  startupStarted = performance.now(); firstFrameAt = pendingInputAt = 0; publishedCacheHits = publishedCacheMisses = pendingAllocations = 0; adaptiveGoodFrames = adaptiveBadFrames = 0
+/** Invalidate old frame/input identities without creating another world clock. */ export function resetPerformanceRuntime(): void {
+  frameObservability.reset()
+  // Module/first-host and workspace-prefetch observations belong to their existing lifetime, not the frame ring.
+  publishedCacheHits = publishedCacheMisses = pendingAllocations = 0
   performanceCommandQueue.clear(); performanceBackgroundQueue.clear()
-  Object.assign(performanceRuntimeState, { frame: 0, mainThreadMs: 0, workerMs: 0, queueWaitMs: 0, cacheHits: 0, cacheMisses: 0, cacheHitRate: 1, allocations: 0, worstFrameMs: 0, onePercentLowFps: 0, inputToPixelMs: 0, coldStartupMs: 0, warmStartupMs: 0, queuedCommands: 0, deferredCommands: 0, streamingProcessed: 0, streamingDeferred: 0, reactivePublications: 0, staleWorkerResults: 0, workerFallbacks: 0, entityCount: 0, componentCount: 0, dirtyTransforms: 0, spatialEntries: 0, adaptiveTier: 0, adaptivePixelRatioScale: 1, adaptiveParticleScale: 1 })
+  Object.assign(performanceRuntimeState, { frame: 0, mainThreadMs: null, workerMs: 0, queueWaitMs: 0, cacheHits: 0, cacheMisses: 0, cacheHitRate: 1, allocations: 0, worstFrameMs: null, onePercentLowFps: null, inputToSubmitMs: null, inputToPixelMs: null, rafIntervalMs: null, submissionIntervalMs: null, cpuFrameMs: null, coldStartupMs: null, warmStartupMs: null, queuedCommands: 0, deferredCommands: 0, streamingProcessed: 0, streamingDeferred: 0, reactivePublications: 0, staleWorkerResults: 0, workerFallbacks: 0, entityCount: 0, componentCount: 0, dirtyTransforms: 0, spatialEntries: 0, adaptiveTier: 0, adaptivePixelRatioScale: 1, adaptiveParticleScale: 1 })
 }

@@ -4,7 +4,7 @@ import type { NavigationRegion2D, NavigationObstacle2D, TileMap2D } from '../wor
 import type { Vec2 } from '../world/types'
 import { worldTransform } from '../world/hierarchy'
 import { prepareColliderSet } from './physicsGeometry'
-import { readTileSet, transformNormalizedTilePoint } from './tilemap'
+
 
 export interface NavigationShape { points: Vec2[]; ellipse?: { center: Vec2; axes: Vec2; angle: number } }
 const rotate = /** 构造并返回记录 { x: point.x * Math.cos(angle) - point.y * Math.sin(angle), y: point.x * Math.sin(angle) + point.y * Math.cos(angle) }，字段按当前实参及捕获状态求值。 */ (point: Vec2, angle: number): Vec2 => ({ x: point.x * Math.cos(angle) - point.y * Math.sin(angle), y: point.x * Math.sin(angle) + point.y * Math.cos(angle) })
@@ -92,7 +92,24 @@ const rotate = /** 构造并返回记录 { x: point.x * Math.cos(angle) - point.
   })
 }
 /** Resolve and copy tile data once per query/bake, never once per sampled cell. */
-/** 结构说明（自动提取）：createTileNavigationSampler；输入 region、entities；直接调用 entities.find、entity.getComponent、readTileSet、worldTransform、JSON.parse 等。 */ export function createTileNavigationSampler(region: NavigationRegion2D, entities: Entity[]): { signature: unknown; sample(point: Vec2): { blocked: boolean; cost: number } | null } {
+/** 结构说明（自动提取）：createTileNavigationSampler；输入 region、entities；直接调用 entities.find、entity.getComponent、readTileSet、worldTransform、JSON.parse 等。 */ /** Structural consumption only. Actual full reader object still enters source signature. */
+export interface NavigationTileDocument { tiles: Array<{ navigationCost: number; navigationPolygon: Vec2[] }> }
+export interface NavigationTileCapabilities {
+  readTileSet(reference: string | null | undefined): NavigationTileDocument | null
+  transformNormalizedTilePoint(point: Vec2, flags: number): Vec2
+}
+let legacyTileCapabilities: NavigationTileCapabilities | null = null
+/** Temporary resource compatibility port, never a World/Owner cache. */
+export function installLegacyNavigationTileCapabilities(capabilities: NavigationTileCapabilities): void {
+  if (typeof capabilities?.readTileSet !== 'function' || typeof capabilities?.transformNormalizedTilePoint !== 'function') throw new Error('NAVIGATION_TILE_CAPABILITIES_REQUIRED: Supply actual Tile resources.')
+  if (legacyTileCapabilities && legacyTileCapabilities !== capabilities) throw new Error('NAVIGATION_TILE_CAPABILITIES_ALREADY_INSTALLED: Preserve the single resource port.')
+  legacyTileCapabilities = capabilities
+}
+export function createNavigationTileSamplerFactory(capabilities: NavigationTileCapabilities | null) {
+  const requireCapabilities = () => { if (!capabilities) throw new Error('NAVIGATION_TILE_CAPABILITIES_REQUIRED: Supply actual Tile resources.'); return capabilities }
+  const readTileSet = (reference: string | null | undefined) => { const owner = requireCapabilities(); return owner.readTileSet(reference) }
+  const transformNormalizedTilePoint = (point: Vec2, flags: number) => { const owner = requireCapabilities(); return owner.transformNormalizedTilePoint(point, flags) }
+function createTileNavigationSampler(region: NavigationRegion2D, entities: Entity[]): { signature: unknown; sample(point: Vec2): { blocked: boolean; cost: number } | null } {
   if (region.source !== 'TileMap') return { signature: null, sample: /* 返回固定值 null。 */ () => null }
   const entity = entities.find(/* 比较 candidate.uuid 与 region.sourceEntityUuid，返回严格相等的判断结果。 */ candidate => candidate.uuid === region.sourceEntityUuid), tile = entity?.getComponent<TileMap2D>('TileMap2D'), document = tile?.enabled && entity?.enabled && tile.bakeNavigation ? readTileSet(tile.tileSetAsset) : null
   if (!entity || !tile || !document) return { signature: 'missing-or-disabled', sample: /** 构造并返回记录 { blocked: true, cost: 0 }，字段按当前实参及捕获状态求值。 */ () => ({ blocked: true, cost: 0 }) }
@@ -114,6 +131,13 @@ const rotate = /** 构造并返回记录 { x: point.x * Math.cos(angle) - point.
     return { blocked: !found, cost: found ? Math.max(.001, cost) : 0 }
   } }
 }
+  return createTileNavigationSampler
+}
+/** Non-Tile inputs exit through the same original body without using resource ports. */
+export function createTileNavigationSampler(region: NavigationRegion2D, entities: Entity[]): ReturnType<ReturnType<typeof createNavigationTileSamplerFactory>> {
+  return createNavigationTileSamplerFactory(legacyTileCapabilities)(region, entities)
+}
+
 
 /** Continuous segment clearance: thin obstacles cannot fall between raster samples. */
 /** 结构说明（自动提取）：shapeSegmentDistance；输入 first、second、shape；直接调用 at、Math.min、polygonContains、cross、segmentDistance；写入 high、low、distance；返回路径包含 distance；包含循环处理。 */ export function shapeSegmentDistance(first: Vec2, second: Vec2, shape: NavigationShape): number {

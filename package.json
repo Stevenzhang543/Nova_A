@@ -1,7 +1,7 @@
 {
   "name": "nova_a",
   "private": true,
-  "version": "26.37.0",
+  "version": "26.38.0",
   "homepage": "https://github.com/Stevenzhang543/Nova_A/",
   "repository": {
     "type": "git",
@@ -14,6 +14,16 @@
     "pnpm": "10.30.0"
   },
   "scripts": {
+    "build:engine:profile": "node scripts/build-engine-profile.mjs",
+    "audit:engine:boundaries": "node scripts/audit-engine-boundaries.mjs",
+    "verify:engine:scheduler": "node scripts/verify-engine-scheduler.mjs",
+    "verify:engine:assets": "node scripts/verify-engine-asset-admission.mjs",
+    "verify:engine:observability": "node scripts/verify-engine-observability.mjs",
+    "verify:engine:presentation": "node scripts/verify-engine-observability-presentation.mjs",
+    "verify:engine:benchmark": "node scripts/verify-engine-observability-benchmark.mjs",
+    "verify:engine:input-observation": "node scripts/verify-engine-runtime-input-observation.mjs",
+    "verify:engine:timing": "node scripts/verify-engine-runtime-timing.mjs",
+    "verify:engine:platform-host": "node scripts/verify-engine-platform-host.mjs",
     "version:v26.36": "node scripts/set-calendar-release.mjs --release=26.36",
     "prepare:v26.36": "node scripts/prepare-release-26.36.mjs",
     "qualify:v26.36": "node scripts/release-qualification.mjs --plan=release-audits/v26.36-qualification-plan.json",
@@ -546,7 +556,15 @@
     "qualify:v26.37": "node scripts/release-qualification.mjs --plan=release-audits/v26.37-qualification-plan.json",
     "verify:v26.37:motion": "node scripts/verify-v26.37-motion.mjs",
     "verify:v26.37:comfortable-user": "node scripts/verify-v26.37-comfortable-user.mjs",
-    "release:v26.37": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-release.ps1 -Version 26.37.0 -ReleaseLabel 26.37"
+    "release:v26.37": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-release.ps1 -Version 26.37.0 -ReleaseLabel 26.37",
+    "version:v26.38": "node scripts/set-calendar-release.mjs --release=26.38",
+    "prepare:v26.38": "node scripts/prepare-release-26.38.mjs",
+    "qualify:v26.38": "node scripts/release-qualification.mjs --plan=release-audits/v26.38-qualification-plan.json",
+    "qualify:v26.38:scoped": "node scripts/qualify-v26.38-scoped.mjs",
+    "verify:v26.38:motion": "node scripts/verify-v26.37-motion.mjs",
+    "verify:v26.38:comfortable-user": "node scripts/verify-v26.37-comfortable-user.mjs",
+    "evidence:v26.38": "node scripts/generate-calendar-release-evidence.mjs --release=26.38 --engine=26.38.0",
+    "release:v26.38": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-release.ps1 -Version 26.38.0 -ReleaseLabel 26.38"
   },
   "dependencies": {
     "@fontsource-variable/jetbrains-mono": "^5.3.0",

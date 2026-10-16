@@ -1,12 +1,14 @@
 /** WebGL 2 渲染实现：管理着色器、批次、纹理驻留、多重采样和后处理目标，并回收 GPU 资源。 */
+import { RequiredResourceUploadTracker, type RequiredResourceUploadRequest, type RequiredResourceUploadSnapshot, type RequiredResourceUploadAck } from './requiredResourceUpload'
 import { nineSliceGeometry, shapeGeometry, spriteGeometry, strokeGeometry, type GeometryData } from './geometry'
-import { assetState, resolveTexture as resolveTextureAsset } from '../assets/AssetDatabase'
 import { analyzeMaterialShader, defaultMaterial, reflectShaderUniforms, reportMaterialFallback, resolvedMaterialFragment, resolveMaterial, type Material2DResource } from './materials'
-import { reportRendererContextLost, reportRendererContextRestored } from './capabilities'
-import { activePostProcessing, GPU_TEXTURE_MEMORY_LIMIT_MB, renderingSettings } from './renderSettings'
+import { defaultRendererEnvironment, type RendererEnvironment } from './RendererEnvironment'
+import { GPU_TEXTURE_MEMORY_LIMIT_MB } from './renderSettingsSchema'
 import { textureContentVersion } from './textureContent'
 import { boundedFrame } from './surfaceLimits'
 import { multisampleCount } from './outputQuality20'
+import { SPRITE_INSTANCE_FLOATS, SPRITE_INSTANCE_BYTES, writeSpriteInstance } from './spriteInstances'
+import { gpuDiagnosticsBudget, type GpuDiagnosticsBudget } from './GpuDiagnosticsBudget'
 import {
   normalizedColor,
   type CameraRenderView,
@@ -21,7 +23,7 @@ import {
   type TileChunkRenderCommand
 } from './types'
 
-interface GeometryPacket {
+interface PacketState {
   layer: number
   order: number
   sequence: number
@@ -30,10 +32,12 @@ interface GeometryPacket {
   texture: TextureRegion | null
   filter: TextureFilter
   color: [number, number, number, number]
-  geometry: GeometryData
   camera: CameraRenderView
   cameraIndex: number
 }
+interface GeometryPacket extends PacketState { kind: 'geometry'; geometry: GeometryData }
+interface SpriteInstancePacket extends PacketState { kind: 'sprite-instance'; instanceOffset: number }
+type RenderPacket = GeometryPacket | SpriteInstancePacket
 
 interface CachedTexture {
   texture: WebGLTexture
@@ -42,6 +46,7 @@ interface CachedTexture {
   filter: TextureFilter | null
   lastUsedFrame: number
   contentVersion: string
+  residencyToken: object | null
 }
 
 interface CachedText {
@@ -53,6 +58,11 @@ interface CachedText {
 
 const MAX_PACKET_VERTICES = 65_000
 const MAX_BATCH_INDICES = MAX_PACKET_VERTICES * 3
+const MAX_BATCH_SPRITES = Math.floor(MAX_PACKET_VERTICES / 4)
+const MAX_FRAME_PACKETS = 100_000
+// Diagnostic GPU timing must not create an unbounded queue on a slow/lost device.
+let nextDeviceEpoch = 1
+interface SubmissionFence { sync: WebGLSync; epoch: number; id: number }
 /* 根据 Number.isFinite(value) 的真假，分别返回 value 或 fallback。 */ function finite(value: number, fallback: number): number { return Number.isFinite(value) ? value : fallback }
 /* 将视口归一化为有效且非空的矩形，非有限输入使用默认值。 */
 function safeViewport(viewport: CameraRenderView['viewport']): { x: number; y: number; width: number; height: number } {
@@ -93,6 +103,32 @@ void main() {
   vec4 sampled = texture(u_texture, v_uv);
   if (u_linearTexture) sampled = vec4(pow(max(sampled.rgb, vec3(0.0)), vec3(1.0 / 2.2)), sampled.a);
   outputColor = sampled * v_color;
+}`
+
+const INSTANCE_VERTEX_SOURCE = `#version 300 es
+precision highp float;
+layout(location=0) in float a_corner;
+layout(location=1) in vec4 a_corner01;
+layout(location=2) in vec4 a_corner23;
+layout(location=3) in vec4 a_uvRect;
+layout(location=4) in vec4 a_color;
+uniform vec4 u_camera;
+uniform vec2 u_rotation;
+out vec2 v_uv;
+out vec4 v_color;
+void main() {
+  vec2 position;
+  if (a_corner < .5) { position = a_corner01.xy; v_uv = a_uvRect.xy; }
+  else if (a_corner < 1.5) { position = a_corner01.zw; v_uv = a_uvRect.zy; }
+  else if (a_corner < 2.5) { position = a_corner23.xy; v_uv = a_uvRect.zw; }
+  else { position = a_corner23.zw; v_uv = a_uvRect.xw; }
+  vec2 relative = position - u_camera.zw;
+  vec2 viewPosition = vec2(
+    relative.x * u_rotation.x + relative.y * u_rotation.y,
+    -relative.x * u_rotation.y + relative.y * u_rotation.x
+  );
+  gl_Position = vec4(viewPosition.x * u_camera.x, viewPosition.y * u_camera.y, 0.0, 1.0);
+  v_color = a_color;
 }`
 
 const POST_VERTEX_SOURCE = `#version 300 es
@@ -232,6 +268,15 @@ export class WebGL2Renderer implements Renderer2D {
   private indexUpload = new Uint32Array(0)
   private vertexCapacityBytes = 0
   private indexCapacityBytes = 0
+  private instanceProgram: ProgramState | null = null
+  private instanceVao: WebGLVertexArrayObject | null = null
+  private instanceBuffer: WebGLBuffer | null = null
+  private cornerBuffer: WebGLBuffer | null = null
+  private quadIndexBuffer: WebGLBuffer | null = null
+  private instanceData = new Float32Array(0)
+  private instanceUpload = new Float32Array(0)
+  private instanceFloats = 0
+  private instanceCapacityBytes = 0
   private readonly maximumSurfaceDimension: number
   private readonly maximumTextureDimension: number
   private framebuffer: WebGLFramebuffer | null = null
@@ -253,9 +298,21 @@ export class WebGL2Renderer implements Renderer2D {
   private activeTimer: WebGLQuery | null = null
   private pendingTimers: WebGLQuery[] = []
   private lastGpuMs: number | null = null
+  private timersDisjoint = false
+  private gpuTimingBudget: Readonly<GpuDiagnosticsBudget> = gpuDiagnosticsBudget()
   private readonly whiteCanvas: HTMLCanvasElement
   private readonly whiteRegion: TextureRegion
   private readonly textureCache = new Map<object, CachedTexture>()
+  readonly requiredResourceOwner = Object.freeze({})
+  private readonly requiredUploads = new RequiredResourceUploadTracker(this.requiredResourceOwner, {
+    deviceEpoch: () => this.deviceEpoch,
+    usable: () => !this.destroyed && !this.contextLost && !this.submissionFaulted && !this.gl.isContextLost(),
+    byteBudget: () => Math.floor(this.textureBudget() - 4),
+    dimensions: texture => textureDimensions(texture.source),
+    contentVersion: texture => textureContentVersion(texture, this.frameSerial),
+    resident: texture => { const cached = this.textureCache.get(texture.source as object); return cached?.residencyToken ? { residencyToken: cached.residencyToken, contentVersion: cached.contentVersion, width: cached.width, height: cached.height } : null },
+    queue: texture => { const dimensions = textureDimensions(texture.source); if (dimensions.width > this.maximumTextureDimension || dimensions.height > this.maximumTextureDimension) return false; this.preloadTexture(texture); const pending = this.pendingTextureUploads.get(texture.source as object); return !!pending && textureContentVersion(pending.region, this.frameSerial) === textureContentVersion(texture, this.frameSerial) }
+  })
   private textureMemoryBytes = 0
   private textureCount = 0
   private readonly pendingTextureUploads = new Map<object, { region: TextureRegion; requestedFrame: number; bytes: number }>()
@@ -263,7 +320,7 @@ export class WebGL2Renderer implements Renderer2D {
   private pendingTextureBytes = 0
   private readonly textCache = new Map<string, CachedText>()
   private textCacheBytes = 0
-  private packets: GeometryPacket[] = []
+  private packets: RenderPacket[] = []
   private frame: FrameOptions = { width: 1, height: 1, pixelRatio: 1, clearColor: { r: 0, g: 0, b: 0, a: 1 } }
   private camera: CameraRenderView = { scale: 1, offset: { x: 0, y: 0 } }
   private sequence = 0
@@ -278,13 +335,23 @@ export class WebGL2Renderer implements Renderer2D {
   private contextLost = false
   private contextLossCount = 0
   private frameSerial = 0
+  private deviceEpoch = nextDeviceEpoch++
+  private pendingSubmissions: SubmissionFence[] = []
+  private submissionSerial = 0
+  private submissionCreditLimit = 2
+  private trackedFrame = false
+  private frameSuspended = false
+  private destroyed = false
+  private submissionFaulted = false
+  private initializingAdmittedFrame = false
   private readonly onContextLost = /* 处理上下文丢失，暂停绘制并丢弃无效 GPU 计时状态，同时更新诊断。 */ (event: Event) => {
     event.preventDefault()
     this.contextLost = true
     this.contextLossCount++
-    this.activeTimer = null
-    this.pendingTimers = []
-    reportRendererContextLost()
+    this.invalidateSubmissions(false)
+    this.discardGpuTimers(false)
+    this.stats.cpuSubmissionAtMs = null
+    this.environment.contextLost?.()
   }
   private readonly onContextRestored = /* 上下文恢复后清空旧纹理引用并请求上层重建，在重建前继续暂停绘制。 */ () => {
     // Objects from the lost context are invalid; remain suspended until the owner rebuilds.
@@ -292,13 +359,12 @@ export class WebGL2Renderer implements Renderer2D {
     this.textureCache.clear()
     this.textureMemoryBytes = 0
     this.textureCount = 0
-    reportRendererContextRestored()
-    window.dispatchEvent(new CustomEvent('nova-renderer-reset-request'))
+    this.environment.contextRestored?.()
   }
 
   /* 初始化 WebGL2 能力、缓冲区和默认资源，失败时注销事件并释放上下文。 */
-  constructor(private readonly canvas: HTMLCanvasElement) {
-    const gl = canvas.getContext('webgl2', { alpha: false, antialias: renderingSettings.antiAliasing !== 'Off', depth: false, premultipliedAlpha: true, powerPreference: 'high-performance' })
+  constructor(private readonly canvas: HTMLCanvasElement, private readonly environment: RendererEnvironment = defaultRendererEnvironment()) {
+    const gl = canvas.getContext('webgl2', { alpha: false, antialias: this.environment.settings.antiAliasing !== 'Off', depth: false, premultipliedAlpha: true, powerPreference: 'high-performance' })
     if (!gl) throw new Error('WebGL2 is unavailable')
     this.gl = gl
     this.supportedSamples = Array.from(gl.getInternalformatParameter(gl.RENDERBUFFER, gl.RGBA8, gl.SAMPLES) as Int32Array)
@@ -332,6 +398,8 @@ export class WebGL2Renderer implements Renderer2D {
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer)
     gl.bindVertexArray(null)
 
+    this.initializeSpriteInstances()
+
     this.whiteCanvas = document.createElement('canvas')
     this.whiteCanvas.width = 1
     this.whiteCanvas.height = 1
@@ -350,6 +418,9 @@ export class WebGL2Renderer implements Renderer2D {
 
   /* 根据硬件限制调整绘制尺寸，仅在像素尺寸变化时更新相关表面。 */
   resize(width: number, height: number, pixelRatio: number): void {
+    // Host resize events must not erase the retained surface while production credit is full.
+    // The admitted beginFrame applies the latest logical request with its normal rendering work.
+    if (!this.initializingAdmittedFrame && (this.pendingSubmissions.length > 0 || this.destroyed || this.contextLost || this.submissionFaulted)) return
     const safe = boundedFrame({ width, height, pixelRatio, clearColor: this.frame.clearColor }, this.maximumSurfaceDimension)
     const pixelWidth = Math.max(1, Math.floor(safe.width * safe.pixelRatio))
     const pixelHeight = Math.max(1, Math.floor(safe.height * safe.pixelRatio))
@@ -363,24 +434,40 @@ export class WebGL2Renderer implements Renderer2D {
 
   /* 开始新帧并初始化质量目标、统计、清屏状态及可用 GPU 计时查询。 */
   beginFrame(options: FrameOptions): void {
+    // Legacy direct-constructor fixtures remain untracked. Remove this entry after all
+    // Runtime/Player/direct callers migrate to tryBeginFrame and real event-loop pulses.
+    this.trackedFrame = false
+    this.frameSuspended = false
+    this.stats.gpuSubmissionStatus = 'untracked'
     this.frameSerial++
     this.frame = boundedFrame(options, this.maximumSurfaceDimension)
-    this.resize(this.frame.width, this.frame.height, this.frame.pixelRatio)
     this.packets.length = 0
     this.sequence = 0
     this.cameraIndex = -1
-    if (this.contextLost || this.gl.isContextLost()) return
-    const aa = renderingSettings.antiAliasing
-    this.requestedSamples = aa === 'Off' ? 0 : aa === 'MSAA8' ? 8 : aa === 'MSAA2' ? 2 : aa === 'MSAA4' ? 4 : renderingSettings.pixelSnap ? 0 : 4
-    this.effectsTargetActive = renderingSettings.postProcessing.enabled || aa?.startsWith('MSAA') === true
+    this.stats.cpuSubmissionAtMs = null
+    if (this.destroyed || this.contextLost || this.gl.isContextLost() || this.submissionFaulted) {
+      this.frameSuspended = true
+      this.stats.gpuSubmissionStatus = this.submissionFaulted ? 'sync-failed' : 'suspended'
+      return
+    }
+    this.initializingAdmittedFrame = true
+    try { this.resize(this.frame.width, this.frame.height, this.frame.pixelRatio) } finally { this.initializingAdmittedFrame = false }
+    const aa = this.environment.settings.antiAliasing
+    this.requestedSamples = aa === 'Off' ? 0 : aa === 'MSAA8' ? 8 : aa === 'MSAA2' ? 2 : aa === 'MSAA4' ? 4 : this.environment.settings.pixelSnap ? 0 : 4
+    this.effectsTargetActive = this.environment.settings.postProcessing.enabled || aa?.startsWith('MSAA') === true
     if (this.effectsTargetActive) { this.ensureEffectsTarget(); this.ensureMultisampleTarget() }
     else this.releaseMultisampleTarget()
-    this.pollGpuTimers()
-    Object.assign(this.stats, { drawCalls: 0, batches: 0, triangles: 0, sprites: 0, shapes: 0, text: 0, textures: this.textureCount, gpuMs: this.lastGpuMs, passes: 1, renderTargets: this.effectsTargetActive ? 1 : 0, overdraw: 0, batchBreaks: 0, atlasPages: assetState.atlasPages.length, textureMemoryBytes: this.textureMemoryBytes, textureUploads: 0, textureEvictions: 0, textureBudgetBytes: this.textureBudget(), textureBudgetExceeded: false, streamingMisses: 0, shaderCompiles: 0, shaderFallbacks: 0, contextLosses: this.contextLossCount, batchBreakReasons: {} })
+    // A preference change during drawing applies at the next admitted frame, never mid-query.
+    const suppliedBudget = this.environment.gpuDiagnosticsBudget?.()
+    this.gpuTimingBudget = gpuDiagnosticsBudget(suppliedBudget?.mode, suppliedBudget?.revision)
+    if (this.gpuTimingBudget.mode === 'off') this.discardGpuTimers(true)
+    else this.pollGpuTimers()
+    Object.assign(this.stats, { drawCalls: 0, batches: 0, triangles: 0, sprites: 0, shapes: 0, text: 0, textures: this.textureCount, gpuMs: this.lastGpuMs, passes: 1, renderTargets: this.effectsTargetActive ? 1 : 0, overdraw: 0, batchBreaks: 0, atlasPages: this.environment.assets.atlasPageCount, textureMemoryBytes: this.textureMemoryBytes, textureUploads: 0, textureEvictions: 0, textureBudgetBytes: this.textureBudget(), textureBudgetExceeded: false, streamingMisses: 0, shaderCompiles: 0, shaderFallbacks: 0, contextLosses: this.contextLossCount, batchBreakReasons: {} })
     this.stats.backingWidth = this.canvas.width; this.stats.backingHeight = this.canvas.height
     this.stats.antiAliasingSamples = this.effectsTargetActive ? this.sampleCount : this.defaultSamples
     this.stats.antiAliasingLimited = this.effectsTargetActive && this.sampleCount < this.requestedSamples
     this.stats.textureUploadDeferrals = 0
+    this.stats.instancedSprites = 0
     this.drainTextureUploads()
     const gl = this.gl
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.effectsTargetActive ? this.sampleFramebuffer ?? this.framebuffer : null)
@@ -390,10 +477,39 @@ export class WebGL2Renderer implements Renderer2D {
     gl.enable(gl.BLEND)
     gl.clearColor(r, g, b, a)
     gl.clear(gl.COLOR_BUFFER_BIT)
-    if (this.timerExtension && !this.activeTimer) {
+    if (this.timerExtension && this.gpuTimingBudget.mode !== 'off' && !this.timersDisjoint && !this.activeTimer
+      && this.pendingTimers.length < this.gpuTimingBudget.maxPendingQueries && this.isGpuTimerSampleFrame()) {
       this.activeTimer = gl.createQuery()
       if (this.activeTimer) gl.beginQuery(this.timerExtension.TIME_ELAPSED_EXT, this.activeTimer)
     }
+  }
+
+  /** Production admission polls at most three existing fences with a zero timeout. */
+  tryBeginFrame(options: FrameOptions): boolean {
+    this.stats.cpuSubmissionAtMs = null
+    this.trackedFrame = false
+    this.frameSuspended = true
+    this.packets.length = 0
+    this.instanceFloats = 0
+    if (this.destroyed || this.contextLost || this.gl.isContextLost()) {
+      this.stats.gpuSubmissionStatus = 'suspended'
+      return false
+    }
+    if (this.submissionFaulted) { this.stats.gpuSubmissionStatus = 'sync-failed'; return false }
+    this.pollSubmissions()
+    const requested = this.environment.submissionCreditLimit?.() ?? 2
+    this.submissionCreditLimit = requested === 1 || requested === 2 || requested === 3 ? requested : 2
+    this.stats.gpuFramesInFlight = this.pendingSubmissions.length
+    this.stats.gpuSubmissionCreditLimit = this.submissionCreditLimit
+    this.stats.deviceEpoch = this.deviceEpoch
+    if (this.submissionFaulted) { this.stats.gpuSubmissionStatus = 'sync-failed'; return false }
+    if (this.pendingSubmissions.length >= this.submissionCreditLimit) {
+      this.stats.gpuSubmissionStatus = 'deferred'
+      return false
+    }
+    this.beginFrame(options)
+    this.trackedFrame = true
+    return true
   }
 
   /* 记录当前相机并递增序号，使后续几何命令绑定到该相机。 */
@@ -403,6 +519,11 @@ export class WebGL2Renderer implements Renderer2D {
   submitSprite(command: SpriteRenderCommand): void {
     if (command.mesh && (command.mesh.positions.length > MAX_PACKET_VERTICES || command.mesh.uvs.length > MAX_PACKET_VERTICES || command.mesh.indices.length > MAX_PACKET_VERTICES * 3)) return
     this.stats.sprites++
+    const material = command.material || 'Default'
+    if (this.instanceProgram && !command.mesh && !command.nineSlice && (material === 'Default' || material === 'Particles' || material.startsWith('__'))) {
+      this.queueSpriteInstance(command)
+      return
+    }
     this.queue(command, command.texture, command.tint, command.mesh ? spriteGeometry(command) : command.nineSlice ? nineSliceGeometry(command) : spriteGeometry(command))
   }
 
@@ -444,32 +565,36 @@ export class WebGL2Renderer implements Renderer2D {
 
   /* 按绘制顺序合并兼容批次，解析抗锯齿和后处理目标，回收资源并返回统计。 */
   endFrame(): RendererStats {
-    if (this.contextLost || this.gl.isContextLost()) return { ...this.stats }
+    if (this.destroyed || this.frameSuspended || this.contextLost || this.gl.isContextLost()) return { ...this.stats, cpuSubmissionAtMs: null }
     this.packets.sort(/* 按相机、层、层内次序及入队序号排序，保留稳定提交顺序。 */ (first, second) => first.cameraIndex - second.cameraIndex || first.layer - second.layer || first.order - second.order || first.sequence - second.sequence)
-    let batch: GeometryPacket[] = []
+    let batch: RenderPacket[] = []
     let batchVertexCount = 0, batchIndexCount = 0
     const flush = /* 绘制非空批次并清空当前批次及顶点、索引计数。 */ () => {
       if (!batch.length) return
-      this.drawBatch(batch)
+      if (batch[0].kind === 'sprite-instance') this.drawSpriteInstanceBatch(batch as SpriteInstancePacket[])
+      else this.drawBatch(batch as GeometryPacket[])
       batch = []
       batchVertexCount = 0; batchIndexCount = 0
     }
     for (const packet of this.packets) {
       const previous = batch[0]
+      const vertices = packet.kind === 'geometry' ? packet.geometry.positions.length : 4
+      const indices = packet.kind === 'geometry' ? packet.geometry.indices.length : 6
       const sameBatch = previous
+        && previous.kind === packet.kind
         && previous.cameraIndex === packet.cameraIndex
         && previous.texture?.source === packet.texture?.source
         && previous.filter === packet.filter
         && previous.material === packet.material
         && previous.blend === packet.blend
-      if ((!sameBatch || batchVertexCount + packet.geometry.positions.length > MAX_PACKET_VERTICES || batchIndexCount + packet.geometry.indices.length > MAX_BATCH_INDICES) && batch.length) {
-        const reason = !previous ? 'initial' : previous.cameraIndex !== packet.cameraIndex ? 'camera' : previous.texture?.source !== packet.texture?.source ? 'texture' : previous.filter !== packet.filter ? 'filter' : previous.material !== packet.material ? 'material' : previous.blend !== packet.blend ? 'blend' : batchIndexCount + packet.geometry.indices.length > MAX_BATCH_INDICES ? 'index-limit' : 'vertex-limit'
+      if ((!sameBatch || batchVertexCount + vertices > MAX_PACKET_VERTICES || batchIndexCount + indices > MAX_BATCH_INDICES) && batch.length) {
+        const reason = !previous ? 'initial' : previous.cameraIndex !== packet.cameraIndex ? 'camera' : previous.kind !== packet.kind ? 'pipeline' : previous.texture?.source !== packet.texture?.source ? 'texture' : previous.filter !== packet.filter ? 'filter' : previous.material !== packet.material ? 'material' : previous.blend !== packet.blend ? 'blend' : batchIndexCount + indices > MAX_BATCH_INDICES ? 'index-limit' : 'vertex-limit'
         this.stats.batchBreakReasons[reason] = (this.stats.batchBreakReasons[reason] ?? 0) + 1
         flush()
       }
       batch.push(packet)
-      batchVertexCount += packet.geometry.positions.length
-      batchIndexCount += packet.geometry.indices.length
+      batchVertexCount += vertices
+      batchIndexCount += indices
     }
     flush()
     this.stats.batchBreaks = Math.max(0, this.stats.batches - 1)
@@ -479,9 +604,9 @@ export class WebGL2Renderer implements Renderer2D {
       gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, this.framebuffer)
       gl.blitFramebuffer(0, 0, this.canvas.width, this.canvas.height, 0, 0, this.canvas.width, this.canvas.height, gl.COLOR_BUFFER_BIT, gl.NEAREST)
     }
-    const postReference = activePostProcessing.userMaterial
+    const postReference = this.environment.postProcessing.userMaterial
     const postMaterial = postReference ? null : builtInPostMaterial()
-    if (this.effectsTargetActive && (!renderingSettings.postProcessing.enabled || !this.drawPostMaterial(postReference ?? '__nova_builtin_post__', postMaterial))) {
+    if (this.effectsTargetActive && (!this.environment.settings.postProcessing.enabled || !this.drawPostMaterial(postReference ?? '__nova_builtin_post__', postMaterial))) {
       this.drawResolvedColor()
     }
     if (this.activeTimer && this.timerExtension) {
@@ -496,21 +621,80 @@ export class WebGL2Renderer implements Renderer2D {
     }
     gl.bindFramebuffer(gl.FRAMEBUFFER, null)
     this.trimTextureResidency()
+    if (this.trackedFrame) {
+      // A fence covers this admitted frame's uploads/draws/resolve/resource maintenance.
+      // flush submits without waiting; completion is observed on a later browser task.
+      const sync = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0)
+      if (sync) { this.pendingSubmissions.push({ sync, epoch: this.deviceEpoch, id: ++this.submissionSerial }); this.requiredUploads.submitted(this.submissionSerial); gl.flush(); this.stats.gpuSubmissionStatus = 'submitted' }
+      else this.failSubmission('fenceSync did not create a completion fence')
+      this.stats.gpuFramesInFlight = this.pendingSubmissions.length
+      this.stats.deviceEpoch = this.deviceEpoch
+      this.frameSuspended = true
+    }
+    this.trackedFrame = false
+    this.stats.cpuSubmissionAtMs = performance.now()
     return { ...this.stats, batchBreakReasons: { ...this.stats.batchBreakReasons } }
+  }
+
+  private pollSubmissions(): void {
+    while (this.pendingSubmissions.length) {
+      const fence = this.pendingSubmissions[0]
+      if (fence.epoch !== this.deviceEpoch) { this.pendingSubmissions.shift(); continue }
+      const result = this.gl.clientWaitSync(fence.sync, 0, 0)
+      if (result === this.gl.TIMEOUT_EXPIRED) return
+      if (result === this.gl.WAIT_FAILED) { this.failSubmission('clientWaitSync returned WAIT_FAILED'); return }
+      if (result !== this.gl.ALREADY_SIGNALED && result !== this.gl.CONDITION_SATISFIED) { this.failSubmission('clientWaitSync returned an invalid completion status'); return }
+      this.pendingSubmissions.shift()
+      this.gl.deleteSync(fence.sync)
+      this.stats.gpuCompletionObservedAtMs = performance.now()
+      this.stats.gpuCompletedSubmissionId = fence.id
+      this.requiredUploads.completed(fence.id, this.stats.gpuCompletionObservedAtMs)
+    }
+  }
+
+  private failSubmission(reason: string): void {
+    if (this.submissionFaulted) return
+    this.submissionFaulted = true
+    this.requiredUploads.invalidate('REQUIRED_UPLOAD_SUBMISSION_FAILED: ' + reason)
+    this.stats.gpuSubmissionStatus = 'sync-failed'
+    this.stats.gpuSubmissionFaultReason = reason
+    // Do not return failed fences as completed credits or restart every frame.
+    this.environment.submissionFault?.(reason)
+  }
+
+  private invalidateSubmissions(deleteHandles: boolean): void {
+    this.requiredUploads.invalidate('REQUIRED_UPLOAD_DEVICE_EPOCH_INVALIDATED')
+    if (deleteHandles) for (const fence of this.pendingSubmissions) if (fence.epoch === this.deviceEpoch) this.gl.deleteSync(fence.sync)
+    this.pendingSubmissions.length = 0
+    this.deviceEpoch = nextDeviceEpoch++
+    this.trackedFrame = false
+    this.frameSuspended = true
+    this.stats.gpuFramesInFlight = 0
+    this.stats.deviceEpoch = this.deviceEpoch
+    this.stats.gpuCompletionObservedAtMs = null
+    this.stats.gpuCompletedSubmissionId = null
+    this.stats.gpuSubmissionStatus = 'suspended'
   }
 
   /* 移除上下文监听并释放 CPU 缓存和可用 GPU 对象；丢失上下文时仅清理引用。 */
   destroy(): void {
+    if (this.destroyed) return
+    this.destroyed = true
+    this.requiredUploads.dispose()
     this.canvas.removeEventListener('webglcontextlost', this.onContextLost)
     this.canvas.removeEventListener('webglcontextrestored', this.onContextRestored)
     const gl = this.gl
+    this.discardGpuTimers(!this.contextLost && !gl.isContextLost())
+    this.invalidateSubmissions(!this.contextLost && !gl.isContextLost())
     for (const value of this.textCache.values()) { const surface = value.region.source as HTMLCanvasElement; surface.width = 0; surface.height = 0 }
     this.vertexUpload = new Float32Array(0); this.indexUpload = new Uint32Array(0)
+    this.instanceData = new Float32Array(0); this.instanceUpload = new Float32Array(0); this.instanceFloats = 0
     this.textCache.clear(); this.textCacheBytes = 0; this.packets = []; this.pendingTextureUploads.clear(); this.pendingTextureBytes = 0
     if (this.contextLost || gl.isContextLost()) { this.textureCache.clear(); this.materialPrograms.clear(); this.textureMemoryBytes = 0; this.textureCount = 0; return }
     gl.deleteBuffer(this.vertexBuffer)
     gl.deleteBuffer(this.indexBuffer)
     gl.deleteVertexArray(this.vao)
+    this.releaseSpriteInstances()
     this.releaseMultisampleTarget()
     if (this.framebuffer) gl.deleteFramebuffer(this.framebuffer)
     if (this.colorTarget) gl.deleteTexture(this.colorTarget)
@@ -518,7 +702,6 @@ export class WebGL2Renderer implements Renderer2D {
     if (this.copyProgram) gl.deleteProgram(this.copyProgram)
     for (const state of this.materialPrograms.values()) if (state) gl.deleteProgram(state.program)
     if (this.postProgram) gl.deleteProgram(this.postProgram.program)
-    for (const query of this.pendingTimers) gl.deleteQuery(query)
     for (const cached of this.textureCache.values()) gl.deleteTexture(cached.texture)
     this.textureCache.clear(); this.textureMemoryBytes = 0; this.textureCount = 0
     this.materialPrograms.clear()
@@ -532,16 +715,114 @@ export class WebGL2Renderer implements Renderer2D {
     geometry: GeometryData,
     orderOverride = order.orderInLayer
   ): void {
-    if (this.packets.length >= 100_000 || !geometry.positions.length || !geometry.indices.length) return
+    if (this.packets.length >= MAX_FRAME_PACKETS || !geometry.positions.length || !geometry.indices.length) return
     if (geometry.positions.length > MAX_PACKET_VERTICES) return
     if (geometry.positions.some(/* 先计算 !Number.isFinite(position.x)；仅当其为假值时求右侧 !Number.isFinite(position.y)，返回短路求值结果。 */ position => !Number.isFinite(position.x) || !Number.isFinite(position.y))) return
     if (geometry.uvs.some(/* 先计算 !Number.isFinite(uv.x)；仅当其为假值时求右侧 !Number.isFinite(uv.y)，返回短路求值结果。 */ uv => !Number.isFinite(uv.x) || !Number.isFinite(uv.y))) return
     if (geometry.indices.some(/* 先计算 !Number.isInteger(index) || index < 0；仅当其为假值时求右侧 index >= geometry.positions.length，返回短路求值结果。 */ index => !Number.isInteger(index) || index < 0 || index >= geometry.positions.length)) return
     this.packets.push({
+      kind: 'geometry',
       layer: finite(order.sortingLayer, 0), order: finite(orderOverride, 0), sequence: this.sequence++, material: order.material || 'Default',
       blend: order.blendMode ?? 'Alpha', texture, filter: texture?.filter ?? 'Linear', color: normalizedColor(color), geometry,
       camera: this.camera, cameraIndex: this.cameraIndex
     })
+  }
+
+  /** Cold initialization only. Failure retains the established WebGL2 geometry path. */
+  private initializeSpriteInstances(): void {
+    this.stats.spriteInstancing = false
+    if (this.environment.spriteInstancing === false) { this.stats.spriteInstanceFallbackReason = 'explicit geometry diagnostic/compatibility control'; return }
+    const gl = this.gl
+    let program: WebGLProgram | null = null
+    try {
+      program = createProgram(gl, FRAGMENT_SOURCE, INSTANCE_VERTEX_SOURCE)
+      this.instanceVao = gl.createVertexArray(); this.instanceBuffer = gl.createBuffer(); this.cornerBuffer = gl.createBuffer(); this.quadIndexBuffer = gl.createBuffer()
+      if (!this.instanceVao || !this.instanceBuffer || !this.cornerBuffer || !this.quadIndexBuffer) throw new Error('Could not allocate sprite instance buffers')
+      const camera = gl.getUniformLocation(program, 'u_camera'), texture = gl.getUniformLocation(program, 'u_texture'), rotation = gl.getUniformLocation(program, 'u_rotation')
+      if (!camera || !texture || !rotation) throw new Error('Sprite instance uniforms are unavailable')
+      this.instanceProgram = { program, camera, texture, rotation, linearTexture: gl.getUniformLocation(program, 'u_linearTexture'), material: null }
+      gl.bindVertexArray(this.instanceVao)
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.cornerBuffer)
+      gl.bufferData(gl.ARRAY_BUFFER, new Uint8Array([0, 1, 2, 3]), gl.STATIC_DRAW)
+      gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 1, gl.UNSIGNED_BYTE, false, 1, 0); gl.vertexAttribDivisor(0, 0)
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.instanceBuffer)
+      for (let location = 1; location <= 4; location++) {
+        gl.enableVertexAttribArray(location); gl.vertexAttribPointer(location, 4, gl.FLOAT, false, SPRITE_INSTANCE_BYTES, (location - 1) * 16); gl.vertexAttribDivisor(location, 1)
+      }
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.quadIndexBuffer)
+      gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint8Array([0, 1, 2, 0, 2, 3]), gl.STATIC_DRAW)
+      this.stats.spriteInstanceFallbackReason = null
+    } catch (error) {
+      // Release partially initialized objects exactly once, without selecting a different backend.
+      if (program && !this.instanceProgram) gl.deleteProgram(program)
+      this.releaseSpriteInstances()
+      this.stats.spriteInstanceFallbackReason = error instanceof Error ? error.message : String(error)
+    } finally { gl.bindVertexArray(null) }
+    this.stats.spriteInstancing = this.instanceProgram !== null
+  }
+
+  private releaseSpriteInstances(): void {
+    const gl = this.gl
+    if (this.instanceProgram) gl.deleteProgram(this.instanceProgram.program)
+    if (this.instanceVao) gl.deleteVertexArray(this.instanceVao)
+    for (const buffer of [this.instanceBuffer, this.cornerBuffer, this.quadIndexBuffer]) if (buffer) gl.deleteBuffer(buffer)
+    this.instanceProgram = null; this.instanceVao = null; this.instanceBuffer = null; this.cornerBuffer = null; this.quadIndexBuffer = null
+  }
+
+  /** Snapshot mutable command values at submission, just as the old geometry builder did. */
+  private queueSpriteInstance(command: SpriteRenderCommand): void {
+    if (this.packets.length >= MAX_FRAME_PACKETS) return
+    const count = this.instanceFloats + SPRITE_INSTANCE_FLOATS
+    if (this.instanceData.length < count) {
+      const grown = new Float32Array(Math.min(MAX_FRAME_PACKETS * SPRITE_INSTANCE_FLOATS, Math.max(count, 1024, this.instanceData.length * 2)))
+      grown.set(this.instanceData); this.instanceData = grown
+    }
+    const color = normalizedColor(command.tint)
+    if (!writeSpriteInstance(this.instanceData, this.instanceFloats, command, color)) return
+    this.packets.push({ kind: 'sprite-instance', instanceOffset: this.instanceFloats,
+      layer: finite(command.sortingLayer, 0), order: finite(command.orderInLayer, 0), sequence: this.sequence++, material: command.material || 'Default',
+      blend: command.blendMode ?? 'Alpha', texture: command.texture, filter: command.texture.filter ?? 'Linear', color,
+      camera: this.camera, cameraIndex: this.cameraIndex })
+    this.instanceFloats = count
+  }
+
+  /** Only adjacent state-compatible sprites reach this batch; shared quad is never rebuilt. */
+  private drawSpriteInstanceBatch(batch: SpriteInstancePacket[]): void {
+    const gl = this.gl, program = this.instanceProgram!, packet = batch[0]
+    const floats = batch.length * SPRITE_INSTANCE_FLOATS
+    if (this.instanceUpload.length < floats) this.instanceUpload = new Float32Array(Math.max(floats, Math.min(MAX_BATCH_SPRITES * SPRITE_INSTANCE_FLOATS, Math.max(1024, this.instanceUpload.length * 2))))
+    let destination = 0
+    for (const item of batch) for (let field = 0; field < SPRITE_INSTANCE_FLOATS; field++) this.instanceUpload[destination++] = this.instanceData[item.instanceOffset + field]
+    const camera = packet.camera, viewport = safeViewport(camera.viewport)
+    const scale = Math.max(1e-9, Math.abs(finite(camera.scale, 1)))
+    const width = this.frame.width * viewport.width, height = this.frame.height * viewport.height
+    const center = camera.position ?? { x: (this.frame.width * .5 - finite(camera.offset.x, this.frame.width * .5)) / scale, y: (finite(camera.offset.y, this.frame.height * .5) - this.frame.height * .5) / scale }
+    const viewportX = Math.round(viewport.x * this.canvas.width), viewportY = Math.round(viewport.y * this.canvas.height)
+    const viewportWidth = Math.max(1, Math.round(viewport.width * this.canvas.width)), viewportHeight = Math.max(1, Math.round(viewport.height * this.canvas.height))
+    gl.enable(gl.SCISSOR_TEST)
+    try {
+      gl.scissor(viewportX, viewportY, viewportWidth, viewportHeight); gl.viewport(viewportX, viewportY, viewportWidth, viewportHeight)
+      gl.useProgram(program.program); gl.bindVertexArray(this.instanceVao); gl.bindBuffer(gl.ARRAY_BUFFER, this.instanceBuffer)
+      if (this.instanceCapacityBytes < this.instanceUpload.byteLength) { gl.bufferData(gl.ARRAY_BUFFER, this.instanceUpload.byteLength, gl.DYNAMIC_DRAW); this.instanceCapacityBytes = this.instanceUpload.byteLength }
+      gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.instanceUpload, 0, floats)
+      gl.uniform4f(program.camera, 2 * scale / Math.max(1, width), 2 * scale / Math.max(1, height), finite(center.x, 0), finite(center.y, 0))
+      const rotation = finite(camera.rotation ?? 0, 0); gl.uniform2f(program.rotation, Math.cos(rotation), Math.sin(rotation))
+      gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, this.resolveTexture(packet.texture ?? this.whiteRegion, packet.filter)); gl.uniform1i(program.texture, 0)
+      if (program.linearTexture) gl.uniform1i(program.linearTexture, packet.texture?.colorSpace === 'Linear' ? 1 : 0)
+      if (packet.blend === 'Additive') gl.blendFunc(gl.SRC_ALPHA, gl.ONE)
+      else if (packet.blend === 'Multiply') gl.blendFunc(gl.DST_COLOR, gl.ONE_MINUS_SRC_ALPHA)
+      else if (packet.blend === 'Screen') gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_COLOR)
+      else gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+      gl.drawElementsInstanced(gl.TRIANGLES, 6, gl.UNSIGNED_BYTE, 0, batch.length)
+      if (!this.validatedFirstDraw) {
+        const error = gl.getError()
+        if (error !== gl.NO_ERROR) throw new Error(`WebGL2 renderer failed its first instance draw (error 0x${error.toString(16)})`)
+        this.validatedFirstDraw = true
+      }
+    } finally { gl.bindVertexArray(null); gl.disable(gl.SCISSOR_TEST) }
+    this.stats.drawCalls++; this.stats.batches++; this.stats.triangles += batch.length * 2; this.stats.overdraw += batch.length * 2
+    this.stats.instancedSprites = (this.stats.instancedSprites ?? 0) + batch.length
+    this.stats.textures = this.textureCount; this.stats.textureMemoryBytes = this.textureMemoryBytes
   }
 
   /* 复用上传数组合并批次几何，绑定相机和材质绘制，并更新渲染统计。 */
@@ -631,14 +912,14 @@ export class WebGL2Renderer implements Renderer2D {
 
   /* 缓存材质程序并随资源版本失效，验证或编译失败时记录原因并回退基础程序。 */
   private programFor(reference: string): ProgramState {
-    if (this.materialGeneration !== assetState.generation) {
+    if (this.materialGeneration !== this.environment.assets.generation) {
       for (const state of this.materialPrograms.values()) if (state) this.gl.deleteProgram(state.program)
-      this.materialPrograms.clear(); this.materialGeneration = assetState.generation
+      this.materialPrograms.clear(); this.materialGeneration = this.environment.assets.generation
     }
     if (!reference || reference === 'Default' || reference === 'Particles' || reference.startsWith('__')) return this.baseProgramState
     if (this.materialPrograms.has(reference)) return this.materialPrograms.get(reference) ?? this.baseProgramState
     if (this.materialPrograms.size >= 128) { const key = this.materialPrograms.keys().next().value!; const stale = this.materialPrograms.get(key); if (stale) this.gl.deleteProgram(stale.program); this.materialPrograms.delete(key) }
-    const material = resolveMaterial(reference)
+    const material = resolveMaterial(reference, new Set(), this.environment.assets)
     const resolved = resolvedMaterialFragment(material)
     if ([...resolved.diagnostics, ...analyzeMaterialShader(resolved.source, material.includes)].some(/* 比较 item.severity 与 'error'，返回严格相等的判断结果。 */ item => item.severity === 'error')) { reportMaterialFallback(reference, 'shader validation failed'); this.stats.shaderFallbacks++; this.materialPrograms.set(reference, null); return this.baseProgramState }
     try {
@@ -677,7 +958,7 @@ export class WebGL2Renderer implements Renderer2D {
     Object.entries(material.textures).slice(0, 7).forEach(/* 绑定一个附加纹理到对应纹理单元，缺失资源使用白色回退纹理。 */ ([name, reference], index) => {
       const location = this.gl.getUniformLocation(program, name)
       if (!location) return
-      const region = resolveTextureAsset(reference, material.sampling) ?? this.whiteRegion
+      const region = this.environment.assets.resolveTexture(reference, material.sampling) ?? this.whiteRegion
       this.gl.activeTexture(this.gl.TEXTURE1 + index)
       this.gl.bindTexture(this.gl.TEXTURE_2D, this.resolveTexture(region, material.sampling))
       this.gl.uniform1i(location, index + 1)
@@ -688,11 +969,11 @@ export class WebGL2Renderer implements Renderer2D {
   /* 编译或复用后处理材质并绘制全屏通道，记录失败签名以避免反复重试。 */
   private drawPostMaterial(reference: string, providedMaterial: Material2DResource | null = null): boolean {
     if (!this.colorTarget) return false
-    const signature = providedMaterial ? `${reference}:${providedMaterial.fragment}` : `${reference}:${assetState.generation}`
+    const signature = providedMaterial ? `${reference}:${providedMaterial.fragment}` : `${reference}:${this.environment.assets.generation}`
     if (this.failedPostSignature === signature) return false
-    const material = providedMaterial ?? resolveMaterial(reference), resolved = resolvedMaterialFragment(material)
+    const material = providedMaterial ?? resolveMaterial(reference, new Set(), this.environment.assets), resolved = resolvedMaterialFragment(material)
     if ([...resolved.diagnostics, ...analyzeMaterialShader(resolved.source, material.includes)].some(/* 比较 item.severity 与 'error'，返回严格相等的判断结果。 */ item => item.severity === 'error')) { this.failedPostSignature = signature; reportMaterialFallback(reference, 'post-process validation failed'); this.stats.shaderFallbacks++; return false }
-    const generation = providedMaterial ? signature.length + [...signature].reduce(/* 将材质签名字符累积为三十二位整数，用于内置后处理程序版本判断。 */ (sum, character) => (sum * 31 + character.charCodeAt(0)) | 0, 0) : assetState.generation
+    const generation = providedMaterial ? signature.length + [...signature].reduce(/* 将材质签名字符累积为三十二位整数，用于内置后处理程序版本判断。 */ (sum, character) => (sum * 31 + character.charCodeAt(0)) | 0, 0) : this.environment.assets.generation
     if (!this.postProgram || this.postProgram.reference !== reference || this.postProgram.generation !== generation) {
       if (this.postProgram) this.gl.deleteProgram(this.postProgram.program)
       try {
@@ -708,8 +989,8 @@ export class WebGL2Renderer implements Renderer2D {
     gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, this.canvas.width, this.canvas.height); gl.disable(gl.BLEND)
     gl.useProgram(state.program); gl.bindVertexArray(this.vao); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, this.colorTarget); gl.uniform1i(state.texture, 0)
     const post = this.gl.getUniformLocation(state.program, 'u_nova_post'), extra = this.gl.getUniformLocation(state.program, 'u_nova_post_extra')
-    if (post) gl.uniform4f(post, activePostProcessing.exposure, activePostProcessing.contrast, activePostProcessing.saturation, activePostProcessing.vignette)
-    if (extra) gl.uniform2f(extra, activePostProcessing.bloom, activePostProcessing.blur)
+    if (post) gl.uniform4f(post, this.environment.postProcessing.exposure, this.environment.postProcessing.contrast, this.environment.postProcessing.saturation, this.environment.postProcessing.vignette)
+    if (extra) gl.uniform2f(extra, this.environment.postProcessing.bloom, this.environment.postProcessing.blur)
     this.applyResourceUniforms(state.program, state.material); gl.drawArrays(gl.TRIANGLES, 0, 3); gl.bindVertexArray(null); gl.enable(gl.BLEND)
     return gl.getError() === gl.NO_ERROR
   }
@@ -785,14 +1066,45 @@ void main(){ outputColor=texelFetch(u_texture,ivec2(gl_FragCoord.xy),0); }`, POS
   }
 
   /* 非阻塞读取已完成的 GPU 计时查询，忽略不连续计时并释放查询对象。 */
+  private isGpuTimerSampleFrame(): boolean {
+    const interval = this.gpuTimingBudget.sampleIntervalFrames
+    return interval !== null && (this.frameSerial - 1) % interval === 0
+  }
+
+  /** Lost handles are forgotten, never sent to a restored/new context. No separate polling loop. */
+  private discardGpuTimers(deleteHandles: boolean): void {
+    if (deleteHandles) {
+      if (this.activeTimer && this.timerExtension) this.gl.endQuery(this.timerExtension.TIME_ELAPSED_EXT)
+      if (this.activeTimer) this.gl.deleteQuery(this.activeTimer)
+      for (const query of this.pendingTimers) this.gl.deleteQuery(query)
+    }
+    this.activeTimer = null
+    this.pendingTimers.length = 0
+    this.lastGpuMs = null
+    this.stats.gpuMs = null
+    this.timersDisjoint = false
+  }
+
   private pollGpuTimers(): void {
     if (!this.timerExtension) return
+    const oldest = this.pendingTimers[0]
+    // Availability checks do not wait. Query global driver state only at a sample boundary
+    // or when a result can actually be consumed, rather than on every draw/frame.
+    if (!this.isGpuTimerSampleFrame() && (!oldest || !this.gl.getQueryParameter(oldest, this.gl.QUERY_RESULT_AVAILABLE))) return
+    this.timersDisjoint = Boolean(this.gl.getParameter(this.timerExtension.GPU_DISJOINT_EXT))
+    // A disjoint invalidates the last displayed sample as well as every outstanding query.
+    if (this.timersDisjoint) {
+      this.lastGpuMs = null
+      for (const query of this.pendingTimers) this.gl.deleteQuery(query)
+      this.pendingTimers.length = 0
+      return
+    }
     while (this.pendingTimers.length) {
       const query = this.pendingTimers[0]
       if (!this.gl.getQueryParameter(query, this.gl.QUERY_RESULT_AVAILABLE)) break
       this.pendingTimers.shift()
-      const disjoint = this.gl.getParameter(this.timerExtension.GPU_DISJOINT_EXT) as boolean
-      if (!disjoint) this.lastGpuMs = Number(this.gl.getQueryParameter(query, this.gl.QUERY_RESULT)) / 1_000_000
+      const nanoseconds = Number(this.gl.getQueryParameter(query, this.gl.QUERY_RESULT))
+      this.lastGpuMs = Number.isFinite(nanoseconds) && nanoseconds >= 0 ? nanoseconds / 1_000_000 : null
       this.gl.deleteQuery(query)
     }
   }
@@ -805,19 +1117,20 @@ void main(){ outputColor=texelFetch(u_texture,ivec2(gl_FragCoord.xy),0); }`, POS
     let cached = this.textureCache.get(source)
     const contentVersion = textureContentVersion(region, this.frameSerial)
     const changed = !cached || cached.width !== dimensions.width || cached.height !== dimensions.height || cached.contentVersion !== contentVersion
-    if (changed && source !== this.whiteCanvas && renderingSettings.textureStreaming.enabled && !this.drainingTextureUploads && (this.stats.textureUploads >= this.uploadBudget() || this.pendingTextureUploads.size > 0)) {
+    if (changed && source !== this.whiteCanvas && this.environment.settings.textureStreaming.enabled && !this.drainingTextureUploads && (this.stats.textureUploads >= this.uploadBudget() || this.pendingTextureUploads.size > 0)) {
       this.queueTextureUpload(region)
       if (cached) { cached.lastUsedFrame = this.frameSerial; return cached.texture }
       return this.resolveTexture(this.whiteRegion, 'Nearest')
     }
     if (!Number.isFinite(weight) || dimensions.width <= 0 || dimensions.height <= 0 || dimensions.width > maximum || dimensions.height > maximum || !this.reserveTexture(source, weight)) {
       this.stats.textureBudgetExceeded = true; this.stats.streamingMisses++
+      this.requiredUploads.failSource(source, 'REQUIRED_UPLOAD_RESIDENCY_BUDGET_REJECTED')
       return this.resolveTexture(this.whiteRegion, 'Nearest')
     }
     if (!cached) {
       const texture = this.gl.createTexture()
-      if (!texture) throw new Error('Could not allocate WebGL texture')
-      cached = { texture, width: 0, height: 0, filter: null, lastUsedFrame: this.frameSerial, contentVersion: '' }
+      if (!texture) { this.requiredUploads.failSource(source, 'REQUIRED_UPLOAD_TEXTURE_ALLOCATION_FAILED'); throw new Error('Could not allocate WebGL texture') }
+      cached = { texture, width: 0, height: 0, filter: null, lastUsedFrame: this.frameSerial, contentVersion: '', residencyToken: null }
       this.textureCache.set(source, cached)
       this.textureCount++
       this.stats.streamingMisses++
@@ -828,11 +1141,15 @@ void main(){ outputColor=texelFetch(u_texture,ivec2(gl_FragCoord.xy),0); }`, POS
     if (cached.width !== dimensions.width || cached.height !== dimensions.height || cached.contentVersion !== contentVersion) {
       this.textureMemoryBytes -= cached.width * cached.height * 4
       gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false)
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, region.source)
+      try {
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, region.source)
+        if (this.requiredUploads.isRetained(source)) { const error = gl.getError(); if (error !== gl.NO_ERROR) throw new Error('Required texture upload failed (WebGL error 0x' + error.toString(16) + ')') }
+      } catch (error) { this.requiredUploads.failSource(source, 'REQUIRED_UPLOAD_TEXTURE_FAILED: ' + (error instanceof Error ? error.message : String(error))); throw error }
       this.stats.textureUploads++
       cached.width = dimensions.width
       cached.height = dimensions.height
       cached.contentVersion = contentVersion
+      cached.residencyToken = Object.freeze({})
       this.textureMemoryBytes += cached.width * cached.height * 4
     }
     if (cached.filter !== filter) {
@@ -846,13 +1163,23 @@ void main(){ outputColor=texelFetch(u_texture,ivec2(gl_FragCoord.xy),0); }`, POS
     return cached.texture
   }
 
+  /** Same renderer/frame pulse; no separate timer, context, clock or GPU wait. */
+  requestRequiredResourceUpload(request: RequiredResourceUploadRequest): RequiredResourceUploadSnapshot { return this.requiredUploads.request(request) }
+  pollRequiredResourceUpload(requestId: string): RequiredResourceUploadSnapshot | null {
+    if (!this.destroyed && !this.contextLost && !this.gl.isContextLost() && !this.submissionFaulted) this.pollSubmissions()
+    return this.requiredUploads.snapshot(requestId)
+  }
+  isRequiredResourceUploadCurrent(ack: RequiredResourceUploadAck): boolean { return this.requiredUploads.isCurrent(ack) }
+  cancelRequiredResourceUpload(requestId: string): boolean { return this.requiredUploads.cancel(requestId) }
+  releaseRequiredResourceUpload(requestId: string): boolean { return this.requiredUploads.release(requestId) }
+
   /* 内容未缓存或版本变化时，将纹理加入延迟上传队列。 */
   preloadTexture(region: TextureRegion): void {
     const cached = this.textureCache.get(region.source as object)
     if (!cached || cached.contentVersion !== textureContentVersion(region, this.frameSerial)) this.queueTextureUpload(region)
   }
 
-  /* 调用 Math.round(Math.min(4096, Math.max(1, finite(renderingSettings.textureStreaming.uploadBudgetPerFrame, 16)))) 并返回调用结果。 */ private uploadBudget(): number { return Math.round(Math.min(4096, Math.max(1, finite(renderingSettings.textureStreaming.uploadBudgetPerFrame, 16)))) }
+  /* 调用 Math.round(Math.min(4096, Math.max(1, finite(this.environment.settings.textureStreaming.uploadBudgetPerFrame, 16)))) 并返回调用结果。 */ private uploadBudget(): number { return Math.round(Math.min(4096, Math.max(1, finite(this.environment.settings.textureStreaming.uploadBudgetPerFrame, 16)))) }
 
   /* 校验纹理尺寸并在条目及字节预算内更新上传请求，记录延迟与超限统计。 */
   private queueTextureUpload(region: TextureRegion): void {
@@ -870,21 +1197,22 @@ void main(){ outputColor=texelFetch(u_texture,ivec2(gl_FragCoord.xy),0); }`, POS
   private drainTextureUploads(): void {
     this.drainingTextureUploads = true
     try {
-      const maximum = renderingSettings.textureStreaming.enabled ? this.uploadBudget() : 4096
+      const maximum = this.environment.settings.textureStreaming.enabled ? this.uploadBudget() : 4096
       for (const [source, request] of this.pendingTextureUploads) {
         if (this.stats.textureUploads >= maximum) break
         this.pendingTextureUploads.delete(source); this.pendingTextureBytes -= request.bytes
-        if (request.requestedFrame < this.frameSerial - 120) continue
+        if (request.requestedFrame < this.frameSerial - 120) { this.requiredUploads.failSource(source, 'REQUIRED_UPLOAD_QUEUE_EXPIRED'); continue }
         this.resolveTexture(request.region, request.region.filter)
       }
     } finally { this.drainingTextureUploads = false; this.stats.textureUploadQueue = this.pendingTextureUploads.size; this.stats.textureUploadQueueBytes = this.pendingTextureBytes }
   }
 
   /* 将纹理流送内存设置限制到有效范围并转换为字节预算。 */
-  private textureBudget(): number { return Math.min(GPU_TEXTURE_MEMORY_LIMIT_MB, Math.max(16, finite(renderingSettings.textureStreaming.memoryBudgetMb, 256))) * 1048576 }
+  private textureBudget(): number { return Math.min(GPU_TEXTURE_MEMORY_LIMIT_MB, Math.max(16, finite(this.environment.settings.textureStreaming.memoryBudgetMb, 256))) * 1048576 }
 
   /* 释放一个已缓存 GPU 纹理并更新数量、内存和淘汰统计。 */
   private evictTexture(source: object): void {
+    if (this.requiredUploads.isRetained(source)) return
     const cached = this.textureCache.get(source); if (!cached) return
     this.gl.deleteTexture(cached.texture); this.textureCache.delete(source)
     this.textureCount--; this.textureMemoryBytes -= cached.width * cached.height * 4; this.stats.textureEvictions++
@@ -905,17 +1233,18 @@ void main(){ outputColor=texelFetch(u_texture,ivec2(gl_FragCoord.xy),0); }`, POS
   private trimTextureResidency(): void {
     const budgetBytes = this.textureBudget()
     this.stats.textureBudgetBytes = budgetBytes
-    if (!renderingSettings.textureStreaming.enabled) {
+    if (!this.environment.settings.textureStreaming.enabled) {
       this.stats.textureBudgetExceeded ||= this.textureMemoryBytes > budgetBytes
       this.stats.textures = this.textureCount
       this.stats.textureMemoryBytes = this.textureMemoryBytes
       return
     }
-    const idleBefore = this.frameSerial - Math.max(2, renderingSettings.textureStreaming.idleFrames)
+    const idleBefore = this.frameSerial - Math.max(2, this.environment.settings.textureStreaming.idleFrames)
     if (this.textureMemoryBytes <= budgetBytes) {
       // 预算充足时仅回收到期项；无需为仍驻留的所有纹理分配候选数组并排序。
       // Map 删除当前项不会跳过后续项；白色回退和本帧纹理仍受同一生命周期保护。
       for (const [source, cached] of this.textureCache) {
+        if (this.requiredUploads.isRetained(source)) continue
         if (source !== this.whiteCanvas && cached.lastUsedFrame < this.frameSerial && cached.lastUsedFrame <= idleBefore) this.evictTexture(source)
       }
     } else {
@@ -923,6 +1252,7 @@ void main(){ outputColor=texelFetch(u_texture,ivec2(gl_FragCoord.xy),0); }`, POS
         .filter(/* 先计算 source !== this.whiteCanvas；仅当其为真值时求右侧 cached.lastUsedFrame < this.frameSerial，返回短路求值结果。 */ ([source, cached]) => source !== this.whiteCanvas && cached.lastUsedFrame < this.frameSerial)
         .sort(/* 优先按最后使用帧排序，再按像素面积排序确定纹理淘汰次序。 */ (first, second) => first[1].lastUsedFrame - second[1].lastUsedFrame || first[1].width * first[1].height - second[1].width * second[1].height)
       for (const [source, cached] of candidates) {
+        if (this.requiredUploads.isRetained(source)) continue
         if (cached.lastUsedFrame > idleBefore && this.textureMemoryBytes <= budgetBytes) break
         this.gl.deleteTexture(cached.texture)
         this.textureCache.delete(source)
@@ -972,7 +1302,9 @@ void main(){ outputColor=texelFetch(u_texture,ivec2(gl_FragCoord.xy),0); }`, POS
       context.fillText(line, padding, y)
     })
     const cached: CachedText = {
-      region: { key: `text:${key}`, source: canvas, uv: { x: 0, y: 0, width: 1, height: 1 }, filter: 'Linear' },
+      // This canvas is published once and never mutated while retained in textCache.
+      // Unversioned external canvases/video remain dynamic in textureContentVersion.
+      region: { key: `text:${key}`, revision: key, source: canvas, uv: { x: 0, y: 0, width: 1, height: 1 }, filter: 'Linear' },
       aspect: canvas.width / Math.max(1, canvas.height), bytes, lastUsedFrame: this.frameSerial
     }
     this.textCache.set(key, cached); this.textCacheBytes += bytes

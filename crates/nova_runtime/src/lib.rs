@@ -8,7 +8,7 @@ use nova_physics::{CharacterMoveResult, PhysicsEvent, PhysicsQueryHit, PhysicsWo
 use serde::Serialize;
 
 pub const DEFAULT_TICK_RATE: f64 = 60.0;
-pub const DEFAULT_MAX_CATCH_UP_STEPS: u32 = 8;
+pub const DEFAULT_MAX_CATCH_UP_STEPS: u32 = 4;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum DroppedTimePolicy {
@@ -373,6 +373,7 @@ pub struct RuntimeWorld {
     scenes: RuntimeSceneManager,
     time: EngineTime,
     prepared_report: Option<StepReport>,
+    interpolation_reset_pending: bool,
 }
 
 impl Default for RuntimeWorld {
@@ -394,6 +395,7 @@ impl RuntimeWorld {
             scenes: RuntimeSceneManager::default(),
             time: EngineTime::default(),
             prepared_report: None,
+            interpolation_reset_pending: false,
         }
     }
 
@@ -507,6 +509,20 @@ impl RuntimeWorld {
     // 设置运行时暂停标志。
     pub fn set_paused(&mut self, paused: bool) {
         self.timing.paused = paused;
+    }
+
+    /// Reset only the host frame clock at a completed frame boundary (or before executing
+    /// a cancelled prepared frame). Never interrupt a fixed tick/script sequence midway.
+    /// Preserve physics/current/previous poses, handles, events, elapsed time and counters.
+    /// Until an actual new fixed tick supplies a fresh previous/current pair, present current
+    /// with alpha=1 rather than replay the pre-suspension previous pose with alpha=0.
+    pub fn reset_frame_clock(&mut self) {
+        self.accumulator = 0.0;
+        self.prepared_report = None;
+        self.time.delta = 0.0;
+        self.diagnostics.steps_last_frame = 0;
+        self.diagnostics.interpolation_alpha = 1.0;
+        self.interpolation_reset_pending = true;
     }
 
     // 按稳定句柄新增或更新刚体记录，返回是否发生有效变化。
@@ -715,7 +731,11 @@ impl RuntimeWorld {
                 }
             }
         }
-        report.interpolation_alpha = (self.accumulator / fixed_delta).clamp(0.0, 1.0);
+        report.interpolation_alpha = if self.interpolation_reset_pending && report.steps == 0 {
+            1.0
+        } else {
+            (self.accumulator / fixed_delta).clamp(0.0, 1.0)
+        };
         self.prepared_report = Some(report);
         report
     }
@@ -724,6 +744,7 @@ impl RuntimeWorld {
     pub fn advance_fixed_tick(&mut self, global_gravity: f64, air_friction: f64) {
         let fixed_delta = self.timing.fixed_delta();
         self.physics.step(fixed_delta, global_gravity, air_friction);
+        self.interpolation_reset_pending = false;
         self.diagnostics.total_physics_steps =
             self.diagnostics.total_physics_steps.saturating_add(1);
         self.forward_physics_events();
@@ -767,6 +788,7 @@ impl RuntimeWorld {
         self.accumulator = 0.0;
         self.time = EngineTime::default();
         self.prepared_report = None;
+        self.interpolation_reset_pending = false;
         self.forward_physics_events();
         self.refresh_diagnostics(StepReport::default());
     }
@@ -929,6 +951,110 @@ mod tests {
         for rate in [30.0, 144.0, 240.0] {
             assert!((simulate(rate) - expected).abs() < 1.0e-9, "rate={rate}");
         }
+    }
+
+    #[test]
+    fn default_frame_clock_caps_long_delta_at_250ms_and_catches_up_four_steps() {
+        let mut runtime = RuntimeWorld::new();
+        assert_eq!(runtime.timing().max_catch_up_steps, 4);
+        runtime.set_paused(false);
+        let report = runtime.advance(10.0, 0.0, 0.0);
+        assert_eq!(report.steps, 4);
+        assert_eq!(runtime.time().delta, 0.25);
+        assert_eq!(runtime.time().elapsed, 0.25);
+        assert!(report.dropped_seconds > 0.16);
+    }
+
+    #[test]
+    fn explicit_legacy_eight_step_budget_is_preserved() {
+        let mut runtime = RuntimeWorld::new();
+        runtime.set_timing(FixedTimeSettings {
+            paused: false,
+            max_catch_up_steps: 8,
+            ..FixedTimeSettings::default()
+        });
+        assert_eq!(runtime.advance(10.0, 0.0, 0.0).steps, 8);
+        assert_eq!(runtime.timing().max_catch_up_steps, 8);
+        assert_eq!(runtime.time().delta, 0.25);
+    }
+
+    #[test]
+    fn frame_clock_reset_preserves_world_time_events_and_owned_pose_copies() {
+        let mut runtime = RuntimeWorld::new();
+        runtime.upsert_body(1, 0, &moving_body()).unwrap();
+        runtime.set_paused(false);
+        runtime.advance(1.0 / 60.0, 0.0, 0.0);
+        runtime.advance(1.0 / 120.0, 0.0, 0.0);
+        let current = runtime.physics().state().to_vec();
+        let previous = runtime.physics().previous_body_state().to_vec();
+        assert_ne!(current[2], previous[2]);
+        let checksum = runtime.physics().state_checksum();
+        let time = runtime.time();
+        let diagnostics = runtime.diagnostics();
+        let events = runtime.events.events.clone();
+        let timing = runtime.timing();
+        assert!(runtime.accumulator > 0.0);
+        runtime.reset_frame_clock();
+        runtime.reset_frame_clock(); // Repeated host suspension is idempotent.
+        assert_eq!(runtime.physics().state(), current);
+        assert_eq!(runtime.physics().previous_body_state(), previous);
+        assert_eq!(runtime.physics().state_checksum(), checksum);
+        assert_eq!(runtime.events.events, events);
+        assert_eq!(runtime.time().elapsed, time.elapsed);
+        assert_eq!(runtime.time().frame, time.frame);
+        assert_eq!(runtime.time().fixed_delta, time.fixed_delta);
+        assert_eq!(runtime.time().scale, time.scale);
+        assert_eq!(runtime.time().delta, 0.0);
+        assert_eq!(runtime.timing(), timing);
+        assert_eq!(
+            runtime.diagnostics().total_physics_steps,
+            diagnostics.total_physics_steps
+        );
+        assert_eq!(
+            runtime.diagnostics().dropped_seconds,
+            diagnostics.dropped_seconds
+        );
+        assert_eq!(runtime.diagnostics().event_count, diagnostics.event_count);
+        assert_eq!(
+            runtime.diagnostics().configuration_rebuilds,
+            diagnostics.configuration_rebuilds
+        );
+        assert_eq!(runtime.diagnostics().interpolation_alpha, 1.0);
+        assert_eq!(runtime.advance(0.0, 0.0, 0.0).steps, 0);
+        assert_eq!(runtime.advance(1.0 / 120.0, 0.0, 0.0).steps, 0);
+        assert_eq!(runtime.diagnostics().interpolation_alpha, 1.0);
+        assert_eq!(runtime.physics().state(), current);
+        assert_eq!(runtime.physics().previous_body_state(), previous);
+        assert_eq!(runtime.physics().state_checksum(), checksum);
+        assert_eq!(runtime.advance(1.0 / 120.0, 0.0, 0.0).steps, 1);
+        assert_eq!(runtime.physics().previous_body_state(), current);
+        assert!(runtime.diagnostics().interpolation_alpha < 1.0e-9);
+        assert!(!runtime.interpolation_reset_pending);
+    }
+
+    #[test]
+    fn frame_clock_reset_cancels_only_unexecuted_prepared_debt() {
+        let mut runtime = RuntimeWorld::new();
+        runtime.upsert_body(1, 0, &moving_body()).unwrap();
+        runtime.set_paused(false);
+        runtime.advance(1.0 / 60.0, 0.0, 0.0);
+        let current = runtime.physics().state().to_vec();
+        let previous = runtime.physics().previous_body_state().to_vec();
+        let checksum = runtime.physics().state_checksum();
+        assert_eq!(runtime.prepare_advance(1.0 / 30.0).steps, 2);
+        let time = runtime.time();
+        runtime.reset_frame_clock();
+        assert!(runtime.prepared_report.is_none());
+        assert_eq!(runtime.accumulator, 0.0);
+        assert_eq!(runtime.physics().state_checksum(), checksum);
+        assert_eq!(runtime.time().elapsed, time.elapsed);
+        assert_eq!(runtime.time().frame, time.frame);
+        assert_eq!(runtime.physics().state(), current);
+        assert_eq!(runtime.physics().previous_body_state(), previous);
+        assert_eq!(runtime.prepare_advance(0.0).steps, 0);
+        assert_eq!(runtime.complete_advance().interpolation_alpha, 1.0);
+        assert_eq!(runtime.diagnostics().steps_last_frame, 0);
+        assert_eq!(runtime.physics().state_checksum(), checksum);
     }
 
     // 验证暂停运行时只响应明确的单步推进。

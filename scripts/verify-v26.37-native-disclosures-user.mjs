@@ -4,9 +4,9 @@ import {readFile,writeFile} from 'node:fs/promises'
 import {join} from 'node:path'
 import {withBrowserAudit} from './lib/browserUserAudit.mjs'
 import {worldUserControls17} from './lib/worldAudit17.mjs'
-const root=process.cwd(),release='26.37',qualified=process.argv.includes('--qualification-release=26.37')
+const root=process.cwd(),qualificationTarget=process.argv.find(a=>a.startsWith('--qualification-release='))?.split('=')[1],release=qualificationTarget??'26.37',qualified=Boolean(qualificationTarget)
 const engineVersion=JSON.parse(await readFile(join(root,'package.json'),'utf8')).version
-assert.equal(engineVersion,'26.37.0')
+assert.equal(engineVersion,release+'.0')
 const fixture=join(root,'reference-projects/projects/creator-v2636-mixed-game/project.nova')
 const menu='.workspace-bar details.layout-menu[data-ui-motion-popover]',ownership='.config-panel details.object-ownership[data-ui-motion-disclosure]'
 let evidence
@@ -88,7 +88,7 @@ await withBrowserAudit({release,name:'native-disclosures-user',width:1600,height
   await a.evaluate('window.__novaNativeDisclosureTrace?.stop();delete window.__novaNativeDisclosureTrace;delete window.__novaOldNativeDetails');await a.client.send('Emulation.setEmulatedMedia',{features:[]})
  }
 })
-const path=join(evidence,'v26.37-native-disclosures-user.json'),report=JSON.parse(await readFile(path,'utf8'))
+const path=join(evidence,'v'+release+'-native-disclosures-user.json'),report=JSON.parse(await readFile(path,'utf8'))
 assert.equal(report.status,'passed');assert.equal(report.checks.length,9);report.engineVersion=engineVersion
 report.coverage={publicInput:true,privateStateInjection:false,groups:9,nativePopupCallers:12,realNativePopup:true,ordinaryContent:true,lazyBody:true,systemReduced:true,domOwnerDisposal:true,privateRegistryObserved:false}
 await writeFile(path,JSON.stringify(report,null,2)+'\n')

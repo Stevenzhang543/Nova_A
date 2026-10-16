@@ -1,5 +1,6 @@
 /** 渲染能力检测与状态：查询平台支持，记录上下文丢失恢复并请求渲染器重建。 */
 import { reactive } from 'vue'
+import { installMigrationRendererEnvironment } from './RendererEnvironment'
 
 export type RendererBackendName = 'WebGL2' | 'Canvas2D'
 export type RendererPath = 'Native' | 'Compatibility' | 'Diagnostic fallback'
@@ -120,3 +121,6 @@ export function reportRendererContextRestored(): void {
 export function reportRendererReset(): void { rendererCapabilityState.resetCount++; rendererCapabilityState.lastEvent = 'Renderer reset completed' }
 /* 在浏览器环境派发渲染器重置请求，由持有画布的上层执行重建。 */
 export function requestRendererReset(): void { if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('nova-renderer-reset-request')) }
+
+// Compatibility for old direct backend constructors. Explicit production hosts own these callbacks.
+installMigrationRendererEnvironment({ rendererCreated: reportRendererCreated, contextLost: reportRendererContextLost, contextRestored() { reportRendererContextRestored(); requestRendererReset() } })

@@ -1,0 +1,24 @@
+{
+  "schema": "nova-simulation-evidence-editor-transform-v1",
+  "beforeSha256": "18064f05767f8a1b6aa3c2be13f0a15ac6abdde5f15a9f875a44c921b682a420",
+  "afterSha256": "6cd86c8685fe93283eebbe4279b415d481431ca142a4731016b537397700c50a",
+  "edits": [
+    [
+      "import { captureSimulationEvidence, clearSimulationEvidence } from '../runtime/simulationAuthoring26'",
+      "import { createEditorSimulationEvidenceOwner } from './simulationEvidenceAdapter'"
+    ],
+    [
+      "const ports: WorldGameplayPorts = {",
+      "const ports: Omit<WorldGameplayPorts, 'evidence'> = {"
+    ],
+    [
+      "  evidence: { captureSimulationEvidence, clearSimulationEvidence },\n",
+      ""
+    ],
+    [
+      "  const owner = options.legacyRoot ? new WorldGameplayOwner(host, ports, stateView, componentsDiagnosticsView) : new WorldGameplayOwner(host, ports)",
+      "  const portsForOwner: WorldGameplayPorts = { ...ports, evidence: createEditorSimulationEvidenceOwner(world, options) }\n  const owner = options.legacyRoot ? new WorldGameplayOwner(host, portsForOwner, stateView, componentsDiagnosticsView) : new WorldGameplayOwner(host, portsForOwner)"
+    ]
+  ],
+  "removedEvidenceAnchor": "  particles: { shiftParticleOrigin }"
+}

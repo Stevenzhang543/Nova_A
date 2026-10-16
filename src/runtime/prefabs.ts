@@ -1,10 +1,12 @@
+import {RuntimePrefabInstantiator} from './runtimePrefabInstantiator'
+import type {PrefabDocument} from '../world/sceneEntityData'
+export type {PrefabDocument} from '../world/sceneEntityData'
 /** 预制体系统：创建、实例化和更新预制资源，跟踪嵌套来源及字段覆盖。 */
 import { assetGuid, assetReference, createTextAsset, readTextAsset, resolveAsset, updateTextAssetTransactional } from '../assets/AssetDatabase'
 import { subtreeEntities } from '../editor/selection'
 import {
   captureEntityBundle,
   createEntityFromData,
-  instantiateEntityBundle,
   physicsState,
   pushHistory,
   selectEntities,
@@ -14,38 +16,19 @@ import {
   type SceneEntityData
 } from '../store/physics'
 import type { Entity } from '../world/Entity'
-import { setParent, translateEntityTree, worldTransform } from '../world/hierarchy'
+import { setParent, worldTransform } from '../world/hierarchy'
 import { normalizeUuid } from '../world/identity'
 import { normalizeConnection, type Connection } from '../world/Connection'
 import type { Vec2 } from '../world/types'
-import { canonicalProjectText } from '../projects/projectData'
+import { canonicalProjectText } from '../projects/projectCanonicalValues'
+import {createRuntimePrefabReader,prefabChecksum as checksum} from './runtimePrefabReader'
 
-export interface PrefabDocument {
-  prefabVersion: 2
-  name: string
-  bundle: EntityBundle
-  variantOf: string | null
-  sourceChecksum: string
-  createdAt: string
-}
+
 
 /** 结构说明（自动提取）：clone；输入 value；直接调用 JSON.parse、JSON.stringify。 */ function clone<T>(value: T): T { return JSON.parse(JSON.stringify(value)) as T }
-/** 结构说明（自动提取）：checksum；输入 value；直接调用 canonicalProjectText、Math.imul、source.charCodeAt、padStart、hash.toString；写入 hash；包含循环处理。 */ function checksum(value: unknown): string { const source = canonicalProjectText(value); let hash = 0x811c9dc5; for (let index = 0; index < source.length; index++) hash = Math.imul(hash ^ source.charCodeAt(index), 0x01000193) >>> 0; return hash.toString(16).padStart(8, '0') }
 /** 结构说明（自动提取）：deterministicPrefabText；输入 document；直接调用 clone、checksum、canonicalProjectText；写入 value.sourceChecksum。 */ function deterministicPrefabText(document: PrefabDocument): string { const value = clone(document); value.sourceChecksum = checksum(value.bundle); return canonicalProjectText(value) }
 
-/** 结构说明（自动提取）：prefabRecord；输入 assetRef；直接调用 resolveAsset、readTextAsset、JSON.parse、includes、Array.isArray 等。 */ function prefabRecord(assetRef: string | null | undefined): { reference: string; document: PrefabDocument } | null {
-  const asset = resolveAsset(assetRef)
-  const source = readTextAsset(assetRef)
-  if (!asset || asset.assetType !== 'prefab' || !source) return null
-  try {
-    const document = JSON.parse(source) as Partial<PrefabDocument> & { prefabVersion?: number }
-    if (![1, 2].includes(document.prefabVersion ?? 0) || !document.bundle || !Array.isArray(document.bundle.entities) || !Array.isArray(document.bundle.rootUuids)) return null
-    const normalized: PrefabDocument = { prefabVersion: 2, name: String(document.name ?? asset.name).slice(0, 80), bundle: document.bundle, variantOf: typeof document.variantOf === 'string' ? document.variantOf : null, sourceChecksum: typeof document.sourceChecksum === 'string' ? document.sourceChecksum : checksum(document.bundle), createdAt: typeof document.createdAt === 'string' ? document.createdAt : new Date(0).toISOString() }
-    return { reference: assetReference(asset.uuid), document: normalized }
-  } catch {
-    return null
-  }
-}
+const prefabRecord = createRuntimePrefabReader({resolveAsset,readSource:readTextAsset})
 
 /** 结构说明（自动提取）：storedTransform；输入 record；直接调用 record.components.find。 */ function storedTransform(record: SceneEntityData): Record<string, unknown> | null {
   const component = record.components?.find(/* 比较 candidate.kind 与 'Transform2D'，返回严格相等的判断结果。 */ candidate => candidate.kind === 'Transform2D')
@@ -105,25 +88,7 @@ export interface PrefabDocument {
   select = true,
   invalidateRuntime = true
 ): Entity[] {
-  const prefab = prefabRecord(assetRef)
-  if (!prefab) return []
-  const instance = instantiateEntityBundle(prefab.document.bundle, { x: 0, y: 0 }, '', select, invalidateRuntime)
-  const instanceUuid = normalizeUuid(undefined)
-  for (const [sourceUuid, entity] of instance.sourceToEntity) {
-    entity.prefabAsset = prefab.reference
-    entity.prefabInstanceUuid = instanceUuid
-    entity.prefabSourceUuid = sourceUuid
-    entity.prefabOverrides = {}
-    entity.ownership = 'Prefab'
-  }
-  const instanceRootUuid = instance.roots[0]?.uuid ?? null
-  for (const entity of instance.entities) entity.ownerUuid = instanceRootUuid
-  if (position && instance.roots.length) {
-    const origin = worldTransform(instance.roots[0], physicsState.world.entities).position
-    const delta = { x: position.x - origin.x, y: position.y - origin.y }
-    for (const root of instance.roots) translateEntityTree(root, delta, physicsState.world.entities)
-  }
-  return instance.entities
+  return new RuntimePrefabInstantiator(physicsState.world, { readPrefab: prefabRecord, createEntity: createEntityFromData, selectEntities }).instantiatePrefab(assetRef, position, select, invalidateRuntime)
 }
 
 /** 结构说明（自动提取）：prefabInstanceEntities；输入 entity；直接调用 physicsState.world.entities.filter。 */ export function prefabInstanceEntities(entity: Entity): Entity[] {
@@ -474,3 +439,6 @@ export interface PrefabConflict { code: 'missing-source' | 'circular-dependency'
   }
   return replacements
 }
+
+/** Runtime catalog port delegates the same original parser; authoring functions remain here. */
+export function getRuntimePrefabRecord(reference:string):{reference:string;document:PrefabDocument}|null { return prefabRecord(reference) }

@@ -1,6 +1,6 @@
 /** 场景文档管理器：保存已加载场景、活动场景和导航记录，支持继承依赖与项目导入导出。 */
 import { normalizeUuid } from './identity'
-import { defaultSceneAuthoringSettings, normalizeSceneAuthoringSettings, type SceneAuthoringSettings, type SceneExternalState, type SceneValidationState } from '../editor/sceneAuthoring'
+import { defaultSceneAuthoringSettings, normalizeSceneAuthoringSettings, type SceneAuthoringSettings, type SceneExternalState, type SceneValidationState } from './sceneSettings'
 
 export interface SceneDocument {
   uuid: string

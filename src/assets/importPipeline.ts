@@ -1,5 +1,6 @@
 /** 资源导入管线：读取来源、计算摘要、验证并缓存产物，管理取消重试及外部来源监听。 */
 import { resetImportSessionCaches } from './importRetention'
+import { auxiliaryWork, performanceCoordinator } from '../runtime/performance/services'
 import { reactive } from 'vue'
 import { BoundedImportCache, IMPORT_LIMITS } from './importRetention'
 import { sha256Bytes } from './contentHash'
@@ -8,7 +9,6 @@ import { assetSettingsHash, stableAssetSettings, validateImportSource } from './
 
 export const ASSET_IMPORTER_VERSION = '3.1.0'
 const CACHE_NAME = 'nova-a-imports-v3.1'
-const MAX_PARALLEL_IMPORTS = Math.max(1, Math.min(4, typeof navigator !== 'undefined' && navigator.hardwareConcurrency ? Math.floor(navigator.hardwareConcurrency / 2) : 2))
 
 export interface AssetImportJob {
   id: number
@@ -35,8 +35,6 @@ export interface ImportedArtifact {
 }
 
 let nextJobId = 1
-let running = 0
-const waiting: Array<() => void> = []
 const controllers = new Map<number, AbortController>()
 const memoryCache = new BoundedImportCache<string, Blob>(IMPORT_LIMITS.cacheEntries, IMPORT_LIMITS.memoryBytes)
 const retryInputs = new BoundedImportCache<number, { file: File; settings: AssetImportSettings; targetUuid?: string }>(IMPORT_LIMITS.retries, IMPORT_LIMITS.retryBytes, /** 重试输入被驱逐时取消对应任务的可重试标记。 */ id => { const job = importPipelineState.jobs.find(/* 比较 job.id 与 id，返回严格相等的判断结果。 */ job => job.id === id); if (job) job.retryable = false })
@@ -52,19 +50,6 @@ export const importPipelineState = reactive({ jobs: [] as AssetImportJob[], exte
 }
 
 const stable=stableAssetSettings
-
-/** 获取有界导入并发名额，满额时加入可取消队列。 */ async function acquire(signal: AbortSignal): Promise<void> {
-  if (signal.aborted) throw new DOMException('Import cancelled', 'AbortError')
-  if (running < MAX_PARALLEL_IMPORTS) { running++; return }
-  await new Promise<void>(/** 登记等待导入名额的启动及取消处理器，避免取消任务残留队列。 */ (resolve, reject) => {
-    const start = /** 轮到等待任务时移除取消监听，增加运行计数并允许导入继续。 */ () => { signal.removeEventListener('abort', cancel); running++; resolve() }
-    const cancel = /** 从并发等待队列移除当前任务并以取消错误结束等待。 */ () => { const index = waiting.indexOf(start); if (index >= 0) waiting.splice(index, 1); reject(new DOMException('Import cancelled', 'AbortError')) }
-    waiting.push(start)
-    signal.addEventListener('abort', cancel, { once: true })
-  })
-}
-
-/** 扣减运行名额并唤醒队列首个等待任务。 */ function release(): void { running = Math.max(0, running - 1); waiting.shift()?.() }
 
 /** 以可取消流分块读取源文件并更新进度，检查字节预算后合并缓冲；无流接口时使用文件缓冲读取。 */ async function readBytes(file: File, job: AssetImportJob, signal: AbortSignal): Promise<ArrayBuffer> {
   if (!file.stream) return file.arrayBuffer()
@@ -182,6 +167,7 @@ let diskMaintenance: Promise<void> = Promise.resolve()
 }
 
 /** 在有界可取消队列中读取校验并哈希源文件，验证缓存和解码产物，生成元信息并管理失败重试及任务清理。 */ export async function processAssetImport(file: File, settings: AssetImportSettings, options: { targetUuid?: string; signal?: AbortSignal } = {}): Promise<ImportedArtifact> {
+  const requestedAtMs = performance.now()
   if (controllers.size >= IMPORT_LIMITS.jobs) throw new Error('IMPORT_QUEUE_LIMIT: Wait for current imports before adding more files.')
   settings = JSON.parse(JSON.stringify(settings)) as AssetImportSettings
   const job = reactive<AssetImportJob>({ id: nextJobId++, name: file.name, progress: 0, status: 'queued', error: '', logs: ['Queued import'], retryable: false })
@@ -190,10 +176,18 @@ let diskMaintenance: Promise<void> = Promise.resolve()
   controllers.set(job.id, controller)
   const abort = /* 调用 controller.abort() 并返回调用结果。 */ () => controller.abort()
   options.signal?.addEventListener('abort', abort, {once: true}); if(options.signal?.aborted) controller.abort()
-  let acquired = false
+
   try {
     if (file.size > IMPORT_LIMITS.sourceBytes) throw new Error('SOURCE_TOO_LARGE: Source exceeds the 512 MiB importer limit.')
-    await acquire(controller.signal); acquired = true
+    if (controller.signal.aborted) throw new DOMException('Import cancelled', 'AbortError')
+    const work = auxiliaryWork.schedule<ImportedArtifact>({ name: `import:${file.name}`, owner: 'asset', workClass: 'required', requestedAtMs,
+      inputBytes: file.size, scratchBytes: Math.max(1024, file.size * 2), outputBytes: Math.max(1024, file.size * 4),
+      readSet: [`source:${file.name}:${file.size}:${file.lastModified}`], writeSet: [],
+      cooperative: true, cancelStrategy: 'checkpoint' }, async context => {
+      const cancelFromScheduler = () => controller.abort()
+      context.signal.addEventListener('abort', cancelFromScheduler, { once: true })
+      if (context.signal.aborted) controller.abort()
+      try {
     job.status = 'reading'; job.logs.push('Reading source bytes')
     const bytes = await readBytes(file, job, controller.signal)
     if (controller.signal.aborted) throw new DOMException('Import cancelled', 'AbortError')
@@ -229,6 +223,13 @@ let diskMaintenance: Promise<void> = Promise.resolve()
         diagnostics, reproducible: true, deprecatedSettings: []
       }
     }
+      } finally { context.signal.removeEventListener('abort', cancelFromScheduler) }
+    })
+    const cancelWork = () => work.cancel('Import cancelled')
+    controller.signal.addEventListener('abort', cancelWork, { once: true })
+    if (controller.signal.aborted) cancelWork()
+    try { return await work.promise }
+    finally { controller.signal.removeEventListener('abort', cancelWork) }
   } catch (error) {
     job.status = controller.signal.aborted || error instanceof DOMException && error.name === 'AbortError' ? 'cancelled' : 'failed'
     job.error = error instanceof Error ? error.message : String(error)
@@ -237,7 +238,6 @@ let diskMaintenance: Promise<void> = Promise.resolve()
   } finally {
     options.signal?.removeEventListener('abort', abort)
     controllers.delete(job.id)
-    if (acquired) release()
     while (importPipelineState.jobs.length > IMPORT_LIMITS.jobs) { const index = importPipelineState.jobs.findIndex(/* 调用 ['complete', 'cancelled', 'failed'].includes(value.status) 并返回调用结果。 */ value => ['complete', 'cancelled', 'failed'].includes(value.status)); if (index < 0) break; retryInputs.delete(importPipelineState.jobs[index].id); importPipelineState.jobs.splice(index, 1) }
     window.setTimeout(/** 延迟移除已结束导入任务及其保留重试输入，避免状态列表长期增长。 */ () => {
       const index = importPipelineState.jobs.indexOf(job)
@@ -304,9 +304,11 @@ const watchers = new Map<string, { handle: WatchedHandle; modified: number | nul
 /* 调用 watchers.has(uuid) 并返回调用结果。 */ export function isAssetWatched(uuid: string): boolean { return watchers.has(uuid) }
 
 /** 清理会话缓存，取消所有活动导入和文件监听，并释放重试、内存缓存及外部变更记录。 */ export function clearAssetImportSession(): void {
+  auxiliaryWork.cancelAll('Job cancelled: project session changed')
+  performanceCoordinator.advanceEpoch()
   resetImportSessionCaches()
   for (const controller of controllers.values()) controller.abort()
   for (const uuid of [...watchers.keys()]) stopWatchingAsset(uuid)
   retryInputs.clear(); memoryCache.clear(); importPipelineState.externalChanges.splice(0)
 }
-/** 返回导入缓存、重试、运行队列和文件监听的当前保留量供诊断。 */ export function assetImportRetentionStats() { return { cacheEntries: memoryCache.size, cacheBytes: memoryCache.bytes, retries: retryInputs.size, retryBytes: retryInputs.bytes, running, queued: waiting.length, watchers: watchers.size } }
+/** 返回导入缓存、重试、共享额度中的资源队列和文件监听的当前保留量供诊断。 */ export function assetImportRetentionStats() { const work = auxiliaryWork.counts('asset'); return { cacheEntries: memoryCache.size, cacheBytes: memoryCache.bytes, retries: retryInputs.size, retryBytes: retryInputs.bytes, running: work.active, queued: work.queued, watchers: watchers.size } }

@@ -1,18 +1,15 @@
 /** 场景绘制编排：把当前场景、相机及可绘制组件转换为渲染后端提交的绘制命令。 */
-import { resolveAsset, resolveTexture } from '../assets/AssetDatabase'
 import { compoundGeometries } from '../world/compoundGeometry'
 import type { Connection } from '../world/Connection'
-import { Camera2D, ParticleEmitter2D, ShapeRenderer2D, SpriteRenderer2D, TextRenderer2D, TileMap2D } from '../world/components'
+import type { Camera2D, ParticleEmitter2D, ShapeRenderer2D, SpriteRenderer2D, TextRenderer2D, TileMap2D } from '../world/components'
 import type { Entity } from '../world/Entity'
 import { worldTransform } from '../world/hierarchy'
 import type { CameraRenderView, RenderColor, Renderer2D, RendererStats } from './types'
-import { tileChunkCommands } from '../runtime/tilemap'
-import { particleRuntime } from '../runtime/particles'
 import { canvasMaterialColor, resolveMaterial } from './materials'
 import type { TextureFilter } from './types'
-import { deformSkin } from '../runtime/rigging'
-import { renderingSettings, updateActivePostProcess, updateActiveRenderQuality } from './renderSettings'
+import { resolveSceneRendererEnvironment, sceneRenderingSettings, type SceneRendererEnvironment } from './SceneRendererEnvironment'
 import { cameraViewportHalfExtents, visibleWorldBounds } from './cameraMath'
+import { renderBoundsIntersect, transformedRenderBounds, type RenderBounds2D } from './visibilityBounds'
 
 export { gameScreenToWorld, visibleWorldBounds } from './cameraMath'
 
@@ -70,7 +67,8 @@ let timelineCameraBlend: TimelineCameraBlendOverride | null = null
 /** 将 value ? { ...value, weight: Math.min(1, Math.max(0, finite(value.weight, 0))) } : null 赋给 timelineCameraBlend，不显式返回值。 */ export function setTimelineCameraBlend(value: TimelineCameraBlendOverride | null): void { timelineCameraBlend = value ? { ...value, weight: Math.min(1, Math.max(0, finite(value.weight, 0))) } : null }
 
 /* 收集活动游戏相机，计算跟随与时间轴混合后的视图，并按优先级稳定排序。 */
-export function activeGameCameras(entities: Entity[], width: number, height: number, deltaSeconds?: number): ActiveCamera[] {
+export function activeGameCameras(entities: Entity[], width: number, height: number, deltaSeconds?: number, environment?: SceneRendererEnvironment): ActiveCamera[] {
+  const renderingSettings = sceneRenderingSettings(environment)
   const safeWidth = Math.max(1, finite(width, 1)), safeHeight = Math.max(1, finite(height, 1))
   return entities
     .flatMap(/* 从有效相机实体生成经过跟随、混合和视口校正的渲染视图。 */ entity => {
@@ -116,13 +114,12 @@ export function activeGameCameras(entities: Entity[], width: number, height: num
     .sort(/* 依次比较相机优先级、堆叠顺序及实体编号。 */ (first, second) => first.component.priority - second.component.priority || first.component.stackOrder - second.component.stackOrder || first.entity.id - second.entity.id)
 }
 
-/* 当 activeGameCameras(entities, width, height)[0] 为 null 或 undefined 时返回 null，否则保留左侧值。 */ export function activeGameCamera(entities: Entity[], width: number, height: number): ActiveCamera | null { return activeGameCameras(entities, width, height)[0] ?? null }
+/* 当 activeGameCameras(entities, width, height)[0] 为 null 或 undefined 时返回 null，否则保留左侧值。 */ export function activeGameCamera(entities: Entity[], width: number, height: number, environment?: SceneRendererEnvironment): ActiveCamera | null { return activeGameCameras(entities, width, height, undefined, environment)[0] ?? null }
 
 /* 解析材质的混合与采样设置，非材质引用保留默认混合和回退采样。 */
-function renderState(reference: string, fallbackFilter: TextureFilter) {
-  const asset = resolveAsset(reference)
-  if (asset?.assetType !== 'material') return { blendMode: 'Alpha' as const, sampling: fallbackFilter, material: null }
-  const material = resolveMaterial(reference)
+function renderState(reference: string, fallbackFilter: TextureFilter, environment: SceneRendererEnvironment) {
+  if (environment.assetKind(reference) !== 'material') return { blendMode: 'Alpha' as const, sampling: fallbackFilter, material: null }
+  const material = resolveMaterial(reference, new Set(), environment.assets)
   return { blendMode: material.blendMode, sampling: material.sampling, material }
 }
 
@@ -167,14 +164,22 @@ function cssFontFamily(value: string): string {
 }
 
 /* 解析精灵资源并提交含视差重复、翻转、蒙皮及九宫格设置的绘制命令。 */
-function submitSprite(renderer: Renderer2D, entity: Entity, sprite: SpriteRenderer2D, entities: Entity[], view: CameraRenderView): void {
+type FrameSpriteMeshes = Map<Entity, ReturnType<SceneRendererEnvironment['deformSkin']>>
+/** Bounds and all cameras/repeat copies borrow one pose result during this synchronous frame. */
+function frameSpriteMesh(entity: Entity, sprite: SpriteRenderer2D, meshes: FrameSpriteMeshes, environment: SceneRendererEnvironment): ReturnType<SceneRendererEnvironment['deformSkin']> {
+  if (!meshes.has(entity)) meshes.set(entity, environment.deformSkin(entity, sprite))
+  return meshes.get(entity) ?? null
+}
+
+function submitSprite(renderer: Renderer2D, entity: Entity, sprite: SpriteRenderer2D, entities: Entity[], view: CameraRenderView, meshes: FrameSpriteMeshes, environment: SceneRendererEnvironment): void {
   if (!sprite.enabled || sprite.removed || !sprite.spriteAsset) return
-  const state = renderState(sprite.material, sprite.filterMode)
-  const texture = resolveTexture(sprite.spriteAsset, state.sampling)
+  const state = renderState(sprite.material, sprite.filterMode, environment)
+  const texture = environment.assets.resolveTexture(sprite.spriteAsset, state.sampling)
   if (!texture) return
   const transform = worldTransform(entity, entities)
   const base = authoringPosition(entity, transform.position, entities, view), parallaxLayer = ancestorParallax(entity, entities), parallax = parallaxLayer?.authoring.parallax
   const repeatX = parallax && parallax.repeat.x > 0 ? [-1, 0, 1] : [0], repeatY = parallax && parallax.repeat.y > 0 ? [-1, 0, 1] : [0]
+  const mesh = frameSpriteMesh(entity, sprite, meshes, environment)
   for (const y of repeatY) for (const x of repeatX) {
     const mirrored = parallax?.mirror === true && Math.abs(x + y) % 2 === 1
     renderer.submitSprite({
@@ -184,7 +189,7 @@ function submitSprite(renderer: Renderer2D, entity: Entity, sprite: SpriteRender
       sortingLayer: sprite.sortingLayer, orderInLayer: authoredOrder(entity, sprite.orderInLayer, entities) + (parallax?.depth ?? 0) * .000001,
       material: sprite.material, blendMode: state.blendMode,
       nineSlice: sprite.nineSlice.enabled ? { left: sprite.nineSlice.left, top: sprite.nineSlice.top, right: sprite.nineSlice.right, bottom: sprite.nineSlice.bottom } : null,
-      mesh: deformSkin(entity, sprite)
+      mesh
     })
   }
 }
@@ -206,14 +211,13 @@ function renderedPathVertices(entity: Entity): Array<{ x: number; y: number }> {
 }
 
 /* 解析导入字体及回退字体，提交包含描边、对齐和作者层级的文本命令。 */
-function submitText(renderer: Renderer2D, entity: Entity, text: TextRenderer2D, entities: Entity[], view: CameraRenderView): void {
+function submitText(renderer: Renderer2D, entity: Entity, text: TextRenderer2D, entities: Entity[], view: CameraRenderView, environment: SceneRendererEnvironment): void {
   if (!text.enabled || text.removed || !text.text) return
   const transform = worldTransform(entity, entities)
-  const fontAsset = resolveAsset(text.fontAsset)
-  const importedFont = fontAsset?.assetType === 'font' ? fontAsset : null
-  const fallbacks = importedFont?.settings.fontSettings.fallbackFamilies.map(cssFontFamily).filter(Boolean) ?? []
-  const primaryFamily = cssFontFamily(importedFont?.fontFamily || text.fontFamily) || 'sans-serif'
-  const outlineWidth = importedFont?.settings.fontSettings.outlineWidth ?? 0
+  const importedFont = environment.fontMetadata(text.fontAsset)
+  const fallbacks = importedFont?.fallbackFamilies.map(cssFontFamily).filter(Boolean) ?? []
+  const primaryFamily = cssFontFamily(importedFont?.family || text.fontFamily) || 'sans-serif'
+  const outlineWidth = importedFont?.outlineWidth ?? 0
   renderer.submitText({
     position: authoringPosition(entity, transform.position, entities, view), rotation: transform.rotation, scale: transform.scale,
     text: text.text, fontFamily: [primaryFamily, ...fallbacks].join(', '),
@@ -231,28 +235,69 @@ export function texturePreloadBounds(bounds: ReturnType<typeof visibleWorldBound
   return { minX: centerX - halfWidth, maxX: centerX + halfWidth, minY: centerY - halfHeight, maxY: centerY + halfHeight }
 }
 
+/** Cull the pixels submitted by this frontend, never an entity origin with a fixed-size guess. */
+function entityIntersectsRenderBounds(entity: Entity, entities: Entity[], view: CameraRenderView, bounds: RenderBounds2D, meshes: FrameSpriteMeshes, environment: SceneRendererEnvironment): boolean {
+  // Tile chunks own their transformed/parallax bounds. Text layout and live particle bounds are
+  // not exposed by these systems yet; retain them conservatively instead of dropping pixels.
+  if (entity.getComponent<TileMap2D>('TileMap2D') || entity.getComponent<ParticleEmitter2D>('ParticleEmitter2D') || entity.textRenderer?.text) return true
+  const shape = entity.getComponent<ShapeRenderer2D>('ShapeRenderer2D'), sprite = entity.spriteRenderer
+  if (!shape && !sprite) return true
+  const transform = worldTransform(entity, entities)
+  const position = authoringPosition(entity, transform.position, entities, view)
+  if (shape) {
+    const points = shape.shape === 'Ellipse'
+      ? [{ x: -shape.radiusX, y: -shape.radiusY }, { x: shape.radiusX, y: -shape.radiusY }, { x: shape.radiusX, y: shape.radiusY }, { x: -shape.radiusX, y: shape.radiusY }]
+      : renderedPathVertices(entity)
+    const local = points.length ? points : [{ x: -.5, y: -.5 }, { x: .5, y: -.5 }, { x: .5, y: .5 }, { x: -.5, y: .5 }]
+    // strokeGeometry caps its world-space miter at four half-widths.
+    if (renderBoundsIntersect(transformedRenderBounds(local, position, transform.rotation, transform.scale, Math.max(0, shape.strokeWidth) * 2), bounds)) return true
+  }
+  if (sprite?.spriteAsset) {
+    const mesh = frameSpriteMesh(entity, sprite, meshes, environment)
+    const left = -sprite.pivot.x * sprite.size.x, right = left + sprite.size.x
+    const bottom = -sprite.pivot.y * sprite.size.y, top = bottom + sprite.size.y
+    const local = mesh?.positions ?? [{ x: left, y: bottom }, { x: right, y: bottom }, { x: right, y: top }, { x: left, y: top }]
+    const spriteBounds = transformedRenderBounds(local, position, transform.rotation, transform.scale)
+    const repeat = ancestorParallax(entity, entities)?.authoring.parallax.repeat
+    if (spriteBounds && repeat) {
+      // The frontend submits the original and the two neighboring repeat copies.
+      const repeatX = Math.max(0, repeat.x), repeatY = Math.max(0, repeat.y)
+      spriteBounds.minX -= repeatX; spriteBounds.maxX += repeatX
+      spriteBounds.minY -= repeatY; spriteBounds.maxY += repeatY
+    }
+    if (renderBoundsIntersect(spriteBounds, bounds)) return true
+  }
+  return false
+}
+
 /* 逐相机提交世界绘制命令、更新质量并执行视域裁剪，在帧末处理纹理预加载任务。 */
-export function renderWorld(renderer: Renderer2D, entities: Entity[], options: SceneRenderOptions): RendererStats {
-  const cameras = options.gameView ? activeGameCameras(entities, options.width, options.height, options.deltaSeconds ?? 0) : []
+export function renderWorld(renderer: Renderer2D, entities: Entity[], options: SceneRenderOptions, suppliedEnvironment?: SceneRendererEnvironment): RendererStats {
+  const environment = resolveSceneRendererEnvironment(suppliedEnvironment)
+  const renderingSettings = environment.settings
+  const cameras = options.gameView ? activeGameCameras(entities, options.width, options.height, options.deltaSeconds ?? 0, environment) : []
   const primaryCamera = cameras[0] ?? null
   const qualityPosition = primaryCamera?.view.position ?? options.editorCamera.position ?? { x: 0, y: 0 }
-  updateActivePostProcess(qualityPosition)
-  updateActiveRenderQuality(qualityPosition)
-  renderer.beginFrame({
+  environment.publishPostProcess(qualityPosition)
+  environment.publishRenderQuality(qualityPosition)
+  const frame = {
     width: options.width,
     height: options.height,
     pixelRatio: options.pixelRatio,
     clearColor: primaryCamera?.background ?? parseCssColor(options.canvasColor)
-  })
+  }
+  if (renderer.tryBeginFrame) {
+    if (!renderer.tryBeginFrame(frame)) return { ...renderer.stats, cpuSubmissionAtMs: null }
+  } else renderer.beginFrame(frame)
   const compounds = compoundGeometries(entities, options.connections)
   const compoundMembers = new Set(compounds.filter(/* 比较 compound.members.length 与 1，返回大于的判断结果。 */ compound => compound.members.length > 1).flatMap(/* 返回按声明顺序构造的数组 [...compound.memberIds]。 */ compound => [...compound.memberIds]))
   const passes = options.gameView && cameras.length ? cameras : [{ entity: null, component: null, view: options.editorCamera, background: parseCssColor(options.canvasColor) }]
   const preloadJobs: Array<() => void> = [], requestedTextures = new Set<string>()
+  const spriteMeshes: FrameSpriteMeshes = new Map()
   let preparedTileTextures = 0
   const requestTexture = /* 对有限数量的纹理引用去重，解析后提交可选预加载请求。 */ (reference: string | null | undefined, filter?: TextureFilter) => {
     if (!reference || requestedTextures.has(reference) || requestedTextures.size >= 256) return
     requestedTextures.add(reference)
-    const texture = resolveTexture(reference, filter); if (texture) renderer.preloadTexture?.(texture)
+    const texture = environment.assets.resolveTexture(reference, filter); if (texture) renderer.preloadTexture?.(texture)
   }
   for (const camera of passes) {
     renderer.beginCamera(camera.view)
@@ -267,34 +312,29 @@ export function renderWorld(renderer: Renderer2D, entities: Entity[], options: S
       .filter(/* 先计算 options.renderLayer === 'all'；仅当其为假值时求右侧 entity.layer === options.renderLayer，返回短路求值结果。 */ entity => options.renderLayer === 'all' || entity.layer === options.renderLayer)
       .filter(/* 比较 (cullingMask & (1 << (entity.layer & 31))) 与 0，返回严格不等的判断结果。 */ entity => (cullingMask & (1 << (entity.layer & 31))) !== 0)
       .filter(/* 先计算 sortingLayer(entity) >= near；仅当其为真值时求右侧 sortingLayer(entity) <= far，返回短路求值结果。 */ entity => sortingLayer(entity) >= near && sortingLayer(entity) <= far)
-    const visible = candidates.filter(/* 在性能模式下按带余量的可见范围筛选实体位置，其余模式保留实体。 */ entity => {
-        if (!options.performanceMode) return true
-        const position = worldTransform(entity, entities).position
-        const margin = 4
-        return position.x >= visibleBounds.minX - margin && position.x <= visibleBounds.maxX + margin && position.y >= visibleBounds.minY - margin && position.y <= visibleBounds.maxY + margin
-      })
+    const visible = candidates.filter(entity => !options.performanceMode || entityIntersectsRenderBounds(entity, entities, camera.view, visibleBounds, spriteMeshes, environment))
       .sort(/* 依次比较实体排序层、作者层内次序及实体编号。 */ (first, second) => sortingLayer(first) - sortingLayer(second) || authoredOrder(first, first.renderer.orderInLayer, entities) - authoredOrder(second, second.renderer.orderInLayer, entities) || first.id - second.id)
     for (const entity of visible) {
       const tileMap = entity.getComponent<TileMap2D>('TileMap2D')
-      if (tileMap) for (const chunk of tileChunkCommands(entity, tileMap, entities, visibleBounds, camera.view.position)) renderer.submitTileChunk(chunk)
+      if (tileMap) for (const chunk of environment.tileChunkCommands(entity, tileMap, entities, visibleBounds, camera.view.position)) renderer.submitTileChunk(chunk)
       const shape = entity.getComponent<ShapeRenderer2D>('ShapeRenderer2D')
       if (shape) {
         const transform = worldTransform(entity, entities)
-        const materialState = renderState(shape.material, shape.filterMode)
+        const materialState = renderState(shape.material, shape.filterMode, environment)
         renderer.submitShape({
           shape: shape.shape, position: authoringPosition(entity, transform.position, entities, camera.view), rotation: transform.rotation, scale: transform.scale,
           vertices: renderedPathVertices(entity), radiusX: shape.radiusX, radiusY: shape.radiusY,
           fill: renderer.stats.backend === 'Canvas2D' && materialState.material ? canvasMaterialColor(materialState.material, rgba(shape.color, shape.opacity)) : rgba(shape.color, shape.opacity), stroke: rgba(shape.strokeColor, compoundMembers.has(entity.id) ? 0 : shape.strokeOpacity),
-          strokeWidth: shape.strokeWidth, texture: resolveTexture(shape.textureAsset, materialState.sampling),
+          strokeWidth: shape.strokeWidth, texture: environment.assets.resolveTexture(shape.textureAsset, materialState.sampling),
           sortingLayer: shape.sortingLayer, orderInLayer: authoredOrder(entity, shape.orderInLayer, entities), material: shape.material, blendMode: materialState.blendMode
         })
       }
       const sprite = entity.getComponent<SpriteRenderer2D>('SpriteRenderer2D')
-      if (sprite) submitSprite(renderer, entity, sprite, entities, camera.view)
+      if (sprite) submitSprite(renderer, entity, sprite, entities, camera.view, spriteMeshes, environment)
       const text = entity.getComponent<TextRenderer2D>('TextRenderer2D')
-      if (text) submitText(renderer, entity, text, entities, camera.view)
+      if (text) submitText(renderer, entity, text, entities, camera.view, environment)
     }
-    particleRuntime.submit(renderer, visible)
+    environment.submitParticles(renderer, visible, entities)
     for (const compound of compounds) {
       if (compound.members.length < 2 || !compound.members.some(/* 调用 visible.includes(member) 并返回调用结果。 */ member => visible.includes(member))) continue
       const style = compound.members[0].renderer
@@ -317,14 +357,14 @@ export function renderWorld(renderer: Renderer2D, entities: Entity[], options: S
           if (sprite?.enabled) { requestTexture(sprite.spriteAsset, sprite.filterMode); requestTexture(sprite.normalMapAsset, sprite.filterMode) }
           if (shape?.enabled) requestTexture(shape.textureAsset, shape.filterMode)
           if (particles?.enabled) requestTexture(particles.textureAsset)
-          for (const reference of [sprite?.material, shape?.material, particles?.material]) if (reference && reference !== 'Default') for (const texture of Object.values(resolveMaterial(reference).textures)) requestTexture(texture)
+          for (const reference of [sprite?.material, shape?.material, particles?.material]) if (reference && reference !== 'Default') for (const texture of Object.values(resolveMaterial(reference, new Set(), environment.assets).textures)) requestTexture(texture)
         })
         if (preloadJobs.length >= 256) break
       }
       for (const entity of visible) {
         const tileMap = entity.getComponent<TileMap2D>('TileMap2D')
         if (!tileMap?.enabled || preloadJobs.length >= 256) continue
-        preloadJobs.push(/* 在瓦片纹理数量预算内遍历预加载块并提交纹理请求。 */ () => { if (preparedTileTextures >= 256) return; for (const chunk of tileChunkCommands(entity, tileMap, entities, bounds, camera.view.position)) for (const sprite of chunk.sprites) { renderer.preloadTexture?.(sprite.texture); if (++preparedTileTextures >= 256) return } })
+        preloadJobs.push(/* 在瓦片纹理数量预算内遍历预加载块并提交纹理请求。 */ () => { if (preparedTileTextures >= 256) return; for (const chunk of environment.tileChunkCommands(entity, tileMap, entities, bounds, camera.view.position)) for (const sprite of chunk.sprites) { renderer.preloadTexture?.(sprite.texture); if (++preparedTileTextures >= 256) return } })
       }
     }
   }

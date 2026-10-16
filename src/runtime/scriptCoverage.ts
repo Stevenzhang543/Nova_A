@@ -1,7 +1,6 @@
 /** 脚本覆盖率记录：跟踪语句执行和未覆盖位置，生成可导出的覆盖结果。 */
-import { reactive } from 'vue'
-import { SCRIPT_API_V2_MANIFEST } from '../editor/scriptApi'
-import { analyzeScript } from '../editor/scriptLanguage'
+import { SCRIPT_API_V2_MANIFEST } from './scriptApiCatalog'
+import { analyzeScript } from './scriptAnalysis'
 import { NOVA_ENGINE_VERSION } from '../projects/projectFormat'
 
 export interface ScriptCoverageFile {
@@ -31,12 +30,25 @@ interface MutableCoverageFile extends ScriptCoverageFile {
   lineHits: Record<number, number>
 }
 
-export const scriptCoverageState = reactive({
+export let scriptCoverageState = {
   enabled: true,
   files: {} as Record<string, MutableCoverageFile>,
   bindingHits: {} as Record<string, number>,
   revision: 0
-})
+}
+
+let stateAdapterInstalled = false
+/** Bootstrap preflight only; the aggregate installer owns production installation. */
+export function isScriptCoverageStateAdapterInstalled(): boolean { return stateAdapterInstalled }
+/** Internal bootstrap: the aggregate installer stages all four views before committing. */
+export function installScriptCoverageStateAdapter(adapter: (target: typeof scriptCoverageState) => typeof scriptCoverageState): void {
+  if (stateAdapterInstalled) return
+  const view = adapter(scriptCoverageState)
+  if (!view || typeof view !== 'object') throw new TypeError('Script state adapter must wrap the existing scriptCoverageState target')
+  scriptCoverageState = view
+  stateAdapterInstalled = true
+}
+
 
 /** 按字符迭代计算源码变化摘要，供覆盖记录失效判断。 */ function hash(source: string): string {
   let value = 2166136261

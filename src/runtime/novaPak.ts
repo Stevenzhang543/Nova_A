@@ -2,36 +2,21 @@
 import { localizationBuildDependencies } from '../assets/localizationDependencies'
 import type { AssetRecord } from '../assets/types'
 import { NOVA_ENGINE_VERSION } from '../projects/projectFormat'
+import { NOVA_PAK_MAGIC, NOVA_PAK_HEADER_BYTES, NOVA_PAK_VERSION, NOVA_PAK_COMPATIBILITY_LIMITS, safePackagePath, runtimePackagePathKey, bytesToBase64, parseRuntimeNovaPak, projectJsonFromParsedNovaPak } from './novaPakReader'
+import type { NovaPakEntry, NovaPakIndex, ParsedNovaPak, RuntimePakLimits } from './novaPakReader'
+import { createWebNovaPakCapabilities, packageSha256 as sha256 } from '../platform/webNovaPakCodecs'
+export { NOVA_PAK_COMPATIBILITY_LIMITS } from './novaPakReader'
+const packageCodecs = createWebNovaPakCapabilities()
 
-const MAGIC = new TextEncoder().encode('NOVAPAK\0')
-const HEADER_BYTES = 16
-export const NOVA_PAK_VERSION = 1
 
-export interface NovaPakEntry {
-  path: string
-  offset: number
-  length: number
-  originalLength: number
-  codec: 'store' | 'gzip'
-  mimeType: string
-  sha256: string
-  assetUuid?: string
-  assetType?: string
-}
-export interface NovaPakIndex {
-  format: 'nova-pak'
-  version: number
-  engineVersion: string
-  createdAt: string
-  startupSceneUuid: string
-  physicsProfile?: Record<string, unknown>
-  entries: NovaPakEntry[]
-}
+const MAGIC = new TextEncoder().encode(NOVA_PAK_MAGIC)
+const HEADER_BYTES = NOVA_PAK_HEADER_BYTES
+export { NOVA_PAK_VERSION } from './novaPakReader'
 
-export interface ParsedNovaPak {
-  index: NovaPakIndex
-  files: Map<string, Uint8Array>
-}
+export type { NovaPakEntry } from './novaPakReader'
+export type { NovaPakIndex } from './novaPakReader'
+
+export type { ParsedNovaPak } from './novaPakReader'
 
 /** 结构说明（自动提取）：concatenate；输入 parts；直接调用 Uint8Array、parts.reduce、result.set；写入 cursor；返回路径包含 result；包含循环处理。 */ function concatenate(parts: Uint8Array[]): Uint8Array {
   const result = new Uint8Array(parts.reduce(/* 计算表达式 total + part.byteLength 并返回结果，沿用操作数的原有类型规则。 */ (total, part) => total + part.byteLength, 0))
@@ -40,14 +25,9 @@ export interface ParsedNovaPak {
   return result
 }
 
-/* 调用 [...bytes].map(value => value.toString(16).padStart(2, '0')).join('') 并返回调用结果。 */ function bytesToHex(bytes: Uint8Array): string {
-  return [...bytes].map(/* 调用 value.toString(16).padStart(2, '0') 并返回调用结果。 */ value => value.toString(16).padStart(2, '0')).join('')
-}
+/* 调用 [...bytes].map(value => value.toString(16).padStart(2, '0')).join('') 并返回调用结果。 */ /* Shared bytesToHex implementation is imported above; no second package-read algorithm. */
 
-/** 结构说明（自动提取）：sha256；输入 bytes；直接调用 bytes.buffer.slice、bytesToHex、Uint8Array、crypto.subtle.digest；等待异步结果。 */ async function sha256(bytes: Uint8Array): Promise<string> {
-  const input = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer
-  return bytesToHex(new Uint8Array(await crypto.subtle.digest('SHA-256', input)))
-}
+/** 结构说明（自动提取）：sha256；输入 bytes；直接调用 bytes.buffer.slice、bytesToHex、Uint8Array、crypto.subtle.digest；等待异步结果。 */ /* Shared sha256 implementation is imported above; no second package-read algorithm. */
 
 /** 结构说明（自动提取）：gzip；输入 bytes；直接调用 pipeThrough、stream、Blob、bytes.buffer.slice、CompressionStream 等；等待异步结果。 */ async function gzip(bytes: Uint8Array): Promise<Uint8Array | null> {
   if (!('CompressionStream' in globalThis) || bytes.byteLength < 128) return null
@@ -55,17 +35,9 @@ export interface ParsedNovaPak {
   return new Uint8Array(await new Response(stream).arrayBuffer())
 }
 
-/** 结构说明（自动提取）：gunzip；输入 bytes；直接调用 Error、pipeThrough、stream、Blob、bytes.buffer.slice 等；等待异步结果；包含显式抛错路径。 */ async function gunzip(bytes: Uint8Array): Promise<Uint8Array> {
-  if (!('DecompressionStream' in globalThis)) throw new Error('This browser cannot decompress Nova packages')
-  const stream = new Blob([bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)]).stream().pipeThrough(new DecompressionStream('gzip'))
-  return new Uint8Array(await new Response(stream).arrayBuffer())
-}
+/** 结构说明（自动提取）：gunzip；输入 bytes；直接调用 Error、pipeThrough、stream、Blob、bytes.buffer.slice 等；等待异步结果；包含显式抛错路径。 */ /* Shared gunzip implementation is imported above; no second package-read algorithm. */
 
-/** 结构说明（自动提取）：safePackagePath；输入 value；直接调用 replace、value.replace、some、normalized.split、Error；返回路径包含 normalized；包含显式抛错路径。 */ function safePackagePath(value: string): string {
-  const normalized = value.replace(/\\/g, '/').replace(/^\/+/, '')
-  if (!normalized || normalized.split('/').some(/* 比较 part 与 '..'，返回严格相等的判断结果。 */ part => part === '..')) throw new Error(`Unsafe package path: ${value}`)
-  return normalized
-}
+/** 结构说明（自动提取）：safePackagePath；输入 value；直接调用 replace、value.replace、some、normalized.split、Error；返回路径包含 normalized；包含显式抛错路径。 */ /* Shared safePackagePath implementation is imported above; no second package-read algorithm. */
 
 const INLINE_TEXT_ASSET_TYPES = new Set(['script', 'prefab', 'scene', 'material', 'animation', 'controller', 'animationMask', 'rig', 'skin', 'timeline', 'tileset', 'atlas', 'shader', 'localization', 'uiTheme', 'behaviorTree', 'stateMachine', 'tilePalette', 'brushPreset', 'terrainRules', 'dataSchema', 'dataTable', 'replay', 'resource'])
 
@@ -87,7 +59,7 @@ export interface NovaPakBuildOptions { deterministic?: boolean; compression?: 's
   // All package identity/source fields are scalar: capture them before the first asynchronous read.
   assets=assets.map(/** 构造并返回记录 {...asset}，字段按当前实参及捕获状态求值。 */ asset=>({...asset}))
   const identities=new Set<string>(),paths=new Set(['project.nova'])
-  for(const asset of assets){const path=safePackagePath(asset.path).toLowerCase(),id=asset.uuid.toLowerCase();if(identities.has(id)||paths.has(path))throw new Error(`Duplicate package asset identity/path: ${asset.path}`);identities.add(id);paths.add(path)}
+  for(const asset of assets){const path=runtimePackagePathKey(safePackagePath(asset.path)),id=asset.uuid.toLowerCase();if(identities.has(id)||paths.has(path))throw new Error(`Duplicate package asset identity/path: ${asset.path}`);identities.add(id);paths.add(path)}
   const project = JSON.parse(projectJson) as Record<string, unknown>
   const developmentBuild = (project.projectSettings as { build?: { developmentBuild?: boolean } } | undefined)?.build?.developmentBuild !== false
   const packageEntries = project.packages && typeof project.packages === 'object' && Array.isArray((project.packages as Record<string, unknown>).installed)
@@ -181,52 +153,14 @@ export interface NovaPakBuildOptions { deterministic?: boolean; compression?: 's
   return concatenate([header, indexBytes, ...blocks])
 }
 
-/** 结构说明（自动提取）：parseNovaPak；输入 source；直接调用 Uint8Array、MAGIC.every、Error、DataView、view.getUint32 等；包含循环处理；等待异步结果；包含显式抛错路径。 */ export async function parseNovaPak(source: ArrayBuffer | Uint8Array): Promise<ParsedNovaPak> {
-  const bytes = source instanceof Uint8Array ? source : new Uint8Array(source)
-  if (bytes.byteLength < HEADER_BYTES || !MAGIC.every(/* 比较 bytes[index] 与 value，返回严格相等的判断结果。 */ (value, index) => bytes[index] === value)) throw new Error('Not a Nova package')
-  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)
-  const version = view.getUint32(8, true)
-  if (version !== NOVA_PAK_VERSION) throw new Error(`Unsupported Nova package version ${version}`)
-  const indexLength = view.getUint32(12, true)
-  if (indexLength <= 0 || HEADER_BYTES + indexLength > bytes.byteLength) throw new Error('Nova package index is truncated')
-  const index = JSON.parse(new TextDecoder().decode(bytes.subarray(HEADER_BYTES, HEADER_BYTES + indexLength))) as NovaPakIndex
-  if (index.format !== 'nova-pak' || index.version !== version || !Array.isArray(index.entries)) throw new Error('Nova package index is invalid')
-  const dataStart = HEADER_BYTES + indexLength
-  const files = new Map<string, Uint8Array>()
-  for (const entry of index.entries) {
-    safePackagePath(entry.path)
-    if (!Number.isSafeInteger(entry.offset) || !Number.isSafeInteger(entry.length) || entry.offset < 0 || entry.length < 0 || dataStart + entry.offset + entry.length > bytes.byteLength) throw new Error(`Package entry ${entry.path} is outside the archive`)
-    const stored = bytes.slice(dataStart + entry.offset, dataStart + entry.offset + entry.length)
-    const decoded = entry.codec === 'gzip' ? await gunzip(stored) : stored
-    if (decoded.byteLength !== entry.originalLength) throw new Error(`Package entry ${entry.path} has the wrong size`)
-    if (await sha256(decoded) !== entry.sha256) throw new Error(`Package entry ${entry.path} failed its checksum`)
-    files.set(entry.path, decoded)
-  }
-  return { index, files }
+/** 结构说明（自动提取）：parseNovaPak；输入 source；直接调用 Uint8Array、MAGIC.every、Error、DataView、view.getUint32 等；包含循环处理；等待异步结果；包含显式抛错路径。 */ export async function parseNovaPak(source: ArrayBuffer | Uint8Array, limits: RuntimePakLimits = NOVA_PAK_COMPATIBILITY_LIMITS, signal?: AbortSignal): Promise<ParsedNovaPak> {
+  return parseRuntimeNovaPak(source, packageCodecs, limits, signal)
 }
 
-/** 结构说明（自动提取）：bytesToBase64；输入 bytes；直接调用 String.fromCharCode、bytes.subarray、btoa；写入 index、result；包含循环处理。 */ function bytesToBase64(bytes: Uint8Array): string {
-  let result = ''
-  const chunk = 0x8000
-  for (let index = 0; index < bytes.length; index += chunk) result += String.fromCharCode(...bytes.subarray(index, index + chunk))
-  return btoa(result)
-}
+/** 结构说明（自动提取）：bytesToBase64；输入 bytes；直接调用 String.fromCharCode、bytes.subarray、btoa；写入 index、result；包含循环处理。 */ /* Shared bytesToBase64 implementation is imported above; no second package-read algorithm. */
 
 /* 调用 bytesToBase64(bytes) 并返回调用结果。 */ export function packageBase64(bytes: Uint8Array): string { return bytesToBase64(bytes) }
 
-/** 结构说明（自动提取）：projectJsonFromNovaPak；输入 source；直接调用 parseNovaPak、parsed.files.get、Error、JSON.parse、decode 等；写入 asset.source、project.activeSceneUuid；包含循环处理；等待异步结果；包含显式抛错路径。 */ export async function projectJsonFromNovaPak(source: ArrayBuffer | Uint8Array): Promise<string> {
-  const parsed = await parseNovaPak(source)
-  const projectBytes = parsed.files.get('project.nova')
-  if (!projectBytes) throw new Error('Nova package has no project.nova entry')
-  const project = JSON.parse(new TextDecoder().decode(projectBytes)) as Record<string, unknown>
-  const assets = Array.isArray(project.assets) ? project.assets as Array<Record<string, unknown>> : []
-  for (const asset of assets) {
-    const path = typeof asset.path === 'string' ? asset.path : ''
-    const bytes = parsed.files.get(path)
-    if (!bytes) continue
-    const mimeType = typeof asset.mimeType === 'string' && asset.mimeType ? asset.mimeType : 'application/octet-stream'
-    asset.source = `data:${mimeType};base64,${bytesToBase64(bytes)}`
-  }
-  if (parsed.index.startupSceneUuid) project.activeSceneUuid = parsed.index.startupSceneUuid
-  return JSON.stringify(project)
+/** 结构说明（自动提取）：projectJsonFromNovaPak；输入 source；直接调用 parseNovaPak、parsed.files.get、Error、JSON.parse、decode 等；写入 asset.source、project.activeSceneUuid；包含循环处理；等待异步结果；包含显式抛错路径。 */ export async function projectJsonFromNovaPak(source: ArrayBuffer | Uint8Array, limits: RuntimePakLimits = NOVA_PAK_COMPATIBILITY_LIMITS, signal?: AbortSignal): Promise<string> {
+  return projectJsonFromParsedNovaPak(await parseNovaPak(source, limits, signal))
 }

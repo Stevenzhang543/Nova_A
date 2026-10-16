@@ -1,0 +1,5 @@
+{
+  "version": 1,
+  "baselineSourceSha256": "84b6e797431928da532185380c0995152475758f0604947aa30d31e93ebebbcc",
+  "exports": ["ExportedProperty", "RuntimeDiagnostics", "DEFAULT_SCRIPT_SOURCE", "GameplayInputReceiptObservation", "GameplayInputFrameObservation", "GameplayInputObservationCallbacks", "GameplayRuntime", "gameplayRuntime"]
+}

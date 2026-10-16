@@ -1,16 +1,18 @@
 /** 图生产编辑操作：维护例程及签名、稳定引用和节点迁移，执行函数提取、语义差异、三方合并及热重载兼容分析。 */
 import { createGraphNode, graphNodeDefinition } from './graphCatalog'
-import { canonicalGraphDocument, defaultGraphValue, graphUuid, parseGraphDocument, serializeGraphDocument, type GraphCanvasScope, type GraphCustomEvent, type GraphInterface, type GraphParameter, type GraphRoutine, type GraphRoutineKind, type GraphValue, type GraphValueType, type NovaGraphDocument } from './graphTypes'
+import { canonicalGraphDocument, defaultGraphValue, graphUuid, parseGraphDocument, serializeGraphDocument, type GraphCanvasScope, type GraphCustomEvent, type GraphInterface, type GraphParameter, type GraphRoutine, type GraphRoutineKind, type GraphValueType, type NovaGraphDocument } from './graphTypes'
+import { stable, ordinal } from './graphRuntimeHotReload'
+export { planGraphHotReload } from './graphRuntimeHotReload'
+export type { GraphHotReloadPlan } from './graphRuntimeHotReload'
+
 
 export type GraphReferenceKind = 'variable' | 'local' | 'routine' | 'event' | 'interface' | 'library' | 'node'
 export interface GraphReference { kind: GraphReferenceKind; targetUuid: string; scopeUuid: string; nodeUuid: string; label: string }
 export interface GraphSemanticChange { identity: string; kind: 'added' | 'removed' | 'modified' | 'moved' | 'renamed'; path: string; before: unknown; after: unknown }
 export interface GraphMergeConflict { id: string; identity: string; path: string; base: unknown; ours: unknown; theirs: unknown; resolution: 'unresolved' | 'ours' | 'theirs' }
 export interface GraphMergeResult { graph: NovaGraphDocument; conflicts: GraphMergeConflict[]; changes: GraphSemanticChange[] }
-export interface GraphHotReloadPlan { compatible: boolean; reasons: string[]; preserved: Record<string, GraphValue>; initialized: string[]; dropped: string[] }
 
 /** 清理脚本标识符并限制为八十字符；清理后为空时使用备用名。 */ function identifier(value: string, fallback: string): string { const safe = value.trim().replace(/[^A-Za-z0-9_]/g, '_').replace(/^[^A-Za-z_]+/, '').slice(0, 80); return safe || fallback }
-/* 根据 a < b 的真假，分别返回 -1 或 a > b ? 1 : 0。 */ function ordinal(a: string, b: string): number { return a < b ? -1 : a > b ? 1 : 0 }
 /** 构造并返回记录 { uuid: graphUuid(), name: identifier(name, 'value'), valueType, defaultValue: defaultGraphValue(valueType), tooltip: '' }，字段按当前实参及捕获状态求值。 */ function parameter(name: string, valueType: GraphValueType = 'Data'): GraphParameter { return { uuid: graphUuid(), name: identifier(name, 'value'), valueType, defaultValue: defaultGraphValue(valueType), tooltip: '' } }
 /* 返回具有所列字段的新对象 { nodes: [], edges: [], comments: [], viewport: { x: 80, y: 80, zoom: 1 } }。 */ function emptyScope(): GraphCanvasScope { return { nodes: [], edges: [], comments: [], viewport: { x: 80, y: 80, zoom: 1 } } }
 
@@ -138,8 +140,6 @@ export interface GraphHotReloadPlan { compatible: boolean; reasons: string[]; pr
   return routine
 }
 
-/** 递归按键排序对象，保留数组顺序，生成用于稳定比较的值结构。 */ function stableObject(value: unknown): unknown { if (Array.isArray(value)) return value.map(stableObject); if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value as Record<string, unknown>).sort(/* 调用 ordinal(a, b) 并返回调用结果。 */ ([a], [b]) => ordinal(a, b)).map(/* 返回按声明顺序构造的数组 [key, stableObject(item)]。 */ ([key, item]) => [key, stableObject(item)])); return value }
-/* 调用 JSON.stringify(stableObject(value)) 并返回调用结果。 */ function stable(value: unknown): string { return JSON.stringify(stableObject(value)) }
 /** 按 UUID 展开图声明、作用域、节点、连线和注释，记录各自语义路径。 */ function identityItems(graph: NovaGraphDocument): Map<string, { path: string; value: unknown }> {
   const output = new Map<string, { path: string; value: unknown }>(), add = /* 调用 output.set(identity, { path, value }) 并返回调用结果。 */ (identity: string, path: string, value: unknown) => output.set(identity, { path, value })
   add(graph.uuid, 'graph', { ...graph, variables: undefined, routines: undefined, nodes: undefined, edges: undefined, comments: undefined, customEvents: undefined, interfaces: undefined, libraries: undefined, migrations: undefined })
@@ -206,13 +206,4 @@ export interface GraphHotReloadPlan { compatible: boolean; reasons: string[]; pr
     else (current as Record<string, unknown>)[last] = selected
   }
   return { graph: parseGraphDocument(serializeGraphDocument(result.graph)), conflicts: result.conflicts, changes: result.changes }
-}
-
-/** 按 UUID 与类型和序列化生命周期保留兼容变量状态；列出新增、移除和公共例程签名变化作为重载判断依据。 */ export function planGraphHotReload(previousInput: NovaGraphDocument | string, candidateInput: NovaGraphDocument | string, state: Record<string, GraphValue>): GraphHotReloadPlan {
-  const previous = typeof previousInput === 'string' ? parseGraphDocument(previousInput) : previousInput, candidate = typeof candidateInput === 'string' ? parseGraphDocument(candidateInput) : candidateInput, reasons: string[] = [], preserved: Record<string, GraphValue> = {}, initialized: string[] = [], dropped: string[] = [], before = new Map(previous.variables.map(/* 返回按声明顺序构造的数组 [item.uuid, item]。 */ item => [item.uuid, item]))
-  for (const variable of candidate.variables) { const old = before.get(variable.uuid); if (old && old.valueType === variable.valueType && old.serialized === variable.serialized) preserved[variable.name] = state[old.name] ?? old.defaultValue; else { initialized.push(variable.name); if (old) reasons.push(`Variable ${variable.name} changed type or lifetime.`) } }
-  for (const variable of previous.variables) if (!candidate.variables.some(/* 比较 item.uuid 与 variable.uuid，返回严格相等的判断结果。 */ item => item.uuid === variable.uuid)) { dropped.push(variable.name); if (variable.serialized) reasons.push(`Serialized variable ${variable.name} was removed.`) }
-  const previousRoutines = new Map(previous.routines.map(/* 返回按声明顺序构造的数组 [item.uuid, item]。 */ item => [item.uuid, item]))
-  for (const routine of candidate.routines) { const old = previousRoutines.get(routine.uuid); if (old && stable({ inputs: old.inputs, outputs: old.outputs, kind: old.kind }) !== stable({ inputs: routine.inputs, outputs: routine.outputs, kind: routine.kind })) reasons.push(`Routine ${routine.name} changed its public signature.`) }
-  return { compatible: reasons.length === 0, reasons: reasons.length ? reasons : ['Stable identities and serialized variable layouts are compatible.'], preserved, initialized, dropped }
 }

@@ -1,5 +1,5 @@
 /** 脚本测试执行桥接：组织脚本测试运行请求和结果回传。 */
-import type { ScriptTestMetadata } from '../editor/scriptLanguage'
+import type { ScriptTestMetadata } from './scriptAnalysis'
 import type { ScriptTestResult } from './scriptDebug'
 
 export interface TestExecutionResult { properties: Record<string, unknown>; logs: Array<{ level: string; message: string }> }

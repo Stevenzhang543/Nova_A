@@ -2,8 +2,9 @@
 <script setup lang="ts">
 import { installEditorTouch } from '../runtime/editorTouch'
 import { boundedFrame } from '../renderer/surfaceLimits'
-import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
-import { physicsState, pushHistory, selectEntities } from '../store/physics'
+import { ref, shallowRef, triggerRef, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
+import { physicsState, pushHistory, selectEntities, sceneManager } from '../store/physics'
+import { getProjectSessionGeneration } from '../projects/projectSession'
 import { BoxEntity } from '../world/BoxEntity'
 import { CircleEntity } from '../world/CircleEntity'
 import { TriangleEntity } from '../world/TriangleEntity'
@@ -18,22 +19,28 @@ import { defaultColorForLayer } from '../world/layers'
 import { compoundGeometries } from '../world/compoundGeometry'
 import { localPointToWorld, prepareHierarchyIndex, worldPointToLocal, worldTransform } from '../world/hierarchy'
 import { applyRotation, applyScale, applyTranslation, axisVector, captureTransforms, gizmoPivot, gizmoRotation, projectedDelta, type GizmoAxis, type TransformSnapshot } from '../editor/gizmo'
-import { createRenderer2D, RendererCanvasReplacementRequired, type Renderer2D } from '../renderer'
+import { createRenderer2D, createRendererRecoveryOwner, editorSceneRendererEnvironment, editorLightingEnvironment, RendererCanvasReplacementRequired, type Renderer2D } from '../editor/rendererAdapter'
+import { createEditorParticleOwner } from '../editor/particleAdapter'
+import { createRenderer2D as createRuntimeRenderer2D } from '../renderer/core'
+import { editorRendererEnvironment } from '../editor/rendererAdapter'
+import type { RuntimeWorldView, RuntimeWorldSurface } from '../runtime/runtimeWorldHostContracts'
 import { reportRendererReset } from '../renderer/capabilities'
 import { renderWorld } from '../renderer/sceneRenderer'
 import { assetReference, resolveAsset } from '../assets/AssetDatabase'
 import { type CharacterBody2D, type Joint2D, type RectTransform, type TextInput, type TileMap2D } from '../world/components'
-import { gameplayRuntime } from '../runtime/GameplayRuntime'
-import { gameUiRuntime, type UiAccessibilityNode } from '../runtime/gameUi'
+import { gameplayRuntime as editorGameplayRuntime } from '../runtime/GameplayRuntime'
+import type { GameplayRuntime } from '../runtime/GameplayRuntimeCore'
+import { GameUiRuntime, gameUiRuntime as editorGameUiRuntime, type UiAccessibilityNode } from '../runtime/gameUi'
 import { rebindInputAction } from '../runtime/input'
 import { instantiatePrefab } from '../runtime/prefabs'
+import {getEditorTileMapOwner} from '../editor/tileMapAdapter'
 import { beginTileStroke, continueTileStroke, endTileStroke, tilemapEditorState, worldToTile, type TileStroke } from '../runtime/tilemap'
 import { profilerState, recordFrameProfile } from '../runtime/profiler'
 import { samplePerformanceTools } from '../runtime/performanceTools'
 import { reportFatalError, reportRecoverableError } from '../runtime/faultCenter'
 import { physicsDebugState } from '../runtime/physicsDebug'
 import { renderDebugView2D, renderLighting2D, renderPostProcessOverlay, worldPostProcessFilter } from '../renderer/lighting2d'
-import { beginRenderGraph, captureRenderSurface, completeRenderGraph, recordRenderPass, renderGraphState } from '../renderer/renderGraph'
+import { beginRenderGraph, captureRenderSurface, completeRenderGraph, createRenderGraphDiagnosticsOwner, recordRenderPass, renderGraphState, type RenderGraphDiagnosticsScope } from '../renderer/renderGraph'
 import { captureRenderTexture } from '../renderer/renderTextures'
 import { activeGameCameras, resetCameraSmoothing } from '../renderer/sceneRenderer'
 import { activeRenderQuality, renderingSettings } from '../renderer/renderSettings'
@@ -43,19 +50,52 @@ import { navigationPaths, worldGameplayState } from '../runtime/worldGameplay'
 import { aiDebugState } from '../runtime/aiTools'
 import { worldStreamingState } from '../runtime/worldStreaming'
 import { authoringState, createAuthoringObject } from '../editor/authoring2d'
-import { timelinePresentationState } from '../runtime/timeline'
 import VirtualControlsOverlay from './VirtualControlsOverlay.vue'
-import { beginPerformanceFrame, completePerformanceFrame, markPerformanceInput, performanceRuntimeState } from '../runtime/largeWorldPerformance'
+import { beginPerformanceFrame, completePerformanceFrame, currentPerformanceFrameObservation, forgetPerformanceInput, markPerformanceInput, markPerformanceSubmission, performanceRuntimeState, rebasePerformanceFrameContinuity } from '../runtime/largeWorldPerformance'
+import { InputReceiptTokenMap } from '../runtime/performance/observability'
 import { PHYSICS_UNITS } from '../runtime/physicsProduction'
+import { normalizeSimulationFrameDelta } from '../runtime/engineTiming'
 import { UiNativeInputBridge, isExternalUiControl } from '../runtime/uiNativeInput'
-import { runtimeAccessibilitySettings, runtimeCaptions, activeRuntimeCaptions } from '../runtime/presentation'
+
 import { setInputModality } from '../runtime/inputModality'
 import { activeTextDirection } from '../runtime/localization'
 
+// Runtime identity is fixed for this Canvas mount; the Editor keeps its existing default.
+const props = defineProps<{ runtime?: GameplayRuntime | null; runtimeView?: RuntimeWorldView | null; runtimeSurface?: RuntimeWorldSurface | null }>()
+const runtimeView = props.runtimeView ?? null
+const runtimeSurface = props.runtimeSurface ?? null
+if (Boolean(props.runtime) !== Boolean(runtimeView) || Boolean(runtimeView) !== Boolean(runtimeSurface)) throw new Error('RUNTIME_CANVAS_COMPOSITION_REQUIRED')
+const gameplayRuntime = props.runtime ?? editorGameplayRuntime
+if (runtimeView && (gameplayRuntime.presentation.world !== runtimeView.state.world || gameplayRuntime.scriptDebugger.world !== runtimeView.state.world || gameplayRuntime.graphDebug.world !== runtimeView.state.world)) throw new Error('RUNTIME_CANVAS_WORLD_MISMATCH')
+const runtimeAccessibilitySettings=gameplayRuntime.presentation.state.accessibility
+const runtimeCaptions=gameplayRuntime.presentation.state.captions
+const activeRuntimeCaptions=()=>gameplayRuntime.presentation.activeRuntimeCaptions()
+// The Player Canvas owns its UI interaction controller and uses this Core audio; the Editor retains its existing singleton.
+const gameUiRuntime = props.runtime ? new GameUiRuntime(gameplayRuntime.audio,()=>gameplayRuntime.presentation.state) : editorGameUiRuntime
+// Plain Runtime presentation stays owned by Core; Vue observes only this Canvas bridge.
+const timelinePresentationState=shallowRef(gameplayRuntime.animationTimeline.presentation)
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 const renderCanvasRef = ref<HTMLCanvasElement | null>(null)
 const renderCanvasKey = ref(0)
 let rendererInitialization = 0, canvasDisposed = false
+const rendererRecoveryOwner = createRendererRecoveryOwner()
+// Recovery belongs to this viewport; Runtime assets/settings keep the supplied environment.
+const runtimeRendererEnvironment = runtimeSurface ? { ...runtimeSurface.renderer, contextRestored: editorRendererEnvironment(rendererRecoveryOwner).contextRestored, submissionFault: (reason: string) => rendererRecoveryOwner.submissionFault(reason) } : null
+function createCanvasRenderer(canvas: HTMLCanvasElement, canvas2dOnly: boolean): Renderer2D {
+  return runtimeRendererEnvironment ? createRuntimeRenderer2D(canvas, canvas2dOnly, runtimeRendererEnvironment) : createRenderer2D(canvas, canvas2dOnly, rendererRecoveryOwner)
+}
+const renderGraphDiagnosticsOwner = createRenderGraphDiagnosticsOwner()
+let renderGraphDiagnosticsScope: RenderGraphDiagnosticsScope | null = null
+/** Scope keys are existing identities; this adds no world epoch, scheduler or frame clock. */
+function synchronizeRenderGraphDiagnosticsScope() {
+  const projectGeneration = runtimeView?.resources.catalog.revision() ?? getProjectSessionGeneration(), sceneUuid = (runtimeView?.scenes ?? sceneManager).activeSceneUuid ?? '', runtimeSessionIdentity = gameplayRuntime.sessionIdentity, view = editorState.currentPage
+  const old = renderGraphDiagnosticsScope
+  if (!old || old.projectGeneration !== projectGeneration || old.sceneUuid !== sceneUuid || old.rendererGeneration !== rendererInitialization
+    || old.runtimeSessionIdentity !== runtimeSessionIdentity || old.view !== view) {
+    renderGraphDiagnosticsScope = { projectGeneration, sceneUuid, rendererGeneration: rendererInitialization, runtimeSessionIdentity, view }
+    renderGraphDiagnosticsOwner.updateScope(renderGraphDiagnosticsScope)
+  }
+}
 const gameSurfaceRef = ref<HTMLDivElement | null>(null)
 const nativeInputRef = ref<HTMLInputElement | null>(null)
 const focusedUiInput = ref<{ entity: Entity; rect: { x: number; y: number; width: number; height: number }; input: TextInput } | null>(null)
@@ -63,6 +103,30 @@ const accessibilityNodes = ref<UiAccessibilityNode[]>([])
 let accessibilitySignature = ''
 let touchPointer: number | null = null
 let disposeEditorTouch: (() => void) | null = null
+const profileInputObservations = import.meta.env.VITE_NOVA_PERFORMANCE_TRACE === '1'
+let inputReceiptTokens: InputReceiptTokenMap | null = null
+let inputObservationWorldEpoch: number | null = null, lastConsumedInputFrameSequence = 0
+let disposePerformanceInputObservation: (() => void) | null = null
+/** Profiling only: this viewport owns its receipt tokens and never replaces the gameplay input sampler. */
+function installInputPerformanceObservation() {
+  if (!profileInputObservations) return
+  disposeInputPerformanceObservation()
+  const tokens = new InputReceiptTokenMap(markPerformanceInput, forgetPerformanceInput)
+  inputReceiptTokens = tokens
+  const stop = gameplayRuntime.setInputObservationCallbacks({
+    receipt: receipt => { if (receipt.worldEpoch === inputObservationWorldEpoch) tokens.receipt(receipt) },
+    reset: (worldEpoch, inputEpoch) => {
+      inputObservationWorldEpoch = worldEpoch; lastConsumedInputFrameSequence = 0; tokens.reset(inputEpoch)
+    }
+  })
+  let disposed = false
+  disposePerformanceInputObservation = () => {
+    if (disposed) return
+    disposed = true; stop(); tokens.dispose()
+    if (inputReceiptTokens === tokens) { inputReceiptTokens = null; inputObservationWorldEpoch = null; lastConsumedInputFrameSequence = 0 }
+  }
+}
+function disposeInputPerformanceObservation() { const dispose = disposePerformanceInputObservation; disposePerformanceInputObservation = null; dispose?.() }
 const captionTick = ref(0), visibleCaptions = computed(/** 随字幕刷新计数变化获取当前有效的运行时字幕。 */ () => { void captionTick.value; return activeRuntimeCaptions() })
 const inputBridge = new UiNativeInputBridge(/* 调用 gameUiRuntime.commitTextInput(uuid, value) 并返回调用结果。 */ (uuid, value) => gameUiRuntime.commitTextInput(uuid, value))
 let ctx: CanvasRenderingContext2D | null = null
@@ -76,9 +140,32 @@ let palette = {
   selection: '#ffd166', selectionFill: 'rgba(255,209,102,.24)', handle: '#ff7a59', connection: '#8bb8ff', broken: '#ff6b6b'
 }
 
-const state = physicsState
-const world = physicsState.world
-const camera = physicsState.camera
+// The seven gameplay fields remain live Host reads, including field replacement on scene load.
+// Editor-only tools retain their legacy state only on the default Editor path.
+const runtimeStateKeys = new Set<PropertyKey>(['world', 'camera', 'globalSettings', 'playMode', 'engineDiagnostics', 'inputMap', 'audioSettings'])
+const state = runtimeView ? new Proxy(physicsState, {
+  get(target, key) {
+    if (runtimeStateKeys.has(key)) return Reflect.get(runtimeView.state, key)
+    if (key === 'simulationRunning') return runtimeView.state.playMode !== 'editing'
+    if (key === 'selectedEntityIds') return []
+    if (key === 'selectedEntityId' || key === 'focusEntityID') return null
+    return Reflect.get(target, key)
+  },
+  set(_target, key, value) {
+    if (runtimeStateKeys.has(key)) return Reflect.set(runtimeView.state, key, value)
+    if (key === 'simulationRunning') throw new Error('RUNTIME_CANVAS_PLAY_MODE_OWNED_BY_CORE')
+    throw new Error('RUNTIME_CANVAS_AUTHORING_WRITE_REJECTED: ' + String(key))
+  }
+}) : physicsState
+const world = state.world
+const sceneRendererEnvironment = runtimeSurface?.scene ?? (() => {
+  const sceneParticleOwner = createEditorParticleOwner(world,{legacyRoot:true})
+  return editorSceneRendererEnvironment(()=>getEditorTileMapOwner(world),()=>sceneParticleOwner)
+})()
+const lightingEnvironment = runtimeSurface?.lighting ?? editorLightingEnvironment(sceneRendererEnvironment,world)
+const camera = state.camera
+const activeCanvasLayer = () => runtimeView?.activeLayer ?? editorState.activeLayer
+const renderCanvasLayer = () => runtimeView?.renderLayer ?? editorState.renderLayer
 
 let isDragging = false; let isPanning = false; let isVertexDragging = false; let dragButton = 0 
 let dragStart: Vec2 | null = null; let dragNow: Vec2 | null = null; let lastMouseScreen: Vec2 | null = null
@@ -238,7 +325,7 @@ let canvasLogicalWidth = 0, canvasLogicalHeight = 0
 /** 综合设备像素比、画质上限、自适应比例和分辨率缩放计算有界像素比。 */ function desiredCanvasPixelRatio(width: number, height: number) {
   return boundedFrame({width, height, pixelRatio: Math.max(.5, Math.min(window.devicePixelRatio || 1, editorState.currentPage === 'game' ? Infinity : prefs.maxPixelRatio, activeRenderQuality.maximumPixelRatio) * performanceRuntimeState.adaptivePixelRatioScale * (Number.isFinite(renderingSettings.resolutionScale) ? Math.min(2, Math.max(.5, renderingSettings.resolutionScale)) : 1)), clearColor: {r:0,g:0,b:0,a:1}}).pixelRatio
 }
-/** 同步逻辑尺寸、后备像素及渲染视口，保持相机中心并重新绘制。 */ function resize() {
+/** Update requested viewport/input geometry; backing pixels change only with a submitted world. */ function resize(redraw = true) {
   const canvas = canvasRef.value; if (!canvas) return
   const r = canvas.getBoundingClientRect()
   if (r.width <= 0 || r.height <= 0) return
@@ -246,11 +333,6 @@ let canvasLogicalWidth = 0, canvasLogicalHeight = 0
   canvasLogicalWidth = r.width; canvasLogicalHeight = r.height
   canvasPixelRatio = desiredCanvasPixelRatio(r.width, r.height)
   const dpr = canvasPixelRatio
-  const nextWidth = Math.max(1, Math.round(r.width * dpr)); const nextHeight = Math.max(1, Math.round(r.height * dpr))
-  const backingStoreChanged = canvas.width !== nextWidth || canvas.height !== nextHeight
-  if (backingStoreChanged) {
-    canvas.width = nextWidth; canvas.height = nextHeight
-  }
   // CSS dimensions can change without changing a rounded backing-store pixel.
   // The WebGL viewport still needs the latest logical size in that case.
   renderer?.resize(r.width, r.height, dpr)
@@ -258,12 +340,7 @@ let canvasLogicalWidth = 0, canvasLogicalHeight = 0
     camera.offset.x += (r.width - oldWidth) / 2; camera.offset.y += (r.height - oldHeight) / 2
   }
   if (!ctx) ctx = canvas.getContext('2d', { alpha: true })!
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-  ctx.imageSmoothingEnabled = true
-  ctx.imageSmoothingQuality = 'high'
-  ctx.lineCap = 'round'
-  ctx.lineJoin = 'round'
-  render()
+  if (redraw) render()
 }
 
 /** 将多次尺寸变化合并为下一显示帧的一次更新。 */ function scheduleResize() {
@@ -275,10 +352,14 @@ let canvasLogicalWidth = 0, canvasLogicalHeight = 0
 }
 
 /** 逐帧合并输入、更新相机与玩法、同步连接并渲染，按频率采集性能诊断。 */ function runFrame(time?: number) {
+  if (document.hidden) return
   const now = time || performance.now(); const dt = (now - lastTime) / 1000; lastTime = now
   const frameStarted = performance.now()
-  beginPerformanceFrame(frameStarted)
+  beginPerformanceFrame(frameStarted, time)
   flushPendingMouseMove()
+  const gameInputScope = editorState.currentPage === 'game'
+  gameUiRuntime.sampleInput({ editor: !gameInputScope })
+  if (gameInputScope) synchronizeNativeInput()
 
   if (camera.targetScale !== null && editorPerformancePreferences.value.decorativeMotion) {
     camera.scale += (camera.targetScale - camera.scale) * (1 - Math.exp(-8 * dt));
@@ -296,7 +377,14 @@ let canvasLogicalWidth = 0, canvasLogicalHeight = 0
   if (camera.targetOffset !== null && !editorPerformancePreferences.value.decorativeMotion) { camera.offset = { ...camera.targetOffset }; camera.targetOffset = null }
 
   if (editorState.currentPage === 'scene' && !state.simulationRunning) syncEditableConnections(true)
-  gameplayRuntime.frame(Math.min(dt, 0.1), canvasRef.value?.getBoundingClientRect())
+  const previousConsumedInput = inputReceiptTokens ? gameplayRuntime.lastFrameConsumedInput : null
+  gameplayRuntime.frame(normalizeSimulationFrameDelta(dt), canvasRef.value?.getBoundingClientRect())
+  triggerRef(timelinePresentationState)
+  const currentConsumedInput = inputReceiptTokens ? gameplayRuntime.lastFrameConsumedInput : null
+  const freshConsumedInput = currentConsumedInput && currentConsumedInput !== previousConsumedInput
+    && currentConsumedInput.worldEpoch === inputObservationWorldEpoch && currentConsumedInput.frameSequence > lastConsumedInputFrameSequence
+    ? currentConsumedInput : null
+  if (freshConsumedInput) lastConsumedInputFrameSequence = freshConsumedInput.frameSequence
   // Runtime commands may change hierarchy membership. Prepare the renderer's
   // identity lookup after simulation so the frame cannot consume stale parents.
   prepareHierarchyIndex(world.entities)
@@ -309,8 +397,12 @@ let canvasLogicalWidth = 0, canvasLogicalHeight = 0
     }
   }
   const renderingStarted = performance.now()
-  render(dt)
+  const inputToken = inputReceiptTokens?.consumeLatest(freshConsumedInput)
+  try { render(dt, inputToken) }
+  finally { if (inputToken !== undefined) inputReceiptTokens?.release(inputToken) }
   const renderingMs = performance.now() - renderingStarted
+  completePerformanceFrame()
+  const frameObservation = currentPerformanceFrameObservation()
   const timings = gameplayRuntime.diagnostics.timings
   const frameMs = Math.max(0, dt * 1000)
   const measured = timings.physicsMs + timings.scriptsMs + timings.animationMs + timings.audioMs + timings.assetsMs + renderingMs
@@ -324,16 +416,15 @@ let canvasLogicalWidth = 0, canvasLogicalHeight = 0
       frameMs, physicsMs: timings.physicsMs, renderingMs, scriptsMs: timings.scriptsMs,
       animationMs: timings.animationMs, audioMs: timings.audioMs, assetsMs: timings.assetsMs,
       otherMs: Math.max(0, Math.min(performance.now() - frameStarted, frameMs || Number.POSITIVE_INFINITY) - measured),
-      fps: dt > 0 ? 1 / dt : 0, memoryMb: memory ? memory.usedJSHeapSize / (1024 * 1024) : null,
+      fps: frameObservation.rafIntervalMs === null ? null : 1000 / frameObservation.rafIntervalMs, memoryMb: memory ? memory.usedJSHeapSize / (1024 * 1024) : null,
       inputMs: timings.inputMs, allocations: performanceSample.allocations,
       gpuPasses: renderGraphState.passes.filter(/* 返回 pass.enabled 的当前值。 */ pass => pass.enabled).length, assetJobs: performanceSample.assetJobs,
       mainThreadMs: performanceRuntimeState.mainThreadMs, workerMs: performanceRuntimeState.workerMs,
       queueWaitMs: performanceRuntimeState.queueWaitMs, cacheHitRate: performanceRuntimeState.cacheHitRate,
       worstFrameMs: performanceRuntimeState.worstFrameMs, onePercentLowFps: performanceRuntimeState.onePercentLowFps,
-      inputToPixelMs: performanceRuntimeState.inputToPixelMs
+      ...frameObservation
     })
   }
-  completePerformanceFrame()
 }
 
 /** 只限制静止的编辑器画布；运行、游戏和交互仍使用显示器帧率。 */
@@ -359,15 +450,23 @@ function loop(time?: number) {
 function wakeFrameLoop() {
   if (idleFrameTimer !== null) { clearTimeout(idleFrameTimer); idleFrameTimer = null; if (!canvasDisposed && !raf) raf = requestAnimationFrame(loop) }
 }
+/** Visibility changes occur between complete host frames; release input before clearing unstarted fixed time. */
+function onFrameVisibilityChange() {
+  if (canvasDisposed) return
+  gameplayRuntime.setHostSuspended(document.hidden)
+  world.resetSimulationClock()
+  lastTime = performance.now(); rebasePerformanceFrameContinuity(); wakeFrameLoop()
+}
 watch(/** 只观察排程参数和播放模式，避免深层世界观察开销。 */ () => [editorPerformancePreferences.value.idleFps, state.playMode, editorState.currentPage, editorState.activeWorkspace], wakeFrameLoop)
 
 onMounted(/** 挂载时连接运行时输入、创建渲染器并启动帧循环及窗口监听。 */ () => {
+  installInputPerformanceObservation()
   if (canvasRef.value) disposeEditorTouch = installEditorTouch(canvasRef.value, { enabled: /** 只对设计视图接管触摸。 */ () => editorState.currentPage === 'scene', camera, down: onMouseDown, move: onMouseMove, up: onMouseUp })
   readPalette()
   gameUiRuntime.setCallback(/* 调用 gameplayRuntime.invokeUiCallback(entity, functionName) 并返回调用结果。 */ (entity, functionName) => gameplayRuntime.invokeUiCallback(entity, functionName))
-  gameUiRuntime.setInputActions(physicsState.inputMap)
+  gameUiRuntime.setInputActions(state.inputMap)
   gameUiRuntime.setRemapCallback(/** 运行时改键成功后记录输入映射历史。 */ (action, bindingIndex, binding) => {
-    if (rebindInputAction(physicsState.inputMap, action, bindingIndex, binding)) pushHistory('Remap runtime input')
+    if (rebindInputAction(state.inputMap, action, bindingIndex, binding) && !runtimeView) pushHistory('Remap runtime input')
   })
   void resetRenderer()
   window.addEventListener('nova-renderer-reset-request', resetRenderer)
@@ -377,18 +476,19 @@ onMounted(/** 挂载时连接运行时输入、创建渲染器并启动帧循环
     const r = canvasRef.value.getBoundingClientRect(); camera.offset.x = r.width / 2; camera.offset.y = r.height / 2
     resizeObserver = new ResizeObserver(scheduleResize); resizeObserver.observe(canvasRef.value.parentElement!)
   }
-  lastTime = performance.now(); loop(); document.addEventListener('visibilitychange', wakeFrameLoop); window.addEventListener('resize', scheduleResize); window.addEventListener('mouseup', onMouseUp); window.addEventListener('keydown', onKeyDown, true)
+  document.addEventListener('visibilitychange', onFrameVisibilityChange); onFrameVisibilityChange(); loop(); window.addEventListener('resize', scheduleResize); window.addEventListener('mouseup', onMouseUp); window.addEventListener('keydown', onKeyDown, true)
   void world.wasmReady.then(/** 物理模块就绪后将初始化失败信息显示在状态栏。 */ () => {
     if (world.wasmError) editorState.statusText = t('physicsUnavailable', { message: world.wasmError.message })
   }).catch(/** 物理初始化拒绝时显示状态并记录可恢复错误。 */ error => { editorState.statusText = t('physicsUnavailable', { message: error instanceof Error ? error.message : String(error) }); reportRecoverableError(error, 'Physics WebAssembly initialization', 'Physics') })
 })
-onBeforeUnmount(/** 卸载时失效初始化、取消帧与监听并销毁运行时及渲染器。 */ () => { disposeEditorTouch?.(); disposeEditorTouch = null; canvasDisposed = true; rendererInitialization++; pendingMouseMove = null; if (raf) cancelAnimationFrame(raf); if (idleFrameTimer !== null) clearTimeout(idleFrameTimer); if (resizeRaf) cancelAnimationFrame(resizeRaf); document.removeEventListener('visibilitychange', wakeFrameLoop); window.removeEventListener('resize', scheduleResize); window.removeEventListener('mouseup', onMouseUp); window.removeEventListener('keydown', onKeyDown, true); window.removeEventListener('nova-renderer-reset-request', resetRenderer); if (resizeObserver) resizeObserver.disconnect(); gameUiRuntime.reset(); renderer?.destroy(); renderer = null })
+onBeforeUnmount(/** 卸载时失效初始化、取消帧与监听并销毁运行时及渲染器。 */ () => { disposeInputPerformanceObservation(); disposeEditorTouch?.(); disposeEditorTouch = null; canvasDisposed = true; rendererInitialization++; renderGraphDiagnosticsOwner.dispose(); pendingMouseMove = null; if (raf) cancelAnimationFrame(raf); if (idleFrameTimer !== null) clearTimeout(idleFrameTimer); if (resizeRaf) cancelAnimationFrame(resizeRaf); document.removeEventListener('visibilitychange', onFrameVisibilityChange); window.removeEventListener('resize', scheduleResize); window.removeEventListener('mouseup', onMouseUp); window.removeEventListener('keydown', onKeyDown, true); window.removeEventListener('nova-renderer-reset-request', resetRenderer); if (resizeObserver) resizeObserver.disconnect(); gameUiRuntime.reset(); rendererRecoveryOwner.dispose(); renderer?.destroy(); renderer = null })
 
 let rendererContextAntialias: boolean | null = null
 watch(/* 比较 renderingSettings.antiAliasing 与 'Off'，返回严格相等的判断结果。 */ () => renderingSettings.antiAliasing === 'Off', /** 渲染设置变化后异步重建渲染器。 */ () => { void resetRenderer() })
 /** 按抗锯齿要求重建画布上下文，以初始化代数阻止过期结果生效。 */ async function resetRenderer() {
   if (!renderCanvasRef.value || canvasDisposed) return
   const generation = ++rendererInitialization
+  renderGraphDiagnosticsOwner.invalidate()
   const contextAntialias = renderingSettings.antiAliasing !== 'Off'
   const replaceContext = rendererContextAntialias !== null && rendererContextAntialias !== contextAntialias
   renderer?.destroy(); renderer = null
@@ -397,12 +497,12 @@ watch(/* 比较 renderingSettings.antiAliasing 与 'Off'，返回严格相等的
       renderCanvasKey.value++; await nextTick()
       if (generation !== rendererInitialization || canvasDisposed || !renderCanvasRef.value) return
     }
-    try { renderer = createRenderer2D(renderCanvasRef.value) }
+    try { renderer = createCanvasRenderer(renderCanvasRef.value, false) }
     catch (error) {
       if (!(error instanceof RendererCanvasReplacementRequired)) throw error
       renderCanvasKey.value++; await nextTick()
       if (generation !== rendererInitialization || canvasDisposed || !renderCanvasRef.value) return
-      renderer = createRenderer2D(renderCanvasRef.value, true)
+      renderer = createCanvasRenderer(renderCanvasRef.value, true)
     }
     if (renderCanvasRef.value) renderer.resize(renderCanvasRef.value.clientWidth, renderCanvasRef.value.clientHeight, canvasPixelRatio)
     rendererContextAntialias = contextAntialias
@@ -413,7 +513,7 @@ watch(/* 比较 renderingSettings.antiAliasing 与 'Off'，返回严格相等的
 /** 将鼠标窗口坐标转换为画布逻辑坐标。 */ function screenPos(e: MouseEvent): Vec2 { const r = canvasRef.value!.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top } }
 /** Game controls own handled scroll; otherwise sample gameplay once before suppressing browser scroll. */
 function onWheel(e: WheelEvent) {
-  wakeFrameLoop(); markPerformanceInput()
+  wakeFrameLoop()
   if (e.defaultPrevented) return
   if (editorState.currentPage === 'game') {
     if (!gameUiRuntime.wheel(screenPos(e), e.deltaX, e.deltaY) && state.playMode !== 'editing') gameplayRuntime.input.onWheel(e)
@@ -505,7 +605,6 @@ function onWheel(e: WheelEvent) {
 }
 
 /** 跳过输入法及外部控件按键，转发游戏输入或处理顶点删除和取消编辑。 */ function onKeyDown(event: KeyboardEvent) {
-  markPerformanceInput()
   if (event.isComposing || event.keyCode === 229 || event.target === nativeInputRef.value || isExternalUiControl(event.target, gameSurfaceRef.value) || isExternalUiControl(document.activeElement, gameSurfaceRef.value)) return
   if (editorState.currentPage === 'game' && gameUiRuntime.keyDown(event)) { event.preventDefault(); event.stopPropagation(); synchronizeNativeInput(true); synchronizeAccessibleFocus(); return }
   if ((event.key === 'Delete' || event.key === 'Backspace') && hoveredVertex && (hoveredVertex.target === 'renderer')) {
@@ -640,7 +739,6 @@ const drawTools = new Set(['rectangle', 'circle', 'triangle'])
 
 /** 按控件、瓦片、连接、测量、轴心、顶点及变换优先级分派按下，必要时开始绘图或框选。 */ function onMouseDown(e: MouseEvent) {
   wakeFrameLoop()
-  markPerformanceInput()
   const sPos = screenPos(e); const wPos = camera.screenToWorld(sPos); dragButton = e.button; hasMovedEntity = false
   if (editorState.currentPage === 'game') {
     if (e.button === 0) { canvasRef.value?.focus({ preventScroll: true }); if (gameUiRuntime.pointerDown(sPos)) { e.preventDefault(); e.stopPropagation() }; synchronizeNativeInput(true) }
@@ -725,7 +823,6 @@ const drawTools = new Set(['rectangle', 'circle', 'triangle'])
 
 /** 仅保留最新鼠标移动样本，避免高频事件积压编辑操作。 */ function onMouseMove(e: MouseEvent) {
   wakeFrameLoop()
-  markPerformanceInput()
   // Browser mouse events can arrive much faster than the display can present
   // them. Retaining only the newest sample prevents an expensive drag or snap
   // operation from building an input backlog while still updating every frame.
@@ -821,7 +918,6 @@ const drawTools = new Set(['rectangle', 'circle', 'triangle'])
 }
 
 /** 释放前处理最后移动样本，完成瓦片、连接、变换或创建操作并记录历史。 */ function onMouseUp(event?: MouseEvent) {
-  markPerformanceInput()
   flushPendingMouseMove()
   if (editorState.currentPage === 'game') {
     if (event && canvasRef.value && gameUiRuntime.pointerUp(screenPos(event))) { event.preventDefault(); event.stopPropagation() }
@@ -1180,28 +1276,42 @@ const drawTools = new Set(['rectangle', 'circle', 'triangle'])
   context.restore()
 }
 
-/** 绘制世界、光照、后处理、编辑覆盖层与界面，同步统计、纹理捕获和输入。 */ function render(deltaSeconds = 0) {
+/** Only a successful current Runtime caller may supply an input token; resize/manual redraws have none. */ function render(deltaSeconds = 0, consumedInputToken?: number) {
   if (!ctx || !canvasRef.value) return
   const desiredPixelRatio = desiredCanvasPixelRatio(canvasLogicalWidth, canvasLogicalHeight)
-  if (Math.abs(desiredPixelRatio - canvasPixelRatio) > .001) resize()
+  if (Math.abs(desiredPixelRatio - canvasPixelRatio) > .001) resize(false)
   const cvs = canvasRef.value; const width = canvasLogicalWidth; const height = canvasLogicalHeight
   if (state.playMode === 'editing') resetCameraSmoothing()
-  const graphStarted = beginRenderGraph()
+  synchronizeRenderGraphDiagnosticsScope()
+  const graphStarted = beginRenderGraph(renderGraphDiagnosticsOwner)
   let passStarted = graphStarted
+  let worldSubmitted = false
   if (renderer) {
-    Object.assign(editorState.rendererStats, renderWorld(renderer, world.entities, {
+    const renderedStats = renderWorld(renderer, world.entities, {
       width, height, pixelRatio: canvasPixelRatio,
       deltaSeconds: state.playMode === 'playing' ? deltaSeconds * state.globalSettings.timeScale : 0,
       editorCamera: { scale: camera.scale, offset: { ...camera.offset } },
-      gameView: editorState.currentPage === 'game', activeLayer: editorState.activeLayer,
-      renderLayer: editorState.currentPage === 'game' ? editorState.renderLayer : editorState.activeLayer,
+      gameView: editorState.currentPage === 'game', activeLayer: activeCanvasLayer(),
+      renderLayer: editorState.currentPage === 'game' ? renderCanvasLayer() : activeCanvasLayer(),
       canvasColor: palette.canvas,
       connections: world.connections,
       editorGrid: { enabled: editorState.showGrid, step: prefs.gridSize, color: palette.grid },
       performanceMode: authoringState.performanceMode
-    }))
+    }, sceneRendererEnvironment)
+    Object.assign(editorState.rendererStats, renderedStats)
+    worldSubmitted = typeof renderedStats.cpuSubmissionAtMs === 'number' && Number.isFinite(renderedStats.cpuSubmissionAtMs)
+    if (worldSubmitted) markPerformanceSubmission(renderedStats.cpuSubmissionAtMs!, consumedInputToken)
   }
-  passStarted = recordRenderPass('World', passStarted, true, editorState.rendererStats.drawCalls)
+  passStarted = recordRenderPass('World', passStarted, worldSubmitted, worldSubmitted ? editorState.rendererStats.drawCalls : 0, renderGraphDiagnosticsOwner)
+  if (!worldSubmitted) {
+    for (const name of ['Lighting', 'PostProcess', 'EditorOverlay', 'UI'] as const) recordRenderPass(name, passStarted, false, 0, renderGraphDiagnosticsOwner)
+    completeRenderGraph(graphStarted, editorState.rendererStats, passStarted, passStarted, renderGraphDiagnosticsOwner)
+    editorState.rendererStats.passes = 0
+    return
+  }
+  const nextWidth = Math.max(1, Math.round(width * canvasPixelRatio)), nextHeight = Math.max(1, Math.round(height * canvasPixelRatio))
+  if (cvs.width !== nextWidth || cvs.height !== nextHeight) { cvs.width = nextWidth; cvs.height = nextHeight }
+  ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high'; ctx.lineCap = 'round'; ctx.lineJoin = 'round'
   // Reset and clear in backing-store pixels. This prevents retained overlay
   // fragments when DPR, axes, scenes, or panel dimensions change together.
   ctx.setTransform(1, 0, 0, 1, 0, 0)
@@ -1210,15 +1320,15 @@ const drawTools = new Set(['rectangle', 'circle', 'triangle'])
   const isGameView = editorState.currentPage === 'game'
   renderLighting2D(ctx, world.entities, {
     width, height, editorCamera: { scale: camera.scale, offset: { ...camera.offset } },
-    gameView: isGameView, activeLayer: editorState.activeLayer
-  })
-  passStarted = recordRenderPass('Lighting', passStarted, renderingSettings.lightingEnabled)
-  renderPostProcessOverlay(ctx, width, height)
+    gameView: isGameView, activeLayer: activeCanvasLayer()
+  }, lightingEnvironment)
+  passStarted = recordRenderPass('Lighting', passStarted, renderingSettings.lightingEnabled, 0, renderGraphDiagnosticsOwner)
+  renderPostProcessOverlay(ctx, width, height, lightingEnvironment)
   renderDebugView2D(ctx, world.entities, {
     width, height, editorCamera: { scale: camera.scale, offset: { ...camera.offset } },
-    gameView: isGameView, activeLayer: editorState.activeLayer
-  })
-  passStarted = recordRenderPass('PostProcess', passStarted, renderingSettings.postProcessing.enabled || renderingSettings.debugView !== 'None')
+    gameView: isGameView, activeLayer: activeCanvasLayer()
+  }, lightingEnvironment)
+  passStarted = recordRenderPass('PostProcess', passStarted, renderingSettings.postProcessing.enabled || renderingSettings.debugView !== 'None', 0, renderGraphDiagnosticsOwner)
   ctx.save(); ctx.translate(camera.offset.x, camera.offset.y); ctx.scale(camera.scale, -camera.scale) 
   const viewL = -camera.offset.x / camera.scale; const viewR = viewL + width / camera.scale
   const viewT = camera.offset.y / camera.scale; const viewB = viewT - height / camera.scale   
@@ -1370,25 +1480,25 @@ const drawTools = new Set(['rectangle', 'circle', 'triangle'])
   drawPhysicsDebug(ctx)
   drawWorldGameplayDebug(ctx)
   ctx.restore()
-  passStarted = recordRenderPass('EditorOverlay', passStarted, !isGameView, 1)
+  passStarted = recordRenderPass('EditorOverlay', passStarted, !isGameView, 1, renderGraphDiagnosticsOwner)
   const uiEntities = isGameView ? world.entities : world.entities.filter(/* 比较 entity.layer 与 editorState.activeLayer，返回严格相等的判断结果。 */ entity => entity.layer === editorState.activeLayer)
   gameUiRuntime.render(ctx, width, height, uiEntities, { editor: !isGameView, selectedEntityIds: selectedIds })
   renderScreenRulers(ctx, width, height)
   const nodes = isGameView ? gameUiRuntime.accessibilityNodes() : []
   const nextAccessibilitySignature = JSON.stringify(nodes)
   if (nextAccessibilitySignature !== accessibilitySignature) { accessibilitySignature = nextAccessibilitySignature; accessibilityNodes.value = nodes }
-  recordRenderPass('UI', passStarted, true, uiEntities.length ? 1 : 0)
-  completeRenderGraph(graphStarted, editorState.rendererStats, passStarted, passStarted)
+  recordRenderPass('UI', passStarted, true, uiEntities.length ? 1 : 0, renderGraphDiagnosticsOwner)
+  completeRenderGraph(graphStarted, editorState.rendererStats, passStarted, passStarted, renderGraphDiagnosticsOwner)
   editorState.rendererStats.passes = 5
   if (renderCanvasRef.value) {
-    captureRenderSurface(renderCanvasRef.value, canvasRef.value, worldPostProcessFilter())
+    captureRenderSurface(renderCanvasRef.value, canvasRef.value, worldPostProcessFilter(lightingEnvironment))
     const renderTextureCameras = isGameView ? activeGameCameras(world.entities, width, height).filter(/* 返回 camera.component.renderTexture 的当前值。 */ camera => camera.component.renderTexture) : []
     editorState.rendererStats.renderTargets += new Set(renderTextureCameras.map(/* 返回 camera.component.renderTexture 的当前值。 */ camera => camera.component.renderTexture)).size
     for (const activeCamera of renderTextureCameras) {
       if (activeCamera.component.renderTexture) captureRenderTexture(activeCamera.component.renderTexture, renderCanvasRef.value, activeCamera.component.viewport, renderGraphState.frame)
     }
   }
-  if (isGameView) { synchronizeNativeInput(); if (runtimeCaptions.length) captionTick.value++ }
+  if (isGameView && (runtimeCaptions.length || visibleCaptions.value.length)) captionTick.value++
 }
 
 /** 在世界位置绘制保持屏幕字号的调试标签及背景。 */ function drawWorldDebugLabel(context: CanvasRenderingContext2D, point: Vec2, text: string, color: string, yOffset = 0): void {
@@ -1532,9 +1642,9 @@ const drawTools = new Set(['rectangle', 'circle', 'triangle'])
 
 <template>
   <div ref="gameSurfaceRef" class="canvas-container" @dragover="onAssetDragOver" @drop="onAssetDrop">
-    <canvas :key="renderCanvasKey" ref="renderCanvasRef" class="render-canvas" :style="{ filter: worldPostProcessFilter() }" aria-hidden="true" />
+    <canvas :key="renderCanvasKey" ref="renderCanvasRef" class="render-canvas" :style="{ filter: worldPostProcessFilter(lightingEnvironment) }" aria-hidden="true" />
     <canvas ref="canvasRef" class="overlay-canvas" data-game-input-surface tabindex="0" :aria-label="editorState.currentPage === 'game' ? t('game') : t('scene')" @touchstart="touchPointer !== null && $event.stopPropagation()" @touchmove="touchPointer !== null && $event.stopPropagation()" @pointerdown="onUiPointerDown" @pointermove="onUiPointerMove" @pointerup="onUiPointerUp" @pointercancel="onUiPointerCancel" @lostpointercapture="onUiPointerCancel" @mousedown="onMouseDown" @mousemove="onMouseMove" @mouseup="onMouseUp" @dblclick="onDoubleClick" @wheel="onWheel" @contextmenu.prevent />
-    <VirtualControlsOverlay v-if="editorState.currentPage === 'game'" />
+    <VirtualControlsOverlay v-if="editorState.currentPage === 'game'" :runtime="gameplayRuntime" :world="gameplayRuntime.presentation.world" :input-actions="state.inputMap" />
     <div v-if="editorState.currentPage === 'game' && accessibilityNodes.length" class="game-ui-a11y" aria-label="Game UI">
       <div
         v-for="node in accessibilityNodes"

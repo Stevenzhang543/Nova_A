@@ -1,10 +1,30 @@
-/** 流送生命周期工具：协调可取消工作与实体或场景的激活、退休边界。 */
-import { toRaw } from 'vue'
+/** Per-fixed-World stream hook registry; registration cleanup cannot clear a successor. */
 import type { Entity } from '../world/Entity'
-import { beginEntityLifetime, retireEntityLifetime } from './entityLifetimes'
-interface StreamRuntimeHooks { beforeDeactivate(entities: Entity[], world: Entity[]): void; afterActivate(entities: Entity[], fresh: Entity[]): void }
-let hooks: StreamRuntimeHooks | null = null
-let initialized = new WeakSet<Entity>()
-/** 替换流式生命周期钩子，并以现存实体原始对象初始化弱引用集合。 */ export function setStreamRuntimeHooks(value: StreamRuntimeHooks | null, existing: Entity[] = []): void { hooks = value; initialized = new WeakSet(existing.map(toRaw)) }
-/** 先调用停用钩子，再终止每个流式实体的生命周期。 */ export function deactivateStreamEntities(entities: Entity[], world: Entity[]): void { if (!entities.length) return; hooks?.beforeDeactivate(entities, world); for (const entity of entities) retireEntityLifetime(entity) }
-/** 识别首次激活实体，登记对象并开启新生命周期，再通知激活钩子。 */ export function activateStreamEntities(entities: Entity[]): void { if (!entities.length) return; const fresh = entities.filter(/* 返回 initialized.has(toRaw(entity)) 的逻辑取反结果。 */ entity => !initialized.has(toRaw(entity))); for (const entity of entities) { initialized.add(toRaw(entity)); beginEntityLifetime(entity) }; hooks?.afterActivate(entities, fresh) }
+import { EntityLifetimeOwner } from './entityLifetimes'
+export interface StreamRuntimeHooks { beforeDeactivate(entities: Entity[], world: Entity[]): void; afterActivate(entities: Entity[], fresh: Entity[]): void }
+export class StreamLifecycleOwner {
+  private hooks: StreamRuntimeHooks | null = null
+  private initialized = new WeakSet<Entity>()
+  private registration: object | null = null
+  constructor(readonly lifetimes: EntityLifetimeOwner) {
+    if (!(lifetimes instanceof EntityLifetimeOwner)) throw new Error('STREAM_LIFETIME_OWNER_REQUIRED')
+  }
+  setStreamRuntimeHooks(value: StreamRuntimeHooks | null, existing: Entity[] = []): () => void { this.hooks = value; this.initialized = new WeakSet(existing.map(this.lifetimes.unwrapEntity)) ; const registration = {}; this.registration = registration; return () => { if (this.registration !== registration) return; this.hooks = null; this.initialized = new WeakSet(); this.registration = null } }
+  deactivateStreamEntities(entities: Entity[], world: Entity[]): void { if (!entities.length) return; this.hooks?.beforeDeactivate(entities, world); for (const entity of entities) this.lifetimes.retire(entity) }
+  activateStreamEntities(entities: Entity[]): void { if (!entities.length) return; const fresh = entities.filter(/* 返回 this.initialized.has(this.lifetimes.unwrapEntity(entity)) 的逻辑取反结果。 */ entity => !this.initialized.has(this.lifetimes.unwrapEntity(entity))); for (const entity of entities) { this.initialized.add(this.lifetimes.unwrapEntity(entity)); this.lifetimes.begin(entity) }; this.hooks?.afterActivate(entities, fresh) }
+}
+interface LegacyStreamLifecyclePort { getOwner(): StreamLifecycleOwner }
+let legacyPort: LegacyStreamLifecyclePort | null = null
+export function installLegacyStreamLifecyclePort(port: LegacyStreamLifecyclePort): () => void {
+  if (!port || typeof port.getOwner !== 'function') throw new Error('STREAM_LIFECYCLE_LEGACY_PORT_REQUIRED')
+  legacyPort = port
+  return () => { if (legacyPort === port) legacyPort = null }
+}
+export function getLegacyStreamLifecycleOwner(): StreamLifecycleOwner {
+  const owner = legacyPort?.getOwner()
+  if (!(owner instanceof StreamLifecycleOwner)) throw new Error('STREAM_LIFECYCLE_LEGACY_PORT_NOT_INSTALLED')
+  return owner
+}
+export function setStreamRuntimeHooks(value: StreamRuntimeHooks | null, existing: Entity[] = []): void { getLegacyStreamLifecycleOwner().setStreamRuntimeHooks(value, existing) }
+export function deactivateStreamEntities(entities: Entity[], world: Entity[]): void { getLegacyStreamLifecycleOwner().deactivateStreamEntities(entities, world) }
+export function activateStreamEntities(entities: Entity[]): void { getLegacyStreamLifecycleOwner().activateStreamEntities(entities) }

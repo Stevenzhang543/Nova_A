@@ -40,16 +40,20 @@ export async function withBrowserAudit({ release, name, width = 1440, height = 9
   const regressionOrigin = release
   const qualificationTarget = process.argv.find(/* 调用 value.startsWith('--qualification-release=') 并返回调用结果。 */ value => value.startsWith('--qualification-release='))?.split('=')[1]
   if (qualificationTarget && qualificationTarget !== release) {
-    assert.match(qualificationTarget, /^26\.(?:2[0-9]|3[0-7])$/)
+    assert.match(qualificationTarget, /^26\.(?:2[0-9]|3[0-9])$/)
     assert.ok(Number(qualificationTarget.split('.')[1]) >= Number(release.split('.')[1]), 'Cannot qualify a future regression suite')
     assert.equal(JSON.parse(await readFile(join(root, 'package.json'), 'utf8')).version, qualificationTarget + '.0', 'Retained browser regression must target the actual source authority')
     release = qualificationTarget; expectedRelease = qualificationTarget
   }
-  assert.match(release, /^26\.(?:1[3-9]|2[0-9]|3[0-7])$/); assert.match(name, /^[a-z0-9-]+$/)
+  assert.match(release, /^26\.(?:1[3-9]|2[0-9]|3[0-9])$/); assert.match(name, /^[a-z0-9-]+$/)
   assert.ok(Number.isFinite(commandTimeoutMs) && commandTimeoutMs >= 30000 && commandTimeoutMs <= 180000, 'Bounded diagnostic command deadline');
   assert.match(expectedRelease, /^26\.\d{2}$/)
   if (!development) assert.equal(expectedRelease, release, 'Qualification must exercise its actual public version')
   root = resolve(root)
+  const dist = resolve(root, process.env.NOVA_AUDIT_DIST_DIRECTORY || 'dist')
+  const distSuffix = relative(root, dist)
+  assert.ok(distSuffix && !distSuffix.startsWith('..') && !isAbsolute(distSuffix), 'Audit artifact must stay inside its workspace')
+  await readFile(join(dist, 'index.html'))
   const evidence = resolve(root, process.env.NOVA_AUDIT_REPORT_DIRECTORY || 'release-audits'), captures = [], checks = [], observations = [], errors = []
   let client, edge, server, profile, failure, browser, coverageMapper, coverageOrigin
   const operationCoverage = []
@@ -58,7 +62,7 @@ export async function withBrowserAudit({ release, name, width = 1440, height = 9
   /** 在有界时间内轮询 DOM 条件；超时保留具体表达式用于定位界面故障。 */
   const until = async (expression, timeout = 20000) => { const end = Date.now() + timeout; while (Date.now() < end) { if (await evaluate(expression)) return; await wait(75) } throw Error(`Timed out: ${expression}`) }
   /** 将目标滚入视野并读取可见中心；缺失、禁用或无尺寸的控件立即失败。 */
-  const point = async (selector, index = 0) => evaluate(`(()=>{const e=document.querySelectorAll(${JSON.stringify(selector)})[${index}];if(!e)throw Error('Missing '+${JSON.stringify(selector)});if(e.disabled)throw Error('Disabled '+e.textContent);e.scrollIntoView({block:'nearest',inline:'nearest'});const r=e.getBoundingClientRect();if(!r.width||!r.height)throw Error('Invisible '+${JSON.stringify(selector)});return{x:r.left+r.width/2,y:r.top+r.height/2}})()`)
+  const point = async (selector, index = 0) => { for (let attempt = 0; ; attempt++) { const at = await evaluate(`(()=>{const e=document.querySelectorAll(${JSON.stringify(selector)})[${index}];if(!e)throw Error('Missing '+${JSON.stringify(selector)});if(e.disabled)throw Error('Disabled '+e.textContent);e.scrollIntoView({block:${JSON.stringify(attempt ? 'center' : 'nearest')},inline:'nearest'});const r=e.getBoundingClientRect();if(!r.width||!r.height)throw Error('Invisible '+${JSON.stringify(selector)});const x=r.left+r.width/2,y=r.top+r.height/2,top=document.elementFromPoint(x,y);const owned=!!top&&(top===e||e.contains(top)||top.contains(e)||top.tagName==='CANVAS');const tr=top?top.getBoundingClientRect():null;return{x,y,owned,cover:owned?null:(top?(top.id?'#'+top.id:top.className||top.tagName):'nothing'),rect:[r.left,r.top,r.right,r.bottom],coverRect:tr?[tr.left,tr.top,tr.right,tr.bottom]:null,viewport:[innerWidth,innerHeight]}})()`); if (at.owned) return { x: at.x, y: at.y }; if (attempt >= 12) throw Error('Covered ' + selector + ' by ' + at.cover + ' ' + JSON.stringify({ point: [at.x, at.y], rect: at.rect, coverRect: at.coverRect, viewport: at.viewport })); await wait(75) } }
   /** 在实际目标中心发送鼠标按下与释放，不直接调用应用事件处理函数。 */
   const click = async (selector, index = 0, button = 'left') => { const at = await point(selector, index); await client.send('Input.dispatchMouseEvent', { type: 'mousePressed', ...at, button, clickCount: 1 }); await client.send('Input.dispatchMouseEvent', { type: 'mouseReleased', ...at, button, clickCount: 1 }); await wait(90) }
   /** 只在可见候选中按完整或部分文字定位，再执行真实鼠标点击。 */
@@ -101,7 +105,7 @@ export async function withBrowserAudit({ release, name, width = 1440, height = 9
   const viewport = async (w, h) => { await client.send('Emulation.setDeviceMetricsOverride', { width: w, height: h, deviceScaleFactor: 1, mobile: false }); await client.send('Emulation.setVisibleSize', { width: w, height: h }); await wait(480); assert.deepEqual(await evaluate('({width:innerWidth,height:innerHeight})'), { width: w, height: h }) }
   try {
     await mkdir(evidence, { recursive: true }); profile = await mkdtemp(join(tmpdir(), `nova-v${release.replace('.', '')}-${name}-`))
-    const port = await freePort(), debug = await freePort(); server = await preview({ root, logLevel: 'silent', preview: { host: '127.0.0.1', port, strictPort: true } })
+    const port = await freePort(), debug = await freePort(); server = await preview({ root, logLevel: 'silent', build: { outDir: dist }, preview: { host: '127.0.0.1', port, strictPort: true } })
     let executable; for (const file of ['C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', 'C:/Program Files/Microsoft/Edge/Application/msedge.exe']) try { await readFile(file); executable = file; break } catch {}
     assert.ok(executable, 'Microsoft Edge must be installed')
     edge = spawn(executable, ['--headless=new', '--no-first-run', '--disable-extensions', '--disable-blink-features=FileSystemAccessLocal', '--use-angle=swiftshader', `--remote-debugging-port=${debug}`, `--user-data-dir=${profile}`, initialUrl || `http://127.0.0.1:${port}/`], { stdio: 'ignore', windowsHide: true })
@@ -114,16 +118,16 @@ export async function withBrowserAudit({ release, name, width = 1440, height = 9
       const {createOperationCoverageMapper22} = await import('./operationCoverage22.mjs')
       const sourceRoot = resolve(process.env.NOVA_AUDIT_COVERAGE_SOURCE_ROOT || process.cwd())
       const inventory = JSON.parse(await readFile(join(sourceRoot, 'reports/v26.22-public-operations.json'), 'utf8'))
-      coverageMapper = await createOperationCoverageMapper22({root: sourceRoot, dist: join(root, 'dist'), operations: inventory.operations})
+      coverageMapper = await createOperationCoverageMapper22({root: sourceRoot, dist, operations: inventory.operations})
       coverageOrigin = `http://127.0.0.1:${port}`
       await client.send('Profiler.enable'); await client.send('Profiler.startPreciseCoverage', {callCount:true, detailed:true})
     }
-    await task({ evaluate, until, point, click, clickText, press, fill, select, capture, check, viewport, client, evidence, profile, observations, checks, expectedRelease, development })
+    await task({ evaluate, until, point, click, clickText, press, fill, select, capture, check, viewport, client, evidence, profile, observations, checks, release, expectedRelease, development })
     assert.deepEqual(errors, [], 'No uncaught browser exceptions')
   } catch (error) { failure = error; process.exitCode = 1; console.error(error); if (client) try { await capture('failure') } catch {} }
   finally {
     await mkdir(evidence, { recursive: true })
-    await writeFile(join(evidence, `v${release}-${name}.json`), JSON.stringify({ format: `nova-v${release}-${name}-user-audit`, version: 1, release, regressionOrigin, expectedRelease, development, qualifiedRelease: qualifyRelease && !failure ? release : null, generatedAt: new Date().toISOString(), status: failure ? 'failed' : 'passed', checks, observations, captures, consoleErrors: errors, browser, commandTimeoutMs, ...(coverageMapper ? {operationCoverage, executionTracing: true, tracingScope: 'Positive V8 function-entry counters within named passing assertions; source, bundle and map hashes checked. Not input-domain coverage or performance qualification.'} : {}), error: failure?.stack, scope: (development ? 'Development source overlay only, not release qualification. ' : !qualifyRelease ? 'Development rebuild production bundle; not published-release qualification. ' : '') + 'Recorded real Edge input and DOM observations against production dist. Headless software rendering and download/file-input fallback; physical assistive technology and native OS picker behavior are not measured.' }, null, 2) + '\n')
+    await writeFile(join(evidence, `v${release}-${name}.json`), JSON.stringify({ format: `nova-v${release}-${name}-user-audit`, version: 1, release, regressionOrigin, expectedRelease, development, qualifiedRelease: qualifyRelease && !failure ? release : null, generatedAt: new Date().toISOString(), artifactDirectory: dist, status: failure ? 'failed' : 'passed', checks, observations, captures, consoleErrors: errors, browser, commandTimeoutMs, ...(coverageMapper ? {operationCoverage, executionTracing: true, tracingScope: 'Positive V8 function-entry counters within named passing assertions; source, bundle and map hashes checked. Not input-domain coverage or performance qualification.'} : {}), error: failure?.stack, scope: (development ? 'Development source overlay only, not release qualification. ' : !qualifyRelease ? 'Development rebuild production bundle; not published-release qualification. ' : '') + 'Recorded real Edge input and DOM observations against selected production artifact. Headless software rendering and download/file-input fallback; physical assistive technology and native OS picker behavior are not measured.' }, null, 2) + '\n')
     try { await client?.send('Browser.close') } catch {} client?.close(); if (edge && !edge.killed) edge.kill()
     if (server) await new Promise(/* 调用 server.httpServer.close(done) 并返回调用结果。 */ done => server.httpServer.close(done))
     if (profile) { const suffix = relative(resolve(tmpdir()), resolve(profile)); assert.ok(suffix && !suffix.startsWith('..') && !isAbsolute(suffix) && suffix.startsWith(`nova-v${release.replace('.', '')}-${name}-`)); await wait(200); await rm(resolve(profile), { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }) }

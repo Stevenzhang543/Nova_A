@@ -5,12 +5,23 @@ import { advancedRenderingActive, renderingSettings } from './renderSettings'
 
 export type RenderPassName = 'World' | 'Lighting' | 'UI' | 'EditorOverlay' | 'PostProcess'
 export interface RenderPassSample { name: RenderPassName; enabled: boolean; durationMs: number; drawCalls: number }
+export type RenderGraphRequestStatus = 'none' | 'pending' | 'world-cpu-submitted' | 'not-submitted' | 'unmeasured'
+export interface RenderGraphDiagnosticsScope { projectGeneration: number; sceneUuid: string; rendererGeneration: number; runtimeSessionIdentity: number; view: string }
+export interface WorldCpuSubmissionSummary {
+  requestFrame: number
+  ownerEpoch: number
+  worldCpuSubmissionAtMs: number
+  measurementScope: 'world-renderer-cpu-api-submission'
+  passes: readonly Readonly<RenderPassSample>[]
+}
 export interface DeterministicCaptureFrame { index: number; timeSeconds: number; audioSampleStart: number; audioSampleEnd: number; dataUrl: string; width: number; height: number; encodedBytes: number }
 export interface DeterministicCaptureOptions { name?: string; frameRate?: number; sampleRate?: number; maximumFrames?: number; memoryBudgetMb?: number; includeUi?: boolean }
 
 export const renderGraphState = reactive({
   frame: 0,
   passes: [] as RenderPassSample[],
+  request: { frame: 0, status: 'none' as RenderGraphRequestStatus, worldCpuSubmissionAtMs: null as number | null, reason: 'unknown' as const },
+  lastWorldSubmission: null as WorldCpuSubmissionSummary | null,
   captures: [] as Array<{ id: number; createdAt: string; dataUrl: string; width: number; height: number }>,
   captureRequested: false,
   comparisons: [] as Array<{ first: number; second: number; difference: number; comparedAt: string }>
@@ -22,23 +33,86 @@ export const renderGraphState = reactive({
 })
 
 let framePasses: RenderPassSample[] = []
+let activeOwner: DiagnosticsOwner | null = null
+let frameOwnerEpoch = -1
+
+/** This owns diagnostics only; it never owns a graphics context or advances a clock. */
+class DiagnosticsOwner {
+  private epochValue = 0
+  private disposedValue = false
+  private retiredValue = false
+  private scopeValue: Readonly<RenderGraphDiagnosticsScope> | null = null
+  get epoch(): number { return this.epochValue }
+  get disposed(): boolean { return this.disposedValue || this.retiredValue }
+  retire(): void { this.retiredValue = true }
+  updateScope(scope: RenderGraphDiagnosticsScope): void {
+    if (this.disposed) return
+    const old = this.scopeValue
+    if (old && old.projectGeneration === scope.projectGeneration && old.sceneUuid === scope.sceneUuid
+      && old.rendererGeneration === scope.rendererGeneration && old.runtimeSessionIdentity === scope.runtimeSessionIdentity && old.view === scope.view) return
+    this.scopeValue = Object.freeze({ ...scope })
+    this.invalidate()
+  }
+  invalidate(): void { if (!this.disposed) { this.epochValue++; clearOwnerDiagnostics(this) } }
+  dispose(): void { if (this.disposedValue) return; this.disposedValue = true; this.epochValue++; clearOwnerDiagnostics(this) }
+}
+export type RenderGraphDiagnosticsOwner = DiagnosticsOwner
+export function createRenderGraphDiagnosticsOwner(): RenderGraphDiagnosticsOwner { return new DiagnosticsOwner() }
+const legacyOwner = new DiagnosticsOwner()
+function clearCurrentDiagnostics(): void {
+  framePasses = []; frameOwnerEpoch = -1
+  renderGraphState.passes.splice(0)
+  Object.assign(renderGraphState.request, { frame: 0, status: 'none', worldCpuSubmissionAtMs: null })
+  renderGraphState.lastWorldSubmission = null
+}
+function clearOwnerDiagnostics(owner: DiagnosticsOwner): void {
+  // A late cleanup from an old canvas must not erase a newer owner's observation.
+  if (activeOwner !== owner) return
+  clearCurrentDiagnostics()
+  if (owner.disposed) activeOwner = null
+}
+function ownsCurrentRequest(owner: DiagnosticsOwner): boolean { return !owner.disposed && activeOwner === owner && frameOwnerEpoch === owner.epoch }
 
 /* 开始新渲染图帧，清空临时通道记录并返回计时起点。 */
-export function beginRenderGraph(): number { renderGraphState.frame++; framePasses = []; return performance.now() }
+export function beginRenderGraph(owner: RenderGraphDiagnosticsOwner = legacyOwner): number {
+  const started = performance.now()
+  if (owner.disposed) return started
+  if (activeOwner !== owner) {
+    // A replacement explicit Owner makes its predecessor stale even before late unmount cleanup.
+    if (owner !== legacyOwner && activeOwner && activeOwner !== legacyOwner) activeOwner.retire()
+    clearCurrentDiagnostics(); activeOwner = owner
+  }
+  renderGraphState.frame++; framePasses = []; frameOwnerEpoch = owner.epoch
+  renderGraphState.passes.splice(0)
+  Object.assign(renderGraphState.request, { frame: renderGraphState.frame, status: 'pending', worldCpuSubmissionAtMs: null })
+  return started
+}
 /* 记录一个渲染通道的启用状态、耗时和绘制调用数，并返回结束时间。 */
-export function recordRenderPass(name: RenderPassName, startedAt: number, enabled = true, drawCalls = 0): number {
+export function recordRenderPass(name: RenderPassName, startedAt: number, enabled = true, drawCalls = 0, owner: RenderGraphDiagnosticsOwner = legacyOwner): number {
   const ended = performance.now()
+  if (!ownsCurrentRequest(owner)) return ended
   framePasses.push({ name, enabled, durationMs: enabled ? Math.max(0, ended - startedAt) : 0, drawCalls })
   return ended
 }
 /* 补齐未显式记录的默认渲染通道，再提交本帧通道列表。 */
-export function completeRenderGraph(worldStarted: number, stats: RendererStats, uiStarted: number, overlayStarted: number): void {
-  if (!framePasses.some(/* 比较 pass.name 与 'World'，返回严格相等的判断结果。 */ pass => pass.name === 'World')) recordRenderPass('World', worldStarted, true, stats.drawCalls)
+export function completeRenderGraph(worldStarted: number, stats: RendererStats, uiStarted: number, overlayStarted: number, owner: RenderGraphDiagnosticsOwner = legacyOwner): void {
+  if (!ownsCurrentRequest(owner)) return
+  if (!framePasses.some(/* 比较 pass.name 与 'World'，返回严格相等的判断结果。 */ pass => pass.name === 'World')) recordRenderPass('World', worldStarted, true, stats.drawCalls, owner)
   if (!framePasses.some(/* 比较 pass.name 与 'Lighting'，返回严格相等的判断结果。 */ pass => pass.name === 'Lighting')) framePasses.push({ name: 'Lighting', enabled: renderingSettings.lightingEnabled, durationMs: 0, drawCalls: 0 })
-  if (!framePasses.some(/* 比较 pass.name 与 'UI'，返回严格相等的判断结果。 */ pass => pass.name === 'UI')) recordRenderPass('UI', uiStarted, true, 1)
-  if (!framePasses.some(/* 比较 pass.name 与 'EditorOverlay'，返回严格相等的判断结果。 */ pass => pass.name === 'EditorOverlay')) recordRenderPass('EditorOverlay', overlayStarted, true, 1)
+  if (!framePasses.some(/* 比较 pass.name 与 'UI'，返回严格相等的判断结果。 */ pass => pass.name === 'UI')) recordRenderPass('UI', uiStarted, true, 1, owner)
+  if (!framePasses.some(/* 比较 pass.name 与 'EditorOverlay'，返回严格相等的判断结果。 */ pass => pass.name === 'EditorOverlay')) recordRenderPass('EditorOverlay', overlayStarted, true, 1, owner)
   if (!framePasses.some(/* 比较 pass.name 与 'PostProcess'，返回严格相等的判断结果。 */ pass => pass.name === 'PostProcess')) framePasses.push({ name: 'PostProcess', enabled: renderingSettings.postProcessing.enabled, durationMs: 0, drawCalls: 0 })
   renderGraphState.passes.splice(0, renderGraphState.passes.length, ...framePasses)
+  const at = stats.cpuSubmissionAtMs
+  const measured = typeof at === 'number' && Number.isFinite(at) && at >= 0
+  renderGraphState.request.worldCpuSubmissionAtMs = measured ? at : null
+  renderGraphState.request.status = measured ? 'world-cpu-submitted' : at === null ? 'not-submitted' : 'unmeasured'
+  if (measured) {
+    // A single immutable, bounded historical summary. Never feed it into current-frame counters.
+    renderGraphState.lastWorldSubmission = Object.freeze({ requestFrame: renderGraphState.request.frame, ownerEpoch: owner.epoch,
+      worldCpuSubmissionAtMs: at, measurementScope: 'world-renderer-cpu-api-submission' as const,
+      passes: Object.freeze(framePasses.slice(0, 5).map(pass => Object.freeze({ ...pass }))) })
+  }
 }
 /** 将 true 赋给 renderGraphState.captureRequested，不显式返回值。 */ export function requestRenderCapture(): void { renderGraphState.captureRequested = true }
 /* 归一化捕获频率、帧数和内存预算，初始化确定性捕获序列并清空旧帧。 */

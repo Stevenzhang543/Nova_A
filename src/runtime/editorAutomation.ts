@@ -3,6 +3,7 @@ import { reactive } from 'vue'
 import { WasmScriptRuntime } from '../../nova_core/pkg/nova_core.js'
 import { createTextAsset } from '../assets/AssetDatabase'
 import type { TextAssetType } from '../assets/types'
+import { NOVA_ENGINE_VERSION } from '../projects/projectFormat'
 import { addEditorLog } from '../store/editor'
 import { beginHistoryTransaction, cancelHistoryTransaction, commitHistoryTransaction, deleteEntity, physicsState, selectEntities, undo } from '../store/physics'
 
@@ -152,4 +153,4 @@ export const automationState = reactive({
 }
 
 /** 结构说明（自动提取）：rollbackLastAutomation；无显式参数；直接调用 undo、trace；写入 automationState.lastApplied、automationState.phase。 */ export function rollbackLastAutomation():boolean{if(!automationState.lastApplied)return false;undo();automationState.lastApplied=false;automationState.phase='idle';trace('rollback','The last automation transaction was undone.');return true}
-/** 结构说明（自动提取）：serializeAutomationEvidence；无显式参数；直接调用 toISOString、Date、automationState.diff.map、automationState.trace.map。 */ export function serializeAutomationEvidence(){return{format:'nova-editor-automation-evidence',version:1,engineVersion:'6.7.0',generatedAt:new Date().toISOString(),phase:automationState.phase,origin:automationState.origin,permissions:[...automationState.granted],diff:automationState.diff.map(/** 构造并返回记录 {...item}，字段按当前实参及捕获状态求值。 */ item=>({...item})),trace:automationState.trace.map(/** 构造并返回记录 {...item}，字段按当前实参及捕获状态求值。 */ item=>({...item})),error:automationState.error}}
+/** 结构说明（自动提取）：serializeAutomationEvidence；无显式参数；直接调用 toISOString、Date、automationState.diff.map、automationState.trace.map。 */ export function serializeAutomationEvidence(){return{format:'nova-editor-automation-evidence',version:1,engineVersion:NOVA_ENGINE_VERSION,generatedAt:new Date().toISOString(),phase:automationState.phase,origin:automationState.origin,permissions:[...automationState.granted],diff:automationState.diff.map(/** 构造并返回记录 {...item}，字段按当前实参及捕获状态求值。 */ item=>({...item})),trace:automationState.trace.map(/** 构造并返回记录 {...item}，字段按当前实参及捕获状态求值。 */ item=>({...item})),error:automationState.error}}

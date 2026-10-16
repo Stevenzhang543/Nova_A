@@ -6,7 +6,7 @@ import { withBrowserAudit, wait } from './lib/browserUserAudit.mjs'
 import { worldUserControls17 } from './lib/worldAudit17.mjs'
 
 const release = process.argv.find(arg => arg.startsWith('--qualification-release='))?.split('=')[1] ?? '26.34'
-assert.match(release, /^26\.(?:34|35|37)$/)
+assert.match(release, /^26\.(?:34|35|37|38)$/)
 assert.equal(JSON.parse(await readFile('package.json', 'utf8')).version, release + '.0')
 const semanticAssets = assets => assets.map(asset => { let source = asset.source; try { source = JSON.parse(source) } catch {} return { ...asset, source } })
 const activeEntities = document => document.scenes.find(scene => scene.uuid === document.activeSceneUuid).entities

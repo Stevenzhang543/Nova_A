@@ -1,5 +1,4 @@
 /** 设备输入处理：归一化设备事件与状态，供运行时输入绑定使用。 */
-import { reactive } from 'vue'
 
 export type VirtualControlKind = 'button' | 'stick' | 'dpad'
 export type VirtualControlAnchor = 'bottom-left' | 'bottom-right' | 'top-left' | 'top-right'
@@ -82,9 +81,34 @@ const defaults = /** 结构说明（自动提取）：defaults；无显式参数
   hapticsEnabled: true, motionSensorsEnabled: false, sensorFrequency: 30, gamepadCalibrations: [], virtualControls: []
 })
 
-export const deviceInputSettings = reactive<DeviceInputSettings>(defaults())
-export const deviceSensorState = reactive<DeviceSensorSnapshot>({ orientation: [0, 0, 0], acceleration: [0, 0, 0], rotationRate: [0, 0, 0], permission: 'not-requested', updatedAt: 0 })
-export const deviceRuntimeState = reactive({ capabilities: { touch: false, pen: false, maximumTouches: 0, pointerEvents: false, gamepads: false, vibration: false, orientationLock: false, motionSensors: false, devicePixelRatio: 1, viewport: [0, 0], orientation: 'landscape', safeArea: { left: 0, top: 0, right: 0, bottom: 0 } } as DeviceRuntimeCapabilities, lastHapticAt: 0, lastError: '' })
+export let deviceInputSettings: DeviceInputSettings = defaults()
+export let deviceSensorState: DeviceSensorSnapshot = { orientation: [0, 0, 0], acceleration: [0, 0, 0], rotationRate: [0, 0, 0], permission: 'not-requested', updatedAt: 0 }
+export let deviceRuntimeState = { capabilities: { touch: false, pen: false, maximumTouches: 0, pointerEvents: false, gamepads: false, vibration: false, orientationLock: false, motionSensors: false, devicePixelRatio: 1, viewport: [0, 0], orientation: 'landscape', safeArea: { left: 0, top: 0, right: 0, bottom: 0 } } as DeviceRuntimeCapabilities, lastHapticAt: 0, lastError: '' }
+
+let deviceInputAdapterPhase: 'plain' | 'preparing' | 'installed' = 'plain'
+/** Internal bootstrap preflight; production hosts use the aggregate installer. */
+export function isDeviceInputStateAdapterInstalled(): boolean { return deviceInputAdapterPhase !== 'plain' }
+/** Reserve all three existing Owners together; no host code runs during their eventual commit. */
+export function reserveDeviceInputStateAdapter() {
+  if (deviceInputAdapterPhase !== 'plain') throw new Error('Device input state has an independent module bootstrap')
+  deviceInputAdapterPhase = 'preparing'
+  let active = true
+  return {
+    targets: [deviceInputSettings, deviceSensorState, deviceRuntimeState] as const,
+    commit(views: readonly [DeviceInputSettings, DeviceSensorSnapshot, typeof deviceRuntimeState]): void {
+      if (!active || deviceInputAdapterPhase !== 'preparing') throw new Error('Device input state bootstrap reservation expired')
+      if (views.some(view => !view || typeof view !== 'object')) throw new TypeError('Device input views must retain the same raw Owners')
+      ;[deviceInputSettings, deviceSensorState, deviceRuntimeState] = views
+      deviceInputAdapterPhase = 'installed'
+      active = false
+    },
+    release(): void {
+      if (!active) return
+      active = false
+      deviceInputAdapterPhase = 'plain'
+    }
+  }
+}
 
 /** 结构说明（自动提取）：normalizeDeviceInputSettings；输入 source；直接调用 defaults、flatMap、slice、Array.isArray、Set 等。 */ export function normalizeDeviceInputSettings(source: unknown): DeviceInputSettings {
   const item = source && typeof source === 'object' ? source as Partial<DeviceInputSettings> : {}, base = defaults()

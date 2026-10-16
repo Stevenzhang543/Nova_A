@@ -19,6 +19,9 @@ startup('production-load')
 const production = await vite.ssrLoadModule('/src/runtime/production.ts')
 startup('network-load')
 const network = await vite.ssrLoadModule('/src/runtime/networking.ts')
+const { NetworkSessionOwner } = await vite.ssrLoadModule('/src/runtime/networkSessionOwner.ts')
+const { MultiplayerReplayOwner } = await vite.ssrLoadModule('/src/runtime/multiplayerReplayOwner.ts')
+const { createNetworkPlatformPorts } = await vite.ssrLoadModule('/src/platform/networkPlatformFactory.ts')
 startup('network-loaded')
 // Optional decoded-package settings keep headless clients on the authority's actual replication schema.
 // Pace the connectivity workload at60Hz with bandwidth for8peers. Budget refusal is tested separately; oversubscribed retry expiry must not masquerade as connectivity.
@@ -42,6 +45,17 @@ if (packagedSettings) {
   const { BoxEntity } = await vite.ssrLoadModule('/src/world/BoxEntity.ts')
   for (const [index, definition] of production.productionSettings.networking.replicatedEntities.entries()) replicaEntities.push(new BoxEntity(index + 1, { x: 999_999, y: 999_999 }, { x: 1, y: 1 }, definition.entityUuid))
 }
+
+// Runtime callers no longer inherit a global network Owner. Install the same explicit
+// composition the editor installs, but with real runtime platform ports, the peer's own
+// replicated entities and no editor state, so every public network call has one Owner.
+const rawNetworkingState = network.getLegacyNetworkSessionOwnerRawState()
+const networkHost = { world: { entities: replicaEntities }, readConfiguration: () => production.productionSettings }
+const networkPorts = createNetworkPlatformPorts()
+const networkReplayOwner = new MultiplayerReplayOwner(networkHost, networkPorts)
+const networkSessionOwner = new NetworkSessionOwner(networkHost, networkPorts, networkReplayOwner, rawNetworkingState)
+network.installLegacyNetworkSessionOwnerPort({ stateView: rawNetworkingState, getOwner: () => networkSessionOwner })
+startup('network-owner-installed')
 
 let rpcReceived = 0, exercisedTicks = 0
 network.registerRpc('soak.ready', /** 收到安全整数 RPC 参数时累计接收次数。 */ value => { if (Number.isSafeInteger(value)) rpcReceived++ })

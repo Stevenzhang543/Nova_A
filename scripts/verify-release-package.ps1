@@ -11,6 +11,20 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+# Windows PowerShell 5.1 cannot deserialize the largest or deepest project documents with
+# ConvertFrom-Json (it aborts part-way through a 3.6 MB reference project), while PowerShell 7 can.
+# These checks only need top-level scalars, and the project writer always emits them first, so read
+# those scalars directly and keep verification runnable on the pinned Windows PowerShell runtime.
+function Get-NovaProjectAuthority {
+  param([Parameter(Mandatory = $true)][string]$LiteralPath)
+  $head = [IO.File]::ReadAllText($LiteralPath)
+  $engine = [regex]::Match($head, '"engineVersion"\s*:\s*"([^"]+)"').Groups[1].Value
+  $major = [regex]::Match($head, '"projectFormatMajor"\s*:\s*(\d+)').Groups[1].Value
+  $format = [regex]::Match($head, '"formatVersion"\s*:\s*(\d+)').Groups[1].Value
+  if ([string]::IsNullOrWhiteSpace($engine) -or [string]::IsNullOrWhiteSpace($major) -or [string]::IsNullOrWhiteSpace($format)) { throw "Project authority is missing from $LiteralPath" }
+  return [pscustomobject]@{ engineVersion = $engine; projectFormatMajor = [int]$major; formatVersion = [int]$format }
+}
+
 # 以流方式计算文件 SHA-256，返回小写十六进制并释放流与算法对象。
 function Get-Sha256Lower {
   param(
@@ -195,7 +209,7 @@ try {
     $engineMatch = [regex]::Match($text, 'Engine \*\*(\d+\.\d+\.\d+)\*\*')
     if (-not $engineMatch.Success -or $text -notmatch 'Project Format 2.*schema 29') { throw "Reference README metadata is incomplete: $($readme.FullName)" }
     foreach ($required in @('project.nova', 'expected-output.json', 'test-controls.json')) { if (-not (Test-Path -LiteralPath (Join-Path $readme.DirectoryName $required) -PathType Leaf)) { throw "Reference fixture is missing $required beside $($readme.Name)" } }
-    $referenceProject = Get-Content -LiteralPath (Join-Path $readme.DirectoryName 'project.nova') -Raw | ConvertFrom-Json
+    $referenceProject = Get-NovaProjectAuthority -LiteralPath (Join-Path $readme.DirectoryName 'project.nova')
     if ($referenceProject.engineVersion -notmatch '^\d+\.\d+\.\d+$' -or $referenceProject.projectFormatMajor -ne 2 -or $referenceProject.formatVersion -ne 29) { throw "Reference project authority is invalid: $($readme.FullName)" }
     if (-not (Test-VersionAtMost -Candidate $referenceProject.engineVersion -Maximum $MachineVersion)) { throw "Reference archive contains future-engine project $($referenceProject.engineVersion): $($readme.Directory.Name)" }
     $readmeIsCurrent = $engineMatch.Groups[1].Value -eq $MachineVersion

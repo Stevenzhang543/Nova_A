@@ -24,11 +24,9 @@ import init, {
 } from '../../nova_core/pkg/nova_core.js'
 import { invalidateHierarchyIndex, localPointToWorld, setWorldTransform, worldTransform } from './hierarchy'
 import { TileMap2D } from './components'
-import { buildTileColliderDescriptors } from '../runtime/tilemap'
-import { assetState, readTextAsset } from '../assets/AssetDatabase'
-import { recordPhysicsTelemetry } from '../runtime/physicsMonitor'
 import { defaultPhysicsLayers, defaultPhysicsProfile, normalizePhysicsMaterial, normalizePhysicsProfile, stablePhysicsEventOrder, type PhysicsInterpolationMode, type PhysicsLayerDefinition, type PhysicsSimulationProfile2D } from '../runtime/physicsProduction'
 import { encodeColliderChildren, solverShapeArea, prepareColliderSet, type SolverColliderShape2D } from '../runtime/physicsGeometry'
+import { DEFAULT_MAX_CATCH_UP_STEPS, normalizeSimulationFrameDelta } from '../runtime/engineTiming'
 
 export const PHYSICS_STRIDE = 56
 export const PHYSICS_LAYER_COUNT = 32
@@ -87,6 +85,28 @@ export interface RuntimePhysicsEvent {
   [key: string]: unknown
 }
 
+/** Per-world synchronous host services. Resource data and observers stay with their host owner. */
+export interface WorldHostServices {
+  readTextAsset(reference: string): string | null
+  assetRevision(): number
+  buildTileColliderDescriptors(component: TileMap2D): readonly {
+    center: Vec2
+    size: Vec2
+    vertices: readonly Vec2[]
+    oneWay: boolean
+  }[]
+  recordPhysicsTelemetry?(entities: Entity[], connections: Connection[], events: RuntimePhysicsEvent[], diagnostics: EngineDiagnostics, tickRate: number, profile: PhysicsSimulationProfile2D): void
+}
+
+const DEFAULT_WORLD_HOST_SERVICES: Readonly<WorldHostServices> = Object.freeze({
+  readTextAsset: () => null,
+  assetRevision: () => 0,
+  buildTileColliderDescriptors: (component: TileMap2D) => {
+    if (!component.bakeCollision || !component.tileSetAsset) return []
+    throw new Error('WORLD_TILE_SERVICE_REQUIRED: configure this world\'s tile collider projection before simulation.')
+  }
+})
+
 export interface CharacterMoveResult2D {
   position: [number, number]
   appliedMotion: [number, number]
@@ -125,7 +145,7 @@ interface ConnectionRecord {
 }
 
 /** Writes one entity into the stable Float64 ABI shared with nova_core. */
-/** 规范实体与关联物理材质，按固定 Float64 ABI 写入世界姿态、形状、运动、质量和碰撞设置；无有效形状时拒绝同步。 */ function writeEntityRecord(data: Float64Array, entityIndex: number, entity: Entity, entities: Entity[], settings: GlobalPhysicsSettings, runtimeHandle = entity.id, solverShapes?: SolverColliderShape2D[]): void {
+/** 规范实体与关联物理材质，按固定 Float64 ABI 写入世界姿态、形状、运动、质量和碰撞设置；无有效形状时拒绝同步。 */ function writeEntityRecord(data: Float64Array, entityIndex: number, entity: Entity, entities: Entity[], settings: GlobalPhysicsSettings, readTextAsset: WorldHostServices['readTextAsset'], runtimeHandle = entity.id, solverShapes?: SolverColliderShape2D[]): void {
   normalizeEntity(entity)
   let material = entity.collider.material
   if (entity.collider.materialAsset) {
@@ -340,12 +360,14 @@ interface ConnectionRecord {
 }
 
 export class World {
+  private readonly host: Readonly<WorldHostServices>
   private nextId = 1
   private nextConnectionId = 1
   entities: Entity[] = []
   connections: Connection[] = []
   private wasmLoaded = false
   private runtime: WasmRuntimeWorld | null = null
+  private runtimeDisposed = false
   private nextRuntimeHandle = 1
   private bodyHandles = new Map<number, number>()
   private connectionHandles = new Map<string, number>()
@@ -366,7 +388,7 @@ export class World {
   private activeConnectionRecords: ConnectionRecord[] = []
   private runtimeJointConnections = new Map<string, Connection>()
   private timingSignature = ''
-  private lastSettings: GlobalPhysicsSettings = { gravity: 9.8, airFriction: .01, timeScale: 1, tickRate: 60, maxCatchUpSteps: 8, collisionMatrix: defaultCollisionMatrix(), interpolation: 'Interpolate', layers: defaultPhysicsLayers(), profile: defaultPhysicsProfile() }
+  private lastSettings: GlobalPhysicsSettings = { gravity: 9.8, airFriction: .01, timeScale: 1, tickRate: 60, maxCatchUpSteps: DEFAULT_MAX_CATCH_UP_STEPS, collisionMatrix: defaultCollisionMatrix(), interpolation: 'Interpolate', layers: defaultPhysicsLayers(), profile: defaultPhysicsProfile() }
   wasmError: Error | null = null
   readonly wasmReady: Promise<void>
   diagnostics: EngineDiagnostics = {
@@ -378,7 +400,14 @@ export class World {
   projectFormatVersion = 29
   projectEngineVersion = '6.7.0'
 
-  /** 浏览器中异步初始化 WASM 世界及实际版本信息；Node 审计环境保持无加载后备，初始化错误保存供诊断。 */ constructor() {
+  /** 浏览器中异步初始化 WASM 世界及实际版本信息；资源与观察服务按世界注入，Node 保持现有无加载后备。 */ constructor(host: WorldHostServices = DEFAULT_WORLD_HOST_SERVICES) {
+    // Bind once so callbacks keep their supplied owner, without any process-wide default registration.
+    this.host = Object.freeze({
+      readTextAsset: host.readTextAsset.bind(host),
+      assetRevision: host.assetRevision.bind(host),
+      buildTileColliderDescriptors: host.buildTileColliderDescriptors.bind(host),
+      recordPhysicsTelemetry: host.recordPhysicsTelemetry?.bind(host)
+    })
     // Vite's Node-side audit loader has no browser fetch implementation for file: WASM URLs.
     // Keep its deliberate headless fallback quiet; browsers and Tauri still initialize normally.
     const nodeRuntime = (globalThis as typeof globalThis & { process?: { versions?: { node?: string } } }).process?.versions?.node
@@ -388,6 +417,7 @@ export class World {
     }
     this.wasmReady = init()
       .then(/** WASM 初始化完成后创建运行世界，读取实际引擎及格式版本并标记就绪。 */ () => {
+        if (this.runtimeDisposed) return
         this.runtime = new WasmRuntimeWorld()
         this.projectFormatVersion = current_format_version()
         this.projectEngineVersion = engine_version()
@@ -460,7 +490,7 @@ export class World {
     if (!this.wasmLoaded || !this.runtime) return this.diagnostics
     this.configureTiming(globalSettings, !isRunning)
     if (isRunning && this.entities.length > 0) {
-      const frameDelta = Math.min(Math.max(finiteNumber(dt, 0), 0), 0.25)
+      const frameDelta = normalizeSimulationFrameDelta(dt)
       const gravity = finiteNumber(globalSettings.gravity, 9.8)
       const airFriction = Math.max(0, finiteNumber(globalSettings.airFriction, 0.01))
       if (beforeFixedStep) {
@@ -486,6 +516,16 @@ export class World {
     }
     this.readDiagnostics()
     return this.diagnostics
+  }
+
+  /** Host calls between complete update/singleStep calls, after releasing held input.
+   * Reset sampling/debt only: do not rebuild storage, read poses or drain pending events.
+   * Rust retains current presentation until a new fixed tick replaces the old interpolation pair. */
+  resetSimulationClock(): void {
+    if (!this.wasmLoaded || !this.runtime) return
+    this.runtime.reset_frame_clock()
+    this.diagnostics.stepsLastFrame = 0
+    this.diagnostics.interpolationAlpha = 1
   }
 
   /** 同步当前编辑数据，强制执行一个固定物理步并回读完整状态及诊断。 */ singleStep(globalSettings: GlobalPhysicsSettings): EngineDiagnostics {
@@ -698,6 +738,16 @@ export class World {
     this.timingSignature = ''
   }
 
+  /** Final host-owned disposal; clear cached views and free the native wrapper once. */
+  disposeRuntimeWorld(): void {
+    if (this.runtimeDisposed) return
+    this.runtimeDisposed = true
+    const runtime = this.runtime
+    this.runtime = null
+    this.wasmLoaded = false
+    try { this.invalidateRuntime() } finally { runtime?.free() }
+  }
+
   /** 分配不重复的 32 位运行句柄，达到上限时拒绝继续。 */ private allocateRuntimeHandle(): number {
     if (this.nextRuntimeHandle >= 0xffff_ffff) throw new Error('Runtime handle space is exhausted')
     return this.nextRuntimeHandle++
@@ -747,7 +797,7 @@ export class World {
       liveBodies.add(entity.id)
       const prepared = colliderSets.get(entity.id) ?? prepareColliderSet(entity.collider, !entity.isStatic && !entity.isKinematic)
       this.bodyScratch.fill(0)
-      writeEntityRecord(this.bodyScratch, 0, entity, this.entities, settings, handle, prepared.shapes)
+      writeEntityRecord(this.bodyScratch, 0, entity, this.entities, settings, this.host.readTextAsset, handle, prepared.shapes)
       const cached = this.bodyRecords.get(handle)
       if (!cached || this.bodyOrders.get(handle) !== order || !recordsEqual(cached, this.bodyScratch)) {
         // Interpolation is a display pose. A velocity/material/shape edit must not send
@@ -841,18 +891,19 @@ export class World {
       const component = entity.getComponent<TileMap2D>('TileMap2D')
       return component?.enabled && !component.removed && entity.enabled ? [{ entity, component }] : []
     })
-    const signature = `${assetState.generation}|${tileMaps.map(/** 将地图身份、内容修订、碰撞设置及世界变换编码为重建缓存签名。 */ ({ entity, component }) => {
+    const assetRevision = this.host.assetRevision()
+    if (!Number.isSafeInteger(assetRevision) || assetRevision < 0) throw new Error('WORLD_ASSET_REVISION_INVALID: expected a nonnegative safe integer.')
+    const signature = `${assetRevision}|${tileMaps.map(/** 将地图身份、内容修订、碰撞设置及世界变换编码为重建缓存签名。 */ ({ entity, component }) => {
       const transform = worldTransform(entity, this.entities)
       return [entity.uuid, component.revision, component.tileSetAsset, component.width, component.height, component.tileSize.x, component.tileSize.y, component.physicsLayer, component.collisionMask, transform.position.x, transform.position.y, transform.rotation, transform.scale.x, transform.scale.y].join(':')
     }).join('|')}`
     if (signature === this.tileCollisionSignature) return
-    this.tileCollisionSignature = signature
-    this.tileCollisionBodies = []
-    this.tileCollisionOwners.clear()
+    const bodies: Entity[] = []
+    const owners = new Map<number, Entity>()
     let syntheticId = -1
     for (const { entity, component } of tileMaps) {
       const transform = worldTransform(entity, this.entities)
-      for (const descriptor of buildTileColliderDescriptors(component)) {
+      for (const descriptor of this.host.buildTileColliderDescriptors(component)) {
         const center = {
           x: descriptor.center.x * transform.scale.x,
           y: descriptor.center.y * transform.scale.y
@@ -874,10 +925,14 @@ export class World {
         body.collider.collisionMask = component.collisionMask >>> 0
         body.collider.oneWay = descriptor.oneWay
         body.collider.oneWayNormal = { x: 0, y: 1 }
-        this.tileCollisionBodies.push(body)
-        this.tileCollisionOwners.set(body.id, entity)
+        bodies.push(body)
+        owners.set(body.id, entity)
       }
     }
+    // A failed projector must not publish a successful cache revision or discard the last valid projection.
+    this.tileCollisionBodies = bodies
+    this.tileCollisionOwners = owners
+    this.tileCollisionSignature = signature
   }
 
   /** 复用缓冲读取当前及前一固定步状态，按设置插值显示姿态，并刷新刚体和连接同步记录。 */ private readRuntimeState(alpha: number, settings: GlobalPhysicsSettings): void {
@@ -886,8 +941,8 @@ export class World {
     const bodyLength = this.runtime.body_state_len()
     this.stateBuffer = ensureBuffer(this.stateBuffer, stateLength)
     this.previousBodyBuffer = ensureBuffer(this.previousBodyBuffer, bodyLength)
-    if (this.runtime.copy_state(this.stateBuffer) !== stateLength) return
-    const previousLength = this.runtime.copy_previous_body_state(this.previousBodyBuffer)
+    if (this.copyBorrowedRuntimeState(false, this.stateBuffer, stateLength) !== stateLength) return
+    const previousLength = this.copyBorrowedRuntimeState(true, this.previousBodyBuffer, bodyLength)
     this.activeBodies.forEach(/** 恢复单个刚体状态，可选插值显示姿态，并缓存回写记录避免无变化的重复同步。 */ (entity, index) => {
       const handle = this.bodyHandles.get(entity.id), offset = index * PHYSICS_STRIDE
       if (handle !== undefined) this.storeNativeBodyPose(handle, this.stateBuffer[offset + 2], this.stateBuffer[offset + 3], this.stateBuffer[offset + 14])
@@ -905,7 +960,7 @@ export class World {
       }
       if (handle !== undefined) {
         this.bodyScratch.fill(0)
-        writeEntityRecord(this.bodyScratch, 0, entity, this.entities, settings, handle)
+        writeEntityRecord(this.bodyScratch, 0, entity, this.entities, settings, this.host.readTextAsset, handle)
         this.storeRecord(this.bodyRecords, handle, this.bodyScratch)
       }
     })
@@ -918,6 +973,16 @@ export class World {
         this.storeRecord(this.connectionRecords, handle, this.connectionScratch)
       }
     })
+  }
+
+  /** Borrow and copy within one synchronous call; no pointer/view survives a tick or await. */
+  private copyBorrowedRuntimeState(previous: boolean, target: Float64Array, expectedLength: number): number {
+    if (!this.runtime) return 0
+    const view: unknown = previous ? this.runtime.previous_body_state_view() : this.runtime.state_view()
+    const buffer: unknown = this.runtime.memory_buffer() // Non-mutating; must not relocate the borrowed storage.
+    if (!(view instanceof Float64Array) || !(buffer instanceof ArrayBuffer) || view.buffer !== buffer || !(target.buffer instanceof ArrayBuffer) || target.buffer === buffer || view.length !== expectedLength || target.length !== expectedLength || !Number.isSafeInteger(expectedLength) || expectedLength < 0 || view.byteOffset % 8 !== 0 || view.byteLength !== expectedLength * 8 || !Number.isSafeInteger(view.byteOffset + view.byteLength) || view.byteOffset + view.byteLength > buffer.byteLength) throw new Error('Invalid or expired ordinary WASM state view.')
+    target.set(view)
+    return view.length
   }
 
   /** 读取求解诊断和事件，将运行句柄关联回实体或连接，稳定排序并发布物理遥测；格式错误只记录警告。 */ private readDiagnostics(): void {
@@ -942,7 +1007,7 @@ export class World {
         entityUuid: typeof event.handle === 'number' && (event.type === 'bodySleeping' || event.type === 'bodyWoke') ? entityByHandle.get(event.handle)?.uuid : undefined,
         connectionUuid: typeof event.handle === 'number' && event.type === 'jointBroken' ? connectionByHandle.get(event.handle)?.uuid : undefined
       })))
-      recordPhysicsTelemetry(this.entities, this.connections, this.events, this.diagnostics, this.lastSettings.tickRate, this.lastSettings.profile)
+      this.host.recordPhysicsTelemetry?.(this.entities, this.connections, this.events, this.diagnostics, this.lastSettings.tickRate, this.lastSettings.profile)
     } catch (error) {
       console.warn('Nova_A received malformed runtime diagnostics', error)
     }

@@ -7,7 +7,7 @@ import {worldUserControls17} from './lib/worldAudit17.mjs'
 
 const root=resolve(process.env.NOVA_AUDIT_ROOT||process.cwd())
 const release=process.argv.find(arg=>arg.startsWith('--qualification-release='))?.split('=')[1]||'26.37'
-assert.equal(release,'26.37')
+assert.ok(['26.37','26.38'].includes(release))
 assert.equal(JSON.parse(await readFile(join(root,'package.json'),'utf8')).version,release+'.0')
 const fixture=join(root,'reference-projects/projects/world-v2629-stream-host/project.nova')
 const replacement=join(root,'reference-projects/projects/creator-v2637-mixed-game/project.nova')

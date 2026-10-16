@@ -1,6 +1,6 @@
 /** 网络协议编码与验证：规范消息及序列信息，检查接收数据符合协议约定。 */
-import type { NetworkChannelDefinition, NetworkDelivery, NetworkPayloadSchema } from './production'
-import type { NetworkSecurityEnvelope } from './networkProduction'
+import type { NetworkChannelDefinition, NetworkDelivery, NetworkPayloadSchema } from './networkSessionContracts'
+import type { NetworkSecurityEnvelope } from './networkProductionValues'
 
 export const NOVA_NETWORK_PROTOCOL = 2 as const
 export const NOVA_NETWORK_PACKET_FORMAT = 'nova-net' as const

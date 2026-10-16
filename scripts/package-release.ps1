@@ -11,6 +11,20 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+# Windows PowerShell 5.1 cannot deserialize the largest or deepest project documents with
+# ConvertFrom-Json (it aborts part-way through a 3.6 MB reference project), while PowerShell 7 can.
+# These checks only need top-level scalars, and the project writer always emits them first, so read
+# those scalars directly and keep packaging runnable on the pinned Windows PowerShell runtime.
+function Get-NovaProjectAuthority {
+  param([Parameter(Mandatory = $true)][string]$LiteralPath)
+  $head = [IO.File]::ReadAllText($LiteralPath)
+  $engine = [regex]::Match($head, '"engineVersion"\s*:\s*"([^"]+)"').Groups[1].Value
+  $major = [regex]::Match($head, '"projectFormatMajor"\s*:\s*(\d+)').Groups[1].Value
+  $format = [regex]::Match($head, '"formatVersion"\s*:\s*(\d+)').Groups[1].Value
+  if ([string]::IsNullOrWhiteSpace($engine) -or [string]::IsNullOrWhiteSpace($major) -or [string]::IsNullOrWhiteSpace($format)) { throw "Project authority is missing from $LiteralPath" }
+  return [pscustomobject]@{ engineVersion = $engine; projectFormatMajor = [int]$major; formatVersion = [int]$format }
+}
+
 # 以流方式计算文件 SHA-256，返回小写十六进制并释放流与算法对象。
 function Get-Sha256Lower {
   param(
@@ -118,7 +132,7 @@ function Assert-CurrentReleaseReferences {
     if (-not (Test-Path -LiteralPath $projectPath -PathType Leaf)) { continue }
     $text = Get-Content -LiteralPath $readme.FullName -Raw
     $engineMatch = [regex]::Match($text, 'Engine \*\*(\d+\.\d+\.\d+)\*\*')
-    $project = Get-Content -LiteralPath $projectPath -Raw | ConvertFrom-Json
+    $project = Get-NovaProjectAuthority -LiteralPath $projectPath
     $readmeIsCurrent = $engineMatch.Success -and $engineMatch.Groups[1].Value -eq $MachineVersion
     $projectIsCurrent = $project.engineVersion -eq $MachineVersion
     if ($readmeIsCurrent -xor $projectIsCurrent) { throw "Reference authority disagrees for public $PublicLabel / machine $($MachineVersion): $($readme.DirectoryName)" }
@@ -250,7 +264,7 @@ function Test-ExcludedSourcePath {
   $normalized = $Path.Replace('\','/').TrimStart('/')
   if ($normalized -ieq 'godot-master' -or $normalized -ilike 'godot-master/*' -or $normalized -ieq 'instructions.txt') { return $true }
   $first = $normalized.Split('/')[0]
-  if ($first -like 'stage*' -or $first -match '^(\.git|\.pnpm-store|\.VSCodeCounter|\.vite|\.cache|\.turbo|\.vscode|\.idea|dist|dist-ssr|node_modules|release-audits|releases|target|coverage|playwright-report|test-results|logs)$') { return $true }
+  if ($first -like 'stage*' -or $first -match '^(\.git|\.dsh|\.pnpm-store|\.VSCodeCounter|\.vite|\.cache|\.turbo|\.vscode|\.idea|dist|dist-ssr|node_modules|release-audits|releases|target|coverage|playwright-report|test-results|logs)$') { return $true }
   if ($normalized -match '^(src-tauri|nova_core)/target(/|$)' -or $normalized -match '^src-tauri/gen(/|$)') { return $true }
   $name = [IO.Path]::GetFileName($normalized)
   if ($name -match '^(\.DS_Store|Thumbs\.db|Desktop\.ini)$' -or $name -match '^(npm|yarn|pnpm|lerna)-debug\.log' -or $name -match '\.(log|tsbuildinfo|tmp|temp|local)$' -or $name -match '\.sw.$') { return $true }
@@ -460,7 +474,7 @@ try { Invoke-WithTransientFileRetry -Operation 'Reference-project archive creati
   foreach ($directory in @(Get-ChildItem -LiteralPath (Join-Path $projectRoot 'reference-projects\projects') -Directory)) {
     $projectPath = Join-Path $directory.FullName 'project.nova'
     if (-not (Test-Path -LiteralPath $projectPath -PathType Leaf)) { continue }
-    $engine = [string](Get-Content -LiteralPath $projectPath -Raw | ConvertFrom-Json).engineVersion
+    $engine = [string](Get-NovaProjectAuthority -LiteralPath $projectPath).engineVersion
     if (-not (Test-VersionAtMost -Candidate $engine -Maximum $MachineVersion)) { continue }
     Copy-Item -LiteralPath $directory.FullName -Destination (Join-Path $projectsStage $directory.Name) -Recurse -Force
   }

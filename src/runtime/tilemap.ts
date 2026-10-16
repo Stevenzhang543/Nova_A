@@ -1,53 +1,31 @@
+import { normalizeTileMap, integer, MAX_TILESET_TILES, MAX_TILEMAP_CELLS } from './tileMapValues'
+export { normalizeTileMap } from './tileMapValues'
 /** 瓦片地图系统：管理瓦片集、地图单元和编辑操作，生成绘制及碰撞所需数据。 */
 import { reactive } from 'vue'
-import { assetState, textureContentRevision } from '../assets/AssetDatabase'
-import { isTiledMapAsset, resolveTiledMapAsset } from '../assets/tiledMapAssets'
-import { BoundedImportCache, registerImportSessionCleanup } from '../assets/importRetention'
+import {TileMapOwner,TileSetResourceOwner} from './tileMapOwner'
+import {normalizeTileSet} from './tileSetValues'
+import type {TileDefinition,TileSetDocument} from './tileSetValues'
+export {normalizeTileSet} from './tileSetValues'
+export type {TileDefinition,TileSetDocument} from './tileSetValues'
+import { isTiledMapAsset } from '../assets/tiledMapAssets'
+
 import {
   assetReference,
   createTextAsset,
   readTextAsset,
   resolveAsset,
-  resolveTextureRegion,
+
   updateTextAssetTransactional
 } from '../assets/AssetDatabase'
 import type { AssetRecord } from '../assets/types'
 import type { TileChunkRenderCommand } from '../renderer'
+import type {RuntimeTileChunk,TileColliderDescriptor,TilePlacementDescriptor} from './tileMapOwner'
+export type {RuntimeTileChunk,TileColliderDescriptor,TilePlacementDescriptor} from './tileMapOwner'
 import type { Entity } from '../world/Entity'
 import { finiteNumber } from '../world/geometry'
-import { localPointToWorld, worldPointToLocal, worldTransform } from '../world/hierarchy'
-import type { TileBlendMode2D, TileCellTransform2D, TileCollision2D, TileMap2D } from '../world/components'
+
+import type { TileCellTransform2D, TileMap2D } from '../world/components'
 import type { Vec2 } from '../world/types'
-
-export interface TileDefinition {
-  index: number
-  name: string
-  collision: TileCollision2D
-  polygon: Vec2[]
-  terrain: string
-  navigationCost: number
-  occluder: boolean
-  navigationPolygon: Vec2[]
-  occlusionPolygon: Vec2[]
-  metadata: Record<string, boolean | number | string>
-  sceneAsset: string | null
-  prefabAsset: string | null
-  sourceId: string
-  region: { x: number; y: number; width: number; height: number } | null
-  animation: { frames: number[]; durations?: number[]; framesPerSecond: number; mode: 'Loop' | 'PingPong' | 'Once' } | null
-  variants: Array<{ tile: number; weight: number }>
-}
-
-export interface TileSetDocument {
-  version: 2
-  textureAsset: string | null
-  sources: Array<{ id: string; name: string; textureAsset: string | null; margin: number; spacing: number }>
-  tileWidth: number
-  tileHeight: number
-  columns: number
-  rows: number
-  tiles: TileDefinition[]
-}
 
 export type TileTool = 'brush' | 'stamp' | 'pattern' | 'line' | 'rectangle' | 'eraser' | 'fill' | 'replace' | 'eyedropper' | 'selection'
 
@@ -77,113 +55,16 @@ export const tileBakeState = reactive({
 })
 let tileBakeController: AbortController | null = null
 
-const MAX_TILESET_TILES = 65_536
-const MAX_TILEMAP_CELLS = 4_194_304
 
-/* 调用 Math.round(Math.min(maximum, Math.max(minimum, finiteNumber(value, fallback)))) 并返回调用结果。 */ function integer(value: unknown, fallback: number, minimum: number, maximum: number): number {
-  return Math.round(Math.min(maximum, Math.max(minimum, finiteNumber(value, fallback))))
-}
+/** Temporary authoring facade; Runtime/Player use the explicit fixed World child. */
+export interface LegacyTileMapPort {getOwner():TileMapOwner;readonly resources:TileSetResourceOwner}
+let legacyTileMapPort:LegacyTileMapPort|null=null
+export function installLegacyTileMapPort(port:LegacyTileMapPort):void {if(legacyTileMapPort)throw new Error('TILE_LEGACY_PORT_ALREADY_INSTALLED');if(!(port.resources instanceof TileSetResourceOwner)||typeof port.getOwner!=='function')throw new Error('TILE_LEGACY_PORT_REQUIRED');legacyTileMapPort=port}
+function requireTileMapOwner():TileMapOwner {if(!legacyTileMapPort)throw new Error('TILE_LEGACY_PORT_REQUIRED');return legacyTileMapPort.getOwner()}
+function readRuntimeTileSet(reference:string|null|undefined):TileSetDocument|null {if(!legacyTileMapPort)throw new Error('TILE_LEGACY_PORT_REQUIRED');return legacyTileMapPort.resources.readRuntimeTileSet(reference)}
+export function tileSetCacheStats(){if(!legacyTileMapPort)throw new Error('TILE_LEGACY_PORT_REQUIRED');return legacyTileMapPort.resources.tileSetCacheStats()}
+export function readTileSet(reference:string|null|undefined):TileSetDocument|null {if(!legacyTileMapPort)throw new Error('TILE_LEGACY_PORT_REQUIRED');return legacyTileMapPort.resources.readTileSet(reference)}
 
-/** 结构说明（自动提取）：normalizedPolygon；输入 source；直接调用 Array.isArray、flatMap、source.slice。 */ function normalizedPolygon(source: unknown): Vec2[] {
-  if (!Array.isArray(source)) return []
-  // The stable physics ABI stores four convex vertices per collider.
-  return source.slice(0, 4).flatMap(/** 结构说明（自动提取）：flatMap 回调；输入 value；直接调用 Math.min、Math.max、finiteNumber。 */ value => {
-    if (!value || typeof value !== 'object') return []
-    const point = value as Record<string, unknown>
-    return [{ x: Math.min(1, Math.max(0, finiteNumber(point.x))), y: Math.min(1, Math.max(0, finiteNumber(point.y))) }]
-  })
-}
-
-/** 结构说明（自动提取）：normalizedMetadata；输入 source；直接调用 Array.isArray、slice、Object.entries、rawKey.trim、includes 等；写入 result[…]；返回路径包含 result；包含循环处理。 */ function normalizedMetadata(source: unknown): Record<string, boolean | number | string> {
-  if (!source || typeof source !== 'object' || Array.isArray(source)) return {}
-  const result: Record<string, boolean | number | string> = {}
-  for (const [rawKey, rawValue] of Object.entries(source as Record<string, unknown>).slice(0, 64)) {
-    const key = rawKey.trim().slice(0, 80)
-    if (!key || !['boolean', 'number', 'string'].includes(typeof rawValue) || typeof rawValue === 'number' && !Number.isFinite(rawValue)) continue
-    result[key] = typeof rawValue === 'string' ? rawValue.slice(0, 500) : rawValue as boolean | number
-  }
-  return result
-}
-
-/** 结构说明（自动提取）：normalizeTileSet；输入 source；直接调用 integer、Math.max、Math.floor、Math.min、Array.isArray 等。 */ export function normalizeTileSet(source: unknown): TileSetDocument {
-  const value = source && typeof source === 'object' ? source as Record<string, unknown> : {}
-  const tileWidth = integer(value.tileWidth, 32, 1, 16_384)
-  const tileHeight = integer(value.tileHeight, 32, 1, 16_384)
-  const columns = integer(value.columns, 1, 1, MAX_TILESET_TILES)
-  const rows = integer(value.rows, 1, 1, Math.max(1, Math.floor(MAX_TILESET_TILES / columns)))
-  const count = Math.min(MAX_TILESET_TILES, columns * rows)
-  const rawTiles = Array.isArray(value.tiles) ? value.tiles : []
-  const sources = (Array.isArray(value.sources) ? value.sources : []).slice(0, 64).flatMap(/** 结构说明（自动提取）：flatMap 回调；输入 item、index；直接调用 raw.id.slice、raw.name.slice、integer。 */ (item, index) => {
-    if (!item || typeof item !== 'object') return []
-    const raw = item as Record<string, unknown>
-    return [{ id: typeof raw.id === 'string' && raw.id ? raw.id.slice(0, 80) : `source-${index}`, name: typeof raw.name === 'string' ? raw.name.slice(0, 120) : `Source ${index + 1}`, textureAsset: typeof raw.textureAsset === 'string' ? raw.textureAsset : null, margin: integer(raw.margin, 0, 0, 16_384), spacing: integer(raw.spacing, 0, 0, 16_384) }]
-  })
-  if (!sources.length) sources.push({ id: 'primary', name: 'Primary atlas', textureAsset: typeof value.textureAsset === 'string' ? value.textureAsset : null, margin: 0, spacing: 0 })
-  const byIndex = new Map<number, Record<string, unknown>>()
-  rawTiles.forEach(/** 结构说明（自动提取）：rawTiles.forEach 回调；输入 item；直接调用 integer、byIndex.set。 */ item => {
-    if (!item || typeof item !== 'object') return
-    const record = item as Record<string, unknown>
-    const index = integer(record.index, -1, -1, count - 1)
-    if (index >= 0) byIndex.set(index, record)
-  })
-  return {
-    version: 2,
-    textureAsset: typeof value.textureAsset === 'string' ? value.textureAsset : null,
-    sources,
-    tileWidth,
-    tileHeight,
-    columns,
-    rows,
-    tiles: Array.from({ length: count }, /** 结构说明（自动提取）：Array.from 回调；输入 _、index；直接调用 byIndex.get、includes、String、normalizedPolygon、Array.isArray 等。 */ (_, index) => {
-      const raw = byIndex.get(index)
-      const collision = ['Box', 'Polygon', 'OneWay'].includes(String(raw?.collision)) ? raw!.collision as TileCollision2D : 'None'
-      const polygon = normalizedPolygon(raw?.polygon)
-      const rawAnimation = raw?.animation && typeof raw.animation === 'object' ? raw.animation as Record<string, unknown> : null
-      const animationFrames = Array.isArray(rawAnimation?.frames) ? rawAnimation.frames.slice(0, 256).map(/* 调用 integer(frame, index, 0, count - 1) 并返回调用结果。 */ frame => integer(frame, index, 0, count - 1)) : []
-      const variants = Array.isArray(raw?.variants) ? raw.variants.slice(0, 64).flatMap(/** 结构说明（自动提取）：flatMap 回调；输入 item；直接调用 integer、Math.min、Math.max、finiteNumber。 */ item => {
-        if (!item || typeof item !== 'object') return []
-        const variant = item as Record<string, unknown>
-        return [{ tile: integer(variant.tile, index, 0, count - 1), weight: Math.min(1e6, Math.max(0.000001, finiteNumber(variant.weight, 1))) }]
-      }) : []
-      const rawRegion = raw?.region && typeof raw.region === 'object' ? raw.region as Record<string, unknown> : null
-      return {
-        index,
-        name: typeof raw?.name === 'string' ? raw.name.slice(0, 120) : `Tile ${index}`,
-        collision,
-        polygon: collision === 'Polygon' && polygon.length >= 3 ? polygon : [],
-        terrain: typeof raw?.terrain === 'string' ? raw.terrain.slice(0, 80) : '',
-        navigationCost: Math.min(1e6, Math.max(0, finiteNumber(raw?.navigationCost, 1))),
-        occluder: raw?.occluder === true,
-        navigationPolygon: normalizedPolygon(raw?.navigationPolygon),
-        occlusionPolygon: normalizedPolygon(raw?.occlusionPolygon),
-        metadata: normalizedMetadata(raw?.metadata),
-        sceneAsset: typeof raw?.sceneAsset === 'string' ? raw.sceneAsset : null,
-        prefabAsset: typeof raw?.prefabAsset === 'string' ? raw.prefabAsset : null,
-        sourceId: typeof raw?.sourceId === 'string' && sources.some(/* 比较 source.id 与 raw.sourceId，返回严格相等的判断结果。 */ source => source.id === raw.sourceId) ? raw.sourceId : sources[0].id,
-        region: rawRegion ? { x: integer(rawRegion.x, 0, 0, 1_000_000), y: integer(rawRegion.y, 0, 0, 1_000_000), width: integer(rawRegion.width, tileWidth, 1, 1_000_000), height: integer(rawRegion.height, tileHeight, 1, 1_000_000) } : null,
-        animation: animationFrames.length ? { frames: animationFrames, ...(Array.isArray(rawAnimation?.durations) && rawAnimation.durations.length === animationFrames.length && rawAnimation.durations.every(/* 先计算 typeof value === 'number' && Number.isFinite(value) && value > 0；仅当其为真值时求右侧 value <= 3600，返回短路求值结果。 */ value => typeof value === 'number' && Number.isFinite(value) && value > 0 && value <= 3600) ? {durations: [...rawAnimation.durations] as number[]} : {}), framesPerSecond: Math.min(240, Math.max(0.01, finiteNumber(rawAnimation?.framesPerSecond, 8))), mode: rawAnimation?.mode === 'PingPong' || rawAnimation?.mode === 'Once' ? rawAnimation.mode : 'Loop' } : null,
-        variants
-      }
-    })
-  }
-}
-
-const parsedTileSets = new BoundedImportCache<string, {asset: AssetRecord; source: string; generation: number; value: TileSetDocument | null}>(128, 64 * 1024 * 1024)
-registerImportSessionCleanup(/* 调用 parsedTileSets.clear() 并返回调用结果。 */ () => parsedTileSets.clear())
-/* 返回具有所列字段的新对象 {entries: parsedTileSets.size, bytes: parsedTileSets.bytes, maxEntries: 128, maxBytes: 64 * 1024 * 1024}。 */ export function tileSetCacheStats() { return {entries: parsedTileSets.size, bytes: parsedTileSets.bytes, maxEntries: 128, maxBytes: 64 * 1024 * 1024} }
-/** 结构说明（自动提取）：readRuntimeTileSet；输入 reference；直接调用 resolveAsset、parsedTileSets.get、readTextAsset、JSON.parse、normalizeTileSet 等；写入 value；返回路径包含 cached.value、value。 */ function readRuntimeTileSet(reference: string | null | undefined): TileSetDocument | null {
-  const asset = resolveAsset(reference)
-  if (!asset || asset.assetType !== 'tileset') return null
-  const cached = parsedTileSets.get(asset.uuid)
-  if (cached && cached.asset === asset && cached.source === asset.source && cached.generation === assetState.generation) return cached.value
-  const source = readTextAsset(reference); if (!source) return null
-  let value: TileSetDocument | null = null
-  try { const parsed = JSON.parse(source); value = normalizeTileSet(parsed.format === 'nova-tiled-map-resource' ? resolveTiledMapAsset(asset, assetState.records).tileSet : parsed) } catch { /* Import details expose the precise dependency diagnostic. */ }
-  parsedTileSets.set(asset.uuid, {asset, source: asset.source, generation: assetState.generation, value}, source.length * 2 + (value?.tiles.length ?? 0) * 512)
-  return value
-}
-/** Editors receive detached data; unsaved Inspector edits cannot alter the renderer's cached document. */
-/** 结构说明（自动提取）：readTileSet；输入 reference；直接调用 readRuntimeTileSet、JSON.parse、JSON.stringify。 */ export function readTileSet(reference: string | null | undefined): TileSetDocument | null { const value=readRuntimeTileSet(reference);return value?JSON.parse(JSON.stringify(value)):null }
 
 /** 结构说明（自动提取）：createTileSet；输入 texture、tileWidth、tileHeight；直接调用 Error、integer、Math.max、Math.floor、normalizeTileSet 等；包含显式抛错路径。 */ export function createTileSet(texture: AssetRecord, tileWidth = 32, tileHeight = 32): AssetRecord {
   if (texture.assetType !== 'image') throw new Error('A TileSet requires an image asset')
@@ -205,41 +86,6 @@ registerImportSessionCleanup(/* 调用 parsedTileSets.clear() 并返回调用结
   const asset = resolveAsset(assetUuid)
   if (!asset || asset.assetType !== 'tileset' || isTiledMapAsset(asset)) return false
   return updateTextAssetTransactional(assetUuid, `${JSON.stringify(normalizeTileSet(document), null, 2)}\n`)
-}
-
-/** 结构说明（自动提取）：normalizeTileMap；输入 component；直接调用 integer、Math.min、Math.floor、Math.max、Math.abs 等；写入 component.width、component.height、component.tileSize、component.chunkSize 等。 */ export function normalizeTileMap(component: TileMap2D): void {
-  component.width = integer(component.width, 32, 1, 2048)
-  component.height = integer(component.height, 18, 1, Math.min(2048, Math.floor(MAX_TILEMAP_CELLS / component.width)))
-  component.tileSize = {
-    x: Math.min(1e6, Math.max(1e-6, Math.abs(finiteNumber(component.tileSize?.x, 1)))),
-    y: Math.min(1e6, Math.max(1e-6, Math.abs(finiteNumber(component.tileSize?.y, 1))))
-  }
-  component.chunkSize = integer(component.chunkSize, 32, 4, 128)
-  component.tiles = Array.from({ length: component.width * component.height }, /* 调用 integer(component.tiles?.[index], -1, -1, MAX_TILESET_TILES - 1) 并返回调用结果。 */ (_, index) => integer(component.tiles?.[index], -1, -1, MAX_TILESET_TILES - 1))
-  const rawLayers = Array.isArray(component.layers) ? component.layers.slice(0, 128) : []
-  component.layers = (rawLayers.length ? rawLayers : [{ id: crypto.randomUUID(), name: 'Base', visible: true, locked: false, opacity: 1, blendMode: 'Alpha' as const, parallax: { x: 1, y: 1 }, zOrder: 0, collisionEnabled: true, navigationEnabled: true, occlusionEnabled: true, tiles: component.tiles, transforms: Array(component.width * component.height).fill(0) as TileCellTransform2D[] }]).map(/** 结构说明（自动提取）：map 回调；输入 layer、index；直接调用 layer.id.slice、layer.name.trim、slice、Math.min、Math.max 等；返回表达式求值结果。 */ (layer, index) => ({
-    id: typeof layer.id === 'string' && layer.id ? layer.id.slice(0, 80) : `layer-${index}`,
-    name: typeof layer.name === 'string' && layer.name.trim() ? layer.name.trim().slice(0, 80) : `Layer ${index + 1}`,
-    visible: layer.visible !== false, locked: layer.locked === true,
-    opacity: Math.min(1, Math.max(0, finiteNumber(layer.opacity, 1))),
-    blendMode: (['Alpha', 'Additive', 'Multiply', 'Screen'].includes(String(layer.blendMode)) ? layer.blendMode : 'Alpha') as TileBlendMode2D,
-    parallax: { x: Math.min(16, Math.max(-16, finiteNumber(layer.parallax?.x, 1))), y: Math.min(16, Math.max(-16, finiteNumber(layer.parallax?.y, 1))) },
-    zOrder: integer(layer.zOrder, index, -1_000_000, 1_000_000),
-    collisionEnabled: layer.collisionEnabled !== false,
-    navigationEnabled: layer.navigationEnabled !== false,
-    occlusionEnabled: layer.occlusionEnabled !== false,
-    tiles: Array.from({ length: component.width * component.height }, /* 调用 integer(layer.tiles?.[tile], -1, -1, MAX_TILESET_TILES - 1) 并返回调用结果。 */ (_, tile) => integer(layer.tiles?.[tile], -1, -1, MAX_TILESET_TILES - 1)),
-    transforms: Array.from({ length: component.width * component.height }, /** 结构说明（自动提取）：Array.from 回调；输入 _、tile；直接调用 integer；返回表达式求值结果。 */ (_, tile) => integer(layer.transforms?.[tile], 0, 0, 15) as TileCellTransform2D)
-  }))
-  component.activeLayer = integer(component.activeLayer, 0, 0, component.layers.length - 1)
-  component.tiles = component.layers[component.activeLayer].tiles
-  component.streamingRadius = integer(component.streamingRadius, 3, 1, 64)
-  component.opacity = Math.min(100, Math.max(0, finiteNumber(component.opacity, 100)))
-  component.sortingLayer = integer(component.sortingLayer, 0, -1_000_000, 1_000_000)
-  component.orderInLayer = integer(component.orderInLayer, 0, -1_000_000, 1_000_000)
-  component.physicsLayer = integer(component.physicsLayer, 0, 0, 31)
-  component.collisionMask = Math.min(0xffff_ffff, Math.max(0, Math.round(finiteNumber(component.collisionMask, 1)))) >>> 0
-  if (component.filterMode !== 'Linear') component.filterMode = 'Nearest'
 }
 
 /** 结构说明（自动提取）：resizeTileMap；输入 component、width、height；直接调用 normalizeTileMap、integer、Math.min、Math.floor、fill 等；写入 component.width、component.height、layer.tiles、layer.transforms 等；包含循环处理。 */ export function resizeTileMap(component: TileMap2D, width: number, height: number): void {
@@ -392,58 +238,16 @@ export interface TilemapDiagnostic { severity: 'info' | 'warning' | 'error'; cod
   return issues.slice(0, 512)
 }
 
-export interface RuntimeTileChunk { layerId: string; chunkX: number; chunkY: number; width: number; height: number; tiles: number[]; transforms: TileCellTransform2D[] }
-
 /** Read-only projection: Inspector/render queries never normalize live reactive arrays. */
-/** 结构说明（自动提取）：tileMapView；输入 component；直接调用 Number.isInteger、Array.isArray、component.layers.every、Number.isFinite、normalizeTileMap；返回路径包含 component、view。 */ function tileMapView(component: TileMap2D): TileMap2D {
-  const cells=component.width*component.height
-  const valid=Number.isInteger(component.width)&&Number.isInteger(component.height)&&component.width>=1&&component.width<=2048&&component.height>=1&&component.height<=2048&&Array.isArray(component.layers)&&component.layers.length>0&&component.layers.length<=128&&cells*component.layers.length<=MAX_TILEMAP_CELLS&&component.layers.every(/* 先计算 Array.isArray(layer.tiles)&&Array.isArray(layer.transforms)&&layer.tiles.length===cells；仅当其为真值时求右侧 layer.transforms.length===cells，返回短路求值结果。 */ layer=>Array.isArray(layer.tiles)&&Array.isArray(layer.transforms)&&layer.tiles.length===cells&&layer.transforms.length===cells)&&Number.isInteger(component.activeLayer)&&component.activeLayer>=0&&component.activeLayer<component.layers.length&&component.tiles===component.layers[component.activeLayer].tiles&&Number.isInteger(component.chunkSize)&&component.chunkSize>=4&&component.chunkSize<=128&&Number.isFinite(component.tileSize?.x)&&component.tileSize.x>0&&Number.isFinite(component.tileSize?.y)&&component.tileSize.y>0
-  if(valid)return component
-  const view={...component} as TileMap2D;normalizeTileMap(view);return view
-}
-/** 结构说明（自动提取）：ensureRuntimeTileMap；输入 component；直接调用 tileMapView、normalizeTileMap。 */ function ensureRuntimeTileMap(component: TileMap2D): void { if(tileMapView(component)!==component)normalizeTileMap(component) }
+/** 结构说明（自动提取）：tileMapView；输入 component；直接调用 Number.isInteger、Array.isArray、component.layers.every、Number.isFinite、normalizeTileMap；返回路径包含 component、view。 */ function tileMapView(component: TileMap2D): TileMap2D { return requireTileMapOwner().tileMapView(component) }
 
-/** 结构说明（自动提取）：readRuntimeTileChunk；输入 component、layerId、chunkX、chunkY；直接调用 tileMapView、component.layers.find、Math.max、Math.round、Math.min 等；写入 component；包含循环处理。 */ export function readRuntimeTileChunk(component: TileMap2D, layerId: string, chunkX: number, chunkY: number): RuntimeTileChunk | null {
-  component = tileMapView(component)
-  const layer = component.layers.find(/* 比较 candidate.id 与 layerId，返回严格相等的判断结果。 */ candidate => candidate.id === layerId)
-  if (!layer) return null
-  const startX = Math.max(0, Math.round(chunkX) * component.chunkSize), startY = Math.max(0, Math.round(chunkY) * component.chunkSize)
-  if (startX >= component.width || startY >= component.height) return null
-  const width = Math.min(component.chunkSize, component.width - startX), height = Math.min(component.chunkSize, component.height - startY)
-  const tiles: number[] = [], transforms: TileCellTransform2D[] = []
-  for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) { const index = (startY + y) * component.width + startX + x; tiles.push(layer.tiles[index]); transforms.push(layer.transforms[index]) }
-  return { layerId, chunkX: Math.round(chunkX), chunkY: Math.round(chunkY), width, height, tiles, transforms }
-}
+/** 结构说明（自动提取）：readRuntimeTileChunk；输入 component、layerId、chunkX、chunkY；直接调用 tileMapView、component.layers.find、Math.max、Math.round、Math.min 等；写入 component；包含循环处理。 */ export function readRuntimeTileChunk(component: TileMap2D, layerId: string, chunkX: number, chunkY: number): RuntimeTileChunk | null { return requireTileMapOwner().readRuntimeTileChunk(component,layerId,chunkX,chunkY) }
 
-/** 结构说明（自动提取）：writeRuntimeTileChunk；输入 component、chunk；直接调用 ensureRuntimeTileMap、component.layers.findIndex、Math.max、Math.round、Math.min 等；写入 component.layers[…].tiles[…]、component.layers[…].transforms[…]、changed；返回路径包含 changed；包含循环处理。 */ export function writeRuntimeTileChunk(component: TileMap2D, chunk: RuntimeTileChunk): boolean {
-  ensureRuntimeTileMap(component)
-  const layerIndex = component.layers.findIndex(/* 比较 candidate.id 与 chunk.layerId，返回严格相等的判断结果。 */ candidate => candidate.id === chunk.layerId)
-  if (layerIndex < 0 || component.layers[layerIndex].locked) return false
-  const startX = Math.max(0, Math.round(chunk.chunkX) * component.chunkSize), startY = Math.max(0, Math.round(chunk.chunkY) * component.chunkSize)
-  let changed = false
-  for (let y = 0; y < Math.min(component.chunkSize, chunk.height); y++) for (let x = 0; x < Math.min(component.chunkSize, chunk.width); x++) {
-    if (startX + x >= component.width || startY + y >= component.height) continue
-    const source = y * chunk.width + x, target = (startY + y) * component.width + startX + x
-    const tile = integer(chunk.tiles[source], -1, -1, MAX_TILESET_TILES - 1), flags = integer(chunk.transforms[source], 0, 0, 15) as TileCellTransform2D
-    if (component.layers[layerIndex].tiles[target] !== tile || component.layers[layerIndex].transforms[target] !== flags) { component.layers[layerIndex].tiles[target] = tile; component.layers[layerIndex].transforms[target] = flags; changed = true }
-  }
-  if (changed) { component.revision++; invalidateTileMap(component) }
-  return changed
-}
+/** 结构说明（自动提取）：writeRuntimeTileChunk；输入 component、chunk；直接调用 ensureRuntimeTileMap、component.layers.findIndex、Math.max、Math.round、Math.min 等；写入 component.layers[…].tiles[…]、component.layers[…].transforms[…]、changed；返回路径包含 changed；包含循环处理。 */ export function writeRuntimeTileChunk(component: TileMap2D, chunk: RuntimeTileChunk): boolean { return requireTileMapOwner().writeRuntimeTileChunk(component,chunk) }
 
-/** 结构说明（自动提取）：tileMetadataAt；输入 component、x、y；直接调用 ensureRuntimeTileMap、readRuntimeTileSet、Object.assign、map、component.layers.filter。 */ export function tileMetadataAt(component: TileMap2D, x: number, y: number): Record<string, boolean | number | string> {
-  ensureRuntimeTileMap(component)
-  if (x < 0 || y < 0 || x >= component.width || y >= component.height) return {}
-  const set = readRuntimeTileSet(component.tileSetAsset), index = y * component.width + x
-  return Object.assign({}, ...component.layers.filter(/* 返回 layer.visible 的当前值。 */ layer => layer.visible).map(/* 当 set?.tiles[layer.tiles[index]]?.metadata 为 null 或 undefined 时返回 {}，否则保留左侧值。 */ layer => set?.tiles[layer.tiles[index]]?.metadata ?? {}))
-}
+/** 结构说明（自动提取）：tileMetadataAt；输入 component、x、y；直接调用 ensureRuntimeTileMap、readRuntimeTileSet、Object.assign、map、component.layers.filter。 */ export function tileMetadataAt(component: TileMap2D, x: number, y: number): Record<string, boolean | number | string> { return requireTileMapOwner().tileMetadataAt(component,x,y) }
 
-/** 结构说明（自动提取）：worldToTile；输入 entity、component、point、entities；直接调用 worldPointToLocal、Math.floor。 */ export function worldToTile(entity: Entity, component: TileMap2D, point: Vec2, entities: Entity[]): { x: number; y: number } | null {
-  const local = worldPointToLocal(entity, point, entities)
-  const x = Math.floor(local.x / component.tileSize.x + component.width * .5)
-  const y = Math.floor(local.y / component.tileSize.y + component.height * .5)
-  return x >= 0 && y >= 0 && x < component.width && y < component.height ? { x, y } : null
-}
+/** 结构说明（自动提取）：worldToTile；输入 entity、component、point、entities；直接调用 worldPointToLocal、Math.floor。 */ export function worldToTile(entity: Entity, component: TileMap2D, point: Vec2, entities: Entity[]): { x: number; y: number } | null { return requireTileMapOwner().worldToTile(entity,component,point,entities) }
 
 /* 计算表达式 cell.y * component.width + cell.x 并返回结果，沿用操作数的原有类型规则。 */ function tileIndex(component: TileMap2D, cell: { x: number; y: number }): number { return cell.y * component.width + cell.x }
 /** 结构说明（自动提取）：chooseVariant；输入 component、cell、value；直接调用 readRuntimeTileSet、choices.reduce、deterministicUnit；写入 sample；返回路径包含 value、choice.tile；包含循环处理。 */ function chooseVariant(component: TileMap2D, cell: { x: number; y: number }, value: number): number {
@@ -564,7 +368,7 @@ export interface TileStroke { start: { x: number; y: number }; previous: { x: nu
     const target = component.tiles[tileIndex(component, stroke.start)]
     for (let index = 0; index < component.tiles.length; index++) if (component.tiles[index] === target) stroke.changed = setTile(component, { x: index % component.width, y: Math.floor(index / component.width) }, tilemapEditorState.tileIndex) || stroke.changed
   }
-  if (stroke.changed) component.revision++
+  if (stroke.changed) advanceLocalTileRevision(component)
   if (stroke.changed) {
     const layerId = component.layers[component.activeLayer]?.id ?? 'base'
     tilemapEditorState.history.unshift({ id: crypto.randomUUID(), at: Date.now(), tool: tilemapEditorState.tool, layerId, start: { ...stroke.start }, end: { ...cell }, revision: component.revision })
@@ -573,26 +377,11 @@ export interface TileStroke { start: { x: number; y: number }; previous: { x: nu
   return stroke.changed
 }
 
-/** 结构说明（自动提取）：tileWorldCoordinate；输入 entity、component、cell、entities；直接调用 tileMapView、localPointToWorld；写入 component。 */ export function tileWorldCoordinate(entity: Entity, component: TileMap2D, cell: { x: number; y: number }, entities: Entity[]): Vec2 {
-  component = tileMapView(component)
-  return localPointToWorld(entity, { x: (cell.x + .5 - component.width / 2) * component.tileSize.x, y: (component.height / 2 - cell.y - .5) * component.tileSize.y }, entities)
-}
+/** 结构说明（自动提取）：tileWorldCoordinate；输入 entity、component、cell、entities；直接调用 tileMapView、localPointToWorld；写入 component。 */ export function tileWorldCoordinate(entity: Entity, component: TileMap2D, cell: { x: number; y: number }, entities: Entity[]): Vec2 { return requireTileMapOwner().tileWorldCoordinate(entity,component,cell,entities) }
 
-/** 结构说明（自动提取）：deterministicTileMapStorage；输入 component；直接调用 tileMapView、map、sort、JSON.stringify；写入 component。 */ export function deterministicTileMapStorage(component: TileMap2D): string {
-  component = tileMapView(component)
-  const runLength = /** 结构说明（自动提取）：runLength；输入 values；直接调用 output.push；返回路径包含 output；包含循环处理。 */ (values: number[]) => { const output: Array<[number, number]> = []; for (const value of values) { const previous = output[output.length - 1]; if (previous?.[0] === value) previous[1]++; else output.push([value, 1]) } return output }
-  const value = {
-    format: 'nova-tilemap-source', version: 1, width: component.width, height: component.height, tileSize: { ...component.tileSize }, chunkSize: component.chunkSize,
-    layers: [...component.layers].sort(/* 先计算 a.zOrder - b.zOrder；仅当其为假值时求右侧 a.id.localeCompare(b.id)，返回短路求值结果。 */ (a, b) => a.zOrder - b.zOrder || a.id.localeCompare(b.id)).map(/** 结构说明（自动提取）：map 回调；输入 layer；直接调用 runLength；返回表达式求值结果。 */ layer => ({ id: layer.id, name: layer.name, visible: layer.visible, locked: layer.locked, opacity: layer.opacity, blendMode: layer.blendMode, parallax: { ...layer.parallax }, zOrder: layer.zOrder, collisionEnabled: layer.collisionEnabled, navigationEnabled: layer.navigationEnabled, occlusionEnabled: layer.occlusionEnabled, tilesRle: runLength(layer.tiles), transformsRle: runLength(layer.transforms) }))
-  }
-  return `${JSON.stringify(value, null, 2)}\n`
-}
+/** 结构说明（自动提取）：deterministicTileMapStorage；输入 component；直接调用 tileMapView、map、sort、JSON.stringify；写入 component。 */ export function deterministicTileMapStorage(component: TileMap2D): string { return requireTileMapOwner().deterministicTileMapStorage(component) }
 
-/** 结构说明（自动提取）：tileStreamingBoundaries；输入 component；直接调用 tileMapView、Math.max、output.push、Math.floor、Math.min；写入 component、y、x；返回路径包含 output；包含循环处理。 */ export function tileStreamingBoundaries(component: TileMap2D): Array<{ chunkX: number; chunkY: number; left: number; top: number; right: number; bottom: number }> {
-  component = tileMapView(component); const size = Math.max(1, component.chunkSize), output = []
-  for (let y = 0; y < component.height; y += size) for (let x = 0; x < component.width; x += size) output.push({ chunkX: Math.floor(x / size), chunkY: Math.floor(y / size), left: x, top: y, right: Math.min(component.width, x + size), bottom: Math.min(component.height, y + size) })
-  return output
-}
+/** 结构说明（自动提取）：tileStreamingBoundaries；输入 component；直接调用 tileMapView、Math.max、output.push、Math.floor、Math.min；写入 component、y、x；返回路径包含 output；包含循环处理。 */ export function tileStreamingBoundaries(component: TileMap2D): Array<{ chunkX: number; chunkY: number; left: number; top: number; right: number; bottom: number }> { return requireTileMapOwner().tileStreamingBoundaries(component) }
 
 /** 结构说明（自动提取）：selectionBounds；输入 component；直接调用 Math.max、Math.min。 */ function selectionBounds(component: TileMap2D): { left: number; right: number; bottom: number; top: number } | null {
   const selection = tilemapEditorState.selection
@@ -667,113 +456,19 @@ export interface TileStroke { start: { x: number; y: number }; previous: { x: nu
     if (cell.y > 0) pending.push({ x: cell.x, y: cell.y - 1 })
     if (cell.y + 1 < component.height) pending.push({ x: cell.x, y: cell.y + 1 })
   }
-  if (changed) component.revision++
+  if (changed) advanceLocalTileRevision(component)
   return changed
 }
 
-interface ChunkCache { signature: string; chunks: Map<string, TileChunkRenderCommand>; dirty: Set<string> }
-const chunkCaches = new WeakMap<TileMap2D, ChunkCache>()
 
-/** 按模板 `${Math.floor(x / component.chunkSize)}:${Math.floor(y / component.chunkSize)}` 生成并返回字符串。 */ function chunkKey(component: TileMap2D, x: number, y: number): string {
-  return `${Math.floor(x / component.chunkSize)}:${Math.floor(y / component.chunkSize)}`
-}
+/** Register only the chunk modified by this layer writer. */ function markTileDirty(component: TileMap2D, x: number, y: number, layerId = component.layers[component.activeLayer]?.id): void { return requireTileMapOwner().markTileDirty(component,x,y,layerId) }
+/** Known local writers have already marked their affected chunks; external revisions still invalidate all. */
+function advanceLocalTileRevision(component: TileMap2D): void { return requireTileMapOwner().advanceLocalTileRevision(component) }
+/** 执行时调用 chunkCaches.delete(component)；不显式返回调用结果。 */ export function invalidateTileMap(component: TileMap2D): void { return requireTileMapOwner().invalidateTileMap(component) }
 
-/** 结构说明（自动提取）：markTileDirty；输入 component、x、y；直接调用 dirty.add、chunkCaches.get、chunkKey。 */ function markTileDirty(component: TileMap2D, x: number, y: number): void {
-  const layer = component.layers[component.activeLayer]
-  if (layer) chunkCaches.get(component)?.dirty.add(`${layer.id}:${chunkKey(component, x, y)}`)
-}
-/** 执行时调用 chunkCaches.delete(component)；不显式返回调用结果。 */ export function invalidateTileMap(component: TileMap2D): void { chunkCaches.delete(component) }
 
-let explicitTileTime: number | null = null
-/** 结构说明（自动提取）：setTileAnimationTime；输入 seconds；直接调用 Number.isFinite、Error；写入 explicitTileTime；包含显式抛错路径。 */ export function setTileAnimationTime(seconds: number | null): void { if(seconds!==null&&(!Number.isFinite(seconds)||seconds<0))throw new Error('TILE_TIME: Expected a finite non-negative time.');explicitTileTime=seconds }
-/* 当 explicitTileTime 为 null 或 undefined 时返回 performance.now()/1000，否则保留左侧值。 */ function tileAnimationTime(): number { return explicitTileTime ?? performance.now()/1000 }
-/** 结构说明（自动提取）：animationTile；输入 definition、nowSeconds；直接调用 animation.frames.keys、Array.from、order.reduce、Math.max、Math.min 等；写入 cursor；返回路径包含 animation.frames[…]；包含循环处理。 */ export function animationTile(definition: TileDefinition | undefined, nowSeconds: number): number | null {
-  const animation = definition?.animation
-  if (!animation?.frames.length) return definition?.index ?? null
-  if(animation.durations?.length===animation.frames.length){
-    const order=animation.mode==='PingPong'&&animation.frames.length>1?[...animation.frames.keys(),...Array.from({length:animation.frames.length-2},/* 计算表达式 animation.frames.length-2-i 并返回结果，沿用操作数的原有类型规则。 */ (_,i)=>animation.frames.length-2-i)]:[...animation.frames.keys()]
-    const total=order.reduce(/* 计算表达式 sum+animation.durations![index] 并返回结果，沿用操作数的原有类型规则。 */ (sum,index)=>sum+animation.durations![index],0),time=Math.max(0,nowSeconds)
-    let cursor=animation.mode==='Once'?Math.min(total,time):time%total
-    for(const index of order){const duration=animation.durations[index];if(cursor<duration)return animation.frames[index];cursor-=duration}
-    return animation.frames[order.at(-1)!]
-  }
-  const raw = Math.max(0, Math.floor(nowSeconds * animation.framesPerSecond))
-  if (animation.mode === 'Once') return animation.frames[Math.min(animation.frames.length - 1, raw)]
-  if (animation.mode === 'PingPong' && animation.frames.length > 1) {
-    const period = animation.frames.length * 2 - 2
-    const cursor = raw % period
-    return animation.frames[cursor < animation.frames.length ? cursor : period - cursor]
-  }
-  return animation.frames[raw % animation.frames.length]
-}
-
-/** 结构说明（自动提取）：chunkCommand；输入 entity、component、layer、tileSet、chunkX、chunkY、entities、cameraPosition；直接调用 worldTransform、Math.min、animationTile、tileAnimationTime、tileSet.sources.find 等；写入 position.x、position.y；包含循环处理。 */ function chunkCommand(entity: Entity, component: TileMap2D, layer: TileMap2D['layers'][number], tileSet: TileSetDocument, chunkX: number, chunkY: number, entities: Entity[], cameraPosition?: Vec2): TileChunkRenderCommand {
-  const transform = worldTransform(entity, entities)
-  const sprites: TileChunkRenderCommand['sprites'] = []
-  const startX = chunkX * component.chunkSize, startY = chunkY * component.chunkSize
-  const endX = Math.min(component.width, startX + component.chunkSize), endY = Math.min(component.height, startY + component.chunkSize)
-  for (let y = startY; y < endY; y++) for (let x = startX; x < endX; x++) {
-    const cellIndex = y * component.width + x
-    const value = layer.tiles[cellIndex]
-    if (value < 0 || value >= tileSet.columns * tileSet.rows) continue
-    const definition = tileSet.tiles[value]
-    const frame = animationTile(definition, tileAnimationTime()) ?? value
-    const frameDefinition = tileSet.tiles[frame] ?? definition
-    const source = tileSet.sources.find(/* 比较 candidate.id 与 frameDefinition?.sourceId，返回严格相等的判断结果。 */ candidate => candidate.id === frameDefinition?.sourceId) ?? tileSet.sources[0]
-    const region = frameDefinition?.region ?? {
-      x: source.margin + frame % tileSet.columns * (tileSet.tileWidth + source.spacing),
-      y: source.margin + Math.floor(frame / tileSet.columns) * (tileSet.tileHeight + source.spacing),
-      width: tileSet.tileWidth,
-      height: tileSet.tileHeight
-    }
-    const texture = resolveTextureRegion(source.textureAsset ?? tileSet.textureAsset, {
-      x: region.x,
-      y: region.y,
-      width: region.width,
-      height: region.height
-    }, component.filterMode)
-    if (!texture) continue
-    const local = { x: (x + .5 - component.width * .5) * component.tileSize.x, y: (y + .5 - component.height * .5) * component.tileSize.y }
-    const position = localPointToWorld(entity, local, entities)
-    if (cameraPosition) { position.x += cameraPosition.x * (1 - layer.parallax.x); position.y += cameraPosition.y * (1 - layer.parallax.y) }
-    const flags = layer.transforms[cellIndex] ?? 0
-    sprites.push({
-      position, rotation: transform.rotation + (flags & 3) * Math.PI * .5, scale: transform.scale,
-      size: { ...component.tileSize }, pivot: { x: .5, y: .5 }, flipX: (flags & 4) !== 0, flipY: (flags & 8) !== 0,
-      tint: { ...component.tint, a: component.opacity / 100 * layer.opacity }, texture
-    })
-  }
-  return { sprites, sortingLayer: component.sortingLayer, orderInLayer: component.orderInLayer + layer.zOrder, material: component.material, blendMode: layer.blendMode }
-}
-
-/** 结构说明（自动提取）：chunkIntersectsBounds；输入 entity、component、chunkX、chunkY、entities、bounds；直接调用 Math.min、localPointToWorld、corners.map、Math.max。 */ function chunkIntersectsBounds(
-  entity: Entity,
-  component: TileMap2D,
-  chunkX: number,
-  chunkY: number,
-  entities: Entity[],
-  bounds: { minX: number; minY: number; maxX: number; maxY: number }
-): boolean {
-  const startX = chunkX * component.chunkSize
-  const startY = chunkY * component.chunkSize
-  const endX = Math.min(component.width, startX + component.chunkSize)
-  const endY = Math.min(component.height, startY + component.chunkSize)
-  const left = (startX - component.width * .5) * component.tileSize.x
-  const right = (endX - component.width * .5) * component.tileSize.x
-  const bottom = (startY - component.height * .5) * component.tileSize.y
-  const top = (endY - component.height * .5) * component.tileSize.y
-  const corners = [
-    localPointToWorld(entity, { x: left, y: bottom }, entities),
-    localPointToWorld(entity, { x: right, y: bottom }, entities),
-    localPointToWorld(entity, { x: right, y: top }, entities),
-    localPointToWorld(entity, { x: left, y: top }, entities)
-  ]
-  const minX = Math.min(...corners.map(/* 返回 point.x 的当前值。 */ point => point.x))
-  const maxX = Math.max(...corners.map(/* 返回 point.x 的当前值。 */ point => point.x))
-  const minY = Math.min(...corners.map(/* 返回 point.y 的当前值。 */ point => point.y))
-  const maxY = Math.max(...corners.map(/* 返回 point.y 的当前值。 */ point => point.y))
-  return maxX >= bounds.minX && minX <= bounds.maxX && maxY >= bounds.minY && minY <= bounds.maxY
-}
+/** 结构说明（自动提取）：setTileAnimationTime；输入 seconds；直接调用 Number.isFinite、Error；写入 explicitTileTime；包含显式抛错路径。 */ export function setTileAnimationTime(seconds: number | null): void { return requireTileMapOwner().setTileAnimationTime(seconds) }
+/** 结构说明（自动提取）：animationTile；输入 definition、nowSeconds；直接调用 animation.frames.keys、Array.from、order.reduce、Math.max、Math.min 等；写入 cursor；返回路径包含 animation.frames[…]；包含循环处理。 */ export function animationTile(definition: TileDefinition | undefined, nowSeconds: number): number | null { return requireTileMapOwner().animationTile(definition,nowSeconds) }
 
 /** 结构说明（自动提取）：tileChunkCommands；输入 entity、component、entities、visibleBounds、cameraPosition；直接调用 tileMapView、readRuntimeTileSet、resolveAsset、worldTransform、tileSet.tiles.some 等；写入 component、cache、command；返回路径包含 commands；包含循环处理。 */ export function tileChunkCommands(
   entity: Entity,
@@ -781,65 +476,10 @@ let explicitTileTime: number | null = null
   entities: Entity[],
   visibleBounds?: { minX: number; minY: number; maxX: number; maxY: number },
   cameraPosition?: Vec2
-): TileChunkRenderCommand[] {
-  if (!component.enabled || component.removed || !component.tileSetAsset) return []
-  component = tileMapView(component)
-  const tileSet = readRuntimeTileSet(component.tileSetAsset)
-  const asset = resolveAsset(component.tileSetAsset)
-  if (!tileSet || !asset) return []
-  const transform = worldTransform(entity, entities)
-  const hasAnimation = tileSet.tiles.some(/* 返回 tile.animation?.frames.length 的当前值。 */ tile => tile.animation?.frames.length)
-  const animationTick = hasAnimation ? tileSet.tiles.filter(/* 返回 tile.animation?.frames.length 的当前值。 */ tile=>tile.animation?.frames.length).map(/* 调用 animationTile(tile,tileAnimationTime()) 并返回调用结果。 */ tile=>animationTile(tile,tileAnimationTime())).join(',') : 0
-  const signature = [assetState.generation, textureContentRevision(), component.width, component.height, component.chunkSize, component.tileSize.x, component.tileSize.y, component.tileSetAsset, asset.sourceModified, transform.position.x, transform.position.y, transform.rotation, transform.scale.x, transform.scale.y, cameraPosition?.x ?? 0, cameraPosition?.y ?? 0, component.tint.r, component.tint.g, component.tint.b, component.opacity, component.filterMode, component.sortingLayer, component.orderInLayer, component.material, component.revision, animationTick, ...component.layers.map(/** 按模板 `${layer.id}:${layer.visible}:${layer.opacity}:${layer.blendMode}:${layer.parallax.x}:${layer.parallax.y}:${layer.zOrder}` 生成并返回字符串。 */ layer => `${layer.id}:${layer.visible}:${layer.opacity}:${layer.blendMode}:${layer.parallax.x}:${layer.parallax.y}:${layer.zOrder}`)].join(':')
-  let cache = chunkCaches.get(component)
-  if (!cache || cache.signature !== signature) {
-    cache = { signature, chunks: new Map(), dirty: new Set() }
-    chunkCaches.set(component, cache)
-  }
-  const columns = Math.ceil(component.width / component.chunkSize), rows = Math.ceil(component.height / component.chunkSize)
-  const commands: TileChunkRenderCommand[] = []
-  for (const layer of component.layers) for (let y = 0; y < rows; y++) for (let x = 0; x < columns; x++) {
-    if (!layer.visible || layer.opacity <= 0) continue
-    // Cull at chunk granularity before generating or walking any tile sprites.
-    if (visibleBounds && !chunkIntersectsBounds(entity, component, x, y, entities, visibleBounds)) continue
-    const key = `${layer.id}:${x}:${y}`
-    let command = cache.chunks.get(key)
-    if (!command || cache.dirty.has(key)) {
-      command = chunkCommand(entity, component, layer, tileSet, x, y, entities, cameraPosition)
-      cache.chunks.set(key, command)
-      cache.dirty.delete(key)
-    }
-    if (command.sprites.length) commands.push(command)
-  }
-  return commands
-}
-
-export interface TileColliderDescriptor {
-  center: Vec2
-  size: Vec2
-  vertices: Vec2[]
-  oneWay: boolean
-}
+): TileChunkRenderCommand[] { return requireTileMapOwner().tileChunkCommands(entity,component,entities,visibleBounds,cameraPosition) }
 
 /** Applies the same rotate/mirror flags used by rendering and collider baking. */
-/** 结构说明（自动提取）：transformNormalizedTilePoint；输入 point、flags；写入 x、y；包含循环处理。 */ export function transformNormalizedTilePoint(point: Vec2, flags: number): Vec2 {
-  let x = point.x - .5, y = point.y - .5
-  if ((flags & 4) !== 0) x = -x
-  if ((flags & 8) !== 0) y = -y
-  for (let turn = 0; turn < (flags & 3); turn++) { const previous = x; x = -y; y = previous }
-  return { x: x + .5, y: y + .5 }
-}
-
-export interface TilePlacementDescriptor {
-  layerId: string
-  cell: { x: number; y: number }
-  kind: 'scene' | 'prefab'
-  asset: string
-  position: Vec2
-  rotation: number
-  flipX: boolean
-  flipY: boolean
-}
+/** 结构说明（自动提取）：transformNormalizedTilePoint；输入 point、flags；写入 x、y；包含循环处理。 */ export function transformNormalizedTilePoint(point: Vec2, flags: number): Vec2 { return requireTileMapOwner().transformNormalizedTilePoint(point,flags) }
 
 /**
  * Returns bounded, chunk-local scene/prefab placements for a streaming host.
@@ -852,92 +492,7 @@ export interface TilePlacementDescriptor {
   entities: Entity[],
   chunkX: number,
   chunkY: number
-): TilePlacementDescriptor[] {
-  ensureRuntimeTileMap(component)
-  const tileSet = readRuntimeTileSet(component.tileSetAsset)
-  if (!tileSet) return []
-  const startX = Math.max(0, Math.round(chunkX) * component.chunkSize), startY = Math.max(0, Math.round(chunkY) * component.chunkSize)
-  if (startX >= component.width || startY >= component.height) return []
-  const endX = Math.min(component.width, startX + component.chunkSize), endY = Math.min(component.height, startY + component.chunkSize)
-  const mapTransform = worldTransform(entity, entities), result: TilePlacementDescriptor[] = []
-  for (const layer of component.layers.filter(/* 返回 candidate.visible 的当前值。 */ candidate => candidate.visible)) {
-    for (let y = startY; y < endY; y++) for (let x = startX; x < endX; x++) {
-      const index = y * component.width + x, definition = tileSet.tiles[layer.tiles[index]]
-      const asset = definition?.sceneAsset ?? definition?.prefabAsset
-      if (!definition || !asset) continue
-      const flags = layer.transforms[index] ?? 0
-      const local = { x: (x + .5 - component.width * .5) * component.tileSize.x, y: (y + .5 - component.height * .5) * component.tileSize.y }
-      result.push({
-        layerId: layer.id,
-        cell: { x, y },
-        kind: definition.sceneAsset ? 'scene' : 'prefab',
-        asset,
-        position: localPointToWorld(entity, local, entities),
-        rotation: mapTransform.rotation + (flags & 3) * Math.PI * .5,
-        flipX: (flags & 4) !== 0,
-        flipY: (flags & 8) !== 0
-      })
-    }
-  }
-  return result
-}
+): TilePlacementDescriptor[] { return requireTileMapOwner().tilePlacementDescriptors(entity,component,entities,chunkX,chunkY) }
 
 /** Greedily merges adjacent box tiles and horizontal one-way runs. */
-/** 结构说明（自动提取）：buildTileColliderDescriptors；输入 component；直接调用 readRuntimeTileSet、normalizeTileMap、component.layers.filter、Uint8Array、collision 等；写入 visited[…]；返回路径包含 result；包含循环处理。 */ export function buildTileColliderDescriptors(component: TileMap2D): TileColliderDescriptor[] {
-  if (!component.bakeCollision) return []
-  const tileSet = readRuntimeTileSet(component.tileSetAsset)
-  if (!tileSet) return []
-  normalizeTileMap(component)
-  const collisionLayers = component.layers.filter(/* 先计算 layer.visible；仅当其为真值时求右侧 layer.collisionEnabled，返回短路求值结果。 */ layer => layer.visible && layer.collisionEnabled)
-  const collision = /** 结构说明（自动提取）：collision；输入 x、y；返回路径包含 kind；包含循环处理。 */ (x: number, y: number) => {
-    for (let index = collisionLayers.length - 1; index >= 0; index--) {
-      const kind = tileSet.tiles[collisionLayers[index].tiles[y * component.width + x]]?.collision ?? 'None'
-      if (kind !== 'None') return kind
-    }
-    return 'None' as TileCollision2D
-  }
-  const definitionAt = /** 结构说明（自动提取）：definitionAt；输入 x、y；返回路径包含 undefined；包含循环处理。 */ (x: number, y: number) => {
-    for (let index = collisionLayers.length - 1; index >= 0; index--) {
-      const layer = collisionLayers[index], cellIndex = y * component.width + x
-      const definition = tileSet.tiles[layer.tiles[cellIndex]]
-      if (definition?.collision !== 'None') return { definition, flags: layer.transforms[cellIndex] ?? 0 }
-    }
-    return undefined
-  }
-  const visited = new Uint8Array(component.width * component.height)
-  const result: TileColliderDescriptor[] = []
-  for (let y = 0; y < component.height; y++) for (let x = 0; x < component.width; x++) {
-    const index = y * component.width + x
-    if (visited[index]) continue
-    const kind = collision(x, y)
-    if (kind === 'None') { visited[index] = 1; continue }
-    const cellDefinition = definitionAt(x, y)
-    if (kind === 'Polygon' || (cellDefinition?.flags ?? 0) !== 0) {
-      visited[index] = 1
-      const definition = cellDefinition?.definition
-      const polygon = definition?.polygon.length && definition.polygon.length <= 4 ? definition.polygon : [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 }, { x: 0, y: 1 }]
-      result.push({
-        center: { x: (x + .5 - component.width * .5) * component.tileSize.x, y: (y + .5 - component.height * .5) * component.tileSize.y },
-        size: { ...component.tileSize }, oneWay: kind === 'OneWay',
-        vertices: polygon.map(/* 调用 transformNormalizedTilePoint(point, cellDefinition?.flags ?? 0) 并返回调用结果。 */ point => transformNormalizedTilePoint(point, cellDefinition?.flags ?? 0)).map(/** 构造并返回记录 { x: (point.x - .5) * component.tileSize.x, y: (point.y - .5) * component.tileSize.y }，字段按当前实参及捕获状态求值。 */ point => ({ x: (point.x - .5) * component.tileSize.x, y: (point.y - .5) * component.tileSize.y }))
-      })
-      continue
-    }
-    let runWidth = 1
-    while (x + runWidth < component.width && !visited[index + runWidth] && collision(x + runWidth, y) === kind) runWidth++
-    let runHeight = 1
-    if (kind === 'Box') {
-      outer: while (y + runHeight < component.height) {
-        for (let dx = 0; dx < runWidth; dx++) if (visited[(y + runHeight) * component.width + x + dx] || collision(x + dx, y + runHeight) !== 'Box') break outer
-        runHeight++
-      }
-    }
-    for (let dy = 0; dy < runHeight; dy++) for (let dx = 0; dx < runWidth; dx++) visited[(y + dy) * component.width + x + dx] = 1
-    const width = runWidth * component.tileSize.x, height = runHeight * component.tileSize.y
-    result.push({
-      center: { x: (x + runWidth * .5 - component.width * .5) * component.tileSize.x, y: (y + runHeight * .5 - component.height * .5) * component.tileSize.y },
-      size: { x: width, y: height }, vertices: [], oneWay: kind === 'OneWay'
-    })
-  }
-  return result
-}
+/** 结构说明（自动提取）：buildTileColliderDescriptors；输入 component；直接调用 readRuntimeTileSet、normalizeTileMap、component.layers.filter、Uint8Array、collision 等；写入 visited[…]；返回路径包含 result；包含循环处理。 */ export function buildTileColliderDescriptors(component: TileMap2D): TileColliderDescriptor[] { return requireTileMapOwner().buildTileColliderDescriptors(component) }

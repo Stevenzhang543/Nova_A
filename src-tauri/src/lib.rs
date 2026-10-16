@@ -15,6 +15,12 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use tauri::Manager;
 
+mod native_admission;
+mod runtime_pak_preflight;
+mod runtime_package_source;
+#[cfg(test)]
+mod native_export_tests;
+
 const EMBEDDED_LEGACY_MAGIC: &[u8; 8] = b"NOVAPAK!";
 const EMBEDDED_MAGIC: &[u8; 8] = b"NOVAPK2!";
 const EMBEDDED_LEGACY_FOOTER_BYTES: u64 = 16;
@@ -28,6 +34,7 @@ const MAX_RUNTIME_PROJECT_BYTES: usize = 64 * 1024 * 1024;
 const MAX_RUNTIME_UDP_SOCKETS: usize = 8;
 const MAX_EDITOR_UDP_SOCKETS: usize = 32;
 static EXPORTED_PLAYER_MODE: OnceLock<bool> = OnceLock::new();
+static RUNTIME_PACKAGE_IDENTITY: OnceLock<Option<runtime_package_source::PackageIdentity>> = OnceLock::new();
 static RUNTIME_NETWORK_POLICY: OnceLock<Result<Option<RuntimeNetworkPolicy>, String>> =
     OnceLock::new();
 
@@ -1574,16 +1581,18 @@ fn runtime_package_bytes() -> Result<Option<Vec<u8>>, String> {
         /* 将底层错误转换为字符串，保留错误信息供上层返回。 */
         |error| error.to_string(),
     )?;
-    if let Some(pack) = embedded_package(&executable)? {
-        return Ok(Some(pack));
-    }
-    sidecar_package(&executable)
-        .map(fs::read)
-        .transpose()
-        .map_err(
-            /* 将底层错误转换为字符串，保留错误信息供上层返回。 */
-            |error| error.to_string(),
-        )
+    let pack = if let Some(pack) = embedded_package(&executable)? {
+        Some(pack)
+    } else {
+        sidecar_package(&executable)
+            .map(|path| runtime_package_source::read_bounded_sidecar(
+                &path,
+                runtime_pak_preflight::RuntimePakCallerDecodedPolicy::compatibility_1_gib().maximum_package_bytes,
+            ))
+            .transpose()?
+    };
+    runtime_package_source::verify_package_identity(&RUNTIME_PACKAGE_IDENTITY, pack.as_deref())?;
+    Ok(pack)
 }
 
 // 从运行包解码工程文档并校验包结构。
@@ -1610,7 +1619,7 @@ fn runtime_project_document(pack: &[u8]) -> Result<serde_json::Value, String> {
         |error| format!("The runtime package index is invalid: {error}"),
     )?;
     if index.get("format").and_then(serde_json::Value::as_str) != Some("nova-pak")
-        || index.get("version").and_then(serde_json::Value::as_u64) != Some(1)
+        || !runtime_pak_preflight::is_version_one(index.get("version"))
     {
         return Err("The runtime package index contract is unsupported.".into());
     }
@@ -1621,10 +1630,12 @@ fn runtime_project_document(pack: &[u8]) -> Result<serde_json::Value, String> {
     if entries.len() > MAX_WEB_EXPORT_FILES {
         return Err("The runtime package entry table exceeds the safety limit.".into());
     }
-    let entry = entries
-        .iter()
-        .find(/* 判断 entry . get ("path") . and_then (serde_json :: Value :: as_str) == Some ("project.nova") 是否成立，供过滤或有效性检查使用。 */ |entry| entry.get("path").and_then(serde_json::Value::as_str) == Some("project.nova"))
-        .ok_or("The runtime package has no project.nova authority.")?;
+    let validated_index = runtime_pak_preflight::preflight(
+        pack,
+        &index,
+        runtime_pak_preflight::RuntimePakCallerDecodedPolicy::compatibility_1_gib(),
+    )?;
+    let entry = &validated_index.project_entry;
     let offset = entry
         .get("offset")
         .and_then(serde_json::Value::as_u64)
@@ -2671,7 +2682,12 @@ fn build_file_records(root: &Path, files: &[String]) -> Result<Vec<BuildFileReco
 
 // 校验请求，构建目标平台产物并生成完整的输出文件记录。
 #[tauri::command]
-fn export_game(request: ExportRequest) -> Result<ExportResult, String> {
+async fn export_game(request: ExportRequest) -> Result<ExportResult, String> {
+    native_admission::run_export(move || export_game_core(request)).await
+}
+
+// Existing export algorithm, permissions and publication semantics remain in this single core.
+fn export_game_core(request: ExportRequest) -> Result<ExportResult, String> {
     require_editor_mode()?;
     if !matches!(
         request.target.as_str(),

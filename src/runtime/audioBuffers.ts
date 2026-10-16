@@ -11,10 +11,10 @@ export const MAX_DECODED_AUDIO_BYTES=64*1024*1024
 export const MAX_AUDIO_CLIP_BYTES=32*1024*1024
 export class AudioBufferCache {
   private entries=new Map<string,BufferEntry>()
-  private pending=new Map<string,{promise:Promise<BufferEntry>;waiters:number}>()
+  private pending=new Map<string,{promise:Promise<BufferEntry>;waiters:number;controller:AbortController}>()
   private serial=0
   private generation=0
-  /** 保存用于音频解码与反转缓冲构造的音频上下文。 */ constructor(private context:BaseAudioContext){}
+  /** 保存用于音频解码与反转缓冲构造的音频上下文。 */ constructor(private context:BaseAudioContext,private readBytes:(source:string,maximumBytes:number,signal?:AbortSignal)=>Promise<ArrayBuffer>,private createReadAbortController:()=>AbortController){if(typeof readBytes!=='function'||typeof createReadAbortController!=='function')throw new Error('AUDIO_BYTE_READ_REQUIRED')}
   /* 调用 [...this.entries.values()].reduce((sum,entry)=>sum+entry.bytes,0) 并返回调用结果。 */ get byteLength():number{return [...this.entries.values()].reduce(/* 计算表达式 sum+entry.bytes 并返回结果，沿用操作数的原有类型规则。 */ (sum,entry)=>sum+entry.bytes,0)}
   /* 返回 this.entries.size 的当前值。 */ get size():number{return this.entries.size}
   /** 按最近使用顺序逐出无引用缓冲，仍不能满足驻留预算时拒绝分配。 */ private makeRoom(bytes:number):void{
@@ -28,8 +28,8 @@ export class AudioBufferCache {
       if(!request){
         if(this.pending.size>=16)throw new Error('AUDIO_DECODE_LIMIT: At most sixteen clips may decode concurrently.')
         const generation=this.generation
-        const slot={promise:null as unknown as Promise<BufferEntry>,waiters:0}
-        slot.promise=(/** 读取音频并验证压缩大小，解码后检查会话代次和内存预算，再建立带等待者引用数的缓存。 */ async()=>{const response=await fetch(source);if(!response.ok)throw new Error(`Audio source read failed (${response.status}).`);const advertised=Number(response.headers.get('content-length'));if(advertised>MAX_AUDIO_CLIP_BYTES)throw new Error('AUDIO_CLIP_LIMIT: Compressed audio exceeds 32 MiB. Use streaming.');const data=await response.arrayBuffer();if(data.byteLength>MAX_AUDIO_CLIP_BYTES)throw new Error('AUDIO_CLIP_LIMIT: Compressed audio exceeds 32 MiB. Use streaming.');const buffer=await this.context.decodeAudioData(data),bytes=buffer.length*buffer.numberOfChannels*4;if(generation!==this.generation)throw new Error('AUDIO_DISPOSED: Decode completed after session disposal.');if(bytes>MAX_AUDIO_CLIP_BYTES)throw new Error('AUDIO_CLIP_LIMIT: Decoded clip exceeds 32 MiB. Use streaming.');this.makeRoom(bytes);const created={buffer,reverse:null,references:slot.waiters,lastUse:++this.serial,bytes};this.entries.set(source,created);return created})().finally(/** 仅在该解码槽仍是当前请求时清理等待项。 */ ()=>{if(this.pending.get(source)===slot)this.pending.delete(source)})
+        const slot={promise:null as unknown as Promise<BufferEntry>,waiters:0,controller:this.createReadAbortController()}
+        slot.promise=(/** 读取音频并验证压缩大小，解码后检查会话代次和内存预算，再建立带等待者引用数的缓存。 */ async()=>{const data=await this.readBytes(source,MAX_AUDIO_CLIP_BYTES,slot.controller.signal);if(generation!==this.generation)throw new Error('AUDIO_DISPOSED: Read completed after session disposal.');const buffer=await this.context.decodeAudioData(data),bytes=buffer.length*buffer.numberOfChannels*4;if(generation!==this.generation)throw new Error('AUDIO_DISPOSED: Decode completed after session disposal.');if(bytes>MAX_AUDIO_CLIP_BYTES)throw new Error('AUDIO_CLIP_LIMIT: Decoded clip exceeds 32 MiB. Use streaming.');this.makeRoom(bytes);const created={buffer,reverse:null,references:slot.waiters,lastUse:++this.serial,bytes};this.entries.set(source,created);return created})().finally(/** 仅在该解码槽仍是当前请求时清理等待项。 */ ()=>{if(this.pending.get(source)===slot)this.pending.delete(source)})
         request=slot;this.pending.set(source,slot)
       }
       request.waiters++;entry=await request.promise
@@ -38,7 +38,7 @@ export class AudioBufferCache {
     let released=false
     return {buffer:entry.buffer,reversed:/** 按需分配并逐声道生成反转样本缓存，已释放租约拒绝访问。 */ ()=>{if(released)throw new Error('AUDIO_DISPOSED: Buffer lease was released.');if(!entry!.reverse){const bytes=entry!.buffer.length*entry!.buffer.numberOfChannels*4;this.makeRoom(bytes);const reverse=this.context.createBuffer(entry!.buffer.numberOfChannels,entry!.buffer.length,entry!.buffer.sampleRate);for(let channel=0;channel<reverse.numberOfChannels;channel++){const input=entry!.buffer.getChannelData(channel),output=reverse.getChannelData(channel);for(let index=0;index<input.length;index++)output[index]=input[input.length-1-index]}entry!.reverse=reverse;entry!.bytes+=bytes}return entry!.reverse},release:/** 幂等释放本租约持有的缓冲引用。 */ ()=>{if(!released){released=true;entry!.references--}}}
   }
-  /** 递增缓存代次使迟到解码失效，并清空缓存和等待请求引用。 */ clear():void{this.generation++;this.entries.clear();this.pending.clear()}
+  /** 递增缓存代次使迟到解码失效，并清空缓存和等待请求引用。 */ clear():void{this.generation++;for(const request of this.pending.values())request.controller.abort(new Error('AUDIO_DISPOSED: Session disposed during audio read.'));this.entries.clear();this.pending.clear()}
 }
 
 export class BufferedAudioPlayback implements AudioPlaybackElement {

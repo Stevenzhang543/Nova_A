@@ -1,5 +1,5 @@
 /** 网络服务连接配置：组织会话和服务信息及相关连接操作。 */
-import type { ProductionProjectSettings } from './production'
+import type { NetworkProjectSettings } from './networkSessionContracts'
 
 export type NetworkServiceKind = 'identity' | 'lobby' | 'relay'
 export type NetworkServicePermission = 'network.client' | 'network.listen' | 'identity.read' | 'lobby.read' | 'lobby.write' | 'relay.use'
@@ -77,11 +77,11 @@ const requiredPermissionByKind: Record<NetworkServiceKind, readonly NetworkServi
   return Object.freeze([...providers.values()].map(/* 返回 provider.review 的当前值。 */ provider => provider.review).filter(/* 先计算 !kind；仅当其为假值时求右侧 review.kind === kind，返回短路求值结果。 */ review => !kind || review.kind === kind).sort(/* 调用 a.label.localeCompare(b.label) 并返回调用结果。 */ (a, b) => a.label.localeCompare(b.label)))
 }
 
-/** 构造并返回记录 { identity: settings.services.identityProviderId, lobby: settings.services.lobbyProviderId, relay: settings.services.relayProviderId }，字段按当前实参及捕获状态求值。 */ export function selectedNetworkServiceIds(settings: Readonly<ProductionProjectSettings['networking']>): Record<NetworkServiceKind, string> {
+/** 构造并返回记录 { identity: settings.services.identityProviderId, lobby: settings.services.lobbyProviderId, relay: settings.services.relayProviderId }，字段按当前实参及捕获状态求值。 */ export function selectedNetworkServiceIds(settings: Readonly<NetworkProjectSettings>): Record<NetworkServiceKind, string> {
   return { identity: settings.services.identityProviderId, lobby: settings.services.lobbyProviderId, relay: settings.services.relayProviderId }
 }
 
-/** 结构说明（自动提取）：networkServiceSelectionIssues；输入 settings；直接调用 Object.entries、selectedNetworkServiceIds、providers.get、issues.push；返回路径包含 issues；包含循环处理。 */ export function networkServiceSelectionIssues(settings: Readonly<ProductionProjectSettings['networking']>): string[] {
+/** 结构说明（自动提取）：networkServiceSelectionIssues；输入 settings；直接调用 Object.entries、selectedNetworkServiceIds、providers.get、issues.push；返回路径包含 issues；包含循环处理。 */ export function networkServiceSelectionIssues(settings: Readonly<NetworkProjectSettings>): string[] {
   const issues: string[] = []
   for (const [kind, id] of Object.entries(selectedNetworkServiceIds(settings)) as Array<[NetworkServiceKind, string]>) {
     if (!id) continue
@@ -91,7 +91,7 @@ const requiredPermissionByKind: Record<NetworkServiceKind, readonly NetworkServi
   return issues
 }
 
-/** 结构说明（自动提取）：openReviewedNetworkService；输入 kind、settings、context；直接调用 Error、selectedNetworkServiceIds、providers.get、provider.review.permissions.includes、DOMException 等；返回路径包含 handle；等待异步结果；包含显式抛错路径。 */ export async function openReviewedNetworkService(kind: NetworkServiceKind, settings: Readonly<ProductionProjectSettings['networking']>, context: Readonly<NetworkServiceContext>): Promise<NetworkServiceHandle> {
+/** 结构说明（自动提取）：openReviewedNetworkService；输入 kind、settings、context；直接调用 Error、selectedNetworkServiceIds、providers.get、provider.review.permissions.includes、DOMException 等；返回路径包含 handle；等待异步结果；包含显式抛错路径。 */ export async function openReviewedNetworkService(kind: NetworkServiceKind, settings: Readonly<NetworkProjectSettings>, context: Readonly<NetworkServiceContext>): Promise<NetworkServiceHandle> {
   if (!settings.enabled || !settings.permissionGranted) throw new Error('Explicit project networking permission is required before a service can open.')
   const id = selectedNetworkServiceIds(settings)[kind]
   if (!id) throw new Error(`No reviewed ${kind} service is selected.`)

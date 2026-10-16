@@ -1,5 +1,15 @@
 # Nova_A reference projects
 
+<!-- NOVA_V2638_REFERENCES -->
+## Current26.38 delivery references
+
+Engine26.38.0 · Project Format2/schema29. The 26.38 reference pair carries the current release identity with unchanged game semantics. This release changes release tooling, the Rust formatting/lint state, one evidence version authority and one native window permission; project format, gameplay and rendering are unchanged.
+
+- [Coin Trail — mixed](projects/creator-v2638-mixed-game/README.md)
+- [Renderer-disabled authority](projects/server-v2638-headless-authority/README.md)
+- [26.38 release notes and scope](../docs/RELEASE_NOTES_26_38.md)
+
+
 <!-- NOVA_V2637_REFERENCES -->
 ## Current26.37 delivery references
 

@@ -1,4 +1,6 @@
 /** 资源引用重写：从持久化记录和文本中提取引用，并准备及提交一致的元数据修复。 */
+import { runtimeAssetSourceText, ASSET_REFERENCE_LIMITS } from '../runtime/runtimeAssetValues'
+export { ASSET_REFERENCE_LIMITS } from '../runtime/runtimeAssetValues'
 import type { AssetRecord } from './types'
 import { assetSourceBytes, sha256Bytes } from './contentHash'
 import { decodeRhaiString, isRhaiTrivia, lexRhai } from '../visual/rhaiSyntaxLexer'
@@ -7,15 +9,9 @@ const GUID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
 const URI = new RegExp(`asset://(${GUID})(?![0-9a-z_-])`, 'gi')
 const BARE = new RegExp(`^(?:asset://)?(${GUID})$`, 'i')
 const REFERENCE_KEY = /(?:asset(?:s|uuid|uuids)?|reference|references|texture|texturePath|parent|clips|controllers|masks|rigs|retargetProfile)$/i
-export const ASSET_REFERENCE_LIMITS = Object.freeze({ textBytes: 16 * 1024 * 1024, values: 1_000_000, depth: 64 })
 
 /** Decode text only. Binary image/audio/font bodies are never scanned or rewritten. */
-/** 排除二进制媒体，在依赖分析字节预算内严格按 UTF-8 解码文本，非法编码返回 null。 */ export function assetSourceText(asset: Pick<AssetRecord, 'source' | 'assetType' | 'mimeType'>): string | null {
-  if (['image', 'audio', 'font'].includes(asset.assetType)) return null
-  const bytes = assetSourceBytes(asset.source)
-  if (bytes.length > ASSET_REFERENCE_LIMITS.textBytes) throw new Error('ASSET_REFERENCE_LIMIT: Text asset exceeds the 16 MiB dependency-analysis limit.')
-  try { return new TextDecoder('utf-8', { fatal: true }).decode(bytes) } catch { return null }
-}
+/** 排除二进制媒体，在依赖分析字节预算内严格按 UTF-8 解码文本，非法编码返回 null。 */ export function assetSourceText(asset: Pick<AssetRecord, 'source' | 'assetType' | 'mimeType'>): string | null { return runtimeAssetSourceText(asset) }
 
 /** 在节点和深度预算内迭代收集 URI、上下文允许的裸身份及可解析路径，防止循环对象重复遍历。 */ export function collectAssetReferences(value: unknown, output = new Set<string>(), resolvePath?: (value: string, key: string) => string | null): Set<string> {
   const pending = [{ value, key: '', depth: 0, resource: false }], visited = new WeakSet<object>(); let count = 0

@@ -1,5 +1,4 @@
 /** 脚本项目设置：保存并规范语言、诊断与运行相关选项。 */
-import { reactive } from 'vue'
 
 export interface ScriptProjectSettings {
   apiVersion: 1 | 2
@@ -18,7 +17,7 @@ export interface ScriptProjectSettings {
   remoteDebug: { enabled: boolean; host: '127.0.0.1' | 'localhost'; port: number; authentication: 'token'; tokenHash: string; allowExportedPlayers: boolean }
 }
 
-export const scriptProjectSettings = reactive<ScriptProjectSettings>({
+export let scriptProjectSettings: ScriptProjectSettings = {
   apiVersion: 2,
   customSignals: [],
   maxConsoleEntries: 2000,
@@ -33,7 +32,20 @@ export const scriptProjectSettings = reactive<ScriptProjectSettings>({
   indexing: { persist: true, maxScripts: 10_000, interactiveBudgetMs: 50 },
   testing: { parallelism: 1, defaultTimeoutMs: 10_000, coverageEnabled: true, failOnEmpty: false },
   remoteDebug: { enabled: false, host: '127.0.0.1', port: 47960, authentication: 'token', tokenHash: '', allowExportedPlayers: false }
-})
+}
+
+let stateAdapterInstalled = false
+/** Bootstrap preflight only; the aggregate installer owns production installation. */
+export function isScriptProjectSettingsAdapterInstalled(): boolean { return stateAdapterInstalled }
+/** Internal bootstrap: the aggregate installer stages all four views before committing. */
+export function installScriptProjectSettingsAdapter(adapter: (target: typeof scriptProjectSettings) => typeof scriptProjectSettings): void {
+  if (stateAdapterInstalled) return
+  const view = adapter(scriptProjectSettings)
+  if (!view || typeof view !== 'object') throw new TypeError('Script state adapter must wrap the existing scriptProjectSettings target')
+  scriptProjectSettings = view
+  stateAdapterInstalled = true
+}
+
 
 /** 规范化脚本 API、信号、格式、检查、索引和测试预算，限制远程调试为回环主机与令牌认证。 */ export function normalizeScriptSettings(source: unknown): ScriptProjectSettings {
   const item = source && typeof source === 'object' ? source as Partial<ScriptProjectSettings> : {}

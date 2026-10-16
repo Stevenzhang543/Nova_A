@@ -13,7 +13,8 @@ export type ManageSection = 'learn' | 'settings' | 'automation' | 'packages' | '
 export type InspectorCategory = 'all' | 'general' | 'transform' | 'render' | 'physics' | 'gameplay' | 'ui'
 type ContextMenuType = 'sidebar-entity' | 'layer' | 'grid-entity' | 'none'
 export type EditorLogLevel = 'trace' | 'debug' | 'info' | 'warning' | 'error' | 'fatal'
-export type EditorLogCategory = 'Editor' | 'Physics' | 'Project' | 'Renderer' | 'Assets' | 'Audio' | 'Engine' | 'Runtime' | 'Script' | 'Save' | 'Plugin' | 'Input'
+import type { EditorLogCategory } from '../contracts/applicationLog'
+export type { EditorLogCategory } from '../contracts/applicationLog'
 
 export interface EditorLogEntry {
   id: number

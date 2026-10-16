@@ -1,7 +1,25 @@
 /** 运行性能采样：记录时间和计数指标，维护有界采样数据供性能面板使用。 */
-import { reactive, toRaw } from 'vue'
 import { productionSettings } from './production'
 import { NOVA_ENGINE_VERSION } from '../projects/projectFormat'
+import { FRAME_INTERVAL_CAPACITY } from './performance/observability'
+import { createProfilerCollectionBudget, readScriptProfileCollectionEvidence, scriptProfileMetadataEstimate, type ScriptProfileCollectionEvidence } from './profilerCollectionBudget'
+
+export const PROFILER_INTERVAL_SUMMARY_CAPACITY = 240
+export interface PerformanceSamplingScope {
+  schema: 'nova-performance-sampling-scope-v1'
+  rafIntervalCapacity: number
+  profilerIntervalSummaryCapacity: number
+  profilerCaptureCapacityAtCapture: number
+  profilerSampleEveryHostFramesAtCapture: number | null
+  profilerModeAtCapture: 'Full' | 'Low overhead' | 'Off'
+  profilerEnabledAtCapture: boolean
+  profilerFrozenAtCapture: boolean
+  runtimePublishEveryHostFramesAtCapture: number
+  frameAndFpsSource: 'last-recorded-host-frame'
+  rafHistoryReset: 'reset-performance-runtime'
+  profilerHistoryReset: 'clear-profiler'
+  historyMaySpanSamplingChangesAndPlayStop: true
+}
 
 export interface FrameProfile {
   frame: number
@@ -14,19 +32,25 @@ export interface FrameProfile {
   audioMs: number
   assetsMs: number
   otherMs: number
-  fps: number
+  fps: number | null
   memoryMb: number | null
   inputMs: number
   allocations: number
   gpuPasses: number
   assetJobs: number
-  mainThreadMs: number
+  mainThreadMs: number | null
   workerMs: number
   queueWaitMs: number
   cacheHitRate: number
-  worstFrameMs: number
-  onePercentLowFps: number
-  inputToPixelMs: number
+  worstFrameMs: number | null
+  onePercentLowFps: number | null
+  /** Deprecated archived name: physical display latency is unavailable. */
+  inputToPixelMs: null
+  cpuFrameMs: number | null
+  rafIntervalMs: number | null
+  submissionIntervalMs: number | null
+  inputToSubmitMs: number | null
+  gpuMs: number | null
 }
 export interface ScriptFunctionProfile {
   scriptUuid: string
@@ -45,6 +69,8 @@ export interface ScriptProfileCapture {
   engineVersion: string
   createdAt: string
   entries: ScriptFunctionProfile[]
+  /** Missing in older v1 captures: collection coverage is unknown. */
+  collection?: Readonly<ScriptProfileCollectionEvidence>
 }
 export interface ProfilerMarker { id: number; frame: number; name: string; category: string; startMs: number; durationMs: number; detail: string }
 export interface ProfilerCounter { frame: number; name: string; value: number; unit: string }
@@ -52,12 +78,14 @@ export interface ProfilerAnnotation { frame: number; createdAt: string; text: st
 
 const EMPTY: FrameProfile = {
   frame: 0, timestamp: 0, frameMs: 0, physicsMs: 0, renderingMs: 0, scriptsMs: 0,
-  animationMs: 0, audioMs: 0, assetsMs: 0, otherMs: 0, fps: 0, memoryMb: null,
-  inputMs: 0, allocations: 0, gpuPasses: 0, assetJobs: 0, mainThreadMs: 0, workerMs: 0,
-  queueWaitMs: 0, cacheHitRate: 1, worstFrameMs: 0, onePercentLowFps: 0, inputToPixelMs: 0
+  animationMs: 0, audioMs: 0, assetsMs: 0, otherMs: 0, fps: null, memoryMb: null,
+  inputMs: 0, allocations: 0, gpuPasses: 0, assetJobs: 0, mainThreadMs: null, workerMs: 0,
+  queueWaitMs: 0, cacheHitRate: 1, worstFrameMs: null, onePercentLowFps: null, inputToPixelMs: null,
+  cpuFrameMs: null, rafIntervalMs: null, submissionIntervalMs: null, inputToSubmitMs: null, gpuMs: null
 }
 
-export const profilerState = reactive({
+const scriptCollectionBudget = createProfilerCollectionBudget()
+const rawProfilerState = {
   enabled: true,
   frozen: false,
   current: { ...EMPTY },
@@ -67,6 +95,7 @@ export const profilerState = reactive({
   markers: [] as ProfilerMarker[],
   counters: [] as ProfilerCounter[],
   annotations: [] as ProfilerAnnotation[],
+  scriptCollection: scriptCollectionBudget.snapshot,
   // Full tracing remains available on demand. The normal editor records a
   // representative frame sample without allocating per-subsystem markers on
   // every animation frame.
@@ -74,7 +103,46 @@ export const profilerState = reactive({
   estimatedOverheadPercent: 0,
   remotePeer: '' as string,
   capacity: 180
-})
+}
+
+export type ProfilerState = typeof rawProfilerState
+export let profilerState: ProfilerState = rawProfilerState
+export interface ProfilerStateAdapter {
+  wrap: <T extends object>(target: T) => T
+  unwrap: <T extends object>(view: T) => T
+}
+let unwrapProfilerState: ProfilerStateAdapter['unwrap'] = value => value
+let stateAdapterInstalled = false
+let stateAdapterInstalling = false
+
+/** Trusted synchronous host bootstrap; wrap the same Owner without cloning, mutation or awaits. */
+export function installProfilerStateAdapter(adapter: ProfilerStateAdapter): void {
+  if (stateAdapterInstalled) return
+  if (stateAdapterInstalling) throw new Error('Profiler state adapter installation cannot reenter')
+  if (typeof adapter?.wrap !== 'function' || typeof adapter?.unwrap !== 'function') throw new TypeError('Profiler state adapter requires wrap and unwrap functions')
+  stateAdapterInstalling = true
+  try {
+    const view = adapter.wrap(rawProfilerState)
+    if (!view || typeof view !== 'object' || adapter.unwrap(view) !== rawProfilerState) throw new TypeError('Profiler state adapter must retain the same raw Owner')
+    for (const key of ['current', 'samples', 'scriptFunctions', 'scriptCaptures', 'markers', 'counters', 'annotations', 'scriptCollection'] as const) {
+      if (adapter.unwrap(view[key]) !== rawProfilerState[key]) throw new TypeError(`Profiler state adapter must retain the same raw ${key}`)
+    }
+    // Publish only after all host calls succeed. Runtime defaults keep the identity unwrap.
+    unwrapProfilerState = adapter.unwrap
+    profilerState = view
+    stateAdapterInstalled = true
+  } finally { stateAdapterInstalling = false }
+}
+
+/** Metadata describes the current recording policy, not a claim that all retained history used that policy. */
+export function currentPerformanceSamplingScope(runtimePublishEveryHostFrames: number): PerformanceSamplingScope {
+  return { schema: 'nova-performance-sampling-scope-v1', rafIntervalCapacity: FRAME_INTERVAL_CAPACITY,
+    profilerIntervalSummaryCapacity: PROFILER_INTERVAL_SUMMARY_CAPACITY, profilerCaptureCapacityAtCapture: productionSettings.performance.traceCapacity,
+    profilerSampleEveryHostFramesAtCapture: profilerState.overheadMode === 'Full' ? 1 : profilerState.overheadMode === 'Low overhead' ? 4 : null,
+    profilerModeAtCapture: profilerState.overheadMode, profilerEnabledAtCapture: profilerState.enabled, profilerFrozenAtCapture: profilerState.frozen,
+    runtimePublishEveryHostFramesAtCapture: runtimePublishEveryHostFrames, frameAndFpsSource: 'last-recorded-host-frame',
+    rafHistoryReset: 'reset-performance-runtime', profilerHistoryReset: 'clear-profiler', historyMaySpanSamplingChangesAndPlayStop: true }
+}
 
 const functionProfiles = new Map<string, ScriptFunctionProfile>()
 let markerSerial = 1
@@ -84,23 +152,36 @@ let captureGeneration = 0
   if (!profilerState.enabled || profilerState.frozen || profilerState.overheadMode === 'Off') return /* 返回 undefined 的当前值。 */ () => undefined
   const start = performance.now(), frame = profilerState.current.frame, generation = captureGeneration
   let completed = false
-  return /** 校验标记仍属于当前采样代次，记录有界名称、耗时和帧信息，并限制标记缓存数量。 */ () => { if (completed || generation !== captureGeneration || !profilerState.enabled || profilerState.frozen || profilerState.overheadMode === 'Off') return; completed = true; const marker: ProfilerMarker = { id: markerSerial++, frame, name: name.slice(0, 120), category: category.slice(0, 80), startMs: start, durationMs: Math.max(0, performance.now() - start), detail: detail.slice(0, 500) }; profilerState.markers.push(marker); if (profilerState.markers.length > 10_000) profilerState.markers = toRaw(profilerState.markers).slice(-10_000) }
+  return /** 校验标记仍属于当前采样代次，记录有界名称、耗时和帧信息，并限制标记缓存数量。 */ () => { if (completed || generation !== captureGeneration || !profilerState.enabled || profilerState.frozen || profilerState.overheadMode === 'Off') return; completed = true; const marker: ProfilerMarker = { id: markerSerial++, frame, name: name.slice(0, 120), category: category.slice(0, 80), startMs: start, durationMs: Math.max(0, performance.now() - start), detail: detail.slice(0, 500) }; profilerState.markers.push(marker); if (profilerState.markers.length > 10_000) profilerState.markers = unwrapProfilerState(profilerState.markers).slice(-10_000) }
 }
-/** 采样允许且数值有限时追加计数器，保留最近一万条记录。 */ export function recordProfilerCounter(name: string, value: number, unit = ''): void { if (!profilerState.enabled || profilerState.frozen || !Number.isFinite(value) || profilerState.overheadMode === 'Off') return; profilerState.counters.push({ frame: profilerState.current.frame, name: name.slice(0, 120), value, unit: unit.slice(0, 24) }); if (profilerState.counters.length > 10_000) profilerState.counters = toRaw(profilerState.counters).slice(-10_000) }
+/** 采样允许且数值有限时追加计数器，保留最近一万条记录。 */ export function recordProfilerCounter(name: string, value: number, unit = ''): void { if (!profilerState.enabled || profilerState.frozen || !Number.isFinite(value) || profilerState.overheadMode === 'Off') return; profilerState.counters.push({ frame: profilerState.current.frame, name: name.slice(0, 120), value, unit: unit.slice(0, 24) }); if (profilerState.counters.length > 10_000) profilerState.counters = unwrapProfilerState(profilerState.counters).slice(-10_000) }
 /** 截取非空批注并记录当前帧及时间，按现有数组策略保留最多一百二十八条。 */ export function addProfilerAnnotation(text: string): void { const value = text.trim().slice(0, 500); if (!value) return; profilerState.annotations.push({ frame: profilerState.current.frame, createdAt: new Date().toISOString(), text: value }); profilerState.annotations.splice(128) }
 
+/** Callers may skip profiling-only preparation; the callee checks the same live policy again. */
+export function shouldRecordScriptFunction(): boolean { return profilerState.enabled && !profilerState.frozen && profilerState.overheadMode !== 'Off' }
+
+export function currentScriptProfileCollection(): Readonly<ScriptProfileCollectionEvidence> { return profilerState.scriptCollection }
+export function scriptProfileCaptureCollectionEvidence(capture: Pick<ScriptProfileCapture, 'collection'>): Readonly<ScriptProfileCollectionEvidence> | null {
+  const descriptor = Object.getOwnPropertyDescriptor(capture, 'collection')
+  return descriptor && 'value' in descriptor ? readScriptProfileCollectionEvidence(descriptor.value) : null
+}
+
 /** 按脚本和函数累计调用、耗时及估计分配量，按总耗时更新前两千条展示记录。 */ export function recordScriptFunction(scriptUuid: string, scriptName: string, functionName: string, durationMs: number, allocationEstimateBytes: number): void {
-  if (!profilerState.enabled || profilerState.frozen || !Number.isFinite(durationMs)) return
+  if (!shouldRecordScriptFunction() || !Number.isFinite(durationMs)) return
   const key = `${scriptUuid}:${functionName}`
+  const newIdentity = !functionProfiles.has(key)
+  const weight = newIdentity ? scriptProfileMetadataEstimate(key, scriptUuid, scriptName, functionName) : 0
+  if (newIdentity && !scriptCollectionBudget.canAdmit(weight)) { profilerState.scriptCollection = scriptCollectionBudget.reject(); return }
   const item = functionProfiles.get(key) ?? { scriptUuid, scriptName, functionName, calls: 0, totalMs: 0, lastMs: 0, maximumMs: 0, allocationEstimateBytes: 0 }
   item.calls++; item.lastMs = Math.max(0, durationMs); item.totalMs += item.lastMs; item.maximumMs = Math.max(item.maximumMs, item.lastMs); item.allocationEstimateBytes += Math.max(0, Math.round(allocationEstimateBytes))
   functionProfiles.set(key, item)
+  if (newIdentity) profilerState.scriptCollection = scriptCollectionBudget.admit(weight)
   const values = [...functionProfiles.values()].sort(/* 计算表达式 second.totalMs - first.totalMs 并返回结果，沿用操作数的原有类型规则。 */ (first, second) => second.totalMs - first.totalMs).slice(0, 2_000)
   profilerState.scriptFunctions.splice(0, profilerState.scriptFunctions.length, ...values)
 }
 
 /** 复制当前函数统计为带版本的捕获记录，保留最近十六次。 */ export function captureScriptProfile(engineVersion = NOVA_ENGINE_VERSION): ScriptProfileCapture {
-  const capture: ScriptProfileCapture = { format: 'nova-script-profile', version: 1, engineVersion, createdAt: new Date().toISOString(), entries: profilerState.scriptFunctions.map(/** 构造并返回记录 { ...item }，字段按当前实参及捕获状态求值。 */ item => ({ ...item })) }
+  const capture: ScriptProfileCapture = { format: 'nova-script-profile', version: 1, engineVersion, createdAt: new Date().toISOString(), collection: currentScriptProfileCollection(), entries: profilerState.scriptFunctions.map(/** 构造并返回记录 { ...item }，字段按当前实参及捕获状态求值。 */ item => ({ ...item })) }
   profilerState.scriptCaptures.push(capture)
   if (profilerState.scriptCaptures.length > 16) profilerState.scriptCaptures.splice(0, profilerState.scriptCaptures.length - 16)
   return capture
@@ -114,20 +195,22 @@ let captureGeneration = 0
   }).sort(/* 计算表达式 Math.abs(b.totalMsDelta) - Math.abs(a.totalMsDelta) 并返回结果，沿用操作数的原有类型规则。 */ (a, b) => Math.abs(b.totalMsDelta) - Math.abs(a.totalMsDelta))
 }
 
-/** 记录当前帧及环形历史，完整模式生成分阶段标记，附加计数器并根据容量限制内存。 */ export function recordFrameProfile(sample: Omit<FrameProfile, 'frame' | 'timestamp' | 'inputMs' | 'allocations' | 'gpuPasses' | 'assetJobs' | 'mainThreadMs' | 'workerMs' | 'queueWaitMs' | 'cacheHitRate' | 'worstFrameMs' | 'onePercentLowFps' | 'inputToPixelMs'> & Partial<Pick<FrameProfile, 'inputMs' | 'allocations' | 'gpuPasses' | 'assetJobs' | 'mainThreadMs' | 'workerMs' | 'queueWaitMs' | 'cacheHitRate' | 'worstFrameMs' | 'onePercentLowFps' | 'inputToPixelMs'>>): FrameProfile | null {
+export type FrameProfileSample = Pick<FrameProfile, 'frameMs' | 'physicsMs' | 'renderingMs' | 'scriptsMs' | 'animationMs' | 'audioMs' | 'assetsMs' | 'otherMs' | 'fps' | 'memoryMb'> & Partial<Omit<FrameProfile, 'frame' | 'timestamp'>>
+/** Record measured nullable fields without converting absent evidence to zero. */ export function recordFrameProfile(sample: FrameProfileSample): FrameProfile | null {
   if (!profilerState.enabled || profilerState.frozen || profilerState.overheadMode === 'Off') return null
-  const next: FrameProfile = { inputMs: 0, allocations: 0, gpuPasses: 0, assetJobs: 0, mainThreadMs: 0, workerMs: 0, queueWaitMs: 0, cacheHitRate: 1, worstFrameMs: 0, onePercentLowFps: 0, inputToPixelMs: 0, ...sample, frame: profilerState.current.frame + 1, timestamp: performance.now() }
+  const next: FrameProfile = { ...EMPTY, ...sample, inputToPixelMs: null, frame: profilerState.current.frame + 1, timestamp: performance.now() }
   Object.assign(profilerState.current, next)
   profilerState.samples.push(next)
   if (profilerState.overheadMode === 'Full') {
     let cursor = next.timestamp - next.frameMs
     for (const [name, duration] of [['input', next.inputMs], ['physics', next.physicsMs], ['scripts', next.scriptsMs], ['animation', next.animationMs], ['audio', next.audioMs], ['rendering', next.renderingMs], ['assets', next.assetsMs], ['other', next.otherMs]] as Array<[string, number]>) { if (duration > 0) profilerState.markers.push({ id: markerSerial++, frame: next.frame, name, category: 'frame', startMs: cursor, durationMs: duration, detail: `Frame ${next.frame}` }); cursor += duration }
-    if (profilerState.markers.length > 10_000) profilerState.markers = toRaw(profilerState.markers).slice(-10_000)
+    if (profilerState.markers.length > 10_000) profilerState.markers = unwrapProfilerState(profilerState.markers).slice(-10_000)
   }
-  profilerState.counters.push({ frame: next.frame, name: 'fps', value: next.fps, unit: 'Hz' }, { frame: next.frame, name: 'allocations', value: next.allocations, unit: 'count' }, { frame: next.frame, name: 'gpuPasses', value: next.gpuPasses, unit: 'count' }); if (next.memoryMb !== null) profilerState.counters.push({ frame: next.frame, name: 'memory', value: next.memoryMb, unit: 'MB' }); if (profilerState.counters.length > 10_000) profilerState.counters = toRaw(profilerState.counters).slice(-10_000)
+  if (next.fps !== null) profilerState.counters.push({ frame: next.frame, name: 'fps', value: next.fps, unit: 'Hz' })
+  profilerState.counters.push({ frame: next.frame, name: 'allocations', value: next.allocations, unit: 'count' }, { frame: next.frame, name: 'gpuPasses', value: next.gpuPasses, unit: 'count' }); if (next.memoryMb !== null) profilerState.counters.push({ frame: next.frame, name: 'memory', value: next.memoryMb, unit: 'MB' }); if (profilerState.counters.length > 10_000) profilerState.counters = unwrapProfilerState(profilerState.counters).slice(-10_000)
   profilerState.estimatedOverheadPercent = profilerState.overheadMode === 'Full' ? Math.min(25, .25 + profilerState.markers.length / 50_000 + profilerState.counters.length / 100_000) : .08
   profilerState.capacity = productionSettings.performance.traceCapacity
-  if (profilerState.samples.length > profilerState.capacity) profilerState.samples = toRaw(profilerState.samples).slice(-profilerState.capacity)
+  if (profilerState.samples.length > profilerState.capacity) profilerState.samples = unwrapProfilerState(profilerState.samples).slice(-profilerState.capacity)
   return next
 }
 
@@ -137,5 +220,6 @@ let captureGeneration = 0
   profilerState.scriptFunctions.splice(0)
   profilerState.markers.splice(0); profilerState.counters.splice(0); profilerState.annotations.splice(0)
   functionProfiles.clear()
+  profilerState.scriptCollection = scriptCollectionBudget.clear()
   Object.assign(profilerState.current, EMPTY)
 }

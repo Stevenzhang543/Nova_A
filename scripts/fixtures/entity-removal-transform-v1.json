@@ -1,0 +1,654 @@
+{
+  "schema": "nova-entity-removal-transform-v1",
+  "baseline": {
+    "buildId": "engine-profile-dc45610d35bd14b6a156",
+    "sourceHash": "dc45610d35bd14b6a156d7526c99d87121a83a193c1e3a1d56b166e1f73b29d5",
+    "manifestSha256": "e606cfd65fb1884497d4cb8aa78466e7342b73a1bd9091232ab3a41b6c994464",
+    "sourceRecordSha256": "8254ea6a73efe1a2099920225622d2af4fe046fa78367ed2f7d6cfd42e61ae86"
+  },
+  "physics": {
+    "path": "src/store/physics.ts",
+    "beforeSha256": "9da248e9e91101faa0cc372b8ecdfc37dd318c285dda2da1762aa07166eb7971",
+    "afterSha256": "895fcd08f489fec447a116c034b2b6a98632db9a5c2d667863805cba50895169",
+    "edits": [
+      [
+        "import {instantiateEntityBundleInWorld} from '../runtime/runtimePrefabInstantiator'\n",
+        "import { detachEntityFromConnectionsInWorld, deleteEntitySubtreeInWorld } from '../world/entityRemoval'\nimport {instantiateEntityBundleInWorld} from '../runtime/runtimePrefabInstantiator'\n",
+        1
+      ],
+      [
+        "{\r\n  for (let index = physicsState.world.connections.length - 1; index >= 0; index--) {\r\n    const connection = physicsState.world.connections[index]\r\n    connection.anchors = connection.anchors.filter(/* 比较 anchor.entityId 与 entityId，返回严格不等的判断结果。 */ anchor => anchor.entityId !== entityId)\r\n    if (!normalizeConnection(connection, physicsState.world.entities.filter(/* 比较 entity.id 与 entityId，返回严格不等的判断结果。 */ entity => entity.id !== entityId))) {\r\n      physicsState.world.connections.splice(index, 1)\r\n    }\r\n  }\r\n}",
+        "{\r\n  detachEntityFromConnectionsInWorld(physicsState.world, entityId)\r\n}",
+        1
+      ],
+      [
+        "{\r\n  const ids = new Set(subtreeEntities([id], physicsState.world.entities).map(/* 返回 entity.id 的当前值。 */ entity => entity.id))\r\n  if (!ids.size) return\r\n  for (const entityId of ids) detachEntityFromConnections(entityId)\r\n  for (let index = physicsState.world.entities.length - 1; index >= 0; index--) {\r\n    if (ids.has(physicsState.world.entities[index].id)) physicsState.world.entities.splice(index, 1)\r\n  }\r\n  const selection = physicsState.selectedEntityIds.filter(/* 返回 ids.has(entityId) 的逻辑取反结果。 */ entityId => !ids.has(entityId))\r\n  selectEntities(selection, 'replace')\r\n}",
+        "{\r\n  const ids = deleteEntitySubtreeInWorld(physicsState.world, id)\r\n  if (!ids.size) return\r\n  const selection = physicsState.selectedEntityIds.filter(/* 返回 ids.has(entityId) 的逻辑取反结果。 */ entityId => !ids.has(entityId))\r\n  selectEntities(selection, 'replace')\r\n}",
+        1
+      ]
+    ]
+  },
+  "editor": {
+    "path": "src/editor/gameplayWorldHost.ts",
+    "beforeSha256": "61e1565c4f218e7691a1cb4c27256a60fdab67b162acf71b1b35a0258b5b02b8",
+    "afterSha256": "c3a1205537460b41119797683d5ee4023088902381e04e3352cbbab6b8a6461e",
+    "edits": [
+      [
+        "import { createEditorWorldGameplayOwner } from './worldGameplayAdapter'",
+        "import { createEditorWorldGameplayOwner } from './worldGameplayAdapter'\nimport { deleteEntitySubtreeInWorld } from '../world/entityRemoval'",
+        1
+      ],
+      [
+        "    deleteEntity,",
+        "    deleteEntity(id) {\n      const state = this.state\n      if ((state as unknown) === physicsState) deleteEntity(id)\n      else deleteEntitySubtreeInWorld(state.world, id)\n    },",
+        1
+      ]
+    ]
+  },
+  "helper": {
+    "path": "src/world/entityRemoval.ts",
+    "sha256": "679cd889d2227b903fcec88c0294ba5f8f901b1473565dc9f50f939c5c9fa202",
+    "source": "/** Shared structural removal for one explicitly supplied World. Lifecycle and Undo remain with their callers. */\nimport type { World } from './World'\nimport { subtreeEntities } from './hierarchy'\nimport { normalizeConnection } from './Connection'\n\n/** Remove this entity endpoint using the original per-ID connection normalization order. */\nexport function detachEntityFromConnectionsInWorld(world: World, entityId: number): void {\n  for (let index = world.connections.length - 1; index >= 0; index--) {\n    const connection = world.connections[index]\n    connection.anchors = connection.anchors.filter(/* 比较 anchor.entityId 与 entityId，返回严格不等的判断结果。 */ anchor => anchor.entityId !== entityId)\n    if (!normalizeConnection(connection, world.entities.filter(/* 比较 entity.id 与 entityId，返回严格不等的判断结果。 */ entity => entity.id !== entityId))) {\n      world.connections.splice(index, 1)\n    }\n  }\n}\n\n/** Remove the exact scene-ordered subtree in place; return its IDs for the authoring selection facade. */\nexport function deleteEntitySubtreeInWorld(world: World, id: number): Set<number> {\n  const ids = new Set(subtreeEntities([id], world.entities).map(/* 返回 entity.id 的当前值。 */ entity => entity.id))\n  if (!ids.size) return ids\n  for (const entityId of ids) detachEntityFromConnectionsInWorld(world, entityId)\n  for (let index = world.entities.length - 1; index >= 0; index--) {\n    if (ids.has(world.entities[index].id)) world.entities.splice(index, 1)\n  }\n  return ids\n}\n",
+    "originalDetachBodySha256": "40f65a076621b6d8d3943b572c98c38a3f50bfea3db2f5cdaaf0ddbfbe58ca6e",
+    "originalDeleteBodySha256": "f3218d4c1a155d295eb173e74058aa81602b44775f953d0ecfa7b5ca935c396d",
+    "detachBody": "{\n  for (let index = world.connections.length - 1; index >= 0; index--) {\n    const connection = world.connections[index]\n    connection.anchors = connection.anchors.filter(/* 比较 anchor.entityId 与 entityId，返回严格不等的判断结果。 */ anchor => anchor.entityId !== entityId)\n    if (!normalizeConnection(connection, world.entities.filter(/* 比较 entity.id 与 entityId，返回严格不等的判断结果。 */ entity => entity.id !== entityId))) {\n      world.connections.splice(index, 1)\n    }\n  }\n}",
+    "removalBody": "{\n  const ids = new Set(subtreeEntities([id], world.entities).map(/* 返回 entity.id 的当前值。 */ entity => entity.id))\n  if (!ids.size) return ids\n  for (const entityId of ids) detachEntityFromConnectionsInWorld(world, entityId)\n  for (let index = world.entities.length - 1; index >= 0; index--) {\n    if (ids.has(world.entities[index].id)) world.entities.splice(index, 1)\n  }\n  return ids\n}",
+    "algorithmInverse": "Remove only explicit World parameter substitution, return-Set skeleton and delegated detach identifier; the complete original body/order must then match."
+  },
+  "physicsFunctions": [
+    {
+      "name": "createEditorWorld",
+      "beforeBodySha256": "9060a89c257601f6b70eddee35389ec166723b39048dd89829b3953040601c68",
+      "afterBodySha256": "9060a89c257601f6b70eddee35389ec166723b39048dd89829b3953040601c68",
+      "changed": false
+    },
+    {
+      "name": "normalizeGlobalSettings",
+      "beforeBodySha256": "dc6c2944838696368d1ca522f9254774287712f0756b0ad36e21910d233d1043",
+      "afterBodySha256": "dc6c2944838696368d1ca522f9254774287712f0756b0ad36e21910d233d1043",
+      "changed": false
+    },
+    {
+      "name": "enterEditMode",
+      "beforeBodySha256": "bae19c2a99996294dcd5befabf8b948eef82e4605a0c7ddaa46190efe2ae45d5",
+      "afterBodySha256": "bae19c2a99996294dcd5befabf8b948eef82e4605a0c7ddaa46190efe2ae45d5",
+      "changed": false
+    },
+    {
+      "name": "selectEntities",
+      "beforeBodySha256": "9dca2efa84f053341e587ec40107830c955e3e8b864309d849f5d72bac2ff0e2",
+      "afterBodySha256": "9dca2efa84f053341e587ec40107830c955e3e8b864309d849f5d72bac2ff0e2",
+      "changed": false
+    },
+    {
+      "name": "selectedEntities",
+      "beforeBodySha256": "4163da78c52725c2d7d5d4565e974e9f32012949dce03fbdb5d4727284f2ec95",
+      "afterBodySha256": "4163da78c52725c2d7d5d4565e974e9f32012949dce03fbdb5d4727284f2ec95",
+      "changed": false
+    },
+    {
+      "name": "serializeComponent",
+      "beforeBodySha256": "898dfddf24696d59e8f1372bee78a142bf472ac5eb0c4c4df8b5d000a50cbdb2",
+      "afterBodySha256": "898dfddf24696d59e8f1372bee78a142bf472ac5eb0c4c4df8b5d000a50cbdb2",
+      "changed": false
+    },
+    {
+      "name": "serializeEntity",
+      "beforeBodySha256": "892cbf34910bf7ee37b219c4d8ffbee6422cc261892726ee04d5c1c0155c7d5a",
+      "afterBodySha256": "892cbf34910bf7ee37b219c4d8ffbee6422cc261892726ee04d5c1c0155c7d5a",
+      "changed": false
+    },
+    {
+      "name": "readEntityAuthoringData",
+      "beforeBodySha256": "5f5fd7e16fa3d17a146d41705c8b6e133a489f7b366c9b291a411164b01e5c54",
+      "afterBodySha256": "5f5fd7e16fa3d17a146d41705c8b6e133a489f7b366c9b291a411164b01e5c54",
+      "changed": false
+    },
+    {
+      "name": "entityAuthoringData",
+      "beforeBodySha256": "584662f9eb255f55337f5d96ffdd09812a5b32f53bb5caaca232b6c01d76fdd8",
+      "afterBodySha256": "584662f9eb255f55337f5d96ffdd09812a5b32f53bb5caaca232b6c01d76fdd8",
+      "changed": false
+    },
+    {
+      "name": "serializeActiveScene",
+      "beforeBodySha256": "50d987b4407fa8b032011662f25716efa23e4b30b254758e4baade94c89afef6",
+      "afterBodySha256": "50d987b4407fa8b032011662f25716efa23e4b30b254758e4baade94c89afef6",
+      "changed": false
+    },
+    {
+      "name": "projectSource",
+      "beforeBodySha256": "a09f1a600028fe1c8131ad5e9c49c4111e3d6f0cfb187585057eb66a04ca50ea",
+      "afterBodySha256": "a09f1a600028fe1c8131ad5e9c49c4111e3d6f0cfb187585057eb66a04ca50ea",
+      "changed": false
+    },
+    {
+      "name": "getSceneJSON",
+      "beforeBodySha256": "1076680be3aca05c064f07c18e6eedd15deb2870d396098a7479e9d5c71d1778",
+      "afterBodySha256": "1076680be3aca05c064f07c18e6eedd15deb2870d396098a7479e9d5c71d1778",
+      "changed": false
+    },
+    {
+      "name": "matchesAssetReference",
+      "beforeBodySha256": "8d623aababe4ee67f4a5d68c85f1335e282b36fbeca8a2bee9d69b9dd272880c",
+      "afterBodySha256": "8d623aababe4ee67f4a5d68c85f1335e282b36fbeca8a2bee9d69b9dd272880c",
+      "changed": false
+    },
+    {
+      "name": "visitStoredAssetReferences",
+      "beforeBodySha256": "a4b770380b8a03debbe8431e373e3ea5e3a22494eec7e6187f08ca48f4a48295",
+      "afterBodySha256": "a4b770380b8a03debbe8431e373e3ea5e3a22494eec7e6187f08ca48f4a48295",
+      "changed": false
+    },
+    {
+      "name": "visitLiveAssetReferences",
+      "beforeBodySha256": "e8ea042facf53f62d6c12f1bd7cbe1b8244871cc0cef146724affafcc51bc4a0",
+      "afterBodySha256": "e8ea042facf53f62d6c12f1bd7cbe1b8244871cc0cef146724affafcc51bc4a0",
+      "changed": false
+    },
+    {
+      "name": "visitDocumentAssetReferences",
+      "beforeBodySha256": "2760e7cd281a872aeb38fb76480e9f248f870626e8e39f443dc4eb7e6ed1a696",
+      "afterBodySha256": "2760e7cd281a872aeb38fb76480e9f248f870626e8e39f443dc4eb7e6ed1a696",
+      "changed": false
+    },
+    {
+      "name": "countAssetReferences",
+      "beforeBodySha256": "899f67235ffb999c50104a830d093a8b54d27078210e386618a70749e04467a2",
+      "afterBodySha256": "899f67235ffb999c50104a830d093a8b54d27078210e386618a70749e04467a2",
+      "changed": false
+    },
+    {
+      "name": "clearAssetReferences",
+      "beforeBodySha256": "44b85cbabb2eb65e52687f2267cf4538f2e09a1dfa0fb96f8d24bb1d22e88546",
+      "afterBodySha256": "44b85cbabb2eb65e52687f2267cf4538f2e09a1dfa0fb96f8d24bb1d22e88546",
+      "changed": false
+    },
+    {
+      "name": "replaceAssetReferences",
+      "beforeBodySha256": "c7e4fd6b209f441937424ae585484236b08fa9bd424b8723df08d507bc19a82c",
+      "afterBodySha256": "c7e4fd6b209f441937424ae585484236b08fa9bd424b8723df08d507bc19a82c",
+      "changed": false
+    },
+    {
+      "name": "copyVector",
+      "beforeBodySha256": "f45bf0bb22a21de2e5a62d604b3fa30f6c4ff8871d3a879270c7230ec602e06e",
+      "afterBodySha256": "f45bf0bb22a21de2e5a62d604b3fa30f6c4ff8871d3a879270c7230ec602e06e",
+      "changed": false
+    },
+    {
+      "name": "normalizeIdentifier",
+      "beforeBodySha256": "f890723ae12714a59e7f1597088645fa8a5de20997419949832493312328a70f",
+      "afterBodySha256": "f890723ae12714a59e7f1597088645fa8a5de20997419949832493312328a70f",
+      "changed": false
+    },
+    {
+      "name": "normalizedVertices",
+      "beforeBodySha256": "1ee41e7979aa024251f4f93f6f3fa62dbcd54bc52f907b39d4f04078c9c8b9f1",
+      "afterBodySha256": "1ee41e7979aa024251f4f93f6f3fa62dbcd54bc52f907b39d4f04078c9c8b9f1",
+      "changed": false
+    },
+    {
+      "name": "storedShapeType",
+      "beforeBodySha256": "7d7ac54676aeb318cc0c2d6cbc6d9da49f5dde3cfdd0b5cc190a14729b6027a0",
+      "afterBodySha256": "7d7ac54676aeb318cc0c2d6cbc6d9da49f5dde3cfdd0b5cc190a14729b6027a0",
+      "changed": false
+    },
+    {
+      "name": "createShapeEntity",
+      "beforeBodySha256": "33193b95fbce69ec8eebb0f43bc053112111839e891f42440d6cadefd802bbe0",
+      "afterBodySha256": "33193b95fbce69ec8eebb0f43bc053112111839e891f42440d6cadefd802bbe0",
+      "changed": false
+    },
+    {
+      "name": "recordData",
+      "beforeBodySha256": "82d5a0c1ddd51f92a80ac7b4d953703d325b92f6a5345e5dd7c40ec3223cbc36",
+      "afterBodySha256": "82d5a0c1ddd51f92a80ac7b4d953703d325b92f6a5345e5dd7c40ec3223cbc36",
+      "changed": false
+    },
+    {
+      "name": "applyComponentMetadata",
+      "beforeBodySha256": "7839da5cc38cabd7c5454475583627cc01adc35d266ac02ba204ac40271ca969",
+      "afterBodySha256": "7839da5cc38cabd7c5454475583627cc01adc35d266ac02ba204ac40271ca969",
+      "changed": false
+    },
+    {
+      "name": "createExtendedComponent",
+      "beforeBodySha256": "2a8d425659da3bfb8e64736c16247af1178f40c5f45bd79e7bce4e70184fec96",
+      "afterBodySha256": "2a8d425659da3bfb8e64736c16247af1178f40c5f45bd79e7bce4e70184fec96",
+      "changed": false
+    },
+    {
+      "name": "clamp",
+      "beforeBodySha256": "46c5937af66841042ea44aa6798942069605d1ab5e42974f5d8b7d49966c7c38",
+      "afterBodySha256": "46c5937af66841042ea44aa6798942069605d1ab5e42974f5d8b7d49966c7c38",
+      "changed": false
+    },
+    {
+      "name": "safeVector",
+      "beforeBodySha256": "1a39e75cf436419c18b60a67b13fc7094a4e517ab102c0544e78e3cfd2abb816",
+      "afterBodySha256": "1a39e75cf436419c18b60a67b13fc7094a4e517ab102c0544e78e3cfd2abb816",
+      "changed": false
+    },
+    {
+      "name": "safeColor",
+      "beforeBodySha256": "0a5faaf0131a731be8756b569d9cb09ffe2530b03e552d37e6dc671d813f471f",
+      "afterBodySha256": "0a5faaf0131a731be8756b569d9cb09ffe2530b03e552d37e6dc671d813f471f",
+      "changed": false
+    },
+    {
+      "name": "safeStyleOverrides",
+      "beforeBodySha256": "dd319b3d613fd0a2081e174327d2d567efe24ab1f0d555e70268be2c404111ec",
+      "afterBodySha256": "dd319b3d613fd0a2081e174327d2d567efe24ab1f0d555e70268be2c404111ec",
+      "changed": false
+    },
+    {
+      "name": "normalizeExtendedComponent",
+      "beforeBodySha256": "f1837b88359dba8a50fc8e60d269fbbc8b270c7fec4377fd0144373a32f57b46",
+      "afterBodySha256": "f1837b88359dba8a50fc8e60d269fbbc8b270c7fec4377fd0144373a32f57b46",
+      "changed": false
+    },
+    {
+      "name": "applyStoredComponents",
+      "beforeBodySha256": "a88920c0a61610a539a42cdd578038dc0934b338b39b1a8b418521d23ae7d2dd",
+      "afterBodySha256": "a88920c0a61610a539a42cdd578038dc0934b338b39b1a8b418521d23ae7d2dd",
+      "changed": false
+    },
+    {
+      "name": "applyStoredProperties",
+      "beforeBodySha256": "c69daf033aa30ba25f87082585ffb6e601e093a36beb5a9ab304af7a1eb69af1",
+      "afterBodySha256": "c69daf033aa30ba25f87082585ffb6e601e093a36beb5a9ab304af7a1eb69af1",
+      "changed": false
+    },
+    {
+      "name": "applyStoredAppearance",
+      "beforeBodySha256": "a70c8176539558a00cccf70f2b98f858481ec1fa5f300f51d58af8a40db49910",
+      "afterBodySha256": "a70c8176539558a00cccf70f2b98f858481ec1fa5f300f51d58af8a40db49910",
+      "changed": false
+    },
+    {
+      "name": "applyStoredTransform",
+      "beforeBodySha256": "8580a342200e8185d610a4e8f9e1f34ec5f468f2de95f8472ba7093c975af5ac",
+      "afterBodySha256": "8580a342200e8185d610a4e8f9e1f34ec5f468f2de95f8472ba7093c975af5ac",
+      "changed": false
+    },
+    {
+      "name": "createEntityFromData",
+      "beforeBodySha256": "186b80b6c7f38f79ea4a4053617b58f62702aa5657005591711245e09088badb",
+      "afterBodySha256": "186b80b6c7f38f79ea4a4053617b58f62702aa5657005591711245e09088badb",
+      "changed": false
+    },
+    {
+      "name": "createUiEntity",
+      "beforeBodySha256": "cb2859b8b66bed054e417beb56262415e2080ef0341db8159dc66e6b341152e0",
+      "afterBodySha256": "cb2859b8b66bed054e417beb56262415e2080ef0341db8159dc66e6b341152e0",
+      "changed": false
+    },
+    {
+      "name": "createTileMapEntity",
+      "beforeBodySha256": "d685da01af0d8b86bb2aeca94aad480560e090cfd292e98e50e7d505a34b3503",
+      "afterBodySha256": "d685da01af0d8b86bb2aeca94aad480560e090cfd292e98e50e7d505a34b3503",
+      "changed": false
+    },
+    {
+      "name": "cloneEntity",
+      "beforeBodySha256": "56ccb10336fd2cc6821840cbdb289851c4be19cd16883667dcb7cc497b74f03f",
+      "afterBodySha256": "56ccb10336fd2cc6821840cbdb289851c4be19cd16883667dcb7cc497b74f03f",
+      "changed": false
+    },
+    {
+      "name": "captureEntityBundle",
+      "beforeBodySha256": "ba5498e103959380aea32437b7329ead5df8f30dd1a142b774dc13b5097ee0e7",
+      "afterBodySha256": "ba5498e103959380aea32437b7329ead5df8f30dd1a142b774dc13b5097ee0e7",
+      "changed": false
+    },
+    {
+      "name": "copySelectedEntities",
+      "beforeBodySha256": "ccf6ff015f5cb45388a69beda2517105aedc1aeae282c21065ce13f3e36e8e9f",
+      "afterBodySha256": "ccf6ff015f5cb45388a69beda2517105aedc1aeae282c21065ce13f3e36e8e9f",
+      "changed": false
+    },
+    {
+      "name": "instantiateEntityBundle",
+      "beforeBodySha256": "c917298edd17c0c8ceace21070fbe116cc28667b059ad0f62808ce91651ea00a",
+      "afterBodySha256": "c917298edd17c0c8ceace21070fbe116cc28667b059ad0f62808ce91651ea00a",
+      "changed": false
+    },
+    {
+      "name": "pasteEntities",
+      "beforeBodySha256": "d0e2f07353de576b87c5d1525388e350fc45512608a1c497527a0cccd0820a61",
+      "afterBodySha256": "d0e2f07353de576b87c5d1525388e350fc45512608a1c497527a0cccd0820a61",
+      "changed": false
+    },
+    {
+      "name": "duplicateSelectedEntities",
+      "beforeBodySha256": "b2b5db9333818b78c2ef0475cd91952fb603836533837da100bcc242b1a0e65f",
+      "afterBodySha256": "b2b5db9333818b78c2ef0475cd91952fb603836533837da100bcc242b1a0e65f",
+      "changed": false
+    },
+    {
+      "name": "addConnection",
+      "beforeBodySha256": "93a36d1275b785bc419acf5870d966cdbbbd5e4e2e4dbd4ddd2ec667b6373f35",
+      "afterBodySha256": "93a36d1275b785bc419acf5870d966cdbbbd5e4e2e4dbd4ddd2ec667b6373f35",
+      "changed": false
+    },
+    {
+      "name": "deleteConnection",
+      "beforeBodySha256": "ef59b78db9f7f24b8995068b1029f5b37fd38c1299c2e355acecba88db56cac6",
+      "afterBodySha256": "ef59b78db9f7f24b8995068b1029f5b37fd38c1299c2e355acecba88db56cac6",
+      "changed": false
+    },
+    {
+      "name": "repairConnection",
+      "beforeBodySha256": "7079950c5addee7697cf8cfb95ef7745318748ee3ed1c09d5732e0195d314251",
+      "afterBodySha256": "7079950c5addee7697cf8cfb95ef7745318748ee3ed1c09d5732e0195d314251",
+      "changed": false
+    },
+    {
+      "name": "detachEntityFromConnections",
+      "beforeBodySha256": "40f65a076621b6d8d3943b572c98c38a3f50bfea3db2f5cdaaf0ddbfbe58ca6e",
+      "afterBodySha256": "ac9a58de9f4d1c535a3f395ffd5ecd7f791fe8ca4789fc2f498ee796034799ea",
+      "changed": true
+    },
+    {
+      "name": "duplicateConnections",
+      "beforeBodySha256": "ccd40189f1b6e03695b441d8b2149d2a4c42773cdc282ec65c4c8c986bcc8f4b",
+      "afterBodySha256": "ccd40189f1b6e03695b441d8b2149d2a4c42773cdc282ec65c4c8c986bcc8f4b",
+      "changed": false
+    },
+    {
+      "name": "claimIdentifier",
+      "beforeBodySha256": "e6fabafd3361b5cb8a75d6f592a279b8abc8441110d1d09c4e359c49c295918a",
+      "afterBodySha256": "e6fabafd3361b5cb8a75d6f592a279b8abc8441110d1d09c4e359c49c295918a",
+      "changed": false
+    },
+    {
+      "name": "loadEntities",
+      "beforeBodySha256": "cff9db7b626d70eae56c8d9ee16eecb1a55bec1332e1197e0d5b81719d0e6d93",
+      "afterBodySha256": "cff9db7b626d70eae56c8d9ee16eecb1a55bec1332e1197e0d5b81719d0e6d93",
+      "changed": false
+    },
+    {
+      "name": "loadConnections",
+      "beforeBodySha256": "012344c8da9853f4e6d99dc131e38978268d2f04bbc91c8a796d4ad58c1826ea",
+      "afterBodySha256": "012344c8da9853f4e6d99dc131e38978268d2f04bbc91c8a796d4ad58c1826ea",
+      "changed": false
+    },
+    {
+      "name": "loadGlobalSettings",
+      "beforeBodySha256": "d037cb2568c864ac01f87031a2e3d73d36e732762a6ff62c37ee16d1d6476d09",
+      "afterBodySha256": "d037cb2568c864ac01f87031a2e3d73d36e732762a6ff62c37ee16d1d6476d09",
+      "changed": false
+    },
+    {
+      "name": "serializePhysicsProjectSettings",
+      "beforeBodySha256": "ceda7cf5b373b51ecaa7298ec44a6023d9183b1d90de65d943684127f9d1cb95",
+      "afterBodySha256": "ceda7cf5b373b51ecaa7298ec44a6023d9183b1d90de65d943684127f9d1cb95",
+      "changed": false
+    },
+    {
+      "name": "loadPhysicsProjectSettings",
+      "beforeBodySha256": "48e8329f2cf2a9d6922f1f3d5b89d515277ac524a69b07e3da1577aa34da390b",
+      "afterBodySha256": "48e8329f2cf2a9d6922f1f3d5b89d515277ac524a69b07e3da1577aa34da390b",
+      "changed": false
+    },
+    {
+      "name": "loadProject",
+      "beforeBodySha256": "f2e482590098ec54c1c2d4be8799872dad464ed39bca269b063c4550001d762a",
+      "afterBodySha256": "f2e482590098ec54c1c2d4be8799872dad464ed39bca269b063c4550001d762a",
+      "changed": false
+    },
+    {
+      "name": "hydrateProjectDocument",
+      "beforeBodySha256": "5e03708cba7568f54885379d9dd348664bbc78471aca20a515f85fe14cbf05c4",
+      "afterBodySha256": "5e03708cba7568f54885379d9dd348664bbc78471aca20a515f85fe14cbf05c4",
+      "changed": false
+    },
+    {
+      "name": "reloadSceneManagerProject",
+      "beforeBodySha256": "152c3462a768929f8e53c133bbe6609d2aa190d7fe534adcec6164c6e040f98b",
+      "afterBodySha256": "152c3462a768929f8e53c133bbe6609d2aa190d7fe534adcec6164c6e040f98b",
+      "changed": false
+    },
+    {
+      "name": "createScene",
+      "beforeBodySha256": "642963985fa28c0b4e39213e3e2d02af706b530fa812925d611703e5f14883a2",
+      "afterBodySha256": "642963985fa28c0b4e39213e3e2d02af706b530fa812925d611703e5f14883a2",
+      "changed": false
+    },
+    {
+      "name": "setActiveScene",
+      "beforeBodySha256": "a99387dac869ff8e8f11eb0422fc046d5ac75cd4fdad75962f49d19a6d9e70d0",
+      "afterBodySha256": "a99387dac869ff8e8f11eb0422fc046d5ac75cd4fdad75962f49d19a6d9e70d0",
+      "changed": false
+    },
+    {
+      "name": "navigateScene",
+      "beforeBodySha256": "54bc5b92201140c73c94483e2ad189f8fe2f804c38e309e8cba7ce94b9cef4e7",
+      "afterBodySha256": "54bc5b92201140c73c94483e2ad189f8fe2f804c38e309e8cba7ce94b9cef4e7",
+      "changed": false
+    },
+    {
+      "name": "reloadActiveScene",
+      "beforeBodySha256": "7ded814cf35a708fa638dc8b384976384c21a2393170438e6fc43ad0e5809a03",
+      "afterBodySha256": "7ded814cf35a708fa638dc8b384976384c21a2393170438e6fc43ad0e5809a03",
+      "changed": false
+    },
+    {
+      "name": "setSceneLoaded",
+      "beforeBodySha256": "7b967d50ddd0af15d07c5ec649fce6e4cfc5a82ec28634c200f3a60c79d9c8f2",
+      "afterBodySha256": "7b967d50ddd0af15d07c5ec649fce6e4cfc5a82ec28634c200f3a60c79d9c8f2",
+      "changed": false
+    },
+    {
+      "name": "prepareRuntimeSceneTransition",
+      "beforeBodySha256": "be403e20d5653cacb5f4a32144f267b97bc153b9181a4da1124555f2a6190eb6",
+      "afterBodySha256": "be403e20d5653cacb5f4a32144f267b97bc153b9181a4da1124555f2a6190eb6",
+      "changed": false
+    },
+    {
+      "name": "runtimeLoadScene",
+      "beforeBodySha256": "4dba96618d7204741b4b01b77bdd4460f2d861eab11cf742c9d83bfbae507bcb",
+      "afterBodySha256": "4dba96618d7204741b4b01b77bdd4460f2d861eab11cf742c9d83bfbae507bcb",
+      "changed": false
+    },
+    {
+      "name": "runtimeReloadScene",
+      "beforeBodySha256": "ac0f9ce95252ab54ff5a2be5e6b559593cee8def96bd8a2b722703e5ad1a7cdb",
+      "afterBodySha256": "ac0f9ce95252ab54ff5a2be5e6b559593cee8def96bd8a2b722703e5ad1a7cdb",
+      "changed": false
+    },
+    {
+      "name": "settlePlaybackEdits",
+      "beforeBodySha256": "9d296540a105ad555613dc35be8ec17cd4cda32dc447c1e7bd2d2012dea4341a",
+      "afterBodySha256": "9d296540a105ad555613dc35be8ec17cd4cda32dc447c1e7bd2d2012dea4341a",
+      "changed": false
+    },
+    {
+      "name": "toggleSimulation",
+      "beforeBodySha256": "23fb2988ceceb72d05ae77f214fc7529382a175ca8f289f0f86820880c5f1cff",
+      "afterBodySha256": "23fb2988ceceb72d05ae77f214fc7529382a175ca8f289f0f86820880c5f1cff",
+      "changed": false
+    },
+    {
+      "name": "resetSimulation",
+      "beforeBodySha256": "c489d1e38dff79c7d272b52525cf5133e190ff8d383e537d1bf02143b3475739",
+      "afterBodySha256": "c489d1e38dff79c7d272b52525cf5133e190ff8d383e537d1bf02143b3475739",
+      "changed": false
+    },
+    {
+      "name": "singleStepSimulation",
+      "beforeBodySha256": "dbe1f60c0fbd19db9321ba59809180148eecd3dce5baafe5650b0b2013efab7b",
+      "afterBodySha256": "dbe1f60c0fbd19db9321ba59809180148eecd3dce5baafe5650b0b2013efab7b",
+      "changed": false
+    },
+    {
+      "name": "stopPlayMode",
+      "beforeBodySha256": "fd974c132dbef1edaa3f6f8fa46c8aafe14c05085448c63da35352ef22016115",
+      "afterBodySha256": "fd974c132dbef1edaa3f6f8fa46c8aafe14c05085448c63da35352ef22016115",
+      "changed": false
+    },
+    {
+      "name": "getPerformanceAuthoringSource",
+      "beforeBodySha256": "9c0002401fe8332f8c68c63b994641ed53b05d7a657a11f4db5d7f50305e794f",
+      "afterBodySha256": "9c0002401fe8332f8c68c63b994641ed53b05d7a657a11f4db5d7f50305e794f",
+      "changed": false
+    },
+    {
+      "name": "hasRuntimeSession",
+      "beforeBodySha256": "7ea3a57ec9f4aa5686534ed3e5addb70ebc0175a95f9e6dff928afde3950e398",
+      "afterBodySha256": "7ea3a57ec9f4aa5686534ed3e5addb70ebc0175a95f9e6dff928afde3950e398",
+      "changed": false
+    },
+    {
+      "name": "saveProject",
+      "beforeBodySha256": "1869432182774272ffa34b547f9d6e4e47e9ba42c78504a8364fca04a35df57c",
+      "afterBodySha256": "1869432182774272ffa34b547f9d6e4e47e9ba42c78504a8364fca04a35df57c",
+      "changed": false
+    },
+    {
+      "name": "clearScene",
+      "beforeBodySha256": "b35852e0328dd41b44829d90055d8c4e40fd72a507f9553930f1d4429a36f5db",
+      "afterBodySha256": "b35852e0328dd41b44829d90055d8c4e40fd72a507f9553930f1d4429a36f5db",
+      "changed": false
+    },
+    {
+      "name": "deleteSelected",
+      "beforeBodySha256": "ccef39d88891f66e9c7414532c54cade4f46310fc7b845545338964f85c3a6e7",
+      "afterBodySha256": "ccef39d88891f66e9c7414532c54cade4f46310fc7b845545338964f85c3a6e7",
+      "changed": false
+    },
+    {
+      "name": "deleteEntity",
+      "beforeBodySha256": "f3218d4c1a155d295eb173e74058aa81602b44775f953d0ecfa7b5ca935c396d",
+      "afterBodySha256": "c5542edb6813a6653815a554d87455a149e4479126f3aa87f39ddd67829514f9",
+      "changed": true
+    },
+    {
+      "name": "resetCamera",
+      "beforeBodySha256": "7a325860dede2e865c690f6da60f7629e018e0a715c7d14944dfc0ddcce69a60",
+      "afterBodySha256": "7a325860dede2e865c690f6da60f7629e018e0a715c7d14944dfc0ddcce69a60",
+      "changed": false
+    },
+    {
+      "name": "moveToFront",
+      "beforeBodySha256": "a0e5fd7a5bf4640dabb994d1e220626cea77666f34b76ec419efa72ebd9b8e8d",
+      "afterBodySha256": "a0e5fd7a5bf4640dabb994d1e220626cea77666f34b76ec419efa72ebd9b8e8d",
+      "changed": false
+    },
+    {
+      "name": "moveToBack",
+      "beforeBodySha256": "885930134d37d7e96627f36d34a8b961d97ada8e137de48e0e694f1e480256a2",
+      "afterBodySha256": "885930134d37d7e96627f36d34a8b961d97ada8e137de48e0e694f1e480256a2",
+      "changed": false
+    },
+    {
+      "name": "duplicateEntity",
+      "beforeBodySha256": "b45f53581393a64f21bc1078260c1c1c67b40e6d545de761b30d78440ea57804",
+      "afterBodySha256": "b45f53581393a64f21bc1078260c1c1c67b40e6d545de761b30d78440ea57804",
+      "changed": false
+    },
+    {
+      "name": "readAutosave",
+      "beforeBodySha256": "097fd54571ff168ade9ec90c9a92101e8c93cadb3925d1163070c4d27c723152",
+      "afterBodySha256": "097fd54571ff168ade9ec90c9a92101e8c93cadb3925d1163070c4d27c723152",
+      "changed": false
+    },
+    {
+      "name": "scheduleAutosave",
+      "beforeBodySha256": "3edbc1d187b0c70f15f314e787029b2b56bb5187ec9d07c60b8819840166929d",
+      "afterBodySha256": "3edbc1d187b0c70f15f314e787029b2b56bb5187ec9d07c60b8819840166929d",
+      "changed": false
+    },
+    {
+      "name": "restoreAutosave",
+      "beforeBodySha256": "68d70529db5f8b4498ee229b58baa45c8d2a947e3ccda81c45f6c1dfe4d32ecf",
+      "afterBodySha256": "68d70529db5f8b4498ee229b58baa45c8d2a947e3ccda81c45f6c1dfe4d32ecf",
+      "changed": false
+    },
+    {
+      "name": "hasAutosave",
+      "beforeBodySha256": "b2dffa814a7c6cf8b7372bb6325e0caef40eeb3c370265f2d44b530a957555a7",
+      "afterBodySha256": "b2dffa814a7c6cf8b7372bb6325e0caef40eeb3c370265f2d44b530a957555a7",
+      "changed": false
+    },
+    {
+      "name": "syncHistoryState",
+      "beforeBodySha256": "70e9d5abfc7f210d1ec36d2cd0ff116e7c5e5720e145629949a3f669e2037e3d",
+      "afterBodySha256": "70e9d5abfc7f210d1ec36d2cd0ff116e7c5e5720e145629949a3f669e2037e3d",
+      "changed": false
+    },
+    {
+      "name": "synchronizeHistoryBaseline",
+      "beforeBodySha256": "6af2b1696a8295531dd90c727343c1f0bce45a44fa81f523cdd3147b28434049",
+      "afterBodySha256": "6af2b1696a8295531dd90c727343c1f0bce45a44fa81f523cdd3147b28434049",
+      "changed": false
+    },
+    {
+      "name": "applyHistoryDocument",
+      "beforeBodySha256": "b4fdf93b22fcade8a158fe9a55388eb3e9965806ef74f5f3ce5e615f169babc0",
+      "afterBodySha256": "b4fdf93b22fcade8a158fe9a55388eb3e9965806ef74f5f3ce5e615f169babc0",
+      "changed": false
+    },
+    {
+      "name": "commandScope",
+      "beforeBodySha256": "cfcadca3e3c840db5e388619630abca339d8344122d40c2ce9b508557586545c",
+      "afterBodySha256": "cfcadca3e3c840db5e388619630abca339d8344122d40c2ce9b508557586545c",
+      "changed": false
+    },
+    {
+      "name": "pushAssetReimportHistory",
+      "beforeBodySha256": "fb51174d3ae44a7f91ed0c6125d499a77ccb4bb3140ca30b5085f1e441d75e87",
+      "afterBodySha256": "fb51174d3ae44a7f91ed0c6125d499a77ccb4bb3140ca30b5085f1e441d75e87",
+      "changed": false
+    },
+    {
+      "name": "pushHistory",
+      "beforeBodySha256": "9116966c83d420ddc79b6cb6c281f5f3c786693c5889f3827554ec2f859dc273",
+      "afterBodySha256": "9116966c83d420ddc79b6cb6c281f5f3c786693c5889f3827554ec2f859dc273",
+      "changed": false
+    },
+    {
+      "name": "settlePendingDocumentEdits",
+      "beforeBodySha256": "b80f942b6d36a9a6ba605a4ed3ff96c097b3ad00ecdbe264dce23eb37843ef5e",
+      "afterBodySha256": "b80f942b6d36a9a6ba605a4ed3ff96c097b3ad00ecdbe264dce23eb37843ef5e",
+      "changed": false
+    },
+    {
+      "name": "beginHistoryTransaction",
+      "beforeBodySha256": "2684571b50bc3e2556a0f63526c16c7b09814769f66cb767b0180e89c58b730f",
+      "afterBodySha256": "2684571b50bc3e2556a0f63526c16c7b09814769f66cb767b0180e89c58b730f",
+      "changed": false
+    },
+    {
+      "name": "commitHistoryTransaction",
+      "beforeBodySha256": "3a3df770e93c5f9ba331dd6cc33c70c1cbf7228a17e9cc2d20f14ac7c3be7ef8",
+      "afterBodySha256": "3a3df770e93c5f9ba331dd6cc33c70c1cbf7228a17e9cc2d20f14ac7c3be7ef8",
+      "changed": false
+    },
+    {
+      "name": "cancelHistoryTransaction",
+      "beforeBodySha256": "2b1c9745218739023f6ae77803954113c2a807dc4cc58dd9aa8b4e4a62462716",
+      "afterBodySha256": "2b1c9745218739023f6ae77803954113c2a807dc4cc58dd9aa8b4e4a62462716",
+      "changed": false
+    },
+    {
+      "name": "clearEditorHistory",
+      "beforeBodySha256": "717405c35a365e6175f9c3c4f8203ab3c48d152542a4a555dc65b4635aec8a0b",
+      "afterBodySha256": "717405c35a365e6175f9c3c4f8203ab3c48d152542a4a555dc65b4635aec8a0b",
+      "changed": false
+    },
+    {
+      "name": "undo",
+      "beforeBodySha256": "44abd13119bda39bc23ab177e3e938acfb507e4a5fc25769b086c9d78a636106",
+      "afterBodySha256": "44abd13119bda39bc23ab177e3e938acfb507e4a5fc25769b086c9d78a636106",
+      "changed": false
+    },
+    {
+      "name": "redo",
+      "beforeBodySha256": "04b91b5c094249c8e5b42e0e145041378495481d0cdab69793247b3c80383c56",
+      "afterBodySha256": "04b91b5c094249c8e5b42e0e145041378495481d0cdab69793247b3c80383c56",
+      "changed": false
+    }
+  ]
+}

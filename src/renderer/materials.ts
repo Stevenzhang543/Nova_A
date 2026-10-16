@@ -1,5 +1,5 @@
 /** 材质资源管理：规范材质和参数，解析资源并提供渲染阶段所需的材质描述。 */
-import { readTextAsset, resolveAsset } from '../assets/AssetDatabase'
+import { defaultRendererEnvironment, type RendererAssetSource } from './RendererEnvironment'
 import type { BlendMode2D, TextureFilter } from './types'
 import { compileMaterialGraph, compileMaterialLayers, normalizeMaterialGraph, normalizeMaterialLayers, type MaterialGraphDocument, type MaterialGraphTarget, type MaterialLayer2D } from './materialGraph'
 
@@ -232,12 +232,12 @@ export function validateMaterialForPlatform(material: Material2DResource, platfo
   return diagnostics
 }
 /* 解析材质资源与父材质继承，合并属性；资源缺失、格式错误或循环引用时记录回退。 */
-export function resolveMaterial(reference: string | null | undefined, visited = new Set<string>()): Material2DResource {
+export function resolveMaterial(reference: string | null | undefined, visited = new Set<string>(), assets: RendererAssetSource = defaultRendererEnvironment().assets): Material2DResource {
   if (!reference || reference === 'Default' || reference === 'Particles' || reference.startsWith('__')) return defaultMaterial(reference || 'Default')
   if (visited.has(reference)) return noteFallback(reference, 'inheritance cycle')
   visited.add(reference)
-  const asset = resolveAsset(reference), source = asset?.assetType === 'material' ? readTextAsset(asset.uuid) : null
+  const source = assets.readMaterialSource(reference)
   if (!source) return noteFallback(reference, 'material asset not found')
-  try { const material = normalizeMaterial(JSON.parse(source)); if (!material.parentMaterial) return material; const parent = resolveMaterial(material.parentMaterial, visited); return normalizeMaterial({ ...parent, ...material, name: material.name, uniforms: { ...parent.uniforms, ...material.uniforms }, textures: { ...parent.textures, ...material.textures }, uniformSchema: [...parent.uniformSchema, ...material.uniformSchema.filter(/* 返回 parent.uniformSchema.some(parentField => parentField.name === field.name) 的逻辑取反结果。 */ field => !parent.uniformSchema.some(/* 比较 parentField.name 与 field.name，返回严格相等的判断结果。 */ parentField => parentField.name === field.name))] }) } catch { return noteFallback(reference, 'invalid serialized material') }
+  try { const material = normalizeMaterial(JSON.parse(source)); if (!material.parentMaterial) return material; const parent = resolveMaterial(material.parentMaterial, visited, assets); return normalizeMaterial({ ...parent, ...material, name: material.name, uniforms: { ...parent.uniforms, ...material.uniforms }, textures: { ...parent.textures, ...material.textures }, uniformSchema: [...parent.uniformSchema, ...material.uniformSchema.filter(/* 返回 parent.uniformSchema.some(parentField => parentField.name === field.name) 的逻辑取反结果。 */ field => !parent.uniformSchema.some(/* 比较 parentField.name 与 field.name，返回严格相等的判断结果。 */ parentField => parentField.name === field.name))] }) } catch { return noteFallback(reference, 'invalid serialized material') }
 }
 /* 调用 JSON.stringify(normalizeMaterial(material), null, 2) 并返回调用结果。 */ export function serializeMaterial(material: Material2DResource): string { return JSON.stringify(normalizeMaterial(material), null, 2) }

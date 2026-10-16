@@ -9,7 +9,7 @@ const context=resolveMilestoneAuditContext(import.meta.url,{release:'26.17',repo
 const opened=await openMediaAuditModules(context,{physics:'store/physics',world:'world/World',box:'world/BoxEntity',circle:'world/CircleEntity',components:'world/components',query:'runtime/physics2d',database:'assets/AssetDatabase',types:'assets/types',tiles:'runtime/tilemap'})
 const {world:{World},box:{BoxEntity},circle:{CircleEntity},components,physics,query:{Physics2D},database,types,tiles}=opened.modules
 const wasm=await opened.wasm(),runtimes=[]
-const makeWorld=/** 创建真实 WASM 物理查询世界，绑定实体并记录运行时实例。 */ entities=>{const world=new World();Object.defineProperty(world,'__v_skip',{value:true});world.runtime=new wasm.module.WasmRuntimeWorld();world.wasmLoaded=true;world.entities=entities;runtimes.push(world.runtime);physics.physicsState.world=world;return world}
+const makeWorld=/** 通过生产编辑器工厂创建真实 WASM 查询世界，保留资源服务并记录运行时。 */ entities=>{const world=physics.createEditorWorld();Object.defineProperty(world,'__v_skip',{value:true});world.runtime=new wasm.module.WasmRuntimeWorld();world.wasmLoaded=true;world.entities=entities;runtimes.push(world.runtime);physics.physicsState.world=world;return world}
 const box=/** 创建指定位置、尺寸和稳定 UUID 的静态查询测试实体。 */ (id,x,y=0,size={x:1,y:1})=>{const entity=new BoxEntity(id,{x,y},size,uuid(id));entity.rigidBody.bodyType='Static';return entity}
 const check=/** 结构说明（自动提取）：check；输入 name、run；直接调用 run、checks.push、String；等待异步结果。 */ async(name,run)=>{try{await run();checks.push({name,status:'passed'})}catch(error){checks.push({name,status:'failed',error:error.stack??String(error)})}}
 try{

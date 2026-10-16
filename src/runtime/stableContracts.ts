@@ -10,7 +10,8 @@ import {
 import { NOVA_GRAPH_FORMAT, NOVA_GRAPH_VERSION } from '../visual/graphTypes'
 
 export const NOVA_RUNTIME_API_VERSION = 2
-export const NOVA_PLUGIN_API_VERSION = 2
+import { NOVA_PLUGIN_API_VERSION } from './pluginApiContract'
+export { NOVA_PLUGIN_API_VERSION }
 export const NOVA_PACKAGE_MANIFEST_VERSION = 1
 export const NOVA_BUILD_CLI_VERSION = 1
 export const NOVA_WORKSPACE_DOCUMENT_VERSION = 3

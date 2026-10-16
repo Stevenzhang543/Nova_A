@@ -39,7 +39,7 @@ try {
   const wasmMetadata = JSON.parse(createRequire(import.meta.url)(join(output, 'nova_rhai_metadata.js')).metadata_json())
   const evidence = { rhaiVersion: version, sourceHash: createHash('sha256').update(source).digest('hex'), native: metadata, wasm: wasmMetadata }
   await writeFile(join(root, 'target/rhai-api-metadata/metadata.json'), JSON.stringify(evidence, null, 2))
-  const inventory = createApiInventory({ ...evidence, source, manifest: await readFile(join(root, 'src/editor/scriptApi.ts'), 'utf8'), packageFiles: packages })
+  const inventory = createApiInventory({ ...evidence, source, manifest: await readFile(join(root, 'src/runtime/scriptApiCatalog.ts'), 'utf8'), packageFiles: packages })
   await writeFile(join(root, 'src/visual/rhaiApiSignatures.generated.json'), JSON.stringify(inventory, null, 2) + '\n')
   console.log(JSON.stringify({ rhaiVersion: version, host: inventory.signatures.filter(/* 比较 item.origin 与 'host'，返回严格相等的判断结果。 */ item => item.origin === 'host').length, signatures: inventory.signatures.length, packages: inventory.packages.length, path: 'src/visual/rhaiApiSignatures.generated.json' }))
 } finally { await rm(temporary, { recursive: true, force: true }) }

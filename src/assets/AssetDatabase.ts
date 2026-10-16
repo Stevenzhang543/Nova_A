@@ -1,7 +1,11 @@
 /** 资源数据库：维护资源登记、导入、文本更新、目录及集合，解析绘制纹理并协调图集缓存。 */
+import { runtimeAssetGuid, createRuntimeAssetIndex, resolveRuntimeAssetGuid, readRuntimeScriptText, RUNTIME_SCRIPT_TEXT_TYPES } from '../runtime/runtimeAssetValues'
+import { inlinePipeline, defaultFolder, sanitizedName, uniqueAssetPath, normalizeFolder, fontFamilyFor, preflightPersistedAssetRecords, appendNormalizedAssetRecords, restoreDerivedAssetSize } from '../runtime/runtimeAssetPreparation'
+export { normalizeFolder } from '../runtime/runtimeAssetPreparation'
 import { markRaw, reactive, watch } from 'vue'
 import { normalizeUuid } from '../world/identity'
-import { buildTextureAtlases } from './TextureAtlas'
+import { RuntimeMediaOwner } from '../runtime/runtimeMediaOwner'
+import { createWebMediaPorts } from '../platform/webMediaPorts'
 import {
   DEFAULT_ASSET_FOLDERS,
   defaultAnimationImportMetadata,
@@ -24,10 +28,9 @@ import { buildAssetDependencyGraph, repairAssetPathReferences } from './assetGra
 import { assetSourceBytes, sha256Bytes } from './contentHash'
 import { assetSettingsHash } from './assetProduction'
 import { bindInterchangeTexture } from './interchangeBindings'
-import { importContentInterchangeAsync, validateInterchangeMetadata } from './contentInteroperability'
-import { applyDerivedSprite, prepareDerivedSpriteRefresh, spriteDefinitions, validateDerivedSprite } from './derivedSprites'
-import { clearDerivedSpriteTextures, resolveDerivedSpriteTexture } from './derivedSpriteTexture'
-import { BoundedImportCache } from './importRetention'
+import { decodeContentInterchangeSource, importContentInterchangeAsync } from './contentInteroperability'
+import { applyDerivedSprite, prepareDerivedSpriteRefresh, spriteDefinitions } from './derivedSprites'
+const clearDerivedSpriteTextures = () => getEditorMediaOwner().clearDerived()
 import { readAssetPixels } from './assetPixels'
 
 export interface AssetDatabaseState {
@@ -85,35 +88,28 @@ watch(/* 返回 assetState.selectedGuid 的当前值。 */ () => assetState.sele
   assetState.recentGuids.splice(0, assetState.recentGuids.length, guid, ...assetState.recentGuids.filter(/* 比较 value 与 guid，返回严格不等的判断结果。 */ value => value !== guid).slice(0, 19))
 })
 
-const pendingImageLoads = new Map<string, HTMLImageElement>()
-const rejectedImageSources = new WeakMap<AssetRecord, { source: string; error: string }>()
-const IMAGE_CACHE_LIMITS = Object.freeze({ entries: 256, bytes: 128 * 1024 * 1024 })
-const imageCache = new BoundedImportCache<string, HTMLImageElement>(IMAGE_CACHE_LIMITS.entries, IMAGE_CACHE_LIMITS.bytes, /** 缓存驱逐时清除同键未完成图像监听和源，释放挂起加载引用。 */ key => {
-  const pending = pendingImageLoads.get(key)
-  if (pending) { pending.onload = null; pending.onerror = null; pending.src = ''; pendingImageLoads.delete(key) }
-})
-/* 返回具有所列字段的新对象 { entries: imageCache.size, bytes: imageCache.bytes, pending: pendingImageLoads.size, limits: IMAGE_CACHE_LIMITS }。 */ export function imageDecodedCacheStats() { return { entries: imageCache.size, bytes: imageCache.bytes, pending: pendingImageLoads.size, limits: IMAGE_CACHE_LIMITS } }
-const installedFonts = new Map<string, FontFace>()
-let atlasRevision = 0
-let atlasContentRevision = 0
 let assetSessionRevision = 0
-/* 返回 assetSessionRevision 的当前值。 */ export function assetSessionVersion(): number { return assetSessionRevision }
-let decodedTextureRevision = 0
-/* 计算表达式 decodedTextureRevision + atlasContentRevision 并返回结果，沿用操作数的原有类型规则。 */ export function textureContentRevision(): number { return decodedTextureRevision + atlasContentRevision }
+export function assetSessionVersion():number{return assetSessionRevision}
+let editorMediaOwner:RuntimeMediaOwner|undefined
+const mediaPorts=createWebMediaPorts()
+/** Cold accessor invokes no decoder or World. Runtime/Player must use explicit Catalog owners. */
+export function getEditorMediaOwner():RuntimeMediaOwner {
+ if(!editorMediaOwner){const catalog={identity:Object.freeze({session:assetSessionRevision}),projectId:'legacy-editor',revision:()=>assetSessionRevision,listRecords:()=>assetState.records,resolveAsset};let owner!:RuntimeMediaOwner;owner=new RuntimeMediaOwner(catalog,mediaPorts,{state:assetState,legacyEditorFontFamilies:true,isCurrentOwner:()=>editorMediaOwner===owner,wrapAtlasPage:page=>markRaw(page)});editorMediaOwner=owner}
+ return editorMediaOwner
+}
+function replaceEditorMediaOwner():void {const previous=editorMediaOwner,revision=previous?.revisionValues();editorMediaOwner=undefined;if(previous)void previous.dispose();const catalog={identity:Object.freeze({session:assetSessionRevision}),projectId:'legacy-editor',revision:()=>assetSessionRevision,listRecords:()=>assetState.records,resolveAsset};let owner!:RuntimeMediaOwner;owner=new RuntimeMediaOwner(catalog,mediaPorts,{state:assetState,legacyEditorFontFamilies:true,isCurrentOwner:()=>editorMediaOwner===owner,wrapAtlasPage:page=>markRaw(page),initialDecodedRevision:revision?.decoded,initialAtlasContentRevision:revision?.atlas});editorMediaOwner=owner;assetState.atlasPages.splice(0)}
+export function imageDecodedCacheStats(){return getEditorMediaOwner().imageDecodedCacheStats()}
+export function textureContentRevision():number{return getEditorMediaOwner().textureContentRevision()}
 const reimportRevisions = new WeakMap<AssetRecord, number>()
 let indexRevision = -1
 let indexedRecords: AssetRecord[] = []
 let recordsByUuid = new Map<string, AssetRecord>()
 
-/** 根据内联源真实字节生成摘要，并建立无需外部导入器的可复现流水线元信息。 */ function inlinePipeline(source: string) {
-  const hash = sha256Bytes(assetSourceBytes(source))
-  return { importerId: 'nova.inline', importerVersion: '1.0.0', presetId: 'inline', platform: 'web' as const, sourceHash: hash, artifactHash: hash, contentHash: hash, cacheKey: hash, status: 'ready' as const, lastValidSource: source, error: '', dependencies: [] as string[], reverseDependencies: [] as string[], cacheHit: false, settingsHash: hash, artifactSettingsHash: hash, invalidationReason: 'Inline asset', sourceSettings: '{}', artifactSettings: '{}', diagnostics: [] as Array<{ severity: 'info' | 'warning' | 'error'; code: string; message: string }>, reproducible: true, deprecatedSettings: [] as string[] }
-}
-
 /** 仅在资源代次变化时重建按路径排序的列表和 UUID 索引，并同步索引数量。 */ function ensureIndex(): void {
   if (indexRevision === assetState.generation) return
-  indexedRecords = [...assetState.records].sort(/* 先计算 a.path.localeCompare(b.path)；仅当其为假值时求右侧 a.uuid.localeCompare(b.uuid)，返回短路求值结果。 */ (a, b) => a.path.localeCompare(b.path) || a.uuid.localeCompare(b.uuid))
-  recordsByUuid = new Map(indexedRecords.map(/* 返回按声明顺序构造的数组 [record.uuid, record]。 */ record => [record.uuid, record]))
+  const index = createRuntimeAssetIndex(assetState.records)
+  indexedRecords = index.records
+  recordsByUuid = index.byUuid
   assetState.indexSize = indexedRecords.length
   indexRevision = assetState.generation
 }
@@ -155,74 +151,10 @@ let recordsByUuid = new Map<string, AssetRecord>()
   if (extension === 'nova-theme') return 'uiTheme'
   return 'other'
 }
+/** Existing live Editor path allocation uses the same explicit-record algorithm. */ function uniquePath(folder: string, name: string, ignoreGuid?: string): string { return uniqueAssetPath(assetState.records, folder, name, ignoreGuid) }
 
-/** 为每个受支持资源类型选择默认项目目录。 */ function defaultFolder(type: AssetType): string {
-  if (type === 'image') return 'Assets/Sprites'
-  if (type === 'audio') return 'Assets/Audio'
-  if (type === 'font') return 'Assets/Fonts'
-  if (type === 'scene') return 'Assets/Scenes'
-  if (type === 'prefab') return 'Assets/Prefabs'
-  if (type === 'script') return 'Assets/Scripts'
-  if (type === 'visualScript') return 'Assets/Visual Scripts'
-  if (type === 'eventSheet') return 'Assets/Event Sheets'
-  if (type === 'objectBlueprint') return 'Assets/Object Blueprints'
-  if (type === 'material') return 'Assets/Materials'
-  if (type === 'animation') return 'Assets/Animations'
-  if (type === 'controller') return 'Assets/Controllers'
-  if (type === 'animationMask') return 'Assets/AnimationMasks'
-  if (type === 'rig') return 'Assets/Rigs'
-  if (type === 'skin') return 'Assets/Skins'
-  if (type === 'timeline') return 'Assets/Timelines'
-  if (type === 'dataSchema') return 'Assets/Data/Schemas'
-  if (type === 'dataTable') return 'Assets/Data/Tables'
-  if (type === 'replay') return 'Assets/Replays'
-  if (type === 'path') return 'Assets/Paths'
-  if (type === 'particleSystem') return 'Assets/Particles'
-  if (type === 'resource') return 'Assets/Resources'
-  if (type === 'behaviorTree' || type === 'stateMachine') return 'Assets/AI'
-  if (type === 'tilePalette') return 'Assets/TilePalettes'
-  if (type === 'brushPreset') return 'Assets/BrushPresets'
-  if (type === 'terrainRules') return 'Assets/TerrainRules'
-  if (type === 'tileset') return 'Assets/TileSets'
-  if (type === 'atlas') return 'Assets/Atlases'
-  if (type === 'shader') return 'Assets/Shaders'
-  if (type === 'localization') return 'Assets/Localization'
-  if (type === 'uiTheme') return 'Assets/UI Themes'
-  return 'Assets'
-}
 
-/* 先计算 value.replace(/[\\/:*?"<>|]/g, '_').trim().slice(0, 120)；仅当其为假值时求右侧 'Untitled asset'，返回短路求值结果。 */ function sanitizedName(value: string): string {
-  return value.replace(/[\\/:*?"<>|]/g, '_').trim().slice(0, 120) || 'Untitled asset'
-}
-
-/** 清理目录和文件名后检查不区分大小写的冲突，保留扩展名递增后缀直到路径可用。 */ function uniquePath(folder: string, name: string, ignoreGuid?: string): string {
-  const normalizedFolder = normalizeFolder(folder)
-  const stem = sanitizedName(name)
-  let candidate = `${normalizedFolder}/${stem}`
-  let suffix = 2
-  while (assetState.records.some(/* 先计算 record.uuid !== ignoreGuid；仅当其为真值时求右侧 record.path.toLowerCase() === candidate.toLowerCase()，返回短路求值结果。 */ record => record.uuid !== ignoreGuid && record.path.toLowerCase() === candidate.toLowerCase())) {
-    const dot = stem.lastIndexOf('.')
-    candidate = dot > 0
-      ? `${normalizedFolder}/${stem.slice(0, dot)} ${suffix}${stem.slice(dot)}`
-      : `${normalizedFolder}/${stem} ${suffix}`
-    suffix++
-  }
-  return candidate
-}
-
-/** 统一分隔符并移除点目录，按现有规则保留隐藏或项目设置目录，其他补充 Assets 前缀。 */ export function normalizeFolder(value: string): string {
-  const clean = value.replace(/\\/g, '/').split('/').filter(/* 先计算 part && part !== '.'；仅当其为真值时求右侧 part !== '..'，返回短路求值结果。 */ part => part && part !== '.' && part !== '..').join('/')
-  return clean.startsWith('.') ? clean : clean.startsWith('Assets') || clean === 'ProjectSettings' ? clean : `Assets/${clean}`
-}
-
-/** 加载图像并在十五秒超时内读取自然尺寸，错误时拒绝。 */ function imageMetadata(source:string):Promise<{width:number;height:number}>{
-  return new Promise(/** 建立一次性图像元信息读取和超时处理，避免多个完成事件重复结算。 */ (resolve,reject)=>{
-    const image=new Image();let finished=false
-    const timeout=window.setTimeout(/* 调用 finish(new Error('IMAGE_METADATA_TIMEOUT: Image decoding exceeded 15 seconds.')) 并返回调用结果。 */ ()=>finish(new Error('IMAGE_METADATA_TIMEOUT: Image decoding exceeded 15 seconds.')),15000)
-    const finish=/** 单次结算图像元信息读取，清除计时及事件后返回自然尺寸或错误。 */ (error?:Error)=>{if(finished)return;finished=true;window.clearTimeout(timeout);image.onload=null;image.onerror=null;if(error)reject(error);else resolve({width:image.naturalWidth,height:image.naturalHeight})}
-    image.onload=/* 调用 finish() 并返回调用结果。 */ ()=>finish();image.onerror=/* 调用 finish(new Error('IMAGE_METADATA: The image could not be decoded.')) 并返回调用结果。 */ ()=>finish(new Error('IMAGE_METADATA: The image could not be decoded.'));image.src=source
-  })
-}
+/** 加载图像并在十五秒超时内读取自然尺寸，错误时拒绝。 */ function imageMetadata(source:string):Promise<{width:number;height:number}>{ return getEditorMediaOwner().imageMetadata(source) }
 /** 加载音频元信息并要求有限非负时长，完成后释放媒体源和监听。 */ function audioMetadata(source:string):Promise<number>{
   return new Promise(/** 建立音频元信息读取器，使用一次性完成保护和超时拒绝。 */ (resolve,reject)=>{
     const audio=new Audio();let finished=false
@@ -232,30 +164,14 @@ let recordsByUuid = new Map<string, AssetRecord>()
   })
 }
 
-/** 按模板 `NovaAsset_${uuid.replace(/-/g, '')}` 生成并返回字符串。 */ function fontFamilyFor(uuid: string): string { return `NovaAsset_${uuid.replace(/-/g, '')}` }
-
-/** 为字体资源准备 FontFace，以十五秒超时限制等待并清理计时器，尚不登记文档字体。 */ async function prepareFont(record: AssetRecord): Promise<FontFace | null> {
-  if (record.assetType !== 'font' || !record.source || !('FontFace' in window)) return null
-  const face = new FontFace(record.fontFamily || fontFamilyFor(record.uuid), `url(${JSON.stringify(record.source)})`)
-  let timeout: ReturnType<typeof setTimeout> | undefined
-  try { return await Promise.race([face.load(), new Promise<never>(/** 登记字体加载超时拒绝处理，计时句柄由外层 finally 清理。 */ (_,reject)=>{timeout=setTimeout(/* 调用 reject(new Error('FONT_METADATA_TIMEOUT: Font decoding exceeded 15 seconds.')) 并返回调用结果。 */ ()=>reject(new Error('FONT_METADATA_TIMEOUT: Font decoding exceeded 15 seconds.')),15000)})]) }
-  finally { if(timeout!==undefined)clearTimeout(timeout) }
-}
-/** 登记新字体并移除同资源旧 FontFace，更新字体所有权映射。 */ function registerFont(uuid:string,face:FontFace|null):void {
-  if(!face)return
-  document.fonts.add(face)
-  const previous=installedFonts.get(uuid)
-  if(previous&&previous!==face)document.fonts.delete(previous)
-  installedFonts.set(uuid,face)
-}
-/** 异步准备字体，仅当记录仍属于项目且源未变化时登记，失败不阻断资源列表。 */ function installFont(record: AssetRecord): void {
-  const source=record.source
-  void prepareFont(record).then(/** 仅在异步加载对应的原资源仍有效且源未改动时安装字体。 */ face=>{if(assetState.records.includes(record)&&record.source===source)registerFont(record.uuid,face)}).catch(/* 返回 undefined 的当前值。 */ ()=>undefined)
-}
+/** 为字体资源准备 FontFace，以十五秒超时限制等待并清理计时器，尚不登记文档字体。 */ async function prepareFont(record: AssetRecord): Promise<FontFace | null> { return getEditorMediaOwner().prepareFont(record) }
+/** 登记新字体并移除同资源旧 FontFace，更新字体所有权映射。 */ function registerFont(uuid:string,face:FontFace|null):void { return getEditorMediaOwner().registerFont(uuid,face) }
+/** 异步准备字体，仅当记录仍属于项目且源未变化时登记，失败不阻断资源列表。 */ function installFont(record: AssetRecord): void { return getEditorMediaOwner().installFont(record) }
 
 /** 转换交换格式、验证媒体及字体；批次调用只暂存记录和字体，单项重试在会话有效时登记。 */ async function recordImportedArtifact(file: File, settings: AssetImportSettings, artifact: ImportedArtifact, requestedFolder?: string, signal?: AbortSignal, session = assetSessionRevision, stagedFonts?: Map<string, FontFace | null>): Promise<AssetRecord> {
   let assetType = inferAssetType(file), source = artifact.source
-  const external = ['atlas', 'tileset', 'other'].includes(assetType) ? await importContentInterchangeAsync(file.name, new TextDecoder().decode(artifact.bytes)) : null
+  const preparationStartedAtMs = performance.now()
+  const external = ['atlas', 'tileset', 'other'].includes(assetType) ? await importContentInterchangeAsync(file.name, decodeContentInterchangeSource(file.name, artifact.bytes), undefined, { signal, isCurrent: () => session === assetSessionRevision, sourceIdentity: `import:${file.name.slice(0, 240)}:${file.size}:${file.lastModified}`, inputRevision: session, preparationStartedAtMs }) : null
   if (external) {
     assetType = external.assetType; source = `data:${external.mimeType};charset=utf-8,${encodeURIComponent(external.source)}`
     artifact.metadata.importerId = `nova.${external.metadata.format}`
@@ -377,7 +293,8 @@ let recordsByUuid = new Map<string, AssetRecord>()
   }
   assetState.records.push(record)
   if (!assetState.folders.includes('Assets/Sprites/Imported')) assetState.folders.push('Assets/Sprites/Imported')
-  void imageMetadata(source).then(/** 内嵌图像加载后补齐尺寸并安排图集更新。 */ size => { record.width = size.width; record.height = size.height; queueTextureAtlasRebuild() }).catch(/** 将 error instanceof Error ? error.message : String(error) 赋给 assetState.atlasError，不显式返回值。 */ error => { assetState.atlasError = error instanceof Error ? error.message : String(error) })
+  const mediaOwner=getEditorMediaOwner()
+  void mediaOwner.imageMetadata(source).then(/** 内嵌图像加载后补齐尺寸并安排图集更新。 */ size => { if(mediaOwner.isDisposed||getEditorMediaOwner()!==mediaOwner||resolveAsset(record.uuid)!==record||record.source!==source)return;record.width = size.width; record.height = size.height; queueTextureAtlasRebuild() }).catch(/** 将 error instanceof Error ? error.message : String(error) 赋给 assetState.atlasError，不显式返回值。 */ error => { if(mediaOwner.isDisposed||getEditorMediaOwner()!==mediaOwner)return;assetState.atlasError = error instanceof Error ? error.message : String(error) })
   assetState.generation++
   return record
 }
@@ -431,25 +348,11 @@ let recordsByUuid = new Map<string, AssetRecord>()
   return record
 }
 
-/** 仅读取支持的文本资源，兼容原文和百分号或 Base64 数据 URI，解码失败返回 null。 */ export function readTextAsset(reference: string | null | undefined): string | null {
-  const record = resolveAsset(reference)
-  if (!record || !['script', 'visualScript', 'eventSheet', 'objectBlueprint', 'prefab', 'scene', 'material', 'animation', 'controller', 'animationMask', 'rig', 'skin', 'timeline', 'tileset', 'atlas', 'shader', 'localization', 'uiTheme', 'behaviorTree', 'stateMachine', 'tilePalette', 'brushPreset', 'terrainRules', 'dataSchema', 'dataTable', 'replay', 'path', 'particleSystem', 'resource'].includes(record.assetType)) return null
-  const comma = record.source.indexOf(',')
-  if (!record.source.startsWith('data:') || comma < 0) return record.source || null
-  try {
-    const metadata = record.source.slice(0, comma)
-    const payload = record.source.slice(comma + 1)
-    if (!metadata.includes(';base64')) return decodeURIComponent(payload)
-    const binary = atob(payload)
-    return new TextDecoder().decode(Uint8Array.from(binary, /* 调用 character.charCodeAt(0) 并返回调用结果。 */ character => character.charCodeAt(0)))
-  } catch {
-    return null
-  }
-}
+/** 仅读取支持的文本资源，兼容原文和百分号或 Base64 数据 URI，解码失败返回 null。 */ export function readTextAsset(reference: string | null | undefined): string | null { return readRuntimeScriptText(resolveAsset(reference)) }
 
 /** 更新可编辑且非生成缓存目录内的文本源、字节及时间，重建内联元信息并保留依赖列表。 */ export function updateTextAsset(uuid: string, source: string): boolean {
   const record = assetState.records.find(/* 比较 asset.uuid 与 uuid，返回严格相等的判断结果。 */ asset => asset.uuid === uuid)
-  if (!record || record.path.startsWith('.nova/') || !['script', 'visualScript', 'eventSheet', 'objectBlueprint', 'prefab', 'scene', 'material', 'animation', 'controller', 'animationMask', 'rig', 'skin', 'timeline', 'tileset', 'atlas', 'shader', 'localization', 'uiTheme', 'behaviorTree', 'stateMachine', 'tilePalette', 'brushPreset', 'terrainRules', 'dataSchema', 'dataTable', 'replay', 'path', 'particleSystem', 'resource'].includes(record.assetType)) return false
+  if (!record || record.path.startsWith('.nova/') || !RUNTIME_SCRIPT_TEXT_TYPES.includes(record.assetType)) return false
   const nextSource = textDataUrl(source, record.mimeType || 'text/plain')
   if (record.source === nextSource) return true
   record.source = nextSource
@@ -542,188 +445,15 @@ let recordsByUuid = new Map<string, AssetRecord>()
   assetState.thumbnailSize = Math.min(192, Math.max(72, Number(value.thumbnailSize) || 112))
 }
 
-/** 从资源路径提取规范目录，无有效父目录时使用类型默认目录。 */ function sourceFolder(path: unknown, type: AssetType): string {
-  if (typeof path !== 'string') return defaultFolder(type)
-  const separator = path.replace(/\\/g, '/').lastIndexOf('/')
-  return separator > 0 ? normalizeFolder(path.slice(0, separator)) : defaultFolder(type)
-}
-
-/** 将有效输入转换为有限数值，空值、布尔及非法数值使用默认值。 */ function finiteAssetSetting(value: unknown, fallback: number): number {
-  if (value == null || value === '' || typeof value === 'boolean') return fallback
-  const number = Number(value)
-  return Number.isFinite(number) ? number : fallback
-}
-
 /** 预检派生元信息后切换资源会话，释放旧字体缓存，迁移设置和未知字段，再恢复目录、字体与图集。 */ export function loadAssets(source: unknown, folderSource?: unknown, databaseSource?: unknown): void {
-  for (const raw of Array.isArray(source) ? source : []) if (raw && typeof raw === 'object' && raw.derivedSprite !== undefined) { if (raw.assetType !== 'image') throw new Error('SPRITE_DERIVATION: Only image assets may carry derived sprite metadata.'); validateDerivedSprite(raw.derivedSprite) }
+  preflightPersistedAssetRecords(source)
   assetSessionRevision++
-  for(const face of installedFonts.values())document.fonts.delete(face)
-  installedFonts.clear()
+  replaceEditorMediaOwner()
   clearAssetImportSession()
   assetState.records.splice(0)
-  imageCache.clear()
+  getEditorMediaOwner().clearImages()
   clearDerivedSpriteTextures()
-  const records = Array.isArray(source) ? source : []
-  for (const value of records) {
-    if (!value || typeof value !== 'object') continue
-    const item = value as Partial<AssetRecord>
-    const knownFields = new Set(['uuid', 'name', 'path', 'assetType', 'mimeType', 'byteLength', 'source', 'sourceModified', 'importedAt', 'width', 'height', 'duration', 'fontFamily', 'settings', 'script', 'animationImport', 'interchange', 'derivedSprite', 'pipeline', 'tags', 'collectionIds', 'contentGroup', 'editorOnly', 'sourceControlStatus', 'thumbnailKey', 'unknownFields'])
-    const inheritedUnknown = item.unknownFields && typeof item.unknownFields === 'object' ? item.unknownFields : {}
-    const unknownFields = { ...inheritedUnknown, ...Object.fromEntries(Object.entries(value).filter(/* 返回 knownFields.has(key) 的逻辑取反结果。 */ ([key]) => !knownFields.has(key))) }
-    const assetType = ['image', 'audio', 'font', 'scene', 'prefab', 'script', 'material', 'animation', 'controller', 'animationMask', 'rig', 'skin', 'timeline', 'tileset', 'atlas', 'shader', 'localization', 'uiTheme', 'behaviorTree', 'stateMachine', 'tilePalette', 'brushPreset', 'terrainRules', 'dataSchema', 'dataTable', 'replay', 'path', 'particleSystem', 'visualScript', 'eventSheet', 'objectBlueprint', 'other', 'resource'].includes(String(item.assetType)) ? item.assetType as AssetType : 'other'
-    const uuid = normalizeUuid(item.uuid)
-    const defaults = defaultImportSettings()
-    const settings: AssetImportSettings = {
-      ...defaults,
-      ...(item.settings ?? {}),
-      atlasSettings: { ...defaults.atlasSettings, ...(item.settings?.atlasSettings ?? {}) },
-      spriteSheet: { ...defaults.spriteSheet, ...(item.settings?.spriteSheet ?? {}) },
-      borders: { ...defaults.borders, ...(item.settings?.borders ?? {}) },
-      platformOverrides: { ...defaults.platformOverrides, ...(item.settings?.platformOverrides ?? {}) },
-      collisionGeneration: { ...defaults.collisionGeneration, ...(item.settings?.collisionGeneration ?? {}) },
-      svgSettings: { ...defaults.svgSettings, ...(item.settings?.svgSettings ?? {}) },
-      audioSettings: { ...defaults.audioSettings, ...(item.settings?.audioSettings ?? {}) },
-      fontSettings: { ...defaults.fontSettings, ...(item.settings?.fontSettings ?? {}) },
-      tileSettings: { ...defaults.tileSettings, ...(item.settings?.tileSettings ?? {}) },
-      scriptSettings: { ...defaults.scriptSettings, ...(item.settings?.scriptSettings ?? {}) },
-      shaderSettings: { ...defaults.shaderSettings, ...(item.settings?.shaderSettings ?? {}) },
-      localizationSettings: { ...defaults.localizationSettings, ...(item.settings?.localizationSettings ?? {}) }
-    }
-    settings.audioSettings.normalizationGain = Math.min(16, Math.max(.01, Number(settings.audioSettings.normalizationGain) || 1))
-    settings.textureProfile = ['General', 'PixelArt', 'UI', 'NormalMap'].includes(String(settings.textureProfile)) ? settings.textureProfile : 'General'
-    settings.audioSettings.profile = ['SoundEffect', 'Music', 'Voice', 'Streaming'].includes(String(settings.audioSettings.profile)) ? settings.audioSettings.profile : 'SoundEffect'
-    settings.audioSettings.codec = ['Original', 'PCM', 'Vorbis', 'MP3'].includes(String(settings.audioSettings.codec)) ? settings.audioSettings.codec : 'Original'
-    settings.audioSettings.quality = Math.min(1, Math.max(0, finiteAssetSetting(settings.audioSettings.quality, .8)))
-    settings.audioSettings.trimStart = Math.max(0, Number(settings.audioSettings.trimStart) || 0)
-    settings.audioSettings.trimEnd = Math.max(0, Number(settings.audioSettings.trimEnd) || 0)
-    settings.audioSettings.preload = ['Preload', 'Metadata', 'None'].includes(String(settings.audioSettings.preload)) ? settings.audioSettings.preload : 'Auto'
-    settings.fontSettings.renderMode = settings.fontSettings.renderMode === 'Bitmap' ? 'Bitmap' : 'Scalable'
-    settings.fontSettings.fallbackFamilies = Array.isArray(settings.fontSettings.fallbackFamilies) ? settings.fontSettings.fallbackFamilies.map(String).map(/* 调用 value.trim() 并返回调用结果。 */ value => value.trim()).filter(Boolean).slice(0, 16) : defaults.fontSettings.fallbackFamilies
-    settings.fontSettings.bitmapSize = Math.min(512, Math.max(6, Math.round(Number(settings.fontSettings.bitmapSize) || 32)))
-    settings.fontSettings.outlineWidth = Math.min(32, Math.max(0, Number(settings.fontSettings.outlineWidth) || 0))
-    settings.fontSettings.shaping = settings.fontSettings.shaping !== false
-    settings.fontSettings.fallbackAssetUuids = Array.isArray(settings.fontSettings.fallbackAssetUuids) ? [...new Set(settings.fontSettings.fallbackAssetUuids.map(String))].slice(0, 32) : []
-    settings.fontSettings.openTypeFeatures = Array.isArray(settings.fontSettings.openTypeFeatures) ? [...new Set(settings.fontSettings.openTypeFeatures.map(String).filter(/* 调用 /^[a-z0-9]{4}$/i.test(value) 并返回调用结果。 */ value => /^[a-z0-9]{4}$/i.test(value)))].slice(0, 64) : defaults.fontSettings.openTypeFeatures
-    settings.fontSettings.hinting = ['Auto', 'None', 'Light', 'Full'].includes(String(settings.fontSettings.hinting)) ? settings.fontSettings.hinting : 'Auto'
-    settings.fontSettings.oversampling = Math.min(8, Math.max(1, Number(settings.fontSettings.oversampling) || 1))
-    settings.fontSettings.distanceField = ['SDF', 'MSDF'].includes(String(settings.fontSettings.distanceField)) ? settings.fontSettings.distanceField : 'None'
-    settings.fontSettings.distanceRange = Math.min(64, Math.max(1, Number(settings.fontSettings.distanceRange) || 8))
-    settings.fontSettings.declaredLanguages = Array.isArray(settings.fontSettings.declaredLanguages) ? [...new Set(settings.fontSettings.declaredLanguages.map(String).map(/* 调用 value.trim() 并返回调用结果。 */ value => value.trim()).filter(Boolean))].slice(0, 32) : ['en']
-    settings.fontSettings.editorFont = settings.fontSettings.editorFont === true
-    settings.spriteSheet.columns = Math.min(256, Math.max(1, Math.trunc(Number(settings.spriteSheet.columns) || 1)))
-    settings.spriteSheet.rows = Math.min(256, Math.max(1, Math.trunc(Number(settings.spriteSheet.rows) || 1)))
-    settings.spriteSheet.margin = Math.max(0, Math.trunc(Number(settings.spriteSheet.margin) || 0))
-    settings.spriteSheet.spacing = Math.max(0, Math.trunc(Number(settings.spriteSheet.spacing) || 0))
-    for (const side of ['left', 'top', 'right', 'bottom'] as const) settings.borders[side] = Math.max(0, Number(settings.borders[side]) || 0)
-    settings.audioSettings.targetPeakDb = Math.min(0, Math.max(-24, finiteAssetSetting(settings.audioSettings.targetPeakDb, -1)))
-    settings.audioSettings.loopStart = Math.max(0, Number(settings.audioSettings.loopStart) || 0)
-    settings.audioSettings.loopEnd = Math.max(0, Number(settings.audioSettings.loopEnd) || 0)
-    settings.audioSettings.loopRegions = (Array.isArray(settings.audioSettings.loopRegions) ? settings.audioSettings.loopRegions : []).slice(0, 64).map(/** 清理音频循环区身份、名称及非负起止时间，后续筛除空区间。 */ (region, index) => ({
-      id: String(region?.id || `loop-${index + 1}`).replace(/[^A-Za-z0-9_.-]/g, '-').slice(0, 80), name: String(region?.name || `Loop ${index + 1}`).slice(0, 80),
-      start: Math.max(0, Number(region?.start) || 0), end: Math.max(0, Number(region?.end) || 0)
-    })).filter(/* 比较 region.end 与 region.start，返回大于的判断结果。 */ region => region.end > region.start)
-    settings.audioSettings.activeLoopRegion = typeof settings.audioSettings.activeLoopRegion === 'string' && settings.audioSettings.loopRegions.some(/* 比较 region.id 与 settings.audioSettings.activeLoopRegion，返回严格相等的判断结果。 */ region => region.id === settings.audioSettings.activeLoopRegion) ? settings.audioSettings.activeLoopRegion : null
-    settings.colorSpace = settings.colorSpace === 'Linear' ? 'Linear' : 'sRGB'
-    settings.generateMipmaps = settings.generateMipmaps === true
-    settings.transparency = ['Premultiply', 'Discard'].includes(String(settings.transparency)) ? settings.transparency : 'Preserve'
-    settings.atlasSettings.rotationPolicy = settings.atlasSettings.rotationPolicy === 'Allow' ? 'Allow' : 'Never'
-    settings.atlasSettings.trimPolicy = settings.atlasSettings.trimPolicy === 'None' ? 'None' : 'Transparent'
-    settings.atlasSettings.group = String(settings.atlasSettings.group || 'Default').trim().slice(0, 80) || 'Default'
-    settings.polygonOutline = Array.isArray(settings.polygonOutline) ? settings.polygonOutline.flatMap(/** 将多边形点规范为非负二维坐标，跳过非对象项。 */ point => point && typeof point === 'object' ? [{ x: Math.max(0, Number(point.x) || 0), y: Math.max(0, Number(point.y) || 0) }] : []).slice(0, 1024) : []
-    settings.collisionGeneration.mode = ['Box', 'Polygon'].includes(String(settings.collisionGeneration.mode)) ? settings.collisionGeneration.mode : 'None'
-    settings.collisionGeneration.tolerance = Math.min(64, Math.max(.01, Number(settings.collisionGeneration.tolerance) || 1))
-    settings.extractedAnimationFrames = Array.isArray(settings.extractedAnimationFrames) ? settings.extractedAnimationFrames.flatMap(/** 将提取帧规范为非负起点和至少一像素宽高，跳过非对象项。 */ frame => frame && typeof frame === 'object' ? [{ x: Math.max(0, Number(frame.x) || 0), y: Math.max(0, Number(frame.y) || 0), width: Math.max(1, Number(frame.width) || 1), height: Math.max(1, Number(frame.height) || 1) }] : []).slice(0, 4096) : []
-    settings.svgSettings.rasterization = ['Runtime', 'Disabled'].includes(String(settings.svgSettings.rasterization)) ? settings.svgSettings.rasterization : 'ImportTime'
-    settings.svgSettings.scale = Math.min(16, Math.max(.01, Number(settings.svgSettings.scale) || 1)); settings.svgSettings.allowExternalResources = settings.svgSettings.allowExternalResources === true
-    const variants = settings.platformVariants && typeof settings.platformVariants === 'object' ? settings.platformVariants : {}
-    settings.platformVariants = Object.fromEntries(Object.entries(variants).filter(/** 只保留支持的平台及压缩模式覆盖配置。 */ ([platform, compression]) => ['windows', 'linux', 'macos', 'web'].includes(platform) && ['None', 'Lossless', 'Optimized'].includes(String(compression)))) as AssetImportSettings['platformVariants']
-    settings.pixelsPerUnit = Math.min(1_000_000, Math.max(.000001, Number(settings.pixelsPerUnit) || 100))
-    settings.pivot = {
-      x: Math.min(1, Math.max(0, Number(settings.pivot?.x) || 0)),
-      y: Math.min(1, Math.max(0, Number(settings.pivot?.y) || 0))
-    }
-    const rawRegion = settings.spriteRegion
-    settings.spriteRegion = rawRegion && typeof rawRegion === 'object' ? {
-      x: Math.max(0, Number(rawRegion.x) || 0), y: Math.max(0, Number(rawRegion.y) || 0),
-      width: Math.max(1, Number(rawRegion.width) || 1), height: Math.max(1, Number(rawRegion.height) || 1)
-    } : null
-    assetState.records.push({
-      uuid, name: sanitizedName(item.name || item.path?.split('/').pop() || 'Asset'),
-      // 显示名可能相同；保存路径中的消歧后缀属于身份，重新打开时不得按显示名重新分配。
-      path: uniquePath(sourceFolder(item.path, assetType), (typeof item.path === 'string' ? item.path.replace(/\\/g, '/').split('/').pop() : '') || item.name || 'Asset', uuid),
-      assetType, mimeType: String(item.mimeType || 'application/octet-stream'), byteLength: Math.max(0, Number(item.byteLength) || 0),
-      source: typeof item.source === 'string' ? item.source : '', sourceModified: Number(item.sourceModified) || 0,
-      importedAt: Number(item.importedAt) || 0, width: Math.max(0, Number(item.width) || 0), height: Math.max(0, Number(item.height) || 0),
-      duration: Math.max(0, Number(item.duration) || 0), fontFamily: item.fontFamily || (assetType === 'font' ? fontFamilyFor(uuid) : ''), settings,
-      script: assetType === 'script' ? {
-        ...defaultScriptMetadata(),
-        ...(item.script ?? {}),
-        version: 2,
-        apiVersion: item.script?.apiVersion === undefined || Number(item.script.apiVersion) === 1 ? 1 : 2,
-        breakpoints: Array.isArray(item.script?.breakpoints) ? [...new Set(item.script.breakpoints.map(Number).filter(/* 先计算 Number.isInteger(value)；仅当其为真值时求右侧 value > 0，返回短路求值结果。 */ value => Number.isInteger(value) && value > 0))].slice(0, 1000) : [],
-        breakpointDetails: Array.isArray(item.script?.breakpointDetails) ? item.script.breakpointDetails.flatMap(/** 校验断点行号并限制身份、条件、日志、计数和分组字段。 */ (point, index) => {
-          if (!point || typeof point !== 'object') return []
-          const line = Math.round(Number(point.line))
-          if (!Number.isFinite(line) || line < 1 || line > 1_000_000) return []
-          return [{
-            id: String(point.id || `breakpoint-${line}-${index}`).slice(0, 128), line,
-            functionName: String(point.functionName || '').slice(0, 80), condition: String(point.condition || '').slice(0, 512),
-            hitCondition: Math.min(1_000_000, Math.max(0, Math.round(Number(point.hitCondition) || 0))),
-            logMessage: String(point.logMessage || '').slice(0, 1_024), enabled: point.enabled !== false,
-            hitCount: Math.min(1_000_000_000, Math.max(0, Math.round(Number(point.hitCount) || 0))),
-            group: String(point.group || 'Default').trim().slice(0, 80) || 'Default'
-          }]
-        }).slice(0, 1000) : [],
-        tests: Array.isArray(item.script?.tests) ? item.script.tests.filter(/* 比较 typeof value 与 'string'，返回严格相等的判断结果。 */ value => typeof value === 'string').map(/* 调用 value.slice(0, 80) 并返回调用结果。 */ value => value.slice(0, 80)).slice(0, 256) : [],
-        packageDependencies: Array.isArray(item.script?.packageDependencies) ? item.script.packageDependencies.filter(/* 比较 typeof value 与 'string'，返回严格相等的判断结果。 */ value => typeof value === 'string').map(/* 调用 value.slice(0, 256) 并返回调用结果。 */ value => value.slice(0, 256)).slice(0, 128) : [],
-        packageName: String(item.script?.packageName || '').slice(0, 128),
-        reloadPolicy: ['preserve', 'recreate', 'disabled'].includes(String(item.script?.reloadPolicy)) ? item.script!.reloadPolicy : 'preserve',
-        signalConnections: Array.isArray(item.script?.signalConnections) ? item.script.signalConnections.flatMap(/** 保留非空信号及回调连接，限制来源目标字段并规范启用状态。 */ connection => {
-          if (!connection || typeof connection !== 'object') return []
-          const signal = String(connection.signal || '').trim().slice(0, 128), callback = String(connection.callback || '').trim().slice(0, 80)
-          return signal && callback ? [{ signal, callback, source: String(connection.source || '').slice(0, 128), target: String(connection.target || '').slice(0, 128), enabled: connection.enabled !== false }] : []
-        }).slice(0, 512) : [],
-        recoverySource: String(item.script?.recoverySource || '').slice(0, 1_000_000),
-        linkedGraphUuid: String(item.script?.linkedGraphUuid || '').toLowerCase().slice(0, 128),
-        lastSavedHash: String(item.script?.lastSavedHash || '').slice(0, 128)
-      } : undefined,
-      animationImport: assetType === 'animation' ? {
-        ...defaultAnimationImportMetadata(),
-        ...(item.animationImport ?? {}),
-        sourceAsset: typeof item.animationImport?.sourceAsset === 'string' ? item.animationImport.sourceAsset : null,
-        sourceFrameRate: Math.min(240, Math.max(1, Number(item.animationImport?.sourceFrameRate) || 60)),
-        sampleRate: Math.min(240, Math.max(1, Number(item.animationImport?.sampleRate) || 60)),
-        compressionTolerance: Math.min(1e6, Math.max(0, Number(item.animationImport?.compressionTolerance) || .0001)),
-        preserveEvents: item.animationImport?.preserveEvents !== false,
-        trackMappings: Array.isArray(item.animationImport?.trackMappings) ? item.animationImport.trackMappings.flatMap(/** 只保留有字符串源目标的动画轨道映射并限制长度。 */ mapping => {
-          if (!mapping || typeof mapping.source !== 'string' || typeof mapping.target !== 'string') return []
-          return [{ source: mapping.source.slice(0, 256), target: mapping.target.slice(0, 256) }]
-        }).slice(0, 512) : [],
-        lastImportedAt: Math.max(0, Number(item.animationImport?.lastImportedAt) || 0)
-      } : undefined,
-      interchange: validateInterchangeMetadata(item.interchange) ?? undefined,
-      derivedSprite: validateDerivedSprite(item.derivedSprite),
-      pipeline: item.pipeline && typeof item.pipeline === 'object' ? {
-        importerId: String(item.pipeline.importerId || 'nova.legacy').slice(0, 80),
-        importerVersion: String(item.pipeline.importerVersion || '1.0.0').slice(0, 40),
-        presetId: String(item.pipeline.presetId || 'legacy').slice(0, 80),
-        platform: ['windows', 'linux', 'macos', 'web'].includes(String(item.pipeline.platform)) ? item.pipeline.platform : 'web',
-        sourceHash: String(item.pipeline.sourceHash || item.pipeline.contentHash || '').slice(0, 128), artifactHash: String(item.pipeline.artifactHash || item.pipeline.cacheKey || '').slice(0, 128),
-        contentHash: String(item.pipeline.contentHash || item.pipeline.sourceHash || '').slice(0, 128), cacheKey: String(item.pipeline.cacheKey || item.pipeline.artifactHash || '').slice(0, 128),
-        status: item.pipeline.status === 'failed' ? 'failed' : 'ready', lastValidSource: typeof item.pipeline.lastValidSource === 'string' ? item.pipeline.lastValidSource : (typeof item.source === 'string' ? item.source : ''),
-        error: String(item.pipeline.error || '').slice(0, 500), dependencies: Array.isArray(item.pipeline.dependencies) ? item.pipeline.dependencies.filter(/* 比较 typeof value 与 'string'，返回严格相等的判断结果。 */ value => typeof value === 'string').slice(0, 2048) : [],
-        reverseDependencies: Array.isArray(item.pipeline.reverseDependencies) ? item.pipeline.reverseDependencies.filter(/* 比较 typeof value 与 'string'，返回严格相等的判断结果。 */ value => typeof value === 'string').slice(0, 2048) : [],
-        cacheHit: item.pipeline.cacheHit === true,
-        settingsHash: String(item.pipeline.settingsHash || item.pipeline.cacheKey || '').slice(0, 128), artifactSettingsHash: String(item.pipeline.artifactSettingsHash || item.pipeline.cacheKey || '').slice(0, 128),
-        invalidationReason: String(item.pipeline.invalidationReason || 'Legacy metadata upgraded').slice(0, 500), sourceSettings: String(item.pipeline.sourceSettings || '{}').slice(0, 100_000), artifactSettings: String(item.pipeline.artifactSettings || '{}').slice(0, 100_000),
-        diagnostics: Array.isArray(item.pipeline.diagnostics) ? item.pipeline.diagnostics.flatMap(/** 规范化导入诊断严重性和有界消息，丢弃非对象项。 */ diagnostic => diagnostic && typeof diagnostic === 'object' ? [{ severity: ['warning','error'].includes(String(diagnostic.severity)) ? diagnostic.severity as 'warning'|'error' : 'info' as const, code: String(diagnostic.code || 'IMPORT').slice(0, 80), message: String(diagnostic.message || '').slice(0, 1000) }] : []).slice(0, 256) : [],
-        reproducible: item.pipeline.reproducible !== false, deprecatedSettings: Array.isArray(item.pipeline.deprecatedSettings) ? item.pipeline.deprecatedSettings.map(String).slice(0, 128) : []
-      } : inlinePipeline(typeof item.source === 'string' ? item.source : ''),
-      tags: Array.isArray(item.tags) ? [...new Set(item.tags.map(String).map(/* 调用 tag.trim() 并返回调用结果。 */ tag => tag.trim()).filter(Boolean))].slice(0, 64) : [], collectionIds: Array.isArray(item.collectionIds) ? [...new Set(item.collectionIds.map(String))].slice(0, 64) : [],
-      contentGroup: String(item.contentGroup || 'main').slice(0, 80), editorOnly: item.editorOnly === true, sourceControlStatus: ['clean','added','modified','conflict','untracked'].includes(String(item.sourceControlStatus)) ? item.sourceControlStatus : 'clean', thumbnailKey: String(item.thumbnailKey || '').slice(0, 128),
-      unknownFields: Object.keys(unknownFields).length ? unknownFields : undefined
-    })
-  }
+  appendNormalizedAssetRecords(source, assetState.records, { normalizeUuid })
   const folders = new Set<string>(DEFAULT_ASSET_FOLDERS)
   if (Array.isArray(folderSource)) {
     for (const value of folderSource) {
@@ -733,7 +463,7 @@ let recordsByUuid = new Map<string, AssetRecord>()
     }
   }
   assetState.records.forEach(/** 恢复派生资源尺寸、登记父目录并异步安装字体。 */ record => {
-    if (record.derivedSprite) { record.width = record.derivedSprite.sourceSize.width; record.height = record.derivedSprite.sourceSize.height }
+    restoreDerivedAssetSize(record)
     const folder = record.path.slice(0, record.path.lastIndexOf('/'))
     if (folder) folders.add(folder)
     installFont(record)
@@ -783,8 +513,9 @@ let recordsByUuid = new Map<string, AssetRecord>()
     if (inferred !== 'other' && inferred !== record.assetType) throw new Error(`CONTENT_TYPE_MISMATCH: ${inferred} source cannot replace ${record.assetType}.`)
     if (prepared && prepared.metadata.settingsHash !== assetSettingsHash(before.settings)) throw new Error('IMPORT_SETTINGS_CHANGED: Retry settings differ from the current asset. Reimport with the current settings.')
     const artifact = prepared ?? await processAssetImport(file, before.settings, { targetUuid: uuid, signal })
-    const decoded = ['atlas', 'tileset'].includes(record.assetType) ? new TextDecoder().decode(artifact.bytes) : ''
-    const external = decoded ? await importContentInterchangeAsync(file.name, decoded, before.interchange) : null
+    const preparationStartedAtMs = performance.now()
+    const decoded = ['atlas', 'tileset'].includes(record.assetType) ? decodeContentInterchangeSource(file.name, artifact.bytes) : ''
+    const external = decoded ? await importContentInterchangeAsync(file.name, decoded, before.interchange, { signal, isCurrent: current, sourceIdentity: `asset:${uuid}`, inputRevision: revision, preparationStartedAtMs }) : null
     if (before.interchange && !external) throw new Error('CONTENT_FORMAT_MISMATCH: Reimport requires the same supported atlas or Tiled metadata family.')
     if (external && external.assetType !== before.assetType) throw new Error(`CONTENT_TYPE_MISMATCH: ${external.assetType} source cannot replace ${before.assetType}.`)
     const candidate = { ...before, source: external ? `data:${external.mimeType};charset=utf-8,${encodeURIComponent(external.source)}` : artifact.source,
@@ -813,7 +544,7 @@ let recordsByUuid = new Map<string, AssetRecord>()
     }
     for (const update of derivedUpdates) applyDerivedSprite(update.record, update.sprite)
     for (const page of assetState.atlasPages) page.regions.delete(uuid)
-    clearDerivedSpriteTextures(); rejectedImageSources.delete(record); imageCache.delete(uuid); assetState.generation++; queueTextureAtlasRebuild(); return true
+    clearDerivedSpriteTextures(); getEditorMediaOwner().invalidate(record); assetState.generation++; queueTextureAtlasRebuild(); return true
   } catch (error) {
     if (!current()) return false
     const message = error instanceof Error ? error.message : String(error)
@@ -838,11 +569,9 @@ let recordsByUuid = new Map<string, AssetRecord>()
   const index = assetState.records.findIndex(/* 比较 record.uuid 与 uuid，返回严格相等的判断结果。 */ record => record.uuid === uuid)
   if (index < 0) return false
   stopWatchingAsset(uuid)
-  const font=installedFonts.get(uuid)
-  if(font)document.fonts.delete(font)
-  installedFonts.delete(uuid)
+  getEditorMediaOwner().removeFont(uuid)
   assetState.records.splice(index, 1)
-  imageCache.delete(uuid)
+  getEditorMediaOwner().deleteImage(uuid)
   clearDerivedSpriteTextures()
   if (assetState.selectedGuid === uuid) assetState.selectedGuid = null
   assetState.generation++
@@ -967,140 +696,31 @@ type SourceFileHandle = { getFile(): Promise<File> }
 }
 
 /** 按模板 `asset://${normalizeUuid(uuid)}` 生成并返回字符串。 */ export function assetReference(uuid: string): string { return `asset://${normalizeUuid(uuid)}` }
-/** 仅从 asset URI 提取身份，其他引用返回 null。 */ export function assetGuid(reference: string | null | undefined): string | null {
-  if (!reference?.startsWith('asset://')) return null
-  return reference.slice('asset://'.length)
-}
+/** 仅从 asset URI 提取身份，其他引用返回 null。 */ export function assetGuid(reference: string | null | undefined): string | null { return runtimeAssetGuid(reference) }
 /** 确保索引代次最新后按资源 URI 或裸身份读取记录。 */ export function resolveAsset(reference: string | null | undefined): AssetRecord | null {
   const guid = assetGuid(reference) ?? reference
   ensureIndex()
-  return guid ? recordsByUuid.get(guid) ?? null : null
+  return resolveRuntimeAssetGuid(guid, recordsByUuid)
 }
 
-/** 检查派生帧来源、拥有者和几何边界，并返回当前源对应的加载拒绝诊断。 */ export function assetTextureDiagnostic(reference: string | null | undefined): string {
-  const record = resolveAsset(reference)
-  if (!record) return 'TEXTURE_MISSING: Select or repair the missing image reference.'
-  if (record.derivedSprite) {
-    const texture = resolveAsset(record.derivedSprite.textureAsset)
-    if (!texture || texture.assetType !== 'image' || texture.derivedSprite) return 'TEXTURE_SOURCE_MISSING: Repair the original image linked by this frame.'
-    if (!resolveAsset(record.derivedSprite.ownerAsset)) return 'TEXTURE_OWNER_MISSING: Repair the atlas or sheet that owns this frame.'
-    const frame = record.derivedSprite.frame
-    if (frame.x + frame.width > texture.width || frame.y + frame.height > texture.height) return 'TEXTURE_FRAME_BOUNDS: This frame no longer fits its source image. Restore or reimport the matching source.'
-    const failure = rejectedImageSources.get(texture)
-    return failure?.source === texture.source ? failure.error : ''
-  }
-  const failure = rejectedImageSources.get(record)
-  return failure?.source === record.source ? failure.error : ''
-}
+/** 检查派生帧来源、拥有者和几何边界，并返回当前源对应的加载拒绝诊断。 */ export function assetTextureDiagnostic(reference: string | null | undefined): string { return getEditorMediaOwner().assetTextureDiagnostic(reference) }
 
-/** 解析图像资源的完整纹理，再应用用户导入裁剪区域。 */ export function resolveTexture(reference: string | null | undefined, filterOverride?: 'Nearest' | 'Linear'): TextureRegion | null {
-  const record = resolveAsset(reference)
-  if (!record || record.assetType !== 'image') return null
-  const texture = resolveUncroppedTexture(record, filterOverride)
-  return texture ? importedSpriteRegion(record, texture) : null
-}
+/** 解析图像资源的完整纹理，再应用用户导入裁剪区域。 */ export function resolveTexture(reference: string | null | undefined, filterOverride?: 'Nearest' | 'Linear'): TextureRegion | null { return getEditorMediaOwner().resolveTexture(reference,filterOverride) }
 
-/** 优先解析派生帧或图集区域，否则在有界解码缓存中加载原图，使用源身份保护异步完成。 */ function resolveUncroppedTexture(record: AssetRecord, filterOverride?: 'Nearest' | 'Linear'): TextureRegion | null {
-  if (record.derivedSprite) {
-    const image = resolveAsset(record.derivedSprite.textureAsset)
-    if (!image || image.assetType !== 'image' || image.derivedSprite) return null
-    const texture = resolveUncroppedTexture(image, filterOverride)
-    return texture ? resolveDerivedSpriteTexture(record.derivedSprite, texture, image, filterOverride ?? record.settings.filterMode) : null
-  }
-  if (!record.source) return null
-  for (const page of assetState.atlasPages) {
-    const region = page.regions.get(record.uuid)
-    if (region) return { ...region, key: region.key + ':revision:' + atlasContentRevision, revision: atlasContentRevision, filter: filterOverride ?? region.filter, colorSpace: record.settings.colorSpace }
-  }
-  if (rejectedImageSources.get(record)?.source === record.source) return null
-  let image = imageCache.get(record.uuid)
-  if (!image) {
-    const expectedBytes = Math.max(4, record.width * record.height * 4)
-    if (!Number.isFinite(expectedBytes) || expectedBytes > IMAGE_CACHE_LIMITS.bytes) { rejectedImageSources.set(record, { source: record.source, error: 'TEXTURE_MEMORY_BUDGET: This source exceeds the128MiB decoded-image budget. Enable atlas packing or import a smaller source.' }); return null }
-    const loaded = new Image(), source = record.source
-    if (!imageCache.set(record.uuid, loaded, expectedBytes)) return null
-    pendingImageLoads.set(record.uuid, loaded)
-    loaded.onload = /** 仅处理当前图像请求，更新解码修订并按真实像素重新计费；超预算时拒绝保留图像。 */ () => {
-      if (pendingImageLoads.get(record.uuid) !== loaded) return
-      pendingImageLoads.delete(record.uuid); loaded.onload = null; loaded.onerror = null
-      if (record.source !== source || imageCache.get(record.uuid) !== loaded) return
-      decodedTextureRevision++
-      const weight = loaded.naturalWidth * loaded.naturalHeight * 4
-      if (!Number.isFinite(weight) || weight <= 0 || !imageCache.set(record.uuid, loaded, weight)) { imageCache.delete(record.uuid); rejectedImageSources.set(record, { source, error: 'TEXTURE_DECODE_FAILED: Image pixels could not be retained. Reimport the source to retry; reduce oversized image dimensions.' }) }
-    }
-    loaded.onerror = /** 清理失败图像的监听和缓存，仅为仍匹配的源记录解码错误。 */ () => {
-      if (pendingImageLoads.get(record.uuid) !== loaded) return
-      pendingImageLoads.delete(record.uuid); loaded.onload = null; loaded.onerror = null
-      imageCache.delete(record.uuid); if (record.source === source) rejectedImageSources.set(record, { source, error: 'TEXTURE_DECODE_FAILED: Image decoding failed. Reimport the source to retry.' })
-    }
-    loaded.src = source; image = loaded
-  }
-  if (!image.complete || image.naturalWidth <= 0) return null
-  return { key: `asset:${record.uuid}:${record.pipeline?.artifactHash || record.importedAt}`, source: image, revision: record.pipeline?.artifactHash || record.importedAt, uv: { x: 0, y: 0, width: 1, height: 1 }, filter: filterOverride ?? record.settings.filterMode, colorSpace: record.settings.colorSpace }
-}
+/** 优先解析派生帧或图集区域，否则在有界解码缓存中加载原图，使用源身份保护异步完成。 */ 
 
 /** Resolves a pixel-space sub-region without allocating another texture. */
 /** 将显式像素区域限制在资源边界，并组合到完整纹理或图集 UV 范围。 */ export function resolveTextureRegion(
   reference: string | null | undefined,
   region: { x: number; y: number; width: number; height: number },
   filterOverride?: 'Nearest' | 'Linear'
-): TextureRegion | null {
-  const record = resolveAsset(reference)
-  const texture = record?.assetType === 'image' ? resolveUncroppedTexture(record, filterOverride) : null
-  if (!record || !texture || record.width <= 0 || record.height <= 0) return null
-  const x = Math.min(record.width - 1, Math.max(0, Number(region.x) || 0))
-  const y = Math.min(record.height - 1, Math.max(0, Number(region.y) || 0))
-  const width = Math.min(record.width - x, Math.max(1, Number(region.width) || 1))
-  const height = Math.min(record.height - y, Math.max(1, Number(region.height) || 1))
-  return {
-    ...texture,
-    key: `${texture.key}:region:${x}:${y}:${width}:${height}`,
-    uv: {
-      x: texture.uv.x + x / record.width * texture.uv.width,
-      y: texture.uv.y + y / record.height * texture.uv.height,
-      width: width / record.width * texture.uv.width,
-      height: height / record.height * texture.uv.height
-    }
-  }
-}
+): TextureRegion | null { return getEditorMediaOwner().resolveTextureRegion(reference,region,filterOverride) }
 
-/** 把资源导入裁剪区域限制在尺寸边界，并转换为纹理 UV 子区域。 */ function importedSpriteRegion(record: AssetRecord, texture: TextureRegion): TextureRegion {
-  const region = record.settings.spriteRegion
-  if (!region || record.width <= 0 || record.height <= 0) return texture
-  const x = Math.min(record.width - 1, Math.max(0, region.x))
-  const y = Math.min(record.height - 1, Math.max(0, region.y))
-  const width = Math.min(record.width - x, Math.max(1, region.width))
-  const height = Math.min(record.height - y, Math.max(1, region.height))
-  return {
-    ...texture,
-    key: `${texture.key}:${x}:${y}:${width}:${height}`,
-    uv: {
-      x: texture.uv.x + x / record.width * texture.uv.width,
-      y: texture.uv.y + y / record.height * texture.uv.height,
-      width: width / record.width * texture.uv.width,
-      height: height / record.height * texture.uv.height
-    }
-  }
-}
+/** 把资源导入裁剪区域限制在尺寸边界，并转换为纹理 UV 子区域。 */ 
 
-/** 异步构建图集，仅提交最新请求修订，更新纹理内容版本并清理派生纹理缓存。 */ export async function rebuildTextureAtlases(): Promise<void> {
-  const revision = ++atlasRevision
-  const pages = await buildTextureAtlases(assetState.records)
-  if (revision !== atlasRevision) return
-  assetState.atlasPages.splice(0, assetState.atlasPages.length, ...pages.map(/* 调用 markRaw(page) 并返回调用结果。 */ page => markRaw(page)))
-  atlasContentRevision++; clearDerivedSpriteTextures()
-  assetState.atlasError = ''
-  assetState.generation++
-}
+/** 异步构建图集，仅提交最新请求修订，更新纹理内容版本并清理派生纹理缓存。 */ export async function rebuildTextureAtlases(): Promise<void> { return getEditorMediaOwner().rebuildTextureAtlases() }
 
-/** 启动图集重建，失败时保留旧有效图集并记录有界错误消息。 */ export function queueTextureAtlasRebuild(): void {
-  const pending = rebuildTextureAtlases(), requestedRevision = atlasRevision
-  void pending.catch(/** 只发布最新构建的错误，旧请求不得覆盖后来成功构建的状态。 */ error => {
-    if (requestedRevision !== atlasRevision) return
-    assetState.atlasError = error instanceof Error ? error.message.slice(0, 500) : String(error).slice(0, 500)
-    console.error('Texture atlas rebuild failed; the previous valid atlas remains active.', error)
-  })
-}
+/** 启动图集重建，失败时保留旧有效图集并记录有界错误消息。 */ export function queueTextureAtlasRebuild(): void { return getEditorMediaOwner().queueTextureAtlasRebuild() }
 
 /** 根据目录、全文查询、类型、标签、集合及收藏条件筛选已排序资源索引。 */ export function filteredAssets(): AssetRecord[] {
   ensureIndex()
@@ -1116,3 +736,13 @@ type SourceFileHandle = { getFile(): Promise<File> }
     return (query || collectionAssets || inFolder) && typeMatches && queryMatches && tagMatches && (!collectionAssets || collectionAssets.has(record.uuid)) && (!assetState.favoritesOnly || favorites.has(record.uuid))
   })
 }
+
+// Temporary direct-constructor compatibility. Production Editor supplies these through rendererAdapter;
+// remove with installMigrationRendererEnvironment after the authoring frontend/legacy fixtures migrate.
+import { installMigrationRendererEnvironment } from '../renderer/RendererEnvironment'
+installMigrationRendererEnvironment({ assets: {
+  get generation() { return assetState.generation },
+  get atlasPageCount() { return assetState.atlasPages.length },
+  resolveTexture,
+  readMaterialSource(reference) { const asset = resolveAsset(reference); return asset?.assetType === 'material' ? readTextAsset(asset.uuid) : null }
+} })

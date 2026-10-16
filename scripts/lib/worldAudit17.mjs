@@ -26,6 +26,7 @@ import {wait} from './browserUserAudit.mjs'
    }
   }
   await until("!document.querySelector('.toast-stack article')")
+  if(await evaluate("!!document.querySelector('#editor-notification-history')")){await click('#editor-notification-history header button');await until("!document.querySelector('#editor-notification-history')")}
   if(await evaluate("!!document.querySelector('.compact-tab-select')?.getBoundingClientRect().width"))await a.select('.compact-tab-select',id)
   else await clickText('.bottom-panel .panel-tab',label,true)
   if(await evaluate("!!document.querySelector('.bottom-panel.collapsed')")){

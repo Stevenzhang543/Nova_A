@@ -1,4 +1,4 @@
-# 历史原生窗口审计：验证标题栏、全屏及 WebView 键盘消息路径。
+﻿# 历史原生窗口审计：验证标题栏、全屏及 WebView 键盘消息路径。
 [CmdletBinding()]
 param()
 

@@ -1,5 +1,4 @@
 /** 项目生产资料：组织制作设置、验证结果及创作工作流信息。 */
-import { reactive } from 'vue'
 import { loadPerformanceRuntimeSettings } from './largeWorldPerformance'
 
 export type TestKind = 'unit' | 'integration' | 'scene' | 'ui' | 'physics' | 'animation' | 'regression' | 'headless'
@@ -227,7 +226,17 @@ const DEFAULTS: ProductionProjectSettings = {
   }
 }
 
-export const productionSettings = reactive<ProductionProjectSettings>(structuredClone(DEFAULTS))
+export let productionSettings: ProductionProjectSettings = structuredClone(DEFAULTS)
+export type ProductionStateAdapter = (target: ProductionProjectSettings) => ProductionProjectSettings
+let productionStateAdapterInstalled = false
+/** An optional UI host wraps this same target once, before services/component setup; it must not copy state. */
+export function installProductionStateAdapter(adapter: ProductionStateAdapter): void {
+  if (productionStateAdapterInstalled) return
+  const wrapped = adapter(productionSettings)
+  if (!wrapped || typeof wrapped !== 'object') throw new TypeError('Production state adapter must wrap the existing settings object')
+  productionSettings = wrapped
+  productionStateAdapterInstalled = true
+}
 
 /* 根据 value && typeof value === 'object' && !Array.isArray(value) 的真假，分别返回 value as Record<string, unknown> 或 {}。 */ function object(value: unknown): Record<string, unknown> { return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {} }
 /** 结构说明（自动提取）：bounded；输入 value、fallback、minimum、maximum、integer；直接调用 Number.isFinite、Math.min、Math.max、Math.round。 */ function bounded(value: unknown, fallback: number, minimum: number, maximum: number, integer = false): number {

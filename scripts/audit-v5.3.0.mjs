@@ -13,7 +13,7 @@ globalThis.window ??= { setTimeout, clearTimeout, setInterval, clearInterval, /*
 globalThis.localStorage ??= { /* 返回固定值 null。 */ getItem(){ return null }, /* 为审计环境提供不写入真实存储的 localStorage 占位方法。 */ setItem(){}, /* 为审计环境提供不删除真实存储的 localStorage 占位方法。 */ removeItem(){} }
 
 const [packageSource, tauriSource, workspaceCargo, instructions, graphTypes, graphCatalog, graphCompiler, production, debuggerSource, runtime, panel, editor, packageRuntime, i18n, graphGuide, debugGuide, layoutSource, packageRelease] = await Promise.all([
-  'package.json','src-tauri/tauri.conf.json','Cargo.toml','instructions.txt','src/visual/graphTypes.ts','src/visual/graphCatalog.ts','src/visual/graphCompiler.ts','src/visual/graphProduction.ts','src/visual/graphDebugger.ts','src/runtime/GameplayRuntime.ts','src/components/GraphProductionPanel.vue','src/components/VisualGraphEditor.vue','src/runtime/packages.ts','src/i18n.ts','docs/VISUAL_SCRIPTING_5_3.md','docs/VISUAL_SCRIPT_DEBUGGING_5_3.md','release-audits/v5.3.0-layout-browser.json','scripts/package-release.ps1'
+  'package.json','src-tauri/tauri.conf.json','Cargo.toml','instructions.txt','src/visual/graphTypes.ts','src/visual/graphCatalog.ts','src/visual/graphCompiler.ts','src/visual/graphProduction.ts','src/visual/graphDebugger.ts','src/runtime/GameplayRuntimeCore.ts','src/components/GraphProductionPanel.vue','src/components/VisualGraphEditor.vue','src/runtime/packages.ts','src/i18n.ts','docs/VISUAL_SCRIPTING_5_3.md','docs/VISUAL_SCRIPT_DEBUGGING_5_3.md','release-audits/v5.3.0-layout-browser.json','scripts/package-release.ps1'
 ].map(text))
 const pkg = JSON.parse(packageSource), tauri = JSON.parse(tauriSource), layout = JSON.parse(layoutSource)
 

@@ -15,11 +15,8 @@ export interface RuntimeSceneHost<View> {
   restoreView(view: View): void
   applyView(scene: Record<string, unknown>, entities: Entity[]): void
 }
-export interface PreparedRuntimeSceneTransition {
-  preservedEntityUuids: readonly string[]
-  commit(): boolean
-  readonly error: string | null
-}
+import type { PreparedRuntimeSceneTransition } from './runtimeSceneContracts'
+export type { PreparedRuntimeSceneTransition } from './runtimeSceneContracts'
 
 /** Decode into detached entities. Failed preparation may consume monotonic IDs,
  * but never replaces live objects, assets, metadata, settings or scene identity. */

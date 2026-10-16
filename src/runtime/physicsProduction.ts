@@ -1,5 +1,6 @@
 /** 物理制作配置：定义并规范碰撞器、关节及仿真参数，提供编辑校验。 */
 import type { Vec2 } from '../world/types'
+import { DEFAULT_MAX_CATCH_UP_STEPS } from './engineTiming'
 
 export type PhysicsInterpolationMode = 'Interpolate' | 'None'
 export type PhysicsCombineMode = 'Average' | 'Minimum' | 'Maximum' | 'Multiply'
@@ -186,7 +187,7 @@ export const PHYSICS_SHAPE_SUPPORT: Readonly<Record<PhysicsShapeKind, { simulati
 
 export const PHYSICS_PROFILE_LIBRARY: Readonly<Record<Exclude<PhysicsProfileId, 'Custom'>, PhysicsSimulationProfile2D>> = Object.freeze({
   Accurate: Object.freeze({ id: 'Accurate', name: 'Accurate', tickRate: 120, maxCatchUpSteps: 12, minimumSubsteps: 12, velocityIterations: 32, positionIterations: 24, interpolation: 'Interpolate', droppedTimePolicy: 'PreserveBacklog', sleepLinearThreshold: .0005, sleepAngularThreshold: .0005, timeToSleep: .75, physicsBudgetMs: 6 }),
-  Balanced: Object.freeze({ id: 'Balanced', name: 'Balanced', tickRate: 60, maxCatchUpSteps: 8, minimumSubsteps: 8, velocityIterations: 20, positionIterations: 16, interpolation: 'Interpolate', droppedTimePolicy: 'Drop', sleepLinearThreshold: .001, sleepAngularThreshold: .001, timeToSleep: .5, physicsBudgetMs: 4 }),
+  Balanced: Object.freeze({ id: 'Balanced', name: 'Balanced', tickRate: 60, maxCatchUpSteps: DEFAULT_MAX_CATCH_UP_STEPS, minimumSubsteps: 8, velocityIterations: 20, positionIterations: 16, interpolation: 'Interpolate', droppedTimePolicy: 'Drop', sleepLinearThreshold: .001, sleepAngularThreshold: .001, timeToSleep: .5, physicsBudgetMs: 4 }),
   Fast: Object.freeze({ id: 'Fast', name: 'Fast', tickRate: 60, maxCatchUpSteps: 4, minimumSubsteps: 4, velocityIterations: 12, positionIterations: 8, interpolation: 'Interpolate', droppedTimePolicy: 'SlowMotion', sleepLinearThreshold: .0025, sleepAngularThreshold: .0025, timeToSleep: .35, physicsBudgetMs: 2 })
 })
 

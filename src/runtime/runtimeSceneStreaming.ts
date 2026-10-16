@@ -1,5 +1,5 @@
 /** 运行场景流送桥接：协调场景分块的加载、激活和卸载回调。 */
-import { toRaw } from 'vue'
+
 import { worldTransform } from '../world/hierarchy'
 import type { Entity } from '../world/Entity'
 import type { SceneManager } from '../world/SceneManager'
@@ -7,9 +7,12 @@ import type { World } from '../world/World'
 import { normalizeConnection, type Connection } from '../world/Connection'
 import type { NavigationAgent2D } from '../world/components'
 import type { Vec2 } from '../world/types'
-import { activateStreamEntities, deactivateStreamEntities } from './streamLifecycle'
+import { StreamLifecycleOwner } from './streamLifecycle'
+import { WorldStreamingOwner } from './worldStreamingOwner'
 
 export interface StreamSceneHost {
+  lifecycle: StreamLifecycleOwner
+  streamingOwner: WorldStreamingOwner
   world: Pick<World, 'entities' | 'connections' | 'allocateId' | 'allocateConnectionId'>; scenes: Pick<SceneManager, 'scenes' | 'activeSceneUuid'>; origin(): Vec2
   createEntity(data: Record<string, unknown>, id: number): Entity
   serializeEntity(entity: Entity): Record<string, unknown>
@@ -22,10 +25,15 @@ const clone = /** 结构说明（自动提取）：clone；输入 value；直接
 
 /** Runtime scene leases install real entities/connections; authored scene documents stay immutable. */
 export class RuntimeSceneStreaming {
+  private readonly streamingOwner: WorldStreamingOwner
+  private requireCurrentOwner(): void {
+    if (this.streamingOwner.isDisposed) throw new Error('STREAM_SCENE_OWNER_DISPOSED')
+    if (this.host.streamingOwner !== this.streamingOwner || this.host.world !== this.streamingOwner.world || this.host.lifecycle !== this.streamingOwner.lifecycle || this.host.readHandoff !== this.streamingOwner.sceneHandoffPorts.readHandoff || this.host.writeHandoff !== this.streamingOwner.sceneHandoffPorts.writeHandoff) throw new Error('STREAM_SCENE_HANDOFF_OWNER_MISMATCH')
+  }
   private instances = new Map<string, SceneInstance>()
   private promoted = new Map<string, Entity>()
   private leases = new Map<string, SceneLease>()
-  /** 结构说明（自动提取）：匿名回调；输入 host；空实现，不执行额外操作。 */ constructor(private host: StreamSceneHost) {}
+  /** 结构说明（自动提取）：匿名回调；输入 host；空实现，不执行额外操作。 */ constructor(private host: StreamSceneHost) { if (!(host.lifecycle instanceof StreamLifecycleOwner) || host.lifecycle.lifetimes.world !== host.world) throw new Error('STREAM_SCENE_LIFECYCLE_OWNER_MISMATCH'); if (!(host.streamingOwner instanceof WorldStreamingOwner) || host.streamingOwner.world !== host.world || host.streamingOwner.lifecycle !== host.lifecycle || host.streamingOwner.isDisposed || host.readHandoff !== host.streamingOwner.sceneHandoffPorts.readHandoff || host.writeHandoff !== host.streamingOwner.sceneHandoffPorts.writeHandoff) throw new Error('STREAM_SCENE_HANDOFF_OWNER_MISMATCH'); this.streamingOwner = host.streamingOwner }
 
   /** 结构说明（自动提取）：prepare；输入 uuid；直接调用 host.scenes.scenes.find、Error、JSON.stringify、instances.get、host.readHandoff 等；写入 parent、connection.id、anchor.entityId；返回路径包含 cached、instance；包含循环处理；包含显式抛错路径。 */ private prepare(uuid: string): SceneInstance {
     const scene = this.host.scenes.scenes.find(/* 比较 scene.uuid 与 uuid，返回严格相等的判断结果。 */ scene => scene.uuid === uuid)
@@ -43,7 +51,7 @@ export class RuntimeSceneStreaming {
     const existing = new Map(this.host.world.entities.map(/* 返回按声明顺序构造的数组 [entity.uuid, entity]。 */ entity => [entity.uuid, entity]))
     for (const raw of data.entities) {
       if (!raw || typeof raw !== 'object' || Array.isArray(raw) || typeof raw.uuid !== 'string') throw new Error('STREAM_SCENE_FORMAT: each entity needs a stable UUID.')
-      if (uuids.has(raw.uuid) || existing.has(raw.uuid) && this.promoted.get(raw.uuid) !== toRaw(existing.get(raw.uuid)!)) throw new Error('STREAM_SCENE_IDENTITY: duplicate live entity UUID ' + raw.uuid)
+      if (uuids.has(raw.uuid) || existing.has(raw.uuid) && this.promoted.get(raw.uuid) !== this.host.lifecycle.lifetimes.unwrapEntity(existing.get(raw.uuid)!)) throw new Error('STREAM_SCENE_IDENTITY: duplicate live entity UUID ' + raw.uuid)
       const entity = existing.get(raw.uuid) ?? this.host.createEntity(raw, this.host.world.allocateId())
       if (typeof raw.id === 'number') { if (ids.has(raw.id)) throw new Error('STREAM_SCENE_IDENTITY: duplicate stored entity ID.'); ids.set(raw.id, entity.id) }
       entities.push(entity); uuids.set(entity.uuid, entity)
@@ -71,13 +79,13 @@ export class RuntimeSceneStreaming {
     return instance
   }
 
-  /** 结构说明（自动提取）：setOwner；输入 owner、sceneUuid、loaded、active；直接调用 Error、releaseOwner、leases.get、prepare、Map 等；包含循环处理；包含显式抛错路径。 */ setOwner(owner: string, sceneUuid: string, loaded: boolean, active: boolean): void {
+  /** 结构说明（自动提取）：setOwner；输入 owner、sceneUuid、loaded、active；直接调用 Error、releaseOwner、leases.get、prepare、Map 等；包含循环处理；包含显式抛错路径。 */ setOwner(owner: string, sceneUuid: string, loaded: boolean, active: boolean): void { this.requireCurrentOwner();
     if (!owner) throw new Error('STREAM_OWNER: a stable owner is required.')
     if (sceneUuid === this.host.scenes.activeSceneUuid) { this.releaseOwner(owner); return }
     const previous = this.leases.get(owner), instance = loaded ? this.prepare(sceneUuid) : undefined
     if (instance && active) {
       const live = new Map(this.host.world.entities.map(/* 返回按声明顺序构造的数组 [entity.uuid, entity]。 */ entity => [entity.uuid, entity]))
-      for (const entity of instance.entities) if (live.has(entity.uuid) && toRaw(live.get(entity.uuid)!) !== toRaw(entity)) throw new Error('STREAM_SCENE_IDENTITY: another scene owns live UUID ' + entity.uuid)
+      for (const entity of instance.entities) if (live.has(entity.uuid) && this.host.lifecycle.lifetimes.unwrapEntity(live.get(entity.uuid)!) !== this.host.lifecycle.lifetimes.unwrapEntity(entity)) throw new Error('STREAM_SCENE_IDENTITY: another scene owns live UUID ' + entity.uuid)
     }
     // Decode and validate before releasing the owner's previous scene.
     if (previous && (previous.sceneUuid !== sceneUuid || !loaded)) this.releaseOwner(owner)
@@ -85,7 +93,7 @@ export class RuntimeSceneStreaming {
     this.instances.set(sceneUuid, instance); instance.owners.set(owner, active); this.leases.set(owner, { sceneUuid, active })
     this.reconcile(sceneUuid, instance)
   }
-  /** 结构说明（自动提取）：releaseOwner；输入 owner；直接调用 leases.get、instances.get、leases.delete、host.origin、instance.entities.map 等；写入 scene.loaded。 */ releaseOwner(owner: string): void {
+  /** 结构说明（自动提取）：releaseOwner；输入 owner；直接调用 leases.get、instances.get、leases.delete、host.origin、instance.entities.map 等；写入 scene.loaded。 */ releaseOwner(owner: string): void { this.requireCurrentOwner();
     const lease = this.leases.get(owner)
     if (!lease) return
     const instance = this.instances.get(lease.sceneUuid)
@@ -106,7 +114,7 @@ export class RuntimeSceneStreaming {
       const added = instance.entities.filter(/* 返回 world.entities.includes(entity) 的逻辑取反结果。 */ entity => !world.entities.includes(entity))
       for (const entity of added) world.entities.push(entity)
       for (const connection of instance.connections) if (!world.connections.includes(connection)) world.connections.push(connection)
-      activateStreamEntities(added)
+      this.host.lifecycle.activateStreamEntities(added)
     } else {
       const retained = new Set(instance.entities.filter(/* 先计算 entity.persistentAcrossScenes；仅当其为假值时求右侧 this.promoted.has(entity.uuid)，返回短路求值结果。 */ entity => entity.persistentAcrossScenes || this.promoted.has(entity.uuid)).map(/* 返回 entity.uuid 的当前值。 */ entity => entity.uuid))
       const children = new Map<string, Entity[]>()
@@ -114,12 +122,12 @@ export class RuntimeSceneStreaming {
       const pending = [...retained]; while (pending.length) for (const child of children.get(pending.pop()!) ?? []) if (!retained.has(child.uuid)) { retained.add(child.uuid); pending.push(child.uuid) }
       for (const entity of instance.entities) if (retained.has(entity.uuid) && world.entities.includes(entity)) {
         if (entity.parentUuid && !retained.has(entity.parentUuid)) { const transform = worldTransform(entity, world.entities); entity.parentUuid = null; Object.assign(entity.transform, transform) }
-        this.promoted.set(entity.uuid, toRaw(entity)); entities.delete(entity); ids.delete(entity.id)
+        this.promoted.set(entity.uuid, this.host.lifecycle.lifetimes.unwrapEntity(entity)); entities.delete(entity); ids.delete(entity.id)
       }
-      deactivateStreamEntities(instance.entities.filter(/* 返回 retained.has(entity.uuid) 的逻辑取反结果。 */ entity => !retained.has(entity.uuid)).filter(/* 调用 world.entities.includes(entity) 并返回调用结果。 */ entity => world.entities.includes(entity)), [...world.entities])
+      this.host.lifecycle.deactivateStreamEntities(instance.entities.filter(/* 返回 retained.has(entity.uuid) 的逻辑取反结果。 */ entity => !retained.has(entity.uuid)).filter(/* 调用 world.entities.includes(entity) 并返回调用结果。 */ entity => world.entities.includes(entity)), [...world.entities])
       // Removing membership leaves authored enable flags and cached runtime state intact.
       for (let index = world.connections.length - 1; index >= 0; index--) if (world.connections[index].anchors.some(/* 调用 ids.has(anchor.entityId) 并返回调用结果。 */ anchor => ids.has(anchor.entityId))) world.connections.splice(index, 1)
-      for (let index = world.entities.length - 1; index >= 0; index--) if (entities.has(toRaw(world.entities[index])) || ids.has(world.entities[index].id)) world.entities.splice(index, 1)
+      for (let index = world.entities.length - 1; index >= 0; index--) if (entities.has(this.host.lifecycle.lifetimes.unwrapEntity(world.entities[index])) || ids.has(world.entities[index].id)) world.entities.splice(index, 1)
     }
     const scene = this.host.scenes.scenes.find(/* 比较 scene.uuid 与 uuid，返回严格相等的判断结果。 */ scene => scene.uuid === uuid); if (scene) scene.loaded = instance.owners.size > 0 || instance.originalLoaded
     // The retained World synchronizes only changed membership on its next fixed tick/query.
@@ -127,15 +135,15 @@ export class RuntimeSceneStreaming {
   /** 结构说明（自动提取）：translateInstance；输入 instance、offset、skipLive；直接调用 Set、map、host.world.connections.map、live.has、promoted.get 等；写入 entity.transform.position.x、entity.transform.position.y、agent.targetPosition.x、agent.targetPosition.y 等；包含循环处理。 */ private translateInstance(instance: SceneInstance, offset: Vec2, skipLive: boolean): void {
     const live = new Set((skipLive ? this.host.world.entities : []).map(/* 返回 entity.uuid 的当前值。 */ entity => entity.uuid)), liveConnections = new Set(this.host.world.connections.map(/* 返回 connection.uuid 的当前值。 */ connection => connection.uuid))
     for (const entity of instance.entities) {
-      if (live.has(entity.uuid) || this.promoted.get(entity.uuid) === toRaw(entity)) continue
+      if (live.has(entity.uuid) || this.promoted.get(entity.uuid) === this.host.lifecycle.lifetimes.unwrapEntity(entity)) continue
       if (!entity.parentUuid) { entity.transform.position.x -= offset.x; entity.transform.position.y -= offset.y }
       const agent = entity.getComponent<NavigationAgent2D>('NavigationAgent2D', true)
       if (agent) { agent.targetPosition.x -= offset.x; agent.targetPosition.y -= offset.y; for (const point of agent.path) { point.x -= offset.x; point.y -= offset.y } }
     }
     for (const connection of instance.connections) if (!liveConnections.has(connection.uuid)) for (const node of connection.ropeNodes) { node.position.x -= offset.x; node.position.y -= offset.y }
   }
-  /** 结构说明（自动提取）：shiftOrigin；输入 offset；直接调用 instances.values、translateInstance；包含循环处理。 */ shiftOrigin(offset: Vec2): void { for (const instance of this.instances.values()) this.translateInstance(instance, offset, true) }
-  /** 结构说明（自动提取）：detachAfterSceneTransition；无显式参数；直接调用 host.scenes.scenes.find、instances.clear、leases.clear、promoted.clear；写入 scene.loaded；包含循环处理。 */ detachAfterSceneTransition(): void { for (const [uuid, instance] of this.instances) { const scene = this.host.scenes.scenes.find(/* 比较 value.uuid 与 uuid，返回严格相等的判断结果。 */ value => value.uuid === uuid); if (scene && uuid !== this.host.scenes.activeSceneUuid) scene.loaded = instance.originalLoaded }; this.instances.clear(); this.leases.clear(); this.promoted.clear() }
-  /** 结构说明（自动提取）：reset；无显式参数；直接调用 leases.keys、releaseOwner、instances.clear、leases.clear、promoted.clear；包含循环处理。 */ reset(): void { for (const owner of [...this.leases.keys()]) this.releaseOwner(owner); this.instances.clear(); this.leases.clear(); this.promoted.clear() }
+  /** 结构说明（自动提取）：shiftOrigin；输入 offset；直接调用 instances.values、translateInstance；包含循环处理。 */ shiftOrigin(offset: Vec2): void { this.requireCurrentOwner(); for (const instance of this.instances.values()) this.translateInstance(instance, offset, true) }
+  /** 结构说明（自动提取）：detachAfterSceneTransition；无显式参数；直接调用 host.scenes.scenes.find、instances.clear、leases.clear、promoted.clear；写入 scene.loaded；包含循环处理。 */ detachAfterSceneTransition(): void { this.requireCurrentOwner(); for (const [uuid, instance] of this.instances) { const scene = this.host.scenes.scenes.find(/* 比较 value.uuid 与 uuid，返回严格相等的判断结果。 */ value => value.uuid === uuid); if (scene && uuid !== this.host.scenes.activeSceneUuid) scene.loaded = instance.originalLoaded }; this.instances.clear(); this.leases.clear(); this.promoted.clear() }
+  /** 结构说明（自动提取）：reset；无显式参数；直接调用 leases.keys、releaseOwner、instances.clear、leases.clear、promoted.clear；包含循环处理。 */ reset(): void { this.requireCurrentOwner(); for (const owner of [...this.leases.keys()]) this.releaseOwner(owner); this.instances.clear(); this.leases.clear(); this.promoted.clear() }
   /** 结构说明（自动提取）：inspect；无显式参数；直接调用 map。 */ inspect(): Array<{ sceneUuid: string; owners: number; activeOwners: number; entities: number; connections: number }> { return [...this.instances].map(/** 结构说明（自动提取）：map 回调；输入 [sceneUuid, instance]；直接调用 filter、instance.owners.values；返回表达式求值结果。 */ ([sceneUuid, instance]) => ({ sceneUuid, owners: instance.owners.size, activeOwners: [...instance.owners.values()].filter(Boolean).length, entities: instance.entities.length, connections: instance.connections.length })) }
 }

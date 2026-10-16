@@ -339,7 +339,7 @@ const formattedLocals = computed(/* 调用 snapshotPreview(debug.locals) 并返�
 const filteredApi = computed(/** 按名称、分类和详情筛选脚本接口列表。 */ () => { const q = apiQuery.value.toLowerCase(); return q ? SCRIPT_API.filter(/* 调用 `${entry.name} ${entry.category} ${entry.detail}`.toLowerCase().includes(q) 并返回调用结果。 */ entry => `${entry.name} ${entry.category} ${entry.detail}`.toLowerCase().includes(q)) : SCRIPT_API })
 const deprecatedCount = computed(/* 返回 analysis.value.diagnostics.filter(item => item.code === 'NOVA-COMPAT-001').length 的当前值。 */ () => analysis.value.diagnostics.filter(/* 比较 item.code 与 'NOVA-COMPAT-001'，返回严格相等的判断结果。 */ item => item.code === 'NOVA-COMPAT-001').length)
 const reloadHistory = computed(/* 调用 hotReloadHistory(activeAsset.value?.uuid) 并返回调用结果。 */ () => hotReloadHistory(activeAsset.value?.uuid))
-const canRollbackReload = computed(/** 检查当前脚本是否具有可供回滚的先前源代码。 */ () => Boolean(activeAsset.value && Object.prototype.hasOwnProperty.call(scriptHotReloadState.rollbackSources, activeAsset.value.uuid)))
+const canRollbackReload = computed(/** 检查当前脚本是否具有可供回滚的先前源代码。 */ () => Boolean(activeAsset.value && (activeAsset.value.uuid in scriptHotReloadState.rollbackSources) && Object.prototype.hasOwnProperty.call(scriptHotReloadState.rollbackSources, activeAsset.value.uuid)))
 const coverage = computed(/** 在覆盖率修订变化时重新生成脚本覆盖率报告。 */ () => { void scriptCoverageState.revision; return scriptCoverageReport() })
 const projectModuleDiagnostics = computed(/** 分析所有脚本当前草稿的依赖关系并建立模块图。 */ () => analyzeModuleGraph(scripts.value.map(/** 为模块分析生成脚本路径及其依赖列表。 */ asset => ({ uri: asset.path, dependencies: analyzeScript(drafts[asset.uuid] ?? readTextAsset(asset.uuid) ?? '').dependencies }))))
 

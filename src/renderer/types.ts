@@ -1,7 +1,10 @@
 /** 二维渲染接口类型：声明绘制命令、相机、纹理及渲染后端之间的数据约定。 */
+import type { RequiredResourceUploadRequest, RequiredResourceUploadSnapshot, RequiredResourceUploadAck } from './requiredResourceUpload'
+export type { RequiredResourceUploadRequest, RequiredResourceUploadSnapshot, RequiredResourceUploadAck, RequiredResourceVersion } from './requiredResourceUpload'
 import type { Vec2 } from '../world/types'
+import type { TextureFilter } from '../runtime/runtimeAssetRecordContracts'
+export type { TextureFilter } from '../runtime/runtimeAssetRecordContracts'
 
-export type TextureFilter = 'Nearest' | 'Linear'
 export type BlendMode2D = 'Alpha' | 'Additive' | 'Multiply' | 'Screen'
 
 export interface RenderColor {
@@ -97,10 +100,24 @@ export interface RendererStats {
   batches: number
   triangles: number
   sprites: number
+  /** Actual backend pipeline choice and number of sprites issued in instanced draws this frame. */
+  spriteInstancing?: boolean
+  spriteInstanceFallbackReason?: string | null
+  instancedSprites?: number
   shapes: number
   text: number
   textures: number
   gpuMs: number | null
+  /** CPU time after this frame's drawing API calls; null when drawing was suspended. */
+  cpuSubmissionAtMs?: number | null
+  /** GPU command completion observed via a fence; never a display/presentation timestamp. */
+  gpuCompletionObservedAtMs?: number | null
+  gpuCompletedSubmissionId?: number | null
+  gpuSubmissionStatus?: 'untracked' | 'submitted' | 'deferred' | 'suspended' | 'sync-failed'
+  gpuSubmissionFaultReason?: string | null
+  gpuFramesInFlight?: number
+  gpuSubmissionCreditLimit?: number
+  deviceEpoch?: number
   backingWidth?: number
   backingHeight?: number
   antiAliasingSamples?: number
@@ -128,10 +145,20 @@ export interface RendererStats {
 export interface Renderer2D {
   readonly stats: RendererStats
   resize(width: number, height: number, pixelRatio: number): void
+  /** Legacy untracked fixture compatibility. Runtime/Player production must use tryBeginFrame;
+   * remove this entry when direct callers and frozen fixtures migrate to real frame pulses. */
   beginFrame(options: FrameOptions): void
+  /** Production owners admit the newest frame without waiting; false retains the previous surface. */
+  tryBeginFrame?(options: FrameOptions): boolean
   beginCamera(camera: CameraRenderView): void
   /** Optional GPU preparation; CPU decoding is requested by the scene renderer. */
   preloadTexture?(texture: TextureRegion): void
+  /** Revocable WebGL2 texture residency +observed submission-completion lease, not display/HUD FontReady. */
+  requestRequiredResourceUpload?(request: RequiredResourceUploadRequest): RequiredResourceUploadSnapshot
+  pollRequiredResourceUpload?(requestId: string): RequiredResourceUploadSnapshot | null
+  isRequiredResourceUploadCurrent?(ack: RequiredResourceUploadAck): boolean
+  cancelRequiredResourceUpload?(requestId: string): boolean
+  releaseRequiredResourceUpload?(requestId: string): boolean
   submitSprite(command: SpriteRenderCommand): void
   submitShape(command: ShapeRenderCommand): void
   submitText(command: TextRenderCommand): void

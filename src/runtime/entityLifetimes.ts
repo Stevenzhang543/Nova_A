@@ -1,28 +1,47 @@
-/** 实体生命周期代数：用弱引用记录对象的当前生命期，防止对象池复用使旧句柄重新有效。 */
+/** Per-fixed-World lifetime identity; no Vue or hidden platform default. */
 import type { Entity } from '../world/Entity'
-import { toRaw } from 'vue'
-
+export interface EntityLifetimeWorld { readonly entities: readonly Entity[] }
 interface EntityLifetime { generation: number; active: boolean }
-let nextGeneration = 0
-const lifetimes = new WeakMap<Entity, EntityLifetime>()
-
-/** Generations belong to a lifetime, so pooled reuse of the same UUID cannot revive an old handle. */
-/** 为原始实体对象分配单调递增的活动代数；达到 32 位上限时拒绝继续分配。 */ export function beginEntityLifetime(entity: Entity): number {
-  entity = toRaw(entity)
-  if (nextGeneration >= 0xffff_ffff) throw Error('Runtime entity lifetime generations exhausted; restart the player.')
-  const generation = ++nextGeneration
-  lifetimes.set(entity, { generation, active: true })
+export class EntityLifetimeOwner {
+  private nextGeneration = 0
+  private readonly lifetimes = new WeakMap<Entity, EntityLifetime>()
+  constructor(readonly world: EntityLifetimeWorld, readonly unwrapEntity: (entity: Entity) => Entity) {
+    if (!world || typeof unwrapEntity !== 'function') throw new Error('ENTITY_LIFETIME_PORT_REQUIRED: Supply the fixed World and its actual identity port.')
+  }
+  begin(entity: Entity): number {
+  entity = this.unwrapEntity(entity)
+  if (this.nextGeneration >= 0xffff_ffff) throw Error('Runtime entity lifetime generations exhausted; restart the player.')
+  const generation = ++this.nextGeneration
+  this.lifetimes.set(entity, { generation, active: true })
   return generation
 }
-/** 读取实体已有代数；尚未登记时创建新生命期。 */ export function entityLifetimeGeneration(entity: Entity): number {
-  entity = toRaw(entity)
-  return lifetimes.get(entity)?.generation ?? beginEntityLifetime(entity)
+  generation(entity: Entity): number {
+  entity = this.unwrapEntity(entity)
+  return this.lifetimes.get(entity)?.generation ?? this.begin(entity)
 }
-/* 比较 lifetimes.get(toRaw(entity))?.active 与 false，返回严格不等的判断结果。 */ export function entityLifetimeActive(entity: Entity): boolean { return lifetimes.get(toRaw(entity))?.active !== false }
-/** 只返回仍活动的生命期代数，未知或已退休的对象返回 null。 */ export function inspectEntityLifetimeGeneration(entity: Entity): number | null { const lifetime = lifetimes.get(toRaw(entity)); return lifetime?.active ? lifetime.generation : null }
-/** 将已有生命期标为失效；未知对象也登记为失效，避免后续误认为活动对象。 */ export function retireEntityLifetime(entity: Entity): void {
-  entity = toRaw(entity)
-  const lifetime = lifetimes.get(entity)
+  active(entity: Entity): boolean { return this.lifetimes.get(this.unwrapEntity(entity))?.active !== false }
+  inspect(entity: Entity): number | null { const lifetime = this.lifetimes.get(this.unwrapEntity(entity)); return lifetime?.active ? lifetime.generation : null }
+  retire(entity: Entity): void {
+  entity = this.unwrapEntity(entity)
+  const lifetime = this.lifetimes.get(entity)
   if (lifetime) lifetime.active = false
-  else lifetimes.set(entity, { generation: 0, active: false })
+  else this.lifetimes.set(entity, { generation: 0, active: false })
 }
+}
+interface LegacyEntityLifetimePort { getOwner(): EntityLifetimeOwner }
+let legacyPort: LegacyEntityLifetimePort | null = null
+export function installLegacyEntityLifetimePort(port: LegacyEntityLifetimePort): () => void {
+  if (!port || typeof port.getOwner !== 'function') throw new Error('ENTITY_LIFETIME_LEGACY_PORT_REQUIRED')
+  legacyPort = port
+  return () => { if (legacyPort === port) legacyPort = null }
+}
+export function getLegacyEntityLifetimeOwner(): EntityLifetimeOwner {
+  const owner = legacyPort?.getOwner()
+  if (!(owner instanceof EntityLifetimeOwner)) throw new Error('ENTITY_LIFETIME_LEGACY_PORT_NOT_INSTALLED')
+  return owner
+}
+export function beginEntityLifetime(entity: Entity): number { return getLegacyEntityLifetimeOwner().begin(entity) }
+export function entityLifetimeGeneration(entity: Entity): number { return getLegacyEntityLifetimeOwner().generation(entity) }
+export function entityLifetimeActive(entity: Entity): boolean { return getLegacyEntityLifetimeOwner().active(entity) }
+export function inspectEntityLifetimeGeneration(entity: Entity): number | null { return getLegacyEntityLifetimeOwner().inspect(entity) }
+export function retireEntityLifetime(entity: Entity): void { getLegacyEntityLifetimeOwner().retire(entity) }

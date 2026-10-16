@@ -51,3 +51,6 @@ Desktop.ini
 
 # User-provided engine reference; never part of Nova_A source packages.
 /godot-master/
+
+# Workspace agent-tooling skills; third-party content, not Nova_A source.
+/.dsh/

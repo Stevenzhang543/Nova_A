@@ -1,5 +1,6 @@
 /** 运行任务工作线程入口：执行调度器发来的独立计算任务并返回对应结果。 */
-type WorkerJob = { id: number; lease: number; kind: 'parseJson' | 'parseCsv' | 'hash' | 'compare' | 'sampleAnimation' | 'advanceParticles' | 'buildSpatialGrid'; payload: unknown }
+import { measurePayloadBytes } from './performance/byteBounds'
+type WorkerJob = { id: number; lease: number; kind: 'parseJson' | 'parseCsv' | 'hash' | 'compare' | 'sampleAnimation' | 'advanceParticles' | 'buildSpatialGrid'; payload: unknown; outputByteLimit?: number }
 
 /** 在工作线程逐字符解析带引号的 CSV，返回有行列上限的非空记录。 */ function parseCsv(source: string): string[][] {
   const rows: string[][] = []; let row: string[] = [], field = '', quoted = false
@@ -52,6 +53,7 @@ type WorkerJob = { id: number; lease: number; kind: 'parseJson' | 'parseCsv' | '
 
 self.onmessage = /** 按任务类型执行线程计算，并携带原任务身份和租约回传结果或错误文本。 */ (event: MessageEvent<WorkerJob>) => {
   const { id, lease, kind, payload } = event.data
+  const started = performance.now()
   try {
     const result = kind === 'parseJson' ? JSON.parse(String(payload))
       : kind === 'parseCsv' ? parseCsv(String(payload))
@@ -60,6 +62,9 @@ self.onmessage = /** 按任务类型执行线程计算，并携带原任务身�
             : kind === 'sampleAnimation' ? sampleAnimation(payload)
               : kind === 'advanceParticles' ? advanceParticles(payload)
                 : buildSpatialGrid(payload)
-    self.postMessage({ id, lease, result })
-  } catch (error) { self.postMessage({ id, lease, error: error instanceof Error ? error.message : String(error) }) }
+    const outputByteLimit = event.data.outputByteLimit ?? 2 * 1024 * 1024 * 1024
+    if (!Number.isSafeInteger(outputByteLimit) || outputByteLimit < 0 || outputByteLimit > 2 * 1024 * 1024 * 1024) throw new Error('Invalid worker output byte bound')
+    measurePayloadBytes(result, outputByteLimit)
+    self.postMessage({ id, lease, result, executionMs: Math.max(0, performance.now() - started) })
+  } catch (error) { self.postMessage({ id, lease, error: error instanceof Error ? error.message : String(error), executionMs: Math.max(0, performance.now() - started) }) }
 }

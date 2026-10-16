@@ -10,8 +10,8 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const root = dirname(dirname(fileURLToPath(import.meta.url))), temporary = await mkdtemp(join(tmpdir(), 'nova-module-bundles-')), checks = []
 const check = /** 执行模块验证操作，捕获错误并登记通过或失败。 */ (id, operation) => { try { operation(); checks.push({ id, status: 'passed' }) } catch (error) { checks.push({ id, status: 'failed', error: error.message }) } }
-const runtimeFile = join(root, 'src/runtime/GameplayRuntime.ts'), runtimeText = await readFile(runtimeFile, 'utf8')
-const ast = ts.createSourceFile(runtimeFile, runtimeText, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS)
+const runtimeFile = join(root, 'src/runtime/GameplayRuntime.ts'), implementationFile = join(root, 'src/runtime/GameplayRuntimeCore.ts'), runtimeText = await readFile(implementationFile, 'utf8')
+const ast = ts.createSourceFile(implementationFile, runtimeText, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS)
 const imports = new Map()
 for (const statement of ast.statements.filter(ts.isImportDeclaration)) { const path = statement.moduleSpecifier.text, names = statement.importClause?.namedBindings && ts.isNamedImports(statement.importClause.namedBindings) ? statement.importClause.namedBindings.elements.map(/* 当 element.propertyName?.text 为 null 或 undefined 时返回 element.name.text，否则保留左侧值。 */ element => element.propertyName?.text ?? element.name.text) : []; imports.set(path, [...new Set([...(imports.get(path) ?? []), ...names])]) }
 const assets = new Map(), registrations = []
@@ -19,7 +19,7 @@ globalThis.__novaModuleFixture = { resolveAsset: /* 当 [...assets.values()].fin
 try {
   // Execute production GameplayRuntime and AssetDatabase, including their UUID-versus-path resolution boundary.
   // Only unrelated scene/audio/network dependencies are stubs; graph compilation, lexer and VM remain real.
-  await build({ configFile: false, root, logLevel: 'error', ssr: { noExternal: true }, plugins: [{ name: 'isolated-gameplay-module-fixture', enforce: 'pre', /** 将游戏运行时中指定依赖重定向到隔离的模块测试替身。 */ resolveId(source, importer) { if (importer?.replaceAll('\\', '/').endsWith('/src/runtime/GameplayRuntime.ts') && !['./scriptModules', '../visual/graphCompiler', '../assets/AssetDatabase', './mediaClock'].includes(source) && imports.has(source)) return `\0module-fixture:${source}` }, /** 为虚拟测试模块生成指定导出的替身源码，保留资产访问和调试注册的代理调用。 */ load(id) { if (!id.startsWith('\0module-fixture:')) return; return imports.get(id.slice('\0module-fixture:'.length)).map(/** 按导出名称生成资产代理、空类、合约分析器或空函数的测试源码。 */ name => {
+  await build({ configFile: false, root, logLevel: 'error', ssr: { noExternal: true }, plugins: [{ name: 'isolated-gameplay-module-fixture', enforce: 'pre', /** 将游戏运行时中指定依赖重定向到隔离的模块测试替身。 */ resolveId(source, importer) { if (importer?.replaceAll('\\', '/').endsWith('/src/runtime/GameplayRuntimeCore.ts') && !['./scriptModules', './scriptServices', './eventSheetReader', './mediaClock'].includes(source) && imports.has(source)) return `\0module-fixture:${source}` }, /** 为虚拟测试模块生成指定导出的替身源码，保留资产访问和调试注册的代理调用。 */ load(id) { if (!id.startsWith('\0module-fixture:')) return; return imports.get(id.slice('\0module-fixture:'.length)).map(/** 按导出名称生成资产代理、空类、合约分析器或空函数的测试源码。 */ name => {
     if (['resolveAsset', 'readTextAsset', 'registerGraphDebugDocument'].includes(name)) return `export const ${name} = (...args) => globalThis.__novaModuleFixture.${name}(...args);`
     if (['InputManager', 'RuntimeTime'].includes(name)) return `export class ${name} {}`
     if (name === 'parseScriptContract') return `export const parseScriptContract = source => ({ valid: !source.includes('INVALID_CONTRACT'), diagnostics: [{ severity: 'error', code: 'fixture-contract', line: 1, message: 'rejected' }], contract: {} });`

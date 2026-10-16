@@ -24,6 +24,7 @@ pub const MAX_SCRIPT_COMMANDS: usize = 4_096;
 pub const MAX_SCRIPT_LOGS: usize = 512;
 pub const CURRENT_SCRIPT_API_VERSION: u8 = 2;
 pub const MINIMUM_SCRIPT_API_VERSION: u8 = 1;
+pub const MAX_SCRIPT_INSTANCES: usize = 100_000;
 
 // 提供新脚本上下文使用的当前脚本接口版本。
 fn current_script_api_version() -> u8 {
@@ -95,6 +96,91 @@ pub struct SceneEntitySnapshot {
     pub components: Vec<String>,
     #[serde(default)]
     pub position: [f64; 2],
+}
+
+/// A read-only query projection published by the world Owner at a phase boundary.
+/// It is never a simulation world and cannot commit gameplay writes.
+#[derive(Clone, Debug, Default, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ScriptWorldSnapshot {
+    pub protocol_version: u16,
+    pub entity_generations: BTreeMap<String, u32>,
+    pub entities: BTreeMap<String, String>,
+    pub scene_entities: Vec<SceneEntitySnapshot>,
+}
+
+#[derive(Debug, Default)]
+pub struct ScriptWorldView {
+    epoch: u32,
+    revision: u32,
+    snapshot: ScriptWorldSnapshot,
+    index: BTreeMap<String, usize>,
+}
+
+impl ScriptWorldView {
+    fn from_snapshot(
+        epoch: u32,
+        revision: u32,
+        snapshot: ScriptWorldSnapshot,
+    ) -> Result<Self, String> {
+        if snapshot.protocol_version != 1 {
+            return Err("unsupported script world context version".into());
+        }
+        if snapshot.scene_entities.len() > MAX_SCRIPT_INSTANCES
+            || snapshot.entities.len() > MAX_SCRIPT_INSTANCES
+            || snapshot.entity_generations.len() > MAX_SCRIPT_INSTANCES
+        {
+            return Err("script query world capacity exceeded".into());
+        }
+        let mut index = BTreeMap::new();
+        for (n, entity) in snapshot.scene_entities.iter().enumerate() {
+            Self::validate_entity(entity)?;
+            if snapshot.entity_generations.get(&entity.uuid) != Some(&entity.generation)
+                || index.insert(entity.uuid.clone(), n).is_some()
+            {
+                return Err("invalid script world entity generation or duplicate identity".into());
+            }
+        }
+        if snapshot
+            .entity_generations
+            .iter()
+            .any(|(id, generation)| id.is_empty() || *generation == 0)
+            || snapshot
+                .entities
+                .values()
+                .any(|id| !snapshot.entity_generations.contains_key(id))
+        {
+            return Err("invalid script world lookup identity".into());
+        }
+        Ok(Self {
+            epoch,
+            revision,
+            snapshot,
+            index,
+        })
+    }
+
+    fn validate_entity(entity: &SceneEntitySnapshot) -> Result<(), String> {
+        if entity.uuid.is_empty()
+            || entity.generation == 0
+            || entity.position.iter().any(|value| !value.is_finite())
+        {
+            return Err("invalid script world entity snapshot".into());
+        }
+        Ok(())
+    }
+
+    fn entity_from_handle(&self, handle: Map) -> Option<&SceneEntitySnapshot> {
+        let (id, generation) = target_from_handle(handle)?;
+        let entity = self.snapshot.scene_entities.get(*self.index.get(&id)?)?;
+        (generation
+            == if entity.generation == 0 {
+                handle_generation(&id)
+            } else {
+                entity.generation
+            })
+        .then_some(entity)
+    }
 }
 
 #[derive(Clone, Debug, Default, Deserialize)]
@@ -197,6 +283,8 @@ pub struct CharacterSnapshot {
 #[derive(Clone, Debug, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ScriptContext {
+    #[serde(skip)]
+    pub shared_world: Option<Rc<RefCell<ScriptWorldView>>>,
     #[serde(default = "current_script_api_version")]
     pub api_version: u8,
     pub entity: String,
@@ -556,9 +644,43 @@ struct CompiledScript {
     ast: AST,
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+struct ScriptInstanceKey {
+    epoch: u32,
+    entity: String,
+    generation: u32,
+    script: String,
+}
+
+struct ScriptInstance {
+    program: Rc<CompiledScript>,
+    scope: Scope<'static>,
+    initialized: bool,
+}
+
+#[derive(Default)]
 pub struct ScriptRuntime {
     scripts: BTreeMap<String, Rc<CompiledScript>>,
+    instances: BTreeMap<ScriptInstanceKey, ScriptInstance>,
+    instance_epoch: Option<u32>,
+    generations: BTreeMap<String, u32>,
+    retired_generations: BTreeMap<String, u32>,
+    world_view: Option<Rc<RefCell<ScriptWorldView>>>,
+}
+
+impl Clone for ScriptRuntime {
+    /// Candidates share immutable ASTs. Live scopes move only at the final owner commit;
+    /// cloning a Rhai closure's shared captured values would alias instance state.
+    fn clone(&self) -> Self {
+        Self {
+            scripts: self.scripts.clone(),
+            instances: BTreeMap::new(),
+            instance_epoch: self.instance_epoch,
+            generations: self.generations.clone(),
+            retired_generations: self.retired_generations.clone(),
+            world_view: self.world_view.clone(),
+        }
+    }
 }
 
 impl ScriptRuntime {
@@ -647,6 +769,7 @@ impl ScriptRuntime {
 
     // 移除指定脚本的缓存条目并返回是否存在。
     pub fn remove(&mut self, script_id: &str) -> bool {
+        self.reset_script_instances(script_id);
         self.scripts.remove(script_id).is_some()
     }
 
@@ -663,6 +786,262 @@ impl ScriptRuntime {
             .ok_or_else(/* 计算并返回 format ! ("script is not compiled: {script_id}")，用于当前 execute_cached 流程。 */ || format!("script is not compiled: {script_id}"))?;
         execute_prepared(&compiled.prepared, &compiled.ast, function, context)
     }
+
+    /// Live gameplay API. Tools keep the explicitly stateless execute/execute_cached path.
+    pub fn execute_instance(
+        &mut self,
+        script_id: &str,
+        function: &str,
+        epoch: u32,
+        generation: u32,
+        context: ScriptContext,
+    ) -> Result<ScriptExecution, String> {
+        if epoch == 0 || generation == 0 || context.entity.is_empty() {
+            return Err("invalid live script instance identity".into());
+        }
+        match self.instance_epoch {
+            None => self.instance_epoch = Some(epoch),
+            Some(current) if current != epoch => return Err("stale script world epoch".into()),
+            _ => {}
+        }
+        let context_generation = context
+            .shared_world
+            .as_ref()
+            .map(|world| {
+                world
+                    .borrow()
+                    .snapshot
+                    .entity_generations
+                    .get(&context.entity)
+                    .copied()
+            })
+            .unwrap_or_else(|| context.entity_generations.get(&context.entity).copied());
+        if context_generation != Some(generation) {
+            return Err("stale script entity generation".into());
+        }
+        if self
+            .retired_generations
+            .get(&context.entity)
+            .is_some_and(|retired| generation <= *retired)
+            || self
+                .generations
+                .get(&context.entity)
+                .is_some_and(|current| generation < *current)
+        {
+            return Err("stale script entity generation".into());
+        }
+        let program = self
+            .scripts
+            .get(script_id)
+            .cloned()
+            .ok_or_else(|| format!("script is not compiled: {script_id}"))?;
+        if self
+            .generations
+            .get(&context.entity)
+            .is_some_and(|current| generation > *current)
+        {
+            self.instances.retain(|key, _| key.entity != context.entity);
+        }
+        self.generations.insert(context.entity.clone(), generation);
+        let key = ScriptInstanceKey {
+            epoch,
+            entity: context.entity.clone(),
+            generation,
+            script: script_id.to_owned(),
+        };
+        let changed = self
+            .instances
+            .get(&key)
+            .is_some_and(|instance| !Rc::ptr_eq(&instance.program, &program));
+        if changed {
+            self.instances.remove(&key);
+        }
+        if !self.instances.contains_key(&key) {
+            if self.instances.len() >= MAX_SCRIPT_INSTANCES {
+                return Err("script instance capacity exhausted".into());
+            }
+            self.instances.insert(
+                key.clone(),
+                ScriptInstance {
+                    program: Rc::clone(&program),
+                    scope: Scope::new(),
+                    initialized: false,
+                },
+            );
+        }
+        let instance = self
+            .instances
+            .get_mut(&key)
+            .expect("inserted live script instance");
+        if instance.initialized {
+            for exported in &program.prepared.exports {
+                if let Some(value) = context
+                    .properties
+                    .get(&exported.name)
+                    .and_then(json_to_dynamic)
+                {
+                    instance.scope.set_value(&exported.name, value);
+                }
+            }
+        }
+        execute_in_scope(
+            &program.prepared,
+            &program.ast,
+            function,
+            context,
+            &mut instance.scope,
+            &mut instance.initialized,
+        )
+    }
+
+    pub fn clear_instances(&mut self, epoch: u32) -> Result<(), String> {
+        if epoch == 0 || self.instance_epoch.is_some_and(|current| epoch < current) {
+            return Err("stale script world epoch".into());
+        }
+        self.instances.clear();
+        self.generations.clear();
+        self.retired_generations.clear();
+        self.world_view = None;
+        self.instance_epoch = Some(epoch);
+        Ok(())
+    }
+
+    pub fn publish_world_context(
+        &mut self,
+        epoch: u32,
+        revision: u32,
+        snapshot: ScriptWorldSnapshot,
+    ) -> Result<(), String> {
+        if self.instance_epoch != Some(epoch) || epoch == 0 {
+            return Err("stale script world epoch".into());
+        }
+        if revision == 0
+            || self
+                .world_view
+                .as_ref()
+                .is_some_and(|world| revision <= world.borrow().revision)
+        {
+            return Err("stale script world revision".into());
+        }
+        let view = ScriptWorldView::from_snapshot(epoch, revision, snapshot)?;
+        self.world_view = Some(Rc::new(RefCell::new(view)));
+        Ok(())
+    }
+
+    /// Deltas describe already committed Owner writes. Validate the complete batch before mutation.
+    pub fn apply_world_delta(
+        &mut self,
+        epoch: u32,
+        base_revision: u32,
+        revision: u32,
+        changes: Vec<SceneEntitySnapshot>,
+    ) -> Result<(), String> {
+        let world = self
+            .world_view
+            .as_ref()
+            .ok_or("script world context is not published")?;
+        let mut world = world.borrow_mut();
+        if world.epoch != epoch || self.instance_epoch != Some(epoch) {
+            return Err("stale script world epoch".into());
+        }
+        if world.revision != base_revision || base_revision.checked_add(1) != Some(revision) {
+            return Err("stale script world revision".into());
+        }
+        if changes.len() > MAX_SCRIPT_INSTANCES {
+            return Err("script world delta capacity exceeded".into());
+        }
+        let mut ids = std::collections::BTreeSet::new();
+        for entity in &changes {
+            ScriptWorldView::validate_entity(entity)?;
+            let old = world
+                .index
+                .get(&entity.uuid)
+                .and_then(|n| world.snapshot.scene_entities.get(*n))
+                .ok_or("script world delta needs a structural publication")?;
+            if old.generation != entity.generation
+                || old.name != entity.name
+                || !ids.insert(&entity.uuid)
+            {
+                return Err("script world delta identity changed or duplicated".into());
+            }
+        }
+        for entity in changes {
+            let n = world.index[&entity.uuid];
+            world.snapshot.scene_entities[n] = entity;
+        }
+        world.revision = revision;
+        Ok(())
+    }
+
+    pub fn execute_instance_context(
+        &mut self,
+        script_id: &str,
+        function: &str,
+        epoch: u32,
+        revision: u32,
+        generation: u32,
+        mut context: ScriptContext,
+    ) -> Result<ScriptExecution, String> {
+        let world = self
+            .world_view
+            .as_ref()
+            .ok_or("script world context is not published")?;
+        {
+            let view = world.borrow();
+            if view.epoch != epoch {
+                return Err("stale script world epoch".into());
+            }
+            if view.revision != revision {
+                return Err("stale script world revision".into());
+            }
+        }
+        if !context.entities.is_empty()
+            || !context.entity_generations.is_empty()
+            || !context.scene_entities.is_empty()
+        {
+            return Err("small script context must reference the published world".into());
+        }
+        context.shared_world = Some(Rc::clone(world));
+        self.execute_instance(script_id, function, epoch, generation, context)
+    }
+
+    pub fn remove_entity_instances(&mut self, epoch: u32, entity: &str) -> bool {
+        if self.instance_epoch != Some(epoch) {
+            return false;
+        }
+        if let Some(generation) = self.generations.get(entity).copied() {
+            self.retired_generations
+                .insert(entity.to_owned(), generation);
+        }
+        let before = self.instances.len();
+        self.instances.retain(|key, _| key.entity != entity);
+        before != self.instances.len()
+    }
+
+    pub fn reset_script_instances(&mut self, script: &str) {
+        self.instances.retain(|key, _| key.script != script);
+    }
+
+    /// Called once after candidate validation. Only identical compiled revisions retain private state.
+    pub fn take_instances_from(&mut self, source: &mut Self) -> Result<usize, String> {
+        if self.instance_epoch != source.instance_epoch {
+            return Err("script candidate epoch mismatch".into());
+        }
+        if !self.instances.is_empty() {
+            return Err("script candidate executed before owner commit".into());
+        }
+        let instances = std::mem::take(&mut source.instances);
+        for (key, instance) in instances {
+            if self
+                .scripts
+                .get(&key.script)
+                .is_some_and(|program| Rc::ptr_eq(program, &instance.program))
+            {
+                self.instances.insert(key, instance);
+            }
+        }
+        Ok(self.instances.len())
+    }
 }
 
 // 建立受限宿主引擎，恢复导出状态，执行回调并汇总命令和属性。
@@ -672,23 +1051,64 @@ fn execute_prepared(
     function: &str,
     context: ScriptContext,
 ) -> Result<ScriptExecution, String> {
+    let mut scope = Scope::new();
+    let mut initialized = false;
+    execute_in_scope(
+        prepared,
+        ast,
+        function,
+        context,
+        &mut scope,
+        &mut initialized,
+    )
+}
+
+fn execute_in_scope(
+    prepared: &PreparedScript,
+    ast: &AST,
+    function: &str,
+    mut context: ScriptContext,
+    scope: &mut Scope<'static>,
+    initialized: &mut bool,
+) -> Result<ScriptExecution, String> {
+    // Legacy tools still own their snapshot; host closures share one projection instead of cloning it.
+    if context.shared_world.is_none() {
+        let snapshot = ScriptWorldSnapshot {
+            protocol_version: 1,
+            entity_generations: std::mem::take(&mut context.entity_generations),
+            entities: std::mem::take(&mut context.entities),
+            scene_entities: std::mem::take(&mut context.scene_entities),
+        };
+        let mut index = BTreeMap::new();
+        for (n, entity) in snapshot.scene_entities.iter().enumerate() {
+            index.entry(entity.uuid.clone()).or_insert(n);
+        }
+        context.shared_world = Some(Rc::new(RefCell::new(ScriptWorldView {
+            snapshot,
+            index,
+            ..ScriptWorldView::default()
+        })));
+    }
     let output = Rc::new(RefCell::new(HostOutput::default()));
     let engine = engine_with_host(&context, Rc::clone(&output));
-    let mut scope = Scope::new();
-    if let Err(error) = engine.run_ast_with_scope(&mut scope, ast) {
-        if let Some(limit) = host_output_limit_error(&output) {
-            return Err(limit);
+    if !*initialized {
+        if let Err(error) = engine.run_ast_with_scope(scope, ast) {
+            scope.clear();
+            if let Some(limit) = host_output_limit_error(&output) {
+                return Err(limit);
+            }
+            return Err(error.to_string());
         }
-        return Err(error.to_string());
+        *initialized = true;
     }
-    if let Err(error) = call_lifecycle(&engine, &mut scope, ast, function, &context) {
+    if let Err(error) = call_lifecycle(&engine, scope, ast, function, &context) {
         if let Some(limit) = host_output_limit_error(&output) {
             return Err(limit);
         }
         return Err(error);
     }
 
-    let properties = collect_properties(&scope, &prepared.exports, &context.properties);
+    let properties = collect_properties(scope, &prepared.exports, &context.properties);
     let mut output = output.borrow_mut();
     if output.commands.len() > MAX_SCRIPT_COMMANDS {
         return Err(format!(
@@ -823,7 +1243,15 @@ fn engine_with_host(context: &ScriptContext, output: Rc<RefCell<HostOutput>>) ->
         symbol.split('_').next().unwrap_or(symbol).to_owned()
     });
     let entity = context.entity.clone();
-    let generation = context.entity_generations.get(&entity).copied();
+    let generation = context
+        .shared_world
+        .as_ref()
+        .expect("host world projection")
+        .borrow()
+        .snapshot
+        .entity_generations
+        .get(&entity)
+        .copied();
     engine.register_fn(
         "entity_handle",
         /* 计算并返回 entity_handle_map (& entity , generation)，用于当前 engine_with_host 流程。 */
@@ -835,17 +1263,34 @@ fn engine_with_host(context: &ScriptContext, output: Rc<RefCell<HostOutput>>) ->
         /* 复制 entity_name . clone () 的结果，避免向调用方暴露可变宿主引用。 */
         move || entity_name.clone(),
     );
-    let entities = context.entities.clone();
-    engine.register_fn("find_entity", /* 按 entities . get (name) . cloned () . unwrap_or_default () 读取或转换可选值，保留转换失败分支。 */ move |name: &str| {
-        entities.get(name).cloned().unwrap_or_default()
-    });
-    let entities = context.entities.clone();
-    let generations = context.entity_generations.clone();
-    engine.register_fn("find_entity_handle", /* 按名称查找实体并附上生命周期代数；不存在时返回失效句柄。 */ move |name: &str| {
-        entities
+    let world = Rc::clone(
+        context
+            .shared_world
+            .as_ref()
+            .expect("host world projection"),
+    );
+    engine.register_fn("find_entity", move |name: &str| {
+        world
+            .borrow()
+            .snapshot
+            .entities
             .get(name)
-            .map(/* 按 entity_handle_map (id , generations . get (id) . copied ()) 读取或转换可选值，保留转换失败分支。 */ |id| entity_handle_map(id, generations.get(id).copied()))
-            .unwrap_or_else(/* 计算并返回 handle_map (false , "Entity" , "" , "Entity not found")，用于当前 engine_with_host 流程。 */ || handle_map(false, "Entity", "", "Entity not found"))
+            .cloned()
+            .unwrap_or_default()
+    });
+    let world = Rc::clone(
+        context
+            .shared_world
+            .as_ref()
+            .expect("host world projection"),
+    );
+    engine.register_fn("find_entity_handle", move |name: &str| {
+        let view = world.borrow();
+        view.snapshot
+            .entities
+            .get(name)
+            .map(|id| entity_handle_map(id, view.snapshot.entity_generations.get(id).copied()))
+            .unwrap_or_else(|| handle_map(false, "Entity", "", "Entity not found"))
     });
     let components = context.components.clone();
     engine.register_fn("has_component", /* 判断 components . iter () . any (| component | component == kind) 是否成立，供过滤或有效性检查使用。 */ move |kind: &str| {
@@ -1170,23 +1615,6 @@ fn bounded_query_handles<'a>(
         .collect()
 }
 
-// 在当前场景快照中解析有效实体句柄，拒绝失效代数。
-fn scene_entity_from_handle(
-    handle: Map,
-    entities: &[SceneEntitySnapshot],
-) -> Option<&SceneEntitySnapshot> {
-    let (id, generation) = target_from_handle(handle)?;
-    entities.iter().find(/* 判断 entity . uuid == id && generation == if entity . generation == 0 { handle_generation (& id) } else { entity . generation } 是否成立，供过滤或有效性检查使用。 */ |entity| {
-        entity.uuid == id
-            && generation
-                == if entity.generation == 0 {
-                    handle_generation(&id)
-                } else {
-                    entity.generation
-                }
-    })
-}
-
 // 注册时间、帧号和固定步相关只读脚本接口。
 fn register_time_api(engine: &mut Engine, context: &ScriptContext) {
     let time = context.time.clone();
@@ -1252,73 +1680,135 @@ fn register_entity_api(engine: &mut Engine, context: &ScriptContext) {
             map
         },
     );
-    let entities = context.scene_entities.clone();
-    engine.register_fn("query_tag", /* 判断 bounded_query_handles (entities . iter () . filter (| entity | entity . tags . iter () . any (| value | value == tag)) , limit ,) 是否成立，供过滤或有效性检查使用。 */ move |tag: &str, limit: INT| {
+    let world = Rc::clone(
+        context
+            .shared_world
+            .as_ref()
+            .expect("host world projection"),
+    );
+    engine.register_fn("query_tag", move |tag: &str, limit: INT| {
         bounded_query_handles(
-            entities
+            world
+                .borrow()
+                .snapshot
+                .scene_entities
                 .iter()
-                .filter(/* 判断 entity . tags . iter () . any (| value | value == tag) 是否成立，供过滤或有效性检查使用。 */ |entity| entity.tags.iter().any(/* 判断 value == tag 是否成立，供过滤或有效性检查使用。 */ |value| value == tag)),
+                .filter(|entity| entity.tags.iter().any(|value| value == tag)),
             limit,
         )
     });
-    let entities = context.scene_entities.clone();
-    engine.register_fn("query_group", /* 判断 bounded_query_handles (entities . iter () . filter (| entity | entity . groups . iter () . any (| value | value == group)) , limit ,) 是否成立，供过滤或有效性检查使用。 */ move |group: &str, limit: INT| {
+    let world = Rc::clone(
+        context
+            .shared_world
+            .as_ref()
+            .expect("host world projection"),
+    );
+    engine.register_fn("query_group", move |group: &str, limit: INT| {
         bounded_query_handles(
-            entities
+            world
+                .borrow()
+                .snapshot
+                .scene_entities
                 .iter()
-                .filter(/* 判断 entity . groups . iter () . any (| value | value == group) 是否成立，供过滤或有效性检查使用。 */ |entity| entity.groups.iter().any(/* 判断 value == group 是否成立，供过滤或有效性检查使用。 */ |value| value == group)),
+                .filter(|entity| entity.groups.iter().any(|value| value == group)),
             limit,
         )
     });
-    let entities = context.scene_entities.clone();
-    engine.register_fn("query_component", /* 判断 bounded_query_handles (entities . iter () . filter (| entity | entity . components . iter () . any (| value | value == kind)) , limit ,) 是否成立，供过滤或有效性检查使用。 */ move |kind: &str, limit: INT| {
+    let world = Rc::clone(
+        context
+            .shared_world
+            .as_ref()
+            .expect("host world projection"),
+    );
+    engine.register_fn("query_component", move |kind: &str, limit: INT| {
         bounded_query_handles(
-            entities
+            world
+                .borrow()
+                .snapshot
+                .scene_entities
                 .iter()
-                .filter(/* 判断 entity . components . iter () . any (| value | value == kind) 是否成立，供过滤或有效性检查使用。 */ |entity| entity.components.iter().any(/* 判断 value == kind 是否成立，供过滤或有效性检查使用。 */ |value| value == kind)),
+                .filter(|entity| entity.components.iter().any(|value| value == kind)),
             limit,
         )
     });
-    let entities = context.scene_entities.clone();
+    let world = Rc::clone(
+        context
+            .shared_world
+            .as_ref()
+            .expect("host world projection"),
+    );
     engine.register_fn(
         "query_radius",
-        /* 拒绝非法圆心与半径，按平方距离筛选实体并限制返回句柄数量。 */ move |x: FLOAT, y: FLOAT, radius: FLOAT, limit: INT| {
+        move |x: FLOAT, y: FLOAT, radius: FLOAT, limit: INT| {
             if !x.is_finite() || !y.is_finite() || !radius.is_finite() || radius < 0.0 {
                 return Array::new();
             }
             let radius_squared = radius.min(1.0e12).powi(2);
             bounded_query_handles(
-                entities.iter().filter(/* 判断 let dx = entity . position [0] - x ; let dy = entity . position [1] - y ; dx * dx + dy * dy <= radius_squared 是否成立，供过滤或有效性检查使用。 */ |entity| {
-                    let dx = entity.position[0] - x;
-                    let dy = entity.position[1] - y;
-                    dx * dx + dy * dy <= radius_squared
-                }),
+                world
+                    .borrow()
+                    .snapshot
+                    .scene_entities
+                    .iter()
+                    .filter(|entity| {
+                        let dx = entity.position[0] - x;
+                        let dy = entity.position[1] - y;
+                        dx * dx + dy * dy <= radius_squared
+                    }),
                 limit,
             )
         },
     );
-    let entities = context.scene_entities.clone();
-    engine.register_fn("entity_name_on", /* 复制 scene_entity_from_handle (handle , & entities) . map (| entity | entity . name . clone ()) . unwrap_or_default () 的结果，避免向调用方暴露可变宿主引用。 */ move |handle: Map| {
-        scene_entity_from_handle(handle, &entities)
-            .map(/* 复制 entity . name . clone () 的结果，避免向调用方暴露可变宿主引用。 */ |entity| entity.name.clone())
+    let world = Rc::clone(
+        context
+            .shared_world
+            .as_ref()
+            .expect("host world projection"),
+    );
+    engine.register_fn("entity_name_on", move |handle: Map| {
+        world
+            .borrow()
+            .entity_from_handle(handle)
+            .map(|entity| entity.name.clone())
             .unwrap_or_default()
     });
-    let entities = context.scene_entities.clone();
-    engine.register_fn("entity_enabled_on", /* 计算并返回 scene_entity_from_handle (handle , & entities) . map (| entity | entity . enabled) . unwrap_or (false)，用于当前 register_entity_api 流程。 */ move |handle: Map| {
-        scene_entity_from_handle(handle, &entities)
-            .map(/* 返回当前快照值 entity . enabled。 */ |entity| entity.enabled)
+    let world = Rc::clone(
+        context
+            .shared_world
+            .as_ref()
+            .expect("host world projection"),
+    );
+    engine.register_fn("entity_enabled_on", move |handle: Map| {
+        world
+            .borrow()
+            .entity_from_handle(handle)
+            .map(|entity| entity.enabled)
             .unwrap_or(false)
     });
-    let entities = context.scene_entities.clone();
-    engine.register_fn("entity_position_x_on", /* 计算并返回 scene_entity_from_handle (handle , & entities) . map (| entity | entity . position [0]) . unwrap_or (0.0)，用于当前 register_entity_api 流程。 */ move |handle: Map| {
-        scene_entity_from_handle(handle, &entities)
-            .map(/* 计算并返回 entity . position [0]，用于当前 register_entity_api 流程。 */ |entity| entity.position[0])
+    let world = Rc::clone(
+        context
+            .shared_world
+            .as_ref()
+            .expect("host world projection"),
+    );
+    engine.register_fn("entity_position_x_on", move |handle: Map| {
+        world
+            .borrow()
+            .entity_from_handle(handle)
+            .map(|entity| entity.position[0])
             .unwrap_or(0.0)
     });
-    let entities = context.scene_entities.clone();
-    engine.register_fn("entity_position_y_on", /* 计算并返回 scene_entity_from_handle (handle , & entities) . map (| entity | entity . position [1]) . unwrap_or (0.0)，用于当前 register_entity_api 流程。 */ move |handle: Map| {
-        scene_entity_from_handle(handle, &entities)
-            .map(/* 计算并返回 entity . position [1]，用于当前 register_entity_api 流程。 */ |entity| entity.position[1])
+    let world = Rc::clone(
+        context
+            .shared_world
+            .as_ref()
+            .expect("host world projection"),
+    );
+    engine.register_fn("entity_position_y_on", move |handle: Map| {
+        world
+            .borrow()
+            .entity_from_handle(handle)
+            .map(|entity| entity.position[1])
             .unwrap_or(0.0)
     });
     let rigid_body = context.rigid_body.clone();
@@ -3354,6 +3844,109 @@ fn parse_export_value(value: &str) -> Option<Value> {
 
 #[cfg(test)]
 mod tests {
+    fn phase_world() -> ScriptWorldSnapshot {
+        ScriptWorldSnapshot {
+            protocol_version: 1,
+            entities: BTreeMap::from([
+                ("Target".into(), "target".into()),
+                ("Self".into(), "self".into()),
+            ]),
+            entity_generations: BTreeMap::from([("target".into(), 2), ("self".into(), 1)]),
+            scene_entities: vec![
+                SceneEntitySnapshot {
+                    uuid: "target".into(),
+                    generation: 2,
+                    name: "Target".into(),
+                    enabled: true,
+                    tags: vec!["old".into()],
+                    position: [3.0, 4.0],
+                    ..Default::default()
+                },
+                SceneEntitySnapshot {
+                    uuid: "self".into(),
+                    generation: 1,
+                    name: "Self".into(),
+                    enabled: true,
+                    ..Default::default()
+                },
+            ],
+        }
+    }
+
+    #[test]
+    fn phase_context_references_shared_world_and_observes_committed_deltas() {
+        let mut runtime = ScriptRuntime::new();
+        runtime.clear_instances(1).unwrap();
+        runtime.upsert("query", "fn update(dt) { let e = find_entity_handle(\"Target\"); print(entity_position_x_on(e)); print(query_tag(\"new\", 4).len()); }").unwrap();
+        runtime.publish_world_context(1, 1, phase_world()).unwrap();
+        let small = || ScriptContext {
+            entity: "self".into(),
+            ..Default::default()
+        };
+        assert_eq!(
+            runtime
+                .execute_instance_context("query", "update", 1, 1, 1, small())
+                .unwrap()
+                .logs[0]
+                .message,
+            "3.0"
+        );
+        let mut delta = phase_world().scene_entities.remove(0);
+        delta.position = [99.0, 4.0];
+        delta.tags = vec!["new".into()];
+        runtime.apply_world_delta(1, 1, 2, vec![delta]).unwrap();
+        let after = runtime
+            .execute_instance_context("query", "update", 1, 2, 1, small())
+            .unwrap();
+        assert_eq!(after.logs[0].message, "99.0");
+        assert_eq!(after.logs[1].message, "1");
+        assert!(runtime
+            .execute_instance_context("query", "update", 1, 1, 1, small())
+            .unwrap_err()
+            .contains("revision"));
+        assert!(runtime
+            .execute_instance_context("query", "update", 2, 2, 1, small())
+            .unwrap_err()
+            .contains("epoch"));
+        let mut full = small();
+        full.scene_entities = phase_world().scene_entities;
+        assert!(runtime
+            .execute_instance_context("query", "update", 1, 2, 1, full)
+            .unwrap_err()
+            .contains("small"));
+    }
+
+    #[test]
+    fn phase_delta_validation_is_atomic_and_structural_changes_need_publication() {
+        let mut runtime = ScriptRuntime::new();
+        runtime.clear_instances(1).unwrap();
+        runtime.publish_world_context(1, 1, phase_world()).unwrap();
+        let mut valid = phase_world().scene_entities.remove(0);
+        valid.position[0] = 10.0;
+        let mut invalid = valid.clone();
+        invalid.uuid = "missing".into();
+        assert!(runtime
+            .apply_world_delta(1, 1, 2, vec![valid.clone(), invalid])
+            .is_err());
+        let view = runtime.world_view.as_ref().unwrap().borrow();
+        assert_eq!(view.revision, 1);
+        assert_eq!(view.snapshot.scene_entities[0].position[0], 3.0);
+        drop(view);
+        let mut bad = valid.clone();
+        bad.position[0] = f64::NAN;
+        assert!(runtime.apply_world_delta(1, 1, 2, vec![bad]).is_err());
+        assert!(runtime
+            .apply_world_delta(1, 0, 1, vec![valid.clone()])
+            .is_err());
+        assert!(runtime.publish_world_context(1, 1, phase_world()).is_err());
+        assert!(runtime.publish_world_context(2, 2, phase_world()).is_err());
+        let mut replacement = phase_world();
+        replacement.scene_entities[0].generation = 3;
+        replacement.entity_generations.insert("target".into(), 3);
+        runtime.publish_world_context(1, 2, replacement).unwrap();
+        assert!(runtime.apply_world_delta(1, 2, 3, vec![valid]).is_err());
+    }
+
     use super::*;
 
     // 构造脚本沙箱测试使用的宿主上下文。
@@ -3375,6 +3968,132 @@ mod tests {
             },
             ..ScriptContext::default()
         }
+    }
+
+    fn live_context(entity: &str, generation: u32) -> ScriptContext {
+        let mut value = context();
+        value.entity = entity.into();
+        value.entity_generations.insert(entity.into(), generation);
+        value
+    }
+
+    #[test]
+    fn live_instances_initialize_once_retain_private_state_and_isolate_entities() {
+        let mut runtime = ScriptRuntime::new();
+        runtime.upsert("counter", "@export let exported = 0;\nlet private_count = 0;\nscore_add(1.0);\nfn update(dt) { private_count += 1; exported += 1; print(private_count); }").unwrap();
+        let first = runtime
+            .execute_instance("counter", "update", 1, 11, live_context("a", 11))
+            .unwrap();
+        assert_eq!(first.commands, vec![ScriptCommand::ScoreAdd { value: 1.0 }]);
+        let mut input = live_context("a", 11);
+        input.properties = first.properties;
+        let second = runtime
+            .execute_instance("counter", "update", 1, 11, input)
+            .unwrap();
+        assert!(second.commands.is_empty());
+        assert_eq!(second.logs[0].message, "2");
+        assert_eq!(second.properties["exported"], 2);
+        let other = runtime
+            .execute_instance("counter", "update", 1, 12, live_context("b", 12))
+            .unwrap();
+        assert_eq!(other.logs[0].message, "1");
+        assert_eq!(other.commands.len(), 1);
+    }
+
+    #[test]
+    fn live_instances_reject_stale_lifetimes_epochs_and_reuse_after_retirement() {
+        let mut runtime = ScriptRuntime::new();
+        runtime
+            .upsert(
+                "counter",
+                "let count = 0; fn update(dt) { count += 1; print(count); }",
+            )
+            .unwrap();
+        runtime
+            .execute_instance("counter", "update", 1, 11, live_context("a", 11))
+            .unwrap();
+        assert!(runtime.remove_entity_instances(1, "a"));
+        assert!(runtime
+            .execute_instance("counter", "update", 1, 11, live_context("a", 11))
+            .unwrap_err()
+            .contains("generation"));
+        let new = runtime
+            .execute_instance("counter", "update", 1, 12, live_context("a", 12))
+            .unwrap();
+        assert_eq!(new.logs[0].message, "1");
+        runtime.clear_instances(2).unwrap();
+        assert!(runtime
+            .execute_instance("counter", "update", 1, 12, live_context("a", 12))
+            .unwrap_err()
+            .contains("epoch"));
+        assert!(runtime.clear_instances(1).is_err());
+    }
+
+    #[test]
+    fn candidate_instance_ownership_moves_only_after_validation_and_preserves_unchanged_closures() {
+        let mut live = ScriptRuntime::new();
+        live.upsert("counter", "let count = 0; let increment = || { count += 1; count }; fn update(dt) { print(increment.call()); }").unwrap();
+        assert_eq!(
+            live.execute_instance("counter", "update", 1, 1, live_context("a", 1))
+                .unwrap()
+                .logs[0]
+                .message,
+            "1"
+        );
+        let mut rejected = live.clone();
+        assert!(rejected.upsert("counter", "fn update(").is_err());
+        assert_eq!(
+            live.execute_instance("counter", "update", 1, 1, live_context("a", 1))
+                .unwrap()
+                .logs[0]
+                .message,
+            "2"
+        );
+        let mut candidate = live.clone();
+        candidate.upsert("unrelated", "fn update(dt) {}").unwrap();
+        assert_eq!(candidate.take_instances_from(&mut live).unwrap(), 1);
+        assert!(live.instances.is_empty());
+        assert_eq!(
+            candidate
+                .execute_instance("counter", "update", 1, 1, live_context("a", 1))
+                .unwrap()
+                .logs[0]
+                .message,
+            "3"
+        );
+        let mut changed = candidate.clone();
+        changed
+            .upsert(
+                "counter",
+                "let count = 10; fn update(dt) { count += 1; print(count); }",
+            )
+            .unwrap();
+        changed.take_instances_from(&mut candidate).unwrap();
+        assert_eq!(
+            changed
+                .execute_instance("counter", "update", 1, 1, live_context("a", 1))
+                .unwrap()
+                .logs[0]
+                .message,
+            "11"
+        );
+    }
+
+    #[test]
+    fn live_callback_uses_fresh_host_input_and_initialization_is_not_retried_after_callback_error()
+    {
+        let mut runtime = ScriptRuntime::new();
+        runtime.upsert("callback", "score_add(1.0); fn update(dt) { print(input_pressed(\"Jump\")); if input_pressed(\"Jump\") { throw \"intentional\"; } }").unwrap();
+        assert!(runtime
+            .execute_instance("callback", "update", 1, 1, live_context("a", 1))
+            .is_err());
+        let mut input = live_context("a", 1);
+        input.input.pressed.clear();
+        let next = runtime
+            .execute_instance("callback", "update", 1, 1, input)
+            .unwrap();
+        assert_eq!(next.logs[0].message, "false");
+        assert!(next.commands.is_empty());
     }
 
     // 验证导出属性和受控命令正确跨越脚本沙箱边界。

@@ -1,0 +1,1031 @@
+{
+  "schema": "nova-runtime-catalog-six-file-contract-v1",
+  "steps": [
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "name": "import",
+      "from": "/** 资源数据库：维护资源登记、导入、文本更新、目录及集合，解析绘制纹理并协调图集缓存。 */\r\n",
+      "to": "/** 资源数据库：维护资源登记、导入、文本更新、目录及集合，解析绘制纹理并协调图集缓存。 */\r\nimport { runtimeAssetGuid, createRuntimeAssetIndex, resolveRuntimeAssetGuid, readRuntimeScriptText, RUNTIME_SCRIPT_TEXT_TYPES } from '../runtime/runtimeAssetValues'\r\n",
+      "count": 1
+    },
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "name": "assetGuid delegation",
+      "from": "{\r\n  if (!reference?.startsWith('asset://')) return null\r\n  return reference.slice('asset://'.length)\r\n}",
+      "to": "{ return runtimeAssetGuid(reference) }",
+      "count": 1
+    },
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "name": "readTextAsset delegation",
+      "from": "{\r\n  const record = resolveAsset(reference)\r\n  if (!record || !['script', 'visualScript', 'eventSheet', 'objectBlueprint', 'prefab', 'scene', 'material', 'animation', 'controller', 'animationMask', 'rig', 'skin', 'timeline', 'tileset', 'atlas', 'shader', 'localization', 'uiTheme', 'behaviorTree', 'stateMachine', 'tilePalette', 'brushPreset', 'terrainRules', 'dataSchema', 'dataTable', 'replay', 'path', 'particleSystem', 'resource'].includes(record.assetType)) return null\r\n  const comma = record.source.indexOf(',')\r\n  if (!record.source.startsWith('data:') || comma < 0) return record.source || null\r\n  try {\r\n    const metadata = record.source.slice(0, comma)\r\n    const payload = record.source.slice(comma + 1)\r\n    if (!metadata.includes(';base64')) return decodeURIComponent(payload)\r\n    const binary = atob(payload)\r\n    return new TextDecoder().decode(Uint8Array.from(binary, /* 调用 character.charCodeAt(0) 并返回调用结果。 */ character => character.charCodeAt(0)))\r\n  } catch {\r\n    return null\r\n  }\r\n}",
+      "to": "{ return readRuntimeScriptText(resolveAsset(reference)) }",
+      "count": 1
+    },
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "name": "ensureIndex pure value extraction",
+      "from": "  indexedRecords = [...assetState.records].sort(/* 先计算 a.path.localeCompare(b.path)；仅当其为假值时求右侧 a.uuid.localeCompare(b.uuid)，返回短路求值结果。 */ (a, b) => a.path.localeCompare(b.path) || a.uuid.localeCompare(b.uuid))\r\n  recordsByUuid = new Map(indexedRecords.map(/* 返回按声明顺序构造的数组 [record.uuid, record]。 */ record => [record.uuid, record]))",
+      "to": "  const index = createRuntimeAssetIndex(assetState.records)\r\n  indexedRecords = index.records\r\n  recordsByUuid = index.byUuid",
+      "count": 1
+    },
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "name": "resolveAsset last expression",
+      "from": "{\r\n  const guid = assetGuid(reference) ?? reference\r\n  ensureIndex()\r\n  return guid ? recordsByUuid.get(guid) ?? null : null\r\n}",
+      "to": "{\r\n  const guid = assetGuid(reference) ?? reference\r\n  ensureIndex()\r\n  return resolveRuntimeAssetGuid(guid, recordsByUuid)\r\n}",
+      "count": 1
+    },
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "name": "updateTextAsset allowlist expression only",
+      "from": "{\r\n  const record = assetState.records.find(/* 比较 asset.uuid 与 uuid，返回严格相等的判断结果。 */ asset => asset.uuid === uuid)\r\n  if (!record || record.path.startsWith('.nova/') || !['script', 'visualScript', 'eventSheet', 'objectBlueprint', 'prefab', 'scene', 'material', 'animation', 'controller', 'animationMask', 'rig', 'skin', 'timeline', 'tileset', 'atlas', 'shader', 'localization', 'uiTheme', 'behaviorTree', 'stateMachine', 'tilePalette', 'brushPreset', 'terrainRules', 'dataSchema', 'dataTable', 'replay', 'path', 'particleSystem', 'resource'].includes(record.assetType)) return false\r\n  const nextSource = textDataUrl(source, record.mimeType || 'text/plain')\r\n  if (record.source === nextSource) return true\r\n  record.source = nextSource\r\n  record.byteLength = new TextEncoder().encode(source).byteLength\r\n  record.sourceModified = Date.now()\r\n  record.importedAt = Date.now()\r\n  const metadata = inlinePipeline(record.source)\r\n  metadata.dependencies = record.pipeline?.dependencies ?? []\r\n  metadata.reverseDependencies = record.pipeline?.reverseDependencies ?? []\r\n  record.pipeline = metadata\r\n  assetState.generation++\r\n  return true\r\n}",
+      "to": "{\r\n  const record = assetState.records.find(/* 比较 asset.uuid 与 uuid，返回严格相等的判断结果。 */ asset => asset.uuid === uuid)\r\n  if (!record || record.path.startsWith('.nova/') || !RUNTIME_SCRIPT_TEXT_TYPES.includes(record.assetType)) return false\r\n  const nextSource = textDataUrl(source, record.mimeType || 'text/plain')\r\n  if (record.source === nextSource) return true\r\n  record.source = nextSource\r\n  record.byteLength = new TextEncoder().encode(source).byteLength\r\n  record.sourceModified = Date.now()\r\n  record.importedAt = Date.now()\r\n  const metadata = inlinePipeline(record.source)\r\n  metadata.dependencies = record.pipeline?.dependencies ?? []\r\n  metadata.reverseDependencies = record.pipeline?.reverseDependencies ?? []\r\n  record.pipeline = metadata\r\n  assetState.generation++\r\n  return true\r\n}",
+      "count": 1
+    },
+    {
+      "path": "src/assets/assetReferences.ts",
+      "name": "import and shared limits export",
+      "from": "/** 资源引用重写：从持久化记录和文本中提取引用，并准备及提交一致的元数据修复。 */\n",
+      "to": "/** 资源引用重写：从持久化记录和文本中提取引用，并准备及提交一致的元数据修复。 */\nimport { runtimeAssetSourceText, ASSET_REFERENCE_LIMITS } from '../runtime/runtimeAssetValues'\nexport { ASSET_REFERENCE_LIMITS } from '../runtime/runtimeAssetValues'\n",
+      "count": 1
+    },
+    {
+      "path": "src/assets/assetReferences.ts",
+      "name": "unique limits relocation",
+      "from": "const REFERENCE_KEY = /(?:asset(?:s|uuid|uuids)?|reference|references|texture|texturePath|parent|clips|controllers|masks|rigs|retargetProfile)$/i\r\nexport const ASSET_REFERENCE_LIMITS = Object.freeze({ textBytes: 16 * 1024 * 1024, values: 1_000_000, depth: 64 })\r\n",
+      "to": "const REFERENCE_KEY = /(?:asset(?:s|uuid|uuids)?|reference|references|texture|texturePath|parent|clips|controllers|masks|rigs|retargetProfile)$/i\r\n",
+      "count": 1
+    },
+    {
+      "path": "src/assets/assetReferences.ts",
+      "name": "assetSourceText delegation",
+      "from": "{\r\n  if (['image', 'audio', 'font'].includes(asset.assetType)) return null\r\n  const bytes = assetSourceBytes(asset.source)\r\n  if (bytes.length > ASSET_REFERENCE_LIMITS.textBytes) throw new Error('ASSET_REFERENCE_LIMIT: Text asset exceeds the 16 MiB dependency-analysis limit.')\r\n  try { return new TextDecoder('utf-8', { fatal: true }).decode(bytes) } catch { return null }\r\n}",
+      "to": "{ return runtimeAssetSourceText(asset) }",
+      "count": 1
+    },
+    {
+      "path": "src/runtime/resources.ts",
+      "name": "import",
+      "from": "/** 运行资源解析：从项目资源记录加载可使用的数据，管理引用及缓存。 */\n",
+      "to": "/** 运行资源解析：从项目资源记录加载可使用的数据，管理引用及缓存。 */\nimport { resolveRuntimeResourceRecord } from './runtimeAssetValues'\n",
+      "count": 1
+    },
+    {
+      "path": "src/runtime/resources.ts",
+      "name": "resourceRecord delegation",
+      "from": "{\r\n  const id=(referenceValue??'').replace(/^asset:\\/\\//,'').toLowerCase()\r\n  return assets.find(/* 比较 asset.uuid.toLowerCase() 与 id，返回严格相等的判断结果。 */ asset=>asset.uuid.toLowerCase()===id)??null\r\n}",
+      "to": "{ return resolveRuntimeResourceRecord(referenceValue, assets) }",
+      "count": 1
+    },
+    {
+      "path": "src/editor/gameplayScriptServices.ts",
+      "name": "import",
+      "from": "/** Editor composition for the existing AssetDatabase; no global Runtime service registry. */\n",
+      "to": "/** Editor composition for the existing AssetDatabase; no global Runtime service registry. */\nimport { resolveRuntimeModuleAsset } from '../runtime/runtimeAssetValues'\n",
+      "count": 1
+    },
+    {
+      "path": "src/editor/gameplayScriptServices.ts",
+      "name": "module resolver arrow delegation",
+      "from": "{\n      const asset = resolveAsset(reference) ?? assetState.records.find(candidate => candidate.path === reference)\n      return asset && (asset.assetType === 'script' || asset.assetType === 'visualScript')\n        ? { uuid: asset.uuid, path: asset.path, assetType: asset.assetType } : null\n    }",
+      "to": "resolveRuntimeModuleAsset(reference, resolveAsset, assetState.records)",
+      "count": 1
+    }
+  ],
+  "originalWholeFiles": [
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "sha256": "4354812b58fa0252fe4a3c356f2240582877f87095335f574a1ba36df59b7198"
+    },
+    {
+      "path": "src/assets/assetReferences.ts",
+      "sha256": "20ebeaace264fc21b122018de4f317a5e1d1fd7a59da8b1b5b4dbfd88bd58a38"
+    },
+    {
+      "path": "src/runtime/resources.ts",
+      "sha256": "f6d457b8882ed0bbb5a3175586cde57c279d27cf2265fa59cd11a16bf21453bd"
+    },
+    {
+      "path": "src/editor/gameplayScriptServices.ts",
+      "sha256": "17bb2c60450a5410fed378e08f1e17c6c9131f8e196d987a04348dc4abfae53f"
+    }
+  ],
+  "newWholeFiles": [
+    {
+      "path": "src/runtime/runtimeAssetValues.ts",
+      "sha256": "fa750c1055c198840e7b58cdc0071e191dce12e4aebafd83e94677177b9d0524"
+    },
+    {
+      "path": "src/runtime/runtimeProjectCatalog.ts",
+      "sha256": "ec4d8106960aa3f5be7465d87d207f8a1c208b12ee93998104ac5f4c084972ff"
+    }
+  ],
+  "baseline": {
+    "sourceHash": "95da1912fc92b591b5803cec01c3c5e3acc626b05aa2f430ee135a54c3db3f37",
+    "manifestSha256": "b967b4e52c48791738e8d38ad826c1f7d1a1b75f79d84c879f92d7513cc238bb",
+    "sourceCount": 597,
+    "overrides": []
+  },
+  "existingWholeFiles": [
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "sha256": "4354812b58fa0252fe4a3c356f2240582877f87095335f574a1ba36df59b7198",
+      "afterSha256": "c1856e6126d363839aec0e4d07075d9b87e28ebf55e5b571c522a1e751d39ef2"
+    },
+    {
+      "path": "src/assets/assetReferences.ts",
+      "sha256": "20ebeaace264fc21b122018de4f317a5e1d1fd7a59da8b1b5b4dbfd88bd58a38",
+      "afterSha256": "a20bfb53a47f84c161439b358a86d7a656cf890866704647b6e8a6915eb5f369"
+    },
+    {
+      "path": "src/runtime/resources.ts",
+      "sha256": "f6d457b8882ed0bbb5a3175586cde57c279d27cf2265fa59cd11a16bf21453bd",
+      "afterSha256": "ac88110c0c2b1593f0d690f66555001304ca135bb306f358eaf8787781642773"
+    },
+    {
+      "path": "src/editor/gameplayScriptServices.ts",
+      "sha256": "17bb2c60450a5410fed378e08f1e17c6c9131f8e196d987a04348dc4abfae53f",
+      "afterSha256": "324a43bb845a844888ee6dad3dfa7103cab090794f21affc3cf5e251339be10d"
+    }
+  ],
+  "originalBodyInventory": [
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "name": "imageDecodedCacheStats",
+      "originalBodySha256": "006c25d33da204a24f36c67d625ffd51e6a914d95e8204a12aae3e2d76a60bea",
+      "originalBodyPath": "original-bodies/src_assets_AssetDatabase.ts_imageDecodedCacheStats.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "name": "assetSessionVersion",
+      "originalBodySha256": "13f96d7a405200a8277b48212785c6e356bc34b33215e07abbc849092127a7e4",
+      "originalBodyPath": "original-bodies/src_assets_AssetDatabase.ts_assetSessionVersion.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "name": "textureContentRevision",
+      "originalBodySha256": "b9054f9574a3d3238c514d28eb86e9b8e7a1018300f40041d6c876fd9e45c29f",
+      "originalBodyPath": "original-bodies/src_assets_AssetDatabase.ts_textureContentRevision.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "name": "inlinePipeline",
+      "originalBodySha256": "231c96224c1155172bbc1659ec176bd22d40559e379c0bce23601f65f9843dd3",
+      "originalBodyPath": "original-bodies/src_assets_AssetDatabase.ts_inlinePipeline.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "name": "ensureIndex",
+      "originalBodySha256": "d60c15915f609c034d997ddcd432793a645d981c209d891c1f03b205f7427847",
+      "originalBodyPath": "original-bodies/src_assets_AssetDatabase.ts_ensureIndex.txt",
+      "expectedChanged": true
+    },
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "name": "inferAssetType",
+      "originalBodySha256": "e078d860c5f181a71ad907516fd4ab620e1f5bb8cdf949ef4ef7a81c49cc9c89",
+      "originalBodyPath": "original-bodies/src_assets_AssetDatabase.ts_inferAssetType.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "name": "defaultFolder",
+      "originalBodySha256": "66fea71b79b917630aa4f30fceb22719e43dbdfac17d408eed3cb33b3a48e18e",
+      "originalBodyPath": "original-bodies/src_assets_AssetDatabase.ts_defaultFolder.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "name": "sanitizedName",
+      "originalBodySha256": "f96ae052429310a2537e34b809ac997928d77af65859bafe04ab0aaa919f7d09",
+      "originalBodyPath": "original-bodies/src_assets_AssetDatabase.ts_sanitizedName.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "name": "uniquePath",
+      "originalBodySha256": "91664cdaec371c08027072502dac787facc0b898d1785693b856290810d432f2",
+      "originalBodyPath": "original-bodies/src_assets_AssetDatabase.ts_uniquePath.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "name": "normalizeFolder",
+      "originalBodySha256": "5674f097c2a0873ac09a61f7a7b30556f14f671f2bcec07dd5f102fade0173b6",
+      "originalBodyPath": "original-bodies/src_assets_AssetDatabase.ts_normalizeFolder.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "name": "imageMetadata",
+      "originalBodySha256": "92249578d1e9503dc7b99d63c4a8269e2e19d09302668affc7d8543057ee2b0b",
+      "originalBodyPath": "original-bodies/src_assets_AssetDatabase.ts_imageMetadata.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "name": "audioMetadata",
+      "originalBodySha256": "dde388c0ad04edb53fd37ef46aa67440a0ce859607c17ef8d13a15135ec59049",
+      "originalBodyPath": "original-bodies/src_assets_AssetDatabase.ts_audioMetadata.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "name": "fontFamilyFor",
+      "originalBodySha256": "5ecc1564934ab5fa366473a91c5f4b27f52a31ead7d896538f6650304b834d34",
+      "originalBodyPath": "original-bodies/src_assets_AssetDatabase.ts_fontFamilyFor.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "name": "prepareFont",
+      "originalBodySha256": "e248b1397e0452cb965bb762e1a0c27e36738590cd63992de548fd8432d17771",
+      "originalBodyPath": "original-bodies/src_assets_AssetDatabase.ts_prepareFont.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "name": "registerFont",
+      "originalBodySha256": "762aef576e6c4e89808940fe968c8b31e4a7b750a278ae6b9187fb38a5c46aa7",
+      "originalBodyPath": "original-bodies/src_assets_AssetDatabase.ts_registerFont.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "name": "installFont",
+      "originalBodySha256": "90066787f4aeebab73c8be994705a4ca5586a8075ff2a7323303ba46273142f3",
+      "originalBodyPath": "original-bodies/src_assets_AssetDatabase.ts_installFont.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "name": "recordImportedArtifact",
+      "originalBodySha256": "ebb28724c38319ba40035fac59797a8dc0291a752a5cc96673ef5b67e7599cb3",
+      "originalBodyPath": "original-bodies/src_assets_AssetDatabase.ts_recordImportedArtifact.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "name": "importAssetFiles",
+      "originalBodySha256": "f9b105daeba12c62aa9bfa2e9aba492faf68e296805c70fd7d9eda7e2a5d7e45",
+      "originalBodyPath": "original-bodies/src_assets_AssetDatabase.ts_importAssetFiles.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "name": "sliceSpriteSheet",
+      "originalBodySha256": "af4ef951e9e11f6f198629878a84bb84e1c5f8efa09327cbd213b36efee2eac8",
+      "originalBodyPath": "original-bodies/src_assets_AssetDatabase.ts_sliceSpriteSheet.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "name": "trimTransparentImage",
+      "originalBodySha256": "465cc68202b1f52ab4e85d744d1f7280b346477e39d1e5dde30e7cacec07167a",
+      "originalBodyPath": "original-bodies/src_assets_AssetDatabase.ts_trimTransparentImage.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "name": "registerEmbeddedImage",
+      "originalBodySha256": "32c52a37620734ad03dabd3b5abf09042e666f494bd389af50617855801714ec",
+      "originalBodyPath": "original-bodies/src_assets_AssetDatabase.ts_registerEmbeddedImage.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "name": "assetBookkeepingDefaults",
+      "originalBodySha256": "7e5c5c29263cc5bc6ddb2073adc3d9000737353f8475508d2c325474ef8095cf",
+      "originalBodyPath": "original-bodies/src_assets_AssetDatabase.ts_assetBookkeepingDefaults.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "name": "textDataUrl",
+      "originalBodySha256": "a41799299c524c197154104a44e559063dbd11c16ce6bc49c75974fe70eac580",
+      "originalBodyPath": "original-bodies/src_assets_AssetDatabase.ts_textDataUrl.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "name": "createTextAsset",
+      "originalBodySha256": "1425d5dced3ad8395ec92d7d4c370c577278994a95202e2af9f24e33b3920ddf",
+      "originalBodyPath": "original-bodies/src_assets_AssetDatabase.ts_createTextAsset.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "name": "readTextAsset",
+      "originalBodySha256": "9e30b805ef3efe0a119edd832b831d30ae52f40e3644ab15f203a53eb0e82dd6",
+      "originalBodyPath": "original-bodies/src_assets_AssetDatabase.ts_readTextAsset.txt",
+      "expectedChanged": true
+    },
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "name": "updateTextAsset",
+      "originalBodySha256": "d8b5afc38c41bc5502a1d495cdf3fb5c3d50b9f16a1e9ebb99f66ecf7f3a7163",
+      "originalBodyPath": "original-bodies/src_assets_AssetDatabase.ts_updateTextAsset.txt",
+      "expectedChanged": true
+    },
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "name": "updateTextAssetTransactional",
+      "originalBodySha256": "53d9a25db8d462390cdd227e92e911d373b55336b3deafb03eaa822c82211294",
+      "originalBodyPath": "original-bodies/src_assets_AssetDatabase.ts_updateTextAssetTransactional.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "name": "serializeAssets",
+      "originalBodySha256": "4964aa37fc828cb250e54fe7634df28186db80859fe2d8032b482dda39d058d5",
+      "originalBodyPath": "original-bodies/src_assets_AssetDatabase.ts_serializeAssets.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "name": "serializeAssetFolders",
+      "originalBodySha256": "0272dc9a58ebdf50aed2dcae711ec6766e7f13c1c34c3306bd9b0e547abd1fed",
+      "originalBodyPath": "original-bodies/src_assets_AssetDatabase.ts_serializeAssetFolders.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "name": "serializeAssetDatabaseSettings",
+      "originalBodySha256": "aacd04b5017f37f99bb2c0c15009f8c1794efaf81e1b226f8409b926ec319848",
+      "originalBodyPath": "original-bodies/src_assets_AssetDatabase.ts_serializeAssetDatabaseSettings.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "name": "loadAssetDatabaseSettings",
+      "originalBodySha256": "26436d1213af673cec9500e52758576ad553e12cc4efd2edbfc94b3e6f4f6899",
+      "originalBodyPath": "original-bodies/src_assets_AssetDatabase.ts_loadAssetDatabaseSettings.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "name": "sourceFolder",
+      "originalBodySha256": "f9e69e0c36f3fe1b33809fb51ceb0d901165920ad456961848725a061b3f5e2d",
+      "originalBodyPath": "original-bodies/src_assets_AssetDatabase.ts_sourceFolder.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "name": "finiteAssetSetting",
+      "originalBodySha256": "3cbfbfe6348496dd7beda3d34e17b8bac68a603c501317c9e21f743f775ca1bd",
+      "originalBodyPath": "original-bodies/src_assets_AssetDatabase.ts_finiteAssetSetting.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "name": "loadAssets",
+      "originalBodySha256": "f58321d4a6c34e4062203273e7118e7f9464b567a8738c586aac82a3758ab350",
+      "originalBodyPath": "original-bodies/src_assets_AssetDatabase.ts_loadAssets.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "name": "renameAsset",
+      "originalBodySha256": "3595e5eada2ac1e5368c5ab042d472e7387f9e43b9d9faaae6b0753a63905288",
+      "originalBodyPath": "original-bodies/src_assets_AssetDatabase.ts_renameAsset.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "name": "moveAsset",
+      "originalBodySha256": "bd0d900cf29fadcc89611ae6248e27b06ee4d33bbc3fd29d664cc005dbcf27ad",
+      "originalBodyPath": "original-bodies/src_assets_AssetDatabase.ts_moveAsset.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "name": "reimportAsset",
+      "originalBodySha256": "a54cbccf6ae8d4008d420850ee8d8e4ddc4b89f27d9b46d2eee6289109b4e385",
+      "originalBodyPath": "original-bodies/src_assets_AssetDatabase.ts_reimportAsset.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "name": "createAssetFolder",
+      "originalBodySha256": "4ba1aa0d99c8eb5524a90ad6f83a7f24dc35acbcc12af215805ba51d3ca32e28",
+      "originalBodyPath": "original-bodies/src_assets_AssetDatabase.ts_createAssetFolder.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "name": "deleteAsset",
+      "originalBodySha256": "9a30db4042484f79717a4ef265735d0972d7b91942bfaf0788e2902b88029d64",
+      "originalBodyPath": "original-bodies/src_assets_AssetDatabase.ts_deleteAsset.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "name": "restoreAssetRecord",
+      "originalBodySha256": "10843bdc568e8f0860ed1e243f043dc9f518f41636a3a5f3cf1ee7dd84747df2",
+      "originalBodyPath": "original-bodies/src_assets_AssetDatabase.ts_restoreAssetRecord.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "name": "toggleAssetFavorite",
+      "originalBodySha256": "ddd31038f04895779606318927a6980feaecde51d337399d08d79d095cbc33cc",
+      "originalBodyPath": "original-bodies/src_assets_AssetDatabase.ts_toggleAssetFavorite.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "name": "saveCurrentAssetFilter",
+      "originalBodySha256": "d7a689e7c6d74fd8a90959ff6c1aa2437bd7f94d3530eefdfae38bf739b263f6",
+      "originalBodyPath": "original-bodies/src_assets_AssetDatabase.ts_saveCurrentAssetFilter.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "name": "applyAssetFilter",
+      "originalBodySha256": "9eed9d44a16cb3dea88f4c1a4716fb4abd4bb87a9902eeb78e42cd4829aa70b1",
+      "originalBodyPath": "original-bodies/src_assets_AssetDatabase.ts_applyAssetFilter.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "name": "deleteAssetFilter",
+      "originalBodySha256": "c27b7640ec8e7cf013cafa47204a12d337d64ccfdd68dcaa765d9230295850e5",
+      "originalBodyPath": "original-bodies/src_assets_AssetDatabase.ts_deleteAssetFilter.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "name": "createAssetCollection",
+      "originalBodySha256": "c15cd8c3ba3f11a6f666878a6729bd2c454d66cf5ceb8bdb22160e6c8b8ec564",
+      "originalBodyPath": "original-bodies/src_assets_AssetDatabase.ts_createAssetCollection.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "name": "toggleAssetInCollection",
+      "originalBodySha256": "777a10360c95b6cf2034d4512a412a6cd3735c5e73c8c873daeba2a3f8ca2dda",
+      "originalBodyPath": "original-bodies/src_assets_AssetDatabase.ts_toggleAssetInCollection.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "name": "saveImportPreset",
+      "originalBodySha256": "803f267b2e9ff2101b7741d539644a12ed48a700697e8bf57414002fb8ec7fd0",
+      "originalBodyPath": "original-bodies/src_assets_AssetDatabase.ts_saveImportPreset.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "name": "applyImportPreset",
+      "originalBodySha256": "74e8c61d8a8d1a94808f501d5b62e39a33b3424013b831c2725055ce5544cc6c",
+      "originalBodyPath": "original-bodies/src_assets_AssetDatabase.ts_applyImportPreset.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "name": "synchronizeAssetDependencyMetadata",
+      "originalBodySha256": "d487d85d5f4350fe82c8eb9cee07cbeb8104ab7a269abf8f4efd4f24f4cba39a",
+      "originalBodyPath": "original-bodies/src_assets_AssetDatabase.ts_synchronizeAssetDependencyMetadata.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "name": "retryFailedAssetImport",
+      "originalBodySha256": "9d2039f58362cf47db5089d2e174a95fd12a96ee6b1041e9aae440851967dbf7",
+      "originalBodyPath": "original-bodies/src_assets_AssetDatabase.ts_retryFailedAssetImport.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "name": "linkAssetSource",
+      "originalBodySha256": "770554415d106de4063b402b632a1d25cfbb20e8e3857d6b6471e6429a36009d",
+      "originalBodyPath": "original-bodies/src_assets_AssetDatabase.ts_linkAssetSource.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "name": "resolveExternalAssetChange",
+      "originalBodySha256": "0fd08085881c7bec1eb311d6e426c18fd7d6775c9efdd57a6b01efa92c166705",
+      "originalBodyPath": "original-bodies/src_assets_AssetDatabase.ts_resolveExternalAssetChange.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "name": "assetReference",
+      "originalBodySha256": "827ee7ddfa4d9d18b0bdb67078ee030168c2cecc5cd0471715207f50780cf707",
+      "originalBodyPath": "original-bodies/src_assets_AssetDatabase.ts_assetReference.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "name": "assetGuid",
+      "originalBodySha256": "3d52e380c44265320e628af3bb9a572981135db8e2a32e2b7cb67193541c99ca",
+      "originalBodyPath": "original-bodies/src_assets_AssetDatabase.ts_assetGuid.txt",
+      "expectedChanged": true
+    },
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "name": "resolveAsset",
+      "originalBodySha256": "161d41d4ec073634e66e85b6d232fb7e1f155fee0e518b7f301e95eb4314122a",
+      "originalBodyPath": "original-bodies/src_assets_AssetDatabase.ts_resolveAsset.txt",
+      "expectedChanged": true
+    },
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "name": "assetTextureDiagnostic",
+      "originalBodySha256": "dcdf4832a0519a21b0f178db0e66e29f358e4b0b35b6b13b7dce458862c81c0b",
+      "originalBodyPath": "original-bodies/src_assets_AssetDatabase.ts_assetTextureDiagnostic.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "name": "resolveTexture",
+      "originalBodySha256": "d4e169e7f78949f7212aa2fb32cfe0e91b99d5bd0e25cfdc215a89e8b01fc76d",
+      "originalBodyPath": "original-bodies/src_assets_AssetDatabase.ts_resolveTexture.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "name": "resolveUncroppedTexture",
+      "originalBodySha256": "ab6952c6e8cdda5c38369ea6ecdeb1a3daaf94ab80e222c32cfd44fd3e266dbe",
+      "originalBodyPath": "original-bodies/src_assets_AssetDatabase.ts_resolveUncroppedTexture.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "name": "resolveTextureRegion",
+      "originalBodySha256": "2f2c14f87403d9a867077dc7e83464d9e58ae1537bc1673e9eb5b5d2e2d0b2f3",
+      "originalBodyPath": "original-bodies/src_assets_AssetDatabase.ts_resolveTextureRegion.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "name": "importedSpriteRegion",
+      "originalBodySha256": "55867868d5c2ec8b51e46dc9fed431e82ffb68233cb5d8ca909fab3ddd4b546e",
+      "originalBodyPath": "original-bodies/src_assets_AssetDatabase.ts_importedSpriteRegion.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "name": "rebuildTextureAtlases",
+      "originalBodySha256": "ff7c7d0987547eecec53b29ff29455b827c5909381c4b62cf662d2005dba63df",
+      "originalBodyPath": "original-bodies/src_assets_AssetDatabase.ts_rebuildTextureAtlases.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "name": "queueTextureAtlasRebuild",
+      "originalBodySha256": "2ab0ca577559b45a27c3100531bfc0eadd5ca226d9886f45292982fa563ad837",
+      "originalBodyPath": "original-bodies/src_assets_AssetDatabase.ts_queueTextureAtlasRebuild.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "name": "filteredAssets",
+      "originalBodySha256": "df4ee171c03f2280d1cc1a99ebaad861964fbef12792b6bd3a1816dff361832e",
+      "originalBodyPath": "original-bodies/src_assets_AssetDatabase.ts_filteredAssets.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/assets/assetReferences.ts",
+      "name": "assetSourceText",
+      "originalBodySha256": "6ec0084cbb10982aa0eedd205e8ad6b48c4042bb2bcdddac335f57aec23d9237",
+      "originalBodyPath": "original-bodies/src_assets_assetReferences.ts_assetSourceText.txt",
+      "expectedChanged": true
+    },
+    {
+      "path": "src/assets/assetReferences.ts",
+      "name": "collectAssetReferences",
+      "originalBodySha256": "0c2d47f0f5400e5a319620e9347270859d82d5affbc25b5e172847857e3282cb",
+      "originalBodyPath": "original-bodies/src_assets_assetReferences.ts_collectAssetReferences.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/assets/assetReferences.ts",
+      "name": "textAssetReferences",
+      "originalBodySha256": "b07bca55c9b8c225d7c0f6880825d0d420a4ab8d18beb5ce7deff15f9d91c43b",
+      "originalBodyPath": "original-bodies/src_assets_assetReferences.ts_textAssetReferences.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/assets/assetReferences.ts",
+      "name": "encodeTextLike",
+      "originalBodySha256": "c14d85c8d621de81d9d47b573dc586734b0d87efd92f011a108c12735b260c38",
+      "originalBodyPath": "original-bodies/src_assets_assetReferences.ts_encodeTextLike.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/assets/assetReferences.ts",
+      "name": "rewriteAssetSource",
+      "originalBodySha256": "c6142046ed2e5ea8779d158e13ee26ea74934296f55579ce7b4c195886b3f4ee",
+      "originalBodyPath": "original-bodies/src_assets_assetReferences.ts_rewriteAssetSource.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/assets/assetReferences.ts",
+      "name": "referenceMetadataRepairs",
+      "originalBodySha256": "921aed6ecdb3ec7ed0b4d9afaef4f4d2766c7f92d63217d5558b686d0ff91fc2",
+      "originalBodyPath": "original-bodies/src_assets_assetReferences.ts_referenceMetadataRepairs.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/assets/assetReferences.ts",
+      "name": "commitAssetReferenceRepairs",
+      "originalBodySha256": "dc29ee390f216c58b8a1ab5b9a9498d8ea563e55574316cb3af2b4280039adb1",
+      "originalBodyPath": "original-bodies/src_assets_assetReferences.ts_commitAssetReferenceRepairs.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/runtime/resources.ts",
+      "name": "object",
+      "originalBodySha256": "219a6eaa90e4f02e33fedce67cc1ab392c4ef78655732b741346bdcf659e52a7",
+      "originalBodyPath": "original-bodies/src_runtime_resources.ts_object.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/runtime/resources.ts",
+      "name": "finite",
+      "originalBodySha256": "787b3a0a8641ef4e1e26311c6cd0f3d6aabed0fbd576511f0961d9ea65f50ec4",
+      "originalBodyPath": "original-bodies/src_runtime_resources.ts_finite.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/runtime/resources.ts",
+      "name": "id",
+      "originalBodySha256": "2818bd7b2ac771b8de8f45212e13460f8ee2f27211039766baefefd2b42bf003",
+      "originalBodyPath": "original-bodies/src_runtime_resources.ts_id.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/runtime/resources.ts",
+      "name": "reference",
+      "originalBodySha256": "9001c36df82d1722363ded83178b72d0258a8ebf994ab11877a6eb5ab51a7cc2",
+      "originalBodyPath": "original-bodies/src_runtime_resources.ts_reference.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/runtime/resources.ts",
+      "name": "references",
+      "originalBodySha256": "fc1df835f1c9b417f1d05872354fbe2624924fb89b2ab437bf961818eec7c925",
+      "originalBodyPath": "original-bodies/src_runtime_resources.ts_references.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/runtime/resources.ts",
+      "name": "safeJson",
+      "originalBodySha256": "d34d97aad8924c2099fbbe05a2ea307928a7fd2ba122bef6ec74aba304e5c5e7",
+      "originalBodyPath": "original-bodies/src_runtime_resources.ts_safeJson.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/runtime/resources.ts",
+      "name": "normalizeData",
+      "originalBodySha256": "5f6b98eb80e35fbe26dc9fbf23a9d43d7d724ff883a5a0b427ed718f89758c19",
+      "originalBodyPath": "original-bodies/src_runtime_resources.ts_normalizeData.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/runtime/resources.ts",
+      "name": "normalizeOverrideData",
+      "originalBodySha256": "27d65788387ee0f8bd50b1bee6415807dec2aed6a16335287bd556592a8c5a34",
+      "originalBodyPath": "original-bodies/src_runtime_resources.ts_normalizeOverrideData.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/runtime/resources.ts",
+      "name": "normalizeVariants",
+      "originalBodySha256": "e842c8ac3caa7e5436c408bfceb576bde9d7729df428711249d06401552b8c32",
+      "originalBodyPath": "original-bodies/src_runtime_resources.ts_normalizeVariants.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/runtime/resources.ts",
+      "name": "defaultResource",
+      "originalBodySha256": "d2eeeca144ddf18e36291b3f563e45f2cc7a6a08dcd9ebe12aa44e789507fbea",
+      "originalBodyPath": "original-bodies/src_runtime_resources.ts_defaultResource.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/runtime/resources.ts",
+      "name": "normalizeResource",
+      "originalBodySha256": "02c4ba62cd71d16fa4b4dc71841698201c715ae388bd6194ffbae552c31611a6",
+      "originalBodyPath": "original-bodies/src_runtime_resources.ts_normalizeResource.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/runtime/resources.ts",
+      "name": "serializeResource",
+      "originalBodySha256": "f2937b29b9a8aa8754ca801a2844686ab3a827fe3da44a709ca46c468a286422",
+      "originalBodyPath": "original-bodies/src_runtime_resources.ts_serializeResource.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/runtime/resources.ts",
+      "name": "createResourceAsset",
+      "originalBodySha256": "e8b94e24d7bb89bb562c90c30344364ca331ee24917b9fe15578dbff1c837d44",
+      "originalBodyPath": "original-bodies/src_runtime_resources.ts_createResourceAsset.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/runtime/resources.ts",
+      "name": "resourceRecord",
+      "originalBodySha256": "06645f4d9927e5aa259c6245e2fdc023fdb8abb4f20683c0ce3e2db360bfd131",
+      "originalBodyPath": "original-bodies/src_runtime_resources.ts_resourceRecord.txt",
+      "expectedChanged": true
+    },
+    {
+      "path": "src/runtime/resources.ts",
+      "name": "readResourceFromAssets",
+      "originalBodySha256": "791d335b77c5c123debce42a2b0ef9f3575105d766a55c9ef89df368deea50e9",
+      "originalBodyPath": "original-bodies/src_runtime_resources.ts_readResourceFromAssets.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/runtime/resources.ts",
+      "name": "readResource",
+      "originalBodySha256": "88fa7b498c9d4aaa9875f0979b1dff0c90858d2a59be3176947c8f61e5b1b9de",
+      "originalBodyPath": "original-bodies/src_runtime_resources.ts_readResource.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/runtime/resources.ts",
+      "name": "saveResource",
+      "originalBodySha256": "80f597c939c180092ff9c871d843b33d6de0470fa326ebf0b56e93b9bb6c4bba",
+      "originalBodyPath": "original-bodies/src_runtime_resources.ts_saveResource.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/runtime/resources.ts",
+      "name": "createResourceOverride",
+      "originalBodySha256": "c35c0a2ae5aa29dee6e0a874aa29495161ef12c63909dca0059087087163aa00",
+      "originalBodyPath": "original-bodies/src_runtime_resources.ts_createResourceOverride.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/runtime/resources.ts",
+      "name": "deepMerge",
+      "originalBodySha256": "a491ea9c12673bbdd64e515bf70e56d2d1787914fe9edd2e9010809b680f39ab",
+      "originalBodyPath": "original-bodies/src_runtime_resources.ts_deepMerge.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/runtime/resources.ts",
+      "name": "resolveResource",
+      "originalBodySha256": "5da85bad7c25cf63300d86e12e823e4b218481abeb55ccdd24c9763e9d4e7e1e",
+      "originalBodyPath": "original-bodies/src_runtime_resources.ts_resolveResource.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/runtime/resources.ts",
+      "name": "resolveResourceFromAssets",
+      "originalBodySha256": "c5d3f9e7c566d9ff88186ce59ef35c0f0759b01f528854fe1d7edd35cbf8fd27",
+      "originalBodyPath": "original-bodies/src_runtime_resources.ts_resolveResourceFromAssets.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/runtime/resources.ts",
+      "name": "resourceVariantNames",
+      "originalBodySha256": "0ca5ee2860d2d029fcdc3f414de84e67287b7a2d8a9dcaef22b6360725257367",
+      "originalBodyPath": "original-bodies/src_runtime_resources.ts_resourceVariantNames.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/runtime/resources.ts",
+      "name": "setResourceVariantData",
+      "originalBodySha256": "6f2ea2b41a2e7bf53294168b3aab7dc8d4e26d0baaa7e44e97cce53688a6ce14",
+      "originalBodyPath": "original-bodies/src_runtime_resources.ts_setResourceVariantData.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/runtime/resources.ts",
+      "name": "validateResourceProject",
+      "originalBodySha256": "6cd69174453e13f530013b77e8342c9f5cc6cfab8323aac4a14cd00661e21ea7",
+      "originalBodyPath": "original-bodies/src_runtime_resources.ts_validateResourceProject.txt",
+      "expectedChanged": false
+    },
+    {
+      "path": "src/editor/gameplayScriptServices.ts",
+      "name": "createEditorGameplayScriptServices",
+      "originalBodySha256": "3af61fc1e3c1d4f3990d48d916f35342f3a1396888dbc8ee17528ea43b67b8e0",
+      "originalBodyPath": "original-bodies/src_editor_gameplayScriptServices.ts_createEditorGameplayScriptServices.txt",
+      "expectedChanged": true
+    }
+  ],
+  "algorithmProof": [
+    {
+      "name": "runtimeAssetGuid",
+      "original": "src/assets/AssetDatabase.ts:assetGuid",
+      "expectedBody": "{\r\n  if (!reference?.startsWith('asset://')) return null\r\n  return reference.slice('asset://'.length)\r\n}",
+      "mapping": "identity extraction body unchanged",
+      "originalOrMappedBodySha256": "3d52e380c44265320e628af3bb9a572981135db8e2a32e2b7cb67193541c99ca"
+    },
+    {
+      "name": "createRuntimeAssetIndex",
+      "original": "src/assets/AssetDatabase.ts:ensureIndex value expressions",
+      "expectedBody": "{\n  const indexedRecords = [...records].sort(/* 先计算 a.path.localeCompare(b.path)；仅当其为假值时求右侧 a.uuid.localeCompare(b.uuid)，返回短路求值结果。 */ (a, b) => a.path.localeCompare(b.path) || a.uuid.localeCompare(b.uuid))\n  const recordsByUuid = new Map(indexedRecords.map(/* 返回按声明顺序构造的数组 [record.uuid, record]。 */ record => [record.uuid, record]))\n  return { records: indexedRecords, byUuid: recordsByUuid }\n}",
+      "mapping": "original sort and Map expressions only, explicit record input/return; live generation/index side effects retained in original wrapper",
+      "originalOrMappedBodySha256": "cfd5014acf6cf3c17da6778e7c778e526b0caa2937425d0e93bf8426be83392d"
+    },
+    {
+      "name": "resolveRuntimeAssetGuid",
+      "original": "src/assets/AssetDatabase.ts:resolveAsset final conditional",
+      "expectedBody": "{ return guid ? recordsByUuid.get(guid) ?? null : null }",
+      "mapping": "only original final Map conditional; original URI extraction and ensureIndex order retained in wrapper",
+      "originalOrMappedBodySha256": "6f217e43cd832262d6ffdd4f2c7b3f578a5dedd68ece5df906d2e304af8ead03"
+    },
+    {
+      "name": "resolveRuntimeModuleAsset",
+      "original": "src/editor/gameplayScriptServices.ts:resolveModuleAsset arrow",
+      "expectedBody": "{\n      const asset = resolveAsset(reference) ?? records.find(candidate => candidate.path === reference)\n      return asset && (asset.assetType === 'script' || asset.assetType === 'visualScript')\n        ? { uuid: asset.uuid, path: asset.path, assetType: asset.assetType } : null\n    }",
+      "mapping": "only array receiver becomes explicit records; original resolver callback, nullish precedence, path find and type checks identical",
+      "originalOrMappedBodySha256": "d69871ab48922d2d2fe5d246d597da2b3268d8196025b5490d3845d40b7e0860"
+    },
+    {
+      "name": "resolveRuntimeResourceRecord",
+      "original": "src/runtime/resources.ts:resourceRecord",
+      "expectedBody": "{\r\n  const id=(referenceValue??'').replace(/^asset:\\/\\//,'').toLowerCase()\r\n  return assets.find(/* 比较 asset.uuid.toLowerCase() 与 id，返回严格相等的判断结果。 */ asset=>asset.uuid.toLowerCase()===id)??null\r\n}",
+      "mapping": "exact original lowercase UUID and first-match lookup body",
+      "originalOrMappedBodySha256": "06645f4d9927e5aa259c6245e2fdc023fdb8abb4f20683c0ce3e2db360bfd131"
+    },
+    {
+      "name": "readRuntimeScriptText",
+      "original": "src/assets/AssetDatabase.ts:readTextAsset",
+      "expectedBody": "{\r\n  if (!record || !RUNTIME_SCRIPT_TEXT_TYPES.includes(record.assetType)) return null\r\n  const comma = record.source.indexOf(',')\r\n  if (!record.source.startsWith('data:') || comma < 0) return record.source || null\r\n  try {\r\n    const metadata = record.source.slice(0, comma)\r\n    const payload = record.source.slice(comma + 1)\r\n    if (!metadata.includes(';base64')) return decodeURIComponent(payload)\r\n    const binary = atob(payload)\r\n    return new TextDecoder().decode(Uint8Array.from(binary, /* 调用 character.charCodeAt(0) 并返回调用结果。 */ character => character.charCodeAt(0)))\r\n  } catch {\r\n    return null\r\n  }\r\n}",
+      "mapping": "record is required explicit input; original allowlist relocated once; decoder and all error/null/empty behavior identical",
+      "originalOrMappedBodySha256": "d3a29407d5bcf9097d10546e8ab1360fe811fd41297e0bf9d093b4aa415a977f"
+    },
+    {
+      "name": "runtimeAssetSourceText",
+      "original": "src/assets/assetReferences.ts:assetSourceText",
+      "expectedBody": "{\r\n  if (['image', 'audio', 'font'].includes(asset.assetType)) return null\r\n  const bytes = assetSourceBytes(asset.source)\r\n  if (bytes.length > ASSET_REFERENCE_LIMITS.textBytes) throw new Error('ASSET_REFERENCE_LIMIT: Text asset exceeds the 16 MiB dependency-analysis limit.')\r\n  try { return new TextDecoder('utf-8', { fatal: true }).decode(bytes) } catch { return null }\r\n}",
+      "mapping": "exact strict decoder/limit/media/error body; unchanged source-byte helper and original unique limit object",
+      "originalOrMappedBodySha256": "6ec0084cbb10982aa0eedd205e8ad6b48c4042bb2bcdddac335f57aec23d9237"
+    }
+  ],
+  "originalAllowlist": "['script', 'visualScript', 'eventSheet', 'objectBlueprint', 'prefab', 'scene', 'material', 'animation', 'controller', 'animationMask', 'rig', 'skin', 'timeline', 'tileset', 'atlas', 'shader', 'localization', 'uiTheme', 'behaviorTree', 'stateMachine', 'tilePalette', 'brushPreset', 'terrainRules', 'dataSchema', 'dataTable', 'replay', 'path', 'particleSystem', 'resource']",
+  "typeClosure": {
+    "files": [
+      {
+        "path": "src/runtime/runtimeAssetValues.ts",
+        "sha256": "fa750c1055c198840e7b58cdc0071e191dce12e4aebafd83e94677177b9d0524",
+        "draft": true
+      },
+      {
+        "path": "src/runtime/runtimeProjectCatalog.ts",
+        "sha256": "ec4d8106960aa3f5be7465d87d207f8a1c208b12ee93998104ac5f4c084972ff",
+        "draft": true
+      },
+      {
+        "path": "src/assets/contentHash.ts",
+        "sha256": "a5e596fa2925808ed863cde3aa19d52bbf51740fe7f701aa59d177974a019dab",
+        "draft": false
+      },
+      {
+        "path": "src/runtime/scriptServices.ts",
+        "sha256": "9975234c09036fe46ebf99fc598896ec62bf8fcea60e032d1aab910ea457ee31",
+        "draft": false
+      },
+      {
+        "path": "src/runtime/scriptModules.ts",
+        "sha256": "ddc901a7e47bec1c53321efe1dd509ebbd72aba5786cbee4fb10457c5ffcaf85",
+        "draft": false
+      },
+      {
+        "path": "src/runtime/scriptDebugCounterOwner.ts",
+        "sha256": "660e38ddecee13b9bb9fabbf679f8b5c3913a1bd93892ad323c82b46f2a50cc5",
+        "draft": false
+      },
+      {
+        "path": "src/visual/rhaiSyntaxLexer.ts",
+        "sha256": "41c9a897c2376d687e97c828569d5b8da1212d702eeff8d47a56643e4e2e599f",
+        "draft": false
+      },
+      {
+        "path": "src/visual/rhaiSyntaxTypes.ts",
+        "sha256": "01219e1ff047eb5ccbbbadd76b675c6969d613cdfc8030ed52a418a1b33ce838",
+        "draft": false
+      }
+    ],
+    "edges": [
+      {
+        "from": "src/runtime/runtimeAssetValues.ts",
+        "reference": "../assets/contentHash",
+        "typeOnly": false,
+        "target": "src/assets/contentHash.ts"
+      },
+      {
+        "from": "src/runtime/runtimeProjectCatalog.ts",
+        "reference": "./runtimeAssetValues",
+        "typeOnly": false,
+        "target": "src/runtime/runtimeAssetValues.ts"
+      },
+      {
+        "from": "src/runtime/runtimeProjectCatalog.ts",
+        "reference": "./runtimeAssetValues",
+        "typeOnly": true,
+        "target": "src/runtime/runtimeAssetValues.ts"
+      },
+      {
+        "from": "src/runtime/runtimeProjectCatalog.ts",
+        "reference": "./scriptServices",
+        "typeOnly": true,
+        "target": "src/runtime/scriptServices.ts"
+      },
+      {
+        "from": "src/runtime/scriptServices.ts",
+        "reference": "./scriptModules",
+        "typeOnly": true,
+        "target": "src/runtime/scriptModules.ts"
+      },
+      {
+        "from": "src/runtime/scriptServices.ts",
+        "reference": "./scriptDebugCounterOwner",
+        "typeOnly": true,
+        "target": "src/runtime/scriptDebugCounterOwner.ts"
+      },
+      {
+        "from": "src/runtime/scriptModules.ts",
+        "reference": "../visual/rhaiSyntaxLexer",
+        "typeOnly": false,
+        "target": "src/visual/rhaiSyntaxLexer.ts"
+      },
+      {
+        "from": "src/runtime/scriptDebugCounterOwner.ts",
+        "reference": "./scriptServices",
+        "typeOnly": true,
+        "target": "src/runtime/scriptServices.ts"
+      },
+      {
+        "from": "src/visual/rhaiSyntaxLexer.ts",
+        "reference": "./rhaiSyntaxTypes",
+        "typeOnly": true,
+        "target": "src/visual/rhaiSyntaxTypes.ts"
+      }
+    ]
+  },
+  "runtimeClosure": {
+    "files": [
+      {
+        "path": "src/runtime/runtimeAssetValues.ts",
+        "sha256": "fa750c1055c198840e7b58cdc0071e191dce12e4aebafd83e94677177b9d0524",
+        "draft": true
+      },
+      {
+        "path": "src/runtime/runtimeProjectCatalog.ts",
+        "sha256": "ec4d8106960aa3f5be7465d87d207f8a1c208b12ee93998104ac5f4c084972ff",
+        "draft": true
+      },
+      {
+        "path": "src/assets/contentHash.ts",
+        "sha256": "a5e596fa2925808ed863cde3aa19d52bbf51740fe7f701aa59d177974a019dab",
+        "draft": false
+      }
+    ],
+    "edges": [
+      {
+        "from": "src/runtime/runtimeAssetValues.ts",
+        "reference": "../assets/contentHash",
+        "typeOnly": false,
+        "target": "src/assets/contentHash.ts"
+      },
+      {
+        "from": "src/runtime/runtimeProjectCatalog.ts",
+        "reference": "./runtimeAssetValues",
+        "typeOnly": false,
+        "target": "src/runtime/runtimeAssetValues.ts"
+      }
+    ]
+  },
+  "scope": {
+    "catalog": "IMPLEMENTED; VERIFIED_NODE_ONLY; no current production Editor/Player entry instantiates it",
+    "values": "real Editor adopter; separate pure SSR compilation is not a formal Editor/Player bundle qualification",
+    "untouched": [
+      "PAK",
+      "Rust migration",
+      "Core",
+      "World",
+      "physics",
+      "Builder",
+      "Host",
+      "Player entry",
+      "Scene/stream",
+      "old helpers/gates",
+      "locks/projects/master"
+    ]
+  },
+  "additiveRepair": {
+    "scope": "Only the plain dense-array prototype admission condition in new immutable catalog; all original text/index/math/Editor algorithms unchanged.",
+    "beforeSha256": "88d54c06ed48fb058588ad8204d02fc7ad4611ec7aacad8aa81790cae2192756",
+    "afterSha256": "ec4d8106960aa3f5be7465d87d207f8a1c208b12ee93998104ac5f4c084972ff",
+    "from": "if (!array && prototype !== Object.prototype && prototype !== null)",
+    "to": "if (array ? prototype !== Array.prototype : prototype !== Object.prototype && prototype !== null)",
+    "wholeFileInverse": true,
+    "initialFunctionalReport": ".cache/engine-overhaul/runtime-catalog/after-qZyBe1/report.json",
+    "initialExtraFailure": ".cache/engine-overhaul/runtime-catalog/contract-bbzG6v/report.json"
+  }
+}

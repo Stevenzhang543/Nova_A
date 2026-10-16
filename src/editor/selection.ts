@@ -1,6 +1,7 @@
 /** 场景选择工具：更新选中标识，解析选中根对象及子树，并计算集合中心。 */
 import type { Entity } from '../world/Entity'
-import { descendantsOf, worldTransform } from '../world/hierarchy'
+import { worldTransform } from '../world/hierarchy'
+export { subtreeEntities } from '../world/hierarchy'
 import type { Vec2 } from '../world/types'
 
 export type SelectionMode = 'replace' | 'add' | 'toggle'
@@ -35,15 +36,6 @@ export type SelectionMode = 'replace' | 'add' | 'toggle'
     }
     return true
   })
-}
-
-/** 把选中根及所有后代加入集合，再按场景顺序返回完整子树。 */ export function subtreeEntities(rootIds: number[], entities: Entity[]): Entity[] {
-  const included = new Set<number>()
-  for (const root of selectedEntities(rootIds, entities)) {
-    included.add(root.id)
-    for (const child of descendantsOf(root, entities)) included.add(child.id)
-  }
-  return entities.filter(/* 调用 included.has(entity.id) 并返回调用结果。 */ entity => included.has(entity.id))
 }
 
 /** 对选中实体的世界位置求平均；无选择时返回原点。 */ export function selectionCenter(ids: number[], entities: Entity[]): Vec2 {

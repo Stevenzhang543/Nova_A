@@ -1,19 +1,18 @@
 /** 二维光照合成：处理灯光范围、阴影及法线响应，并提供调试视图和后处理覆盖绘制。 */
 import { entityBoundaryPoints } from '../world/Connection'
-import { resolveTexture } from '../assets/AssetDatabase'
-import { Light2D, ShadowCaster2D } from '../world/components'
+import type { Light2D, ShadowCaster2D } from '../world/components'
 import type { Entity } from '../world/Entity'
 import { worldTransform } from '../world/hierarchy'
 import type { Vec2 } from '../world/types'
 import { activeGameCamera, activeGameCameras } from './sceneRenderer'
-import { activePostProcessing, activeRenderQuality, renderingSettings } from './renderSettings'
+import { resolveLightingEnvironment, type LightingEnvironment } from './LightingEnvironment'
 import type { CameraRenderView } from './types'
 import { CanvasPixelCache, textureContentVersion } from './textureContent'
 
 const normalResponseCache = new CanvasPixelCache(192, 48 * 1048576)
 let lightingFrame = 0
 
-interface LightingOptions {
+export interface LightingOptions {
   width: number
   height: number
   editorCamera: CameraRenderView
@@ -22,9 +21,9 @@ interface LightingOptions {
 }
 
 /* 选择当前游戏相机；没有有效游戏相机或处于编辑状态时使用编辑相机。 */
-function cameraFor(entities: Entity[], options: LightingOptions): CameraRenderView {
+function cameraFor(entities: Entity[], options: LightingOptions, environment: LightingEnvironment): CameraRenderView {
   return options.gameView
-    ? activeGameCamera(entities, options.width, options.height)?.view ?? options.editorCamera
+    ? activeGameCamera(entities, options.width, options.height, environment.scene)?.view ?? options.editorCamera
     : options.editorCamera
 }
 
@@ -105,7 +104,8 @@ function punchLight(context: CanvasRenderingContext2D, light: Light2D, position:
 }
 
 /* 根据有效投影体的边缘向远离光源的方向拉伸阴影，遵守质量与层掩码设置。 */
-function drawShadows(context: CanvasRenderingContext2D, lightEntity: Entity, light: Light2D, entities: Entity[], camera: CameraRenderView, options: LightingOptions): void {
+function drawShadows(context: CanvasRenderingContext2D, lightEntity: Entity, light: Light2D, entities: Entity[], camera: CameraRenderView, options: LightingOptions, environment: LightingEnvironment): void {
+  const activeRenderQuality = environment.renderQuality
   if (!light.castsShadows || activeRenderQuality.shadowQuality === 'Off' || light.lightType === 'Directional') return
   const lightWorld = worldTransform(lightEntity, entities).position
   const lightScreen = worldToScreen(lightWorld, camera, options.width, options.height)
@@ -130,8 +130,8 @@ function drawShadows(context: CanvasRenderingContext2D, lightEntity: Entity, lig
 }
 
 /* 按纹理版本和离散光照方向缓存法线贴图的漫反射响应，读取失败时返回空。 */
-function normalResponse(reference: string, direction: Vec2): HTMLCanvasElement | null {
-  const texture = resolveTexture(reference)
+function normalResponse(reference: string, direction: Vec2, environment: LightingEnvironment): HTMLCanvasElement | null {
+  const texture = environment.assets.resolveTexture(reference)
   if (!texture) return null
   const angleBin = Math.round((Math.atan2(direction.y, direction.x) + Math.PI) / (Math.PI * 2) * 24) % 24
   const key = `${texture.key}:${textureContentVersion(texture, lightingFrame)}:${texture.uv.x}:${texture.uv.y}:${texture.uv.width}:${texture.uv.height}:${angleBin}`
@@ -158,7 +158,7 @@ function normalResponse(reference: string, direction: Vec2): HTMLCanvasElement |
 }
 
 /* 将光照方向转换到精灵局部空间，叠加法线响应并考虑距离衰减和翻转。 */
-function drawNormalMappedLight(context: CanvasRenderingContext2D, targets: Entity[], lightEntity: Entity, light: Light2D, entities: Entity[], camera: CameraRenderView, options: LightingOptions): void {
+function drawNormalMappedLight(context: CanvasRenderingContext2D, targets: Entity[], lightEntity: Entity, light: Light2D, entities: Entity[], camera: CameraRenderView, options: LightingOptions, environment: LightingEnvironment): void {
   const lightWorld = worldTransform(lightEntity, entities).position
   for (const entity of targets) {
     const sprite = entity.spriteRenderer
@@ -170,7 +170,7 @@ function drawNormalMappedLight(context: CanvasRenderingContext2D, targets: Entit
     const direction = light.lightType === 'Directional' ? { x: -Math.cos(lightRotation), y: -Math.sin(lightRotation) } : { x: dx, y: dy }
     const cosine = Math.cos(transform.rotation), sine = Math.sin(transform.rotation)
     const localDirection = { x: (direction.x * cosine + direction.y * sine) * (transform.scale.x < 0 ? -1 : 1) * (sprite.flipX ? -1 : 1), y: (-direction.x * sine + direction.y * cosine) * (transform.scale.y < 0 ? -1 : 1) * (sprite.flipY ? -1 : 1) }
-    const response = normalResponse(sprite.normalMapAsset, localDirection)
+    const response = normalResponse(sprite.normalMapAsset, localDirection, environment)
     if (!response) continue
     const position = worldToScreen(transform.position, camera, options.width, options.height), attenuation = light.lightType === 'Directional' ? 1 : Math.max(0, 1 - distance / Math.max(.0001, light.range))
     context.save(); context.globalCompositeOperation = 'screen'; context.globalAlpha = Math.min(.7, light.intensity * attenuation * .22)
@@ -182,13 +182,14 @@ function drawNormalMappedLight(context: CanvasRenderingContext2D, targets: Entit
 }
 
 /* 逐相机绘制环境暗幕、光照、法线响应与阴影，返回此次光照处理耗时。 */
-export function renderLighting2D(context: CanvasRenderingContext2D, entities: Entity[], options: LightingOptions): number {
+export function renderLighting2D(context: CanvasRenderingContext2D, entities: Entity[], options: LightingOptions, suppliedEnvironment?: LightingEnvironment): number {
+  const environment = resolveLightingEnvironment(suppliedEnvironment), renderingSettings = environment.settings
   if (!renderingSettings.lightingEnabled) return 0
   lightingFrame++
   const started = performance.now()
   const lights = entities.flatMap(/* 收集启用且可见的光源组件，并保留其所属实体供后续变换使用。 */ entity => { const light = entity.getComponent<Light2D>('Light2D'); return entity.enabled && entity.authoring.visible && (options.gameView || (entity.editorVisible && entity.layer === options.activeLayer)) && light?.enabled && !light.removed ? [{ entity, light }] : [] })
   const cameras = options.gameView
-    ? activeGameCameras(entities, options.width, options.height).map(/* 返回 camera.view 的当前值。 */ camera => camera.view)
+    ? activeGameCameras(entities, options.width, options.height, undefined, environment.scene).map(/* 返回 camera.view 的当前值。 */ camera => camera.view)
     : [options.editorCamera]
   for (const camera of cameras.length ? cameras : [options.editorCamera]) {
     context.save()
@@ -203,9 +204,9 @@ export function renderLighting2D(context: CanvasRenderingContext2D, entities: En
       if (!clipTargets(context, targets, entities, camera, options.width, options.height)) { context.restore(); continue }
       const transform = worldTransform(entity, entities), position = worldToScreen(transform.position, camera, options.width, options.height)
       punchLight(context, light, position, transform.rotation - (camera.rotation ?? 0), camera.scale, options)
-      drawNormalMappedLight(context, targets, entity, light, entities, camera, options)
+      drawNormalMappedLight(context, targets, entity, light, entities, camera, options, environment)
       context.restore()
-      drawShadows(context, entity, light, entities, camera, options)
+      drawShadows(context, entity, light, entities, camera, options, environment)
     }
     context.restore()
   }
@@ -213,9 +214,10 @@ export function renderLighting2D(context: CanvasRenderingContext2D, entities: En
 }
 
 /* 绘制光照、过度绘制、批次或法线贴图调试视图，并返回处理耗时。 */
-export function renderDebugView2D(context: CanvasRenderingContext2D, entities: Entity[], options: LightingOptions): number {
+export function renderDebugView2D(context: CanvasRenderingContext2D, entities: Entity[], options: LightingOptions, suppliedEnvironment?: LightingEnvironment): number {
+  const environment = resolveLightingEnvironment(suppliedEnvironment), renderingSettings = environment.settings
   if (renderingSettings.debugView === 'None') return 0
-  const started = performance.now(), camera = cameraFor(entities, options)
+  const started = performance.now(), camera = cameraFor(entities, options, environment)
   context.save()
   if (renderingSettings.debugView === 'Lighting') {
     context.globalCompositeOperation = 'source-over'; context.fillStyle = 'rgba(0,0,0,.72)'; context.fillRect(0, 0, options.width, options.height)
@@ -243,7 +245,8 @@ export function renderDebugView2D(context: CanvasRenderingContext2D, entities: E
 }
 
 /* 启用后处理且暗角非零时叠加径向暗角，返回处理耗时。 */
-export function renderPostProcessOverlay(context: CanvasRenderingContext2D, width: number, height: number): number {
+export function renderPostProcessOverlay(context: CanvasRenderingContext2D, width: number, height: number, suppliedEnvironment?: LightingEnvironment): number {
+  const environment = resolveLightingEnvironment(suppliedEnvironment), renderingSettings = environment.settings, activePostProcessing = environment.postProcessing
   if (!renderingSettings.postProcessing.enabled || activePostProcessing.vignette <= 0) return 0
   const started = performance.now(), amount = activePostProcessing.vignette
   const gradient = context.createRadialGradient(width * .5, height * .5, Math.min(width, height) * .18, width * .5, height * .5, Math.max(width, height) * .72)
@@ -253,7 +256,8 @@ export function renderPostProcessOverlay(context: CanvasRenderingContext2D, widt
 }
 
 /* 将当前曝光、对比度、饱和度、模糊与泛光设置组合成画布过滤器字符串。 */
-export function worldPostProcessFilter(): string {
+export function worldPostProcessFilter(suppliedEnvironment?: LightingEnvironment): string {
+  const environment = resolveLightingEnvironment(suppliedEnvironment), renderingSettings = environment.settings, activePostProcessing = environment.postProcessing
   if (!renderingSettings.postProcessing.enabled) return 'none'
   const effect = activePostProcessing
   const brightness = Math.pow(2, effect.exposure)
