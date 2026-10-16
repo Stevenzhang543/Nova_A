@@ -1,21 +1,23 @@
 {
-  "generatedAt": "2026-10-16T18:17:07.962Z",
+  "generatedAt": "2026-10-16T18:21:16.387Z",
   "note": "Median of 5 runs per strategy, reconstructed algorithms, synthetic scene, no GPU or frame pipeline involved.",
   "results": [
     {
       "count": 1000,
       "depth": 10,
-      "beforeMs": 31.9582,
-      "afterMs": 2.9063,
-      "speedup": 10.996180710869492,
+      "beforeMs": 29.1568,
+      "perEntityMs": 2.3261,
+      "batchMs": 1.237,
+      "speedupTotal": 23.570573969280517,
       "orderIdentical": true
     },
     {
       "count": 1000,
       "depth": 50,
-      "beforeMs": 157.9655,
-      "afterMs": 11.2772,
-      "speedup": 14.007510729613733,
+      "beforeMs": 143.9692,
+      "perEntityMs": 8.9806,
+      "batchMs": 1.4633,
+      "speedupTotal": 98.38666028838925,
       "orderIdentical": true
     }
   ]

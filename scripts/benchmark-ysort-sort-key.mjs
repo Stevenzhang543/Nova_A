@@ -24,9 +24,17 @@ function scene(count, depth) {
 }
 
 /** 与 sceneRenderer.authoredOrder 同构的排序键。 */
-const key = (entity, entities) =>
+const key = (entity, entities, worldY) =>
   entity.renderer.orderInLayer + entity.authoring.zOrder +
-  (entity.authoring.sortMode === 'YSort' ? -hierarchy.worldTransform(entity, entities).position.y * 0.000001 : 0)
+  (entity.authoring.sortMode === 'YSort' ? -(worldY ?? hierarchy.worldTransform(entity, entities).position.y) * 0.000001 : 0)
+
+/** 本轮：排序键按拓扑序批量求解世界变换（每个祖先只算一次）。 */
+const sortBatch = (entities) => {
+  const worlds = hierarchy.worldTransformsFor(entities, entities)
+  const keys = new Map()
+  for (const entity of entities) keys.set(entity.id, key(entity, entities, worlds.get(entity.uuid).position.y))
+  return [...entities].sort((first, second) => keys.get(first.id) - keys.get(second.id) || first.id - second.id)
+}
 
 /** 修复前：比较器每次比较都重新求键。 */
 const sortBefore = (entities) => [...entities].sort((first, second) => key(first, entities) - key(second, entities) || first.id - second.id)
@@ -55,9 +63,11 @@ for (const [count, depth] of [[1000, 10], [1000, 50]]) {
   const entities = scene(count, depth)
   const before = bench(() => sortBefore(entities), 5)
   const after = bench(() => sortAfter(entities), 5)
-  const same = JSON.stringify(sortBefore(entities).map(/** 取 id 以便比较顺序。 */ e => e.id)) === JSON.stringify(sortAfter(entities).map(/** 取 id 以便比较顺序。 */ e => e.id))
-  console.log('n=' + count + ' depth=' + depth + ' | before ' + before.toFixed(2) + ' ms | after ' + after.toFixed(2) + ' ms | ' + (before / after).toFixed(1) + 'x | order identical: ' + same)
-  results.push({ count, depth, beforeMs: before, afterMs: after, speedup: before / after, orderIdentical: same })
+  const batch = bench(() => sortBatch(entities), 5)
+  const orderOf = (run) => JSON.stringify(run(entities).map(/** 取 id 以便比较顺序。 */ e => e.id))
+  const same = orderOf(sortBefore) === orderOf(sortAfter) && orderOf(sortAfter) === orderOf(sortBatch)
+  console.log('n=' + count + ' depth=' + depth + ' | before ' + before.toFixed(2) + ' ms | per-entity ' + after.toFixed(2) + ' ms | batch ' + batch.toFixed(2) + ' ms | total ' + (before / batch).toFixed(1) + 'x | order identical: ' + same)
+  results.push({ count, depth, beforeMs: before, perEntityMs: after, batchMs: batch, speedupTotal: before / batch, orderIdentical: same })
   assert.ok(same, 'both strategies must produce the same order')
 }
 

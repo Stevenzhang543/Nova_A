@@ -3,7 +3,7 @@ import { compoundGeometries } from '../world/compoundGeometry'
 import type { Connection } from '../world/Connection'
 import type { Camera2D, ParticleEmitter2D, ShapeRenderer2D, SpriteRenderer2D, TextRenderer2D, TileMap2D } from '../world/components'
 import type { Entity } from '../world/Entity'
-import { worldTransform } from '../world/hierarchy'
+import { worldTransform, worldTransformsFor } from '../world/hierarchy'
 import type { CameraRenderView, RenderColor, Renderer2D, RendererStats } from './types'
 import { canvasMaterialColor, resolveMaterial } from './materials'
 import type { TextureFilter } from './types'
@@ -153,7 +153,11 @@ function authoringPosition(entity: Entity, position: { x: number; y: number }, e
   return position
 }
 /* 组合层内次序、作者指定深度与可选 Y 排序偏移。 */
-function authoredOrder(entity: Entity, base: number, entities: Entity[]): number { return base + entity.authoring.zOrder + (entity.authoring.sortMode === 'YSort' ? -worldTransform(entity, entities).position.y * .000001 : 0) }
+/** 计算作者层内次序。`worldY` 由调用方批量求解后传入；省略时退回单次查询，保持既有行为。 */
+function authoredOrder(entity: Entity, base: number, entities: Entity[], worldY?: number): number {
+  const depthKey = entity.authoring.sortMode === 'YSort' ? -(worldY ?? worldTransform(entity, entities).position.y) * .000001 : 0
+  return base + entity.authoring.zOrder + depthKey
+}
 
 /* 保留标准 CSS 字体族，其余字体名清洗引号和反斜杠后加引号。 */
 function cssFontFamily(value: string): string {
@@ -315,8 +319,12 @@ export function renderWorld(renderer: Renderer2D, entities: Entity[], options: S
     const positioned = candidates.filter(entity => !options.performanceMode || entityIntersectsRenderBounds(entity, entities, camera.view, visibleBounds, spriteMeshes, environment))
     // authoredOrder 对 YSort 实体会调用 worldTransform，而实测 worldTransform 为 O(depth)（约 323ns/层）。
     // 在比较器内求值会把它重复 O(n log n) 次；按实体预计算一次后降为每帧 O(n) 次，排序结果不变。
+    // YSort 实体需要世界 Y 作为排序键。逐实体查询会让世界变换被重复求解；这里按拓扑序批量
+    // 求解一次，使每个祖先只算一次，键值与排序结果都不变。无 YSort 实体时完全跳过。
+    const needsWorldY = positioned.some(/* 仅当存在 YSort 实体时才付出批量求解成本。 */ entity => entity.authoring.sortMode === 'YSort')
+    const worldTransforms = needsWorldY ? worldTransformsFor(entities, positioned) : null
     const orderKeys = new Map<number, number>()
-    for (const entity of positioned) orderKeys.set(entity.id, authoredOrder(entity, entity.renderer.orderInLayer, entities))
+    for (const entity of positioned) orderKeys.set(entity.id, authoredOrder(entity, entity.renderer.orderInLayer, entities, worldTransforms?.get(entity.uuid)?.position.y))
     // 上面的循环已覆盖 positioned 的每个实体，回退值不可达；保留它只是避免在渲染热路径抛出。
     const visible = positioned.sort(/* 依次比较实体排序层、作者层内次序及实体编号。 */ (first, second) => sortingLayer(first) - sortingLayer(second) || (orderKeys.get(first.id) ?? 0) - (orderKeys.get(second.id) ?? 0) || first.id - second.id)
     for (const entity of visible) {
