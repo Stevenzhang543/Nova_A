@@ -652,4 +652,28 @@ C 组与 B 组**独立**判定"信号层缺失/无预算"；C 组的 G5（Play �
 
 **本轮未改任何产品代码** —— 这是纯测试补齐，因此**不可能引入回归**，但也因此**不构成功能完成**：它证明的是"现有变换语义符合预期"，不是"新增能力已实现"。
 
-**C10（Y-Sort）仍为零覆盖**，且 A 组审计已指出其排序键内重复调用 `worldTransform` 导致每帧 O(n·depth) 全场景排序，属需修复项。
+### 17.5 C10 / Y-Sort 性能缺陷：已完成调用链核实（只读，未改代码）
+
+A 组审计曾判定 Y-Sort「排序键内再算 `worldTransform` → 每帧 O(n·depth) 全场景排序」。本轮**独立核实**该判定，取得精确调用链：
+
+```text
+sceneRenderer.ts:316  .sort((first, second) =>
+                        sortingLayer(first) - sortingLayer(second)
+                        || authoredOrder(first, …) - authoredOrder(second, …))
+sceneRenderer.ts:156  function authoredOrder(entity, base, entities) {
+                        return base + entity.authoring.zOrder
+                          + (entity.authoring.sortMode === 'YSort'
+                             ? -worldTransform(entity, entities).position.y * .000001
+                             : 0)
+                      }
+```
+
+**结论（比原判定更严重）**：比较器对**每一次比较**调用两次 `authoredOrder`，而后者对 YSort 实体调用一次 `worldTransform`。`Array.prototype.sort` 的比较次数为 O(n log n)，因此每帧的 `worldTransform` 调用数为 **O(n log n)**；若 `worldTransform` 为 O(depth)，总复杂度是 **O(n log n · depth)** —— 原判定的 "O(n·depth)" 是**低估**。
+
+**尚未确定的部分（不冒充已知）**：`hierarchy.ts:25/30` 提供 `prepareHierarchyIndex` / `invalidateHierarchyIndex`，说明可能存在层级索引缓存。**`worldTransform` 的实际单次复杂度取决于该索引是否被命中，本轮未测量**，因此不宣称具体数量级。要做的是先测、再改。
+
+**同为证据的旁证**：`sceneRenderer.ts` 另有 6 处逐实体 `worldTransform` 调用（:77/:179/:216/:245/:322/:353）。这些是**每实体一次**（O(n)），与比较器内的调用不是同一量级问题，**不应混为一谈**。
+
+**状态**：`IMPLEMENTED`（缺陷已定位并核实），**未修复**——修复需改 `src/renderer/**`，属冻结面，须先解冻。**C10 测试仍为零覆盖。**
+
+**本轮未改任何文件（除本记录）**：核实过程为只读。
