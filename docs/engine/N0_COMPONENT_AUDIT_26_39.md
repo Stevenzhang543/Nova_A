@@ -328,3 +328,37 @@
 3. **补齐 typed signal 注册**（`signalId` + 参数 schema + 连接持久化），超限丢弃改为**有界背压**，并定义 `_enter_tree`/`_ready`/`_exit_tree` 对 `awake`/`start` 的映射与测试（§5.1/§5.3）。
 
 > 注：第 2、3 项触及 `src/world/hierarchy.ts` 与 `src/runtime/GameplayRuntimeCore.ts`——后者在**冻结面**内（§10.1）。因此第 3 项必须先由集成者显式解除冻结后方可执行；本轮不越界。
+
+---
+
+## 14. 附录：B 范围（脚本 / 事件 / 输入 / 低延迟）审计结论
+
+### 14.1 已验证可复用（不得重做）
+
+| 项 | 状态 | 依据 |
+|---|---|---|
+| Rhai 脚本内核 | **COMPLETE_VERIFIED** | `crates/nova_script/src/lib.rs` **37 个 `#[test]`**：AST 缓存原子性、Scope/实例隔离、epoch+generation 陈旧拒绝、顶层初始化仅一次、操作预算、候选实例仅同 revision 转移、宿主输出预算；权威**全在 Rust**，TS 仅为调用方，无重复逻辑 |
+| 性能协调与调度 | **COMPLETE_VERIFIED** | `verify-engine-scheduler.mjs` **28 项真实断言**（租约恰好一次释放、等待期不占租约、软截止期、wall-cost 含准备与合并、hidden 暂停可选工作、压力迟滞不改写 VisualQualityFloor） |
+| Play/Pause/Step/Stop 共用同一 Runtime | **成立** | Player 直接 `new GameplayRuntimeCore`（`PlayerApp.vue:276`），Editor 为 `GameplayRuntime extends GameplayRuntimeCore`——**语义共用已达成**，仅边界未分离 |
+
+### 14.2 B 范围缺口（G1–G9，按优先级）
+
+| # | 缺口 | 证据 | 违反 |
+|---|---|---|---|
+| **G1** | **§26.4 追踪身份完全缺失**：`inputSequence` / 消费 tick / 首次受影响 packet **全库 0 命中**；`inputToPixelMs` 恒 `null` | `observability.ts:95`、`profiler.ts:48,201` | §26.4 —— **没有它就无法证明任何低延迟改动有效** |
+| **G2** | **脚本世界投影每帧多次全实体 JSON**：`invalidateScriptWorld` 在 `dispatchSignals`(:1925)、`ensureLifecycle`(:1233)、每 `runPhase`(:1276) 都被调用 → 每固定步失效，**每帧 4+ 次全实体 JSON 重建**；再叠加每回调 `JSON.stringify(context)` 跨 WASM | `GameplayRuntimeCore.ts:1188-1230`；基线可测 `scriptContextDiagnostics.publications`(:434) | §5、§0.1 |
+| **G3** | **Inspector 以属性名字符串为键**（`Script.${name}`、`propertyMetadata[name]`），无稳定字段 ID → **脚本重命名即丢失作者值**，且阻碍 §6 schema 驱动 | `ConfigPanel.vue:222,564` | §6、§19 |
+| **G4** | 信号**无循环/深度预算**，仅 1024 队列丢弃最旧；**C04 零专项测试** | `GameplayRuntimeCore.ts:1049-1052` | §5.3、C04 |
+| **G5** | 输入四分作用域**无单一优先级仲裁源**，靠分散 DOM 守卫；`pointercancel`/`lostpointercapture` **仅对 pen 处理** | `input.ts:356,905`；`ToolBar.vue:114`；`input.ts:423,444` | §9 |
+| **G6** | 插值只有 `Interpolate`/`None`，**缺 §8 的 Balanced/Responsive 表现策略语义** | `physicsProduction.ts:5` | §8.2 |
+| **G7** | **无真实时间（wall-clock/process）计时器通道**，无法表达 `process_callback=process` | `time.ts` 为唯一实现 | §14 |
+| **G8** | Player 依赖 Editor 模块（与 §13 门槛 1 同一结论） | `PlayerApp.vue:45,50,62,73` | §0.2 门槛 1 |
+| **G9** | `World.activeBodies` **每帧全量 `entities.filter` 重建**，无持久活动集/脏标记 | `World.ts:783` | §5.2；**优化被冻结面阻塞** |
+
+### 14.3 B 范围给出的 N1/N2 排序（与 A 范围合并后）
+
+1. **G3 稳定字段 ID** 与 A 范围第 1 项是同一件事的两面（组件字段 + 脚本导出属性），应在 N1 的同一契约层内解决。
+2. **G1 可观测身份透传**：在既有 `FrameObservability`/`InputReceiptTokenMap` 上追加 `inputSequence` → 消费 tick → 提交 → 首次受影响 packet，**不改变既有 packet 布局与 offset**（避免触犯 ABI 冻结面）。这是 N8 性能验收的前置条件。
+3. **G2 投影失效收敛**、**G4 信号预算与 C04**、**G5 输入仲裁源**、**G9 active list** 均落在**冻结面**内，须先解冻。
+
+> 交叉印证：A、B 两路审计**独立**得出同一条结论——"Player 依赖边界未闭合"是唯一的硬门槛缺口；且都指出活动集/脏标记缺失（A 的 Transform dirty、B 的 active list），二者在缓存与失效策略上应一并设计，而不是各修一处。

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-16T17:54:58.602Z",
+  "generatedAt": "2026-10-16T17:56:22.103Z",
   "registryApiVersion": "2.0",
   "counts": {
     "registryKinds": 61,
@@ -17,6 +17,10 @@
       "Rope2D",
       "Transform2D"
     ]
+  },
+  "fieldSchema": {
+    "kinds": 59,
+    "fields": 595
   },
   "registryGap": [
     "CanvasLayer",
@@ -51,6 +55,10 @@
     },
     {
       "name": "Registry gap is recorded for kinds the Inspector supports but STABLE_COMPONENTS omits",
+      "status": "passed"
+    },
+    {
+      "name": "Single field-level entry point stays derived from the generated contract",
       "status": "passed"
     },
     {

@@ -1,14 +1,20 @@
 /** N1 契约层基线校验：证明登记表、生成式字段契约、组件声明与 Inspector 分支四者不漂移。 */
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
+import { openMediaAuditModules } from './lib/mediaAudit16.mjs'
 
 const read = path => fs.readFileSync(path, 'utf8').replaceAll('\r\n', '\n')
+// Load the real module the same way the other engine verifiers do, so this contract test can
+// never pass against a stale hand-copied snapshot of the source.
+const opened = await openMediaAuditModules({ repository: process.cwd(), bases: [process.cwd()] }, { fieldSchema: 'world/componentFieldSchema' })
+globalThis.__fieldSchema = opened.modules.fieldSchema
 const checks = []
 async function test(name, run) {
   try { await run(); checks.push({ name, status: 'passed' }); console.log('PASS ' + name) }
   catch (error) { checks.push({ name, status: 'failed', error: String(error && error.message || error) }); console.error('FAIL ' + name + ' :: ' + (error && error.message || error)) }
 }
 
+const fieldSchemaSource = read('src/world/componentFieldSchema.ts')
 const registrySource = read('src/world/componentRegistry.ts')
 const generatedSource = read('src/world/componentPrimitiveTypes.ts')
 const componentsSource = read('src/world/components.ts')
@@ -79,6 +85,32 @@ await test('Registry gap is recorded for kinds the Inspector supports but STABLE
   assert.ok(Array.isArray(globalThis.__registryGap), 'gap must be recorded')
 })
 
+await test('Single field-level entry point stays derived from the generated contract', () => {
+  const opened = globalThis.__fieldSchema
+  assert.ok(opened, 'componentFieldSchema module must load')
+  const { componentFields, componentField, componentFieldKindCount } = opened
+  const blocks = [...generatedSource.matchAll(/^  "([A-Za-z0-9]+)": \{([\s\S]*?)^  \},?$/gm)]
+  let kinds = 0
+  let fields = 0
+  for (const [, kind, body] of blocks) {
+    const declared = [...body.matchAll(/^    "([A-Za-z0-9_]+)": \[/gm)].map(m => m[1]).sort()
+    const described = componentFields(kind)
+    assert.deepEqual(described.map(f => f.id), declared, kind + ' field ids diverge from the generated contract')
+    for (const field of described) {
+      assert.ok(field.types.length > 0, kind + '.' + field.id + ' declares no primitive type')
+      assert.equal(field.kind, kind, 'field descriptor carries the wrong kind')
+      assert.ok(Object.isFrozen(field), 'field descriptors must be frozen')
+      assert.equal(componentField(kind, field.id), field, 'single-field lookup disagrees with the list')
+    }
+    kinds++
+    fields += described.length
+  }
+  assert.equal(componentFieldKindCount(), kinds, 'entry point exposes a different kind count than the contract')
+  assert.deepEqual(componentFields('NoSuchKind2D'), [], 'unknown kinds must resolve to an empty list, never throw')
+  assert.equal(componentField('SpriteRenderer2D', 'NoSuchField'), undefined, 'unknown fields must resolve to undefined')
+  globalThis.__fieldSchemaCoverage = { kinds, fields }
+})
+
 await test('Schema coverage is reported per registered kind', () => {
   const generated = new Set(generatedKinds)
   const missing = descriptorKinds.filter(kind => !generated.has(kind)).sort()
@@ -101,6 +133,7 @@ fs.writeFileSync(out, JSON.stringify({
     inspectorDistinctKinds: new Set(inspectorKinds).size,
   },
   coverage: globalThis.__coverage,
+  fieldSchema: globalThis.__fieldSchemaCoverage,
   registryGap: globalThis.__registryGap,
   checks,
   status: checks.some(c => c.status === 'failed') ? 'failed' : 'passed',
