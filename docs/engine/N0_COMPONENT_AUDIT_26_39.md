@@ -443,4 +443,16 @@ C 组与 B 组**独立**判定"信号层缺失/无预算"；C 组的 G5（Play �
 
 **状态**：`IMPLEMENTED` + 有行为证据；因尚未在真实 GUI 中做一次人工 Escape 走查，**本轮标为 IMPLEMENTED 而非 VERIFIED**（主指令 §33 禁止把内部空跑当作体验通过）。
 
-**仍待处理**：`pointercancel` / `lostpointercapture` 在编辑态仍未接入同一条还原路径（当前仅触屏游戏输入处理），列为下一轮项。
+### 16.2 G6 剩余面已补齐：pointercancel / lostpointercapture 接入同一还原路径
+
+**问题**：画布已绑定 `@pointercancel="onUiPointerCancel"` 与 `@lostpointercapture="onUiPointerCancel"`，但该处理器（`WorldCanvas.vue:322`）**只处理触屏游戏输入**（`touchPointer`），对编辑态的变换拖动**不做任何处理**。因此浏览器触发 pointercancel（系统手势、窗口失活、笔离开范围等）时，位移同样被遗留且不入历史——与 Escape 是同一个缺陷的第二条入口。
+
+**修复**：把取消语义抽成单一助手 `cancelActiveCanvasDrag()`（有位移则 `restoreTransforms` + 刷新属性，然后 `finishCanvasDrag()`，不写历史），并让**两个入口共用**：
+- Escape 分支：`if (gizmoDrag) { cancelActiveCanvasDrag(); return }`
+- `onUiPointerCancel`：保留原触屏处理，追加 `if (gizmoDrag) cancelActiveCanvasDrag()`
+
+**证据**：`scripts/verify-engine-gizmo-cancel.mjs` 扩展为 **6 项检查全部通过**。新增项断言两个入口**共用同一助手**、助手内部 `restoreTransforms` 确实先于 `finishCanvasDrag`、且 `onUiPointerCancel` 确实路由到助手。`pnpm check` 退出码 0。
+
+**状态**：`IMPLEMENTED`（有行为证据），仍**未**在真实 GUI 中人工触发一次 pointercancel 走查，故不标 VERIFIED。
+
+**本轮明确未处理（不掩盖）**：**顶点拖动（vertex drag）的取消仍不还原**——`isVertexDragging` 在 `finishCanvasDrag` 中仅被复位，其基准保存在 `dragMeta`/比例中，未纳入还原路径。这与 G6 同类（直接改写 `renderer.vertices` 与 `authoring.path.points`），但需要的基准信息不同，留作下一轮独立处理。

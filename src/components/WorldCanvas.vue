@@ -319,7 +319,7 @@ watch(/* 返回 editorState.currentPage 的当前值。 */ () => editorState.cur
   event.preventDefault(); event.stopPropagation(); gameUiRuntime.pointerUp(screenPos(event)); touchPointer = null
   if (canvasRef.value?.hasPointerCapture(event.pointerId)) canvasRef.value.releasePointerCapture(event.pointerId)
 }
-/** 当前指针取消时终止交互并清空触摸状态。 */ function onUiPointerCancel(event: PointerEvent) { if (event.pointerId === touchPointer) { gameUiRuntime.pointerCancel(); touchPointer = null } }
+/** 当前指针取消时终止交互并清空触摸状态。 */ function onUiPointerCancel(event: PointerEvent) { if (event.pointerId === touchPointer) { gameUiRuntime.pointerCancel(); touchPointer = null } if (gizmoDrag) cancelActiveCanvasDrag() }
 
 let canvasLogicalWidth = 0, canvasLogicalHeight = 0
 /** 综合设备像素比、画质上限、自适应比例和分辨率缩放计算有界像素比。 */ function desiredCanvasPixelRatio(width: number, height: number) {
@@ -619,18 +619,7 @@ function onWheel(e: WheelEvent) {
     isManualDrawing = false
     editorState.statusText = t('ready')
   }
-  if (gizmoDrag) {
-    // §24: Escape cancels the drag, so the captured baseline must be written back. Clearing the
-    // drag alone would leave the moved transforms in the document with no history entry, making
-    // the displacement permanent and invisible to Undo.
-    if (hasMovedEntity) {
-      restoreTransforms(gizmoDrag.snapshots, world.entities)
-      recordEntityProperties(gizmoDrag.snapshots.map(/* 收集被还原的实体以刷新属性显示。 */ snapshot => snapshot.entity))
-      editorState.statusText = t('ready')
-    }
-    finishCanvasDrag()
-    return
-  }
+  if (gizmoDrag) { cancelActiveCanvasDrag(); return }
   gizmoDrag = null
   canvasDragMode = 'none'
 }
@@ -927,6 +916,18 @@ const drawTools = new Set(['rectangle', 'circle', 'triangle'])
 /** 结束全部画布拖动并清空指针、几何及变换快照。 */ function finishCanvasDrag() {
   isDragging = isPanning = isVertexDragging = false
   canvasDragMode = 'none'; dragStart = dragNow = lastMouseScreen = null; dragMeta = null; dragEntityId = null; gizmoDrag = null
+}
+
+/** 取消进行中的变换拖动：先恢复捕获的基准姿态，再清空拖动状态。
+ * §24 要求 Escape 与 pointercancel 都是"恢复基准"，而不是把已写入的位移留成不可撤销的残留。
+ * 刻意不写历史：回到基准后文档未变，无需产生一条空事务。 */
+function cancelActiveCanvasDrag() {
+  if (gizmoDrag && hasMovedEntity) {
+    restoreTransforms(gizmoDrag.snapshots, world.entities)
+    recordEntityProperties(gizmoDrag.snapshots.map(/* 收集被还原的实体以刷新属性显示。 */ snapshot => snapshot.entity))
+    editorState.statusText = t('ready')
+  }
+  finishCanvasDrag()
 }
 
 /** 释放前处理最后移动样本，完成瓦片、连接、变换或创建操作并记录历史。 */ function onMouseUp(event?: MouseEvent) {

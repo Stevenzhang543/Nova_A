@@ -69,11 +69,26 @@ await test('Clearing the drag without restoring would strand the displacement (r
   assert.ok(sameTransform(readAll(entities)[0], baseline[0]))
 })
 
-await test('The editor Escape path restores the baseline before finishing the drag', () => {
-  const escapeBlock = canvasSource.slice(canvasSource.indexOf("if (event.key !== 'Escape') return"), canvasSource.indexOf("if (event.key !== 'Escape') return") + 900)
-  assert.ok(escapeBlock.includes('restoreTransforms(gizmoDrag.snapshots, world.entities)'), 'Escape must restore the captured baseline')
-  assert.ok(escapeBlock.includes('finishCanvasDrag()'), 'Escape must still clear the drag state')
-  assert.ok(escapeBlock.indexOf('restoreTransforms') < escapeBlock.indexOf('finishCanvasDrag()'), 'restore must run before the drag state is cleared')
+await test('The editor Escape path cancels through the restore helper', () => {
+  const start = canvasSource.indexOf("if (event.key !== 'Escape') return")
+  assert.ok(start >= 0, 'the Escape branch must exist')
+  const escapeBlock = canvasSource.slice(start, start + 600)
+  assert.ok(/if \(gizmoDrag\) \{ cancelActiveCanvasDrag\(\); return \}/.test(escapeBlock),
+    'Escape must cancel an active gizmo drag through the shared helper')
+})
+
+await test('Both cancel entry points share one restore helper', () => {
+  assert.ok(canvasSource.includes('function cancelActiveCanvasDrag()'), 'a single cancel helper must exist')
+  const helper = canvasSource.slice(canvasSource.indexOf('function cancelActiveCanvasDrag()'))
+  const body = helper.slice(0, helper.indexOf('\n}'))
+  assert.ok(body.includes('restoreTransforms(gizmoDrag.snapshots, world.entities)'), 'the helper must restore the baseline')
+  assert.ok(body.includes('finishCanvasDrag()'), 'the helper must still clear the drag state')
+  assert.ok(body.indexOf('restoreTransforms') < body.indexOf('finishCanvasDrag()'), 'restore must precede clearing')
+  // Escape and pointercancel must both route through it rather than reimplementing the teardown.
+  assert.ok(/if \(gizmoDrag\) \{ cancelActiveCanvasDrag\(\); return \}/.test(canvasSource), 'Escape must call the helper')
+  assert.ok(canvasSource.includes('if (gizmoDrag) cancelActiveCanvasDrag()'), 'pointercancel and lostpointercapture must call the helper')
+  const cancelHandler = canvasSource.slice(canvasSource.indexOf('function onUiPointerCancel'))
+  assert.ok(cancelHandler.slice(0, 260).includes('cancelActiveCanvasDrag()'), 'the pointer cancel handler must route to the helper')
 })
 
 const out = process.env.NOVA_GIZMO_CANCEL_REPORT || 'reports/phase2/gizmo-cancel.json'

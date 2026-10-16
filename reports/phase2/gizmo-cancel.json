@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-16T17:59:00.184Z",
+  "generatedAt": "2026-10-16T18:00:56.725Z",
   "checks": [
     {
       "name": "A committed translation produces one snapshot per selection root",
@@ -18,7 +18,11 @@
       "status": "passed"
     },
     {
-      "name": "The editor Escape path restores the baseline before finishing the drag",
+      "name": "The editor Escape path cancels through the restore helper",
+      "status": "passed"
+    },
+    {
+      "name": "Both cancel entry points share one restore helper",
       "status": "passed"
     }
   ],
