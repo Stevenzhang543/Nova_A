@@ -6,8 +6,10 @@ import { openMediaAuditModules } from './lib/mediaAudit16.mjs'
 const read = path => fs.readFileSync(path, 'utf8').replaceAll('\r\n', '\n')
 // Load the real module the same way the other engine verifiers do, so this contract test can
 // never pass against a stale hand-copied snapshot of the source.
-const opened = await openMediaAuditModules({ repository: process.cwd(), bases: [process.cwd()] }, { fieldSchema: 'world/componentFieldSchema' })
+const opened = await openMediaAuditModules({ repository: process.cwd(), bases: [process.cwd()] }, { fieldSchema: 'world/componentFieldSchema', descriptions: 'world/componentFieldDescriptions', primitives: 'world/componentPrimitiveTypes' })
 globalThis.__fieldSchema = opened.modules.fieldSchema
+globalThis.__descriptions = opened.modules.descriptions
+globalThis.__primitives = opened.modules.primitives
 const checks = []
 async function test(name, run) {
   try { await run(); checks.push({ name, status: 'passed' }); console.log('PASS ' + name) }
@@ -123,6 +125,41 @@ await test('Schema coverage is reported per registered kind', () => {
   globalThis.__coverage = { registry: descriptorKinds.length, generated: generatedKinds.length, covered, withoutFieldContract: missing }
 })
 
+await test('Generated field descriptions agree exactly with the primitive contract', () => {
+  const descriptions = globalThis.__descriptions?.componentFieldDescriptions
+  const primitives = globalThis.__primitives?.componentPrimitiveTypes
+  assert.ok(descriptions, 'componentFieldDescriptions must load')
+  assert.ok(primitives, 'componentPrimitiveTypes must load')
+  assert.deepEqual(Object.keys(descriptions).sort(), Object.keys(primitives).sort(), 'both artifacts must cover the same kinds')
+  for (const kind of Object.keys(primitives)) {
+    assert.deepEqual(Object.keys(descriptions[kind]).sort(), Object.keys(primitives[kind]).sort(), kind + ' must describe exactly the contracted fields')
+    for (const field of Object.keys(primitives[kind])) {
+      const described = descriptions[kind][field]
+      assert.deepEqual([...described.types], [...primitives[kind][field]], kind + '.' + field + ' types must match the primitive contract')
+      assert.equal(typeof described.optional, 'boolean', kind + '.' + field + ' optional must be a boolean')
+    }
+  }
+})
+
+await test('Every generated static default is compatible with its declared types', () => {
+  const descriptions = globalThis.__descriptions.componentFieldDescriptions
+  const kindOf = (/** 把 JS 值映射到契约使用的基础类型名。 */ value) =>
+    value === null ? 'null' : typeof value === 'number' ? 'number' : typeof value === 'string' ? 'string' : typeof value === 'boolean' ? 'boolean' : 'other'
+  let withDefault = 0
+  for (const kind of Object.keys(descriptions)) {
+    for (const field of Object.keys(descriptions[kind])) {
+      const described = descriptions[kind][field]
+      if (!Object.prototype.hasOwnProperty.call(described, 'default')) continue
+      withDefault += 1
+      const actual = kindOf(described.default)
+      assert.notEqual(actual, 'other', kind + '.' + field + ' has a non-scalar default, which this generator must not emit')
+      assert.ok(described.types.includes(actual), kind + '.' + field + ' default is ' + actual + ' but declared types are ' + described.types.join('/'))
+    }
+  }
+  assert.ok(withDefault > 0, 'the generator must extract at least some static defaults')
+  globalThis.__descriptionStats = { kinds: Object.keys(descriptions).length, withDefault }
+})
+
 const out = process.env.NOVA_COMPONENT_SCHEMA_REPORT || 'reports/phase2/component-schema-baseline.json'
 fs.mkdirSync(out.slice(0, out.lastIndexOf('/')), { recursive: true })
 fs.writeFileSync(out, JSON.stringify({
@@ -138,6 +175,7 @@ fs.writeFileSync(out, JSON.stringify({
   },
   coverage: globalThis.__coverage,
   fieldSchema: globalThis.__fieldSchemaCoverage,
+  fieldDescriptions: globalThis.__descriptionStats,
   registryGap: globalThis.__registryGap,
   branchScope: { componentKind: componentKindBranches.length, authoringKind: authoringKindBranches.length },
   checks,

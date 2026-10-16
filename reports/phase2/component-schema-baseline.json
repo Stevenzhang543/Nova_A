@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-16T18:21:55.633Z",
+  "generatedAt": "2026-10-16T18:35:56.375Z",
   "registryApiVersion": "2.0",
   "counts": {
     "registryKinds": 61,
@@ -21,6 +21,10 @@
   "fieldSchema": {
     "kinds": 59,
     "fields": 595
+  },
+  "fieldDescriptions": {
+    "kinds": 59,
+    "withDefault": 515
   },
   "registryGap": [
     "WorldBoundary"
@@ -64,6 +68,14 @@
     },
     {
       "name": "Schema coverage is reported per registered kind",
+      "status": "passed"
+    },
+    {
+      "name": "Generated field descriptions agree exactly with the primitive contract",
+      "status": "passed"
+    },
+    {
+      "name": "Every generated static default is compatible with its declared types",
       "status": "passed"
     }
   ],
