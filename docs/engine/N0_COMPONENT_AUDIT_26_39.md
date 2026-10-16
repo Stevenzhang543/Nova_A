@@ -284,4 +284,6 @@
 
 **新增缺口记录（登记表 vs Inspector）**：`CanvasLayer`、`ParallaxLayer`、`Path` 在 `src/world/Entity.ts:33-34` 的实体种类联合中存在，Inspector 也有分支，但**不在 `STABLE_COMPONENTS`**。N1 必须决定：登记它们，或移除分支；不得两套权威并存（§31）。
 
+> 说明：本轮的记录里还包含 `WorldBoundary`（第 4 项）。它是**碰撞体形状模型**（`src/world/entityBuilder.ts:607`、`World.ts:172`），**不是组件种类**，因此真正的登记表缺口是 3 个组件种类，而非 4 个。校验脚本当前尚未区分「组件 kind」与「形状 kind」，N1 需要细化该判定，本轮不掩盖此不精确。
+
 **上游明示未完成（本轮不得假设已完成）**：WebGPU NOT PRESENT；compiled Worker 生产入口未完成；原生与 Web Player 隔离未完成；QualityLocked / AdaptiveExperience 分别 NOT_TESTED；Linux、签名、clean-machine NOT_TESTED；`FEATURE_MATRIX` 停 26.34。
