@@ -27,7 +27,11 @@ const descriptorCategories = [...registrySource.matchAll(/category:\s*'([A-Za-z]
 const generatedKinds = [...generatedSource.matchAll(/^  "([A-Za-z0-9]+)": \{/gm)].map(m => m[1])
 const classNames = [...componentsSource.matchAll(/^export class ([A-Za-z0-9]+)/gm)].map(m => m[1])
 const declaredKindLiterals = [...componentsSource.matchAll(/readonly kind(?::\s*[A-Za-z]+)?\s*=\s*'([A-Za-z0-9]+)'/g)].map(m => m[1])
-const inspectorKinds = [...configPanelSource.matchAll(/kind === '([A-Za-z0-9]+)'/g)].map(m => m[1])
+// Only component-kind branches belong to this contract. `authoring.kind` and `collider.kind`
+// are different unions (AuthoringObjectKind, shape models) and must not be counted here.
+const componentKindBranches = [...configPanelSource.matchAll(/(?:^|[^.\w])kind === '([A-Za-z0-9]+)'/g)].map(m => m[1])
+const authoringKindBranches = [...configPanelSource.matchAll(/authoring\.kind === '([A-Za-z0-9]+)'/g)].map(m => m[1])
+const inspectorKinds = componentKindBranches
 const allowedCategories = new Set(['Core', 'Rendering', 'Physics', 'Gameplay', 'Audio', 'UI', 'World'])
 
 await test('Registry exists with a declared stable API version and no duplicate kind', () => {
@@ -135,6 +139,7 @@ fs.writeFileSync(out, JSON.stringify({
   coverage: globalThis.__coverage,
   fieldSchema: globalThis.__fieldSchemaCoverage,
   registryGap: globalThis.__registryGap,
+  branchScope: { componentKind: componentKindBranches.length, authoringKind: authoringKindBranches.length },
   checks,
   status: checks.some(c => c.status === 'failed') ? 'failed' : 'passed',
 }, null, 2) + '\n')

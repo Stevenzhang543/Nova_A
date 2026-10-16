@@ -282,9 +282,15 @@
 
 **本轮新增执行脚本**：`scripts/verify-engine-component-schema.mjs`（8 项检查，全部通过；报告 `reports/phase2/component-schema-baseline.json`），机械固定登记表 / 生成式字段契约 / 世界声明 / Inspector 分支四者不漂移，并**记录**而非隐藏登记表缺口（`CanvasLayer`、`ParallaxLayer`、`Path` 被 Inspector 支持但未登记进 `STABLE_COMPONENTS`）。
 
-**新增缺口记录（登记表 vs Inspector）**：`CanvasLayer`、`ParallaxLayer`、`Path` 在 `src/world/Entity.ts:33-34` 的实体种类联合中存在，Inspector 也有分支，但**不在 `STABLE_COMPONENTS`**。N1 必须决定：登记它们，或移除分支；不得两套权威并存（§31）。
+**更正：此前记录的"登记表缺口"不成立。** `CanvasLayer`、`ParallaxLayer`、`Path` 是 **`AuthoringObjectKind`**（`src/world/Entity.ts:32-35` 的实体/创作种类联合），ConfigPanel 的分支实际写作 `selectedEntity.authoring.kind === '…'`（`ConfigPanel.vue:45,49,55`），**不是组件 `kind`**。我的正则 `kind === '…'` 匹配到了带点号的访问器，属**误报**。
 
-> 说明：本轮的记录里还包含 `WorldBoundary`（第 4 项）。它是**碰撞体形状模型**（`src/world/entityBuilder.ts:607`、`World.ts:172`），**不是组件种类**，因此真正的登记表缺口是 3 个组件种类，而非 4 个。校验脚本当前尚未区分「组件 kind」与「形状 kind」，N1 需要细化该判定，本轮不掩盖此不精确。
+已修正校验脚本只统计组件 kind 分支，实测：**组件 kind 分支 109 处 + authoring.kind 分支 3 处**（原报 114 处是两类混合），**Inspector 覆盖的不同组件 kind 为 50 个**。
+
+这条更正很重要：若照原判断去"修"，会往稳定登记表里塞进 3 个并非组件的条目，反而制造第二套权威。
+
+**仍待细化的 1 项**：记录中残留 `WorldBoundary`。它是碰撞体**形状模型**（`entityBuilder.ts:607`、`World.ts:172`），不是组件种类；校验脚本尚未区分"形状 kind"与"组件 kind"，本轮不掩盖该不精确。
+
+> 见上条更正。
 
 **上游明示未完成（本轮不得假设已完成）**：WebGPU NOT PRESENT；compiled Worker 生产入口未完成；原生与 Web Player 隔离未完成；QualityLocked / AdaptiveExperience 分别 NOT_TESTED；Linux、签名、clean-machine NOT_TESTED；`FEATURE_MATRIX` 停 26.34。
 

@@ -1,13 +1,13 @@
 {
-  "generatedAt": "2026-10-16T17:56:22.103Z",
+  "generatedAt": "2026-10-16T17:57:36.735Z",
   "registryApiVersion": "2.0",
   "counts": {
     "registryKinds": 61,
     "generatedKinds": 59,
     "componentClasses": 50,
     "declaredKindLiterals": 48,
-    "inspectorKindBranches": 114,
-    "inspectorDistinctKinds": 54
+    "inspectorKindBranches": 109,
+    "inspectorDistinctKinds": 50
   },
   "coverage": {
     "registry": 61,
@@ -23,11 +23,12 @@
     "fields": 595
   },
   "registryGap": [
-    "CanvasLayer",
-    "ParallaxLayer",
-    "Path",
     "WorldBoundary"
   ],
+  "branchScope": {
+    "componentKind": 109,
+    "authoringKind": 3
+  },
   "checks": [
     {
       "name": "Registry exists with a declared stable API version and no duplicate kind",
