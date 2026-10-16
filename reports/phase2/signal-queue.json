@@ -1,0 +1,49 @@
+{
+  "generatedAt": "2026-10-16T18:52:08.244Z",
+  "covers": [
+    "enqueue order",
+    "monotonic sequence",
+    "bounded overflow with recorded range",
+    "overflow episodes",
+    "target removal",
+    "clear semantics",
+    "limit validation",
+    "runtime wiring"
+  ],
+  "notCovered": [
+    "signal parameter schema",
+    "persistent connection identity",
+    "same-phase dispatch ordering against real scripts"
+  ],
+  "checks": [
+    {
+      "name": "Draining preserves enqueue order and assigns monotonic sequence numbers",
+      "status": "passed"
+    },
+    {
+      "name": "Overflow drops the oldest entries and records how many and which range",
+      "status": "passed"
+    },
+    {
+      "name": "Overflow episodes are counted separately from dropped signals",
+      "status": "passed"
+    },
+    {
+      "name": "Dropping by target removes only that target and never touches counters",
+      "status": "passed"
+    },
+    {
+      "name": "Clearing empties the queue but keeps cumulative accounting",
+      "status": "passed"
+    },
+    {
+      "name": "An invalid limit is rejected instead of silently unbounded",
+      "status": "passed"
+    },
+    {
+      "name": "The runtime uses the queue instead of a raw array with a silent drop",
+      "status": "passed"
+    }
+  ],
+  "status": "passed"
+}

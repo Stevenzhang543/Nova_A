@@ -958,6 +958,33 @@ pnpm check                                                  # vue-tsc + tsc
 
 **发现并确认的既有失败**：`scripts/verify-engine-runtime-script-services.mjs` 报 `WORLD_GAMEPLAY_WORLD_ALREADY_BOUND`（在 `new GameplayRuntime` **构造期**抛出，早于任何生命周期派发）。为排除本次改动的影响，我用 `git stash` **临时移除改动后重跑，同样失败**，确认属**既有问题**，已单独记录，不计入本次回归。
 
+### 19.4 批次 B3：信号队列 —— 丢弃不再静默
+
+**问题**（B 组审计 G4）：`emitSignal` 在超过 1024 时 `splice` 掉最旧条目，**只记一条 warning**：既不计数、也无法定位丢了什么；每条信号也**没有序号**，顺序与消费无法关联。
+
+**实现**：新增 `src/runtime/signalQueue.ts`（**不依赖 Runtime 或 Vue，可在 Node 独立验证**）：
+
+- 每条信号分配**单调序号**（从 1 起），入队顺序与 `drain` 输出顺序一致；
+- 超限时丢弃最旧条目，并记录**丢弃数量、丢弃序号区间、溢出批次次数**；
+- `dropTarget(target)` 取代原先的数组 `filter`；`clear()` 只清队列、**保留累计计数**（序号不回退，保证后续顺序仍可比较）；
+- 非正整数上限**直接报错**，而不是静默变成无界队列。
+
+**Runtime 接线**：`pendingSignals: RuntimeSignal[]` 整个移除，改为 `SignalQueue`；`emitSignal` 经队列入队并报出**本次与累计**丢弃数；`dispatchSignals` 用 `drain()`；实体移除用 `dropTarget()`；新增公开 `signalQueueStats()` 供诊断读取。未使用的 `RuntimeSignal` 接口由 `vue-tsc` 报 **TS6196** 后删除（检查工具再次发挥作用）。
+
+**验证**：新增 `scripts/verify-engine-signal-queue.mjs`，**7 项全部通过**：
+
+| 检查 | 内容 |
+|---|---|
+| 顺序与序号 | 序号 1,2,3,4 递增；drain 保持入队顺序 |
+| **溢出可观测** | 上限 4 入队 7 条 → 丢弃 3 条，**记录区间 {from:1,to:3}**，保留最新 4 条 |
+| 溢出批次独立计数 | 两次溢出 → `dropped=2`、`overflowEpisodes=2` |
+| 按目标移除 | 只移除该目标；**不计入丢弃**，`emitted` 不变 |
+| `clear()` 语义 | 清空队列但 `emitted`/`dispatched`/`lastSequence` 保留 |
+| 非法上限 | 0 与 1.5 均抛错，不会静默无界 |
+| **运行时确实改用它** | 源码级断言：队列已接入，且 `this.pendingSignals` **已不存在** |
+
+**未覆盖并如实记录**（报告 `notCovered`）：**信号参数 schema**、**连接持久化标识**、**同阶段派发顺序对真实脚本的验证** —— 这三项是 typed signal 的其余部分，尚未实现。
+
 ### 19.2 批次 B1：渲染抽取全部改用批量世界变换
 
 **改动**（`src/renderer/sceneRenderer.ts`，已解冻范围）：

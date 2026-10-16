@@ -5,6 +5,7 @@ import { finiteNumber, normalizeEntity } from '../world/geometry'
 import type { Entity } from '../world/Entity'
 import type { Animator, AudioSource, Checkbox, NavigationAgent2D, ProgressBar, ScriptPropertyValue, Slider, Text as UIText, TextRenderer2D, TimelinePlayer } from '../world/components'
 import { hierarchyOrder, worldTransform, setWorldTransform, subtreeEntities } from '../world/hierarchy'
+import { SignalQueue, type SignalQueueStats } from './signalQueue'
 import type { RuntimePhysicsEvent } from '../world/World'
 import { INPUT_EDGE_CAPACITY, InputManager, type InputActionEdge, type InputSnapshot, type InputReceiptObservation, type InputSampleObservation, type InputObservationResetReason } from './input'
 import { RuntimeTime, type TimerExpiration } from './time'
@@ -151,7 +152,6 @@ interface ScriptContact {
 }
 
 interface ScriptEvent { name: string; source: string; payload: unknown }
-interface RuntimeSignal extends ScriptEvent { target: string; deliveredCallbacks?: string[] }
 interface PendingDebugInvocation { entityUuid: string; scriptUuid: string; functionName: string; contact?: ScriptContact; event?: ScriptEvent; logicAsset?: string | null; callbackKind?: string }
 interface PendingGraphExecution {
   entityUuid: string
@@ -435,7 +435,7 @@ export class GameplayRuntime {
   private declaredFunctions = new Map<string, { source: string; names: Set<string>; contract: ScriptContractReport }>()
   private contractValidations = new Map<string, { signature: string; error: string | null }>()
   private pendingReloads = new Map<string, string>()
-  private pendingSignals: RuntimeSignal[] = []
+  private signalQueue = new SignalQueue()
   private pendingDebugInvocation: PendingDebugInvocation | null = null
   private pendingGraphExecution: PendingGraphExecution | null = null
   private networkUnsubscribe: (() => void) | null = null
@@ -895,7 +895,7 @@ export class GameplayRuntime {
     this.pendingPrefabs = []
     this.pendingDynamicCommands = []
     this.pendingHandleResolutions.clear()
-    this.pendingSignals = []
+    this.signalQueue.clear()
     this.pendingReloads.clear()
     this.worldGameplayOwner.objectPoolOwner.setPoolRuntimeHooks()
     this.contractValidations.clear()
@@ -1045,12 +1045,15 @@ export class GameplayRuntime {
   /** 结构说明（自动提取）：emitSignal；输入 name、payload、target、source、deliveredCallbacks；直接调用 slice、name.trim、pendingSignals.push、serializable、target.trim 等。 */ emitSignal(name: string, payload: unknown = null, target = '', source = 'editor', deliveredCallbacks: string[] = []): void {
     const clean = name.trim().slice(0, 128)
     if (!clean) return
-    this.pendingSignals.push({ name: clean, payload: this.serializable(payload), target: target.trim().slice(0, 128), source: source.trim().slice(0, 128), deliveredCallbacks: [...deliveredCallbacks] })
-    if (this.pendingSignals.length > 1024) {
-      this.pendingSignals.splice(0, this.pendingSignals.length - 1024)
-      this.worldHost.log('Signal queue limit reached; oldest events were dropped.', 'Script', 'warning')
-    }
+    const before = this.signalQueue.stats()
+    this.signalQueue.enqueue({ name: clean, payload: this.serializable(payload), target: target.trim().slice(0, 128), source: source.trim().slice(0, 128), deliveredCallbacks: [...deliveredCallbacks] })
+    const after = this.signalQueue.stats()
+    // 丢弃必须是可观测事实：报出本次与累计数量，而不是只留一条无从核对的 warning。
+    if (after.dropped > before.dropped) this.worldHost.log(`Signal queue limit reached; ${after.dropped - before.dropped} oldest event(s) dropped, cumulative ${after.dropped}.`, 'Script', 'warning')
   }
+
+  /** 信号队列的可观测状态：发送/派发/丢弃计数与序号区间。§5.3 不允许静默丢弃，故对外暴露。 */
+  signalQueueStats(): SignalQueueStats { return this.signalQueue.stats() }
 
   /** 结构说明（自动提取）：debugContinue；无显式参数；直接调用 clearScriptDebugger、requestDebugStep、requestGraphStep、this.worldHost.state.world.entities.find、processScriptCommands 等；写入 pendingGraphExecution、this.worldHost.state.playMode、pendingDebugInvocation。 */ debugContinue(): void {
     if (this.pendingGraphExecution) {
@@ -1752,7 +1755,7 @@ export class GameplayRuntime {
     this.time.removeEntity(entity.uuid); this.awakened.delete(entity.uuid); this.started.delete(entity.uuid)
     for (const key of this.behaviorProperties.keys()) if (key.startsWith(`${entity.uuid}:`)) this.behaviorProperties.delete(key)
     for (const key of this.contractValidations.keys()) if (key.startsWith(`${entity.uuid}:`)) this.contractValidations.delete(key)
-    this.pendingSignals = this.pendingSignals.filter(/* 比较 signal.target 与 entity.uuid，返回严格不等的判断结果。 */ signal => signal.target !== entity.uuid)
+    this.signalQueue.dropTarget(entity.uuid)
     if (this.pendingDebugInvocation?.entityUuid === entity.uuid) this.pendingDebugInvocation = null
     if (this.pendingGraphExecution?.entityUuid === entity.uuid) this.pendingGraphExecution = null
   }
@@ -1926,7 +1929,7 @@ export class GameplayRuntime {
 
   /** 结构说明（自动提取）：dispatchSignals；无显式参数；直接调用 pendingSignals.splice、signalWorld.filter、runEntityFunction、signal.name.startsWith、runEventSheetHandlers 等；写入 scriptDebugState.lastSignal；包含循环处理。 */ private dispatchSignals(): void {
     this.invalidateScriptWorld()
-    const batch = this.pendingSignals.splice(0)
+    const batch = this.signalQueue.drain()
     for (const signal of batch) {
       this.scriptDebugger.state.lastSignal = { name: signal.name, source: signal.source, target: signal.target }
       const signalWorld = this.callbackWorld ?? this.worldHost.state.world.entities
