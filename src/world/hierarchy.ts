@@ -40,8 +40,9 @@ function hierarchyEntity(uuid: string, entities: readonly Entity[]): Entity | un
   return preparedLookup!.byUuid.get(uuid)?.entity
 }
 
-/** 递归合成祖先平移、旋转及带符号缩放；遇到缺失父级或环时退回当前局部变换。 */ export function worldTransform(entity: Entity, entities: readonly Entity[], visiting = new Set<string>()): WorldTransform2D {
-  const local: WorldTransform2D = {
+/** 归一化实体自身的局部变换；负数缩放拆成符号与正量级。 */
+export function localTransform(entity: Entity): WorldTransform2D {
+  return {
     position: { x: finiteNumber(entity.transform.position.x), y: finiteNumber(entity.transform.position.y) },
     rotation: normalizeAngle(entity.transform.rotation),
     scale: {
@@ -49,13 +50,11 @@ function hierarchyEntity(uuid: string, entities: readonly Entity[]): Entity | un
       y: (entity.transform.scale.y < 0 ? -1 : 1) * positiveNumber(entity.transform.scale.y, 1)
     }
   }
-  const parentUuid = entity.parentUuid
-  if (!parentUuid || visiting.has(entity.uuid)) return local
-  const parent = hierarchyEntity(parentUuid, entities)
-  if (!parent || parent === entity) return local
-  visiting.add(entity.uuid)
-  const parentWorld = worldTransform(parent, entities, visiting)
-  visiting.delete(entity.uuid)
+}
+
+/** 把父级世界变换与子级局部变换合成为一个世界变换。
+ * 这是唯一的组合实现：递归版与批量版都调用它，避免两份公式各自漂移。 */
+export function composeWorldTransform(parentWorld: WorldTransform2D, local: WorldTransform2D): WorldTransform2D {
   const offset = rotate({
     x: local.position.x * parentWorld.scale.x,
     y: local.position.y * parentWorld.scale.y
@@ -71,6 +70,43 @@ function hierarchyEntity(uuid: string, entities: readonly Entity[]): Entity | un
       y: parentWorld.scale.y * local.scale.y
     }
   }
+}
+
+/** 递归合成祖先平移、旋转及带符号缩放；遇到缺失父级或环时退回当前局部变换。 */ export function worldTransform(entity: Entity, entities: readonly Entity[], visiting = new Set<string>()): WorldTransform2D {
+  const local = localTransform(entity)
+  const parentUuid = entity.parentUuid
+  if (!parentUuid || visiting.has(entity.uuid)) return local
+  const parent = hierarchyEntity(parentUuid, entities)
+  if (!parent || parent === entity) return local
+  visiting.add(entity.uuid)
+  const parentWorld = worldTransform(parent, entities, visiting)
+  visiting.delete(entity.uuid)
+  return composeWorldTransform(parentWorld, local)
+}
+
+/** 一次性求解一批实体的世界变换：每个祖先只计算一次，结果由调用方持有。
+ * 生命周期归调用方（一次渲染抽取或一次排序），因此不需要全局失效信号；
+ * 缺失父级或环仍按 worldTransform 的语义退回局部变换。 */
+export function worldTransformsFor(entities: readonly Entity[], subset: readonly Entity[]): Map<string, WorldTransform2D> {
+  const cache = new Map<string, WorldTransform2D>()
+  const resolving = new Set<string>()
+  const resolve = (entity: Entity): WorldTransform2D => {
+    const cached = cache.get(entity.uuid)
+    if (cached) return cached
+    const local = localTransform(entity)
+    const parentUuid = entity.parentUuid
+    if (!parentUuid || resolving.has(entity.uuid)) { cache.set(entity.uuid, local); return local }
+    const parent = hierarchyEntity(parentUuid, entities)
+    if (!parent || parent === entity) { cache.set(entity.uuid, local); return local }
+    resolving.add(entity.uuid)
+    const parentWorld = resolve(parent)
+    resolving.delete(entity.uuid)
+    const world = composeWorldTransform(parentWorld, local)
+    cache.set(entity.uuid, world)
+    return world
+  }
+  for (const entity of subset) resolve(entity)
+  return cache
 }
 
 /** 用层级世界变换先缩放和旋转局部点，再加世界平移。 */ export function localPointToWorld(entity: Entity, point: Vec2, entities: readonly Entity[]): Vec2 {

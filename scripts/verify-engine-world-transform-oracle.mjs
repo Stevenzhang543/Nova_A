@@ -100,6 +100,30 @@ await test('Reparenting changes the composed result and matches the oracle', () 
   compare(hierarchy.worldTransform(leaf, entities), oracleChain([leaf]), 'leaf detached')
 })
 
+await test('The batch solver matches per-call results for every entity in a chain', () => {
+  const { entities } = chain3()
+  const batch = hierarchy.worldTransformsFor(entities, entities)
+  for (const entity of entities) compare(batch.get(entity.uuid), hierarchy.worldTransform(entity, entities), 'batch entity ' + entity.id)
+  compare(batch.get(entities[2].uuid), oracleChain(entities), 'batch leaf vs oracle')
+})
+
+await test('The batch solver matches per-call results on a long chain and on a subset', () => {
+  const entities = []
+  for (let i = 0; i < 60; i++) {
+    const entity = new box.BoxEntity(i + 1, { x: i % 5 - 2, y: i % 7 - 3 }, { x: 1 + (i % 3), y: 1 })
+    if (i % 4 === 1) entity.transform.scale = { x: -1.5, y: 0.5 }
+    entity.transform.rotation = (i % 9) * 0.13
+    entities.push(entity)
+    if (i > 0) hierarchy.setParent(entity, entities[i - 1].uuid, entities, false)
+  }
+  hierarchy.prepareHierarchyIndex(entities)
+  const batch = hierarchy.worldTransformsFor(entities, [entities[59]])
+  for (const entity of entities) compare(batch.get(entity.uuid), hierarchy.worldTransform(entity, entities), 'long chain entity ' + entity.id)
+  const subset = [entities[10], entities[30], entities[59]]
+  const partial = hierarchy.worldTransformsFor(entities, subset)
+  for (const entity of subset) compare(partial.get(entity.uuid), hierarchy.worldTransform(entity, entities), 'subset entity ' + entity.id)
+})
+
 const out = process.env.NOVA_WORLD_ORACLE_REPORT || 'reports/phase2/world-transform-oracle.json'
 fs.mkdirSync(out.slice(0, out.lastIndexOf('/')), { recursive: true })
 fs.writeFileSync(out, JSON.stringify({

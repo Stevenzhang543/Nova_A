@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-16T18:18:05.030Z",
+  "generatedAt": "2026-10-16T18:19:32.410Z",
   "purpose": "Independent reference semantics that any batch or cached transform path must match exactly.",
   "checks": [
     {
@@ -16,6 +16,14 @@
     },
     {
       "name": "Reparenting changes the composed result and matches the oracle",
+      "status": "passed"
+    },
+    {
+      "name": "The batch solver matches per-call results for every entity in a chain",
+      "status": "passed"
+    },
+    {
+      "name": "The batch solver matches per-call results on a long chain and on a subset",
       "status": "passed"
     }
   ],
