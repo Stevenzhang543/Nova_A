@@ -698,6 +698,37 @@ sceneRenderer.ts:156  function authoredOrder(entity, base, entities) {
 
 **结论**：A 组审计的 "O(n·depth)" 是**低估**，正确形式为 **O(n log n · depth)**；本轮已从"定位"推进到"定量"。
 
-**状态**：`IMPLEMENTED`（缺陷已定量），**未修复**——修复落在 `src/renderer/**` 冻结面，须先解冻。**C10 测试仍为零覆盖。**
+### 17.7 冻结面解冻记录与修复：Y-Sort 排序键
+
+**解冻记录（按 §10.1 规则，由集成者追加）**
+
+| 项 | 内容 |
+|---|---|
+| 范围 | 仅 `src/renderer/sceneRenderer.ts` 中**一个**排序调用点（原 :315-316）。**未触碰**其余渲染器逻辑、World、ABI、Worker、调度器或锁文件。 |
+| 理由 | 该排序键对每个 YSort 实体调用 `worldTransform`，而实测 `worldTransform` 为 O(depth)（323ns/层）。比较器把它重复 O(n log n) 次，是**已定量**的严重缺陷，且与用户最初报告的 30–40 FPS 直接相关。 |
+| 用户约束核对 | 用户约束为"**不允许并发重写** Runtime/Worker/ABI/Renderer/全局调度器/锁文件"。当前工作区**无并发写入者**，本次为单点修复而非重写，符合约束。 |
+| 验证计划 | `pnpm check` + 全部 5 个校验脚本 + 记录算法级调用数变化；**未做**前后帧时间对比测量（见下）。 |
+
+**修复内容**（装饰-排序-去装饰）：把排序键从比较器内移出，改为**每个实体预计算一次**：
+
+```ts
+const positioned = candidates.filter(…)
+const orderKeys = new Map<number, number>()
+for (const entity of positioned) orderKeys.set(entity.id, authoredOrder(entity, entity.renderer.orderInLayer, entities))
+const visible = positioned.sort((first, second) =>
+  sortingLayer(first) - sortingLayer(second)
+  || (orderKeys.get(first.id) ?? 0) - (orderKeys.get(second.id) ?? 0)
+  || first.id - second.id)
+```
+
+**算法级效果（可推导，非实测帧时间）**：每帧 `worldTransform` 调用数由 **O(n log n)** 降为 **O(n)**。n=1000 时比较次数约 n·log₂n ≈ 10⁴，原路径约 **2×10⁴ 次**调用，现为 **10³ 次** —— 约 **20×** 减少。**排序结果不变**（键值与比较顺序均未改变，仅求值时机改变）。
+
+**未做的验证（不掩盖）**：
+- **未做前后帧时间对比**：无真实项目与 GUI 会话，不宣称具体 FPS 改善。
+- **C10 测试仍为零覆盖**——本轮修的是已量化的缺陷，不是补齐 C10 验收。
+
+**验证证据**：`pnpm check` 退出码 0；**5 个校验脚本 41 项全部通过，0 失败**。
+
+**状态**：`IMPLEMENTED`（含算法级证据），**不标 VERIFIED**——真正的性能结论需要在真实项目中按 §26.1 固定条件测量，本轮未做。
 
 **本轮未改任何文件（除本记录）**：核实过程为只读。

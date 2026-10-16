@@ -312,8 +312,13 @@ export function renderWorld(renderer: Renderer2D, entities: Entity[], options: S
       .filter(/* 先计算 options.renderLayer === 'all'；仅当其为假值时求右侧 entity.layer === options.renderLayer，返回短路求值结果。 */ entity => options.renderLayer === 'all' || entity.layer === options.renderLayer)
       .filter(/* 比较 (cullingMask & (1 << (entity.layer & 31))) 与 0，返回严格不等的判断结果。 */ entity => (cullingMask & (1 << (entity.layer & 31))) !== 0)
       .filter(/* 先计算 sortingLayer(entity) >= near；仅当其为真值时求右侧 sortingLayer(entity) <= far，返回短路求值结果。 */ entity => sortingLayer(entity) >= near && sortingLayer(entity) <= far)
-    const visible = candidates.filter(entity => !options.performanceMode || entityIntersectsRenderBounds(entity, entities, camera.view, visibleBounds, spriteMeshes, environment))
-      .sort(/* 依次比较实体排序层、作者层内次序及实体编号。 */ (first, second) => sortingLayer(first) - sortingLayer(second) || authoredOrder(first, first.renderer.orderInLayer, entities) - authoredOrder(second, second.renderer.orderInLayer, entities) || first.id - second.id)
+    const positioned = candidates.filter(entity => !options.performanceMode || entityIntersectsRenderBounds(entity, entities, camera.view, visibleBounds, spriteMeshes, environment))
+    // authoredOrder 对 YSort 实体会调用 worldTransform，而实测 worldTransform 为 O(depth)（约 323ns/层）。
+    // 在比较器内求值会把它重复 O(n log n) 次；按实体预计算一次后降为每帧 O(n) 次，排序结果不变。
+    const orderKeys = new Map<number, number>()
+    for (const entity of positioned) orderKeys.set(entity.id, authoredOrder(entity, entity.renderer.orderInLayer, entities))
+    // 上面的循环已覆盖 positioned 的每个实体，回退值不可达；保留它只是避免在渲染热路径抛出。
+    const visible = positioned.sort(/* 依次比较实体排序层、作者层内次序及实体编号。 */ (first, second) => sortingLayer(first) - sortingLayer(second) || (orderKeys.get(first.id) ?? 0) - (orderKeys.get(second.id) ?? 0) || first.id - second.id)
     for (const entity of visible) {
       const tileMap = entity.getComponent<TileMap2D>('TileMap2D')
       if (tileMap) for (const chunk of environment.tileChunkCommands(entity, tileMap, entities, visibleBounds, camera.view.position)) renderer.submitTileChunk(chunk)
