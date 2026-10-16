@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-16T18:19:34.402Z",
+  "generatedAt": "2026-10-16T18:21:54.754Z",
   "checks": [
     {
       "name": "A committed translation produces one snapshot per selection root",
