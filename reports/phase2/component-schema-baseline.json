@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-16T18:35:56.375Z",
+  "generatedAt": "2026-10-16T18:37:21.780Z",
   "registryApiVersion": "2.0",
   "counts": {
     "registryKinds": 61,
@@ -26,6 +26,7 @@
     "kinds": 59,
     "withDefault": 515
   },
+  "entryPointDefaults": 515,
   "registryGap": [
     "WorldBoundary"
   ],
@@ -68,6 +69,10 @@
     },
     {
       "name": "Schema coverage is reported per registered kind",
+      "status": "passed"
+    },
+    {
+      "name": "The field entry point exposes optionality and defaults derived from the generated descriptions",
       "status": "passed"
     },
     {

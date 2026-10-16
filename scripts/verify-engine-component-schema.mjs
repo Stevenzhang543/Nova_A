@@ -125,6 +125,25 @@ await test('Schema coverage is reported per registered kind', () => {
   globalThis.__coverage = { registry: descriptorKinds.length, generated: generatedKinds.length, covered, withoutFieldContract: missing }
 })
 
+await test('The field entry point exposes optionality and defaults derived from the generated descriptions', () => {
+  const { componentFields } = globalThis.__fieldSchema
+  const descriptions = globalThis.__descriptions.componentFieldDescriptions
+  let withDefault = 0
+  for (const kind of Object.keys(descriptions)) {
+    const described = componentFields(kind)
+    assert.equal(described.length, Object.keys(descriptions[kind]).length, kind + ' field count must match the generated description')
+    for (const field of described) {
+      const source = descriptions[kind][field.id]
+      assert.ok(source, kind + '.' + field.id + ' must exist in the generated description')
+      assert.equal(field.optional, source.optional, kind + '.' + field.id + ' optional must come from the source')
+      assert.equal(field.defaultValue, source.default, kind + '.' + field.id + ' default must come from the source')
+      if (Object.prototype.hasOwnProperty.call(source, 'default')) withDefault += 1
+    }
+  }
+  assert.ok(withDefault > 0, 'at least some fields must expose a static default')
+  globalThis.__entryPointDefaults = withDefault
+})
+
 await test('Generated field descriptions agree exactly with the primitive contract', () => {
   const descriptions = globalThis.__descriptions?.componentFieldDescriptions
   const primitives = globalThis.__primitives?.componentPrimitiveTypes
@@ -176,6 +195,7 @@ fs.writeFileSync(out, JSON.stringify({
   coverage: globalThis.__coverage,
   fieldSchema: globalThis.__fieldSchemaCoverage,
   fieldDescriptions: globalThis.__descriptionStats,
+  entryPointDefaults: globalThis.__entryPointDefaults,
   registryGap: globalThis.__registryGap,
   branchScope: { componentKind: componentKindBranches.length, authoringKind: authoringKindBranches.length },
   checks,
