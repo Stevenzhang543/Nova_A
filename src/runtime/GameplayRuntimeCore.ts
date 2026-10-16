@@ -4,7 +4,7 @@ import type { PreparedRuntimeSceneTransition } from './runtimeSceneContracts'
 import { finiteNumber, normalizeEntity } from '../world/geometry'
 import type { Entity } from '../world/Entity'
 import type { Animator, AudioSource, Checkbox, NavigationAgent2D, ProgressBar, ScriptPropertyValue, Slider, Text as UIText, TextRenderer2D, TimelinePlayer } from '../world/components'
-import { worldTransform, setWorldTransform, subtreeEntities } from '../world/hierarchy'
+import { hierarchyOrder, worldTransform, setWorldTransform, subtreeEntities } from '../world/hierarchy'
 import type { RuntimePhysicsEvent } from '../world/World'
 import { INPUT_EDGE_CAPACITY, InputManager, type InputActionEdge, type InputSnapshot, type InputReceiptObservation, type InputSampleObservation, type InputObservationResetReason } from './input'
 import { RuntimeTime, type TimerExpiration } from './time'
@@ -1234,14 +1234,17 @@ export class GameplayRuntime {
     for (const entity of this.worldHost.state.world.entities) this.captureAuthoredEntity(entity, 'runtime-spawned')
     const scripted = this.worldHost.state.world.entities.filter(/* 调用 this.canRun(entity) 并返回调用结果。 */ entity => this.canRun(entity))
     this.diagnostics.scripts = scripted.length
-    for (const entity of scripted) {
+    // 生命周期顺序必须由树结构决定，而不是由 entities 数组的存储顺序决定（§5.1）。
+    // awake 近似"进入树"：父级先于子级。start 近似"就绪"：子级先于父级，因此用其逆序。
+    const parentFirst = hierarchyOrder(scripted)
+    for (const entity of parentFirst) {
       if (!this.awakened.has(entity.uuid)) {
         this.awakened.add(entity.uuid)
         this.runEntityFunction(entity, 'awake')
         this.runEventSheetHandlers(entity, 'awake', '', 'awake')
       }
     }
-    for (const entity of scripted) {
+    for (const entity of [...parentFirst].reverse()) {
       if (!this.started.has(entity.uuid)) {
         this.started.add(entity.uuid)
         this.runEntityFunction(entity, 'start')

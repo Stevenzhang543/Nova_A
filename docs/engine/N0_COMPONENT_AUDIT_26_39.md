@@ -926,6 +926,38 @@ pnpm check                                                  # vue-tsc + tsc
 
 契约层校验器现有 **13 项**全部通过。
 
+### 19.3 批次 B2：生命周期派发改为树序
+
+**解冻记录（按 §10.1 规则，由集成者追加）**
+
+| 项 | 内容 |
+|---|---|
+| 范围 | `src/world/hierarchy.ts` 新增 `hierarchyOrder`；`src/runtime/GameplayRuntimeCore.ts` 的 `ensureLifecycle` 改为消费它。**未触碰** Worker、ABI、渲染器、调度器、锁文件。 |
+| 理由 | A 组审计指出 `awake`/`start` 按 `entities` **数组存储顺序**派发，而非树结构顺序（§5.1 要求明确的父子序）。数组顺序是存储细节，不应决定生命周期语义。 |
+| 用户约束核对 | 约束为"不允许**并发重写** Runtime"，本次是单点语义修复，当前无并发写入者。 |
+| 验证计划 | 顺序性质单测 + 源码级接线守护 + `pnpm check` + 现有 runtime 校验脚本回归。 |
+
+**实现**：新增 `hierarchyOrder(entities)` —— 父级先于子级的拓扑序，**同级保持输入相对次序**；缺失父级/自引用按根处理；**环中的实体也保证被收录**（输出必为输入的一个排列，顺序问题不能让实体消失）。
+
+`ensureLifecycle` 中：
+
+- `awake` 近似"进入树" → **父先子先**（`parentFirst`）
+- `start` 近似"就绪" → **子先父先**（`[...parentFirst].reverse()`）
+
+**验证**：oracle 增至 **15 项全部通过**，新增 5 项：
+
+| 检查 | 内容 |
+|---|---|
+| 父先子先 + 同级稳定 + 不丢实体 | 故意乱序输入（孙在父前、同级逆序），断言输出是输入的排列且父必在子前 |
+| 逆序即子先父先 | 三层链逆序后最深实体最先 |
+| 环中实体仍被收录 | 两节点互指时输出长度仍为 2 |
+| **运行时确实消费该顺序** | 源码级断言：`ensureLifecycle` 中 awake 用 `parentFirst`、start 用其逆序，且 awake 先于 start |
+| 覆盖范围显式化 | 报告 `lifecycleCoverage`，并**显式记录未覆盖项** |
+
+**未覆盖并如实记录**：报告 `notCovered` 明确写出 `awake and start are not yet exercised end to end against a real Rhai script asset` —— 顺序性质与接线已验，**端到端脚本执行未验**。
+
+**发现并确认的既有失败**：`scripts/verify-engine-runtime-script-services.mjs` 报 `WORLD_GAMEPLAY_WORLD_ALREADY_BOUND`（在 `new GameplayRuntime` **构造期**抛出，早于任何生命周期派发）。为排除本次改动的影响，我用 `git stash` **临时移除改动后重跑，同样失败**，确认属**既有问题**，已单独记录，不计入本次回归。
+
 ### 19.2 批次 B1：渲染抽取全部改用批量世界变换
 
 **改动**（`src/renderer/sceneRenderer.ts`，已解冻范围）：

@@ -72,6 +72,34 @@ export function composeWorldTransform(parentWorld: WorldTransform2D, local: Worl
   }
 }
 
+/** 返回父级先于子级的实体顺序（拓扑序），同级保持输入数组中的相对次序。
+ * 用途：生命周期派发。父先子先近似"进入树"，其逆序近似"就绪/退出树"。
+ * 缺失父级、自引用与环中的实体都保证被包含且函数一定终止——顺序问题不能让实体消失。 */
+export function hierarchyOrder(entities: readonly Entity[]): Entity[] {
+  const byUuid = new Map(entities.map(/* 建立 uuid 索引，父级查找保持 O(1)。 */ entity => [entity.uuid, entity]))
+  const children = new Map<string, Entity[]>()
+  const roots: Entity[] = []
+  for (const entity of entities) {
+    const parent = entity.parentUuid ? byUuid.get(entity.parentUuid) : undefined
+    if (!parent || parent === entity) { roots.push(entity); continue }
+    const siblings = children.get(parent.uuid)
+    if (siblings) siblings.push(entity)
+    else children.set(parent.uuid, [entity])
+  }
+  const ordered: Entity[] = []
+  const visited = new Set<string>()
+  const visit = (/** 深度优先展开子树；已访问即返回，避免环导致无限递归。 */ entity: Entity): void => {
+    if (visited.has(entity.uuid)) return
+    visited.add(entity.uuid)
+    ordered.push(entity)
+    for (const child of children.get(entity.uuid) ?? []) visit(child)
+  }
+  for (const root of roots) visit(root)
+  // 仅出现在环中的实体不会从任何根到达，这里兜底收录，保证输出是输入的一个排列。
+  for (const entity of entities) visit(entity)
+  return ordered
+}
+
 /** 检测层级环：沿 parentUuid 上溯，当前路径上重复出现同一实体即为环。
  * 环状文档没有合法的世界变换（实测递归版与批量版会给出不同且互不自洽的结果），
  * 因此调用方应据此拒绝或修复文档，而不是依赖任意一个变换结果。本函数只做检测，不修改数据。 */

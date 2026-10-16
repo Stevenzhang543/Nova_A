@@ -1,6 +1,15 @@
 {
-  "generatedAt": "2026-10-16T18:42:51.943Z",
+  "generatedAt": "2026-10-16T18:47:36.477Z",
   "purpose": "Independent reference semantics that any batch or cached transform path must match exactly.",
+  "lifecycleCoverage": [
+    "hierarchy order parent first",
+    "hierarchy order children first when reversed",
+    "cycle-safe ordering",
+    "runtime dispatch wiring"
+  ],
+  "notCovered": [
+    "awake and start are not yet exercised end to end against a real Rhai script asset"
+  ],
   "checks": [
     {
       "name": "Product composition matches an independently written composition",
@@ -40,6 +49,26 @@
     },
     {
       "name": "The cycle detector finds cycles and accepts every valid shape",
+      "status": "passed"
+    },
+    {
+      "name": "Hierarchy order is parent first, keeps siblings stable and never drops an entity",
+      "status": "passed"
+    },
+    {
+      "name": "Reversing the hierarchy order yields children before parents",
+      "status": "passed"
+    },
+    {
+      "name": "Hierarchy order terminates and covers entities that only appear inside a cycle",
+      "status": "passed"
+    },
+    {
+      "name": "The runtime lifecycle dispatch consumes the hierarchy order",
+      "status": "passed"
+    },
+    {
+      "name": "Lifecycle helpers keep their covered surface explicit",
       "status": "passed"
     }
   ],

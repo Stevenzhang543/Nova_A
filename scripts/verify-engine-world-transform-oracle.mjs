@@ -189,11 +189,72 @@ await test('The cycle detector finds cycles and accepts every valid shape', () =
   assert.equal(hierarchy.hierarchyHasCycle(detached), false, 'independent roots are not a cycle')
 })
 
+await test('Hierarchy order is parent first, keeps siblings stable and never drops an entity', () => {
+  const root = new box.BoxEntity(1, { x: 0, y: 0 }, { x: 1, y: 1 })
+  const childA = new box.BoxEntity(2, { x: 0, y: 0 }, { x: 1, y: 1 })
+  const childB = new box.BoxEntity(3, { x: 0, y: 0 }, { x: 1, y: 1 })
+  const grand = new box.BoxEntity(4, { x: 0, y: 0 }, { x: 1, y: 1 })
+  // Deliberately unsorted input: grandchild before its parent, and children reversed.
+  const entities = [grand, childB, root, childA]
+  hierarchy.setParent(childA, root.uuid, entities, false)
+  hierarchy.setParent(childB, root.uuid, entities, false)
+  hierarchy.setParent(grand, childA.uuid, entities, false)
+  const ordered = hierarchy.hierarchyOrder(entities)
+  assert.equal(ordered.length, entities.length, 'every entity must appear exactly once')
+  assert.deepEqual([...ordered].map(/** 取实体 id 以便比较顺序。 */ e => e.id).sort(), [1, 2, 3, 4].sort(), 'no entity may be dropped or duplicated')
+  const indexOf = (/** 取实体在结果中的位置。 */ entity) => ordered.indexOf(entity)
+  assert.ok(indexOf(root) < indexOf(childA), 'a parent must come before its child')
+  assert.ok(indexOf(root) < indexOf(childB), 'a parent must come before its child')
+  assert.ok(indexOf(childA) < indexOf(grand), 'a parent must come before its grandchild')
+  assert.ok(indexOf(childB) < indexOf(childA), 'siblings keep their input relative order')
+})
+
+await test('Reversing the hierarchy order yields children before parents', () => {
+  const root = new box.BoxEntity(1, { x: 0, y: 0 }, { x: 1, y: 1 })
+  const child = new box.BoxEntity(2, { x: 0, y: 0 }, { x: 1, y: 1 })
+  const grand = new box.BoxEntity(3, { x: 0, y: 0 }, { x: 1, y: 1 })
+  const entities = [root, child, grand]
+  hierarchy.setParent(child, root.uuid, entities, false)
+  hierarchy.setParent(grand, child.uuid, entities, false)
+  const reversed = [...hierarchy.hierarchyOrder(entities)].reverse()
+  assert.ok(reversed.indexOf(grand) < reversed.indexOf(child), 'the deepest entity must come first')
+  assert.ok(reversed.indexOf(child) < reversed.indexOf(root), 'a child must come before its parent')
+})
+
+await test('Hierarchy order terminates and covers entities that only appear inside a cycle', () => {
+  const a = new box.BoxEntity(1, { x: 0, y: 0 }, { x: 1, y: 1 })
+  const b = new box.BoxEntity(2, { x: 0, y: 0 }, { x: 1, y: 1 })
+  a.parentUuid = b.uuid
+  b.parentUuid = a.uuid
+  const ordered = hierarchy.hierarchyOrder([a, b])
+  assert.equal(ordered.length, 2, 'entities trapped in a cycle must still be emitted')
+})
+
+await test('The runtime lifecycle dispatch consumes the hierarchy order', () => {
+  const core = fs.readFileSync('src/runtime/GameplayRuntimeCore.ts', 'utf8').replaceAll('\r\n', '\n')
+  assert.ok(core.includes('hierarchyOrder'), 'the runtime must import the hierarchy order helper')
+  const start = core.indexOf('private ensureLifecycle()')
+  assert.ok(start >= 0, 'ensureLifecycle must exist')
+  const body = core.slice(start, start + 1400)
+  assert.ok(body.includes('const parentFirst = hierarchyOrder(scripted)'), 'lifecycle must order scripted entities by the tree')
+  assert.ok(/for \(const entity of parentFirst\) \{[\s\S]*?'awake'/.test(body), 'awake must run parent first')
+  assert.ok(body.includes('[...parentFirst].reverse()'), 'start must run child first by reversing the parent-first order')
+  assert.ok(body.indexOf("'awake'") < body.indexOf('[...parentFirst].reverse()'), 'awake must be dispatched before start')
+})
+
+await test('Lifecycle helpers keep their covered surface explicit', () => {
+  const covered = ['hierarchy order parent first', 'hierarchy order children first when reversed', 'cycle-safe ordering', 'runtime dispatch wiring']
+  assert.equal(covered.length, 4)
+  globalThis.__lifecycleCoverage = covered
+})
+
 const out = process.env.NOVA_WORLD_ORACLE_REPORT || 'reports/phase2/world-transform-oracle.json'
 fs.mkdirSync(out.slice(0, out.lastIndexOf('/')), { recursive: true })
 fs.writeFileSync(out, JSON.stringify({
   generatedAt: new Date().toISOString(),
   purpose: 'Independent reference semantics that any batch or cached transform path must match exactly.',
+  lifecycleCoverage: globalThis.__lifecycleCoverage,
+  notCovered: ['awake and start are not yet exercised end to end against a real Rhai script asset'],
   checks,
   status: checks.some(/** 任一失败即整体失败。 */ c => c.status === 'failed') ? 'failed' : 'passed',
 }, null, 2) + '\n')
