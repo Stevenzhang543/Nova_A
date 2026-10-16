@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-16T18:21:52.727Z",
+  "generatedAt": "2026-10-16T18:23:43.247Z",
   "purpose": "Independent reference semantics that any batch or cached transform path must match exactly.",
   "checks": [
     {
@@ -24,6 +24,18 @@
     },
     {
       "name": "The batch solver matches per-call results on a long chain and on a subset",
+      "status": "passed"
+    },
+    {
+      "name": "A cyclic parent chain terminates and stays finite in both paths",
+      "status": "passed"
+    },
+    {
+      "name": "Valid hierarchies still agree exactly, so the divergence is confined to invalid input",
+      "status": "passed"
+    },
+    {
+      "name": "A missing parent falls back to the local transform in both paths",
       "status": "passed"
     }
   ],

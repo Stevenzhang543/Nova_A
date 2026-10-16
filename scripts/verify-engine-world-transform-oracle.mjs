@@ -124,6 +124,49 @@ await test('The batch solver matches per-call results on a long chain and on a s
   for (const entity of subset) compare(partial.get(entity.uuid), hierarchy.worldTransform(entity, entities), 'subset entity ' + entity.id)
 })
 
+await test('A cyclic parent chain terminates and stays finite in both paths', () => {
+  // setParent rejects cycles, but a loaded or hand-edited document could still contain one.
+  // A cycle has no valid world transform, and cycle breaking is order dependent: the recursive
+  // path breaks at the queried entity while the batch path breaks where traversal first revisits
+  // a node already being resolved. The two therefore disagree on cyclic input, and the recursive
+  // path is not even self-consistent (a and b do not agree on each other's placement), so the
+  // guarantee tested here is termination and finiteness, not agreement.
+  const a = new box.BoxEntity(1, { x: 1, y: 0 }, { x: 1, y: 1 })
+  const b = new box.BoxEntity(2, { x: 0, y: 2 }, { x: 1, y: 1 })
+  const entities = [a, b]
+  a.parentUuid = b.uuid
+  b.parentUuid = a.uuid
+  hierarchy.invalidateHierarchyIndex()
+  const started = Date.now()
+  const batch = hierarchy.worldTransformsFor(entities, entities)
+  const elapsed = Date.now() - started
+  assert.ok(elapsed < 2000, 'the batch solver must terminate on a cycle, took ' + elapsed + ' ms')
+  const allFinite = (/** 检查世界变换各分量是否有限。 */ value) =>
+    [value.position.x, value.position.y, value.rotation, value.scale.x, value.scale.y].every(Number.isFinite)
+  for (const entity of entities) {
+    const batched = batch.get(entity.uuid)
+    assert.ok(batched, 'the batch path must still produce a value for ' + entity.id)
+    assert.ok(allFinite(batched), 'batch value must be finite for ' + entity.id)
+    assert.ok(allFinite(hierarchy.worldTransform(entity, entities)), 'per-call value must be finite for ' + entity.id)
+  }
+})
+
+await test('Valid hierarchies still agree exactly, so the divergence is confined to invalid input', () => {
+  const { entities } = chain3()
+  const batch = hierarchy.worldTransformsFor(entities, entities)
+  for (const entity of entities) compare(batch.get(entity.uuid), hierarchy.worldTransform(entity, entities), 'valid entity ' + entity.id)
+})
+
+await test('A missing parent falls back to the local transform in both paths', () => {
+  const orphan = new box.BoxEntity(1, { x: 7, y: -3 }, { x: 2, y: 2 })
+  orphan.parentUuid = 'uuid-that-does-not-exist'
+  const entities = [orphan]
+  hierarchy.invalidateHierarchyIndex()
+  const batch = hierarchy.worldTransformsFor(entities, entities)
+  compare(batch.get(orphan.uuid), hierarchy.worldTransform(orphan, entities), 'orphan batch vs per-call')
+  assert.ok(near(batch.get(orphan.uuid).position.x, 7), 'a missing parent must fall back to the local transform')
+})
+
 const out = process.env.NOVA_WORLD_ORACLE_REPORT || 'reports/phase2/world-transform-oracle.json'
 fs.mkdirSync(out.slice(0, out.lastIndexOf('/')), { recursive: true })
 fs.writeFileSync(out, JSON.stringify({
