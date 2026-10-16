@@ -99,6 +99,16 @@ await test('Every core command is dispatched through the shortcut source', () =>
   assert.ok(!/event\.key === 'F2'|event\.key === 'Delete'|event\.key === 'Escape'/.test(topBar), 'no literal special-key tests may remain')
 })
 
+await test('Navigation keys render from the source and keep their arrow chips', () => {
+  assert.equal(shortcutLabel('navigateBack'), 'Alt ←')
+  assert.equal(shortcutLabel('navigateForward'), 'Alt →')
+  assert.equal(shortcutLabel('navigateBack', 'inline'), 'Alt+ArrowLeft')
+  assert.ok(workspaceBar.includes("shortcutLabel('navigateBack')"), 'WorkspaceBar must render the back key from the source')
+  assert.ok(workspaceBar.includes("shortcutLabel('navigateForward')"), 'WorkspaceBar must render the forward key from the source')
+  const stripped = workspaceBar.split("shortcutLabel('navigateBack'").join('').split("shortcutLabel('navigateForward'").join('')
+  assert.ok(!/Alt[+ ]?←|Alt[+ ]?→/.test(stripped), 'no hardcoded arrow bindings may remain')
+})
+
 const out = process.env.NOVA_SHORTCUT_LABEL_REPORT || 'reports/phase2/shortcut-labels.json'
 fs.mkdirSync(out.slice(0, out.lastIndexOf('/')), { recursive: true })
 fs.writeFileSync(out, JSON.stringify({ generatedAt: new Date().toISOString(), checks, status: checks.some(/** 任一失败即整体失败。 */ c => c.status === 'failed') ? 'failed' : 'passed' }, null, 2) + '\n')

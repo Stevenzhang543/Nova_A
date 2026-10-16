@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-16T18:10:27.809Z",
+  "generatedAt": "2026-10-16T18:12:07.854Z",
   "checks": [
     {
       "name": "A label is derived from the live binding of the requested command",
@@ -39,6 +39,10 @@
     },
     {
       "name": "Every core command is dispatched through the shortcut source",
+      "status": "passed"
+    },
+    {
+      "name": "Navigation keys render from the source and keep their arrow chips",
       "status": "passed"
     }
   ],

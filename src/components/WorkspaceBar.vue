@@ -15,8 +15,8 @@
     <div class="context-title" :title="contextTitle"><small>{{ t('currentContext') }}</small><strong>{{ contextTitle }}</strong></div>
     <span class="workspace-spacer"></span>
     <div class="history-controls" :aria-label="t('navigationHistory')">
-      <UiButton :aria-label="t('navigateBack')" :disabled="!workspaceState.navigationBack.length" :title="`${t('navigateBack')} (Alt+←)`" data-doc="manual/navigation-history" @click="navigateHistory('back')"><EditorIcon name="back" /><span class="control-label">{{ t('back') }}</span></UiButton>
-      <UiButton :aria-label="t('navigateForward')" :disabled="!workspaceState.navigationForward.length" :title="`${t('navigateForward')} (Alt+→)`" data-doc="manual/navigation-history" @click="navigateHistory('forward')"><EditorIcon name="forward" /><span class="control-label">{{ t('forward') }}</span></UiButton>
+      <UiButton :aria-label="t('navigateBack')" :disabled="!workspaceState.navigationBack.length" :title="`${t('navigateBack')} (${shortcutLabel('navigateBack', 'inline')})`" data-doc="manual/navigation-history" @click="navigateHistory('back')"><EditorIcon name="back" /><span class="control-label">{{ t('back') }}</span></UiButton>
+      <UiButton :aria-label="t('navigateForward')" :disabled="!workspaceState.navigationForward.length" :title="`${t('navigateForward')} (${shortcutLabel('navigateForward', 'inline')})`" data-doc="manual/navigation-history" @click="navigateHistory('forward')"><EditorIcon name="forward" /><span class="control-label">{{ t('forward') }}</span></UiButton>
     </div>
     <details data-ui-motion-popover v-transient-popover class="workspace-menu layout-menu">
       <summary :aria-label="t('layoutPanels')" :title="t('layoutPanels')"><EditorIcon name="layout" /><span>{{ t('layout') }}</span></summary>
@@ -36,8 +36,8 @@
         <UiButton class="quick-trigger" :data-shortcut="shortcutLabel('quickOpen', 'inline')" @click="openPalette('quick')"><EditorIcon name="search" /><span>{{ t('quickOpen') }}</span><kbd>{{ shortcutLabel('quickOpen') }}</kbd></UiButton>
         <UiButton class="command-trigger" :data-shortcut="shortcutLabel('commandPalette', 'inline')" @click="openPalette('commands')"><EditorIcon name="command" /><span>{{ t('commandPalette') }}</span><kbd>{{ shortcutLabel('commandPalette') }}</kbd></UiButton>
         <div class="history-overflow" :aria-label="t('navigationHistory')">
-          <UiButton data-doc="manual/navigation-history" :disabled="!workspaceState.navigationBack.length" :title="`${t('navigateBack')} (Alt+←)`" @click="navigateHistory('back'); ($event.currentTarget as HTMLElement).closest('details')?.removeAttribute('open')"><EditorIcon name="back" /><span>{{ t('navigateBack') }}</span><kbd>Alt ←</kbd></UiButton>
-          <UiButton data-doc="manual/navigation-history" :disabled="!workspaceState.navigationForward.length" :title="`${t('navigateForward')} (Alt+→)`" @click="navigateHistory('forward'); ($event.currentTarget as HTMLElement).closest('details')?.removeAttribute('open')"><EditorIcon name="forward" /><span>{{ t('navigateForward') }}</span><kbd>Alt →</kbd></UiButton>
+          <UiButton data-doc="manual/navigation-history" :disabled="!workspaceState.navigationBack.length" :title="`${t('navigateBack')} (${shortcutLabel('navigateBack', 'inline')})`" @click="navigateHistory('back'); ($event.currentTarget as HTMLElement).closest('details')?.removeAttribute('open')"><EditorIcon name="back" /><span>{{ t('navigateBack') }}</span><kbd>{{ shortcutLabel('navigateBack') }}</kbd></UiButton>
+          <UiButton data-doc="manual/navigation-history" :disabled="!workspaceState.navigationForward.length" :title="`${t('navigateForward')} (${shortcutLabel('navigateForward', 'inline')})`" @click="navigateHistory('forward'); ($event.currentTarget as HTMLElement).closest('details')?.removeAttribute('open')"><EditorIcon name="forward" /><span>{{ t('navigateForward') }}</span><kbd>{{ shortcutLabel('navigateForward') }}</kbd></UiButton>
         </div>
       </div>
     </details>
