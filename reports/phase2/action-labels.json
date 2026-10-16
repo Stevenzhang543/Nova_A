@@ -1,0 +1,1101 @@
+{
+  "generatedAt": "2026-10-16T18:07:39.116Z",
+  "counts": {
+    "iconOnly": 213,
+    "visibleText": 104,
+    "withoutIcon": 32
+  },
+  "primaryAuthoringActionsFixed": [
+    "importAssets",
+    "newScript",
+    "visualGraph",
+    "createSceneAsset",
+    "newFolder"
+  ],
+  "remainingIconOnly": [
+    {
+      "file": "src/components/AccessibilityEvidencePanel.vue",
+      "line": 26,
+      "text": "<div class=\"actions\"><UiButton icon=\"refresh\" :label=\"l('refresh')\" :disabled=\"nativeAccessibilityState.loading\" @click="
+    },
+    {
+      "file": "src/components/ActionBar.vue",
+      "line": 4,
+      "text": "<UiButton :class=\"{ active: state.playMode === 'playing' }\" :aria-label=\"t('play')\" :aria-pressed=\"state.playMode === 'p"
+    },
+    {
+      "file": "src/components/ActionBar.vue",
+      "line": 5,
+      "text": "<UiButton :class=\"{ active: state.playMode === 'paused' }\" :disabled=\"state.playMode === 'editing'\" :label=\"t('pause')\" "
+    },
+    {
+      "file": "src/components/ActionBar.vue",
+      "line": 6,
+      "text": "<UiButton class=\"step-button\" :label=\"t('step')\" :aria-label=\"t('step')\" @click=\"stepSimulation\" icon=\"step\" />"
+    },
+    {
+      "file": "src/components/ActionBar.vue",
+      "line": 7,
+      "text": "<UiButton :disabled=\"state.playMode === 'editing'\" :aria-label=\"t('stop')\" :label=\"t('stop')\" @click=\"restoreSimulation\""
+    },
+    {
+      "file": "src/components/AndroidDeliveryPanel.vue",
+      "line": 39,
+      "text": "<div class=\"package-row\"><span>{{ l('package') }} · <EditorIcon :name=\"packageReady ? 'check' : 'warning'\" /></span><but"
+    },
+    {
+      "file": "src/components/AnimationPanel.vue",
+      "line": 13,
+      "text": "<UiButton icon=\"save\" :label=\"t('saveAsset')\" :disabled=\"!document || previewActive\" @click=\"save\" />"
+    },
+    {
+      "file": "src/components/AnimationPanel.vue",
+      "line": 22,
+      "text": "<template v-if=\"previewActive && timeline\"><button @click=\"skipTimeline\"><EditorIcon name=\"step\" /> {{ t('skip') }}</but"
+    },
+    {
+      "file": "src/components/AnimationPanel.vue",
+      "line": 39,
+      "text": "<UiButton :disabled=\"!selectedKeys.length\" @click=\"copyKeys\" icon=\"copy\" :label=\"t('copy')\" />"
+    },
+    {
+      "file": "src/components/AnimationPanel.vue",
+      "line": 40,
+      "text": "<UiButton :disabled=\"!keyClipboard.length\" @click=\"pasteKeys\" icon=\"paste\" :label=\"t('paste')\" />"
+    },
+    {
+      "file": "src/components/AnimationPanel.vue",
+      "line": 120,
+      "text": "<UiButton v-if=\"index\" icon=\"remove\" :label=\"t('remove') + ' · ' + layer.name\" @click=\"controller.layers.splice(index,1)"
+    },
+    {
+      "file": "src/components/AnimationPanel.vue",
+      "line": 165,
+      "text": "<aside class=\"timeline-inspector\"><PanelResizeHandle v-if=\"!propertiesStacked\" v-model=\"propertiesWidth\" orientation=\"ve"
+    },
+    {
+      "file": "src/components/AutomationStudio.vue",
+      "line": 4,
+      "text": "<UiPanelHeader class=\"studio-header\" :title=\"t('automationStudio')\" :description=\"t('automationSandbox')\"><template #act"
+    },
+    {
+      "file": "src/components/AutomationStudio.vue",
+      "line": 4,
+      "text": "<UiPanelHeader class=\"studio-header\" :title=\"t('automationStudio')\" :description=\"t('automationSandbox')\"><template #act"
+    },
+    {
+      "file": "src/components/AutomationStudio.vue",
+      "line": 4,
+      "text": "<UiPanelHeader class=\"studio-header\" :title=\"t('automationStudio')\" :description=\"t('automationSandbox')\"><template #act"
+    },
+    {
+      "file": "src/components/BuildSettingsPanel.vue",
+      "line": 30,
+      "text": "<article v-for=\"(uuid, index) in buildSettings.sceneOrder\" :key=\"uuid\"><span class=\"index\">{{ index + 1 }}</span><strong"
+    },
+    {
+      "file": "src/components/BuildSettingsPanel.vue",
+      "line": 30,
+      "text": "<article v-for=\"(uuid, index) in buildSettings.sceneOrder\" :key=\"uuid\"><span class=\"index\">{{ index + 1 }}</span><strong"
+    },
+    {
+      "file": "src/components/ConfigPanel.vue",
+      "line": 128,
+      "text": "<UiButton icon=\"restore\" v-if=\"!connection.binding && connection.breakState !== 'intact'\" class=\"mini-button\" :title=\"t("
+    },
+    {
+      "file": "src/components/ConfigPanel.vue",
+      "line": 130,
+      "text": "<UiButton icon=\"clear\" class=\"mini-button danger\" :title=\"t('deleteConnection')\" @click=\"removeConnection(connection.id)"
+    },
+    {
+      "file": "src/components/ConfigPanel.vue",
+      "line": 293,
+      "text": "<header><select v-model=\"shape.kind\" :aria-label=\"t('colliderShape')\"><option v-for=\"kind in colliderShapeKinds\" :key=\"k"
+    },
+    {
+      "file": "src/components/ConsolePanel.vue",
+      "line": 9,
+      "text": "<UiButton icon=\"clear\" :label=\"t('clearConsole')\" @click=\"editorState.logs.splice(0)\" />"
+    },
+    {
+      "file": "src/components/ContentAssetInspector.vue",
+      "line": 4,
+      "text": "<UiPanelHeader :title=\"t('contentAssetStudio')\" :description=\"contextLabel\"><template #actions><UiButton v-if=\"animation"
+    },
+    {
+      "file": "src/components/CreateObjectPalette.vue",
+      "line": 21,
+      "text": "<UiButton icon=\"star\" :label=\"t('favorite')\" class=\"favorite\" :class=\"{ active: authoringState.favorites.includes(item.k"
+    },
+    {
+      "file": "src/components/CreatorLearningCenter.vue",
+      "line": 5,
+      "text": "<template #actions><span class=\"learning-progress\" role=\"status\">{{ progress.completed }} / {{ progress.total }} · {{ Ma"
+    },
+    {
+      "file": "src/components/CreatorLearningCenter.vue",
+      "line": 5,
+      "text": "<template #actions><span class=\"learning-progress\" role=\"status\">{{ progress.completed }} / {{ progress.total }} · {{ Ma"
+    },
+    {
+      "file": "src/components/CreatorOnboarding.vue",
+      "line": 6,
+      "text": "<header><span>Nova_A {{ NOVA_RELEASE_NAME }} · {{ t('firstRunOnboarding') }}</span><UiButton icon=\"close\" :label=\"t('clo"
+    },
+    {
+      "file": "src/components/DeviceInputPanel.vue",
+      "line": 142,
+      "text": "<h3>{{ l('calibration') }}</h3><article v-for=\"(item,index) in deviceInputSettings.gamepadCalibrations\" :key=\"`${item.de"
+    },
+    {
+      "file": "src/components/EcosystemStudioPanel.vue",
+      "line": 16,
+      "text": "<div class=\"button-row\"><UiButton icon=\"play\" :label=\"t('loadPlugins')\" @click=\"pluginRuntime.start()\" /><UiButton icon="
+    },
+    {
+      "file": "src/components/EcosystemStudioPanel.vue",
+      "line": 16,
+      "text": "<div class=\"button-row\"><UiButton icon=\"play\" :label=\"t('loadPlugins')\" @click=\"pluginRuntime.start()\" /><UiButton icon="
+    },
+    {
+      "file": "src/components/EcosystemStudioPanel.vue",
+      "line": 16,
+      "text": "<div class=\"button-row\"><UiButton icon=\"play\" :label=\"t('loadPlugins')\" @click=\"pluginRuntime.start()\" /><UiButton icon="
+    },
+    {
+      "file": "src/components/EcosystemStudioPanel.vue",
+      "line": 20,
+      "text": "<div class=\"extension-list\"><article v-for=\"manifest in pluginState.manifests\" :key=\"manifest.id\"><div><strong>{{ manife"
+    },
+    {
+      "file": "src/components/EcosystemStudioPanel.vue",
+      "line": 20,
+      "text": "<div class=\"extension-list\"><article v-for=\"manifest in pluginState.manifests\" :key=\"manifest.id\"><div><strong>{{ manife"
+    },
+    {
+      "file": "src/components/EditorBottomPanel.vue",
+      "line": 66,
+      "text": "<UiButton @click=\"reportUnusedAssets\" icon=\"check\" :label=\"t('unusedAssetReport')\" />"
+    },
+    {
+      "file": "src/components/EditorFeedback.vue",
+      "line": 4,
+      "text": "<UiMotionTransition><div v-if=\"feedback.banner\" class=\"feedback-banner\" role=\"status\"><span>{{ feedback.banner }}</span>"
+    },
+    {
+      "file": "src/components/EditorFeedback.vue",
+      "line": 5,
+      "text": "<div ref=\"toastRegion\" class=\"toast-stack\" @keydown=\"toastKeydown\"><TransitionGroup tag=\"div\" :css=\"false\" @before-enter"
+    },
+    {
+      "file": "src/components/EditorFeedback.vue",
+      "line": 6,
+      "text": "<UiMotionTransition><section v-if=\"notificationsOpen\" id=\"editor-notification-history\" ref=\"notificationPanel\" class=\"st"
+    },
+    {
+      "file": "src/components/EditorFeedback.vue",
+      "line": 6,
+      "text": "<UiMotionTransition><section v-if=\"notificationsOpen\" id=\"editor-notification-history\" ref=\"notificationPanel\" class=\"st"
+    },
+    {
+      "file": "src/components/EditorFeedback.vue",
+      "line": 8,
+      "text": "<header><div><strong>{{ t('statusCenter') }}</strong><small>{{ activeCount }} {{ t('activeTasks') }}</small></div><UiBut"
+    },
+    {
+      "file": "src/components/EventSheetEditor.vue",
+      "line": 8,
+      "text": "<header><strong>{{ t('eventSheets') }}</strong><UiButton icon=\"add\" :label=\"t('newEventSheet')\" variant=\"primary\" @click"
+    },
+    {
+      "file": "src/components/EventSheetEditor.vue",
+      "line": 15,
+      "text": "<div><UiButton icon=\"rectangle\" :label=\"t('rectangle')\" @click=\"quickObject('Rectangle')\" /><UiButton icon=\"render\" labe"
+    },
+    {
+      "file": "src/components/EventSheetEditor.vue",
+      "line": 15,
+      "text": "<div><UiButton icon=\"rectangle\" :label=\"t('rectangle')\" @click=\"quickObject('Rectangle')\" /><UiButton icon=\"render\" labe"
+    },
+    {
+      "file": "src/components/EventSheetEditor.vue",
+      "line": 20,
+      "text": "<UiPanelHeader class=\"sheet-toolbar\" :title=\"document.name\" :description=\"activeAsset?.path ?? t('unsaved')\"><template #"
+    },
+    {
+      "file": "src/components/EventSheetEditor.vue",
+      "line": 20,
+      "text": "<UiPanelHeader class=\"sheet-toolbar\" :title=\"document.name\" :description=\"activeAsset?.path ?? t('unsaved')\"><template #"
+    },
+    {
+      "file": "src/components/EventSheetEditor.vue",
+      "line": 39,
+      "text": "<header><div><strong>{{ t('objectEvents') }}</strong><span>{{ visibleHandlers.length }} / {{ document.handlers.length }}"
+    },
+    {
+      "file": "src/components/EventSheetEditor.vue",
+      "line": 48,
+      "text": "<UiButton class=\"remove-handler\" icon=\"remove\" variant=\"danger\" :label=\"t('remove')\" @click=\"removeHandler(handler.uuid)"
+    },
+    {
+      "file": "src/components/EventSheetEditor.vue",
+      "line": 67,
+      "text": "<header><strong>{{ t('objectBlueprints') }}</strong><UiButton icon=\"add\" :label=\"t('add') + ' · ' + t('objectBlueprints'"
+    },
+    {
+      "file": "src/components/GraphProductionPanel.vue",
+      "line": 10,
+      "text": "<div class=\"card-title\"><button class=\"name\" @click=\"emit('scope', routine.uuid)\">{{ routine.name }}</button><small>{{ r"
+    },
+    {
+      "file": "src/components/GraphProductionPanel.vue",
+      "line": 17,
+      "text": "<div v-for=\"parameter in [...routine.inputs,...routine.outputs]\" :key=\"parameter.uuid\" class=\"symbol-row\"><EditorIcon :n"
+    },
+    {
+      "file": "src/components/GraphProductionPanel.vue",
+      "line": 18,
+      "text": "<div v-for=\"local in routine.locals\" :key=\"local.uuid\" class=\"symbol-row\"><EditorIcon name=\"design\" /><input :aria-label"
+    },
+    {
+      "file": "src/components/GraphProductionPanel.vue",
+      "line": 23,
+      "text": "<header><strong>{{ t('customEvents') }}</strong><UiButton :aria-label=\"t('addEvent')\" @click=\"addEvent\" icon=\"add\" :labe"
+    },
+    {
+      "file": "src/components/GraphProductionPanel.vue",
+      "line": 24,
+      "text": "<article v-for=\"event in graph.customEvents\" :key=\"event.uuid\" class=\"production-card\"><div class=\"symbol-row\"><EditorIc"
+    },
+    {
+      "file": "src/components/GraphProductionPanel.vue",
+      "line": 24,
+      "text": "<article v-for=\"event in graph.customEvents\" :key=\"event.uuid\" class=\"production-card\"><div class=\"symbol-row\"><EditorIc"
+    },
+    {
+      "file": "src/components/GraphProductionPanel.vue",
+      "line": 24,
+      "text": "<article v-for=\"event in graph.customEvents\" :key=\"event.uuid\" class=\"production-card\"><div class=\"symbol-row\"><EditorIc"
+    },
+    {
+      "file": "src/components/GraphProductionPanel.vue",
+      "line": 26,
+      "text": "<header><strong>{{ t('graphInterfaces') }}</strong><UiButton :aria-label=\"t('add') + ' · ' + t('graphInterfaces')\" @clic"
+    },
+    {
+      "file": "src/components/GraphProductionPanel.vue",
+      "line": 27,
+      "text": "<article v-for=\"contract in graph.interfaces\" :key=\"contract.uuid\" class=\"production-card\"><div class=\"symbol-row\"><Edit"
+    },
+    {
+      "file": "src/components/GraphProductionPanel.vue",
+      "line": 27,
+      "text": "<article v-for=\"contract in graph.interfaces\" :key=\"contract.uuid\" class=\"production-card\"><div class=\"symbol-row\"><Edit"
+    },
+    {
+      "file": "src/components/GraphProductionPanel.vue",
+      "line": 27,
+      "text": "<article v-for=\"contract in graph.interfaces\" :key=\"contract.uuid\" class=\"production-card\"><div class=\"symbol-row\"><Edit"
+    },
+    {
+      "file": "src/components/GraphProductionPanel.vue",
+      "line": 27,
+      "text": "<article v-for=\"contract in graph.interfaces\" :key=\"contract.uuid\" class=\"production-card\"><div class=\"symbol-row\"><Edit"
+    },
+    {
+      "file": "src/components/GraphProductionPanel.vue",
+      "line": 32,
+      "text": "<div v-for=\"library in graph.libraries\" :key=\"library.uuid\" class=\"symbol-row\"><input :aria-label=\"t('enabled') + ' · ' "
+    },
+    {
+      "file": "src/components/GraphProductionPanel.vue",
+      "line": 40,
+      "text": "<header><strong>{{ t('watches') }}</strong><UiButton :aria-label=\"t('add') + ' · ' + t('watches')\" @click=\"addWatch\" ico"
+    },
+    {
+      "file": "src/components/GraphProductionPanel.vue",
+      "line": 41,
+      "text": "<div v-for=\"(watch,index) in graph.debug.watches\" :key=\"`${watch}:${index}`\" class=\"watch-row\"><input :aria-label=\"t('wa"
+    },
+    {
+      "file": "src/components/ImportedAssetBindings.vue",
+      "line": 5,
+      "text": "<UiPropertyRow v-for=\"slot in slots\" :key=\"slot.id\" :label=\"copy(slot.kind==='image'?'imageSource':'tilesetSource') + ' "
+    },
+    {
+      "file": "src/components/LayerBar.vue",
+      "line": 2,
+      "text": "<template><aside class=\"layer-bar\"><div class=\"layer-header\">{{ t('layers') }}</div><div class=\"layer-list\"><button v-fo"
+    },
+    {
+      "file": "src/components/ManualViewer.vue",
+      "line": 5,
+      "text": "<header><div><strong>{{ t('manual') }}</strong><span>{{ t('bundledManual') }}</span></div><nav><UiButton icon=\"refresh\" "
+    },
+    {
+      "file": "src/components/ManualViewer.vue",
+      "line": 5,
+      "text": "<header><div><strong>{{ t('manual') }}</strong><span>{{ t('bundledManual') }}</span></div><nav><UiButton icon=\"refresh\" "
+    },
+    {
+      "file": "src/components/MaterialGraphEditor.vue",
+      "line": 34,
+      "text": "<UiButton v-if=\"selectedNode.kind !== 'Output'\" icon=\"remove\" variant=\"danger\" :label=\"t('removeNode')\" @click=\"removeSe"
+    },
+    {
+      "file": "src/components/MaterialGraphEditor.vue",
+      "line": 45,
+      "text": "<!-- 诊断严重程度回调检测错误；消息映射回调提取各诊断文本供页脚显示。 -->    <footer><span :class=\"diagnostics.some(item => item.severity === 'error') ?"
+    },
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "line": 88,
+      "text": "<template #actions><UiButton icon=\"add\" :disabled=\"settings.networking.rpcContracts.length >= 256\" @click=\"addRpc\">RPC</"
+    },
+    {
+      "file": "src/components/ObjectOwnershipPanel.vue",
+      "line": 9,
+      "text": "<div class=\"ownership-actions\"><UiButton icon=\"reset\" :label=\"labels.refresh\" @click=\"revision++\" /><UiButton icon=\"add\""
+    },
+    {
+      "file": "src/components/ObjectOwnershipPanel.vue",
+      "line": 9,
+      "text": "<div class=\"ownership-actions\"><UiButton icon=\"reset\" :label=\"labels.refresh\" @click=\"revision++\" /><UiButton icon=\"add\""
+    },
+    {
+      "file": "src/components/PackageManagerPanel.vue",
+      "line": 7,
+      "text": "<UiButton icon=\"search\" :label=\"t('browsePackages')\" :aria-pressed=\"registryOpen\" @click=\"pluginToolsOpen = false; regis"
+    },
+    {
+      "file": "src/components/PackageManagerPanel.vue",
+      "line": 8,
+      "text": "<UiButton icon=\"settings\" :label=\"t('pluginApi')\" :aria-pressed=\"pluginToolsOpen\" @click=\"pluginToolsOpen = !pluginTools"
+    },
+    {
+      "file": "src/components/PackageManagerPanel.vue",
+      "line": 9,
+      "text": "<UiButton icon=\"upload\" :label=\"t('importPackageManifest')\" @click=\"manifestInput?.click()\" />"
+    },
+    {
+      "file": "src/components/PhysicsRuntimePanel.vue",
+      "line": 84,
+      "text": "<div class=\"capture-list\"><article v-for=\"capture in captures\" :key=\"capture.id\"><button @click=\"selectedCaptureId = cap"
+    },
+    {
+      "file": "src/components/PluginSettings.vue",
+      "line": 10,
+      "text": "<UiButton icon=\"refresh\" :label=\"t('reloadPlugin')\" @click=\"pluginRuntime.reload(manifest.id)\" /><UiButton icon=\"remove\""
+    },
+    {
+      "file": "src/components/PluginSettings.vue",
+      "line": 10,
+      "text": "<UiButton icon=\"refresh\" :label=\"t('reloadPlugin')\" @click=\"pluginRuntime.reload(manifest.id)\" /><UiButton icon=\"remove\""
+    },
+    {
+      "file": "src/components/PresentationPanel.vue",
+      "line": 66,
+      "text": "<div v-if=\"localeDraft\" class=\"locale-rows\"><article v-for=\"(value,key) in localeDraft.entries\" :key=\"key\"><code :title="
+    },
+    {
+      "file": "src/components/PresentationPanel.vue",
+      "line": 76,
+      "text": "<div class=\"snapshot-list\"><label v-for=\"snapshot in audioSettings.mixer.snapshots\" :key=\"snapshot.id\"><input :aria-labe"
+    },
+    {
+      "file": "src/components/PresentationPanel.vue",
+      "line": 78,
+      "text": "<header :aria-label=\"audioCopy.authoredMix\"><strong :title=\"bus.name\">{{ bus.name }}</strong><meter :aria-label=\"audioCo"
+    },
+    {
+      "file": "src/components/PresentationPanel.vue",
+      "line": 82,
+      "text": "<details data-ui-motion-disclosure><summary>{{ t('effects') }} ({{ bus.effects.length }})</summary><div v-for=\"effect in"
+    },
+    {
+      "file": "src/components/PresentationPanel.vue",
+      "line": 83,
+      "text": "<details data-ui-motion-disclosure><summary>{{ t('sends') }} ({{ bus.sends.length }})</summary><div v-for=\"send in bus.s"
+    },
+    {
+      "file": "src/components/PresentationPanel.vue",
+      "line": 84,
+      "text": "<details data-ui-motion-disclosure><summary>{{ t('automation') }} ({{ bus.automation.length }})</summary><div v-for=\"(po"
+    },
+    {
+      "file": "src/components/PresentationPanel.vue",
+      "line": 90,
+      "text": "<template v-if=\"selectedAudio\"><UiPropertyRow :label=\"audioCopy.auditionBus\"><select v-model=\"auditionBus\"><option v-for"
+    },
+    {
+      "file": "src/components/PresentationPanel.vue",
+      "line": 93,
+      "text": "<UiButton icon=\"add\" @click=\"addDucking\">{{ t('duckingRule') }}</UiButton><article v-for=\"rule in audioSettings.mixer.du"
+    },
+    {
+      "file": "src/components/ProfilerPanel.vue",
+      "line": 46,
+      "text": "<div class=\"button-row\"><UiButton :icon=\"profilerState.frozen ? 'play' : 'pause'\" :label=\"t(profilerState.frozen ? 'resu"
+    },
+    {
+      "file": "src/components/ProfilerPanel.vue",
+      "line": 46,
+      "text": "<div class=\"button-row\"><UiButton :icon=\"profilerState.frozen ? 'play' : 'pause'\" :label=\"t(profilerState.frozen ? 'resu"
+    },
+    {
+      "file": "src/components/ProfilerPanel.vue",
+      "line": 70,
+      "text": "<label><span>{{ t('annotation') }}</span><div class=\"annotation-control\"><input v-model=\"annotationDraft\" maxlength=\"500"
+    },
+    {
+      "file": "src/components/ProfilerPanel.vue",
+      "line": 143,
+      "text": "<div class=\"assertion-list\"><article v-for=\"(assertion, index) in selectedTest.assertions\" :key=\"index\"><select v-model="
+    },
+    {
+      "file": "src/components/ProfilerPanel.vue",
+      "line": 167,
+      "text": "<div class=\"field-list\"><article v-for=\"(field, index) in schemaDraft.fields\" :key=\"index\"><input v-model=\"field.name\" m"
+    },
+    {
+      "file": "src/components/ProfilerPanel.vue",
+      "line": 264,
+      "text": "<article v-for=\"definition in settings.networking.replicatedEntities\" :key=\"definition.entityUuid\" class=\"replication-ro"
+    },
+    {
+      "file": "src/components/ProjectHealthPanel.vue",
+      "line": 16,
+      "text": "<div v-if=\"issues.length\" v-show=\"healthView === 'overview'\" class=\"issues\"><article v-for=\"issue in issues\" :key=\"issue"
+    },
+    {
+      "file": "src/components/ProjectManager.vue",
+      "line": 87,
+      "text": "<UiButton class=\"remove-recent\" icon=\"close\" :label=\"t('removeRecent')\" @click=\"removeRecentProject(recent.id)\" />"
+    },
+    {
+      "file": "src/components/RenderingPanel.vue",
+      "line": 24,
+      "text": "<aside class=\"card material-list\"><header><strong>{{ t('materials') }}</strong><UiButton icon=\"add\" :aria-label=\"t('newM"
+    },
+    {
+      "file": "src/components/RenderingPanel.vue",
+      "line": 59,
+      "text": "<UiPropertySection :title=\"t('materialLayers')\" class=\"layer-editor\"><template #actions><span>{{ material.layers.length "
+    },
+    {
+      "file": "src/components/RenderingPanel.vue",
+      "line": 59,
+      "text": "<UiPropertySection :title=\"t('materialLayers')\" class=\"layer-editor\"><template #actions><span>{{ material.layers.length "
+    },
+    {
+      "file": "src/components/RenderingPanel.vue",
+      "line": 59,
+      "text": "<UiPropertySection :title=\"t('materialLayers')\" class=\"layer-editor\"><template #actions><span>{{ material.layers.length "
+    },
+    {
+      "file": "src/components/RenderingPanel.vue",
+      "line": 71,
+      "text": "<UiPropertySection :title=\"t('cameraVolumes')\" ><template #actions><UiButton icon=\"add\" :aria-label=\"t('add') + ' · ' + "
+    },
+    {
+      "file": "src/components/RenderingPanel.vue",
+      "line": 109,
+      "text": "<UiPropertySection :title=\"t('qualityVolumes')\" class=\"quality-volumes\"><template #actions><UiButton icon=\"add\" :aria-la"
+    },
+    {
+      "file": "src/components/RenderingPanel.vue",
+      "line": 109,
+      "text": "<UiPropertySection :title=\"t('qualityVolumes')\" class=\"quality-volumes\"><template #actions><UiButton icon=\"add\" :aria-la"
+    },
+    {
+      "file": "src/components/RuntimeComponentsInspector.vue",
+      "line": 4,
+      "text": "<template #actions><UiButton icon=\"clear\" @click=\"remove('Animator')\" :label=\"t('remove')\" /></template>"
+    },
+    {
+      "file": "src/components/RuntimeComponentsInspector.vue",
+      "line": 13,
+      "text": "<template #actions><UiButton icon=\"clear\" @click=\"remove('Skeleton2D')\" :label=\"t('remove')\" /></template>"
+    },
+    {
+      "file": "src/components/RuntimeComponentsInspector.vue",
+      "line": 20,
+      "text": "<template #actions><UiButton icon=\"clear\" @click=\"remove('TimelinePlayer')\" :label=\"t('remove')\" /></template>"
+    },
+    {
+      "file": "src/components/RuntimeComponentsInspector.vue",
+      "line": 31,
+      "text": "<template #actions><UiButton icon=\"clear\" @click=\"remove('AudioSource')\" :label=\"t('remove')\" /></template>"
+    },
+    {
+      "file": "src/components/RuntimeComponentsInspector.vue",
+      "line": 56,
+      "text": "<template #actions><UiButton icon=\"clear\" @click=\"remove('AudioListener')\" :label=\"t('remove')\" /></template>"
+    },
+    {
+      "file": "src/components/RuntimeComponentsInspector.vue",
+      "line": 61,
+      "text": "<template #actions><UiButton icon=\"clear\" @click=\"remove('TileMap2D')\" :label=\"t('remove')\" /></template>"
+    },
+    {
+      "file": "src/components/RuntimeComponentsInspector.vue",
+      "line": 76,
+      "text": "<template #actions><UiButton icon=\"clear\" @click=\"remove('ParticleEmitter2D')\" :label=\"t('remove')\" /></template>"
+    },
+    {
+      "file": "src/components/RuntimeComponentsInspector.vue",
+      "line": 106,
+      "text": "<template #actions><UiButton icon=\"clear\" @click=\"remove('Light2D')\" :label=\"t('remove')\" /></template>"
+    },
+    {
+      "file": "src/components/RuntimeComponentsInspector.vue",
+      "line": 120,
+      "text": "<template #actions><UiButton icon=\"clear\" @click=\"remove('ShadowCaster2D')\" :label=\"t('remove')\" /></template>"
+    },
+    {
+      "file": "src/components/RuntimeComponentsInspector.vue",
+      "line": 127,
+      "text": "<template #actions><UiButton icon=\"clear\" @click=\"remove(joint.kind)\" :label=\"t('remove')\" /></template>"
+    },
+    {
+      "file": "src/components/RuntimeComponentsInspector.vue",
+      "line": 146,
+      "text": "<template #actions><UiButton icon=\"clear\" @click=\"remove('RectTransform')\" :label=\"t('remove')\" /></template>"
+    },
+    {
+      "file": "src/components/RuntimeComponentsInspector.vue",
+      "line": 176,
+      "text": "<div class=\"breakpoint-editor\"><strong>{{ t('responsiveBreakpoints') }}</strong><article v-for=\"(point,index) in rectTra"
+    },
+    {
+      "file": "src/components/RuntimeComponentsInspector.vue",
+      "line": 180,
+      "text": "<template #actions><UiButton icon=\"clear\" @click=\"remove('Canvas')\" :label=\"t('remove')\" /></template>"
+    },
+    {
+      "file": "src/components/RuntimeComponentsInspector.vue",
+      "line": 193,
+      "text": "<template #actions><UiButton icon=\"clear\" @click=\"remove('Panel')\" :label=\"t('remove')\" /></template>"
+    },
+    {
+      "file": "src/components/RuntimeComponentsInspector.vue",
+      "line": 217,
+      "text": "<template #actions><UiButton icon=\"clear\" @click=\"remove('Image')\" :label=\"t('remove')\" /></template>"
+    },
+    {
+      "file": "src/components/RuntimeComponentsInspector.vue",
+      "line": 224,
+      "text": "<UiPropertySection :title=\"(t('uiText'))\" v-if=\"text && componentVisible('Text', t('uiText'))\" ><template #actions><UiBu"
+    },
+    {
+      "file": "src/components/RuntimeComponentsInspector.vue",
+      "line": 225,
+      "text": "<UiPropertySection :title=\"(t('uiButton'))\" v-if=\"button && componentVisible('Button', t('uiButton'))\" ><template #actio"
+    },
+    {
+      "file": "src/components/RuntimeComponentsInspector.vue",
+      "line": 226,
+      "text": "<UiPropertySection :title=\"(t('uiSlider'))\" v-if=\"slider && componentVisible('Slider', t('uiSlider'))\" ><template #actio"
+    },
+    {
+      "file": "src/components/RuntimeComponentsInspector.vue",
+      "line": 227,
+      "text": "<UiPropertySection :title=\"(t('uiProgressBar'))\" v-if=\"progress && componentVisible('ProgressBar', t('uiProgressBar'))\" "
+    },
+    {
+      "file": "src/components/RuntimeComponentsInspector.vue",
+      "line": 228,
+      "text": "<UiPropertySection :title=\"(t('uiCheckbox'))\" v-if=\"checkbox && componentVisible('Checkbox', t('uiCheckbox'))\" ><templat"
+    },
+    {
+      "file": "src/components/RuntimeComponentsInspector.vue",
+      "line": 229,
+      "text": "<UiPropertySection :title=\"(t('uiTextInput'))\" v-if=\"textInput && componentVisible('TextInput', t('uiTextInput'))\" ><tem"
+    },
+    {
+      "file": "src/components/SaveDataSettings.vue",
+      "line": 6,
+      "text": "<div class=\"actions\"><UiButton :disabled=\"saveGameState.busy\" @click=\"load\" icon=\"open\" :label=\"t('loadSlot')\" /><UiButt"
+    },
+    {
+      "file": "src/components/SaveDataSettings.vue",
+      "line": 6,
+      "text": "<div class=\"actions\"><UiButton :disabled=\"saveGameState.busy\" @click=\"load\" icon=\"open\" :label=\"t('loadSlot')\" /><UiButt"
+    },
+    {
+      "file": "src/components/SaveDataSettings.vue",
+      "line": 6,
+      "text": "<div class=\"actions\"><UiButton :disabled=\"saveGameState.busy\" @click=\"load\" icon=\"open\" :label=\"t('loadSlot')\" /><UiButt"
+    },
+    {
+      "file": "src/components/SceneSideBar.vue",
+      "line": 4,
+      "text": "<UiButton v-if=\"isCollapsed\" class=\"expand\" icon=\"forward\" :label=\"t('expandPanel')\" @click=\"expandPanel\" />"
+    },
+    {
+      "file": "src/components/SceneSideBar.vue",
+      "line": 10,
+      "text": "<UiButton class=\"scene-direct-action\" :label=\"t('reloadScene')\" :disabled=\"!canEdit\" @click=\"reloadScene\" icon=\"refresh\""
+    },
+    {
+      "file": "src/components/SceneSideBar.vue",
+      "line": 11,
+      "text": "<UiButton class=\"scene-direct-action\" :label=\"t('addScene')\" :disabled=\"!canEdit\" @click=\"addScene\" icon=\"add\" />"
+    },
+    {
+      "file": "src/components/SceneSideBar.vue",
+      "line": 12,
+      "text": "<UiButton class=\"compact-action scene-overflow\" icon=\"more\" :label=\"sidebarMenuLabels.scene\" aria-haspopup=\"menu\" :aria-"
+    },
+    {
+      "file": "src/components/SceneSideBar.vue",
+      "line": 27,
+      "text": "<div><span class=\"hierarchy-title\" :title=\"t('hierarchy')\">{{ t('hierarchy') }}</span><span class=\"hierarchy-actions\"><s"
+    },
+    {
+      "file": "src/components/SceneSideBar.vue",
+      "line": 27,
+      "text": "<div><span class=\"hierarchy-title\" :title=\"t('hierarchy')\">{{ t('hierarchy') }}</span><span class=\"hierarchy-actions\"><s"
+    },
+    {
+      "file": "src/components/SceneSideBar.vue",
+      "line": 27,
+      "text": "<div><span class=\"hierarchy-title\" :title=\"t('hierarchy')\">{{ t('hierarchy') }}</span><span class=\"hierarchy-actions\"><s"
+    },
+    {
+      "file": "src/components/SceneSideBar.vue",
+      "line": 29,
+      "text": "<div class=\"hierarchy-filters\"><select class=\"hierarchy-filter-wide\" v-model=\"authoringState.selectionFilter\" :aria-labe"
+    },
+    {
+      "file": "src/components/SceneSideBar.vue",
+      "line": 29,
+      "text": "<div class=\"hierarchy-filters\"><select class=\"hierarchy-filter-wide\" v-model=\"authoringState.selectionFilter\" :aria-labe"
+    },
+    {
+      "file": "src/components/SceneSideBar.vue",
+      "line": 68,
+      "text": "<UiButton class=\"state-button pin\" :class=\"{ active: authoringState.pinnedEntityUuids.includes(row.entity.uuid) }\" :labe"
+    },
+    {
+      "file": "src/components/SceneSideBar.vue",
+      "line": 72,
+      "text": "<UiButton class=\"compact-action row-overflow\" icon=\"more\" :label=\"`${sidebarMenuLabels.entity}: ${row.entity.name}`\" ari"
+    },
+    {
+      "file": "src/components/SceneTabs.vue",
+      "line": 5,
+      "text": "<UiButton :disabled=\"sceneManager.navigationIndex <= 0\" :label=\"t('previousScene')\" @click=\"navigate(-1)\" icon=\"back\" />"
+    },
+    {
+      "file": "src/components/SceneTabs.vue",
+      "line": 11,
+      "text": "</button><UiButton v-if=\"scene.uuid !== sceneManager.activeSceneUuid\" type=\"button\" class=\"scene-tab-close\" :aria-label="
+    },
+    {
+      "file": "src/components/SceneTabs.vue",
+      "line": 14,
+      "text": "<UiButton class=\"settings-toggle\" :class=\"{ active: settingsOpen }\" :label=\"t('sceneSettings')\" @click=\"settingsOpen = !"
+    },
+    {
+      "file": "src/components/SceneTabs.vue",
+      "line": 16,
+      "text": "<header><div><small>{{ t('sceneSettings') }}</small><strong>{{ active.name }}</strong></div><UiButton :label=\"t('close')"
+    },
+    {
+      "file": "src/components/SceneTabs.vue",
+      "line": 21,
+      "text": "<section class=\"named-layers\"><header><strong>{{ t('namedLayers') }}</strong><UiButton :label=\"t('addLayer')\" @click=\"ad"
+    },
+    {
+      "file": "src/components/SceneTabs.vue",
+      "line": 21,
+      "text": "<section class=\"named-layers\"><header><strong>{{ t('namedLayers') }}</strong><UiButton :label=\"t('addLayer')\" @click=\"ad"
+    },
+    {
+      "file": "src/components/SceneTabs.vue",
+      "line": 21,
+      "text": "<section class=\"named-layers\"><header><strong>{{ t('namedLayers') }}</strong><UiButton :label=\"t('addLayer')\" @click=\"ad"
+    },
+    {
+      "file": "src/components/ScriptConversionPanel.vue",
+      "line": 15,
+      "text": "<div class=\"conversion-actions\"><UiButton @click=\"navigate('code', diagnostic)\" icon=\"code\" :label=\"copy.code\" /><UiButt"
+    },
+    {
+      "file": "src/components/ScriptConversionPanel.vue",
+      "line": 15,
+      "text": "<div class=\"conversion-actions\"><UiButton @click=\"navigate('code', diagnostic)\" icon=\"code\" :label=\"copy.code\" /><UiButt"
+    },
+    {
+      "file": "src/components/ScriptConversionPanel.vue",
+      "line": 22,
+      "text": "<div class=\"conversion-actions\"><UiButton @click=\"navigate('code', region)\" icon=\"code\" :label=\"copy.code\" /><UiButton v"
+    },
+    {
+      "file": "src/components/ScriptConversionPanel.vue",
+      "line": 22,
+      "text": "<div class=\"conversion-actions\"><UiButton @click=\"navigate('code', region)\" icon=\"code\" :label=\"copy.code\" /><UiButton v"
+    },
+    {
+      "file": "src/components/ScriptStudio.vue",
+      "line": 8,
+      "text": "<UiButton icon=\"add\" :label=\"t('newScript')\" @click=\"createScript\" />"
+    },
+    {
+      "file": "src/components/ScriptStudio.vue",
+      "line": 9,
+      "text": "<UiButton icon=\"save\" :label=\"t('saveScript')\" :disabled=\"!activeAsset || !activeDirty\" variant=\"primary\" @click=\"saveAc"
+    },
+    {
+      "file": "src/components/ScriptStudio.vue",
+      "line": 10,
+      "text": "<UiButton icon=\"search\" :label=\"t('findReplace')\" :aria-pressed=\"findOpen\" @click=\"findOpen = !findOpen\" />"
+    },
+    {
+      "file": "src/components/ScriptStudio.vue",
+      "line": 11,
+      "text": "<UiButton :aria-pressed=\"scriptStudioState.layout.codeFocused\" :aria-label=\"scriptStudioState.layout.codeFocused?layoutL"
+    },
+    {
+      "file": "src/components/ScriptStudio.vue",
+      "line": 12,
+      "text": "<UiButton icon=\"assets\" :label=\"paneLayout.primaryVisible?t('hideExplorer'):t('showExplorer')\" :aria-expanded=\"paneLayou"
+    },
+    {
+      "file": "src/components/ScriptStudio.vue",
+      "line": 13,
+      "text": "<UiButton icon=\"inspector\" :label=\"layoutLabels.scriptDetails\" :aria-expanded=\"detailVisible\" @click=\"toggleDetails\" />"
+    },
+    {
+      "file": "src/components/ScriptStudio.vue",
+      "line": 35,
+      "text": "<div class=\"pane-heading\"><strong>{{ t('projectScripts') }}</strong><span>{{ scripts.length }}</span><UiButton :aria-lab"
+    },
+    {
+      "file": "src/components/ScriptStudio.vue",
+      "line": 52,
+      "text": "<div v-for=\"asset in openAssets\" :key=\"asset.uuid\" class=\"file-tab\" :class=\"{active:asset.uuid===activeAsset?.uuid}\"><bu"
+    },
+    {
+      "file": "src/components/ScriptStudio.vue",
+      "line": 54,
+      "text": "<UiButton class=\"icon-button\" :title=\"t('closeAll')\" @click=\"closeAll\" icon=\"close\" :label=\"t('close')\" />"
+    },
+    {
+      "file": "src/components/ScriptStudio.vue",
+      "line": 60,
+      "text": "<UiButton icon=\"down\" :label=\"t('find')\" @click=\"findNext\" /><button @click=\"replaceOne\">{{ t('replace') }}</button><but"
+    },
+    {
+      "file": "src/components/ScriptStudio.vue",
+      "line": 61,
+      "text": "<span>{{ findCount }}</span><UiButton icon=\"close\" :label=\"t('close')\" @click=\"findOpen = false\" />"
+    },
+    {
+      "file": "src/components/ScriptStudio.vue",
+      "line": 89,
+      "text": "<UiButton class=\"close-inspector\" :aria-label=\"t('close')\" @click=\"scriptStudioState.layout.detailVisible=false\" icon=\"c"
+    },
+    {
+      "file": "src/components/ScriptStudio.vue",
+      "line": 94,
+      "text": "<div class=\"pane-heading\"><strong>{{ t('diagnostics') }}</strong><span>{{ analysis.diagnostics.length }}</span><UiButton"
+    },
+    {
+      "file": "src/components/ScriptStudio.vue",
+      "line": 133,
+      "text": "<div class=\"dependency-editor\"><input v-model=\"packageDraft\" :placeholder=\"t('packageDependency')\" @keydown.enter=\"addPa"
+    },
+    {
+      "file": "src/components/ScriptStudio.vue",
+      "line": 134,
+      "text": "<label v-for=\"dependency in packageDependencies\" :key=\"dependency\"><span>◇ {{ dependency }}</span><UiButton @click=\"remo"
+    },
+    {
+      "file": "src/components/ScriptStudio.vue",
+      "line": 159,
+      "text": "<h3>{{ t('breakpoints') }}</h3><article v-for=\"point in breakpointDetails\" :key=\"point.id\" class=\"breakpoint-detail\"><la"
+    },
+    {
+      "file": "src/components/ScriptStudio.vue",
+      "line": 162,
+      "text": "<h3>{{ t('tasks') }}</h3><label v-for=\"task in debug.tasks\" :key=\"task.id\"><span><b>{{ task.name }}</b><small>{{ task.st"
+    },
+    {
+      "file": "src/components/ScriptStudio.vue",
+      "line": 165,
+      "text": "<h3>{{ t('watches') }}</h3><p class=\"pane-help\">{{ runtimeCopy.hint }}</p><div class=\"dependency-editor\"><input v-model="
+    },
+    {
+      "file": "src/components/ScriptStudio.vue",
+      "line": 166,
+      "text": "<label v-for=\"watch in debug.watches\" :key=\"watch.id\"><span><b>{{ watch.expression }}</b><small :class=\"{ error: watch.e"
+    },
+    {
+      "file": "src/components/ScriptStudio.vue",
+      "line": 170,
+      "text": "<div class=\"pane-heading\"><strong>{{ t('scriptTests') }}</strong><UiButton icon=\"play\" :label=\"t('runTests')\" @click=\"ru"
+    },
+    {
+      "file": "src/components/ScriptStudio.vue",
+      "line": 179,
+      "text": "<div class=\"dependency-editor\"><input v-model=\"signalDraft\" :placeholder=\"t('signalName')\" @keydown.enter=\"addSignal\"><U"
+    },
+    {
+      "file": "src/components/ScriptStudio.vue",
+      "line": 180,
+      "text": "<label v-for=\"signal in signals\" :key=\"signal\"><button class=\"emit\" @click=\"runtime.emitSignal(signal)\">●</button><span>"
+    },
+    {
+      "file": "src/components/ScriptStudio.vue",
+      "line": 181,
+      "text": "<div class=\"dependency-editor\"><input v-model=\"connectionSignalDraft\" :placeholder=\"t('signalName')\"><input v-model=\"con"
+    },
+    {
+      "file": "src/components/ScriptStudio.vue",
+      "line": 182,
+      "text": "<label v-for=\"(connection,index) in signalConnections\" :key=\"`${connection.signal}:${connection.callback}:${index}`\"><in"
+    },
+    {
+      "file": "src/components/ShortcutEditor.vue",
+      "line": 11,
+      "text": "<UiButton :label=\"t('reset')\" @click=\"setShortcut(item.id, item.defaultBinding)\" icon=\"reset\" />"
+    },
+    {
+      "file": "src/components/TeamWorkflowPanel.vue",
+      "line": 7,
+      "text": "<div class=\"card-title\"><strong>{{ t('sourceStatus') }}</strong><UiButton icon=\"refresh\" :label=\"t('refresh')\" @click=\"r"
+    },
+    {
+      "file": "src/components/TilemapPanel.vue",
+      "line": 4,
+      "text": "<UiPanelHeader :title=\"t('tilemap')\"><template #actions><UiButton icon=\"add\" :label=\"t('createTileMap')\" @click=\"createM"
+    },
+    {
+      "file": "src/components/TilemapPanel.vue",
+      "line": 25,
+      "text": "<UiButton icon=\"align\" :label=\"t('mirrorHorizontal')\" :aria-pressed=\"brushMirrorX\" @click=\"toggleBrushMirror(4)\" />"
+    },
+    {
+      "file": "src/components/TilemapPanel.vue",
+      "line": 26,
+      "text": "<UiButton icon=\"distribute\" :label=\"t('mirrorVertical')\" :aria-pressed=\"brushMirrorY\" @click=\"toggleBrushMirror(8)\" />"
+    },
+    {
+      "file": "src/components/TilemapPanel.vue",
+      "line": 27,
+      "text": "<UiButton icon=\"copy\" :disabled=\"!tilemapEditorState.selection\" :label=\"t('copy')\" @click=\"copySelection\" /><UiButton ic"
+    },
+    {
+      "file": "src/components/TilemapPanel.vue",
+      "line": 27,
+      "text": "<UiButton icon=\"copy\" :disabled=\"!tilemapEditorState.selection\" :label=\"t('copy')\" @click=\"copySelection\" /><UiButton ic"
+    },
+    {
+      "file": "src/components/TilemapPanel.vue",
+      "line": 27,
+      "text": "<UiButton icon=\"copy\" :disabled=\"!tilemapEditorState.selection\" :label=\"t('copy')\" @click=\"copySelection\" /><UiButton ic"
+    },
+    {
+      "file": "src/components/TilemapPanel.vue",
+      "line": 27,
+      "text": "<UiButton icon=\"copy\" :disabled=\"!tilemapEditorState.selection\" :label=\"t('copy')\" @click=\"copySelection\" /><UiButton ic"
+    },
+    {
+      "file": "src/components/TilemapPanel.vue",
+      "line": 72,
+      "text": "<section class=\"layers\"><strong>{{ t('tileLayers') }}</strong><button v-for=\"(layer, index) in tileMap.layers\" :key=\"lay"
+    },
+    {
+      "file": "src/components/TilemapPanel.vue",
+      "line": 72,
+      "text": "<section class=\"layers\"><strong>{{ t('tileLayers') }}</strong><button v-for=\"(layer, index) in tileMap.layers\" :key=\"lay"
+    },
+    {
+      "file": "src/components/TilemapPanel.vue",
+      "line": 72,
+      "text": "<section class=\"layers\"><strong>{{ t('tileLayers') }}</strong><button v-for=\"(layer, index) in tileMap.layers\" :key=\"lay"
+    },
+    {
+      "file": "src/components/ToolBar.vue",
+      "line": 5,
+      "text": "<UiButton icon=\"add\" :label=\"t('createObject')\" @click=\"estate.createObjectPaletteOpen = true\" />"
+    },
+    {
+      "file": "src/components/UndoHistoryPanel.vue",
+      "line": 5,
+      "text": "<header><div><strong>{{ t('undoHistory') }}</strong><small>{{ history.length }} · {{ formatBytes(history.memoryBytes) }}"
+    },
+    {
+      "file": "src/components/UndoHistoryPanel.vue",
+      "line": 6,
+      "text": "<div class=\"history-actions\"><UiButton :disabled=\"!history.canUndo\" @click=\"undo\" icon=\"undo\" :label=\"t('undo')\" /><UiBu"
+    },
+    {
+      "file": "src/components/UndoHistoryPanel.vue",
+      "line": 6,
+      "text": "<div class=\"history-actions\"><UiButton :disabled=\"!history.canUndo\" @click=\"undo\" icon=\"undo\" :label=\"t('undo')\" /><UiBu"
+    },
+    {
+      "file": "src/components/UndoHistoryPanel.vue",
+      "line": 6,
+      "text": "<div class=\"history-actions\"><UiButton :disabled=\"!history.canUndo\" @click=\"undo\" icon=\"undo\" :label=\"t('undo')\" /><UiBu"
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "line": 6,
+      "text": "<UiButton icon=\"add\" variant=\"primary\" :label=\"t('newVisualGraph')\" @click=\"createGraph\" />"
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "line": 7,
+      "text": "<UiButton icon=\"code\" :label=\"conversionLabels.newGraph\" @click=\"createSyntaxGraph\" />"
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "line": 8,
+      "text": "<UiButton icon=\"save\" :label=\"t('saveAsset')\" :disabled=\"!activeAsset || !dirty\" @click=\"saveGraph\" />"
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "line": 9,
+      "text": "<UiButton icon=\"undo\" :disabled=\"!canUndo\" :label=\"t('undo')\" @click=\"undo\" /><UiButton icon=\"redo\" :disabled=\"!canRedo\""
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "line": 9,
+      "text": "<UiButton icon=\"undo\" :disabled=\"!canUndo\" :label=\"t('undo')\" @click=\"undo\" /><UiButton icon=\"redo\" :disabled=\"!canRedo\""
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "line": 40,
+      "text": "<header><strong>{{ t('nodePalette') }}</strong><UiButton :title=\"t('close')\" @click=\"closePalette\" icon=\"close\" :label=\""
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "line": 96,
+      "text": "<div class=\"canvas-controls\" role=\"toolbar\" :aria-label=\"t('graphNavigation')\" @pointerdown.stop><UiButton type=\"button\""
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "line": 96,
+      "text": "<div class=\"canvas-controls\" role=\"toolbar\" :aria-label=\"t('graphNavigation')\" @pointerdown.stop><UiButton type=\"button\""
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "line": 96,
+      "text": "<div class=\"canvas-controls\" role=\"toolbar\" :aria-label=\"t('graphNavigation')\" @pointerdown.stop><UiButton type=\"button\""
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "line": 96,
+      "text": "<div class=\"canvas-controls\" role=\"toolbar\" :aria-label=\"t('graphNavigation')\" @pointerdown.stop><UiButton type=\"button\""
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "line": 103,
+      "text": "<header><strong>{{ t('graphDetails') }}</strong><UiButton :title=\"t('close')\" @click=\"closeDetails\" icon=\"close\" :label="
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "line": 112,
+      "text": "<div v-for=\"(point,index) in selectedEdge.reroutes\" :key=\"index\" class=\"reroute-row\"><span>{{ layoutLabels.routingPoint "
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "line": 127,
+      "text": "<div><UiButton :aria-label=\"conversionLabels.moveUp+' '+syntaxFieldLabel(list.field,preferencesState.locale,list.label)+"
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "line": 127,
+      "text": "<div><UiButton :aria-label=\"conversionLabels.moveUp+' '+syntaxFieldLabel(list.field,preferencesState.locale,list.label)+"
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "line": 127,
+      "text": "<div><UiButton :aria-label=\"conversionLabels.moveUp+' '+syntaxFieldLabel(list.field,preferencesState.locale,list.label)+"
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "line": 141,
+      "text": "<section v-if=\"!graph.language\" class=\"variables\"><header><strong>{{ t('graphVariables') }}</strong><UiButton @click=\"ad"
+    },
+    {
+      "file": "src/components/VisualGraphEditor.vue",
+      "line": 141,
+      "text": "<section v-if=\"!graph.language\" class=\"variables\"><header><strong>{{ t('graphVariables') }}</strong><UiButton @click=\"ad"
+    },
+    {
+      "file": "src/components/WorldToolsPanel.vue",
+      "line": 64,
+      "text": "<section v-if=\"effector\" class=\"effect-list\"><article v-for=\"effect in effector.effectors\" :key=\"effect.id\"><select v-mo"
+    },
+    {
+      "file": "src/components/WorldToolsPanel.vue",
+      "line": 69,
+      "text": "<section class=\"production-list\"><header><strong>{{ t('navigationLinks') }}</strong><UiButton icon=\"add\" @click=\"addNavi"
+    },
+    {
+      "file": "src/components/WorldToolsPanel.vue",
+      "line": 70,
+      "text": "<section class=\"production-list\"><header><strong>{{ t('costAreas') }}</strong><UiButton icon=\"add\" @click=\"addNavigation"
+    },
+    {
+      "file": "src/layout/EditorLayout.vue",
+      "line": 41,
+      "text": "<UiMotionTransition preset=\"elastic\"><section v-if=\"isFloating('hierarchy') && showHierarchy && !state.distractionFree\" "
+    },
+    {
+      "file": "src/layout/EditorLayout.vue",
+      "line": 42,
+      "text": "<UiMotionTransition preset=\"elastic\"><section v-if=\"isFloating('inspector') && inspectorLoaded && !state.distractionFree"
+    },
+    {
+      "file": "src/layout/SideBar.vue",
+      "line": 8,
+      "text": "<UiButton class=\"create\" icon=\"add\" :label=\"t('createObject')\" @click=\"state.createObjectPaletteOpen = true\" />"
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "line": 116,
+      "text": "<UiButton icon=\"clear\" class=\"icon-action danger\" :title=\"t('removeInputAction')\" @click=\"removeInputAction(actionIndex)"
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "line": 117,
+      "text": "<UiButton icon=\"duplicate\" class=\"icon-action\" :label=\"t('duplicate')\" @click=\"duplicateInputAction(actionIndex)\" />"
+    },
+    {
+      "file": "src/panels/SettingsPanel.vue",
+      "line": 147,
+      "text": "<UiButton icon=\"clear\" class=\"icon-action danger\" :title=\"t('removeBinding')\" @click=\"removeInputBinding(actionIndex, bi"
+    },
+    {
+      "file": "src/ui/components/UiDialog.vue",
+      "line": 3,
+      "text": "<div v-if=\"open\" class=\"ui-dialog-overlay\" @pointerdown.self=\"backdrop\"><section v-modal-focus class=\"ui-dialog\" :role=\""
+    }
+  ],
+  "checks": [
+    {
+      "name": "Primary authoring actions render visible text, not just an icon",
+      "status": "passed"
+    },
+    {
+      "name": "Those actions keep their label so the tooltip and accessible name survive",
+      "status": "passed"
+    },
+    {
+      "name": "The icon-only measurement is reported and bounded",
+      "status": "passed"
+    },
+    {
+      "name": "Icon-only buttons never exceed the recorded ceiling",
+      "status": "passed"
+    }
+  ],
+  "status": "passed"
+}

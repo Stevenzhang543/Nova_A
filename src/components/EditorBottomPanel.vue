@@ -38,12 +38,12 @@
         <section class="asset-workspace">
           <header class="asset-toolbar">
             <div class="asset-actions-row">
-              <UiButton class="primary" :disabled="assets.importing || assetBatch.active" @click="assetInput?.click()" icon="upload" :label="t('importAssets')" />
+              <UiButton class="primary" :disabled="assets.importing || assetBatch.active" @click="assetInput?.click()" icon="upload" :label="t('importAssets')"><span>{{ t('importAssets') }}</span></UiButton>
               <button v-if="selectedAsset" class="asset-detail-toggle" type="button" @click="assetDetailMode = true; assetFullPage = true">{{ assetCopy('previewDetails') }}</button>
-              <UiButton @click="createScriptAsset" icon="script" :label="t('newScript')" />
-              <UiButton @click="createVisualGraphAsset" icon="graph" :label="t('visualGraph')" />
-              <UiButton :disabled="!state.selectedEntityIds.length" @click="createSceneAssetFromSelection" icon="design" :label="t('createSceneAsset')" />
-              <UiButton @click="creatingFolder = !creatingFolder" icon="folder" :label="t('newFolder')" />
+              <UiButton @click="createScriptAsset" icon="script" :label="t('newScript')"><span>{{ t('newScript') }}</span></UiButton>
+              <UiButton @click="createVisualGraphAsset" icon="graph" :label="t('visualGraph')"><span>{{ t('visualGraph') }}</span></UiButton>
+              <UiButton :disabled="!state.selectedEntityIds.length" @click="createSceneAssetFromSelection" icon="design" :label="t('createSceneAsset')"><span>{{ t('createSceneAsset') }}</span></UiButton>
+              <UiButton @click="creatingFolder = !creatingFolder" icon="folder" :label="t('newFolder')"><span>{{ t('newFolder') }}</span></UiButton>
               <details data-ui-motion-popover ref="assetOverflow" class="asset-overflow"><summary :title="t('moreActions')" :aria-label="t('moreActions')"><EditorIcon name="more" /></summary><section class="asset-overflow-menu"><strong>{{ t('newSharedResource') }}</strong><button v-for="kind in resourceKinds" :key="kind" type="button" :aria-label="`+ ${t(`resource_${kind}`)}`" @click="createSharedResource(kind); closeAssetOverflow()">+ {{ t(`resource_${kind}`) }}</button><button type="button" @click="exportFolder(); closeAssetOverflow()">{{ t('exportProjectFolder') }}</button><button type="button" :disabled="assetBatch.active" @click="batchReimportVisible(); closeAssetOverflow()">{{ t('batchReimport') }}</button><button type="button" :disabled="!selectedAsset" @click="bulkApplyVisible(); closeAssetOverflow()">{{ t('bulkApplyVisible') }}</button><button v-for="item in pluginAssetContributions" :key="`${item.pluginId}:${item.kind}:${item.id}`" type="button" :title="`${item.pluginName} · ${item.description ?? ''}`" @click="pluginRuntime.invokeContribution(item.kind,item.id,item.pluginId); closeAssetOverflow()">{{ item.label }}</button></section></details>
               <input v-if="creatingFolder" v-model="newFolderName" class="folder-input" :placeholder="t('folderName')" @keydown.enter="createFolder" @keydown.escape="creatingFolder = false">
               <span class="path" :title="assets.currentFolder">{{ assets.currentFolder }}</span>
