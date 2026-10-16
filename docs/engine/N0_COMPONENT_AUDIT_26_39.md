@@ -536,3 +536,23 @@ C 组与 B 组**独立**判定"信号层缺失/无预算"；C 组的 G5（Play �
 `pnpm check` 退出码 0。
 
 **边界**：只处理了 5 个**主要创作入口**。剩余 **213** 个纯图标按钮多为面板内的次要工具（工具栏、动画/图集/动画时间轴等），是否补文字取决于 §21/§22.1 的分层判断，**不做无差别铺开**——AGENTS §12 同时要求保护舒适密度与既有布局。未在真实 GUI 中确认新增文字后工具栏不溢出，故标 `IMPLEMENTED`。
+
+### 16.6 C 组 G4（第一步）：核心编辑命令纳入可改键源
+
+**问题**（§15.1 G4）：`TopBar.vue` 的 10 个核心编辑动作（保存/撤销/重做/撤销历史/复制/粘贴/复制副本/重命名/删除/取消选择）按键**硬编码在 `handleKeyDown` 里**，对应的命令**根本不在 `shortcuts.ts` 中**——因此既不出现在快捷键编辑器里，也无法由用户更改。
+
+**本轮完成**：
+1. `shortcuts.ts` 登记 10 个核心命令及其默认绑定（保存 Ctrl+S、撤销 Ctrl+Z、重做 Ctrl+Y、撤销历史 Ctrl+Alt+H、复制 Ctrl+C、粘贴 Ctrl+V、复制副本 Ctrl+D、重命名 F2、删除 Delete、取消选择 Escape）。这使它们**自动出现在既有 ShortcutEditor 中并参与冲突检测**。
+2. `保存` 完成端到端迁移：`handleKeyDown` 改用 `shortcutMatches(event, 'saveProject')` 取代字面量 `event.key === 's'`，其 `<kbd>` 改为 `{{ shortcutLabel('saveProject') }}`。
+
+**发现并记录的契约限制（未掩盖）**：`shortcuts.ts` **每个命令只支持一个绑定**，而 `TopBar` 历史上同时接受 **Ctrl+Shift+Z 与 Ctrl+Y** 作为重做、**Delete 与 Backspace** 作为删除。因此**其余 9 个命令本轮不迁移**——若强行迁移会**丢失别名绑定**，属于行为回归。已在代码注释中写明该限制，并确定后续需先扩展为多绑定/别名契约再统一迁移。
+
+**证据**：`scripts/verify-editor-shortcut-labels.mjs` 扩展到 **7 项全部通过**。新增两项：
+- 10 个核心命令均已登记且其显示文案由当前绑定派生；
+- 保存确实经 `shortcutMatches` 派发，且字面量 `key === 's'` 已消失。
+
+`pnpm check` 退出码 0。
+
+**状态**：`IMPLEMENTED`（1/10 迁移完成，9/10 因契约限制明确延后并给出理由）。
+
+**过程中的一次自伤与修复**：编辑 `ShortcutCommand` 联合类型时我用了**被截断的 `old_string`**，导致行尾残留 `ter'`，构建立即报 `Expected ";" but found "ter"`。已修复。教训：`old_string` 必须是完整且唯一的最小片段，不能是前缀。

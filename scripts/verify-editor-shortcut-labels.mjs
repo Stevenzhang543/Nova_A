@@ -46,13 +46,28 @@ await test('An unknown command resolves to an empty label instead of throwing', 
 
 await test('Both shells import the single source and keep no hardcoded bindings', () => {
   for (const [name, source] of [['TopBar.vue', topBar], ['WorkspaceBar.vue', workspaceBar]]) {
-    assert.ok(source.includes("import { shortcutLabel } from '../editor/shortcuts'"), name + ' must import the single source')
+    assert.ok(/import \{[^}]*shortcutLabel[^}]*\} from '\.\.\/editor\/shortcuts'/.test(source), name + ' must import the single source')
   }
   assert.ok(!/Ctrl K<\/kbd>/.test(topBar), 'TopBar must not hardcode the wrong palette key')
   assert.ok(!/data-shortcut="Ctrl/.test(workspaceBar), 'WorkspaceBar must not hardcode data-shortcut bindings')
   for (const id of ['commandPalette', 'fullscreen', 'workspaceManager', 'shortcutEditor']) {
     assert.ok(topBar.includes("shortcutLabel('" + id + "')"), 'TopBar must render ' + id + ' from the registry')
   }
+})
+
+await test('The core editing commands are registered, so they become editable', () => {
+  const core = ['saveProject', 'undo', 'redo', 'undoHistory', 'copySelection', 'pasteSelection', 'duplicateSelection', 'renameSelection', 'deleteSelection', 'deselectAll']
+  for (const id of core) {
+    assert.ok(bindingOf(id), id + ' must be registered in the shortcut source')
+    assert.equal(shortcutLabel(id), bindingOf(id).split('+').join(' '), id + ' label must derive from its binding')
+  }
+  assert.ok(!/Ctrl S<\/kbd>/.test(topBar), 'the save key must be rendered from the source, not hardcoded')
+  assert.ok(topBar.includes("shortcutLabel('saveProject')"), 'TopBar must render the save key from the source')
+})
+
+await test('Save is dispatched through the shortcut source rather than a literal key test', () => {
+  assert.ok(topBar.includes("shortcutMatches(event, 'saveProject')"), 'save must match through the registry')
+  assert.ok(!/event\.key\.toLowerCase\(\) === 's'/.test(topBar), 'the literal save key test must be gone')
 })
 
 const out = process.env.NOVA_SHORTCUT_LABEL_REPORT || 'reports/phase2/shortcut-labels.json'

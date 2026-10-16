@@ -1,7 +1,7 @@
 /** 编辑快捷键配置：解析键盘组合，查找冲突并持久化、导入或导出用户绑定。 */
 import { reactive } from 'vue'
 
-export type ShortcutCommand = 'commandPalette' | 'quickOpen' | 'globalSearch' | 'contextSearch' | 'fullscreen' | 'navigateBack' | 'navigateForward' | 'shortcutEditor' | 'workspaceManager' | 'statusCenter'
+export type ShortcutCommand = 'commandPalette' | 'quickOpen' | 'globalSearch' | 'contextSearch' | 'fullscreen' | 'navigateBack' | 'navigateForward' | 'shortcutEditor' | 'workspaceManager' | 'statusCenter' | 'saveProject' | 'undo' | 'redo' | 'undoHistory' | 'copySelection' | 'pasteSelection' | 'duplicateSelection' | 'renameSelection' | 'deleteSelection' | 'deselectAll'
 export interface ShortcutDefinition { id: ShortcutCommand; label: string; defaultBinding: string; binding: string }
 const STORAGE_KEY = 'nova-a-editor-shortcuts-v1'
 const defaults: Array<Omit<ShortcutDefinition, 'binding'>> = [
@@ -14,7 +14,20 @@ const defaults: Array<Omit<ShortcutDefinition, 'binding'>> = [
   { id: 'navigateForward', label: 'navigateForward', defaultBinding: 'Alt+ArrowRight' },
   { id: 'shortcutEditor', label: 'shortcutEditor', defaultBinding: 'Ctrl+Alt+K' },
   { id: 'workspaceManager', label: 'manageWorkspaces', defaultBinding: 'Ctrl+Alt+W' },
-  { id: 'statusCenter', label: 'statusCenter', defaultBinding: 'Ctrl+Alt+J' }
+  { id: 'statusCenter', label: 'statusCenter', defaultBinding: 'Ctrl+Alt+J' },
+  // Core editing commands. These were previously hardcoded in TopBar and therefore unchangeable.
+  // 单绑定限制：TopBar 历史上同时接受 Ctrl+Shift+Z 与 Ctrl+Y 作为重做、Delete 与 Backspace 作为删除，
+  // 而本表每个命令只有一个绑定。此处登记主绑定，别名仍由 TopBar 保留，待多绑定契约落地后统一。
+  { id: 'saveProject', label: 'saveProject', defaultBinding: 'Ctrl+S' },
+  { id: 'undo', label: 'undo', defaultBinding: 'Ctrl+Z' },
+  { id: 'redo', label: 'redo', defaultBinding: 'Ctrl+Y' },
+  { id: 'undoHistory', label: 'undoHistory', defaultBinding: 'Ctrl+Alt+H' },
+  { id: 'copySelection', label: 'copy', defaultBinding: 'Ctrl+C' },
+  { id: 'pasteSelection', label: 'paste', defaultBinding: 'Ctrl+V' },
+  { id: 'duplicateSelection', label: 'duplicate', defaultBinding: 'Ctrl+D' },
+  { id: 'renameSelection', label: 'rename', defaultBinding: 'F2' },
+  { id: 'deleteSelection', label: 'deleteSelected', defaultBinding: 'Delete' },
+  { id: 'deselectAll', label: 'deselectAll', defaultBinding: 'Escape' }
 ]
 
 /** 从本地存储读取用户快捷键映射，存储或 JSON 失败时返回空映射。 */ function stored(): Partial<Record<ShortcutCommand, string>> { try { return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}') as Partial<Record<ShortcutCommand, string>> } catch { return {} } }

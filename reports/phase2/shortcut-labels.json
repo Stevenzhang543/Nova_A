@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-16T18:06:25.778Z",
+  "generatedAt": "2026-10-16T18:09:03.949Z",
   "checks": [
     {
       "name": "A label is derived from the live binding of the requested command",
@@ -19,6 +19,14 @@
     },
     {
       "name": "Both shells import the single source and keep no hardcoded bindings",
+      "status": "passed"
+    },
+    {
+      "name": "The core editing commands are registered, so they become editable",
+      "status": "passed"
+    },
+    {
+      "name": "Save is dispatched through the shortcut source rather than a literal key test",
       "status": "passed"
     }
   ],

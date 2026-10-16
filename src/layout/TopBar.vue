@@ -34,7 +34,7 @@
           <div v-if="activeMenu === 'file'" :key="'file'" class="dropdown">
           <button :disabled="!isEditing" @click="handleProjectManager"><span>{{ t('projectManager') }}</span></button>
           <hr>
-          <button :disabled="!isEditing" @click="handleSave"><span>{{ t('saveProject') }}</span><kbd>Ctrl S</kbd></button>
+          <button :disabled="!isEditing" @click="handleSave"><span>{{ t('saveProject') }}</span><kbd>{{ shortcutLabel('saveProject') }}</kbd></button>
           <button :disabled="!isEditing" @click="triggerLoad"><span>{{ t('loadProject') }}</span></button>
           <hr><button class="danger" :disabled="!isEditing" @click="handleClearScene"><span>{{ t('clearScene') }}</span></button>
         </div>
@@ -104,7 +104,7 @@ import { installTransientPopover } from '../editor/transientPopover'
 import { openExternalUrl } from '../runtime/externalLinks'
 import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { t } from '../i18n'
-import { shortcutLabel } from '../editor/shortcuts'
+import { shortcutLabel, shortcutMatches } from '../editor/shortcuts'
 import { addEditorLog, editorState } from '../store/editor'
 import { clearScene, copySelectedEntities, deleteSelected, duplicateSelectedEntities, historyState, pasteEntities, physicsState, pushHistory, redo, resetCamera, saveProject, selectEntities, undo } from '../store/physics'
 import { preferencesState } from '../store/preferences'
@@ -225,7 +225,7 @@ const isEditing = computed(/** 只有编辑模式且非只读恢复会话才允�
   if (event.defaultPrevented) return
   if (confirmDialogState.visible) return
   const commandKey = event.ctrlKey || event.metaKey
-  if (commandKey && event.key.toLowerCase() === 's' && !event.isComposing) {
+  if (shortcutMatches(event, 'saveProject') && !event.isComposing) {
     event.preventDefault()
     // Commit blur-based fields before serializing; keep native text editing shortcuts.
     if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
