@@ -891,4 +891,67 @@ const visible = positioned.sort((first, second) =>
 
 **状态**：检测 `IMPLEMENTED` + 已测；**策略接线 `DEFERRED_WITH_REASON`**（需产品决策）。
 
+---
+
+## 18. 交接：精确锚点与下一步
+
+> 本节为交接而写。以下锚点均经本轮实际读取确认，可直接开工，无需重新搜索。
+
+### 18.1 复现全部验证（无 GUI 依赖）
+
+```powershell
+cd E:\Nova_A
+node scripts/verify-engine-world-transform-oracle.mjs      # 10 项
+node scripts/verify-engine-transform-hierarchy.mjs         # 8 项  (C02)
+node scripts/verify-engine-gizmo-cancel.mjs                # 9 项  (G6)
+node scripts/verify-engine-component-schema.mjs            # 9 项  (N1 契约层)
+node scripts/verify-editor-shortcut-labels.mjs             # 11 项 (G2/G4)
+node scripts/verify-editor-action-labels.mjs               # 4 项  (G3)
+node scripts/benchmark-ysort-sort-key.mjs                  # Y-Sort A/B 实测
+node scripts/measure-world-transform-cost.mjs              # worldTransform 复杂度
+pnpm check                                                  # vue-tsc + tsc
+```
+
+合计 **51 项断言**，报告写入 `reports/phase2/*.json`。
+
+### 18.2 待替换的渲染抽取调用点（已解冻范围）
+
+`src/renderer/sceneRenderer.ts` 中**逐实体** `worldTransform` 调用，应改用已验证的 `worldTransformsFor`（`src/world/hierarchy.ts`）：
+
+| 行 | 用途 |
+|---|---|
+| :77 | 主变换（相机/通用） |
+| :179 | Camera2D follow |
+| :216 | 渲染项 |
+| :245 | 渲染项 |
+| :322 | ShapeRenderer2D |
+| :353 | 位置读取 |
+
+**排序键已替换完毕**（:315 附近），实测 105×。替换其余 6 处的**判定基准已就绪**：`verify-engine-world-transform-oracle.mjs` 会断言批量结果与逐次结果**逐字段相等**。注意其中部分调用点在 `for (const entity of visible)` 循环内，可用同一张表；替换后需重跑全部 51 项。
+
+### 18.3 冻结面待授权项（含精确位置）
+
+| 缺口 | 位置 | 影响 |
+|---|---|---|
+| **G1 追踪身份** | `src/runtime/performance/observability.ts:47-122`、`profiler.ts:48,201` | `inputSequence`/消费 tick/首次受影响 packet **全库 0 命中**；**N8 性能验收的前置条件** |
+| **G2 脚本投影** | `src/runtime/GameplayRuntimeCore.ts:1188-1230,1233,1276,1925` | 每帧 **4+ 次**全实体 JSON 重建（`invalidateScriptWorld` 在 `runPhase`/`ensureLifecycle`/`dispatchSignals` 均被调用）；基线可测 `scriptContextDiagnostics.publications`(:434) |
+| **G4 信号预算** | `GameplayRuntimeCore.ts:1049-1052` | 无循环/深度预算，仅 1024 队列丢最旧；C04 零专项 |
+| **G5 Play 独立世界** | `src/store/physics.ts:83,846-863` | Play 直接跑在编辑世界上，Stop 靠整份 JSON 复原；**无 Apply Runtime Changes**（全库 0 命中） |
+| **G9 active list** | `src/world/World.ts:783` | 每帧全量 `entities.filter` 重建 |
+
+### 18.4 N1 剩余
+
+- **描述性 schema**：扩展现有生成器 `scripts/generate-v26.22-component-primitives.mjs`（11 行，用 TS 编译器 API 解析 `src/world/components.ts`），由**同一来源**再产出默认值/范围/单位/控件/i18n 键/分组/信号声明。**不要新建第二张表**——`src/world/componentFieldSchema.ts` 已确立"派生而非并行"的模式。
+- **脚本导出属性稳定 ID**（B 组 G3）：`src/components/ConfigPanel.vue:222,564` 现以属性名作键，重命名即丢作者值；应与组件字段共用同一契约层。
+
+### 18.5 开放产品决策（需您选择）
+
+1. **环状层级策略**：拒绝加载 / 阻止保存 / 自动断开。检测器 `hierarchyHasCycle` 已就绪但**未接线**。
+2. **剩余 213 个纯图标按钮**是否补文字：AGENTS §12 要求工具动作优先图标，§22.1 要求关键动作有文字，需按层判断。
+3. **§22.2 Command Registry 本体**：需一次性迁移 TopBar / CommandPalette / ContextMenu / ActionBar / ProfilerPanel 五处，否则会退化为未集成空壳。
+
+### 18.6 状态真实性
+
+**本轮无任何项标 `VERIFIED`。** 所有 `IMPLEMENTED` 项均只有**模块级或基准级**证据，**缺少真实 GUI 人工走查**与**真实项目帧时间测量**。按主指令 §33，内部测试不得冒充体验验证。
+
 **本轮未改任何文件（除本记录）**：核实过程为只读。
