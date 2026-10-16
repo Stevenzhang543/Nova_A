@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-16T18:37:21.780Z",
+  "generatedAt": "2026-10-16T18:39:15.272Z",
   "registryApiVersion": "2.0",
   "counts": {
     "registryKinds": 61,
@@ -27,6 +27,17 @@
     "withDefault": 515
   },
   "entryPointDefaults": 515,
+  "presentation": {
+    "presentable": 595,
+    "groups": [
+      "Audio",
+      "Gameplay",
+      "Physics",
+      "Rendering",
+      "UI",
+      "World"
+    ]
+  },
   "registryGap": [
     "WorldBoundary"
   ],
@@ -73,6 +84,10 @@
     },
     {
       "name": "The field entry point exposes optionality and defaults derived from the generated descriptions",
+      "status": "passed"
+    },
+    {
+      "name": "Every contracted field resolves to an editor control and a registered group",
       "status": "passed"
     },
     {

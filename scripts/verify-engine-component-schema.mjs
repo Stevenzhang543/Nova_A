@@ -6,8 +6,10 @@ import { openMediaAuditModules } from './lib/mediaAudit16.mjs'
 const read = path => fs.readFileSync(path, 'utf8').replaceAll('\r\n', '\n')
 // Load the real module the same way the other engine verifiers do, so this contract test can
 // never pass against a stale hand-copied snapshot of the source.
-const opened = await openMediaAuditModules({ repository: process.cwd(), bases: [process.cwd()] }, { fieldSchema: 'world/componentFieldSchema', descriptions: 'world/componentFieldDescriptions', primitives: 'world/componentPrimitiveTypes' })
+const opened = await openMediaAuditModules({ repository: process.cwd(), bases: [process.cwd()] }, { fieldSchema: 'world/componentFieldSchema', descriptions: 'world/componentFieldDescriptions', primitives: 'world/componentPrimitiveTypes', presentation: 'world/componentFieldPresentation', registry: 'world/componentRegistry' })
 globalThis.__fieldSchema = opened.modules.fieldSchema
+globalThis.__presentation = opened.modules.presentation
+globalThis.__registryModule = opened.modules.registry
 globalThis.__descriptions = opened.modules.descriptions
 globalThis.__primitives = opened.modules.primitives
 const checks = []
@@ -144,6 +146,30 @@ await test('The field entry point exposes optionality and defaults derived from 
   globalThis.__entryPointDefaults = withDefault
 })
 
+await test('Every contracted field resolves to an editor control and a registered group', () => {
+  const { componentFields } = globalThis.__fieldSchema
+  const { componentFieldControl, componentFieldGroup, isPresentableField } = globalThis.__presentation
+  const categories = new Set(['Core', 'Rendering', 'Physics', 'Gameplay', 'Audio', 'UI', 'World'])
+  const controls = new Set(['toggle', 'number', 'text', 'asset', 'entity'])
+  let presentable = 0
+  const groups = new Set()
+  for (const kind of Object.keys(globalThis.__descriptions.componentFieldDescriptions)) {
+    const group = componentFieldGroup(kind)
+    assert.ok(categories.has(group) || group === 'Other', kind + ' resolved to an unexpected group ' + group)
+    groups.add(group)
+    for (const field of componentFields(kind)) {
+      const control = componentFieldControl(field)
+      assert.ok(controls.has(control), kind + '.' + field.id + ' resolved to an unknown control ' + control)
+      if (isPresentableField(field)) presentable += 1
+      if (field.types.includes('boolean')) assert.equal(control, 'toggle', kind + '.' + field.id + ' is boolean and must be a toggle')
+      if (/Asset$/.test(field.id) && !field.types.includes('boolean')) assert.equal(control, 'asset', kind + '.' + field.id + ' ends in Asset and must be an asset reference')
+      if (/Uuid$/.test(field.id) && !field.types.includes('boolean')) assert.equal(control, 'entity', kind + '.' + field.id + ' ends in Uuid and must be an entity reference')
+    }
+  }
+  assert.ok(presentable > 0, 'some fields must be presentable')
+  globalThis.__presentationStats = { presentable, groups: [...groups].sort() }
+})
+
 await test('Generated field descriptions agree exactly with the primitive contract', () => {
   const descriptions = globalThis.__descriptions?.componentFieldDescriptions
   const primitives = globalThis.__primitives?.componentPrimitiveTypes
@@ -196,6 +222,7 @@ fs.writeFileSync(out, JSON.stringify({
   fieldSchema: globalThis.__fieldSchemaCoverage,
   fieldDescriptions: globalThis.__descriptionStats,
   entryPointDefaults: globalThis.__entryPointDefaults,
+  presentation: globalThis.__presentationStats,
   registryGap: globalThis.__registryGap,
   branchScope: { componentKind: componentKindBranches.length, authoringKind: authoringKindBranches.length },
   checks,
