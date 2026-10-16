@@ -4,8 +4,8 @@ import { reactive } from 'vue'
 export type ShortcutCommand = 'commandPalette' | 'quickOpen' | 'globalSearch' | 'contextSearch' | 'fullscreen' | 'navigateBack' | 'navigateForward' | 'shortcutEditor' | 'workspaceManager' | 'statusCenter' | 'saveProject' | 'undo' | 'redo' | 'undoHistory' | 'copySelection' | 'pasteSelection' | 'duplicateSelection' | 'renameSelection' | 'deleteSelection' | 'deselectAll'
 export interface ShortcutDefinition { id: ShortcutCommand; label: string; defaultBinding: string; binding: string; defaultAliases?: string[] }
 const STORAGE_KEY = 'nova-a-editor-shortcuts-v1'
-/** 紧凑显示名：绑定语义不变，只影响界面文案。 */
-const DISPLAY_ALIASES: Record<string, string> = { Escape: 'Esc', Delete: 'Del', ArrowLeft: '←', ArrowRight: '→', ArrowUp: '↑', ArrowDown: '↓' }
+/** 紧凑显示名：绑定语义不变，只影响界面文案。导出以便测试引用同一份映射，避免各自复制造成漂移。 */
+export const SHORTCUT_DISPLAY_ALIASES: Record<string, string> = { Escape: 'Esc', Delete: 'Del', ArrowLeft: '←', ArrowRight: '→', ArrowUp: '↑', ArrowDown: '↓' }
 const defaults: Array<Omit<ShortcutDefinition, 'binding'>> = [
   { id: 'commandPalette', label: 'commandPalette', defaultBinding: 'Ctrl+Shift+P' },
   { id: 'quickOpen', label: 'quickOpen', defaultBinding: 'Ctrl+P' },
@@ -51,7 +51,7 @@ export function shortcutLabel(command: ShortcutCommand, style: 'kbd' | 'inline' 
   const definition = shortcutState.definitions.find(/* 比较 item.id 与 command，返回严格相等的判断结果。 */ item => item.id === command)
   if (!definition) return ''
   const shown = style === 'kbd' ? definition.binding.split('+').join(' ') : definition.binding
-  return shown.split(' ').map(/* 用紧凑写法渲染常见按键名，保持既有 UI 密度。 */ part => DISPLAY_ALIASES[part] ?? part).join(' ')
+  return shown.split(' ').map(/* 用紧凑写法渲染常见按键名，保持既有 UI 密度。 */ part => SHORTCUT_DISPLAY_ALIASES[part] ?? part).join(' ')
 }
 
 /** 别名只在默认绑定之外补充额外按键；它们不参与改键，因此不会与主绑定冲突。 */

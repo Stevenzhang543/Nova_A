@@ -10,7 +10,7 @@ async function test(name, run) {
 }
 
 const opened = await openMediaAuditModules({ repository: process.cwd(), bases: [process.cwd()] }, { shortcuts: 'editor/shortcuts' })
-const { shortcutLabel, shortcutState, setShortcut, resetShortcuts, shortcutMatches, shortcutAliases } = opened.modules.shortcuts
+const { shortcutLabel, shortcutState, setShortcut, resetShortcuts, shortcutMatches, shortcutAliases, SHORTCUT_DISPLAY_ALIASES } = opened.modules.shortcuts
 const read = path => fs.readFileSync(path, 'utf8').replaceAll('\r\n', '\n')
 const topBar = read('src/layout/TopBar.vue')
 const workspaceBar = read('src/components/WorkspaceBar.vue')
@@ -59,12 +59,13 @@ await test('The core editing commands are registered, so they become editable', 
   const core = ['saveProject', 'undo', 'redo', 'undoHistory', 'copySelection', 'pasteSelection', 'duplicateSelection', 'renameSelection', 'deleteSelection', 'deselectAll']
   for (const id of core) {
     assert.ok(bindingOf(id), id + ' must be registered in the shortcut source')
-    // Labels derive from the live binding, then pass through the documented compact display map.
-    const DISPLAY = { Escape: 'Esc', Delete: 'Del', ArrowLeft: '←', ArrowRight: '→', ArrowUp: '↑', ArrowDown: '↓' }
-    const expected = bindingOf(id).split('+').join(' ').split(' ').map(/** 应用既有的紧凑显示映射。 */ part => DISPLAY[part] ?? part).join(' ')
+    // Labels derive from the live binding, then pass through the exported compact display map.
+    // The map is imported rather than copied so the assertion cannot drift from the implementation.
+    const expected = bindingOf(id).split('+').join(' ').split(' ').map(/** 应用产品代码导出的紧凑显示映射。 */ part => SHORTCUT_DISPLAY_ALIASES[part] ?? part).join(' ')
     assert.equal(shortcutLabel(id), expected, id + ' label must derive from its binding')
   }
   assert.ok(!/Ctrl S<\/kbd>/.test(topBar), 'the save key must be rendered from the source, not hardcoded')
+  assert.ok(SHORTCUT_DISPLAY_ALIASES && SHORTCUT_DISPLAY_ALIASES.Escape === 'Esc', 'the display map must be exported from the product source')
   assert.ok(topBar.includes("shortcutLabel('saveProject')"), 'TopBar must render the save key from the source')
 })
 
