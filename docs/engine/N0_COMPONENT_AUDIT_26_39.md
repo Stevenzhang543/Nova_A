@@ -414,3 +414,33 @@
 ### 15.4 四路审计的合并结论
 
 C 组与 B 组**独立**判定"信号层缺失/无预算"；C 组的 G5（Play 未隔离世界）与 A/B 的 Player 边界问题是**同一根源**的两个表现（Runtime 与 Editor 世界未分离）。**唯一会静默损坏用户数据的是 G6（Escape 取消不还原）**，故列为下一轮最高优先级。
+
+---
+
+## 16. 修复记录
+
+### 16.1 G6 已修复：拖动取消会静默损坏用户数据
+
+**问题**（§15.1 G6）：`WorldCanvas.vue` 的 Escape 分支只做 `gizmoDrag = null; canvasDragMode = 'none'`。三个 `apply*` 函数**直接写入实体**（无独立预览层），因此取消后位移留在文档里，且**没有 pushHistory** → 位移永久且 Undo 无法触及。同一条路径也未处理 `pointercancel`。
+
+**修复**：
+1. `src/editor/gizmo.ts` 新增 `restoreTransforms(snapshots, entities)`，与三个 `apply*` 使用**同一条 `setWorldTransform` 写入路径**，精确还原位置、旋转与缩放。
+2. `src/components/WorldCanvas.vue` 的 Escape 分支改为：若存在 `gizmoDrag` 且 `hasMovedEntity`，先 `restoreTransforms` 并刷新属性显示，再 `finishCanvasDrag()`。**不写历史**——因为已回到基准，文档未变（符合 §24「撤销预览，恢复基准」）。
+
+**未触及冻结面**：改动仅在 `src/editor/**` 与 `src/components/**`。
+
+**证据**：新增 `scripts/verify-engine-gizmo-cancel.mjs`，**5 项检查全部通过**（报告 `reports/phase2/gizmo-cancel.json`）：
+
+| 检查 | 内容 |
+|---|---|
+| 1 | 每个选中层级根各得一个快照 |
+| 2 | 平移 / 旋转 / 缩放**三种工具**各自 apply 后 restore，世界变换与基准**精确相等** |
+| 3 | 重复取消 5 次**幂等无漂移** |
+| 4 | **负向对照**：只清状态不还原会把位移遗留（固化修复前的缺陷） |
+| 5 | 源码级守护：Escape 分支确实先 `restoreTransforms` 再 `finishCanvasDrag`，且顺序正确 |
+
+`pnpm check`（vue-tsc + tsc）退出码 0。
+
+**状态**：`IMPLEMENTED` + 有行为证据；因尚未在真实 GUI 中做一次人工 Escape 走查，**本轮标为 IMPLEMENTED 而非 VERIFIED**（主指令 §33 禁止把内部空跑当作体验通过）。
+
+**仍待处理**：`pointercancel` / `lostpointercapture` 在编辑态仍未接入同一条还原路径（当前仅触屏游戏输入处理），列为下一轮项。

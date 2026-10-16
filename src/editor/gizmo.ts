@@ -62,6 +62,18 @@ export interface TransformSnapshot {
   }
 }
 
+/** 取消拖动时把对象写回捕获的基准姿态（§24：Escape/pointercancel 恢复基准，而不是提交）。
+ * 与三个 apply* 使用同一条 setWorldTransform 写入路径，因此位置、旋转与缩放都精确还原。 */
+export function restoreTransforms(snapshots: TransformSnapshot[], entities: Entity[]): void {
+  for (const snapshot of snapshots) {
+    setWorldTransform(snapshot.entity, {
+      position: { ...snapshot.position },
+      rotation: snapshot.rotation,
+      scale: { ...snapshot.scale }
+    }, entities)
+  }
+}
+
 /** 围绕共同枢轴旋转各对象原始世界位置，同时增加旋转角并保留原缩放。 */ export function applyRotation(snapshots: TransformSnapshot[], pivot: Vec2, delta: number, entities: Entity[]): void {
   const cosine = Math.cos(delta)
   const sine = Math.sin(delta)

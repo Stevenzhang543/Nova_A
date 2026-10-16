@@ -1,0 +1,26 @@
+{
+  "generatedAt": "2026-10-16T17:59:00.184Z",
+  "checks": [
+    {
+      "name": "A committed translation produces one snapshot per selection root",
+      "status": "passed"
+    },
+    {
+      "name": "Translation, rotation and scale each restore the exact captured baseline",
+      "status": "passed"
+    },
+    {
+      "name": "Restoring is idempotent and does not drift on repeated cancel",
+      "status": "passed"
+    },
+    {
+      "name": "Clearing the drag without restoring would strand the displacement (regression guard)",
+      "status": "passed"
+    },
+    {
+      "name": "The editor Escape path restores the baseline before finishing the drag",
+      "status": "passed"
+    }
+  ],
+  "status": "passed"
+}

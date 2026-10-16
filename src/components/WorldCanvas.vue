@@ -18,7 +18,7 @@ import { t } from '../i18n'
 import { defaultColorForLayer } from '../world/layers'
 import { compoundGeometries } from '../world/compoundGeometry'
 import { localPointToWorld, prepareHierarchyIndex, worldPointToLocal, worldTransform } from '../world/hierarchy'
-import { applyRotation, applyScale, applyTranslation, axisVector, captureTransforms, gizmoPivot, gizmoRotation, projectedDelta, type GizmoAxis, type TransformSnapshot } from '../editor/gizmo'
+import { applyRotation, applyScale, applyTranslation, axisVector, captureTransforms, gizmoPivot, gizmoRotation, projectedDelta, restoreTransforms, type GizmoAxis, type TransformSnapshot } from '../editor/gizmo'
 import { createRenderer2D, createRendererRecoveryOwner, editorSceneRendererEnvironment, editorLightingEnvironment, RendererCanvasReplacementRequired, type Renderer2D } from '../editor/rendererAdapter'
 import { createEditorParticleOwner } from '../editor/particleAdapter'
 import { createRenderer2D as createRuntimeRenderer2D } from '../renderer/core'
@@ -618,6 +618,18 @@ function onWheel(e: WheelEvent) {
     editorState.manualConnectionPoints.splice(0)
     isManualDrawing = false
     editorState.statusText = t('ready')
+  }
+  if (gizmoDrag) {
+    // §24: Escape cancels the drag, so the captured baseline must be written back. Clearing the
+    // drag alone would leave the moved transforms in the document with no history entry, making
+    // the displacement permanent and invisible to Undo.
+    if (hasMovedEntity) {
+      restoreTransforms(gizmoDrag.snapshots, world.entities)
+      recordEntityProperties(gizmoDrag.snapshots.map(/* 收集被还原的实体以刷新属性显示。 */ snapshot => snapshot.entity))
+      editorState.statusText = t('ready')
+    }
+    finishCanvasDrag()
+    return
   }
   gizmoDrag = null
   canvasDragMode = 'none'
