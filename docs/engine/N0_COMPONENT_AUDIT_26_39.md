@@ -71,7 +71,15 @@
 
 ## 5. 关键结构性缺口
 
-1. **类型注册表 / 属性 schema 层缺失。** 主指令 §6 称其为本轮最关键的连接层，但仓库中未找到统一的 `TypeDescriptor` / 字段 schema 源；现有的是分散的组件定义（`src/world/components.ts`）、序列化（`projectFormat.ts`、`nova_format`）与 Inspector 直接读 store 的组合。**这是 N1 的首要交付物。**
+1. **类型注册表已存在；缺的是属性（字段）schema 与信号声明层。**（N0 初稿曾误判为“注册表缺失”，此处更正——原始判断把“未检查”写成了 MISSING，违反了主指令“不得把未检查标为 MISSING”。）
+
+   **已存在（应复用，不重造）**：`src/world/componentRegistry.ts` 提供 `STABLE_COMPONENT_API_VERSION = '2.0'`、`ComponentDescriptor { kind, category, unique, summary }`、**63 条 `STABLE_COMPONENTS`**、`STABLE_COMPONENT_KINDS` 与 `componentDescriptor(kind)`。消费方包括 `src/projects/projectData.ts`、`src/runtime/objectBlueprints.ts`、`objectComposition.ts`、`dynamicObjectsOwner.ts`（Runtime，**冻结面**）、`src/editor/sceneAuthoring.ts`、`componentPalette.ts`。
+
+   **确实缺失**：描述符**只有类目与摘要**，没有字段 ID、值类型、默认值、范围/步进、单位、编辑控件、校验规则、i18n 标签键，也没有按 kind 的信号声明与序列化键映射。
+
+   **证据（Inspector 现状）**：`src/components/ConfigPanel.vue`（1208 行 / 153 KB）中含 **114 处 `kind === '…'` 分支**，覆盖 **53 个互不相同的 kind**，另有 `GameplayComponentsInspector.vue`、`RuntimeComponentsInspector.vue`、`WorldComponentsInspector.vue`、`ContentAssetInspector.vue` 四个专用检查器。也就是说**属性表单是逐 kind 手写的模板**，而非由 schema 驱动——这正是 §6 所指的连接层缺口。
+
+   **N1 首要交付物**（加法式，不替换既有注册表）：为既有 `ComponentDescriptor` 增加可选的字段 schema 与信号声明，并提供 schema 驱动的渲染路径，使 ConfigPanel 的分支可以**逐项**迁移而非一次性重写。
 2. **Node 门面语义层不存在。** 现有面向用户的是 Entity + Component（ECS 式），没有 Node/Node2D/Control/Resource 的对外语义与生命周期命名（`_ready`/`_enter_tree`/`_exit_tree`）。主指令 §4/§5 要求在不建立第二份 TS 权威世界的前提下补上该门面。
 3. **Player 依赖边界未闭合**（见 §2 门槛 1）。
 4. **能力矩阵与文档滞后于已发布版本**（FEATURE_MATRIX/TEST_MATRIX 停在 26.34）。
@@ -220,4 +228,36 @@
 | `Timer` | `Cooldown2D` / `Lifetime2D` | 需明确模拟时间 vs 真实时间与暂停模式 |
 | `Shape2D` 资源 vs `RayCast2D` 查询 | 物理查询 API（Rust） | 需按 §15 明确分类，不得混入 Shape 资源 |
 
-N1 交付物据此定义为：为上述 48 个 kind 建立**单向**的 TypeDescriptor（稳定 typeId、对外名称、字段 ID、编辑控件、校验、序列化键、信号声明），并证明 Rust 侧 `nova_format` 的既有 schema 与之**一致而非重复权威**。
+### 11.1 契约层实测（更正 N0 初稿）
+
+初稿称"仓库中未找到统一的类型/schema 源"，经实测**不成立**。现有契约层有两块，**都应复用而非重造**：
+
+| 层 | 文件 | 规模 | 性质 |
+|---|---|---|---|
+| 类型登记表 | `src/world/componentRegistry.ts` | `STABLE_COMPONENT_API_VERSION='2.0'`；**63** 条 `STABLE_COMPONENTS`；字段 `kind/category/unique/summary` | 手写、稳定 API |
+| 字段原始类型契约 | `src/world/componentPrimitiveTypes.ts` | **1954 行；59 个 kind；595 条字段条目；332 个不同字段名** | **生成物**（`scripts/generate-v26.22-component-primitives.mjs`，支持 `--check`） |
+
+`componentPrimitiveTypes` 的形状是 `kind → { fieldName → 允许的基本类型数组 }`，由 `src/world/componentValidation.ts` 在写入前消费。
+
+**因此 N1 的真正缺口是"描述性 schema"而非"契约存在性"**：
+
+| 已有 | 缺失 |
+|---|---|
+| 稳定 kind 与类目/唯一性/摘要 | 字段的**默认值** |
+| 字段名与允许的原始类型 | **范围 / 步进 / 单位** |
+| 生成 + `--check` 校验机制 | **编辑控件选择**（number/slider/color/asset/enum/…） |
+| | **i18n 标签键**（现由 `componentTitle` + i18n 分散承担） |
+| | **序列化键显式映射** |
+| | **按 kind 的信号声明**（§5.3、§23.4） |
+| | **Inspector 分组**（§23.3 要求保持分组与草稿） |
+
+**消费侧实测（为何需要 schema 驱动）**：`src/components/ConfigPanel.vue` 1208 行 / 153 KB，含 **114 处 `kind === '…'` 分支**，覆盖 **53 个不同 kind**；另有 4 个专用检查器组件。属性表单是逐 kind 手写模板，**不是** schema 驱动。
+
+### 11.2 N1 交付物（据此定义）
+
+1. **扩展现有生成器**，而不是手写第二张表：由 `generate-v26.22-component-primitives.mjs` 同一来源同时产出「原始类型契约」与「描述性 schema」（默认值、范围、单位、控件、i18n 键、分组、信号）。
+2. **保持 `componentRegistry.ts` 为唯一类型身份来源**，只加法式追加可选的 `fields`/`signals` 视图，不替换既有 `ComponentDescriptor`，不破坏 6 个既有消费方（其中 `dynamicObjectsOwner.ts`、`objectBlueprints.ts`、`objectComposition.ts` 在**冻结面**内）。
+3. **提供 schema 驱动渲染路径**，使 ConfigPanel 的 114 处分支可**逐项**迁移，禁止一次性重写。
+4. **证明与 Rust 侧 `nova_format` 既有 schema 一致而非重复权威**（字段名/类型/可选性对齐；冲突必须报错而不是静默二选一）。
+5. **补齐主指令要求但完全缺失的 2 项**：`Timer`（模拟时间 vs 真实时间、暂停模式；现仅 `Cooldown2D`/`Lifetime2D`）与 `Control` 相对 `Node2D` 的显式语义分离。
+6. **为 C02（变换/reparent）与 C10（Y-Sort）建立测试地基**——两者现有测试文件数为 **0**。
