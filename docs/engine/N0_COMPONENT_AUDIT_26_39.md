@@ -985,6 +985,34 @@ pnpm check                                                  # vue-tsc + tsc
 
 **未覆盖并如实记录**（报告 `notCovered`）：**信号参数 schema**、**连接持久化标识**、**同阶段派发顺序对真实脚本的验证** —— 这三项是 typed signal 的其余部分，尚未实现。
 
+### 19.5 批次 B4：输入消费台账 —— 以及一次**被我拦下的重复实现**
+
+**先记录一次自我纠正（本程序第 6 次）**：我按 B 组审计的措辞（"inputSequence / 消费 tick / 首次受影响 packet 全库 0 命中"）先写了一个 `InputTrace` 模块，包含 receipt → submit 的延迟测量、保留上限、null 不填 0。
+
+写完后读 `src/runtime/performance/observability.ts` 才发现：**那部分早已存在且设计正确**——
+
+- `FrameObservability.receipt(now)` 分配序号 token；`submission(now, consumedInputSequence)` 计算 `inputToSubmitMs`；
+- 源码注释明确写着 *"A timestamp alone cannot prove that this submission contains a particular input"*，即**只有提供被消费的输入身份才给出延迟**，否则为 null；
+- 已有 256 条保留上限与分位数统计；
+- `InputReceiptTokenMap` 已按 `(inputEpoch, sequence)` 建立身份。
+
+**我的草稿会造出第二套权威**——正是我一路在防范的事。因此**删除草稿**，改为只实现**真正缺失**的部分：**消费 tick** 与**首次受影响 packet** 的身份绑定，且**不计算任何延迟**、**不重复编号**。
+
+**实现**：`src/runtime/inputConsumption.ts` 的 `InputConsumptionLedger`，键为既有身份对 `(inputEpoch, sequence)`：
+
+- `markConsumed` —— **只有第一个 tick 生效**（多步补算不得改写消费时点）；
+- `markFirstAffectedPacket` —— 必须先消费，且**只有第一次调用生效**（后续提交不算"已响应"，§26.4 核心要求）；
+- 非法身份/负数/小数**一律忽略**，不产生幽灵记录；
+- 有界保留 512，累积计数不受淘汰影响；`pending()` 暴露"已消费但从未到达 packet"的积压。
+
+**验证**：`scripts/verify-engine-input-consumption.mjs` **9 项全部通过**，其中第 9 项是**边界守护**：
+
+> 去掉注释后断言模块代码中**不出现** `Ms`/`latency`/`percentile`/`hrtime`/`performance.now`，也不重述 `inputToSubmitMs`；同时断言 `observability.ts` **仍然**持有该指标与那句证明性注释。
+
+**关于该检查的一次修正**：初版守护直接扫描全文，结果把**注释里用于说明边界的那句话**判成了违规。改为先剥离注释再检查代码 —— 这是**修正过宽的断言**，不是放宽容差：真正的边界（代码中不得计算延迟）仍被强制。
+
+**未覆盖并如实记录**：运行时与渲染器接线、真实端到端显示延迟、与固定步补算路径的交互。
+
 ### 19.2 批次 B1：渲染抽取全部改用批量世界变换
 
 **改动**（`src/renderer/sceneRenderer.ts`，已解冻范围）：

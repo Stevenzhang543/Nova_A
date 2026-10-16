@@ -1,0 +1,57 @@
+{
+  "generatedAt": "2026-10-16T18:54:43.041Z",
+  "covers": [
+    "idempotent tracking",
+    "first consuming tick wins",
+    "first affected packet wins",
+    "ordering constraint",
+    "invalid identity rejection",
+    "bounded retention",
+    "pending backlog",
+    "non-duplication of latency measurement"
+  ],
+  "notCovered": [
+    "runtime and renderer wiring",
+    "real end-to-end display latency",
+    "interaction with the fixed-step catch-up path"
+  ],
+  "checks": [
+    {
+      "name": "Tracking is idempotent and keeps the first record",
+      "status": "passed"
+    },
+    {
+      "name": "Only the FIRST consuming tick counts, so catch-up steps cannot rewrite it",
+      "status": "passed"
+    },
+    {
+      "name": "Only the FIRST affected packet counts as the response",
+      "status": "passed"
+    },
+    {
+      "name": "A packet cannot be bound before the input was consumed",
+      "status": "passed"
+    },
+    {
+      "name": "Invalid identities and values are ignored instead of creating records",
+      "status": "passed"
+    },
+    {
+      "name": "Retention is bounded while the cumulative counter keeps counting",
+      "status": "passed"
+    },
+    {
+      "name": "Pending reports consumed input that never reached a packet",
+      "status": "passed"
+    },
+    {
+      "name": "Clearing keeps the cumulative counter",
+      "status": "passed"
+    },
+    {
+      "name": "This ledger does not duplicate the existing receipt-to-submit measurement",
+      "status": "passed"
+    }
+  ],
+  "status": "passed"
+}
