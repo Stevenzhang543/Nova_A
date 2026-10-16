@@ -287,3 +287,44 @@
 > 说明：本轮的记录里还包含 `WorldBoundary`（第 4 项）。它是**碰撞体形状模型**（`src/world/entityBuilder.ts:607`、`World.ts:172`），**不是组件种类**，因此真正的登记表缺口是 3 个组件种类，而非 4 个。校验脚本当前尚未区分「组件 kind」与「形状 kind」，N1 需要细化该判定，本轮不掩盖此不精确。
 
 **上游明示未完成（本轮不得假设已完成）**：WebGPU NOT PRESENT；compiled Worker 生产入口未完成；原生与 Web Player 隔离未完成；QualityLocked / AdaptiveExperience 分别 NOT_TESTED；Linux、签名、clean-machine NOT_TESTED；`FEATURE_MATRIX` 停 26.34。
+
+---
+
+## 13. 附录：A 范围（组件与节点内核）审计结论
+
+### 13.1 契约层的真实形态：不是 1 张表，是 5 张并行表 + 5 个手写 Inspector
+
+| # | 位置 | 内容 | 性质 |
+|---|---|---|---|
+| 1 | `componentRegistry.ts:13` | kind / 类目 / 唯一性 / 摘要 | 手写 |
+| 2 | `componentPrimitiveTypes.ts:4` | 59 类字段 → 允许的原始类型 | **生成** |
+| 3 | `componentEnums.ts:4` | 枚举取值 | **生成** |
+| 4 | `propertyMetadata.ts:13` | **仅 25 条路径** | 手写 |
+| 5 | `componentValidation.ts:6` | 写入校验 | 手写 |
+
+消费侧另有 **5 个手写 Inspector**：`ConfigPanel.vue`（主，1168 行）+ `Runtime`/`World`/`Gameplay` ComponentsInspector。**新增一个组件目前需要改 6 处**——这是本轮最大的结构性阻塞，也精确定义了 N1 的目标：以 `componentRegistry.ts` 为**唯一入口**落地字段级 TypeDescriptor（`fieldId` / 序列化键 / 单位 / 范围 / 枚举 / `editorWidgetId` / `mutationPhase`），把 2、3 降为**派生物**，并合并 4、5 两张并行表。
+
+**已验证为完整的上游能力（应复用，不重做）**：组件登记↔原始类型闭合（`verify-engine-component-registry.mjs`）、实体序列化、**Prefab 七项闭环全通过**、Area2D enter/exit 差分与删除补发、Sprite 字段↔Inspector↔序列化对齐、Camera2D 全套、Timer（start/pause/repeat/代次/容量上限）、nova-pak。
+
+### 13.2 A 范围实测缺口（8 项，按严重度）
+
+| # | 缺口 | 证据 | 违反条款 |
+|---|---|---|---|
+| 1 | **无字段级契约**：缺 `fieldId`/`serializationKey`/`editorWidgetId`/`signals[]`；5 表 + 5 Inspector 并行 | 见 §13.1 | §6、§31 |
+| 2 | **Transform 无 dirty/版本**：`hierarchy.ts` 每帧递归重算全祖先；Y-Sort 排序键、相机、渲染各自再调 `worldTransform` | `hierarchy.ts:43-74`；`sceneRenderer.ts:77,156,179,216,245,316,322,353` | §5.2、§12.3（O(n·depth) 全场景排序） |
+| 3 | **生命周期缺 `_enter_tree`/`_ready`/`_exit_tree`**；`awake`/`start` 按 `entities` 数组序而非父先/子先；树外与重新入树契约缺失 | `GameplayRuntimeCore.ts:1232-1251`；全仓仅 i18n 文案含这三个名字 | §5.1 |
+| 4 | **信号无参数 schema / 无持久连接标识**；队列 >1024 **静默丢最旧**；实体删除仅按 target 过滤 | `GameplayRuntimeCore.ts:1049,1924-1945,1752` | §5.3、C04 |
+| 5 | **Control 无脏更新**：每次调用重建整棵布局树，`gameUiOwner` 每帧 `this.resolve` 全树重算；游戏内无障碍**无 DOM/aria 桥**（grep=0） | `uiLayout.ts:27,77`；`gameUiOwner.ts:80,239` | §17.2 |
+| 6 | **CharacterBody2D 两套 API 语义不一致**：脚本 `move_character(x,y)`（固定步）与 TS `moveAndSlide(velocity,dt)`（内部再乘 dt）→ **dt 双重相乘风险** | `scriptApiCatalog.ts:142,226`；`physics2d.ts:82` | §15.4、C12 |
+| 7 | **场景实例与 Prefab 不对等**：`sceneInstances.ts` 仅创建/实例化/解包，缺覆盖差异集与源刷新（5、6 项） | `sceneInstances.ts:22-44` vs `prefabs.ts:330-402` | §7、C03 |
+| 8 | **组件无独立导出映射**：`gameExporter.ts` 不遍历组件，仅随项目文档 | `gameExporter.ts` | §20、C22 |
+
+补充：非均匀父缩放对 collider 的限制**无检查**；`Transform` 奇异矩阵靠 `MIN_SIZE` 下限兜底（不 NaN 但会放大 1/MIN_SIZE 且无显式错误）；RayCast/ShapeCast 只有查询 API，**无节点式持久 RayCast**（无 update 时机 / debug / 排除属性）。
+
+### 13.3 修正后的 N1 起手顺序
+
+1. **以 `componentRegistry.ts` 为唯一入口落地字段级 TypeDescriptor**，把 `componentPrimitiveTypes`/`componentEnums` 降为派生物，合并 `propertyMetadata` 与 `componentPalette` 两张并行表，并加契约测试（§6）。这同时消解 §13.1 的"改 6 处"问题。
+2. **为 Transform/hierarchy 加 dirty 版本与世界矩阵缓存**，消除排序键与相机路径的重复 `worldTransform` 调用（§5.2/§12.3）。
+3. **补齐 typed signal 注册**（`signalId` + 参数 schema + 连接持久化），超限丢弃改为**有界背压**，并定义 `_enter_tree`/`_ready`/`_exit_tree` 对 `awake`/`start` 的映射与测试（§5.1/§5.3）。
+
+> 注：第 2、3 项触及 `src/world/hierarchy.ts` 与 `src/runtime/GameplayRuntimeCore.ts`——后者在**冻结面**内（§10.1）。因此第 3 项必须先由集成者显式解除冻结后方可执行；本轮不越界。
