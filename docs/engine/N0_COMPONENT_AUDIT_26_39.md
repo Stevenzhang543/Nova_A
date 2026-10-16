@@ -473,4 +473,29 @@ C 组与 B 组**独立**判定"信号层缺失/无预算"；C 组的 G5（Play �
 
 `pnpm check` 退出码 0。
 
-**状态**：`IMPLEMENTED`（有行为证据）。仍未在真实 GUI 中人工走查，故不标 VERIFIED。至此 **Escape / pointercancel 两条取消入口 × 变换 / 顶点两类拖动**共四条路径全部纳入还原语义。
+### 16.4 C 组 G2 的第一步：按键文案统一为单一绑定源
+
+**问题**（§15.1 G2）：`TopBar.vue:78` 把「命令面板」标为 `Ctrl K`，而 `shortcuts.ts:8` 的实际默认绑定是 **`Ctrl+Shift+P`**；`WorkspaceBar.vue:37` 又写成第三种格式 `Ctrl Shift P`。三处硬编码、一处错误。
+
+**根因**：两个外壳都**没有**导入 `src/editor/shortcuts`，而是各自硬编码 `<kbd>` 文本。因此用户改键后，界面显示的仍是旧按键——显示与实际绑定会**静默不一致**。
+
+**修复**：
+1. `shortcuts.ts` 新增唯一展示入口 `shortcutLabel(command, style = 'kbd')`：`kbd` 输出 `Ctrl Shift P` 形式，`inline` 输出 `Ctrl+Shift+P` 形式供 `title` 使用；未知命令返回空串而非抛错。
+2. `TopBar.vue`：4 处 `<kbd>` 改为 `{{ shortcutLabel(...) }}`（含修复错误的 `Ctrl K`）。
+3. `WorkspaceBar.vue`：`title` 与两个 `data-shortcut` 属性、两个 `<kbd>` 全部改为派生。
+
+**证据**：新增 `scripts/verify-editor-shortcut-labels.mjs`，**5 项全部通过**（报告 `reports/phase2/shortcut-labels.json`）：
+
+| 检查 | 内容 |
+|---|---|
+| 1 | 5 个命令的 `kbd`/inline 文案与其**当前绑定**逐一相符 |
+| 2 | 命令面板默认确为 `Ctrl+Shift+P`，且其标签**不含 K**（固化此前的错误） |
+| 3 | **行为验证**：`setShortcut` 改键后标签随之变化，`resetShortcuts` 后恢复默认 |
+| 4 | 未知命令返回空串，不抛错 |
+| 5 | 两个外壳都导入唯一源，且不再残留硬编码绑定 |
+
+**由检查工具捕获的真实缺陷**：`vue-tsc` 报 **TS2550 `Property 'replaceAll' does not exist on type 'string'`**（本项目 lib 目标低于 ES2021）。已改用 `split('+').join(' ')`，未放宽编译配置。
+
+`pnpm check` 退出码 0。
+
+**状态**：这一步只闭合了 C 组 **G2 的按键文案一致性问题**，**没有**建立 §22.2 的 Command Registry 本体。`TopBar.vue` 仍有 **10 处硬编码 `<kbd>`**（保存/撤销/重做/复制/粘贴/复制副本/F2/Del/Esc/Ctrl Alt H），它们对应的动作**根本不在 `shortcuts.ts` 的 10 条命令内**，因此不可改键、也无单一源可派生——这正是 C 组 **G4**。Command Registry 本体与这 10 项的接入留待后续轮次。

@@ -26,15 +26,15 @@
         <UiButton :class="{ active: state.inspectorVisible && !state.distractionFree }" :title="t('toggleInspector')" data-doc="manual/inspector" @click="toggleEditorPanel('inspector')"><EditorIcon name="layout" /><span>{{ t('inspector') }}</span><EditorIcon v-if="state.inspectorVisible && !state.distractionFree" name="check" /></UiButton>
         <UiButton :class="{ active: state.bottomPanelVisible && !state.distractionFree }" :title="t('toggleBottomPanel')" data-doc="manual/bottom-panel" @click="toggleEditorPanel('bottom')"><EditorIcon name="bottom" /><span>{{ t('bottomPanel') }}</span><EditorIcon v-if="state.bottomPanelVisible && !state.distractionFree" name="check" /></UiButton>
         <UiButton :class="{ active: state.distractionFree }" :title="t('focusMode')" data-doc="manual/focus-mode" @click="toggleFocusMode"><EditorIcon name="maximize" /><span>{{ t('focusMode') }}</span><EditorIcon v-if="state.distractionFree" name="check" /></UiButton>
-        <UiButton :title="`${t('manageWorkspaces')} (Ctrl+Alt+W)`" data-doc="manual/workspaces" @click="state.workspaceManagerOpen = true"><EditorIcon name="manage" /><span>{{ t('manageWorkspaces') }}</span><i></i></UiButton>
+        <UiButton :title="`${t('manageWorkspaces')} (${shortcutLabel('workspaceManager', 'inline')})`" data-doc="manual/workspaces" @click="state.workspaceManagerOpen = true"><EditorIcon name="manage" /><span>{{ t('manageWorkspaces') }}</span><i></i></UiButton>
       </div>
     </details>
     <details data-ui-motion-popover v-transient-popover class="workspace-menu command-menu">
       <summary :aria-label="t('commands')" :title="t('commands')"><EditorIcon name="search" /><span>{{ t('commands') }}</span></summary>
       <div class="workspace-popover command-popover" role="group" :aria-label="t('commands')">
         <h3>{{ t('commandsAndSearch') }}</h3>
-        <UiButton class="quick-trigger" data-shortcut="Ctrl+P" @click="openPalette('quick')"><EditorIcon name="search" /><span>{{ t('quickOpen') }}</span><kbd>Ctrl P</kbd></UiButton>
-        <UiButton class="command-trigger" data-shortcut="Ctrl+Shift+P" @click="openPalette('commands')"><EditorIcon name="command" /><span>{{ t('commandPalette') }}</span><kbd>Ctrl Shift P</kbd></UiButton>
+        <UiButton class="quick-trigger" :data-shortcut="shortcutLabel('quickOpen', 'inline')" @click="openPalette('quick')"><EditorIcon name="search" /><span>{{ t('quickOpen') }}</span><kbd>{{ shortcutLabel('quickOpen') }}</kbd></UiButton>
+        <UiButton class="command-trigger" :data-shortcut="shortcutLabel('commandPalette', 'inline')" @click="openPalette('commands')"><EditorIcon name="command" /><span>{{ t('commandPalette') }}</span><kbd>{{ shortcutLabel('commandPalette') }}</kbd></UiButton>
         <div class="history-overflow" :aria-label="t('navigationHistory')">
           <UiButton data-doc="manual/navigation-history" :disabled="!workspaceState.navigationBack.length" :title="`${t('navigateBack')} (Alt+←)`" @click="navigateHistory('back'); ($event.currentTarget as HTMLElement).closest('details')?.removeAttribute('open')"><EditorIcon name="back" /><span>{{ t('navigateBack') }}</span><kbd>Alt ←</kbd></UiButton>
           <UiButton data-doc="manual/navigation-history" :disabled="!workspaceState.navigationForward.length" :title="`${t('navigateForward')} (Alt+→)`" @click="navigateHistory('forward'); ($event.currentTarget as HTMLElement).closest('details')?.removeAttribute('open')"><EditorIcon name="forward" /><span>{{ t('navigateForward') }}</span><kbd>Alt →</kbd></UiButton>
@@ -50,6 +50,7 @@ import EditorIcon from './EditorIcon.vue'
 import UiButton from '../ui/components/UiButton.vue'
 import { vTransientPopover } from '../editor/transientPopover'
 import { t } from '../i18n'
+import { shortcutLabel } from '../editor/shortcuts'
 import { editorState as state, type EditorWorkspace } from '../store/editor'
 import { applyEditorWorkspace, navigateHistory, toggleEditorPanel, toggleFocusMode, WORKSPACE_PRESETS, workspaceState } from '../editor/workspaces'
 import { projectSessionState } from '../projects/projectSession'

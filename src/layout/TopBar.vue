@@ -72,11 +72,11 @@
           <button @click="handleTogglePanel('bottom')"><span>{{ t('toggleBottomPanel') }}</span><EditorIcon v-if="editorState.bottomPanelVisible" name="check" /></button>
           <button @click="handleFocusMode"><span>{{ t('focusMode') }}</span><EditorIcon v-if="editorState.distractionFree" name="check" /></button>
           <button @click="handleResetLayout"><span>{{ t('resetLayout') }}</span></button>
-          <button @click="handleWorkspaceManager"><span>{{ t('manageWorkspaces') }}</span><kbd>Ctrl Alt W</kbd></button>
+          <button @click="handleWorkspaceManager"><span>{{ t('manageWorkspaces') }}</span><kbd>{{ shortcutLabel('workspaceManager') }}</kbd></button>
           <hr>
-          <button @click="handleFullscreen"><span>{{ t('toggleFullscreen') }}</span><kbd>F11</kbd></button>
-          <button @click="handleCommandPalette"><span>{{ t('commandPalette') }}</span><kbd>Ctrl K</kbd></button>
-          <button @click="handleShortcutEditor"><span>{{ t('shortcutEditor') }}</span><kbd>Ctrl Alt K</kbd></button>
+          <button @click="handleFullscreen"><span>{{ t('toggleFullscreen') }}</span><kbd>{{ shortcutLabel('fullscreen') }}</kbd></button>
+          <button @click="handleCommandPalette"><span>{{ t('commandPalette') }}</span><kbd>{{ shortcutLabel('commandPalette') }}</kbd></button>
+          <button @click="handleShortcutEditor"><span>{{ t('shortcutEditor') }}</span><kbd>{{ shortcutLabel('shortcutEditor') }}</kbd></button>
         </div>
           <div v-else-if="activeMenu === 'help'" :key="'help'" class="dropdown dropdown-right">
           <button @click="handleManual"><span>{{ t('manual') }}</span><kbd>5.0 · {{ t('offline') }}</kbd></button>
@@ -104,6 +104,7 @@ import { installTransientPopover } from '../editor/transientPopover'
 import { openExternalUrl } from '../runtime/externalLinks'
 import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { t } from '../i18n'
+import { shortcutLabel } from '../editor/shortcuts'
 import { addEditorLog, editorState } from '../store/editor'
 import { clearScene, copySelectedEntities, deleteSelected, duplicateSelectedEntities, historyState, pasteEntities, physicsState, pushHistory, redo, resetCamera, saveProject, selectEntities, undo } from '../store/physics'
 import { preferencesState } from '../store/preferences'

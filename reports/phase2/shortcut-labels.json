@@ -1,0 +1,26 @@
+{
+  "generatedAt": "2026-10-16T18:06:25.778Z",
+  "checks": [
+    {
+      "name": "A label is derived from the live binding of the requested command",
+      "status": "passed"
+    },
+    {
+      "name": "The command palette default is Ctrl+Shift+P, so the old Ctrl K label was wrong",
+      "status": "passed"
+    },
+    {
+      "name": "Remapping a shortcut updates the displayed label",
+      "status": "passed"
+    },
+    {
+      "name": "An unknown command resolves to an empty label instead of throwing",
+      "status": "passed"
+    },
+    {
+      "name": "Both shells import the single source and keep no hardcoded bindings",
+      "status": "passed"
+    }
+  ],
+  "status": "passed"
+}

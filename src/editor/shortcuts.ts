@@ -30,6 +30,14 @@ export const shortcutState = reactive({ definitions: defaults.map(/** 构造并�
   if (!['Control', 'Meta', 'Alt', 'Shift'].includes(event.key)) parts.push(normalizePart(event.key))
   return parts.join('+')
 }
+/** 把绑定规范化为展示文本；`kbd` 用于按键提示，`inline` 用于 title 等行内文案。
+ * UI 只能通过 shortcutLabel 取按键文案，不得各自硬编码，否则显示会与实际绑定不一致。 */
+export function shortcutLabel(command: ShortcutCommand, style: 'kbd' | 'inline' = 'kbd'): string {
+  const definition = shortcutState.definitions.find(/* 比较 item.id 与 command，返回严格相等的判断结果。 */ item => item.id === command)
+  if (!definition) return ''
+  return style === 'kbd' ? definition.binding.split('+').join(' ') : definition.binding
+}
+
 /** 按命令查找当前绑定，并以不区分大小写的规范化事件字符串比较。 */ export function shortcutMatches(event: KeyboardEvent, command: ShortcutCommand): boolean { const definition = shortcutState.definitions.find(/* 比较 item.id 与 command，返回严格相等的判断结果。 */ item => item.id === command); return Boolean(definition && shortcutFromEvent(event).toLocaleLowerCase() === definition.binding.toLocaleLowerCase()) }
 /** 更新已知命令的非空绑定并限制文本长度，随后保存用户配置。 */ export function setShortcut(command: ShortcutCommand, binding: string): boolean { const item = shortcutState.definitions.find(/* 比较 value.id 与 command，返回严格相等的判断结果。 */ value => value.id === command); const safe = binding.trim().slice(0, 80); if (!item || !safe) return false; item.binding = safe; persistShortcuts(); return true }
 /** 列出使用相同绑定的其他命令，比较时忽略大小写。 */ export function shortcutConflicts(binding: string, except?: ShortcutCommand): ShortcutDefinition[] { return shortcutState.definitions.filter(/* 先计算 item.id !== except；仅当其为真值时求右侧 item.binding.toLocaleLowerCase() === binding.toLocaleLowerCase()，返回短路求值结果。 */ item => item.id !== except && item.binding.toLocaleLowerCase() === binding.toLocaleLowerCase()) }
