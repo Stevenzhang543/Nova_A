@@ -1250,6 +1250,37 @@ EXIT=0
 
 **必须写明的限制**：这些证据来自**多个独立验证脚本**，不是**一次连续会话**内跑完整个 W1 流程。二者不等价：连续会话还会暴露"步骤之间的状态衔接"问题。因此该 `VERIFIED` 的准确含义是**"W1 的每一项能力都已验证可用"**，而非"已录制一次完整的用户走查"。若需要更强的结论，应补一条连续的端到端会话 —— 列为后续加强项，不影响当前逐项结论。
 
+### 19.15 批次 D（N4 起步）：信号目录 —— §23.4 的可发现性基础
+
+**新增 `src/world/componentSignals.ts`**：按组件种类声明可发出的信号，供 Inspector 的 Signals 区与连接对话框使用（§5.3、§23.4）。
+
+**核心约束：目录不许凭想象登记。** 每条静态信号记录 `emittedAt`（真实发射文件），校验脚本会到源码核对字面量确实存在；反过来，源码中每一个 `emitSignal('…')` 字面量也必须被目录覆盖。**双向核对**，任何一侧漏掉都会失败。
+
+**实测覆盖**：**10 个**源码字面量信号全部入册，分布为
+
+| 作用域 | 信号 |
+|---|---|
+| entity | `area.entered`、`area.exited`、`area.damage`、`portal.entered`、`entity.spawned` |
+| scene | `scene.started`、`scene.loaded`、`scene.unloading` |
+| network | `network.input`、`network.scene_handoff` |
+| input（动态） | `input.<action>.<phase>` |
+| entity（动态默认名） | `area.effect`（可被 `effect.signal` 覆盖） |
+
+**验证**：`scripts/verify-engine-signal-catalog.mjs` **5 项全部通过**：
+1. 每条静态信号都有真实发射点，且记录的发射文件确实提到它；
+2. **源码中每个字面量信号都被登记**（`missing` 必须为空）；
+3. 动态族要么带模板前缀且前缀真实存在于源码，要么其默认名在**记录的发射文件内**紧邻一次 `emitSignal` 调用；
+4. 描述符结构合法（作用域、i18n 键前缀、发射路径、参数类型）；
+5. 查找助手正确：`signalsForComponent('Area2D')` 命中区域信号、未知组件返回空、**节点只暴露自身组件拥有的信号**（`scene.*` 不会泄漏进节点列表）。
+
+**过程中的两次自我修正（都是规则写错，不是放宽容差）**：
+- `area.effect` 初版按静态登记 → 核对失败，因为它由 `emitSignal(effect.signal || 'area.effect')` **动态选择**；已改标 `dynamic` 并为其定义"默认名"核对规则。
+- 该规则初版在全库拼接文本里找首次出现，命中了**目录文件自身**；已改为只在**记录的发射文件**内核对。
+
+`pnpm check` 退出码 0。
+
+**状态**：目录 `IMPLEMENTED` + 双向核对证据。**尚未接入 Inspector 的 Signals 区**（下一步），也未实现连接模型与签名校验 —— 那些仍属 §23.4 的未完成部分。
+
 ### 19.2 批次 B1：渲染抽取全部改用批量世界变换
 
 **改动**（`src/renderer/sceneRenderer.ts`，已解冻范围）：
