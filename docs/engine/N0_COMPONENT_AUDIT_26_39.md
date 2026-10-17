@@ -1219,6 +1219,37 @@ EXIT=0
 - **经 UI 配置 InputMap 动作与绑定** ✅（本轮）
 - 仍缺：**连接 Area 信号**、**把角色保存为可复用场景并在另一场景实例化**、**组装后运行验证行为**。
 
+### 19.14 批次 C：W1 证据汇总与判定
+
+**先纠正第二处可能的误判（与 InputMap 同类）**：C 组审计判定"Signals 层完全缺失"。**逐文件核实后需要更精确的表述**：
+
+| 层 | 实际状态 |
+|---|---|
+| 运行期信号派发 | **已实现**：`worldGameplayOwner.ts:229-243` 发射 `area.entered` / `area.exited` / `area.damage` / 自定义 effect 信号，均带目标实体与来源；脚本经 `on_signal` 接收 |
+| 项目级信号名声明 | **已实现**：`scripting.customSignals: string[]`（`scriptSettings.ts`） |
+| 脚本级信号连接 | **已实现**：`signalConnections`（信号名 + 回调 + target/source 过滤），由 **ScriptStudio** 增删 |
+| **Godot 式节点 Signals 面板**（§23.4：按类型列出、参数说明、连接对话框、签名校验、组） | **确实缺失** |
+
+因此准确的结论是：**信号能力存在，缺的是 §23.4 的节点 Signals 编辑面板与参数 schema**。把"缺面板"写成"信号层缺失"会误导后续排期。
+
+**W1 证据映射（逐条对应 §29 W1 的要求）**：
+
+| W1 要求 | 验证脚本 | 具体检查 |
+|---|---|---|
+| 新建场景、创建 CharacterBody2D、添加形状 | `verify-w1-character-authoring.mjs` | 空场景 → Rectangle → Add Component（CharacterBody2D 等） |
+| Sprite / Camera / 脚本挂接 | 同上 | 添加 `SpriteRenderer2D`/`Camera2D`/`Script2D`/`Area2D` 并断言进入保存文档 |
+| **InputMap 配置移动** | 同上 | 命令面板 → Input Map → 新增 `Move` → 绑定 `KeyD` → 断言进入 `projectSettings.inputMap` |
+| **保存为可复用场景** | 同上 | `Create prefab` → 断言预制体资源含全部角色组件 |
+| **在关卡中实例化** | `verify-v26.34-authoring-user.mjs`、`verify-v26.34-game-scenarios.mjs` | 嵌套预制体实例化 + top-down"实例化其可复用敌人预制体" |
+| **Area 信号触发交互** | `verify-v26.34-game-scenarios.mjs` | sensor(Area) 触发 → 信号 → 脚本 → 存档 + 真实场景切换 |
+| **音效** | 同上 | platformer"jump audio" |
+| **运行与停止** | `verify-engine-workflows.mjs` | 三个模板 create → save → reload → run → stop |
+| 输入驱动移动/跳跃 | `verify-v26.34-game-scenarios.mjs` | 命名输入 + 原生碰撞下实际位移 |
+
+**判定：W1 = `VERIFIED`（组合证据）** —— 每一条要求都有**真实浏览器或真实运行时**的通过检查。
+
+**必须写明的限制**：这些证据来自**多个独立验证脚本**，不是**一次连续会话**内跑完整个 W1 流程。二者不等价：连续会话还会暴露"步骤之间的状态衔接"问题。因此该 `VERIFIED` 的准确含义是**"W1 的每一项能力都已验证可用"**，而非"已录制一次完整的用户走查"。若需要更强的结论，应补一条连续的端到端会话 —— 列为后续加强项，不影响当前逐项结论。
+
 ### 19.2 批次 B1：渲染抽取全部改用批量世界变换
 
 **改动**（`src/renderer/sceneRenderer.ts`，已解冻范围）：

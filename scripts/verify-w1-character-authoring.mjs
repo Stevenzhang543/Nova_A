@@ -103,4 +103,20 @@ await withBrowserAudit({ release, name: 'w1-character-authoring', width: 1600, h
       'the recorded binding must survive, saw ' + JSON.stringify(move.bindings))
     a.observations.push({ id: 'w1-input-map', actionCount: actions.length, move })
   })
+
+  await a.check('Save the assembled character as a reusable prefab', async () => {
+    await u.entity('Hero'); await u.expandInspector()
+    await a.clickText('.config-panel button', 'Create prefab', true)
+    await a.until("!!document.querySelector('.prefab-actions')", 15000)
+
+    const withPrefab = await u.save('w1-character-prefab')
+    const prefabs = withPrefab.document.assets.filter(/** 找出预制体资源。 */ asset => asset.assetType === 'prefab')
+    assert.ok(prefabs.length >= 1, 'a prefab asset must exist after Create prefab, saw ' + withPrefab.document.assets.map(/** 取资源类型。 */ asset => asset.assetType).join(','))
+    const prefab = prefabs[prefabs.length - 1]
+    const source = typeof prefab.source === 'string' ? prefab.source : JSON.stringify(prefab.source)
+    for (const kind of ['CharacterBody2D', 'SpriteRenderer2D', 'Camera2D', 'Script2D', 'Area2D']) {
+      assert.ok(source.includes(kind), 'the reusable prefab must carry ' + kind)
+    }
+    a.observations.push({ id: 'w1-prefab', prefabCount: prefabs.length, assetType: prefab.assetType })
+  })
 })
