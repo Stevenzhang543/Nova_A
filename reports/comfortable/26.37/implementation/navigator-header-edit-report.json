@@ -1,0 +1,123 @@
+{
+  "generatedAt": "2026-10-03T19:21:40.128Z",
+  "path": "src/components/VisualGraphEditor.vue",
+  "beforeSha256": "0c50ea373c14800baecb80046b0126f22c0a60b3bd107796fddd3f179d604358",
+  "afterSha256": "6fa794e85c5f43b222a9eb58b779371c379634c97aa518fb1f5152c8616cbbef",
+  "edits": [
+    {
+      "path": "src/components/VisualGraphEditor.vue",
+      "selector": ".minimap",
+      "property": "height",
+      "before": [
+        "148px"
+      ],
+      "after": "auto",
+      "reason": "Comfortable navigator header fits actual scaled font metrics; retain fixed SVG viewBox/precise mapping and use an opaque persistent surface."
+    },
+    {
+      "path": "src/components/VisualGraphEditor.vue",
+      "selector": ".minimap",
+      "property": "max-width",
+      "before": [],
+      "after": "calc(100% - 2 * var(--space-3))",
+      "reason": "Comfortable navigator header fits actual scaled font metrics; retain fixed SVG viewBox/precise mapping and use an opaque persistent surface."
+    },
+    {
+      "path": "src/components/VisualGraphEditor.vue",
+      "selector": ".minimap",
+      "property": "border-radius",
+      "before": [
+        "11px"
+      ],
+      "after": "var(--radius-panel)",
+      "reason": "Comfortable navigator header fits actual scaled font metrics; retain fixed SVG viewBox/precise mapping and use an opaque persistent surface."
+    },
+    {
+      "path": "src/components/VisualGraphEditor.vue",
+      "selector": ".minimap",
+      "property": "background",
+      "before": [
+        "color-mix(in srgb,var(--surface-1) 94%,transparent)"
+      ],
+      "after": "var(--surface-1)",
+      "reason": "Comfortable navigator header fits actual scaled font metrics; retain fixed SVG viewBox/precise mapping and use an opaque persistent surface."
+    },
+    {
+      "path": "src/components/VisualGraphEditor.vue",
+      "selector": ".minimap",
+      "property": "backdrop-filter",
+      "before": [
+        "blur(12px)"
+      ],
+      "after": "none",
+      "reason": "Comfortable navigator header fits actual scaled font metrics; retain fixed SVG viewBox/precise mapping and use an opaque persistent surface."
+    },
+    {
+      "path": "src/components/VisualGraphEditor.vue",
+      "selector": ".minimap header",
+      "property": "height",
+      "before": [
+        "26px"
+      ],
+      "after": "auto",
+      "reason": "Comfortable navigator header fits actual scaled font metrics; retain fixed SVG viewBox/precise mapping and use an opaque persistent surface."
+    },
+    {
+      "path": "src/components/VisualGraphEditor.vue",
+      "selector": ".minimap header",
+      "property": "min-height",
+      "before": [],
+      "after": "var(--ui-panel-header-height)",
+      "reason": "Comfortable navigator header fits actual scaled font metrics; retain fixed SVG viewBox/precise mapping and use an opaque persistent surface."
+    },
+    {
+      "path": "src/components/VisualGraphEditor.vue",
+      "selector": ".minimap header",
+      "property": "padding",
+      "before": [
+        "6px 9px"
+      ],
+      "after": "var(--space-3) var(--space-4)",
+      "reason": "Comfortable navigator header fits actual scaled font metrics; retain fixed SVG viewBox/precise mapping and use an opaque persistent surface."
+    },
+    {
+      "path": "src/components/VisualGraphEditor.vue",
+      "selector": ".minimap header",
+      "property": "font-size",
+      "before": [
+        "var(--type-caption)"
+      ],
+      "after": "var(--type-body)",
+      "reason": "Comfortable navigator header fits actual scaled font metrics; retain fixed SVG viewBox/precise mapping and use an opaque persistent surface."
+    },
+    {
+      "path": "src/components/VisualGraphEditor.vue",
+      "selector": ".minimap header",
+      "property": "line-height",
+      "before": [],
+      "after": "var(--line-body)",
+      "reason": "Comfortable navigator header fits actual scaled font metrics; retain fixed SVG viewBox/precise mapping and use an opaque persistent surface."
+    },
+    {
+      "path": "src/components/VisualGraphEditor.vue",
+      "selector": ".minimap header",
+      "property": "overflow-wrap",
+      "before": [],
+      "after": "anywhere",
+      "reason": "Comfortable navigator header fits actual scaled font metrics; retain fixed SVG viewBox/precise mapping and use an opaque persistent surface."
+    },
+    {
+      "path": "src/components/VisualGraphEditor.vue",
+      "selector": ".minimap header",
+      "property": "text-transform",
+      "before": [
+        "uppercase"
+      ],
+      "after": "none",
+      "reason": "Comfortable navigator header fits actual scaled font metrics; retain fixed SVG viewBox/precise mapping and use an opaque persistent surface."
+    }
+  ],
+  "script": "byte-identical",
+  "css": "compiled",
+  "visual": "pending"
+}

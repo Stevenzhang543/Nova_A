@@ -1,0 +1,323 @@
+{
+  "aliases": [
+    {
+      "field": "color",
+      "path": "renderer.color",
+      "canonicalDeclaration": "ShapeRenderer2D",
+      "canonicalField": "color",
+      "checks": [
+        "Entity authored aliases update the canonical component and survive serialization/hydration",
+        "Nonfinite entity alias writes reject before changing their canonical owner"
+      ]
+    },
+    {
+      "field": "transparency",
+      "path": "renderer.opacity",
+      "canonicalDeclaration": "ShapeRenderer2D",
+      "canonicalField": "opacity",
+      "checks": [
+        "Entity authored aliases update the canonical component and survive serialization/hydration",
+        "Nonfinite entity alias writes reject before changing their canonical owner"
+      ]
+    },
+    {
+      "field": "texture",
+      "path": "renderer.texture",
+      "canonicalDeclaration": "ShapeRenderer2D",
+      "canonicalField": "texture",
+      "checks": [
+        "Entity authored aliases update the canonical component and survive serialization/hydration"
+      ]
+    },
+    {
+      "field": "velocity",
+      "path": "rigidBody.velocity",
+      "canonicalDeclaration": "RigidBody2D",
+      "canonicalField": "velocity",
+      "checks": [
+        "Entity authored aliases update the canonical component and survive serialization/hydration",
+        "Nonfinite entity alias writes reject before changing their canonical owner"
+      ]
+    },
+    {
+      "field": "angularVelocity",
+      "path": "rigidBody.angularVelocity",
+      "canonicalDeclaration": "RigidBody2D",
+      "canonicalField": "angularVelocity",
+      "checks": [
+        "Entity authored aliases update the canonical component and survive serialization/hydration",
+        "Nonfinite entity alias writes reject before changing their canonical owner"
+      ]
+    },
+    {
+      "field": "linearDamping",
+      "path": "rigidBody.linearDamping",
+      "canonicalDeclaration": "RigidBody2D",
+      "canonicalField": "linearDamping",
+      "checks": [
+        "Entity authored aliases update the canonical component and survive serialization/hydration",
+        "Nonfinite entity alias writes reject before changing their canonical owner"
+      ]
+    },
+    {
+      "field": "angularDamping",
+      "path": "rigidBody.angularDamping",
+      "canonicalDeclaration": "RigidBody2D",
+      "canonicalField": "angularDamping",
+      "checks": [
+        "Entity authored aliases update the canonical component and survive serialization/hydration",
+        "Nonfinite entity alias writes reject before changing their canonical owner"
+      ]
+    },
+    {
+      "field": "density",
+      "path": "rigidBody.density",
+      "canonicalDeclaration": "RigidBody2D",
+      "canonicalField": "density",
+      "checks": [
+        "Entity authored aliases update the canonical component and survive serialization/hydration",
+        "Nonfinite entity alias writes reject before changing their canonical owner"
+      ]
+    },
+    {
+      "field": "mass",
+      "path": "rigidBody.mass",
+      "canonicalDeclaration": "RigidBody2D",
+      "canonicalField": "mass",
+      "checks": [
+        "Entity authored aliases update the canonical component and survive serialization/hydration",
+        "Nonfinite entity alias writes reject before changing their canonical owner"
+      ]
+    },
+    {
+      "field": "autoInertia",
+      "path": "rigidBody.autoInertia",
+      "canonicalDeclaration": "RigidBody2D",
+      "canonicalField": "autoInertia",
+      "checks": [
+        "Entity authored aliases update the canonical component and survive serialization/hydration",
+        "Boolean Entity aliases reject nonboolean values before modifying any component"
+      ]
+    },
+    {
+      "field": "inertia",
+      "path": "rigidBody.inertia",
+      "canonicalDeclaration": "RigidBody2D",
+      "canonicalField": "inertia",
+      "checks": [
+        "Entity authored aliases update the canonical component and survive serialization/hydration",
+        "Nonfinite entity alias writes reject before changing their canonical owner"
+      ]
+    },
+    {
+      "field": "gravityScale",
+      "path": "rigidBody.gravityScale",
+      "canonicalDeclaration": "RigidBody2D",
+      "canonicalField": "gravityScale",
+      "checks": [
+        "Entity authored aliases update the canonical component and survive serialization/hydration",
+        "Nonfinite entity alias writes reject before changing their canonical owner"
+      ]
+    },
+    {
+      "field": "force",
+      "path": "rigidBody.force",
+      "canonicalDeclaration": "RigidBody2D",
+      "canonicalField": "force",
+      "checks": [
+        "Entity authored aliases update the canonical component and survive serialization/hydration",
+        "Nonfinite entity alias writes reject before changing their canonical owner"
+      ]
+    },
+    {
+      "field": "torque",
+      "path": "rigidBody.torque",
+      "canonicalDeclaration": "RigidBody2D",
+      "canonicalField": "torque",
+      "checks": [
+        "Entity authored aliases update the canonical component and survive serialization/hydration",
+        "Nonfinite entity alias writes reject before changing their canonical owner"
+      ]
+    },
+    {
+      "field": "gravity",
+      "path": "rigidBody.localGravity",
+      "canonicalDeclaration": "RigidBody2D",
+      "canonicalField": "localGravity",
+      "checks": [
+        "Entity authored aliases update the canonical component and survive serialization/hydration",
+        "Nonfinite entity alias writes reject before changing their canonical owner"
+      ]
+    },
+    {
+      "field": "acceleration",
+      "path": "rigidBody.acceleration",
+      "canonicalDeclaration": "RigidBody2D",
+      "canonicalField": "acceleration",
+      "checks": [
+        "Entity authored aliases update the canonical component and survive serialization/hydration",
+        "Nonfinite entity alias writes reject before changing their canonical owner"
+      ]
+    },
+    {
+      "field": "restitution",
+      "path": "collider.material.restitution",
+      "canonicalDeclaration": "Collider2D",
+      "canonicalField": "material.restitution",
+      "checks": [
+        "Entity authored aliases update the canonical component and survive serialization/hydration",
+        "Nonfinite entity alias writes reject before changing their canonical owner"
+      ]
+    },
+    {
+      "field": "restitutionThreshold",
+      "path": "collider.material.restitutionThreshold",
+      "canonicalDeclaration": "Collider2D",
+      "canonicalField": "material.restitutionThreshold",
+      "checks": [
+        "Entity authored aliases update the canonical component and survive serialization/hydration",
+        "Nonfinite entity alias writes reject before changing their canonical owner"
+      ]
+    },
+    {
+      "field": "staticFriction",
+      "path": "collider.material.staticFriction",
+      "canonicalDeclaration": "Collider2D",
+      "canonicalField": "material.staticFriction",
+      "checks": [
+        "Entity authored aliases update the canonical component and survive serialization/hydration",
+        "Nonfinite entity alias writes reject before changing their canonical owner"
+      ]
+    },
+    {
+      "field": "dynamicFriction",
+      "path": "collider.material.dynamicFriction",
+      "canonicalDeclaration": "Collider2D",
+      "canonicalField": "material.dynamicFriction",
+      "checks": [
+        "Entity authored aliases update the canonical component and survive serialization/hydration",
+        "Nonfinite entity alias writes reject before changing their canonical owner"
+      ]
+    },
+    {
+      "field": "isSensor",
+      "path": "collider.sensor",
+      "canonicalDeclaration": "Collider2D",
+      "canonicalField": "sensor",
+      "checks": [
+        "Entity authored aliases update the canonical component and survive serialization/hydration",
+        "Boolean Entity aliases reject nonboolean values before modifying any component"
+      ]
+    }
+  ],
+  "format": "nova-v26.22-entity-api",
+  "version": 1,
+  "release": "26.22",
+  "regressionOrigin": "26.22",
+  "engineVersion": "26.32.0",
+  "expectedRelease": "26.32",
+  "development": true,
+  "qualifiedRelease": null,
+  "generatedAt": "2026-09-28T18:09:39.317Z",
+  "status": "passed",
+  "scope": "Direct public Entity forwarding, rejection and identity semantics. This does not qualify every raw component assignment or transient solver state.",
+  "checks": [
+    {
+      "name": "Entity authored aliases update the canonical component and survive serialization/hydration",
+      "status": "passed",
+      "covers": [
+        "src/world/Entity.ts#Entity.color",
+        "src/world/Entity.ts#Entity.transparency",
+        "src/world/Entity.ts#Entity.texture",
+        "src/world/Entity.ts#Entity.velocity",
+        "src/world/Entity.ts#Entity.angularVelocity",
+        "src/world/Entity.ts#Entity.linearDamping",
+        "src/world/Entity.ts#Entity.angularDamping",
+        "src/world/Entity.ts#Entity.density",
+        "src/world/Entity.ts#Entity.mass",
+        "src/world/Entity.ts#Entity.autoInertia",
+        "src/world/Entity.ts#Entity.inertia",
+        "src/world/Entity.ts#Entity.gravityScale",
+        "src/world/Entity.ts#Entity.force",
+        "src/world/Entity.ts#Entity.torque",
+        "src/world/Entity.ts#Entity.gravity",
+        "src/world/Entity.ts#Entity.acceleration",
+        "src/world/Entity.ts#Entity.restitution",
+        "src/world/Entity.ts#Entity.restitutionThreshold",
+        "src/world/Entity.ts#Entity.staticFriction",
+        "src/world/Entity.ts#Entity.dynamicFriction",
+        "src/world/Entity.ts#Entity.isSensor"
+      ]
+    },
+    {
+      "name": "Nonfinite entity alias writes reject before changing their canonical owner",
+      "status": "passed",
+      "covers": [
+        "src/world/Entity.ts#Entity.color",
+        "src/world/Entity.ts#Entity.transparency",
+        "src/world/Entity.ts#Entity.velocity",
+        "src/world/Entity.ts#Entity.angularVelocity",
+        "src/world/Entity.ts#Entity.linearDamping",
+        "src/world/Entity.ts#Entity.angularDamping",
+        "src/world/Entity.ts#Entity.density",
+        "src/world/Entity.ts#Entity.mass",
+        "src/world/Entity.ts#Entity.inertia",
+        "src/world/Entity.ts#Entity.gravityScale",
+        "src/world/Entity.ts#Entity.force",
+        "src/world/Entity.ts#Entity.torque",
+        "src/world/Entity.ts#Entity.gravity",
+        "src/world/Entity.ts#Entity.acceleration",
+        "src/world/Entity.ts#Entity.restitution",
+        "src/world/Entity.ts#Entity.restitutionThreshold",
+        "src/world/Entity.ts#Entity.staticFriction",
+        "src/world/Entity.ts#Entity.dynamicFriction"
+      ]
+    },
+    {
+      "name": "Body-mode aliases preserve unrelated modes and layer writes update all retained renderers",
+      "status": "passed",
+      "covers": [
+        "src/world/Entity.ts#Entity.isStatic",
+        "src/world/Entity.ts#Entity.isKinematic",
+        "src/world/Entity.ts#Entity.layer",
+        "src/world/Entity.ts#Entity.spriteRenderer",
+        "src/world/Entity.ts#Entity.textRenderer"
+      ]
+    },
+    {
+      "name": "Removed component records keep identity while live collider replacement and optional accessors stay correct",
+      "status": "passed",
+      "covers": [
+        "src/world/Entity.ts#Entity.components",
+        "src/world/Entity.ts#Entity.addComponent",
+        "src/world/Entity.ts#Entity.getComponent",
+        "src/world/Entity.ts#Entity.getCollider",
+        "src/world/Entity.ts#Entity.hasComponent",
+        "src/world/Entity.ts#Entity.removeComponent",
+        "src/world/Entity.ts#Entity.collider",
+        "src/world/Entity.ts#Entity.transform",
+        "src/world/Entity.ts#Entity.renderer",
+        "src/world/Entity.ts#Entity.rigidBody",
+        "src/world/Entity.ts#Entity.camera2D",
+        "src/world/Entity.ts#Entity.script2D"
+      ]
+    },
+    {
+      "name": "Boolean Entity aliases reject nonboolean values before modifying any component",
+      "status": "passed",
+      "covers": [
+        "src/world/Entity.ts#Entity.autoInertia",
+        "src/world/Entity.ts#Entity.isSensor",
+        "src/world/Entity.ts#Entity.isStatic",
+        "src/world/Entity.ts#Entity.isKinematic"
+      ]
+    },
+    {
+      "name": "Triangle vertices reject malformed and nonfinite coordinates before either component changes",
+      "status": "passed",
+      "covers": [
+        "src/world/TriangleEntity.ts#TriangleEntity.vertices"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,1247 @@
+{
+  "format": "nova-v26.35-hierarchy-compact-user-audit",
+  "version": 1,
+  "release": "26.35",
+  "regressionOrigin": "26.35",
+  "expectedRelease": "26.35",
+  "development": false,
+  "qualifiedRelease": null,
+  "generatedAt": "2026-10-02T15:11:37.755Z",
+  "status": "passed",
+  "checks": [
+    {
+      "name": "default-width 100% hierarchy names search and header actions remain readable",
+      "status": "passed"
+    },
+    {
+      "name": "actual settings 200% keeps names input and fixed breadcrumb geometry",
+      "status": "passed"
+    },
+    {
+      "name": "shared menus retain semantics across direct trigger switching and Escape outside Tab workspace cleanup",
+      "status": "passed"
+    },
+    {
+      "name": "compact pin visibility lock enabled use retained actions and authored Undo Redo",
+      "status": "passed"
+    },
+    {
+      "name": "native original row drag starts without selection geometry jump and Escape cancels without authored change",
+      "status": "passed"
+    },
+    {
+      "name": "minimum 1024 by 640 at 200% keeps compact hierarchy names and search usable",
+      "status": "passed"
+    },
+    {
+      "name": "public safe recovery read-only path disables authored row scene and create actions while retaining pin",
+      "status": "passed"
+    }
+  ],
+  "observations": [
+    {
+      "name": "scope",
+      "scope": "Build8 development rebuild production bundle. Existing long-name project opened through the normal file chooser. Actions, keyboard and native HTML drag use actual Edge input. Recovery guard uses the public safe-recovery source storage contract and public read-only URL, with the same validated project as a controlled recovery fixture; no engine/editor module or private state writes."
+    },
+    {
+      "name": "actual-hierarchy-geometry",
+      "data": {
+        "scale": 100,
+        "host": {
+          "x": 36,
+          "y": 102,
+          "width": 235,
+          "height": 769,
+          "top": 102,
+          "right": 271,
+          "bottom": 871,
+          "left": 36
+        },
+        "font": 13,
+        "search": {
+          "x": 40,
+          "y": 206,
+          "width": 195,
+          "height": 28,
+          "top": 206,
+          "right": 235,
+          "bottom": 234,
+          "left": 40
+        },
+        "list": {
+          "top": 276,
+          "clientWidth": 225,
+          "scrollWidth": 225
+        },
+        "rows": [
+          {
+            "name": "Motion parent with a deliberately long hierarchy breadcrumb label to preserve navigation",
+            "width": 151,
+            "textWidth": 151,
+            "title": "Motion parent with a deliberately long hierarchy breadcrumb label to preserve navigation (1) — Double-click to rename",
+            "height": 24
+          },
+          {
+            "name": "Motion descendant with another deliberately long breadcrumb label for horizontal scrolling",
+            "width": 165,
+            "textWidth": 165,
+            "title": "Motion descendant with another deliberately long breadcrumb label for horizontal scrolling (4) — Double-click to rename",
+            "height": 24
+          },
+          {
+            "name": "Motion child",
+            "width": 177,
+            "textWidth": 177,
+            "title": "Motion child (2) — Double-click to rename",
+            "height": 24
+          },
+          {
+            "name": "Motion peer",
+            "width": 177,
+            "textWidth": 177,
+            "title": "Motion peer (3) — Double-click to rename",
+            "height": 24
+          },
+          {
+            "name": "Main Camera",
+            "width": 177,
+            "textWidth": 177,
+            "title": "Main Camera (5) — Double-click to rename",
+            "height": 24
+          },
+          {
+            "name": "Checkpoint 1",
+            "width": 177,
+            "textWidth": 177,
+            "title": "Checkpoint 1 (6) — Double-click to rename",
+            "height": 24
+          },
+          {
+            "name": "Checkpoint 2",
+            "width": 177,
+            "textWidth": 177,
+            "title": "Checkpoint 2 (7) — Double-click to rename",
+            "height": 24
+          },
+          {
+            "name": "Checkpoint 3",
+            "width": 177,
+            "textWidth": 177,
+            "title": "Checkpoint 3 (8) — Double-click to rename",
+            "height": 24
+          },
+          {
+            "name": "Checkpoint 4",
+            "width": 177,
+            "textWidth": 177,
+            "title": "Checkpoint 4 (9) — Double-click to rename",
+            "height": 24
+          },
+          {
+            "name": "Checkpoint 5",
+            "width": 177,
+            "textWidth": 177,
+            "title": "Checkpoint 5 (10) — Double-click to rename",
+            "height": 24
+          },
+          {
+            "name": "Checkpoint 6",
+            "width": 177,
+            "textWidth": 177,
+            "title": "Checkpoint 6 (11) — Double-click to rename",
+            "height": 24
+          },
+          {
+            "name": "Player",
+            "width": 177,
+            "textWidth": 177,
+            "title": "Player (12) — Double-click to rename",
+            "height": 24
+          },
+          {
+            "name": "HUD Canvas",
+            "width": 151,
+            "textWidth": 151,
+            "title": "HUD Canvas (13) — Double-click to rename",
+            "height": 24
+          },
+          {
+            "name": "Scene Title",
+            "width": 165,
+            "textWidth": 165,
+            "title": "Scene Title (14) — Double-click to rename",
+            "height": 24
+          },
+          {
+            "name": "Motion row 000",
+            "width": 177,
+            "textWidth": 177,
+            "title": "Motion row 000 (15) — Double-click to rename",
+            "height": 24
+          },
+          {
+            "name": "Motion row 001",
+            "width": 177,
+            "textWidth": 177,
+            "title": "Motion row 001 (16) — Double-click to rename",
+            "height": 24
+          },
+          {
+            "name": "Motion row 002",
+            "width": 177,
+            "textWidth": 177,
+            "title": "Motion row 002 (17) — Double-click to rename",
+            "height": 24
+          },
+          {
+            "name": "Motion row 003",
+            "width": 177,
+            "textWidth": 177,
+            "title": "Motion row 003 (18) — Double-click to rename",
+            "height": 24
+          },
+          {
+            "name": "Motion row 004",
+            "width": 177,
+            "textWidth": 177,
+            "title": "Motion row 004 (19) — Double-click to rename",
+            "height": 24
+          },
+          {
+            "name": "Motion row 005",
+            "width": 177,
+            "textWidth": 177,
+            "title": "Motion row 005 (20) — Double-click to rename",
+            "height": 24
+          },
+          {
+            "name": "Motion row 006",
+            "width": 177,
+            "textWidth": 177,
+            "title": "Motion row 006 (21) — Double-click to rename",
+            "height": 24
+          },
+          {
+            "name": "Motion row 007",
+            "width": 177,
+            "textWidth": 177,
+            "title": "Motion row 007 (22) — Double-click to rename",
+            "height": 24
+          },
+          {
+            "name": "Motion row 008",
+            "width": 177,
+            "textWidth": 177,
+            "title": "Motion row 008 (23) — Double-click to rename",
+            "height": 24
+          },
+          {
+            "name": "Motion row 009",
+            "width": 177,
+            "textWidth": 177,
+            "title": "Motion row 009 (24) — Double-click to rename",
+            "height": 24
+          },
+          {
+            "name": "Motion row 010",
+            "width": 177,
+            "textWidth": 177,
+            "title": "Motion row 010 (25) — Double-click to rename",
+            "height": 24
+          },
+          {
+            "name": "Motion row 011",
+            "width": 177,
+            "textWidth": 177,
+            "title": "Motion row 011 (26) — Double-click to rename",
+            "height": 24
+          },
+          {
+            "name": "Motion row 012",
+            "width": 177,
+            "textWidth": 177,
+            "title": "Motion row 012 (27) — Double-click to rename",
+            "height": 24
+          },
+          {
+            "name": "Motion row 013",
+            "width": 177,
+            "textWidth": 177,
+            "title": "Motion row 013 (28) — Double-click to rename",
+            "height": 24
+          },
+          {
+            "name": "Motion row 014",
+            "width": 177,
+            "textWidth": 177,
+            "title": "Motion row 014 (29) — Double-click to rename",
+            "height": 24
+          },
+          {
+            "name": "Motion row 015",
+            "width": 177,
+            "textWidth": 177,
+            "title": "Motion row 015 (30) — Double-click to rename",
+            "height": 24
+          },
+          {
+            "name": "Motion row 016",
+            "width": 177,
+            "textWidth": 177,
+            "title": "Motion row 016 (31) — Double-click to rename",
+            "height": 24
+          },
+          {
+            "name": "Motion row 017",
+            "width": 177,
+            "textWidth": 177,
+            "title": "Motion row 017 (32) — Double-click to rename",
+            "height": 24
+          },
+          {
+            "name": "Motion row 018",
+            "width": 177,
+            "textWidth": 177,
+            "title": "Motion row 018 (33) — Double-click to rename",
+            "height": 24
+          },
+          {
+            "name": "Motion row 019",
+            "width": 177,
+            "textWidth": 177,
+            "title": "Motion row 019 (34) — Double-click to rename",
+            "height": 24
+          },
+          {
+            "name": "Motion row 020",
+            "width": 177,
+            "textWidth": 177,
+            "title": "Motion row 020 (35) — Double-click to rename",
+            "height": 24
+          },
+          {
+            "name": "Motion row 021",
+            "width": 177,
+            "textWidth": 177,
+            "title": "Motion row 021 (36) — Double-click to rename",
+            "height": 24
+          },
+          {
+            "name": "Motion row 022",
+            "width": 177,
+            "textWidth": 177,
+            "title": "Motion row 022 (37) — Double-click to rename",
+            "height": 24
+          }
+        ],
+        "headers": [
+          {
+            "rect": {
+              "x": 36,
+              "y": 102,
+              "width": 235,
+              "height": 39,
+              "top": 102,
+              "right": 271,
+              "bottom": 141,
+              "left": 36
+            },
+            "buttons": [
+              {
+                "x": 197,
+                "y": 106,
+                "width": 30,
+                "height": 30,
+                "top": 106,
+                "right": 227,
+                "bottom": 136,
+                "left": 197
+              },
+              {
+                "x": 231,
+                "y": 107,
+                "width": 28,
+                "height": 28,
+                "top": 107,
+                "right": 259,
+                "bottom": 135,
+                "left": 231
+              }
+            ]
+          },
+          {
+            "rect": {
+              "x": 36,
+              "y": 174,
+              "width": 235,
+              "height": 65,
+              "top": 174,
+              "right": 271,
+              "bottom": 239,
+              "left": 36
+            },
+            "buttons": [
+              {
+                "x": 239,
+                "y": 178,
+                "width": 28,
+                "height": 28,
+                "top": 178,
+                "right": 267,
+                "bottom": 206,
+                "left": 239
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "actual-hierarchy-geometry",
+      "data": {
+        "scale": 200,
+        "host": {
+          "x": 64,
+          "y": 194,
+          "width": 235,
+          "height": 649,
+          "top": 194,
+          "right": 299,
+          "bottom": 843,
+          "left": 64
+        },
+        "font": 26,
+        "search": {
+          "x": 68,
+          "y": 383,
+          "width": 167,
+          "height": 56,
+          "top": 383,
+          "right": 235,
+          "bottom": 439,
+          "left": 68
+        },
+        "list": {
+          "top": 509,
+          "clientWidth": 225,
+          "scrollWidth": 225
+        },
+        "rows": [
+          {
+            "name": "Motion parent with a deliberately long hierarchy breadcrumb label to preserve navigation",
+            "width": 87,
+            "textWidth": 87,
+            "title": "Motion parent with a deliberately long hierarchy breadcrumb label to preserve navigation (1) — Double-click to rename",
+            "height": 48
+          },
+          {
+            "name": "Motion descendant with another deliberately long breadcrumb label for horizontal scrolling",
+            "width": 125,
+            "textWidth": 125,
+            "title": "Motion descendant with another deliberately long breadcrumb label for horizontal scrolling (4) — Double-click to rename",
+            "height": 48
+          },
+          {
+            "name": "Motion child",
+            "width": 137,
+            "textWidth": 137,
+            "title": "Motion child (2) — Double-click to rename",
+            "height": 48
+          },
+          {
+            "name": "Motion peer",
+            "width": 137,
+            "textWidth": 137,
+            "title": "Motion peer (3) — Double-click to rename",
+            "height": 48
+          },
+          {
+            "name": "Main Camera",
+            "width": 137,
+            "textWidth": 137,
+            "title": "Main Camera (5) — Double-click to rename",
+            "height": 48
+          },
+          {
+            "name": "Checkpoint 1",
+            "width": 137,
+            "textWidth": 137,
+            "title": "Checkpoint 1 (6) — Double-click to rename",
+            "height": 48
+          },
+          {
+            "name": "Checkpoint 2",
+            "width": 137,
+            "textWidth": 137,
+            "title": "Checkpoint 2 (7) — Double-click to rename",
+            "height": 48
+          },
+          {
+            "name": "Checkpoint 3",
+            "width": 137,
+            "textWidth": 137,
+            "title": "Checkpoint 3 (8) — Double-click to rename",
+            "height": 48
+          },
+          {
+            "name": "Checkpoint 4",
+            "width": 137,
+            "textWidth": 137,
+            "title": "Checkpoint 4 (9) — Double-click to rename",
+            "height": 48
+          },
+          {
+            "name": "Checkpoint 5",
+            "width": 137,
+            "textWidth": 137,
+            "title": "Checkpoint 5 (10) — Double-click to rename",
+            "height": 48
+          },
+          {
+            "name": "Checkpoint 6",
+            "width": 137,
+            "textWidth": 137,
+            "title": "Checkpoint 6 (11) — Double-click to rename",
+            "height": 48
+          },
+          {
+            "name": "Player",
+            "width": 137,
+            "textWidth": 137,
+            "title": "Player (12) — Double-click to rename",
+            "height": 48
+          },
+          {
+            "name": "HUD Canvas",
+            "width": 87,
+            "textWidth": 87,
+            "title": "HUD Canvas (13) — Double-click to rename",
+            "height": 48
+          },
+          {
+            "name": "Scene Title",
+            "width": 125,
+            "textWidth": 125,
+            "title": "Scene Title (14) — Double-click to rename",
+            "height": 48
+          },
+          {
+            "name": "Motion row 000",
+            "width": 137,
+            "textWidth": 137,
+            "title": "Motion row 000 (15) — Double-click to rename",
+            "height": 48
+          },
+          {
+            "name": "Motion row 001",
+            "width": 137,
+            "textWidth": 137,
+            "title": "Motion row 001 (16) — Double-click to rename",
+            "height": 48
+          },
+          {
+            "name": "Motion row 002",
+            "width": 137,
+            "textWidth": 137,
+            "title": "Motion row 002 (17) — Double-click to rename",
+            "height": 48
+          },
+          {
+            "name": "Motion row 003",
+            "width": 137,
+            "textWidth": 137,
+            "title": "Motion row 003 (18) — Double-click to rename",
+            "height": 48
+          },
+          {
+            "name": "Motion row 004",
+            "width": 137,
+            "textWidth": 137,
+            "title": "Motion row 004 (19) — Double-click to rename",
+            "height": 48
+          }
+        ],
+        "headers": [
+          {
+            "rect": {
+              "x": 64,
+              "y": 194,
+              "width": 235,
+              "height": 72,
+              "top": 194,
+              "right": 299,
+              "bottom": 266,
+              "left": 64
+            },
+            "buttons": [
+              {
+                "x": 167,
+                "y": 199.5,
+                "width": 60,
+                "height": 60,
+                "top": 199.5,
+                "right": 227,
+                "bottom": 259.5,
+                "left": 167
+              },
+              {
+                "x": 231,
+                "y": 201.5,
+                "width": 56,
+                "height": 56,
+                "top": 201.5,
+                "right": 287,
+                "bottom": 257.5,
+                "left": 231
+              }
+            ]
+          },
+          {
+            "rect": {
+              "x": 64,
+              "y": 323,
+              "width": 235,
+              "height": 121,
+              "top": 323,
+              "right": 299,
+              "bottom": 444,
+              "left": 64
+            },
+            "buttons": [
+              {
+                "x": 239,
+                "y": 327,
+                "width": 56,
+                "height": 56,
+                "top": 327,
+                "right": 295,
+                "bottom": 383,
+                "left": 239
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "actual-hierarchy-geometry",
+      "data": {
+        "scale": 200,
+        "host": {
+          "x": 64,
+          "y": 194,
+          "width": 235,
+          "height": 649,
+          "top": 194,
+          "right": 299,
+          "bottom": 843,
+          "left": 64
+        },
+        "font": 26,
+        "search": {
+          "x": 68,
+          "y": 383,
+          "width": 167,
+          "height": 56,
+          "top": 383,
+          "right": 235,
+          "bottom": 439,
+          "left": 68
+        },
+        "list": {
+          "top": 509,
+          "clientWidth": 225,
+          "scrollWidth": 225
+        },
+        "rows": [
+          {
+            "name": "Motion parent with a deliberately long hierarchy breadcrumb label to preserve navigation",
+            "width": 87,
+            "textWidth": 87,
+            "title": "Motion parent with a deliberately long hierarchy breadcrumb label to preserve navigation (1) — Double-click to rename",
+            "height": 48
+          },
+          {
+            "name": "Motion descendant with another deliberately long breadcrumb label for horizontal scrolling",
+            "width": 125,
+            "textWidth": 125,
+            "title": "Motion descendant with another deliberately long breadcrumb label for horizontal scrolling (4) — Double-click to rename",
+            "height": 48
+          },
+          {
+            "name": "Motion child",
+            "width": 137,
+            "textWidth": 137,
+            "title": "Motion child (2) — Double-click to rename",
+            "height": 48
+          },
+          {
+            "name": "Motion peer",
+            "width": 137,
+            "textWidth": 137,
+            "title": "Motion peer (3) — Double-click to rename",
+            "height": 48
+          },
+          {
+            "name": "Main Camera",
+            "width": 137,
+            "textWidth": 137,
+            "title": "Main Camera (5) — Double-click to rename",
+            "height": 48
+          },
+          {
+            "name": "Checkpoint 1",
+            "width": 137,
+            "textWidth": 137,
+            "title": "Checkpoint 1 (6) — Double-click to rename",
+            "height": 48
+          },
+          {
+            "name": "Checkpoint 2",
+            "width": 137,
+            "textWidth": 137,
+            "title": "Checkpoint 2 (7) — Double-click to rename",
+            "height": 48
+          },
+          {
+            "name": "Checkpoint 3",
+            "width": 137,
+            "textWidth": 137,
+            "title": "Checkpoint 3 (8) — Double-click to rename",
+            "height": 48
+          },
+          {
+            "name": "Checkpoint 4",
+            "width": 137,
+            "textWidth": 137,
+            "title": "Checkpoint 4 (9) — Double-click to rename",
+            "height": 48
+          },
+          {
+            "name": "Checkpoint 5",
+            "width": 137,
+            "textWidth": 137,
+            "title": "Checkpoint 5 (10) — Double-click to rename",
+            "height": 48
+          },
+          {
+            "name": "Checkpoint 6",
+            "width": 137,
+            "textWidth": 137,
+            "title": "Checkpoint 6 (11) — Double-click to rename",
+            "height": 48
+          },
+          {
+            "name": "Player",
+            "width": 137,
+            "textWidth": 137,
+            "title": "Player (12) — Double-click to rename",
+            "height": 48
+          },
+          {
+            "name": "HUD Canvas",
+            "width": 87,
+            "textWidth": 87,
+            "title": "HUD Canvas (13) — Double-click to rename",
+            "height": 48
+          },
+          {
+            "name": "Scene Title",
+            "width": 125,
+            "textWidth": 125,
+            "title": "Scene Title (14) — Double-click to rename",
+            "height": 48
+          },
+          {
+            "name": "Motion row 000",
+            "width": 137,
+            "textWidth": 137,
+            "title": "Motion row 000 (15) — Double-click to rename",
+            "height": 48
+          },
+          {
+            "name": "Motion row 001",
+            "width": 137,
+            "textWidth": 137,
+            "title": "Motion row 001 (16) — Double-click to rename",
+            "height": 48
+          },
+          {
+            "name": "Motion row 002",
+            "width": 137,
+            "textWidth": 137,
+            "title": "Motion row 002 (17) — Double-click to rename",
+            "height": 48
+          },
+          {
+            "name": "Motion row 003",
+            "width": 137,
+            "textWidth": 137,
+            "title": "Motion row 003 (18) — Double-click to rename",
+            "height": 48
+          },
+          {
+            "name": "Motion row 004",
+            "width": 137,
+            "textWidth": 137,
+            "title": "Motion row 004 (19) — Double-click to rename",
+            "height": 48
+          }
+        ],
+        "headers": [
+          {
+            "rect": {
+              "x": 64,
+              "y": 194,
+              "width": 235,
+              "height": 72,
+              "top": 194,
+              "right": 299,
+              "bottom": 266,
+              "left": 64
+            },
+            "buttons": [
+              {
+                "x": 167,
+                "y": 199.5,
+                "width": 60,
+                "height": 60,
+                "top": 199.5,
+                "right": 227,
+                "bottom": 259.5,
+                "left": 167
+              },
+              {
+                "x": 231,
+                "y": 201.5,
+                "width": 56,
+                "height": 56,
+                "top": 201.5,
+                "right": 287,
+                "bottom": 257.5,
+                "left": 231
+              }
+            ]
+          },
+          {
+            "rect": {
+              "x": 64,
+              "y": 323,
+              "width": 235,
+              "height": 121,
+              "top": 323,
+              "right": 299,
+              "bottom": 444,
+              "left": 64
+            },
+            "buttons": [
+              {
+                "x": 239,
+                "y": 327,
+                "width": 56,
+                "height": 56,
+                "top": 327,
+                "right": 295,
+                "bottom": 383,
+                "left": 239
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "active-menu-switch",
+      "selector": ".scene-overflow",
+      "value": {
+        "buttons": [
+          {
+            "role": "menuitem",
+            "tabIndex": -1,
+            "disabled": false
+          },
+          {
+            "role": "menuitem",
+            "tabIndex": -1,
+            "disabled": false
+          }
+        ],
+        "focused": true,
+        "rect": {
+          "x": 231,
+          "y": 257.5,
+          "width": 392,
+          "height": 126,
+          "top": 257.5,
+          "right": 623,
+          "bottom": 383.5,
+          "left": 231
+        }
+      }
+    },
+    {
+      "name": "active-menu-switch",
+      "selector": ".hierarchy-overflow",
+      "value": {
+        "buttons": [
+          {
+            "role": "menuitem",
+            "tabIndex": -1,
+            "disabled": false
+          },
+          {
+            "role": null,
+            "tabIndex": 0,
+            "disabled": true
+          },
+          {
+            "role": "menuitem",
+            "tabIndex": -1,
+            "disabled": false
+          }
+        ],
+        "focused": true,
+        "rect": {
+          "x": 239,
+          "y": 383,
+          "width": 392,
+          "height": 182,
+          "top": 383,
+          "right": 631,
+          "bottom": 565,
+          "left": 239
+        }
+      }
+    },
+    {
+      "name": "active-menu-switch",
+      "selector": ".entity-item .row-overflow",
+      "value": {
+        "buttons": [
+          {
+            "role": "menuitem",
+            "tabIndex": -1,
+            "disabled": false
+          },
+          {
+            "role": "menuitem",
+            "tabIndex": -1,
+            "disabled": false
+          },
+          {
+            "role": "menuitem",
+            "tabIndex": -1,
+            "disabled": false
+          },
+          {
+            "role": "menuitem",
+            "tabIndex": -1,
+            "disabled": false
+          }
+        ],
+        "focused": true,
+        "rect": {
+          "x": 237,
+          "y": 471.359375,
+          "width": 392,
+          "height": 420.640625,
+          "top": 471.359375,
+          "right": 629,
+          "bottom": 892,
+          "left": 237
+        }
+      }
+    },
+    {
+      "name": "native-source-stability-200",
+      "evidence": {
+        "down": {
+          "connected": true,
+          "sameSource": true,
+          "rect": {
+            "x": 64,
+            "y": 658,
+            "width": 225,
+            "height": 48,
+            "top": 658,
+            "right": 289,
+            "bottom": 706,
+            "left": 64
+          }
+        },
+        "begin": {
+          "connected": true,
+          "sameSource": true,
+          "rect": {
+            "x": 64,
+            "y": 658,
+            "width": 225,
+            "height": 48,
+            "top": 658,
+            "right": 289,
+            "bottom": 706,
+            "left": 64
+          }
+        },
+        "connected": true,
+        "after": {
+          "x": 64,
+          "y": 658,
+          "width": 225,
+          "height": 48,
+          "top": 658,
+          "right": 289,
+          "bottom": 706,
+          "left": 64
+        }
+      }
+    },
+    {
+      "name": "actual-project-download",
+      "file": "E:\\Nova_A\\.cache\\phase3-hierarchy-compact-build8\\v26.17-hierarchy-compact-build8.nova",
+      "bytes": 2901914
+    },
+    {
+      "name": "actual-hierarchy-geometry",
+      "data": {
+        "scale": 200,
+        "host": {
+          "x": 64,
+          "y": 194,
+          "width": 235,
+          "height": 389,
+          "top": 194,
+          "right": 299,
+          "bottom": 583,
+          "left": 64
+        },
+        "font": 26,
+        "search": {
+          "x": 68,
+          "y": 383,
+          "width": 167,
+          "height": 56,
+          "top": 383,
+          "right": 235,
+          "bottom": 439,
+          "left": 68
+        },
+        "list": {
+          "top": 509,
+          "clientWidth": 225,
+          "scrollWidth": 225
+        },
+        "rows": [
+          {
+            "name": "Motion parent with a deliberately long hierarchy breadcrumb label to preserve navigation",
+            "width": 87,
+            "textWidth": 87,
+            "title": "Motion parent with a deliberately long hierarchy breadcrumb label to preserve navigation (1) — Double-click to rename",
+            "height": 48
+          },
+          {
+            "name": "Motion descendant with another deliberately long breadcrumb label for horizontal scrolling",
+            "width": 125,
+            "textWidth": 125,
+            "title": "Motion descendant with another deliberately long breadcrumb label for horizontal scrolling (4) — Double-click to rename",
+            "height": 48
+          },
+          {
+            "name": "Motion child",
+            "width": 137,
+            "textWidth": 137,
+            "title": "Motion child (2) — Double-click to rename",
+            "height": 48
+          },
+          {
+            "name": "Motion peer",
+            "width": 137,
+            "textWidth": 137,
+            "title": "Motion peer (3) — Double-click to rename",
+            "height": 48
+          },
+          {
+            "name": "Main Camera",
+            "width": 137,
+            "textWidth": 137,
+            "title": "Main Camera (5) — Double-click to rename",
+            "height": 48
+          },
+          {
+            "name": "Checkpoint 1",
+            "width": 137,
+            "textWidth": 137,
+            "title": "Checkpoint 1 (6) — Double-click to rename",
+            "height": 48
+          },
+          {
+            "name": "Checkpoint 2",
+            "width": 137,
+            "textWidth": 137,
+            "title": "Checkpoint 2 (7) — Double-click to rename",
+            "height": 48
+          },
+          {
+            "name": "Checkpoint 3",
+            "width": 137,
+            "textWidth": 137,
+            "title": "Checkpoint 3 (8) — Double-click to rename",
+            "height": 48
+          },
+          {
+            "name": "Checkpoint 4",
+            "width": 137,
+            "textWidth": 137,
+            "title": "Checkpoint 4 (9) — Double-click to rename",
+            "height": 48
+          },
+          {
+            "name": "Checkpoint 5",
+            "width": 137,
+            "textWidth": 137,
+            "title": "Checkpoint 5 (10) — Double-click to rename",
+            "height": 48
+          },
+          {
+            "name": "Checkpoint 6",
+            "width": 137,
+            "textWidth": 137,
+            "title": "Checkpoint 6 (11) — Double-click to rename",
+            "height": 48
+          },
+          {
+            "name": "Player",
+            "width": 137,
+            "textWidth": 137,
+            "title": "Player (12) — Double-click to rename",
+            "height": 48
+          },
+          {
+            "name": "HUD Canvas",
+            "width": 87,
+            "textWidth": 87,
+            "title": "HUD Canvas (13) — Double-click to rename",
+            "height": 48
+          },
+          {
+            "name": "Scene Title",
+            "width": 125,
+            "textWidth": 125,
+            "title": "Scene Title (14) — Double-click to rename",
+            "height": 48
+          }
+        ],
+        "headers": [
+          {
+            "rect": {
+              "x": 64,
+              "y": 194,
+              "width": 235,
+              "height": 72,
+              "top": 194,
+              "right": 299,
+              "bottom": 266,
+              "left": 64
+            },
+            "buttons": [
+              {
+                "x": 167,
+                "y": 199.5,
+                "width": 60,
+                "height": 60,
+                "top": 199.5,
+                "right": 227,
+                "bottom": 259.5,
+                "left": 167
+              },
+              {
+                "x": 231,
+                "y": 201.5,
+                "width": 56,
+                "height": 56,
+                "top": 201.5,
+                "right": 287,
+                "bottom": 257.5,
+                "left": 231
+              }
+            ]
+          },
+          {
+            "rect": {
+              "x": 64,
+              "y": 323,
+              "width": 235,
+              "height": 121,
+              "top": 323,
+              "right": 299,
+              "bottom": 444,
+              "left": 64
+            },
+            "buttons": [
+              {
+                "x": 239,
+                "y": 327,
+                "width": 56,
+                "height": 56,
+                "top": 327,
+                "right": 295,
+                "bottom": 383,
+                "left": 239
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "public-recovery-read-only-guard",
+      "state": {
+        "pin": false,
+        "authored": [
+          true,
+          true,
+          true
+        ],
+        "rows": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "url": "?safe-mode=1&safe-layout=1&read-only=1"
+      }
+    }
+  ],
+  "captures": [
+    "v26.35-hierarchy-compact-default-100.png",
+    "v26.35-hierarchy-compact-default-200.png",
+    "v26.35-hierarchy-compact-object-actions-200.png",
+    "v26.35-hierarchy-compact-native-drag-200.png",
+    "v26.35-hierarchy-compact-minimum-200.png",
+    "v26.35-hierarchy-compact-read-only-object-actions.png"
+  ],
+  "consoleErrors": [],
+  "browser": {
+    "protocolVersion": "1.3",
+    "product": "Edg/147.0.3912.72",
+    "revision": "@d4380ba2b9dc3452fbccdc737e69d7f67a09122c",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/147.0.0.0 Safari/537.36 Edg/147.0.0.0",
+    "jsVersion": "14.7.25.7"
+  },
+  "commandTimeoutMs": 30000,
+  "scope": "Development rebuild production bundle; not published-release qualification. Recorded real Edge input and DOM observations against production dist. Headless software rendering and download/file-input fallback; physical assistive technology and native OS picker behavior are not measured."
+}

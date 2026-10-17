@@ -1,0 +1,48 @@
+{
+  "generatedAt": "2026-10-04T12:03:10.659Z",
+  "status": "documentation-updated-development-gui-passed-finalqualification-pending",
+  "edits": [
+    {
+      "file": "docs/ui/MOTION_SYSTEM_SPEC.md",
+      "reason": "Replace tuning placeholders with actual presets/policies/production owners, precision and native-OS exclusions, interruption/modal/disposal semantics and accurately bounded evidence",
+      "consequence": "Documentation only; does not change production UI, game data or test outcomes; pending verification remains explicit",
+      "beforeSha256": "c779b4c8742cd5fee811533721d84f1cb1ebc9c253160e89bfb94107264671a7",
+      "afterSha256": "cfd1fd604953692ab2f53810e7e9a1a74d75dc003e485e0bfdae613d9d225d57"
+    },
+    {
+      "file": "docs/ui/UI_MOTION_IMPLEMENTATION_PLAN.md",
+      "reason": "Record implemented motion migration and label repairs while keeping final GUI/full-route/frozen-source qualification and release explicitly pending",
+      "consequence": "Documentation only; does not change production UI, game data or test outcomes; pending verification remains explicit",
+      "beforeSha256": "ffec06d88da8bffaa98a7f49f5709c500b8bf22180fd9775bb0aa29dd19f038f",
+      "afterSha256": "dcda6905c05b6683515e037df5e9137ab114b02e2ca466c0e5420834e845507c"
+    },
+    {
+      "file": "docs/ui/MOTION_QA_CHECKLIST.md",
+      "reason": "Separate recorded 28-test logic/host evidence and implemented ownership from pending real-browser, source-bound and external acceptance",
+      "consequence": "Documentation only; does not change production UI, game data or test outcomes; pending verification remains explicit",
+      "beforeSha256": "9054ea34c1bfa80e4c619523f63e1730b24215d5b58e386073a4dbfb054d8efb",
+      "afterSha256": "a1b7555dac23927d6d5da0a7805bcc92624c2a05fb78826a1eee3f4a26a0290c"
+    },
+    {
+      "file": "docs/ui/MOTION_SYSTEM_SPEC.md",
+      "reason": "Reconcile newly reported development GUI 22/22 and timing/capture evidence; retain running complete-route audit and pending frozen native/Web qualification",
+      "consequence": "Documentation only; development results are acknowledged without asserting final frozen-source, physical GPU/AT or installer certification",
+      "beforeSha256": "cfd1fd604953692ab2f53810e7e9a1a74d75dc003e485e0bfdae613d9d225d57",
+      "afterSha256": "e7f2186b7464a6a9c0e5467872ea2930a528d9c605942be77ed5b7905e84dd1a"
+    },
+    {
+      "file": "docs/ui/UI_MOTION_IMPLEMENTATION_PLAN.md",
+      "reason": "Reconcile newly reported development GUI 22/22 and timing/capture evidence; retain running complete-route audit and pending frozen native/Web qualification",
+      "consequence": "Documentation only; development results are acknowledged without asserting final frozen-source, physical GPU/AT or installer certification",
+      "beforeSha256": "dcda6905c05b6683515e037df5e9137ab114b02e2ca466c0e5420834e845507c",
+      "afterSha256": "68331a7d2398fda28857d9e32ab19321d11783f307cfa8b6308abd0142f89679"
+    },
+    {
+      "file": "docs/ui/MOTION_QA_CHECKLIST.md",
+      "reason": "Reconcile newly reported development GUI 22/22 and timing/capture evidence; retain running complete-route audit and pending frozen native/Web qualification",
+      "consequence": "Documentation only; development results are acknowledged without asserting final frozen-source, physical GPU/AT or installer certification",
+      "beforeSha256": "a1b7555dac23927d6d5da0a7805bcc92624c2a05fb78826a1eee3f4a26a0290c",
+      "afterSha256": "87fd6068f05fcf5653b8663763db920be6cd30628fee43278d649d5e41bec8a4"
+    }
+  ]
+}

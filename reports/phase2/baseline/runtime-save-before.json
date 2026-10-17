@@ -1,0 +1,50 @@
+{
+  "engineVersion": "26.32.0",
+  "status": "failed",
+  "scope": "Real production modules with failure-injected in-memory Web Storage; not browser storage or native qualification.",
+  "checks": [
+    {
+      "name": "Structured save survives a fresh load with checksum verification",
+      "status": "passed"
+    },
+    {
+      "name": "Verified commit remains successful when temporary cleanup is denied",
+      "status": "failed",
+      "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\nfalse !== true\n"
+    },
+    {
+      "name": "Valid primary load does not become corruption when cleanup is denied",
+      "status": "failed",
+      "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\nfalse !== true\n"
+    },
+    {
+      "name": "Editing and snapshotting a selected non-default slot preserves its identity",
+      "status": "failed",
+      "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n'slot1' !== 'slot2'\n"
+    },
+    {
+      "name": "Custom serializer round-trip retains its namespace through normalization",
+      "status": "failed",
+      "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:\n+ actual - expected\n\n+ undefined\n- {\n-   coins: 7\n- }\n"
+    },
+    {
+      "name": "Interrupted primary write preserves the previous slot and supports explicit recovery",
+      "status": "passed"
+    },
+    {
+      "name": "Corrupt primary recovers the prior committed backup explicitly",
+      "status": "passed"
+    },
+    {
+      "name": "Ordered schema migration renames and supplies defaults on load",
+      "status": "passed"
+    },
+    {
+      "name": "Cancelled async save writes no persistent keys and releases busy state",
+      "status": "passed"
+    }
+  ],
+  "sourceHashes": {
+    "src/runtime/saveGame.ts": "8d793382750486cf55fc28be3f8ea1106b5a7dfc9c652f1e81206f61e4d05949"
+  }
+}

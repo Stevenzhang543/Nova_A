@@ -1,0 +1,65 @@
+# Nova_A 26.26 / 26.26.0 — 编辑清单
+
+Files changed/added relative to the released 26.25 frozen snapshot (not Git HEAD). This deterministic path-level manifest preserves earlier uncommitted changes and describes every source path changed for this release. Generated binaries, screenshots, logs and release archives are indexed separately by release evidence and SHA256SUMS.txt.
+
+- `Cargo.lock` — 同步本版机器版本 26.26.0 与公开版本 26.26，保持项目 schema 29。
+- `Cargo.toml` — 同步本版机器版本 26.26.0 与公开版本 26.26，保持项目 schema 29。
+- `README.md` — 更新当前开发版本和本版发布文档入口。
+- `crates/nova_format/src/lib.rs` — 同步本版机器版本 26.26.0 与公开版本 26.26，保持项目 schema 29。
+- `docs/EDIT_LEDGER_26_26.md` — 逐文件记录相对 26.25 冻结源码的本版修改。
+- `docs/IMPLEMENTATION_TRACKER_26_26.md` — 记录本版义务、风险范围、基线和外部资格限制。
+- `docs/PANEL_INVENTORY_26_26.md` — 记录全部 Vue 面板的状态、宽度、滚动、键盘及缺陷归属。
+- `docs/QUALIFICATION_LESSON_26_26.de.md` — 增加本版三语资源工作流、验证操作和能力边界，保留已有教程。
+- `docs/QUALIFICATION_LESSON_26_26.en.md` — 增加本版三语资源工作流、验证操作和能力边界，保留已有教程。
+- `docs/QUALIFICATION_LESSON_26_26.zh.md` — 增加本版三语资源工作流、验证操作和能力边界，保留已有教程。
+- `docs/RELEASE_NOTES_26_26.md` — 说明资源生产、界面修改、验证范围和限制。
+- `docs/WEB_HOSTING_26_26.md` — 本版静态网站部署、子目录及资源整包更新指南。
+- `manual/MANUAL.de.md` — 增加本版三语资源工作流、验证操作和能力边界，保留已有教程。
+- `manual/MANUAL.en.md` — 增加本版三语资源工作流、验证操作和能力边界，保留已有教程。
+- `manual/MANUAL.zh-CN.md` — 增加本版三语资源工作流、验证操作和能力边界，保留已有教程。
+- `manual/index.html` — 增加本版三语资源工作流、验证操作和能力边界，保留已有教程。
+- `package.json` — 同步本版机器版本 26.26.0 与公开版本 26.26，保持项目 schema 29。
+- `reference-projects/projects/creator-v2626-mixed-game/README.md` — 新增本版独立参考项目、预期输出和实际操作定义，保留旧版。
+- `reference-projects/projects/creator-v2626-mixed-game/expected-output.json` — 新增本版独立参考项目、预期输出和实际操作定义，保留旧版。
+- `reference-projects/projects/creator-v2626-mixed-game/project.nova` — 新增本版独立参考项目、预期输出和实际操作定义，保留旧版。
+- `reference-projects/projects/creator-v2626-mixed-game/test-controls.json` — 新增本版独立参考项目、预期输出和实际操作定义，保留旧版。
+- `reference-projects/projects/server-v2626-headless-authority/README.md` — 新增本版独立参考项目、预期输出和实际操作定义，保留旧版。
+- `reference-projects/projects/server-v2626-headless-authority/expected-output.json` — 新增本版独立参考项目、预期输出和实际操作定义，保留旧版。
+- `reference-projects/projects/server-v2626-headless-authority/project.nova` — 新增本版独立参考项目、预期输出和实际操作定义，保留旧版。
+- `reference-projects/projects/server-v2626-headless-authority/test-controls.json` — 新增本版独立参考项目、预期输出和实际操作定义，保留旧版。
+- `scripts/generate-panel-inventory-26.26.mjs` — 生成所有 Vue 面板和条件状态清单，提供只读一致性检查。
+- `scripts/nova-export.mjs` — 修正百分号编码 data URL 解码，导出资源字节与浏览器保持一致。
+- `scripts/prepare-release-26.26.mjs` — 生成本版 14 项真实执行发布门禁与明确不运行范围。
+- `scripts/qualify-v26.26-scoped.mjs` — 执行改动相关子测试并保存原始报告及产物证据。
+- `scripts/verify-v26.26-asset-production-user.mjs` — 实际播放中替换资源、停止、撤销、保存重开、修复依赖及下载导出。
+- `scripts/verify-v26.26-asset-production.mjs` — 验证导入原子性、取消和竞争、引用、字体与音频生命周期。
+- `scripts/verify-v26.26-library-regression.mjs` — 验证大型库访问边界和测量、包事务及三语错误分类。
+- `scripts/verify-v26.26-library-user.mjs` — 实际键盘、长路径、整页详情、窄布局和损坏文件操作。
+- `scripts/verify-v26.26-panel-layout-user.mjs` — 实际 World、Physics、场景导航和协作键盘布局检查。
+- `scripts/verify-v26.26-release-inputs.mjs` — 冻结前核对版本、文档和逐路径清单格式。
+- `scripts/verify-v26.26-template-library.mjs` — 实际启动并操作所有 40 个模板，保留渲染证据。
+- `scripts/verify-v26.26-template-output.mjs` — 验证所有模板 Web/实际原生播放器导出及资源 UUID、原始字节。
+- `src-tauri/Cargo.lock` — 同步本版机器版本 26.26.0 与公开版本 26.26，保持项目 schema 29。
+- `src-tauri/Cargo.toml` — 同步本版机器版本 26.26.0 与公开版本 26.26，保持项目 schema 29。
+- `src-tauri/tauri.conf.json` — 同步本版机器版本 26.26.0 与公开版本 26.26，保持项目 schema 29。
+- `src/assets/AssetDatabase.ts` — 导入先准备后提交；保留 UUID 和设置，处理取消、旧任务竞争及派生资源失效；文件监听成功换源后通知作者历史；重开时保留已保存路径，避免同名资源交换路径。
+- `src/assets/assetBatch.ts` — 批量资源操作使用原子准备和提交，防止失败后只导入部分文件。
+- `src/assets/assetImportCopy.ts` — 新增英德中导入错误建议与独立原始技术诊断。
+- `src/assets/assetWorkflowCopy.ts` — 补齐三语资源草稿验证提示。
+- `src/assets/contentLibrary26.ts` — 限制真实依赖遍历数量，使用游标队列并记录访问量。
+- `src/assets/contentProfileCopy.ts` — 生产配置标签和值本地化，保留稳定技术标识。
+- `src/assets/editorReadability.css` — 共享描述、状态文字换行和焦点滚动留白。
+- `src/assets/importPipeline.ts` — 有效 SVG 的受限备用解码，包含尺寸预算、超时和资源清理。
+- `src/components/ContentAssetInspector.vue` — 配置本地化、草稿错误提示及移除嵌套滚动限制。
+- `src/components/EditorBottomPanel.vue` — 键盘选择、完整路径、整页资源详情、可执行导入错误；单个/批量/重试/外部变更/恢复源/自动监听等成功换源入口统一作者历史。
+- `src/components/PackageManagerPanel.vue` — 包列表键盘选择和长名称可读性。
+- `src/components/PhysicsSettingsPanel.vue` — 窄宽度下材料、验证和分层表单布局。
+- `src/components/SceneSideBar.vue` — 场景实体名称使用原生键盘按钮。
+- `src/components/SceneTabs.vue` — 关闭按钮与切换按钮平级，移除嵌套交互元素。
+- `src/components/TeamWorkflowPanel.vue` — 更改条目原生按钮、选择状态和完整路径换行。
+- `src/components/WorldToolsPanel.vue` — 整页状态表单及长标签布局。
+- `src/projects/projectFormat.ts` — 同步本版机器版本 26.26.0 与公开版本 26.26，保持项目 schema 29。
+- `src/runtime/audio.ts` — 同 UUID 更换源时释放旧音频播放资源并支持撤销后恢复。
+- `src/runtime/packages.ts` — 隔离提交后观察者异常；验证成功后再保存升级回滚基线。
+- `src/store/physics.ts` — 播放期间资源编辑写回作者快照并保留撤销历史，不保存模拟实体状态。
+- `tests/fixtures/migrations/public-schema-expected.json` — 同步本版机器版本 26.26.0 与公开版本 26.26，保持项目 schema 29。

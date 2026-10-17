@@ -1,0 +1,5559 @@
+{
+  "projectFormat": "Nova_A Project Format 2",
+  "projectFormatMajor": 2,
+  "formatVersion": 29,
+  "engineVersion": "26.17.0",
+  "compatibility": {
+    "format": "Nova_A Project Format 2",
+    "major": 2,
+    "schemaVersion": 29,
+    "minimumSchemaVersion": 5
+  },
+  "projectMetadata": {
+    "id": "00000398-0000-4000-8000-000000000000",
+    "name": "Physics and world panel audit",
+    "createdAt": "2026-09-06T00:00:00.000Z",
+    "updatedAt": "2026-09-06T00:00:00.000Z",
+    "format": "Nova_A Project Format 2",
+    "template": "empty"
+  },
+  "manifest": {
+    "manifestVersion": 1,
+    "projectUuid": "00000398-0000-4000-8000-000000000000",
+    "name": "Physics and world panel audit",
+    "engineCompatibility": {
+      "minimum": "3.9.0",
+      "maximumExclusive": "27.0.0"
+    },
+    "schemaVersion": 29,
+    "packageLockfile": "Packages.lock",
+    "buildPresets": [
+      "ProjectSettings/build.presets.json"
+    ],
+    "directories": {
+      "source": "Assets",
+      "shared": "ProjectSettings",
+      "generated": ".nova/imported",
+      "cache": ".nova/cache",
+      "userLocal": ".nova/user"
+    }
+  },
+  "assets": [
+    {
+      "uuid": "2b5e3219-bdcd-450d-8b5e-3219bdcd750d",
+      "name": "Getting Started.md",
+      "path": "Assets/Tutorials/Getting Started.md",
+      "assetType": "other",
+      "mimeType": "text/markdown",
+      "byteLength": 1082,
+      "source": "---\ndismissible: true\ntemplate: empty\n---\n# Welcome to Physics and world panel audit\n\nThis project was created from the **empty** template. Open the Scene, Assets, Script, Debug, and Manage workspaces to explore the configured systems. Dismiss this tutorial from its Asset Inspector when you are ready.\n\n## Controls and setup (en)\n\nCreate objects in Design, then press Play. The empty scene intentionally has no game controls.\n\n### Expected result\n\nAn empty scene is ready for your first object; an empty Game preview is expected.\n\nRequirements: Ready offline\n\n## Steuerung und Einrichtung (de)\n\nObjekte in Design erstellen, dann Play starten. Die leere Szene hat absichtlich keine Spielsteuerung.\n\n### Erwartetes Ergebnis\n\nEine leere Szene ist für das erste Objekt bereit; eine leere Spielansicht ist korrekt.\n\nVoraussetzungen: Offline bereit\n\n## 操作与准备 (zh)\n\n在设计工作区创建对象后播放。空场景没有预设游戏操作。\n\n### 预期结果\n\n创建空场景后即可添加第一个对象；空白游戏预览是预期结果。\n\n使用要求: 离线可用\n",
+      "sourceModified": 0,
+      "importedAt": 0,
+      "width": 0,
+      "height": 0,
+      "duration": 0,
+      "fontFamily": "",
+      "settings": {
+        "filterMode": "Linear",
+        "compression": "Lossless",
+        "pixelsPerUnit": 100,
+        "spriteRegion": null,
+        "pivot": {
+          "x": 0.5,
+          "y": 0.5
+        },
+        "atlas": false
+      },
+      "pipeline": {
+        "importerVersion": "template-4.2",
+        "platform": "web",
+        "sourceHash": "f5fdadce9e7be772494225db1f102c3338fa2c21da8cab7943d96e2fdecd9329",
+        "artifactHash": "f5fdadce9e7be772494225db1f102c3338fa2c21da8cab7943d96e2fdecd9329",
+        "contentHash": "f5fdadce9e7be772494225db1f102c3338fa2c21da8cab7943d96e2fdecd9329",
+        "cacheKey": "f5fdadce9e7be772494225db1f102c3338fa2c21da8cab7943d96e2fdecd9329",
+        "status": "ready",
+        "lastValidSource": "---\ndismissible: true\ntemplate: empty\n---\n# Welcome to Physics and world panel audit\n\nThis project was created from the **empty** template. Open the Scene, Assets, Script, Debug, and Manage workspaces to explore the configured systems. Dismiss this tutorial from its Asset Inspector when you are ready.\n\n## Controls and setup (en)\n\nCreate objects in Design, then press Play. The empty scene intentionally has no game controls.\n\n### Expected result\n\nAn empty scene is ready for your first object; an empty Game preview is expected.\n\nRequirements: Ready offline\n\n## Steuerung und Einrichtung (de)\n\nObjekte in Design erstellen, dann Play starten. Die leere Szene hat absichtlich keine Spielsteuerung.\n\n### Erwartetes Ergebnis\n\nEine leere Szene ist für das erste Objekt bereit; eine leere Spielansicht ist korrekt.\n\nVoraussetzungen: Offline bereit\n\n## 操作与准备 (zh)\n\n在设计工作区创建对象后播放。空场景没有预设游戏操作。\n\n### 预期结果\n\n创建空场景后即可添加第一个对象；空白游戏预览是预期结果。\n\n使用要求: 离线可用\n",
+        "error": "",
+        "dependencies": [],
+        "reverseDependencies": [],
+        "cacheHit": false
+      }
+    }
+  ],
+  "assetFolders": [
+    "Assets",
+    "Assets/Tutorials",
+    "Assets/Scenes",
+    "Assets/Sprites",
+    "Assets/Audio",
+    "Assets/Scripts",
+    "Assets/Fonts",
+    "Assets/Prefabs",
+    "Assets/Tiles",
+    "Assets/TileSets",
+    "Assets/Materials",
+    "Assets/Animations",
+    "Assets/Controllers",
+    "ProjectSettings",
+    ".nova/cache",
+    ".nova/imported"
+  ],
+  "assetDatabase": {
+    "version": 2,
+    "favorites": [],
+    "savedFilters": [],
+    "importPresets": [],
+    "collections": [],
+    "contentGroups": [
+      {
+        "id": "main",
+        "name": "Main",
+        "mode": "embedded",
+        "optional": false
+      }
+    ],
+    "viewMode": "grid",
+    "thumbnailSize": 112
+  },
+  "plugins": [],
+  "packages": {
+    "manifestVersion": 1,
+    "installed": [],
+    "lockfile": [],
+    "offlineCache": [],
+    "offlineMode": true
+  },
+  "projectSettings": {
+    "inputMap": [
+      {
+        "name": "MoveLeft",
+        "kind": "button",
+        "bindings": [
+          {
+            "device": "keyboard",
+            "code": "KeyA",
+            "scale": 1,
+            "x": 1,
+            "y": 0,
+            "gamepad": 0,
+            "deviceId": "",
+            "deadzone": 0.18,
+            "threshold": 0.0001,
+            "invert": false,
+            "responseCurve": "linear",
+            "modifiers": [],
+            "chord": []
+          },
+          {
+            "device": "keyboard",
+            "code": "ArrowLeft",
+            "scale": 1,
+            "x": 1,
+            "y": 0,
+            "gamepad": 0,
+            "deviceId": "",
+            "deadzone": 0.18,
+            "threshold": 0.0001,
+            "invert": false,
+            "responseCurve": "linear",
+            "modifiers": [],
+            "chord": []
+          }
+        ],
+        "enabled": true,
+        "context": "Gameplay",
+        "map": "Default",
+        "schemes": [],
+        "interaction": "press",
+        "holdSeconds": 0.35,
+        "tapSeconds": 0.25,
+        "multiTapCount": 2,
+        "consume": false,
+        "priority": 0,
+        "callback": ""
+      },
+      {
+        "name": "MoveRight",
+        "kind": "button",
+        "bindings": [
+          {
+            "device": "keyboard",
+            "code": "KeyD",
+            "scale": 1,
+            "x": 1,
+            "y": 0,
+            "gamepad": 0,
+            "deviceId": "",
+            "deadzone": 0.18,
+            "threshold": 0.0001,
+            "invert": false,
+            "responseCurve": "linear",
+            "modifiers": [],
+            "chord": []
+          },
+          {
+            "device": "keyboard",
+            "code": "ArrowRight",
+            "scale": 1,
+            "x": 1,
+            "y": 0,
+            "gamepad": 0,
+            "deviceId": "",
+            "deadzone": 0.18,
+            "threshold": 0.0001,
+            "invert": false,
+            "responseCurve": "linear",
+            "modifiers": [],
+            "chord": []
+          }
+        ],
+        "enabled": true,
+        "context": "Gameplay",
+        "map": "Default",
+        "schemes": [],
+        "interaction": "press",
+        "holdSeconds": 0.35,
+        "tapSeconds": 0.25,
+        "multiTapCount": 2,
+        "consume": false,
+        "priority": 0,
+        "callback": ""
+      },
+      {
+        "name": "Jump",
+        "kind": "button",
+        "bindings": [
+          {
+            "device": "keyboard",
+            "code": "Space",
+            "scale": 1,
+            "x": 1,
+            "y": 0,
+            "gamepad": 0,
+            "deviceId": "",
+            "deadzone": 0.18,
+            "threshold": 0.0001,
+            "invert": false,
+            "responseCurve": "linear",
+            "modifiers": [],
+            "chord": []
+          },
+          {
+            "device": "gamepad-button",
+            "code": "0",
+            "scale": 1,
+            "x": 1,
+            "y": 0,
+            "gamepad": 0,
+            "deviceId": "",
+            "deadzone": 0.18,
+            "threshold": 0.0001,
+            "invert": false,
+            "responseCurve": "linear",
+            "modifiers": [],
+            "chord": []
+          }
+        ],
+        "enabled": true,
+        "context": "Gameplay",
+        "map": "Default",
+        "schemes": [],
+        "interaction": "press",
+        "holdSeconds": 0.35,
+        "tapSeconds": 0.25,
+        "multiTapCount": 2,
+        "consume": false,
+        "priority": 0,
+        "callback": ""
+      },
+      {
+        "name": "Horizontal",
+        "kind": "axis",
+        "bindings": [
+          {
+            "device": "keyboard",
+            "code": "KeyA",
+            "scale": -1,
+            "x": 1,
+            "y": 0,
+            "gamepad": 0,
+            "deviceId": "",
+            "deadzone": 0.18,
+            "threshold": 0.0001,
+            "invert": false,
+            "responseCurve": "linear",
+            "modifiers": [],
+            "chord": []
+          },
+          {
+            "device": "keyboard",
+            "code": "ArrowLeft",
+            "scale": -1,
+            "x": 1,
+            "y": 0,
+            "gamepad": 0,
+            "deviceId": "",
+            "deadzone": 0.18,
+            "threshold": 0.0001,
+            "invert": false,
+            "responseCurve": "linear",
+            "modifiers": [],
+            "chord": []
+          },
+          {
+            "device": "keyboard",
+            "code": "KeyD",
+            "scale": 1,
+            "x": 1,
+            "y": 0,
+            "gamepad": 0,
+            "deviceId": "",
+            "deadzone": 0.18,
+            "threshold": 0.0001,
+            "invert": false,
+            "responseCurve": "linear",
+            "modifiers": [],
+            "chord": []
+          },
+          {
+            "device": "keyboard",
+            "code": "ArrowRight",
+            "scale": 1,
+            "x": 1,
+            "y": 0,
+            "gamepad": 0,
+            "deviceId": "",
+            "deadzone": 0.18,
+            "threshold": 0.0001,
+            "invert": false,
+            "responseCurve": "linear",
+            "modifiers": [],
+            "chord": []
+          },
+          {
+            "device": "gamepad-axis",
+            "code": "0",
+            "scale": 1,
+            "x": 1,
+            "y": 0,
+            "gamepad": 0,
+            "deviceId": "",
+            "deadzone": 0.18,
+            "threshold": 0.0001,
+            "invert": false,
+            "responseCurve": "linear",
+            "modifiers": [],
+            "chord": []
+          }
+        ],
+        "enabled": true,
+        "context": "Gameplay",
+        "map": "Default",
+        "schemes": [],
+        "interaction": "press",
+        "holdSeconds": 0.35,
+        "tapSeconds": 0.25,
+        "multiTapCount": 2,
+        "consume": false,
+        "priority": 0,
+        "callback": ""
+      },
+      {
+        "name": "Move",
+        "kind": "vector2",
+        "bindings": [
+          {
+            "device": "keyboard",
+            "code": "KeyA",
+            "scale": 1,
+            "x": -1,
+            "y": 0,
+            "gamepad": 0,
+            "deviceId": "",
+            "deadzone": 0.18,
+            "threshold": 0.0001,
+            "invert": false,
+            "responseCurve": "linear",
+            "modifiers": [],
+            "chord": []
+          },
+          {
+            "device": "keyboard",
+            "code": "KeyD",
+            "scale": 1,
+            "x": 1,
+            "y": 0,
+            "gamepad": 0,
+            "deviceId": "",
+            "deadzone": 0.18,
+            "threshold": 0.0001,
+            "invert": false,
+            "responseCurve": "linear",
+            "modifiers": [],
+            "chord": []
+          },
+          {
+            "device": "keyboard",
+            "code": "KeyW",
+            "scale": 1,
+            "x": 0,
+            "y": 1,
+            "gamepad": 0,
+            "deviceId": "",
+            "deadzone": 0.18,
+            "threshold": 0.0001,
+            "invert": false,
+            "responseCurve": "linear",
+            "modifiers": [],
+            "chord": []
+          },
+          {
+            "device": "keyboard",
+            "code": "KeyS",
+            "scale": 1,
+            "x": 0,
+            "y": -1,
+            "gamepad": 0,
+            "deviceId": "",
+            "deadzone": 0.18,
+            "threshold": 0.0001,
+            "invert": false,
+            "responseCurve": "linear",
+            "modifiers": [],
+            "chord": []
+          },
+          {
+            "device": "gamepad-axis",
+            "code": "0",
+            "scale": 1,
+            "x": 1,
+            "y": 0,
+            "gamepad": 0,
+            "deviceId": "",
+            "deadzone": 0.18,
+            "threshold": 0.0001,
+            "invert": false,
+            "responseCurve": "linear",
+            "modifiers": [],
+            "chord": []
+          },
+          {
+            "device": "gamepad-axis",
+            "code": "1",
+            "scale": 1,
+            "x": 0,
+            "y": -1,
+            "gamepad": 0,
+            "deviceId": "",
+            "deadzone": 0.18,
+            "threshold": 0.0001,
+            "invert": false,
+            "responseCurve": "linear",
+            "modifiers": [],
+            "chord": []
+          }
+        ],
+        "enabled": true,
+        "context": "Gameplay",
+        "map": "Default",
+        "schemes": [],
+        "interaction": "press",
+        "holdSeconds": 0.35,
+        "tapSeconds": 0.25,
+        "multiTapCount": 2,
+        "consume": false,
+        "priority": 0,
+        "callback": ""
+      }
+    ],
+    "audio": {
+      "masterVolume": 1,
+      "sampleRate": 48000,
+      "buses": {
+        "Master": 1,
+        "Music": 1,
+        "SFX": 1,
+        "UI": 1
+      },
+      "mixer": {
+        "buses": [
+          {
+            "id": "Master",
+            "name": "Master",
+            "gain": 1,
+            "mute": false,
+            "solo": false,
+            "parent": null,
+            "voiceLimit": 32,
+            "sends": [],
+            "effects": [],
+            "automation": [],
+            "automationLoopSeconds": 0
+          },
+          {
+            "id": "Music",
+            "name": "Music",
+            "gain": 1,
+            "mute": false,
+            "solo": false,
+            "parent": "Master",
+            "voiceLimit": 4,
+            "sends": [],
+            "effects": [],
+            "automation": [],
+            "automationLoopSeconds": 0
+          },
+          {
+            "id": "SFX",
+            "name": "SFX",
+            "gain": 1,
+            "mute": false,
+            "solo": false,
+            "parent": "Master",
+            "voiceLimit": 32,
+            "sends": [],
+            "effects": [],
+            "automation": [],
+            "automationLoopSeconds": 0
+          },
+          {
+            "id": "UI",
+            "name": "UI",
+            "gain": 1,
+            "mute": false,
+            "solo": false,
+            "parent": "Master",
+            "voiceLimit": 32,
+            "sends": [],
+            "effects": [],
+            "automation": [],
+            "automationLoopSeconds": 0
+          }
+        ],
+        "snapshots": [
+          {
+            "id": "default",
+            "name": "Default",
+            "masterVolume": 1,
+            "busGains": {
+              "Master": 1,
+              "Music": 1,
+              "SFX": 1,
+              "UI": 1
+            }
+          }
+        ],
+        "activeSnapshot": null,
+        "snapshotTransitionSeconds": 0.12,
+        "ducking": [],
+        "masterVoiceLimit": 128,
+        "outputDeviceId": "default",
+        "limiterEnabled": true,
+        "limiterCeilingDb": -1
+      }
+    },
+    "scripting": {
+      "apiVersion": 2,
+      "customSignals": [],
+      "maxConsoleEntries": 2000,
+      "debuggerEnabled": true,
+      "hotReloadEnabled": true,
+      "breakOnRuntimeError": true,
+      "deterministicTestSeed": 1,
+      "externalEditorProtocol": true
+    },
+    "rendering": {
+      "lightingEnabled": false,
+      "ambientColor": {
+        "r": 255,
+        "g": 255,
+        "b": 255
+      },
+      "ambientIntensity": 1,
+      "shadowQuality": "Soft",
+      "colorSpace": "sRGB",
+      "postProcessing": {
+        "enabled": false,
+        "exposure": 0,
+        "contrast": 1,
+        "saturation": 1,
+        "vignette": 0,
+        "bloom": 0,
+        "blur": 0,
+        "userMaterial": null
+      },
+      "debugView": "None"
+    },
+    "build": {
+      "gameName": "Physics and world panel audit",
+      "target": "windows",
+      "architecture": "x86_64",
+      "runtimeMode": "game",
+      "profile": "debug",
+      "sceneOrder": [
+        "85175bca-ebfa-4226-8517-5bcaebfab226"
+      ],
+      "startupSceneUuid": "85175bca-ebfa-4226-8517-5bcaebfab226",
+      "packageIntoExecutable": true,
+      "developmentBuild": true,
+      "outputDirectory": "",
+      "platform": {
+        "identifier": "top.whitelists.physicsandworldpanelaudit",
+        "version": "1.0.0",
+        "iconAsset": null,
+        "splashAsset": null,
+        "orientation": "auto",
+        "permissions": [],
+        "signingMode": "none",
+        "signingIdentity": "",
+        "notarizationProfile": ""
+      },
+      "delivery": {
+        "deterministic": true,
+        "incremental": true,
+        "compression": "balanced",
+        "patchManifest": true,
+        "structuredLogs": true,
+        "crashReports": true,
+        "telemetryEnabled": false,
+        "telemetryEndpoint": "",
+        "privacyPolicyUrl": "",
+        "cacheMode": "incremental",
+        "include": [
+          "Assets/**"
+        ],
+        "exclude": [
+          "**/*.psd",
+          "**/*.kra",
+          ".nova/**"
+        ],
+        "stripUnusedAssets": false,
+        "sizeReport": true,
+        "dependencyReport": true,
+        "debugSymbols": true,
+        "crashSymbols": true,
+        "releaseChannel": "development",
+        "exportTemplate": "windows-x64-v1",
+        "provenance": true,
+        "sbom": true,
+        "webHeaders": true,
+        "deploymentMode": "local",
+        "deploymentDestination": "",
+        "signingHook": "",
+        "notarizationHook": "",
+        "cleanMachineJob": false,
+        "contentCache": true,
+        "deltaBuilds": true,
+        "ciMatrixVersion": 1,
+        "deploymentConnectorId": "local",
+        "deploymentPermissionGranted": false
+      }
+    },
+    "world": {
+      "navigationDebug": false,
+      "areaDebug": false,
+      "chunkDebug": false,
+      "streamingEnabled": true,
+      "memoryBudgetMb": 256,
+      "originShiftThreshold": 10000
+    }
+  },
+  "projectStructure": {
+    "assetsRoot": "Assets",
+    "settingsRoot": "ProjectSettings",
+    "cacheRoot": ".nova/cache",
+    "importedRoot": ".nova/imported"
+  },
+  "activeSceneUuid": "85175bca-ebfa-4226-8517-5bcaebfab226",
+  "scenes": [
+    {
+      "uuid": "85175bca-ebfa-4226-8517-5bcaebfab226",
+      "name": "Main Scene",
+      "loaded": true,
+      "layers": [
+        1
+      ],
+      "activeLayer": 1,
+      "renderLayer": "all",
+      "authoringSettings": {
+        "sceneVersion": 2,
+        "templateId": null,
+        "templateVersion": 1,
+        "inheritanceSourceUuid": null,
+        "tags": [],
+        "namedLayers": [
+          {
+            "id": 1,
+            "name": "World",
+            "visible": true,
+            "locked": false
+          }
+        ],
+        "runtimePolicy": "Replace"
+      },
+      "globalSettings": {
+        "gravity": 9.80665,
+        "airFriction": 0.01,
+        "timeScale": 1,
+        "tickRate": 60,
+        "maxCatchUpSteps": 8,
+        "collisionMatrix": [
+          1,
+          2,
+          4,
+          8,
+          16,
+          32,
+          64,
+          128,
+          256,
+          512,
+          1024,
+          2048,
+          4096,
+          8192,
+          16384,
+          32768,
+          65536,
+          131072,
+          262144,
+          524288,
+          1048576,
+          2097152,
+          4194304,
+          8388608,
+          16777216,
+          33554432,
+          67108864,
+          134217728,
+          268435456,
+          536870912,
+          1073741824,
+          2147483648
+        ],
+        "interpolation": "Interpolate",
+        "layers": [
+          {
+            "id": 0,
+            "name": "Default",
+            "description": "Default world collision",
+            "color": "#62a8ff"
+          },
+          {
+            "id": 1,
+            "name": "Layer 1",
+            "description": "",
+            "color": "#ff8c62"
+          },
+          {
+            "id": 2,
+            "name": "Layer 2",
+            "description": "",
+            "color": "#7bd88f"
+          },
+          {
+            "id": 3,
+            "name": "Layer 3",
+            "description": "",
+            "color": "#d994ff"
+          },
+          {
+            "id": 4,
+            "name": "Layer 4",
+            "description": "",
+            "color": "#ffd166"
+          },
+          {
+            "id": 5,
+            "name": "Layer 5",
+            "description": "",
+            "color": "#5ed4d4"
+          },
+          {
+            "id": 6,
+            "name": "Layer 6",
+            "description": "",
+            "color": "#ff6b96"
+          },
+          {
+            "id": 7,
+            "name": "Layer 7",
+            "description": "",
+            "color": "#a9b7c9"
+          },
+          {
+            "id": 8,
+            "name": "Layer 8",
+            "description": "",
+            "color": "#62a8ff"
+          },
+          {
+            "id": 9,
+            "name": "Layer 9",
+            "description": "",
+            "color": "#ff8c62"
+          },
+          {
+            "id": 10,
+            "name": "Layer 10",
+            "description": "",
+            "color": "#7bd88f"
+          },
+          {
+            "id": 11,
+            "name": "Layer 11",
+            "description": "",
+            "color": "#d994ff"
+          },
+          {
+            "id": 12,
+            "name": "Layer 12",
+            "description": "",
+            "color": "#ffd166"
+          },
+          {
+            "id": 13,
+            "name": "Layer 13",
+            "description": "",
+            "color": "#5ed4d4"
+          },
+          {
+            "id": 14,
+            "name": "Layer 14",
+            "description": "",
+            "color": "#ff6b96"
+          },
+          {
+            "id": 15,
+            "name": "Layer 15",
+            "description": "",
+            "color": "#a9b7c9"
+          },
+          {
+            "id": 16,
+            "name": "Layer 16",
+            "description": "",
+            "color": "#62a8ff"
+          },
+          {
+            "id": 17,
+            "name": "Layer 17",
+            "description": "",
+            "color": "#ff8c62"
+          },
+          {
+            "id": 18,
+            "name": "Layer 18",
+            "description": "",
+            "color": "#7bd88f"
+          },
+          {
+            "id": 19,
+            "name": "Layer 19",
+            "description": "",
+            "color": "#d994ff"
+          },
+          {
+            "id": 20,
+            "name": "Layer 20",
+            "description": "",
+            "color": "#ffd166"
+          },
+          {
+            "id": 21,
+            "name": "Layer 21",
+            "description": "",
+            "color": "#5ed4d4"
+          },
+          {
+            "id": 22,
+            "name": "Layer 22",
+            "description": "",
+            "color": "#ff6b96"
+          },
+          {
+            "id": 23,
+            "name": "Layer 23",
+            "description": "",
+            "color": "#a9b7c9"
+          },
+          {
+            "id": 24,
+            "name": "Layer 24",
+            "description": "",
+            "color": "#62a8ff"
+          },
+          {
+            "id": 25,
+            "name": "Layer 25",
+            "description": "",
+            "color": "#ff8c62"
+          },
+          {
+            "id": 26,
+            "name": "Layer 26",
+            "description": "",
+            "color": "#7bd88f"
+          },
+          {
+            "id": 27,
+            "name": "Layer 27",
+            "description": "",
+            "color": "#d994ff"
+          },
+          {
+            "id": 28,
+            "name": "Layer 28",
+            "description": "",
+            "color": "#ffd166"
+          },
+          {
+            "id": 29,
+            "name": "Layer 29",
+            "description": "",
+            "color": "#5ed4d4"
+          },
+          {
+            "id": 30,
+            "name": "Layer 30",
+            "description": "",
+            "color": "#ff6b96"
+          },
+          {
+            "id": 31,
+            "name": "Layer 31",
+            "description": "",
+            "color": "#a9b7c9"
+          }
+        ]
+      },
+      "entities": [
+        {
+          "uuid": "5b8b606f-d3a5-4b83-8b8b-606fd3a5ab83",
+          "name": "Main Camera",
+          "enabled": true,
+          "editorVisible": true,
+          "editorLocked": false,
+          "tags": [],
+          "groups": [],
+          "persistentAcrossScenes": false,
+          "prefabAsset": null,
+          "prefabInstanceUuid": null,
+          "prefabSourceUuid": null,
+          "prefabOverrides": {},
+          "entityType": "Box",
+          "components": [
+            {
+              "uuid": "00002710-0000-4000-8000-000000000000",
+              "kind": "Transform2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "parentUuid": null,
+                "position": {
+                  "x": 0,
+                  "y": 0
+                },
+                "rotation": 0,
+                "scale": {
+                  "x": 1,
+                  "y": 1
+                }
+              }
+            },
+            {
+              "uuid": "00002711-0000-4000-8000-000000000000",
+              "kind": "Camera2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "active": true,
+                "orthographicSize": 10,
+                "zoom": 1,
+                "backgroundColor": {
+                  "r": 20,
+                  "g": 25,
+                  "b": 34
+                },
+                "pixelPerfect": false,
+                "viewport": {
+                  "x": 0,
+                  "y": 0,
+                  "width": 1,
+                  "height": 1
+                },
+                "nearSortingLayer": -1000,
+                "farSortingLayer": 1000
+              }
+            }
+          ]
+        },
+        {
+          "uuid": "00000064-0000-4000-8000-000000000000",
+          "name": "RigidBody2D",
+          "enabled": true,
+          "editorVisible": true,
+          "editorLocked": false,
+          "tags": [],
+          "groups": [],
+          "namedLayer": "World",
+          "ownerUuid": null,
+          "ownership": "Scene",
+          "editorOnly": false,
+          "runtimePersistence": "Scene",
+          "persistentAcrossScenes": false,
+          "objectBlueprintAsset": null,
+          "prefabAsset": null,
+          "prefabInstanceUuid": null,
+          "prefabSourceUuid": null,
+          "prefabOverrides": {},
+          "prefabLayers": [],
+          "sceneLayers": [],
+          "authoring": {
+            "kind": "Rectangle",
+            "origin": {
+              "x": 0,
+              "y": 0
+            },
+            "visible": true,
+            "zOrder": 0,
+            "renderLayer": 1,
+            "sortMode": "LayerThenOrder",
+            "canvasLayer": {
+              "screenSpace": false,
+              "followCamera": true
+            },
+            "parallax": {
+              "motionScale": {
+                "x": 0.5,
+                "y": 0.5
+              },
+              "repeat": {
+                "x": 0,
+                "y": 0
+              },
+              "mirror": false,
+              "depth": 0
+            },
+            "path": {
+              "points": [],
+              "tangents": [],
+              "closed": false,
+              "smoothing": 0.5,
+              "asset": null,
+              "follower": {
+                "targetUuid": null,
+                "progress": 0,
+                "speed": 0,
+                "orient": true
+              }
+            }
+          },
+          "entityType": "Box",
+          "components": [
+            {
+              "uuid": "00002774-0000-4000-8000-000000000000",
+              "kind": "Transform2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "parentUuid": null,
+                "position": {
+                  "x": 0,
+                  "y": 0
+                },
+                "rotation": 0,
+                "scale": {
+                  "x": 1,
+                  "y": 1
+                }
+              }
+            },
+            {
+              "uuid": "00002775-0000-4000-8000-000000000000",
+              "kind": "ShapeRenderer2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "shape": "Rectangle",
+                "vertices": [
+                  {
+                    "x": -0.5,
+                    "y": -0.5
+                  },
+                  {
+                    "x": 0.5,
+                    "y": -0.5
+                  },
+                  {
+                    "x": 0.5,
+                    "y": 0.5
+                  },
+                  {
+                    "x": -0.5,
+                    "y": 0.5
+                  }
+                ],
+                "radiusX": 1,
+                "radiusY": 1,
+                "color": {
+                  "r": 0,
+                  "g": 180,
+                  "b": 255
+                },
+                "opacity": 100,
+                "strokeColor": {
+                  "r": 0,
+                  "g": 90,
+                  "b": 155
+                },
+                "strokeOpacity": 100,
+                "strokeWidth": 0.04,
+                "material": "Default",
+                "filterMode": "Linear",
+                "textureAsset": null,
+                "texture": null,
+                "sortingLayer": 1,
+                "orderInLayer": 0
+              }
+            },
+            {
+              "uuid": "00002776-0000-4000-8000-000000000000",
+              "kind": "RigidBody2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "bodyType": "Kinematic",
+                "massMode": "Manual",
+                "density": 2.5,
+                "mass": 3,
+                "autoInertia": false,
+                "inertia": 7,
+                "gravityScale": 0.5,
+                "localGravity": 2,
+                "velocity": {
+                  "x": 1,
+                  "y": -2
+                },
+                "acceleration": {
+                  "x": 0.5,
+                  "y": 0.25
+                },
+                "angularVelocity": 0.75,
+                "linearDamping": 0.2,
+                "angularDamping": 0.3,
+                "force": {
+                  "x": 4,
+                  "y": 5
+                },
+                "torque": 6,
+                "continuousCollision": "Continuous",
+                "sleepingAllowed": false,
+                "freezeRotation": true,
+                "transformOwnership": "Animation"
+              }
+            },
+            {
+              "uuid": "00002777-0000-4000-8000-000000000000",
+              "kind": "BoxCollider2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "offset": {
+                  "x": 0,
+                  "y": 0
+                },
+                "rotation": 0,
+                "size": {
+                  "x": 1,
+                  "y": 1
+                },
+                "radiusX": 1,
+                "radiusY": 1,
+                "vertices": [
+                  {
+                    "x": -0.5,
+                    "y": -0.5
+                  },
+                  {
+                    "x": 0.5,
+                    "y": -0.5
+                  },
+                  {
+                    "x": 0.5,
+                    "y": 0.5
+                  },
+                  {
+                    "x": -0.5,
+                    "y": 0.5
+                  }
+                ],
+                "shapeModel": "Box",
+                "shapes": [],
+                "sensor": false,
+                "physicsLayer": 0,
+                "collisionMask": 1,
+                "oneWay": false,
+                "oneWayNormal": {
+                  "x": 0,
+                  "y": 1
+                },
+                "materialAsset": null,
+                "material": {
+                  "restitution": 0,
+                  "restitutionThreshold": 1,
+                  "staticFriction": 0,
+                  "dynamicFriction": 0,
+                  "density": 1,
+                  "frictionCombine": "Average",
+                  "restitutionCombine": "Maximum"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "uuid": "00000065-0000-4000-8000-000000000000",
+          "name": "Collider2D",
+          "enabled": true,
+          "editorVisible": true,
+          "editorLocked": false,
+          "tags": [],
+          "groups": [],
+          "namedLayer": "World",
+          "ownerUuid": null,
+          "ownership": "Scene",
+          "editorOnly": false,
+          "runtimePersistence": "Scene",
+          "persistentAcrossScenes": false,
+          "objectBlueprintAsset": null,
+          "prefabAsset": null,
+          "prefabInstanceUuid": null,
+          "prefabSourceUuid": null,
+          "prefabOverrides": {},
+          "prefabLayers": [],
+          "sceneLayers": [],
+          "authoring": {
+            "kind": "Rectangle",
+            "origin": {
+              "x": 0,
+              "y": 0
+            },
+            "visible": true,
+            "zOrder": 0,
+            "renderLayer": 1,
+            "sortMode": "LayerThenOrder",
+            "canvasLayer": {
+              "screenSpace": false,
+              "followCamera": true
+            },
+            "parallax": {
+              "motionScale": {
+                "x": 0.5,
+                "y": 0.5
+              },
+              "repeat": {
+                "x": 0,
+                "y": 0
+              },
+              "mirror": false,
+              "depth": 0
+            },
+            "path": {
+              "points": [],
+              "tangents": [],
+              "closed": false,
+              "smoothing": 0.5,
+              "asset": null,
+              "follower": {
+                "targetUuid": null,
+                "progress": 0,
+                "speed": 0,
+                "orient": true
+              }
+            }
+          },
+          "entityType": "Box",
+          "components": [
+            {
+              "uuid": "000027d8-0000-4000-8000-000000000000",
+              "kind": "Transform2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "parentUuid": null,
+                "position": {
+                  "x": 3,
+                  "y": 0
+                },
+                "rotation": 0,
+                "scale": {
+                  "x": 1,
+                  "y": 1
+                }
+              }
+            },
+            {
+              "uuid": "000027d9-0000-4000-8000-000000000000",
+              "kind": "ShapeRenderer2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "shape": "Rectangle",
+                "vertices": [
+                  {
+                    "x": -0.5,
+                    "y": -0.5
+                  },
+                  {
+                    "x": 0.5,
+                    "y": -0.5
+                  },
+                  {
+                    "x": 0.5,
+                    "y": 0.5
+                  },
+                  {
+                    "x": -0.5,
+                    "y": 0.5
+                  }
+                ],
+                "radiusX": 1,
+                "radiusY": 1,
+                "color": {
+                  "r": 0,
+                  "g": 180,
+                  "b": 255
+                },
+                "opacity": 100,
+                "strokeColor": {
+                  "r": 0,
+                  "g": 90,
+                  "b": 155
+                },
+                "strokeOpacity": 100,
+                "strokeWidth": 0.04,
+                "material": "Default",
+                "filterMode": "Linear",
+                "textureAsset": null,
+                "texture": null,
+                "sortingLayer": 1,
+                "orderInLayer": 0
+              }
+            },
+            {
+              "uuid": "000027da-0000-4000-8000-000000000000",
+              "kind": "RigidBody2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "bodyType": "Static",
+                "massMode": "Automatic",
+                "density": 1,
+                "mass": 1,
+                "autoInertia": true,
+                "inertia": 6.005257019863773,
+                "gravityScale": 1,
+                "localGravity": 0,
+                "velocity": {
+                  "x": 0,
+                  "y": 0
+                },
+                "acceleration": {
+                  "x": 0,
+                  "y": 0
+                },
+                "angularVelocity": 0,
+                "linearDamping": 0,
+                "angularDamping": 0,
+                "force": {
+                  "x": 0,
+                  "y": 0
+                },
+                "torque": 0,
+                "continuousCollision": "Discrete",
+                "sleepingAllowed": true,
+                "freezeRotation": false,
+                "transformOwnership": "Physics"
+              }
+            },
+            {
+              "uuid": "000027db-0000-4000-8000-000000000000",
+              "kind": "BoxCollider2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "offset": {
+                  "x": 0.5,
+                  "y": -0.25
+                },
+                "rotation": 0.25,
+                "size": {
+                  "x": 3,
+                  "y": 2
+                },
+                "radiusX": 2,
+                "radiusY": 1,
+                "vertices": [
+                  {
+                    "x": -1,
+                    "y": -1
+                  },
+                  {
+                    "x": 1,
+                    "y": -1
+                  },
+                  {
+                    "x": 1,
+                    "y": 1
+                  },
+                  {
+                    "x": -1,
+                    "y": 1
+                  }
+                ],
+                "shapeModel": "Box",
+                "shapes": [
+                  {
+                    "id": "child-0",
+                    "kind": "Box",
+                    "offset": {
+                      "x": 0,
+                      "y": 0.5
+                    },
+                    "rotation": 0.125,
+                    "size": {
+                      "x": 2,
+                      "y": 3
+                    },
+                    "radius": 0.75,
+                    "points": [
+                      {
+                        "x": 0,
+                        "y": 0
+                      },
+                      {
+                        "x": 2,
+                        "y": 0
+                      },
+                      {
+                        "x": 2,
+                        "y": 2
+                      },
+                      {
+                        "x": 0,
+                        "y": 2
+                      }
+                    ],
+                    "enabled": true,
+                    "sensor": true,
+                    "physicsLayer": 1,
+                    "collisionMask": 7,
+                    "oneWay": false,
+                    "oneWayNormal": {
+                      "x": 0,
+                      "y": 1
+                    }
+                  },
+                  {
+                    "id": "child-1",
+                    "kind": "Circle",
+                    "offset": {
+                      "x": 0.5,
+                      "y": 0.5
+                    },
+                    "rotation": 0.125,
+                    "size": {
+                      "x": 2,
+                      "y": 3
+                    },
+                    "radius": 0.75,
+                    "points": [
+                      {
+                        "x": 0,
+                        "y": 0
+                      },
+                      {
+                        "x": 2,
+                        "y": 0
+                      },
+                      {
+                        "x": 2,
+                        "y": 2
+                      },
+                      {
+                        "x": 0,
+                        "y": 2
+                      }
+                    ],
+                    "enabled": true,
+                    "sensor": false,
+                    "physicsLayer": 1,
+                    "collisionMask": 7,
+                    "oneWay": true,
+                    "oneWayNormal": {
+                      "x": 0,
+                      "y": 1
+                    }
+                  },
+                  {
+                    "id": "child-2",
+                    "kind": "Capsule",
+                    "offset": {
+                      "x": 1,
+                      "y": 0.5
+                    },
+                    "rotation": 0.125,
+                    "size": {
+                      "x": 2,
+                      "y": 3
+                    },
+                    "radius": 0.75,
+                    "points": [
+                      {
+                        "x": 0,
+                        "y": 0
+                      },
+                      {
+                        "x": 2,
+                        "y": 0
+                      },
+                      {
+                        "x": 2,
+                        "y": 2
+                      },
+                      {
+                        "x": 0,
+                        "y": 2
+                      }
+                    ],
+                    "enabled": true,
+                    "sensor": true,
+                    "physicsLayer": 1,
+                    "collisionMask": 7,
+                    "oneWay": false,
+                    "oneWayNormal": {
+                      "x": 0,
+                      "y": 1
+                    }
+                  },
+                  {
+                    "id": "child-3",
+                    "kind": "Segment",
+                    "offset": {
+                      "x": 1.5,
+                      "y": 0.5
+                    },
+                    "rotation": 0.125,
+                    "size": {
+                      "x": 2,
+                      "y": 3
+                    },
+                    "radius": 0.75,
+                    "points": [
+                      {
+                        "x": 0,
+                        "y": 0
+                      },
+                      {
+                        "x": 2,
+                        "y": 0
+                      },
+                      {
+                        "x": 2,
+                        "y": 2
+                      },
+                      {
+                        "x": 0,
+                        "y": 2
+                      }
+                    ],
+                    "enabled": true,
+                    "sensor": false,
+                    "physicsLayer": 1,
+                    "collisionMask": 7,
+                    "oneWay": true,
+                    "oneWayNormal": {
+                      "x": 0,
+                      "y": 1
+                    }
+                  },
+                  {
+                    "id": "child-4",
+                    "kind": "Chain",
+                    "offset": {
+                      "x": 2,
+                      "y": 0.5
+                    },
+                    "rotation": 0.125,
+                    "size": {
+                      "x": 2,
+                      "y": 3
+                    },
+                    "radius": 0.75,
+                    "points": [
+                      {
+                        "x": 0,
+                        "y": 0
+                      },
+                      {
+                        "x": 2,
+                        "y": 0
+                      },
+                      {
+                        "x": 2,
+                        "y": 2
+                      },
+                      {
+                        "x": 0,
+                        "y": 2
+                      }
+                    ],
+                    "enabled": true,
+                    "sensor": true,
+                    "physicsLayer": 1,
+                    "collisionMask": 7,
+                    "oneWay": false,
+                    "oneWayNormal": {
+                      "x": 0,
+                      "y": 1
+                    }
+                  },
+                  {
+                    "id": "child-5",
+                    "kind": "WorldBoundary",
+                    "offset": {
+                      "x": 2.5,
+                      "y": 0.5
+                    },
+                    "rotation": 0.125,
+                    "size": {
+                      "x": 2,
+                      "y": 3
+                    },
+                    "radius": 0.75,
+                    "points": [
+                      {
+                        "x": 0,
+                        "y": 0
+                      },
+                      {
+                        "x": 2,
+                        "y": 0
+                      },
+                      {
+                        "x": 2,
+                        "y": 2
+                      },
+                      {
+                        "x": 0,
+                        "y": 2
+                      }
+                    ],
+                    "enabled": false,
+                    "sensor": false,
+                    "physicsLayer": 1,
+                    "collisionMask": 7,
+                    "oneWay": true,
+                    "oneWayNormal": {
+                      "x": 0,
+                      "y": 1
+                    }
+                  },
+                  {
+                    "id": "child-6",
+                    "kind": "ConvexPolygon",
+                    "offset": {
+                      "x": 3,
+                      "y": 0.5
+                    },
+                    "rotation": 0.125,
+                    "size": {
+                      "x": 2,
+                      "y": 3
+                    },
+                    "radius": 0.75,
+                    "points": [
+                      {
+                        "x": 0,
+                        "y": 0
+                      },
+                      {
+                        "x": 2,
+                        "y": 0
+                      },
+                      {
+                        "x": 2,
+                        "y": 2
+                      },
+                      {
+                        "x": 0,
+                        "y": 2
+                      }
+                    ],
+                    "enabled": true,
+                    "sensor": true,
+                    "physicsLayer": 1,
+                    "collisionMask": 7,
+                    "oneWay": false,
+                    "oneWayNormal": {
+                      "x": 0,
+                      "y": 1
+                    }
+                  },
+                  {
+                    "id": "child-7",
+                    "kind": "ConcavePolygon",
+                    "offset": {
+                      "x": 3.5,
+                      "y": 0.5
+                    },
+                    "rotation": 0.125,
+                    "size": {
+                      "x": 2,
+                      "y": 3
+                    },
+                    "radius": 0.75,
+                    "points": [
+                      {
+                        "x": 0,
+                        "y": 0
+                      },
+                      {
+                        "x": 2,
+                        "y": 0
+                      },
+                      {
+                        "x": 2,
+                        "y": 2
+                      },
+                      {
+                        "x": 0,
+                        "y": 2
+                      }
+                    ],
+                    "enabled": true,
+                    "sensor": false,
+                    "physicsLayer": 1,
+                    "collisionMask": 7,
+                    "oneWay": true,
+                    "oneWayNormal": {
+                      "x": 0,
+                      "y": 1
+                    }
+                  }
+                ],
+                "sensor": true,
+                "physicsLayer": 2,
+                "collisionMask": 5,
+                "oneWay": true,
+                "oneWayNormal": {
+                  "x": 0,
+                  "y": -1
+                },
+                "materialAsset": null,
+                "material": {
+                  "restitution": 0.75,
+                  "restitutionThreshold": 0.2,
+                  "staticFriction": 0.8,
+                  "dynamicFriction": 0.5,
+                  "density": 3,
+                  "frictionCombine": "Multiply",
+                  "restitutionCombine": "Minimum"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "uuid": "00000066-0000-4000-8000-000000000000",
+          "name": "Joint2D",
+          "enabled": true,
+          "editorVisible": true,
+          "editorLocked": false,
+          "tags": [],
+          "groups": [],
+          "namedLayer": "World",
+          "ownerUuid": null,
+          "ownership": "Scene",
+          "editorOnly": false,
+          "runtimePersistence": "Scene",
+          "persistentAcrossScenes": false,
+          "objectBlueprintAsset": null,
+          "prefabAsset": null,
+          "prefabInstanceUuid": null,
+          "prefabSourceUuid": null,
+          "prefabOverrides": {},
+          "prefabLayers": [],
+          "sceneLayers": [],
+          "authoring": {
+            "kind": "Rectangle",
+            "origin": {
+              "x": 0,
+              "y": 0
+            },
+            "visible": true,
+            "zOrder": 0,
+            "renderLayer": 1,
+            "sortMode": "LayerThenOrder",
+            "canvasLayer": {
+              "screenSpace": false,
+              "followCamera": true
+            },
+            "parallax": {
+              "motionScale": {
+                "x": 0.5,
+                "y": 0.5
+              },
+              "repeat": {
+                "x": 0,
+                "y": 0
+              },
+              "mirror": false,
+              "depth": 0
+            },
+            "path": {
+              "points": [],
+              "tangents": [],
+              "closed": false,
+              "smoothing": 0.5,
+              "asset": null,
+              "follower": {
+                "targetUuid": null,
+                "progress": 0,
+                "speed": 0,
+                "orient": true
+              }
+            }
+          },
+          "entityType": "Box",
+          "components": [
+            {
+              "uuid": "0000283c-0000-4000-8000-000000000000",
+              "kind": "Transform2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "parentUuid": null,
+                "position": {
+                  "x": 6,
+                  "y": 0
+                },
+                "rotation": 0,
+                "scale": {
+                  "x": 1,
+                  "y": 1
+                }
+              }
+            },
+            {
+              "uuid": "0000283d-0000-4000-8000-000000000000",
+              "kind": "ShapeRenderer2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "shape": "Rectangle",
+                "vertices": [
+                  {
+                    "x": -0.5,
+                    "y": -0.5
+                  },
+                  {
+                    "x": 0.5,
+                    "y": -0.5
+                  },
+                  {
+                    "x": 0.5,
+                    "y": 0.5
+                  },
+                  {
+                    "x": -0.5,
+                    "y": 0.5
+                  }
+                ],
+                "radiusX": 1,
+                "radiusY": 1,
+                "color": {
+                  "r": 0,
+                  "g": 180,
+                  "b": 255
+                },
+                "opacity": 100,
+                "strokeColor": {
+                  "r": 0,
+                  "g": 90,
+                  "b": 155
+                },
+                "strokeOpacity": 100,
+                "strokeWidth": 0.04,
+                "material": "Default",
+                "filterMode": "Linear",
+                "textureAsset": null,
+                "texture": null,
+                "sortingLayer": 1,
+                "orderInLayer": 0
+              }
+            },
+            {
+              "uuid": "0000283e-0000-4000-8000-000000000000",
+              "kind": "RigidBody2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "bodyType": "Static",
+                "massMode": "Automatic",
+                "density": 1,
+                "mass": 1,
+                "autoInertia": true,
+                "inertia": 0.16666666666666666,
+                "gravityScale": 1,
+                "localGravity": 0,
+                "velocity": {
+                  "x": 0,
+                  "y": 0
+                },
+                "acceleration": {
+                  "x": 0,
+                  "y": 0
+                },
+                "angularVelocity": 0,
+                "linearDamping": 0,
+                "angularDamping": 0,
+                "force": {
+                  "x": 0,
+                  "y": 0
+                },
+                "torque": 0,
+                "continuousCollision": "Discrete",
+                "sleepingAllowed": true,
+                "freezeRotation": false,
+                "transformOwnership": "Physics"
+              }
+            },
+            {
+              "uuid": "0000283f-0000-4000-8000-000000000000",
+              "kind": "BoxCollider2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "offset": {
+                  "x": 0,
+                  "y": 0
+                },
+                "rotation": 0,
+                "size": {
+                  "x": 1,
+                  "y": 1
+                },
+                "radiusX": 1,
+                "radiusY": 1,
+                "vertices": [
+                  {
+                    "x": -0.5,
+                    "y": -0.5
+                  },
+                  {
+                    "x": 0.5,
+                    "y": -0.5
+                  },
+                  {
+                    "x": 0.5,
+                    "y": 0.5
+                  },
+                  {
+                    "x": -0.5,
+                    "y": 0.5
+                  }
+                ],
+                "shapeModel": "Box",
+                "shapes": [],
+                "sensor": false,
+                "physicsLayer": 0,
+                "collisionMask": 1,
+                "oneWay": false,
+                "oneWayNormal": {
+                  "x": 0,
+                  "y": 1
+                },
+                "materialAsset": null,
+                "material": {
+                  "restitution": 0,
+                  "restitutionThreshold": 1,
+                  "staticFriction": 0,
+                  "dynamicFriction": 0,
+                  "density": 1,
+                  "frictionCombine": "Average",
+                  "restitutionCombine": "Maximum"
+                }
+              }
+            },
+            {
+              "uuid": "00002840-0000-4000-8000-000000000000",
+              "kind": "PrismaticJoint2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "enabled": true,
+                "targetEntityUuid": "00000385-0000-4000-8000-000000000000",
+                "anchor": {
+                  "x": 0.25,
+                  "y": -0.5
+                },
+                "connectedAnchor": {
+                  "x": -0.25,
+                  "y": 0.5
+                },
+                "collideConnected": true,
+                "distance": 4,
+                "stiffness": 250,
+                "damping": 20,
+                "axis": {
+                  "x": 0,
+                  "y": 1
+                },
+                "limitsEnabled": true,
+                "lowerLimit": -2,
+                "upperLimit": 3,
+                "motorEnabled": true,
+                "motorSpeed": 2,
+                "maxMotorForce": 40,
+                "breakForce": 500,
+                "breakTorque": 200,
+                "referenceOffset": {
+                  "x": 4,
+                  "y": 0
+                },
+                "referenceAngle": 0.25,
+                "initialized": true
+              }
+            }
+          ]
+        },
+        {
+          "uuid": "00000067-0000-4000-8000-000000000000",
+          "name": "CharacterBody2D",
+          "enabled": true,
+          "editorVisible": true,
+          "editorLocked": false,
+          "tags": [],
+          "groups": [],
+          "namedLayer": "World",
+          "ownerUuid": null,
+          "ownership": "Scene",
+          "editorOnly": false,
+          "runtimePersistence": "Scene",
+          "persistentAcrossScenes": false,
+          "objectBlueprintAsset": null,
+          "prefabAsset": null,
+          "prefabInstanceUuid": null,
+          "prefabSourceUuid": null,
+          "prefabOverrides": {},
+          "prefabLayers": [],
+          "sceneLayers": [],
+          "authoring": {
+            "kind": "Rectangle",
+            "origin": {
+              "x": 0,
+              "y": 0
+            },
+            "visible": true,
+            "zOrder": 0,
+            "renderLayer": 1,
+            "sortMode": "LayerThenOrder",
+            "canvasLayer": {
+              "screenSpace": false,
+              "followCamera": true
+            },
+            "parallax": {
+              "motionScale": {
+                "x": 0.5,
+                "y": 0.5
+              },
+              "repeat": {
+                "x": 0,
+                "y": 0
+              },
+              "mirror": false,
+              "depth": 0
+            },
+            "path": {
+              "points": [],
+              "tangents": [],
+              "closed": false,
+              "smoothing": 0.5,
+              "asset": null,
+              "follower": {
+                "targetUuid": null,
+                "progress": 0,
+                "speed": 0,
+                "orient": true
+              }
+            }
+          },
+          "entityType": "Box",
+          "components": [
+            {
+              "uuid": "000028a0-0000-4000-8000-000000000000",
+              "kind": "Transform2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "parentUuid": null,
+                "position": {
+                  "x": 9,
+                  "y": 0
+                },
+                "rotation": 0,
+                "scale": {
+                  "x": 1,
+                  "y": 1
+                }
+              }
+            },
+            {
+              "uuid": "000028a1-0000-4000-8000-000000000000",
+              "kind": "ShapeRenderer2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "shape": "Rectangle",
+                "vertices": [
+                  {
+                    "x": -0.5,
+                    "y": -0.5
+                  },
+                  {
+                    "x": 0.5,
+                    "y": -0.5
+                  },
+                  {
+                    "x": 0.5,
+                    "y": 0.5
+                  },
+                  {
+                    "x": -0.5,
+                    "y": 0.5
+                  }
+                ],
+                "radiusX": 1,
+                "radiusY": 1,
+                "color": {
+                  "r": 0,
+                  "g": 180,
+                  "b": 255
+                },
+                "opacity": 100,
+                "strokeColor": {
+                  "r": 0,
+                  "g": 90,
+                  "b": 155
+                },
+                "strokeOpacity": 100,
+                "strokeWidth": 0.04,
+                "material": "Default",
+                "filterMode": "Linear",
+                "textureAsset": null,
+                "texture": null,
+                "sortingLayer": 1,
+                "orderInLayer": 0
+              }
+            },
+            {
+              "uuid": "000028a2-0000-4000-8000-000000000000",
+              "kind": "RigidBody2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "bodyType": "Static",
+                "massMode": "Automatic",
+                "density": 1,
+                "mass": 1,
+                "autoInertia": true,
+                "inertia": 0.16666666666666666,
+                "gravityScale": 1,
+                "localGravity": 0,
+                "velocity": {
+                  "x": 0,
+                  "y": 0
+                },
+                "acceleration": {
+                  "x": 0,
+                  "y": 0
+                },
+                "angularVelocity": 0,
+                "linearDamping": 0,
+                "angularDamping": 0,
+                "force": {
+                  "x": 0,
+                  "y": 0
+                },
+                "torque": 0,
+                "continuousCollision": "Discrete",
+                "sleepingAllowed": true,
+                "freezeRotation": false,
+                "transformOwnership": "Physics"
+              }
+            },
+            {
+              "uuid": "000028a3-0000-4000-8000-000000000000",
+              "kind": "BoxCollider2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "offset": {
+                  "x": 0,
+                  "y": 0
+                },
+                "rotation": 0,
+                "size": {
+                  "x": 1,
+                  "y": 1
+                },
+                "radiusX": 1,
+                "radiusY": 1,
+                "vertices": [
+                  {
+                    "x": -0.5,
+                    "y": -0.5
+                  },
+                  {
+                    "x": 0.5,
+                    "y": -0.5
+                  },
+                  {
+                    "x": 0.5,
+                    "y": 0.5
+                  },
+                  {
+                    "x": -0.5,
+                    "y": 0.5
+                  }
+                ],
+                "shapeModel": "Box",
+                "shapes": [],
+                "sensor": false,
+                "physicsLayer": 0,
+                "collisionMask": 1,
+                "oneWay": false,
+                "oneWayNormal": {
+                  "x": 0,
+                  "y": 1
+                },
+                "materialAsset": null,
+                "material": {
+                  "restitution": 0,
+                  "restitutionThreshold": 1,
+                  "staticFriction": 0,
+                  "dynamicFriction": 0,
+                  "density": 1,
+                  "frictionCombine": "Average",
+                  "restitutionCombine": "Maximum"
+                }
+              }
+            },
+            {
+              "uuid": "000028a4-0000-4000-8000-000000000000",
+              "kind": "CharacterBody2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "enabled": true,
+                "maxSlopeAngle": 40,
+                "stepHeight": 0.4,
+                "floorSnap": 0.2,
+                "safeMargin": 0.002,
+                "maxSlides": 7,
+                "coyoteTime": 0.18,
+                "applyPlatformVelocity": false,
+                "collisionMask": 7
+              }
+            }
+          ]
+        },
+        {
+          "uuid": "00000068-0000-4000-8000-000000000000",
+          "name": "Area2D",
+          "enabled": true,
+          "editorVisible": true,
+          "editorLocked": false,
+          "tags": [],
+          "groups": [],
+          "namedLayer": "World",
+          "ownerUuid": null,
+          "ownership": "Scene",
+          "editorOnly": false,
+          "runtimePersistence": "Scene",
+          "persistentAcrossScenes": false,
+          "objectBlueprintAsset": null,
+          "prefabAsset": null,
+          "prefabInstanceUuid": null,
+          "prefabSourceUuid": null,
+          "prefabOverrides": {},
+          "prefabLayers": [],
+          "sceneLayers": [],
+          "authoring": {
+            "kind": "Rectangle",
+            "origin": {
+              "x": 0,
+              "y": 0
+            },
+            "visible": true,
+            "zOrder": 0,
+            "renderLayer": 1,
+            "sortMode": "LayerThenOrder",
+            "canvasLayer": {
+              "screenSpace": false,
+              "followCamera": true
+            },
+            "parallax": {
+              "motionScale": {
+                "x": 0.5,
+                "y": 0.5
+              },
+              "repeat": {
+                "x": 0,
+                "y": 0
+              },
+              "mirror": false,
+              "depth": 0
+            },
+            "path": {
+              "points": [],
+              "tangents": [],
+              "closed": false,
+              "smoothing": 0.5,
+              "asset": null,
+              "follower": {
+                "targetUuid": null,
+                "progress": 0,
+                "speed": 0,
+                "orient": true
+              }
+            }
+          },
+          "entityType": "Box",
+          "components": [
+            {
+              "uuid": "00002904-0000-4000-8000-000000000000",
+              "kind": "Transform2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "parentUuid": null,
+                "position": {
+                  "x": 12,
+                  "y": 0
+                },
+                "rotation": 0,
+                "scale": {
+                  "x": 1,
+                  "y": 1
+                }
+              }
+            },
+            {
+              "uuid": "00002905-0000-4000-8000-000000000000",
+              "kind": "ShapeRenderer2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "shape": "Rectangle",
+                "vertices": [
+                  {
+                    "x": -0.5,
+                    "y": -0.5
+                  },
+                  {
+                    "x": 0.5,
+                    "y": -0.5
+                  },
+                  {
+                    "x": 0.5,
+                    "y": 0.5
+                  },
+                  {
+                    "x": -0.5,
+                    "y": 0.5
+                  }
+                ],
+                "radiusX": 1,
+                "radiusY": 1,
+                "color": {
+                  "r": 0,
+                  "g": 180,
+                  "b": 255
+                },
+                "opacity": 100,
+                "strokeColor": {
+                  "r": 0,
+                  "g": 90,
+                  "b": 155
+                },
+                "strokeOpacity": 100,
+                "strokeWidth": 0.04,
+                "material": "Default",
+                "filterMode": "Linear",
+                "textureAsset": null,
+                "texture": null,
+                "sortingLayer": 1,
+                "orderInLayer": 0
+              }
+            },
+            {
+              "uuid": "00002906-0000-4000-8000-000000000000",
+              "kind": "RigidBody2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "bodyType": "Static",
+                "massMode": "Automatic",
+                "density": 1,
+                "mass": 1,
+                "autoInertia": true,
+                "inertia": 0.16666666666666666,
+                "gravityScale": 1,
+                "localGravity": 0,
+                "velocity": {
+                  "x": 0,
+                  "y": 0
+                },
+                "acceleration": {
+                  "x": 0,
+                  "y": 0
+                },
+                "angularVelocity": 0,
+                "linearDamping": 0,
+                "angularDamping": 0,
+                "force": {
+                  "x": 0,
+                  "y": 0
+                },
+                "torque": 0,
+                "continuousCollision": "Discrete",
+                "sleepingAllowed": true,
+                "freezeRotation": false,
+                "transformOwnership": "Physics"
+              }
+            },
+            {
+              "uuid": "00002907-0000-4000-8000-000000000000",
+              "kind": "BoxCollider2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "offset": {
+                  "x": 0,
+                  "y": 0
+                },
+                "rotation": 0,
+                "size": {
+                  "x": 1,
+                  "y": 1
+                },
+                "radiusX": 1,
+                "radiusY": 1,
+                "vertices": [
+                  {
+                    "x": -0.5,
+                    "y": -0.5
+                  },
+                  {
+                    "x": 0.5,
+                    "y": -0.5
+                  },
+                  {
+                    "x": 0.5,
+                    "y": 0.5
+                  },
+                  {
+                    "x": -0.5,
+                    "y": 0.5
+                  }
+                ],
+                "shapeModel": "Box",
+                "shapes": [],
+                "sensor": false,
+                "physicsLayer": 0,
+                "collisionMask": 1,
+                "oneWay": false,
+                "oneWayNormal": {
+                  "x": 0,
+                  "y": 1
+                },
+                "materialAsset": null,
+                "material": {
+                  "restitution": 0,
+                  "restitutionThreshold": 1,
+                  "staticFriction": 0,
+                  "dynamicFriction": 0,
+                  "density": 1,
+                  "frictionCombine": "Average",
+                  "restitutionCombine": "Maximum"
+                }
+              }
+            },
+            {
+              "uuid": "00002908-0000-4000-8000-000000000000",
+              "kind": "Area2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "enabled": true,
+                "shape": "Circle",
+                "size": {
+                  "x": 5,
+                  "y": 6
+                },
+                "radius": 3,
+                "collisionMask": 7,
+                "monitorable": false
+              }
+            }
+          ]
+        },
+        {
+          "uuid": "00000069-0000-4000-8000-000000000000",
+          "name": "AreaEffector2D",
+          "enabled": true,
+          "editorVisible": true,
+          "editorLocked": false,
+          "tags": [],
+          "groups": [],
+          "namedLayer": "World",
+          "ownerUuid": null,
+          "ownership": "Scene",
+          "editorOnly": false,
+          "runtimePersistence": "Scene",
+          "persistentAcrossScenes": false,
+          "objectBlueprintAsset": null,
+          "prefabAsset": null,
+          "prefabInstanceUuid": null,
+          "prefabSourceUuid": null,
+          "prefabOverrides": {},
+          "prefabLayers": [],
+          "sceneLayers": [],
+          "authoring": {
+            "kind": "Rectangle",
+            "origin": {
+              "x": 0,
+              "y": 0
+            },
+            "visible": true,
+            "zOrder": 0,
+            "renderLayer": 1,
+            "sortMode": "LayerThenOrder",
+            "canvasLayer": {
+              "screenSpace": false,
+              "followCamera": true
+            },
+            "parallax": {
+              "motionScale": {
+                "x": 0.5,
+                "y": 0.5
+              },
+              "repeat": {
+                "x": 0,
+                "y": 0
+              },
+              "mirror": false,
+              "depth": 0
+            },
+            "path": {
+              "points": [],
+              "tangents": [],
+              "closed": false,
+              "smoothing": 0.5,
+              "asset": null,
+              "follower": {
+                "targetUuid": null,
+                "progress": 0,
+                "speed": 0,
+                "orient": true
+              }
+            }
+          },
+          "entityType": "Box",
+          "components": [
+            {
+              "uuid": "00002968-0000-4000-8000-000000000000",
+              "kind": "Transform2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "parentUuid": null,
+                "position": {
+                  "x": 15,
+                  "y": 0
+                },
+                "rotation": 0,
+                "scale": {
+                  "x": 1,
+                  "y": 1
+                }
+              }
+            },
+            {
+              "uuid": "00002969-0000-4000-8000-000000000000",
+              "kind": "ShapeRenderer2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "shape": "Rectangle",
+                "vertices": [
+                  {
+                    "x": -0.5,
+                    "y": -0.5
+                  },
+                  {
+                    "x": 0.5,
+                    "y": -0.5
+                  },
+                  {
+                    "x": 0.5,
+                    "y": 0.5
+                  },
+                  {
+                    "x": -0.5,
+                    "y": 0.5
+                  }
+                ],
+                "radiusX": 1,
+                "radiusY": 1,
+                "color": {
+                  "r": 0,
+                  "g": 180,
+                  "b": 255
+                },
+                "opacity": 100,
+                "strokeColor": {
+                  "r": 0,
+                  "g": 90,
+                  "b": 155
+                },
+                "strokeOpacity": 100,
+                "strokeWidth": 0.04,
+                "material": "Default",
+                "filterMode": "Linear",
+                "textureAsset": null,
+                "texture": null,
+                "sortingLayer": 1,
+                "orderInLayer": 0
+              }
+            },
+            {
+              "uuid": "0000296a-0000-4000-8000-000000000000",
+              "kind": "RigidBody2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "bodyType": "Static",
+                "massMode": "Automatic",
+                "density": 1,
+                "mass": 1,
+                "autoInertia": true,
+                "inertia": 0.16666666666666666,
+                "gravityScale": 1,
+                "localGravity": 0,
+                "velocity": {
+                  "x": 0,
+                  "y": 0
+                },
+                "acceleration": {
+                  "x": 0,
+                  "y": 0
+                },
+                "angularVelocity": 0,
+                "linearDamping": 0,
+                "angularDamping": 0,
+                "force": {
+                  "x": 0,
+                  "y": 0
+                },
+                "torque": 0,
+                "continuousCollision": "Discrete",
+                "sleepingAllowed": true,
+                "freezeRotation": false,
+                "transformOwnership": "Physics"
+              }
+            },
+            {
+              "uuid": "0000296b-0000-4000-8000-000000000000",
+              "kind": "BoxCollider2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "offset": {
+                  "x": 0,
+                  "y": 0
+                },
+                "rotation": 0,
+                "size": {
+                  "x": 1,
+                  "y": 1
+                },
+                "radiusX": 1,
+                "radiusY": 1,
+                "vertices": [
+                  {
+                    "x": -0.5,
+                    "y": -0.5
+                  },
+                  {
+                    "x": 0.5,
+                    "y": -0.5
+                  },
+                  {
+                    "x": 0.5,
+                    "y": 0.5
+                  },
+                  {
+                    "x": -0.5,
+                    "y": 0.5
+                  }
+                ],
+                "shapeModel": "Box",
+                "shapes": [],
+                "sensor": false,
+                "physicsLayer": 0,
+                "collisionMask": 1,
+                "oneWay": false,
+                "oneWayNormal": {
+                  "x": 0,
+                  "y": 1
+                },
+                "materialAsset": null,
+                "material": {
+                  "restitution": 0,
+                  "restitutionThreshold": 1,
+                  "staticFriction": 0,
+                  "dynamicFriction": 0,
+                  "density": 1,
+                  "frictionCombine": "Average",
+                  "restitutionCombine": "Maximum"
+                }
+              }
+            },
+            {
+              "uuid": "0000296c-0000-4000-8000-000000000000",
+              "kind": "AreaEffector2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "enabled": true,
+                "priority": 3,
+                "effectors": [
+                  {
+                    "id": "effect-0",
+                    "kind": "Gravity",
+                    "enabled": true,
+                    "direction": {
+                      "x": 1,
+                      "y": 0
+                    },
+                    "strength": 5,
+                    "drag": 2,
+                    "fluidDensity": 3,
+                    "damagePerSecond": 4,
+                    "signal": "audit.effect"
+                  },
+                  {
+                    "id": "effect-1",
+                    "kind": "Wind",
+                    "enabled": true,
+                    "direction": {
+                      "x": 1,
+                      "y": 0
+                    },
+                    "strength": 5,
+                    "drag": 2,
+                    "fluidDensity": 3,
+                    "damagePerSecond": 4,
+                    "signal": "audit.effect"
+                  },
+                  {
+                    "id": "effect-2",
+                    "kind": "Drag",
+                    "enabled": true,
+                    "direction": {
+                      "x": 1,
+                      "y": 0
+                    },
+                    "strength": 5,
+                    "drag": 2,
+                    "fluidDensity": 3,
+                    "damagePerSecond": 4,
+                    "signal": "audit.effect"
+                  },
+                  {
+                    "id": "effect-3",
+                    "kind": "Buoyancy",
+                    "enabled": true,
+                    "direction": {
+                      "x": 1,
+                      "y": 0
+                    },
+                    "strength": 5,
+                    "drag": 2,
+                    "fluidDensity": 3,
+                    "damagePerSecond": 4,
+                    "signal": "audit.effect"
+                  },
+                  {
+                    "id": "effect-4",
+                    "kind": "Damage",
+                    "enabled": true,
+                    "direction": {
+                      "x": 1,
+                      "y": 0
+                    },
+                    "strength": 5,
+                    "drag": 2,
+                    "fluidDensity": 3,
+                    "damagePerSecond": 4,
+                    "signal": "audit.effect"
+                  },
+                  {
+                    "id": "effect-5",
+                    "kind": "Signal",
+                    "enabled": true,
+                    "direction": {
+                      "x": 1,
+                      "y": 0
+                    },
+                    "strength": 5,
+                    "drag": 2,
+                    "fluidDensity": 3,
+                    "damagePerSecond": 4,
+                    "signal": "audit.effect"
+                  }
+                ]
+              }
+            },
+            {
+              "uuid": "0000296d-0000-4000-8000-000000000000",
+              "kind": "Area2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "enabled": true,
+                "shape": "Box",
+                "size": {
+                  "x": 4,
+                  "y": 4
+                },
+                "radius": 2,
+                "collisionMask": 4294967295,
+                "monitorable": true
+              }
+            }
+          ]
+        },
+        {
+          "uuid": "0000006a-0000-4000-8000-000000000000",
+          "name": "NavigationRegion2D",
+          "enabled": true,
+          "editorVisible": true,
+          "editorLocked": false,
+          "tags": [],
+          "groups": [],
+          "namedLayer": "World",
+          "ownerUuid": null,
+          "ownership": "Scene",
+          "editorOnly": false,
+          "runtimePersistence": "Scene",
+          "persistentAcrossScenes": false,
+          "objectBlueprintAsset": null,
+          "prefabAsset": null,
+          "prefabInstanceUuid": null,
+          "prefabSourceUuid": null,
+          "prefabOverrides": {},
+          "prefabLayers": [],
+          "sceneLayers": [],
+          "authoring": {
+            "kind": "Rectangle",
+            "origin": {
+              "x": 0,
+              "y": 0
+            },
+            "visible": true,
+            "zOrder": 0,
+            "renderLayer": 1,
+            "sortMode": "LayerThenOrder",
+            "canvasLayer": {
+              "screenSpace": false,
+              "followCamera": true
+            },
+            "parallax": {
+              "motionScale": {
+                "x": 0.5,
+                "y": 0.5
+              },
+              "repeat": {
+                "x": 0,
+                "y": 0
+              },
+              "mirror": false,
+              "depth": 0
+            },
+            "path": {
+              "points": [],
+              "tangents": [],
+              "closed": false,
+              "smoothing": 0.5,
+              "asset": null,
+              "follower": {
+                "targetUuid": null,
+                "progress": 0,
+                "speed": 0,
+                "orient": true
+              }
+            }
+          },
+          "entityType": "Box",
+          "components": [
+            {
+              "uuid": "000029cc-0000-4000-8000-000000000000",
+              "kind": "Transform2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "parentUuid": null,
+                "position": {
+                  "x": 18,
+                  "y": 0
+                },
+                "rotation": 0,
+                "scale": {
+                  "x": 1,
+                  "y": 1
+                }
+              }
+            },
+            {
+              "uuid": "000029cd-0000-4000-8000-000000000000",
+              "kind": "ShapeRenderer2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "shape": "Rectangle",
+                "vertices": [
+                  {
+                    "x": -0.5,
+                    "y": -0.5
+                  },
+                  {
+                    "x": 0.5,
+                    "y": -0.5
+                  },
+                  {
+                    "x": 0.5,
+                    "y": 0.5
+                  },
+                  {
+                    "x": -0.5,
+                    "y": 0.5
+                  }
+                ],
+                "radiusX": 1,
+                "radiusY": 1,
+                "color": {
+                  "r": 0,
+                  "g": 180,
+                  "b": 255
+                },
+                "opacity": 100,
+                "strokeColor": {
+                  "r": 0,
+                  "g": 90,
+                  "b": 155
+                },
+                "strokeOpacity": 100,
+                "strokeWidth": 0.04,
+                "material": "Default",
+                "filterMode": "Linear",
+                "textureAsset": null,
+                "texture": null,
+                "sortingLayer": 1,
+                "orderInLayer": 0
+              }
+            },
+            {
+              "uuid": "000029ce-0000-4000-8000-000000000000",
+              "kind": "RigidBody2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "bodyType": "Static",
+                "massMode": "Automatic",
+                "density": 1,
+                "mass": 1,
+                "autoInertia": true,
+                "inertia": 0.16666666666666666,
+                "gravityScale": 1,
+                "localGravity": 0,
+                "velocity": {
+                  "x": 0,
+                  "y": 0
+                },
+                "acceleration": {
+                  "x": 0,
+                  "y": 0
+                },
+                "angularVelocity": 0,
+                "linearDamping": 0,
+                "angularDamping": 0,
+                "force": {
+                  "x": 0,
+                  "y": 0
+                },
+                "torque": 0,
+                "continuousCollision": "Discrete",
+                "sleepingAllowed": true,
+                "freezeRotation": false,
+                "transformOwnership": "Physics"
+              }
+            },
+            {
+              "uuid": "000029cf-0000-4000-8000-000000000000",
+              "kind": "BoxCollider2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "offset": {
+                  "x": 0,
+                  "y": 0
+                },
+                "rotation": 0,
+                "size": {
+                  "x": 1,
+                  "y": 1
+                },
+                "radiusX": 1,
+                "radiusY": 1,
+                "vertices": [
+                  {
+                    "x": -0.5,
+                    "y": -0.5
+                  },
+                  {
+                    "x": 0.5,
+                    "y": -0.5
+                  },
+                  {
+                    "x": 0.5,
+                    "y": 0.5
+                  },
+                  {
+                    "x": -0.5,
+                    "y": 0.5
+                  }
+                ],
+                "shapeModel": "Box",
+                "shapes": [],
+                "sensor": false,
+                "physicsLayer": 0,
+                "collisionMask": 1,
+                "oneWay": false,
+                "oneWayNormal": {
+                  "x": 0,
+                  "y": 1
+                },
+                "materialAsset": null,
+                "material": {
+                  "restitution": 0,
+                  "restitutionThreshold": 1,
+                  "staticFriction": 0,
+                  "dynamicFriction": 0,
+                  "density": 1,
+                  "frictionCombine": "Average",
+                  "restitutionCombine": "Maximum"
+                }
+              }
+            },
+            {
+              "uuid": "000029d0-0000-4000-8000-000000000000",
+              "kind": "NavigationRegion2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "enabled": true,
+                "polygon": [
+                  {
+                    "x": -6,
+                    "y": -4
+                  },
+                  {
+                    "x": 6,
+                    "y": -4
+                  },
+                  {
+                    "x": 6,
+                    "y": 4
+                  },
+                  {
+                    "x": -6,
+                    "y": 4
+                  }
+                ],
+                "cellSize": 0.25,
+                "navigationMode": "Grid",
+                "algorithm": "FlowField",
+                "allowDiagonal": false,
+                "dynamic": true,
+                "rebakeInterval": 0.2,
+                "navigationLayer": 2,
+                "navigationMask": 3,
+                "traversalCost": 2,
+                "source": "Manual",
+                "sourceEntityUuid": null,
+                "agentRadius": 0.3,
+                "clusterSize": 8,
+                "links": [
+                  {
+                    "id": "bridge",
+                    "start": {
+                      "x": -1,
+                      "y": 0
+                    },
+                    "end": {
+                      "x": 1,
+                      "y": 0
+                    },
+                    "bidirectional": false,
+                    "cost": 2,
+                    "enabled": true
+                  }
+                ],
+                "costAreas": [
+                  {
+                    "id": "mud",
+                    "name": "Mud 中",
+                    "shape": "Box",
+                    "center": {
+                      "x": 1,
+                      "y": 0
+                    },
+                    "size": {
+                      "x": 2,
+                      "y": 3
+                    },
+                    "radius": 1.5,
+                    "multiplier": 3,
+                    "navigationLayer": 2,
+                    "enabled": true
+                  }
+                ],
+                "bakedRevision": 0
+              }
+            }
+          ]
+        },
+        {
+          "uuid": "0000006b-0000-4000-8000-000000000000",
+          "name": "NavigationObstacle2D",
+          "enabled": true,
+          "editorVisible": true,
+          "editorLocked": false,
+          "tags": [],
+          "groups": [],
+          "namedLayer": "World",
+          "ownerUuid": null,
+          "ownership": "Scene",
+          "editorOnly": false,
+          "runtimePersistence": "Scene",
+          "persistentAcrossScenes": false,
+          "objectBlueprintAsset": null,
+          "prefabAsset": null,
+          "prefabInstanceUuid": null,
+          "prefabSourceUuid": null,
+          "prefabOverrides": {},
+          "prefabLayers": [],
+          "sceneLayers": [],
+          "authoring": {
+            "kind": "Rectangle",
+            "origin": {
+              "x": 0,
+              "y": 0
+            },
+            "visible": true,
+            "zOrder": 0,
+            "renderLayer": 1,
+            "sortMode": "LayerThenOrder",
+            "canvasLayer": {
+              "screenSpace": false,
+              "followCamera": true
+            },
+            "parallax": {
+              "motionScale": {
+                "x": 0.5,
+                "y": 0.5
+              },
+              "repeat": {
+                "x": 0,
+                "y": 0
+              },
+              "mirror": false,
+              "depth": 0
+            },
+            "path": {
+              "points": [],
+              "tangents": [],
+              "closed": false,
+              "smoothing": 0.5,
+              "asset": null,
+              "follower": {
+                "targetUuid": null,
+                "progress": 0,
+                "speed": 0,
+                "orient": true
+              }
+            }
+          },
+          "entityType": "Box",
+          "components": [
+            {
+              "uuid": "00002a30-0000-4000-8000-000000000000",
+              "kind": "Transform2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "parentUuid": null,
+                "position": {
+                  "x": 21,
+                  "y": 0
+                },
+                "rotation": 0,
+                "scale": {
+                  "x": 1,
+                  "y": 1
+                }
+              }
+            },
+            {
+              "uuid": "00002a31-0000-4000-8000-000000000000",
+              "kind": "ShapeRenderer2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "shape": "Rectangle",
+                "vertices": [
+                  {
+                    "x": -0.5,
+                    "y": -0.5
+                  },
+                  {
+                    "x": 0.5,
+                    "y": -0.5
+                  },
+                  {
+                    "x": 0.5,
+                    "y": 0.5
+                  },
+                  {
+                    "x": -0.5,
+                    "y": 0.5
+                  }
+                ],
+                "radiusX": 1,
+                "radiusY": 1,
+                "color": {
+                  "r": 0,
+                  "g": 180,
+                  "b": 255
+                },
+                "opacity": 100,
+                "strokeColor": {
+                  "r": 0,
+                  "g": 90,
+                  "b": 155
+                },
+                "strokeOpacity": 100,
+                "strokeWidth": 0.04,
+                "material": "Default",
+                "filterMode": "Linear",
+                "textureAsset": null,
+                "texture": null,
+                "sortingLayer": 1,
+                "orderInLayer": 0
+              }
+            },
+            {
+              "uuid": "00002a32-0000-4000-8000-000000000000",
+              "kind": "RigidBody2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "bodyType": "Static",
+                "massMode": "Automatic",
+                "density": 1,
+                "mass": 1,
+                "autoInertia": true,
+                "inertia": 0.16666666666666666,
+                "gravityScale": 1,
+                "localGravity": 0,
+                "velocity": {
+                  "x": 0,
+                  "y": 0
+                },
+                "acceleration": {
+                  "x": 0,
+                  "y": 0
+                },
+                "angularVelocity": 0,
+                "linearDamping": 0,
+                "angularDamping": 0,
+                "force": {
+                  "x": 0,
+                  "y": 0
+                },
+                "torque": 0,
+                "continuousCollision": "Discrete",
+                "sleepingAllowed": true,
+                "freezeRotation": false,
+                "transformOwnership": "Physics"
+              }
+            },
+            {
+              "uuid": "00002a33-0000-4000-8000-000000000000",
+              "kind": "BoxCollider2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "offset": {
+                  "x": 0,
+                  "y": 0
+                },
+                "rotation": 0,
+                "size": {
+                  "x": 1,
+                  "y": 1
+                },
+                "radiusX": 1,
+                "radiusY": 1,
+                "vertices": [
+                  {
+                    "x": -0.5,
+                    "y": -0.5
+                  },
+                  {
+                    "x": 0.5,
+                    "y": -0.5
+                  },
+                  {
+                    "x": 0.5,
+                    "y": 0.5
+                  },
+                  {
+                    "x": -0.5,
+                    "y": 0.5
+                  }
+                ],
+                "shapeModel": "Box",
+                "shapes": [],
+                "sensor": false,
+                "physicsLayer": 0,
+                "collisionMask": 1,
+                "oneWay": false,
+                "oneWayNormal": {
+                  "x": 0,
+                  "y": 1
+                },
+                "materialAsset": null,
+                "material": {
+                  "restitution": 0,
+                  "restitutionThreshold": 1,
+                  "staticFriction": 0,
+                  "dynamicFriction": 0,
+                  "density": 1,
+                  "frictionCombine": "Average",
+                  "restitutionCombine": "Maximum"
+                }
+              }
+            },
+            {
+              "uuid": "00002a34-0000-4000-8000-000000000000",
+              "kind": "NavigationObstacle2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "enabled": true,
+                "shape": "Box",
+                "size": {
+                  "x": 3,
+                  "y": 2
+                },
+                "radius": 1.25,
+                "dynamic": false,
+                "navigationLayer": 2,
+                "avoidanceVelocity": {
+                  "x": 1,
+                  "y": -1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "uuid": "0000006c-0000-4000-8000-000000000000",
+          "name": "NavigationAgent2D",
+          "enabled": true,
+          "editorVisible": true,
+          "editorLocked": false,
+          "tags": [],
+          "groups": [],
+          "namedLayer": "World",
+          "ownerUuid": null,
+          "ownership": "Scene",
+          "editorOnly": false,
+          "runtimePersistence": "Scene",
+          "persistentAcrossScenes": false,
+          "objectBlueprintAsset": null,
+          "prefabAsset": null,
+          "prefabInstanceUuid": null,
+          "prefabSourceUuid": null,
+          "prefabOverrides": {},
+          "prefabLayers": [],
+          "sceneLayers": [],
+          "authoring": {
+            "kind": "Rectangle",
+            "origin": {
+              "x": 0,
+              "y": 0
+            },
+            "visible": true,
+            "zOrder": 0,
+            "renderLayer": 1,
+            "sortMode": "LayerThenOrder",
+            "canvasLayer": {
+              "screenSpace": false,
+              "followCamera": true
+            },
+            "parallax": {
+              "motionScale": {
+                "x": 0.5,
+                "y": 0.5
+              },
+              "repeat": {
+                "x": 0,
+                "y": 0
+              },
+              "mirror": false,
+              "depth": 0
+            },
+            "path": {
+              "points": [],
+              "tangents": [],
+              "closed": false,
+              "smoothing": 0.5,
+              "asset": null,
+              "follower": {
+                "targetUuid": null,
+                "progress": 0,
+                "speed": 0,
+                "orient": true
+              }
+            }
+          },
+          "entityType": "Box",
+          "components": [
+            {
+              "uuid": "00002a94-0000-4000-8000-000000000000",
+              "kind": "Transform2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "parentUuid": null,
+                "position": {
+                  "x": 24,
+                  "y": 0
+                },
+                "rotation": 0,
+                "scale": {
+                  "x": 1,
+                  "y": 1
+                }
+              }
+            },
+            {
+              "uuid": "00002a95-0000-4000-8000-000000000000",
+              "kind": "ShapeRenderer2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "shape": "Rectangle",
+                "vertices": [
+                  {
+                    "x": -0.5,
+                    "y": -0.5
+                  },
+                  {
+                    "x": 0.5,
+                    "y": -0.5
+                  },
+                  {
+                    "x": 0.5,
+                    "y": 0.5
+                  },
+                  {
+                    "x": -0.5,
+                    "y": 0.5
+                  }
+                ],
+                "radiusX": 1,
+                "radiusY": 1,
+                "color": {
+                  "r": 0,
+                  "g": 180,
+                  "b": 255
+                },
+                "opacity": 100,
+                "strokeColor": {
+                  "r": 0,
+                  "g": 90,
+                  "b": 155
+                },
+                "strokeOpacity": 100,
+                "strokeWidth": 0.04,
+                "material": "Default",
+                "filterMode": "Linear",
+                "textureAsset": null,
+                "texture": null,
+                "sortingLayer": 1,
+                "orderInLayer": 0
+              }
+            },
+            {
+              "uuid": "00002a96-0000-4000-8000-000000000000",
+              "kind": "RigidBody2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "bodyType": "Static",
+                "massMode": "Automatic",
+                "density": 1,
+                "mass": 1,
+                "autoInertia": true,
+                "inertia": 0.16666666666666666,
+                "gravityScale": 1,
+                "localGravity": 0,
+                "velocity": {
+                  "x": 0,
+                  "y": 0
+                },
+                "acceleration": {
+                  "x": 0,
+                  "y": 0
+                },
+                "angularVelocity": 0,
+                "linearDamping": 0,
+                "angularDamping": 0,
+                "force": {
+                  "x": 0,
+                  "y": 0
+                },
+                "torque": 0,
+                "continuousCollision": "Discrete",
+                "sleepingAllowed": true,
+                "freezeRotation": false,
+                "transformOwnership": "Physics"
+              }
+            },
+            {
+              "uuid": "00002a97-0000-4000-8000-000000000000",
+              "kind": "BoxCollider2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "offset": {
+                  "x": 0,
+                  "y": 0
+                },
+                "rotation": 0,
+                "size": {
+                  "x": 1,
+                  "y": 1
+                },
+                "radiusX": 1,
+                "radiusY": 1,
+                "vertices": [
+                  {
+                    "x": -0.5,
+                    "y": -0.5
+                  },
+                  {
+                    "x": 0.5,
+                    "y": -0.5
+                  },
+                  {
+                    "x": 0.5,
+                    "y": 0.5
+                  },
+                  {
+                    "x": -0.5,
+                    "y": 0.5
+                  }
+                ],
+                "shapeModel": "Box",
+                "shapes": [],
+                "sensor": false,
+                "physicsLayer": 0,
+                "collisionMask": 1,
+                "oneWay": false,
+                "oneWayNormal": {
+                  "x": 0,
+                  "y": 1
+                },
+                "materialAsset": null,
+                "material": {
+                  "restitution": 0,
+                  "restitutionThreshold": 1,
+                  "staticFriction": 0,
+                  "dynamicFriction": 0,
+                  "density": 1,
+                  "frictionCombine": "Average",
+                  "restitutionCombine": "Maximum"
+                }
+              }
+            },
+            {
+              "uuid": "00002a98-0000-4000-8000-000000000000",
+              "kind": "NavigationAgent2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "enabled": true,
+                "targetPosition": {
+                  "x": 3,
+                  "y": 2
+                },
+                "targetEntityUuid": "00000385-0000-4000-8000-000000000000",
+                "speed": 5,
+                "acceleration": 12,
+                "radius": 0.3,
+                "stoppingDistance": 0.2,
+                "avoidance": false,
+                "avoidanceRadius": 2,
+                "pathSmoothing": false,
+                "repathInterval": 0.4,
+                "navigationLayer": 2,
+                "navigationMask": 3,
+                "avoidancePriority": 0.75,
+                "maximumAvoidanceNeighbors": 8
+              }
+            }
+          ]
+        },
+        {
+          "uuid": "0000006d-0000-4000-8000-000000000000",
+          "name": "BehaviorTree2D",
+          "enabled": true,
+          "editorVisible": true,
+          "editorLocked": false,
+          "tags": [],
+          "groups": [],
+          "namedLayer": "World",
+          "ownerUuid": null,
+          "ownership": "Scene",
+          "editorOnly": false,
+          "runtimePersistence": "Scene",
+          "persistentAcrossScenes": false,
+          "objectBlueprintAsset": null,
+          "prefabAsset": null,
+          "prefabInstanceUuid": null,
+          "prefabSourceUuid": null,
+          "prefabOverrides": {},
+          "prefabLayers": [],
+          "sceneLayers": [],
+          "authoring": {
+            "kind": "Rectangle",
+            "origin": {
+              "x": 0,
+              "y": 0
+            },
+            "visible": true,
+            "zOrder": 0,
+            "renderLayer": 1,
+            "sortMode": "LayerThenOrder",
+            "canvasLayer": {
+              "screenSpace": false,
+              "followCamera": true
+            },
+            "parallax": {
+              "motionScale": {
+                "x": 0.5,
+                "y": 0.5
+              },
+              "repeat": {
+                "x": 0,
+                "y": 0
+              },
+              "mirror": false,
+              "depth": 0
+            },
+            "path": {
+              "points": [],
+              "tangents": [],
+              "closed": false,
+              "smoothing": 0.5,
+              "asset": null,
+              "follower": {
+                "targetUuid": null,
+                "progress": 0,
+                "speed": 0,
+                "orient": true
+              }
+            }
+          },
+          "entityType": "Box",
+          "components": [
+            {
+              "uuid": "00002af8-0000-4000-8000-000000000000",
+              "kind": "Transform2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "parentUuid": null,
+                "position": {
+                  "x": 27,
+                  "y": 0
+                },
+                "rotation": 0,
+                "scale": {
+                  "x": 1,
+                  "y": 1
+                }
+              }
+            },
+            {
+              "uuid": "00002af9-0000-4000-8000-000000000000",
+              "kind": "ShapeRenderer2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "shape": "Rectangle",
+                "vertices": [
+                  {
+                    "x": -0.5,
+                    "y": -0.5
+                  },
+                  {
+                    "x": 0.5,
+                    "y": -0.5
+                  },
+                  {
+                    "x": 0.5,
+                    "y": 0.5
+                  },
+                  {
+                    "x": -0.5,
+                    "y": 0.5
+                  }
+                ],
+                "radiusX": 1,
+                "radiusY": 1,
+                "color": {
+                  "r": 0,
+                  "g": 180,
+                  "b": 255
+                },
+                "opacity": 100,
+                "strokeColor": {
+                  "r": 0,
+                  "g": 90,
+                  "b": 155
+                },
+                "strokeOpacity": 100,
+                "strokeWidth": 0.04,
+                "material": "Default",
+                "filterMode": "Linear",
+                "textureAsset": null,
+                "texture": null,
+                "sortingLayer": 1,
+                "orderInLayer": 0
+              }
+            },
+            {
+              "uuid": "00002afa-0000-4000-8000-000000000000",
+              "kind": "RigidBody2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "bodyType": "Static",
+                "massMode": "Automatic",
+                "density": 1,
+                "mass": 1,
+                "autoInertia": true,
+                "inertia": 0.16666666666666666,
+                "gravityScale": 1,
+                "localGravity": 0,
+                "velocity": {
+                  "x": 0,
+                  "y": 0
+                },
+                "acceleration": {
+                  "x": 0,
+                  "y": 0
+                },
+                "angularVelocity": 0,
+                "linearDamping": 0,
+                "angularDamping": 0,
+                "force": {
+                  "x": 0,
+                  "y": 0
+                },
+                "torque": 0,
+                "continuousCollision": "Discrete",
+                "sleepingAllowed": true,
+                "freezeRotation": false,
+                "transformOwnership": "Physics"
+              }
+            },
+            {
+              "uuid": "00002afb-0000-4000-8000-000000000000",
+              "kind": "BoxCollider2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "offset": {
+                  "x": 0,
+                  "y": 0
+                },
+                "rotation": 0,
+                "size": {
+                  "x": 1,
+                  "y": 1
+                },
+                "radiusX": 1,
+                "radiusY": 1,
+                "vertices": [
+                  {
+                    "x": -0.5,
+                    "y": -0.5
+                  },
+                  {
+                    "x": 0.5,
+                    "y": -0.5
+                  },
+                  {
+                    "x": 0.5,
+                    "y": 0.5
+                  },
+                  {
+                    "x": -0.5,
+                    "y": 0.5
+                  }
+                ],
+                "shapeModel": "Box",
+                "shapes": [],
+                "sensor": false,
+                "physicsLayer": 0,
+                "collisionMask": 1,
+                "oneWay": false,
+                "oneWayNormal": {
+                  "x": 0,
+                  "y": 1
+                },
+                "materialAsset": null,
+                "material": {
+                  "restitution": 0,
+                  "restitutionThreshold": 1,
+                  "staticFriction": 0,
+                  "dynamicFriction": 0,
+                  "density": 1,
+                  "frictionCombine": "Average",
+                  "restitutionCombine": "Maximum"
+                }
+              }
+            },
+            {
+              "uuid": "00002afc-0000-4000-8000-000000000000",
+              "kind": "BehaviorTree2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "enabled": true,
+                "treeAsset": null,
+                "tickRate": 20,
+                "blackboardOverrides": {
+                  "score": 3,
+                  "ready": true,
+                  "label": "中"
+                }
+              }
+            },
+            {
+              "uuid": "00002afd-0000-4000-8000-000000000000",
+              "kind": "StateMachine2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "enabled": true,
+                "machineAsset": null
+              }
+            }
+          ]
+        },
+        {
+          "uuid": "0000006e-0000-4000-8000-000000000000",
+          "name": "StateMachine2D",
+          "enabled": true,
+          "editorVisible": true,
+          "editorLocked": false,
+          "tags": [],
+          "groups": [],
+          "namedLayer": "World",
+          "ownerUuid": null,
+          "ownership": "Scene",
+          "editorOnly": false,
+          "runtimePersistence": "Scene",
+          "persistentAcrossScenes": false,
+          "objectBlueprintAsset": null,
+          "prefabAsset": null,
+          "prefabInstanceUuid": null,
+          "prefabSourceUuid": null,
+          "prefabOverrides": {},
+          "prefabLayers": [],
+          "sceneLayers": [],
+          "authoring": {
+            "kind": "Rectangle",
+            "origin": {
+              "x": 0,
+              "y": 0
+            },
+            "visible": true,
+            "zOrder": 0,
+            "renderLayer": 1,
+            "sortMode": "LayerThenOrder",
+            "canvasLayer": {
+              "screenSpace": false,
+              "followCamera": true
+            },
+            "parallax": {
+              "motionScale": {
+                "x": 0.5,
+                "y": 0.5
+              },
+              "repeat": {
+                "x": 0,
+                "y": 0
+              },
+              "mirror": false,
+              "depth": 0
+            },
+            "path": {
+              "points": [],
+              "tangents": [],
+              "closed": false,
+              "smoothing": 0.5,
+              "asset": null,
+              "follower": {
+                "targetUuid": null,
+                "progress": 0,
+                "speed": 0,
+                "orient": true
+              }
+            }
+          },
+          "entityType": "Box",
+          "components": [
+            {
+              "uuid": "00002b5c-0000-4000-8000-000000000000",
+              "kind": "Transform2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "parentUuid": null,
+                "position": {
+                  "x": 30,
+                  "y": 0
+                },
+                "rotation": 0,
+                "scale": {
+                  "x": 1,
+                  "y": 1
+                }
+              }
+            },
+            {
+              "uuid": "00002b5d-0000-4000-8000-000000000000",
+              "kind": "ShapeRenderer2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "shape": "Rectangle",
+                "vertices": [
+                  {
+                    "x": -0.5,
+                    "y": -0.5
+                  },
+                  {
+                    "x": 0.5,
+                    "y": -0.5
+                  },
+                  {
+                    "x": 0.5,
+                    "y": 0.5
+                  },
+                  {
+                    "x": -0.5,
+                    "y": 0.5
+                  }
+                ],
+                "radiusX": 1,
+                "radiusY": 1,
+                "color": {
+                  "r": 0,
+                  "g": 180,
+                  "b": 255
+                },
+                "opacity": 100,
+                "strokeColor": {
+                  "r": 0,
+                  "g": 90,
+                  "b": 155
+                },
+                "strokeOpacity": 100,
+                "strokeWidth": 0.04,
+                "material": "Default",
+                "filterMode": "Linear",
+                "textureAsset": null,
+                "texture": null,
+                "sortingLayer": 1,
+                "orderInLayer": 0
+              }
+            },
+            {
+              "uuid": "00002b5e-0000-4000-8000-000000000000",
+              "kind": "RigidBody2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "bodyType": "Static",
+                "massMode": "Automatic",
+                "density": 1,
+                "mass": 1,
+                "autoInertia": true,
+                "inertia": 0.16666666666666666,
+                "gravityScale": 1,
+                "localGravity": 0,
+                "velocity": {
+                  "x": 0,
+                  "y": 0
+                },
+                "acceleration": {
+                  "x": 0,
+                  "y": 0
+                },
+                "angularVelocity": 0,
+                "linearDamping": 0,
+                "angularDamping": 0,
+                "force": {
+                  "x": 0,
+                  "y": 0
+                },
+                "torque": 0,
+                "continuousCollision": "Discrete",
+                "sleepingAllowed": true,
+                "freezeRotation": false,
+                "transformOwnership": "Physics"
+              }
+            },
+            {
+              "uuid": "00002b5f-0000-4000-8000-000000000000",
+              "kind": "BoxCollider2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "offset": {
+                  "x": 0,
+                  "y": 0
+                },
+                "rotation": 0,
+                "size": {
+                  "x": 1,
+                  "y": 1
+                },
+                "radiusX": 1,
+                "radiusY": 1,
+                "vertices": [
+                  {
+                    "x": -0.5,
+                    "y": -0.5
+                  },
+                  {
+                    "x": 0.5,
+                    "y": -0.5
+                  },
+                  {
+                    "x": 0.5,
+                    "y": 0.5
+                  },
+                  {
+                    "x": -0.5,
+                    "y": 0.5
+                  }
+                ],
+                "shapeModel": "Box",
+                "shapes": [],
+                "sensor": false,
+                "physicsLayer": 0,
+                "collisionMask": 1,
+                "oneWay": false,
+                "oneWayNormal": {
+                  "x": 0,
+                  "y": 1
+                },
+                "materialAsset": null,
+                "material": {
+                  "restitution": 0,
+                  "restitutionThreshold": 1,
+                  "staticFriction": 0,
+                  "dynamicFriction": 0,
+                  "density": 1,
+                  "frictionCombine": "Average",
+                  "restitutionCombine": "Maximum"
+                }
+              }
+            },
+            {
+              "uuid": "00002b60-0000-4000-8000-000000000000",
+              "kind": "StateMachine2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "enabled": true,
+                "machineAsset": null
+              }
+            }
+          ]
+        },
+        {
+          "uuid": "0000006f-0000-4000-8000-000000000000",
+          "name": "WorldChunk2D",
+          "enabled": true,
+          "editorVisible": true,
+          "editorLocked": false,
+          "tags": [],
+          "groups": [],
+          "namedLayer": "World",
+          "ownerUuid": null,
+          "ownership": "Scene",
+          "editorOnly": false,
+          "runtimePersistence": "Scene",
+          "persistentAcrossScenes": false,
+          "objectBlueprintAsset": null,
+          "prefabAsset": null,
+          "prefabInstanceUuid": null,
+          "prefabSourceUuid": null,
+          "prefabOverrides": {},
+          "prefabLayers": [],
+          "sceneLayers": [],
+          "authoring": {
+            "kind": "Rectangle",
+            "origin": {
+              "x": 0,
+              "y": 0
+            },
+            "visible": true,
+            "zOrder": 0,
+            "renderLayer": 1,
+            "sortMode": "LayerThenOrder",
+            "canvasLayer": {
+              "screenSpace": false,
+              "followCamera": true
+            },
+            "parallax": {
+              "motionScale": {
+                "x": 0.5,
+                "y": 0.5
+              },
+              "repeat": {
+                "x": 0,
+                "y": 0
+              },
+              "mirror": false,
+              "depth": 0
+            },
+            "path": {
+              "points": [],
+              "tangents": [],
+              "closed": false,
+              "smoothing": 0.5,
+              "asset": null,
+              "follower": {
+                "targetUuid": null,
+                "progress": 0,
+                "speed": 0,
+                "orient": true
+              }
+            }
+          },
+          "entityType": "Box",
+          "components": [
+            {
+              "uuid": "00002bc0-0000-4000-8000-000000000000",
+              "kind": "Transform2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "parentUuid": null,
+                "position": {
+                  "x": 33,
+                  "y": 0
+                },
+                "rotation": 0,
+                "scale": {
+                  "x": 1,
+                  "y": 1
+                }
+              }
+            },
+            {
+              "uuid": "00002bc1-0000-4000-8000-000000000000",
+              "kind": "ShapeRenderer2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "shape": "Rectangle",
+                "vertices": [
+                  {
+                    "x": -0.5,
+                    "y": -0.5
+                  },
+                  {
+                    "x": 0.5,
+                    "y": -0.5
+                  },
+                  {
+                    "x": 0.5,
+                    "y": 0.5
+                  },
+                  {
+                    "x": -0.5,
+                    "y": 0.5
+                  }
+                ],
+                "radiusX": 1,
+                "radiusY": 1,
+                "color": {
+                  "r": 0,
+                  "g": 180,
+                  "b": 255
+                },
+                "opacity": 100,
+                "strokeColor": {
+                  "r": 0,
+                  "g": 90,
+                  "b": 155
+                },
+                "strokeOpacity": 100,
+                "strokeWidth": 0.04,
+                "material": "Default",
+                "filterMode": "Linear",
+                "textureAsset": null,
+                "texture": null,
+                "sortingLayer": 1,
+                "orderInLayer": 0
+              }
+            },
+            {
+              "uuid": "00002bc2-0000-4000-8000-000000000000",
+              "kind": "RigidBody2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "bodyType": "Static",
+                "massMode": "Automatic",
+                "density": 1,
+                "mass": 1,
+                "autoInertia": true,
+                "inertia": 0.16666666666666666,
+                "gravityScale": 1,
+                "localGravity": 0,
+                "velocity": {
+                  "x": 0,
+                  "y": 0
+                },
+                "acceleration": {
+                  "x": 0,
+                  "y": 0
+                },
+                "angularVelocity": 0,
+                "linearDamping": 0,
+                "angularDamping": 0,
+                "force": {
+                  "x": 0,
+                  "y": 0
+                },
+                "torque": 0,
+                "continuousCollision": "Discrete",
+                "sleepingAllowed": true,
+                "freezeRotation": false,
+                "transformOwnership": "Physics"
+              }
+            },
+            {
+              "uuid": "00002bc3-0000-4000-8000-000000000000",
+              "kind": "BoxCollider2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "offset": {
+                  "x": 0,
+                  "y": 0
+                },
+                "rotation": 0,
+                "size": {
+                  "x": 1,
+                  "y": 1
+                },
+                "radiusX": 1,
+                "radiusY": 1,
+                "vertices": [
+                  {
+                    "x": -0.5,
+                    "y": -0.5
+                  },
+                  {
+                    "x": 0.5,
+                    "y": -0.5
+                  },
+                  {
+                    "x": 0.5,
+                    "y": 0.5
+                  },
+                  {
+                    "x": -0.5,
+                    "y": 0.5
+                  }
+                ],
+                "shapeModel": "Box",
+                "shapes": [],
+                "sensor": false,
+                "physicsLayer": 0,
+                "collisionMask": 1,
+                "oneWay": false,
+                "oneWayNormal": {
+                  "x": 0,
+                  "y": 1
+                },
+                "materialAsset": null,
+                "material": {
+                  "restitution": 0,
+                  "restitutionThreshold": 1,
+                  "staticFriction": 0,
+                  "dynamicFriction": 0,
+                  "density": 1,
+                  "frictionCombine": "Average",
+                  "restitutionCombine": "Maximum"
+                }
+              }
+            },
+            {
+              "uuid": "00002bc4-0000-4000-8000-000000000000",
+              "kind": "WorldChunk2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "enabled": true,
+                "size": {
+                  "x": 20,
+                  "y": 16
+                },
+                "loadDistance": 30,
+                "unloadDistance": 40,
+                "preloadPriority": 3,
+                "memoryEstimateMb": 5,
+                "sceneUuid": "",
+                "initiallyLoaded": false,
+                "ownership": "audit-owner",
+                "dependencies": [],
+                "prefetchDistance": 50,
+                "cachePolicy": "Retain",
+                "saveStateKey": "audit-world"
+              }
+            }
+          ]
+        },
+        {
+          "uuid": "00000070-0000-4000-8000-000000000000",
+          "name": "Portal2D",
+          "enabled": true,
+          "editorVisible": true,
+          "editorLocked": false,
+          "tags": [],
+          "groups": [],
+          "namedLayer": "World",
+          "ownerUuid": null,
+          "ownership": "Scene",
+          "editorOnly": false,
+          "runtimePersistence": "Scene",
+          "persistentAcrossScenes": false,
+          "objectBlueprintAsset": null,
+          "prefabAsset": null,
+          "prefabInstanceUuid": null,
+          "prefabSourceUuid": null,
+          "prefabOverrides": {},
+          "prefabLayers": [],
+          "sceneLayers": [],
+          "authoring": {
+            "kind": "Rectangle",
+            "origin": {
+              "x": 0,
+              "y": 0
+            },
+            "visible": true,
+            "zOrder": 0,
+            "renderLayer": 1,
+            "sortMode": "LayerThenOrder",
+            "canvasLayer": {
+              "screenSpace": false,
+              "followCamera": true
+            },
+            "parallax": {
+              "motionScale": {
+                "x": 0.5,
+                "y": 0.5
+              },
+              "repeat": {
+                "x": 0,
+                "y": 0
+              },
+              "mirror": false,
+              "depth": 0
+            },
+            "path": {
+              "points": [],
+              "tangents": [],
+              "closed": false,
+              "smoothing": 0.5,
+              "asset": null,
+              "follower": {
+                "targetUuid": null,
+                "progress": 0,
+                "speed": 0,
+                "orient": true
+              }
+            }
+          },
+          "entityType": "Box",
+          "components": [
+            {
+              "uuid": "00002c24-0000-4000-8000-000000000000",
+              "kind": "Transform2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "parentUuid": null,
+                "position": {
+                  "x": 36,
+                  "y": 0
+                },
+                "rotation": 0,
+                "scale": {
+                  "x": 1,
+                  "y": 1
+                }
+              }
+            },
+            {
+              "uuid": "00002c25-0000-4000-8000-000000000000",
+              "kind": "ShapeRenderer2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "shape": "Rectangle",
+                "vertices": [
+                  {
+                    "x": -0.5,
+                    "y": -0.5
+                  },
+                  {
+                    "x": 0.5,
+                    "y": -0.5
+                  },
+                  {
+                    "x": 0.5,
+                    "y": 0.5
+                  },
+                  {
+                    "x": -0.5,
+                    "y": 0.5
+                  }
+                ],
+                "radiusX": 1,
+                "radiusY": 1,
+                "color": {
+                  "r": 0,
+                  "g": 180,
+                  "b": 255
+                },
+                "opacity": 100,
+                "strokeColor": {
+                  "r": 0,
+                  "g": 90,
+                  "b": 155
+                },
+                "strokeOpacity": 100,
+                "strokeWidth": 0.04,
+                "material": "Default",
+                "filterMode": "Linear",
+                "textureAsset": null,
+                "texture": null,
+                "sortingLayer": 1,
+                "orderInLayer": 0
+              }
+            },
+            {
+              "uuid": "00002c26-0000-4000-8000-000000000000",
+              "kind": "RigidBody2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "bodyType": "Static",
+                "massMode": "Automatic",
+                "density": 1,
+                "mass": 1,
+                "autoInertia": true,
+                "inertia": 0.16666666666666666,
+                "gravityScale": 1,
+                "localGravity": 0,
+                "velocity": {
+                  "x": 0,
+                  "y": 0
+                },
+                "acceleration": {
+                  "x": 0,
+                  "y": 0
+                },
+                "angularVelocity": 0,
+                "linearDamping": 0,
+                "angularDamping": 0,
+                "force": {
+                  "x": 0,
+                  "y": 0
+                },
+                "torque": 0,
+                "continuousCollision": "Discrete",
+                "sleepingAllowed": true,
+                "freezeRotation": false,
+                "transformOwnership": "Physics"
+              }
+            },
+            {
+              "uuid": "00002c27-0000-4000-8000-000000000000",
+              "kind": "BoxCollider2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "offset": {
+                  "x": 0,
+                  "y": 0
+                },
+                "rotation": 0,
+                "size": {
+                  "x": 1,
+                  "y": 1
+                },
+                "radiusX": 1,
+                "radiusY": 1,
+                "vertices": [
+                  {
+                    "x": -0.5,
+                    "y": -0.5
+                  },
+                  {
+                    "x": 0.5,
+                    "y": -0.5
+                  },
+                  {
+                    "x": 0.5,
+                    "y": 0.5
+                  },
+                  {
+                    "x": -0.5,
+                    "y": 0.5
+                  }
+                ],
+                "shapeModel": "Box",
+                "shapes": [],
+                "sensor": false,
+                "physicsLayer": 0,
+                "collisionMask": 1,
+                "oneWay": false,
+                "oneWayNormal": {
+                  "x": 0,
+                  "y": 1
+                },
+                "materialAsset": null,
+                "material": {
+                  "restitution": 0,
+                  "restitutionThreshold": 1,
+                  "staticFriction": 0,
+                  "dynamicFriction": 0,
+                  "density": 1,
+                  "frictionCombine": "Average",
+                  "restitutionCombine": "Maximum"
+                }
+              }
+            },
+            {
+              "uuid": "00002c28-0000-4000-8000-000000000000",
+              "kind": "Portal2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "enabled": true,
+                "targetSceneUuid": "",
+                "targetPortal": "00000385-0000-4000-8000-000000000000",
+                "triggerRadius": 2,
+                "preload": false
+              }
+            }
+          ]
+        },
+        {
+          "uuid": "00000071-0000-4000-8000-000000000000",
+          "name": "PlatformController2D",
+          "enabled": true,
+          "editorVisible": true,
+          "editorLocked": false,
+          "tags": [],
+          "groups": [],
+          "namedLayer": "World",
+          "ownerUuid": null,
+          "ownership": "Scene",
+          "editorOnly": false,
+          "runtimePersistence": "Scene",
+          "persistentAcrossScenes": false,
+          "objectBlueprintAsset": null,
+          "prefabAsset": null,
+          "prefabInstanceUuid": null,
+          "prefabSourceUuid": null,
+          "prefabOverrides": {},
+          "prefabLayers": [],
+          "sceneLayers": [],
+          "authoring": {
+            "kind": "Rectangle",
+            "origin": {
+              "x": 0,
+              "y": 0
+            },
+            "visible": true,
+            "zOrder": 0,
+            "renderLayer": 1,
+            "sortMode": "LayerThenOrder",
+            "canvasLayer": {
+              "screenSpace": false,
+              "followCamera": true
+            },
+            "parallax": {
+              "motionScale": {
+                "x": 0.5,
+                "y": 0.5
+              },
+              "repeat": {
+                "x": 0,
+                "y": 0
+              },
+              "mirror": false,
+              "depth": 0
+            },
+            "path": {
+              "points": [],
+              "tangents": [],
+              "closed": false,
+              "smoothing": 0.5,
+              "asset": null,
+              "follower": {
+                "targetUuid": null,
+                "progress": 0,
+                "speed": 0,
+                "orient": true
+              }
+            }
+          },
+          "entityType": "Box",
+          "components": [
+            {
+              "uuid": "00002c88-0000-4000-8000-000000000000",
+              "kind": "Transform2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "parentUuid": null,
+                "position": {
+                  "x": 39,
+                  "y": 0
+                },
+                "rotation": 0,
+                "scale": {
+                  "x": 1,
+                  "y": 1
+                }
+              }
+            },
+            {
+              "uuid": "00002c89-0000-4000-8000-000000000000",
+              "kind": "ShapeRenderer2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "shape": "Rectangle",
+                "vertices": [
+                  {
+                    "x": -0.5,
+                    "y": -0.5
+                  },
+                  {
+                    "x": 0.5,
+                    "y": -0.5
+                  },
+                  {
+                    "x": 0.5,
+                    "y": 0.5
+                  },
+                  {
+                    "x": -0.5,
+                    "y": 0.5
+                  }
+                ],
+                "radiusX": 1,
+                "radiusY": 1,
+                "color": {
+                  "r": 0,
+                  "g": 180,
+                  "b": 255
+                },
+                "opacity": 100,
+                "strokeColor": {
+                  "r": 0,
+                  "g": 90,
+                  "b": 155
+                },
+                "strokeOpacity": 100,
+                "strokeWidth": 0.04,
+                "material": "Default",
+                "filterMode": "Linear",
+                "textureAsset": null,
+                "texture": null,
+                "sortingLayer": 1,
+                "orderInLayer": 0
+              }
+            },
+            {
+              "uuid": "00002c8a-0000-4000-8000-000000000000",
+              "kind": "RigidBody2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "bodyType": "Static",
+                "massMode": "Automatic",
+                "density": 1,
+                "mass": 1,
+                "autoInertia": true,
+                "inertia": 0.16666666666666666,
+                "gravityScale": 1,
+                "localGravity": 0,
+                "velocity": {
+                  "x": 0,
+                  "y": 0
+                },
+                "acceleration": {
+                  "x": 0,
+                  "y": 0
+                },
+                "angularVelocity": 0,
+                "linearDamping": 0,
+                "angularDamping": 0,
+                "force": {
+                  "x": 0,
+                  "y": 0
+                },
+                "torque": 0,
+                "continuousCollision": "Discrete",
+                "sleepingAllowed": true,
+                "freezeRotation": false,
+                "transformOwnership": "Physics"
+              }
+            },
+            {
+              "uuid": "00002c8b-0000-4000-8000-000000000000",
+              "kind": "BoxCollider2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "offset": {
+                  "x": 0,
+                  "y": 0
+                },
+                "rotation": 0,
+                "size": {
+                  "x": 1,
+                  "y": 1
+                },
+                "radiusX": 1,
+                "radiusY": 1,
+                "vertices": [
+                  {
+                    "x": -0.5,
+                    "y": -0.5
+                  },
+                  {
+                    "x": 0.5,
+                    "y": -0.5
+                  },
+                  {
+                    "x": 0.5,
+                    "y": 0.5
+                  },
+                  {
+                    "x": -0.5,
+                    "y": 0.5
+                  }
+                ],
+                "shapeModel": "Box",
+                "shapes": [],
+                "sensor": false,
+                "physicsLayer": 0,
+                "collisionMask": 1,
+                "oneWay": false,
+                "oneWayNormal": {
+                  "x": 0,
+                  "y": 1
+                },
+                "materialAsset": null,
+                "material": {
+                  "restitution": 0,
+                  "restitutionThreshold": 1,
+                  "staticFriction": 0,
+                  "dynamicFriction": 0,
+                  "density": 1,
+                  "frictionCombine": "Average",
+                  "restitutionCombine": "Maximum"
+                }
+              }
+            },
+            {
+              "uuid": "00002c8c-0000-4000-8000-000000000000",
+              "kind": "PlatformController2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "enabled": true,
+                "moveAction": "Move",
+                "jumpAction": "Jump",
+                "speed": 6,
+                "acceleration": 24,
+                "airControl": 0.7,
+                "jumpImpulse": 8,
+                "maximumFallSpeed": 25
+              }
+            },
+            {
+              "uuid": "00002c8d-0000-4000-8000-000000000000",
+              "kind": "CharacterBody2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "enabled": true,
+                "maxSlopeAngle": 45,
+                "stepHeight": 0.35,
+                "floorSnap": 0.15,
+                "safeMargin": 0.001,
+                "maxSlides": 4,
+                "coyoteTime": 0.12,
+                "applyPlatformVelocity": true,
+                "collisionMask": 4294967295
+              }
+            }
+          ]
+        },
+        {
+          "uuid": "00000072-0000-4000-8000-000000000000",
+          "name": "TopDownController2D",
+          "enabled": true,
+          "editorVisible": true,
+          "editorLocked": false,
+          "tags": [],
+          "groups": [],
+          "namedLayer": "World",
+          "ownerUuid": null,
+          "ownership": "Scene",
+          "editorOnly": false,
+          "runtimePersistence": "Scene",
+          "persistentAcrossScenes": false,
+          "objectBlueprintAsset": null,
+          "prefabAsset": null,
+          "prefabInstanceUuid": null,
+          "prefabSourceUuid": null,
+          "prefabOverrides": {},
+          "prefabLayers": [],
+          "sceneLayers": [],
+          "authoring": {
+            "kind": "Rectangle",
+            "origin": {
+              "x": 0,
+              "y": 0
+            },
+            "visible": true,
+            "zOrder": 0,
+            "renderLayer": 1,
+            "sortMode": "LayerThenOrder",
+            "canvasLayer": {
+              "screenSpace": false,
+              "followCamera": true
+            },
+            "parallax": {
+              "motionScale": {
+                "x": 0.5,
+                "y": 0.5
+              },
+              "repeat": {
+                "x": 0,
+                "y": 0
+              },
+              "mirror": false,
+              "depth": 0
+            },
+            "path": {
+              "points": [],
+              "tangents": [],
+              "closed": false,
+              "smoothing": 0.5,
+              "asset": null,
+              "follower": {
+                "targetUuid": null,
+                "progress": 0,
+                "speed": 0,
+                "orient": true
+              }
+            }
+          },
+          "entityType": "Box",
+          "components": [
+            {
+              "uuid": "00002cec-0000-4000-8000-000000000000",
+              "kind": "Transform2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "parentUuid": null,
+                "position": {
+                  "x": 42,
+                  "y": 0
+                },
+                "rotation": 0,
+                "scale": {
+                  "x": 1,
+                  "y": 1
+                }
+              }
+            },
+            {
+              "uuid": "00002ced-0000-4000-8000-000000000000",
+              "kind": "ShapeRenderer2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "shape": "Rectangle",
+                "vertices": [
+                  {
+                    "x": -0.5,
+                    "y": -0.5
+                  },
+                  {
+                    "x": 0.5,
+                    "y": -0.5
+                  },
+                  {
+                    "x": 0.5,
+                    "y": 0.5
+                  },
+                  {
+                    "x": -0.5,
+                    "y": 0.5
+                  }
+                ],
+                "radiusX": 1,
+                "radiusY": 1,
+                "color": {
+                  "r": 0,
+                  "g": 180,
+                  "b": 255
+                },
+                "opacity": 100,
+                "strokeColor": {
+                  "r": 0,
+                  "g": 90,
+                  "b": 155
+                },
+                "strokeOpacity": 100,
+                "strokeWidth": 0.04,
+                "material": "Default",
+                "filterMode": "Linear",
+                "textureAsset": null,
+                "texture": null,
+                "sortingLayer": 1,
+                "orderInLayer": 0
+              }
+            },
+            {
+              "uuid": "00002cee-0000-4000-8000-000000000000",
+              "kind": "RigidBody2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "bodyType": "Static",
+                "massMode": "Automatic",
+                "density": 1,
+                "mass": 1,
+                "autoInertia": true,
+                "inertia": 0.16666666666666666,
+                "gravityScale": 1,
+                "localGravity": 0,
+                "velocity": {
+                  "x": 0,
+                  "y": 0
+                },
+                "acceleration": {
+                  "x": 0,
+                  "y": 0
+                },
+                "angularVelocity": 0,
+                "linearDamping": 0,
+                "angularDamping": 0,
+                "force": {
+                  "x": 0,
+                  "y": 0
+                },
+                "torque": 0,
+                "continuousCollision": "Discrete",
+                "sleepingAllowed": true,
+                "freezeRotation": false,
+                "transformOwnership": "Physics"
+              }
+            },
+            {
+              "uuid": "00002cef-0000-4000-8000-000000000000",
+              "kind": "BoxCollider2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "offset": {
+                  "x": 0,
+                  "y": 0
+                },
+                "rotation": 0,
+                "size": {
+                  "x": 1,
+                  "y": 1
+                },
+                "radiusX": 1,
+                "radiusY": 1,
+                "vertices": [
+                  {
+                    "x": -0.5,
+                    "y": -0.5
+                  },
+                  {
+                    "x": 0.5,
+                    "y": -0.5
+                  },
+                  {
+                    "x": 0.5,
+                    "y": 0.5
+                  },
+                  {
+                    "x": -0.5,
+                    "y": 0.5
+                  }
+                ],
+                "shapeModel": "Box",
+                "shapes": [],
+                "sensor": false,
+                "physicsLayer": 0,
+                "collisionMask": 1,
+                "oneWay": false,
+                "oneWayNormal": {
+                  "x": 0,
+                  "y": 1
+                },
+                "materialAsset": null,
+                "material": {
+                  "restitution": 0,
+                  "restitutionThreshold": 1,
+                  "staticFriction": 0,
+                  "dynamicFriction": 0,
+                  "density": 1,
+                  "frictionCombine": "Average",
+                  "restitutionCombine": "Maximum"
+                }
+              }
+            },
+            {
+              "uuid": "00002cf0-0000-4000-8000-000000000000",
+              "kind": "TopDownController2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "enabled": true,
+                "moveAction": "Move",
+                "speed": 5,
+                "acceleration": 17,
+                "rotateToMovement": true
+              }
+            },
+            {
+              "uuid": "00002cf1-0000-4000-8000-000000000000",
+              "kind": "CharacterBody2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "enabled": true,
+                "maxSlopeAngle": 45,
+                "stepHeight": 0.35,
+                "floorSnap": 0.15,
+                "safeMargin": 0.001,
+                "maxSlides": 4,
+                "coyoteTime": 0.12,
+                "applyPlatformVelocity": true,
+                "collisionMask": 4294967295
+              }
+            }
+          ]
+        },
+        {
+          "uuid": "00000385-0000-4000-8000-000000000000",
+          "name": "Connection target",
+          "enabled": true,
+          "editorVisible": true,
+          "editorLocked": false,
+          "tags": [],
+          "groups": [],
+          "namedLayer": "World",
+          "ownerUuid": null,
+          "ownership": "Scene",
+          "editorOnly": false,
+          "runtimePersistence": "Scene",
+          "persistentAcrossScenes": false,
+          "objectBlueprintAsset": null,
+          "prefabAsset": null,
+          "prefabInstanceUuid": null,
+          "prefabSourceUuid": null,
+          "prefabOverrides": {},
+          "prefabLayers": [],
+          "sceneLayers": [],
+          "authoring": {
+            "kind": "Rectangle",
+            "origin": {
+              "x": 0,
+              "y": 0
+            },
+            "visible": true,
+            "zOrder": 0,
+            "renderLayer": 1,
+            "sortMode": "LayerThenOrder",
+            "canvasLayer": {
+              "screenSpace": false,
+              "followCamera": true
+            },
+            "parallax": {
+              "motionScale": {
+                "x": 0.5,
+                "y": 0.5
+              },
+              "repeat": {
+                "x": 0,
+                "y": 0
+              },
+              "mirror": false,
+              "depth": 0
+            },
+            "path": {
+              "points": [],
+              "tangents": [],
+              "closed": false,
+              "smoothing": 0.5,
+              "asset": null,
+              "follower": {
+                "targetUuid": null,
+                "progress": 0,
+                "speed": 0,
+                "orient": true
+              }
+            }
+          },
+          "entityType": "Box",
+          "components": [
+            {
+              "uuid": "00002d50-0000-4000-8000-000000000000",
+              "kind": "Transform2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "parentUuid": null,
+                "position": {
+                  "x": 0,
+                  "y": 3
+                },
+                "rotation": 0,
+                "scale": {
+                  "x": 1,
+                  "y": 1
+                }
+              }
+            },
+            {
+              "uuid": "00002d51-0000-4000-8000-000000000000",
+              "kind": "ShapeRenderer2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "shape": "Rectangle",
+                "vertices": [
+                  {
+                    "x": -0.5,
+                    "y": -0.5
+                  },
+                  {
+                    "x": 0.5,
+                    "y": -0.5
+                  },
+                  {
+                    "x": 0.5,
+                    "y": 0.5
+                  },
+                  {
+                    "x": -0.5,
+                    "y": 0.5
+                  }
+                ],
+                "radiusX": 1,
+                "radiusY": 1,
+                "color": {
+                  "r": 0,
+                  "g": 180,
+                  "b": 255
+                },
+                "opacity": 100,
+                "strokeColor": {
+                  "r": 0,
+                  "g": 90,
+                  "b": 155
+                },
+                "strokeOpacity": 100,
+                "strokeWidth": 0.04,
+                "material": "Default",
+                "filterMode": "Linear",
+                "textureAsset": null,
+                "texture": null,
+                "sortingLayer": 1,
+                "orderInLayer": 0
+              }
+            },
+            {
+              "uuid": "00002d52-0000-4000-8000-000000000000",
+              "kind": "RigidBody2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "bodyType": "Static",
+                "massMode": "Automatic",
+                "density": 1,
+                "mass": 1,
+                "autoInertia": true,
+                "inertia": 0.16666666666666666,
+                "gravityScale": 1,
+                "localGravity": 0,
+                "velocity": {
+                  "x": 0,
+                  "y": 0
+                },
+                "acceleration": {
+                  "x": 0,
+                  "y": 0
+                },
+                "angularVelocity": 0,
+                "linearDamping": 0,
+                "angularDamping": 0,
+                "force": {
+                  "x": 0,
+                  "y": 0
+                },
+                "torque": 0,
+                "continuousCollision": "Discrete",
+                "sleepingAllowed": true,
+                "freezeRotation": false,
+                "transformOwnership": "Physics"
+              }
+            },
+            {
+              "uuid": "00002d53-0000-4000-8000-000000000000",
+              "kind": "BoxCollider2D",
+              "enabled": true,
+              "removed": false,
+              "data": {
+                "offset": {
+                  "x": 0,
+                  "y": 0
+                },
+                "rotation": 0,
+                "size": {
+                  "x": 1,
+                  "y": 1
+                },
+                "radiusX": 1,
+                "radiusY": 1,
+                "vertices": [
+                  {
+                    "x": -0.5,
+                    "y": -0.5
+                  },
+                  {
+                    "x": 0.5,
+                    "y": -0.5
+                  },
+                  {
+                    "x": 0.5,
+                    "y": 0.5
+                  },
+                  {
+                    "x": -0.5,
+                    "y": 0.5
+                  }
+                ],
+                "shapeModel": "Box",
+                "shapes": [],
+                "sensor": false,
+                "physicsLayer": 0,
+                "collisionMask": 1,
+                "oneWay": false,
+                "oneWayNormal": {
+                  "x": 0,
+                  "y": 1
+                },
+                "materialAsset": null,
+                "material": {
+                  "restitution": 0,
+                  "restitutionThreshold": 1,
+                  "staticFriction": 0,
+                  "dynamicFriction": 0,
+                  "density": 1,
+                  "frictionCombine": "Average",
+                  "restitutionCombine": "Maximum"
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "connections": [
+        {
+          "id": 1,
+          "uuid": "0000038e-0000-4000-8000-000000000000",
+          "name": "Rope2D",
+          "componentType": "Rope2D",
+          "enabled": true,
+          "style": "straight",
+          "anchors": [
+            {
+              "entityId": 100,
+              "mode": "center",
+              "localPoint": {
+                "x": 0,
+                "y": 0
+              },
+              "index": 0,
+              "sideT": 0.5,
+              "entityUuid": "00000064-0000-4000-8000-000000000000"
+            },
+            {
+              "entityId": 901,
+              "mode": "center",
+              "localPoint": {
+                "x": 0,
+                "y": 0
+              },
+              "index": 0,
+              "sideT": 0.5,
+              "entityUuid": "00000385-0000-4000-8000-000000000000"
+            }
+          ],
+          "restLengths": [
+            3
+          ],
+          "manualSegments": [
+            [
+              {
+                "x": 0,
+                "y": 0
+              },
+              {
+                "x": 1,
+                "y": 0
+              }
+            ]
+          ],
+          "curvature": 0.18,
+          "stretchable": false,
+          "bendable": true,
+          "stiffness": 1200,
+          "damping": 35,
+          "maxStretchRatio": 1.25,
+          "bendingToleranceMass": 1000000000000,
+          "stretchingToleranceMass": 1000000000000,
+          "collisionEnabled": true,
+          "collisionRadius": 0.2,
+          "linearDensity": 0.08,
+          "segmentCount": 12,
+          "ropeNodes": [
+            {
+              "position": {
+                "x": 0,
+                "y": 0.23076923076923078
+              },
+              "velocity": {
+                "x": 0,
+                "y": 0
+              }
+            },
+            {
+              "position": {
+                "x": 0,
+                "y": 0.46153846153846156
+              },
+              "velocity": {
+                "x": 0,
+                "y": 0
+              }
+            },
+            {
+              "position": {
+                "x": 0,
+                "y": 0.6923076923076923
+              },
+              "velocity": {
+                "x": 0,
+                "y": 0
+              }
+            },
+            {
+              "position": {
+                "x": 0,
+                "y": 0.9230769230769231
+              },
+              "velocity": {
+                "x": 0,
+                "y": 0
+              }
+            },
+            {
+              "position": {
+                "x": 0,
+                "y": 1.153846153846154
+              },
+              "velocity": {
+                "x": 0,
+                "y": 0
+              }
+            },
+            {
+              "position": {
+                "x": 0,
+                "y": 1.3846153846153846
+              },
+              "velocity": {
+                "x": 0,
+                "y": 0
+              }
+            },
+            {
+              "position": {
+                "x": 0,
+                "y": 1.6153846153846154
+              },
+              "velocity": {
+                "x": 0,
+                "y": 0
+              }
+            },
+            {
+              "position": {
+                "x": 0,
+                "y": 1.8461538461538463
+              },
+              "velocity": {
+                "x": 0,
+                "y": 0
+              }
+            },
+            {
+              "position": {
+                "x": 0,
+                "y": 2.0769230769230766
+              },
+              "velocity": {
+                "x": 0,
+                "y": 0
+              }
+            },
+            {
+              "position": {
+                "x": 0,
+                "y": 2.307692307692308
+              },
+              "velocity": {
+                "x": 0,
+                "y": 0
+              }
+            },
+            {
+              "position": {
+                "x": 0,
+                "y": 2.5384615384615383
+              },
+              "velocity": {
+                "x": 0,
+                "y": 0
+              }
+            },
+            {
+              "position": {
+                "x": 0,
+                "y": 2.769230769230769
+              },
+              "velocity": {
+                "x": 0,
+                "y": 0
+              }
+            }
+          ],
+          "breakLink": -1,
+          "binding": false,
+          "bindOffset": {
+            "x": 0,
+            "y": 0
+          },
+          "bindAngle": 0,
+          "breakState": "intact",
+          "tension": 0,
+          "strain": 0,
+          "jointAxis": {
+            "x": 1,
+            "y": 0
+          },
+          "limitsEnabled": false,
+          "lowerLimit": -1,
+          "upperLimit": 1,
+          "collideConnected": false,
+          "motorEnabled": false,
+          "motorSpeed": 0,
+          "maxMotorForce": 1000,
+          "breakForce": null,
+          "breakTorque": null
+        }
+      ]
+    }
+  ]
+}

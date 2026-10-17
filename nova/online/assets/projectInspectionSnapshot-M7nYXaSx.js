@@ -1,0 +1,1 @@
+import{C as s,aI as a,E as n,aX as o,an as r}from"./crashReporter-BUJSpWFR.js";import{w as i,I as c,D as u}from"./vue-runtime-D7l--P72.js";function S(){const e=u(null);function t(){try{e.value=JSON.parse(r())}catch{e.value=null}}return i([()=>s.id,()=>a.entries.slice(),()=>a.index,()=>n.generation,()=>o.activeSceneUuid],t,{immediate:!0,flush:"post"}),c(t),e}export{S as u};

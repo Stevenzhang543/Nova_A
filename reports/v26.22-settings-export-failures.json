@@ -1,0 +1,9 @@
+[
+  {
+    "field": "projectSettings.production.networking.replicatedEntities.[*].ownerPeerId",
+    "input": "peer-1 audit",
+    "output": "peer-1 audit",
+    "status": "export or native retention failure",
+    "error": "replicated entity authority, flags, or properties are invalid"
+  }
+]

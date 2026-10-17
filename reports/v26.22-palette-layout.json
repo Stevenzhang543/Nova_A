@@ -1,0 +1,1220 @@
+{
+  "format": "nova-v26.22-palette-layout-audit",
+  "version": 1,
+  "release": "26.22",
+  "expectedRelease": "26.21",
+  "development": true,
+  "qualifiedRelease": null,
+  "generatedAt": "2026-09-13T04:26:01.252Z",
+  "status": "passed",
+  "checks": [
+    {
+      "name": "Every supplied palette uses exact semantic colors through visible Settings controls",
+      "status": "passed"
+    },
+    {
+      "name": "Palette Settings labels controls and colors remain readable across 135 combinations",
+      "status": "passed"
+    }
+  ],
+  "observations": [
+    {
+      "name": "cloud-blue",
+      "palette": "cloud-blue",
+      "theme": "light",
+      "colors": [
+        "#f7f9fc",
+        "#ffffff",
+        "#4f6f8f",
+        "#8ea9b8",
+        "#7fa6a0",
+        "#263746"
+      ],
+      "motion": ".22s",
+      "reduced": "false"
+    },
+    {
+      "name": "meadow-cream",
+      "palette": "meadow-cream",
+      "theme": "light",
+      "colors": [
+        "#fbf7ea",
+        "#f1f3e7",
+        "#607a64",
+        "#a5b58a",
+        "#c9af78",
+        "#38463b"
+      ],
+      "motion": ".22s",
+      "reduced": "false"
+    },
+    {
+      "name": "blush-berry",
+      "palette": "blush-berry",
+      "theme": "light",
+      "colors": [
+        "#fff5f7",
+        "#f8e7ec",
+        "#9f5f75",
+        "#d7a6b5",
+        "#a799ba",
+        "#4a3941"
+      ],
+      "motion": ".22s",
+      "reduced": "false"
+    },
+    {
+      "name": "midnight-blue",
+      "palette": "midnight-blue",
+      "theme": "dark",
+      "colors": [
+        "#0f141a",
+        "#171e27",
+        "#527397",
+        "#3f586f",
+        "#6d8d8a",
+        "#d8e0e8"
+      ],
+      "motion": ".22s",
+      "reduced": "false"
+    },
+    {
+      "name": "night-garden",
+      "palette": "night-garden",
+      "theme": "dark",
+      "colors": [
+        "#171518",
+        "#211e23",
+        "#806f8d",
+        "#5f6d78",
+        "#738778",
+        "#ddd8df"
+      ],
+      "motion": ".22s",
+      "reduced": "false"
+    },
+    {
+      "name": "surface-en-1-cloud-blue-720",
+      "palette": "cloud-blue",
+      "reachable": true,
+      "clipped": [],
+      "width": 530,
+      "scrollWidth": 530
+    },
+    {
+      "name": "surface-en-1-cloud-blue-1280",
+      "palette": "cloud-blue",
+      "reachable": true,
+      "clipped": [],
+      "width": 818,
+      "scrollWidth": 818
+    },
+    {
+      "name": "surface-en-1-cloud-blue-1920",
+      "palette": "cloud-blue",
+      "reachable": true,
+      "clipped": [],
+      "width": 510,
+      "scrollWidth": 510
+    },
+    {
+      "name": "surface-en-1-meadow-cream-720",
+      "palette": "meadow-cream",
+      "reachable": true,
+      "clipped": [],
+      "width": 530,
+      "scrollWidth": 530
+    },
+    {
+      "name": "surface-en-1-meadow-cream-1280",
+      "palette": "meadow-cream",
+      "reachable": true,
+      "clipped": [],
+      "width": 818,
+      "scrollWidth": 818
+    },
+    {
+      "name": "surface-en-1-meadow-cream-1920",
+      "palette": "meadow-cream",
+      "reachable": true,
+      "clipped": [],
+      "width": 510,
+      "scrollWidth": 510
+    },
+    {
+      "name": "surface-en-1-blush-berry-720",
+      "palette": "blush-berry",
+      "reachable": true,
+      "clipped": [],
+      "width": 530,
+      "scrollWidth": 530
+    },
+    {
+      "name": "surface-en-1-blush-berry-1280",
+      "palette": "blush-berry",
+      "reachable": true,
+      "clipped": [],
+      "width": 818,
+      "scrollWidth": 818
+    },
+    {
+      "name": "surface-en-1-blush-berry-1920",
+      "palette": "blush-berry",
+      "reachable": true,
+      "clipped": [],
+      "width": 510,
+      "scrollWidth": 510
+    },
+    {
+      "name": "surface-en-1-midnight-blue-720",
+      "palette": "midnight-blue",
+      "reachable": true,
+      "clipped": [],
+      "width": 530,
+      "scrollWidth": 530
+    },
+    {
+      "name": "surface-en-1-midnight-blue-1280",
+      "palette": "midnight-blue",
+      "reachable": true,
+      "clipped": [],
+      "width": 818,
+      "scrollWidth": 818
+    },
+    {
+      "name": "surface-en-1-midnight-blue-1920",
+      "palette": "midnight-blue",
+      "reachable": true,
+      "clipped": [],
+      "width": 510,
+      "scrollWidth": 510
+    },
+    {
+      "name": "surface-en-1-night-garden-720",
+      "palette": "night-garden",
+      "reachable": true,
+      "clipped": [],
+      "width": 530,
+      "scrollWidth": 530
+    },
+    {
+      "name": "surface-en-1-night-garden-1280",
+      "palette": "night-garden",
+      "reachable": true,
+      "clipped": [],
+      "width": 818,
+      "scrollWidth": 818
+    },
+    {
+      "name": "surface-en-1-night-garden-1920",
+      "palette": "night-garden",
+      "reachable": true,
+      "clipped": [],
+      "width": 510,
+      "scrollWidth": 510
+    },
+    {
+      "name": "surface-en-1.5-cloud-blue-720",
+      "palette": "cloud-blue",
+      "reachable": true,
+      "clipped": [],
+      "width": 520,
+      "scrollWidth": 520
+    },
+    {
+      "name": "surface-en-1.5-cloud-blue-1280",
+      "palette": "cloud-blue",
+      "reachable": true,
+      "clipped": [],
+      "width": 770,
+      "scrollWidth": 770
+    },
+    {
+      "name": "surface-en-1.5-cloud-blue-1920",
+      "palette": "cloud-blue",
+      "reachable": true,
+      "clipped": [],
+      "width": 1038,
+      "scrollWidth": 1038
+    },
+    {
+      "name": "surface-en-1.5-meadow-cream-720",
+      "palette": "meadow-cream",
+      "reachable": true,
+      "clipped": [],
+      "width": 520,
+      "scrollWidth": 520
+    },
+    {
+      "name": "surface-en-1.5-meadow-cream-1280",
+      "palette": "meadow-cream",
+      "reachable": true,
+      "clipped": [],
+      "width": 770,
+      "scrollWidth": 770
+    },
+    {
+      "name": "surface-en-1.5-meadow-cream-1920",
+      "palette": "meadow-cream",
+      "reachable": true,
+      "clipped": [],
+      "width": 1038,
+      "scrollWidth": 1038
+    },
+    {
+      "name": "surface-en-1.5-blush-berry-720",
+      "palette": "blush-berry",
+      "reachable": true,
+      "clipped": [],
+      "width": 520,
+      "scrollWidth": 520
+    },
+    {
+      "name": "surface-en-1.5-blush-berry-1280",
+      "palette": "blush-berry",
+      "reachable": true,
+      "clipped": [],
+      "width": 770,
+      "scrollWidth": 770
+    },
+    {
+      "name": "surface-en-1.5-blush-berry-1920",
+      "palette": "blush-berry",
+      "reachable": true,
+      "clipped": [],
+      "width": 1038,
+      "scrollWidth": 1038
+    },
+    {
+      "name": "surface-en-1.5-midnight-blue-720",
+      "palette": "midnight-blue",
+      "reachable": true,
+      "clipped": [],
+      "width": 520,
+      "scrollWidth": 520
+    },
+    {
+      "name": "surface-en-1.5-midnight-blue-1280",
+      "palette": "midnight-blue",
+      "reachable": true,
+      "clipped": [],
+      "width": 770,
+      "scrollWidth": 770
+    },
+    {
+      "name": "surface-en-1.5-midnight-blue-1920",
+      "palette": "midnight-blue",
+      "reachable": true,
+      "clipped": [],
+      "width": 1038,
+      "scrollWidth": 1038
+    },
+    {
+      "name": "surface-en-1.5-night-garden-720",
+      "palette": "night-garden",
+      "reachable": true,
+      "clipped": [],
+      "width": 520,
+      "scrollWidth": 520
+    },
+    {
+      "name": "surface-en-1.5-night-garden-1280",
+      "palette": "night-garden",
+      "reachable": true,
+      "clipped": [],
+      "width": 770,
+      "scrollWidth": 770
+    },
+    {
+      "name": "surface-en-1.5-night-garden-1920",
+      "palette": "night-garden",
+      "reachable": true,
+      "clipped": [],
+      "width": 1038,
+      "scrollWidth": 1038
+    },
+    {
+      "name": "surface-en-2-cloud-blue-720",
+      "palette": "cloud-blue",
+      "reachable": true,
+      "clipped": [],
+      "width": 534,
+      "scrollWidth": 534
+    },
+    {
+      "name": "surface-en-2-cloud-blue-1280",
+      "palette": "cloud-blue",
+      "reachable": true,
+      "clipped": [],
+      "width": 1038,
+      "scrollWidth": 1038
+    },
+    {
+      "name": "surface-en-2-cloud-blue-1920",
+      "palette": "cloud-blue",
+      "reachable": true,
+      "clipped": [],
+      "width": 1038,
+      "scrollWidth": 1038
+    },
+    {
+      "name": "surface-en-2-meadow-cream-720",
+      "palette": "meadow-cream",
+      "reachable": true,
+      "clipped": [],
+      "width": 534,
+      "scrollWidth": 534
+    },
+    {
+      "name": "surface-en-2-meadow-cream-1280",
+      "palette": "meadow-cream",
+      "reachable": true,
+      "clipped": [],
+      "width": 1038,
+      "scrollWidth": 1038
+    },
+    {
+      "name": "surface-en-2-meadow-cream-1920",
+      "palette": "meadow-cream",
+      "reachable": true,
+      "clipped": [],
+      "width": 1038,
+      "scrollWidth": 1038
+    },
+    {
+      "name": "surface-en-2-blush-berry-720",
+      "palette": "blush-berry",
+      "reachable": true,
+      "clipped": [],
+      "width": 534,
+      "scrollWidth": 534
+    },
+    {
+      "name": "surface-en-2-blush-berry-1280",
+      "palette": "blush-berry",
+      "reachable": true,
+      "clipped": [],
+      "width": 1038,
+      "scrollWidth": 1038
+    },
+    {
+      "name": "surface-en-2-blush-berry-1920",
+      "palette": "blush-berry",
+      "reachable": true,
+      "clipped": [],
+      "width": 1038,
+      "scrollWidth": 1038
+    },
+    {
+      "name": "surface-en-2-midnight-blue-720",
+      "palette": "midnight-blue",
+      "reachable": true,
+      "clipped": [],
+      "width": 534,
+      "scrollWidth": 534
+    },
+    {
+      "name": "surface-en-2-midnight-blue-1280",
+      "palette": "midnight-blue",
+      "reachable": true,
+      "clipped": [],
+      "width": 1038,
+      "scrollWidth": 1038
+    },
+    {
+      "name": "surface-en-2-midnight-blue-1920",
+      "palette": "midnight-blue",
+      "reachable": true,
+      "clipped": [],
+      "width": 1038,
+      "scrollWidth": 1038
+    },
+    {
+      "name": "surface-en-2-night-garden-720",
+      "palette": "night-garden",
+      "reachable": true,
+      "clipped": [],
+      "width": 534,
+      "scrollWidth": 534
+    },
+    {
+      "name": "surface-en-2-night-garden-1280",
+      "palette": "night-garden",
+      "reachable": true,
+      "clipped": [],
+      "width": 1038,
+      "scrollWidth": 1038
+    },
+    {
+      "name": "surface-en-2-night-garden-1920",
+      "palette": "night-garden",
+      "reachable": true,
+      "clipped": [],
+      "width": 1038,
+      "scrollWidth": 1038
+    },
+    {
+      "name": "surface-de-1-cloud-blue-720",
+      "palette": "cloud-blue",
+      "reachable": true,
+      "clipped": [],
+      "width": 530,
+      "scrollWidth": 530
+    },
+    {
+      "name": "surface-de-1-cloud-blue-1280",
+      "palette": "cloud-blue",
+      "reachable": true,
+      "clipped": [],
+      "width": 818,
+      "scrollWidth": 818
+    },
+    {
+      "name": "surface-de-1-cloud-blue-1920",
+      "palette": "cloud-blue",
+      "reachable": true,
+      "clipped": [],
+      "width": 510,
+      "scrollWidth": 510
+    },
+    {
+      "name": "surface-de-1-meadow-cream-720",
+      "palette": "meadow-cream",
+      "reachable": true,
+      "clipped": [],
+      "width": 530,
+      "scrollWidth": 530
+    },
+    {
+      "name": "surface-de-1-meadow-cream-1280",
+      "palette": "meadow-cream",
+      "reachable": true,
+      "clipped": [],
+      "width": 818,
+      "scrollWidth": 818
+    },
+    {
+      "name": "surface-de-1-meadow-cream-1920",
+      "palette": "meadow-cream",
+      "reachable": true,
+      "clipped": [],
+      "width": 510,
+      "scrollWidth": 510
+    },
+    {
+      "name": "surface-de-1-blush-berry-720",
+      "palette": "blush-berry",
+      "reachable": true,
+      "clipped": [],
+      "width": 530,
+      "scrollWidth": 530
+    },
+    {
+      "name": "surface-de-1-blush-berry-1280",
+      "palette": "blush-berry",
+      "reachable": true,
+      "clipped": [],
+      "width": 818,
+      "scrollWidth": 818
+    },
+    {
+      "name": "surface-de-1-blush-berry-1920",
+      "palette": "blush-berry",
+      "reachable": true,
+      "clipped": [],
+      "width": 510,
+      "scrollWidth": 510
+    },
+    {
+      "name": "surface-de-1-midnight-blue-720",
+      "palette": "midnight-blue",
+      "reachable": true,
+      "clipped": [],
+      "width": 530,
+      "scrollWidth": 530
+    },
+    {
+      "name": "surface-de-1-midnight-blue-1280",
+      "palette": "midnight-blue",
+      "reachable": true,
+      "clipped": [],
+      "width": 818,
+      "scrollWidth": 818
+    },
+    {
+      "name": "surface-de-1-midnight-blue-1920",
+      "palette": "midnight-blue",
+      "reachable": true,
+      "clipped": [],
+      "width": 510,
+      "scrollWidth": 510
+    },
+    {
+      "name": "surface-de-1-night-garden-720",
+      "palette": "night-garden",
+      "reachable": true,
+      "clipped": [],
+      "width": 530,
+      "scrollWidth": 530
+    },
+    {
+      "name": "surface-de-1-night-garden-1280",
+      "palette": "night-garden",
+      "reachable": true,
+      "clipped": [],
+      "width": 818,
+      "scrollWidth": 818
+    },
+    {
+      "name": "surface-de-1-night-garden-1920",
+      "palette": "night-garden",
+      "reachable": true,
+      "clipped": [],
+      "width": 510,
+      "scrollWidth": 510
+    },
+    {
+      "name": "surface-de-1.5-cloud-blue-720",
+      "palette": "cloud-blue",
+      "reachable": true,
+      "clipped": [],
+      "width": 520,
+      "scrollWidth": 520
+    },
+    {
+      "name": "surface-de-1.5-cloud-blue-1280",
+      "palette": "cloud-blue",
+      "reachable": true,
+      "clipped": [],
+      "width": 770,
+      "scrollWidth": 770
+    },
+    {
+      "name": "surface-de-1.5-cloud-blue-1920",
+      "palette": "cloud-blue",
+      "reachable": true,
+      "clipped": [],
+      "width": 1038,
+      "scrollWidth": 1038
+    },
+    {
+      "name": "surface-de-1.5-meadow-cream-720",
+      "palette": "meadow-cream",
+      "reachable": true,
+      "clipped": [],
+      "width": 520,
+      "scrollWidth": 520
+    },
+    {
+      "name": "surface-de-1.5-meadow-cream-1280",
+      "palette": "meadow-cream",
+      "reachable": true,
+      "clipped": [],
+      "width": 770,
+      "scrollWidth": 770
+    },
+    {
+      "name": "surface-de-1.5-meadow-cream-1920",
+      "palette": "meadow-cream",
+      "reachable": true,
+      "clipped": [],
+      "width": 1038,
+      "scrollWidth": 1038
+    },
+    {
+      "name": "surface-de-1.5-blush-berry-720",
+      "palette": "blush-berry",
+      "reachable": true,
+      "clipped": [],
+      "width": 520,
+      "scrollWidth": 520
+    },
+    {
+      "name": "surface-de-1.5-blush-berry-1280",
+      "palette": "blush-berry",
+      "reachable": true,
+      "clipped": [],
+      "width": 770,
+      "scrollWidth": 770
+    },
+    {
+      "name": "surface-de-1.5-blush-berry-1920",
+      "palette": "blush-berry",
+      "reachable": true,
+      "clipped": [],
+      "width": 1038,
+      "scrollWidth": 1038
+    },
+    {
+      "name": "surface-de-1.5-midnight-blue-720",
+      "palette": "midnight-blue",
+      "reachable": true,
+      "clipped": [],
+      "width": 520,
+      "scrollWidth": 520
+    },
+    {
+      "name": "surface-de-1.5-midnight-blue-1280",
+      "palette": "midnight-blue",
+      "reachable": true,
+      "clipped": [],
+      "width": 770,
+      "scrollWidth": 770
+    },
+    {
+      "name": "surface-de-1.5-midnight-blue-1920",
+      "palette": "midnight-blue",
+      "reachable": true,
+      "clipped": [],
+      "width": 1038,
+      "scrollWidth": 1038
+    },
+    {
+      "name": "surface-de-1.5-night-garden-720",
+      "palette": "night-garden",
+      "reachable": true,
+      "clipped": [],
+      "width": 520,
+      "scrollWidth": 520
+    },
+    {
+      "name": "surface-de-1.5-night-garden-1280",
+      "palette": "night-garden",
+      "reachable": true,
+      "clipped": [],
+      "width": 770,
+      "scrollWidth": 770
+    },
+    {
+      "name": "surface-de-1.5-night-garden-1920",
+      "palette": "night-garden",
+      "reachable": true,
+      "clipped": [],
+      "width": 1038,
+      "scrollWidth": 1038
+    },
+    {
+      "name": "surface-de-2-cloud-blue-720",
+      "palette": "cloud-blue",
+      "reachable": true,
+      "clipped": [],
+      "width": 534,
+      "scrollWidth": 534
+    },
+    {
+      "name": "surface-de-2-cloud-blue-1280",
+      "palette": "cloud-blue",
+      "reachable": true,
+      "clipped": [],
+      "width": 1038,
+      "scrollWidth": 1038
+    },
+    {
+      "name": "surface-de-2-cloud-blue-1920",
+      "palette": "cloud-blue",
+      "reachable": true,
+      "clipped": [],
+      "width": 1038,
+      "scrollWidth": 1038
+    },
+    {
+      "name": "surface-de-2-meadow-cream-720",
+      "palette": "meadow-cream",
+      "reachable": true,
+      "clipped": [],
+      "width": 534,
+      "scrollWidth": 534
+    },
+    {
+      "name": "surface-de-2-meadow-cream-1280",
+      "palette": "meadow-cream",
+      "reachable": true,
+      "clipped": [],
+      "width": 1038,
+      "scrollWidth": 1038
+    },
+    {
+      "name": "surface-de-2-meadow-cream-1920",
+      "palette": "meadow-cream",
+      "reachable": true,
+      "clipped": [],
+      "width": 1038,
+      "scrollWidth": 1038
+    },
+    {
+      "name": "surface-de-2-blush-berry-720",
+      "palette": "blush-berry",
+      "reachable": true,
+      "clipped": [],
+      "width": 534,
+      "scrollWidth": 534
+    },
+    {
+      "name": "surface-de-2-blush-berry-1280",
+      "palette": "blush-berry",
+      "reachable": true,
+      "clipped": [],
+      "width": 1038,
+      "scrollWidth": 1038
+    },
+    {
+      "name": "surface-de-2-blush-berry-1920",
+      "palette": "blush-berry",
+      "reachable": true,
+      "clipped": [],
+      "width": 1038,
+      "scrollWidth": 1038
+    },
+    {
+      "name": "surface-de-2-midnight-blue-720",
+      "palette": "midnight-blue",
+      "reachable": true,
+      "clipped": [],
+      "width": 534,
+      "scrollWidth": 534
+    },
+    {
+      "name": "surface-de-2-midnight-blue-1280",
+      "palette": "midnight-blue",
+      "reachable": true,
+      "clipped": [],
+      "width": 1038,
+      "scrollWidth": 1038
+    },
+    {
+      "name": "surface-de-2-midnight-blue-1920",
+      "palette": "midnight-blue",
+      "reachable": true,
+      "clipped": [],
+      "width": 1038,
+      "scrollWidth": 1038
+    },
+    {
+      "name": "surface-de-2-night-garden-720",
+      "palette": "night-garden",
+      "reachable": true,
+      "clipped": [],
+      "width": 534,
+      "scrollWidth": 534
+    },
+    {
+      "name": "surface-de-2-night-garden-1280",
+      "palette": "night-garden",
+      "reachable": true,
+      "clipped": [],
+      "width": 1038,
+      "scrollWidth": 1038
+    },
+    {
+      "name": "surface-de-2-night-garden-1920",
+      "palette": "night-garden",
+      "reachable": true,
+      "clipped": [],
+      "width": 1038,
+      "scrollWidth": 1038
+    },
+    {
+      "name": "surface-zh-1-cloud-blue-720",
+      "palette": "cloud-blue",
+      "reachable": true,
+      "clipped": [],
+      "width": 530,
+      "scrollWidth": 530
+    },
+    {
+      "name": "surface-zh-1-cloud-blue-1280",
+      "palette": "cloud-blue",
+      "reachable": true,
+      "clipped": [],
+      "width": 818,
+      "scrollWidth": 818
+    },
+    {
+      "name": "surface-zh-1-cloud-blue-1920",
+      "palette": "cloud-blue",
+      "reachable": true,
+      "clipped": [],
+      "width": 510,
+      "scrollWidth": 510
+    },
+    {
+      "name": "surface-zh-1-meadow-cream-720",
+      "palette": "meadow-cream",
+      "reachable": true,
+      "clipped": [],
+      "width": 530,
+      "scrollWidth": 530
+    },
+    {
+      "name": "surface-zh-1-meadow-cream-1280",
+      "palette": "meadow-cream",
+      "reachable": true,
+      "clipped": [],
+      "width": 818,
+      "scrollWidth": 818
+    },
+    {
+      "name": "surface-zh-1-meadow-cream-1920",
+      "palette": "meadow-cream",
+      "reachable": true,
+      "clipped": [],
+      "width": 510,
+      "scrollWidth": 510
+    },
+    {
+      "name": "surface-zh-1-blush-berry-720",
+      "palette": "blush-berry",
+      "reachable": true,
+      "clipped": [],
+      "width": 530,
+      "scrollWidth": 530
+    },
+    {
+      "name": "surface-zh-1-blush-berry-1280",
+      "palette": "blush-berry",
+      "reachable": true,
+      "clipped": [],
+      "width": 818,
+      "scrollWidth": 818
+    },
+    {
+      "name": "surface-zh-1-blush-berry-1920",
+      "palette": "blush-berry",
+      "reachable": true,
+      "clipped": [],
+      "width": 510,
+      "scrollWidth": 510
+    },
+    {
+      "name": "surface-zh-1-midnight-blue-720",
+      "palette": "midnight-blue",
+      "reachable": true,
+      "clipped": [],
+      "width": 530,
+      "scrollWidth": 530
+    },
+    {
+      "name": "surface-zh-1-midnight-blue-1280",
+      "palette": "midnight-blue",
+      "reachable": true,
+      "clipped": [],
+      "width": 818,
+      "scrollWidth": 818
+    },
+    {
+      "name": "surface-zh-1-midnight-blue-1920",
+      "palette": "midnight-blue",
+      "reachable": true,
+      "clipped": [],
+      "width": 510,
+      "scrollWidth": 510
+    },
+    {
+      "name": "surface-zh-1-night-garden-720",
+      "palette": "night-garden",
+      "reachable": true,
+      "clipped": [],
+      "width": 530,
+      "scrollWidth": 530
+    },
+    {
+      "name": "surface-zh-1-night-garden-1280",
+      "palette": "night-garden",
+      "reachable": true,
+      "clipped": [],
+      "width": 818,
+      "scrollWidth": 818
+    },
+    {
+      "name": "surface-zh-1-night-garden-1920",
+      "palette": "night-garden",
+      "reachable": true,
+      "clipped": [],
+      "width": 510,
+      "scrollWidth": 510
+    },
+    {
+      "name": "surface-zh-1.5-cloud-blue-720",
+      "palette": "cloud-blue",
+      "reachable": true,
+      "clipped": [],
+      "width": 520,
+      "scrollWidth": 520
+    },
+    {
+      "name": "surface-zh-1.5-cloud-blue-1280",
+      "palette": "cloud-blue",
+      "reachable": true,
+      "clipped": [],
+      "width": 770,
+      "scrollWidth": 770
+    },
+    {
+      "name": "surface-zh-1.5-cloud-blue-1920",
+      "palette": "cloud-blue",
+      "reachable": true,
+      "clipped": [],
+      "width": 1038,
+      "scrollWidth": 1038
+    },
+    {
+      "name": "surface-zh-1.5-meadow-cream-720",
+      "palette": "meadow-cream",
+      "reachable": true,
+      "clipped": [],
+      "width": 520,
+      "scrollWidth": 520
+    },
+    {
+      "name": "surface-zh-1.5-meadow-cream-1280",
+      "palette": "meadow-cream",
+      "reachable": true,
+      "clipped": [],
+      "width": 770,
+      "scrollWidth": 770
+    },
+    {
+      "name": "surface-zh-1.5-meadow-cream-1920",
+      "palette": "meadow-cream",
+      "reachable": true,
+      "clipped": [],
+      "width": 1038,
+      "scrollWidth": 1038
+    },
+    {
+      "name": "surface-zh-1.5-blush-berry-720",
+      "palette": "blush-berry",
+      "reachable": true,
+      "clipped": [],
+      "width": 520,
+      "scrollWidth": 520
+    },
+    {
+      "name": "surface-zh-1.5-blush-berry-1280",
+      "palette": "blush-berry",
+      "reachable": true,
+      "clipped": [],
+      "width": 770,
+      "scrollWidth": 770
+    },
+    {
+      "name": "surface-zh-1.5-blush-berry-1920",
+      "palette": "blush-berry",
+      "reachable": true,
+      "clipped": [],
+      "width": 1038,
+      "scrollWidth": 1038
+    },
+    {
+      "name": "surface-zh-1.5-midnight-blue-720",
+      "palette": "midnight-blue",
+      "reachable": true,
+      "clipped": [],
+      "width": 520,
+      "scrollWidth": 520
+    },
+    {
+      "name": "surface-zh-1.5-midnight-blue-1280",
+      "palette": "midnight-blue",
+      "reachable": true,
+      "clipped": [],
+      "width": 770,
+      "scrollWidth": 770
+    },
+    {
+      "name": "surface-zh-1.5-midnight-blue-1920",
+      "palette": "midnight-blue",
+      "reachable": true,
+      "clipped": [],
+      "width": 1038,
+      "scrollWidth": 1038
+    },
+    {
+      "name": "surface-zh-1.5-night-garden-720",
+      "palette": "night-garden",
+      "reachable": true,
+      "clipped": [],
+      "width": 520,
+      "scrollWidth": 520
+    },
+    {
+      "name": "surface-zh-1.5-night-garden-1280",
+      "palette": "night-garden",
+      "reachable": true,
+      "clipped": [],
+      "width": 770,
+      "scrollWidth": 770
+    },
+    {
+      "name": "surface-zh-1.5-night-garden-1920",
+      "palette": "night-garden",
+      "reachable": true,
+      "clipped": [],
+      "width": 1038,
+      "scrollWidth": 1038
+    },
+    {
+      "name": "surface-zh-2-cloud-blue-720",
+      "palette": "cloud-blue",
+      "reachable": true,
+      "clipped": [],
+      "width": 534,
+      "scrollWidth": 534
+    },
+    {
+      "name": "surface-zh-2-cloud-blue-1280",
+      "palette": "cloud-blue",
+      "reachable": true,
+      "clipped": [],
+      "width": 1038,
+      "scrollWidth": 1038
+    },
+    {
+      "name": "surface-zh-2-cloud-blue-1920",
+      "palette": "cloud-blue",
+      "reachable": true,
+      "clipped": [],
+      "width": 1038,
+      "scrollWidth": 1038
+    },
+    {
+      "name": "surface-zh-2-meadow-cream-720",
+      "palette": "meadow-cream",
+      "reachable": true,
+      "clipped": [],
+      "width": 534,
+      "scrollWidth": 534
+    },
+    {
+      "name": "surface-zh-2-meadow-cream-1280",
+      "palette": "meadow-cream",
+      "reachable": true,
+      "clipped": [],
+      "width": 1038,
+      "scrollWidth": 1038
+    },
+    {
+      "name": "surface-zh-2-meadow-cream-1920",
+      "palette": "meadow-cream",
+      "reachable": true,
+      "clipped": [],
+      "width": 1038,
+      "scrollWidth": 1038
+    },
+    {
+      "name": "surface-zh-2-blush-berry-720",
+      "palette": "blush-berry",
+      "reachable": true,
+      "clipped": [],
+      "width": 534,
+      "scrollWidth": 534
+    },
+    {
+      "name": "surface-zh-2-blush-berry-1280",
+      "palette": "blush-berry",
+      "reachable": true,
+      "clipped": [],
+      "width": 1038,
+      "scrollWidth": 1038
+    },
+    {
+      "name": "surface-zh-2-blush-berry-1920",
+      "palette": "blush-berry",
+      "reachable": true,
+      "clipped": [],
+      "width": 1038,
+      "scrollWidth": 1038
+    },
+    {
+      "name": "surface-zh-2-midnight-blue-720",
+      "palette": "midnight-blue",
+      "reachable": true,
+      "clipped": [],
+      "width": 534,
+      "scrollWidth": 534
+    },
+    {
+      "name": "surface-zh-2-midnight-blue-1280",
+      "palette": "midnight-blue",
+      "reachable": true,
+      "clipped": [],
+      "width": 1038,
+      "scrollWidth": 1038
+    },
+    {
+      "name": "surface-zh-2-midnight-blue-1920",
+      "palette": "midnight-blue",
+      "reachable": true,
+      "clipped": [],
+      "width": 1038,
+      "scrollWidth": 1038
+    },
+    {
+      "name": "surface-zh-2-night-garden-720",
+      "palette": "night-garden",
+      "reachable": true,
+      "clipped": [],
+      "width": 534,
+      "scrollWidth": 534
+    },
+    {
+      "name": "surface-zh-2-night-garden-1280",
+      "palette": "night-garden",
+      "reachable": true,
+      "clipped": [],
+      "width": 1038,
+      "scrollWidth": 1038
+    },
+    {
+      "name": "surface-zh-2-night-garden-1920",
+      "palette": "night-garden",
+      "reachable": true,
+      "clipped": [],
+      "width": 1038,
+      "scrollWidth": 1038
+    }
+  ],
+  "captures": [
+    "v26.22-palette-layout-cloud-blue.png",
+    "v26.22-palette-layout-meadow-cream.png",
+    "v26.22-palette-layout-blush-berry.png",
+    "v26.22-palette-layout-midnight-blue.png",
+    "v26.22-palette-layout-night-garden.png",
+    "v26.22-palette-layout-en-2-cloud-blue-720.png",
+    "v26.22-palette-layout-en-2-meadow-cream-720.png",
+    "v26.22-palette-layout-en-2-blush-berry-720.png",
+    "v26.22-palette-layout-en-2-midnight-blue-720.png",
+    "v26.22-palette-layout-en-2-night-garden-720.png",
+    "v26.22-palette-layout-de-2-cloud-blue-720.png",
+    "v26.22-palette-layout-de-2-meadow-cream-720.png",
+    "v26.22-palette-layout-de-2-blush-berry-720.png",
+    "v26.22-palette-layout-de-2-midnight-blue-720.png",
+    "v26.22-palette-layout-de-2-night-garden-720.png",
+    "v26.22-palette-layout-zh-2-cloud-blue-720.png",
+    "v26.22-palette-layout-zh-2-meadow-cream-720.png",
+    "v26.22-palette-layout-zh-2-blush-berry-720.png",
+    "v26.22-palette-layout-zh-2-midnight-blue-720.png",
+    "v26.22-palette-layout-zh-2-night-garden-720.png"
+  ],
+  "consoleErrors": [],
+  "browser": {
+    "protocolVersion": "1.3",
+    "product": "Edg/147.0.3912.72",
+    "revision": "@d4380ba2b9dc3452fbccdc737e69d7f67a09122c",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/147.0.0.0 Safari/537.36 Edg/147.0.0.0",
+    "jsVersion": "14.7.25.7"
+  },
+  "commandTimeoutMs": 30000,
+  "scope": "Development source overlay only, not release qualification. Recorded real Edge input and DOM observations against production dist. Headless software rendering and download/file-input fallback; physical assistive technology and native OS picker behavior are not measured.",
+  "regressionOrigin": "26.22",
+  "engineVersion": "26.21.0",
+  "buildEngineVersion": "26.21.0",
+  "qualificationTarget": "26.22",
+  "baselineVersion": "26.21.0",
+  "overlayVersion": "26.22.0",
+  "sourceRoots": [
+    "."
+  ],
+  "buildRoot": ".cache/v2622-events-preview",
+  "evidenceRoot": "../.cache/v2622-events-preview/release-audits"
+}

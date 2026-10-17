@@ -1,0 +1,136 @@
+{
+  "format": "nova-v26.22-delivery-audit",
+  "version": 1,
+  "release": "26.22",
+  "regressionOrigin": "26.21",
+  "engineVersion": "26.21.0",
+  "buildEngineVersion": "26.21.0",
+  "generatedAt": "2026-09-13T01:52:01.249Z",
+  "development": true,
+  "expectedRelease": "26.21",
+  "qualificationTarget": "26.22",
+  "qualifiedRelease": null,
+  "baselineVersion": "26.21.0",
+  "overlayVersion": "26.22.0",
+  "sourceRoots": [
+    "."
+  ],
+  "buildRoot": ".",
+  "status": "passed",
+  "scope": "Programmer regressions with actual source modules and controlled watcher promises. No installer, native GUI or external host qualification.",
+  "checks": [
+    {
+      "name": "reorder-and-independent-value",
+      "status": "passed"
+    },
+    {
+      "name": "delete-edit-repeatable-restoration",
+      "status": "passed"
+    },
+    {
+      "name": "incompatible-order-choices-retain-value-edits",
+      "status": "passed"
+    },
+    {
+      "name": "escaped-pointer-identities",
+      "status": "passed"
+    },
+    {
+      "name": "duplicate-identities-rejected",
+      "status": "passed"
+    },
+    {
+      "name": "concurrent-insertions-retain-anchors",
+      "status": "passed"
+    },
+    {
+      "name": "large-merge-order-and-properties",
+      "status": "passed",
+      "observations": {
+        "entities": 5000,
+        "elapsedMs": 231.71879999999987,
+        "scope": "Local merge only; no renderer or universal performance claim"
+      }
+    },
+    {
+      "name": "verified-package-metadata-cannot-be-substituted",
+      "status": "passed"
+    },
+    {
+      "name": "official-legacy-copy-does-not-disable-existing-reference",
+      "status": "passed"
+    },
+    {
+      "name": "failed-update-restores-permission-grants",
+      "status": "passed"
+    },
+    {
+      "name": "failed-rollback-keeps-history-and-installed-state",
+      "status": "passed"
+    },
+    {
+      "name": "replacement-dependency-failure-is-atomic",
+      "status": "passed"
+    },
+    {
+      "name": "official-activation-validates-before-changing-flags",
+      "status": "passed"
+    },
+    {
+      "name": "signed-update-cancellation-after-verification-yield",
+      "status": "passed"
+    },
+    {
+      "name": "signed-update-minimum-base-and-tampering",
+      "status": "passed"
+    },
+    {
+      "name": "signed-update-commit-replay-and-rollback-record",
+      "status": "passed"
+    },
+    {
+      "name": "stale-merge-preview-rejected",
+      "status": "passed"
+    },
+    {
+      "name": "portable-archive-path-corpus",
+      "status": "passed"
+    },
+    {
+      "name": "package-plugin-import-cannot-self-approve-or-mismatch",
+      "status": "passed"
+    },
+    {
+      "name": "plugin-permission-revocation-unloads-real-wasm",
+      "status": "passed"
+    },
+    {
+      "name": "pending-plugin-unload-cancels-activation",
+      "status": "passed"
+    },
+    {
+      "name": "plugin-project-replacement-stops-previous-instance",
+      "status": "passed"
+    },
+    {
+      "name": "plugin-remote-asset-does-not-fetch",
+      "status": "passed"
+    },
+    {
+      "name": "package-core-removal-disposes-matching-plugin",
+      "status": "passed"
+    },
+    {
+      "name": "canonical-literal-prototype-key-and-budget",
+      "status": "passed"
+    },
+    {
+      "name": "stopped-watcher-cannot-resume",
+      "status": "passed"
+    },
+    {
+      "name": "old-watch-read-cannot-replace-new-watch",
+      "status": "passed"
+    }
+  ]
+}

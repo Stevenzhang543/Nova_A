@@ -1,0 +1,304 @@
+{
+  "release": "26.22",
+  "development": true,
+  "status": "partial",
+  "scope": "Links executed effect assertions, independently of serialized-field retention. This is not a per-field completeness pass. Unlisted executable families and additional input domains remain pending.",
+  "families": [
+    {
+      "id": "rhai-dynamic-values",
+      "scope": "Actual shipped WASM dynamic-value/package execution; no GDScript/C# compatibility claim.",
+      "evidence": {
+        "path": "reports/v26.22-traced-api-signatures.json",
+        "sha256": "12ca0810de73d96f9af49ebf7c8098d0dadf3e93e15ad9402563b5491ddf22bb",
+        "generatedAt": "2026-09-14T16:54:51.187Z",
+        "checks": [
+          "isolated actual WASM: reflection and Fn/curry/call intrinsics",
+          "isolated actual WASM: string, map, array and iterator packages",
+          "isolated actual WASM: blob and JSON standard packages"
+        ]
+      }
+    },
+    {
+      "id": "rhai-closures-and-mutation",
+      "scope": "Original and structurally emitted scripts produce the asserted observable WASM results.",
+      "evidence": {
+        "path": "reports/v26.22-traced-language.json",
+        "sha256": "2018edc750155d4ed9bbbd8868d4b19413da43af08335ca4a4229d22ecbe5f5c",
+        "generatedAt": "2026-09-14T17:50:04.385Z",
+        "checks": [
+          "arrays, maps and compound writes: independent structural emission preserves WASM observable result",
+          "captured closure: independent structural emission preserves WASM observable result"
+        ]
+      }
+    },
+    {
+      "id": "structural-graph-editing",
+      "scope": "Actual slot mutations, serialized graph restoration and VM execution. Browser wiring geometry remains separate.",
+      "evidence": {
+        "path": "reports/v26.22-traced-syntax-slots.json",
+        "sha256": "dd827a4168af9adbb34fd0c8cc0965108f52705ae4a968fe41ed3a052e3e5bbf",
+        "generatedAt": "2026-09-14T16:54:46.959Z",
+        "checks": [
+          "Function parameter reordering changes execution order while retaining stable slot and pin IDs",
+          "Array slot reorder/removal changes values and removes only the removed pin connections",
+          "Block statement order and removal change the executed sequence; serialization preserves undo snapshots"
+        ]
+      }
+    },
+    {
+      "id": "script-modules-and-reload",
+      "scope": "Production resolver and runtime with real WASM, graph compiler and AssetDatabase; unrelated subsystem fixtures remain explicit.",
+      "evidence": {
+        "path": "reports/v26.22-traced-script-modules.json",
+        "sha256": "bb7103a945fd5a03c8d25d7a3de85c1206673e3627070721194e0b417fcbd635",
+        "generatedAt": "2026-09-14T16:54:59.105Z",
+        "checks": [
+          "production text runtime resolves and executes project helper",
+          "production visual runtime uses identical module resolution and VM behavior without changing debug state",
+          "failed override preserves the prior stored playable source"
+        ]
+      }
+    },
+    {
+      "id": "resource-inheritance",
+      "scope": "Actual inherited variant resolution merges parent and child token values; invalid selection preserves stored source.",
+      "evidence": {
+        "path": "reports/v26.22-traced-assets.json",
+        "sha256": "cae806f1c8fb65c2bb591681fca1004ecf708c26c5585ada2f201871e8914d19",
+        "generatedAt": "2026-09-14T18:29:21.256Z",
+        "checks": [
+          "Inherited active variants survive save/reload and unresolved selections cannot mutate saved source"
+        ]
+      }
+    },
+    {
+      "id": "blueprint-instantiation",
+      "scope": "Actual instantiated entity components/metadata/position and event reference. This is not complete event-dispatch or inheritance coverage.",
+      "evidence": {
+        "path": "release-audits/v26.22-script-assets-corpus.json",
+        "sha256": "19ed84d37a941a2866589b103169eb41d212a08fc49fd208427a18c7bae28818",
+        "generatedAt": "2026-09-14T18:14:45.593Z",
+        "checks": [
+          "Actual blueprint instantiation applies required components, tags, groups, position and event binding"
+        ]
+      }
+    },
+    {
+      "id": "physics-live-values",
+      "scope": "Native body, primary collider and connection updates after creation.",
+      "evidence": {
+        "path": "reports/v26.22-bindings.json",
+        "sha256": "af9c893e7c077ccc0008d485fe2a8e32aa3ba80ce409645dd77c750c68512bae",
+        "generatedAt": "2026-09-14T16:51:18.220Z",
+        "checks": [
+          "Every scalar body/material/primary collider ABI binding accepts edits after body creation with the same native handle",
+          "Joint and rope property edits reach retained connection records without stale rope data overwriting joint limits"
+        ]
+      }
+    },
+    {
+      "id": "physics-queries",
+      "scope": "Live facade queries, tile collision identity and filters.",
+      "evidence": {
+        "path": "reports/v26.22-queries.json",
+        "sha256": "420476fad9ce3315635d3d2c0a3ff89d86cccedb8799045272d2c901ea89bc30",
+        "generatedAt": "2026-09-14T16:50:35.938Z",
+        "checks": [
+          "Live transform, layer, sensor and enabled edits reach existing native handles without invalidation",
+          "Real TileMap collision bodies return their scene owner and support exclusions"
+        ]
+      }
+    },
+    {
+      "id": "navigation",
+      "scope": "Path algorithms, live authored cache invalidation and agent stopping.",
+      "evidence": {
+        "path": "reports/v26.22-navigation.json",
+        "sha256": "c6d07b6d80daa3873542ca733039f9dea1634480d44a72046ce47a22f70e73b5",
+        "generatedAt": "2026-09-14T16:50:53.178Z",
+        "checks": [
+          "Every grid algorithm routes around real obstacles; polygon visibility uses the same geometry",
+          "Agent radius, authored radius, transforms, masks and disabled regions invalidate cached paths",
+          "Finished and unreachable navigation agents stop the actual simulation velocity"
+        ]
+      }
+    },
+    {
+      "id": "ai",
+      "scope": "Blackboard, task revision/lifetime and perception.",
+      "evidence": {
+        "path": "reports/v26.22-bindings.json",
+        "sha256": "af9c893e7c077ccc0008d485fe2a8e32aa3ba80ce409645dd77c750c68512bae",
+        "generatedAt": "2026-09-14T16:51:18.220Z",
+        "checks": [
+          "AI blackboard writes persist across ticks and authored revision/retirement resets Wait and overrides",
+          "Perception uses world units, parent rotation, tags, deterministic distance ties and bounded results"
+        ]
+      }
+    },
+    {
+      "id": "world-streaming",
+      "scope": "Live scene leases, persistence and transition placement.",
+      "evidence": {
+        "path": "reports/v26.22-bindings.json",
+        "sha256": "af9c893e7c077ccc0008d485fe2a8e32aa3ba80ce409645dd77c750c68512bae",
+        "generatedAt": "2026-09-14T16:51:18.220Z",
+        "checks": [
+          "Reactive scene hosts preserve shared leases, persistent descendants and lifetime generations across unload/reload",
+          "Scene transition aligns new entities with shifted persistent objects and preserves origin-relative connections"
+        ]
+      }
+    },
+    {
+      "id": "gameplay-controller",
+      "scope": "Top-down controller only; other gameplay component semantics require their own cases.",
+      "evidence": {
+        "path": "reports/v26.22-bindings.json",
+        "sha256": "af9c893e7c077ccc0008d485fe2a8e32aa3ba80ce409645dd77c750c68512bae",
+        "generatedAt": "2026-09-14T16:51:18.220Z",
+        "checks": [
+          "Top-down component input accelerates once per fixed tick, stops after release and respects collisions"
+        ]
+      }
+    },
+    {
+      "id": "animation",
+      "scope": "Pose sampling, interpolation, root motion and controller transitions.",
+      "evidence": {
+        "path": "reports/v26.22-animation-audio.json",
+        "sha256": "70ef158e2f3cf2f9f2839c2d73589ca8a26bfa8aef5dd68653bfa324fba967ac",
+        "generatedAt": "2026-09-14T16:51:21.891Z",
+        "checks": [
+          "Direct clip seek evaluates actual numeric pose without crossed callbacks",
+          "Step keys switch at interior boundaries and Auto tangents use adjacent slopes",
+          "Explicit root-motion extraction covers multiple and reverse loops without absolute teleport",
+          "Looping animator reaches its exit-time-one transition"
+        ]
+      }
+    },
+    {
+      "id": "rigging",
+      "scope": "Rig constraints, retargeting and skin deformation.",
+      "evidence": {
+        "path": "reports/v26.22-animation-audio.json",
+        "sha256": "70ef158e2f3cf2f9f2839c2d73589ca8a26bfa8aef5dd68653bfa324fba967ac",
+        "generatedAt": "2026-09-14T16:51:21.891Z",
+        "checks": [
+          "Rotation limits remain authoritative after inverse kinematics",
+          "Retargeting an unchanged rest pose preserves the target rest transform",
+          "Rig skin deformation preserves mirrored bind geometry and follows translated root pose"
+        ]
+      }
+    },
+    {
+      "id": "timeline",
+      "scope": "Crossed callback ordering, nested sampling and traversal.",
+      "evidence": {
+        "path": "reports/v26.22-animation-audio.json",
+        "sha256": "70ef158e2f3cf2f9f2839c2d73589ca8a26bfa8aef5dd68653bfa324fba967ac",
+        "generatedAt": "2026-09-14T16:51:21.891Z",
+        "checks": [
+          "Timeline emits every crossed occurrence over multiple loops",
+          "Timeline samples assigned animation asset with local offset and rate",
+          "Reverse timeline dispatch order follows traversal and explicit seek dispatches nothing"
+        ]
+      }
+    },
+    {
+      "id": "timeline-ui-actions",
+      "scope": "Actual UI-triggered timeline action behavior.",
+      "evidence": {
+        "path": "reports/v26.22-timeline-actions.json",
+        "sha256": "f44f99b4bad054fe7a165f062e7484b753c7c8278901b86dde909e4c3a8cd93d",
+        "generatedAt": "2026-09-14T16:51:33.324Z",
+        "checks": [
+          "Explicit play evaluates initial subtitle, pause freezes real timeline, and play resumes",
+          "Skip and resume reconstruct real captions and marker time"
+        ]
+      }
+    },
+    {
+      "id": "audio",
+      "scope": "Executed audio runtime with instrumented media elements; physical sound/device acceptance is not implied.",
+      "evidence": {
+        "path": "reports/v26.22-animation-audio.json",
+        "sha256": "70ef158e2f3cf2f9f2839c2d73589ca8a26bfa8aef5dd68653bfa324fba967ac",
+        "generatedAt": "2026-09-14T16:51:21.891Z",
+        "checks": [
+          "Regular source and polyphonic clocks follow scaled transport, manual pause, seek and trim end",
+          "Solo nested bus keeps its ancestors audible and unrelated sibling silent",
+          "Bus automation holds its end unless an explicit loop duration is set"
+        ]
+      }
+    },
+    {
+      "id": "ui-layout",
+      "scope": "Resolved UI layout geometry; separate browser tests inspect actual editor panels.",
+      "evidence": {
+        "path": "reports/v26.22-interface.json",
+        "sha256": "fa1b8a91308d0e9b76f1fa6d1a6e705dc458dbca803b542552ac45471637e58e",
+        "generatedAt": "2026-09-14T16:51:37.262Z",
+        "checks": [
+          "Partial stretch anchors independently resolve both axes and inset offsets",
+          "Fixed pixels, responsive scale, breakpoints and safe area use the same geometry",
+          "Wrapped Flow uses authored widths, line breaks and spacing deterministically"
+        ]
+      }
+    },
+    {
+      "id": "ui-input",
+      "scope": "Game UI activation, slider callbacks and native text ownership.",
+      "evidence": {
+        "path": "reports/v26.22-interface.json",
+        "sha256": "fa1b8a91308d0e9b76f1fa6d1a6e705dc458dbca803b542552ac45471637e58e",
+        "generatedAt": "2026-09-14T16:51:37.262Z",
+        "checks": [
+          "Checkbox requires pointer release inside; cancellation and outside release remain inert",
+          "Slider pointer and keyboard emit changed-value callbacks once and clamp repeat input",
+          "Keyboard text focus creates native-input ownership and commits values atomically"
+        ]
+      }
+    },
+    {
+      "id": "localization-theme",
+      "scope": "Theme inheritance and resolved localized text.",
+      "evidence": {
+        "path": "reports/v26.22-interface.json",
+        "sha256": "fa1b8a91308d0e9b76f1fa6d1a6e705dc458dbca803b542552ac45471637e58e",
+        "generatedAt": "2026-09-14T16:51:37.262Z",
+        "checks": [
+          "Child theme omission preserves parent tokens, variables and every state",
+          "Multi-hop locale fallback and Canvas locale override resolve actual text and direction"
+        ]
+      }
+    },
+    {
+      "id": "network",
+      "scope": "Authored replication policy, ownership and live RPC contract binding.",
+      "evidence": {
+        "path": "reports/v26.22-networking.json",
+        "sha256": "e28ed7960fbec387ba6b032b5a7c8db0e7e7b3b4c83472c9aafcbc64bd72c499",
+        "generatedAt": "2026-09-14T16:52:43.119Z",
+        "checks": [
+          "Incoming snapshots obey the authored property allowlist",
+          "Explicit live owner edits reach ownership while unrelated property edits preserve transfers",
+          "RPC contracts added during a live session reach gameplay listeners"
+        ]
+      }
+    },
+    {
+      "id": "renderer-material-particle",
+      "scope": "Actual pixel assertions on the recorded browser/software graphics context; no native pixel equivalence or universal FPS claim.",
+      "evidence": {
+        "path": "release-audits/v26.22-renderer-development/renderer-staged.json",
+        "sha256": "ca1f982f3907e89464e7290c5569892e653d0d665a7a1c23c06495582bb5c4cf",
+        "generatedAt": "2026-09-12T23:20:36.726Z",
+        "checks": [
+          "actual GLSL material changes pixels and invalid shader uses visible base fallback",
+          "actual particle simulation produces matching visible pixels in both renderer backends",
+          "normal-map lighting follows sprite flips and local rotation"
+        ]
+      }
+    }
+  ]
+}

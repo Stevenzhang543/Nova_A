@@ -1,0 +1,18 @@
+{
+  "generatedAt": "2026-10-04T12:48:32.495Z",
+  "path": "scripts/verify-ui-rebuild-layout-user.mjs",
+  "records": [
+    {
+      "before": "Content disclosure traversal also opened native menus",
+      "after": "Exclude explicit native popup marker; popup paths get separate interruption/input audit",
+      "purpose": "Native content/absolute-menu owners have different geometry and animation meaning."
+    },
+    {
+      "before": "Old high-scale test forced open dock despite insufficient content height",
+      "after": "Use actual recoverable dock-collapse command for200% profiles and record it",
+      "purpose": "Validate current user-approved fold/scroll strategy; no font shrink, hidden core feature or private state injection."
+    }
+  ],
+  "beforeSha256": "7e1f6d59cffcdff7323a580366d0e8e65c9bf15e7b0610b43ad2f3b857ddb4c4",
+  "afterSha256": "63031ef15e684d3458d113c78cd0d225efa4b9473aa0066aff7c1302f2d0dbdf"
+}

@@ -1,0 +1,42 @@
+{
+  "generatedAt": "2026-10-17T09:58:43.915Z",
+  "checks": [
+    {
+      "name": "A committed translation produces one snapshot per selection root",
+      "status": "passed"
+    },
+    {
+      "name": "Translation, rotation and scale each restore the exact captured baseline",
+      "status": "passed"
+    },
+    {
+      "name": "Restoring is idempotent and does not drift on repeated cancel",
+      "status": "passed"
+    },
+    {
+      "name": "Clearing the drag without restoring would strand the displacement (regression guard)",
+      "status": "passed"
+    },
+    {
+      "name": "The editor Escape path cancels through the restore helper",
+      "status": "passed"
+    },
+    {
+      "name": "Vertex drag cancel restores geometry and scale to the captured baseline",
+      "status": "passed"
+    },
+    {
+      "name": "Vertex baseline is a copy: later edits cannot corrupt what will be restored",
+      "status": "passed"
+    },
+    {
+      "name": "Vertex drag capture and cancel are wired into the editor paths",
+      "status": "passed"
+    },
+    {
+      "name": "Both cancel entry points share one restore helper",
+      "status": "passed"
+    }
+  ],
+  "status": "passed"
+}

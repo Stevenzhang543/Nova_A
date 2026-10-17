@@ -1,0 +1,478 @@
+{
+  "generatedAt": "2026-10-04T13:25:21.152Z",
+  "version": "26.37",
+  "task": "Proven populated RPC field compression plus same-source replication compound-row geometry",
+  "sourceFile": "src/components/NetworkStudioPanel.vue",
+  "sourceBeforeSha256": "88a31345919e161686fc3139c1e1f48126a77a12b210ed4476b80aeabb5e0bf2",
+  "sourceAfterSha256": "6af1d920ac52b93f798997b349cd7d5e380bb202ee5ecbae24a311cbdd015a02",
+  "evidence": {
+    "path": "release-audits/v26.37-ui-rebuild-layout-remainder.json",
+    "route": "populated-network/1",
+    "reportedValues": [
+      "coop.move",
+      "128",
+      "40"
+    ],
+    "observedProblem": "Three RPC fields had approximately32px input width despite correct 16px/44px metrics; outer compound grid combined with the shared inner label/value grid."
+  },
+  "consequencesChecked": [
+    "RPC name/channel/direction/authority/schema/budget/rate/remove bindings are byte-identical.",
+    "Replication shared UiPropertyRow roots were subject to the same 12rem compound tracks, plus a direct-div flex override and old flex/grid breakpoint layers; only this matching layout risk is included.",
+    "Shared text/input height/padding/radius remain unchanged; labels stack at12px and field rows have20px spacing with actual-column widths scaled once.",
+    "Existing replicated entity name and property fieldset full-width grouping remains intact.",
+    "Original channel visual geometry remains unchanged; only proven selectors are extended."
+  ],
+  "checks": {
+    "templateByteIdentical": true,
+    "scriptByteIdentical": true,
+    "vueTemplateCompiled": true,
+    "vueCssCompiled": true,
+    "legacyRuleCounts": {
+      "legacyPairs": 4,
+      "legacyRpc": 1,
+      "legacyReplication": 1,
+      "badSharedDiv": 1,
+      "obsoleteFlexSpans": 2,
+      "partialReset": 1
+    }
+  },
+  "notYetVerified": [
+    "No browser or application build was run; parent will rebuild and rerun actual populated/translated/scaled window geometry measurements."
+  ],
+  "edits": [
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "context": "base",
+      "selector": ".rpc-row, .replication-row",
+      "property": "min-width",
+      "before": "720px",
+      "after": null,
+      "reason": "Remove competing fixed-width, two-column/flex breakpoint and 12rem compound-row geometry; one available-width comfortable grid will own this exact row."
+    },
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "context": "base",
+      "selector": ".rpc-row, .replication-row",
+      "property": "padding",
+      "before": "var(--space-1) 0",
+      "after": null,
+      "reason": "Remove competing fixed-width, two-column/flex breakpoint and 12rem compound-row geometry; one available-width comfortable grid will own this exact row."
+    },
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "context": "base",
+      "selector": ".rpc-row, .replication-row",
+      "property": "display",
+      "before": "grid",
+      "after": null,
+      "reason": "Remove competing fixed-width, two-column/flex breakpoint and 12rem compound-row geometry; one available-width comfortable grid will own this exact row."
+    },
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "context": "base",
+      "selector": ".rpc-row, .replication-row",
+      "property": "gap",
+      "before": "var(--space-1)",
+      "after": null,
+      "reason": "Remove competing fixed-width, two-column/flex breakpoint and 12rem compound-row geometry; one available-width comfortable grid will own this exact row."
+    },
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "context": "base",
+      "selector": ".rpc-row, .replication-row",
+      "property": "align-items",
+      "before": "center",
+      "after": null,
+      "reason": "Remove competing fixed-width, two-column/flex breakpoint and 12rem compound-row geometry; one available-width comfortable grid will own this exact row."
+    },
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "context": "base",
+      "selector": ".rpc-row, .replication-row",
+      "property": "border-bottom",
+      "before": "1px solid var(--border-subtle)",
+      "after": null,
+      "reason": "Remove competing fixed-width, two-column/flex breakpoint and 12rem compound-row geometry; one available-width comfortable grid will own this exact row."
+    },
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "context": "base",
+      "selector": ".rpc-row",
+      "property": "grid-template-columns",
+      "before": "120px 105px 145px 90px 85px 90px 75px 28px",
+      "after": null,
+      "reason": "Remove fixed 120/105/145/90/85/90/75/28px RPC tracks, which do not accommodate 16px text with 9x16px padding."
+    },
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "context": "base",
+      "selector": ".replication-row",
+      "property": "min-width",
+      "before": "880px",
+      "after": null,
+      "reason": "Remove fixed 880px replication width and undersized scalar/action tracks; preserve logical fields and use available-width reflow."
+    },
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "context": "base",
+      "selector": ".replication-row",
+      "property": "grid-template-columns",
+      "before": "minmax(120px, 1fr) 90px minmax(210px, 1.4fr) 88px 72px 105px 86px 28px",
+      "after": null,
+      "reason": "Remove fixed 880px replication width and undersized scalar/action tracks; preserve logical fields and use available-width reflow."
+    },
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "context": "base",
+      "selector": ".replication-row > div",
+      "property": "display",
+      "before": "flex",
+      "after": null,
+      "reason": "Stop overriding UiPropertyRow root div as flex; each shared field remains a grid with explicitly stacked label and input."
+    },
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "context": "base",
+      "selector": ".replication-row > div",
+      "property": "gap",
+      "before": "var(--space-2)",
+      "after": null,
+      "reason": "Stop overriding UiPropertyRow root div as flex; each shared field remains a grid with explicitly stacked label and input."
+    },
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "context": "base",
+      "selector": ".replication-row > div",
+      "property": "flex-wrap",
+      "before": "wrap",
+      "after": null,
+      "reason": "Stop overriding UiPropertyRow root div as flex; each shared field remains a grid with explicitly stacked label and input."
+    },
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "context": "@container (max-width: 880px)",
+      "selector": ".rpc-row, .replication-row",
+      "property": "min-width",
+      "before": "0",
+      "after": null,
+      "reason": "Remove competing fixed-width, two-column/flex breakpoint and 12rem compound-row geometry; one available-width comfortable grid will own this exact row."
+    },
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "context": "@container (max-width: 880px)",
+      "selector": ".rpc-row, .replication-row",
+      "property": "margin-bottom",
+      "before": "var(--space-2)",
+      "after": null,
+      "reason": "Remove competing fixed-width, two-column/flex breakpoint and 12rem compound-row geometry; one available-width comfortable grid will own this exact row."
+    },
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "context": "@container (max-width: 880px)",
+      "selector": ".rpc-row, .replication-row",
+      "property": "padding",
+      "before": "var(--space-2)",
+      "after": null,
+      "reason": "Remove competing fixed-width, two-column/flex breakpoint and 12rem compound-row geometry; one available-width comfortable grid will own this exact row."
+    },
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "context": "@container (max-width: 880px)",
+      "selector": ".rpc-row, .replication-row",
+      "property": "grid-template-columns",
+      "before": "repeat(2, minmax(0, 1fr))",
+      "after": null,
+      "reason": "Remove competing fixed-width, two-column/flex breakpoint and 12rem compound-row geometry; one available-width comfortable grid will own this exact row."
+    },
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "context": "@container (max-width: 880px)",
+      "selector": ".rpc-row, .replication-row",
+      "property": "border",
+      "before": "1px solid var(--border-subtle)",
+      "after": null,
+      "reason": "Remove competing fixed-width, two-column/flex breakpoint and 12rem compound-row geometry; one available-width comfortable grid will own this exact row."
+    },
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "context": "@container (max-width: 880px)",
+      "selector": ".rpc-row, .replication-row",
+      "property": "background",
+      "before": "var(--surface-3)",
+      "after": null,
+      "reason": "Remove competing fixed-width, two-column/flex breakpoint and 12rem compound-row geometry; one available-width comfortable grid will own this exact row."
+    },
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "context": "@container (max-width: 880px)",
+      "selector": ".channel-row > *,\r\n  .rpc-row > *,\r\n  .replication-row > *",
+      "property": "selector",
+      "before": ".channel-row > *,\r\n  .rpc-row > *,\r\n  .replication-row > *",
+      "after": ".channel-row > *",
+      "reason": "Keep the previously verified channel rule; RPC/replication no longer receive an obsolete breakpoint full-width child override."
+    },
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "context": "@container (max-width: 880px)",
+      "selector": ".replication-row > strong,\r\n  .replication-row > div",
+      "property": "grid-column",
+      "before": "1 / -1",
+      "after": null,
+      "reason": "Remove duplicated breakpoint flex/grid assignment to every shared property root; existing strong and fieldset full-width semantic grouping is retained."
+    },
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "context": "@container (max-width: 620px)",
+      "selector": ".rpc-row, .replication-row",
+      "property": "display",
+      "before": "flex",
+      "after": null,
+      "reason": "Remove competing fixed-width, two-column/flex breakpoint and 12rem compound-row geometry; one available-width comfortable grid will own this exact row."
+    },
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "context": "@container (max-width: 620px)",
+      "selector": ".rpc-row, .replication-row",
+      "property": "flex-wrap",
+      "before": "wrap",
+      "after": null,
+      "reason": "Remove competing fixed-width, two-column/flex breakpoint and 12rem compound-row geometry; one available-width comfortable grid will own this exact row."
+    },
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "context": "@container (max-width: 620px)",
+      "selector": ".replication-row > strong,\r\n  .replication-row > div",
+      "property": "flex-basis",
+      "before": "100%",
+      "after": null,
+      "reason": "Remove duplicated breakpoint flex/grid assignment to every shared property root; existing strong and fieldset full-width semantic grouping is retained."
+    },
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "context": "base",
+      "selector": ".rpc-row, .replication-row",
+      "property": "min-width",
+      "before": "0",
+      "after": null,
+      "reason": "Remove competing fixed-width, two-column/flex breakpoint and 12rem compound-row geometry; one available-width comfortable grid will own this exact row."
+    },
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "context": "base",
+      "selector": ".rpc-row, .replication-row",
+      "property": "display",
+      "before": "grid",
+      "after": null,
+      "reason": "Remove competing fixed-width, two-column/flex breakpoint and 12rem compound-row geometry; one available-width comfortable grid will own this exact row."
+    },
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "context": "base",
+      "selector": ".rpc-row, .replication-row",
+      "property": "grid-template-columns",
+      "before": "repeat(auto-fit, minmax(min(100%, 12rem), 1fr))",
+      "after": null,
+      "reason": "Remove competing fixed-width, two-column/flex breakpoint and 12rem compound-row geometry; one available-width comfortable grid will own this exact row."
+    },
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "context": "base",
+      "selector": ".rpc-row, .replication-row",
+      "property": "align-items",
+      "before": "start",
+      "after": null,
+      "reason": "Remove competing fixed-width, two-column/flex breakpoint and 12rem compound-row geometry; one available-width comfortable grid will own this exact row."
+    },
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "context": "base",
+      "selector": ".rpc-row, .replication-row",
+      "property": "gap",
+      "before": "var(--space-3)",
+      "after": null,
+      "reason": "Remove competing fixed-width, two-column/flex breakpoint and 12rem compound-row geometry; one available-width comfortable grid will own this exact row."
+    },
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "context": "base",
+      "selector": ".rpc-row, .replication-row",
+      "property": "padding",
+      "before": "var(--space-3) 0",
+      "after": null,
+      "reason": "Remove competing fixed-width, two-column/flex breakpoint and 12rem compound-row geometry; one available-width comfortable grid will own this exact row."
+    },
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "context": "base",
+      "selector": ".channel-row :deep(.ui-property-row)",
+      "property": "selector",
+      "before": ".channel-row :deep(.ui-property-row)",
+      "after": ".channel-row :deep(.ui-property-row), .rpc-row :deep(.ui-property-row), .replication-row :deep(.ui-property-row)",
+      "declarationsUnchanged": [
+        {
+          "property": "grid-template-columns",
+          "value": "minmax(0,1fr)"
+        },
+        {
+          "property": "align-items",
+          "value": "start"
+        },
+        {
+          "property": "row-gap",
+          "value": "var(--ui-label-control-gap)"
+        },
+        {
+          "property": "min-width",
+          "value": "0"
+        },
+        {
+          "property": "max-width",
+          "value": "100%"
+        }
+      ],
+      "reason": "Explicit one-column labels avoid the inner shared label/value grid taking almost all of the outer scalar column. The inherited 12px label/control gap and 16px value remain unchanged."
+    },
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "context": "base",
+      "selector": ".channel-row :deep(.ui-property-control)",
+      "property": "selector",
+      "before": ".channel-row :deep(.ui-property-control)",
+      "after": ".channel-row :deep(.ui-property-control), .rpc-row :deep(.ui-property-control), .replication-row :deep(.ui-property-control)",
+      "declarationsUnchanged": [
+        {
+          "property": "min-width",
+          "value": "0"
+        },
+        {
+          "property": "max-width",
+          "value": "100%"
+        }
+      ],
+      "reason": "Keep actual input wrapper inside the reflowed field without changing direct values or pointer semantics."
+    },
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "context": "base",
+      "selector": ".channel-row :deep(.ui-property-control>input),.channel-row :deep(.ui-property-control>select)",
+      "property": "selector",
+      "before": ".channel-row :deep(.ui-property-control>input),.channel-row :deep(.ui-property-control>select)",
+      "after": ".channel-row :deep(.ui-property-control>input), .channel-row :deep(.ui-property-control>select), .rpc-row :deep(.ui-property-control>input), .rpc-row :deep(.ui-property-control>select), .replication-row :deep(.ui-property-control>input), .replication-row :deep(.ui-property-control>select)",
+      "declarationsUnchanged": [
+        {
+          "property": "min-width",
+          "value": "0"
+        },
+        {
+          "property": "max-width",
+          "value": "100%"
+        }
+      ],
+      "reason": "Extend only the proven channel containment to RPC and replication controls; normal 16px, 44px, 9x16px input metrics continue to come from the shared system."
+    },
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "context": "base",
+      "selector": ".channel-row>button",
+      "property": "selector",
+      "before": ".channel-row>button",
+      "after": ".channel-row>button, .rpc-row>button, .replication-row>button",
+      "declarationsUnchanged": [
+        {
+          "property": "align-self",
+          "value": "end"
+        },
+        {
+          "property": "justify-self",
+          "value": "end"
+        },
+        {
+          "property": "width",
+          "value": "auto"
+        }
+      ],
+      "reason": "Align removal actions with the input baseline and keep the shared 44px button reachable without a tiny dedicated track."
+    },
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "context": "base",
+      "selector": ".rpc-row, .replication-row",
+      "property": "min-width",
+      "before": null,
+      "after": "0",
+      "reason": "Use the verified channel row rhythm: logical 240px columns reflow by actual available width and UI scale, 20px fields and 16px horizontal space; no text/control reduction."
+    },
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "context": "base",
+      "selector": ".rpc-row, .replication-row",
+      "property": "max-width",
+      "before": null,
+      "after": "100%",
+      "reason": "Use the verified channel row rhythm: logical 240px columns reflow by actual available width and UI scale, 20px fields and 16px horizontal space; no text/control reduction."
+    },
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "context": "base",
+      "selector": ".rpc-row, .replication-row",
+      "property": "width",
+      "before": null,
+      "after": "100%",
+      "reason": "Use the verified channel row rhythm: logical 240px columns reflow by actual available width and UI scale, 20px fields and 16px horizontal space; no text/control reduction."
+    },
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "context": "base",
+      "selector": ".rpc-row, .replication-row",
+      "property": "display",
+      "before": null,
+      "after": "grid",
+      "reason": "Use the verified channel row rhythm: logical 240px columns reflow by actual available width and UI scale, 20px fields and 16px horizontal space; no text/control reduction."
+    },
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "context": "base",
+      "selector": ".rpc-row, .replication-row",
+      "property": "grid-template-columns",
+      "before": null,
+      "after": "repeat(auto-fit,minmax(min(100%,calc(240px * var(--ui-scale))),1fr))",
+      "reason": "Use the verified channel row rhythm: logical 240px columns reflow by actual available width and UI scale, 20px fields and 16px horizontal space; no text/control reduction."
+    },
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "context": "base",
+      "selector": ".rpc-row, .replication-row",
+      "property": "align-items",
+      "before": null,
+      "after": "start",
+      "reason": "Use the verified channel row rhythm: logical 240px columns reflow by actual available width and UI scale, 20px fields and 16px horizontal space; no text/control reduction."
+    },
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "context": "base",
+      "selector": ".rpc-row, .replication-row",
+      "property": "gap",
+      "before": null,
+      "after": "var(--ui-field-gap) var(--space-4)",
+      "reason": "Use the verified channel row rhythm: logical 240px columns reflow by actual available width and UI scale, 20px fields and 16px horizontal space; no text/control reduction."
+    },
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "context": "base",
+      "selector": ".rpc-row, .replication-row",
+      "property": "padding",
+      "before": null,
+      "after": "var(--ui-field-gap) 0",
+      "reason": "Use the verified channel row rhythm: logical 240px columns reflow by actual available width and UI scale, 20px fields and 16px horizontal space; no text/control reduction."
+    },
+    {
+      "file": "src/components/NetworkStudioPanel.vue",
+      "context": "base",
+      "selector": ".rpc-row, .replication-row",
+      "property": "border-bottom",
+      "before": null,
+      "after": "var(--ui-border-width) solid var(--border-separator)",
+      "reason": "Use the verified channel row rhythm: logical 240px columns reflow by actual available width and UI scale, 20px fields and 16px horizontal space; no text/control reduction."
+    }
+  ]
+}

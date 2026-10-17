@@ -1,0 +1,1836 @@
+{
+  "release": "26.22",
+  "development": true,
+  "status": "incomplete",
+  "scope": "Type-aware exploratory import-setting hydration on a neutral resource asset. Retention is not a valid media/import/render claim. Empty containers, nullable references, canonical constraints and matching asset-type/runtime fixtures remain pending.",
+  "rows": [
+    {
+      "id": "AssetImportSettings.atlas",
+      "path": [
+        "atlas"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "boolean",
+      "acceptedEnum": [],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [
+        0
+      ],
+      "disposition": "Pending canonical candidate, UI/history, export and runtime-effect audit"
+    },
+    {
+      "id": "AssetImportSettings.atlasSettings.group",
+      "path": [
+        "atlasSettings",
+        "group"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "string",
+      "acceptedEnum": [],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [
+        1
+      ],
+      "disposition": "Pending canonical candidate, UI/history, export and runtime-effect audit"
+    },
+    {
+      "id": "AssetImportSettings.atlasSettings.maxSize",
+      "path": [
+        "atlasSettings",
+        "maxSize"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "number",
+      "acceptedEnum": [],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [
+        2
+      ],
+      "disposition": "Pending canonical candidate, UI/history, export and runtime-effect audit"
+    },
+    {
+      "id": "AssetImportSettings.atlasSettings.padding",
+      "path": [
+        "atlasSettings",
+        "padding"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "number",
+      "acceptedEnum": [],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [
+        3
+      ],
+      "disposition": "Pending canonical candidate, UI/history, export and runtime-effect audit"
+    },
+    {
+      "id": "AssetImportSettings.atlasSettings.rotationPolicy",
+      "path": [
+        "atlasSettings",
+        "rotationPolicy"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "\"Never\" | \"Allow\"",
+      "acceptedEnum": [
+        "Never",
+        "Allow"
+      ],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [
+        4,
+        5
+      ],
+      "disposition": "Pending canonical candidate, UI/history, export and runtime-effect audit"
+    },
+    {
+      "id": "AssetImportSettings.atlasSettings.trim",
+      "path": [
+        "atlasSettings",
+        "trim"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "boolean",
+      "acceptedEnum": [],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [
+        6
+      ],
+      "disposition": "Pending canonical candidate, UI/history, export and runtime-effect audit"
+    },
+    {
+      "id": "AssetImportSettings.atlasSettings.trimPolicy",
+      "path": [
+        "atlasSettings",
+        "trimPolicy"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "\"None\" | \"Transparent\"",
+      "acceptedEnum": [
+        "None",
+        "Transparent"
+      ],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [
+        7,
+        8
+      ],
+      "disposition": "Pending canonical candidate, UI/history, export and runtime-effect audit"
+    },
+    {
+      "id": "AssetImportSettings.audioSettings.activeLoopRegion",
+      "path": [
+        "audioSettings",
+        "activeLoopRegion"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "string",
+      "acceptedEnum": [],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [],
+      "disposition": "Nullable field needs a valid asset-type-specific fixture"
+    },
+    {
+      "id": "AssetImportSettings.audioSettings.codec",
+      "path": [
+        "audioSettings",
+        "codec"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "AudioCodecProfile",
+      "acceptedEnum": [
+        "Original",
+        "PCM",
+        "Vorbis",
+        "MP3"
+      ],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [
+        9,
+        10,
+        11,
+        12
+      ],
+      "disposition": "Pending canonical candidate, UI/history, export and runtime-effect audit"
+    },
+    {
+      "id": "AssetImportSettings.audioSettings.loopEnd",
+      "path": [
+        "audioSettings",
+        "loopEnd"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "number",
+      "acceptedEnum": [],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [
+        13
+      ],
+      "disposition": "Pending canonical candidate, UI/history, export and runtime-effect audit"
+    },
+    {
+      "id": "AssetImportSettings.audioSettings.loopRegions",
+      "path": [
+        "audioSettings",
+        "loopRegions"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "AudioLoopRegion[]",
+      "acceptedEnum": [],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [],
+      "disposition": "Container needs populated member/variant fixtures"
+    },
+    {
+      "id": "AssetImportSettings.audioSettings.loopStart",
+      "path": [
+        "audioSettings",
+        "loopStart"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "number",
+      "acceptedEnum": [],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [
+        14
+      ],
+      "disposition": "Pending canonical candidate, UI/history, export and runtime-effect audit"
+    },
+    {
+      "id": "AssetImportSettings.audioSettings.normalizationGain",
+      "path": [
+        "audioSettings",
+        "normalizationGain"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "number",
+      "acceptedEnum": [],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [
+        15
+      ],
+      "disposition": "Pending canonical candidate, UI/history, export and runtime-effect audit"
+    },
+    {
+      "id": "AssetImportSettings.audioSettings.normalize",
+      "path": [
+        "audioSettings",
+        "normalize"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "boolean",
+      "acceptedEnum": [],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [
+        16
+      ],
+      "disposition": "Pending canonical candidate, UI/history, export and runtime-effect audit"
+    },
+    {
+      "id": "AssetImportSettings.audioSettings.preload",
+      "path": [
+        "audioSettings",
+        "preload"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "\"None\" | \"Auto\" | \"Preload\" | \"Metadata\"",
+      "acceptedEnum": [
+        "None",
+        "Auto",
+        "Preload",
+        "Metadata"
+      ],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [
+        17,
+        18,
+        19,
+        20
+      ],
+      "disposition": "Pending canonical candidate, UI/history, export and runtime-effect audit"
+    },
+    {
+      "id": "AssetImportSettings.audioSettings.profile",
+      "path": [
+        "audioSettings",
+        "profile"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "AudioImportProfile",
+      "acceptedEnum": [
+        "SoundEffect",
+        "Music",
+        "Voice",
+        "Streaming"
+      ],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [
+        21,
+        22,
+        23,
+        24
+      ],
+      "disposition": "Pending canonical candidate, UI/history, export and runtime-effect audit"
+    },
+    {
+      "id": "AssetImportSettings.audioSettings.quality",
+      "path": [
+        "audioSettings",
+        "quality"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "number",
+      "acceptedEnum": [],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [
+        25
+      ],
+      "disposition": "Pending canonical candidate, UI/history, export and runtime-effect audit"
+    },
+    {
+      "id": "AssetImportSettings.audioSettings.sampleRate",
+      "path": [
+        "audioSettings",
+        "sampleRate"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "number",
+      "acceptedEnum": [],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [
+        26
+      ],
+      "disposition": "Pending canonical candidate, UI/history, export and runtime-effect audit"
+    },
+    {
+      "id": "AssetImportSettings.audioSettings.streaming",
+      "path": [
+        "audioSettings",
+        "streaming"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "boolean",
+      "acceptedEnum": [],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [
+        27
+      ],
+      "disposition": "Pending canonical candidate, UI/history, export and runtime-effect audit"
+    },
+    {
+      "id": "AssetImportSettings.audioSettings.targetPeakDb",
+      "path": [
+        "audioSettings",
+        "targetPeakDb"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "number",
+      "acceptedEnum": [],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [
+        28
+      ],
+      "disposition": "Pending canonical candidate, UI/history, export and runtime-effect audit"
+    },
+    {
+      "id": "AssetImportSettings.audioSettings.trimEnd",
+      "path": [
+        "audioSettings",
+        "trimEnd"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "number",
+      "acceptedEnum": [],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [
+        29
+      ],
+      "disposition": "Pending canonical candidate, UI/history, export and runtime-effect audit"
+    },
+    {
+      "id": "AssetImportSettings.audioSettings.trimStart",
+      "path": [
+        "audioSettings",
+        "trimStart"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "number",
+      "acceptedEnum": [],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [
+        30
+      ],
+      "disposition": "Pending canonical candidate, UI/history, export and runtime-effect audit"
+    },
+    {
+      "id": "AssetImportSettings.borders.bottom",
+      "path": [
+        "borders",
+        "bottom"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "number",
+      "acceptedEnum": [],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [
+        31
+      ],
+      "disposition": "Pending canonical candidate, UI/history, export and runtime-effect audit"
+    },
+    {
+      "id": "AssetImportSettings.borders.left",
+      "path": [
+        "borders",
+        "left"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "number",
+      "acceptedEnum": [],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [
+        32
+      ],
+      "disposition": "Pending canonical candidate, UI/history, export and runtime-effect audit"
+    },
+    {
+      "id": "AssetImportSettings.borders.right",
+      "path": [
+        "borders",
+        "right"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "number",
+      "acceptedEnum": [],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [
+        33
+      ],
+      "disposition": "Pending canonical candidate, UI/history, export and runtime-effect audit"
+    },
+    {
+      "id": "AssetImportSettings.borders.top",
+      "path": [
+        "borders",
+        "top"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "number",
+      "acceptedEnum": [],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [
+        34
+      ],
+      "disposition": "Pending canonical candidate, UI/history, export and runtime-effect audit"
+    },
+    {
+      "id": "AssetImportSettings.collisionGeneration.mode",
+      "path": [
+        "collisionGeneration",
+        "mode"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "\"None\" | \"Box\" | \"Polygon\"",
+      "acceptedEnum": [
+        "None",
+        "Box",
+        "Polygon"
+      ],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [
+        35,
+        36,
+        37
+      ],
+      "disposition": "Pending canonical candidate, UI/history, export and runtime-effect audit"
+    },
+    {
+      "id": "AssetImportSettings.collisionGeneration.tolerance",
+      "path": [
+        "collisionGeneration",
+        "tolerance"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "number",
+      "acceptedEnum": [],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [
+        38
+      ],
+      "disposition": "Pending canonical candidate, UI/history, export and runtime-effect audit"
+    },
+    {
+      "id": "AssetImportSettings.colorSpace",
+      "path": [
+        "colorSpace"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "\"sRGB\" | \"Linear\"",
+      "acceptedEnum": [
+        "sRGB",
+        "Linear"
+      ],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [
+        39,
+        40
+      ],
+      "disposition": "Pending canonical candidate, UI/history, export and runtime-effect audit"
+    },
+    {
+      "id": "AssetImportSettings.compression",
+      "path": [
+        "compression"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "AssetCompression",
+      "acceptedEnum": [
+        "None",
+        "Lossless",
+        "Optimized"
+      ],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [
+        41,
+        42,
+        43
+      ],
+      "disposition": "Pending canonical candidate, UI/history, export and runtime-effect audit"
+    },
+    {
+      "id": "AssetImportSettings.extractedAnimationFrames",
+      "path": [
+        "extractedAnimationFrames"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "SpriteRegion[]",
+      "acceptedEnum": [],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [],
+      "disposition": "Container needs populated member/variant fixtures"
+    },
+    {
+      "id": "AssetImportSettings.filterMode",
+      "path": [
+        "filterMode"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "TextureFilter",
+      "acceptedEnum": [
+        "Linear",
+        "Nearest"
+      ],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [
+        44,
+        45
+      ],
+      "disposition": "Pending canonical candidate, UI/history, export and runtime-effect audit"
+    },
+    {
+      "id": "AssetImportSettings.fontSettings.bitmapSize",
+      "path": [
+        "fontSettings",
+        "bitmapSize"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "number",
+      "acceptedEnum": [],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [
+        46
+      ],
+      "disposition": "Pending canonical candidate, UI/history, export and runtime-effect audit"
+    },
+    {
+      "id": "AssetImportSettings.fontSettings.declaredLanguages.0",
+      "path": [
+        "fontSettings",
+        "declaredLanguages",
+        0
+      ],
+      "source": "src/assets/types.ts",
+      "type": "string",
+      "acceptedEnum": [],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [
+        47
+      ],
+      "disposition": "Pending canonical candidate, UI/history, export and runtime-effect audit"
+    },
+    {
+      "id": "AssetImportSettings.fontSettings.distanceField",
+      "path": [
+        "fontSettings",
+        "distanceField"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "FontDistanceFieldMode",
+      "acceptedEnum": [
+        "None",
+        "SDF",
+        "MSDF"
+      ],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [
+        48,
+        49,
+        50
+      ],
+      "disposition": "Pending canonical candidate, UI/history, export and runtime-effect audit"
+    },
+    {
+      "id": "AssetImportSettings.fontSettings.distanceRange",
+      "path": [
+        "fontSettings",
+        "distanceRange"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "number",
+      "acceptedEnum": [],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [
+        51
+      ],
+      "disposition": "Pending canonical candidate, UI/history, export and runtime-effect audit"
+    },
+    {
+      "id": "AssetImportSettings.fontSettings.editorFont",
+      "path": [
+        "fontSettings",
+        "editorFont"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "boolean",
+      "acceptedEnum": [],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [
+        52
+      ],
+      "disposition": "Pending canonical candidate, UI/history, export and runtime-effect audit"
+    },
+    {
+      "id": "AssetImportSettings.fontSettings.fallbackAssetUuids",
+      "path": [
+        "fontSettings",
+        "fallbackAssetUuids"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "string[]",
+      "acceptedEnum": [],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [],
+      "disposition": "Container needs populated member/variant fixtures"
+    },
+    {
+      "id": "AssetImportSettings.fontSettings.fallbackFamilies.0",
+      "path": [
+        "fontSettings",
+        "fallbackFamilies",
+        0
+      ],
+      "source": "src/assets/types.ts",
+      "type": "string",
+      "acceptedEnum": [],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [
+        53
+      ],
+      "disposition": "Pending canonical candidate, UI/history, export and runtime-effect audit"
+    },
+    {
+      "id": "AssetImportSettings.fontSettings.fallbackFamilies.1",
+      "path": [
+        "fontSettings",
+        "fallbackFamilies",
+        1
+      ],
+      "source": "src/assets/types.ts",
+      "type": "string",
+      "acceptedEnum": [],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [
+        54
+      ],
+      "disposition": "Pending canonical candidate, UI/history, export and runtime-effect audit"
+    },
+    {
+      "id": "AssetImportSettings.fontSettings.fallbackFamilies.2",
+      "path": [
+        "fontSettings",
+        "fallbackFamilies",
+        2
+      ],
+      "source": "src/assets/types.ts",
+      "type": "string",
+      "acceptedEnum": [],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [
+        55
+      ],
+      "disposition": "Pending canonical candidate, UI/history, export and runtime-effect audit"
+    },
+    {
+      "id": "AssetImportSettings.fontSettings.hinting",
+      "path": [
+        "fontSettings",
+        "hinting"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "\"None\" | \"Auto\" | \"Light\" | \"Full\"",
+      "acceptedEnum": [
+        "None",
+        "Auto",
+        "Light",
+        "Full"
+      ],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [
+        56,
+        57,
+        58,
+        59
+      ],
+      "disposition": "Pending canonical candidate, UI/history, export and runtime-effect audit"
+    },
+    {
+      "id": "AssetImportSettings.fontSettings.openTypeFeatures.0",
+      "path": [
+        "fontSettings",
+        "openTypeFeatures",
+        0
+      ],
+      "source": "src/assets/types.ts",
+      "type": "string",
+      "acceptedEnum": [],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [
+        60
+      ],
+      "disposition": "Pending canonical candidate, UI/history, export and runtime-effect audit"
+    },
+    {
+      "id": "AssetImportSettings.fontSettings.openTypeFeatures.1",
+      "path": [
+        "fontSettings",
+        "openTypeFeatures",
+        1
+      ],
+      "source": "src/assets/types.ts",
+      "type": "string",
+      "acceptedEnum": [],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [
+        61
+      ],
+      "disposition": "Pending canonical candidate, UI/history, export and runtime-effect audit"
+    },
+    {
+      "id": "AssetImportSettings.fontSettings.outlineWidth",
+      "path": [
+        "fontSettings",
+        "outlineWidth"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "number",
+      "acceptedEnum": [],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [
+        62
+      ],
+      "disposition": "Pending canonical candidate, UI/history, export and runtime-effect audit"
+    },
+    {
+      "id": "AssetImportSettings.fontSettings.oversampling",
+      "path": [
+        "fontSettings",
+        "oversampling"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "number",
+      "acceptedEnum": [],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [
+        63
+      ],
+      "disposition": "Pending canonical candidate, UI/history, export and runtime-effect audit"
+    },
+    {
+      "id": "AssetImportSettings.fontSettings.renderMode",
+      "path": [
+        "fontSettings",
+        "renderMode"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "FontRenderMode",
+      "acceptedEnum": [
+        "Scalable",
+        "Bitmap"
+      ],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [
+        64,
+        65
+      ],
+      "disposition": "Pending canonical candidate, UI/history, export and runtime-effect audit"
+    },
+    {
+      "id": "AssetImportSettings.fontSettings.shaping",
+      "path": [
+        "fontSettings",
+        "shaping"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "boolean",
+      "acceptedEnum": [],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [
+        66
+      ],
+      "disposition": "Pending canonical candidate, UI/history, export and runtime-effect audit"
+    },
+    {
+      "id": "AssetImportSettings.generateMipmaps",
+      "path": [
+        "generateMipmaps"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "boolean",
+      "acceptedEnum": [],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [
+        67
+      ],
+      "disposition": "Pending canonical candidate, UI/history, export and runtime-effect audit"
+    },
+    {
+      "id": "AssetImportSettings.localizationSettings.fallbackLocale",
+      "path": [
+        "localizationSettings",
+        "fallbackLocale"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "string",
+      "acceptedEnum": [],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [
+        68
+      ],
+      "disposition": "Pending canonical candidate, UI/history, export and runtime-effect audit"
+    },
+    {
+      "id": "AssetImportSettings.localizationSettings.locale",
+      "path": [
+        "localizationSettings",
+        "locale"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "string",
+      "acceptedEnum": [],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [
+        69
+      ],
+      "disposition": "Pending canonical candidate, UI/history, export and runtime-effect audit"
+    },
+    {
+      "id": "AssetImportSettings.pivot.x",
+      "path": [
+        "pivot",
+        "x"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "number",
+      "acceptedEnum": [],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [
+        70
+      ],
+      "disposition": "Pending canonical candidate, UI/history, export and runtime-effect audit"
+    },
+    {
+      "id": "AssetImportSettings.pivot.y",
+      "path": [
+        "pivot",
+        "y"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "number",
+      "acceptedEnum": [],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [
+        71
+      ],
+      "disposition": "Pending canonical candidate, UI/history, export and runtime-effect audit"
+    },
+    {
+      "id": "AssetImportSettings.pixelsPerUnit",
+      "path": [
+        "pixelsPerUnit"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "number",
+      "acceptedEnum": [],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [
+        72
+      ],
+      "disposition": "Pending canonical candidate, UI/history, export and runtime-effect audit"
+    },
+    {
+      "id": "AssetImportSettings.platformOverrides",
+      "path": [
+        "platformOverrides"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "Partial<Record<\"windows\" | \"linux\" | \"macos\" | \"web\", AssetPlatformOverride>>",
+      "acceptedEnum": [],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [],
+      "disposition": "Container needs populated member/variant fixtures"
+    },
+    {
+      "id": "AssetImportSettings.platformVariants",
+      "path": [
+        "platformVariants"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "Partial<Record<\"windows\" | \"linux\" | \"macos\" | \"web\", AssetCompression>>",
+      "acceptedEnum": [],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [],
+      "disposition": "Container needs populated member/variant fixtures"
+    },
+    {
+      "id": "AssetImportSettings.polygonOutline",
+      "path": [
+        "polygonOutline"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "{ x: number; y: number; }[]",
+      "acceptedEnum": [],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [],
+      "disposition": "Container needs populated member/variant fixtures"
+    },
+    {
+      "id": "AssetImportSettings.scriptSettings.encoding",
+      "path": [
+        "scriptSettings",
+        "encoding"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "\"utf-8\"",
+      "acceptedEnum": [
+        "utf-8"
+      ],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [
+        73
+      ],
+      "disposition": "Pending canonical candidate, UI/history, export and runtime-effect audit"
+    },
+    {
+      "id": "AssetImportSettings.scriptSettings.module",
+      "path": [
+        "scriptSettings",
+        "module"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "boolean",
+      "acceptedEnum": [],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [
+        74
+      ],
+      "disposition": "Pending canonical candidate, UI/history, export and runtime-effect audit"
+    },
+    {
+      "id": "AssetImportSettings.shaderSettings.entry",
+      "path": [
+        "shaderSettings",
+        "entry"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "string",
+      "acceptedEnum": [],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [
+        75
+      ],
+      "disposition": "Pending canonical candidate, UI/history, export and runtime-effect audit"
+    },
+    {
+      "id": "AssetImportSettings.shaderSettings.stage",
+      "path": [
+        "shaderSettings",
+        "stage"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "\"fragment\" | \"vertex\"",
+      "acceptedEnum": [
+        "fragment",
+        "vertex"
+      ],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [
+        76,
+        77
+      ],
+      "disposition": "Pending canonical candidate, UI/history, export and runtime-effect audit"
+    },
+    {
+      "id": "AssetImportSettings.spriteRegion",
+      "path": [
+        "spriteRegion"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "SpriteRegion",
+      "acceptedEnum": [],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [],
+      "disposition": "Nullable field needs a valid asset-type-specific fixture"
+    },
+    {
+      "id": "AssetImportSettings.spriteSheet.columns",
+      "path": [
+        "spriteSheet",
+        "columns"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "number",
+      "acceptedEnum": [],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [
+        78
+      ],
+      "disposition": "Pending canonical candidate, UI/history, export and runtime-effect audit"
+    },
+    {
+      "id": "AssetImportSettings.spriteSheet.enabled",
+      "path": [
+        "spriteSheet",
+        "enabled"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "boolean",
+      "acceptedEnum": [],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [
+        79
+      ],
+      "disposition": "Pending canonical candidate, UI/history, export and runtime-effect audit"
+    },
+    {
+      "id": "AssetImportSettings.spriteSheet.margin",
+      "path": [
+        "spriteSheet",
+        "margin"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "number",
+      "acceptedEnum": [],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [
+        80
+      ],
+      "disposition": "Pending canonical candidate, UI/history, export and runtime-effect audit"
+    },
+    {
+      "id": "AssetImportSettings.spriteSheet.rows",
+      "path": [
+        "spriteSheet",
+        "rows"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "number",
+      "acceptedEnum": [],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [
+        81
+      ],
+      "disposition": "Pending canonical candidate, UI/history, export and runtime-effect audit"
+    },
+    {
+      "id": "AssetImportSettings.spriteSheet.spacing",
+      "path": [
+        "spriteSheet",
+        "spacing"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "number",
+      "acceptedEnum": [],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [
+        82
+      ],
+      "disposition": "Pending canonical candidate, UI/history, export and runtime-effect audit"
+    },
+    {
+      "id": "AssetImportSettings.svgSettings.allowExternalResources",
+      "path": [
+        "svgSettings",
+        "allowExternalResources"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "boolean",
+      "acceptedEnum": [],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [
+        83
+      ],
+      "disposition": "Pending canonical candidate, UI/history, export and runtime-effect audit"
+    },
+    {
+      "id": "AssetImportSettings.svgSettings.rasterization",
+      "path": [
+        "svgSettings",
+        "rasterization"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "\"ImportTime\" | \"Runtime\" | \"Disabled\"",
+      "acceptedEnum": [
+        "ImportTime",
+        "Runtime",
+        "Disabled"
+      ],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [
+        84,
+        85,
+        86
+      ],
+      "disposition": "Pending canonical candidate, UI/history, export and runtime-effect audit"
+    },
+    {
+      "id": "AssetImportSettings.svgSettings.scale",
+      "path": [
+        "svgSettings",
+        "scale"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "number",
+      "acceptedEnum": [],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [
+        87
+      ],
+      "disposition": "Pending canonical candidate, UI/history, export and runtime-effect audit"
+    },
+    {
+      "id": "AssetImportSettings.textureProfile",
+      "path": [
+        "textureProfile"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "TextureImportProfile",
+      "acceptedEnum": [
+        "General",
+        "PixelArt",
+        "UI",
+        "NormalMap"
+      ],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [
+        88,
+        89,
+        90,
+        91
+      ],
+      "disposition": "Pending canonical candidate, UI/history, export and runtime-effect audit"
+    },
+    {
+      "id": "AssetImportSettings.tileSettings.margin",
+      "path": [
+        "tileSettings",
+        "margin"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "number",
+      "acceptedEnum": [],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [
+        92
+      ],
+      "disposition": "Pending canonical candidate, UI/history, export and runtime-effect audit"
+    },
+    {
+      "id": "AssetImportSettings.tileSettings.spacing",
+      "path": [
+        "tileSettings",
+        "spacing"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "number",
+      "acceptedEnum": [],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [
+        93
+      ],
+      "disposition": "Pending canonical candidate, UI/history, export and runtime-effect audit"
+    },
+    {
+      "id": "AssetImportSettings.tileSettings.tileHeight",
+      "path": [
+        "tileSettings",
+        "tileHeight"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "number",
+      "acceptedEnum": [],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [
+        94
+      ],
+      "disposition": "Pending canonical candidate, UI/history, export and runtime-effect audit"
+    },
+    {
+      "id": "AssetImportSettings.tileSettings.tileWidth",
+      "path": [
+        "tileSettings",
+        "tileWidth"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "number",
+      "acceptedEnum": [],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [
+        95
+      ],
+      "disposition": "Pending canonical candidate, UI/history, export and runtime-effect audit"
+    },
+    {
+      "id": "AssetImportSettings.transparency",
+      "path": [
+        "transparency"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "\"Preserve\" | \"Premultiply\" | \"Discard\"",
+      "acceptedEnum": [
+        "Preserve",
+        "Premultiply",
+        "Discard"
+      ],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [
+        96,
+        97,
+        98
+      ],
+      "disposition": "Pending canonical candidate, UI/history, export and runtime-effect audit"
+    },
+    {
+      "id": "AssetImportSettings.transparentTrim",
+      "path": [
+        "transparentTrim"
+      ],
+      "source": "src/assets/types.ts",
+      "type": "boolean",
+      "acceptedEnum": [],
+      "owner": "AssetDatabase.loadAssets",
+      "cases": [
+        99
+      ],
+      "disposition": "Pending canonical candidate, UI/history, export and runtime-effect audit"
+    }
+  ],
+  "cases": [
+    {
+      "field": "AssetImportSettings.atlas",
+      "input": false,
+      "output": false,
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.atlasSettings.group",
+      "input": "Default audit",
+      "output": "Default audit",
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.atlasSettings.maxSize",
+      "input": 1536,
+      "output": 1536,
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.atlasSettings.padding",
+      "input": 1.5,
+      "output": 1.5,
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.atlasSettings.rotationPolicy",
+      "input": "Never",
+      "output": "Never",
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.atlasSettings.rotationPolicy",
+      "input": "Allow",
+      "output": "Allow",
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.atlasSettings.trim",
+      "input": false,
+      "output": false,
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.atlasSettings.trimPolicy",
+      "input": "None",
+      "output": "None",
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.atlasSettings.trimPolicy",
+      "input": "Transparent",
+      "output": "Transparent",
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.audioSettings.codec",
+      "input": "Original",
+      "output": "Original",
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.audioSettings.codec",
+      "input": "PCM",
+      "output": "PCM",
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.audioSettings.codec",
+      "input": "Vorbis",
+      "output": "Vorbis",
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.audioSettings.codec",
+      "input": "MP3",
+      "output": "MP3",
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.audioSettings.loopEnd",
+      "input": 1,
+      "output": 1,
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.audioSettings.loopStart",
+      "input": 1,
+      "output": 1,
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.audioSettings.normalizationGain",
+      "input": 0.75,
+      "output": 0.75,
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.audioSettings.normalize",
+      "input": true,
+      "output": true,
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.audioSettings.preload",
+      "input": "None",
+      "output": "None",
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.audioSettings.preload",
+      "input": "Auto",
+      "output": "Auto",
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.audioSettings.preload",
+      "input": "Preload",
+      "output": "Preload",
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.audioSettings.preload",
+      "input": "Metadata",
+      "output": "Metadata",
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.audioSettings.profile",
+      "input": "SoundEffect",
+      "output": "SoundEffect",
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.audioSettings.profile",
+      "input": "Music",
+      "output": "Music",
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.audioSettings.profile",
+      "input": "Voice",
+      "output": "Voice",
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.audioSettings.profile",
+      "input": "Streaming",
+      "output": "Streaming",
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.audioSettings.quality",
+      "input": 0.6000000000000001,
+      "output": 0.6000000000000001,
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.audioSettings.sampleRate",
+      "input": 36000,
+      "output": 36000,
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.audioSettings.streaming",
+      "input": true,
+      "output": true,
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.audioSettings.targetPeakDb",
+      "input": -0.75,
+      "output": -0.75,
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.audioSettings.trimEnd",
+      "input": 1,
+      "output": 1,
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.audioSettings.trimStart",
+      "input": 1,
+      "output": 1,
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.borders.bottom",
+      "input": 1,
+      "output": 1,
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.borders.left",
+      "input": 1,
+      "output": 1,
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.borders.right",
+      "input": 1,
+      "output": 1,
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.borders.top",
+      "input": 1,
+      "output": 1,
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.collisionGeneration.mode",
+      "input": "None",
+      "output": "None",
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.collisionGeneration.mode",
+      "input": "Box",
+      "output": "Box",
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.collisionGeneration.mode",
+      "input": "Polygon",
+      "output": "Polygon",
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.collisionGeneration.tolerance",
+      "input": 0.75,
+      "output": 0.75,
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.colorSpace",
+      "input": "sRGB",
+      "output": "sRGB",
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.colorSpace",
+      "input": "Linear",
+      "output": "Linear",
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.compression",
+      "input": "None",
+      "output": "None",
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.compression",
+      "input": "Lossless",
+      "output": "Lossless",
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.compression",
+      "input": "Optimized",
+      "output": "Optimized",
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.filterMode",
+      "input": "Linear",
+      "output": "Linear",
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.filterMode",
+      "input": "Nearest",
+      "output": "Nearest",
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.fontSettings.bitmapSize",
+      "input": 24,
+      "output": 24,
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.fontSettings.declaredLanguages.0",
+      "input": "en audit",
+      "output": "en audit",
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.fontSettings.distanceField",
+      "input": "None",
+      "output": "None",
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.fontSettings.distanceField",
+      "input": "SDF",
+      "output": "SDF",
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.fontSettings.distanceField",
+      "input": "MSDF",
+      "output": "MSDF",
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.fontSettings.distanceRange",
+      "input": 6,
+      "output": 6,
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.fontSettings.editorFont",
+      "input": true,
+      "output": true,
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.fontSettings.fallbackFamilies.0",
+      "input": "Nunito Sans Variable audit",
+      "output": "Nunito Sans Variable audit",
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.fontSettings.fallbackFamilies.1",
+      "input": "Noto Sans SC Variable audit",
+      "output": "Noto Sans SC Variable audit",
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.fontSettings.fallbackFamilies.2",
+      "input": "sans-serif audit",
+      "output": "sans-serif audit",
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.fontSettings.hinting",
+      "input": "None",
+      "output": "None",
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.fontSettings.hinting",
+      "input": "Auto",
+      "output": "Auto",
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.fontSettings.hinting",
+      "input": "Light",
+      "output": "Light",
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.fontSettings.hinting",
+      "input": "Full",
+      "output": "Full",
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.fontSettings.openTypeFeatures.0",
+      "input": "kern audit",
+      "output": "liga",
+      "status": "review normalization or rejected candidate"
+    },
+    {
+      "field": "AssetImportSettings.fontSettings.openTypeFeatures.1",
+      "input": "liga audit",
+      "status": "review normalization or rejected candidate"
+    },
+    {
+      "field": "AssetImportSettings.fontSettings.outlineWidth",
+      "input": 1,
+      "output": 1,
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.fontSettings.oversampling",
+      "input": 0.75,
+      "output": 1,
+      "status": "review normalization or rejected candidate"
+    },
+    {
+      "field": "AssetImportSettings.fontSettings.renderMode",
+      "input": "Scalable",
+      "output": "Scalable",
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.fontSettings.renderMode",
+      "input": "Bitmap",
+      "output": "Bitmap",
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.fontSettings.shaping",
+      "input": false,
+      "output": false,
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.generateMipmaps",
+      "input": true,
+      "output": true,
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.localizationSettings.fallbackLocale",
+      "input": "en audit",
+      "output": "en audit",
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.localizationSettings.locale",
+      "input": "en audit",
+      "output": "en audit",
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.pivot.x",
+      "input": 0.375,
+      "output": 0.375,
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.pivot.y",
+      "input": 0.375,
+      "output": 0.375,
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.pixelsPerUnit",
+      "input": 75,
+      "output": 75,
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.scriptSettings.encoding",
+      "input": "utf-8",
+      "output": "utf-8",
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.scriptSettings.module",
+      "input": false,
+      "output": false,
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.shaderSettings.entry",
+      "input": "main audit",
+      "output": "main audit",
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.shaderSettings.stage",
+      "input": "fragment",
+      "output": "fragment",
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.shaderSettings.stage",
+      "input": "vertex",
+      "output": "vertex",
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.spriteSheet.columns",
+      "input": 0.75,
+      "output": 1,
+      "status": "review normalization or rejected candidate"
+    },
+    {
+      "field": "AssetImportSettings.spriteSheet.enabled",
+      "input": true,
+      "output": true,
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.spriteSheet.margin",
+      "input": 1,
+      "output": 1,
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.spriteSheet.rows",
+      "input": 0.75,
+      "output": 1,
+      "status": "review normalization or rejected candidate"
+    },
+    {
+      "field": "AssetImportSettings.spriteSheet.spacing",
+      "input": 1,
+      "output": 1,
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.svgSettings.allowExternalResources",
+      "input": true,
+      "output": true,
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.svgSettings.rasterization",
+      "input": "ImportTime",
+      "output": "ImportTime",
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.svgSettings.rasterization",
+      "input": "Runtime",
+      "output": "Runtime",
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.svgSettings.rasterization",
+      "input": "Disabled",
+      "output": "Disabled",
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.svgSettings.scale",
+      "input": 0.75,
+      "output": 0.75,
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.textureProfile",
+      "input": "General",
+      "output": "General",
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.textureProfile",
+      "input": "PixelArt",
+      "output": "PixelArt",
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.textureProfile",
+      "input": "UI",
+      "output": "UI",
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.textureProfile",
+      "input": "NormalMap",
+      "output": "NormalMap",
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.tileSettings.margin",
+      "input": 1,
+      "output": 1,
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.tileSettings.spacing",
+      "input": 1,
+      "output": 1,
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.tileSettings.tileHeight",
+      "input": 24,
+      "output": 24,
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.tileSettings.tileWidth",
+      "input": 24,
+      "output": 24,
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.transparency",
+      "input": "Preserve",
+      "output": "Preserve",
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.transparency",
+      "input": "Premultiply",
+      "output": "Premultiply",
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.transparency",
+      "input": "Discard",
+      "output": "Discard",
+      "status": "retained"
+    },
+    {
+      "field": "AssetImportSettings.transparentTrim",
+      "input": true,
+      "output": true,
+      "status": "retained"
+    }
+  ]
+}

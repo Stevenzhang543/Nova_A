@@ -1,0 +1,135 @@
+{
+  "format": "nova-v26.22-document-boundaries",
+  "version": 1,
+  "release": "26.22",
+  "regressionOrigin": "26.22",
+  "engineVersion": "26.32.0",
+  "expectedRelease": "26.32",
+  "development": true,
+  "qualifiedRelease": null,
+  "generatedAt": "2026-09-28T18:10:00.266Z",
+  "status": "passed",
+  "scope": "Executed actual source modules; targeted programmer regressions, not full UI/platform qualification.",
+  "checks": [
+    {
+      "name": "Undo commits a typed draft before undoing it, and Redo restores its value",
+      "status": "passed"
+    },
+    {
+      "name": "Invalid drafts prevent playback and preserve the current document",
+      "status": "passed"
+    },
+    {
+      "name": "Nested document cancellation retains the outer transaction",
+      "status": "passed"
+    },
+    {
+      "name": "Serialization failure retains outer and nested transactions for cancellation",
+      "status": "passed"
+    },
+    {
+      "name": "Selection follows UUID when numeric IDs change during hydration",
+      "status": "passed"
+    },
+    {
+      "name": "Rejected entity and numeric records leave the complete open document unchanged",
+      "status": "passed"
+    },
+    {
+      "name": "Undo preserves an unresolved external scene conflict",
+      "status": "passed"
+    },
+    {
+      "name": "Explicit focus/navigation booleans survive all combinations; unreachable authored controls remain diagnosed",
+      "status": "passed"
+    },
+    {
+      "name": "Late component normalization failure restores settings, assets, selection and scene conflict state",
+      "status": "passed"
+    },
+    {
+      "name": "A document replacement inside a named merge transaction remains one reversible edit",
+      "status": "passed"
+    },
+    {
+      "name": "Rejected hydration retains an open outer transaction for commit",
+      "status": "passed"
+    },
+    {
+      "name": "Replacing a removed collider preserves both identities and applies the live collider geometry/material",
+      "status": "passed"
+    },
+    {
+      "name": "Unlimited, zero, finite and very large joint thresholds survive copy/paste and JSON hydration",
+      "status": "passed"
+    },
+    {
+      "name": "Scene creation and Back/Forward settle drafts into the outgoing scene, never the destination",
+      "status": "passed"
+    },
+    {
+      "name": "Invalid pending drafts block scene mutation and missing targets preserve selection and document",
+      "status": "passed"
+    },
+    {
+      "name": "Prefab apply/revert and Undo preserve instance identity, overrides, source asset and selection",
+      "status": "passed"
+    },
+    {
+      "name": "Every declared scalar component enum rejects invalid API and load values before mutation",
+      "status": "passed"
+    },
+    {
+      "name": "A non-finite nested paste leaves the entire component unchanged",
+      "status": "passed"
+    },
+    {
+      "name": "No-op boundaries preserve redo and discrete actions on one resource remain separate",
+      "status": "passed"
+    },
+    {
+      "name": "Merge application settles pending drafts before checking preview freshness",
+      "status": "passed"
+    },
+    {
+      "name": "A current reviewed merge applies as one reversible edit; invalid drafts leave the preview and document intact",
+      "status": "passed"
+    },
+    {
+      "name": "Component paste cannot replace a prototype or inherited constructor",
+      "status": "passed"
+    },
+    {
+      "name": "Project-test startup rejects invalid drafts before snapshot replacement",
+      "status": "passed"
+    },
+    {
+      "name": "A valid draft is included in the project-test snapshot and survives test restoration",
+      "status": "passed"
+    },
+    {
+      "name": "Invalid entity ownership and persistence enums reject atomically at API and load boundaries",
+      "status": "passed"
+    },
+    {
+      "name": "Identical text-asset writes leave source metadata, generation and document history unchanged",
+      "status": "passed"
+    },
+    {
+      "name": "Recent-project bookkeeping preserves the saved document and the redo branch",
+      "status": "passed"
+    },
+    {
+      "name": "Legacy rope thresholds preserve unlimited, zero and large finite values through normalization and JSON",
+      "status": "passed"
+    },
+    {
+      "name": "Projects containing unlimited legacy ropes serialize and reopen with the same thresholds",
+      "status": "passed"
+    },
+    {
+      "name": "New text assets preserve complete metadata through their first document Undo and Redo",
+      "status": "passed"
+    }
+  ]
+}

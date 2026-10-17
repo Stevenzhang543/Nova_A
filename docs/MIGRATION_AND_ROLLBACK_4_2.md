@@ -1,0 +1,7 @@
+# Nova_A 4.2 migration and rollback
+
+Opening an older project produces a nonmutating compatibility preview: source/target schema and engine, scene/entity/asset counts, registered steps, package issues, engine range, warnings, and blocking preflight items. Migrate and Open then performs a second dry run, canonical deterministic rerun, complete validator pass, semantic-change estimate, Task Center log, source download, bounded rollback checkpoint, and only then changes the editor session.
+
+The source project is never edited in place by preview. If validation, deterministic rerun, permission, lock ownership, or compatibility fails, migration stops before session mutation with the failing step. A successful migration clears the old undo boundary, marks the migrated result unsaved, and keeps the pre-migration rollback. Project Health can download or restore that rollback. Repeating migration from the same input must produce identical bytes.
+
+For team projects: commit or copy the original folder; close other editors or choose read-only; run migration; inspect semantic changes and unresolved references; save to a new branch; run project tests/build; only then replace the shared branch. Roll back by closing the migrated session, opening the `.pre-upgrade.nova`/Project Health rollback, validating it with the prior compatible Nova_A, and restoring the project folder through source control.

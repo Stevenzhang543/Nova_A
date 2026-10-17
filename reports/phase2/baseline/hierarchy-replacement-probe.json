@@ -1,0 +1,10 @@
+{
+  "format": "phase2-hierarchy-replacement-probe",
+  "before": 12,
+  "after": 12,
+  "expectedAfter": 22,
+  "afterInvalidation": 22,
+  "expectedAfterInvalidation": 32,
+  "status": "reproduced-defect",
+  "scope": "Actual bundled hierarchy, BoxEntity and World modules; no browser rendering."
+}

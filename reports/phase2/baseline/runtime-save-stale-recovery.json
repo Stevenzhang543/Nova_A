@@ -1,0 +1,51 @@
+{
+  "engineVersion": "26.32.0",
+  "status": "failed",
+  "scope": "Real production modules with failure-injected in-memory Web Storage; not browser storage or native qualification.",
+  "checks": [
+    {
+      "name": "Structured save survives a fresh load with checksum verification",
+      "status": "passed"
+    },
+    {
+      "name": "Verified commit remains successful when temporary cleanup is denied",
+      "status": "passed"
+    },
+    {
+      "name": "Valid primary load does not become corruption when cleanup is denied",
+      "status": "passed"
+    },
+    {
+      "name": "Editing and snapshotting a selected non-default slot preserves its identity",
+      "status": "passed"
+    },
+    {
+      "name": "Custom serializer round-trip retains its namespace through normalization",
+      "status": "passed"
+    },
+    {
+      "name": "Interrupted primary write preserves the previous slot and supports explicit recovery",
+      "status": "passed"
+    },
+    {
+      "name": "Corrupt primary recovers the prior committed backup explicitly",
+      "status": "passed"
+    },
+    {
+      "name": "Successful commit invalidates a previously offered recovery candidate",
+      "status": "failed",
+      "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\ntrue !== false\n"
+    },
+    {
+      "name": "Ordered schema migration renames and supplies defaults on load",
+      "status": "passed"
+    },
+    {
+      "name": "Cancelled async save writes no persistent keys and releases busy state",
+      "status": "passed"
+    }
+  ],
+  "sourceHashes": {
+    "src/runtime/saveGame.ts": "5dc5c8c2b99062ebc659423d50aa69ed8b6cd4367bf6c758979c225b2473de81"
+  }
+}

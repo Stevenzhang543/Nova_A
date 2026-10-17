@@ -1,0 +1,611 @@
+{
+  "status": "passed",
+  "generatedAt": "2026-09-14T18:29:38.185Z",
+  "scope": "Actual production workspace state and finite resize helpers with in-memory browser storage. Pointer geometry and observed focus have a separate browser gate.",
+  "checks": [
+    {
+      "name": "Pointer resizing respects direction, physical scale and finite size bounds",
+      "status": "passed"
+    },
+    {
+      "name": "Keyboard resizing maps orientation, Shift, Home and End without consuming unrelated keys",
+      "status": "passed"
+    },
+    {
+      "name": "Viewport-capped panels resize from their visible extent rather than a hidden saved preference",
+      "status": "passed"
+    },
+    {
+      "name": "Switching built-in workspaces restores independent authored layout preferences",
+      "status": "passed"
+    },
+    {
+      "name": "Panel maximize and restore do not alter saved dimensions, docking or serialized layout",
+      "status": "passed"
+    },
+    {
+      "name": "Project layout namespaces remain separate and restore their own cached dimensions",
+      "status": "passed"
+    },
+    {
+      "name": "Reset clears remembered preset dimensions and malformed import cannot escape bounds",
+      "status": "passed"
+    },
+    {
+      "name": "Corrupt storage restores both the Design layout and its workspace identity",
+      "status": "passed"
+    },
+    {
+      "name": "Project namespaces do not inherit a global legacy workspace",
+      "status": "passed"
+    },
+    {
+      "name": "Deleting a custom workspace keeps unrelated selection and applies an active replacement",
+      "status": "passed"
+    },
+    {
+      "name": "Creating, duplicating or importing beyond the persisted custom limit fails without dropping entries",
+      "status": "passed"
+    },
+    {
+      "name": "Reset restores the editor even when browser storage is unavailable",
+      "status": "passed"
+    },
+    {
+      "name": "Imported duplicate identifiers become independent custom layouts without losing their names",
+      "status": "passed"
+    },
+    {
+      "name": "Applying a named workspace restores the chosen layout and refuses stale names atomically",
+      "status": "passed"
+    }
+  ],
+  "nodeOperationCoverage": [
+    {
+      "mappingVersion": 2,
+      "id": "src/editor/panelLayout.ts#clampPanelSize",
+      "source": "src/editor/panelLayout.ts",
+      "line": 2,
+      "kind": "exported function",
+      "sourceSha256": "2eae470560c0133c834a74f1da6c0ccaf7c5e7aa23cd0b16452dfa69aa5f8755",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-13-workspaces/1/panels.mjs",
+      "generatedSha256": "45be13fe2df1ab3d017a9985288f72c922ace4e5752479f7f9f9479f3a72b01f",
+      "mapSha256": "8b5dbfcee170245fed193471ca80f07ce0ef1faf91612996bc3061394c77cd44",
+      "entryCount": 16
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/editor/panelLayout.ts#draggedPanelSize",
+      "source": "src/editor/panelLayout.ts",
+      "line": 8,
+      "kind": "exported function",
+      "sourceSha256": "2eae470560c0133c834a74f1da6c0ccaf7c5e7aa23cd0b16452dfa69aa5f8755",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-13-workspaces/1/panels.mjs",
+      "generatedSha256": "45be13fe2df1ab3d017a9985288f72c922ace4e5752479f7f9f9479f3a72b01f",
+      "mapSha256": "8b5dbfcee170245fed193471ca80f07ce0ef1faf91612996bc3061394c77cd44",
+      "entryCount": 8
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/editor/panelLayout.ts#visiblePanelSize",
+      "source": "src/editor/panelLayout.ts",
+      "line": 14,
+      "kind": "exported function",
+      "sourceSha256": "2eae470560c0133c834a74f1da6c0ccaf7c5e7aa23cd0b16452dfa69aa5f8755",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-13-workspaces/1/panels.mjs",
+      "generatedSha256": "45be13fe2df1ab3d017a9985288f72c922ace4e5752479f7f9f9479f3a72b01f",
+      "mapSha256": "8b5dbfcee170245fed193471ca80f07ce0ef1faf91612996bc3061394c77cd44",
+      "entryCount": 5
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/editor/panelLayout.ts#keyedPanelSize",
+      "source": "src/editor/panelLayout.ts",
+      "line": 18,
+      "kind": "exported function",
+      "sourceSha256": "2eae470560c0133c834a74f1da6c0ccaf7c5e7aa23cd0b16452dfa69aa5f8755",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-13-workspaces/1/panels.mjs",
+      "generatedSha256": "45be13fe2df1ab3d017a9985288f72c922ace4e5752479f7f9f9479f3a72b01f",
+      "mapSha256": "8b5dbfcee170245fed193471ca80f07ce0ef1faf91612996bc3061394c77cd44",
+      "entryCount": 6
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/editor/workspaces.ts#captureWorkspaceLayout",
+      "source": "src/editor/workspaces.ts",
+      "line": 134,
+      "kind": "exported function",
+      "sourceSha256": "e61ab685eecb64146b0a12caaa6e9169cc6e76e7d27dded27cb54a98b1fdc205",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-13-workspaces/1/workspaces.mjs",
+      "generatedSha256": "8872d2514b090141db05aa4f4b845b7727f5afcf30c4b0f29188c86132af0658",
+      "mapSha256": "132b8363ccf72877bc0d648852e31178b66f4c825bed07d8eb8ec2d62bd0039d",
+      "entryCount": 85
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/editor/workspaces.ts#initializeEditorWorkspaces",
+      "source": "src/editor/workspaces.ts",
+      "line": 232,
+      "kind": "exported function",
+      "sourceSha256": "e61ab685eecb64146b0a12caaa6e9169cc6e76e7d27dded27cb54a98b1fdc205",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-13-workspaces/1/workspaces.mjs",
+      "generatedSha256": "8872d2514b090141db05aa4f4b845b7727f5afcf30c4b0f29188c86132af0658",
+      "mapSha256": "132b8363ccf72877bc0d648852e31178b66f4c825bed07d8eb8ec2d62bd0039d",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/editor/workspaces.ts#applyEditorWorkspace",
+      "source": "src/editor/workspaces.ts",
+      "line": 250,
+      "kind": "exported function",
+      "sourceSha256": "e61ab685eecb64146b0a12caaa6e9169cc6e76e7d27dded27cb54a98b1fdc205",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-13-workspaces/1/workspaces.mjs",
+      "generatedSha256": "8872d2514b090141db05aa4f4b845b7727f5afcf30c4b0f29188c86132af0658",
+      "mapSha256": "132b8363ccf72877bc0d648852e31178b66f4c825bed07d8eb8ec2d62bd0039d",
+      "entryCount": 11
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/editor/workspaces.ts#applyNamedWorkspace",
+      "source": "src/editor/workspaces.ts",
+      "line": 271,
+      "kind": "exported function",
+      "sourceSha256": "e61ab685eecb64146b0a12caaa6e9169cc6e76e7d27dded27cb54a98b1fdc205",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-13-workspaces/1/workspaces.mjs",
+      "generatedSha256": "8872d2514b090141db05aa4f4b845b7727f5afcf30c4b0f29188c86132af0658",
+      "mapSha256": "132b8363ccf72877bc0d648852e31178b66f4c825bed07d8eb8ec2d62bd0039d",
+      "entryCount": 4
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/editor/workspaces.ts#saveCurrentWorkspace",
+      "source": "src/editor/workspaces.ts",
+      "line": 284,
+      "kind": "exported function",
+      "sourceSha256": "e61ab685eecb64146b0a12caaa6e9169cc6e76e7d27dded27cb54a98b1fdc205",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-13-workspaces/1/workspaces.mjs",
+      "generatedSha256": "8872d2514b090141db05aa4f4b845b7727f5afcf30c4b0f29188c86132af0658",
+      "mapSha256": "132b8363ccf72877bc0d648852e31178b66f4c825bed07d8eb8ec2d62bd0039d",
+      "entryCount": 30
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/editor/workspaces.ts#duplicateWorkspace",
+      "source": "src/editor/workspaces.ts",
+      "line": 292,
+      "kind": "exported function",
+      "sourceSha256": "e61ab685eecb64146b0a12caaa6e9169cc6e76e7d27dded27cb54a98b1fdc205",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-13-workspaces/1/workspaces.mjs",
+      "generatedSha256": "8872d2514b090141db05aa4f4b845b7727f5afcf30c4b0f29188c86132af0658",
+      "mapSha256": "132b8363ccf72877bc0d648852e31178b66f4c825bed07d8eb8ec2d62bd0039d",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/editor/workspaces.ts#removeWorkspace",
+      "source": "src/editor/workspaces.ts",
+      "line": 302,
+      "kind": "exported function",
+      "sourceSha256": "e61ab685eecb64146b0a12caaa6e9169cc6e76e7d27dded27cb54a98b1fdc205",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-13-workspaces/1/workspaces.mjs",
+      "generatedSha256": "8872d2514b090141db05aa4f4b845b7727f5afcf30c4b0f29188c86132af0658",
+      "mapSha256": "132b8363ccf72877bc0d648852e31178b66f4c825bed07d8eb8ec2d62bd0039d",
+      "entryCount": 2
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/editor/workspaces.ts#exportWorkspaces",
+      "source": "src/editor/workspaces.ts",
+      "line": 312,
+      "kind": "exported function",
+      "sourceSha256": "e61ab685eecb64146b0a12caaa6e9169cc6e76e7d27dded27cb54a98b1fdc205",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-13-workspaces/1/workspaces.mjs",
+      "generatedSha256": "8872d2514b090141db05aa4f4b845b7727f5afcf30c4b0f29188c86132af0658",
+      "mapSha256": "132b8363ccf72877bc0d648852e31178b66f4c825bed07d8eb8ec2d62bd0039d",
+      "entryCount": 2
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/editor/workspaces.ts#importWorkspaces",
+      "source": "src/editor/workspaces.ts",
+      "line": 314,
+      "kind": "exported function",
+      "sourceSha256": "e61ab685eecb64146b0a12caaa6e9169cc6e76e7d27dded27cb54a98b1fdc205",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-13-workspaces/1/workspaces.mjs",
+      "generatedSha256": "8872d2514b090141db05aa4f4b845b7727f5afcf30c4b0f29188c86132af0658",
+      "mapSha256": "132b8363ccf72877bc0d648852e31178b66f4c825bed07d8eb8ec2d62bd0039d",
+      "entryCount": 4
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/editor/workspaces.ts#toggleEditorPanel",
+      "source": "src/editor/workspaces.ts",
+      "line": 335,
+      "kind": "exported function",
+      "sourceSha256": "e61ab685eecb64146b0a12caaa6e9169cc6e76e7d27dded27cb54a98b1fdc205",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-13-workspaces/1/workspaces.mjs",
+      "generatedSha256": "8872d2514b090141db05aa4f4b845b7727f5afcf30c4b0f29188c86132af0658",
+      "mapSha256": "132b8363ccf72877bc0d648852e31178b66f4c825bed07d8eb8ec2d62bd0039d",
+      "entryCount": 2
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/editor/workspaces.ts#togglePanelMaximize",
+      "source": "src/editor/workspaces.ts",
+      "line": 336,
+      "kind": "exported function",
+      "sourceSha256": "e61ab685eecb64146b0a12caaa6e9169cc6e76e7d27dded27cb54a98b1fdc205",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-13-workspaces/1/workspaces.mjs",
+      "generatedSha256": "8872d2514b090141db05aa4f4b845b7727f5afcf30c4b0f29188c86132af0658",
+      "mapSha256": "132b8363ccf72877bc0d648852e31178b66f4c825bed07d8eb8ec2d62bd0039d",
+      "entryCount": 7
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/editor/workspaces.ts#resetEditorLayout",
+      "source": "src/editor/workspaces.ts",
+      "line": 365,
+      "kind": "exported function",
+      "sourceSha256": "e61ab685eecb64146b0a12caaa6e9169cc6e76e7d27dded27cb54a98b1fdc205",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-13-workspaces/1/workspaces.mjs",
+      "generatedSha256": "8872d2514b090141db05aa4f4b845b7727f5afcf30c4b0f29188c86132af0658",
+      "mapSha256": "132b8363ccf72877bc0d648852e31178b66f4c825bed07d8eb8ec2d62bd0039d",
+      "entryCount": 2
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/identity.ts#createUuid",
+      "source": "src/world/identity.ts",
+      "line": 8,
+      "kind": "exported function",
+      "sourceSha256": "2fe5fd95a5e427522192d9d7832f4248515d6c47832126b228d6844437068053",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-13-workspaces/1/editor.mjs",
+      "generatedSha256": "6cfe713d49d09e75c64687479f5417788103d23a5b667b2c9cf263558b02583c",
+      "mapSha256": "6d202d7dbb939a09bdd84017fe48f8c2f875df0245cf625ec4e344d10b37bef5",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/identity.ts#normalizeUuid",
+      "source": "src/world/identity.ts",
+      "line": 16,
+      "kind": "exported function",
+      "sourceSha256": "2fe5fd95a5e427522192d9d7832f4248515d6c47832126b228d6844437068053",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-13-workspaces/1/editor.mjs",
+      "generatedSha256": "6cfe713d49d09e75c64687479f5417788103d23a5b667b2c9cf263558b02583c",
+      "mapSha256": "6d202d7dbb939a09bdd84017fe48f8c2f875df0245cf625ec4e344d10b37bef5",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/importRetention.ts#BoundedImportCache.constructor",
+      "source": "src/assets/importRetention.ts",
+      "line": 7,
+      "kind": "public class operation",
+      "sourceSha256": "8a8c7175d66b68206dcda36cace1fde0d518a4feeebbee05d51039d52d19d0fe",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-13-workspaces/1/editor.mjs",
+      "generatedSha256": "6cfe713d49d09e75c64687479f5417788103d23a5b667b2c9cf263558b02583c",
+      "mapSha256": "6d202d7dbb939a09bdd84017fe48f8c2f875df0245cf625ec4e344d10b37bef5",
+      "entryCount": 4
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/importRetention.ts#registerImportSessionCleanup",
+      "source": "src/assets/importRetention.ts",
+      "line": 29,
+      "kind": "exported function",
+      "sourceSha256": "8a8c7175d66b68206dcda36cace1fde0d518a4feeebbee05d51039d52d19d0fe",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-13-workspaces/1/editor.mjs",
+      "generatedSha256": "6cfe713d49d09e75c64687479f5417788103d23a5b667b2c9cf263558b02583c",
+      "mapSha256": "6d202d7dbb939a09bdd84017fe48f8c2f875df0245cf625ec4e344d10b37bef5",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphTypes.ts#defaultGraphValue",
+      "source": "src/visual/graphTypes.ts",
+      "line": 130,
+      "kind": "exported function",
+      "sourceSha256": "f1301f1589f75fec7793cb026cf256eb2af3f020e75b2c670890622290e8cf25",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-13-workspaces/1/editor.mjs",
+      "generatedSha256": "6cfe713d49d09e75c64687479f5417788103d23a5b667b2c9cf263558b02583c",
+      "mapSha256": "6d202d7dbb939a09bdd84017fe48f8c2f875df0245cf625ec4e344d10b37bef5",
+      "entryCount": 294
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/packages.ts#onPackageLifecycle",
+      "source": "src/runtime/packages.ts",
+      "line": 109,
+      "kind": "exported function",
+      "sourceSha256": "6774580dde64cd01a9a826d3a11083261aed603c77524544a4008dad9458838a",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-13-workspaces/1/editor.mjs",
+      "generatedSha256": "6cfe713d49d09e75c64687479f5417788103d23a5b667b2c9cf263558b02583c",
+      "mapSha256": "6d202d7dbb939a09bdd84017fe48f8c2f875df0245cf625ec4e344d10b37bef5",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/physicsProduction.ts#defaultPhysicsLayers",
+      "source": "src/runtime/physicsProduction.ts",
+      "line": 104,
+      "kind": "exported function",
+      "sourceSha256": "8fd1571e431576cd9b2dde89dca2a5f99aff6091d33d1c44def3194551061181",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-13-workspaces/1/editor.mjs",
+      "generatedSha256": "6cfe713d49d09e75c64687479f5417788103d23a5b667b2c9cf263558b02583c",
+      "mapSha256": "6d202d7dbb939a09bdd84017fe48f8c2f875df0245cf625ec4e344d10b37bef5",
+      "entryCount": 2
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/physicsProduction.ts#defaultPhysicsProfile",
+      "source": "src/runtime/physicsProduction.ts",
+      "line": 192,
+      "kind": "exported function",
+      "sourceSha256": "8fd1571e431576cd9b2dde89dca2a5f99aff6091d33d1c44def3194551061181",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-13-workspaces/1/editor.mjs",
+      "generatedSha256": "6cfe713d49d09e75c64687479f5417788103d23a5b667b2c9cf263558b02583c",
+      "mapSha256": "6d202d7dbb939a09bdd84017fe48f8c2f875df0245cf625ec4e344d10b37bef5",
+      "entryCount": 2
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/World.ts#defaultCollisionMatrix",
+      "source": "src/world/World.ts",
+      "line": 35,
+      "kind": "exported function",
+      "sourceSha256": "c725437339ebdfeaff44918dea52767b0c3cf2817578dff72e5e97032886a73b",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-13-workspaces/1/editor.mjs",
+      "generatedSha256": "6cfe713d49d09e75c64687479f5417788103d23a5b667b2c9cf263558b02583c",
+      "mapSha256": "6d202d7dbb939a09bdd84017fe48f8c2f875df0245cf625ec4e344d10b37bef5",
+      "entryCount": 2
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/World.ts#World.constructor",
+      "source": "src/world/World.ts",
+      "line": 379,
+      "kind": "public class operation",
+      "sourceSha256": "c725437339ebdfeaff44918dea52767b0c3cf2817578dff72e5e97032886a73b",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-13-workspaces/1/editor.mjs",
+      "generatedSha256": "6cfe713d49d09e75c64687479f5417788103d23a5b667b2c9cf263558b02583c",
+      "mapSha256": "6d202d7dbb939a09bdd84017fe48f8c2f875df0245cf625ec4e344d10b37bef5",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/i18n.ts#t",
+      "source": "src/i18n.ts",
+      "line": 1559,
+      "kind": "exported function",
+      "sourceSha256": "2554102983c40ced3b712778cbb314cf95379cbac0a613b3d6e112f5ef865901",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-13-workspaces/1/editor.mjs",
+      "generatedSha256": "6cfe713d49d09e75c64687479f5417788103d23a5b667b2c9cf263558b02583c",
+      "mapSha256": "6d202d7dbb939a09bdd84017fe48f8c2f875df0245cf625ec4e344d10b37bef5",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/editor/sceneAuthoring.ts#defaultSceneAuthoringSettings",
+      "source": "src/editor/sceneAuthoring.ts",
+      "line": 78,
+      "kind": "exported function",
+      "sourceSha256": "cacd5234a09c4bad70d65ec4e0b4b39c2239c0eca53f8141cde27ea5fc602a31",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-13-workspaces/1/editor.mjs",
+      "generatedSha256": "6cfe713d49d09e75c64687479f5417788103d23a5b667b2c9cf263558b02583c",
+      "mapSha256": "6d202d7dbb939a09bdd84017fe48f8c2f875df0245cf625ec4e344d10b37bef5",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/SceneManager.ts#SceneManager.constructor",
+      "source": "src/world/SceneManager.ts",
+      "line": 41,
+      "kind": "public class operation",
+      "sourceSha256": "bb21f38e41ca614bff9ce618d0471ec3d0fca919c29aade3140c429e446e53b8",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-13-workspaces/1/editor.mjs",
+      "generatedSha256": "6cfe713d49d09e75c64687479f5417788103d23a5b667b2c9cf263558b02583c",
+      "mapSha256": "6d202d7dbb939a09bdd84017fe48f8c2f875df0245cf625ec4e344d10b37bef5",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/editor/commands.ts#CommandHistory.constructor",
+      "source": "src/editor/commands.ts",
+      "line": 130,
+      "kind": "public class operation",
+      "sourceSha256": "025738bd1c0147d706518f0e7c60626e41087fd72cb77d2a35cd1e470545f972",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-13-workspaces/1/editor.mjs",
+      "generatedSha256": "6cfe713d49d09e75c64687479f5417788103d23a5b667b2c9cf263558b02583c",
+      "mapSha256": "6d202d7dbb939a09bdd84017fe48f8c2f875df0245cf625ec4e344d10b37bef5",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/editor/commands.ts#CommandHistory.lastClearReason",
+      "source": "src/editor/commands.ts",
+      "line": 142,
+      "kind": "getter",
+      "sourceSha256": "025738bd1c0147d706518f0e7c60626e41087fd72cb77d2a35cd1e470545f972",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-13-workspaces/1/editor.mjs",
+      "generatedSha256": "6cfe713d49d09e75c64687479f5417788103d23a5b667b2c9cf263558b02583c",
+      "mapSha256": "6d202d7dbb939a09bdd84017fe48f8c2f875df0245cf625ec4e344d10b37bef5",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/input.ts#createInputBinding",
+      "source": "src/runtime/input.ts",
+      "line": 93,
+      "kind": "exported function",
+      "sourceSha256": "0c004d90942df08d6a5d5be3b35f7f29743d9828f97fe5fcbbe27ab07b215a69",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-13-workspaces/1/editor.mjs",
+      "generatedSha256": "6cfe713d49d09e75c64687479f5417788103d23a5b667b2c9cf263558b02583c",
+      "mapSha256": "6d202d7dbb939a09bdd84017fe48f8c2f875df0245cf625ec4e344d10b37bef5",
+      "entryCount": 17
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/input.ts#defaultInputMap",
+      "source": "src/runtime/input.ts",
+      "line": 97,
+      "kind": "exported function",
+      "sourceSha256": "0c004d90942df08d6a5d5be3b35f7f29743d9828f97fe5fcbbe27ab07b215a69",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-13-workspaces/1/editor.mjs",
+      "generatedSha256": "6cfe713d49d09e75c64687479f5417788103d23a5b667b2c9cf263558b02583c",
+      "mapSha256": "6d202d7dbb939a09bdd84017fe48f8c2f875df0245cf625ec4e344d10b37bef5",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/input.ts#createInputAction",
+      "source": "src/runtime/input.ts",
+      "line": 124,
+      "kind": "exported function",
+      "sourceSha256": "0c004d90942df08d6a5d5be3b35f7f29743d9828f97fe5fcbbe27ab07b215a69",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-13-workspaces/1/editor.mjs",
+      "generatedSha256": "6cfe713d49d09e75c64687479f5417788103d23a5b667b2c9cf263558b02583c",
+      "mapSha256": "6d202d7dbb939a09bdd84017fe48f8c2f875df0245cf625ec4e344d10b37bef5",
+      "entryCount": 5
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/input.ts#normalizePenBindingCode",
+      "source": "src/runtime/input.ts",
+      "line": 136,
+      "kind": "exported function",
+      "sourceSha256": "0c004d90942df08d6a5d5be3b35f7f29743d9828f97fe5fcbbe27ab07b215a69",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-13-workspaces/1/editor.mjs",
+      "generatedSha256": "6cfe713d49d09e75c64687479f5417788103d23a5b667b2c9cf263558b02583c",
+      "mapSha256": "6d202d7dbb939a09bdd84017fe48f8c2f875df0245cf625ec4e344d10b37bef5",
+      "entryCount": 17
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/audio.ts#defaultAudioSettings",
+      "source": "src/runtime/audio.ts",
+      "line": 120,
+      "kind": "exported function",
+      "sourceSha256": "d7942420a501d92638335fcb7d098e35807a56e3c6319e5a3de8c131a7c4ebeb",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-13-workspaces/1/editor.mjs",
+      "generatedSha256": "6cfe713d49d09e75c64687479f5417788103d23a5b667b2c9cf263558b02583c",
+      "mapSha256": "6d202d7dbb939a09bdd84017fe48f8c2f875df0245cf625ec4e344d10b37bef5",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/renderer/outputQuality20.ts#normalizeAntiAliasing",
+      "source": "src/renderer/outputQuality20.ts",
+      "line": 2,
+      "kind": "exported function",
+      "sourceSha256": "d03ccbc43e269bb645131f784c3440d63a8bf4f24c1ace10e812e622c25465fa",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-13-workspaces/1/editor.mjs",
+      "generatedSha256": "6cfe713d49d09e75c64687479f5417788103d23a5b667b2c9cf263558b02583c",
+      "mapSha256": "6d202d7dbb939a09bdd84017fe48f8c2f875df0245cf625ec4e344d10b37bef5",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/renderer/renderSettings.ts#normalizeTextureStreamingSettings",
+      "source": "src/renderer/renderSettings.ts",
+      "line": 80,
+      "kind": "exported function",
+      "sourceSha256": "90ae3c7ce879634f4a166e7155278a13e8d5b44add2437ac30253a1a237f8c6e",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-13-workspaces/1/editor.mjs",
+      "generatedSha256": "6cfe713d49d09e75c64687479f5417788103d23a5b667b2c9cf263558b02583c",
+      "mapSha256": "6d202d7dbb939a09bdd84017fe48f8c2f875df0245cf625ec4e344d10b37bef5",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/renderer/renderSettings.ts#normalizeRenderingSettings",
+      "source": "src/renderer/renderSettings.ts",
+      "line": 106,
+      "kind": "exported function",
+      "sourceSha256": "90ae3c7ce879634f4a166e7155278a13e8d5b44add2437ac30253a1a237f8c6e",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-13-workspaces/1/editor.mjs",
+      "generatedSha256": "6cfe713d49d09e75c64687479f5417788103d23a5b667b2c9cf263558b02583c",
+      "mapSha256": "6d202d7dbb939a09bdd84017fe48f8c2f875df0245cf625ec4e344d10b37bef5",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/exportTemplates.ts#compatibleExportTemplates",
+      "source": "src/runtime/exportTemplates.ts",
+      "line": 28,
+      "kind": "exported function",
+      "sourceSha256": "3cc4801a081c5afd8377289708e9358bd3b9c0033f5efaada290f6833491cead",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-13-workspaces/1/editor.mjs",
+      "generatedSha256": "6cfe713d49d09e75c64687479f5417788103d23a5b667b2c9cf263558b02583c",
+      "mapSha256": "6d202d7dbb939a09bdd84017fe48f8c2f875df0245cf625ec4e344d10b37bef5",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/exportTemplates.ts#defaultExportTemplateId",
+      "source": "src/runtime/exportTemplates.ts",
+      "line": 32,
+      "kind": "exported function",
+      "sourceSha256": "3cc4801a081c5afd8377289708e9358bd3b9c0033f5efaada290f6833491cead",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-13-workspaces/1/editor.mjs",
+      "generatedSha256": "6cfe713d49d09e75c64687479f5417788103d23a5b667b2c9cf263558b02583c",
+      "mapSha256": "6d202d7dbb939a09bdd84017fe48f8c2f875df0245cf625ec4e344d10b37bef5",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/store/editor.ts#reconfigureLayout",
+      "source": "src/store/editor.ts",
+      "line": 117,
+      "kind": "exported function",
+      "sourceSha256": "8a9a2a29c48a0f0fba25d36e600cabc1da7bea305450e248c7467b439645b034",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-13-workspaces/1/editor.mjs",
+      "generatedSha256": "6cfe713d49d09e75c64687479f5417788103d23a5b667b2c9cf263558b02583c",
+      "mapSha256": "6d202d7dbb939a09bdd84017fe48f8c2f875df0245cf625ec4e344d10b37bef5",
+      "entryCount": 30
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/store/colorPalettes.ts#colorPalette",
+      "source": "src/store/colorPalettes.ts",
+      "line": 10,
+      "kind": "exported function",
+      "sourceSha256": "bec5def7babea554f5e68617f4985fa1a609ce97ab71130c3c6ef5e1ef026596",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-13-workspaces/1/preferences.mjs",
+      "generatedSha256": "caf8a7a30ca21d5d9e5bdf5eb78765678ddeb96b23f893179b50839d26bd67af",
+      "mapSha256": "6ea1f79f8fa7e881351eb5e5138506599d8317aa31e83699eff7dbbb186c8fb9",
+      "entryCount": 2
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/store/colorPalettes.ts#paletteForMode",
+      "source": "src/store/colorPalettes.ts",
+      "line": 11,
+      "kind": "exported function",
+      "sourceSha256": "bec5def7babea554f5e68617f4985fa1a609ce97ab71130c3c6ef5e1ef026596",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-13-workspaces/1/preferences.mjs",
+      "generatedSha256": "caf8a7a30ca21d5d9e5bdf5eb78765678ddeb96b23f893179b50839d26bd67af",
+      "mapSha256": "6ea1f79f8fa7e881351eb5e5138506599d8317aa31e83699eff7dbbb186c8fb9",
+      "entryCount": 2
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/store/preferences.ts#applyPreferences",
+      "source": "src/store/preferences.ts",
+      "line": 139,
+      "kind": "exported function",
+      "sourceSha256": "13795bd1ae90c3ceb3349b7ce26ee495781a99d84e30c383f6b21ea86a5e2c0c",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-13-workspaces/1/preferences.mjs",
+      "generatedSha256": "caf8a7a30ca21d5d9e5bdf5eb78765678ddeb96b23f893179b50839d26bd67af",
+      "mapSha256": "6ea1f79f8fa7e881351eb5e5138506599d8317aa31e83699eff7dbbb186c8fb9",
+      "entryCount": 5
+    }
+  ],
+  "tracingScope": "Positive V8 function entries during the complete passing programmer suite, including fixture setup. Not per-assertion isolation, exhaustive domain coverage or performance qualification.",
+  "nodeOperationCoverageCase": "retained-26-13-workspaces complete suite including fixture setup",
+  "nodeOperationCoverageAssertion": {
+    "name": "retained-26-13-workspaces complete suite including fixture setup",
+    "status": "passed"
+  }
+}

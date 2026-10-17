@@ -1,0 +1,9 @@
+# Nova_A 5.0 release engineering and sign-off
+
+The frozen baseline is Project Format 2 schema 29, Rhai API 2, Plugin API 2, Package Manifest 1, Build CLI 1, and the exact eleven-file release layout. From 4.9 to 5.0 only release-blocking corrections, security/migration correctness, final documentation, evidence corrections, and approved compatibility polish are allowed.
+
+Run pinned dependency restore; reference generation; the complete static/runtime/master catalog; Rust formatting, Clippy and all-target tests; production Web/WASM build; DPI/language/keyboard/layout qualification; Windows native build and isolated startup; Tier-1 reference exports; dependency/security/license audit; benchmarks; migration fixtures; stability; evidence generation; exact packaging; and package verification. Ten consecutive clean release payloads must match under the unsigned reproducibility model.
+
+The final evidence archive contains local test results, performance baselines, migration matrix, clean-machine matrix, browser matrix, security/license audit, accessibility/visual results, known issues, command logs, manifests, hashes, source identity, and sign-off. Each accepted Severity 2 issue requires a workaround, owner, and patch target. Severity 0/1 must be zero.
+
+Some gates cannot be manufactured in one local session: 72-hour wall-clock soak, two independent machines, disposable MSI/setup/portable install-upgrade-repair-uninstall, Firefox/WebKit and representative hardware, publisher signing/notarization, a minimum 14-day candidate hold, exact tagged source, and independent verifier signature. They remain `pending-external` and final approval remains false until evidence is attached. The release package may be produced as a candidate; it must not be called independently production-certified early.

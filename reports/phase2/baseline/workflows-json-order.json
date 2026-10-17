@@ -1,0 +1,38 @@
+{
+  "format": "nova-v26.32-phase2-workflows-user-audit",
+  "version": 1,
+  "release": "26.32",
+  "regressionOrigin": "26.32",
+  "expectedRelease": "26.32",
+  "development": false,
+  "qualifiedRelease": null,
+  "generatedAt": "2026-09-28T18:24:53.838Z",
+  "status": "failed",
+  "checks": [],
+  "observations": [
+    {
+      "name": "actual-project-download",
+      "file": "E:\\Nova_A\\reports\\phase2\\browser\\v26.17-phase2-platformer.nova",
+      "bytes": 198191
+    },
+    {
+      "name": "actual-project-download",
+      "file": "E:\\Nova_A\\reports\\phase2\\browser\\v26.17-phase2-platformer-reopened.nova",
+      "bytes": 198191
+    }
+  ],
+  "captures": [
+    "v26.32-phase2-workflows-failure.png"
+  ],
+  "consoleErrors": [],
+  "browser": {
+    "protocolVersion": "1.3",
+    "product": "Edg/147.0.3912.72",
+    "revision": "@d4380ba2b9dc3452fbccdc737e69d7f67a09122c",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/147.0.0.0 Safari/537.36 Edg/147.0.0.0",
+    "jsVersion": "14.7.25.7"
+  },
+  "commandTimeoutMs": 30000,
+  "error": "AssertionError [ERR_ASSERTION]: Asset authoring survives disk roundtrip\n+ actual - expected\n... Skipped lines\n\n  [\n    {\n      animationImport: {\n        compressionTolerance: 0.0001,\n        lastImportedAt: 0,\n...\n      },\n+     source: '{\"columns\":3,\"rows\":1,\"sources\":[{\"id\":\"primary\",\"margin\":0,\"name\":\"Template atlas\",\"spacing\":0,\"textureAsset\":\"asset://056de158-2ef2-4e44-856d-e1582ef29e44\"}],\"textureAsset\":\"asset://056de158-2ef2-4e44-856d-e1582ef29e44\",\"tileHeight\":32,\"tileWidth\":32,\"tiles\":[{\"animation\":null,\"collision\":\"None\",\"index\":0,\"metadata\":{\"biome\":\"ground\"},\"name\":\"Ground\",\"navigationCost\":1,\"navigationPolygon\":[],\"occluder\":false,\"occlusionPolygon\":[],\"polygon\":[],\"prefabAsset\":null,\"region\":null,\"sceneAsset\":null,\"sourceId\":\"primary\",\"terrain\":\"Ground\",\"variants\":[{\"tile\":1,\"weight\":0.08}]},{\"animation\":null,\"collision\":\"Box\",\"index\":1,\"metadata\":{\"solid\":true},\"name\":\"Wall\",\"navigationCost\":0,\"navigationPolygon\":[],\"occluder\":true,\"occlusionPolygon\":[],\"polygon\":[],\"prefabAsset\":null,\"region\":null,\"sceneAsset\":null,\"sourceId\":\"primary\",\"terrain\":\"Wall\",\"variants\":[]},{\"animation\":{\"frames\":[2,0],\"framesPerSecond\":2,\"mode\":\"PingPong\"},\"collision\":\"None\",\"index\":2,\"metadata\":{\"surface\":\"water\"},\"name\":\"Water\",\"navigationCost\":4,\"navigationPolygon\":[],\"occluder\":false,\"occlusionPolygon\":[],\"polygon\":[],\"prefabAsset\":null,\"region\":null,\"sceneAsset\":null,\"sourceId\":\"primary\",\"terrain\":\"Water\",\"variants\":[]}],\"version\":2}',\n-     source: '{\"version\":2,\"textureAsset\":\"asset://056de158-2ef2-4e44-856d-e1582ef29e44\",\"sources\":[{\"id\":\"primary\",\"name\":\"Template atlas\",\"textureAsset\":\"asset://056de158-2ef2-4e44-856d-e1582ef29e44\",\"margin\":0,\"spacing\":0}],\"tileWidth\":32,\"tileHeight\":32,\"columns\":3,\"rows\":1,\"tiles\":[{\"index\":0,\"name\":\"Ground\",\"collision\":\"None\",\"polygon\":[],\"terrain\":\"Ground\",\"navigationCost\":1,\"occluder\":false,\"navigationPolygon\":[],\"occlusionPolygon\":[],\"metadata\":{\"biome\":\"ground\"},\"sceneAsset\":null,\"prefabAsset\":null,\"sourceId\":\"primary\",\"region\":null,\"animation\":null,\"variants\":[{\"tile\":1,\"weight\":0.08}]},{\"index\":1,\"name\":\"Wall\",\"collision\":\"Box\",\"polygon\":[],\"terrain\":\"Wall\",\"navigationCost\":0,\"occluder\":true,\"navigationPolygon\":[],\"occlusionPolygon\":[],\"metadata\":{\"solid\":true},\"sceneAsset\":null,\"prefabAsset\":null,\"sourceId\":\"primary\",\"region\":null,\"animation\":null,\"variants\":[]},{\"index\":2,\"name\":\"Water\",\"collision\":\"None\",\"polygon\":[],\"terrain\":\"Water\",\"navigationCost\":4,\"occluder\":false,\"navigationPolygon\":[],\"occlusionPolygon\":[],\"metadata\":{\"surface\":\"water\"},\"sceneAsset\":null,\"prefabAsset\":null,\"sourceId\":\"primary\",\"region\":null,\"animation\":{\"frames\":[2,0],\"framesPerSecond\":2,\"mode\":\"PingPong\"},\"variants\":[]}]}',\n      sourceControlStatus: 'clean',\n      sourceModified: 0,\n      tags: [],\n      thumbnailKey: '',\n      uuid: '0cc24713-933e-447f-8cc2-4713933ee47f',\n\n    at file:///E:/Nova_A/scripts/verify-engine-workflows.mjs:20:11\n    at async Object.check (file:///E:/Nova_A/scripts/lib/browserUserAudit.mjs:86:5)\n    at async file:///E:/Nova_A/scripts/verify-engine-workflows.mjs:10:3\n    at async withBrowserAudit (file:///E:/Nova_A/scripts/lib/browserUserAudit.mjs:120:5)\n    at async file:///E:/Nova_A/scripts/verify-engine-workflows.mjs:7:1",
+  "scope": "Development rebuild production bundle; not published-release qualification. Recorded real Edge input and DOM observations against production dist. Headless software rendering and download/file-input fallback; physical assistive technology and native OS picker behavior are not measured."
+}

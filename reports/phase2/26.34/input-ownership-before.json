@@ -1,0 +1,41 @@
+{
+  "format": "nova-input-ownership",
+  "version": 1,
+  "engineVersion": "26.34.0",
+  "generatedAt": "2026-10-01T17:19:26.564Z",
+  "status": "failed",
+  "checks": [
+    {
+      "name": "Already handled wheel cannot activate a gameplay action",
+      "status": "failed",
+      "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n1 !== 0\n\n    at file:///E:/Nova_A/scripts/verify-v26.34-input-ownership.mjs:28:52\n    at check (file:///E:/Nova_A/scripts/verify-v26.34-input-ownership.mjs:22:15)\n    at file:///E:/Nova_A/scripts/verify-v26.34-input-ownership.mjs:26:9"
+    },
+    {
+      "name": "Native text and numeric controls retain wheel ownership",
+      "status": "failed",
+      "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n1 !== 0\n\n    at file:///E:/Nova_A/scripts/verify-v26.34-input-ownership.mjs:32:12\n    at check (file:///E:/Nova_A/scripts/verify-v26.34-input-ownership.mjs:22:15)\n    at file:///E:/Nova_A/scripts/verify-v26.34-input-ownership.mjs:30:9"
+    },
+    {
+      "name": "Editor panel scrolling and unrelated canvas input do not reach gameplay",
+      "status": "failed",
+      "error": "AssertionError [ERR_ASSERTION]: editor-panel\n\n1 !== 0\n\n    at file:///E:/Nova_A/scripts/verify-v26.34-input-ownership.mjs:35:134\n    at check (file:///E:/Nova_A/scripts/verify-v26.34-input-ownership.mjs:22:15)\n    at file:///E:/Nova_A/scripts/verify-v26.34-input-ownership.mjs:34:9"
+    },
+    {
+      "name": "Bare game canvas wheel samples once, resets transient delta, and preserves signed actions",
+      "status": "passed"
+    },
+    {
+      "name": "Multiple game surfaces and non-DOM runtime hosts retain wheel support",
+      "status": "passed"
+    },
+    {
+      "name": "Keyboard action handling remains independent from wheel routing",
+      "status": "passed"
+    }
+  ],
+  "sourceHashes": {
+    "src/runtime/input.ts": "7777c659e3c485e47116f970425630e10df27bdedfbb1d3f20843d0f5d60bb07",
+    "src/components/WorldCanvas.vue": "326c0aa73f7f29b75bb16b821ece35d87fa6e7837f39340d5eadab02d9d436ad"
+  },
+  "scope": "Actual InputManager and named-action modules with controlled DOM target identities. WorldCanvas integration requires a separate real browser check; no physical-device claim."
+}

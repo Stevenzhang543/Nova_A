@@ -1,0 +1,108 @@
+# Nova_A26.20 exhaustive edit ledger (machine26.20.0)
+
+This deterministic path-level manifest is compared with frozen26.19 source 2d3f56b4c6216746610ecb5a4f8395d26bc6523908f64693b4e3213edfed5041. Earlier uncommitted work is retained. This lists authored inputs, not build caches. The palette specification is user-owned. Pre-edit consequences and repair findings are retained in VERSION_26_20_QUALIFICATION.md. Only executed frozen-source evidence certifies completion.
+
+## Files changed and added
+
+- Added `app_color_palette_system.md` — USER-SUPPLIED INPUT: retain the original palette specification unchanged; not an assistant-authored edit.
+- Modified `Cargo.lock` — Advance local Nova crate versions only; preserve dependency resolution.
+- Modified `Cargo.toml` — Advance workspace version; add portable release optimization3/thin LTO/one codegen unit and stripped debug symbols, retaining unwind.
+- Modified `crates/nova_format/src/lib.rs` — Advance runtime engine identity; preserve public format/schema.
+- Added `docs/EDIT_LEDGER_26_20.md` — Add current EDIT LEDGER 26 20.md documenting implementation, evidence requirements, inventories or retained limits.
+- Added `docs/FEATURE_INVENTORY_26_20.md` — Add current FEATURE INVENTORY 26 20.md documenting implementation, evidence requirements, inventories or retained limits.
+- Added `docs/IMPLEMENTATION_TRACKER_26_20.md` — Add current IMPLEMENTATION TRACKER 26 20.md documenting implementation, evidence requirements, inventories or retained limits.
+- Added `docs/PERFORMANCE_BUDGETS_26_20.md` — Add current PERFORMANCE BUDGETS 26 20.md documenting implementation, evidence requirements, inventories or retained limits.
+- Added `docs/QUALIFICATION_FEATURE_GAPS_26_20.md` — Add current QUALIFICATION FEATURE GAPS 26 20.md documenting implementation, evidence requirements, inventories or retained limits.
+- Added `docs/QUALIFICATION_LESSON_26_20.de.md` — Add current QUALIFICATION LESSON 26 20.de.md documenting implementation, evidence requirements, inventories or retained limits.
+- Added `docs/QUALIFICATION_LESSON_26_20.en.md` — Add current QUALIFICATION LESSON 26 20.en.md documenting implementation, evidence requirements, inventories or retained limits.
+- Added `docs/QUALIFICATION_LESSON_26_20.zh.md` — Add current QUALIFICATION LESSON 26 20.zh.md documenting implementation, evidence requirements, inventories or retained limits.
+- Added `docs/RELEASE_NOTES_26_20.md` — Add current RELEASE NOTES 26 20.md documenting implementation, evidence requirements, inventories or retained limits.
+- Added `docs/SOURCE_INVENTORY_26_20.json` — Add current SOURCE INVENTORY 26 20.json documenting implementation, evidence requirements, inventories or retained limits.
+- Added `docs/SOURCE_MAP_26_20.md` — Add current SOURCE MAP 26 20.md documenting implementation, evidence requirements, inventories or retained limits.
+- Added `docs/TEMPLATE_LIBRARY_26_20.md` — Add current TEMPLATE LIBRARY 26 20.md documenting implementation, evidence requirements, inventories or retained limits.
+- Added `docs/VERSION_26_20_QUALIFICATION.md` — Add current VERSION 26 20 QUALIFICATION.md documenting implementation, evidence requirements, inventories or retained limits.
+- Modified `manual/index.html` — Integrate full EN/DE/ZH26.20 qualification lessons and current title while retaining all prior teaching.
+- Modified `manual/MANUAL.de.md` — Integrate full EN/DE/ZH26.20 qualification lessons and current title while retaining all prior teaching.
+- Modified `manual/MANUAL.en.md` — Integrate full EN/DE/ZH26.20 qualification lessons and current title while retaining all prior teaching.
+- Modified `manual/MANUAL.zh-CN.md` — Integrate full EN/DE/ZH26.20 qualification lessons and current title while retaining all prior teaching.
+- Modified `package.json` — Advance package version to26.20.0; preserve pinned tools and dependencies.
+- Modified `README.md` — Present26.20 scope and links to notes, full edit ledger, performance budgets and localized lessons.
+- Modified `README.zh-CN.md` — Present26.20 scope and links to notes, full edit ledger, performance budgets and localized lessons.
+- Added `reference-projects/projects/creator-v2620-animated-menu/expected-output.json` — Declare current reference expected output, asset identities and audit actions.
+- Added `reference-projects/projects/creator-v2620-animated-menu/project.nova` — Add a separately identified26.20 project preserving its source reference gameplay/assets and stable internal identities.
+- Added `reference-projects/projects/creator-v2620-animated-menu/README.md` — Document the new reference identity, engine/schema and intended walkthrough.
+- Added `reference-projects/projects/creator-v2620-animated-menu/test-controls.json` — Document current reference controls and repeatable user checks.
+- Added `reference-projects/projects/creator-v2620-blocks-game/expected-output.json` — Declare current reference expected output, asset identities and audit actions.
+- Added `reference-projects/projects/creator-v2620-blocks-game/project.nova` — Add a separately identified26.20 project preserving its source reference gameplay/assets and stable internal identities.
+- Added `reference-projects/projects/creator-v2620-blocks-game/README.md` — Document the new reference identity, engine/schema and intended walkthrough.
+- Added `reference-projects/projects/creator-v2620-blocks-game/test-controls.json` — Document current reference controls and repeatable user checks.
+- Added `reference-projects/projects/creator-v2620-code-game/expected-output.json` — Declare current reference expected output, asset identities and audit actions.
+- Added `reference-projects/projects/creator-v2620-code-game/project.nova` — Add a separately identified26.20 project preserving its source reference gameplay/assets and stable internal identities.
+- Added `reference-projects/projects/creator-v2620-code-game/README.md` — Document the new reference identity, engine/schema and intended walkthrough.
+- Added `reference-projects/projects/creator-v2620-code-game/test-controls.json` — Document current reference controls and repeatable user checks.
+- Added `reference-projects/projects/creator-v2620-mixed-game/expected-output.json` — Declare current reference expected output, asset identities and audit actions.
+- Added `reference-projects/projects/creator-v2620-mixed-game/project.nova` — Add a separately identified26.20 project preserving its source reference gameplay/assets and stable internal identities.
+- Added `reference-projects/projects/creator-v2620-mixed-game/README.md` — Document the new reference identity, engine/schema and intended walkthrough.
+- Added `reference-projects/projects/creator-v2620-mixed-game/test-controls.json` — Document current reference controls and repeatable user checks.
+- Added `reference-projects/projects/creator-v2620-output-quality/expected-output.json` — Declare current reference expected output, asset identities and audit actions.
+- Added `reference-projects/projects/creator-v2620-output-quality/project.nova` — Add a separately identified26.20 project preserving its source reference gameplay/assets and stable internal identities.
+- Added `reference-projects/projects/creator-v2620-output-quality/README.md` — Document the new reference identity, engine/schema and intended walkthrough.
+- Added `reference-projects/projects/creator-v2620-output-quality/test-controls.json` — Document current reference controls and repeatable user checks.
+- Added `reference-projects/projects/server-v2620-headless-authority/expected-output.json` — Declare current reference expected output, asset identities and audit actions.
+- Added `reference-projects/projects/server-v2620-headless-authority/project.nova` — Add a separately identified26.20 project preserving its source reference gameplay/assets and stable internal identities.
+- Added `reference-projects/projects/server-v2620-headless-authority/README.md` — Document the new reference identity, engine/schema and intended walkthrough.
+- Added `reference-projects/projects/server-v2620-headless-authority/test-controls.json` — Document current reference controls and repeatable user checks.
+- Added `scripts/fixtures/renderer20-fixture.ts` — Add real GPU upload/pixel equivalence, grouping timing, buffer/disposal, index-heavy batching, explicit-MSAA presentation and post-effect regressions.
+- Added `scripts/fixtures/rendering20/baseline-webgl-v26.19.ts` — Retain exact frozen26.19 renderer as a reproducible comparison fixture.
+- Added `scripts/generate-v26.20-ledger.mjs` — Generate exhaustive deterministic path-level differences against the frozen26.19 source, marking user input separately.
+- Added `scripts/generate-v26.20-references.mjs` — Generate and verify six separate20 references, preserving game/animation assets and importing missing metadata for the new menu copy.
+- Added `scripts/generate-v26.20-teaching.mjs` — Integrate/verify three full qualification lessons in cumulative manuals with stable previous anchors.
+- Added `scripts/generate-v26.20-template-walkthroughs.mjs` — Generate/verify120 current localized walkthroughs from the40-template registry.
+- Added `scripts/inventory-v26.20.mjs` — Generate current source map and operation inventory without changing previous inventories.
+- Added `scripts/lib/deliveryExportAudit20.mjs` — Add actual Web download, independent archive hashes and exact saved scene/package/rendering comparisons for20.
+- Modified `scripts/lib/milestoneAuditContext.mjs` — Allow explicit integrated26.20 regression target with actual version checks and retained original suite identity.
+- Modified `scripts/lib/worldAudit17.mjs` — Wait for the actual visible launcher action after reload before opening projects, preserving real file chooser input.
+- Added `scripts/qualify-layout-v26.20.mjs` — Execute all five palette panel audits and combine their fresh results/capture references.
+- Added `scripts/qualify-panels-v26.20.mjs` — Sweep each visited panel state across three sizes and three scales per language with animations enabled, default GPU capability recorded and palette-scoped evidence.
+- Modified `scripts/release-milestone-gates.mjs` — Select the expanded five-palette panel matrix for26.20 only.
+- Modified `scripts/verify-v26.12-api-signatures.mjs` — Timestamp fresh executed API reports for current-release evidence provenance.
+- Modified `scripts/verify-v26.12-language.mjs` — Timestamp fresh executed language reports for current-release evidence provenance.
+- Modified `scripts/verify-v26.12-script-modules.mjs` — Use the real MediaClock added since12 rather than an incompatible function stub; preserve actual module/VM assertions.
+- Added `scripts/verify-v26.20-authoring.mjs` — Run real palette, quality, menu and retained delivery/package user input workflows with bundled evidence.
+- Added `scripts/verify-v26.20-delivery-user.mjs` — Run actual semantic collaboration edits, undo/reopen and exact Web player checks with separate20 downloads/reports.
+- Added `scripts/verify-v26.20-delivery.mjs` — Re-execute package/update/merge/security delivery fixtures for actual20 source.
+- Added `scripts/verify-v26.20-focus.mjs` — Run fresh20 delivery/tooling/build checks plus retained language/runtime/media/physics/network/render/template regressions and bundle evidence.
+- Added `scripts/verify-v26.20-lsp.mjs` — Re-execute real LSP framing, version and shutdown regressions for20.
+- Added `scripts/verify-v26.20-menu-user.mjs` — Re-execute full animated-menu editing, playback, audio-clock, localization, input, save/reopen and export on the20 reference.
+- Added `scripts/verify-v26.20-package-user.mjs` — Run actual package review/enable/disable/removal/recovery and saved permissions with separate20 reports.
+- Added `scripts/verify-v26.20-palettes-user.mjs` — Check supplied colors, contrast,135 layouts, remembered choices, accessibility switches, help and reset through real input.
+- Added `scripts/verify-v26.20-quality-user.mjs` — Choose fixed presentation through real Profiler input; check Off/MSAA, Undo/Redo, real backing, save/reopen, exact exported settings and live player input.
+- Added `scripts/verify-v26.20-renderer.mjs` — Run current and retained real renderer fixtures with source provenance, pixel captures and detailed timing.
+- Added `scripts/verify-v26.20-reproducibility.mjs` — Build fresh source offline, move checkout with spaces, repair cached links and compare produced bytes/native compile checks.
+- Added `scripts/verify-v26.20-save-recovery.mjs` — Re-execute filesystem failure and recovery regressions for20.
+- Added `scripts/verify-v26.20-template-library.mjs` — Execute all40 visible starter cards, create/play/stop, real rendered pixels and console checks, plus actual input for top-down/tile worlds and localized discovery.
+- Added `scripts/verify-v26.20-template-output.mjs` — Export all40 current templates with real production Web files and structural native packaging; test determinism, legacy mapping, failures and cache semantics.
+- Modified `src-tauri/Cargo.lock` — Advance local desktop crate version only; preserve dependency resolution.
+- Modified `src-tauri/Cargo.toml` — Advance desktop version and add matching release optimization, preserving independent workspace and unwind.
+- Modified `src-tauri/tauri.conf.json` — Advance packaged Windows application identity to26.20.0.
+- Modified `src/assets/main.css` — Map every supplied semantic palette to shared editor surfaces, text, focus and selection; preserve transitions/high contrast; repair enlarged panel controls, Automation grid areas, full-row hierarchy filters and teleported favorite icons.
+- Modified `src/components/PanelMaximizeButton.vue` — Use the existing font-ui family and scale maximize button dimensions with interface text, preserving its action.
+- Modified `src/components/RenderingPanel.vue` — Add authored AA/resolution controls with history and normalization, actual backing/sample diagnostics and localized help.
+- Modified `src/components/WorldCanvas.vue` — Apply bounded authored resolution to shared editor/player canvases; retain logical viewport/camera coordinates and replace consumed contexts only across the Off anti-aliasing boundary.
+- Modified `src/i18n.ts` — Advance visible English/German/Chinese release identity.
+- Modified `src/panels/SettingsPanel.vue` — Add accessible localized palette selection and bundled26.20 context help, retaining existing mode/accessibility controls.
+- Modified `src/projects/projectFormat.ts` — Advance public release and engine identity; preserve stable format/API numbers.
+- Modified `src/renderer/Canvas2DRenderer.ts` — Reuse command storage and report real backing dimensions without stale WebGL sample stats.
+- Added `src/renderer/outputQuality20.ts` — Add AA type/normalization, supported-sample allocation policy and EN/DE/ZH quality labels.
+- Modified `src/renderer/renderSettings.ts` — Add default/normalized/serialized antiAliasing and resolutionScale while preserving older project compatibility.
+- Modified `src/renderer/types.ts` — Add optional actual backing/sample/limitation renderer diagnostics.
+- Modified `src/renderer/WebGL2Renderer.ts` — Replace quadratic grouping with counters; retain upload arrays/GPU capacity; bound index groups; add device/memory-bounded MSAA resolve and exact presentation; release resources.
+- Modified `src/runtime/stableCreatorPlatform.ts` — Repair missing object-family lesson readiness policy so the complete402-operation registry loads.
+- Added `src/store/colorPalettes.ts` — Add exact five user palettes, mode validation, fallback defaults and localized descriptions.
+- Modified `src/store/preferences.ts` — Persist separate light/dark palettes; normalize old or invalid preferences and apply root palette identity.
+- Modified `src/visual/rhaiApiSignatures.generated.json` — Regenerate scripting API metadata from actual current Rust/native/WASM signatures and refresh source provenance.
+- Modified `tests/fixtures/migrations/public-schema-expected.json` — Advance expected engine identity without changing public schema.
+
+Removed authored files: none.
+
+Generated outputs: optimized WASM/package metadata, Web editor/player, Windows portable/setup/MSI, reports/captures/downloads and final release archives are regenerated by the declared gates; their exact content hashes belong to release evidence. No previous release artifact was deleted by this work. Earlier release folders were absent during the20 recheck.

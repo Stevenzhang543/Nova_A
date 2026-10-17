@@ -1,0 +1,45 @@
+{
+  "format": "nova-v26.22-tilemap-bake",
+  "version": 1,
+  "release": "26.22",
+  "regressionOrigin": "26.22",
+  "engineVersion": "26.32.0",
+  "expectedRelease": "26.32",
+  "development": true,
+  "qualifiedRelease": null,
+  "generatedAt": "2026-09-28T18:10:13.154Z",
+  "status": "passed",
+  "scope": "Actual tilemap bake requests and cancellation over normalized four- and nine-chunk maps. Tests shared progress ownership and deterministic result retention; no timing/performance or GPU quality claim.",
+  "checks": [
+    {
+      "name": "Cancelled predecessor cannot stop or relabel the active replacement bake",
+      "status": "passed",
+      "covers": [
+        "src/runtime/tilemap.ts#requestTileMapBake"
+      ]
+    },
+    {
+      "name": "Explicit cancellation stops its request and idle cancellation is a no-op",
+      "status": "passed",
+      "covers": [
+        "src/runtime/tilemap.ts#requestTileMapBake",
+        "src/runtime/tilemap.ts#cancelTileMapBake"
+      ]
+    },
+    {
+      "name": "Rejected malformed request leaves no active cancellation controller",
+      "status": "passed",
+      "covers": [
+        "src/runtime/tilemap.ts#requestTileMapBake",
+        "src/runtime/tilemap.ts#cancelTileMapBake"
+      ]
+    },
+    {
+      "name": "Repeated completed bakes retain deterministic output and full chunk progress",
+      "status": "passed",
+      "covers": [
+        "src/runtime/tilemap.ts#requestTileMapBake"
+      ]
+    }
+  ]
+}

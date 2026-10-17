@@ -1,0 +1,1781 @@
+{
+  "_EditorBottomPanel-BQwzxcvF.js": {
+    "file": "assets/EditorBottomPanel-BQwzxcvF.js",
+    "name": "EditorBottomPanel",
+    "isDynamicEntry": true,
+    "imports": [
+      "_preload-helper-mg6Z-sIv.js",
+      "_vue-runtime-D7l--P72.js",
+      "_main-Cu47QhQv.js",
+      "_EditorLayout-8PxW-MQf.js",
+      "_projectInspectionSnapshot-M7nYXaSx.js",
+      "_crashReporter-BUJSpWFR.js",
+      "_WorldCanvas-mTGJY71k.js",
+      "_scriptTemplates-CP9ZmjGE.js",
+      "_StudioDraftConflict-DcfEZoNU.js",
+      "_resources-Bng3wMHF.js"
+    ],
+    "dynamicImports": [
+      "src/components/AnimationPanel.vue",
+      "src/components/AudioSystemPanel.vue",
+      "src/components/ConsolePanel.vue",
+      "src/components/ProfilerPanel.vue",
+      "src/components/NetworkStudioPanel.vue",
+      "src/components/EcosystemStudioPanel.vue",
+      "src/components/TilemapPanel.vue",
+      "src/components/WorldToolsPanel.vue"
+    ],
+    "css": [
+      "assets/EditorBottomPanel-DlDke2An.css"
+    ]
+  },
+  "_EditorBottomPanel-DlDke2An.css": {
+    "file": "assets/EditorBottomPanel-DlDke2An.css",
+    "src": "_EditorBottomPanel-DlDke2An.css"
+  },
+  "_EditorLayout-8PxW-MQf.js": {
+    "file": "assets/EditorLayout-8PxW-MQf.js",
+    "name": "EditorLayout",
+    "isDynamicEntry": true,
+    "imports": [
+      "_preload-helper-mg6Z-sIv.js",
+      "_vue-runtime-D7l--P72.js",
+      "_main-Cu47QhQv.js",
+      "_crashReporter-BUJSpWFR.js",
+      "_WorldCanvas-mTGJY71k.js"
+    ],
+    "dynamicImports": [
+      "_WorldCanvas-mTGJY71k.js",
+      "src/components/ConfigPanel.vue",
+      "_EditorBottomPanel-BQwzxcvF.js",
+      "src/components/ScriptWorkspace.vue",
+      "src/components/PresentationPanel.vue",
+      "src/components/ManageWorkspace.vue",
+      "src/components/PhysicsRuntimePanel.vue"
+    ],
+    "css": [
+      "assets/EditorLayout-BRTQzVpW.css"
+    ]
+  },
+  "_EditorLayout-BRTQzVpW.css": {
+    "file": "assets/EditorLayout-BRTQzVpW.css",
+    "src": "_EditorLayout-BRTQzVpW.css"
+  },
+  "_SimulationStatusPanel17-BHU74Xfk.css": {
+    "file": "assets/SimulationStatusPanel17-BHU74Xfk.css",
+    "src": "_SimulationStatusPanel17-BHU74Xfk.css"
+  },
+  "_SimulationStatusPanel17-yYxiZNwW.js": {
+    "file": "assets/SimulationStatusPanel17-yYxiZNwW.js",
+    "name": "SimulationStatusPanel17",
+    "imports": [
+      "_vue-runtime-D7l--P72.js",
+      "_crashReporter-BUJSpWFR.js"
+    ],
+    "css": [
+      "assets/SimulationStatusPanel17-BHU74Xfk.css"
+    ]
+  },
+  "_StudioDraftConflict-BppdTLKs.css": {
+    "file": "assets/StudioDraftConflict-BppdTLKs.css",
+    "src": "_StudioDraftConflict-BppdTLKs.css"
+  },
+  "_StudioDraftConflict-DcfEZoNU.js": {
+    "file": "assets/StudioDraftConflict-DcfEZoNU.js",
+    "name": "StudioDraftConflict",
+    "imports": [
+      "_vue-runtime-D7l--P72.js",
+      "_crashReporter-BUJSpWFR.js"
+    ],
+    "css": [
+      "assets/StudioDraftConflict-BppdTLKs.css"
+    ]
+  },
+  "_WorldCanvas-OKeLcgBp.css": {
+    "file": "assets/WorldCanvas-OKeLcgBp.css",
+    "src": "_WorldCanvas-OKeLcgBp.css"
+  },
+  "_WorldCanvas-mTGJY71k.js": {
+    "file": "assets/WorldCanvas-mTGJY71k.js",
+    "name": "WorldCanvas",
+    "isDynamicEntry": true,
+    "imports": [
+      "_vue-runtime-D7l--P72.js",
+      "_crashReporter-BUJSpWFR.js",
+      "_nova-runtime-YnQwU2rk.js",
+      "_preload-helper-mg6Z-sIv.js"
+    ],
+    "dynamicImports": [
+      "src/runtime/networking.ts"
+    ],
+    "css": [
+      "assets/WorldCanvas-OKeLcgBp.css"
+    ]
+  },
+  "_cinematicProduction-3GiL0UQr.js": {
+    "file": "assets/cinematicProduction-3GiL0UQr.js",
+    "name": "cinematicProduction",
+    "imports": [
+      "_crashReporter-BUJSpWFR.js",
+      "_WorldCanvas-mTGJY71k.js"
+    ]
+  },
+  "_crashReporter-BUJSpWFR.js": {
+    "file": "assets/crashReporter-BUJSpWFR.js",
+    "name": "crashReporter",
+    "isDynamicEntry": true,
+    "imports": [
+      "_preload-helper-mg6Z-sIv.js",
+      "_vue-runtime-D7l--P72.js",
+      "_nova-runtime-YnQwU2rk.js"
+    ],
+    "dynamicImports": [
+      "node_modules/.pnpm/@tauri-apps+api@2.11.1/node_modules/@tauri-apps/api/core.js",
+      "node_modules/.pnpm/@tauri-apps+api@2.11.1/node_modules/@tauri-apps/api/core.js",
+      "node_modules/.pnpm/@tauri-apps+api@2.11.1/node_modules/@tauri-apps/api/core.js",
+      "node_modules/.pnpm/@tauri-apps+api@2.11.1/node_modules/@tauri-apps/api/core.js",
+      "node_modules/.pnpm/@tauri-apps+api@2.11.1/node_modules/@tauri-apps/api/core.js",
+      "node_modules/.pnpm/@tauri-apps+api@2.11.1/node_modules/@tauri-apps/api/core.js",
+      "node_modules/.pnpm/@tauri-apps+api@2.11.1/node_modules/@tauri-apps/api/core.js",
+      "node_modules/.pnpm/@tauri-apps+api@2.11.1/node_modules/@tauri-apps/api/core.js",
+      "node_modules/.pnpm/@tauri-apps+api@2.11.1/node_modules/@tauri-apps/api/core.js",
+      "src/runtime/projectExternalChanges.ts",
+      "src/runtime/shipping.ts",
+      "node_modules/.pnpm/@tauri-apps+api@2.11.1/node_modules/@tauri-apps/api/core.js"
+    ],
+    "css": [
+      "assets/crashReporter-DfrRmfbT.css"
+    ],
+    "assets": [
+      "assets/nunito-sans-cyrillic-ext-wght-normal-7w74d1lj.woff2",
+      "assets/nunito-sans-cyrillic-wght-normal-B9hoeQUC.woff2",
+      "assets/nunito-sans-vietnamese-wght-normal-BhFYcaJr.woff2",
+      "assets/nunito-sans-latin-ext-wght-normal-DMEAsnHD.woff2",
+      "assets/nunito-sans-latin-wght-normal-BWQ3gi2K.woff2",
+      "assets/noto-sans-sc-5-wght-normal-DI846rD9.woff2",
+      "assets/noto-sans-sc-6-wght-normal-ozUCEY9O.woff2",
+      "assets/noto-sans-sc-21-wght-normal-DIu_1ZBI.woff2",
+      "assets/noto-sans-sc-22-wght-normal-VXjdYcT-.woff2",
+      "assets/noto-sans-sc-23-wght-normal-4HrHKhpL.woff2",
+      "assets/noto-sans-sc-24-wght-normal-B58DWgHS.woff2",
+      "assets/noto-sans-sc-25-wght-normal-C3Jm6l7O.woff2",
+      "assets/noto-sans-sc-26-wght-normal-YNOygvr_.woff2",
+      "assets/noto-sans-sc-27-wght-normal-BP2pEGQH.woff2",
+      "assets/noto-sans-sc-28-wght-normal-BWPKDbtH.woff2",
+      "assets/noto-sans-sc-29-wght-normal-45aVmHn_.woff2",
+      "assets/noto-sans-sc-30-wght-normal-B8_s30jZ.woff2",
+      "assets/noto-sans-sc-31-wght-normal-DW0t445S.woff2",
+      "assets/noto-sans-sc-32-wght-normal-ShbWPcei.woff2",
+      "assets/noto-sans-sc-33-wght-normal-BOTZYTjM.woff2",
+      "assets/noto-sans-sc-34-wght-normal-BF1rqDSt.woff2",
+      "assets/noto-sans-sc-35-wght-normal-Bosspiyr.woff2",
+      "assets/noto-sans-sc-36-wght-normal-CtU9CyKw.woff2",
+      "assets/noto-sans-sc-37-wght-normal-ghDiyiuv.woff2",
+      "assets/noto-sans-sc-38-wght-normal-4Nz8k_dt.woff2",
+      "assets/noto-sans-sc-39-wght-normal-Ddtm1XVC.woff2",
+      "assets/noto-sans-sc-40-wght-normal-BVn4-kgX.woff2",
+      "assets/noto-sans-sc-41-wght-normal-CZqajZnl.woff2",
+      "assets/noto-sans-sc-42-wght-normal-CQ4lY28u.woff2",
+      "assets/noto-sans-sc-43-wght-normal-psppu0d8.woff2",
+      "assets/noto-sans-sc-44-wght-normal-cbKJlTUe.woff2",
+      "assets/noto-sans-sc-45-wght-normal-MKIEVRIC.woff2",
+      "assets/noto-sans-sc-46-wght-normal-CErGc6Mt.woff2",
+      "assets/noto-sans-sc-47-wght-normal-C5Kgg1_m.woff2",
+      "assets/noto-sans-sc-48-wght-normal-DFMjDDY6.woff2",
+      "assets/noto-sans-sc-49-wght-normal-B7l_3BZr.woff2",
+      "assets/noto-sans-sc-50-wght-normal-C5KfAmFp.woff2",
+      "assets/noto-sans-sc-51-wght-normal-C2bq6hC8.woff2",
+      "assets/noto-sans-sc-52-wght-normal-P18e_Y0j.woff2",
+      "assets/noto-sans-sc-53-wght-normal-Bgkuo2tF.woff2",
+      "assets/noto-sans-sc-54-wght-normal-DL5lmlUd.woff2",
+      "assets/noto-sans-sc-55-wght-normal-BV_Oy6IF.woff2",
+      "assets/noto-sans-sc-56-wght-normal-B4L7Hj8f.woff2",
+      "assets/noto-sans-sc-57-wght-normal-DU8YBsDj.woff2",
+      "assets/noto-sans-sc-58-wght-normal-CE0BKS9u.woff2",
+      "assets/noto-sans-sc-59-wght-normal-Azv2Ku9_.woff2",
+      "assets/noto-sans-sc-60-wght-normal-C1lngC61.woff2",
+      "assets/noto-sans-sc-61-wght-normal-BxWkGF5M.woff2",
+      "assets/noto-sans-sc-62-wght-normal-CXXMAq-5.woff2",
+      "assets/noto-sans-sc-63-wght-normal-4La5uKvS.woff2",
+      "assets/noto-sans-sc-64-wght-normal-CbIuD2Eg.woff2",
+      "assets/noto-sans-sc-65-wght-normal-BGqvKda2.woff2",
+      "assets/noto-sans-sc-66-wght-normal-BvNozWOY.woff2",
+      "assets/noto-sans-sc-67-wght-normal-CC-WRBV-.woff2",
+      "assets/noto-sans-sc-68-wght-normal-c0FjfUaj.woff2",
+      "assets/noto-sans-sc-69-wght-normal-D596Jjl2.woff2",
+      "assets/noto-sans-sc-70-wght-normal-ColEcmtJ.woff2",
+      "assets/noto-sans-sc-71-wght-normal-ChZfXpdg.woff2",
+      "assets/noto-sans-sc-72-wght-normal-D1VyfEG3.woff2",
+      "assets/noto-sans-sc-73-wght-normal-DwSJRYPJ.woff2",
+      "assets/noto-sans-sc-74-wght-normal-Cte7o1QG.woff2",
+      "assets/noto-sans-sc-75-wght-normal-B0qL41rF.woff2",
+      "assets/noto-sans-sc-76-wght-normal-BPLMO_2x.woff2",
+      "assets/noto-sans-sc-77-wght-normal-Dkbi3pye.woff2",
+      "assets/noto-sans-sc-78-wght-normal-BFUXeSw6.woff2",
+      "assets/noto-sans-sc-79-wght-normal-DoJG4UTB.woff2",
+      "assets/noto-sans-sc-80-wght-normal-BEFypWOO.woff2",
+      "assets/noto-sans-sc-81-wght-normal-ed_TZlfo.woff2",
+      "assets/noto-sans-sc-82-wght-normal-DcxfR5OJ.woff2",
+      "assets/noto-sans-sc-83-wght-normal-C9UjAcMM.woff2",
+      "assets/noto-sans-sc-84-wght-normal-C7NxT478.woff2",
+      "assets/noto-sans-sc-85-wght-normal-DBcDBu1n.woff2",
+      "assets/noto-sans-sc-86-wght-normal-CLJIoPpl.woff2",
+      "assets/noto-sans-sc-87-wght-normal-DYfJ-vGE.woff2",
+      "assets/noto-sans-sc-88-wght-normal-ClNDOCGW.woff2",
+      "assets/noto-sans-sc-89-wght-normal-IQU_KQA8.woff2",
+      "assets/noto-sans-sc-90-wght-normal-BWcrRNoG.woff2",
+      "assets/noto-sans-sc-91-wght-normal-CGekvDdH.woff2",
+      "assets/noto-sans-sc-99-wght-normal-Q_IptJM5.woff2",
+      "assets/noto-sans-sc-100-wght-normal-DrqXJETY.woff2",
+      "assets/noto-sans-sc-101-wght-normal-c94LAl5p.woff2",
+      "assets/noto-sans-sc-102-wght-normal-C1RtbCZr.woff2",
+      "assets/noto-sans-sc-103-wght-normal-DGHo20nu.woff2",
+      "assets/noto-sans-sc-104-wght-normal-CJT2ioDJ.woff2",
+      "assets/noto-sans-sc-105-wght-normal-BFoiJwz2.woff2",
+      "assets/noto-sans-sc-106-wght-normal-D6uUHw3w.woff2",
+      "assets/noto-sans-sc-107-wght-normal-kFQzJDLH.woff2",
+      "assets/noto-sans-sc-108-wght-normal-7aXvqIa2.woff2",
+      "assets/noto-sans-sc-109-wght-normal-CnjNbNmw.woff2",
+      "assets/noto-sans-sc-110-wght-normal-D2JBr045.woff2",
+      "assets/noto-sans-sc-111-wght-normal-ClFr5QXM.woff2",
+      "assets/noto-sans-sc-112-wght-normal-CiZxJMyY.woff2",
+      "assets/noto-sans-sc-113-wght-normal-OgQXOX6x.woff2",
+      "assets/noto-sans-sc-114-wght-normal-CRH9SDZu.woff2",
+      "assets/noto-sans-sc-115-wght-normal-BN__2iBG.woff2",
+      "assets/noto-sans-sc-116-wght-normal-vdFVzbO2.woff2",
+      "assets/noto-sans-sc-117-wght-normal-Dsz3vkzU.woff2",
+      "assets/noto-sans-sc-118-wght-normal-BPEb0gM9.woff2",
+      "assets/noto-sans-sc-119-wght-normal-BfzSEbFz.woff2",
+      "assets/noto-sans-sc-cyrillic-wght-normal-CRA5_Pf1.woff2",
+      "assets/noto-sans-sc-vietnamese-wght-normal-y5SU35Rl.woff2",
+      "assets/noto-sans-sc-latin-ext-wght-normal-CqPqLCfe.woff2",
+      "assets/noto-sans-sc-latin-wght-normal-DYAKOyvl.woff2",
+      "assets/jetbrains-mono-cyrillic-wght-normal-D73BlboJ.woff2",
+      "assets/jetbrains-mono-greek-wght-normal-Bw9x6K1M.woff2",
+      "assets/jetbrains-mono-vietnamese-wght-normal-Bt-aOZkq.woff2",
+      "assets/jetbrains-mono-latin-ext-wght-normal-DBQx-q_a.woff2",
+      "assets/jetbrains-mono-latin-wght-normal-B9CIFXIH.woff2"
+    ]
+  },
+  "_crashReporter-DfrRmfbT.css": {
+    "file": "assets/crashReporter-DfrRmfbT.css",
+    "src": "_crashReporter-DfrRmfbT.css"
+  },
+  "_gameExporter-tWkJpmm7.js": {
+    "file": "assets/gameExporter-tWkJpmm7.js",
+    "name": "gameExporter",
+    "imports": [
+      "_preload-helper-mg6Z-sIv.js",
+      "_crashReporter-BUJSpWFR.js",
+      "_novaPak-CcOuVwbt.js",
+      "_releaseEngineering-C6aaSeod.js",
+      "_productionValidation-Bqs0uv3k.js"
+    ],
+    "dynamicImports": [
+      "node_modules/.pnpm/@tauri-apps+api@2.11.1/node_modules/@tauri-apps/api/core.js"
+    ]
+  },
+  "_main-Cu47QhQv.js": {
+    "file": "assets/main-Cu47QhQv.js",
+    "name": "main",
+    "isDynamicEntry": true,
+    "imports": [
+      "_vue-runtime-D7l--P72.js",
+      "_preload-helper-mg6Z-sIv.js",
+      "_crashReporter-BUJSpWFR.js",
+      "src/runtime/projectExternalChanges.ts",
+      "node_modules/.pnpm/@tauri-apps+api@2.11.1/node_modules/@tauri-apps/api/core.js"
+    ],
+    "dynamicImports": [
+      "_crashReporter-BUJSpWFR.js",
+      "node_modules/.pnpm/@tauri-apps+api@2.11.1/node_modules/@tauri-apps/api/window.js",
+      "node_modules/.pnpm/@tauri-apps+api@2.11.1/node_modules/@tauri-apps/api/window.js",
+      "_EditorLayout-8PxW-MQf.js",
+      "src/PlayerApp.vue",
+      "src/components/ManualViewer.vue",
+      "src/components/StudioStatusDialog.vue",
+      "src/components/ErrorRecovery.vue",
+      "src/components/RecoveryCenter.vue",
+      "src/components/WorkspaceManager.vue",
+      "src/components/ShortcutEditor.vue",
+      "src/components/UndoHistoryPanel.vue",
+      "src/components/ExternalChangeDialog.vue",
+      "node_modules/.pnpm/@tauri-apps+api@2.11.1/node_modules/@tauri-apps/api/core.js",
+      "_crashReporter-BUJSpWFR.js"
+    ],
+    "css": [
+      "assets/main-KCA-QUKw.css"
+    ],
+    "assets": [
+      "assets/animation-lab-bvA5IJB0.png",
+      "assets/audio-lab-M7eEJ-y3.png",
+      "assets/billiards-break-DqR6VHe_.png",
+      "assets/breakout-CbdWskTY.png",
+      "assets/checkpoint-sprint-BMpqvqz7.png",
+      "assets/coin-trail-KqPDXr0N.png",
+      "assets/collision-lab-vcURhJwp.png",
+      "assets/domino-cascade-Dw0n_SAP.png",
+      "assets/friction-ramp-DuEHLSI1.png",
+      "assets/gravity-fountain-DwT1heCu.png",
+      "assets/grid-chase-BI-RJBN1.png",
+      "assets/hazard-crossing-DbkatN_g.png",
+      "assets/lighting-starter-UdOn64IP.png",
+      "assets/mouse-knockout-CJmT9lwN.png",
+      "assets/neon-garden-DK2o0ghr.png",
+      "assets/networked-optional-Cc7cNg5x.png",
+      "assets/orbit-dodge-BSvgYLGG.png",
+      "assets/orbit-gallery-qS8qp42w.png",
+      "assets/particle-fireworks-9MchsCEh.png",
+      "assets/particle-lab-C1VWUCjO.png",
+      "assets/pendulum-row-i7AWn7GE.png",
+      "assets/physics-cleanup-DV-O7RZd.png",
+      "assets/physics-sandbox-Ccx3UMQ3.png",
+      "assets/platformer-T7-7Zcdd.png",
+      "assets/pong-BnWxj1DT.png",
+      "assets/pyramid-stack-DjfZ03ik.png",
+      "assets/rain-room-D3vQEh75.png",
+      "assets/rendering-lab-CTVN5duk.png",
+      "assets/restitution-gallery-DART8fgi.png",
+      "assets/shape-poster-DfYxBkcH.png",
+      "assets/slalom-run-DNsLj4z_.png",
+      "assets/snake-DveUx4Ew.png",
+      "assets/sprite-wall-BKRi3ZQV.png",
+      "assets/starfield-C2l81G4m.png",
+      "assets/target-circuit-DqVSeOuQ.png",
+      "assets/tile-world-Bp4C4vhW.png",
+      "assets/top-down-DPt8WH1u.png"
+    ]
+  },
+  "_main-KCA-QUKw.css": {
+    "file": "assets/main-KCA-QUKw.css",
+    "src": "_main-KCA-QUKw.css"
+  },
+  "_mediaProduction26-D77RdmKm.js": {
+    "file": "assets/mediaProduction26-D77RdmKm.js",
+    "name": "mediaProduction26",
+    "imports": [
+      "_crashReporter-BUJSpWFR.js",
+      "_WorldCanvas-mTGJY71k.js",
+      "_cinematicProduction-3GiL0UQr.js"
+    ]
+  },
+  "_networkReplay-DNqFUPZN.js": {
+    "file": "assets/networkReplay-DNqFUPZN.js",
+    "name": "networkReplay",
+    "imports": [
+      "_crashReporter-BUJSpWFR.js",
+      "_WorldCanvas-mTGJY71k.js",
+      "_vue-runtime-D7l--P72.js"
+    ]
+  },
+  "_nova-runtime-YnQwU2rk.js": {
+    "file": "assets/nova-runtime-YnQwU2rk.js",
+    "name": "nova-runtime",
+    "assets": [
+      "assets/nova_core_bg-BPfUDJj2.wasm"
+    ]
+  },
+  "_novaPak-CcOuVwbt.js": {
+    "file": "assets/novaPak-CcOuVwbt.js",
+    "name": "novaPak",
+    "imports": [
+      "_crashReporter-BUJSpWFR.js"
+    ]
+  },
+  "_objectAuthorNavigation-B2d4RheS.js": {
+    "file": "assets/objectAuthorNavigation-B2d4RheS.js",
+    "name": "objectAuthorNavigation",
+    "imports": [
+      "_vue-runtime-D7l--P72.js",
+      "_crashReporter-BUJSpWFR.js",
+      "_main-Cu47QhQv.js",
+      "_WorldCanvas-mTGJY71k.js",
+      "_StudioDraftConflict-DcfEZoNU.js"
+    ],
+    "css": [
+      "assets/objectAuthorNavigation-DKMjnxBC.css"
+    ]
+  },
+  "_objectAuthorNavigation-DKMjnxBC.css": {
+    "file": "assets/objectAuthorNavigation-DKMjnxBC.css",
+    "src": "_objectAuthorNavigation-DKMjnxBC.css"
+  },
+  "_panelControlCopy-CjgL0VIa.js": {
+    "file": "assets/panelControlCopy-CjgL0VIa.js",
+    "name": "panelControlCopy",
+    "imports": [
+      "_crashReporter-BUJSpWFR.js"
+    ]
+  },
+  "_preload-helper-mg6Z-sIv.js": {
+    "file": "assets/preload-helper-mg6Z-sIv.js",
+    "name": "preload-helper"
+  },
+  "_productionValidation-Bqs0uv3k.js": {
+    "file": "assets/productionValidation-Bqs0uv3k.js",
+    "name": "productionValidation",
+    "imports": [
+      "_crashReporter-BUJSpWFR.js",
+      "_WorldCanvas-mTGJY71k.js",
+      "_resources-Bng3wMHF.js",
+      "_mediaProduction26-D77RdmKm.js"
+    ]
+  },
+  "_projectInspectionSnapshot-M7nYXaSx.js": {
+    "file": "assets/projectInspectionSnapshot-M7nYXaSx.js",
+    "name": "projectInspectionSnapshot",
+    "imports": [
+      "_crashReporter-BUJSpWFR.js",
+      "_vue-runtime-D7l--P72.js"
+    ]
+  },
+  "_releaseEngineering-C6aaSeod.js": {
+    "file": "assets/releaseEngineering-C6aaSeod.js",
+    "name": "releaseEngineering",
+    "imports": [
+      "_crashReporter-BUJSpWFR.js",
+      "_vue-runtime-D7l--P72.js"
+    ]
+  },
+  "_resources-Bng3wMHF.js": {
+    "file": "assets/resources-Bng3wMHF.js",
+    "name": "resources",
+    "imports": [
+      "_crashReporter-BUJSpWFR.js"
+    ]
+  },
+  "_scriptIndexPersistence-DRn-6HuB.js": {
+    "file": "assets/scriptIndexPersistence-DRn-6HuB.js",
+    "name": "scriptIndexPersistence",
+    "imports": [
+      "_WorldCanvas-mTGJY71k.js",
+      "_vue-runtime-D7l--P72.js"
+    ]
+  },
+  "_scriptTemplates-CP9ZmjGE.js": {
+    "file": "assets/scriptTemplates-CP9ZmjGE.js",
+    "name": "scriptTemplates"
+  },
+  "_uiProduction-Bp0hTHJT.js": {
+    "file": "assets/uiProduction-Bp0hTHJT.js",
+    "name": "uiProduction",
+    "imports": [
+      "_crashReporter-BUJSpWFR.js",
+      "_WorldCanvas-mTGJY71k.js"
+    ]
+  },
+  "_vue-runtime-D7l--P72.js": {
+    "file": "assets/vue-runtime-D7l--P72.js",
+    "name": "vue-runtime"
+  },
+  "index.html": {
+    "file": "assets/editor-JNjvnsar.js",
+    "name": "editor",
+    "src": "index.html",
+    "isEntry": true,
+    "imports": [
+      "_preload-helper-mg6Z-sIv.js"
+    ],
+    "dynamicImports": [
+      "_main-Cu47QhQv.js"
+    ],
+    "assets": [
+      "assets/render-CoZn__R4.svg"
+    ]
+  },
+  "node_modules/.pnpm/@fontsource-variable+jetbrains-mono@5.3.0/node_modules/@fontsource-variable/jetbrains-mono/files/jetbrains-mono-cyrillic-wght-normal.woff2": {
+    "file": "assets/jetbrains-mono-cyrillic-wght-normal-D73BlboJ.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+jetbrains-mono@5.3.0/node_modules/@fontsource-variable/jetbrains-mono/files/jetbrains-mono-cyrillic-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+jetbrains-mono@5.3.0/node_modules/@fontsource-variable/jetbrains-mono/files/jetbrains-mono-greek-wght-normal.woff2": {
+    "file": "assets/jetbrains-mono-greek-wght-normal-Bw9x6K1M.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+jetbrains-mono@5.3.0/node_modules/@fontsource-variable/jetbrains-mono/files/jetbrains-mono-greek-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+jetbrains-mono@5.3.0/node_modules/@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-ext-wght-normal.woff2": {
+    "file": "assets/jetbrains-mono-latin-ext-wght-normal-DBQx-q_a.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+jetbrains-mono@5.3.0/node_modules/@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-ext-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+jetbrains-mono@5.3.0/node_modules/@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2": {
+    "file": "assets/jetbrains-mono-latin-wght-normal-B9CIFXIH.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+jetbrains-mono@5.3.0/node_modules/@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+jetbrains-mono@5.3.0/node_modules/@fontsource-variable/jetbrains-mono/files/jetbrains-mono-vietnamese-wght-normal.woff2": {
+    "file": "assets/jetbrains-mono-vietnamese-wght-normal-Bt-aOZkq.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+jetbrains-mono@5.3.0/node_modules/@fontsource-variable/jetbrains-mono/files/jetbrains-mono-vietnamese-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-100-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-100-wght-normal-DrqXJETY.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-100-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-101-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-101-wght-normal-c94LAl5p.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-101-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-102-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-102-wght-normal-C1RtbCZr.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-102-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-103-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-103-wght-normal-DGHo20nu.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-103-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-104-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-104-wght-normal-CJT2ioDJ.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-104-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-105-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-105-wght-normal-BFoiJwz2.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-105-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-106-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-106-wght-normal-D6uUHw3w.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-106-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-107-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-107-wght-normal-kFQzJDLH.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-107-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-108-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-108-wght-normal-7aXvqIa2.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-108-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-109-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-109-wght-normal-CnjNbNmw.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-109-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-110-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-110-wght-normal-D2JBr045.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-110-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-111-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-111-wght-normal-ClFr5QXM.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-111-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-112-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-112-wght-normal-CiZxJMyY.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-112-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-113-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-113-wght-normal-OgQXOX6x.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-113-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-114-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-114-wght-normal-CRH9SDZu.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-114-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-115-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-115-wght-normal-BN__2iBG.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-115-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-116-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-116-wght-normal-vdFVzbO2.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-116-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-117-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-117-wght-normal-Dsz3vkzU.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-117-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-118-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-118-wght-normal-BPEb0gM9.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-118-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-119-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-119-wght-normal-BfzSEbFz.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-119-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-21-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-21-wght-normal-DIu_1ZBI.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-21-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-22-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-22-wght-normal-VXjdYcT-.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-22-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-23-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-23-wght-normal-4HrHKhpL.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-23-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-24-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-24-wght-normal-B58DWgHS.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-24-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-25-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-25-wght-normal-C3Jm6l7O.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-25-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-26-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-26-wght-normal-YNOygvr_.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-26-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-27-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-27-wght-normal-BP2pEGQH.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-27-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-28-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-28-wght-normal-BWPKDbtH.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-28-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-29-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-29-wght-normal-45aVmHn_.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-29-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-30-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-30-wght-normal-B8_s30jZ.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-30-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-31-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-31-wght-normal-DW0t445S.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-31-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-32-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-32-wght-normal-ShbWPcei.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-32-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-33-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-33-wght-normal-BOTZYTjM.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-33-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-34-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-34-wght-normal-BF1rqDSt.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-34-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-35-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-35-wght-normal-Bosspiyr.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-35-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-36-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-36-wght-normal-CtU9CyKw.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-36-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-37-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-37-wght-normal-ghDiyiuv.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-37-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-38-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-38-wght-normal-4Nz8k_dt.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-38-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-39-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-39-wght-normal-Ddtm1XVC.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-39-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-40-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-40-wght-normal-BVn4-kgX.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-40-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-41-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-41-wght-normal-CZqajZnl.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-41-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-42-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-42-wght-normal-CQ4lY28u.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-42-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-43-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-43-wght-normal-psppu0d8.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-43-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-44-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-44-wght-normal-cbKJlTUe.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-44-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-45-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-45-wght-normal-MKIEVRIC.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-45-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-46-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-46-wght-normal-CErGc6Mt.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-46-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-47-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-47-wght-normal-C5Kgg1_m.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-47-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-48-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-48-wght-normal-DFMjDDY6.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-48-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-49-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-49-wght-normal-B7l_3BZr.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-49-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-5-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-5-wght-normal-DI846rD9.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-5-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-50-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-50-wght-normal-C5KfAmFp.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-50-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-51-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-51-wght-normal-C2bq6hC8.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-51-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-52-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-52-wght-normal-P18e_Y0j.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-52-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-53-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-53-wght-normal-Bgkuo2tF.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-53-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-54-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-54-wght-normal-DL5lmlUd.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-54-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-55-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-55-wght-normal-BV_Oy6IF.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-55-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-56-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-56-wght-normal-B4L7Hj8f.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-56-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-57-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-57-wght-normal-DU8YBsDj.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-57-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-58-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-58-wght-normal-CE0BKS9u.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-58-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-59-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-59-wght-normal-Azv2Ku9_.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-59-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-6-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-6-wght-normal-ozUCEY9O.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-6-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-60-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-60-wght-normal-C1lngC61.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-60-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-61-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-61-wght-normal-BxWkGF5M.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-61-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-62-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-62-wght-normal-CXXMAq-5.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-62-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-63-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-63-wght-normal-4La5uKvS.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-63-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-64-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-64-wght-normal-CbIuD2Eg.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-64-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-65-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-65-wght-normal-BGqvKda2.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-65-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-66-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-66-wght-normal-BvNozWOY.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-66-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-67-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-67-wght-normal-CC-WRBV-.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-67-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-68-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-68-wght-normal-c0FjfUaj.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-68-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-69-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-69-wght-normal-D596Jjl2.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-69-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-70-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-70-wght-normal-ColEcmtJ.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-70-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-71-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-71-wght-normal-ChZfXpdg.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-71-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-72-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-72-wght-normal-D1VyfEG3.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-72-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-73-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-73-wght-normal-DwSJRYPJ.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-73-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-74-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-74-wght-normal-Cte7o1QG.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-74-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-75-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-75-wght-normal-B0qL41rF.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-75-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-76-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-76-wght-normal-BPLMO_2x.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-76-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-77-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-77-wght-normal-Dkbi3pye.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-77-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-78-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-78-wght-normal-BFUXeSw6.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-78-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-79-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-79-wght-normal-DoJG4UTB.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-79-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-80-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-80-wght-normal-BEFypWOO.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-80-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-81-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-81-wght-normal-ed_TZlfo.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-81-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-82-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-82-wght-normal-DcxfR5OJ.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-82-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-83-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-83-wght-normal-C9UjAcMM.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-83-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-84-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-84-wght-normal-C7NxT478.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-84-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-85-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-85-wght-normal-DBcDBu1n.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-85-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-86-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-86-wght-normal-CLJIoPpl.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-86-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-87-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-87-wght-normal-DYfJ-vGE.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-87-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-88-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-88-wght-normal-ClNDOCGW.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-88-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-89-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-89-wght-normal-IQU_KQA8.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-89-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-90-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-90-wght-normal-BWcrRNoG.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-90-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-91-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-91-wght-normal-CGekvDdH.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-91-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-99-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-99-wght-normal-Q_IptJM5.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-99-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-cyrillic-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-cyrillic-wght-normal-CRA5_Pf1.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-cyrillic-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-latin-ext-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-latin-ext-wght-normal-CqPqLCfe.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-latin-ext-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-latin-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-latin-wght-normal-DYAKOyvl.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-latin-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-vietnamese-wght-normal.woff2": {
+    "file": "assets/noto-sans-sc-vietnamese-wght-normal-y5SU35Rl.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc/files/noto-sans-sc-vietnamese-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+nunito-sans@5.3.0/node_modules/@fontsource-variable/nunito-sans/files/nunito-sans-cyrillic-ext-wght-normal.woff2": {
+    "file": "assets/nunito-sans-cyrillic-ext-wght-normal-7w74d1lj.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+nunito-sans@5.3.0/node_modules/@fontsource-variable/nunito-sans/files/nunito-sans-cyrillic-ext-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+nunito-sans@5.3.0/node_modules/@fontsource-variable/nunito-sans/files/nunito-sans-cyrillic-wght-normal.woff2": {
+    "file": "assets/nunito-sans-cyrillic-wght-normal-B9hoeQUC.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+nunito-sans@5.3.0/node_modules/@fontsource-variable/nunito-sans/files/nunito-sans-cyrillic-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+nunito-sans@5.3.0/node_modules/@fontsource-variable/nunito-sans/files/nunito-sans-latin-ext-wght-normal.woff2": {
+    "file": "assets/nunito-sans-latin-ext-wght-normal-DMEAsnHD.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+nunito-sans@5.3.0/node_modules/@fontsource-variable/nunito-sans/files/nunito-sans-latin-ext-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+nunito-sans@5.3.0/node_modules/@fontsource-variable/nunito-sans/files/nunito-sans-latin-wght-normal.woff2": {
+    "file": "assets/nunito-sans-latin-wght-normal-BWQ3gi2K.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+nunito-sans@5.3.0/node_modules/@fontsource-variable/nunito-sans/files/nunito-sans-latin-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@fontsource-variable+nunito-sans@5.3.0/node_modules/@fontsource-variable/nunito-sans/files/nunito-sans-vietnamese-wght-normal.woff2": {
+    "file": "assets/nunito-sans-vietnamese-wght-normal-BhFYcaJr.woff2",
+    "src": "node_modules/.pnpm/@fontsource-variable+nunito-sans@5.3.0/node_modules/@fontsource-variable/nunito-sans/files/nunito-sans-vietnamese-wght-normal.woff2"
+  },
+  "node_modules/.pnpm/@tauri-apps+api@2.11.1/node_modules/@tauri-apps/api/core.js": {
+    "file": "assets/core-DhEqZVGG.js",
+    "name": "core",
+    "src": "node_modules/.pnpm/@tauri-apps+api@2.11.1/node_modules/@tauri-apps/api/core.js",
+    "isDynamicEntry": true
+  },
+  "node_modules/.pnpm/@tauri-apps+api@2.11.1/node_modules/@tauri-apps/api/window.js": {
+    "file": "assets/window-DQYDsu7Z.js",
+    "name": "window",
+    "src": "node_modules/.pnpm/@tauri-apps+api@2.11.1/node_modules/@tauri-apps/api/window.js",
+    "isDynamicEntry": true,
+    "imports": [
+      "node_modules/.pnpm/@tauri-apps+api@2.11.1/node_modules/@tauri-apps/api/core.js"
+    ]
+  },
+  "nova_core/pkg/nova_core_bg.wasm": {
+    "file": "assets/nova_core_bg-BPfUDJj2.wasm",
+    "src": "nova_core/pkg/nova_core_bg.wasm"
+  },
+  "player.html": {
+    "file": "assets/player-CxC7B9RY.js",
+    "name": "player",
+    "src": "player.html",
+    "isEntry": true,
+    "imports": [
+      "_preload-helper-mg6Z-sIv.js",
+      "_vue-runtime-D7l--P72.js",
+      "src/PlayerApp.vue",
+      "_crashReporter-BUJSpWFR.js",
+      "_WorldCanvas-mTGJY71k.js",
+      "_nova-runtime-YnQwU2rk.js",
+      "_novaPak-CcOuVwbt.js"
+    ],
+    "css": [
+      "assets/player-DLuZft3L.css"
+    ]
+  },
+  "src/PlayerApp.vue": {
+    "file": "assets/PlayerApp-DqnkzVhJ.js",
+    "name": "PlayerApp",
+    "src": "src/PlayerApp.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_preload-helper-mg6Z-sIv.js",
+      "_vue-runtime-D7l--P72.js",
+      "_WorldCanvas-mTGJY71k.js",
+      "_crashReporter-BUJSpWFR.js",
+      "_novaPak-CcOuVwbt.js",
+      "_nova-runtime-YnQwU2rk.js"
+    ],
+    "dynamicImports": [
+      "node_modules/.pnpm/@tauri-apps+api@2.11.1/node_modules/@tauri-apps/api/core.js",
+      "node_modules/.pnpm/@tauri-apps+api@2.11.1/node_modules/@tauri-apps/api/window.js",
+      "node_modules/.pnpm/@tauri-apps+api@2.11.1/node_modules/@tauri-apps/api/core.js"
+    ],
+    "css": [
+      "assets/PlayerApp-BgaCvp_Y.css"
+    ]
+  },
+  "src/assets/icons/render.svg": {
+    "file": "assets/render-CoZn__R4.svg",
+    "src": "src/assets/icons/render.svg"
+  },
+  "src/assets/template-previews/animation-lab.png": {
+    "file": "assets/animation-lab-bvA5IJB0.png",
+    "src": "src/assets/template-previews/animation-lab.png"
+  },
+  "src/assets/template-previews/audio-lab.png": {
+    "file": "assets/audio-lab-M7eEJ-y3.png",
+    "src": "src/assets/template-previews/audio-lab.png"
+  },
+  "src/assets/template-previews/billiards-break.png": {
+    "file": "assets/billiards-break-DqR6VHe_.png",
+    "src": "src/assets/template-previews/billiards-break.png"
+  },
+  "src/assets/template-previews/breakout.png": {
+    "file": "assets/breakout-CbdWskTY.png",
+    "src": "src/assets/template-previews/breakout.png"
+  },
+  "src/assets/template-previews/checkpoint-sprint.png": {
+    "file": "assets/checkpoint-sprint-BMpqvqz7.png",
+    "src": "src/assets/template-previews/checkpoint-sprint.png"
+  },
+  "src/assets/template-previews/coin-trail.png": {
+    "file": "assets/coin-trail-KqPDXr0N.png",
+    "src": "src/assets/template-previews/coin-trail.png"
+  },
+  "src/assets/template-previews/collision-lab.png": {
+    "file": "assets/collision-lab-vcURhJwp.png",
+    "src": "src/assets/template-previews/collision-lab.png"
+  },
+  "src/assets/template-previews/domino-cascade.png": {
+    "file": "assets/domino-cascade-Dw0n_SAP.png",
+    "src": "src/assets/template-previews/domino-cascade.png"
+  },
+  "src/assets/template-previews/friction-ramp.png": {
+    "file": "assets/friction-ramp-DuEHLSI1.png",
+    "src": "src/assets/template-previews/friction-ramp.png"
+  },
+  "src/assets/template-previews/gravity-fountain.png": {
+    "file": "assets/gravity-fountain-DwT1heCu.png",
+    "src": "src/assets/template-previews/gravity-fountain.png"
+  },
+  "src/assets/template-previews/grid-chase.png": {
+    "file": "assets/grid-chase-BI-RJBN1.png",
+    "src": "src/assets/template-previews/grid-chase.png"
+  },
+  "src/assets/template-previews/hazard-crossing.png": {
+    "file": "assets/hazard-crossing-DbkatN_g.png",
+    "src": "src/assets/template-previews/hazard-crossing.png"
+  },
+  "src/assets/template-previews/lighting-starter.png": {
+    "file": "assets/lighting-starter-UdOn64IP.png",
+    "src": "src/assets/template-previews/lighting-starter.png"
+  },
+  "src/assets/template-previews/mouse-knockout.png": {
+    "file": "assets/mouse-knockout-CJmT9lwN.png",
+    "src": "src/assets/template-previews/mouse-knockout.png"
+  },
+  "src/assets/template-previews/neon-garden.png": {
+    "file": "assets/neon-garden-DK2o0ghr.png",
+    "src": "src/assets/template-previews/neon-garden.png"
+  },
+  "src/assets/template-previews/networked-optional.png": {
+    "file": "assets/networked-optional-Cc7cNg5x.png",
+    "src": "src/assets/template-previews/networked-optional.png"
+  },
+  "src/assets/template-previews/orbit-dodge.png": {
+    "file": "assets/orbit-dodge-BSvgYLGG.png",
+    "src": "src/assets/template-previews/orbit-dodge.png"
+  },
+  "src/assets/template-previews/orbit-gallery.png": {
+    "file": "assets/orbit-gallery-qS8qp42w.png",
+    "src": "src/assets/template-previews/orbit-gallery.png"
+  },
+  "src/assets/template-previews/particle-fireworks.png": {
+    "file": "assets/particle-fireworks-9MchsCEh.png",
+    "src": "src/assets/template-previews/particle-fireworks.png"
+  },
+  "src/assets/template-previews/particle-lab.png": {
+    "file": "assets/particle-lab-C1VWUCjO.png",
+    "src": "src/assets/template-previews/particle-lab.png"
+  },
+  "src/assets/template-previews/pendulum-row.png": {
+    "file": "assets/pendulum-row-i7AWn7GE.png",
+    "src": "src/assets/template-previews/pendulum-row.png"
+  },
+  "src/assets/template-previews/physics-cleanup.png": {
+    "file": "assets/physics-cleanup-DV-O7RZd.png",
+    "src": "src/assets/template-previews/physics-cleanup.png"
+  },
+  "src/assets/template-previews/physics-sandbox.png": {
+    "file": "assets/physics-sandbox-Ccx3UMQ3.png",
+    "src": "src/assets/template-previews/physics-sandbox.png"
+  },
+  "src/assets/template-previews/platformer.png": {
+    "file": "assets/platformer-T7-7Zcdd.png",
+    "src": "src/assets/template-previews/platformer.png"
+  },
+  "src/assets/template-previews/pong.png": {
+    "file": "assets/pong-BnWxj1DT.png",
+    "src": "src/assets/template-previews/pong.png"
+  },
+  "src/assets/template-previews/pyramid-stack.png": {
+    "file": "assets/pyramid-stack-DjfZ03ik.png",
+    "src": "src/assets/template-previews/pyramid-stack.png"
+  },
+  "src/assets/template-previews/rain-room.png": {
+    "file": "assets/rain-room-D3vQEh75.png",
+    "src": "src/assets/template-previews/rain-room.png"
+  },
+  "src/assets/template-previews/rendering-lab.png": {
+    "file": "assets/rendering-lab-CTVN5duk.png",
+    "src": "src/assets/template-previews/rendering-lab.png"
+  },
+  "src/assets/template-previews/responsive-ui.png": {
+    "file": "assets/audio-lab-M7eEJ-y3.png",
+    "src": "src/assets/template-previews/audio-lab.png"
+  },
+  "src/assets/template-previews/restitution-gallery.png": {
+    "file": "assets/restitution-gallery-DART8fgi.png",
+    "src": "src/assets/template-previews/restitution-gallery.png"
+  },
+  "src/assets/template-previews/shape-poster.png": {
+    "file": "assets/shape-poster-DfYxBkcH.png",
+    "src": "src/assets/template-previews/shape-poster.png"
+  },
+  "src/assets/template-previews/slalom-run.png": {
+    "file": "assets/slalom-run-DNsLj4z_.png",
+    "src": "src/assets/template-previews/slalom-run.png"
+  },
+  "src/assets/template-previews/snake.png": {
+    "file": "assets/snake-DveUx4Ew.png",
+    "src": "src/assets/template-previews/snake.png"
+  },
+  "src/assets/template-previews/sprite-wall.png": {
+    "file": "assets/sprite-wall-BKRi3ZQV.png",
+    "src": "src/assets/template-previews/sprite-wall.png"
+  },
+  "src/assets/template-previews/starfield.png": {
+    "file": "assets/starfield-C2l81G4m.png",
+    "src": "src/assets/template-previews/starfield.png"
+  },
+  "src/assets/template-previews/target-circuit.png": {
+    "file": "assets/target-circuit-DqVSeOuQ.png",
+    "src": "src/assets/template-previews/target-circuit.png"
+  },
+  "src/assets/template-previews/tile-world.png": {
+    "file": "assets/tile-world-Bp4C4vhW.png",
+    "src": "src/assets/template-previews/tile-world.png"
+  },
+  "src/assets/template-previews/top-down.png": {
+    "file": "assets/top-down-DPt8WH1u.png",
+    "src": "src/assets/template-previews/top-down.png"
+  },
+  "src/assets/template-previews/ui-showcase.png": {
+    "file": "assets/audio-lab-M7eEJ-y3.png",
+    "src": "src/assets/template-previews/audio-lab.png"
+  },
+  "src/components/AnimationPanel.vue": {
+    "file": "assets/AnimationPanel-CCNITvDj.js",
+    "name": "AnimationPanel",
+    "src": "src/components/AnimationPanel.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_vue-runtime-D7l--P72.js",
+      "_main-Cu47QhQv.js",
+      "_EditorLayout-8PxW-MQf.js",
+      "_crashReporter-BUJSpWFR.js",
+      "_panelControlCopy-CjgL0VIa.js",
+      "_WorldCanvas-mTGJY71k.js",
+      "_cinematicProduction-3GiL0UQr.js",
+      "_preload-helper-mg6Z-sIv.js",
+      "src/runtime/projectExternalChanges.ts",
+      "_nova-runtime-YnQwU2rk.js",
+      "node_modules/.pnpm/@tauri-apps+api@2.11.1/node_modules/@tauri-apps/api/core.js"
+    ],
+    "css": [
+      "assets/AnimationPanel-_DsA0rnU.css"
+    ]
+  },
+  "src/components/AudioSystemPanel.vue": {
+    "file": "assets/AudioSystemPanel-J7zqrLFE.js",
+    "name": "AudioSystemPanel",
+    "src": "src/components/AudioSystemPanel.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "src/components/PresentationPanel.vue",
+      "_vue-runtime-D7l--P72.js",
+      "_crashReporter-BUJSpWFR.js",
+      "_main-Cu47QhQv.js",
+      "_preload-helper-mg6Z-sIv.js",
+      "src/runtime/projectExternalChanges.ts",
+      "_nova-runtime-YnQwU2rk.js",
+      "node_modules/.pnpm/@tauri-apps+api@2.11.1/node_modules/@tauri-apps/api/core.js",
+      "_panelControlCopy-CjgL0VIa.js",
+      "_EditorLayout-8PxW-MQf.js",
+      "_WorldCanvas-mTGJY71k.js",
+      "_uiProduction-Bp0hTHJT.js"
+    ],
+    "css": [
+      "assets/AudioSystemPanel-mKBqBx6Y.css"
+    ]
+  },
+  "src/components/AutomationStudio.vue": {
+    "file": "assets/AutomationStudio-1Gr9NOIU.js",
+    "name": "AutomationStudio",
+    "src": "src/components/AutomationStudio.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_vue-runtime-D7l--P72.js",
+      "_main-Cu47QhQv.js",
+      "_crashReporter-BUJSpWFR.js",
+      "_nova-runtime-YnQwU2rk.js",
+      "_preload-helper-mg6Z-sIv.js",
+      "src/runtime/projectExternalChanges.ts",
+      "node_modules/.pnpm/@tauri-apps+api@2.11.1/node_modules/@tauri-apps/api/core.js"
+    ],
+    "css": [
+      "assets/AutomationStudio-xrMUSR3i.css"
+    ]
+  },
+  "src/components/BuildSettingsPanel.vue": {
+    "file": "assets/BuildSettingsPanel-CKpz8of2.js",
+    "name": "BuildSettingsPanel",
+    "src": "src/components/BuildSettingsPanel.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_vue-runtime-D7l--P72.js",
+      "_crashReporter-BUJSpWFR.js",
+      "_gameExporter-tWkJpmm7.js",
+      "src/runtime/shipping.ts",
+      "_main-Cu47QhQv.js",
+      "_productionValidation-Bqs0uv3k.js",
+      "_releaseEngineering-C6aaSeod.js",
+      "_preload-helper-mg6Z-sIv.js",
+      "_nova-runtime-YnQwU2rk.js",
+      "_novaPak-CcOuVwbt.js",
+      "src/runtime/projectExternalChanges.ts",
+      "node_modules/.pnpm/@tauri-apps+api@2.11.1/node_modules/@tauri-apps/api/core.js",
+      "_WorldCanvas-mTGJY71k.js",
+      "_resources-Bng3wMHF.js",
+      "_mediaProduction26-D77RdmKm.js",
+      "_cinematicProduction-3GiL0UQr.js"
+    ],
+    "css": [
+      "assets/BuildSettingsPanel-DyrgGmZy.css"
+    ]
+  },
+  "src/components/ConfigPanel.vue": {
+    "file": "assets/ConfigPanel-D5WEV8UO.js",
+    "name": "ConfigPanel",
+    "src": "src/components/ConfigPanel.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_vue-runtime-D7l--P72.js",
+      "_main-Cu47QhQv.js",
+      "_crashReporter-BUJSpWFR.js",
+      "_StudioDraftConflict-DcfEZoNU.js",
+      "_WorldCanvas-mTGJY71k.js",
+      "_objectAuthorNavigation-B2d4RheS.js",
+      "_EditorLayout-8PxW-MQf.js",
+      "_SimulationStatusPanel17-yYxiZNwW.js",
+      "_preload-helper-mg6Z-sIv.js",
+      "src/runtime/projectExternalChanges.ts",
+      "_nova-runtime-YnQwU2rk.js",
+      "node_modules/.pnpm/@tauri-apps+api@2.11.1/node_modules/@tauri-apps/api/core.js"
+    ],
+    "css": [
+      "assets/ConfigPanel-DxWZ2Y1b.css"
+    ]
+  },
+  "src/components/ConsolePanel.vue": {
+    "file": "assets/ConsolePanel-CDlDpHWI.js",
+    "name": "ConsolePanel",
+    "src": "src/components/ConsolePanel.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_vue-runtime-D7l--P72.js",
+      "_main-Cu47QhQv.js",
+      "_crashReporter-BUJSpWFR.js",
+      "_preload-helper-mg6Z-sIv.js",
+      "src/runtime/projectExternalChanges.ts",
+      "_nova-runtime-YnQwU2rk.js",
+      "node_modules/.pnpm/@tauri-apps+api@2.11.1/node_modules/@tauri-apps/api/core.js"
+    ],
+    "css": [
+      "assets/ConsolePanel-CGn1xHfV.css"
+    ]
+  },
+  "src/components/CreatorLearningCenter.vue": {
+    "file": "assets/CreatorLearningCenter-Du5Gh_0_.js",
+    "name": "CreatorLearningCenter",
+    "src": "src/components/CreatorLearningCenter.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_vue-runtime-D7l--P72.js",
+      "_crashReporter-BUJSpWFR.js",
+      "_main-Cu47QhQv.js",
+      "_EditorLayout-8PxW-MQf.js",
+      "_preload-helper-mg6Z-sIv.js",
+      "_nova-runtime-YnQwU2rk.js",
+      "src/runtime/projectExternalChanges.ts",
+      "node_modules/.pnpm/@tauri-apps+api@2.11.1/node_modules/@tauri-apps/api/core.js",
+      "_WorldCanvas-mTGJY71k.js"
+    ],
+    "css": [
+      "assets/CreatorLearningCenter-Doe8j7D6.css"
+    ]
+  },
+  "src/components/EcosystemStudioPanel.vue": {
+    "file": "assets/EcosystemStudioPanel-CF6nFxew.js",
+    "name": "EcosystemStudioPanel",
+    "src": "src/components/EcosystemStudioPanel.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_vue-runtime-D7l--P72.js",
+      "_main-Cu47QhQv.js",
+      "_crashReporter-BUJSpWFR.js",
+      "_releaseEngineering-C6aaSeod.js",
+      "_preload-helper-mg6Z-sIv.js",
+      "src/runtime/projectExternalChanges.ts",
+      "_nova-runtime-YnQwU2rk.js",
+      "node_modules/.pnpm/@tauri-apps+api@2.11.1/node_modules/@tauri-apps/api/core.js"
+    ],
+    "css": [
+      "assets/EcosystemStudioPanel-B2IfTcFX.css"
+    ]
+  },
+  "src/components/ErrorRecovery.vue": {
+    "file": "assets/ErrorRecovery-B7qTPBfQ.js",
+    "name": "ErrorRecovery",
+    "src": "src/components/ErrorRecovery.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_main-Cu47QhQv.js",
+      "_crashReporter-BUJSpWFR.js",
+      "_vue-runtime-D7l--P72.js",
+      "_preload-helper-mg6Z-sIv.js",
+      "src/runtime/projectExternalChanges.ts",
+      "_nova-runtime-YnQwU2rk.js",
+      "node_modules/.pnpm/@tauri-apps+api@2.11.1/node_modules/@tauri-apps/api/core.js"
+    ],
+    "css": [
+      "assets/ErrorRecovery-CIjaWDSA.css"
+    ]
+  },
+  "src/components/ExternalChangeDialog.vue": {
+    "file": "assets/ExternalChangeDialog-C99bTMo8.js",
+    "name": "ExternalChangeDialog",
+    "src": "src/components/ExternalChangeDialog.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_main-Cu47QhQv.js",
+      "_crashReporter-BUJSpWFR.js",
+      "src/runtime/projectExternalChanges.ts",
+      "_vue-runtime-D7l--P72.js",
+      "_preload-helper-mg6Z-sIv.js",
+      "node_modules/.pnpm/@tauri-apps+api@2.11.1/node_modules/@tauri-apps/api/core.js",
+      "_nova-runtime-YnQwU2rk.js"
+    ],
+    "css": [
+      "assets/ExternalChangeDialog-BJy-wSKA.css"
+    ]
+  },
+  "src/components/ManageWorkspace.vue": {
+    "file": "assets/ManageWorkspace-Bc4g-QB7.js",
+    "name": "ManageWorkspace",
+    "src": "src/components/ManageWorkspace.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_preload-helper-mg6Z-sIv.js",
+      "_main-Cu47QhQv.js",
+      "_crashReporter-BUJSpWFR.js",
+      "_vue-runtime-D7l--P72.js",
+      "src/runtime/projectExternalChanges.ts",
+      "_nova-runtime-YnQwU2rk.js",
+      "node_modules/.pnpm/@tauri-apps+api@2.11.1/node_modules/@tauri-apps/api/core.js"
+    ],
+    "dynamicImports": [
+      "src/panels/SettingsPanel.vue",
+      "src/components/PackageManagerPanel.vue",
+      "src/components/ProjectHealthPanel.vue",
+      "src/components/RenderingPanel.vue",
+      "src/components/BuildSettingsPanel.vue",
+      "src/components/CreatorLearningCenter.vue",
+      "src/components/AutomationStudio.vue"
+    ],
+    "css": [
+      "assets/ManageWorkspace-mQ6u5qJ_.css"
+    ]
+  },
+  "src/components/ManualViewer.vue": {
+    "file": "assets/ManualViewer-CyTTaRsb.js",
+    "name": "ManualViewer",
+    "src": "src/components/ManualViewer.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_vue-runtime-D7l--P72.js",
+      "_main-Cu47QhQv.js",
+      "_crashReporter-BUJSpWFR.js",
+      "_preload-helper-mg6Z-sIv.js",
+      "src/runtime/projectExternalChanges.ts",
+      "_nova-runtime-YnQwU2rk.js",
+      "node_modules/.pnpm/@tauri-apps+api@2.11.1/node_modules/@tauri-apps/api/core.js"
+    ],
+    "css": [
+      "assets/ManualViewer-DsmFhVVv.css"
+    ]
+  },
+  "src/components/NetworkStudioPanel.vue": {
+    "file": "assets/NetworkStudioPanel-CgAsp_Ke.js",
+    "name": "NetworkStudioPanel",
+    "src": "src/components/NetworkStudioPanel.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_preload-helper-mg6Z-sIv.js",
+      "_vue-runtime-D7l--P72.js",
+      "_crashReporter-BUJSpWFR.js",
+      "_networkReplay-DNqFUPZN.js",
+      "_WorldCanvas-mTGJY71k.js",
+      "_gameExporter-tWkJpmm7.js",
+      "_main-Cu47QhQv.js",
+      "_nova-runtime-YnQwU2rk.js",
+      "_novaPak-CcOuVwbt.js",
+      "_releaseEngineering-C6aaSeod.js",
+      "_productionValidation-Bqs0uv3k.js",
+      "_resources-Bng3wMHF.js",
+      "_mediaProduction26-D77RdmKm.js",
+      "_cinematicProduction-3GiL0UQr.js",
+      "src/runtime/projectExternalChanges.ts",
+      "node_modules/.pnpm/@tauri-apps+api@2.11.1/node_modules/@tauri-apps/api/core.js"
+    ],
+    "dynamicImports": [
+      "node_modules/.pnpm/@tauri-apps+api@2.11.1/node_modules/@tauri-apps/api/core.js",
+      "node_modules/.pnpm/@tauri-apps+api@2.11.1/node_modules/@tauri-apps/api/core.js",
+      "node_modules/.pnpm/@tauri-apps+api@2.11.1/node_modules/@tauri-apps/api/core.js",
+      "node_modules/.pnpm/@tauri-apps+api@2.11.1/node_modules/@tauri-apps/api/core.js"
+    ],
+    "css": [
+      "assets/NetworkStudioPanel-C7KUegYH.css"
+    ]
+  },
+  "src/components/PackageManagerPanel.vue": {
+    "file": "assets/PackageManagerPanel-BZDU13Jy.js",
+    "name": "PackageManagerPanel",
+    "src": "src/components/PackageManagerPanel.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_preload-helper-mg6Z-sIv.js",
+      "_vue-runtime-D7l--P72.js",
+      "_crashReporter-BUJSpWFR.js",
+      "_main-Cu47QhQv.js",
+      "_nova-runtime-YnQwU2rk.js",
+      "src/runtime/projectExternalChanges.ts",
+      "node_modules/.pnpm/@tauri-apps+api@2.11.1/node_modules/@tauri-apps/api/core.js"
+    ],
+    "dynamicImports": [
+      "_main-Cu47QhQv.js"
+    ],
+    "css": [
+      "assets/PackageManagerPanel-id29TU1m.css"
+    ]
+  },
+  "src/components/PhysicsRuntimePanel.vue": {
+    "file": "assets/PhysicsRuntimePanel-DSop2K7T.js",
+    "name": "PhysicsRuntimePanel",
+    "src": "src/components/PhysicsRuntimePanel.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_vue-runtime-D7l--P72.js",
+      "_main-Cu47QhQv.js",
+      "_crashReporter-BUJSpWFR.js",
+      "_preload-helper-mg6Z-sIv.js",
+      "src/runtime/projectExternalChanges.ts",
+      "_nova-runtime-YnQwU2rk.js",
+      "node_modules/.pnpm/@tauri-apps+api@2.11.1/node_modules/@tauri-apps/api/core.js"
+    ],
+    "css": [
+      "assets/PhysicsRuntimePanel-al1SAUSG.css"
+    ]
+  },
+  "src/components/PresentationPanel.vue": {
+    "file": "assets/PresentationPanel-dGAUBC9V.js",
+    "name": "PresentationPanel",
+    "src": "src/components/PresentationPanel.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_vue-runtime-D7l--P72.js",
+      "_main-Cu47QhQv.js",
+      "_crashReporter-BUJSpWFR.js",
+      "_panelControlCopy-CjgL0VIa.js",
+      "_EditorLayout-8PxW-MQf.js",
+      "_WorldCanvas-mTGJY71k.js",
+      "_uiProduction-Bp0hTHJT.js",
+      "_preload-helper-mg6Z-sIv.js",
+      "src/runtime/projectExternalChanges.ts",
+      "_nova-runtime-YnQwU2rk.js",
+      "node_modules/.pnpm/@tauri-apps+api@2.11.1/node_modules/@tauri-apps/api/core.js"
+    ],
+    "dynamicImports": [
+      "node_modules/.pnpm/@tauri-apps+api@2.11.1/node_modules/@tauri-apps/api/core.js"
+    ],
+    "css": [
+      "assets/PresentationPanel-CzcBLkAt.css"
+    ]
+  },
+  "src/components/ProfilerPanel.vue": {
+    "file": "assets/ProfilerPanel-jkmw7UID.js",
+    "name": "ProfilerPanel",
+    "src": "src/components/ProfilerPanel.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_vue-runtime-D7l--P72.js",
+      "_main-Cu47QhQv.js",
+      "_crashReporter-BUJSpWFR.js",
+      "_WorldCanvas-mTGJY71k.js",
+      "_preload-helper-mg6Z-sIv.js",
+      "src/runtime/projectExternalChanges.ts",
+      "_nova-runtime-YnQwU2rk.js",
+      "node_modules/.pnpm/@tauri-apps+api@2.11.1/node_modules/@tauri-apps/api/core.js"
+    ],
+    "css": [
+      "assets/ProfilerPanel-DcXlxDHc.css"
+    ]
+  },
+  "src/components/ProjectHealthPanel.vue": {
+    "file": "assets/ProjectHealthPanel-2E4bY8o6.js",
+    "name": "ProjectHealthPanel",
+    "src": "src/components/ProjectHealthPanel.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_preload-helper-mg6Z-sIv.js",
+      "_vue-runtime-D7l--P72.js",
+      "_projectInspectionSnapshot-M7nYXaSx.js",
+      "_main-Cu47QhQv.js",
+      "_crashReporter-BUJSpWFR.js",
+      "_EditorLayout-8PxW-MQf.js",
+      "_WorldCanvas-mTGJY71k.js",
+      "_scriptIndexPersistence-DRn-6HuB.js",
+      "_cinematicProduction-3GiL0UQr.js",
+      "_uiProduction-Bp0hTHJT.js",
+      "_productionValidation-Bqs0uv3k.js",
+      "_releaseEngineering-C6aaSeod.js",
+      "src/runtime/projectExternalChanges.ts",
+      "_nova-runtime-YnQwU2rk.js",
+      "node_modules/.pnpm/@tauri-apps+api@2.11.1/node_modules/@tauri-apps/api/core.js",
+      "_resources-Bng3wMHF.js",
+      "_mediaProduction26-D77RdmKm.js"
+    ],
+    "dynamicImports": [
+      "_main-Cu47QhQv.js"
+    ],
+    "css": [
+      "assets/ProjectHealthPanel-BzSIzEek.css"
+    ]
+  },
+  "src/components/RecoveryCenter.vue": {
+    "file": "assets/RecoveryCenter-FGif2j4W.js",
+    "name": "RecoveryCenter",
+    "src": "src/components/RecoveryCenter.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_vue-runtime-D7l--P72.js",
+      "_main-Cu47QhQv.js",
+      "_crashReporter-BUJSpWFR.js",
+      "_preload-helper-mg6Z-sIv.js",
+      "src/runtime/projectExternalChanges.ts",
+      "_nova-runtime-YnQwU2rk.js",
+      "node_modules/.pnpm/@tauri-apps+api@2.11.1/node_modules/@tauri-apps/api/core.js"
+    ],
+    "css": [
+      "assets/RecoveryCenter-6W5quDMS.css"
+    ]
+  },
+  "src/components/RenderingPanel.vue": {
+    "file": "assets/RenderingPanel-B67IO3AU.js",
+    "name": "RenderingPanel",
+    "src": "src/components/RenderingPanel.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_vue-runtime-D7l--P72.js",
+      "_crashReporter-BUJSpWFR.js",
+      "_main-Cu47QhQv.js",
+      "_WorldCanvas-mTGJY71k.js",
+      "_mediaProduction26-D77RdmKm.js",
+      "_panelControlCopy-CjgL0VIa.js",
+      "_preload-helper-mg6Z-sIv.js",
+      "_nova-runtime-YnQwU2rk.js",
+      "src/runtime/projectExternalChanges.ts",
+      "node_modules/.pnpm/@tauri-apps+api@2.11.1/node_modules/@tauri-apps/api/core.js",
+      "_cinematicProduction-3GiL0UQr.js"
+    ],
+    "css": [
+      "assets/RenderingPanel-BEI92Liy.css"
+    ]
+  },
+  "src/components/ScriptWorkspace.vue": {
+    "file": "assets/ScriptWorkspace-CryL8L05.js",
+    "name": "ScriptWorkspace",
+    "src": "src/components/ScriptWorkspace.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_main-Cu47QhQv.js",
+      "_vue-runtime-D7l--P72.js",
+      "_crashReporter-BUJSpWFR.js",
+      "_WorldCanvas-mTGJY71k.js",
+      "_StudioDraftConflict-DcfEZoNU.js",
+      "_scriptTemplates-CP9ZmjGE.js",
+      "_EditorLayout-8PxW-MQf.js",
+      "_scriptIndexPersistence-DRn-6HuB.js",
+      "_objectAuthorNavigation-B2d4RheS.js",
+      "_panelControlCopy-CjgL0VIa.js",
+      "_preload-helper-mg6Z-sIv.js",
+      "src/runtime/projectExternalChanges.ts",
+      "_nova-runtime-YnQwU2rk.js",
+      "node_modules/.pnpm/@tauri-apps+api@2.11.1/node_modules/@tauri-apps/api/core.js"
+    ],
+    "css": [
+      "assets/ScriptWorkspace-CwqT8rwH.css"
+    ]
+  },
+  "src/components/ShortcutEditor.vue": {
+    "file": "assets/ShortcutEditor-CE3xu4N1.js",
+    "name": "ShortcutEditor",
+    "src": "src/components/ShortcutEditor.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_vue-runtime-D7l--P72.js",
+      "_main-Cu47QhQv.js",
+      "_crashReporter-BUJSpWFR.js",
+      "_preload-helper-mg6Z-sIv.js",
+      "src/runtime/projectExternalChanges.ts",
+      "_nova-runtime-YnQwU2rk.js",
+      "node_modules/.pnpm/@tauri-apps+api@2.11.1/node_modules/@tauri-apps/api/core.js"
+    ],
+    "css": [
+      "assets/ShortcutEditor-tfITLJQE.css"
+    ]
+  },
+  "src/components/StudioStatusDialog.vue": {
+    "file": "assets/StudioStatusDialog-DaT6pkd6.js",
+    "name": "StudioStatusDialog",
+    "src": "src/components/StudioStatusDialog.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_vue-runtime-D7l--P72.js",
+      "_main-Cu47QhQv.js",
+      "_crashReporter-BUJSpWFR.js",
+      "src/runtime/projectExternalChanges.ts",
+      "_releaseEngineering-C6aaSeod.js",
+      "_preload-helper-mg6Z-sIv.js",
+      "node_modules/.pnpm/@tauri-apps+api@2.11.1/node_modules/@tauri-apps/api/core.js",
+      "_nova-runtime-YnQwU2rk.js"
+    ],
+    "css": [
+      "assets/StudioStatusDialog-Sa2XLGVs.css"
+    ]
+  },
+  "src/components/TilemapPanel.vue": {
+    "file": "assets/TilemapPanel-zIAfOuvx.js",
+    "name": "TilemapPanel",
+    "src": "src/components/TilemapPanel.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_vue-runtime-D7l--P72.js",
+      "_crashReporter-BUJSpWFR.js",
+      "_main-Cu47QhQv.js",
+      "_EditorBottomPanel-BQwzxcvF.js",
+      "_preload-helper-mg6Z-sIv.js",
+      "_nova-runtime-YnQwU2rk.js",
+      "src/runtime/projectExternalChanges.ts",
+      "node_modules/.pnpm/@tauri-apps+api@2.11.1/node_modules/@tauri-apps/api/core.js",
+      "_EditorLayout-8PxW-MQf.js",
+      "_WorldCanvas-mTGJY71k.js",
+      "_projectInspectionSnapshot-M7nYXaSx.js",
+      "_scriptTemplates-CP9ZmjGE.js",
+      "_StudioDraftConflict-DcfEZoNU.js",
+      "_resources-Bng3wMHF.js"
+    ],
+    "css": [
+      "assets/TilemapPanel-DyF-9ws0.css"
+    ]
+  },
+  "src/components/UndoHistoryPanel.vue": {
+    "file": "assets/UndoHistoryPanel-RYrfy9wS.js",
+    "name": "UndoHistoryPanel",
+    "src": "src/components/UndoHistoryPanel.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_main-Cu47QhQv.js",
+      "_crashReporter-BUJSpWFR.js",
+      "_vue-runtime-D7l--P72.js",
+      "_preload-helper-mg6Z-sIv.js",
+      "src/runtime/projectExternalChanges.ts",
+      "_nova-runtime-YnQwU2rk.js",
+      "node_modules/.pnpm/@tauri-apps+api@2.11.1/node_modules/@tauri-apps/api/core.js"
+    ],
+    "css": [
+      "assets/UndoHistoryPanel-BjiXKPzb.css"
+    ]
+  },
+  "src/components/WorkspaceManager.vue": {
+    "file": "assets/WorkspaceManager-C9sSGjFf.js",
+    "name": "WorkspaceManager",
+    "src": "src/components/WorkspaceManager.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_vue-runtime-D7l--P72.js",
+      "_main-Cu47QhQv.js",
+      "_crashReporter-BUJSpWFR.js",
+      "_preload-helper-mg6Z-sIv.js",
+      "src/runtime/projectExternalChanges.ts",
+      "_nova-runtime-YnQwU2rk.js",
+      "node_modules/.pnpm/@tauri-apps+api@2.11.1/node_modules/@tauri-apps/api/core.js"
+    ],
+    "css": [
+      "assets/WorkspaceManager-D9y5ZyVM.css"
+    ]
+  },
+  "src/components/WorldToolsPanel.vue": {
+    "file": "assets/WorldToolsPanel-DFhSMM1b.js",
+    "name": "WorldToolsPanel",
+    "src": "src/components/WorldToolsPanel.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_vue-runtime-D7l--P72.js",
+      "_SimulationStatusPanel17-yYxiZNwW.js",
+      "_crashReporter-BUJSpWFR.js",
+      "_WorldCanvas-mTGJY71k.js",
+      "_preload-helper-mg6Z-sIv.js",
+      "_nova-runtime-YnQwU2rk.js"
+    ],
+    "css": [
+      "assets/WorldToolsPanel-BXnDY5k7.css"
+    ]
+  },
+  "src/panels/SettingsPanel.vue": {
+    "file": "assets/SettingsPanel-DSSsWOR1.js",
+    "name": "SettingsPanel",
+    "src": "src/panels/SettingsPanel.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_vue-runtime-D7l--P72.js",
+      "_main-Cu47QhQv.js",
+      "_crashReporter-BUJSpWFR.js",
+      "_WorldCanvas-mTGJY71k.js",
+      "_SimulationStatusPanel17-yYxiZNwW.js",
+      "_uiProduction-Bp0hTHJT.js",
+      "_EditorLayout-8PxW-MQf.js",
+      "_preload-helper-mg6Z-sIv.js",
+      "src/runtime/projectExternalChanges.ts",
+      "_nova-runtime-YnQwU2rk.js",
+      "node_modules/.pnpm/@tauri-apps+api@2.11.1/node_modules/@tauri-apps/api/core.js"
+    ],
+    "css": [
+      "assets/SettingsPanel-DXd0J3rl.css"
+    ]
+  },
+  "src/runtime/networking.ts": {
+    "file": "assets/networking-BPAPufh4.js",
+    "name": "networking",
+    "src": "src/runtime/networking.ts",
+    "isDynamicEntry": true,
+    "imports": [
+      "_preload-helper-mg6Z-sIv.js",
+      "_crashReporter-BUJSpWFR.js",
+      "_WorldCanvas-mTGJY71k.js",
+      "_networkReplay-DNqFUPZN.js",
+      "_vue-runtime-D7l--P72.js",
+      "_nova-runtime-YnQwU2rk.js"
+    ],
+    "dynamicImports": [
+      "node_modules/.pnpm/@tauri-apps+api@2.11.1/node_modules/@tauri-apps/api/core.js",
+      "node_modules/.pnpm/@tauri-apps+api@2.11.1/node_modules/@tauri-apps/api/core.js",
+      "node_modules/.pnpm/@tauri-apps+api@2.11.1/node_modules/@tauri-apps/api/core.js",
+      "node_modules/.pnpm/@tauri-apps+api@2.11.1/node_modules/@tauri-apps/api/core.js"
+    ]
+  },
+  "src/runtime/projectExternalChanges.ts": {
+    "file": "assets/projectExternalChanges-CgD4p9BH.js",
+    "name": "projectExternalChanges",
+    "src": "src/runtime/projectExternalChanges.ts",
+    "isDynamicEntry": true,
+    "imports": [
+      "_crashReporter-BUJSpWFR.js",
+      "_vue-runtime-D7l--P72.js",
+      "_preload-helper-mg6Z-sIv.js",
+      "_nova-runtime-YnQwU2rk.js"
+    ]
+  },
+  "src/runtime/shipping.ts": {
+    "file": "assets/shipping-CGmh0qh7.js",
+    "name": "shipping",
+    "src": "src/runtime/shipping.ts",
+    "isDynamicEntry": true,
+    "imports": [
+      "_crashReporter-BUJSpWFR.js",
+      "_vue-runtime-D7l--P72.js",
+      "_preload-helper-mg6Z-sIv.js",
+      "_nova-runtime-YnQwU2rk.js"
+    ]
+  }
+}

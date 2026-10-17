@@ -1,0 +1,59 @@
+{
+  "format": "nova-v26.22-history-core",
+  "version": 1,
+  "release": "26.22",
+  "regressionOrigin": "26.22",
+  "engineVersion": "26.32.0",
+  "expectedRelease": "26.32",
+  "development": true,
+  "qualifiedRelease": null,
+  "generatedAt": "2026-09-28T18:09:52.308Z",
+  "status": "passed",
+  "scope": "Executed actual source modules; targeted programmer regressions, not full UI/platform qualification.",
+  "checks": [
+    {
+      "name": "Merge requires matching resource, scope, chronological time and continuous state",
+      "status": "passed"
+    },
+    {
+      "name": "Failed redo preserves cursor and can be retried",
+      "status": "passed"
+    },
+    {
+      "name": "Open nested groups cannot move parent history; cancellation preserves parent group",
+      "status": "passed"
+    },
+    {
+      "name": "A new committed edit invalidates redo",
+      "status": "passed"
+    },
+    {
+      "name": "Failed grouped undo compensates completed steps and preserves the cursor",
+      "status": "passed"
+    },
+    {
+      "name": "Failed group cancellation retains the group for recovery",
+      "status": "passed"
+    },
+    {
+      "name": "Document commands retain their original baseline across a merge and expose bounded metadata",
+      "status": "passed"
+    },
+    {
+      "name": "Composite commands execute forward, undo backward and report combined ownership",
+      "status": "passed"
+    },
+    {
+      "name": "Bounded history metadata tracks undo, redo and clear without leaking mutable entries",
+      "status": "passed"
+    },
+    {
+      "name": "Memory budget evicts oldest commands while retaining one oversized recoverable edit",
+      "status": "passed"
+    },
+    {
+      "name": "Merged edits enforce the history memory budget as their document grows",
+      "status": "passed"
+    }
+  ]
+}

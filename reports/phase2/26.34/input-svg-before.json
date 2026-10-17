@@ -1,0 +1,43 @@
+{
+  "format": "nova-input-ownership",
+  "version": 1,
+  "engineVersion": "26.34.0",
+  "generatedAt": "2026-10-01T17:53:32.115Z",
+  "status": "failed",
+  "checks": [
+    {
+      "name": "Already handled wheel cannot activate a gameplay action",
+      "status": "passed"
+    },
+    {
+      "name": "Native text and numeric controls retain wheel ownership",
+      "status": "passed"
+    },
+    {
+      "name": "Editor panel scrolling and unrelated canvas input do not reach gameplay",
+      "status": "passed"
+    },
+    {
+      "name": "SVG editor icon targets cannot bypass DOM surface ownership",
+      "status": "failed",
+      "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n1 !== 0\n\n    at file:///E:/Nova_A/scripts/verify-v26.34-input-ownership.mjs:41:82\n    at check (file:///E:/Nova_A/scripts/verify-v26.34-input-ownership.mjs:25:15)\n    at file:///E:/Nova_A/scripts/verify-v26.34-input-ownership.mjs:40:9"
+    },
+    {
+      "name": "Bare game canvas wheel samples once, resets transient delta, and preserves signed actions",
+      "status": "passed"
+    },
+    {
+      "name": "Multiple game surfaces and non-DOM runtime hosts retain wheel support",
+      "status": "passed"
+    },
+    {
+      "name": "Keyboard action handling remains independent from wheel routing",
+      "status": "passed"
+    }
+  ],
+  "sourceHashes": {
+    "src/runtime/input.ts": "826526175d68fdb3cb5d96d4b70dacdb976c2a2f9d22050a71365816c57da4c4",
+    "src/components/WorldCanvas.vue": "a9f3ed1bc8f77fe1711e2d01d6244182d889f43a5c614cbcd503eeba9065f0e4"
+  },
+  "scope": "Actual InputManager and named-action modules with controlled DOM target identities. WorldCanvas integration requires a separate real browser check; no physical-device claim."
+}

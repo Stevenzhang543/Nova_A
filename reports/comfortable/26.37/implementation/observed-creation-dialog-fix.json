@@ -1,0 +1,123 @@
+{
+  "generatedAt": "2026-10-04T11:05:59.107Z",
+  "path": "src/components/ProjectManager.vue",
+  "edits": [
+    {
+      "path": "src/components/ProjectManager.vue",
+      "selector": ".creation-card",
+      "property": "gap",
+      "before": [
+        "var(--ui-space-sm)"
+      ],
+      "after": "var(--ui-field-gap)",
+      "reason": "Actual creation dialog showed square template selection and only8px field separation; use rounded native actions and consistent comfortable vertical/horizontal rhythm."
+    },
+    {
+      "path": "src/components/ProjectManager.vue",
+      "selector": ".creation-card>header",
+      "property": "gap",
+      "before": [
+        "var(--ui-space-sm)"
+      ],
+      "after": "var(--ui-field-gap)",
+      "reason": "Actual creation dialog showed square template selection and only8px field separation; use rounded native actions and consistent comfortable vertical/horizontal rhythm."
+    },
+    {
+      "path": "src/components/ProjectManager.vue",
+      "selector": ".creation-card>header label,.project-location",
+      "property": "column-gap",
+      "before": [],
+      "after": "var(--space-4)",
+      "reason": "Actual creation dialog showed square template selection and only8px field separation; use rounded native actions and consistent comfortable vertical/horizontal rhythm."
+    },
+    {
+      "path": "src/components/ProjectManager.vue",
+      "selector": ".creation-card>header label,.project-location",
+      "property": "row-gap",
+      "before": [],
+      "after": "var(--ui-label-control-gap)",
+      "reason": "Actual creation dialog showed square template selection and only8px field separation; use rounded native actions and consistent comfortable vertical/horizontal rhythm."
+    },
+    {
+      "path": "src/components/ProjectManager.vue",
+      "selector": ".creation-card>header label,.project-location",
+      "property": "column-gap",
+      "before": [],
+      "after": "var(--space-4)",
+      "reason": "Actual creation dialog showed square template selection and only8px field separation; use rounded native actions and consistent comfortable vertical/horizontal rhythm."
+    },
+    {
+      "path": "src/components/ProjectManager.vue",
+      "selector": ".creation-card>header label,.project-location",
+      "property": "row-gap",
+      "before": [],
+      "after": "var(--ui-label-control-gap)",
+      "reason": "Actual creation dialog showed square template selection and only8px field separation; use rounded native actions and consistent comfortable vertical/horizontal rhythm."
+    },
+    {
+      "path": "src/components/ProjectManager.vue",
+      "selector": ".template-library-tools",
+      "property": "gap",
+      "before": [
+        "var(--ui-space-sm)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "reason": "Actual creation dialog showed square template selection and only8px field separation; use rounded native actions and consistent comfortable vertical/horizontal rhythm."
+    },
+    {
+      "path": "src/components/ProjectManager.vue",
+      "selector": ".template-library-tools>label",
+      "property": "gap",
+      "before": [
+        "var(--ui-control-gap)"
+      ],
+      "after": "var(--space-4)",
+      "reason": "Actual creation dialog showed square template selection and only8px field separation; use rounded native actions and consistent comfortable vertical/horizontal rhythm."
+    },
+    {
+      "path": "src/components/ProjectManager.vue",
+      "selector": ".template-grid",
+      "property": "gap",
+      "before": [
+        "0"
+      ],
+      "after": "var(--space-2)",
+      "reason": "Actual creation dialog showed square template selection and only8px field separation; use rounded native actions and consistent comfortable vertical/horizontal rhythm."
+    },
+    {
+      "path": "src/components/ProjectManager.vue",
+      "selector": ".template-grid>button",
+      "property": "border-radius",
+      "before": [
+        "0"
+      ],
+      "after": "var(--radius-control)",
+      "reason": "Actual creation dialog showed square template selection and only8px field separation; use rounded native actions and consistent comfortable vertical/horizontal rhythm."
+    },
+    {
+      "path": "src/components/ProjectManager.vue",
+      "selector": ".template-grid>button",
+      "property": "padding",
+      "before": [
+        "var(--ui-space-sm)"
+      ],
+      "after": "var(--space-3) var(--space-4)",
+      "reason": "Actual creation dialog showed square template selection and only8px field separation; use rounded native actions and consistent comfortable vertical/horizontal rhythm."
+    },
+    {
+      "path": "src/components/ProjectManager.vue",
+      "selector": ".template-grid>button",
+      "property": "gap",
+      "before": [
+        "var(--ui-space-xs) var(--ui-space-sm)"
+      ],
+      "after": "var(--ui-control-gap)",
+      "reason": "Actual creation dialog showed square template selection and only8px field separation; use rounded native actions and consistent comfortable vertical/horizontal rhythm."
+    }
+  ],
+  "beforeSha256": "59d58a2656b5e8679a642d15f907bd29ddd658589be524aa5926b7df0ab4d615",
+  "afterSha256": "c155c24233f92a4e3ac6d2ab45195438b77a9c05060ac2144069a5861b46846c",
+  "script": "byte-identical",
+  "css": "compiled",
+  "visual": "rerun pending"
+}

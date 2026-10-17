@@ -1,0 +1,191 @@
+{
+  "phase": "representative-layout",
+  "generatedAt": "2026-10-03T17:32:24.854Z",
+  "edits": [
+    {
+      "path": "src/store/editor.ts",
+      "why": "Comfortable default hierarchy280"
+    },
+    {
+      "path": "src/store/editor.ts",
+      "why": "Comfortable default Inspector380"
+    },
+    {
+      "path": "src/store/editor.ts",
+      "why": "Comfortable default Dock280"
+    },
+    {
+      "path": "src/editor/workspaces.ts",
+      "why": "Comfortable default hierarchy280"
+    },
+    {
+      "path": "src/editor/workspaces.ts",
+      "why": "Comfortable default Inspector380"
+    },
+    {
+      "path": "src/editor/workspaces.ts",
+      "why": "Comfortable default Dock280"
+    },
+    {
+      "path": "src/components/SceneSidebar.vue",
+      "why": "Virtual tree height matches effective density and scale exactly"
+    },
+    {
+      "path": "src/components/SceneSidebar.vue",
+      "why": "Explain effective virtual row geometry"
+    },
+    {
+      "path": "src/components/SceneSidebar.vue",
+      "why": "Restore button44 logical hit area"
+    },
+    {
+      "path": "src/components/SceneSidebar.vue",
+      "why": "Sidebar reset280"
+    },
+    {
+      "path": "src/components/SceneSidebar.vue",
+      "why": "Explicit collapse remains reachable with larger controls"
+    },
+    {
+      "path": "src/components/SceneSidebar.vue",
+      "why": "Readable user resize minimum260"
+    },
+    {
+      "path": "src/components/SceneSidebar.vue",
+      "why": "Recover new width default"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "why": "Inspector user resize minimum320"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "why": "Inspector has room for larger fields"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "why": "Inspector reset380"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "why": "Remove local viewport cap competing with layout owner"
+    },
+    {
+      "path": "src/layout/EditorLayout.vue",
+      "selector": ".editor-main",
+      "why": "Visible shared gutter"
+    },
+    {
+      "path": "src/layout/EditorLayout.vue",
+      "selector": ".workspace-control-row",
+      "why": "Menu600 remains above workspace controls"
+    },
+    {
+      "path": "src/layout/EditorLayout.vue",
+      "selector": ".editor-workspace",
+      "why": "Central flex surface can shrink and separate from Dock"
+    },
+    {
+      "path": "src/layout/EditorLayout.vue",
+      "selector": ".editor-content",
+      "why": "Central rounded contour"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".config-wrapper",
+      "why": "Single width owner without38vw cap"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".config-panel",
+      "why": "One unclipped normal scroll chain"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".settings-content",
+      "why": "One content inset and field rhythm"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".inspector-sticky",
+      "why": "Opaque header in normal scroll; no fixed-height compression"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".inspector-search-row",
+      "why": "Readable search/actions with explicit wrapping"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".add-component-trigger",
+      "why": "Actual Add Component44"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".inspector-view-controls",
+      "why": "View controls do not overlap"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".batch-toggle",
+      "why": "Batch controls44"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ":deep(.component-tools)",
+      "why": "Component actions fit enlarged hit regions"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".pair",
+      "why": "Paired fields remain related with sufficient gap"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "selector": ".stacked-field",
+      "why": "Real stacked label separation"
+    },
+    {
+      "path": "src/components/SceneSidebar.vue",
+      "selector": ".sidebar-container",
+      "why": "Rounded hierarchy outer contour"
+    },
+    {
+      "path": "src/components/SceneSidebar.vue",
+      "selector": ".scene-sidebar",
+      "why": "Child surfaces respect contour"
+    },
+    {
+      "path": "src/components/SceneSidebar.vue",
+      "selector": ".hierarchy-header",
+      "why": "Hierarchy header has four-direction inset"
+    }
+  ],
+  "files": [
+    {
+      "path": "src/store/editor.ts",
+      "beforeSha256": "bc73d9528a1f588d64d2f13eac62fa5691d25652268f77f3d3d9589f22365b6b",
+      "afterSha256": "fb970e5b60a66adf724eb2a806de74453b8cd17ad5978949799309b52950aa63"
+    },
+    {
+      "path": "src/editor/workspaces.ts",
+      "beforeSha256": "20b5ed1138181765429dc2573b298fbdc0b9b9f7130c0839ea8f49d5eaa4e1dd",
+      "afterSha256": "8012642cd0c4151f1a99689f378ec4aaae1aee51242818189386fb2270e583c1"
+    },
+    {
+      "path": "src/components/SceneSidebar.vue",
+      "beforeSha256": "19a0761d2061271ed7cc312ed19e6a82c55213b4ddb1e7b738ea913d140f89b3",
+      "afterSha256": "1ace737f70e0a722ca1fc0fe228ae2aacbc3b009aa68ce8f0bb7d5b5ffe1f7fa"
+    },
+    {
+      "path": "src/components/ConfigPanel.vue",
+      "beforeSha256": "b2eb6b1fd7ba7e48037213321528a1322c48a1558656df2d63db862dc8cb7414",
+      "afterSha256": "594fb9d9c5a292dfa03abb5b6f350f62a5b3708da8f7f1b87277ba7807a2aa8d"
+    },
+    {
+      "path": "src/layout/EditorLayout.vue",
+      "beforeSha256": "7ec85f695bcbc4be709a1dded1a8c55cf9b525a3d7be172506a4e94fdd6bd112",
+      "afterSha256": "59b30159408e58a168ac114544a88073eb706912593219b1a202c3220277d56f"
+    }
+  ]
+}

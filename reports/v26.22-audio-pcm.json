@@ -1,0 +1,74 @@
+{
+  "status": "passed",
+  "checks": [
+    {
+      "name": "Decoded samples seek, trim, and play at doubled rate",
+      "status": "passed"
+    },
+    {
+      "name": "Reverse decoded samples preserve signed time and stop at the trim start",
+      "status": "passed"
+    },
+    {
+      "name": "Buffer loop points repeat the selected sample interval",
+      "status": "passed"
+    },
+    {
+      "name": "Buffered high-rate playback remains audible rather than silently clamping",
+      "status": "passed"
+    },
+    {
+      "name": "Disposal cancels scheduled PCM and releases source listeners/buffer ownership",
+      "status": "passed"
+    },
+    {
+      "name": "Seek during suspended rendering moves to the requested sample before resuming",
+      "status": "passed"
+    },
+    {
+      "name": "Concurrent decoded acquisitions share one buffer and bounded ownership is released",
+      "status": "passed"
+    },
+    {
+      "name": "Real low-pass/high-pass/compressor processors change rendered PCM as configured",
+      "status": "passed"
+    },
+    {
+      "name": "Delay produces an echo at its configured sample offset",
+      "status": "passed"
+    },
+    {
+      "name": "Reverb produces deterministic PCM across graph rebuilds",
+      "status": "passed"
+    },
+    {
+      "name": "UI voices pass through actual bus and master gains and dispose cleanly",
+      "status": "passed"
+    }
+  ],
+  "scope": "Actual Edge OfflineAudioContext decode and PCM rendering of authored runtime modules. No physical output-device, latency or interactive editor claim.",
+  "browser": {
+    "protocolVersion": "1.3",
+    "product": "Edg/147.0.3912.72",
+    "revision": "@d4380ba2b9dc3452fbccdc737e69d7f67a09122c",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/147.0.0.0 Safari/537.36 Edg/147.0.0.0",
+    "jsVersion": "14.7.25.7"
+  },
+  "generatedAt": "2026-09-13T00:53:30.015Z",
+  "format": "nova-v26.22-audio-pcm-audit",
+  "version": 1,
+  "release": "26.22",
+  "regressionOrigin": "26.16",
+  "engineVersion": "26.21.0",
+  "buildEngineVersion": "26.21.0",
+  "development": true,
+  "expectedRelease": "26.21",
+  "qualificationTarget": "26.22",
+  "qualifiedRelease": null,
+  "baselineVersion": "26.21.0",
+  "overlayVersion": "26.22.0",
+  "sourceRoots": [
+    "."
+  ],
+  "buildRoot": "."
+}

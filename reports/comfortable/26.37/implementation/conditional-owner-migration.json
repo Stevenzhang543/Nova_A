@@ -1,0 +1,124 @@
+{
+  "status": "applied",
+  "generatedAt": "2026-10-03T18:32:19.592Z",
+  "changes": [
+    {
+      "path": "src/components/ConfirmDialog.vue",
+      "tag": "UiDialog",
+      "class": "confirm-dialog",
+      "condition": "state.visible",
+      "owner": "blocking-modal-parent"
+    },
+    {
+      "path": "src/components/CreateObjectPalette.vue",
+      "tag": "UiDialog",
+      "class": "authoring-dialog",
+      "condition": "estate.createObjectPaletteOpen",
+      "owner": "blocking-modal-parent"
+    },
+    {
+      "path": "src/components/EditorBottomPanel.vue",
+      "tag": "section",
+      "class": "filter-popover",
+      "condition": "filterMenuOpen",
+      "owner": "finite-surface-parent"
+    },
+    {
+      "path": "src/components/ErrorRecovery.vue",
+      "tag": "UiDialog",
+      "class": "",
+      "condition": "fault",
+      "owner": "blocking-modal-parent"
+    },
+    {
+      "path": "src/components/ExternalChangeDialog.vue",
+      "tag": "UiDialog",
+      "class": "",
+      "condition": "state.visible",
+      "owner": "blocking-modal-parent"
+    },
+    {
+      "path": "src/components/ProjectManager.vue",
+      "tag": "UiDialog",
+      "class": "creation-dialog",
+      "condition": "creationOpen",
+      "owner": "blocking-modal-parent"
+    },
+    {
+      "path": "src/components/ProjectManager.vue",
+      "tag": "UiDialog",
+      "class": "",
+      "condition": "state.pendingUpgrade",
+      "owner": "blocking-modal-parent"
+    },
+    {
+      "path": "src/components/ProjectManager.vue",
+      "tag": "UiDialog",
+      "class": "",
+      "condition": "state.readOnlyDocument",
+      "owner": "blocking-modal-parent"
+    },
+    {
+      "path": "src/components/ProjectManager.vue",
+      "owner": "startup-entry"
+    },
+    {
+      "path": "src/components/RecoveryCenter.vue",
+      "tag": "UiDialog",
+      "class": "",
+      "condition": "recovery.visible",
+      "owner": "blocking-modal-parent"
+    },
+    {
+      "path": "src/components/RuntimeComponentsInspector.vue",
+      "tag": "section",
+      "class": "ui-palette",
+      "condition": "componentVisible('Canvas', t('createGameUi'))",
+      "owner": "finite-surface-parent"
+    },
+    {
+      "path": "src/components/ScriptStudio.vue",
+      "tag": "div",
+      "class": "completion-popover",
+      "condition": "completionOpen",
+      "owner": "finite-surface-parent"
+    },
+    {
+      "path": "src/components/ShortcutEditor.vue",
+      "tag": "UiDialog",
+      "class": "",
+      "condition": "state.shortcutEditorOpen",
+      "owner": "blocking-modal-parent"
+    },
+    {
+      "path": "src/components/StudioStatusDialog.vue",
+      "tag": "UiDialog",
+      "class": "",
+      "condition": "state.visible",
+      "owner": "blocking-modal-parent"
+    },
+    {
+      "path": "src/components/WorkspaceManager.vue",
+      "tag": "UiDialog",
+      "class": "",
+      "condition": "state.workspaceManagerOpen",
+      "owner": "blocking-modal-parent"
+    }
+  ],
+  "files": [
+    "src/components/ConfirmDialog.vue",
+    "src/components/CreateObjectPalette.vue",
+    "src/components/EditorBottomPanel.vue",
+    "src/components/ErrorRecovery.vue",
+    "src/components/ExternalChangeDialog.vue",
+    "src/components/ProjectManager.vue",
+    "src/components/RecoveryCenter.vue",
+    "src/components/RuntimeComponentsInspector.vue",
+    "src/components/ScriptStudio.vue",
+    "src/components/ShortcutEditor.vue",
+    "src/components/StudioStatusDialog.vue",
+    "src/components/WorkspaceManager.vue",
+    "src/ui/components/UiMenu.vue"
+  ],
+  "boundary": "Existing transition owners retained; properties/data guards preserved; component-owned ConfigPanel migration coordinated separately"
+}

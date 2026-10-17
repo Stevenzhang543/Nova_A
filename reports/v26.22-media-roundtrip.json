@@ -1,0 +1,3261 @@
+{
+  "format": "nova-v26.22-media-roundtrip-audit",
+  "version": 1,
+  "release": "26.22",
+  "regressionOrigin": "26.16",
+  "engineVersion": "26.21.0",
+  "buildEngineVersion": "26.21.0",
+  "generatedAt": "2026-09-14T16:51:53.503Z",
+  "development": true,
+  "expectedRelease": "26.21",
+  "qualificationTarget": "26.22",
+  "qualifiedRelease": null,
+  "baselineVersion": "26.21.0",
+  "overlayVersion": "26.22.0",
+  "sourceRoots": [
+    "."
+  ],
+  "buildRoot": ".",
+  "status": "passed",
+  "checks": [
+    {
+      "name": "Every declared serializable media interface field has an explicit fixture and every public enum value is covered",
+      "status": "passed"
+    },
+    {
+      "name": "animation: every raw field survives actual lossless authoring validation and draft encode/decode",
+      "status": "passed"
+    },
+    {
+      "name": "controller: every raw field survives actual lossless authoring validation and draft encode/decode",
+      "status": "passed"
+    },
+    {
+      "name": "animationMask: every raw field survives actual lossless authoring validation and draft encode/decode",
+      "status": "passed"
+    },
+    {
+      "name": "rig: every raw field survives actual lossless authoring validation and draft encode/decode",
+      "status": "passed"
+    },
+    {
+      "name": "skin: every raw field survives actual lossless authoring validation and draft encode/decode",
+      "status": "passed"
+    },
+    {
+      "name": "timeline: every raw field survives actual lossless authoring validation and draft encode/decode",
+      "status": "passed"
+    },
+    {
+      "name": "Actual project serializer, WASM migration and component hydration retain all media asset fields and component authoring values",
+      "status": "passed"
+    },
+    {
+      "name": "Actual deterministic NovaPak asset closure, unpacking, WASM migration and production reopening retain every field",
+      "status": "passed"
+    },
+    {
+      "name": "Unsupported bone masks, serialized skin bind poses and submachine documents are refused without mutating drafts",
+      "status": "passed"
+    },
+    {
+      "name": "Timeline clip zero/negative rates are refused atomically; signed/zero player transport speed survives hydration",
+      "status": "passed"
+    },
+    {
+      "name": "Runtime-only pose samples, clocks, callback queues and caches do not appear in serialized media documents",
+      "status": "passed"
+    }
+  ],
+  "observations": [
+    {
+      "interface": "AnimationClipDocument",
+      "fields": [
+        "commandTracks",
+        "events",
+        "frameRate",
+        "loop",
+        "markers",
+        "name",
+        "onionSkin",
+        "playbackSpeed",
+        "spriteFrames",
+        "tracks",
+        "version"
+      ],
+      "examples": 1
+    },
+    {
+      "interface": "AnimationKeyframe",
+      "fields": [
+        "easing",
+        "inTangent",
+        "interpolation",
+        "outTangent",
+        "tangentMode",
+        "time",
+        "value"
+      ],
+      "examples": 28
+    },
+    {
+      "interface": "AnimationTrack",
+      "fields": [
+        "keyframes",
+        "property",
+        "targetEntityUuid"
+      ],
+      "examples": 7
+    },
+    {
+      "interface": "SpriteAnimationFrame",
+      "fields": [
+        "duration",
+        "spriteAsset"
+      ],
+      "examples": 2
+    },
+    {
+      "interface": "AnimationEvent",
+      "fields": [
+        "payload",
+        "signal",
+        "time"
+      ],
+      "examples": 1
+    },
+    {
+      "interface": "AnimationMarker",
+      "fields": [
+        "name",
+        "time"
+      ],
+      "examples": 1
+    },
+    {
+      "interface": "AnimationCommandTrack",
+      "fields": [
+        "commands",
+        "kind",
+        "targetEntityUuid"
+      ],
+      "examples": 6
+    },
+    {
+      "interface": "AnimationCommand",
+      "fields": [
+        "payload",
+        "time",
+        "value"
+      ],
+      "examples": 6
+    },
+    {
+      "interface": "AnimatorControllerDocument",
+      "fields": [
+        "defaultState",
+        "layers",
+        "name",
+        "parameters",
+        "states",
+        "transitions",
+        "version"
+      ],
+      "examples": 1
+    },
+    {
+      "interface": "AnimatorParameter",
+      "fields": [
+        "defaultValue",
+        "name",
+        "type"
+      ],
+      "examples": 4
+    },
+    {
+      "interface": "AnimatorState",
+      "fields": [
+        "blendTree",
+        "clipAsset",
+        "cycleOffset",
+        "id",
+        "mirrorX",
+        "mirrorY",
+        "name",
+        "rootMotion",
+        "speed",
+        "speedParameter",
+        "subgraph",
+        "x",
+        "y"
+      ],
+      "examples": 3
+    },
+    {
+      "interface": "BlendTree",
+      "fields": [
+        "children",
+        "parameter",
+        "parameterY",
+        "synchronizeNormalizedTime",
+        "type"
+      ],
+      "examples": 2
+    },
+    {
+      "interface": "BlendTreeChild",
+      "fields": [
+        "clipAsset",
+        "positionX",
+        "positionY",
+        "speed",
+        "threshold"
+      ],
+      "examples": 4
+    },
+    {
+      "interface": "AnimatorTransition",
+      "fields": [
+        "conditions",
+        "destinationOffset",
+        "duration",
+        "exitTime",
+        "from",
+        "hasExitTime",
+        "id",
+        "interruption",
+        "syncMarker",
+        "syncMode",
+        "to"
+      ],
+      "examples": 4
+    },
+    {
+      "interface": "TransitionCondition",
+      "fields": [
+        "operator",
+        "parameter",
+        "value"
+      ],
+      "examples": 28
+    },
+    {
+      "interface": "AnimatorLayer",
+      "fields": [
+        "additive",
+        "defaultState",
+        "id",
+        "maskAsset",
+        "name",
+        "synchronizedLayer",
+        "synchronizedTiming",
+        "weight"
+      ],
+      "examples": 2
+    },
+    {
+      "interface": "AnimationMaskDocument",
+      "fields": [
+        "name",
+        "properties",
+        "version"
+      ],
+      "examples": 1
+    },
+    {
+      "interface": "RigDocument",
+      "fields": [
+        "attachments",
+        "bones",
+        "constraints",
+        "ikChains",
+        "name",
+        "retargetAliases",
+        "version"
+      ],
+      "examples": 1
+    },
+    {
+      "interface": "RigBone2D",
+      "fields": [
+        "id",
+        "length",
+        "name",
+        "parentId",
+        "position",
+        "rotation",
+        "scale"
+      ],
+      "examples": 3
+    },
+    {
+      "interface": "RigIkChain2D",
+      "fields": [
+        "chainLength",
+        "endBoneId",
+        "id",
+        "iterations",
+        "name",
+        "target",
+        "weight"
+      ],
+      "examples": 1
+    },
+    {
+      "interface": "RigConstraint2D",
+      "fields": [
+        "boneId",
+        "id",
+        "maximum",
+        "minimum",
+        "targetBoneId",
+        "type",
+        "weight"
+      ],
+      "examples": 3
+    },
+    {
+      "interface": "RigAttachment2D",
+      "fields": [
+        "allowedAssetTypes",
+        "boneId",
+        "id",
+        "name",
+        "position",
+        "rotation"
+      ],
+      "examples": 1
+    },
+    {
+      "interface": "SkinDocument",
+      "fields": [
+        "name",
+        "rigAsset",
+        "triangles",
+        "version",
+        "vertices"
+      ],
+      "examples": 1
+    },
+    {
+      "interface": "SkinVertex2D",
+      "fields": [
+        "position",
+        "uv",
+        "weights"
+      ],
+      "examples": 4
+    },
+    {
+      "interface": "SkinWeight2D",
+      "fields": [
+        "boneId",
+        "weight"
+      ],
+      "examples": 8
+    },
+    {
+      "interface": "TimelineDocument",
+      "fields": [
+        "duration",
+        "frameRate",
+        "markers",
+        "name",
+        "resumeMarker",
+        "skipMarker",
+        "tracks",
+        "version"
+      ],
+      "examples": 1
+    },
+    {
+      "interface": "TimelineMarker",
+      "fields": [
+        "color",
+        "id",
+        "name",
+        "time"
+      ],
+      "examples": 2
+    },
+    {
+      "interface": "TimelineTrack",
+      "fields": [
+        "clips",
+        "id",
+        "muted",
+        "name",
+        "type"
+      ],
+      "examples": 9
+    },
+    {
+      "interface": "TimelineClip",
+      "fields": [
+        "asset",
+        "blendIn",
+        "blendOut",
+        "duration",
+        "id",
+        "locale",
+        "offset",
+        "payload",
+        "playbackRate",
+        "safeArea",
+        "skippable",
+        "start",
+        "targetEntityUuid",
+        "value"
+      ],
+      "examples": 27
+    },
+    {
+      "wasm": {
+        "path": "E:\\Nova_A\\nova_core\\pkg\\nova_core_bg.wasm",
+        "bytes": 3013655,
+        "sha256": "92f2d51910bd3b89537a6a59d299fe6f5ded0d52587e8adaf59195231b016055"
+      },
+      "scope": "Actual Rust/WASM project format boundary preserves embedded media bytes; TypeScript normalizers validate document semantics."
+    },
+    {
+      "componentAuthoring": [
+        {
+          "data": {
+            "autoplay": false,
+            "controllerAsset": "asset://00000002-0000-4000-8000-000000000000",
+            "enabled": true,
+            "layerWeights": {
+              "base": 1,
+              "upper": 0.5
+            },
+            "parameters": {
+              "count": 3,
+              "enabled": true,
+              "fire": false,
+              "speed": 1.25
+            },
+            "speed": -0.5
+          },
+          "enabled": true,
+          "kind": "Animator",
+          "removed": false,
+          "uuid": "b1db4388-d3f2-4f3d-a481-12f7b5f82146"
+        },
+        {
+          "data": {
+            "enabled": true,
+            "pose": [
+              {
+                "boneId": "root",
+                "position": {
+                  "x": 1,
+                  "y": -2
+                },
+                "rotation": 0.75,
+                "scale": {
+                  "x": -1,
+                  "y": 2
+                }
+              }
+            ],
+            "previewEnabled": false,
+            "rigAsset": "asset://00000004-0000-4000-8000-000000000000",
+            "skinAsset": "asset://00000005-0000-4000-8000-000000000000"
+          },
+          "enabled": true,
+          "kind": "Skeleton2D",
+          "removed": false,
+          "uuid": "7913a8de-f28f-4c38-bd18-cbbe45cbc9b3"
+        },
+        {
+          "data": {
+            "autoplay": false,
+            "currentTime": 2.5,
+            "enabled": true,
+            "loop": true,
+            "playing": false,
+            "skipped": true,
+            "speed": -1,
+            "timelineAsset": "asset://00000006-0000-4000-8000-000000000000",
+            "variables": {
+              "count": 3,
+              "ready": true,
+              "route": "left"
+            }
+          },
+          "enabled": true,
+          "kind": "TimelinePlayer",
+          "removed": false,
+          "uuid": "c80423fe-8343-4da4-9177-891fba144bf8"
+        }
+      ]
+    },
+    {
+      "phase": "WASM-project-hydration",
+      "serializedBytes": 129752,
+      "assets": 6
+    },
+    {
+      "phase": "NovaPak-WASM-reopen",
+      "bytes": 15927,
+      "entries": 7,
+      "sha256": "e2e646b8dca9a8501a341bcc8fe4f8ba0b9301f386de0add942098e6fa4bc6af"
+    },
+    {
+      "omissions": [
+        "AnimationMask has properties only; no bone masks.",
+        "Skin bind transforms are derived from RigDocument, not a serialized bindPoses field.",
+        "Controller subgraph is a state label plus layers; no nested submachine document.",
+        "RootMotionPreview, SkinnedMesh2D and evaluator clocks/maps/callback queues are runtime outputs, not media assets.",
+        "Timeline clip playbackRate is positive .001..100; TimelinePlayer.speed supports signed/zero transport.",
+        "All9 timeline kinds are covered, including Branch."
+      ],
+      "qualification": "Field retention and normalizer validation do not prove every playback combination or browser authoring interaction."
+    }
+  ],
+  "scope": "Independent complete-field media corpus: actual source declarations, production authoring normalizers, project serializer/hydrator, actual Rust/WASM migration and NovaPak. No user-click, hardware audio or exhaustive playback claim.",
+  "nodeOperationCoverage": [
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/animation.ts#normalizeAnimationClip",
+      "source": "src/runtime/animation.ts",
+      "line": 112,
+      "kind": "exported function",
+      "sourceSha256": "6fd047cc049ce805b16805649be79e4546820aa98630e11ef0d97303b0c0e365",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/animation.mjs",
+      "generatedSha256": "31e5ccd47de54057c63d37740e8e98d152546fc2768d7e6c7427aa85bf3c358b",
+      "mapSha256": "728bc13b33bf12715abe8880c4a97e02c8a4aebc04d19be8d0fb7195dab7d690",
+      "entryCount": 3
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/animation.ts#normalizeAnimatorController",
+      "source": "src/runtime/animation.ts",
+      "line": 151,
+      "kind": "exported function",
+      "sourceSha256": "6fd047cc049ce805b16805649be79e4546820aa98630e11ef0d97303b0c0e365",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/animation.mjs",
+      "generatedSha256": "31e5ccd47de54057c63d37740e8e98d152546fc2768d7e6c7427aa85bf3c358b",
+      "mapSha256": "728bc13b33bf12715abe8880c4a97e02c8a4aebc04d19be8d0fb7195dab7d690",
+      "entryCount": 4
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/animation.ts#normalizeAnimationMask",
+      "source": "src/runtime/animation.ts",
+      "line": 230,
+      "kind": "exported function",
+      "sourceSha256": "6fd047cc049ce805b16805649be79e4546820aa98630e11ef0d97303b0c0e365",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/animation.mjs",
+      "generatedSha256": "31e5ccd47de54057c63d37740e8e98d152546fc2768d7e6c7427aa85bf3c358b",
+      "mapSha256": "728bc13b33bf12715abe8880c4a97e02c8a4aebc04d19be8d0fb7195dab7d690",
+      "entryCount": 4
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/renderer/sceneRenderer.ts#setTimelineCameraBlend",
+      "source": "src/renderer/sceneRenderer.ts",
+      "line": 67,
+      "kind": "exported function",
+      "sourceSha256": "740d472aa57d60567a52b96a9c7c747e534b6aa5a629454aa2e850a148ab3d70",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/timeline.mjs",
+      "generatedSha256": "025e05ac4f9f71572480fc6e71a6ee0d02c2d17a70bdc81065bb2e10a945d09b",
+      "mapSha256": "1d86cce5b850e694c5bed1995392ea607021675127bdece3cf92bc64be6b5a19",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/timeline.ts#normalizeTimeline",
+      "source": "src/runtime/timeline.ts",
+      "line": 57,
+      "kind": "exported function",
+      "sourceSha256": "a715605cd162e2364203c3a13a5060d46ac3e234f21723b1787c36ac9b20e7e7",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/timeline.mjs",
+      "generatedSha256": "025e05ac4f9f71572480fc6e71a6ee0d02c2d17a70bdc81065bb2e10a945d09b",
+      "mapSha256": "1d86cce5b850e694c5bed1995392ea607021675127bdece3cf92bc64be6b5a19",
+      "entryCount": 5
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/rigging.ts#defaultSkin",
+      "source": "src/runtime/rigging.ts",
+      "line": 82,
+      "kind": "exported function",
+      "sourceSha256": "db6f2b1d84e92488511ebaf58888c30f0afbae076253af17f5b0f58bb0fe32f6",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/rigging.mjs",
+      "generatedSha256": "612f70d3b8c4fbef9d62ebae1109622de6e58da5a0f02060aed8d185c4e6ecea",
+      "mapSha256": "4f6b3236de7c02ec60591cdf89e074b415fd1182464c247600b33d9ca249e031",
+      "entryCount": 4
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/rigging.ts#normalizeRig",
+      "source": "src/runtime/rigging.ts",
+      "line": 97,
+      "kind": "exported function",
+      "sourceSha256": "db6f2b1d84e92488511ebaf58888c30f0afbae076253af17f5b0f58bb0fe32f6",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/rigging.mjs",
+      "generatedSha256": "612f70d3b8c4fbef9d62ebae1109622de6e58da5a0f02060aed8d185c4e6ecea",
+      "mapSha256": "4f6b3236de7c02ec60591cdf89e074b415fd1182464c247600b33d9ca249e031",
+      "entryCount": 4
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/rigging.ts#normalizeSkin",
+      "source": "src/runtime/rigging.ts",
+      "line": 146,
+      "kind": "exported function",
+      "sourceSha256": "db6f2b1d84e92488511ebaf58888c30f0afbae076253af17f5b0f58bb0fe32f6",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/rigging.mjs",
+      "generatedSha256": "612f70d3b8c4fbef9d62ebae1109622de6e58da5a0f02060aed8d185c4e6ecea",
+      "mapSha256": "4f6b3236de7c02ec60591cdf89e074b415fd1182464c247600b33d9ca249e031",
+      "entryCount": 4
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/rigging.ts#evaluateRigPose",
+      "source": "src/runtime/rigging.ts",
+      "line": 268,
+      "kind": "exported function",
+      "sourceSha256": "db6f2b1d84e92488511ebaf58888c30f0afbae076253af17f5b0f58bb0fe32f6",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/rigging.mjs",
+      "generatedSha256": "612f70d3b8c4fbef9d62ebae1109622de6e58da5a0f02060aed8d185c4e6ecea",
+      "mapSha256": "4f6b3236de7c02ec60591cdf89e074b415fd1182464c247600b33d9ca249e031",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/editor/animationAuthoring.ts#normalizeAnimationDocument",
+      "source": "src/editor/animationAuthoring.ts",
+      "line": 11,
+      "kind": "exported function",
+      "sourceSha256": "20df2de0746d3e9c92bfd689c13e98444a840ef53d307c5e9bd3e470352a0a2a",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/authoring.mjs",
+      "generatedSha256": "dda622dfa31fb3f04576f1fe2d35affedce288547a887963afc3faf24801ffe5",
+      "mapSha256": "1ddb1e137796a1d7fa78edad43d5461c307fb1ac76ed8a24489a84057aa77fb1",
+      "entryCount": 23
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/editor/animationAuthoring.ts#inspectAnimationDraft",
+      "source": "src/editor/animationAuthoring.ts",
+      "line": 22,
+      "kind": "exported function",
+      "sourceSha256": "20df2de0746d3e9c92bfd689c13e98444a840ef53d307c5e9bd3e470352a0a2a",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/authoring.mjs",
+      "generatedSha256": "dda622dfa31fb3f04576f1fe2d35affedce288547a887963afc3faf24801ffe5",
+      "mapSha256": "1ddb1e137796a1d7fa78edad43d5461c307fb1ac76ed8a24489a84057aa77fb1",
+      "entryCount": 17
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/editor/animationAuthoring.ts#encodeAnimationDraft",
+      "source": "src/editor/animationAuthoring.ts",
+      "line": 59,
+      "kind": "exported function",
+      "sourceSha256": "20df2de0746d3e9c92bfd689c13e98444a840ef53d307c5e9bd3e470352a0a2a",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/authoring.mjs",
+      "generatedSha256": "dda622dfa31fb3f04576f1fe2d35affedce288547a887963afc3faf24801ffe5",
+      "mapSha256": "1ddb1e137796a1d7fa78edad43d5461c307fb1ac76ed8a24489a84057aa77fb1",
+      "entryCount": 6
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/editor/animationAuthoring.ts#decodeAnimationDraft",
+      "source": "src/editor/animationAuthoring.ts",
+      "line": 62,
+      "kind": "exported function",
+      "sourceSha256": "20df2de0746d3e9c92bfd689c13e98444a840ef53d307c5e9bd3e470352a0a2a",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/authoring.mjs",
+      "generatedSha256": "dda622dfa31fb3f04576f1fe2d35affedce288547a887963afc3faf24801ffe5",
+      "mapSha256": "1ddb1e137796a1d7fa78edad43d5461c307fb1ac76ed8a24489a84057aa77fb1",
+      "entryCount": 6
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/TextureAtlas.ts#buildTextureAtlases",
+      "source": "src/assets/TextureAtlas.ts",
+      "line": 41,
+      "kind": "exported function",
+      "sourceSha256": "f8222943fe4e572e6d9f7b449ea2c380dd8790f6615d16321029b8430b915838",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 7
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/importRetention.ts#BoundedImportCache.constructor",
+      "source": "src/assets/importRetention.ts",
+      "line": 7,
+      "kind": "public class operation",
+      "sourceSha256": "8a8c7175d66b68206dcda36cace1fde0d518a4feeebbee05d51039d52d19d0fe",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 5
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/importRetention.ts#BoundedImportCache.clear",
+      "source": "src/assets/importRetention.ts",
+      "line": 24,
+      "kind": "public class operation",
+      "sourceSha256": "8a8c7175d66b68206dcda36cace1fde0d518a4feeebbee05d51039d52d19d0fe",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 28
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/importRetention.ts#registerImportSessionCleanup",
+      "source": "src/assets/importRetention.ts",
+      "line": 29,
+      "kind": "exported function",
+      "sourceSha256": "8a8c7175d66b68206dcda36cace1fde0d518a4feeebbee05d51039d52d19d0fe",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/importRetention.ts#resetImportSessionCaches",
+      "source": "src/assets/importRetention.ts",
+      "line": 30,
+      "kind": "exported function",
+      "sourceSha256": "8a8c7175d66b68206dcda36cace1fde0d518a4feeebbee05d51039d52d19d0fe",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 7
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphTypes.ts#defaultGraphValue",
+      "source": "src/visual/graphTypes.ts",
+      "line": 130,
+      "kind": "exported function",
+      "sourceSha256": "f1301f1589f75fec7793cb026cf256eb2af3f020e75b2c670890622290e8cf25",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 294
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/packages.ts#onPackageLifecycle",
+      "source": "src/runtime/packages.ts",
+      "line": 109,
+      "kind": "exported function",
+      "sourceSha256": "6774580dde64cd01a9a826d3a11083261aed603c77524544a4008dad9458838a",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/packages.ts#diagnosePackageResolution",
+      "source": "src/runtime/packages.ts",
+      "line": 482,
+      "kind": "exported function",
+      "sourceSha256": "6774580dde64cd01a9a826d3a11083261aed603c77524544a4008dad9458838a",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 5
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/packages.ts#resolvePackageLockfile",
+      "source": "src/runtime/packages.ts",
+      "line": 511,
+      "kind": "exported function",
+      "sourceSha256": "6774580dde64cd01a9a826d3a11083261aed603c77524544a4008dad9458838a",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 5
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/packages.ts#serializePackageState",
+      "source": "src/runtime/packages.ts",
+      "line": 634,
+      "kind": "exported function",
+      "sourceSha256": "6774580dde64cd01a9a826d3a11083261aed603c77524544a4008dad9458838a",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 11
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/packages.ts#loadPackageState",
+      "source": "src/runtime/packages.ts",
+      "line": 644,
+      "kind": "exported function",
+      "sourceSha256": "6774580dde64cd01a9a826d3a11083261aed603c77524544a4008dad9458838a",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 5
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/projects/projectSession.ts#newProjectMetadata",
+      "source": "src/projects/projectSession.ts",
+      "line": 30,
+      "kind": "exported function",
+      "sourceSha256": "f14ebed20c3749f69a4349922958adce7f401bcf033c1568738208ab193886d4",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/projects/projectSession.ts#safeProjectName",
+      "source": "src/projects/projectSession.ts",
+      "line": 42,
+      "kind": "exported function",
+      "sourceSha256": "f14ebed20c3749f69a4349922958adce7f401bcf033c1568738208ab193886d4",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 6
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/projects/projectSession.ts#hydrateProjectMetadata",
+      "source": "src/projects/projectSession.ts",
+      "line": 51,
+      "kind": "exported function",
+      "sourceSha256": "f14ebed20c3749f69a4349922958adce7f401bcf033c1568738208ab193886d4",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 5
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/projects/projectSession.ts#serializeProjectMetadata",
+      "source": "src/projects/projectSession.ts",
+      "line": 70,
+      "kind": "exported function",
+      "sourceSha256": "f14ebed20c3749f69a4349922958adce7f401bcf033c1568738208ab193886d4",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 11
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/store/colorPalettes.ts#colorPalette",
+      "source": "src/store/colorPalettes.ts",
+      "line": 10,
+      "kind": "exported function",
+      "sourceSha256": "bec5def7babea554f5e68617f4985fa1a609ce97ab71130c3c6ef5e1ef026596",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 3
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/store/colorPalettes.ts#paletteForMode",
+      "source": "src/store/colorPalettes.ts",
+      "line": 11,
+      "kind": "exported function",
+      "sourceSha256": "bec5def7babea554f5e68617f4985fa1a609ce97ab71130c3c6ef5e1ef026596",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 3
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/store/preferences.ts#applyPreferences",
+      "source": "src/store/preferences.ts",
+      "line": 139,
+      "kind": "exported function",
+      "sourceSha256": "13795bd1ae90c3ceb3349b7ce26ee495781a99d84e30c383f6b21ea86a5e2c0c",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/projects/projectPreflight.ts#validateEntityMetadataValues",
+      "source": "src/projects/projectPreflight.ts",
+      "line": 5,
+      "kind": "exported function",
+      "sourceSha256": "c7b666a5143b9615808c33e9daa776f08caf158df41dbcce4e2682295e69590b",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 18
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/projects/projectPreflight.ts#preflightProjectValues",
+      "source": "src/projects/projectPreflight.ts",
+      "line": 13,
+      "kind": "exported function",
+      "sourceSha256": "c7b666a5143b9615808c33e9daa776f08caf158df41dbcce4e2682295e69590b",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 5
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/projectMutationRouter.ts#cancelPendingProjectMutations",
+      "source": "src/runtime/projectMutationRouter.ts",
+      "line": 62,
+      "kind": "exported function",
+      "sourceSha256": "f3d3772c40a22080ea12bfe05238c63770c854008f65b7b7dae2bce2d45ac859",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 5
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/editor/pendingDrafts.ts#cancelEditorDrafts",
+      "source": "src/editor/pendingDrafts.ts",
+      "line": 25,
+      "kind": "exported function",
+      "sourceSha256": "fe4d3a1d699c74b85a8beab56d48fdd8e63263c939bf15f4a9226d01296dacf3",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 5
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/World.ts#defaultCollisionMatrix",
+      "source": "src/world/World.ts",
+      "line": 35,
+      "kind": "exported function",
+      "sourceSha256": "c725437339ebdfeaff44918dea52767b0c3cf2817578dff72e5e97032886a73b",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 3
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/World.ts#World.constructor",
+      "source": "src/world/World.ts",
+      "line": 379,
+      "kind": "public class operation",
+      "sourceSha256": "c725437339ebdfeaff44918dea52767b0c3cf2817578dff72e5e97032886a73b",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/World.ts#World.setNextId",
+      "source": "src/world/World.ts",
+      "line": 405,
+      "kind": "public class operation",
+      "sourceSha256": "c725437339ebdfeaff44918dea52767b0c3cf2817578dff72e5e97032886a73b",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 5
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/World.ts#World.setNextConnectionId",
+      "source": "src/world/World.ts",
+      "line": 418,
+      "kind": "public class operation",
+      "sourceSha256": "c725437339ebdfeaff44918dea52767b0c3cf2817578dff72e5e97032886a73b",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 5
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/World.ts#World.invalidateRuntime",
+      "source": "src/world/World.ts",
+      "line": 673,
+      "kind": "public class operation",
+      "sourceSha256": "c725437339ebdfeaff44918dea52767b0c3cf2817578dff72e5e97032886a73b",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 5
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/i18n.ts#t",
+      "source": "src/i18n.ts",
+      "line": 1559,
+      "kind": "exported function",
+      "sourceSha256": "edacb5fbc23298f38a3982cef6eba9ead346750a8ddfc6ebb97f305104e03e79",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/editor/sceneAuthoring.ts#defaultSceneAuthoringSettings",
+      "source": "src/editor/sceneAuthoring.ts",
+      "line": 78,
+      "kind": "exported function",
+      "sourceSha256": "cacd5234a09c4bad70d65ec4e0b4b39c2239c0eca53f8141cde27ea5fc602a31",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 7
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/editor/sceneAuthoring.ts#normalizeSceneAuthoringSettings",
+      "source": "src/editor/sceneAuthoring.ts",
+      "line": 96,
+      "kind": "exported function",
+      "sourceSha256": "cacd5234a09c4bad70d65ec4e0b4b39c2239c0eca53f8141cde27ea5fc602a31",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 5
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/SceneManager.ts#SceneManager.constructor",
+      "source": "src/world/SceneManager.ts",
+      "line": 41,
+      "kind": "public class operation",
+      "sourceSha256": "bb21f38e41ca614bff9ce618d0471ec3d0fca919c29aade3140c429e446e53b8",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/SceneManager.ts#SceneManager.activeScene",
+      "source": "src/world/SceneManager.ts",
+      "line": 49,
+      "kind": "getter",
+      "sourceSha256": "bb21f38e41ca614bff9ce618d0471ec3d0fca919c29aade3140c429e446e53b8",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 21
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/SceneManager.ts#SceneManager.captureActive",
+      "source": "src/world/SceneManager.ts",
+      "line": 59,
+      "kind": "public class operation",
+      "sourceSha256": "bb21f38e41ca614bff9ce618d0471ec3d0fca919c29aade3140c429e446e53b8",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 11
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/SceneManager.ts#SceneManager.inspectDependencies",
+      "source": "src/world/SceneManager.ts",
+      "line": 112,
+      "kind": "public class operation",
+      "sourceSha256": "bb21f38e41ca614bff9ce618d0471ec3d0fca919c29aade3140c429e446e53b8",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 11
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/SceneManager.ts#SceneManager.importProject",
+      "source": "src/world/SceneManager.ts",
+      "line": 143,
+      "kind": "public class operation",
+      "sourceSha256": "bb21f38e41ca614bff9ce618d0471ec3d0fca919c29aade3140c429e446e53b8",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 5
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/SceneManager.ts#SceneManager.serialize",
+      "source": "src/world/SceneManager.ts",
+      "line": 172,
+      "kind": "public class operation",
+      "sourceSha256": "bb21f38e41ca614bff9ce618d0471ec3d0fca919c29aade3140c429e446e53b8",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 11
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/editor/commands.ts#CommandHistory.constructor",
+      "source": "src/editor/commands.ts",
+      "line": 130,
+      "kind": "public class operation",
+      "sourceSha256": "025738bd1c0147d706518f0e7c60626e41087fd72cb77d2a35cd1e470545f972",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/editor/commands.ts#CommandHistory.lastClearReason",
+      "source": "src/editor/commands.ts",
+      "line": 142,
+      "kind": "getter",
+      "sourceSha256": "025738bd1c0147d706518f0e7c60626e41087fd72cb77d2a35cd1e470545f972",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/editor/selection.ts#updateSelection",
+      "source": "src/editor/selection.ts",
+      "line": 7,
+      "kind": "exported function",
+      "sourceSha256": "6998a192718f311e3dbff03886c34fda9edddf22b042d78c7d374842dc4d0786",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 5
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/deviceInput.ts#normalizeDeviceInputSettings",
+      "source": "src/runtime/deviceInput.ts",
+      "line": 88,
+      "kind": "exported function",
+      "sourceSha256": "8be5d2185bf0fdfb26a3959e1b33ff218088b1c17060b898d33246d202db1358",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 16
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/deviceInput.ts#loadDeviceInputSettings",
+      "source": "src/runtime/deviceInput.ts",
+      "line": 108,
+      "kind": "exported function",
+      "sourceSha256": "8be5d2185bf0fdfb26a3959e1b33ff218088b1c17060b898d33246d202db1358",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 5
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/deviceInput.ts#serializeDeviceInputSettings",
+      "source": "src/runtime/deviceInput.ts",
+      "line": 109,
+      "kind": "exported function",
+      "sourceSha256": "8be5d2185bf0fdfb26a3959e1b33ff218088b1c17060b898d33246d202db1358",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 11
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/input.ts#createInputBinding",
+      "source": "src/runtime/input.ts",
+      "line": 93,
+      "kind": "exported function",
+      "sourceSha256": "fad85ae749fdc2b0e378beff7d5b43ff7af6150efbfd8124700945281a42d6dc",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 34
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/input.ts#defaultInputMap",
+      "source": "src/runtime/input.ts",
+      "line": 97,
+      "kind": "exported function",
+      "sourceSha256": "fad85ae749fdc2b0e378beff7d5b43ff7af6150efbfd8124700945281a42d6dc",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 2
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/input.ts#createInputAction",
+      "source": "src/runtime/input.ts",
+      "line": 124,
+      "kind": "exported function",
+      "sourceSha256": "fad85ae749fdc2b0e378beff7d5b43ff7af6150efbfd8124700945281a42d6dc",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 10
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/input.ts#normalizePenBindingCode",
+      "source": "src/runtime/input.ts",
+      "line": 136,
+      "kind": "exported function",
+      "sourceSha256": "fad85ae749fdc2b0e378beff7d5b43ff7af6150efbfd8124700945281a42d6dc",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 306
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/input.ts#normalizeInputMap",
+      "source": "src/runtime/input.ts",
+      "line": 169,
+      "kind": "exported function",
+      "sourceSha256": "fad85ae749fdc2b0e378beff7d5b43ff7af6150efbfd8124700945281a42d6dc",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 16
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/mediaClock.ts#mediaSample",
+      "source": "src/runtime/mediaClock.ts",
+      "line": 4,
+      "kind": "exported function",
+      "sourceSha256": "4e2dd8ffa9052e75e54981ac3cd6de1a11bdeebfa17395e53fd51b9f9a6fc028",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/mediaClock.ts#MediaClock.constructor",
+      "source": "src/runtime/mediaClock.ts",
+      "line": 18,
+      "kind": "public class operation",
+      "sourceSha256": "4e2dd8ffa9052e75e54981ac3cd6de1a11bdeebfa17395e53fd51b9f9a6fc028",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/mediaClock.ts#MediaClock.seek",
+      "source": "src/runtime/mediaClock.ts",
+      "line": 21,
+      "kind": "public class operation",
+      "sourceSha256": "4e2dd8ffa9052e75e54981ac3cd6de1a11bdeebfa17395e53fd51b9f9a6fc028",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/audio.ts#defaultAudioSettings",
+      "source": "src/runtime/audio.ts",
+      "line": 120,
+      "kind": "exported function",
+      "sourceSha256": "d7942420a501d92638335fcb7d098e35807a56e3c6319e5a3de8c131a7c4ebeb",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 19
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/audio.ts#normalizeAudioSettings",
+      "source": "src/runtime/audio.ts",
+      "line": 163,
+      "kind": "exported function",
+      "sourceSha256": "d7942420a501d92638335fcb7d098e35807a56e3c6319e5a3de8c131a7c4ebeb",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 16
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/audio.ts#AudioRuntime.reconcileTimelineVoices",
+      "source": "src/runtime/audio.ts",
+      "line": 440,
+      "kind": "public class operation",
+      "sourceSha256": "d7942420a501d92638335fcb7d098e35807a56e3c6319e5a3de8c131a7c4ebeb",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/renderer/outputQuality20.ts#normalizeAntiAliasing",
+      "source": "src/renderer/outputQuality20.ts",
+      "line": 2,
+      "kind": "exported function",
+      "sourceSha256": "d03ccbc43e269bb645131f784c3440d63a8bf4f24c1ace10e812e622c25465fa",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 17
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/renderer/renderSettings.ts#normalizeTextureStreamingSettings",
+      "source": "src/renderer/renderSettings.ts",
+      "line": 80,
+      "kind": "exported function",
+      "sourceSha256": "90ae3c7ce879634f4a166e7155278a13e8d5b44add2437ac30253a1a237f8c6e",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 17
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/renderer/renderSettings.ts#normalizeRenderingSettings",
+      "source": "src/renderer/renderSettings.ts",
+      "line": 106,
+      "kind": "exported function",
+      "sourceSha256": "90ae3c7ce879634f4a166e7155278a13e8d5b44add2437ac30253a1a237f8c6e",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 17
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/renderer/renderSettings.ts#updateActivePostProcess",
+      "source": "src/renderer/renderSettings.ts",
+      "line": 169,
+      "kind": "exported function",
+      "sourceSha256": "90ae3c7ce879634f4a166e7155278a13e8d5b44add2437ac30253a1a237f8c6e",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 5
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/renderer/renderSettings.ts#updateActiveRenderQuality",
+      "source": "src/renderer/renderSettings.ts",
+      "line": 191,
+      "kind": "exported function",
+      "sourceSha256": "90ae3c7ce879634f4a166e7155278a13e8d5b44add2437ac30253a1a237f8c6e",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 5
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/renderer/renderSettings.ts#loadRenderingSettings",
+      "source": "src/renderer/renderSettings.ts",
+      "line": 214,
+      "kind": "exported function",
+      "sourceSha256": "90ae3c7ce879634f4a166e7155278a13e8d5b44add2437ac30253a1a237f8c6e",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 5
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/renderer/renderSettings.ts#serializeRenderingSettings",
+      "source": "src/renderer/renderSettings.ts",
+      "line": 215,
+      "kind": "exported function",
+      "sourceSha256": "90ae3c7ce879634f4a166e7155278a13e8d5b44add2437ac30253a1a237f8c6e",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 11
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/largeWorldPerformance.ts#normalizePerformanceRuntimeSettings",
+      "source": "src/runtime/largeWorldPerformance.ts",
+      "line": 76,
+      "kind": "exported function",
+      "sourceSha256": "3eb1ef04259407a3005e0d847ae82cc74bccb7ae9b6378251a6ecf8cfddf1ebe",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 5
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/largeWorldPerformance.ts#loadPerformanceRuntimeSettings",
+      "source": "src/runtime/largeWorldPerformance.ts",
+      "line": 90,
+      "kind": "exported function",
+      "sourceSha256": "3eb1ef04259407a3005e0d847ae82cc74bccb7ae9b6378251a6ecf8cfddf1ebe",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 5
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/production.ts#normalizeProductionSettings",
+      "source": "src/runtime/production.ts",
+      "line": 273,
+      "kind": "exported function",
+      "sourceSha256": "007d144a49506ed692c6d02db45ffbdda170152db0549278f69709f5b356e8cd",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 16
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/production.ts#loadProductionSettings",
+      "source": "src/runtime/production.ts",
+      "line": 367,
+      "kind": "exported function",
+      "sourceSha256": "007d144a49506ed692c6d02db45ffbdda170152db0549278f69709f5b356e8cd",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 5
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/production.ts#serializeProductionSettings",
+      "source": "src/runtime/production.ts",
+      "line": 379,
+      "kind": "exported function",
+      "sourceSha256": "007d144a49506ed692c6d02db45ffbdda170152db0549278f69709f5b356e8cd",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 11
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/exportTemplates.ts#exportTemplateFor",
+      "source": "src/runtime/exportTemplates.ts",
+      "line": 27,
+      "kind": "exported function",
+      "sourceSha256": "3cc4801a081c5afd8377289708e9358bd3b9c0033f5efaada290f6833491cead",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 16
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/exportTemplates.ts#compatibleExportTemplates",
+      "source": "src/runtime/exportTemplates.ts",
+      "line": 28,
+      "kind": "exported function",
+      "sourceSha256": "3cc4801a081c5afd8377289708e9358bd3b9c0033f5efaada290f6833491cead",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/exportTemplates.ts#defaultExportTemplateId",
+      "source": "src/runtime/exportTemplates.ts",
+      "line": 32,
+      "kind": "exported function",
+      "sourceSha256": "3cc4801a081c5afd8377289708e9358bd3b9c0033f5efaada290f6833491cead",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/exportTemplates.ts#resolveExportTemplateId",
+      "source": "src/runtime/exportTemplates.ts",
+      "line": 37,
+      "kind": "exported function",
+      "sourceSha256": "3cc4801a081c5afd8377289708e9358bd3b9c0033f5efaada290f6833491cead",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 16
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/buildSettings.ts#normalizeBuildSettings",
+      "source": "src/runtime/buildSettings.ts",
+      "line": 195,
+      "kind": "exported function",
+      "sourceSha256": "b1ef173f84406038fb75bc4652623163b5016a211384e7f3908f22ea1c63dfb2",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 16
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/buildSettings.ts#serializeBuildSettings",
+      "source": "src/runtime/buildSettings.ts",
+      "line": 257,
+      "kind": "exported function",
+      "sourceSha256": "b1ef173f84406038fb75bc4652623163b5016a211384e7f3908f22ea1c63dfb2",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 11
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/scriptSettings.ts#normalizeScriptSettings",
+      "source": "src/runtime/scriptSettings.ts",
+      "line": 37,
+      "kind": "exported function",
+      "sourceSha256": "016d8d3a602f027cb9687c3c7218a924bd4167340b230bade5be702d3358df51",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 16
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/scriptSettings.ts#serializeScriptSettings",
+      "source": "src/runtime/scriptSettings.ts",
+      "line": 88,
+      "kind": "exported function",
+      "sourceSha256": "016d8d3a602f027cb9687c3c7218a924bd4167340b230bade5be702d3358df51",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 11
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/projects/projectManifest.ts#normalizeProjectManifest",
+      "source": "src/projects/projectManifest.ts",
+      "line": 55,
+      "kind": "exported function",
+      "sourceSha256": "824e903d92b4e1a2b89ca99f2dd785d226016ca0229035ce6509e58db4536fa6",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 17
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/projects/projectManifest.ts#hydrateProjectManifest",
+      "source": "src/projects/projectManifest.ts",
+      "line": 84,
+      "kind": "exported function",
+      "sourceSha256": "824e903d92b4e1a2b89ca99f2dd785d226016ca0229035ce6509e58db4536fa6",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 5
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/projects/projectManifest.ts#serializeProjectManifest",
+      "source": "src/projects/projectManifest.ts",
+      "line": 90,
+      "kind": "exported function",
+      "sourceSha256": "824e903d92b4e1a2b89ca99f2dd785d226016ca0229035ce6509e58db4536fa6",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 11
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/projects/projectData.ts#canonicalProjectText",
+      "source": "src/projects/projectData.ts",
+      "line": 85,
+      "kind": "exported function",
+      "sourceSha256": "60ed31522cfbbf5935f00137cb6c0c20d1c1d685c2da3e76c60e08e189e031dc",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 11
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/saveGame.ts#platformSaveLocation",
+      "source": "src/runtime/saveGame.ts",
+      "line": 43,
+      "kind": "exported function",
+      "sourceSha256": "f10802fbd16d02ebebd584417bd8ae613c2a3b3190ab6a8fac408f91f393a267",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 5
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/saveGame.ts#useSaveProject",
+      "source": "src/runtime/saveGame.ts",
+      "line": 120,
+      "kind": "exported function",
+      "sourceSha256": "f10802fbd16d02ebebd584417bd8ae613c2a3b3190ab6a8fac408f91f393a267",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 5
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/saveGame.ts#loadSaveSlot",
+      "source": "src/runtime/saveGame.ts",
+      "line": 132,
+      "kind": "exported function",
+      "sourceSha256": "f10802fbd16d02ebebd584417bd8ae613c2a3b3190ab6a8fac408f91f393a267",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/worldGameplay.ts#serializeWorldGameplaySettings",
+      "source": "src/runtime/worldGameplay.ts",
+      "line": 34,
+      "kind": "exported function",
+      "sourceSha256": "25a9291e36e2812ee4dbe494ae48e5bd0018460e5db5e80ab8a89d7daf937fe8",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 11
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/worldGameplay.ts#loadWorldGameplaySettings",
+      "source": "src/runtime/worldGameplay.ts",
+      "line": 43,
+      "kind": "exported function",
+      "sourceSha256": "25a9291e36e2812ee4dbe494ae48e5bd0018460e5db5e80ab8a89d7daf937fe8",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 5
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/localization.ts#normalizeLocalizationSettings",
+      "source": "src/runtime/localization.ts",
+      "line": 163,
+      "kind": "exported function",
+      "sourceSha256": "b8dd8e5e988e54a3034a48c5da56140e413de37d678a8e8f4b058ab4a569881b",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 16
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/localization.ts#loadLocalizationSettings",
+      "source": "src/runtime/localization.ts",
+      "line": 181,
+      "kind": "exported function",
+      "sourceSha256": "b8dd8e5e988e54a3034a48c5da56140e413de37d678a8e8f4b058ab4a569881b",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 5
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/localization.ts#serializeLocalizationSettings",
+      "source": "src/runtime/localization.ts",
+      "line": 185,
+      "kind": "exported function",
+      "sourceSha256": "b8dd8e5e988e54a3034a48c5da56140e413de37d678a8e8f4b058ab4a569881b",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 11
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/presentation.ts#normalizeRuntimeAccessibilitySettings",
+      "source": "src/runtime/presentation.ts",
+      "line": 39,
+      "kind": "exported function",
+      "sourceSha256": "418ebab7a9587a92a5d59e31dd51054f763fc150fc282fe0ac35514f50c28280",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 16
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/presentation.ts#loadRuntimeAccessibilitySettings",
+      "source": "src/runtime/presentation.ts",
+      "line": 59,
+      "kind": "exported function",
+      "sourceSha256": "418ebab7a9587a92a5d59e31dd51054f763fc150fc282fe0ac35514f50c28280",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 5
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/presentation.ts#serializeRuntimeAccessibilitySettings",
+      "source": "src/runtime/presentation.ts",
+      "line": 63,
+      "kind": "exported function",
+      "sourceSha256": "418ebab7a9587a92a5d59e31dd51054f763fc150fc282fe0ac35514f50c28280",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 11
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/presentation.ts#normalizeUiAudioSettings",
+      "source": "src/runtime/presentation.ts",
+      "line": 67,
+      "kind": "exported function",
+      "sourceSha256": "418ebab7a9587a92a5d59e31dd51054f763fc150fc282fe0ac35514f50c28280",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 16
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/presentation.ts#loadUiAudioSettings",
+      "source": "src/runtime/presentation.ts",
+      "line": 68,
+      "kind": "exported function",
+      "sourceSha256": "418ebab7a9587a92a5d59e31dd51054f763fc150fc282fe0ac35514f50c28280",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 5
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/presentation.ts#serializeUiAudioSettings",
+      "source": "src/runtime/presentation.ts",
+      "line": 69,
+      "kind": "exported function",
+      "sourceSha256": "418ebab7a9587a92a5d59e31dd51054f763fc150fc282fe0ac35514f50c28280",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 11
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/uiAccessibility.ts#configureUiAccessibility",
+      "source": "src/runtime/uiAccessibility.ts",
+      "line": 12,
+      "kind": "exported function",
+      "sourceSha256": "65be63032f38824f647e172e9777d2cecdefdcc9a7606e5e429188d983349878",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 9
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/projectTrash.ts#serializeProjectTrash",
+      "source": "src/runtime/projectTrash.ts",
+      "line": 40,
+      "kind": "exported function",
+      "sourceSha256": "a11332dc9ae37eb92bd951b24438b028e4651d30a6c84cded2f30b6d59c81a93",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 11
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/projectTrash.ts#loadProjectTrash",
+      "source": "src/runtime/projectTrash.ts",
+      "line": 42,
+      "kind": "exported function",
+      "sourceSha256": "a11332dc9ae37eb92bd951b24438b028e4651d30a6c84cded2f30b6d59c81a93",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 5
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/store/physics.ts#normalizeGlobalSettings",
+      "source": "src/store/physics.ts",
+      "line": 174,
+      "kind": "exported function",
+      "sourceSha256": "eb57db08296d2adb32952367a8758df2ad887f298efd67ef90b1fc4adc0e459b",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 31
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/store/physics.ts#selectEntities",
+      "source": "src/store/physics.ts",
+      "line": 203,
+      "kind": "exported function",
+      "sourceSha256": "eb57db08296d2adb32952367a8758df2ad887f298efd67ef90b1fc4adc0e459b",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 5
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/store/physics.ts#selectedEntities",
+      "source": "src/store/physics.ts",
+      "line": 214,
+      "kind": "exported function",
+      "sourceSha256": "eb57db08296d2adb32952367a8758df2ad887f298efd67ef90b1fc4adc0e459b",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 10
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/store/physics.ts#serializeEntity",
+      "source": "src/store/physics.ts",
+      "line": 327,
+      "kind": "exported function",
+      "sourceSha256": "eb57db08296d2adb32952367a8758df2ad887f298efd67ef90b1fc4adc0e459b",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 20
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/store/physics.ts#getSceneJSON",
+      "source": "src/store/physics.ts",
+      "line": 427,
+      "kind": "exported function",
+      "sourceSha256": "eb57db08296d2adb32952367a8758df2ad887f298efd67ef90b1fc4adc0e459b",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 11
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/store/physics.ts#createEntityFromData",
+      "source": "src/store/physics.ts",
+      "line": 1232,
+      "kind": "exported function",
+      "sourceSha256": "eb57db08296d2adb32952367a8758df2ad887f298efd67ef90b1fc4adc0e459b",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 9
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/store/physics.ts#loadProject",
+      "source": "src/store/physics.ts",
+      "line": 1721,
+      "kind": "exported function",
+      "sourceSha256": "eb57db08296d2adb32952367a8758df2ad887f298efd67ef90b1fc4adc0e459b",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 5
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/plugins.ts#refreshPluginContributions",
+      "source": "src/runtime/plugins.ts",
+      "line": 113,
+      "kind": "exported function",
+      "sourceSha256": "03cb3a0ec7dfad2aa7a49bfe7f56da52b59c35ec18f3e5791b7daa233175d6a7",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 10
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/plugins.ts#loadPluginManifests",
+      "source": "src/runtime/plugins.ts",
+      "line": 129,
+      "kind": "exported function",
+      "sourceSha256": "03cb3a0ec7dfad2aa7a49bfe7f56da52b59c35ec18f3e5791b7daa233175d6a7",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 5
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/plugins.ts#serializePluginManifests",
+      "source": "src/runtime/plugins.ts",
+      "line": 136,
+      "kind": "exported function",
+      "sourceSha256": "03cb3a0ec7dfad2aa7a49bfe7f56da52b59c35ec18f3e5791b7daa233175d6a7",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 11
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/assetGraph.ts#projectAssetReferences",
+      "source": "src/assets/assetGraph.ts",
+      "line": 22,
+      "kind": "exported function",
+      "sourceSha256": "f7af129ff78af50ec45bbb8b4356d50ac9282adca2118ae0775d4da007c19887",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 11
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/assetGraph.ts#buildAssetDependencyGraph",
+      "source": "src/assets/assetGraph.ts",
+      "line": 27,
+      "kind": "exported function",
+      "sourceSha256": "f7af129ff78af50ec45bbb8b4356d50ac9282adca2118ae0775d4da007c19887",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 11
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/importPipeline.ts#clearAssetImportSession",
+      "source": "src/assets/importPipeline.ts",
+      "line": 290,
+      "kind": "exported function",
+      "sourceSha256": "de45141f490f17a89c9914aef5429c1b8fba7e0dfe16ffd50cd585587d7d6360",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 7
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/contentInteroperability.ts#validateInterchangeMetadata",
+      "source": "src/assets/contentInteroperability.ts",
+      "line": 165,
+      "kind": "exported function",
+      "sourceSha256": "efd2779ed176710b099774f1efe9812e55270af92e30a3c34045038a35f19599",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 31
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/derivedSprites.ts#validateDerivedSprite",
+      "source": "src/assets/derivedSprites.ts",
+      "line": 25,
+      "kind": "exported function",
+      "sourceSha256": "afc032cee84142b39931cc68f4933895d28959e7e12135427cc2e6464090bb93",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 31
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/derivedSpriteTexture.ts#clearDerivedSpriteTextures",
+      "source": "src/assets/derivedSpriteTexture.ts",
+      "line": 9,
+      "kind": "exported function",
+      "sourceSha256": "f8ce65c9f64d5528f97f18a9fb1a1e586a46b7fe9b0af4c499a0df0768df3bef",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 11
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/AssetDatabase.ts#normalizeFolder",
+      "source": "src/assets/AssetDatabase.ts",
+      "line": 212,
+      "kind": "exported function",
+      "sourceSha256": "e94767ad0ecf0067fbe2b54a60197974925c945de7eb87125e2c204bd49b466e",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 254
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/AssetDatabase.ts#readTextAsset",
+      "source": "src/assets/AssetDatabase.ts",
+      "line": 420,
+      "kind": "exported function",
+      "sourceSha256": "e94767ad0ecf0067fbe2b54a60197974925c945de7eb87125e2c204bd49b466e",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 12
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/AssetDatabase.ts#serializeAssets",
+      "source": "src/assets/AssetDatabase.ts",
+      "line": 476,
+      "kind": "exported function",
+      "sourceSha256": "e94767ad0ecf0067fbe2b54a60197974925c945de7eb87125e2c204bd49b466e",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 11
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/AssetDatabase.ts#serializeAssetFolders",
+      "source": "src/assets/AssetDatabase.ts",
+      "line": 485,
+      "kind": "exported function",
+      "sourceSha256": "e94767ad0ecf0067fbe2b54a60197974925c945de7eb87125e2c204bd49b466e",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 11
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/AssetDatabase.ts#serializeAssetDatabaseSettings",
+      "source": "src/assets/AssetDatabase.ts",
+      "line": 489,
+      "kind": "exported function",
+      "sourceSha256": "e94767ad0ecf0067fbe2b54a60197974925c945de7eb87125e2c204bd49b466e",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 11
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/AssetDatabase.ts#loadAssets",
+      "source": "src/assets/AssetDatabase.ts",
+      "line": 543,
+      "kind": "exported function",
+      "sourceSha256": "e94767ad0ecf0067fbe2b54a60197974925c945de7eb87125e2c204bd49b466e",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 7
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/AssetDatabase.ts#synchronizeAssetDependencyMetadata",
+      "source": "src/assets/AssetDatabase.ts",
+      "line": 910,
+      "kind": "exported function",
+      "sourceSha256": "e94767ad0ecf0067fbe2b54a60197974925c945de7eb87125e2c204bd49b466e",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 11
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/AssetDatabase.ts#assetGuid",
+      "source": "src/assets/AssetDatabase.ts",
+      "line": 955,
+      "kind": "exported function",
+      "sourceSha256": "e94767ad0ecf0067fbe2b54a60197974925c945de7eb87125e2c204bd49b466e",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 12
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/AssetDatabase.ts#resolveAsset",
+      "source": "src/assets/AssetDatabase.ts",
+      "line": 959,
+      "kind": "exported function",
+      "sourceSha256": "e94767ad0ecf0067fbe2b54a60197974925c945de7eb87125e2c204bd49b466e",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 12
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/AssetDatabase.ts#rebuildTextureAtlases",
+      "source": "src/assets/AssetDatabase.ts",
+      "line": 1071,
+      "kind": "exported function",
+      "sourceSha256": "e94767ad0ecf0067fbe2b54a60197974925c945de7eb87125e2c204bd49b466e",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 7
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/AssetDatabase.ts#queueTextureAtlasRebuild",
+      "source": "src/assets/AssetDatabase.ts",
+      "line": 1081,
+      "kind": "exported function",
+      "sourceSha256": "e94767ad0ecf0067fbe2b54a60197974925c945de7eb87125e2c204bd49b466e",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/physics.mjs",
+      "generatedSha256": "cc6063ee54f92dbd4d97d45f9c66540b0fc3fc37d192d1215da61c615a431014",
+      "mapSha256": "662840cd30d49143a6b6a91f6aaf296044ee4a53684065615b33c3f9a24489aa",
+      "entryCount": 7
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/types.ts#defaultAnimationImportMetadata",
+      "source": "src/assets/types.ts",
+      "line": 208,
+      "kind": "exported function",
+      "sourceSha256": "68b003a8c85b4b7207968432c298634e9841d542b23cd02278574560212c2afa",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/types.mjs",
+      "generatedSha256": "f0efccada1b8717c00808890565ec85c942509c08159d9e7a61b90f75333ea70",
+      "mapSha256": "ff19a6dac5e0244a30b1e0be98cdf341e1947a44b2641ec9e813d70f7f13351f",
+      "entryCount": 5
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/types.ts#defaultImportSettings",
+      "source": "src/assets/types.ts",
+      "line": 230,
+      "kind": "exported function",
+      "sourceSha256": "68b003a8c85b4b7207968432c298634e9841d542b23cd02278574560212c2afa",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/types.mjs",
+      "generatedSha256": "f0efccada1b8717c00808890565ec85c942509c08159d9e7a61b90f75333ea70",
+      "mapSha256": "ff19a6dac5e0244a30b1e0be98cdf341e1947a44b2641ec9e813d70f7f13351f",
+      "entryCount": 37
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/novaPak.ts#createNovaPak",
+      "source": "src/runtime/novaPak.ts",
+      "line": 85,
+      "kind": "exported function",
+      "sourceSha256": "c45e0234a9dc89211464cd90091d8cf7aaa5e6156c2d5e9a692b3cdc1171b260",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/pak.mjs",
+      "generatedSha256": "7a258547d608e423f97b77426b537d46c6533a390676365aaf63b19bc22df9bc",
+      "mapSha256": "0ca2422a1c2c9f74446c840718a0ea829d3f3bbfd27233b3c95dc6ff238e59ad",
+      "entryCount": 2
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/novaPak.ts#parseNovaPak",
+      "source": "src/runtime/novaPak.ts",
+      "line": 183,
+      "kind": "exported function",
+      "sourceSha256": "c45e0234a9dc89211464cd90091d8cf7aaa5e6156c2d5e9a692b3cdc1171b260",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/pak.mjs",
+      "generatedSha256": "7a258547d608e423f97b77426b537d46c6533a390676365aaf63b19bc22df9bc",
+      "mapSha256": "0ca2422a1c2c9f74446c840718a0ea829d3f3bbfd27233b3c95dc6ff238e59ad",
+      "entryCount": 2
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/novaPak.ts#projectJsonFromNovaPak",
+      "source": "src/runtime/novaPak.ts",
+      "line": 216,
+      "kind": "exported function",
+      "sourceSha256": "c45e0234a9dc89211464cd90091d8cf7aaa5e6156c2d5e9a692b3cdc1171b260",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/pak.mjs",
+      "generatedSha256": "7a258547d608e423f97b77426b537d46c6533a390676365aaf63b19bc22df9bc",
+      "mapSha256": "0ca2422a1c2c9f74446c840718a0ea829d3f3bbfd27233b3c95dc6ff238e59ad",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/projects/templateGuides.ts#templateGuide",
+      "source": "src/projects/templateGuides.ts",
+      "line": 668,
+      "kind": "exported function",
+      "sourceSha256": "25dec7ba5747732e36addd0ad877eb06da621c0da5f6e3f45eeafd654bc58c3f",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/templates.mjs",
+      "generatedSha256": "e5509c7bbd62e2931617b2b04dd691350ab80fa054192dde456be064c00924f7",
+      "mapSha256": "4b30541099e5935994fd3bcf0ffc068526a00b57cd517c33c06fafa0004aa44c",
+      "entryCount": 3
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/projects/templates.ts#createTemplateProject",
+      "source": "src/projects/templates.ts",
+      "line": 969,
+      "kind": "exported function",
+      "sourceSha256": "b0aba4edf2e115a5ce2d6dbc12cb6fee7a6d2fdbc8a08839b0297cb33a0dce78",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/templates.mjs",
+      "generatedSha256": "e5509c7bbd62e2931617b2b04dd691350ab80fa054192dde456be064c00924f7",
+      "mapSha256": "4b30541099e5935994fd3bcf0ffc068526a00b57cd517c33c06fafa0004aa44c",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/projects/templates.ts#auditTemplateProject",
+      "source": "src/projects/templates.ts",
+      "line": 993,
+      "kind": "exported function",
+      "sourceSha256": "b0aba4edf2e115a5ce2d6dbc12cb6fee7a6d2fdbc8a08839b0297cb33a0dce78",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/templates.mjs",
+      "generatedSha256": "e5509c7bbd62e2931617b2b04dd691350ab80fa054192dde456be064c00924f7",
+      "mapSha256": "4b30541099e5935994fd3bcf0ffc068526a00b57cd517c33c06fafa0004aa44c",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/projects/templates.ts#createTemplateProjectJson",
+      "source": "src/projects/templates.ts",
+      "line": 1127,
+      "kind": "exported function",
+      "sourceSha256": "b0aba4edf2e115a5ce2d6dbc12cb6fee7a6d2fdbc8a08839b0297cb33a0dce78",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/templates.mjs",
+      "generatedSha256": "e5509c7bbd62e2931617b2b04dd691350ab80fa054192dde456be064c00924f7",
+      "mapSha256": "4b30541099e5935994fd3bcf0ffc068526a00b57cd517c33c06fafa0004aa44c",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/Transform.ts#Transform.constructor",
+      "source": "src/world/Transform.ts",
+      "line": 14,
+      "kind": "public class operation",
+      "sourceSha256": "ed3b83aff6df24cf19b3687286eaee9687e09c4094c5baf710f19dd961a7a120",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 19
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/Entity.ts#defaultAuthoringMetadata",
+      "source": "src/world/Entity.ts",
+      "line": 48,
+      "kind": "exported function",
+      "sourceSha256": "bbd82ccd9ee56d934f736cae5a769e199253053d52d0e0b39d8bb10324b69b95",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 10
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/Entity.ts#Entity.constructor",
+      "source": "src/world/Entity.ts",
+      "line": 85,
+      "kind": "public class operation",
+      "sourceSha256": "bbd82ccd9ee56d934f736cae5a769e199253053d52d0e0b39d8bb10324b69b95",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 10
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/Entity.ts#Entity.addComponent",
+      "source": "src/world/Entity.ts",
+      "line": 98,
+      "kind": "public class operation",
+      "sourceSha256": "bbd82ccd9ee56d934f736cae5a769e199253053d52d0e0b39d8bb10324b69b95",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 43
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/Entity.ts#Entity.getComponent",
+      "source": "src/world/Entity.ts",
+      "line": 109,
+      "kind": "public class operation",
+      "sourceSha256": "bbd82ccd9ee56d934f736cae5a769e199253053d52d0e0b39d8bb10324b69b95",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 3347
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/Entity.ts#Entity.getCollider",
+      "source": "src/world/Entity.ts",
+      "line": 114,
+      "kind": "public class operation",
+      "sourceSha256": "bbd82ccd9ee56d934f736cae5a769e199253053d52d0e0b39d8bb10324b69b95",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 393
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/Entity.ts#Entity.removeComponent",
+      "source": "src/world/Entity.ts",
+      "line": 132,
+      "kind": "public class operation",
+      "sourceSha256": "bbd82ccd9ee56d934f736cae5a769e199253053d52d0e0b39d8bb10324b69b95",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 3
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/Entity.ts#Entity.transform",
+      "source": "src/world/Entity.ts",
+      "line": 141,
+      "kind": "getter",
+      "sourceSha256": "bbd82ccd9ee56d934f736cae5a769e199253053d52d0e0b39d8bb10324b69b95",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 515
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/Entity.ts#Entity.renderer",
+      "source": "src/world/Entity.ts",
+      "line": 145,
+      "kind": "getter",
+      "sourceSha256": "bbd82ccd9ee56d934f736cae5a769e199253053d52d0e0b39d8bb10324b69b95",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 500
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/Entity.ts#Entity.rigidBody",
+      "source": "src/world/Entity.ts",
+      "line": 149,
+      "kind": "getter",
+      "sourceSha256": "bbd82ccd9ee56d934f736cae5a769e199253053d52d0e0b39d8bb10324b69b95",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 1125
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/Entity.ts#Entity.spriteRenderer",
+      "source": "src/world/Entity.ts",
+      "line": 153,
+      "kind": "getter",
+      "sourceSha256": "bbd82ccd9ee56d934f736cae5a769e199253053d52d0e0b39d8bb10324b69b95",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 76
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/Entity.ts#Entity.textRenderer",
+      "source": "src/world/Entity.ts",
+      "line": 157,
+      "kind": "getter",
+      "sourceSha256": "bbd82ccd9ee56d934f736cae5a769e199253053d52d0e0b39d8bb10324b69b95",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 76
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/Entity.ts#Entity.camera2D",
+      "source": "src/world/Entity.ts",
+      "line": 161,
+      "kind": "getter",
+      "sourceSha256": "bbd82ccd9ee56d934f736cae5a769e199253053d52d0e0b39d8bb10324b69b95",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/Entity.ts#Entity.script2D",
+      "source": "src/world/Entity.ts",
+      "line": 165,
+      "kind": "getter",
+      "sourceSha256": "bbd82ccd9ee56d934f736cae5a769e199253053d52d0e0b39d8bb10324b69b95",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 30
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/Entity.ts#Entity.collider",
+      "source": "src/world/Entity.ts",
+      "line": 169,
+      "kind": "getter",
+      "sourceSha256": "bbd82ccd9ee56d934f736cae5a769e199253053d52d0e0b39d8bb10324b69b95",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 322
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/Entity.ts#Entity.shapeType",
+      "source": "src/world/Entity.ts",
+      "line": 175,
+      "kind": "getter",
+      "sourceSha256": "bbd82ccd9ee56d934f736cae5a769e199253053d52d0e0b39d8bb10324b69b95",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 46
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/Entity.ts#Entity.layer",
+      "source": "src/world/Entity.ts",
+      "line": 176,
+      "kind": "getter",
+      "sourceSha256": "bbd82ccd9ee56d934f736cae5a769e199253053d52d0e0b39d8bb10324b69b95",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 76
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/Entity.ts#Entity.layer",
+      "source": "src/world/Entity.ts",
+      "line": 179,
+      "kind": "setter",
+      "sourceSha256": "bbd82ccd9ee56d934f736cae5a769e199253053d52d0e0b39d8bb10324b69b95",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 29
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/Entity.ts#Entity.color",
+      "source": "src/world/Entity.ts",
+      "line": 187,
+      "kind": "getter",
+      "sourceSha256": "bbd82ccd9ee56d934f736cae5a769e199253053d52d0e0b39d8bb10324b69b95",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 174
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/Entity.ts#Entity.transparency",
+      "source": "src/world/Entity.ts",
+      "line": 189,
+      "kind": "getter",
+      "sourceSha256": "bbd82ccd9ee56d934f736cae5a769e199253053d52d0e0b39d8bb10324b69b95",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 49
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/Entity.ts#Entity.transparency",
+      "source": "src/world/Entity.ts",
+      "line": 190,
+      "kind": "setter",
+      "sourceSha256": "bbd82ccd9ee56d934f736cae5a769e199253053d52d0e0b39d8bb10324b69b95",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 29
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/Entity.ts#Entity.velocity",
+      "source": "src/world/Entity.ts",
+      "line": 196,
+      "kind": "getter",
+      "sourceSha256": "bbd82ccd9ee56d934f736cae5a769e199253053d52d0e0b39d8bb10324b69b95",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 116
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/Entity.ts#Entity.angularVelocity",
+      "source": "src/world/Entity.ts",
+      "line": 198,
+      "kind": "getter",
+      "sourceSha256": "bbd82ccd9ee56d934f736cae5a769e199253053d52d0e0b39d8bb10324b69b95",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 49
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/Entity.ts#Entity.angularVelocity",
+      "source": "src/world/Entity.ts",
+      "line": 199,
+      "kind": "setter",
+      "sourceSha256": "bbd82ccd9ee56d934f736cae5a769e199253053d52d0e0b39d8bb10324b69b95",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 29
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/Entity.ts#Entity.linearDamping",
+      "source": "src/world/Entity.ts",
+      "line": 201,
+      "kind": "getter",
+      "sourceSha256": "bbd82ccd9ee56d934f736cae5a769e199253053d52d0e0b39d8bb10324b69b95",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 49
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/Entity.ts#Entity.linearDamping",
+      "source": "src/world/Entity.ts",
+      "line": 202,
+      "kind": "setter",
+      "sourceSha256": "bbd82ccd9ee56d934f736cae5a769e199253053d52d0e0b39d8bb10324b69b95",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 29
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/Entity.ts#Entity.angularDamping",
+      "source": "src/world/Entity.ts",
+      "line": 204,
+      "kind": "getter",
+      "sourceSha256": "bbd82ccd9ee56d934f736cae5a769e199253053d52d0e0b39d8bb10324b69b95",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 49
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/Entity.ts#Entity.angularDamping",
+      "source": "src/world/Entity.ts",
+      "line": 205,
+      "kind": "setter",
+      "sourceSha256": "bbd82ccd9ee56d934f736cae5a769e199253053d52d0e0b39d8bb10324b69b95",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 29
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/Entity.ts#Entity.density",
+      "source": "src/world/Entity.ts",
+      "line": 207,
+      "kind": "getter",
+      "sourceSha256": "bbd82ccd9ee56d934f736cae5a769e199253053d52d0e0b39d8bb10324b69b95",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 49
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/Entity.ts#Entity.density",
+      "source": "src/world/Entity.ts",
+      "line": 208,
+      "kind": "setter",
+      "sourceSha256": "bbd82ccd9ee56d934f736cae5a769e199253053d52d0e0b39d8bb10324b69b95",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 30
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/Entity.ts#Entity.mass",
+      "source": "src/world/Entity.ts",
+      "line": 210,
+      "kind": "getter",
+      "sourceSha256": "bbd82ccd9ee56d934f736cae5a769e199253053d52d0e0b39d8bb10324b69b95",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 81
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/Entity.ts#Entity.mass",
+      "source": "src/world/Entity.ts",
+      "line": 211,
+      "kind": "setter",
+      "sourceSha256": "bbd82ccd9ee56d934f736cae5a769e199253053d52d0e0b39d8bb10324b69b95",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 30
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/Entity.ts#Entity.autoInertia",
+      "source": "src/world/Entity.ts",
+      "line": 213,
+      "kind": "getter",
+      "sourceSha256": "bbd82ccd9ee56d934f736cae5a769e199253053d52d0e0b39d8bb10324b69b95",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 60
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/Entity.ts#Entity.inertia",
+      "source": "src/world/Entity.ts",
+      "line": 215,
+      "kind": "getter",
+      "sourceSha256": "bbd82ccd9ee56d934f736cae5a769e199253053d52d0e0b39d8bb10324b69b95",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 20
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/Entity.ts#Entity.inertia",
+      "source": "src/world/Entity.ts",
+      "line": 216,
+      "kind": "setter",
+      "sourceSha256": "bbd82ccd9ee56d934f736cae5a769e199253053d52d0e0b39d8bb10324b69b95",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 30
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/Entity.ts#Entity.gravityScale",
+      "source": "src/world/Entity.ts",
+      "line": 218,
+      "kind": "getter",
+      "sourceSha256": "bbd82ccd9ee56d934f736cae5a769e199253053d52d0e0b39d8bb10324b69b95",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 49
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/Entity.ts#Entity.gravityScale",
+      "source": "src/world/Entity.ts",
+      "line": 219,
+      "kind": "setter",
+      "sourceSha256": "bbd82ccd9ee56d934f736cae5a769e199253053d52d0e0b39d8bb10324b69b95",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 29
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/Entity.ts#Entity.force",
+      "source": "src/world/Entity.ts",
+      "line": 221,
+      "kind": "getter",
+      "sourceSha256": "bbd82ccd9ee56d934f736cae5a769e199253053d52d0e0b39d8bb10324b69b95",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 116
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/Entity.ts#Entity.torque",
+      "source": "src/world/Entity.ts",
+      "line": 223,
+      "kind": "getter",
+      "sourceSha256": "bbd82ccd9ee56d934f736cae5a769e199253053d52d0e0b39d8bb10324b69b95",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 49
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/Entity.ts#Entity.torque",
+      "source": "src/world/Entity.ts",
+      "line": 224,
+      "kind": "setter",
+      "sourceSha256": "bbd82ccd9ee56d934f736cae5a769e199253053d52d0e0b39d8bb10324b69b95",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 29
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/Entity.ts#Entity.gravity",
+      "source": "src/world/Entity.ts",
+      "line": 226,
+      "kind": "getter",
+      "sourceSha256": "bbd82ccd9ee56d934f736cae5a769e199253053d52d0e0b39d8bb10324b69b95",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 49
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/Entity.ts#Entity.gravity",
+      "source": "src/world/Entity.ts",
+      "line": 227,
+      "kind": "setter",
+      "sourceSha256": "bbd82ccd9ee56d934f736cae5a769e199253053d52d0e0b39d8bb10324b69b95",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 29
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/Entity.ts#Entity.acceleration",
+      "source": "src/world/Entity.ts",
+      "line": 229,
+      "kind": "getter",
+      "sourceSha256": "bbd82ccd9ee56d934f736cae5a769e199253053d52d0e0b39d8bb10324b69b95",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 116
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/Entity.ts#Entity.restitution",
+      "source": "src/world/Entity.ts",
+      "line": 231,
+      "kind": "getter",
+      "sourceSha256": "bbd82ccd9ee56d934f736cae5a769e199253053d52d0e0b39d8bb10324b69b95",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 49
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/Entity.ts#Entity.restitution",
+      "source": "src/world/Entity.ts",
+      "line": 232,
+      "kind": "setter",
+      "sourceSha256": "bbd82ccd9ee56d934f736cae5a769e199253053d52d0e0b39d8bb10324b69b95",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 29
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/Entity.ts#Entity.restitutionThreshold",
+      "source": "src/world/Entity.ts",
+      "line": 234,
+      "kind": "getter",
+      "sourceSha256": "bbd82ccd9ee56d934f736cae5a769e199253053d52d0e0b39d8bb10324b69b95",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 49
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/Entity.ts#Entity.restitutionThreshold",
+      "source": "src/world/Entity.ts",
+      "line": 235,
+      "kind": "setter",
+      "sourceSha256": "bbd82ccd9ee56d934f736cae5a769e199253053d52d0e0b39d8bb10324b69b95",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 29
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/Entity.ts#Entity.staticFriction",
+      "source": "src/world/Entity.ts",
+      "line": 237,
+      "kind": "getter",
+      "sourceSha256": "bbd82ccd9ee56d934f736cae5a769e199253053d52d0e0b39d8bb10324b69b95",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 49
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/Entity.ts#Entity.staticFriction",
+      "source": "src/world/Entity.ts",
+      "line": 238,
+      "kind": "setter",
+      "sourceSha256": "bbd82ccd9ee56d934f736cae5a769e199253053d52d0e0b39d8bb10324b69b95",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 29
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/Entity.ts#Entity.dynamicFriction",
+      "source": "src/world/Entity.ts",
+      "line": 240,
+      "kind": "getter",
+      "sourceSha256": "bbd82ccd9ee56d934f736cae5a769e199253053d52d0e0b39d8bb10324b69b95",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 49
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/Entity.ts#Entity.dynamicFriction",
+      "source": "src/world/Entity.ts",
+      "line": 241,
+      "kind": "setter",
+      "sourceSha256": "bbd82ccd9ee56d934f736cae5a769e199253053d52d0e0b39d8bb10324b69b95",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 29
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/Entity.ts#Entity.isStatic",
+      "source": "src/world/Entity.ts",
+      "line": 245,
+      "kind": "getter",
+      "sourceSha256": "bbd82ccd9ee56d934f736cae5a769e199253053d52d0e0b39d8bb10324b69b95",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 9
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/Entity.ts#Entity.installStandardComponents",
+      "source": "src/world/Entity.ts",
+      "line": 258,
+      "kind": "public class operation",
+      "sourceSha256": "bbd82ccd9ee56d934f736cae5a769e199253053d52d0e0b39d8bb10324b69b95",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 10
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/physicsProduction.ts#defaultPhysicsLayers",
+      "source": "src/runtime/physicsProduction.ts",
+      "line": 104,
+      "kind": "exported function",
+      "sourceSha256": "8fd1571e431576cd9b2dde89dca2a5f99aff6091d33d1c44def3194551061181",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 43
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/physicsProduction.ts#normalizePhysicsLayers",
+      "source": "src/runtime/physicsProduction.ts",
+      "line": 113,
+      "kind": "exported function",
+      "sourceSha256": "8fd1571e431576cd9b2dde89dca2a5f99aff6091d33d1c44def3194551061181",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 40
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/physicsProduction.ts#defaultPhysicsProfile",
+      "source": "src/runtime/physicsProduction.ts",
+      "line": 192,
+      "kind": "exported function",
+      "sourceSha256": "8fd1571e431576cd9b2dde89dca2a5f99aff6091d33d1c44def3194551061181",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 3
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/physicsProduction.ts#normalizePhysicsProfile",
+      "source": "src/runtime/physicsProduction.ts",
+      "line": 196,
+      "kind": "exported function",
+      "sourceSha256": "8fd1571e431576cd9b2dde89dca2a5f99aff6091d33d1c44def3194551061181",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 40
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/physicsGeometry.ts#prepareColliderSet",
+      "source": "src/runtime/physicsGeometry.ts",
+      "line": 163,
+      "kind": "exported function",
+      "sourceSha256": "7857066953c572177a0eccec1c339df5fe3d94a6f584d5c68a482c6d7c676290",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 14
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/physicsGeometry.ts#solverShapeArea",
+      "source": "src/runtime/physicsGeometry.ts",
+      "line": 214,
+      "kind": "exported function",
+      "sourceSha256": "7857066953c572177a0eccec1c339df5fe3d94a6f584d5c68a482c6d7c676290",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 14
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/physicsGeometry.ts#solverShapeInertia",
+      "source": "src/runtime/physicsGeometry.ts",
+      "line": 223,
+      "kind": "exported function",
+      "sourceSha256": "7857066953c572177a0eccec1c339df5fe3d94a6f584d5c68a482c6d7c676290",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 14
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/geometry.ts#finiteNumber",
+      "source": "src/world/geometry.ts",
+      "line": 69,
+      "kind": "exported function",
+      "sourceSha256": "b51c1a4805f82b7f181780a5bbd203307526896ada6ed908b258235d97b6c353",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 6193
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/geometry.ts#clampNumber",
+      "source": "src/world/geometry.ts",
+      "line": 75,
+      "kind": "exported function",
+      "sourceSha256": "b51c1a4805f82b7f181780a5bbd203307526896ada6ed908b258235d97b6c353",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 235
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/geometry.ts#positiveNumber",
+      "source": "src/world/geometry.ts",
+      "line": 79,
+      "kind": "exported function",
+      "sourceSha256": "b51c1a4805f82b7f181780a5bbd203307526896ada6ed908b258235d97b6c353",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 254
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/geometry.ts#normalizeAngle",
+      "source": "src/world/geometry.ts",
+      "line": 84,
+      "kind": "exported function",
+      "sourceSha256": "b51c1a4805f82b7f181780a5bbd203307526896ada6ed908b258235d97b6c353",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 43
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/geometry.ts#convexHull",
+      "source": "src/world/geometry.ts",
+      "line": 98,
+      "kind": "exported function",
+      "sourceSha256": "b51c1a4805f82b7f181780a5bbd203307526896ada6ed908b258235d97b6c353",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 43
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/geometry.ts#polygonArea",
+      "source": "src/world/geometry.ts",
+      "line": 147,
+      "kind": "exported function",
+      "sourceSha256": "b51c1a4805f82b7f181780a5bbd203307526896ada6ed908b258235d97b6c353",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 44
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/geometry.ts#entityArea",
+      "source": "src/world/geometry.ts",
+      "line": 159,
+      "kind": "exported function",
+      "sourceSha256": "b51c1a4805f82b7f181780a5bbd203307526896ada6ed908b258235d97b6c353",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/geometry.ts#effectiveInertia",
+      "source": "src/world/geometry.ts",
+      "line": 174,
+      "kind": "exported function",
+      "sourceSha256": "b51c1a4805f82b7f181780a5bbd203307526896ada6ed908b258235d97b6c353",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 30
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/geometry.ts#syncDensityFromMass",
+      "source": "src/world/geometry.ts",
+      "line": 219,
+      "kind": "exported function",
+      "sourceSha256": "b51c1a4805f82b7f181780a5bbd203307526896ada6ed908b258235d97b6c353",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/geometry.ts#normalizeEntity",
+      "source": "src/world/geometry.ts",
+      "line": 302,
+      "kind": "exported function",
+      "sourceSha256": "b51c1a4805f82b7f181780a5bbd203307526896ada6ed908b258235d97b6c353",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 29
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/BoxEntity.ts#BoxEntity.vertices",
+      "source": "src/world/BoxEntity.ts",
+      "line": 8,
+      "kind": "getter",
+      "sourceSha256": "21f323b10d5017ee3cb886f7f866d453ad45de027582d6a8d80ad5735e89b6eb",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 75
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/BoxEntity.ts#BoxEntity.vertices",
+      "source": "src/world/BoxEntity.ts",
+      "line": 9,
+      "kind": "setter",
+      "sourceSha256": "21f323b10d5017ee3cb886f7f866d453ad45de027582d6a8d80ad5735e89b6eb",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 10
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/BoxEntity.ts#BoxEntity.constructor",
+      "source": "src/world/BoxEntity.ts",
+      "line": 21,
+      "kind": "public class operation",
+      "sourceSha256": "21f323b10d5017ee3cb886f7f866d453ad45de027582d6a8d80ad5735e89b6eb",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/box.mjs",
+      "generatedSha256": "539fbbbd6b0035a78343eb3a91f019dfca034aed67cb91ce15bd28207874b572",
+      "mapSha256": "ed49243a5ca428813676277a260801efd1186431f0cd76819b45e91338ec5b38",
+      "entryCount": 10
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/identity.ts#createUuid",
+      "source": "src/world/identity.ts",
+      "line": 8,
+      "kind": "exported function",
+      "sourceSha256": "2fe5fd95a5e427522192d9d7832f4248515d6c47832126b228d6844437068053",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/components.mjs",
+      "generatedSha256": "4852054f899a7fee9128cb8220dc570ec6ec793f6c71bbd7c3802f3f2c178547",
+      "mapSha256": "9a55ec983f60998bf0208f3e69a9dc78ade24793ba33c311deb3b747e0307b39",
+      "entryCount": 45
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/identity.ts#normalizeUuid",
+      "source": "src/world/identity.ts",
+      "line": 16,
+      "kind": "exported function",
+      "sourceSha256": "2fe5fd95a5e427522192d9d7832f4248515d6c47832126b228d6844437068053",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/components.mjs",
+      "generatedSha256": "4852054f899a7fee9128cb8220dc570ec6ec793f6c71bbd7c3802f3f2c178547",
+      "mapSha256": "9a55ec983f60998bf0208f3e69a9dc78ade24793ba33c311deb3b747e0307b39",
+      "entryCount": 150
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/componentValidation.ts#validateComponentValues",
+      "source": "src/world/componentValidation.ts",
+      "line": 5,
+      "kind": "exported function",
+      "sourceSha256": "dc219a7901a4c9f0d85b4a18d7dad94b3338529bd23cb330be90050295f52a5f",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/components.mjs",
+      "generatedSha256": "4852054f899a7fee9128cb8220dc570ec6ec793f6c71bbd7c3802f3f2c178547",
+      "mapSha256": "9a55ec983f60998bf0208f3e69a9dc78ade24793ba33c311deb3b747e0307b39",
+      "entryCount": 112
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/components.ts#ShapeRenderer2D.constructor",
+      "source": "src/world/components.ts",
+      "line": 112,
+      "kind": "public class operation",
+      "sourceSha256": "cce65cee9ae71d07999c388387ad7c36f199dd26fd1aaf77ef69a8b3a3e24d9a",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/components.mjs",
+      "generatedSha256": "4852054f899a7fee9128cb8220dc570ec6ec793f6c71bbd7c3802f3f2c178547",
+      "mapSha256": "9a55ec983f60998bf0208f3e69a9dc78ade24793ba33c311deb3b747e0307b39",
+      "entryCount": 18
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/components.ts#Camera2D.constructor",
+      "source": "src/world/components.ts",
+      "line": 178,
+      "kind": "public class operation",
+      "sourceSha256": "cce65cee9ae71d07999c388387ad7c36f199dd26fd1aaf77ef69a8b3a3e24d9a",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/components.mjs",
+      "generatedSha256": "4852054f899a7fee9128cb8220dc570ec6ec793f6c71bbd7c3802f3f2c178547",
+      "mapSha256": "9a55ec983f60998bf0208f3e69a9dc78ade24793ba33c311deb3b747e0307b39",
+      "entryCount": 5
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/components.ts#Animator.constructor",
+      "source": "src/world/components.ts",
+      "line": 222,
+      "kind": "public class operation",
+      "sourceSha256": "cce65cee9ae71d07999c388387ad7c36f199dd26fd1aaf77ef69a8b3a3e24d9a",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/components.mjs",
+      "generatedSha256": "4852054f899a7fee9128cb8220dc570ec6ec793f6c71bbd7c3802f3f2c178547",
+      "mapSha256": "9a55ec983f60998bf0208f3e69a9dc78ade24793ba33c311deb3b747e0307b39",
+      "entryCount": 5
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/components.ts#Skeleton2D.constructor",
+      "source": "src/world/components.ts",
+      "line": 239,
+      "kind": "public class operation",
+      "sourceSha256": "cce65cee9ae71d07999c388387ad7c36f199dd26fd1aaf77ef69a8b3a3e24d9a",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/components.mjs",
+      "generatedSha256": "4852054f899a7fee9128cb8220dc570ec6ec793f6c71bbd7c3802f3f2c178547",
+      "mapSha256": "9a55ec983f60998bf0208f3e69a9dc78ade24793ba33c311deb3b747e0307b39",
+      "entryCount": 6
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/components.ts#TimelinePlayer.constructor",
+      "source": "src/world/components.ts",
+      "line": 253,
+      "kind": "public class operation",
+      "sourceSha256": "cce65cee9ae71d07999c388387ad7c36f199dd26fd1aaf77ef69a8b3a3e24d9a",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/components.mjs",
+      "generatedSha256": "4852054f899a7fee9128cb8220dc570ec6ec793f6c71bbd7c3802f3f2c178547",
+      "mapSha256": "9a55ec983f60998bf0208f3e69a9dc78ade24793ba33c311deb3b747e0307b39",
+      "entryCount": 5
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/components.ts#RigidBody2D.constructor",
+      "source": "src/world/components.ts",
+      "line": 998,
+      "kind": "public class operation",
+      "sourceSha256": "cce65cee9ae71d07999c388387ad7c36f199dd26fd1aaf77ef69a8b3a3e24d9a",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/components.mjs",
+      "generatedSha256": "4852054f899a7fee9128cb8220dc570ec6ec793f6c71bbd7c3802f3f2c178547",
+      "mapSha256": "9a55ec983f60998bf0208f3e69a9dc78ade24793ba33c311deb3b747e0307b39",
+      "entryCount": 18
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/components.ts#Collider2D.constructor",
+      "source": "src/world/components.ts",
+      "line": 1041,
+      "kind": "public class operation",
+      "sourceSha256": "cce65cee9ae71d07999c388387ad7c36f199dd26fd1aaf77ef69a8b3a3e24d9a",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/components.mjs",
+      "generatedSha256": "4852054f899a7fee9128cb8220dc570ec6ec793f6c71bbd7c3802f3f2c178547",
+      "mapSha256": "9a55ec983f60998bf0208f3e69a9dc78ade24793ba33c311deb3b747e0307b39",
+      "entryCount": 18
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/components.ts#copyComponentValues",
+      "source": "src/world/components.ts",
+      "line": 1062,
+      "kind": "exported function",
+      "sourceSha256": "cce65cee9ae71d07999c388387ad7c36f199dd26fd1aaf77ef69a8b3a3e24d9a",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/components.mjs",
+      "generatedSha256": "4852054f899a7fee9128cb8220dc570ec6ec793f6c71bbd7c3802f3f2c178547",
+      "mapSha256": "9a55ec983f60998bf0208f3e69a9dc78ade24793ba33c311deb3b747e0307b39",
+      "entryCount": 30
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/components.ts#pasteComponentValues",
+      "source": "src/world/components.ts",
+      "line": 1072,
+      "kind": "exported function",
+      "sourceSha256": "cce65cee9ae71d07999c388387ad7c36f199dd26fd1aaf77ef69a8b3a3e24d9a",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-media-roundtrip/1/components.mjs",
+      "generatedSha256": "4852054f899a7fee9128cb8220dc570ec6ec793f6c71bbd7c3802f3f2c178547",
+      "mapSha256": "9a55ec983f60998bf0208f3e69a9dc78ade24793ba33c311deb3b747e0307b39",
+      "entryCount": 12
+    }
+  ],
+  "tracingScope": "Positive V8 function entries during the complete passing programmer suite, including fixture setup. Not per-assertion isolation, exhaustive domain coverage or performance qualification.",
+  "nodeOperationCoverageCase": "retained-26-16-media-roundtrip complete suite including fixture setup",
+  "nodeOperationCoverageAssertion": {
+    "name": "retained-26-16-media-roundtrip complete suite including fixture setup",
+    "status": "passed"
+  }
+}

@@ -1,0 +1,68 @@
+{
+  "generatedAt": "2026-10-01T17:16:07.118Z",
+  "engineVersion": "26.33.0",
+  "status": "failed",
+  "scope": "Actual production save module with isolated failure-injected Web Storage; physical/browser storage certification is separate.",
+  "checks": [
+    {
+      "name": "Structured maps preserve distinct Unicode, punctuation, and long keys through commit and reload",
+      "status": "failed",
+      "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:\n+ actual - expected\n\n  {\n+   __: 1,\n+   key: 7,\n+   longlonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglong: 6,\n+   move_left: 4\n-   '': 7,\n-   'move left': 3,\n-   'move?left': 4,\n-   '得分': 2,\n-   '玩家': 1,\n-   longlonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglongA: 5,\n-   longlonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglongB: 6\n  }\n"
+    },
+    {
+      "name": "Prototype-looking keys remain own data without changing object prototypes",
+      "status": "failed",
+      "error": "AssertionError [ERR_ASSERTION]: Expected \"actual\" to be reference-equal to \"expected\":\n+ actual - expected\n\n+ {\n+   own: true\n+ }\n- [Object: null prototype] {}\n"
+    },
+    {
+      "name": "Migrations can rename and default prototype-looking keys without losing data",
+      "status": "failed",
+      "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\nfalse !== true\n"
+    },
+    {
+      "name": "Cancelling load at reading preserves selected slot, values, metadata, storage, and custom state",
+      "status": "passed"
+    },
+    {
+      "name": "Cancelling load at validating preserves selected slot, values, metadata, storage, and custom state",
+      "status": "passed"
+    },
+    {
+      "name": "Cancelling load at migrating preserves selected slot, values, metadata, storage, and custom state",
+      "status": "failed",
+      "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:\n+ actual - expected\n\n  {\n+   dirty: false,\n-   dirty: true,\n    error: '',\n    lastCommittedAt: '2026-10-01T17:16:07.111Z',\n    projectId: 'save34',\n    recoveryAvailable: false,\n    recoveryMessage: '',\n    recoverySource: '',\n+   slot: 'slot1',\n-   slot: 'slot2',\n    values: {\n+     '_custom.cancel': {\n+       value: 1\n+     },\n+     score: 7\n-     score: 99\n    }\n  }\n"
+    },
+    {
+      "name": "Successful async load migrates and deserializes exactly once",
+      "status": "passed"
+    },
+    {
+      "name": "Async commit serializes once and writes the exact validated custom snapshot",
+      "status": "failed",
+      "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n2 !== 1\n"
+    },
+    {
+      "name": "Cancelling commit at serializing preserves state and writes nothing",
+      "status": "passed"
+    },
+    {
+      "name": "Cancelling commit at validating preserves state and writes nothing",
+      "status": "passed"
+    },
+    {
+      "name": "Cancelling commit at writing preserves state and writes nothing",
+      "status": "passed"
+    },
+    {
+      "name": "Primary-write failure reports failure and preserves the last committed data",
+      "status": "passed"
+    },
+    {
+      "name": "Existing sanitized slot names and v2 envelope remain compatible",
+      "status": "passed"
+    }
+  ],
+  "sourceHashes": {
+    "src/runtime/saveGame.ts": "c6e898326e4906c5f6b36ecd35de934381f5592e3447a929648d6f4173723839"
+  }
+}

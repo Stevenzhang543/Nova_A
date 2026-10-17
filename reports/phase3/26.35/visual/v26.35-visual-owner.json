@@ -1,0 +1,730 @@
+{
+  "format": "nova-v26.35-visual-owner-user-audit",
+  "version": 1,
+  "release": "26.35",
+  "regressionOrigin": "26.35",
+  "expectedRelease": "26.35",
+  "development": false,
+  "qualifiedRelease": null,
+  "generatedAt": "2026-10-02T14:09:47.243Z",
+  "status": "passed",
+  "checks": [
+    {
+      "name": "launcher-default has bounded actions, readable primary hover and separate recents hint",
+      "status": "passed"
+    },
+    {
+      "name": "launcher-default creation has bounded inputs, whole labels, centered dialog and reachable submission",
+      "status": "passed"
+    },
+    {
+      "name": "launcher-minimum has bounded actions, readable primary hover and separate recents hint",
+      "status": "passed"
+    },
+    {
+      "name": "launcher-minimum creation has bounded inputs, whole labels, centered dialog and reachable submission",
+      "status": "passed"
+    },
+    {
+      "name": "launcher-de-large has bounded actions, readable primary hover and separate recents hint",
+      "status": "passed"
+    },
+    {
+      "name": "launcher-de-large creation has bounded inputs, whole labels, centered dialog and reachable submission",
+      "status": "passed"
+    },
+    {
+      "name": "launcher-zh-large has bounded actions, readable primary hover and separate recents hint",
+      "status": "passed"
+    },
+    {
+      "name": "launcher-zh-large creation has bounded inputs, whole labels, centered dialog and reachable submission",
+      "status": "passed"
+    },
+    {
+      "name": "launcher-light has bounded actions, readable primary hover and separate recents hint",
+      "status": "passed"
+    },
+    {
+      "name": "launcher-light creation has bounded inputs, whole labels, centered dialog and reachable submission",
+      "status": "passed"
+    },
+    {
+      "name": "launcher-contrast has bounded actions, readable primary hover and separate recents hint",
+      "status": "passed"
+    },
+    {
+      "name": "launcher-contrast creation has bounded inputs, whole labels, centered dialog and reachable submission",
+      "status": "passed"
+    }
+  ],
+  "observations": [
+    {
+      "profile": {
+        "name": "launcher-default",
+        "width": 1600,
+        "height": 900,
+        "settings": {
+          "locale": "en",
+          "uiScale": 1,
+          "theme": "dark",
+          "highContrast": false
+        }
+      },
+      "width": 1600,
+      "scroll": 1600,
+      "buttons": [
+        {
+          "text": "Learn Nova_A",
+          "x": 1418.84375,
+          "right": 1533.890625,
+          "width": 115.046875,
+          "height": 28
+        },
+        {
+          "text": "New Project",
+          "x": 418.53125,
+          "right": 670.8125,
+          "width": 252.28125,
+          "height": 32
+        },
+        {
+          "text": "Open Project",
+          "x": 418.53125,
+          "right": 670.8125,
+          "width": 252.28125,
+          "height": 32
+        }
+      ],
+      "recentTitleBottom": 115.84375,
+      "recentHintTop": 123.84375,
+      "primaryContrast": 5.752376738583228,
+      "primaryForeground": "rgb(17, 19, 24)",
+      "primaryBackground": "rgb(91, 141, 239)"
+    },
+    {
+      "profile": "launcher-default-creation",
+      "x": 379.53125,
+      "right": 1220.46875,
+      "y": 86.09375,
+      "bottom": 813.90625,
+      "width": 1600,
+      "height": 900,
+      "inputs": [
+        {
+          "x": 530.671875,
+          "right": 754.671875,
+          "width": 224
+        },
+        {
+          "x": 530.671875,
+          "right": 754.671875,
+          "width": 224
+        },
+        {
+          "x": 483.703125,
+          "right": 875.859375,
+          "width": 392.15625
+        },
+        {
+          "x": 930.8125,
+          "right": 1039.8125,
+          "width": 109
+        },
+        {
+          "x": 1086.46875,
+          "right": 1203.46875,
+          "width": 117
+        }
+      ],
+      "labels": [
+        {
+          "text": "Search templates",
+          "x": 396.53125,
+          "right": 479.703125,
+          "lines": 1
+        },
+        {
+          "text": "Difficulty",
+          "x": 883.859375,
+          "right": 926.8125,
+          "lines": 1
+        },
+        {
+          "text": "Sort by",
+          "x": 1047.8125,
+          "right": 1082.46875,
+          "lines": 1
+        }
+      ]
+    },
+    {
+      "profile": "launcher-default-creation-submit",
+      "x": 1086.859375,
+      "right": 1203.46875,
+      "y": 768.90625,
+      "bottom": 796.90625,
+      "hit": true
+    },
+    {
+      "profile": {
+        "name": "launcher-minimum",
+        "width": 1024,
+        "height": 640,
+        "settings": {
+          "locale": "en",
+          "uiScale": 1,
+          "theme": "dark",
+          "highContrast": false
+        }
+      },
+      "width": 1024,
+      "scroll": 1024,
+      "buttons": [
+        {
+          "text": "Learn Nova_A",
+          "x": 842.84375,
+          "right": 957.890625,
+          "width": 115.046875,
+          "height": 28
+        },
+        {
+          "text": "New Project",
+          "x": 130.53125,
+          "right": 382.8125,
+          "width": 252.28125,
+          "height": 32
+        },
+        {
+          "text": "Open Project",
+          "x": 130.53125,
+          "right": 382.8125,
+          "width": 252.28125,
+          "height": 32
+        }
+      ],
+      "recentTitleBottom": 115.84375,
+      "recentHintTop": 123.84375,
+      "primaryContrast": 5.752376738583228,
+      "primaryForeground": "rgb(17, 19, 24)",
+      "primaryBackground": "rgb(91, 141, 239)"
+    },
+    {
+      "profile": "launcher-minimum-creation",
+      "x": 91.53125,
+      "right": 932.46875,
+      "y": 12,
+      "bottom": 628,
+      "width": 1024,
+      "height": 640,
+      "inputs": [
+        {
+          "x": 242.671875,
+          "right": 466.671875,
+          "width": 224
+        },
+        {
+          "x": 242.671875,
+          "right": 466.671875,
+          "width": 224
+        },
+        {
+          "x": 195.703125,
+          "right": 577.859375,
+          "width": 382.15625
+        },
+        {
+          "x": 632.8125,
+          "right": 741.8125,
+          "width": 109
+        },
+        {
+          "x": 788.46875,
+          "right": 905.46875,
+          "width": 117
+        }
+      ],
+      "labels": [
+        {
+          "text": "Search templates",
+          "x": 108.53125,
+          "right": 191.703125,
+          "lines": 1
+        },
+        {
+          "text": "Difficulty",
+          "x": 585.859375,
+          "right": 628.8125,
+          "lines": 1
+        },
+        {
+          "text": "Sort by",
+          "x": 749.8125,
+          "right": 784.46875,
+          "lines": 1
+        }
+      ]
+    },
+    {
+      "profile": "launcher-minimum-creation-submit",
+      "x": 788.859375,
+      "right": 905.46875,
+      "y": 590.8125,
+      "bottom": 618.8125,
+      "hit": true
+    },
+    {
+      "profile": {
+        "name": "launcher-de-large",
+        "width": 1600,
+        "height": 900,
+        "settings": {
+          "locale": "de",
+          "uiScale": 1.5,
+          "theme": "dark",
+          "highContrast": false
+        }
+      },
+      "width": 1600,
+      "scroll": 1600,
+      "buttons": [
+        {
+          "text": "Nova_A lernen",
+          "x": 1353.6875,
+          "right": 1520.84375,
+          "width": 167.15625,
+          "height": 42
+        },
+        {
+          "text": "Neues Projekt",
+          "x": 211.8125,
+          "right": 590.234375,
+          "width": 378.421875,
+          "height": 48
+        },
+        {
+          "text": "Projekt öffnen",
+          "x": 211.8125,
+          "right": 590.234375,
+          "width": 378.421875,
+          "height": 48
+        }
+      ],
+      "recentTitleBottom": 139.265625,
+      "recentHintTop": 147.265625,
+      "primaryContrast": 5.752376738583228,
+      "primaryForeground": "rgb(17, 19, 24)",
+      "primaryBackground": "rgb(91, 141, 239)"
+    },
+    {
+      "profile": "launcher-de-large-creation",
+      "x": 169.296875,
+      "right": 1430.703125,
+      "y": 25.109375,
+      "bottom": 874.875,
+      "width": 1600,
+      "height": 900,
+      "inputs": [
+        {
+          "x": 383.5,
+          "right": 719.5,
+          "width": 336
+        },
+        {
+          "x": 383.5,
+          "right": 719.5,
+          "width": 336
+        },
+        {
+          "x": 310.765625,
+          "right": 877.46875,
+          "width": 566.703125
+        },
+        {
+          "x": 985.609375,
+          "right": 1144.609375,
+          "width": 159
+        },
+        {
+          "x": 1222.703125,
+          "right": 1413.703125,
+          "width": 191
+        }
+      ],
+      "labels": [
+        {
+          "text": "Vorlagen suchen",
+          "x": 186.296875,
+          "right": 306.765625,
+          "lines": 1
+        },
+        {
+          "text": "Schwierigkeit",
+          "x": 885.46875,
+          "right": 981.609375,
+          "lines": 1
+        },
+        {
+          "text": "Sortieren",
+          "x": 1152.609375,
+          "right": 1218.703125,
+          "lines": 1
+        }
+      ]
+    },
+    {
+      "profile": "launcher-de-large-creation-submit",
+      "x": 1233.15625,
+      "right": 1413.703125,
+      "y": 815.875,
+      "bottom": 857.875,
+      "hit": true
+    },
+    {
+      "profile": {
+        "name": "launcher-zh-large",
+        "width": 1600,
+        "height": 900,
+        "settings": {
+          "locale": "zh",
+          "uiScale": 2,
+          "theme": "dark",
+          "highContrast": false
+        }
+      },
+      "width": 1600,
+      "scroll": 1600,
+      "buttons": [
+        {
+          "text": "学习 Nova_A",
+          "x": 1313.65625,
+          "right": 1507.78125,
+          "width": 194.125,
+          "height": 56
+        },
+        {
+          "text": "新建项目",
+          "x": 32,
+          "right": 536.5625,
+          "width": 504.5625,
+          "height": 64
+        },
+        {
+          "text": "打开项目",
+          "x": 32,
+          "right": 536.5625,
+          "width": 504.5625,
+          "height": 64
+        }
+      ],
+      "recentTitleBottom": 162.6875,
+      "recentHintTop": 170.6875,
+      "primaryContrast": 5.752376738583228,
+      "primaryForeground": "rgb(17, 19, 24)",
+      "primaryBackground": "rgb(91, 141, 239)"
+    },
+    {
+      "profile": "launcher-zh-large-creation",
+      "x": 24,
+      "right": 1576,
+      "y": 12,
+      "bottom": 888,
+      "width": 1600,
+      "height": 900,
+      "inputs": [
+        {
+          "x": 301.28125,
+          "right": 749.28125,
+          "width": 448
+        },
+        {
+          "x": 301.28125,
+          "right": 749.28125,
+          "width": 448
+        },
+        {
+          "x": 133,
+          "right": 1125,
+          "width": 992
+        },
+        {
+          "x": 1181,
+          "right": 1315,
+          "width": 134
+        },
+        {
+          "x": 1415,
+          "right": 1549,
+          "width": 134
+        }
+      ],
+      "labels": [
+        {
+          "text": "搜索模板",
+          "x": 41,
+          "right": 129,
+          "lines": 1
+        },
+        {
+          "text": "难度",
+          "x": 1133,
+          "right": 1177,
+          "lines": 1
+        },
+        {
+          "text": "排序方式",
+          "x": 1323,
+          "right": 1411,
+          "lines": 1
+        }
+      ]
+    },
+    {
+      "profile": "launcher-zh-large-creation-submit",
+      "x": 1397,
+      "right": 1549,
+      "y": 830.671875,
+      "bottom": 886.671875,
+      "hit": true
+    },
+    {
+      "profile": {
+        "name": "launcher-light",
+        "width": 1600,
+        "height": 900,
+        "settings": {
+          "locale": "en",
+          "uiScale": 1,
+          "theme": "light",
+          "highContrast": false
+        }
+      },
+      "width": 1600,
+      "scroll": 1600,
+      "buttons": [
+        {
+          "text": "Learn Nova_A",
+          "x": 1418.84375,
+          "right": 1533.890625,
+          "width": 115.046875,
+          "height": 28
+        },
+        {
+          "text": "New Project",
+          "x": 418.53125,
+          "right": 670.8125,
+          "width": 252.28125,
+          "height": 32
+        },
+        {
+          "text": "Open Project",
+          "x": 418.53125,
+          "right": 670.8125,
+          "width": 252.28125,
+          "height": 32
+        }
+      ],
+      "recentTitleBottom": 115.84375,
+      "recentHintTop": 123.84375,
+      "primaryContrast": 5.24624533980007,
+      "primaryForeground": "rgb(255, 255, 255)",
+      "primaryBackground": "rgb(79, 111, 143)"
+    },
+    {
+      "profile": "launcher-light-creation",
+      "x": 379.53125,
+      "right": 1220.46875,
+      "y": 86.09375,
+      "bottom": 813.90625,
+      "width": 1600,
+      "height": 900,
+      "inputs": [
+        {
+          "x": 530.671875,
+          "right": 754.671875,
+          "width": 224
+        },
+        {
+          "x": 530.671875,
+          "right": 754.671875,
+          "width": 224
+        },
+        {
+          "x": 483.703125,
+          "right": 875.859375,
+          "width": 392.15625
+        },
+        {
+          "x": 930.8125,
+          "right": 1039.8125,
+          "width": 109
+        },
+        {
+          "x": 1086.46875,
+          "right": 1203.46875,
+          "width": 117
+        }
+      ],
+      "labels": [
+        {
+          "text": "Search templates",
+          "x": 396.53125,
+          "right": 479.703125,
+          "lines": 1
+        },
+        {
+          "text": "Difficulty",
+          "x": 883.859375,
+          "right": 926.8125,
+          "lines": 1
+        },
+        {
+          "text": "Sort by",
+          "x": 1047.8125,
+          "right": 1082.46875,
+          "lines": 1
+        }
+      ]
+    },
+    {
+      "profile": "launcher-light-creation-submit",
+      "x": 1086.859375,
+      "right": 1203.46875,
+      "y": 768.90625,
+      "bottom": 796.90625,
+      "hit": true
+    },
+    {
+      "profile": {
+        "name": "launcher-contrast",
+        "width": 1600,
+        "height": 900,
+        "settings": {
+          "locale": "en",
+          "uiScale": 1,
+          "theme": "dark",
+          "highContrast": true
+        }
+      },
+      "width": 1600,
+      "scroll": 1600,
+      "buttons": [
+        {
+          "text": "Learn Nova_A",
+          "x": 1418.84375,
+          "right": 1533.890625,
+          "width": 115.046875,
+          "height": 28
+        },
+        {
+          "text": "New Project",
+          "x": 418.53125,
+          "right": 670.8125,
+          "width": 252.28125,
+          "height": 32
+        },
+        {
+          "text": "Open Project",
+          "x": 418.53125,
+          "right": 670.8125,
+          "width": 252.28125,
+          "height": 32
+        }
+      ],
+      "recentTitleBottom": 115.84375,
+      "recentHintTop": 123.84375,
+      "primaryContrast": 5.752376738583228,
+      "primaryForeground": "rgb(17, 19, 24)",
+      "primaryBackground": "rgb(91, 141, 239)"
+    },
+    {
+      "profile": "launcher-contrast-creation",
+      "x": 379.53125,
+      "right": 1220.46875,
+      "y": 86.09375,
+      "bottom": 813.90625,
+      "width": 1600,
+      "height": 900,
+      "inputs": [
+        {
+          "x": 530.671875,
+          "right": 754.671875,
+          "width": 224
+        },
+        {
+          "x": 530.671875,
+          "right": 754.671875,
+          "width": 224
+        },
+        {
+          "x": 483.703125,
+          "right": 875.859375,
+          "width": 392.15625
+        },
+        {
+          "x": 930.8125,
+          "right": 1039.8125,
+          "width": 109
+        },
+        {
+          "x": 1086.46875,
+          "right": 1203.46875,
+          "width": 117
+        }
+      ],
+      "labels": [
+        {
+          "text": "Search templates",
+          "x": 396.53125,
+          "right": 479.703125,
+          "lines": 1
+        },
+        {
+          "text": "Difficulty",
+          "x": 883.859375,
+          "right": 926.8125,
+          "lines": 1
+        },
+        {
+          "text": "Sort by",
+          "x": 1047.8125,
+          "right": 1082.46875,
+          "lines": 1
+        }
+      ]
+    },
+    {
+      "profile": "launcher-contrast-creation-submit",
+      "x": 1086.859375,
+      "right": 1203.46875,
+      "y": 768.90625,
+      "bottom": 796.90625,
+      "hit": true
+    }
+  ],
+  "captures": [
+    "v26.35-visual-owner-launcher-default.png",
+    "v26.35-visual-owner-launcher-default-creation.png",
+    "v26.35-visual-owner-launcher-minimum.png",
+    "v26.35-visual-owner-launcher-minimum-creation.png",
+    "v26.35-visual-owner-launcher-de-large.png",
+    "v26.35-visual-owner-launcher-de-large-creation.png",
+    "v26.35-visual-owner-launcher-zh-large.png",
+    "v26.35-visual-owner-launcher-zh-large-creation.png",
+    "v26.35-visual-owner-launcher-zh-large-creation-submit.png",
+    "v26.35-visual-owner-launcher-light.png",
+    "v26.35-visual-owner-launcher-light-creation.png",
+    "v26.35-visual-owner-launcher-contrast.png",
+    "v26.35-visual-owner-launcher-contrast-creation.png"
+  ],
+  "consoleErrors": [],
+  "browser": {
+    "protocolVersion": "1.3",
+    "product": "Edg/147.0.3912.72",
+    "revision": "@d4380ba2b9dc3452fbccdc737e69d7f67a09122c",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/147.0.0.0 Safari/537.36 Edg/147.0.0.0",
+    "jsVersion": "14.7.25.7"
+  },
+  "commandTimeoutMs": 30000,
+  "scope": "Development rebuild production bundle; not published-release qualification. Recorded real Edge input and DOM observations against production dist. Headless software rendering and download/file-input fallback; physical assistive technology and native OS picker behavior are not measured."
+}

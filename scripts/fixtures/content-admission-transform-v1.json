@@ -1,0 +1,111 @@
+{
+  "schema": "nova-content-admission-transform-v1",
+  "base": {
+    "path": ".cache/engine-overhaul/root-integration-next/merged-19a57fb5c0d0/source.json",
+    "sha256": "6f8356a03da8c00aa0533999553e1b708111d7cea022000c28f40edab8a0ce59"
+  },
+  "origin": {
+    "path": ".cache/content-admission-root/attempt2/handoff.json",
+    "sha256": "af11711d0b099654a9db38e9101c7b046abba8d91691d08ccffa0b312b2c0474"
+  },
+  "files": [
+    {
+      "path": "src/assets/contentInteroperability.ts",
+      "beforeSha256": "eae188941171b3d207ebe837a7df52ee731e262eca32cf92002717a5c6d81610",
+      "afterSha256": "62c4dc7582486a3c5cff1d5faf8112afeea1d024efeeda248d0f0aaeb366a1dd",
+      "stages": [
+        {
+          "beforeSha256": "eae188941171b3d207ebe837a7df52ee731e262eca32cf92002717a5c6d81610",
+          "afterSha256": "83b0f6c4b3ea48d1ab552704baf69d87739d24f1444c528a7d83c5a695600e1d",
+          "operations": [
+            {
+              "before": "/** Uses an isolated worker for metadata large enough to affect pointer latency; small files avoid worker startup cost. */\n/** 小文档或无 Worker 时同步转换，大文档委派带十秒超时的独立 Worker。 */ export async function importContentInterchangeAsync(fileName:string,source:string,previous?:ContentInterchangeMetadata|null):Promise<ContentInterchangeResult|null>{\n  if(typeof Worker==='undefined'||source.length<131_072)return importContentInterchange(fileName,source,previous)\n  const worker=new Worker(new URL('./contentInteroperability.worker.ts',import.meta.url),{type:'module'}),requestId=stableId(`${fileName}:${source.length}:${performance.now()}`)\n  return new Promise(/** 登记交换转换 Worker 超时、回复及错误处理，并发送带请求身份的转换数据。 */ (resolve,reject)=>{const timeout=window.setTimeout(/** 超时后终止交换转换 Worker 并拒绝等待，避免无限挂起。 */ ()=>{worker.terminate();reject(new Error('CONTENT_IMPORT_TIMEOUT: Metadata processing exceeded 10 seconds.'))},10_000);worker.onmessage=/** 忽略非本次回复，完成时清理超时并终止 Worker，再交付结果或错误。 */ event=>{if(event.data?.id!==requestId)return;window.clearTimeout(timeout);worker.terminate();if(event.data.error)reject(new Error(event.data.error));else resolve(event.data.result as ContentInterchangeResult|null)};worker.onerror=/** 清理超时并终止失败 Worker，将错误消息交给调用者。 */ event=>{window.clearTimeout(timeout);worker.terminate();reject(new Error(event.message))};worker.postMessage({id:requestId,fileName,source,previous})})\n}\n",
+              "after": "/** Optional host identity/cancellation preserves the existing three-argument converter API. */\nexport interface ContentInterchangeAsyncOptions {\n  signal?: AbortSignal\n  isCurrent?: () => boolean\n  sourceIdentity?: string\n  inputRevision?: number\n}\nfunction contentImportAborted(): Error { const error = new Error('Content import cancelled or source replaced.'); error.name = 'AbortError'; return error }\n/** Count UTF-8 without allocating a second whole-source byte buffer; reject at the original limit. */\nfunction contentUtf8Bytes(value: string, maximum: number): number {\n  if (value.length > maximum) throw new Error('CONTENT_INPUT_LIMIT: Input exceeds the configured byte budget.')\n  let bytes = 0\n  for (let index = 0; index < value.length; index++) {\n    const code = value.charCodeAt(index)\n    if (code < 0x80) bytes++\n    else if (code < 0x800) bytes += 2\n    else if (code >= 0xd800 && code <= 0xdbff && index + 1 < value.length && value.charCodeAt(index + 1) >= 0xdc00 && value.charCodeAt(index + 1) <= 0xdfff) { bytes += 4; index++ }\n    else bytes += 3\n    if (bytes > maximum) throw new Error('CONTENT_INPUT_LIMIT: Input exceeds the configured byte budget.')\n  }\n  return bytes\n}\n/** Conservative clone/retained-data estimate, not a physical JS heap upper bound. */\nfunction contentRetainedBytes(value: unknown, maximum: number): number {\n  let bytes = 0\n  const ancestors = new WeakSet<object>()\n  const add = (size: number): void => { bytes += size; if (!Number.isSafeInteger(bytes) || bytes > maximum) throw new Error('CONTENT_INPUT_LIMIT: Metadata exceeds the configured byte budget.') }\n  const visit = (item: unknown, depth: number): void => {\n    if (depth > 32) throw new Error('CONTENT_INPUT_STRUCTURE: Metadata nesting exceeds its plain schema.')\n    if (typeof item === 'string') { add(item.length * 2); add(contentUtf8Bytes(item, maximum - bytes)); return }\n    if (item === null || item === undefined || typeof item === 'number' || typeof item === 'boolean') { add(16); return }\n    if (typeof item !== 'object' || ancestors.has(item)) throw new Error('CONTENT_INPUT_STRUCTURE: Expected acyclic plain metadata.')\n    add(Array.isArray(item) ? 32 + item.length * 8 : 32)\n    ancestors.add(item)\n    for (const key in item) {\n      if (!Object.prototype.hasOwnProperty.call(item, key)) continue\n      const property = Object.getOwnPropertyDescriptor(item, key)\n      if (!property || !('value' in property)) throw new Error('CONTENT_INPUT_STRUCTURE: Metadata accessors cannot be cloned safely.')\n      add(key.length * 2); add(contentUtf8Bytes(key, maximum - bytes)); visit(property.value, depth + 1)\n    }\n    ancestors.delete(item)\n  }\n  visit(value, 0)\n  return bytes\n}\n/** Global asset admission precedes conversion, Worker construction and postMessage clone. */\nexport async function importContentInterchangeAsync(fileName: string, source: string, previous?: ContentInterchangeMetadata | null, options: ContentInterchangeAsyncOptions = {}): Promise<ContentInterchangeResult | null> {\n  const requestedAtMs = performance.now()\n  const current = (): void => { if (options.signal?.aborted || options.isCurrent && !options.isCurrent()) throw contentImportAborted() }\n  current()\n  // The synchronous converter is also imported inside the Worker. Only the parent async path loads its existing singleton.\n  const { auxiliaryWork, performanceCoordinator } = await import('../runtime/performance/services')\n  current()\n  const epoch = performanceCoordinator.snapshot.sessionEpoch\n  let sourceBytes: number\n  try { sourceBytes = contentUtf8Bytes(source, MAX_SOURCE_BYTES) }\n  catch { throw new Error(`CONTENT_SOURCE_LIMIT: ${fileName} exceeds the 16 MiB metadata limit.`) }\n  const maximumInput = performanceCoordinator.config.maxQueueBytes\n  const retainedSourceBytes = sourceBytes + source.length * 2\n  const inputBytes = retainedSourceBytes + contentRetainedBytes({ fileName, previous }, maximumInput - retainedSourceBytes)\n  const identity = options.sourceIdentity ?? `content:${fileName.slice(0, 240)}`\n  const work = auxiliaryWork.schedule<ContentInterchangeResult | null>({\n    name: `content:${fileName.slice(0, 240)}`, owner: 'asset', workClass: 'required', epoch, inputRevision: options.inputRevision,\n    inputBytes, scratchBytes: inputBytes * 8 + MAX_SOURCE_BYTES * 16, outputBytes: inputBytes + MAX_SOURCE_BYTES * 12,\n    readSet: [identity], writeSet: [], requestedAtMs, cooperative: false, cancelStrategy: 'retire-independent-worker'\n  }, async context => {\n    const valid = (): void => { current(); if (context.signal.aborted || context.epoch !== performanceCoordinator.snapshot.sessionEpoch) throw contentImportAborted() }\n    valid()\n    if (typeof Worker === 'undefined' || source.length < 131_072) {\n      const startedAt = performanceCoordinator.now()\n      const result = importContentInterchange(fileName, source, previous)\n      context.reportPhases({ postMessageMs: null, workerExecutionMs: null, localExecutionMs: Math.max(0, performanceCoordinator.now() - startedAt), transportAndReturnMs: null, mergeMs: null })\n      valid(); return result\n    }\n    const worker = new Worker(new URL('./contentInteroperability.worker.ts', import.meta.url), { type: 'module' })\n    const requestId = stableId(`${fileName}:${source.length}:${performance.now()}`)\n    return new Promise<ContentInterchangeResult | null>((resolve, reject) => {\n      let terminal = false, timeout: ReturnType<typeof setTimeout> | undefined\n      let postedAt: number | null = null, postMessageMs: number | null = null\n      const finish = async (result: ContentInterchangeResult | null, error?: unknown): Promise<void> => {\n        if (terminal) return\n        terminal = true\n        if (timeout !== undefined) clearTimeout(timeout)\n        context.signal.removeEventListener('abort', cancel)\n        worker.onmessage = null; worker.onerror = null\n        try {\n          // DOM terminate returns void. Hosts with observable termination (Node tests) return a completion Promise.\n          await worker.terminate()\n          context.reportPhases({ postMessageMs, workerExecutionMs: null, transportAndReturnMs: postedAt === null ? null : Math.max(0, performanceCoordinator.now() - postedAt), mergeMs: null })\n          if (error !== undefined) throw error\n          valid(); resolve(result)\n        } catch (failure) { reject(failure) }\n      }\n      const cancel = (): void => { void finish(null, contentImportAborted()) }\n      context.signal.addEventListener('abort', cancel, { once: true })\n      if (context.signal.aborted) { cancel(); return }\n      timeout = setTimeout(() => { void finish(null, new Error('CONTENT_IMPORT_TIMEOUT: Metadata processing exceeded 10 seconds.')) }, 10_000)\n      worker.onmessage = event => { if (event.data?.id !== requestId || terminal) return; void finish(event.data.result as ContentInterchangeResult | null, event.data.error === undefined ? undefined : new Error(String(event.data.error))) }\n      worker.onerror = event => { void finish(null, new Error(event.message)) }\n      try { valid(); postedAt = performanceCoordinator.now(); worker.postMessage({ id: requestId, fileName, source, previous }); postMessageMs = Math.max(0, performanceCoordinator.now() - postedAt) }\n      catch (error) { void finish(null, error) }\n    })\n  })\n  const cancelWork = (): void => { work.cancel('Content import cancelled') }\n  options.signal?.addEventListener('abort', cancelWork, { once: true })\n  if (options.signal?.aborted) cancelWork()\n  try { const result = await work.promise; current(); return result }\n  catch (error) { if (options.signal?.aborted) throw contentImportAborted(); throw error }\n  finally { options.signal?.removeEventListener('abort', cancelWork) }\n}\n"
+            }
+          ]
+        },
+        {
+          "beforeSha256": "83b0f6c4b3ea48d1ab552704baf69d87739d24f1444c528a7d83c5a695600e1d",
+          "afterSha256": "ccef36e4886e6a11501261f3f1df27e5c07720f3bdc49d25257f5412c0d73e4c",
+          "operations": [
+            {
+              "before": "cancelStrategy: 'retire-independent-worker'",
+              "after": "cancelStrategy: typeof Worker === 'undefined' || source.length < 131_072 ? 'discard-after-completion' : 'retire-independent-worker'"
+            },
+            {
+              "before": "context.reportPhases({ postMessageMs, workerExecutionMs: null, transportAndReturnMs: postedAt === null ? null : Math.max(0, performanceCoordinator.now() - postedAt), mergeMs: null })",
+              "after": "context.reportPhases({ postMessageMs, workerExecutionMs: null, transportAndReturnMs: null, mergeMs: null })"
+            },
+            {
+              "before": "event.data.error === undefined ? undefined : new Error(String(event.data.error))",
+              "after": "event.data.error ? new Error(String(event.data.error)) : undefined"
+            }
+          ]
+        },
+        {
+          "path": "src/assets/contentInteroperability.ts",
+          "beforeSha256": "ccef36e4886e6a11501261f3f1df27e5c07720f3bdc49d25257f5412c0d73e4c",
+          "afterSha256": "62c4dc7582486a3c5cff1d5faf8112afeea1d024efeeda248d0f0aaeb366a1dd",
+          "operations": [
+            {
+              "before": "  inputRevision?: number\n",
+              "after": "  inputRevision?: number\n  preparationStartedAtMs?: number\n"
+            },
+            {
+              "before": "function contentImportAborted()",
+              "after": "/** Reject oversized raw UTF-8 before creating a whole decoded string; preserve the decoder's leading BOM behavior. */\nexport function decodeContentInterchangeSource(fileName: string, bytes: ArrayBuffer): string {\n  if (bytes.byteLength > MAX_SOURCE_BYTES) {\n    const prefix = new Uint8Array(bytes, 0, Math.min(3, bytes.byteLength))\n    if (bytes.byteLength > MAX_SOURCE_BYTES + 3 || prefix[0] !== 0xef || prefix[1] !== 0xbb || prefix[2] !== 0xbf) throw new Error(`CONTENT_SOURCE_LIMIT: ${fileName} exceeds the 16 MiB metadata limit.`)\n  }\n  return new TextDecoder().decode(bytes)\n}\nfunction contentImportAborted()"
+            },
+            {
+              "before": "  const requestedAtMs = performance.now()\n",
+              "after": "  const enteredAtMs = performance.now()\n  const preparationStartedAtMs = options.preparationStartedAtMs\n  const requestedAtMs = preparationStartedAtMs !== undefined && Number.isFinite(preparationStartedAtMs) && preparationStartedAtMs >= 0 && preparationStartedAtMs <= enteredAtMs ? preparationStartedAtMs : enteredAtMs\n"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/assets/AssetDatabase.ts",
+      "beforeSha256": "bc4f713e04475884974648bdaecdd23468520344041518dd83a93fa60aabb46d",
+      "afterSha256": "8484d13030e30731ee7087b372343b343a55eb4fc1631b814714d99370200e7a",
+      "stages": [
+        {
+          "beforeSha256": "bc4f713e04475884974648bdaecdd23468520344041518dd83a93fa60aabb46d",
+          "afterSha256": "e08b7f766fc3492940e3b8ca3898e8c9ed501b21a73f90bfdde0d4c2b7902763",
+          "operations": [
+            {
+              "before": "await importContentInterchangeAsync(file.name, new TextDecoder().decode(artifact.bytes))",
+              "after": "await importContentInterchangeAsync(file.name, new TextDecoder().decode(artifact.bytes), undefined, { signal, isCurrent: () => session === assetSessionRevision, sourceIdentity: `import:${file.name.slice(0, 240)}:${file.size}:${file.lastModified}`, inputRevision: session })"
+            },
+            {
+              "before": "await importContentInterchangeAsync(file.name, decoded, before.interchange)",
+              "after": "await importContentInterchangeAsync(file.name, decoded, before.interchange, { signal, isCurrent: current, sourceIdentity: `asset:${uuid}`, inputRevision: revision })"
+            }
+          ]
+        },
+        {
+          "path": "src/assets/AssetDatabase.ts",
+          "beforeSha256": "e08b7f766fc3492940e3b8ca3898e8c9ed501b21a73f90bfdde0d4c2b7902763",
+          "afterSha256": "8484d13030e30731ee7087b372343b343a55eb4fc1631b814714d99370200e7a",
+          "operations": [
+            {
+              "before": "import { importContentInterchangeAsync } from './contentInteroperability'",
+              "after": "import { decodeContentInterchangeSource, importContentInterchangeAsync } from './contentInteroperability'"
+            },
+            {
+              "before": "  const external = ['atlas', 'tileset', 'other'].includes(assetType) ? await importContentInterchangeAsync(file.name, new TextDecoder().decode(artifact.bytes), undefined, { signal, isCurrent: () => session === assetSessionRevision, sourceIdentity: `import:${file.name.slice(0, 240)}:${file.size}:${file.lastModified}`, inputRevision: session }) : null",
+              "after": "  const preparationStartedAtMs = performance.now()\r\n  const external = ['atlas', 'tileset', 'other'].includes(assetType) ? await importContentInterchangeAsync(file.name, decodeContentInterchangeSource(file.name, artifact.bytes), undefined, { signal, isCurrent: () => session === assetSessionRevision, sourceIdentity: `import:${file.name.slice(0, 240)}:${file.size}:${file.lastModified}`, inputRevision: session, preparationStartedAtMs }) : null"
+            },
+            {
+              "before": "    const decoded = ['atlas', 'tileset'].includes(record.assetType) ? new TextDecoder().decode(artifact.bytes) : ''",
+              "after": "    const preparationStartedAtMs = performance.now()\r\n    const decoded = ['atlas', 'tileset'].includes(record.assetType) ? decodeContentInterchangeSource(file.name, artifact.bytes) : ''"
+            },
+            {
+              "before": "sourceIdentity: `asset:${uuid}`, inputRevision: revision })",
+              "after": "sourceIdentity: `asset:${uuid}`, inputRevision: revision, preparationStartedAtMs })"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

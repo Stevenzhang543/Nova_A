@@ -1,0 +1,635 @@
+{
+  "inventory": [
+    {
+      "id": "BonePose2D.boneId",
+      "source": "src/world/components.ts",
+      "owner": "Skeleton2D.pose.0.boneId / component paste or Transform owner / document transaction",
+      "cases": [
+        0
+      ]
+    },
+    {
+      "id": "BonePose2D.position",
+      "source": "src/world/components.ts",
+      "owner": "Skeleton2D.pose.0.position / component paste or Transform owner / document transaction",
+      "cases": [
+        1
+      ]
+    },
+    {
+      "id": "BonePose2D.rotation",
+      "source": "src/world/components.ts",
+      "owner": "Skeleton2D.pose.0.rotation / component paste or Transform owner / document transaction",
+      "cases": [
+        2
+      ]
+    },
+    {
+      "id": "BonePose2D.scale",
+      "source": "src/world/components.ts",
+      "owner": "Skeleton2D.pose.0.scale / component paste or Transform owner / document transaction",
+      "cases": [
+        3
+      ]
+    },
+    {
+      "id": "AreaEffect2D.id",
+      "source": "src/world/components.ts",
+      "owner": "AreaEffector2D.effectors.0.id / component paste or Transform owner / document transaction",
+      "cases": [
+        4
+      ]
+    },
+    {
+      "id": "AreaEffect2D.enabled",
+      "source": "src/world/components.ts",
+      "owner": "AreaEffector2D.effectors.0.enabled / component paste or Transform owner / document transaction",
+      "cases": [
+        5
+      ]
+    },
+    {
+      "id": "AreaEffect2D.direction",
+      "source": "src/world/components.ts",
+      "owner": "AreaEffector2D.effectors.0.direction / component paste or Transform owner / document transaction",
+      "cases": [
+        6
+      ]
+    },
+    {
+      "id": "AreaEffect2D.strength",
+      "source": "src/world/components.ts",
+      "owner": "AreaEffector2D.effectors.0.strength / component paste or Transform owner / document transaction",
+      "cases": [
+        7
+      ]
+    },
+    {
+      "id": "AreaEffect2D.drag",
+      "source": "src/world/components.ts",
+      "owner": "AreaEffector2D.effectors.0.drag / component paste or Transform owner / document transaction",
+      "cases": [
+        8
+      ]
+    },
+    {
+      "id": "AreaEffect2D.fluidDensity",
+      "source": "src/world/components.ts",
+      "owner": "AreaEffector2D.effectors.0.fluidDensity / component paste or Transform owner / document transaction",
+      "cases": [
+        9
+      ]
+    },
+    {
+      "id": "AreaEffect2D.damagePerSecond",
+      "source": "src/world/components.ts",
+      "owner": "AreaEffector2D.effectors.0.damagePerSecond / component paste or Transform owner / document transaction",
+      "cases": [
+        10
+      ]
+    },
+    {
+      "id": "AreaEffect2D.signal",
+      "source": "src/world/components.ts",
+      "owner": "AreaEffector2D.effectors.0.signal / component paste or Transform owner / document transaction",
+      "cases": [
+        11
+      ]
+    },
+    {
+      "id": "AreaEffect2D.kind",
+      "source": "src/world/components.ts",
+      "owner": "AreaEffector2D.effectors.0.kind / component paste or Transform owner / document transaction",
+      "cases": [
+        12,
+        13,
+        14,
+        15,
+        16,
+        17
+      ]
+    },
+    {
+      "id": "PhysicsMaterial2D.restitution",
+      "source": "src/world/components.ts",
+      "owner": "BoxCollider2D.material.restitution / component paste or Transform owner / document transaction",
+      "cases": [
+        18
+      ]
+    },
+    {
+      "id": "PhysicsMaterial2D.restitutionThreshold",
+      "source": "src/world/components.ts",
+      "owner": "BoxCollider2D.material.restitutionThreshold / component paste or Transform owner / document transaction",
+      "cases": [
+        19
+      ]
+    },
+    {
+      "id": "PhysicsMaterial2D.staticFriction",
+      "source": "src/world/components.ts",
+      "owner": "BoxCollider2D.material.staticFriction / component paste or Transform owner / document transaction",
+      "cases": [
+        20
+      ]
+    },
+    {
+      "id": "PhysicsMaterial2D.dynamicFriction",
+      "source": "src/world/components.ts",
+      "owner": "BoxCollider2D.material.dynamicFriction / component paste or Transform owner / document transaction",
+      "cases": [
+        21
+      ]
+    },
+    {
+      "id": "PhysicsMaterial2D.density",
+      "source": "src/world/components.ts",
+      "owner": "BoxCollider2D.material.density / component paste or Transform owner / document transaction",
+      "cases": [
+        22
+      ]
+    },
+    {
+      "id": "PhysicsMaterial2D.frictionCombine",
+      "source": "src/world/components.ts",
+      "owner": "BoxCollider2D.material.frictionCombine / component paste or Transform owner / document transaction",
+      "cases": [
+        23,
+        24,
+        25,
+        26
+      ]
+    },
+    {
+      "id": "PhysicsMaterial2D.restitutionCombine",
+      "source": "src/world/components.ts",
+      "owner": "BoxCollider2D.material.restitutionCombine / component paste or Transform owner / document transaction",
+      "cases": [
+        27,
+        28,
+        29,
+        30
+      ]
+    },
+    {
+      "id": "Transform.position",
+      "source": "src/world/Transform.ts",
+      "owner": "Transform2D.position / component paste or Transform owner / document transaction",
+      "cases": [
+        31
+      ]
+    },
+    {
+      "id": "Transform.rotation",
+      "source": "src/world/Transform.ts",
+      "owner": "Transform2D.rotation / component paste or Transform owner / document transaction",
+      "cases": [
+        32
+      ]
+    },
+    {
+      "id": "Transform.scale",
+      "source": "src/world/Transform.ts",
+      "owner": "Transform2D.scale / component paste or Transform owner / document transaction",
+      "cases": [
+        33
+      ]
+    },
+    {
+      "id": "Transform.uuid",
+      "source": "src/world/Transform.ts",
+      "owner": "Transform constructor / Entity.removeComponent / applyStoredComponents",
+      "disposition": "Stable constructor component identity; hydration preserves it and property editing must not replace it.",
+      "cases": []
+    },
+    {
+      "id": "Transform.kind",
+      "source": "src/world/Transform.ts",
+      "owner": "Transform constructor / Entity.removeComponent / applyStoredComponents",
+      "disposition": "Fixed Transform2D identity; every entity requires this owner.",
+      "cases": []
+    },
+    {
+      "id": "Transform.enabled",
+      "source": "src/world/Transform.ts",
+      "owner": "Transform constructor / Entity.removeComponent / applyStoredComponents",
+      "disposition": "Mandatory true invariant; Inspector has no enable action and hydration restores true.",
+      "cases": []
+    },
+    {
+      "id": "Transform.removed",
+      "source": "src/world/Transform.ts",
+      "owner": "Transform constructor / Entity.removeComponent / applyStoredComponents",
+      "disposition": "Mandatory false invariant; removeComponent rejects Transform2D and hydration restores presence.",
+      "cases": []
+    }
+  ],
+  "cases": [
+    {
+      "id": "BonePose2D.boneId",
+      "kind": "Skeleton2D",
+      "path": "pose.0.boneId",
+      "value": "tip",
+      "status": "passed"
+    },
+    {
+      "id": "BonePose2D.position",
+      "kind": "Skeleton2D",
+      "path": "pose.0.position",
+      "value": {
+        "x": 2,
+        "y": 3
+      },
+      "status": "passed"
+    },
+    {
+      "id": "BonePose2D.rotation",
+      "kind": "Skeleton2D",
+      "path": "pose.0.rotation",
+      "value": 0.75,
+      "status": "passed"
+    },
+    {
+      "id": "BonePose2D.scale",
+      "kind": "Skeleton2D",
+      "path": "pose.0.scale",
+      "value": {
+        "x": 1.5,
+        "y": 0.8
+      },
+      "status": "passed"
+    },
+    {
+      "id": "AreaEffect2D.id",
+      "kind": "AreaEffector2D",
+      "path": "effectors.0.id",
+      "value": "alternate",
+      "status": "passed"
+    },
+    {
+      "id": "AreaEffect2D.enabled",
+      "kind": "AreaEffector2D",
+      "path": "effectors.0.enabled",
+      "value": false,
+      "status": "passed"
+    },
+    {
+      "id": "AreaEffect2D.direction",
+      "kind": "AreaEffector2D",
+      "path": "effectors.0.direction",
+      "value": {
+        "x": 1,
+        "y": 0
+      },
+      "status": "passed"
+    },
+    {
+      "id": "AreaEffect2D.strength",
+      "kind": "AreaEffector2D",
+      "path": "effectors.0.strength",
+      "value": 4,
+      "status": "passed"
+    },
+    {
+      "id": "AreaEffect2D.drag",
+      "kind": "AreaEffector2D",
+      "path": "effectors.0.drag",
+      "value": 0.2,
+      "status": "passed"
+    },
+    {
+      "id": "AreaEffect2D.fluidDensity",
+      "kind": "AreaEffector2D",
+      "path": "effectors.0.fluidDensity",
+      "value": 3,
+      "status": "passed"
+    },
+    {
+      "id": "AreaEffect2D.damagePerSecond",
+      "kind": "AreaEffector2D",
+      "path": "effectors.0.damagePerSecond",
+      "value": 5,
+      "status": "passed"
+    },
+    {
+      "id": "AreaEffect2D.signal",
+      "kind": "AreaEffector2D",
+      "path": "effectors.0.signal",
+      "value": "audit.effect",
+      "status": "passed"
+    },
+    {
+      "id": "AreaEffect2D.kind",
+      "kind": "AreaEffector2D",
+      "path": "effectors.0.kind",
+      "value": "Gravity",
+      "status": "passed"
+    },
+    {
+      "id": "AreaEffect2D.kind",
+      "kind": "AreaEffector2D",
+      "path": "effectors.0.kind",
+      "value": "Wind",
+      "status": "passed"
+    },
+    {
+      "id": "AreaEffect2D.kind",
+      "kind": "AreaEffector2D",
+      "path": "effectors.0.kind",
+      "value": "Drag",
+      "status": "passed"
+    },
+    {
+      "id": "AreaEffect2D.kind",
+      "kind": "AreaEffector2D",
+      "path": "effectors.0.kind",
+      "value": "Buoyancy",
+      "status": "passed"
+    },
+    {
+      "id": "AreaEffect2D.kind",
+      "kind": "AreaEffector2D",
+      "path": "effectors.0.kind",
+      "value": "Damage",
+      "status": "passed"
+    },
+    {
+      "id": "AreaEffect2D.kind",
+      "kind": "AreaEffector2D",
+      "path": "effectors.0.kind",
+      "value": "Signal",
+      "status": "passed"
+    },
+    {
+      "id": "PhysicsMaterial2D.restitution",
+      "kind": "BoxCollider2D",
+      "path": "material.restitution",
+      "value": 0.6,
+      "status": "passed"
+    },
+    {
+      "id": "PhysicsMaterial2D.restitutionThreshold",
+      "kind": "BoxCollider2D",
+      "path": "material.restitutionThreshold",
+      "value": 2,
+      "status": "passed"
+    },
+    {
+      "id": "PhysicsMaterial2D.staticFriction",
+      "kind": "BoxCollider2D",
+      "path": "material.staticFriction",
+      "value": 0.7,
+      "status": "passed"
+    },
+    {
+      "id": "PhysicsMaterial2D.dynamicFriction",
+      "kind": "BoxCollider2D",
+      "path": "material.dynamicFriction",
+      "value": 0.4,
+      "status": "passed"
+    },
+    {
+      "id": "PhysicsMaterial2D.density",
+      "kind": "BoxCollider2D",
+      "path": "material.density",
+      "value": 2,
+      "status": "passed"
+    },
+    {
+      "id": "PhysicsMaterial2D.frictionCombine",
+      "kind": "BoxCollider2D",
+      "path": "material.frictionCombine",
+      "value": "Average",
+      "status": "passed"
+    },
+    {
+      "id": "PhysicsMaterial2D.frictionCombine",
+      "kind": "BoxCollider2D",
+      "path": "material.frictionCombine",
+      "value": "Minimum",
+      "status": "passed"
+    },
+    {
+      "id": "PhysicsMaterial2D.frictionCombine",
+      "kind": "BoxCollider2D",
+      "path": "material.frictionCombine",
+      "value": "Maximum",
+      "status": "passed"
+    },
+    {
+      "id": "PhysicsMaterial2D.frictionCombine",
+      "kind": "BoxCollider2D",
+      "path": "material.frictionCombine",
+      "value": "Multiply",
+      "status": "passed"
+    },
+    {
+      "id": "PhysicsMaterial2D.restitutionCombine",
+      "kind": "BoxCollider2D",
+      "path": "material.restitutionCombine",
+      "value": "Average",
+      "status": "passed"
+    },
+    {
+      "id": "PhysicsMaterial2D.restitutionCombine",
+      "kind": "BoxCollider2D",
+      "path": "material.restitutionCombine",
+      "value": "Minimum",
+      "status": "passed"
+    },
+    {
+      "id": "PhysicsMaterial2D.restitutionCombine",
+      "kind": "BoxCollider2D",
+      "path": "material.restitutionCombine",
+      "value": "Maximum",
+      "status": "passed"
+    },
+    {
+      "id": "PhysicsMaterial2D.restitutionCombine",
+      "kind": "BoxCollider2D",
+      "path": "material.restitutionCombine",
+      "value": "Multiply",
+      "status": "passed"
+    },
+    {
+      "id": "Transform.position",
+      "kind": "Transform2D",
+      "path": "position",
+      "value": {
+        "x": 3,
+        "y": 4
+      },
+      "status": "passed"
+    },
+    {
+      "id": "Transform.rotation",
+      "kind": "Transform2D",
+      "path": "rotation",
+      "value": 0.6,
+      "status": "passed"
+    },
+    {
+      "id": "Transform.scale",
+      "kind": "Transform2D",
+      "path": "scale",
+      "value": {
+        "x": 2,
+        "y": 1.5
+      },
+      "status": "passed"
+    }
+  ],
+  "format": "nova-v26.22-nested-component-corpus",
+  "version": 1,
+  "release": "26.22",
+  "regressionOrigin": "26.22",
+  "engineVersion": "26.32.0",
+  "expectedRelease": "26.32",
+  "development": true,
+  "qualifiedRelease": null,
+  "generatedAt": "2026-09-28T18:10:38.968Z",
+  "status": "passed",
+  "scope": "Each nested field is independently mutated through its component owner with whole-entity Undo/Redo and native/NovaPak comparison. Enum values are enumerated. This does not claim rig assets, area overlap runtime effects or arbitrary nested structural coverage.",
+  "checks": [
+    {
+      "name": "BonePose2D.boneId \"tip\" history/native/export",
+      "status": "passed"
+    },
+    {
+      "name": "BonePose2D.position {\"x\":2,\"y\":3} history/native/export",
+      "status": "passed"
+    },
+    {
+      "name": "BonePose2D.rotation 0.75 history/native/export",
+      "status": "passed"
+    },
+    {
+      "name": "BonePose2D.scale {\"x\":1.5,\"y\":0.8} history/native/export",
+      "status": "passed"
+    },
+    {
+      "name": "AreaEffect2D.id \"alternate\" history/native/export",
+      "status": "passed"
+    },
+    {
+      "name": "AreaEffect2D.enabled false history/native/export",
+      "status": "passed"
+    },
+    {
+      "name": "AreaEffect2D.direction {\"x\":1,\"y\":0} history/native/export",
+      "status": "passed"
+    },
+    {
+      "name": "AreaEffect2D.strength 4 history/native/export",
+      "status": "passed"
+    },
+    {
+      "name": "AreaEffect2D.drag 0.2 history/native/export",
+      "status": "passed"
+    },
+    {
+      "name": "AreaEffect2D.fluidDensity 3 history/native/export",
+      "status": "passed"
+    },
+    {
+      "name": "AreaEffect2D.damagePerSecond 5 history/native/export",
+      "status": "passed"
+    },
+    {
+      "name": "AreaEffect2D.signal \"audit.effect\" history/native/export",
+      "status": "passed"
+    },
+    {
+      "name": "AreaEffect2D.kind \"Gravity\" history/native/export",
+      "status": "passed"
+    },
+    {
+      "name": "AreaEffect2D.kind \"Wind\" history/native/export",
+      "status": "passed"
+    },
+    {
+      "name": "AreaEffect2D.kind \"Drag\" history/native/export",
+      "status": "passed"
+    },
+    {
+      "name": "AreaEffect2D.kind \"Buoyancy\" history/native/export",
+      "status": "passed"
+    },
+    {
+      "name": "AreaEffect2D.kind \"Damage\" history/native/export",
+      "status": "passed"
+    },
+    {
+      "name": "AreaEffect2D.kind \"Signal\" history/native/export",
+      "status": "passed"
+    },
+    {
+      "name": "PhysicsMaterial2D.restitution 0.6 history/native/export",
+      "status": "passed"
+    },
+    {
+      "name": "PhysicsMaterial2D.restitutionThreshold 2 history/native/export",
+      "status": "passed"
+    },
+    {
+      "name": "PhysicsMaterial2D.staticFriction 0.7 history/native/export",
+      "status": "passed"
+    },
+    {
+      "name": "PhysicsMaterial2D.dynamicFriction 0.4 history/native/export",
+      "status": "passed"
+    },
+    {
+      "name": "PhysicsMaterial2D.density 2 history/native/export",
+      "status": "passed"
+    },
+    {
+      "name": "PhysicsMaterial2D.frictionCombine \"Average\" history/native/export",
+      "status": "passed"
+    },
+    {
+      "name": "PhysicsMaterial2D.frictionCombine \"Minimum\" history/native/export",
+      "status": "passed"
+    },
+    {
+      "name": "PhysicsMaterial2D.frictionCombine \"Maximum\" history/native/export",
+      "status": "passed"
+    },
+    {
+      "name": "PhysicsMaterial2D.frictionCombine \"Multiply\" history/native/export",
+      "status": "passed"
+    },
+    {
+      "name": "PhysicsMaterial2D.restitutionCombine \"Average\" history/native/export",
+      "status": "passed"
+    },
+    {
+      "name": "PhysicsMaterial2D.restitutionCombine \"Minimum\" history/native/export",
+      "status": "passed"
+    },
+    {
+      "name": "PhysicsMaterial2D.restitutionCombine \"Maximum\" history/native/export",
+      "status": "passed"
+    },
+    {
+      "name": "PhysicsMaterial2D.restitutionCombine \"Multiply\" history/native/export",
+      "status": "passed"
+    },
+    {
+      "name": "Transform.position {\"x\":3,\"y\":4} history/native/export",
+      "status": "passed"
+    },
+    {
+      "name": "Transform.rotation 0.6 history/native/export",
+      "status": "passed"
+    },
+    {
+      "name": "Transform.scale {\"x\":2,\"y\":1.5} history/native/export",
+      "status": "passed"
+    },
+    {
+      "name": "Mandatory Transform cannot be removed and hydration restores fixed enabled/present invariants",
+      "status": "passed"
+    }
+  ]
+}

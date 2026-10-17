@@ -1,0 +1,52 @@
+{
+  "format": "nova-performance-evidence",
+  "version": 1,
+  "engineVersion": "26.34.0",
+  "generatedAt": "2026-10-01T17:23:56.213Z",
+  "status": "failed",
+  "checks": [
+    {
+      "name": "An empty capture cannot produce a passing CI performance report",
+      "status": "failed",
+      "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\ntrue !== false\n\n    at file:///E:/Nova_A/scripts/verify-v26.34-performance-evidence.mjs:14:122\n    at check (file:///E:/Nova_A/scripts/verify-v26.34-performance-evidence.mjs:12:172)\n    at file:///E:/Nova_A/scripts/verify-v26.34-performance-evidence.mjs:14:8"
+    },
+    {
+      "name": "Measured frame means and renderer budgets preserve successful CI behavior",
+      "status": "passed"
+    },
+    {
+      "name": "Unavailable GPU query is explicitly skipped while available CPU checks remain usable",
+      "status": "failed",
+      "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n+ actual - expected\n\n+ undefined\n- 'unavailable'\n\n    at file:///E:/Nova_A/scripts/verify-v26.34-performance-evidence.mjs:16:230\n    at check (file:///E:/Nova_A/scripts/verify-v26.34-performance-evidence.mjs:12:172)\n    at file:///E:/Nova_A/scripts/verify-v26.34-performance-evidence.mjs:16:8"
+    },
+    {
+      "name": "Profiler planning estimate cannot certify measured overhead compliance",
+      "status": "failed",
+      "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n+ actual - expected\n\n+ undefined\n- 'estimated'\n\n    at file:///E:/Nova_A/scripts/verify-v26.34-performance-evidence.mjs:17:231\n    at check (file:///E:/Nova_A/scripts/verify-v26.34-performance-evidence.mjs:12:172)\n    at file:///E:/Nova_A/scripts/verify-v26.34-performance-evidence.mjs:17:8"
+    },
+    {
+      "name": "Nonfinite and negative required frame measurements fail instead of becoming zero",
+      "status": "failed",
+      "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n+ actual - expected\n\n+ undefined\n- 'failed'\n\n    at file:///E:/Nova_A/scripts/verify-v26.34-performance-evidence.mjs:18:335\n    at check (file:///E:/Nova_A/scripts/verify-v26.34-performance-evidence.mjs:12:172)\n    at file:///E:/Nova_A/scripts/verify-v26.34-performance-evidence.mjs:18:8"
+    },
+    {
+      "name": "Invalid renderer telemetry and measured budget excess remain failures",
+      "status": "failed",
+      "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n'passed' !== 'failed'\n\n    at file:///E:/Nova_A/scripts/verify-v26.34-performance-evidence.mjs:19:204\n    at check (file:///E:/Nova_A/scripts/verify-v26.34-performance-evidence.mjs:12:172)\n    at file:///E:/Nova_A/scripts/verify-v26.34-performance-evidence.mjs:19:8"
+    },
+    {
+      "name": "Capture serialization retains legacy fields and detached measured samples",
+      "status": "passed"
+    },
+    {
+      "name": "Comparison refuses captures with no frame timing evidence",
+      "status": "failed",
+      "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n+ actual - expected\n\n+ {\n+   assetDeltaMb: 0,\n+   averageFrameDeltaMs: 6,\n+   budgetRegressions: [],\n+   drawCallDelta: 0,\n+   entityDelta: 0,\n+   first: 'capture-mupszueq-0',\n+   gpuDeltaMs: 0,\n+   memoryDeltaMb: null,\n+   peakFrameDeltaMs: 7,\n+   second: 'capture-mupszuer-1',\n+   textureMemoryDeltaMb: 0\n+ }\n- null\n\n    at file:///E:/Nova_A/scripts/verify-v26.34-performance-evidence.mjs:21:142\n    at check (file:///E:/Nova_A/scripts/verify-v26.34-performance-evidence.mjs:12:172)\n    at file:///E:/Nova_A/scripts/verify-v26.34-performance-evidence.mjs:21:8"
+    }
+  ],
+  "sourceHashes": {
+    "src/runtime/performanceTools.ts": "626dec1109a22a1687ff31ee5400cf4121af18b1e05d0832de654afa0bc8c767",
+    "src/components/ProfilerPanel.vue": "8064852d0cb5e1c8cdb15ad2c0d79453ca22115405764d49523f153e5f6e8dfb"
+  },
+  "scope": "Real production profiler/capture modules with specified timing and renderer telemetry inputs. These validate evidence semantics, not target-device performance."
+}

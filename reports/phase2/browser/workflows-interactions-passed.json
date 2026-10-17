@@ -1,0 +1,195 @@
+{
+  "format": "nova-v26.32-phase2-workflows-user-audit",
+  "version": 1,
+  "release": "26.32",
+  "regressionOrigin": "26.32",
+  "expectedRelease": "26.32",
+  "development": false,
+  "qualifiedRelease": null,
+  "generatedAt": "2026-09-28T18:40:43.707Z",
+  "status": "passed",
+  "checks": [
+    {
+      "name": "platformer: create from launcher, save, reload, run and stop",
+      "status": "passed"
+    },
+    {
+      "name": "top-down: create from launcher, save, reload, run and stop",
+      "status": "passed"
+    },
+    {
+      "name": "responsive-ui: create from launcher, save, reload, run and stop",
+      "status": "passed"
+    }
+  ],
+  "observations": [
+    {
+      "name": "actual-project-download",
+      "file": "E:\\Nova_A\\reports\\phase2\\browser\\v26.17-phase2-platformer.nova",
+      "bytes": 198191
+    },
+    {
+      "name": "actual-project-download",
+      "file": "E:\\Nova_A\\reports\\phase2\\browser\\v26.17-phase2-platformer-reopened.nova",
+      "bytes": 198191
+    },
+    {
+      "name": "dismissed-notification",
+      "text": "Project migration"
+    },
+    {
+      "name": "dismissed-notification",
+      "text": "Project upgrade"
+    },
+    {
+      "name": "dismissed-notification",
+      "text": "Save project"
+    },
+    {
+      "name": "dismissed-notification",
+      "text": "Save Project"
+    },
+    {
+      "id": "platformer",
+      "grounded": [
+        -4,
+        -2.599
+      ],
+      "moved": [
+        -3.2,
+        -2.599954214731867
+      ],
+      "jumped": [
+        -3.2,
+        -1.4916208813985334
+      ],
+      "scope": "Bounded actual key hold waits for observed simulation progress; software rendering is not assumed to sustain realtime FPS."
+    },
+    {
+      "name": "actual-project-download",
+      "file": "E:\\Nova_A\\reports\\phase2\\browser\\v26.17-phase2-platformer-stopped.nova",
+      "bytes": 198191
+    },
+    {
+      "id": "platformer",
+      "pixels": {
+        "colors": 827,
+        "nonDominant": 351114
+      },
+      "scenes": 1,
+      "assets": 8,
+      "scope": "Fresh creation and real save/reload/run/stop; top-down keyboard movement. Does not certify every template mechanic."
+    },
+    {
+      "name": "actual-project-download",
+      "file": "E:\\Nova_A\\reports\\phase2\\browser\\v26.17-phase2-top-down.nova",
+      "bytes": 218246
+    },
+    {
+      "name": "actual-project-download",
+      "file": "E:\\Nova_A\\reports\\phase2\\browser\\v26.17-phase2-top-down-reopened.nova",
+      "bytes": 218246
+    },
+    {
+      "name": "dismissed-notification",
+      "text": "Project migration"
+    },
+    {
+      "name": "dismissed-notification",
+      "text": "Project upgrade"
+    },
+    {
+      "name": "dismissed-notification",
+      "text": "Save project"
+    },
+    {
+      "name": "dismissed-notification",
+      "text": "Save Project"
+    },
+    {
+      "id": "top-down",
+      "input": "W",
+      "before": [
+        -1.2958333330233525,
+        3.073804019788013e-12
+      ],
+      "after": [
+        -1.2958333330233525,
+        1.3881678021461636
+      ],
+      "focus": "<body>\n    <div id=\"app\" data-v-app=\"\"><section class=\"ui-workspace-host\" data-displayed-view=\"editor\"><div data-v-f516078e=\"\" class=\"editor-root\" data-control-scope=\"editor-shell\"><!----><header data-v-2e835e5f=\"\" data-v-f516078e=\"\" class=\"top-bar\" style=\"--menu-left: 75.234375px;\"><a data-v-2e835e5f=\"\" class=\"brand\" href=\"https://whitelists.top\" target=\"_blank\" rel=\"noreferrer\" aria-label=\"Nova_A by Whitelist\" data-surface=\"editor-shell\" data-testid=\"nova-editor-shell-link-1\" data-test-identit"
+    },
+    {
+      "name": "actual-project-download",
+      "file": "E:\\Nova_A\\reports\\phase2\\browser\\v26.17-phase2-top-down-stopped.nova",
+      "bytes": 218246
+    },
+    {
+      "id": "top-down",
+      "pixels": {
+        "colors": 137,
+        "nonDominant": 281266
+      },
+      "scenes": 2,
+      "assets": 6,
+      "scope": "Fresh creation and real save/reload/run/stop; top-down keyboard movement. Does not certify every template mechanic."
+    },
+    {
+      "name": "actual-project-download",
+      "file": "E:\\Nova_A\\reports\\phase2\\browser\\v26.17-phase2-responsive-ui.nova",
+      "bytes": 151628
+    },
+    {
+      "name": "actual-project-download",
+      "file": "E:\\Nova_A\\reports\\phase2\\browser\\v26.17-phase2-responsive-ui-reopened.nova",
+      "bytes": 151628
+    },
+    {
+      "name": "dismissed-notification",
+      "text": "Project migration"
+    },
+    {
+      "name": "dismissed-notification",
+      "text": "Project upgrade"
+    },
+    {
+      "name": "dismissed-notification",
+      "text": "Save project"
+    },
+    {
+      "name": "dismissed-notification",
+      "text": "Save Project"
+    },
+    {
+      "name": "actual-project-download",
+      "file": "E:\\Nova_A\\reports\\phase2\\browser\\v26.17-phase2-responsive-ui-stopped.nova",
+      "bytes": 151628
+    },
+    {
+      "id": "responsive-ui",
+      "pixels": {
+        "colors": 445,
+        "nonDominant": 132300
+      },
+      "scenes": 1,
+      "assets": 4,
+      "scope": "Fresh creation and real save/reload/run/stop; top-down keyboard movement. Does not certify every template mechanic."
+    }
+  ],
+  "captures": [
+    "v26.32-phase2-workflows-platformer-running.png",
+    "v26.32-phase2-workflows-top-down-running.png",
+    "v26.32-phase2-workflows-responsive-ui-running.png",
+    "v26.32-phase2-workflows-responsive-ui-interacted.png"
+  ],
+  "consoleErrors": [],
+  "browser": {
+    "protocolVersion": "1.3",
+    "product": "Edg/147.0.3912.72",
+    "revision": "@d4380ba2b9dc3452fbccdc737e69d7f67a09122c",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/147.0.0.0 Safari/537.36 Edg/147.0.0.0",
+    "jsVersion": "14.7.25.7"
+  },
+  "commandTimeoutMs": 30000,
+  "scope": "Development rebuild production bundle; not published-release qualification. Recorded real Edge input and DOM observations against production dist. Headless software rendering and download/file-input fallback; physical assistive technology and native OS picker behavior are not measured."
+}

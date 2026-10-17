@@ -1,0 +1,257 @@
+{
+  "version": "26.37",
+  "source": "Actual170route all-route-attempt1 measured geometry failures",
+  "timestamp": "2026-10-04T12:05:33.881Z",
+  "files": [
+    {
+      "file": "src/components/PresentationPanel.vue",
+      "beforeSha256": "4126bafaa671734c16eaf395042922fb94094baed42fdab18482b9313a80a984",
+      "afterSha256": "fa1379857179555d46c346efe1903d7bc7ab43222dbfdf71083aa125f6c22747"
+    },
+    {
+      "file": "src/components/CreatorLearningCenter.vue",
+      "beforeSha256": "36445140cd72e56759e89ce7c812a02e5f88db7bef2e97f15fc0a62ea4a597d5",
+      "afterSha256": "6d629e9fb6848e21c0a27c77965c596633f71686fdf417e7ed22cd5f6ecba173"
+    },
+    {
+      "file": "src/components/WorldToolsPanel.vue",
+      "beforeSha256": "5468bfad98fcb42e24187fab7ad2e2c5eaf1b07c67951c77b35ea28d44677739",
+      "afterSha256": "52596db09781a7d2984b1aecbbe505c7ef00eeecee14c3892a4ba19319b02be7"
+    }
+  ],
+  "edits": [
+    {
+      "file": "src/components/PresentationPanel.vue",
+      "selector": ".bus-list summary",
+      "property": "min-height",
+      "before": [
+        "20px"
+      ],
+      "after": "var(--ui-control-height)",
+      "reason": "Fix the actual measured all-route comfortable geometry failure without changing domain data."
+    },
+    {
+      "file": "src/components/PresentationPanel.vue",
+      "selector": ".bus-list summary",
+      "property": "line-height",
+      "before": [
+        "18px"
+      ],
+      "after": "var(--line-control)",
+      "reason": "Fix the actual measured all-route comfortable geometry failure without changing domain data."
+    },
+    {
+      "file": "src/components/PresentationPanel.vue",
+      "selector": ".bus-list summary",
+      "property": "font-size",
+      "before": [],
+      "after": "var(--type-body)",
+      "reason": "Fix the actual measured all-route comfortable geometry failure without changing domain data."
+    },
+    {
+      "file": "src/components/PresentationPanel.vue",
+      "selector": ".bus-list summary",
+      "property": "padding",
+      "before": [],
+      "after": "var(--ui-input-padding-block) var(--ui-control-padding)",
+      "reason": "Fix the actual measured all-route comfortable geometry failure without changing domain data."
+    },
+    {
+      "file": "src/components/PresentationPanel.vue",
+      "selector": ".bus-list summary",
+      "property": "border-radius",
+      "before": [],
+      "after": "var(--radius-control)",
+      "reason": "Fix the actual measured all-route comfortable geometry failure without changing domain data."
+    },
+    {
+      "file": "src/components/CreatorLearningCenter.vue",
+      "selector": ".guide-list button",
+      "property": "border-radius",
+      "before": [
+        "0"
+      ],
+      "after": "var(--radius-control)",
+      "reason": "Fix the actual measured all-route comfortable geometry failure without changing domain data."
+    },
+    {
+      "file": "src/components/CreatorLearningCenter.vue",
+      "selector": ".profile-grid button",
+      "property": "border-radius",
+      "before": [
+        "0"
+      ],
+      "after": "var(--radius-control)",
+      "reason": "Fix the actual measured all-route comfortable geometry failure without changing domain data."
+    },
+    {
+      "file": "src/components/WorldToolsPanel.vue",
+      "selector": ".form-grid",
+      "property": "grid-template-columns",
+      "before": [
+        "repeat(auto-fit,minmax(220px,1fr))"
+      ],
+      "after": "repeat(auto-fit,minmax(min(100%,calc(280px * var(--ui-scale))),1fr))",
+      "reason": "Fix the actual measured all-route comfortable geometry failure without changing domain data."
+    },
+    {
+      "file": "src/components/WorldToolsPanel.vue",
+      "selector": ".form-grid",
+      "property": "gap",
+      "before": [
+        "var(--space-1) var(--space-3)"
+      ],
+      "after": "var(--ui-field-gap) var(--space-4)",
+      "reason": "Fix the actual measured all-route comfortable geometry failure without changing domain data."
+    },
+    {
+      "file": "src/components/WorldToolsPanel.vue",
+      "selector": ".form-grid",
+      "property": "grid-template-columns",
+      "before": [
+        "minmax(0,1fr)"
+      ],
+      "after": "repeat(auto-fit,minmax(min(100%,calc(280px * var(--ui-scale))),1fr))",
+      "reason": "Fix the actual measured all-route comfortable geometry failure without changing domain data."
+    },
+    {
+      "file": "src/components/WorldToolsPanel.vue",
+      "selector": ".form-grid",
+      "property": "gap",
+      "before": [],
+      "after": "var(--ui-field-gap) var(--space-4)",
+      "reason": "Fix the actual measured all-route comfortable geometry failure without changing domain data."
+    },
+    {
+      "file": "src/components/WorldToolsPanel.vue",
+      "selector": ".form-grid",
+      "property": "grid-template-columns",
+      "before": [
+        "repeat(auto-fit,minmax(min(100%,280px),1fr))"
+      ],
+      "after": "repeat(auto-fit,minmax(min(100%,calc(280px * var(--ui-scale))),1fr))",
+      "reason": "Fix the actual measured all-route comfortable geometry failure without changing domain data."
+    },
+    {
+      "file": "src/components/WorldToolsPanel.vue",
+      "selector": ".form-grid",
+      "property": "gap",
+      "before": [],
+      "after": "var(--ui-field-gap) var(--space-4)",
+      "reason": "Fix the actual measured all-route comfortable geometry failure without changing domain data."
+    },
+    {
+      "file": "src/components/WorldToolsPanel.vue",
+      "before": "",
+      "after": "/* World form rows are not inside the shared property-section container; explicitly stack their labels. */\n.form-grid :deep(.ui-property-row){grid-template-columns:minmax(0,1fr);align-items:start;row-gap:var(--ui-label-control-gap)}\n.form-grid :deep(.ui-property-control>div:has(>input)){display:flex;flex-wrap:wrap;gap:var(--ui-control-gap);width:100%;min-width:0;max-width:100%}\n.form-grid :deep(.ui-property-control>div>input[type=number]){flex:0 1 var(--ui-number-width);max-width:100%}",
+      "reason": "The actual 35px stream scalar fields came from inline labels in a narrow form-grid cell. Stack labels, preserve bounded numeric widths, and reflow the exact X/Y control group with a real gap."
+    },
+    {
+      "file": "src/components/WorldToolsPanel.vue",
+      "selector": ".workspace>aside",
+      "property": "display",
+      "before": [
+        "block"
+      ],
+      "after": "flex",
+      "reason": "The actual measured35px memoryBudgetMb/originShiftThreshold controls are sidebar rows. Stack their labels and retain the full available scalar field width, with shared20px field and12px label rhythm."
+    },
+    {
+      "file": "src/components/WorldToolsPanel.vue",
+      "selector": ".workspace>aside",
+      "property": "flex-direction",
+      "before": [
+        "row (initial)"
+      ],
+      "after": "column",
+      "reason": "The actual measured35px memoryBudgetMb/originShiftThreshold controls are sidebar rows. Stack their labels and retain the full available scalar field width, with shared20px field and12px label rhythm."
+    },
+    {
+      "file": "src/components/WorldToolsPanel.vue",
+      "selector": ".workspace>aside",
+      "property": "gap",
+      "before": [
+        "normal"
+      ],
+      "after": "var(--ui-field-gap)",
+      "reason": "The actual measured35px memoryBudgetMb/originShiftThreshold controls are sidebar rows. Stack their labels and retain the full available scalar field width, with shared20px field and12px label rhythm."
+    },
+    {
+      "file": "src/components/WorldToolsPanel.vue",
+      "selector": ".workspace>aside",
+      "property": "padding",
+      "before": [
+        "var(--space-2) inherited from aside,main"
+      ],
+      "after": "var(--ui-panel-inset)",
+      "reason": "The actual measured35px memoryBudgetMb/originShiftThreshold controls are sidebar rows. Stack their labels and retain the full available scalar field width, with shared20px field and12px label rhythm."
+    },
+    {
+      "file": "src/components/WorldToolsPanel.vue",
+      "selector": ".workspace>aside :deep(.ui-property-row)",
+      "property": "grid-template-columns",
+      "before": [
+        "shared inline label/value columns; no ui-properties container"
+      ],
+      "after": "minmax(0,1fr)",
+      "reason": "The actual measured35px memoryBudgetMb/originShiftThreshold controls are sidebar rows. Stack their labels and retain the full available scalar field width, with shared20px field and12px label rhythm."
+    },
+    {
+      "file": "src/components/WorldToolsPanel.vue",
+      "selector": ".workspace>aside :deep(.ui-property-row)",
+      "property": "align-items",
+      "before": [
+        "center"
+      ],
+      "after": "start",
+      "reason": "The actual measured35px memoryBudgetMb/originShiftThreshold controls are sidebar rows. Stack their labels and retain the full available scalar field width, with shared20px field and12px label rhythm."
+    },
+    {
+      "file": "src/components/WorldToolsPanel.vue",
+      "selector": ".workspace>aside :deep(.ui-property-row)",
+      "property": "row-gap",
+      "before": [
+        "shared row gap"
+      ],
+      "after": "var(--ui-label-control-gap)",
+      "reason": "The actual measured35px memoryBudgetMb/originShiftThreshold controls are sidebar rows. Stack their labels and retain the full available scalar field width, with shared20px field and12px label rhythm."
+    }
+  ],
+  "checks": [
+    {
+      "file": "src/components/PresentationPanel.vue",
+      "template": "pass",
+      "styles": "pass",
+      "businessScript": "byte-identical",
+      "businessBindings": "byte-identical"
+    },
+    {
+      "file": "src/components/CreatorLearningCenter.vue",
+      "template": "pass",
+      "styles": "pass",
+      "businessScript": "byte-identical",
+      "businessBindings": "byte-identical"
+    },
+    {
+      "file": "src/components/WorldToolsPanel.vue",
+      "template": "pass",
+      "styles": "pass",
+      "businessScript": "byte-identical",
+      "businessBindings": "byte-identical"
+    },
+    {
+      "file": "src/components/WorldToolsPanel.vue",
+      "scope": "actual streaming sidebar",
+      "template": "pass",
+      "styles": "pass",
+      "businessScript": "byte-identical",
+      "businessBindings": "byte-identical",
+      "liveGeometry": "not yet rebuilt"
+    }
+  ],
+  "notVerified": [
+    "Rebuilt actual route measurements",
+    "Runtime visual inspection of mixer/learning/streaming",
+    "New screenshot evidence"
+  ]
+}

@@ -1,0 +1,596 @@
+{
+  "generatedAt": "2026-09-14T17:50:04.385Z",
+  "status": "passed",
+  "checks": [
+    {
+      "name": "arrays, maps and compound writes: typed parse and exact source",
+      "status": "passed"
+    },
+    {
+      "name": "arrays, maps and compound writes: independent structural emission preserves WASM observable result",
+      "status": "passed"
+    },
+    {
+      "name": "captured closure: typed parse and exact source",
+      "status": "passed"
+    },
+    {
+      "name": "captured closure: independent structural emission preserves WASM observable result",
+      "status": "passed"
+    },
+    {
+      "name": "direct closure and zero parameter closure: typed parse and exact source",
+      "status": "passed"
+    },
+    {
+      "name": "direct closure and zero parameter closure: independent structural emission preserves WASM observable result",
+      "status": "passed"
+    },
+    {
+      "name": "Fn pointer and implicit return: typed parse and exact source",
+      "status": "passed"
+    },
+    {
+      "name": "Fn pointer and implicit return: independent structural emission preserves WASM observable result",
+      "status": "passed"
+    },
+    {
+      "name": "switch value, patterns and guard: typed parse and exact source",
+      "status": "passed"
+    },
+    {
+      "name": "switch value, patterns and guard: independent structural emission preserves WASM observable result",
+      "status": "passed"
+    },
+    {
+      "name": "do until: typed parse and exact source",
+      "status": "passed"
+    },
+    {
+      "name": "do until: independent structural emission preserves WASM observable result",
+      "status": "passed"
+    },
+    {
+      "name": "do while: typed parse and exact source",
+      "status": "passed"
+    },
+    {
+      "name": "do while: independent structural emission preserves WASM observable result",
+      "status": "passed"
+    },
+    {
+      "name": "try catch variable: typed parse and exact source",
+      "status": "passed"
+    },
+    {
+      "name": "try catch variable: independent structural emission preserves WASM observable result",
+      "status": "passed"
+    },
+    {
+      "name": "try catch without variable: typed parse and exact source",
+      "status": "passed"
+    },
+    {
+      "name": "try catch without variable: independent structural emission preserves WASM observable result",
+      "status": "passed"
+    },
+    {
+      "name": "interpolated expressions: typed parse and exact source",
+      "status": "passed"
+    },
+    {
+      "name": "interpolated expressions: independent structural emission preserves WASM observable result",
+      "status": "passed"
+    },
+    {
+      "name": "interpolated statement blocks and nested interpolation: typed parse and exact source",
+      "status": "passed"
+    },
+    {
+      "name": "interpolated statement blocks and nested interpolation: independent structural emission preserves WASM observable result",
+      "status": "passed"
+    },
+    {
+      "name": "for counter tuple and continue: typed parse and exact source",
+      "status": "passed"
+    },
+    {
+      "name": "for counter tuple and continue: independent structural emission preserves WASM observable result",
+      "status": "passed"
+    },
+    {
+      "name": "while and loop break values: typed parse and exact source",
+      "status": "passed"
+    },
+    {
+      "name": "while and loop break values: independent structural emission preserves WASM observable result",
+      "status": "passed"
+    },
+    {
+      "name": "short circuit and else if tail values: typed parse and exact source",
+      "status": "passed"
+    },
+    {
+      "name": "short circuit and else if tail values: independent structural emission preserves WASM observable result",
+      "status": "passed"
+    },
+    {
+      "name": "signed integer literals and Rhai precedence: typed parse and exact source",
+      "status": "passed"
+    },
+    {
+      "name": "signed integer literals and Rhai precedence: independent structural emission preserves WASM observable result",
+      "status": "passed"
+    },
+    {
+      "name": "number spellings and string keys: typed parse and exact source",
+      "status": "passed"
+    },
+    {
+      "name": "number spellings and string keys: independent structural emission preserves WASM observable result",
+      "status": "passed"
+    },
+    {
+      "name": "escaped, raw, verbatim and doubled quote map keys: typed parse and exact source",
+      "status": "passed"
+    },
+    {
+      "name": "escaped, raw, verbatim and doubled quote map keys: independent structural emission preserves WASM observable result",
+      "status": "passed"
+    },
+    {
+      "name": "character scalar escapes and verbatim backslashes: typed parse and exact source",
+      "status": "passed"
+    },
+    {
+      "name": "character scalar escapes and verbatim backslashes: independent structural emission preserves WASM observable result",
+      "status": "passed"
+    },
+    {
+      "name": "tail declarations and assignments stay unit: typed parse and exact source",
+      "status": "passed"
+    },
+    {
+      "name": "tail declarations and assignments stay unit: independent structural emission preserves WASM observable result",
+      "status": "passed"
+    },
+    {
+      "name": "private recursive helper: typed parse and exact source",
+      "status": "passed"
+    },
+    {
+      "name": "private recursive helper: independent structural emission preserves WASM observable result",
+      "status": "passed"
+    },
+    {
+      "name": "parameter shadowing and independent function overloads: typed parse and exact source",
+      "status": "passed"
+    },
+    {
+      "name": "parameter shadowing and independent function overloads: independent structural emission preserves WASM observable result",
+      "status": "passed"
+    },
+    {
+      "name": "typed receiver overloads and implicit this: typed parse and exact source",
+      "status": "passed"
+    },
+    {
+      "name": "typed receiver overloads and implicit this: independent structural emission preserves WASM observable result",
+      "status": "passed"
+    },
+    {
+      "name": "normal string continuation preserves its original indentation rules: typed parse and exact source",
+      "status": "passed"
+    },
+    {
+      "name": "normal string continuation preserves its original indentation rules: independent structural emission preserves WASM observable result",
+      "status": "passed"
+    },
+    {
+      "name": "control character map keys retain valid Rhai escapes: typed parse and exact source",
+      "status": "passed"
+    },
+    {
+      "name": "control character map keys retain valid Rhai escapes: independent structural emission preserves WASM observable result",
+      "status": "passed"
+    },
+    {
+      "name": "switch range and block cases: typed parse and exact source",
+      "status": "passed"
+    },
+    {
+      "name": "switch range and block cases: independent structural emission preserves WASM observable result",
+      "status": "passed"
+    },
+    {
+      "name": "empty module statement and return unit: typed parse and exact source",
+      "status": "passed"
+    },
+    {
+      "name": "empty module statement and return unit: independent structural emission preserves WASM observable result",
+      "status": "passed"
+    },
+    {
+      "name": "comments and multiline strings remain inert: typed parse and exact source",
+      "status": "passed"
+    },
+    {
+      "name": "comments and multiline strings remain inert: independent structural emission preserves WASM observable result",
+      "status": "passed"
+    },
+    {
+      "name": "export properties and commands: typed parse and exact source",
+      "status": "passed"
+    },
+    {
+      "name": "export properties and commands: independent structural emission preserves WASM observable result",
+      "status": "passed"
+    },
+    {
+      "name": "legacy comment export and metadata: typed parse and exact source",
+      "status": "passed"
+    },
+    {
+      "name": "legacy comment export and metadata: independent structural emission preserves WASM observable result",
+      "status": "passed"
+    },
+    {
+      "name": "native module export declarations and aliases: typed parse and exact source",
+      "status": "passed"
+    },
+    {
+      "name": "native module export declarations and aliases: independent structural emission preserves WASM observable result",
+      "status": "passed"
+    },
+    {
+      "name": "unsupported closure persistence is observable: typed parse and exact source",
+      "status": "passed"
+    },
+    {
+      "name": "unsupported closure persistence is observable: independent structural emission preserves WASM observable result",
+      "status": "passed"
+    },
+    {
+      "name": "optional access and coalesce: typed parse and exact source",
+      "status": "passed"
+    },
+    {
+      "name": "optional access and coalesce: independent structural emission preserves WASM observable result",
+      "status": "passed"
+    },
+    {
+      "name": "runtime failure preserves actual numeric overload: typed parse and exact source",
+      "status": "passed"
+    },
+    {
+      "name": "runtime failure preserves actual numeric overload: independent structural emission preserves WASM observable result",
+      "status": "passed"
+    },
+    {
+      "name": "uncaught throw: typed parse and exact source",
+      "status": "passed"
+    },
+    {
+      "name": "uncaught throw: independent structural emission preserves WASM observable result",
+      "status": "passed"
+    },
+    {
+      "name": "edit a real typed literal and change the runtime result",
+      "status": "passed"
+    },
+    {
+      "name": "UTF16 positions, CRLF and non-ASCII trivia are exact",
+      "status": "passed"
+    },
+    {
+      "name": "bindings distinguish shadowing, writes, recursive functions and closure captures",
+      "status": "passed"
+    },
+    {
+      "name": "format-only edits preserve binding and node identities",
+      "status": "passed"
+    },
+    {
+      "name": "declaration rename preserves its binding and dependent reference identity",
+      "status": "passed"
+    },
+    {
+      "name": "inserted blocks do not steal existing scope or binding identities",
+      "status": "passed"
+    },
+    {
+      "name": "source patch preserves comments and protects stale or overlapping edits",
+      "status": "passed"
+    },
+    {
+      "name": "malformed source: \"fn f(\"",
+      "status": "passed"
+    },
+    {
+      "name": "malformed source: \"fn f(){let =;\"",
+      "status": "passed"
+    },
+    {
+      "name": "malformed source: \"let x=[1,2;\"",
+      "status": "passed"
+    },
+    {
+      "name": "malformed source: \"let x=#{a:};\"",
+      "status": "passed"
+    },
+    {
+      "name": "malformed source: \"fn f(){if true {\"",
+      "status": "passed"
+    },
+    {
+      "name": "malformed source: \"fn f(){for (x,) in []{}}\"",
+      "status": "passed"
+    },
+    {
+      "name": "malformed source: \"fn f(){try {} catch(\"",
+      "status": "passed"
+    },
+    {
+      "name": "malformed source: \"\\\"unterminated\"",
+      "status": "passed"
+    },
+    {
+      "name": "malformed source: \"/* nested /* missing */\"",
+      "status": "passed"
+    },
+    {
+      "name": "malformed source: \"`value ${1\"",
+      "status": "passed"
+    },
+    {
+      "name": "malformed source: \"let x=;\"",
+      "status": "passed"
+    },
+    {
+      "name": "malformed source: \"let x=(1+);\"",
+      "status": "passed"
+    },
+    {
+      "name": "malformed source: \"fn f(){break;}\"",
+      "status": "passed"
+    },
+    {
+      "name": "malformed source: \"const x=1; x=2;\"",
+      "status": "passed"
+    },
+    {
+      "name": "malformed source: \"fn f(a,a){}\"",
+      "status": "passed"
+    },
+    {
+      "name": "malformed source: \"fn f(){let x=1; fn nested(){}}\"",
+      "status": "passed"
+    },
+    {
+      "name": "malformed source: \"let value = (x=3);\"",
+      "status": "passed"
+    },
+    {
+      "name": "malformed source: \"{fn nested(){}}\"",
+      "status": "passed"
+    },
+    {
+      "name": "malformed source: \"let value=\\\"\\\\q\\\";\"",
+      "status": "passed"
+    },
+    {
+      "name": "malformed source: \"let value='two';\"",
+      "status": "passed"
+    },
+    {
+      "name": "malformed source: \"let value=#{a:1,a:2};\"",
+      "status": "passed"
+    },
+    {
+      "name": "malformed source: \"fn start(){await work();}\"",
+      "status": "passed"
+    },
+    {
+      "name": "all incomplete prefixes terminate without losing source",
+      "status": "passed"
+    },
+    {
+      "name": "lexer follows actual Rhai reserved names rather than other languages",
+      "status": "passed"
+    },
+    {
+      "name": "source, token, AST, nesting, comment and cancellation bounds are explicit",
+      "status": "passed"
+    },
+    {
+      "name": "sandbox-disabled calls and modules receive exact diagnostics while module AST is retained",
+      "status": "passed"
+    },
+    {
+      "name": "host module mode accepts exact project use lines while retaining sandbox restrictions",
+      "status": "passed"
+    },
+    {
+      "name": "deterministic operator corpus round trips through the actual runtime",
+      "status": "passed"
+    }
+  ],
+  "typedKinds": [
+    "Array",
+    "Assignment",
+    "Binary",
+    "Block",
+    "Break",
+    "Call",
+    "Closure",
+    "Continue",
+    "DoWhile",
+    "Empty",
+    "ExportDeclaration",
+    "ExportMetadata",
+    "ExpressionStatement",
+    "For",
+    "FunctionDeclaration",
+    "Identifier",
+    "If",
+    "Index",
+    "InterpolatedString",
+    "Literal",
+    "Loop",
+    "Map",
+    "MapEntry",
+    "Member",
+    "Parameter",
+    "Return",
+    "Switch",
+    "SwitchCase",
+    "TemplateText",
+    "Throw",
+    "Try",
+    "Unary",
+    "VariableDeclaration",
+    "While"
+  ],
+  "vmFixtures": 34,
+  "randomizedVmPairs": 60,
+  "nodeOperationCoverage": [
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/rhaiSyntaxLexer.ts#isRhaiTrivia",
+      "source": "src/visual/rhaiSyntaxLexer.ts",
+      "line": 10,
+      "kind": "exported function",
+      "sourceSha256": "78f338e82918ea20d869f89879d059644212025c9d8f7383d143d9bee1848b34",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-language/1/language.mjs",
+      "generatedSha256": "8ad014ad6749178e7fb08697f6c6b08ae1b06ae3d34ae4b55f6e7edcb0acbc3f",
+      "mapSha256": "753ccd69668fd94b641c73b2ef5cc7989cb6f99805a608aa6188760857da8977",
+      "entryCount": 7837
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/rhaiSyntaxLexer.ts#rhaiSourceHash",
+      "source": "src/visual/rhaiSyntaxLexer.ts",
+      "line": 11,
+      "kind": "exported function",
+      "sourceSha256": "78f338e82918ea20d869f89879d059644212025c9d8f7383d143d9bee1848b34",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-language/1/language.mjs",
+      "generatedSha256": "8ad014ad6749178e7fb08697f6c6b08ae1b06ae3d34ae4b55f6e7edcb0acbc3f",
+      "mapSha256": "753ccd69668fd94b641c73b2ef5cc7989cb6f99805a608aa6188760857da8977",
+      "entryCount": 2783
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/rhaiSyntaxLexer.ts#rhaiLineStarts",
+      "source": "src/visual/rhaiSyntaxLexer.ts",
+      "line": 12,
+      "kind": "exported function",
+      "sourceSha256": "78f338e82918ea20d869f89879d059644212025c9d8f7383d143d9bee1848b34",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-language/1/language.mjs",
+      "generatedSha256": "8ad014ad6749178e7fb08697f6c6b08ae1b06ae3d34ae4b55f6e7edcb0acbc3f",
+      "mapSha256": "753ccd69668fd94b641c73b2ef5cc7989cb6f99805a608aa6188760857da8977",
+      "entryCount": 830
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/rhaiSyntaxLexer.ts#rhaiSpan",
+      "source": "src/visual/rhaiSyntaxLexer.ts",
+      "line": 13,
+      "kind": "exported function",
+      "sourceSha256": "78f338e82918ea20d869f89879d059644212025c9d8f7383d143d9bee1848b34",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-language/1/language.mjs",
+      "generatedSha256": "8ad014ad6749178e7fb08697f6c6b08ae1b06ae3d34ae4b55f6e7edcb0acbc3f",
+      "mapSha256": "753ccd69668fd94b641c73b2ef5cc7989cb6f99805a608aa6188760857da8977",
+      "entryCount": 12172
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/rhaiSyntaxLexer.ts#rhaiLimits",
+      "source": "src/visual/rhaiSyntaxLexer.ts",
+      "line": 18,
+      "kind": "exported function",
+      "sourceSha256": "78f338e82918ea20d869f89879d059644212025c9d8f7383d143d9bee1848b34",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-language/1/language.mjs",
+      "generatedSha256": "8ad014ad6749178e7fb08697f6c6b08ae1b06ae3d34ae4b55f6e7edcb0acbc3f",
+      "mapSha256": "753ccd69668fd94b641c73b2ef5cc7989cb6f99805a608aa6188760857da8977",
+      "entryCount": 278
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/rhaiSyntaxLexer.ts#decodeRhaiString",
+      "source": "src/visual/rhaiSyntaxLexer.ts",
+      "line": 27,
+      "kind": "exported function",
+      "sourceSha256": "78f338e82918ea20d869f89879d059644212025c9d8f7383d143d9bee1848b34",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-language/1/language.mjs",
+      "generatedSha256": "8ad014ad6749178e7fb08697f6c6b08ae1b06ae3d34ae4b55f6e7edcb0acbc3f",
+      "mapSha256": "753ccd69668fd94b641c73b2ef5cc7989cb6f99805a608aa6188760857da8977",
+      "entryCount": 57
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/rhaiSyntaxLexer.ts#lexRhai",
+      "source": "src/visual/rhaiSyntaxLexer.ts",
+      "line": 58,
+      "kind": "exported function",
+      "sourceSha256": "78f338e82918ea20d869f89879d059644212025c9d8f7383d143d9bee1848b34",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-language/1/language.mjs",
+      "generatedSha256": "8ad014ad6749178e7fb08697f6c6b08ae1b06ae3d34ae4b55f6e7edcb0acbc3f",
+      "mapSha256": "753ccd69668fd94b641c73b2ef5cc7989cb6f99805a608aa6188760857da8977",
+      "entryCount": 278
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/rhaiSyntax.ts#parseRhai",
+      "source": "src/visual/rhaiSyntax.ts",
+      "line": 279,
+      "kind": "exported function",
+      "sourceSha256": "25f8ff10d119f9b1b58d250f531b9a0b89d2b03b9b13cf583ca6f415ff871b77",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-language/1/language.mjs",
+      "generatedSha256": "8ad014ad6749178e7fb08697f6c6b08ae1b06ae3d34ae4b55f6e7edcb0acbc3f",
+      "mapSha256": "753ccd69668fd94b641c73b2ef5cc7989cb6f99805a608aa6188760857da8977",
+      "entryCount": 276
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/rhaiSyntax.ts#walkRhai",
+      "source": "src/visual/rhaiSyntax.ts",
+      "line": 282,
+      "kind": "exported function",
+      "sourceSha256": "25f8ff10d119f9b1b58d250f531b9a0b89d2b03b9b13cf583ca6f415ff871b77",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-language/1/language.mjs",
+      "generatedSha256": "8ad014ad6749178e7fb08697f6c6b08ae1b06ae3d34ae4b55f6e7edcb0acbc3f",
+      "mapSha256": "753ccd69668fd94b641c73b2ef5cc7989cb6f99805a608aa6188760857da8977",
+      "entryCount": 345
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/rhaiSyntax.ts#emitRhai",
+      "source": "src/visual/rhaiSyntax.ts",
+      "line": 445,
+      "kind": "exported function",
+      "sourceSha256": "25f8ff10d119f9b1b58d250f531b9a0b89d2b03b9b13cf583ca6f415ff871b77",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-language/1/language.mjs",
+      "generatedSha256": "8ad014ad6749178e7fb08697f6c6b08ae1b06ae3d34ae4b55f6e7edcb0acbc3f",
+      "mapSha256": "753ccd69668fd94b641c73b2ef5cc7989cb6f99805a608aa6188760857da8977",
+      "entryCount": 152
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/rhaiSyntax.ts#emitRhaiNode",
+      "source": "src/visual/rhaiSyntax.ts",
+      "line": 457,
+      "kind": "exported function",
+      "sourceSha256": "25f8ff10d119f9b1b58d250f531b9a0b89d2b03b9b13cf583ca6f415ff871b77",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-language/1/language.mjs",
+      "generatedSha256": "8ad014ad6749178e7fb08697f6c6b08ae1b06ae3d34ae4b55f6e7edcb0acbc3f",
+      "mapSha256": "753ccd69668fd94b641c73b2ef5cc7989cb6f99805a608aa6188760857da8977",
+      "entryCount": 1284
+    }
+  ],
+  "tracingScope": "Positive V8 function entries during the complete passing programmer suite, including fixture setup. Not per-assertion isolation, exhaustive domain coverage or performance qualification.",
+  "nodeOperationCoverageCase": "retained-26-12-language complete suite including fixture setup",
+  "nodeOperationCoverageAssertion": {
+    "name": "retained-26-12-language complete suite including fixture setup",
+    "status": "passed"
+  }
+}

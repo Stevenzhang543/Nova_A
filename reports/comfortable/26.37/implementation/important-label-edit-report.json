@@ -1,0 +1,41 @@
+{
+  "generatedAt": "2026-10-03T19:19:18.185Z",
+  "status": "passed",
+  "edits": [
+    {
+      "file": "src/components/ProjectManager.vue",
+      "reason": "Raise actual template search, difficulty and sort labels to comfortable body text; preserve existing 12px inline control gap",
+      "compiledStyleStatus": "passed",
+      "beforeSha256": "4772434f35ea73fc1ca45ea5afbcae23aaefbe9bf3551352b2aacdf7165a2341",
+      "afterSha256": "2c4be4a0e48d2150d97a017372998a2cbea06601a38cdd59455c0614224ff1ea"
+    },
+    {
+      "file": "src/components/GraphProductionPanel.vue",
+      "reason": "Raise pure-function and inline-macro checkbox labels to body text with comfortable line-height",
+      "compiledStyleStatus": "passed",
+      "beforeSha256": "1aff97273b6193a61ccc49c5104b2dc2f1ef9d2f4f0169eb6f4d2e4cd6883dec",
+      "afterSha256": "528785655e0a61db6c7920650a0f7cebddd76bda7b488bbad50bd2cb33591cdc"
+    },
+    {
+      "file": "src/components/MaterialGraphEditor.vue",
+      "reason": "Raise material target property label to body text and shared 12px control gap; do not alter graph coordinates",
+      "compiledStyleStatus": "passed",
+      "beforeSha256": "1b57c48e3ebbcfa3a375638b707af09c55a561bdc1b66c4a961f6b48405221ec",
+      "afterSha256": "5b1672ecc701bece2f08f7694a08d6c3ea6ceb4255913c4e9325616a311fd8a5"
+    },
+    {
+      "file": "src/components/ParticleGraphEditor.vue",
+      "reason": "Raise simulation-backend property label to body text and shared 12px gap; leave simulation data unchanged",
+      "compiledStyleStatus": "passed",
+      "beforeSha256": "a1095959ec32eed90f9cac597692ab5a476979114098d436ccdc1b3719b60bc7",
+      "afterSha256": "3f7541d413e8fe5e6f77bd7937e52890a16bd583f2e1b990014f74235e7d20c3"
+    },
+    {
+      "file": "src/components/ScriptStudio.vue",
+      "reason": "Raise the compact-toolbar checkbox label to body text and shared 12px gap without changing the chosen layout preference",
+      "compiledStyleStatus": "passed",
+      "beforeSha256": "3dd5283516d7f0ab5953bc5f0d4dde2596934312e34883cb56cd6d61e270824c",
+      "afterSha256": "935f04a52a521bceb2cd3bd74bd41cec27444e2ce6c7a246e2df387063aec71c"
+    }
+  ]
+}

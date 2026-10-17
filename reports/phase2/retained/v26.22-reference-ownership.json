@@ -1,0 +1,163 @@
+{
+  "inventory": [
+    {
+      "id": "Entity.parentUuid",
+      "source": "src/world/Entity.ts",
+      "owner": "Actual hierarchy/prefab/scene-instance operation in named whole-document transaction",
+      "cases": [
+        0
+      ]
+    },
+    {
+      "id": "Transform.parentUuid",
+      "source": "src/world/Transform.ts",
+      "owner": "Actual hierarchy/prefab/scene-instance operation in named whole-document transaction",
+      "cases": [
+        0
+      ]
+    },
+    {
+      "id": "Entity.prefabAsset",
+      "source": "src/world/Entity.ts",
+      "owner": "Actual hierarchy/prefab/scene-instance operation in named whole-document transaction",
+      "cases": [
+        1
+      ]
+    },
+    {
+      "id": "Entity.prefabInstanceUuid",
+      "source": "src/world/Entity.ts",
+      "owner": "Actual hierarchy/prefab/scene-instance operation in named whole-document transaction",
+      "cases": [
+        1
+      ]
+    },
+    {
+      "id": "Entity.prefabSourceUuid",
+      "source": "src/world/Entity.ts",
+      "owner": "Actual hierarchy/prefab/scene-instance operation in named whole-document transaction",
+      "cases": [
+        1
+      ]
+    },
+    {
+      "id": "Entity.prefabOverrides",
+      "source": "src/world/Entity.ts",
+      "owner": "Actual hierarchy/prefab/scene-instance operation in named whole-document transaction",
+      "cases": [
+        1
+      ]
+    },
+    {
+      "id": "Entity.prefabLayers",
+      "source": "src/world/Entity.ts",
+      "owner": "Actual hierarchy/prefab/scene-instance operation in named whole-document transaction",
+      "cases": [
+        1
+      ]
+    },
+    {
+      "id": "PrefabInstanceLayer.asset",
+      "source": "src/world/Entity.ts",
+      "owner": "Actual hierarchy/prefab/scene-instance operation in named whole-document transaction",
+      "cases": [
+        1
+      ]
+    },
+    {
+      "id": "PrefabInstanceLayer.instanceUuid",
+      "source": "src/world/Entity.ts",
+      "owner": "Actual hierarchy/prefab/scene-instance operation in named whole-document transaction",
+      "cases": [
+        1
+      ]
+    },
+    {
+      "id": "PrefabInstanceLayer.sourceUuid",
+      "source": "src/world/Entity.ts",
+      "owner": "Actual hierarchy/prefab/scene-instance operation in named whole-document transaction",
+      "cases": [
+        1
+      ]
+    },
+    {
+      "id": "PrefabInstanceLayer.overrides",
+      "source": "src/world/Entity.ts",
+      "owner": "Actual hierarchy/prefab/scene-instance operation in named whole-document transaction",
+      "cases": [
+        1
+      ]
+    },
+    {
+      "id": "Entity.sceneLayers",
+      "source": "src/world/Entity.ts",
+      "owner": "Actual hierarchy/prefab/scene-instance operation in named whole-document transaction",
+      "cases": [
+        2
+      ]
+    },
+    {
+      "id": "SceneInstanceLayer.asset",
+      "source": "src/world/Entity.ts",
+      "owner": "Actual hierarchy/prefab/scene-instance operation in named whole-document transaction",
+      "cases": [
+        2
+      ]
+    },
+    {
+      "id": "SceneInstanceLayer.instanceUuid",
+      "source": "src/world/Entity.ts",
+      "owner": "Actual hierarchy/prefab/scene-instance operation in named whole-document transaction",
+      "cases": [
+        2
+      ]
+    },
+    {
+      "id": "SceneInstanceLayer.sourceUuid",
+      "source": "src/world/Entity.ts",
+      "owner": "Actual hierarchy/prefab/scene-instance operation in named whole-document transaction",
+      "cases": [
+        2
+      ]
+    }
+  ],
+  "cases": [
+    {
+      "name": "Parent change preserves world placement and rejects a cycle without partial mutation",
+      "status": "passed"
+    },
+    {
+      "name": "Prefab variant creation retains nested source identities and captured overrides",
+      "status": "passed"
+    },
+    {
+      "name": "Nested scene composition retains each source layer while unpack removes only the outer layer",
+      "status": "passed"
+    }
+  ],
+  "format": "nova-v26.22-reference-ownership",
+  "version": 1,
+  "release": "26.22",
+  "regressionOrigin": "26.22",
+  "engineVersion": "26.32.0",
+  "expectedRelease": "26.32",
+  "development": true,
+  "qualifiedRelease": null,
+  "generatedAt": "2026-09-28T18:10:09.057Z",
+  "status": "passed",
+  "scope": "Actual hierarchy, nested prefab variant and scene-composition operations with full-document Undo/Redo/native/NovaPak comparisons. Reference IDs and layer records are produced by composition owners, not arbitrarily edited UUID strings.",
+  "checks": [
+    {
+      "name": "Parent change preserves world placement and rejects a cycle without partial mutation",
+      "status": "passed"
+    },
+    {
+      "name": "Prefab variant creation retains nested source identities and captured overrides",
+      "status": "passed"
+    },
+    {
+      "name": "Nested scene composition retains each source layer while unpack removes only the outer layer",
+      "status": "passed"
+    }
+  ]
+}

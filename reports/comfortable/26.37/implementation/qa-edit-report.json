@@ -1,0 +1,31 @@
+{
+  "generatedAt": "2026-10-04T11:43:06.400Z",
+  "edits": [
+    {
+      "path": "scripts/prepare-release-26.37.mjs",
+      "action": "added"
+    },
+    {
+      "path": "scripts/qualify-v26.37-scoped.mjs",
+      "action": "added"
+    },
+    {
+      "path": "scripts/lib/browserUserAudit.mjs",
+      "action": "modified",
+      "why": "Allow26.37 actual qualification without changing input/report authority"
+    },
+    {
+      "path": "scripts/lib/comfortableGeometryAudit.mjs",
+      "action": "added",
+      "afterSha256": "9344ff4f4209e24d0faf2782145b867b3109e85dd2b54e16150ec25dfc128482",
+      "why": "Measure final geometry and explicit dense-tool exceptions"
+    },
+    {
+      "path": "scripts/verify-v26.37-comfortable-user.mjs",
+      "action": "added",
+      "afterSha256": "627da7d25ba0a3e8ad00d01af58dad912d9ce35240345f877b62cebcd4a25074",
+      "why": "Exact immutable36 baseline methods plus real production motion/input/drag/history/project-switch checks",
+      "consequence": "Uses actual English preference labels and moves keyboard focus away from editable text before global undo; no private app state changes. Bounded real trusted-pointer test proves closing modal scrim blocks underlying action while inner surface remains inert through observed exit frames; later explicit reopening remains functional. Final High contrast preference resolution uses actual aria-labelledby/aria-label/native labels with a unique switch match; the later launcher-reentry capture cannot overwrite the strict initial launcher comparison. Test-only fixes preserve every assertion. Raw900ms windows additionally record exact active target/timing; a real4200ms nonerror toast may start its finite exit near the window end, so only observed toast jobs with one finite iteration <=800ms are allowed there and must fully settle within1500ms. All other or infinite jobs still fail. Final numeric test closes actual obstructing notifications and requires real pointer focus before typing; no threshold or game-state changes."
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "generatedAt": "2026-10-17T10:14:39.596Z",
+  "packageVersion": "26.38.0",
+  "currentMinor": "38",
+  "scannedScripts": 1064,
+  "browserAuditScripts": 110,
+  "offenders": [],
+  "checks": [
+    {
+      "name": "No audit call mixes a stale pinned release with a derived expectedRelease",
+      "status": "passed"
+    },
+    {
+      "name": "The guard actually inspects audit scripts",
+      "status": "passed"
+    }
+  ],
+  "status": "passed"
+}

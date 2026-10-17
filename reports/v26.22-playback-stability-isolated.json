@@ -1,0 +1,210 @@
+{
+  "format": "nova-v26.22-playback-stability-user-user-audit",
+  "version": 1,
+  "release": "26.22",
+  "expectedRelease": "26.21",
+  "development": true,
+  "qualifiedRelease": null,
+  "generatedAt": "2026-09-13T03:07:50.519Z",
+  "status": "passed",
+  "checks": [
+    {
+      "name": "Fifty actual Play Pause Stop cycles preserve the authored project",
+      "status": "passed"
+    },
+    {
+      "name": "Reopened project remains unchanged and playback controls still work after the cycle batch",
+      "status": "passed"
+    }
+  ],
+  "observations": [
+    {
+      "name": "actual-project-download",
+      "file": "E:\\Nova_A\\.cache\\v2622-order-preview\\release-audits\\v26.17-playback-stability-before-22.nova",
+      "bytes": 1817636
+    },
+    {
+      "name": "actual-project-download",
+      "file": "E:\\Nova_A\\.cache\\v2622-order-preview\\release-audits\\v26.17-playback-stability-cycle-10-22.nova",
+      "bytes": 1817636
+    },
+    {
+      "name": "actual-project-download",
+      "file": "E:\\Nova_A\\.cache\\v2622-order-preview\\release-audits\\v26.17-playback-stability-cycle-20-22.nova",
+      "bytes": 1817636
+    },
+    {
+      "name": "actual-project-download",
+      "file": "E:\\Nova_A\\.cache\\v2622-order-preview\\release-audits\\v26.17-playback-stability-cycle-30-22.nova",
+      "bytes": 1817636
+    },
+    {
+      "name": "actual-project-download",
+      "file": "E:\\Nova_A\\.cache\\v2622-order-preview\\release-audits\\v26.17-playback-stability-cycle-40-22.nova",
+      "bytes": 1817636
+    },
+    {
+      "name": "actual-project-download",
+      "file": "E:\\Nova_A\\.cache\\v2622-order-preview\\release-audits\\v26.17-playback-stability-cycle-50-22.nova",
+      "bytes": 1817636
+    },
+    {
+      "name": "actual-editor-playback-smoke",
+      "cycles": 50,
+      "measurements": [
+        {
+          "cycle": 10,
+          "metrics": [
+            {
+              "name": "Documents",
+              "value": 3
+            },
+            {
+              "name": "JSEventListeners",
+              "value": 891
+            },
+            {
+              "name": "Nodes",
+              "value": 3112
+            },
+            {
+              "name": "JSHeapUsedSize",
+              "value": 156757548
+            },
+            {
+              "name": "JSHeapTotalSize",
+              "value": 210161664
+            }
+          ]
+        },
+        {
+          "cycle": 20,
+          "metrics": [
+            {
+              "name": "Documents",
+              "value": 3
+            },
+            {
+              "name": "JSEventListeners",
+              "value": 768
+            },
+            {
+              "name": "Nodes",
+              "value": 2874
+            },
+            {
+              "name": "JSHeapUsedSize",
+              "value": 147783180
+            },
+            {
+              "name": "JSHeapTotalSize",
+              "value": 212271104
+            }
+          ]
+        },
+        {
+          "cycle": 30,
+          "metrics": [
+            {
+              "name": "Documents",
+              "value": 3
+            },
+            {
+              "name": "JSEventListeners",
+              "value": 644
+            },
+            {
+              "name": "Nodes",
+              "value": 2628
+            },
+            {
+              "name": "JSHeapUsedSize",
+              "value": 81128620
+            },
+            {
+              "name": "JSHeapTotalSize",
+              "value": 181936128
+            }
+          ]
+        },
+        {
+          "cycle": 40,
+          "metrics": [
+            {
+              "name": "Documents",
+              "value": 3
+            },
+            {
+              "name": "JSEventListeners",
+              "value": 1018
+            },
+            {
+              "name": "Nodes",
+              "value": 3387
+            },
+            {
+              "name": "JSHeapUsedSize",
+              "value": 149069524
+            },
+            {
+              "name": "JSHeapTotalSize",
+              "value": 221302784
+            }
+          ]
+        },
+        {
+          "cycle": 50,
+          "metrics": [
+            {
+              "name": "Documents",
+              "value": 3
+            },
+            {
+              "name": "JSEventListeners",
+              "value": 766
+            },
+            {
+              "name": "Nodes",
+              "value": 2868
+            },
+            {
+              "name": "JSHeapUsedSize",
+              "value": 138299584
+            },
+            {
+              "name": "JSHeapTotalSize",
+              "value": 214921216
+            }
+          ]
+        }
+      ],
+      "performanceQualified": false,
+      "longDurationQualified": false
+    },
+    {
+      "name": "actual-project-download",
+      "file": "E:\\Nova_A\\.cache\\v2622-order-preview\\release-audits\\v26.17-playback-stability-final-22.nova",
+      "bytes": 1817636
+    },
+    {
+      "name": "actual-project-download",
+      "file": "E:\\Nova_A\\.cache\\v2622-order-preview\\release-audits\\v26.17-playback-stability-reopened-22.nova",
+      "bytes": 1817636
+    }
+  ],
+  "captures": [
+    "v26.22-playback-stability-user-playback-stopped.png",
+    "v26.22-playback-stability-user-playback-reopened.png"
+  ],
+  "consoleErrors": [],
+  "browser": {
+    "protocolVersion": "1.3",
+    "product": "Edg/147.0.3912.72",
+    "revision": "@d4380ba2b9dc3452fbccdc737e69d7f67a09122c",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/147.0.0.0 Safari/537.36 Edg/147.0.0.0",
+    "jsVersion": "14.7.25.7"
+  },
+  "commandTimeoutMs": 30000,
+  "scope": "Development-only isolated preview containing the component-order hydration fix. Main dist remained unchanged for the concurrent palette sweep. Not frozen release qualification.",
+  "buildRoot": ".cache/v2622-order-preview"
+}

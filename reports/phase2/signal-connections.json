@@ -1,0 +1,30 @@
+{
+  "generatedAt": "2026-10-17T10:23:27.979Z",
+  "checks": [
+    {
+      "name": "A valid connection is appended with enabled true",
+      "status": "passed"
+    },
+    {
+      "name": "Duplicate connections are rejected instead of silently stacked",
+      "status": "passed"
+    },
+    {
+      "name": "Validation rejects malformed input with a specific reason",
+      "status": "passed"
+    },
+    {
+      "name": "Removing a connection is index checked",
+      "status": "passed"
+    },
+    {
+      "name": "Lookups are scoped to the receiving object",
+      "status": "passed"
+    },
+    {
+      "name": "This module reuses the runtime model instead of introducing a second dispatcher",
+      "status": "passed"
+    }
+  ],
+  "status": "passed"
+}

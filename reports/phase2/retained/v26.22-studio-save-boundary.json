@@ -1,0 +1,99 @@
+{
+  "format": "nova-v26.22-studio-save-boundary",
+  "version": 1,
+  "release": "26.22",
+  "regressionOrigin": "26.22",
+  "engineVersion": "26.32.0",
+  "expectedRelease": "26.32",
+  "development": true,
+  "qualifiedRelease": null,
+  "generatedAt": "2026-09-28T18:10:27.596Z",
+  "status": "passed",
+  "scope": "Actual project Save and compiler entry reject omitted studio drafts before writing or packing, retaining exact recovery data. Valid numeric controls settle first; asset editors own validation/Save/discard. This does not claim automatic saving of arbitrary recovery wrappers.",
+  "checks": [
+    {
+      "name": "theme retained draft prevents silent project Save/export and remains recoverable",
+      "status": "passed"
+    },
+    {
+      "name": "localization retained draft prevents silent project Save/export and remains recoverable",
+      "status": "passed"
+    },
+    {
+      "name": "code retained draft prevents silent project Save/export and remains recoverable",
+      "status": "passed"
+    },
+    {
+      "name": "graph retained draft prevents silent project Save/export and remains recoverable",
+      "status": "passed"
+    },
+    {
+      "name": "events retained draft prevents silent project Save/export and remains recoverable",
+      "status": "passed"
+    },
+    {
+      "name": "blueprint retained draft prevents silent project Save/export and remains recoverable",
+      "status": "passed"
+    },
+    {
+      "name": "resource retained draft prevents silent project Save/export and remains recoverable",
+      "status": "passed"
+    },
+    {
+      "name": "animation retained draft prevents silent project Save/export and remains recoverable",
+      "status": "passed"
+    },
+    {
+      "name": "controller retained draft prevents silent project Save/export and remains recoverable",
+      "status": "passed"
+    },
+    {
+      "name": "animationMask retained draft prevents silent project Save/export and remains recoverable",
+      "status": "passed"
+    },
+    {
+      "name": "rig retained draft prevents silent project Save/export and remains recoverable",
+      "status": "passed"
+    },
+    {
+      "name": "skin retained draft prevents silent project Save/export and remains recoverable",
+      "status": "passed"
+    },
+    {
+      "name": "timeline retained draft prevents silent project Save/export and remains recoverable",
+      "status": "passed"
+    },
+    {
+      "name": "material retained draft prevents silent project Save/export and remains recoverable",
+      "status": "passed"
+    },
+    {
+      "name": "particle retained draft prevents silent project Save/export and remains recoverable",
+      "status": "passed"
+    },
+    {
+      "name": "Mounted draft capture follows numeric commit before Save validates studio contents",
+      "status": "passed"
+    },
+    {
+      "name": "Mounted conflicted draft blocks Save after record replacement without migrating its recovery identity",
+      "status": "passed"
+    },
+    {
+      "name": "Conflicted mounted owners participate in explicit discard and failed-open rollback snapshots",
+      "status": "passed"
+    },
+    {
+      "name": "Studio Save error is localized in English German and Chinese and clean Save still writes",
+      "status": "passed"
+    },
+    {
+      "name": "Clean playback starts and stops while explicit asset preview retains its local draft",
+      "status": "passed"
+    },
+    {
+      "name": "Compiler rejects invalid numeric drafts before build settings or progress change",
+      "status": "passed"
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+## 26.30 — Integriertes Authoring und Release-Prüfung
+
+Engine: **26.30.0** · Projektformat2/Schema29. Mit einer Projektkopie beginnen und das Migrationsbackup behalten. Project Health prüfen, ungültige Referenzen korrigieren, speichern und erneut öffnen. Die einzige alte Projektkopie nicht überschreiben.
+
+Eine Vorlage aus Library anlegen, Hauptszene und Einstiegsskript finden und einen sichtbaren Wert ändern. Vorschau starten/stoppen, rückgängig machen/wiederholen, speichern und erneut öffnen. Ein Web-Spiel exportieren und den heruntergeladenen Player separat prüfen. Dies für jede tatsächlich verwendete Vorlage wiederholen; ein Katalogeintrag ist kein bestandener Durchlauf.
+
+Eine kleine Funktion mit Variable, Verzweigung und Schleife schreiben. In Visual Verbindungen und Verschachtelung prüfen, einen unterstützten Wert ändern, zu Code zurückkehren und Verhalten vergleichen. Nicht unterstützter Quelltext muss erhalten bleiben und diagnostiziert werden. Projekt-use-Module teilen einen Programmnamensraum, ohne native Import-Aliase. Einen Syntaxfehler einbauen: Das letzte gültige Programm muss weiterlaufen. Reparieren, neu laden und gespeicherten Text wieder öffnen; Änderungen persistenter Struktur können einen Neustart erfordern.
+
+Bei animierten Menüs Bindung/Keyframe ändern, springen/abspielen, verschachtelte Clips und Endpose prüfen und exportieren. Vorschau-Mute/Solo ist sitzungsbezogen; gespeicherte Mixerwerte sind Projektdaten. Gestreamte Zellen entladen/laden und Navigationsziele ersetzen: Fehlende Ziele stoppen Agenten, Zellwiederherstellung darf fremde Zellen nicht ändern. Multiplayer-Berechtigung erteilen, zwei Teilnehmer verbinden, Besitz prüfen, trennen/erneut verbinden und heruntergeladene Player testen. Transform-Delta-Snapshots sind kein vollständiges deterministisches Rollback.
+
+Alle Arbeitsbereiche mit langen Pfaden, gefüllten Listen, schmalen/breiten Fenstern, großer Schrift, EN/DE/ZH, Tastatur und Mausmenüs prüfen. Abbrechen bewahrt Projektdaten. Kontrast und Low-End-Modus sind optional; Standardanimationen und Effekte bleiben erhalten. Leerlaufdauer, Gerät und Frame-Messwerte dokumentieren, keine universellen FPS oder Fehlerfreiheit versprechen.
+
+Web-ZIP-Inhalt mit relativen Assets und WASM-MIME-Typ unter HTTP(S)-Root oder Unterpfad hosten. Lokale Bearbeitung benötigt keinen App-Backend; Auth/Relay benötigen einen kompatiblen Dienst. Installation/Home-Screen ist ein Online-Link: kein Service Worker, kein Offline-Neuladen. Desktop benötigt die dokumentierte Laufzeit. Die native JSONL-CLI führt begrenzte Physikanfragen aus, keine Projekt-/Rhai-Spiele oder Multiplayer-Server. Andere Hosts, Geräte und unabhängige Barrierefreiheitsprüfungen bleiben externe Prüfungen.
+
+Aktuelle Funktions-, Panel-, Vergleichs- und Abschlussregister26.30 unterscheiden deklarierte Routen von ausgeführten Nachweisen. Bei Problemen Backup/Recovery Browser verwenden, fehlerhaftes Paket deaktivieren, Console/Build-Diagnose lesen und letzten gültigen Export behalten. Freigabe beruht auf eingefrorenen Quellen, tatsächlichen Berichten und Prüfsummen; nicht ausgeführte Zustände sind kein Erfolg.

@@ -1,0 +1,24 @@
+{
+  "generatedAt": "2026-10-16T18:42:56.334Z",
+  "note": "Median of 5 runs per strategy, reconstructed algorithms, synthetic scene, no GPU or frame pipeline involved.",
+  "results": [
+    {
+      "count": 1000,
+      "depth": 10,
+      "beforeMs": 26.353,
+      "perEntityMs": 2.6529,
+      "batchMs": 1.5459,
+      "speedupTotal": 17.047027621450287,
+      "orderIdentical": true
+    },
+    {
+      "count": 1000,
+      "depth": 50,
+      "beforeMs": 140.5129,
+      "perEntityMs": 9.1416,
+      "batchMs": 0.9745,
+      "speedupTotal": 144.18973832734736,
+      "orderIdentical": true
+    }
+  ]
+}

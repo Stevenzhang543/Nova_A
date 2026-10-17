@@ -1,0 +1,41 @@
+[package]
+name = "nova_a"
+version = "26.40.0"
+description = "Nova_A open-source 2D physics and rendering engine."
+authors = ["Whitelist"]
+repository = "https://github.com/Stevenzhang543/Nova_A"
+edition = "2021"
+rust-version = "1.88"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+# The `_lib` suffix may seem redundant but it is necessary
+# to make the lib name unique and wouldn't conflict with the bin name.
+# This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
+name = "nova_a_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "=2.6.3", features = [] }
+
+[dependencies]
+tauri = { version = "=2.11.5", features = [] }
+tauri-plugin-opener = "=2.5.3"
+base64 = "0.22"
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["float_roundtrip"] }
+sha2 = "0.10"
+flate2 = "1"
+
+# Keep desktop builds independent when the checkout is nested in another workspace.
+[workspace]
+resolver = "2"
+
+# Independent desktop workspace uses the same optimized release policy.
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+incremental = false
+strip = "debuginfo"

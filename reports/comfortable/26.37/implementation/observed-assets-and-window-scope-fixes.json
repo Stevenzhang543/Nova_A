@@ -1,0 +1,59 @@
+{
+  "generatedAt": "2026-10-04T12:44:16.232Z",
+  "records": [
+    {
+      "path": "src/components/ContentAssetInspector.vue",
+      "before": "border-radius:0",
+      "after": "border-radius:var(--radius-control)",
+      "purpose": "Round the actual Overview/Dependencies/Pipeline Tabs from zero to12; no semantic audit exception."
+    },
+    {
+      "path": "src/components/EditorBottomPanel.vue",
+      "before": ".asset-actions-row{flex:none}",
+      "after": ".asset-actions-row{flex:1 1 auto;flex-wrap:wrap;max-width:100%}",
+      "purpose": "Wrap asset commands/search at enlarged type without reducing44px controls or hiding commands."
+    },
+    {
+      "path": "src/components/EditorBottomPanel.vue",
+      "before": ".asset-toolbar input[type=search]{min-width:12ch;max-width:28ch;flex:1}",
+      "after": ".asset-toolbar input[type=search]{min-width:min(12ch,100%);max-width:min(28ch,100%);flex:1 1 12ch}",
+      "purpose": "Bound the actual search flex item by its parent at150% scale; values stay immediately editable."
+    },
+    {
+      "path": "scripts/verify-ui-rebuild-layout-user.mjs",
+      "before": "['zh','meadow-cream',900,600,2]",
+      "after": "['zh','meadow-cream',1600,900,2]",
+      "purpose": "Use a supported desktop size for200% locale/palette inspection. Original900x600 failure remains archived; desktop minimum is1024x640, tested separately."
+    },
+    {
+      "path": "scripts/verify-ui-rebuild-layout-user.mjs",
+      "before": "['en','night-garden',844,390,1]",
+      "after": "['en','night-garden',1024,640,1]",
+      "purpose": "Exercise touch at the actual configured desktop minimum rather than certify an unsupported844x390 editor. Retain actual touch input and keyboard checks."
+    },
+    {
+      "path": "scripts/verify-ui-rebuild-layout-user.mjs",
+      "before": "Historical26.32 default/report/gallery title",
+      "after": "Current26.37 default/report/gallery title",
+      "purpose": "Name actual current audit evidence consistently; historical report archives remain intact."
+    }
+  ],
+  "hashes": [
+    {
+      "path": "src/components/ContentAssetInspector.vue",
+      "beforeSha256": "180658e6f83e428cb60354171d043b23409cbb4f142ab1bec3e432691f9b4f65",
+      "afterSha256": "47f94f231ff93346274b8ac05ad804ecb6001a2f6db67465a7db3acb77785984"
+    },
+    {
+      "path": "src/components/EditorBottomPanel.vue",
+      "beforeSha256": "9c468a9d32b0bdf97ef5b9e3fe41280fc167b0e5dd9a7cc2612640f29a6bddf5",
+      "afterSha256": "3c0a178af278bb8d637df16ac8f2da0894a3d50908dff66cab8041de7a6e75ea"
+    },
+    {
+      "path": "scripts/verify-ui-rebuild-layout-user.mjs",
+      "beforeSha256": "d4c371dd1ff832a5a3cfbbb990a174874f523e85875e892ef85712bafcdcc233",
+      "afterSha256": "7e1f6d59cffcdff7323a580366d0e8e65c9bf15e7b0610b43ad2f3b857ddb4c4"
+    }
+  ],
+  "verification": "Touched Vue/CSS compile; actual route rerun pending. No production font/height reductions. Failed below-minimum captures retained in all-route-attempt2."
+}

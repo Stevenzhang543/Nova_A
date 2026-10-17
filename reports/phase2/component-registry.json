@@ -1,0 +1,26 @@
+{
+  "status": "passed",
+  "engineVersion": "26.32.0",
+  "checks": [
+    {
+      "name": "Every persisted primitive component kind has shared registry metadata",
+      "status": "passed"
+    },
+    {
+      "name": "WeldJoint2D composes, toggles at runtime and roundtrips through project serialization",
+      "status": "passed"
+    },
+    {
+      "name": "MotorJoint2D composes, toggles at runtime and roundtrips through project serialization",
+      "status": "passed"
+    },
+    {
+      "name": "RopeJoint2D composes, toggles at runtime and roundtrips through project serialization",
+      "status": "passed"
+    }
+  ],
+  "sourceHashes": {
+    "src/world/componentRegistry.ts": "04164e0f30e4775177f540bc1232227361f205d10652ecfb7a4ff91cbe672719"
+  },
+  "scope": "Real component registry/composition/mutation/project modules. Solver behavior remains covered separately."
+}

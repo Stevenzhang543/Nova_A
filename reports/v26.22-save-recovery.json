@@ -1,0 +1,59 @@
+{
+  "format": "nova-v26.22-save-recovery-audit",
+  "version": 1,
+  "release": "26.22",
+  "regressionOrigin": "26.21",
+  "engineVersion": "26.21.0",
+  "buildEngineVersion": "26.21.0",
+  "generatedAt": "2026-09-14T16:36:11.403Z",
+  "development": true,
+  "expectedRelease": "26.21",
+  "qualificationTarget": "26.22",
+  "qualifiedRelease": null,
+  "baselineVersion": "26.21.0",
+  "overlayVersion": "26.22.0",
+  "sourceRoots": [
+    "."
+  ],
+  "buildRoot": ".",
+  "status": "passed",
+  "checks": [
+    {
+      "name": "A zero browser-origin quota cannot block a different destination; successful recovery stays readable",
+      "status": "passed"
+    },
+    {
+      "name": "External save survives optional recovery write refusal at nova_a.project_transaction.journal.v1.temporary",
+      "status": "passed"
+    },
+    {
+      "name": "External save survives optional recovery write refusal at nova_a.project_transaction.last_good.v1.backup",
+      "status": "passed"
+    },
+    {
+      "name": "External save survives optional recovery write refusal at nova_a.project_transaction.last_good.v1",
+      "status": "passed"
+    },
+    {
+      "name": "External save survives optional recovery write refusal at *",
+      "status": "passed"
+    },
+    {
+      "name": "Cleanup denial after sink completion cannot turn a completed save into failure",
+      "status": "passed"
+    },
+    {
+      "name": "Real destination disk-full remains the failure and retains dirty data despite cache refusal",
+      "status": "passed"
+    },
+    {
+      "name": "Read-only and cancellation gates still prevent any sink call",
+      "status": "passed"
+    },
+    {
+      "name": "Every injected transaction boundary preserves the previous last-good copy",
+      "status": "passed"
+    }
+  ],
+  "scope": "Actual project transaction, schema and template modules with explicit storage/destination failure fixtures. Actual large menu download/reopen is recorded separately."
+}

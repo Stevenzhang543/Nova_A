@@ -1,0 +1,79 @@
+{
+  "format": "nova-v26.22-animation-ui-audit",
+  "version": 1,
+  "release": "26.22",
+  "regressionOrigin": "26.16",
+  "engineVersion": "26.21.0",
+  "buildEngineVersion": "26.21.0",
+  "generatedAt": "2026-09-13T00:53:25.470Z",
+  "development": true,
+  "expectedRelease": "26.21",
+  "qualificationTarget": "26.22",
+  "qualifiedRelease": null,
+  "baselineVersion": "26.21.0",
+  "overlayVersion": "26.22.0",
+  "sourceRoots": [
+    "."
+  ],
+  "buildRoot": ".",
+  "status": "passed",
+  "checks": [
+    {
+      "name": "Actual AnimationPanel script/template/styles compile",
+      "status": "passed"
+    },
+    {
+      "name": "Actual PresentationPanel script/template/styles compile",
+      "status": "passed"
+    },
+    {
+      "name": "Owned preview begins actual lifecycle dependency and Stop restores once with drafts",
+      "status": "passed"
+    },
+    {
+      "name": "Rapid external Stop then independent Play cannot be stopped, paused, resumed or sought by the old preview owner",
+      "status": "passed"
+    },
+    {
+      "name": "Scene/lifecycle removal or rebinding of preview target refuses startup and restores the authored scene",
+      "status": "passed"
+    },
+    {
+      "name": "A lifecycle replacement with the same UUID edits only the new live component",
+      "status": "passed"
+    },
+    {
+      "name": "Pending WASM startup cancellation or a changed source does not create a session",
+      "status": "passed"
+    },
+    {
+      "name": "Startup exceptions after runtime activation still stop the owned session and restore",
+      "status": "passed"
+    },
+    {
+      "name": "Preflight and existing global Play refuse preview without mutating runtime state",
+      "status": "passed"
+    },
+    {
+      "name": "Recording reset capture is associated only with the owned session and consumed once",
+      "status": "passed"
+    },
+    {
+      "name": "Actual Save refuses invalid, conflicted, missing and preview drafts without clearing or persisting them",
+      "status": "passed"
+    },
+    {
+      "name": "Actual successful Save persists before clearing recovery and preserves the Curve view",
+      "status": "passed"
+    },
+    {
+      "name": "Actual failed Save preserves draft/base and produces no history",
+      "status": "passed"
+    },
+    {
+      "name": "Pointer click does not toggle a key selected by pointerdown; keyboard activation selects once",
+      "status": "passed"
+    }
+  ],
+  "scope": "Actual SFC compilation and extracted production handlers with explicit runtime/asset fixtures. No browser geometry or complete user workflow claim."
+}

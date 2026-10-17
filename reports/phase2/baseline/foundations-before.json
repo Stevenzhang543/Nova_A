@@ -1,0 +1,47 @@
+{
+  "format": "nova-phase2-foundations",
+  "version": 1,
+  "engineVersion": "26.32.0",
+  "status": "failed",
+  "scope": "Actual bundled production logic; browser services inert. Not a browser visual or native player qualification.",
+  "checks": [
+    {
+      "name": "Same-UUID middle replacement updates child transforms without changing array endpoints",
+      "status": "failed",
+      "error": "AssertionError [ERR_ASSERTION]: 12 != 22"
+    },
+    {
+      "name": "New parent UUID inserted in the middle is resolved; removed parents fall back locally",
+      "status": "failed",
+      "error": "AssertionError [ERR_ASSERTION]: 2 != 32"
+    },
+    {
+      "name": "World runtime invalidation cannot retain a replaced parent object",
+      "status": "failed",
+      "error": "AssertionError [ERR_ASSERTION]: 12 != 52"
+    },
+    {
+      "name": "Reordering and cycle prevention use current parent membership",
+      "status": "passed"
+    },
+    {
+      "name": "Mirrored hierarchy point conversions and reparenting preserve the existing TRS contract",
+      "status": "passed"
+    },
+    {
+      "name": "Unchanged parent lookups reuse the prepared index instead of scanning every entity",
+      "status": "passed"
+    },
+    {
+      "name": "Actual prefab override reset updates children and survives undo/redo and serialization",
+      "status": "failed",
+      "error": "AssertionError [ERR_ASSERTION]: 32 != 12"
+    }
+  ],
+  "sourceHashes": {
+    "src/world/hierarchy.ts": "810276a2d1c0b872780b2339d62342681ca91295b781a64e90f3c8baa065b2d7",
+    "src/world/World.ts": "c23a50f1609cb5d3015b57866bd27524798d415107e5927b2e89d09eef148542",
+    "src/runtime/prefabs.ts": "e53d2898893a18918afdbbe351dc45461bba2583d5b5200165203ac3010f2eec",
+    "src/store/physics.ts": "546f89767bfdb3d689b05cf30322a0470ee8793b94fd63da0b383cbeed32fdbb"
+  }
+}

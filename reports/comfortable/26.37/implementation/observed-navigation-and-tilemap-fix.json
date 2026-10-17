@@ -1,0 +1,545 @@
+{
+  "generatedAt": "2026-10-04T15:36:05.706Z",
+  "cause": "Candidate2 passed the full10-group196-route static layout gate with205 captures, but unchanged actual navigation frame checks found29 near-transparent samples while surfaces remained mounted. Original TileMap capture163 showed touching44px rows despite inner label spacing. Candidate2 qualification remains incomplete.",
+  "failedQualification": ".cache/comfortable26.37/build2/release-audits/qualification-v26.37-ad870849-3b5f-4a31-a2aa-b4db0f3d7ebc",
+  "files": [
+    {
+      "path": "src/ui/motion.ts",
+      "beforeSha256": "dbedebfb1e1a0339f6fddf1581df27da8a28bcc404da7ada323a4a1bb0da9144",
+      "afterSha256": "0d161961e4e52fc483ca28349f48fefd3f62ab91cbbaa5f18207d84a8d22c65d",
+      "change": "Persistent workspace handoff retains authored opacity through the same finite shared spring instead of fading readable content to zero; transient menus/modal/tooltips keep their existing fades."
+    },
+    {
+      "path": "src/ui/components/UiAsyncWorkspace.vue",
+      "beforeSha256": "bab6735176b79b34fbd130908584e44d601a5cc7657d75da0fea8b88b740ae75",
+      "afterSha256": "6c25b98ecc939a1d842397ccbcc5fc853d98738f39a2300bbf561c68937e1fe1",
+      "change": "Explicitly opt every real async workspace, including nested Manage pages, into opacity-preserving entry. Existing loader revisions, KeepAlive, current/displayed and data script remain byte-identical."
+    },
+    {
+      "path": "src/components/TilemapPanel.vue",
+      "beforeSha256": "eff71e60eec5cac3717babf48ed79a8ea38dfc2560e4cb1188a3c9aeb69e9d6e",
+      "afterSha256": "46559ecd54e8b0258b1e4d1d8663cacaf426aa86c7d2383707177bcee09ab17d",
+      "change": "Replace missing fieldset layout and4px nested gaps with20px real field gaps,28px sections,20px panel inset and the shared named property-container responsive stacking. Preserve exact template, business script and tile/game coordinates."
+    },
+    {
+      "path": "scripts/lib/comfortableGeometryAudit.mjs",
+      "beforeSha256": "bd4ab3ef6f1f7036d0f5350c7ed522338a502f856cbd73095f0c034e6ed8bff0",
+      "afterSha256": "3b7c25d6a5a8c5f1bbbc797dda216f22e541fc2b28e5c67f775ce8ff079d522d",
+      "change": "Measure the actual TileMap fieldset/sections/asset selectors, effective grid/flex spacing and real neighboring field rectangles so decorative gap declarations cannot mask touching inputs."
+    },
+    {
+      "path": "scripts/verify-v26.37-motion.mjs",
+      "beforeSha256": "477f9e4053500cc6144f8767fea4e6b5bf2c3c21e6a09e3d8ff36edbf6e60a9c",
+      "afterSha256": "47cc46ed043760d905fc85d77c89d899650349e203017441d7ec8e1327fc201e",
+      "change": "Add an actual production test for readable opacity-preserving Smooth handoff, current-state reversal, finite transforms and suppression of stale completion; keep every previous assertion."
+    }
+  ],
+  "docs": [
+    {
+      "path": "docs/RELEASE_NOTES_26_37.md",
+      "before": "Recorded actual production motion checkpoint45/45",
+      "after": "Actual updated production checkpoint46/46 includes readable content handoff",
+      "beforeSha256": "9b30d0e3261b219b1f4977c817877bedd022b697578af275180913888707855e",
+      "afterSha256": "d1732fd580e0f3e387d68b3874653ffd1f2f725ccb127c78339d297e969378c2"
+    },
+    {
+      "path": "docs/ui/MIGRATION.md",
+      "before": "Recorded actual production motion checkpoint45/45",
+      "after": "Actual updated production checkpoint46/46 includes readable content handoff",
+      "beforeSha256": "cbfaded9210d8a6168ebd23bf09fa7cd623c9b06fd155becabf075ec99830be0",
+      "afterSha256": "533598528edab29e3b4845c0bd24b53185c1be4987f7240ab7d3180325a65531"
+    },
+    {
+      "path": "docs/ui/MOTION_SYSTEM_SPEC.md",
+      "before": "Recorded actual production motion checkpoint45/45",
+      "after": "Actual updated production checkpoint46/46 includes readable content handoff",
+      "beforeSha256": "57a57c85ac90d70e64fdd6b593225708c092680b55fc8e00acd6cc62e2b679d7",
+      "afterSha256": "79c36c6b2a02c167719e6a55fcce481d717b55b514f9bfd84166aaecc3c70460"
+    },
+    {
+      "path": "docs/ui/UI_MOTION_IMPLEMENTATION_PLAN.md",
+      "before": "Recorded actual production motion checkpoint45/45",
+      "after": "Actual updated production checkpoint46/46 includes readable content handoff",
+      "beforeSha256": "adb5689d5d8d778fb2bbcfe50f24b08877d8ce9305b17e5c83cd440f871a13d1",
+      "afterSha256": "8684f4afe47e64d4a89c0c97ed7d25303485e699a2e201031e16cf8bd19b70f7"
+    },
+    {
+      "path": "docs/ui/MOTION_QA_CHECKLIST.md",
+      "before": "Recorded actual production motion checkpoint45/45",
+      "after": "Actual updated production checkpoint46/46 includes readable content handoff",
+      "beforeSha256": "cbf4f1603fc6a4b575a3b04c41b890b1c413272f142ba56fa55c9f6be52fcc62",
+      "afterSha256": "cfc0c498de8a824b6d25f4ffc2345ff267c27cbc22c867f2fe9a973d1ef6188d"
+    }
+  ],
+  "granularGeometry": [
+    {
+      "selector": ".tilemap-workspace aside,.tile-properties",
+      "property": "padding",
+      "before": "8",
+      "after": "20"
+    },
+    {
+      "selector": ".tile-properties",
+      "property": "container/display/section gap",
+      "before": "unnamed/block/no gap",
+      "after": "ui-properties inline-size/flex column/28"
+    },
+    {
+      "selector": ".tile-definition-fields",
+      "property": "display/gap",
+      "before": "block/no gap",
+      "after": "grid/20"
+    },
+    {
+      "selector": ".tile-properties section",
+      "property": "margin-top/padding-top/gap",
+      "before": "12/8/4",
+      "after": "0/16/20"
+    },
+    {
+      "selector": ".tile-definition-fields>section",
+      "property": "margin-block-start",
+      "before": "12",
+      "after": "28-20 =8, accounting for the parent field gap"
+    },
+    {
+      "selector": ".asset-selects",
+      "property": "gap/margin-block",
+      "before": "4/8",
+      "after": "20/16"
+    }
+  ],
+  "consequence": "UI presentation and relevant verification only; preserve precise input, model, history, loading/cache behavior, tile coordinates, dependencies and project schema.",
+  "verification": {
+    "productionMotion": "actual46/46 passed",
+    "vueTemplatesAndStyles": "actual compiled both affected Vue files; script identities preserved",
+    "currentNavigationGUI": {
+      "status": "passed",
+      "groups": 6,
+      "traces": 15,
+      "sampledFrames": 1000,
+      "blankFrames": 0,
+      "qualifiedRelease": null,
+      "regressionOrigin": "26.32",
+      "actualBundle": "Current rebuilt26.37.0 production dist",
+      "rawFrames": "release-audits/ui-rebuild/navigation-frames.json"
+    },
+    "currentTileMapGUI": {
+      "status": "passed",
+      "groups": 2,
+      "qualifiedRelease": null,
+      "scope": "Only original conditional populated TileMap/world/network group plus unchanged final geometry assertion; full10-group release gate remains required",
+      "report": "release-audits/v26.37-ui-rebuild-current-linked-layout.json",
+      "originalPNG": "release-audits/v26.37-ui-rebuild-current-linked-layout-route-001-conditional-tilemap.png"
+    },
+    "frozenSourceQualification": "not claimed passed",
+    "publication": "not claimed"
+  },
+  "selectTooltipFollowup": {
+    "cause": "Actual frozen candidate2 hover-only Channels hint stayed visible600ms after keyboard Replication navigation, with no WAAPI jobs and no described control. This was a real stale owner, not an exit animation screenshot.",
+    "diagnostic": ".cache/comfortable26.37/select-tooltip-diagnostic/diagnostic.json",
+    "files": [
+      {
+        "path": "src/editor/selectValueDetails.ts",
+        "beforeSha256": "3153660c9b317ba305f846efb78623cb80a831b4533c6165fbc62fd593eff243",
+        "afterSha256": "243367f10f7896ce3e214a7244a60c303cf0de746a8290ae9a73cdead0e4d2c3",
+        "edits": [
+          "Only observe DOM visibility/removal while an actual select owns the hint; disconnect immediately when hiding/disposed.",
+          "Reject removed/hidden/inert owners without changing selected values.",
+          "Clear stale hover ownership on focus or pointer intent elsewhere; latest reentry retains finite reversal and ARIA ownership."
+        ],
+        "consequence": "Presentation lifetime only. Native select/model/focus/game controls remain authoritative; no permanent timer or idle observer."
+      },
+      {
+        "path": "scripts/verify-v26.37-select-tooltip-user.mjs",
+        "beforeSha256": null,
+        "afterSha256": "4aa0e71b463d0c7763308db1ae2c6bc62f7042e329633d2ae46113a0be155501",
+        "change": "Four real trusted keyboard/hover/file-input/latest-reentry groups, bounded finite settlement and detached-owner ARIA observations; no private application mutation."
+      },
+      {
+        "path": "scripts/qualify-v26.37-scoped.mjs",
+        "beforeSha256": "8af50d7daaf0154c9cd64269f26a00710850d85ffc4cd55b5acda4a80b8da4ef",
+        "afterSha256": "efd14f15170d086d52b71d74562c4f0d28b5f2bab18cdbce8a5cc7c3250b67e9",
+        "change": "Require the actual new4-group selected-value hint regression in final performance gate alongside Comfortable22 and native9; no previous check removed."
+      }
+    ],
+    "verification": {
+      "report": "release-audits/v26.37-select-tooltip-user.json",
+      "status": "passed",
+      "groups": 4,
+      "qualifiedRelease": null,
+      "consoleErrors": []
+    },
+    "regressionScriptEditChain": {
+      "format": "nova-comfortable-ui-implementation-edits",
+      "release": "26.37",
+      "generatedAt": "2026-10-04T15:41:27Z",
+      "scope": "Only scripts/verify-v26.37-select-tooltip-user.mjs was added. Cache report only; no application, document, helper, or frozen-candidate source changes.",
+      "files": [
+        {
+          "file": "scripts/verify-v26.37-select-tooltip-user.mjs",
+          "beforeSha256": null,
+          "afterSha256": "0c50dc84212d6e6405d616569f17c93b68ba6c11c5128ee65a0ca471926a293c",
+          "before": "File did not exist.",
+          "after": "Standalone four-group real browser regression for selected-value hint lifetime, with public hover, keyboard navigation and intercepted file-input delivery. It is not yet executed against the fixed product.",
+          "reason": "Actual candidate2 diagnostic showed a hovered Channels select hint remained fully visible 600ms after its DOM owner disappeared on Replication navigation.",
+          "impact": "Adds directly linked UI lifetime regression evidence; preserves existing production semantics and diagnostic failure records. Qualification must run the new script against a fresh fixed source candidate.",
+          "editChain": [
+            {
+              "action": "add-file",
+              "beforeSha256": null,
+              "afterSha256": "0c2c79a6e3b9eec37192044c9aec4558802a7b16481eba42c8c5b8e1761a9ee3",
+              "change": "Added release authority checks, public populated fixture navigation, detached DOM-owner observations with released CDP object handles, and four bounded GUI assertion groups."
+            },
+            {
+              "action": "replace-one-call-option",
+              "beforeSha256": "0c2c79a6e3b9eec37192044c9aec4558802a7b16481eba42c8c5b8e1761a9ee3",
+              "afterSha256": "0c50dc84212d6e6405d616569f17c93b68ba6c11c5128ee65a0ca471926a293c",
+              "before": "withBrowserAudit({release,expectedRelease:release,name:'select-tooltip-user',root,width:1366,height:768},...)",
+              "after": "withBrowserAudit({release,expectedRelease:release,name:'select-tooltip-user',root,qualifyRelease:false,width:1366,height:768},...)",
+              "reason": "Standalone development execution must not imply release qualification. Existing browser helper explicitly upgrades to actual qualification only with --qualification-release=26.37 and retains authority checks."
+            },
+            {
+              "action": "public-import-review-followup",
+              "beforeSha256": "0c50dc84212d6e6405d616569f17c93b68ba6c11c5128ee65a0ca471926a293c",
+              "afterSha256": "4aa0e71b463d0c7763308db1ae2c6bc62f7042e329633d2ae46113a0be155501",
+              "change": "Preserve recorded initial failure and original screenshot with explicit JSON-overwrite retention limit. Source-removal cleanup already passed before further focus. Then complete the existing public upgrade-review confirmation, using the same flow as worldUserControls17. No production changes or cleanup assertion removed."
+            }
+          ],
+          "addedCoverage": [
+            "Hovered Channels select -> trusted keyboard Replication: bounded hidden, no hint-local running animation, old owner ARIA removal and detached DOM identity.",
+            "Focused Channels select -> actual Script workspace: finite hidden/ARIA cleanup without private application state.",
+            "Real Import Project chooser is held by existing headless fallback, then the previous select is merely hovered before file delivery replaces the project. Assert old DOM owner detaches and hint cleanup finishes; no select focus or app state mutation.",
+            "Two actual distinct select labels alternate trusted hover/exit/reentry. Settle on latest text, exactly one ARIA owner, old owner token removal, nonintercepting hint and finite final exit."
+          ],
+          "limits": [
+            "No browser run, screenshot comparison, performance claim, or release qualification was performed for this new script.",
+            "Hint-local WAAPI jobs are observed through real DOM; no unexposed global production motion registry is claimed measured.",
+            "Headless intercepted file chooser does not certify native OS picker behavior.",
+            "All4 groups use actual existing world-v2629-stream-host and creator-v2637-mixed-game projects. Historical fixture identities are preserved."
+          ]
+        }
+      ],
+      "validation": {
+        "syntaxCheck": {
+          "command": "node --check scripts/verify-v26.37-select-tooltip-user.mjs",
+          "exitCode": 0,
+          "status": "passed"
+        },
+        "replacementFixtureExists": true,
+        "actualFixedProductGui": "not run by this agent",
+        "qualifiedRelease": null
+      },
+      "preservedDiagnostic": ".cache/comfortable26.37/select-tooltip-diagnostic/diagnostic.json"
+    },
+    "failedDevelopmentRecord": ".cache/comfortable26.37/select-tooltip-initial-failure/observed-failure.json"
+  },
+  "latestLinkedDocumentation": [
+    {
+      "path": "docs/RELEASE_NOTES_26_37.md",
+      "beforeSha256": "d1732fd580e0f3e387d68b3874653ffd1f2f725ccb127c78339d297e969378c2",
+      "afterSha256": "c6bbc8b439f1e7f9d1dad0ed1113397bed5089c2809d9207fa405004efb5004c",
+      "change": "Correct46-check current source receipt reference and record actual linked fixes/passes separately from final qualification."
+    },
+    {
+      "path": "docs/ui/MIGRATION.md",
+      "beforeSha256": "533598528edab29e3b4845c0bd24b53185c1be4987f7240ab7d3180325a65531",
+      "afterSha256": "29c0c682fc881018148152c3788b67dd46ffb5197ae2cb2433bf09f371861053",
+      "change": "Correct46-check current source receipt reference and record actual linked fixes/passes separately from final qualification."
+    },
+    {
+      "path": "docs/ui/MOTION_SYSTEM_SPEC.md",
+      "beforeSha256": "79c36c6b2a02c167719e6a55fcce481d717b55b514f9bfd84166aaecc3c70460",
+      "afterSha256": "c3077bdd019a301c2c420b31ab7ecc871e41fd90bb1ebc6d9c6179b4378ebc33",
+      "change": "Correct46-check current source receipt reference and record actual linked fixes/passes separately from final qualification."
+    },
+    {
+      "path": "docs/ui/UI_MOTION_IMPLEMENTATION_PLAN.md",
+      "beforeSha256": "8684f4afe47e64d4a89c0c97ed7d25303485e699a2e201031e16cf8bd19b70f7",
+      "afterSha256": "4d2027da9403f31afbe9cb261b1ab302693b918a1a0ec2a6e09ee5c70be76123",
+      "change": "Correct46-check current source receipt reference and record actual linked fixes/passes separately from final qualification."
+    },
+    {
+      "path": "docs/ui/MOTION_QA_CHECKLIST.md",
+      "beforeSha256": "cfc0c498de8a824b6d25f4ffc2345ff267c27cbc22c867f2fe9a973d1ef6188d",
+      "afterSha256": "f057177ee80a42979d99309abc62189460def0d5e6ad58c1dde40b26a4b7be8c",
+      "change": "Correct46-check current source receipt reference and record actual linked fixes/passes separately from final qualification."
+    }
+  ],
+  "latestVerifiedAt": "2026-10-04T15:49:50.557Z",
+  "laterManualTilemapFollowup": {
+    "failedQualification": ".cache/comfortable26.37/build3/release-audits/qualification-v26.37-b60ca686-e650-43bb-a48a-a0ff1a30fa99",
+    "failedGate": "manual",
+    "priorPassedGates": 11,
+    "priorActualLayout": {
+      "groups": 10,
+      "routes": 196,
+      "captures": 205,
+      "status": "passed",
+      "scopeLimit": "Original Tilemap capture lacked visible definitions, so the following test strengthens actual selected-property coverage."
+    },
+    "files": [
+      {
+        "path": "manual/MANUAL.en.md",
+        "beforeSha256": "387a56b685c5f048268a1a8a5f903222e7c9222ab3685870bafcfe1891599536",
+        "afterSha256": "cbac394226f98a74fd462f5a01f150ec6fddfe71cae302d7ae02dff0a7e9fa2c",
+        "change": "Add canonical current Engine:**26.37.0** identity immediately after edition title; preserve historical36 branding chapter and all complete teaching content."
+      },
+      {
+        "path": "manual/MANUAL.de.md",
+        "beforeSha256": "0d37b47fe5729e559126b6cacb41e00d689047e6c14709f6477798323086d51f",
+        "afterSha256": "f8c714e6d0557fe2a5aaf9dcc77b4bed177f40f48689283df41881b9532c3801",
+        "change": "Add canonical current Engine:**26.37.0** identity immediately after edition title; preserve historical36 branding chapter and all complete teaching content."
+      },
+      {
+        "path": "manual/MANUAL.zh-CN.md",
+        "beforeSha256": "445143645c3a4f5a29623380ffe639e9dd9781d7c1c994fa9cc21456196e91e2",
+        "afterSha256": "6d640511b2dc151ba2693d40b871ec6b73b6a3d4eb9e87c40865305a68652d05",
+        "change": "Add canonical current Engine:**26.37.0** identity immediately after edition title; preserve historical36 branding chapter and all complete teaching content."
+      },
+      {
+        "path": "scripts/verify-ui-rebuild-layout-user.mjs",
+        "beforeSha256": "63031ef15e684d3458d113c78cd0d225efa4b9473aa0066aff7c1302f2d0dbdf",
+        "afterSha256": "d0f0b7dec3841210dd2c9d190cc21a32ce82057039b5918c4086430e30bd4724",
+        "change": "Choose Ground via public palette, require two actual visible44px definition fields and add Atlas/layers/baking scroll routes. Existing geometry/console assertions unchanged."
+      },
+      {
+        "path": "src/components/TilemapPanel.vue",
+        "beforeSha256": "46559ecd54e8b0258b1e4d1d8663cacaf426aa86c7d2383707177bcee09ab17d",
+        "afterSha256": "f35d71307fcb3c8d9a3a1d482a966e4fa3860e25a243a036c1ee5412d78d91fd",
+        "change": "Narrow the12px flex selector to actual layer button groups and inner paired inputs; let shared property rows retain16px inline/12px stacked spacing. Exact business script/template unchanged."
+      }
+    ],
+    "granularRule": {
+      "before": ".layers>div,.region-settings :deep(.ui-property-control>div)",
+      "after": ".layers>div:not(.ui-property-row),.layers :deep(.ui-property-control>div),.region-settings :deep(.ui-property-control>div)",
+      "reason": "Actual scrolled Locked/Blend mode rows had12px inline gap because local display:flex matched the shared row wrapper."
+    },
+    "actualManualAudit": "3 complete Markdown editions and multilingual HTML audit passed with unchanged checker",
+    "actualTileSubset": {
+      "status": "passed",
+      "groups": 2,
+      "routes": 17,
+      "captures": 18,
+      "report": "release-audits/v26.37-ui-rebuild-current-linked-layout.json",
+      "qualifiedRelease": null
+    },
+    "actualMinimumDiagnostic": {
+      "report": "release-audits/v26.37-ui-rebuild-minimum-tilemap-probe.json",
+      "scope": "Actual1024x768 selected Ground and visible definitions observed; diagnostic did not certify all routes."
+    },
+    "consequence": "Documentation/current identity and UI CSS/linked verification only; no dependencies, game coordinates, schema or model changes.",
+    "publication": false,
+    "documentationEdits": [
+      {
+        "path": "docs/RELEASE_NOTES_26_37.md",
+        "beforeSha256": "c6bbc8b439f1e7f9d1dad0ed1113397bed5089c2809d9207fa405004efb5004c",
+        "afterSha256": "cbe34a542a4ec8b30e7fe7f2c79381e25810f284cc299ac0c07392dd048a7b34",
+        "change": "Record current canonical manual identity, selected/scrolled Tilemap coverage and actual all-width nonzero Assets geometry/22+9 preflight, retaining final qualification distinction."
+      },
+      {
+        "path": "docs/ui/MIGRATION.md",
+        "beforeSha256": "29c0c682fc881018148152c3788b67dd46ffb5197ae2cb2433bf09f371861053",
+        "afterSha256": "8223d2c27020e5f15711a9cc1c8d548b3646776b48818438035ea2953d74ee2f",
+        "change": "Record current canonical manual identity, selected/scrolled Tilemap coverage and actual all-width nonzero Assets geometry/22+9 preflight, retaining final qualification distinction."
+      },
+      {
+        "path": "docs/ui/MOTION_QA_CHECKLIST.md",
+        "beforeSha256": "f057177ee80a42979d99309abc62189460def0d5e6ad58c1dde40b26a4b7be8c",
+        "afterSha256": "a84c768f7c7ebe771a93b6074edb16134e10f4ea6f2eb38ef64e8a79d5cc4dbe",
+        "change": "Record current canonical manual identity, selected/scrolled Tilemap coverage and actual all-width nonzero Assets geometry/22+9 preflight, retaining final qualification distinction."
+      }
+    ]
+  },
+  "laterZeroLayoutFollowup": {
+    "source": "src/components/TilemapPanel.vue",
+    "beforeSha256": "f35d71307fcb3c8d9a3a1d482a966e4fa3860e25a243a036c1ee5412d78d91fd",
+    "afterSha256": "1412b1275edcf2dabb527c83e7ecac85e9ef9faae2c43f217e338dcd6788a11f",
+    "businessScriptByteIdentical": true,
+    "templateByteIdentical": true,
+    "scopedCssCompiled": true,
+    "edits": [
+      {
+        "selector": ".tile-properties",
+        "property": "display",
+        "before": "flex",
+        "after": "block",
+        "consequence": "Use natural content layout in the bounded scroll pane."
+      },
+      {
+        "selector": ".tile-properties",
+        "property": "flex-direction",
+        "before": "column",
+        "after": "Removed",
+        "consequence": "Avoid an unused flex-only rule."
+      },
+      {
+        "selector": ".tile-properties",
+        "property": "container",
+        "before": "ui-properties/inline-size",
+        "after": "Removed",
+        "consequence": "The initial narrow scroll pane no longer combines size containment and its content layout; local rows keep the same stacked geometry explicitly."
+      },
+      {
+        "selector": ".tile-properties",
+        "property": "gap",
+        "before": "var(--ui-section-gap)",
+        "after": "Removed; actual adjacent block margins provide28px",
+        "consequence": "Do not retain an ineffective block gap declaration."
+      },
+      {
+        "selector": ".tile-properties>*",
+        "property": "flex-shrink",
+        "before": "0",
+        "after": "Removed",
+        "consequence": "Natural block flow does not shrink content."
+      },
+      {
+        "selector": ".tile-properties>*",
+        "property": "margin-block",
+        "before": "Browser/local paragraph and section margins",
+        "after": "0",
+        "consequence": "Avoid additive or collapsed inconsistent group margins."
+      },
+      {
+        "selector": ".tile-properties>:not(:first-child)",
+        "property": "margin-block-start",
+        "before": "No shared direct-block rhythm",
+        "after": "var(--ui-section-gap)",
+        "consequence": "Actual direct blocks remain28px apart."
+      },
+      {
+        "selector": ".tile-properties :deep(.ui-property-row)",
+        "property": "grid-template-columns",
+        "before": "Named container determines stacking",
+        "after": "minmax(0,1fr)",
+        "consequence": "Retain comfortable vertical label/value grouping without the failing pane containment."
+      },
+      {
+        "selector": ".tile-properties :deep(.ui-property-row)",
+        "property": "align-items",
+        "before": "center",
+        "after": "start",
+        "consequence": "Keep multiline labels aligned while shared12px gap,16px values and44px control height remain."
+      }
+    ],
+    "observedFailure": {
+      "candidate": 5,
+      "sourceInputDigest": "fa34bc5b33a9037917e7f9da5d954598bcf6b06df767c5ec73314f95c125765d",
+      "archive": ".cache/comfortable26.37/candidate5-tilemap-failure",
+      "actualReplay": ".cache/comfortable26.37/tilemap-failure-diagnostic/v26.37-ui-rebuild-layout.json",
+      "result": "Groundinput value existed; pane409.6x294 visible; all direct children rect0x0 with no hiding attributes or active animations. Previous short-route pass did not cover initial narrow-mount path."
+    },
+    "diagnostic": {
+      "report": ".cache/comfortable26.37/tilemap-layout-style-probe/v26.37-tilemap-layout-style-probe.json",
+      "qualifiedRelease": null,
+      "measurements": [
+        {
+          "phase": "original",
+          "paneHeight": 294,
+          "scrollHeight": 294,
+          "fieldsetHeight": 0,
+          "inputHeight": 0
+        },
+        {
+          "phase": "container-normal",
+          "paneHeight": 294,
+          "scrollHeight": 294,
+          "fieldsetHeight": 0,
+          "inputHeight": 0
+        },
+        {
+          "phase": "block-layout",
+          "paneHeight": 294,
+          "scrollHeight": 4471,
+          "fieldsetHeight": 2841,
+          "inputHeight": 44
+        },
+        {
+          "phase": "overflow-visible",
+          "paneHeight": 294,
+          "scrollHeight": 4591,
+          "fieldsetHeight": 2841,
+          "inputHeight": 44
+        },
+        {
+          "phase": "content-visible",
+          "paneHeight": 294,
+          "scrollHeight": 4611,
+          "fieldsetHeight": 2841,
+          "inputHeight": 44
+        },
+        {
+          "phase": "contain-none",
+          "paneHeight": 294,
+          "scrollHeight": 4611,
+          "fieldsetHeight": 2841,
+          "inputHeight": 44
+        },
+        {
+          "phase": "restored",
+          "paneHeight": 294,
+          "scrollHeight": 4611,
+          "fieldsetHeight": 2841,
+          "inputHeight": 44
+        }
+      ],
+      "inference": "Changing display to block restored real geometry. Restored flex also rendered after invalidation, so this is an observed initial layout-combination failure, not a general browser certification. Grid/block with size containment still failed initial loading; removal of pane size containment plus explicit local stacked rows passed the unchanged actual minimum-window acceptance.",
+      "unsuccessfulImplementationTrials": [
+        ".cache/comfortable26.37/tilemap-grid-check/v26.37-ui-rebuild-layout.json",
+        ".cache/comfortable26.37/tilemap-block-check/v26.37-ui-rebuild-layout.json",
+        ".cache/comfortable26.37/tilemap-current-block-probe/v26.37-tilemap-layout-style-probe.json"
+      ]
+    },
+    "verification": {
+      "status": "passed",
+      "qualifiedRelease": null,
+      "report": ".cache/comfortable26.37/tilemap-uncontained-block-check/v26.37-ui-rebuild-layout.json",
+      "checks": [
+        {
+          "name": "Conditional tilemap, populated world and network panels are reachable with their owning project",
+          "status": "passed"
+        },
+        {
+          "name": "All visited panel and field geometry is readable and contained",
+          "status": "passed"
+        }
+      ],
+      "visitedRoutes": 17,
+      "captures": 18,
+      "actualSelectedFields": {
+        "name": "actual-selected-tilemap-fields",
+        "selection": "Public Ground palette button",
+        "fields": [
+          {
+            "label": "Tile name",
+            "value": "Ground",
+            "height": 44,
+            "contained": true
+          },
+          {
+            "label": "Tile collision",
+            "value": "None",
+            "height": 44,
+            "contained": true
+          }
+        ]
+      },
+      "scope": "Actual authored natural block initial1024x768, unchanged selectedGround field containment/44px and scroll Atlas/layers/baking, populatedworld/network and independent complete-visited geometry assertion; final source-bound14 gates remain required."
+    },
+    "auditEdit": {
+      "path": "scripts/lib/comfortableGeometryAudit.mjs",
+      "beforeSha256": "3b7c25d6a5a8c5f1bbbc797dda216f22e541fc2b28e5c67f775ce8ff079d522d",
+      "afterSha256": "1d12e662ebf9513476c75b813f5b6b194180704bfbda610a54b80f120c23e1ae",
+      "before": "Read pane row-gap token only",
+      "after": "Measure every rendered adjacent direct block rectangle and fail actual distance below28 logical pixels; preserve selected44px field and all other geometry checks",
+      "consequence": "Effective actual spacing is checked for the natural block layout; no decorative gap or weakened threshold."
+    },
+    "documentationEdit": {
+      "path": "docs/ui/MIGRATION.md",
+      "beforeSha256": "8223d2c27020e5f15711a9cc1c8d548b3646776b48818438035ea2953d74ee2f",
+      "afterSha256": "810c868ceaf092664b76f58e013f9c307cd58666df906cd5ccc9b3b2bb7c5aad",
+      "change": "Record actual initial narrow layout defect, minimum natural block fix, unaffected business semantics and explicit unqualified development scope."
+    }
+  }
+}

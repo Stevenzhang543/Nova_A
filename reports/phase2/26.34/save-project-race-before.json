@@ -1,0 +1,73 @@
+{
+  "generatedAt": "2026-10-01T17:27:50.089Z",
+  "engineVersion": "26.34.0",
+  "status": "failed",
+  "scope": "Actual production save module with isolated failure-injected Web Storage; physical/browser storage certification is separate.",
+  "checks": [
+    {
+      "name": "Structured maps preserve distinct Unicode, punctuation, and long keys through commit and reload",
+      "status": "passed"
+    },
+    {
+      "name": "Prototype-looking keys remain own data without changing object prototypes",
+      "status": "passed"
+    },
+    {
+      "name": "Migrations can rename and default prototype-looking keys without losing data",
+      "status": "passed"
+    },
+    {
+      "name": "Cancelling load at reading preserves selected slot, values, metadata, storage, and custom state",
+      "status": "passed"
+    },
+    {
+      "name": "Cancelling load at validating preserves selected slot, values, metadata, storage, and custom state",
+      "status": "passed"
+    },
+    {
+      "name": "Cancelling load at migrating preserves selected slot, values, metadata, storage, and custom state",
+      "status": "passed"
+    },
+    {
+      "name": "Successful async load migrates and deserializes exactly once",
+      "status": "passed"
+    },
+    {
+      "name": "Async commit serializes once and writes the exact validated custom snapshot",
+      "status": "passed"
+    },
+    {
+      "name": "Cancelling commit at serializing preserves state and writes nothing",
+      "status": "passed"
+    },
+    {
+      "name": "Cancelling commit at validating preserves state and writes nothing",
+      "status": "passed"
+    },
+    {
+      "name": "Cancelling commit at writing preserves state and writes nothing",
+      "status": "passed"
+    },
+    {
+      "name": "Primary-write failure reports failure and preserves the last committed data",
+      "status": "passed"
+    },
+    {
+      "name": "Existing sanitized slot names and v2 envelope remain compatible",
+      "status": "passed"
+    },
+    {
+      "name": "Project switch during async load rejects the stale result without changing new-project state",
+      "status": "failed",
+      "error": "AssertionError [ERR_ASSERTION]: Missing expected rejection (AbortError)."
+    },
+    {
+      "name": "Project switch during async commit rejects the stale snapshot without writing or changing new-project state",
+      "status": "failed",
+      "error": "AssertionError [ERR_ASSERTION]: Missing expected rejection (AbortError)."
+    }
+  ],
+  "sourceHashes": {
+    "src/runtime/saveGame.ts": "26c0078a494367d00b21f8e1eb372f3f06ed6d0fb013138bd732934686653265"
+  }
+}

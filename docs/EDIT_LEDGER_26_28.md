@@ -1,0 +1,63 @@
+# Nova_A26.28 /26.28.0 — 逐路径修改清单
+
+Files changed/added — deterministic path-level manifest.
+
+比较基线为已发布26.27快照752c8bb666d0a500cb273e45e2ee7dd732ccddbbd8662ca3964b53fd6d4678df；保留此前未提交改动和既有发布文件。以下每项对应本版新增或修改，不把历史改动重复算作本版。无功能、默认动画或历史发布删除。
+
+- `Cargo.lock` — 同步机器／公开版本26.28.0／26.28；保留格式和行为。
+- `Cargo.toml` — 同步机器／公开版本26.28.0／26.28；保留格式和行为。
+- `README.md` — 更新当前源码版本和本版文档入口，保留历史版本内容。
+- `crates/nova_format/src/lib.rs` — 同步机器／公开版本26.28.0／26.28；保留格式和行为。
+- `docs/EDIT_LEDGER_26_28.md` — 新增本版实现、影响、逐文件记录、验证方法或发布／部署说明（按文件主题）。
+- `docs/GAME_UI_26_28.md` — 新增本版实现、影响、逐文件记录、验证方法或发布／部署说明（按文件主题）。
+- `docs/IMPLEMENTATION_TRACKER_26_28.md` — 新增本版实现、影响、逐文件记录、验证方法或发布／部署说明（按文件主题）。
+- `docs/LOCALIZATION_26_28.md` — 新增本版实现、影响、逐文件记录、验证方法或发布／部署说明（按文件主题）。
+- `docs/MEDIA_26_28.md` — 新增本版实现、影响、逐文件记录、验证方法或发布／部署说明（按文件主题）。
+- `docs/QUALIFICATION_LESSON_26_28.de.md` — 新增本版对应语言制作／输入／导出课程与设备资格边界。
+- `docs/QUALIFICATION_LESSON_26_28.en.md` — 新增本版对应语言制作／输入／导出课程与设备资格边界。
+- `docs/QUALIFICATION_LESSON_26_28.zh.md` — 新增本版对应语言制作／输入／导出课程与设备资格边界。
+- `docs/RELEASE_NOTES_26_28.md` — 新增本版实现、影响、逐文件记录、验证方法或发布／部署说明（按文件主题）。
+- `docs/WEB_HOSTING_26_28.md` — 新增本版实现、影响、逐文件记录、验证方法或发布／部署说明（按文件主题）。
+- `manual/MANUAL.de.md` — 更新手册版本并前置本版对应语言制作课程，保留累积手册。
+- `manual/MANUAL.en.md` — 更新手册版本并前置本版对应语言制作课程，保留累积手册。
+- `manual/MANUAL.zh-CN.md` — 更新手册版本并前置本版对应语言制作课程，保留累积手册。
+- `manual/index.html` — 更新本版HTML标题，新增三语媒体与UI制作课程并保留旧锚点。
+- `package.json` — 同步机器／公开版本26.28.0／26.28；保留格式和行为。
+- `reference-projects/projects/creator-v2628-animated-menu/README.md` — 说明本版参考的用途、运行方法及验证边界。
+- `reference-projects/projects/creator-v2628-animated-menu/expected-output.json` — 声明本版参考身份、预期运行行为及版本。
+- `reference-projects/projects/creator-v2628-animated-menu/project.nova` — 新增26.28独立参考项目数据，保留旧版项目与schema29。
+- `reference-projects/projects/creator-v2628-animated-menu/test-controls.json` — 记录本版参考的实际操作步骤与预期结果。
+- `reference-projects/projects/creator-v2628-mixed-game/README.md` — 说明本版参考的用途、运行方法及验证边界。
+- `reference-projects/projects/creator-v2628-mixed-game/expected-output.json` — 声明本版参考身份、预期运行行为及版本。
+- `reference-projects/projects/creator-v2628-mixed-game/project.nova` — 新增26.28独立参考项目数据，保留旧版项目与schema29。
+- `reference-projects/projects/creator-v2628-mixed-game/test-controls.json` — 记录本版参考的实际操作步骤与预期结果。
+- `reference-projects/projects/server-v2628-headless-authority/README.md` — 说明本版参考的用途、运行方法及验证边界。
+- `reference-projects/projects/server-v2628-headless-authority/expected-output.json` — 声明本版参考身份、预期运行行为及版本。
+- `reference-projects/projects/server-v2628-headless-authority/project.nova` — 新增26.28独立参考项目数据，保留旧版项目与schema29。
+- `reference-projects/projects/server-v2628-headless-authority/test-controls.json` — 记录本版参考的实际操作步骤与预期结果。
+- `scripts/generate-v26.28-menu-reference.mjs` — 生成本版音乐／字幕／动画／菜单参考，保持原版参考不变。
+- `scripts/prepare-release-26.28.mjs` — 定义13项实际门禁、8项不重复理由、当前工具链与单独发布身份；用户制作先于依赖其产物的布局检查。
+- `scripts/qualify-v26.28-scoped.mjs` — 组合媒体/UI/语言/PCM/序列化、真实制作及布局结果，拒绝未通过先决报告。
+- `scripts/verify-v26.28-animation-authoring-user.mjs` — 本版实际曲线／预览／记录／保存重开及拖动检查；兼容折叠启动页和同版无需迁移的重开。
+- `scripts/verify-v26.28-game-ui.mjs` — 六项真实UI模块回归：模态／IME／多手柄／RTL／可访问本地化。
+- `scripts/verify-v26.28-localization.mjs` — 验证字典键、显式翻译、占位符、API帮助与响应式状态；记录三语源库存。
+- `scripts/verify-v26.28-media-bindings.mjs` — 九项实际资源重命名／重新导入、精确字节Undo/Redo、保存重开及运行时绑定采样。
+- `scripts/verify-v26.28-media-layout.mjs` — 当前媒体面板三语／五配色／大字检查；真实试听开关重置和作者控制隔离。
+- `scripts/verify-v26.28-media.mjs` — 六项真实时间轴和试听隔离测试，记录宿主模拟的设备边界。
+- `scripts/verify-v26.28-menu-user.mjs` — 实际编辑、键盘／触摸／IME、保存重开及下载Web播放器验证，产物使用本版独立名称。
+- `scripts/verify-v26.28-release-inputs.mjs` — 校验本版版本、部署文档、逐路径清单及资格计划。
+- `src-tauri/Cargo.lock` — 同步机器／公开版本26.28.0／26.28；保留格式和行为。
+- `src-tauri/Cargo.toml` — 同步机器／公开版本26.28.0／26.28；保留格式和行为。
+- `src-tauri/tauri.conf.json` — 同步机器／公开版本26.28.0／26.28；保留格式和行为。
+- `src/components/AnimationPanel.vue` — 增加完整绑定路径；创建按钮保留单行横向访问；编辑区最小高度与工具栏固有行高防止大字重叠，窄屏取消固定。
+- `src/components/PresentationPanel.vue` — 增加试听mute/solo及重置，保留作者M/S；长总线名可换行、混音标题固定。
+- `src/components/VisualGraphEditor.vue` — 连线／布局状态保存语义，语言切换即时重算显示。
+- `src/editor/audioAudition.ts` — 独立试听配置副本、mute/solo覆盖及异步释放；不修改作者混音。
+- `src/editor/audioAuthoringCopy.ts` — 增加三语试听／作者混音区别与重置说明。
+- `src/editor/graphStandardApiCopy.ts` — 34个无上游说明的重载提供本地化参数／返回类型与诚实的说明边界。
+- `src/editor/graphStatusCopy.ts` — 新增图编辑器语义状态的EN/DE/ZH格式化。
+- `src/i18n.ts` — 补足缺键和DE/ZH缺译、中文摩擦标签；页脚三语版本统一读取发布常量。
+- `src/projects/projectFormat.ts` — 同步机器／公开版本26.28.0／26.28；保留格式和行为。
+- `src/runtime/gameUi.ts` — 修复失效模态焦点／重映射、多手柄边沿、RTL滑块与提示及无障碍文本本地化。
+- `src/runtime/timeline.ts` — 修复嵌套淡入淡出继承、终点姿态和反向进入事件；定位保持静默。
+- `tests/fixtures/migrations/public-schema-expected.json` — 同步机器／公开版本26.28.0／26.28；保留格式和行为。

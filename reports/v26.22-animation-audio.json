@@ -1,0 +1,1726 @@
+{
+  "format": "nova-v26.22-animation-audio-audit",
+  "version": 1,
+  "release": "26.22",
+  "regressionOrigin": "26.16",
+  "engineVersion": "26.21.0",
+  "buildEngineVersion": "26.21.0",
+  "generatedAt": "2026-09-14T16:51:21.891Z",
+  "development": true,
+  "expectedRelease": "26.21",
+  "qualificationTarget": "26.22",
+  "qualifiedRelease": null,
+  "baselineVersion": "26.21.0",
+  "overlayVersion": "26.22.0",
+  "sourceRoots": [
+    "."
+  ],
+  "buildRoot": ".",
+  "status": "passed",
+  "checks": [
+    {
+      "name": "Direct clip seek evaluates actual numeric pose without crossed callbacks",
+      "status": "passed"
+    },
+    {
+      "name": "Repeated backwards seeks remain exact and invalid requests preserve the existing transport",
+      "status": "passed"
+    },
+    {
+      "name": "Stopping a direct preview leaves unrelated transports and current pose under session ownership",
+      "status": "passed"
+    },
+    {
+      "name": "Timeline frameRate quantizes playhead while preserving fractional advancement",
+      "status": "passed"
+    },
+    {
+      "name": "Timeline emits every crossed occurrence over multiple loops",
+      "status": "passed"
+    },
+    {
+      "name": "Timeline samples assigned animation asset with local offset and rate",
+      "status": "passed"
+    },
+    {
+      "name": "Repeated additive and partial layers do not accumulate the previous output",
+      "status": "passed"
+    },
+    {
+      "name": "Rotation limits remain authoritative after inverse kinematics",
+      "status": "passed"
+    },
+    {
+      "name": "Retargeting an unchanged rest pose preserves the target rest transform",
+      "status": "passed"
+    },
+    {
+      "name": "Non-looping audio does not restart after the media element ends",
+      "status": "passed"
+    },
+    {
+      "name": "Explicit stop remains stopped for an autoplay source",
+      "status": "passed"
+    },
+    {
+      "name": "Shared clock is deterministic at supported sample rates across fixed-step partitions",
+      "status": "passed"
+    },
+    {
+      "name": "Rig hierarchy survives source reorder and cyclic input is rejected",
+      "status": "passed"
+    },
+    {
+      "name": "Rig zero-weight limits remain inert and copy constraints cannot break final hard limits",
+      "status": "passed"
+    },
+    {
+      "name": "Invalid skin triangles are dropped as groups without shifting subsequent indices",
+      "status": "passed"
+    },
+    {
+      "name": "Timeline paused seeks sample envelopes without accumulating previous output",
+      "status": "passed"
+    },
+    {
+      "name": "Overlapping timeline audio voices retain independent rate/offset and release at clip end",
+      "status": "passed"
+    },
+    {
+      "name": "Global pause suspends timeline voices even without another timeline evaluation",
+      "status": "passed"
+    },
+    {
+      "name": "Subtitles disappear at the exact half-open clip end and paused seek restores text",
+      "status": "passed"
+    },
+    {
+      "name": "Step keys switch at interior boundaries and Auto tangents use adjacent slopes",
+      "status": "passed"
+    },
+    {
+      "name": "Key reduction preserves piecewise easing rather than deleting a meaningful middle key",
+      "status": "passed"
+    },
+    {
+      "name": "Explicit root-motion extraction covers multiple and reverse loops without absolute teleport",
+      "status": "passed"
+    },
+    {
+      "name": "Root-motion Ignore preserves scale tracks and loop cycle offsets wrap samples",
+      "status": "passed"
+    },
+    {
+      "name": "Looping animator reaches its exit-time-one transition",
+      "status": "passed"
+    },
+    {
+      "name": "Bus automation holds its end unless an explicit loop duration is set",
+      "status": "passed"
+    },
+    {
+      "name": "Nested events survive crossing an entire clip and follow offset/rate ordering",
+      "status": "passed"
+    },
+    {
+      "name": "Repeated nested instances create distinct voices using multiplied rate and owner play state",
+      "status": "passed"
+    },
+    {
+      "name": "Branch consumes remaining time from its marker and suppresses events in skipped span",
+      "status": "passed"
+    },
+    {
+      "name": "Reverse timeline dispatch order follows traversal and explicit seek dispatches nothing",
+      "status": "passed"
+    },
+    {
+      "name": "Zero-weight layers keep advancing and triggers are consumed after every layer evaluates",
+      "status": "passed"
+    },
+    {
+      "name": "Transition interruption uses the active transition policy rather than unrelated inbound edges",
+      "status": "passed"
+    },
+    {
+      "name": "Regular source and polyphonic clocks follow scaled transport, manual pause, seek and trim end",
+      "status": "passed"
+    },
+    {
+      "name": "Unused sources do not consume voice budgets or duck buses and UI voices obey bus/mute limits",
+      "status": "passed"
+    },
+    {
+      "name": "Solo nested bus keeps its ancestors audible and unrelated sibling silent",
+      "status": "passed"
+    },
+    {
+      "name": "Audio dispose releases every source and UI reference and clears transport diagnostics",
+      "status": "passed"
+    },
+    {
+      "name": "Missing animation tracks crossfade against the underlying pose",
+      "status": "passed"
+    },
+    {
+      "name": "Timeline overlap weights normalize jointly and additive unit scale remains neutral",
+      "status": "passed"
+    },
+    {
+      "name": "Timeline sprite frames restore the pre-animation sprite when the clip is no longer active",
+      "status": "passed"
+    },
+    {
+      "name": "Slicing preserves interpolated boundaries and curved interior values with declared precision",
+      "status": "passed"
+    },
+    {
+      "name": "Retiming preserves curve values, rescales sprite frames, events, markers and command tracks",
+      "status": "passed"
+    },
+    {
+      "name": "Every numeric track and command kind survives normalize/JSON/reload and dispatches in time order",
+      "status": "passed"
+    },
+    {
+      "name": "Root-motion preview refuses unbounded sample expansion before allocating it",
+      "status": "passed"
+    },
+    {
+      "name": "Runtime recording captures frame zero and every integer frame across coarser simulation updates",
+      "status": "passed"
+    },
+    {
+      "name": "Rig skin deformation preserves mirrored bind geometry and follows translated root pose",
+      "status": "passed"
+    },
+    {
+      "name": "Timeline track kinds and every clip field survive normalization and JSON reopen",
+      "status": "passed"
+    },
+    {
+      "name": "Mixer routing, effects, snapshots, ducking, automation and device settings survive JSON reopen",
+      "status": "passed"
+    },
+    {
+      "name": "Cyclic and excessive timeline traversal pauses with retained diagnostics and no partial commands",
+      "status": "passed"
+    },
+    {
+      "name": "Mixer sends cannot close feedback through parent buses declared later",
+      "status": "passed"
+    },
+    {
+      "name": "Visibility tracks seek back to the underlying state and cannot stop their own playhead",
+      "status": "passed"
+    }
+  ],
+  "nodeOperationCoverage": [
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/mediaClock.ts#mediaSample",
+      "source": "src/runtime/mediaClock.ts",
+      "line": 4,
+      "kind": "exported function",
+      "sourceSha256": "4e2dd8ffa9052e75e54981ac3cd6de1a11bdeebfa17395e53fd51b9f9a6fc028",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/clock.mjs",
+      "generatedSha256": "56d855268f363e51191fa463cdee05db3afc4b5ddd4f85f76cf57210e021b132",
+      "mapSha256": "0fc00df32037de3a4a0623183280d9b9844e4e0dd9548c004ca8981d6df95691",
+      "entryCount": 197
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/mediaClock.ts#mediaFrame",
+      "source": "src/runtime/mediaClock.ts",
+      "line": 10,
+      "kind": "exported function",
+      "sourceSha256": "4e2dd8ffa9052e75e54981ac3cd6de1a11bdeebfa17395e53fd51b9f9a6fc028",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/clock.mjs",
+      "generatedSha256": "56d855268f363e51191fa463cdee05db3afc4b5ddd4f85f76cf57210e021b132",
+      "mapSha256": "0fc00df32037de3a4a0623183280d9b9844e4e0dd9548c004ca8981d6df95691",
+      "entryCount": 74
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/mediaClock.ts#mediaFrameTime",
+      "source": "src/runtime/mediaClock.ts",
+      "line": 14,
+      "kind": "exported function",
+      "sourceSha256": "4e2dd8ffa9052e75e54981ac3cd6de1a11bdeebfa17395e53fd51b9f9a6fc028",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/clock.mjs",
+      "generatedSha256": "56d855268f363e51191fa463cdee05db3afc4b5ddd4f85f76cf57210e021b132",
+      "mapSha256": "0fc00df32037de3a4a0623183280d9b9844e4e0dd9548c004ca8981d6df95691",
+      "entryCount": 44
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/mediaClock.ts#MediaClock.constructor",
+      "source": "src/runtime/mediaClock.ts",
+      "line": 18,
+      "kind": "public class operation",
+      "sourceSha256": "4e2dd8ffa9052e75e54981ac3cd6de1a11bdeebfa17395e53fd51b9f9a6fc028",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/clock.mjs",
+      "generatedSha256": "56d855268f363e51191fa463cdee05db3afc4b5ddd4f85f76cf57210e021b132",
+      "mapSha256": "0fc00df32037de3a4a0623183280d9b9844e4e0dd9548c004ca8981d6df95691",
+      "entryCount": 61
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/mediaClock.ts#MediaClock.ticks",
+      "source": "src/runtime/mediaClock.ts",
+      "line": 19,
+      "kind": "getter",
+      "sourceSha256": "4e2dd8ffa9052e75e54981ac3cd6de1a11bdeebfa17395e53fd51b9f9a6fc028",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/clock.mjs",
+      "generatedSha256": "56d855268f363e51191fa463cdee05db3afc4b5ddd4f85f76cf57210e021b132",
+      "mapSha256": "0fc00df32037de3a4a0623183280d9b9844e4e0dd9548c004ca8981d6df95691",
+      "entryCount": 38
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/mediaClock.ts#MediaClock.seconds",
+      "source": "src/runtime/mediaClock.ts",
+      "line": 20,
+      "kind": "getter",
+      "sourceSha256": "4e2dd8ffa9052e75e54981ac3cd6de1a11bdeebfa17395e53fd51b9f9a6fc028",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/clock.mjs",
+      "generatedSha256": "56d855268f363e51191fa463cdee05db3afc4b5ddd4f85f76cf57210e021b132",
+      "mapSha256": "0fc00df32037de3a4a0623183280d9b9844e4e0dd9548c004ca8981d6df95691",
+      "entryCount": 2106
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/mediaClock.ts#MediaClock.seek",
+      "source": "src/runtime/mediaClock.ts",
+      "line": 21,
+      "kind": "public class operation",
+      "sourceSha256": "4e2dd8ffa9052e75e54981ac3cd6de1a11bdeebfa17395e53fd51b9f9a6fc028",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/clock.mjs",
+      "generatedSha256": "56d855268f363e51191fa463cdee05db3afc4b5ddd4f85f76cf57210e021b132",
+      "mapSha256": "0fc00df32037de3a4a0623183280d9b9844e4e0dd9548c004ca8981d6df95691",
+      "entryCount": 138
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/mediaClock.ts#MediaClock.advance",
+      "source": "src/runtime/mediaClock.ts",
+      "line": 25,
+      "kind": "public class operation",
+      "sourceSha256": "4e2dd8ffa9052e75e54981ac3cd6de1a11bdeebfa17395e53fd51b9f9a6fc028",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/clock.mjs",
+      "generatedSha256": "56d855268f363e51191fa463cdee05db3afc4b5ddd4f85f76cf57210e021b132",
+      "mapSha256": "0fc00df32037de3a4a0623183280d9b9844e4e0dd9548c004ca8981d6df95691",
+      "entryCount": 1614
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/mediaClock.ts#MediaClock.snapshot",
+      "source": "src/runtime/mediaClock.ts",
+      "line": 31,
+      "kind": "public class operation",
+      "sourceSha256": "4e2dd8ffa9052e75e54981ac3cd6de1a11bdeebfa17395e53fd51b9f9a6fc028",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/clock.mjs",
+      "generatedSha256": "56d855268f363e51191fa463cdee05db3afc4b5ddd4f85f76cf57210e021b132",
+      "mapSha256": "0fc00df32037de3a4a0623183280d9b9844e4e0dd9548c004ca8981d6df95691",
+      "entryCount": 30
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/animation.ts#defaultAnimationClip",
+      "source": "src/runtime/animation.ts",
+      "line": 97,
+      "kind": "exported function",
+      "sourceSha256": "6fd047cc049ce805b16805649be79e4546820aa98630e11ef0d97303b0c0e365",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/animation.mjs",
+      "generatedSha256": "4889220b0f98c30b1f53da17d4ed7eff44c5b100211d5f08854323ae36976645",
+      "mapSha256": "4fdc5021780f63ce5ee80b6363ac10049522d88730101b412e0a6310802d9aa1",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/animation.ts#defaultAnimatorController",
+      "source": "src/runtime/animation.ts",
+      "line": 101,
+      "kind": "exported function",
+      "sourceSha256": "6fd047cc049ce805b16805649be79e4546820aa98630e11ef0d97303b0c0e365",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/animation.mjs",
+      "generatedSha256": "4889220b0f98c30b1f53da17d4ed7eff44c5b100211d5f08854323ae36976645",
+      "mapSha256": "4fdc5021780f63ce5ee80b6363ac10049522d88730101b412e0a6310802d9aa1",
+      "entryCount": 12
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/animation.ts#normalizeAnimationClip",
+      "source": "src/runtime/animation.ts",
+      "line": 112,
+      "kind": "exported function",
+      "sourceSha256": "6fd047cc049ce805b16805649be79e4546820aa98630e11ef0d97303b0c0e365",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/animation.mjs",
+      "generatedSha256": "4889220b0f98c30b1f53da17d4ed7eff44c5b100211d5f08854323ae36976645",
+      "mapSha256": "4fdc5021780f63ce5ee80b6363ac10049522d88730101b412e0a6310802d9aa1",
+      "entryCount": 64
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/animation.ts#normalizeAnimatorController",
+      "source": "src/runtime/animation.ts",
+      "line": 151,
+      "kind": "exported function",
+      "sourceSha256": "6fd047cc049ce805b16805649be79e4546820aa98630e11ef0d97303b0c0e365",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/animation.mjs",
+      "generatedSha256": "4889220b0f98c30b1f53da17d4ed7eff44c5b100211d5f08854323ae36976645",
+      "mapSha256": "4fdc5021780f63ce5ee80b6363ac10049522d88730101b412e0a6310802d9aa1",
+      "entryCount": 12
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/animation.ts#readAnimationClip",
+      "source": "src/runtime/animation.ts",
+      "line": 249,
+      "kind": "exported function",
+      "sourceSha256": "6fd047cc049ce805b16805649be79e4546820aa98630e11ef0d97303b0c0e365",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/animation.mjs",
+      "generatedSha256": "4889220b0f98c30b1f53da17d4ed7eff44c5b100211d5f08854323ae36976645",
+      "mapSha256": "4fdc5021780f63ce5ee80b6363ac10049522d88730101b412e0a6310802d9aa1",
+      "entryCount": 495
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/animation.ts#readAnimatorController",
+      "source": "src/runtime/animation.ts",
+      "line": 259,
+      "kind": "exported function",
+      "sourceSha256": "6fd047cc049ce805b16805649be79e4546820aa98630e11ef0d97303b0c0e365",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/animation.mjs",
+      "generatedSha256": "4889220b0f98c30b1f53da17d4ed7eff44c5b100211d5f08854323ae36976645",
+      "mapSha256": "4fdc5021780f63ce5ee80b6363ac10049522d88730101b412e0a6310802d9aa1",
+      "entryCount": 109
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/animation.ts#readAnimationMask",
+      "source": "src/runtime/animation.ts",
+      "line": 269,
+      "kind": "exported function",
+      "sourceSha256": "6fd047cc049ce805b16805649be79e4546820aa98630e11ef0d97303b0c0e365",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/animation.mjs",
+      "generatedSha256": "4889220b0f98c30b1f53da17d4ed7eff44c5b100211d5f08854323ae36976645",
+      "mapSha256": "4fdc5021780f63ce5ee80b6363ac10049522d88730101b412e0a6310802d9aa1",
+      "entryCount": 111
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/animation.ts#animationClipLength",
+      "source": "src/runtime/animation.ts",
+      "line": 320,
+      "kind": "exported function",
+      "sourceSha256": "6fd047cc049ce805b16805649be79e4546820aa98630e11ef0d97303b0c0e365",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/animation.mjs",
+      "generatedSha256": "4889220b0f98c30b1f53da17d4ed7eff44c5b100211d5f08854323ae36976645",
+      "mapSha256": "4fdc5021780f63ce5ee80b6363ac10049522d88730101b412e0a6310802d9aa1",
+      "entryCount": 746
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/animation.ts#sampleAnimationTrack",
+      "source": "src/runtime/animation.ts",
+      "line": 336,
+      "kind": "exported function",
+      "sourceSha256": "6fd047cc049ce805b16805649be79e4546820aa98630e11ef0d97303b0c0e365",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/animation.mjs",
+      "generatedSha256": "4889220b0f98c30b1f53da17d4ed7eff44c5b100211d5f08854323ae36976645",
+      "mapSha256": "4fdc5021780f63ce5ee80b6363ac10049522d88730101b412e0a6310802d9aa1",
+      "entryCount": 10391
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/animation.ts#animationRootMotionDelta",
+      "source": "src/runtime/animation.ts",
+      "line": 355,
+      "kind": "exported function",
+      "sourceSha256": "6fd047cc049ce805b16805649be79e4546820aa98630e11ef0d97303b0c0e365",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/animation.mjs",
+      "generatedSha256": "4889220b0f98c30b1f53da17d4ed7eff44c5b100211d5f08854323ae36976645",
+      "mapSha256": "4fdc5021780f63ce5ee80b6363ac10049522d88730101b412e0a6310802d9aa1",
+      "entryCount": 3
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/animation.ts#applyAnimationRootMotion",
+      "source": "src/runtime/animation.ts",
+      "line": 364,
+      "kind": "exported function",
+      "sourceSha256": "6fd047cc049ce805b16805649be79e4546820aa98630e11ef0d97303b0c0e365",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/animation.mjs",
+      "generatedSha256": "4889220b0f98c30b1f53da17d4ed7eff44c5b100211d5f08854323ae36976645",
+      "mapSha256": "4fdc5021780f63ce5ee80b6363ac10049522d88730101b412e0a6310802d9aa1",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/animation.ts#previewRootMotion",
+      "source": "src/runtime/animation.ts",
+      "line": 370,
+      "kind": "exported function",
+      "sourceSha256": "6fd047cc049ce805b16805649be79e4546820aa98630e11ef0d97303b0c0e365",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/animation.mjs",
+      "generatedSha256": "4889220b0f98c30b1f53da17d4ed7eff44c5b100211d5f08854323ae36976645",
+      "mapSha256": "4fdc5021780f63ce5ee80b6363ac10049522d88730101b412e0a6310802d9aa1",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/animation.ts#reduceAnimationKeys",
+      "source": "src/runtime/animation.ts",
+      "line": 381,
+      "kind": "exported function",
+      "sourceSha256": "6fd047cc049ce805b16805649be79e4546820aa98630e11ef0d97303b0c0e365",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/animation.mjs",
+      "generatedSha256": "4889220b0f98c30b1f53da17d4ed7eff44c5b100211d5f08854323ae36976645",
+      "mapSha256": "4fdc5021780f63ce5ee80b6363ac10049522d88730101b412e0a6310802d9aa1",
+      "entryCount": 6
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/animation.ts#retimeAnimationClip",
+      "source": "src/runtime/animation.ts",
+      "line": 405,
+      "kind": "exported function",
+      "sourceSha256": "6fd047cc049ce805b16805649be79e4546820aa98630e11ef0d97303b0c0e365",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/animation.mjs",
+      "generatedSha256": "4889220b0f98c30b1f53da17d4ed7eff44c5b100211d5f08854323ae36976645",
+      "mapSha256": "4fdc5021780f63ce5ee80b6363ac10049522d88730101b412e0a6310802d9aa1",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/animation.ts#sliceAnimationClip",
+      "source": "src/runtime/animation.ts",
+      "line": 417,
+      "kind": "exported function",
+      "sourceSha256": "6fd047cc049ce805b16805649be79e4546820aa98630e11ef0d97303b0c0e365",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/animation.mjs",
+      "generatedSha256": "4889220b0f98c30b1f53da17d4ed7eff44c5b100211d5f08854323ae36976645",
+      "mapSha256": "4fdc5021780f63ce5ee80b6363ac10049522d88730101b412e0a6310802d9aa1",
+      "entryCount": 4
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/animation.ts#animationDispatchesBetween",
+      "source": "src/runtime/animation.ts",
+      "line": 454,
+      "kind": "exported function",
+      "sourceSha256": "6fd047cc049ce805b16805649be79e4546820aa98630e11ef0d97303b0c0e365",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/animation.mjs",
+      "generatedSha256": "4889220b0f98c30b1f53da17d4ed7eff44c5b100211d5f08854323ae36976645",
+      "mapSha256": "4fdc5021780f63ce5ee80b6363ac10049522d88730101b412e0a6310802d9aa1",
+      "entryCount": 113
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/renderer/sceneRenderer.ts#setTimelineCameraBlend",
+      "source": "src/renderer/sceneRenderer.ts",
+      "line": 67,
+      "kind": "exported function",
+      "sourceSha256": "740d472aa57d60567a52b96a9c7c747e534b6aa5a629454aa2e850a148ab3d70",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/timeline.mjs",
+      "generatedSha256": "ccd710aea2c1d396d6fab9ec28eb7b1b00a3a4f03c33493638056ef71e060edc",
+      "mapSha256": "be5c741e185c59a23821d57c8b702aafd90a8234b4c75dc00e676a93917488e4",
+      "entryCount": 40
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/timeline.ts#normalizeTimeline",
+      "source": "src/runtime/timeline.ts",
+      "line": 57,
+      "kind": "exported function",
+      "sourceSha256": "a715605cd162e2364203c3a13a5060d46ac3e234f21723b1787c36ac9b20e7e7",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/timeline.mjs",
+      "generatedSha256": "ccd710aea2c1d396d6fab9ec28eb7b1b00a3a4f03c33493638056ef71e060edc",
+      "mapSha256": "be5c741e185c59a23821d57c8b702aafd90a8234b4c75dc00e676a93917488e4",
+      "entryCount": 16
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/timeline.ts#readTimeline",
+      "source": "src/runtime/timeline.ts",
+      "line": 84,
+      "kind": "exported function",
+      "sourceSha256": "a715605cd162e2364203c3a13a5060d46ac3e234f21723b1787c36ac9b20e7e7",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/timeline.mjs",
+      "generatedSha256": "ccd710aea2c1d396d6fab9ec28eb7b1b00a3a4f03c33493638056ef71e060edc",
+      "mapSha256": "be5c741e185c59a23821d57c8b702aafd90a8234b4c75dc00e676a93917488e4",
+      "entryCount": 38
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/timeline.ts#timelineCrossings",
+      "source": "src/runtime/timeline.ts",
+      "line": 100,
+      "kind": "exported function",
+      "sourceSha256": "a715605cd162e2364203c3a13a5060d46ac3e234f21723b1787c36ac9b20e7e7",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/timeline.mjs",
+      "generatedSha256": "ccd710aea2c1d396d6fab9ec28eb7b1b00a3a4f03c33493638056ef71e060edc",
+      "mapSha256": "be5c741e185c59a23821d57c8b702aafd90a8234b4c75dc00e676a93917488e4",
+      "entryCount": 16
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/rigging.ts#defaultRig",
+      "source": "src/runtime/rigging.ts",
+      "line": 72,
+      "kind": "exported function",
+      "sourceSha256": "db6f2b1d84e92488511ebaf58888c30f0afbae076253af17f5b0f58bb0fe32f6",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/rigging.mjs",
+      "generatedSha256": "cf3c2c272c744f63a2c4601219575e7670f4fee77a715ec9d5ee0fd3efa9d8e6",
+      "mapSha256": "abfa38b5ba152637da2fa9261571999bf968960594d020fb494284390df1f4f0",
+      "entryCount": 6
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/rigging.ts#defaultSkin",
+      "source": "src/runtime/rigging.ts",
+      "line": 82,
+      "kind": "exported function",
+      "sourceSha256": "db6f2b1d84e92488511ebaf58888c30f0afbae076253af17f5b0f58bb0fe32f6",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/rigging.mjs",
+      "generatedSha256": "cf3c2c272c744f63a2c4601219575e7670f4fee77a715ec9d5ee0fd3efa9d8e6",
+      "mapSha256": "abfa38b5ba152637da2fa9261571999bf968960594d020fb494284390df1f4f0",
+      "entryCount": 5
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/rigging.ts#normalizeRig",
+      "source": "src/runtime/rigging.ts",
+      "line": 97,
+      "kind": "exported function",
+      "sourceSha256": "db6f2b1d84e92488511ebaf58888c30f0afbae076253af17f5b0f58bb0fe32f6",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/rigging.mjs",
+      "generatedSha256": "cf3c2c272c744f63a2c4601219575e7670f4fee77a715ec9d5ee0fd3efa9d8e6",
+      "mapSha256": "abfa38b5ba152637da2fa9261571999bf968960594d020fb494284390df1f4f0",
+      "entryCount": 8
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/rigging.ts#normalizeSkin",
+      "source": "src/runtime/rigging.ts",
+      "line": 146,
+      "kind": "exported function",
+      "sourceSha256": "db6f2b1d84e92488511ebaf58888c30f0afbae076253af17f5b0f58bb0fe32f6",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/rigging.mjs",
+      "generatedSha256": "cf3c2c272c744f63a2c4601219575e7670f4fee77a715ec9d5ee0fd3efa9d8e6",
+      "mapSha256": "abfa38b5ba152637da2fa9261571999bf968960594d020fb494284390df1f4f0",
+      "entryCount": 3
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/rigging.ts#readRig",
+      "source": "src/runtime/rigging.ts",
+      "line": 181,
+      "kind": "exported function",
+      "sourceSha256": "db6f2b1d84e92488511ebaf58888c30f0afbae076253af17f5b0f58bb0fe32f6",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/rigging.mjs",
+      "generatedSha256": "cf3c2c272c744f63a2c4601219575e7670f4fee77a715ec9d5ee0fd3efa9d8e6",
+      "mapSha256": "abfa38b5ba152637da2fa9261571999bf968960594d020fb494284390df1f4f0",
+      "entryCount": 2
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/rigging.ts#readSkin",
+      "source": "src/runtime/rigging.ts",
+      "line": 188,
+      "kind": "exported function",
+      "sourceSha256": "db6f2b1d84e92488511ebaf58888c30f0afbae076253af17f5b0f58bb0fe32f6",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/rigging.mjs",
+      "generatedSha256": "cf3c2c272c744f63a2c4601219575e7670f4fee77a715ec9d5ee0fd3efa9d8e6",
+      "mapSha256": "abfa38b5ba152637da2fa9261571999bf968960594d020fb494284390df1f4f0",
+      "entryCount": 2
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/rigging.ts#evaluateRigPose",
+      "source": "src/runtime/rigging.ts",
+      "line": 268,
+      "kind": "exported function",
+      "sourceSha256": "db6f2b1d84e92488511ebaf58888c30f0afbae076253af17f5b0f58bb0fe32f6",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/rigging.mjs",
+      "generatedSha256": "cf3c2c272c744f63a2c4601219575e7670f4fee77a715ec9d5ee0fd3efa9d8e6",
+      "mapSha256": "abfa38b5ba152637da2fa9261571999bf968960594d020fb494284390df1f4f0",
+      "entryCount": 2
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/rigging.ts#deformSkin",
+      "source": "src/runtime/rigging.ts",
+      "line": 270,
+      "kind": "exported function",
+      "sourceSha256": "db6f2b1d84e92488511ebaf58888c30f0afbae076253af17f5b0f58bb0fe32f6",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/rigging.mjs",
+      "generatedSha256": "cf3c2c272c744f63a2c4601219575e7670f4fee77a715ec9d5ee0fd3efa9d8e6",
+      "mapSha256": "abfa38b5ba152637da2fa9261571999bf968960594d020fb494284390df1f4f0",
+      "entryCount": 2
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/rigging.ts#retargetPose",
+      "source": "src/runtime/rigging.ts",
+      "line": 297,
+      "kind": "exported function",
+      "sourceSha256": "db6f2b1d84e92488511ebaf58888c30f0afbae076253af17f5b0f58bb0fe32f6",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/rigging.mjs",
+      "generatedSha256": "cf3c2c272c744f63a2c4601219575e7670f4fee77a715ec9d5ee0fd3efa9d8e6",
+      "mapSha256": "abfa38b5ba152637da2fa9261571999bf968960594d020fb494284390df1f4f0",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/rigging.ts#resolveRigAttachments",
+      "source": "src/runtime/rigging.ts",
+      "line": 353,
+      "kind": "exported function",
+      "sourceSha256": "db6f2b1d84e92488511ebaf58888c30f0afbae076253af17f5b0f58bb0fe32f6",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/rigging.mjs",
+      "generatedSha256": "cf3c2c272c744f63a2c4601219575e7670f4fee77a715ec9d5ee0fd3efa9d8e6",
+      "mapSha256": "abfa38b5ba152637da2fa9261571999bf968960594d020fb494284390df1f4f0",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/TextureAtlas.ts#buildTextureAtlases",
+      "source": "src/assets/TextureAtlas.ts",
+      "line": 41,
+      "kind": "exported function",
+      "sourceSha256": "f8222943fe4e572e6d9f7b449ea2c380dd8790f6615d16321029b8430b915838",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/audio.mjs",
+      "generatedSha256": "8c6845830011623fc2e7ff968dc879eab479456feb9473402d894d9ab1983f02",
+      "mapSha256": "a9cfe171280a16c85350f8cfa9ee6cf2bf9b655921b857339b8a9c08be24f7aa",
+      "entryCount": 41
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/importRetention.ts#BoundedImportCache.constructor",
+      "source": "src/assets/importRetention.ts",
+      "line": 7,
+      "kind": "public class operation",
+      "sourceSha256": "8a8c7175d66b68206dcda36cace1fde0d518a4feeebbee05d51039d52d19d0fe",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/audio.mjs",
+      "generatedSha256": "8c6845830011623fc2e7ff968dc879eab479456feb9473402d894d9ab1983f02",
+      "mapSha256": "a9cfe171280a16c85350f8cfa9ee6cf2bf9b655921b857339b8a9c08be24f7aa",
+      "entryCount": 5
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/importRetention.ts#BoundedImportCache.clear",
+      "source": "src/assets/importRetention.ts",
+      "line": 24,
+      "kind": "public class operation",
+      "sourceSha256": "8a8c7175d66b68206dcda36cace1fde0d518a4feeebbee05d51039d52d19d0fe",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/audio.mjs",
+      "generatedSha256": "8c6845830011623fc2e7ff968dc879eab479456feb9473402d894d9ab1983f02",
+      "mapSha256": "a9cfe171280a16c85350f8cfa9ee6cf2bf9b655921b857339b8a9c08be24f7aa",
+      "entryCount": 164
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/importRetention.ts#registerImportSessionCleanup",
+      "source": "src/assets/importRetention.ts",
+      "line": 29,
+      "kind": "exported function",
+      "sourceSha256": "8a8c7175d66b68206dcda36cace1fde0d518a4feeebbee05d51039d52d19d0fe",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/audio.mjs",
+      "generatedSha256": "8c6845830011623fc2e7ff968dc879eab479456feb9473402d894d9ab1983f02",
+      "mapSha256": "a9cfe171280a16c85350f8cfa9ee6cf2bf9b655921b857339b8a9c08be24f7aa",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/importRetention.ts#resetImportSessionCaches",
+      "source": "src/assets/importRetention.ts",
+      "line": 30,
+      "kind": "exported function",
+      "sourceSha256": "8a8c7175d66b68206dcda36cace1fde0d518a4feeebbee05d51039d52d19d0fe",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/audio.mjs",
+      "generatedSha256": "8c6845830011623fc2e7ff968dc879eab479456feb9473402d894d9ab1983f02",
+      "mapSha256": "a9cfe171280a16c85350f8cfa9ee6cf2bf9b655921b857339b8a9c08be24f7aa",
+      "entryCount": 41
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/contentHash.ts#sha256Bytes",
+      "source": "src/assets/contentHash.ts",
+      "line": 16,
+      "kind": "exported function",
+      "sourceSha256": "6d967909198d8a6d86dffd3fd9a08afc201384ae19e7e17c0e7f8880f511ad39",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/audio.mjs",
+      "generatedSha256": "8c6845830011623fc2e7ff968dc879eab479456feb9473402d894d9ab1983f02",
+      "mapSha256": "a9cfe171280a16c85350f8cfa9ee6cf2bf9b655921b857339b8a9c08be24f7aa",
+      "entryCount": 63
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/contentHash.ts#assetSourceBytes",
+      "source": "src/assets/contentHash.ts",
+      "line": 52,
+      "kind": "exported function",
+      "sourceSha256": "6d967909198d8a6d86dffd3fd9a08afc201384ae19e7e17c0e7f8880f511ad39",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/audio.mjs",
+      "generatedSha256": "8c6845830011623fc2e7ff968dc879eab479456feb9473402d894d9ab1983f02",
+      "mapSha256": "a9cfe171280a16c85350f8cfa9ee6cf2bf9b655921b857339b8a9c08be24f7aa",
+      "entryCount": 63
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphTypes.ts#defaultGraphValue",
+      "source": "src/visual/graphTypes.ts",
+      "line": 130,
+      "kind": "exported function",
+      "sourceSha256": "f1301f1589f75fec7793cb026cf256eb2af3f020e75b2c670890622290e8cf25",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/audio.mjs",
+      "generatedSha256": "8c6845830011623fc2e7ff968dc879eab479456feb9473402d894d9ab1983f02",
+      "mapSha256": "a9cfe171280a16c85350f8cfa9ee6cf2bf9b655921b857339b8a9c08be24f7aa",
+      "entryCount": 294
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/packages.ts#onPackageLifecycle",
+      "source": "src/runtime/packages.ts",
+      "line": 109,
+      "kind": "exported function",
+      "sourceSha256": "6774580dde64cd01a9a826d3a11083261aed603c77524544a4008dad9458838a",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/audio.mjs",
+      "generatedSha256": "8c6845830011623fc2e7ff968dc879eab479456feb9473402d894d9ab1983f02",
+      "mapSha256": "a9cfe171280a16c85350f8cfa9ee6cf2bf9b655921b857339b8a9c08be24f7aa",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/store/colorPalettes.ts#colorPalette",
+      "source": "src/store/colorPalettes.ts",
+      "line": 10,
+      "kind": "exported function",
+      "sourceSha256": "bec5def7babea554f5e68617f4985fa1a609ce97ab71130c3c6ef5e1ef026596",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/audio.mjs",
+      "generatedSha256": "8c6845830011623fc2e7ff968dc879eab479456feb9473402d894d9ab1983f02",
+      "mapSha256": "a9cfe171280a16c85350f8cfa9ee6cf2bf9b655921b857339b8a9c08be24f7aa",
+      "entryCount": 3
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/store/colorPalettes.ts#paletteForMode",
+      "source": "src/store/colorPalettes.ts",
+      "line": 11,
+      "kind": "exported function",
+      "sourceSha256": "bec5def7babea554f5e68617f4985fa1a609ce97ab71130c3c6ef5e1ef026596",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/audio.mjs",
+      "generatedSha256": "8c6845830011623fc2e7ff968dc879eab479456feb9473402d894d9ab1983f02",
+      "mapSha256": "a9cfe171280a16c85350f8cfa9ee6cf2bf9b655921b857339b8a9c08be24f7aa",
+      "entryCount": 3
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/store/preferences.ts#applyPreferences",
+      "source": "src/store/preferences.ts",
+      "line": 139,
+      "kind": "exported function",
+      "sourceSha256": "13795bd1ae90c3ceb3349b7ce26ee495781a99d84e30c383f6b21ea86a5e2c0c",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/audio.mjs",
+      "generatedSha256": "8c6845830011623fc2e7ff968dc879eab479456feb9473402d894d9ab1983f02",
+      "mapSha256": "a9cfe171280a16c85350f8cfa9ee6cf2bf9b655921b857339b8a9c08be24f7aa",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/hierarchy.ts#worldTransform",
+      "source": "src/world/hierarchy.ts",
+      "line": 35,
+      "kind": "exported function",
+      "sourceSha256": "9ad8fa476dc7d613ab53d0cc33ac9958c469a73d25259ee3c5196a85b0a3de64",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/audio.mjs",
+      "generatedSha256": "8c6845830011623fc2e7ff968dc879eab479456feb9473402d894d9ab1983f02",
+      "mapSha256": "a9cfe171280a16c85350f8cfa9ee6cf2bf9b655921b857339b8a9c08be24f7aa",
+      "entryCount": 18
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/World.ts#defaultCollisionMatrix",
+      "source": "src/world/World.ts",
+      "line": 35,
+      "kind": "exported function",
+      "sourceSha256": "c725437339ebdfeaff44918dea52767b0c3cf2817578dff72e5e97032886a73b",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/audio.mjs",
+      "generatedSha256": "8c6845830011623fc2e7ff968dc879eab479456feb9473402d894d9ab1983f02",
+      "mapSha256": "a9cfe171280a16c85350f8cfa9ee6cf2bf9b655921b857339b8a9c08be24f7aa",
+      "entryCount": 2
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/World.ts#World.constructor",
+      "source": "src/world/World.ts",
+      "line": 379,
+      "kind": "public class operation",
+      "sourceSha256": "c725437339ebdfeaff44918dea52767b0c3cf2817578dff72e5e97032886a73b",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/audio.mjs",
+      "generatedSha256": "8c6845830011623fc2e7ff968dc879eab479456feb9473402d894d9ab1983f02",
+      "mapSha256": "a9cfe171280a16c85350f8cfa9ee6cf2bf9b655921b857339b8a9c08be24f7aa",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/i18n.ts#t",
+      "source": "src/i18n.ts",
+      "line": 1559,
+      "kind": "exported function",
+      "sourceSha256": "edacb5fbc23298f38a3982cef6eba9ead346750a8ddfc6ebb97f305104e03e79",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/audio.mjs",
+      "generatedSha256": "8c6845830011623fc2e7ff968dc879eab479456feb9473402d894d9ab1983f02",
+      "mapSha256": "a9cfe171280a16c85350f8cfa9ee6cf2bf9b655921b857339b8a9c08be24f7aa",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/editor/sceneAuthoring.ts#defaultSceneAuthoringSettings",
+      "source": "src/editor/sceneAuthoring.ts",
+      "line": 78,
+      "kind": "exported function",
+      "sourceSha256": "cacd5234a09c4bad70d65ec4e0b4b39c2239c0eca53f8141cde27ea5fc602a31",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/audio.mjs",
+      "generatedSha256": "8c6845830011623fc2e7ff968dc879eab479456feb9473402d894d9ab1983f02",
+      "mapSha256": "a9cfe171280a16c85350f8cfa9ee6cf2bf9b655921b857339b8a9c08be24f7aa",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/SceneManager.ts#SceneManager.constructor",
+      "source": "src/world/SceneManager.ts",
+      "line": 41,
+      "kind": "public class operation",
+      "sourceSha256": "bb21f38e41ca614bff9ce618d0471ec3d0fca919c29aade3140c429e446e53b8",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/audio.mjs",
+      "generatedSha256": "8c6845830011623fc2e7ff968dc879eab479456feb9473402d894d9ab1983f02",
+      "mapSha256": "a9cfe171280a16c85350f8cfa9ee6cf2bf9b655921b857339b8a9c08be24f7aa",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/editor/commands.ts#CommandHistory.constructor",
+      "source": "src/editor/commands.ts",
+      "line": 130,
+      "kind": "public class operation",
+      "sourceSha256": "025738bd1c0147d706518f0e7c60626e41087fd72cb77d2a35cd1e470545f972",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/audio.mjs",
+      "generatedSha256": "8c6845830011623fc2e7ff968dc879eab479456feb9473402d894d9ab1983f02",
+      "mapSha256": "a9cfe171280a16c85350f8cfa9ee6cf2bf9b655921b857339b8a9c08be24f7aa",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/editor/commands.ts#CommandHistory.lastClearReason",
+      "source": "src/editor/commands.ts",
+      "line": 142,
+      "kind": "getter",
+      "sourceSha256": "025738bd1c0147d706518f0e7c60626e41087fd72cb77d2a35cd1e470545f972",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/audio.mjs",
+      "generatedSha256": "8c6845830011623fc2e7ff968dc879eab479456feb9473402d894d9ab1983f02",
+      "mapSha256": "a9cfe171280a16c85350f8cfa9ee6cf2bf9b655921b857339b8a9c08be24f7aa",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/input.ts#createInputBinding",
+      "source": "src/runtime/input.ts",
+      "line": 93,
+      "kind": "exported function",
+      "sourceSha256": "fad85ae749fdc2b0e378beff7d5b43ff7af6150efbfd8124700945281a42d6dc",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/audio.mjs",
+      "generatedSha256": "8c6845830011623fc2e7ff968dc879eab479456feb9473402d894d9ab1983f02",
+      "mapSha256": "a9cfe171280a16c85350f8cfa9ee6cf2bf9b655921b857339b8a9c08be24f7aa",
+      "entryCount": 17
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/input.ts#defaultInputMap",
+      "source": "src/runtime/input.ts",
+      "line": 97,
+      "kind": "exported function",
+      "sourceSha256": "fad85ae749fdc2b0e378beff7d5b43ff7af6150efbfd8124700945281a42d6dc",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/audio.mjs",
+      "generatedSha256": "8c6845830011623fc2e7ff968dc879eab479456feb9473402d894d9ab1983f02",
+      "mapSha256": "a9cfe171280a16c85350f8cfa9ee6cf2bf9b655921b857339b8a9c08be24f7aa",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/input.ts#createInputAction",
+      "source": "src/runtime/input.ts",
+      "line": 124,
+      "kind": "exported function",
+      "sourceSha256": "fad85ae749fdc2b0e378beff7d5b43ff7af6150efbfd8124700945281a42d6dc",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/audio.mjs",
+      "generatedSha256": "8c6845830011623fc2e7ff968dc879eab479456feb9473402d894d9ab1983f02",
+      "mapSha256": "a9cfe171280a16c85350f8cfa9ee6cf2bf9b655921b857339b8a9c08be24f7aa",
+      "entryCount": 5
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/input.ts#normalizePenBindingCode",
+      "source": "src/runtime/input.ts",
+      "line": 136,
+      "kind": "exported function",
+      "sourceSha256": "fad85ae749fdc2b0e378beff7d5b43ff7af6150efbfd8124700945281a42d6dc",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/audio.mjs",
+      "generatedSha256": "8c6845830011623fc2e7ff968dc879eab479456feb9473402d894d9ab1983f02",
+      "mapSha256": "a9cfe171280a16c85350f8cfa9ee6cf2bf9b655921b857339b8a9c08be24f7aa",
+      "entryCount": 17
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/audio.ts#defaultAudioSettings",
+      "source": "src/runtime/audio.ts",
+      "line": 120,
+      "kind": "exported function",
+      "sourceSha256": "d7942420a501d92638335fcb7d098e35807a56e3c6319e5a3de8c131a7c4ebeb",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/audio.mjs",
+      "generatedSha256": "8c6845830011623fc2e7ff968dc879eab479456feb9473402d894d9ab1983f02",
+      "mapSha256": "a9cfe171280a16c85350f8cfa9ee6cf2bf9b655921b857339b8a9c08be24f7aa",
+      "entryCount": 32
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/audio.ts#normalizeAudioSettings",
+      "source": "src/runtime/audio.ts",
+      "line": 163,
+      "kind": "exported function",
+      "sourceSha256": "d7942420a501d92638335fcb7d098e35807a56e3c6319e5a3de8c131a7c4ebeb",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/audio.mjs",
+      "generatedSha256": "8c6845830011623fc2e7ff968dc879eab479456feb9473402d894d9ab1983f02",
+      "mapSha256": "a9cfe171280a16c85350f8cfa9ee6cf2bf9b655921b857339b8a9c08be24f7aa",
+      "entryCount": 18
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/audio.ts#AudioRuntime.recover",
+      "source": "src/runtime/audio.ts",
+      "line": 304,
+      "kind": "public class operation",
+      "sourceSha256": "d7942420a501d92638335fcb7d098e35807a56e3c6319e5a3de8c131a7c4ebeb",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/audio.mjs",
+      "generatedSha256": "8c6845830011623fc2e7ff968dc879eab479456feb9473402d894d9ab1983f02",
+      "mapSha256": "a9cfe171280a16c85350f8cfa9ee6cf2bf9b655921b857339b8a9c08be24f7aa",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/audio.ts#AudioRuntime.setTransportTime",
+      "source": "src/runtime/audio.ts",
+      "line": 310,
+      "kind": "public class operation",
+      "sourceSha256": "d7942420a501d92638335fcb7d098e35807a56e3c6319e5a3de8c131a7c4ebeb",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/audio.mjs",
+      "generatedSha256": "8c6845830011623fc2e7ff968dc879eab479456feb9473402d894d9ab1983f02",
+      "mapSha256": "a9cfe171280a16c85350f8cfa9ee6cf2bf9b655921b857339b8a9c08be24f7aa",
+      "entryCount": 8
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/audio.ts#AudioRuntime.update",
+      "source": "src/runtime/audio.ts",
+      "line": 316,
+      "kind": "public class operation",
+      "sourceSha256": "d7942420a501d92638335fcb7d098e35807a56e3c6319e5a3de8c131a7c4ebeb",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/audio.mjs",
+      "generatedSha256": "8c6845830011623fc2e7ff968dc879eab479456feb9473402d894d9ab1983f02",
+      "mapSha256": "a9cfe171280a16c85350f8cfa9ee6cf2bf9b655921b857339b8a9c08be24f7aa",
+      "entryCount": 15
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/audio.ts#AudioRuntime.play",
+      "source": "src/runtime/audio.ts",
+      "line": 412,
+      "kind": "public class operation",
+      "sourceSha256": "d7942420a501d92638335fcb7d098e35807a56e3c6319e5a3de8c131a7c4ebeb",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/audio.mjs",
+      "generatedSha256": "8c6845830011623fc2e7ff968dc879eab479456feb9473402d894d9ab1983f02",
+      "mapSha256": "a9cfe171280a16c85350f8cfa9ee6cf2bf9b655921b857339b8a9c08be24f7aa",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/audio.ts#AudioRuntime.pause",
+      "source": "src/runtime/audio.ts",
+      "line": 428,
+      "kind": "public class operation",
+      "sourceSha256": "d7942420a501d92638335fcb7d098e35807a56e3c6319e5a3de8c131a7c4ebeb",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/audio.mjs",
+      "generatedSha256": "8c6845830011623fc2e7ff968dc879eab479456feb9473402d894d9ab1983f02",
+      "mapSha256": "a9cfe171280a16c85350f8cfa9ee6cf2bf9b655921b857339b8a9c08be24f7aa",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/audio.ts#AudioRuntime.stop",
+      "source": "src/runtime/audio.ts",
+      "line": 429,
+      "kind": "public class operation",
+      "sourceSha256": "d7942420a501d92638335fcb7d098e35807a56e3c6319e5a3de8c131a7c4ebeb",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/audio.mjs",
+      "generatedSha256": "8c6845830011623fc2e7ff968dc879eab479456feb9473402d894d9ab1983f02",
+      "mapSha256": "a9cfe171280a16c85350f8cfa9ee6cf2bf9b655921b857339b8a9c08be24f7aa",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/audio.ts#AudioRuntime.scrub",
+      "source": "src/runtime/audio.ts",
+      "line": 430,
+      "kind": "public class operation",
+      "sourceSha256": "d7942420a501d92638335fcb7d098e35807a56e3c6319e5a3de8c131a7c4ebeb",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/audio.mjs",
+      "generatedSha256": "8c6845830011623fc2e7ff968dc879eab479456feb9473402d894d9ab1983f02",
+      "mapSha256": "a9cfe171280a16c85350f8cfa9ee6cf2bf9b655921b857339b8a9c08be24f7aa",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/audio.ts#AudioRuntime.stopAll",
+      "source": "src/runtime/audio.ts",
+      "line": 437,
+      "kind": "public class operation",
+      "sourceSha256": "d7942420a501d92638335fcb7d098e35807a56e3c6319e5a3de8c131a7c4ebeb",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/audio.mjs",
+      "generatedSha256": "8c6845830011623fc2e7ff968dc879eab479456feb9473402d894d9ab1983f02",
+      "mapSha256": "a9cfe171280a16c85350f8cfa9ee6cf2bf9b655921b857339b8a9c08be24f7aa",
+      "entryCount": 11
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/audio.ts#AudioRuntime.reconcileTimelineVoices",
+      "source": "src/runtime/audio.ts",
+      "line": 440,
+      "kind": "public class operation",
+      "sourceSha256": "d7942420a501d92638335fcb7d098e35807a56e3c6319e5a3de8c131a7c4ebeb",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/audio.mjs",
+      "generatedSha256": "8c6845830011623fc2e7ff968dc879eab479456feb9473402d894d9ab1983f02",
+      "mapSha256": "a9cfe171280a16c85350f8cfa9ee6cf2bf9b655921b857339b8a9c08be24f7aa",
+      "entryCount": 41
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/audio.ts#AudioRuntime.playUiClip",
+      "source": "src/runtime/audio.ts",
+      "line": 487,
+      "kind": "public class operation",
+      "sourceSha256": "d7942420a501d92638335fcb7d098e35807a56e3c6319e5a3de8c131a7c4ebeb",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/audio.mjs",
+      "generatedSha256": "8c6845830011623fc2e7ff968dc879eab479456feb9473402d894d9ab1983f02",
+      "mapSha256": "a9cfe171280a16c85350f8cfa9ee6cf2bf9b655921b857339b8a9c08be24f7aa",
+      "entryCount": 3
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/audio.ts#AudioRuntime.dispose",
+      "source": "src/runtime/audio.ts",
+      "line": 517,
+      "kind": "public class operation",
+      "sourceSha256": "d7942420a501d92638335fcb7d098e35807a56e3c6319e5a3de8c131a7c4ebeb",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/audio.mjs",
+      "generatedSha256": "8c6845830011623fc2e7ff968dc879eab479456feb9473402d894d9ab1983f02",
+      "mapSha256": "a9cfe171280a16c85350f8cfa9ee6cf2bf9b655921b857339b8a9c08be24f7aa",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/renderer/outputQuality20.ts#normalizeAntiAliasing",
+      "source": "src/renderer/outputQuality20.ts",
+      "line": 2,
+      "kind": "exported function",
+      "sourceSha256": "d03ccbc43e269bb645131f784c3440d63a8bf4f24c1ace10e812e622c25465fa",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/audio.mjs",
+      "generatedSha256": "8c6845830011623fc2e7ff968dc879eab479456feb9473402d894d9ab1983f02",
+      "mapSha256": "a9cfe171280a16c85350f8cfa9ee6cf2bf9b655921b857339b8a9c08be24f7aa",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/renderer/renderSettings.ts#normalizeTextureStreamingSettings",
+      "source": "src/renderer/renderSettings.ts",
+      "line": 80,
+      "kind": "exported function",
+      "sourceSha256": "90ae3c7ce879634f4a166e7155278a13e8d5b44add2437ac30253a1a237f8c6e",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/audio.mjs",
+      "generatedSha256": "8c6845830011623fc2e7ff968dc879eab479456feb9473402d894d9ab1983f02",
+      "mapSha256": "a9cfe171280a16c85350f8cfa9ee6cf2bf9b655921b857339b8a9c08be24f7aa",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/renderer/renderSettings.ts#normalizeRenderingSettings",
+      "source": "src/renderer/renderSettings.ts",
+      "line": 106,
+      "kind": "exported function",
+      "sourceSha256": "90ae3c7ce879634f4a166e7155278a13e8d5b44add2437ac30253a1a237f8c6e",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/audio.mjs",
+      "generatedSha256": "8c6845830011623fc2e7ff968dc879eab479456feb9473402d894d9ab1983f02",
+      "mapSha256": "a9cfe171280a16c85350f8cfa9ee6cf2bf9b655921b857339b8a9c08be24f7aa",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/exportTemplates.ts#compatibleExportTemplates",
+      "source": "src/runtime/exportTemplates.ts",
+      "line": 28,
+      "kind": "exported function",
+      "sourceSha256": "3cc4801a081c5afd8377289708e9358bd3b9c0033f5efaada290f6833491cead",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/audio.mjs",
+      "generatedSha256": "8c6845830011623fc2e7ff968dc879eab479456feb9473402d894d9ab1983f02",
+      "mapSha256": "a9cfe171280a16c85350f8cfa9ee6cf2bf9b655921b857339b8a9c08be24f7aa",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/exportTemplates.ts#defaultExportTemplateId",
+      "source": "src/runtime/exportTemplates.ts",
+      "line": 32,
+      "kind": "exported function",
+      "sourceSha256": "3cc4801a081c5afd8377289708e9358bd3b9c0033f5efaada290f6833491cead",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/audio.mjs",
+      "generatedSha256": "8c6845830011623fc2e7ff968dc879eab479456feb9473402d894d9ab1983f02",
+      "mapSha256": "a9cfe171280a16c85350f8cfa9ee6cf2bf9b655921b857339b8a9c08be24f7aa",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/localization.ts#localizeUiLabel",
+      "source": "src/runtime/localization.ts",
+      "line": 274,
+      "kind": "exported function",
+      "sourceSha256": "b8dd8e5e988e54a3034a48c5da56140e413de37d678a8e8f4b058ab4a569881b",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/audio.mjs",
+      "generatedSha256": "8c6845830011623fc2e7ff968dc879eab479456feb9473402d894d9ab1983f02",
+      "mapSha256": "a9cfe171280a16c85350f8cfa9ee6cf2bf9b655921b857339b8a9c08be24f7aa",
+      "entryCount": 2
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/importPipeline.ts#clearAssetImportSession",
+      "source": "src/assets/importPipeline.ts",
+      "line": 290,
+      "kind": "exported function",
+      "sourceSha256": "de45141f490f17a89c9914aef5429c1b8fba7e0dfe16ffd50cd585587d7d6360",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/audio.mjs",
+      "generatedSha256": "8c6845830011623fc2e7ff968dc879eab479456feb9473402d894d9ab1983f02",
+      "mapSha256": "a9cfe171280a16c85350f8cfa9ee6cf2bf9b655921b857339b8a9c08be24f7aa",
+      "entryCount": 41
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/contentInteroperability.ts#validateInterchangeMetadata",
+      "source": "src/assets/contentInteroperability.ts",
+      "line": 165,
+      "kind": "exported function",
+      "sourceSha256": "efd2779ed176710b099774f1efe9812e55270af92e30a3c34045038a35f19599",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/audio.mjs",
+      "generatedSha256": "8c6845830011623fc2e7ff968dc879eab479456feb9473402d894d9ab1983f02",
+      "mapSha256": "a9cfe171280a16c85350f8cfa9ee6cf2bf9b655921b857339b8a9c08be24f7aa",
+      "entryCount": 62
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/derivedSprites.ts#validateDerivedSprite",
+      "source": "src/assets/derivedSprites.ts",
+      "line": 25,
+      "kind": "exported function",
+      "sourceSha256": "afc032cee84142b39931cc68f4933895d28959e7e12135427cc2e6464090bb93",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/audio.mjs",
+      "generatedSha256": "8c6845830011623fc2e7ff968dc879eab479456feb9473402d894d9ab1983f02",
+      "mapSha256": "a9cfe171280a16c85350f8cfa9ee6cf2bf9b655921b857339b8a9c08be24f7aa",
+      "entryCount": 62
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/derivedSpriteTexture.ts#clearDerivedSpriteTextures",
+      "source": "src/assets/derivedSpriteTexture.ts",
+      "line": 9,
+      "kind": "exported function",
+      "sourceSha256": "f8ce65c9f64d5528f97f18a9fb1a1e586a46b7fe9b0af4c499a0df0768df3bef",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/audio.mjs",
+      "generatedSha256": "8c6845830011623fc2e7ff968dc879eab479456feb9473402d894d9ab1983f02",
+      "mapSha256": "a9cfe171280a16c85350f8cfa9ee6cf2bf9b655921b857339b8a9c08be24f7aa",
+      "entryCount": 73
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/AssetDatabase.ts#normalizeFolder",
+      "source": "src/assets/AssetDatabase.ts",
+      "line": 212,
+      "kind": "exported function",
+      "sourceSha256": "e94767ad0ecf0067fbe2b54a60197974925c945de7eb87125e2c204bd49b466e",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/audio.mjs",
+      "generatedSha256": "8c6845830011623fc2e7ff968dc879eab479456feb9473402d894d9ab1983f02",
+      "mapSha256": "a9cfe171280a16c85350f8cfa9ee6cf2bf9b655921b857339b8a9c08be24f7aa",
+      "entryCount": 125
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/AssetDatabase.ts#createTextAsset",
+      "source": "src/assets/AssetDatabase.ts",
+      "line": 380,
+      "kind": "exported function",
+      "sourceSha256": "e94767ad0ecf0067fbe2b54a60197974925c945de7eb87125e2c204bd49b466e",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/audio.mjs",
+      "generatedSha256": "8c6845830011623fc2e7ff968dc879eab479456feb9473402d894d9ab1983f02",
+      "mapSha256": "a9cfe171280a16c85350f8cfa9ee6cf2bf9b655921b857339b8a9c08be24f7aa",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/AssetDatabase.ts#readTextAsset",
+      "source": "src/assets/AssetDatabase.ts",
+      "line": 420,
+      "kind": "exported function",
+      "sourceSha256": "e94767ad0ecf0067fbe2b54a60197974925c945de7eb87125e2c204bd49b466e",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/audio.mjs",
+      "generatedSha256": "8c6845830011623fc2e7ff968dc879eab479456feb9473402d894d9ab1983f02",
+      "mapSha256": "a9cfe171280a16c85350f8cfa9ee6cf2bf9b655921b857339b8a9c08be24f7aa",
+      "entryCount": 51
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/AssetDatabase.ts#loadAssets",
+      "source": "src/assets/AssetDatabase.ts",
+      "line": 543,
+      "kind": "exported function",
+      "sourceSha256": "e94767ad0ecf0067fbe2b54a60197974925c945de7eb87125e2c204bd49b466e",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/audio.mjs",
+      "generatedSha256": "8c6845830011623fc2e7ff968dc879eab479456feb9473402d894d9ab1983f02",
+      "mapSha256": "a9cfe171280a16c85350f8cfa9ee6cf2bf9b655921b857339b8a9c08be24f7aa",
+      "entryCount": 41
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/AssetDatabase.ts#assetGuid",
+      "source": "src/assets/AssetDatabase.ts",
+      "line": 955,
+      "kind": "exported function",
+      "sourceSha256": "e94767ad0ecf0067fbe2b54a60197974925c945de7eb87125e2c204bd49b466e",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/audio.mjs",
+      "generatedSha256": "8c6845830011623fc2e7ff968dc879eab479456feb9473402d894d9ab1983f02",
+      "mapSha256": "a9cfe171280a16c85350f8cfa9ee6cf2bf9b655921b857339b8a9c08be24f7aa",
+      "entryCount": 127
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/AssetDatabase.ts#resolveAsset",
+      "source": "src/assets/AssetDatabase.ts",
+      "line": 959,
+      "kind": "exported function",
+      "sourceSha256": "e94767ad0ecf0067fbe2b54a60197974925c945de7eb87125e2c204bd49b466e",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/audio.mjs",
+      "generatedSha256": "8c6845830011623fc2e7ff968dc879eab479456feb9473402d894d9ab1983f02",
+      "mapSha256": "a9cfe171280a16c85350f8cfa9ee6cf2bf9b655921b857339b8a9c08be24f7aa",
+      "entryCount": 127
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/AssetDatabase.ts#rebuildTextureAtlases",
+      "source": "src/assets/AssetDatabase.ts",
+      "line": 1071,
+      "kind": "exported function",
+      "sourceSha256": "e94767ad0ecf0067fbe2b54a60197974925c945de7eb87125e2c204bd49b466e",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/audio.mjs",
+      "generatedSha256": "8c6845830011623fc2e7ff968dc879eab479456feb9473402d894d9ab1983f02",
+      "mapSha256": "a9cfe171280a16c85350f8cfa9ee6cf2bf9b655921b857339b8a9c08be24f7aa",
+      "entryCount": 41
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/AssetDatabase.ts#queueTextureAtlasRebuild",
+      "source": "src/assets/AssetDatabase.ts",
+      "line": 1081,
+      "kind": "exported function",
+      "sourceSha256": "e94767ad0ecf0067fbe2b54a60197974925c945de7eb87125e2c204bd49b466e",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/audio.mjs",
+      "generatedSha256": "8c6845830011623fc2e7ff968dc879eab479456feb9473402d894d9ab1983f02",
+      "mapSha256": "a9cfe171280a16c85350f8cfa9ee6cf2bf9b655921b857339b8a9c08be24f7aa",
+      "entryCount": 41
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/types.ts#defaultAnimationImportMetadata",
+      "source": "src/assets/types.ts",
+      "line": 208,
+      "kind": "exported function",
+      "sourceSha256": "68b003a8c85b4b7207968432c298634e9841d542b23cd02278574560212c2afa",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/types.mjs",
+      "generatedSha256": "f0efccada1b8717c00808890565ec85c942509c08159d9e7a61b90f75333ea70",
+      "mapSha256": "ff19a6dac5e0244a30b1e0be98cdf341e1947a44b2641ec9e813d70f7f13351f",
+      "entryCount": 23
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/types.ts#defaultImportSettings",
+      "source": "src/assets/types.ts",
+      "line": 230,
+      "kind": "exported function",
+      "sourceSha256": "68b003a8c85b4b7207968432c298634e9841d542b23cd02278574560212c2afa",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/types.mjs",
+      "generatedSha256": "f0efccada1b8717c00808890565ec85c942509c08159d9e7a61b90f75333ea70",
+      "mapSha256": "ff19a6dac5e0244a30b1e0be98cdf341e1947a44b2641ec9e813d70f7f13351f",
+      "entryCount": 125
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/identity.ts#createUuid",
+      "source": "src/world/identity.ts",
+      "line": 8,
+      "kind": "exported function",
+      "sourceSha256": "2fe5fd95a5e427522192d9d7832f4248515d6c47832126b228d6844437068053",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/components.mjs",
+      "generatedSha256": "faf9686fbeb10049c4cab5b4084f55d72856ebcaf3bed7274afdebe18af7ce0e",
+      "mapSha256": "9a55ec983f60998bf0208f3e69a9dc78ade24793ba33c311deb3b747e0307b39",
+      "entryCount": 204
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/identity.ts#normalizeUuid",
+      "source": "src/world/identity.ts",
+      "line": 16,
+      "kind": "exported function",
+      "sourceSha256": "2fe5fd95a5e427522192d9d7832f4248515d6c47832126b228d6844437068053",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/components.mjs",
+      "generatedSha256": "faf9686fbeb10049c4cab5b4084f55d72856ebcaf3bed7274afdebe18af7ce0e",
+      "mapSha256": "9a55ec983f60998bf0208f3e69a9dc78ade24793ba33c311deb3b747e0307b39",
+      "entryCount": 306
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/components.ts#ShapeRenderer2D.constructor",
+      "source": "src/world/components.ts",
+      "line": 112,
+      "kind": "public class operation",
+      "sourceSha256": "cce65cee9ae71d07999c388387ad7c36f199dd26fd1aaf77ef69a8b3a3e24d9a",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/components.mjs",
+      "generatedSha256": "faf9686fbeb10049c4cab5b4084f55d72856ebcaf3bed7274afdebe18af7ce0e",
+      "mapSha256": "9a55ec983f60998bf0208f3e69a9dc78ade24793ba33c311deb3b747e0307b39",
+      "entryCount": 40
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/components.ts#SpriteRenderer2D.constructor",
+      "source": "src/world/components.ts",
+      "line": 135,
+      "kind": "public class operation",
+      "sourceSha256": "cce65cee9ae71d07999c388387ad7c36f199dd26fd1aaf77ef69a8b3a3e24d9a",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/components.mjs",
+      "generatedSha256": "faf9686fbeb10049c4cab5b4084f55d72856ebcaf3bed7274afdebe18af7ce0e",
+      "mapSha256": "9a55ec983f60998bf0208f3e69a9dc78ade24793ba33c311deb3b747e0307b39",
+      "entryCount": 2
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/components.ts#Animator.constructor",
+      "source": "src/world/components.ts",
+      "line": 222,
+      "kind": "public class operation",
+      "sourceSha256": "cce65cee9ae71d07999c388387ad7c36f199dd26fd1aaf77ef69a8b3a3e24d9a",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/components.mjs",
+      "generatedSha256": "faf9686fbeb10049c4cab5b4084f55d72856ebcaf3bed7274afdebe18af7ce0e",
+      "mapSha256": "9a55ec983f60998bf0208f3e69a9dc78ade24793ba33c311deb3b747e0307b39",
+      "entryCount": 12
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/components.ts#Skeleton2D.constructor",
+      "source": "src/world/components.ts",
+      "line": 239,
+      "kind": "public class operation",
+      "sourceSha256": "cce65cee9ae71d07999c388387ad7c36f199dd26fd1aaf77ef69a8b3a3e24d9a",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/components.mjs",
+      "generatedSha256": "faf9686fbeb10049c4cab5b4084f55d72856ebcaf3bed7274afdebe18af7ce0e",
+      "mapSha256": "9a55ec983f60998bf0208f3e69a9dc78ade24793ba33c311deb3b747e0307b39",
+      "entryCount": 4
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/components.ts#TimelinePlayer.constructor",
+      "source": "src/world/components.ts",
+      "line": 253,
+      "kind": "public class operation",
+      "sourceSha256": "cce65cee9ae71d07999c388387ad7c36f199dd26fd1aaf77ef69a8b3a3e24d9a",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/components.mjs",
+      "generatedSha256": "faf9686fbeb10049c4cab5b4084f55d72856ebcaf3bed7274afdebe18af7ce0e",
+      "mapSha256": "9a55ec983f60998bf0208f3e69a9dc78ade24793ba33c311deb3b747e0307b39",
+      "entryCount": 12
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/components.ts#AudioSource.constructor",
+      "source": "src/world/components.ts",
+      "line": 286,
+      "kind": "public class operation",
+      "sourceSha256": "cce65cee9ae71d07999c388387ad7c36f199dd26fd1aaf77ef69a8b3a3e24d9a",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/components.mjs",
+      "generatedSha256": "faf9686fbeb10049c4cab5b4084f55d72856ebcaf3bed7274afdebe18af7ce0e",
+      "mapSha256": "9a55ec983f60998bf0208f3e69a9dc78ade24793ba33c311deb3b747e0307b39",
+      "entryCount": 12
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/components.ts#RigidBody2D.constructor",
+      "source": "src/world/components.ts",
+      "line": 998,
+      "kind": "public class operation",
+      "sourceSha256": "cce65cee9ae71d07999c388387ad7c36f199dd26fd1aaf77ef69a8b3a3e24d9a",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/components.mjs",
+      "generatedSha256": "faf9686fbeb10049c4cab5b4084f55d72856ebcaf3bed7274afdebe18af7ce0e",
+      "mapSha256": "9a55ec983f60998bf0208f3e69a9dc78ade24793ba33c311deb3b747e0307b39",
+      "entryCount": 40
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/components.ts#Collider2D.constructor",
+      "source": "src/world/components.ts",
+      "line": 1041,
+      "kind": "public class operation",
+      "sourceSha256": "cce65cee9ae71d07999c388387ad7c36f199dd26fd1aaf77ef69a8b3a3e24d9a",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/components.mjs",
+      "generatedSha256": "faf9686fbeb10049c4cab5b4084f55d72856ebcaf3bed7274afdebe18af7ce0e",
+      "mapSha256": "9a55ec983f60998bf0208f3e69a9dc78ade24793ba33c311deb3b747e0307b39",
+      "entryCount": 40
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/Transform.ts#Transform.constructor",
+      "source": "src/world/Transform.ts",
+      "line": 14,
+      "kind": "public class operation",
+      "sourceSha256": "ed3b83aff6df24cf19b3687286eaee9687e09c4094c5baf710f19dd961a7a120",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/box.mjs",
+      "generatedSha256": "669beb21e9e98b75127b928d31388c587a0fd9cc62e42205d68b611eadb0d427",
+      "mapSha256": "145750b2dc076a22009400ff8ec8d1ecc0c8c8a0cb0fdc4d0f85c90c563f83a3",
+      "entryCount": 40
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/Entity.ts#defaultAuthoringMetadata",
+      "source": "src/world/Entity.ts",
+      "line": 48,
+      "kind": "exported function",
+      "sourceSha256": "bbd82ccd9ee56d934f736cae5a769e199253053d52d0e0b39d8bb10324b69b95",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/box.mjs",
+      "generatedSha256": "669beb21e9e98b75127b928d31388c587a0fd9cc62e42205d68b611eadb0d427",
+      "mapSha256": "145750b2dc076a22009400ff8ec8d1ecc0c8c8a0cb0fdc4d0f85c90c563f83a3",
+      "entryCount": 40
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/Entity.ts#Entity.constructor",
+      "source": "src/world/Entity.ts",
+      "line": 85,
+      "kind": "public class operation",
+      "sourceSha256": "bbd82ccd9ee56d934f736cae5a769e199253053d52d0e0b39d8bb10324b69b95",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/box.mjs",
+      "generatedSha256": "669beb21e9e98b75127b928d31388c587a0fd9cc62e42205d68b611eadb0d427",
+      "mapSha256": "145750b2dc076a22009400ff8ec8d1ecc0c8c8a0cb0fdc4d0f85c90c563f83a3",
+      "entryCount": 40
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/Entity.ts#Entity.addComponent",
+      "source": "src/world/Entity.ts",
+      "line": 98,
+      "kind": "public class operation",
+      "sourceSha256": "bbd82ccd9ee56d934f736cae5a769e199253053d52d0e0b39d8bb10324b69b95",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/box.mjs",
+      "generatedSha256": "669beb21e9e98b75127b928d31388c587a0fd9cc62e42205d68b611eadb0d427",
+      "mapSha256": "145750b2dc076a22009400ff8ec8d1ecc0c8c8a0cb0fdc4d0f85c90c563f83a3",
+      "entryCount": 194
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/Entity.ts#Entity.getComponent",
+      "source": "src/world/Entity.ts",
+      "line": 109,
+      "kind": "public class operation",
+      "sourceSha256": "bbd82ccd9ee56d934f736cae5a769e199253053d52d0e0b39d8bb10324b69b95",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/box.mjs",
+      "generatedSha256": "669beb21e9e98b75127b928d31388c587a0fd9cc62e42205d68b611eadb0d427",
+      "mapSha256": "145750b2dc076a22009400ff8ec8d1ecc0c8c8a0cb0fdc4d0f85c90c563f83a3",
+      "entryCount": 1557
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/Entity.ts#Entity.getCollider",
+      "source": "src/world/Entity.ts",
+      "line": 114,
+      "kind": "public class operation",
+      "sourceSha256": "bbd82ccd9ee56d934f736cae5a769e199253053d52d0e0b39d8bb10324b69b95",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/box.mjs",
+      "generatedSha256": "669beb21e9e98b75127b928d31388c587a0fd9cc62e42205d68b611eadb0d427",
+      "mapSha256": "145750b2dc076a22009400ff8ec8d1ecc0c8c8a0cb0fdc4d0f85c90c563f83a3",
+      "entryCount": 80
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/Entity.ts#Entity.transform",
+      "source": "src/world/Entity.ts",
+      "line": 141,
+      "kind": "getter",
+      "sourceSha256": "bbd82ccd9ee56d934f736cae5a769e199253053d52d0e0b39d8bb10324b69b95",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/box.mjs",
+      "generatedSha256": "669beb21e9e98b75127b928d31388c587a0fd9cc62e42205d68b611eadb0d427",
+      "mapSha256": "145750b2dc076a22009400ff8ec8d1ecc0c8c8a0cb0fdc4d0f85c90c563f83a3",
+      "entryCount": 1084
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/Entity.ts#Entity.renderer",
+      "source": "src/world/Entity.ts",
+      "line": 145,
+      "kind": "getter",
+      "sourceSha256": "bbd82ccd9ee56d934f736cae5a769e199253053d52d0e0b39d8bb10324b69b95",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/box.mjs",
+      "generatedSha256": "669beb21e9e98b75127b928d31388c587a0fd9cc62e42205d68b611eadb0d427",
+      "mapSha256": "145750b2dc076a22009400ff8ec8d1ecc0c8c8a0cb0fdc4d0f85c90c563f83a3",
+      "entryCount": 40
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/Entity.ts#Entity.spriteRenderer",
+      "source": "src/world/Entity.ts",
+      "line": 153,
+      "kind": "getter",
+      "sourceSha256": "bbd82ccd9ee56d934f736cae5a769e199253053d52d0e0b39d8bb10324b69b95",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/box.mjs",
+      "generatedSha256": "669beb21e9e98b75127b928d31388c587a0fd9cc62e42205d68b611eadb0d427",
+      "mapSha256": "145750b2dc076a22009400ff8ec8d1ecc0c8c8a0cb0fdc4d0f85c90c563f83a3",
+      "entryCount": 44
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/Entity.ts#Entity.collider",
+      "source": "src/world/Entity.ts",
+      "line": 169,
+      "kind": "getter",
+      "sourceSha256": "bbd82ccd9ee56d934f736cae5a769e199253053d52d0e0b39d8bb10324b69b95",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/box.mjs",
+      "generatedSha256": "669beb21e9e98b75127b928d31388c587a0fd9cc62e42205d68b611eadb0d427",
+      "mapSha256": "145750b2dc076a22009400ff8ec8d1ecc0c8c8a0cb0fdc4d0f85c90c563f83a3",
+      "entryCount": 40
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/Entity.ts#Entity.parentUuid",
+      "source": "src/world/Entity.ts",
+      "line": 173,
+      "kind": "getter",
+      "sourceSha256": "bbd82ccd9ee56d934f736cae5a769e199253053d52d0e0b39d8bb10324b69b95",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/box.mjs",
+      "generatedSha256": "669beb21e9e98b75127b928d31388c587a0fd9cc62e42205d68b611eadb0d427",
+      "mapSha256": "145750b2dc076a22009400ff8ec8d1ecc0c8c8a0cb0fdc4d0f85c90c563f83a3",
+      "entryCount": 18
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/Entity.ts#Entity.installStandardComponents",
+      "source": "src/world/Entity.ts",
+      "line": 258,
+      "kind": "public class operation",
+      "sourceSha256": "bbd82ccd9ee56d934f736cae5a769e199253053d52d0e0b39d8bb10324b69b95",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/box.mjs",
+      "generatedSha256": "669beb21e9e98b75127b928d31388c587a0fd9cc62e42205d68b611eadb0d427",
+      "mapSha256": "145750b2dc076a22009400ff8ec8d1ecc0c8c8a0cb0fdc4d0f85c90c563f83a3",
+      "entryCount": 40
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/physicsProduction.ts#defaultPhysicsLayers",
+      "source": "src/runtime/physicsProduction.ts",
+      "line": 104,
+      "kind": "exported function",
+      "sourceSha256": "8fd1571e431576cd9b2dde89dca2a5f99aff6091d33d1c44def3194551061181",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/box.mjs",
+      "generatedSha256": "669beb21e9e98b75127b928d31388c587a0fd9cc62e42205d68b611eadb0d427",
+      "mapSha256": "145750b2dc076a22009400ff8ec8d1ecc0c8c8a0cb0fdc4d0f85c90c563f83a3",
+      "entryCount": 2
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/physicsProduction.ts#defaultPhysicsProfile",
+      "source": "src/runtime/physicsProduction.ts",
+      "line": 192,
+      "kind": "exported function",
+      "sourceSha256": "8fd1571e431576cd9b2dde89dca2a5f99aff6091d33d1c44def3194551061181",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/box.mjs",
+      "generatedSha256": "669beb21e9e98b75127b928d31388c587a0fd9cc62e42205d68b611eadb0d427",
+      "mapSha256": "145750b2dc076a22009400ff8ec8d1ecc0c8c8a0cb0fdc4d0f85c90c563f83a3",
+      "entryCount": 2
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/geometry.ts#finiteNumber",
+      "source": "src/world/geometry.ts",
+      "line": 69,
+      "kind": "exported function",
+      "sourceSha256": "b51c1a4805f82b7f181780a5bbd203307526896ada6ed908b258235d97b6c353",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/box.mjs",
+      "generatedSha256": "669beb21e9e98b75127b928d31388c587a0fd9cc62e42205d68b611eadb0d427",
+      "mapSha256": "145750b2dc076a22009400ff8ec8d1ecc0c8c8a0cb0fdc4d0f85c90c563f83a3",
+      "entryCount": 8073
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/geometry.ts#positiveNumber",
+      "source": "src/world/geometry.ts",
+      "line": 79,
+      "kind": "exported function",
+      "sourceSha256": "b51c1a4805f82b7f181780a5bbd203307526896ada6ed908b258235d97b6c353",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/box.mjs",
+      "generatedSha256": "669beb21e9e98b75127b928d31388c587a0fd9cc62e42205d68b611eadb0d427",
+      "mapSha256": "145750b2dc076a22009400ff8ec8d1ecc0c8c8a0cb0fdc4d0f85c90c563f83a3",
+      "entryCount": 196
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/geometry.ts#normalizeAngle",
+      "source": "src/world/geometry.ts",
+      "line": 84,
+      "kind": "exported function",
+      "sourceSha256": "b51c1a4805f82b7f181780a5bbd203307526896ada6ed908b258235d97b6c353",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/box.mjs",
+      "generatedSha256": "669beb21e9e98b75127b928d31388c587a0fd9cc62e42205d68b611eadb0d427",
+      "mapSha256": "145750b2dc076a22009400ff8ec8d1ecc0c8c8a0cb0fdc4d0f85c90c563f83a3",
+      "entryCount": 18
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/BoxEntity.ts#BoxEntity.vertices",
+      "source": "src/world/BoxEntity.ts",
+      "line": 9,
+      "kind": "setter",
+      "sourceSha256": "21f323b10d5017ee3cb886f7f866d453ad45de027582d6a8d80ad5735e89b6eb",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/box.mjs",
+      "generatedSha256": "669beb21e9e98b75127b928d31388c587a0fd9cc62e42205d68b611eadb0d427",
+      "mapSha256": "145750b2dc076a22009400ff8ec8d1ecc0c8c8a0cb0fdc4d0f85c90c563f83a3",
+      "entryCount": 40
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/BoxEntity.ts#BoxEntity.constructor",
+      "source": "src/world/BoxEntity.ts",
+      "line": 21,
+      "kind": "public class operation",
+      "sourceSha256": "21f323b10d5017ee3cb886f7f866d453ad45de027582d6a8d80ad5735e89b6eb",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-16-animation-audio/1/box.mjs",
+      "generatedSha256": "669beb21e9e98b75127b928d31388c587a0fd9cc62e42205d68b611eadb0d427",
+      "mapSha256": "145750b2dc076a22009400ff8ec8d1ecc0c8c8a0cb0fdc4d0f85c90c563f83a3",
+      "entryCount": 40
+    }
+  ],
+  "tracingScope": "Positive V8 function entries during the complete passing programmer suite, including fixture setup. Not per-assertion isolation, exhaustive domain coverage or performance qualification.",
+  "nodeOperationCoverageCase": "retained-26-16-animation-audio complete suite including fixture setup",
+  "nodeOperationCoverageAssertion": {
+    "name": "retained-26-16-animation-audio complete suite including fixture setup",
+    "status": "passed"
+  }
+}

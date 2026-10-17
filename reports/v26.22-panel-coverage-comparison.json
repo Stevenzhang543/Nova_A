@@ -1,0 +1,100 @@
+{
+  "development": true,
+  "palette": "cloud-blue",
+  "previousResults": 1334,
+  "currentResults": 1172,
+  "difference": 162,
+  "reason": "Supplying requiredViewports runs the explicit 27-case Settings matrix and skips the earlier duplicate SHELL traversal. Main workspace traversal still checks all six workspaces at all nine width/scale combinations per language. No production controls were removed.",
+  "coverage": [
+    {
+      "locale": "en",
+      "workspace": 1,
+      "passedStates": 9
+    },
+    {
+      "locale": "en",
+      "workspace": 2,
+      "passedStates": 9
+    },
+    {
+      "locale": "en",
+      "workspace": 3,
+      "passedStates": 9
+    },
+    {
+      "locale": "en",
+      "workspace": 4,
+      "passedStates": 9
+    },
+    {
+      "locale": "en",
+      "workspace": 5,
+      "passedStates": 9
+    },
+    {
+      "locale": "en",
+      "workspace": 6,
+      "passedStates": 9
+    },
+    {
+      "locale": "de",
+      "workspace": 1,
+      "passedStates": 9
+    },
+    {
+      "locale": "de",
+      "workspace": 2,
+      "passedStates": 9
+    },
+    {
+      "locale": "de",
+      "workspace": 3,
+      "passedStates": 9
+    },
+    {
+      "locale": "de",
+      "workspace": 4,
+      "passedStates": 9
+    },
+    {
+      "locale": "de",
+      "workspace": 5,
+      "passedStates": 9
+    },
+    {
+      "locale": "de",
+      "workspace": 6,
+      "passedStates": 9
+    },
+    {
+      "locale": "zh",
+      "workspace": 1,
+      "passedStates": 9
+    },
+    {
+      "locale": "zh",
+      "workspace": 2,
+      "passedStates": 9
+    },
+    {
+      "locale": "zh",
+      "workspace": 3,
+      "passedStates": 9
+    },
+    {
+      "locale": "zh",
+      "workspace": 4,
+      "passedStates": 9
+    },
+    {
+      "locale": "zh",
+      "workspace": 5,
+      "passedStates": 9
+    },
+    {
+      "locale": "zh",
+      "workspace": 6,
+      "passedStates": 9
+    }
+  ]
+}

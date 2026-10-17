@@ -1,0 +1,36 @@
+2 October 2026 — Separate Nova website / online editor delivery
+
+Inputs: www/nova (three original website files) and the published
+releases/v26.35/Nova_A-v26.35-web.zip. All inputs retained unchanged.
+
+Changes made only within nova/:
+- Added Try online mode next to the Nova_A GitHub action, linking to ./online/.
+- Made website stylesheet/script and Nova-home links relative for root/subpath hosting.
+- Replaced obsolete C++20/GLFW/ImGui foundation and planned-only feature copy with
+  current 26.35 Rust/WebAssembly/Vue 3/Tauri information and a creation workflow.
+- Preserved website styles, theme script, visual structure and Nova_v1 content.
+- Extracted all 272 release files unchanged into online/; no engine rebuild.
+- Added the deployment manual, optional local preview/integrity/browser checks,
+  and scoped package/browser evidence.
+
+Validation:
+- All 272 engine files equal archive bytes; all 271 listed checksums pass.
+- Original three website hashes preserved; release archive checksum preserved.
+- Root and nested URLs, MIME, manifests, redirects and real 404 responses pass.
+- Edge browser button, theme, desktop/narrow layout, project creation and WASM
+  startup checks pass; screenshots visually inspected.
+- JavaScript syntax checks pass. Static-site delivery requires no new build.
+
+Production deployment and provider-specific server changes are not performed.
+No engine/editor UI architecture or shared project documentation is changed by
+this website integration; this ledger records its separate delivery state.
+
+Server-specific follow-up:
+- Confirmed public URL https://nova.whitelists.top/; observed existing Nginx site.
+- Added SERVER_UPLOAD.txt for whitelist@whitelists.top:/srv/whitelists/nova/,
+  whole-folder staged upload, private backup, verification and rollback.
+- Added verify-deployed.mjs to compare all public files and critical MIME/404/
+  manifest/directory behavior with the local package. Loopback rehearsal passes.
+- Extended verify-package.mjs to check an explicit future release folder or
+  follow the landing button. Recommended future versioned directories preserve
+  old tabs, assets and manifests without overwriting a live engine release.

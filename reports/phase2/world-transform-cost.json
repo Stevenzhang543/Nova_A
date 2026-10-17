@@ -1,0 +1,8 @@
+{
+  "generatedAt": "2026-10-16T18:15:21.816Z",
+  "nsPerCallDepth1": 522.695,
+  "nsPerCallDepth200": 64258.805,
+  "ratio": 122.93747787906905,
+  "verdict": "grows-with-depth (ancestor walk)",
+  "note": "Measures worldTransform on the deepest node of a parent chain after prepareHierarchyIndex."
+}

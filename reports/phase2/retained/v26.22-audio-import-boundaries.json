@@ -1,0 +1,87 @@
+{
+  "format": "nova-v26.22-audio-import-boundaries",
+  "version": 1,
+  "release": "26.22",
+  "regressionOrigin": "26.22",
+  "engineVersion": "26.32.0",
+  "expectedRelease": "26.32",
+  "development": true,
+  "qualifiedRelease": null,
+  "generatedAt": "2026-09-28T18:10:18.041Z",
+  "status": "passed",
+  "scope": "Actual asset hydration and native/NovaPak retention of valid zero, bounded values and malformed legacy inputs. No codec-quality or acoustic measurement claim.",
+  "checks": [
+    {
+      "name": "quality 0 normalizes to 0 and survives native/export reopen",
+      "status": "passed"
+    },
+    {
+      "name": "quality 1 normalizes to 1 and survives native/export reopen",
+      "status": "passed"
+    },
+    {
+      "name": "quality -1 normalizes to 0 and survives native/export reopen",
+      "status": "passed"
+    },
+    {
+      "name": "quality 2 normalizes to 1 and survives native/export reopen",
+      "status": "passed"
+    },
+    {
+      "name": "quality null normalizes to 0.8 and survives native/export reopen",
+      "status": "passed"
+    },
+    {
+      "name": "quality  normalizes to 0.8 and survives native/export reopen",
+      "status": "passed"
+    },
+    {
+      "name": "quality invalid normalizes to 0.8 and survives native/export reopen",
+      "status": "passed"
+    },
+    {
+      "name": "quality Infinity normalizes to 0.8 and survives native/export reopen",
+      "status": "passed"
+    },
+    {
+      "name": "quality 0.3 normalizes to 0.3 and survives native/export reopen",
+      "status": "passed"
+    },
+    {
+      "name": "targetPeakDb 0 normalizes to 0 and survives native/export reopen",
+      "status": "passed"
+    },
+    {
+      "name": "targetPeakDb -24 normalizes to -24 and survives native/export reopen",
+      "status": "passed"
+    },
+    {
+      "name": "targetPeakDb -50 normalizes to -24 and survives native/export reopen",
+      "status": "passed"
+    },
+    {
+      "name": "targetPeakDb 5 normalizes to 0 and survives native/export reopen",
+      "status": "passed"
+    },
+    {
+      "name": "targetPeakDb null normalizes to -1 and survives native/export reopen",
+      "status": "passed"
+    },
+    {
+      "name": "targetPeakDb  normalizes to -1 and survives native/export reopen",
+      "status": "passed"
+    },
+    {
+      "name": "targetPeakDb invalid normalizes to -1 and survives native/export reopen",
+      "status": "passed"
+    },
+    {
+      "name": "targetPeakDb -Infinity normalizes to -1 and survives native/export reopen",
+      "status": "passed"
+    },
+    {
+      "name": "targetPeakDb -3 normalizes to -3 and survives native/export reopen",
+      "status": "passed"
+    }
+  ]
+}

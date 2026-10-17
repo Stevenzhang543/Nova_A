@@ -1,0 +1,66 @@
+{
+  "scope": "Release evidence only; no editor or engine behavior changes",
+  "records": [
+    {
+      "path": "scripts/lib/milestoneAuditBundle.mjs",
+      "before": "png/nova/workspaces/zip attachment extensions",
+      "after": "Also allow the actual static HTML gallery, with the same confined path,32MiB/256MiB bounds and SHA256",
+      "consequence": "All-route screenshot gallery is retained alongside its qualified PNG files."
+    },
+    {
+      "path": "scripts/lib/milestoneAuditBundle.mjs",
+      "before": "Observation file discovery excluded HTML and assumed root-relative artifacts",
+      "after": "Discover HTML and place a basename gallery under release-audits",
+      "consequence": "Current gallery resolves to the actual audit output; other artifact paths retain their behavior."
+    },
+    {
+      "path": "scripts/generate-sequential-release-evidence.mjs",
+      "before": "Copy qualified JSON bundles only",
+      "after": "For26.37 also decode qualified attachments into review/<report>/ ordinary files",
+      "consequence": "The gallery and relative screenshots open directly after ZIP extraction; historical evidence generation stays unchanged."
+    },
+    {
+      "path": "scripts/generate-sequential-release-evidence.mjs",
+      "before": "No standalone attachment reconstruction",
+      "after": "Recheck actual byte count, per-file/total bounds, SHA256, permitted extension and confined destination; exclusive creation",
+      "consequence": "Invalid or overwritten attachments fail evidence publication. Final manifest includes all actual review bytes."
+    },
+    {
+      "path": "scripts/generate-sequential-release-evidence.mjs",
+      "before": "Read/copy and UUID imports",
+      "after": "Add writeFile and createHash required by attachment reconstruction",
+      "consequence": "Uses existing Node standard library; no dependency or framework added."
+    },
+    {
+      "path": "docs/EDIT_LEDGER_26_37.md",
+      "before": "Non-contract section wording",
+      "after": "Files changed or added and deterministic path-level manifest wording in exhaustive ledger generator",
+      "consequence": "Satisfies existing independent release-package verification without weakening its checks."
+    },
+    {
+      "path": "scripts/qualify-v26.37-scoped.mjs",
+      "before": "Performance/UI gate runs Comfortable audit only",
+      "after": "Also run real native-disclosure/popover input audit and retain its fresh report and captures",
+      "consequence": "The14-gate final qualification includes actual newly connected native menu paths; no extra unrelated engine sweep."
+    },
+    {
+      "path": "scripts/lib/milestoneAuditBundle.mjs",
+      "before": "The five baseline images were copied to release-audits and named in true-before-evidence.captures, but only final report captures were attached",
+      "after": "For26.37 attach exactly the five named unchanged26.36 comparison PNGs through the same confined path, byte limits and hash checks",
+      "consequence": "The release evidence includes actual before and after images, not only baseline filenames. Other releases and editor behavior remain unchanged."
+    }
+  ],
+  "verification": "Both modified release JavaScript modules parse. Actual evidence reconstruction and package verification are required in the final source-bound release run.",
+  "authoringVersionFollowup": {
+    "generatedAt": "2026-10-04T15:12:15.368Z",
+    "path": "scripts/verify-v26.34-authoring-user.mjs",
+    "before": "Explicit authoring target allows26.34/26.35 only",
+    "after": "Also accept explicitly requested26.37 and require actual package version26.37.0 as before",
+    "beforeSha256": "2e47b87abf8bd55993b38d58e2973e031463316b495bc7fa5f0a1f8847e9db3c",
+    "afterSha256": "38ac56efc17d812108788f4e29136049924e11c097f375711a2342b28a704319",
+    "cause": "Frozen candidate1 stopped at gate7 before launching any authoring business check: target26.37 rejected by old assertion.",
+    "failedReceipt": ".cache/comfortable26.37/build1/release-audits/qualification-v26.37-269b8e40-7a38-438f-b37a-643d54187ae8/executed-gates.json",
+    "consequence": "Only test target authorization changes; all existing authoring assertions and application behavior remain unchanged. A new source snapshot and all fourteen fresh gates are required.",
+    "qualificationClaim": false
+  }
+}

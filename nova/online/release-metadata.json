@@ -1,0 +1,32 @@
+{
+  "product": "Nova_A",
+  "version": "26.35",
+  "machineVersion": "26.35.0",
+  "format": "nova-web-release",
+  "projectFormat": 2,
+  "schema": 29,
+  "sourceCommit": "da2182569b7dddb227e7623ce38bf92485d88807",
+  "sourceState": "git-working-tree",
+  "generatedAt": "10/02/2026 15:48:09",
+  "entrypoints": [
+    "index.html",
+    "player.html"
+  ],
+  "contentManifest": "SHA256SUMS.txt",
+  "runtimeCapabilities": [
+    "2D editor",
+    "standalone player",
+    "WebAssembly physics",
+    "workers",
+    "bundled manual",
+    "local variable fonts"
+  ],
+  "hosting": {
+    "protocol": "http-or-https",
+    "wasmMime": "application/wasm",
+    "hashedAssetCaching": "immutable",
+    "htmlCaching": "revalidate",
+    "crossOriginIsolationRequired": false,
+    "spaFallbackRequired": false
+  }
+}

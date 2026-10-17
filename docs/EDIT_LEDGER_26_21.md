@@ -1,0 +1,118 @@
+# Nova_A 26.21 development edit ledger (target machine 26.21.0)
+
+This deterministic path-level manifest is relative to the committed 26.20 baseline cb73d58. It records development changes, not a qualified release. Generated build outputs, temporary preparation scripts and reports live outside authored source. Previous releases remain preserved.
+
+## Files changed and added
+
+- `Cargo.lock` — Modified. Align public/machine/build/test authority to 26.21 / 26.21.0 without changing Project Format 2/schema 29.
+- `Cargo.toml` — Modified. Align public/machine/build/test authority to 26.21 / 26.21.0 without changing Project Format 2/schema 29.
+- `README.md` — Modified. Link the new coding manual, inventories, comparison, panel audit, gap register and development ledger while retaining 26.20 as the packaged release.
+- `crates/nova_format/src/lib.rs` — Modified. Fix partial production/Build settings migration with missing-only defaults; preserve scripting API 1/2 and reject unsupported versions; align Rust input devices with implemented sensor/pen bindings. Canonicalize known pre-calendar bare script UUIDs while rejecting malformed modern references. Add historical-fixture, authored-value, idempotence and invalid-value regressions.
+- `docs/COMPETITIVE_REVIEW_26_21.md` — Added. Compare current capabilities with primary Godot, GameMaker, Construct and Defold documentation; assign concrete opportunities.
+- `docs/EDIT_LEDGER_26_21.md` — Added. Publish this exhaustive path-level change manifest; package the same path-first text.
+- `docs/FEATURE_INVENTORY_26_21.md` — Added. Enumerate all registered operations, components, documented API entries and graph nodes, with declared routes and limitations.
+- `docs/GAP_REGISTER_26_21.md` — Added. Persist incomplete capability and qualification boundaries without treating catalog presence as parity.
+- `docs/IMPLEMENTATION_TRACKER_26_21.md` — Added. Map every 26.21 manual requirement to its implementation and executable evidence owner.
+- `docs/PANEL_AUDIT_26_21.json` — Added. Record every Vue surface control, conditional expression, event handler and model binding plus source-route existence.
+- `docs/PANEL_AUDIT_26_21.md` — Added. Provide every-surface audit checklist and open behavioral/conditional-state qualification status.
+- `docs/PANEL_FINDINGS_26_21.md` — Added. Document corrected input/label/hierarchy defects and every remaining selected-option clipping state from the corrected-font audit, without claiming complete conditional-state coverage.
+- `docs/QUALIFICATION_LESSON_26_21.de.md` — Added. Add localized actual-user instructions for readable fields, full values, palettes, independent Undo, save/reopen/export and large scenes; state qualification boundaries.
+- `docs/QUALIFICATION_LESSON_26_21.en.md` — Added. Add localized actual-user instructions for readable fields, full values, palettes, independent Undo, save/reopen/export and large scenes; state qualification boundaries.
+- `docs/QUALIFICATION_LESSON_26_21.zh.md` — Added. Add localized actual-user instructions for readable fields, full values, palettes, independent Undo, save/reopen/export and large scenes; state qualification boundaries.
+- `docs/RELEASE_NOTES_26_21.md` — Added. Describe 26.21 changes, compatibility, evidence limits and exact release files without claiming unexecuted qualification.
+- `docs/ROADMAP_26_21_TO_26_30.md` — Added. Define ten separate implementation releases with programmer audits, user checks, compatibility boundaries and release artifact requirements.
+- `docs/SOURCE_INVENTORY_26_21.json` — Added. Generate per-file hashes, symbols, imports and ownership; explicitly distinguish indexing from semantic audit.
+- `docs/SOURCE_MAP_26_21.md` — Added. Generate file-by-file ownership and explain frontend/runtime/Rust/native/generated boundaries.
+- `docs/TEMPLATE_LIBRARY_26_21.md` — Added. Generate current forty-template walkthroughs in all three locales, retaining controls, expected results and manual links.
+- `docs/VERSION_26_21_FOUNDATIONS.md` — Added. Record pre-edit consequences, findings, tested evidence and unfinished qualification.
+- `manual/MANUAL.de.md` — Modified. Retain historical teaching and append the localized 26.21 readability/history lesson; align current manual authority.
+- `manual/MANUAL.en.md` — Modified. Retain historical teaching and append the localized 26.21 readability/history lesson; align current manual authority.
+- `manual/MANUAL.zh-CN.md` — Modified. Retain historical teaching and append the localized 26.21 readability/history lesson; align current manual authority.
+- `manual/index.html` — Modified. Retain historical teaching and append the localized 26.21 readability/history lesson; align current manual authority.
+- `package.json` — Modified. Align public/machine/build/test authority to 26.21 / 26.21.0 without changing Project Format 2/schema 29.
+- `reference-projects/projects/ai-v57-perception-utility/project.nova` — Modified. Replace only Enemy Health2D duplicate UUID with eb9aed42-0faf-42f9-86d4-000507a97e9f; preserve gameplay and all authored values.
+- `reference-projects/projects/creator-v2621-animated-menu/README.md` — Added. Add separate 26.21 README.md for creator-v2621-animated-menu, with version/format metadata and repeatable label, history, gameplay and output checks.
+- `reference-projects/projects/creator-v2621-animated-menu/expected-output.json` — Added. Add separate 26.21 expected-output.json for creator-v2621-animated-menu, with version/format metadata and repeatable label, history, gameplay and output checks.
+- `reference-projects/projects/creator-v2621-animated-menu/project.nova` — Added. Add separate 26.21 project.nova for creator-v2621-animated-menu, with version/format metadata and repeatable label, history, gameplay and output checks.
+- `reference-projects/projects/creator-v2621-animated-menu/test-controls.json` — Added. Add separate 26.21 test-controls.json for creator-v2621-animated-menu, with version/format metadata and repeatable label, history, gameplay and output checks.
+- `reference-projects/projects/creator-v2621-blocks-game/README.md` — Added. Add separate 26.21 README.md for creator-v2621-blocks-game, with version/format metadata and repeatable label, history, gameplay and output checks.
+- `reference-projects/projects/creator-v2621-blocks-game/expected-output.json` — Added. Add separate 26.21 expected-output.json for creator-v2621-blocks-game, with version/format metadata and repeatable label, history, gameplay and output checks.
+- `reference-projects/projects/creator-v2621-blocks-game/project.nova` — Added. Add separate 26.21 project.nova for creator-v2621-blocks-game, with version/format metadata and repeatable label, history, gameplay and output checks.
+- `reference-projects/projects/creator-v2621-blocks-game/test-controls.json` — Added. Add separate 26.21 test-controls.json for creator-v2621-blocks-game, with version/format metadata and repeatable label, history, gameplay and output checks.
+- `reference-projects/projects/creator-v2621-code-game/README.md` — Added. Add separate 26.21 README.md for creator-v2621-code-game, with version/format metadata and repeatable label, history, gameplay and output checks.
+- `reference-projects/projects/creator-v2621-code-game/expected-output.json` — Added. Add separate 26.21 expected-output.json for creator-v2621-code-game, with version/format metadata and repeatable label, history, gameplay and output checks.
+- `reference-projects/projects/creator-v2621-code-game/project.nova` — Added. Add separate 26.21 project.nova for creator-v2621-code-game, with version/format metadata and repeatable label, history, gameplay and output checks.
+- `reference-projects/projects/creator-v2621-code-game/test-controls.json` — Added. Add separate 26.21 test-controls.json for creator-v2621-code-game, with version/format metadata and repeatable label, history, gameplay and output checks.
+- `reference-projects/projects/creator-v2621-mixed-game/README.md` — Added. Add separate 26.21 README.md for creator-v2621-mixed-game, with version/format metadata and repeatable label, history, gameplay and output checks.
+- `reference-projects/projects/creator-v2621-mixed-game/expected-output.json` — Added. Add separate 26.21 expected-output.json for creator-v2621-mixed-game, with version/format metadata and repeatable label, history, gameplay and output checks.
+- `reference-projects/projects/creator-v2621-mixed-game/project.nova` — Added. Add separate 26.21 project.nova for creator-v2621-mixed-game, with version/format metadata and repeatable label, history, gameplay and output checks.
+- `reference-projects/projects/creator-v2621-mixed-game/test-controls.json` — Added. Add separate 26.21 test-controls.json for creator-v2621-mixed-game, with version/format metadata and repeatable label, history, gameplay and output checks.
+- `reference-projects/projects/creator-v2621-output-quality/README.md` — Added. Add separate 26.21 README.md for creator-v2621-output-quality, with version/format metadata and repeatable label, history, gameplay and output checks.
+- `reference-projects/projects/creator-v2621-output-quality/expected-output.json` — Added. Add separate 26.21 expected-output.json for creator-v2621-output-quality, with version/format metadata and repeatable label, history, gameplay and output checks.
+- `reference-projects/projects/creator-v2621-output-quality/project.nova` — Added. Add separate 26.21 project.nova for creator-v2621-output-quality, with version/format metadata and repeatable label, history, gameplay and output checks.
+- `reference-projects/projects/creator-v2621-output-quality/test-controls.json` — Added. Add separate 26.21 test-controls.json for creator-v2621-output-quality, with version/format metadata and repeatable label, history, gameplay and output checks.
+- `reference-projects/projects/creator-v60-top-down/project.nova` — Modified. Replace only Enemy Health2D duplicate UUID with 1e6001a3-a47b-43ab-be4c-ce151a3057c8; preserve gameplay and all authored values.
+- `reference-projects/projects/gameplay-v54-twin-stick/project.nova` — Modified. Replace only Enemy Health2D duplicate UUID with 9284e794-2453-4958-9032-3cf31be27760; preserve gameplay and all authored values.
+- `reference-projects/projects/server-v2621-headless-authority/README.md` — Added. Add separate 26.21 README.md for server-v2621-headless-authority, with version/format metadata and repeatable label, history, gameplay and output checks.
+- `reference-projects/projects/server-v2621-headless-authority/expected-output.json` — Added. Add separate 26.21 expected-output.json for server-v2621-headless-authority, with version/format metadata and repeatable label, history, gameplay and output checks.
+- `reference-projects/projects/server-v2621-headless-authority/project.nova` — Added. Add separate 26.21 project.nova for server-v2621-headless-authority, with version/format metadata and repeatable label, history, gameplay and output checks.
+- `reference-projects/projects/server-v2621-headless-authority/test-controls.json` — Added. Add separate 26.21 test-controls.json for server-v2621-headless-authority, with version/format metadata and repeatable label, history, gameplay and output checks.
+- `scripts/audit-v26.21-reference-imports.mjs` — Added. Execute actual rebuilt WebAssembly migration and idempotence for all 213 historical reference projects, recording failures separately from editor/gameplay qualification.
+- `scripts/audit-v26.21-surfaces.mjs` — Added. Parse every Vue template and enumerate roots, controls, conditions, handlers and models; check catalog source-path existence.
+- `scripts/generate-release-plan.mjs` — Modified. Bind 26.21-and-later plans to the next-series implementation manual while retaining earlier release behavior.
+- `scripts/generate-v26.21-ledger.mjs` — Added. Generate a deterministic exhaustive path-first edit ledger with descriptions required for every changed file.
+- `scripts/generate-v26.21-references.mjs` — Added. Generate and verify separate 26.21 references outputs while preserving historical versions.
+- `scripts/generate-v26.21-teaching.mjs` — Added. Generate and verify separate 26.21 teaching outputs while preserving historical versions.
+- `scripts/generate-v26.21-template-walkthroughs.mjs` — Added. Generate and verify separate 26.21 template-walkthroughs outputs while preserving historical versions.
+- `scripts/inventory-v26.21.mjs` — Added. Read/index source files and runtime catalogs into separate 26.21 inventories; label route declarations and test limitations honestly.
+- `scripts/lib/browserUserAudit.mjs` — Modified. Allow explicitly bounded audit report labels through 26.30; retain expected-release/development checks and the default 30-second command deadline, with a recorded bounded diagnostic override for the large-scene investigation.
+- `scripts/lib/milestoneAuditContext.mjs` — Modified. Support explicit 26.21–26.30 integrated audit targets while retaining original suite identity and rejecting future-suite or wrong-engine qualification.
+- `scripts/qualify-layout-v26.21.mjs` — Added. Run all five palettes, three locales, three sizes and three text scales against actual 26.21; aggregate only fresh passing child reports.
+- `scripts/qualify-panels-v26.21.mjs` — Added. Retain every-surface traversal with source-version checks; fail short editable fields and record clipped selections separately, accepting only a visibly complete wrapping full-value hint.
+- `scripts/release-milestone-gates.mjs` — Modified. Route 26.21 to its complete five-palette layout runner and use the correct next-series manual for the product gate.
+- `scripts/repair-v26.21-reference-identities.mjs` — Added. Repair only the three proven duplicate Enemy Health2D UUIDs, with deterministic IDs, occurrence guards and a parsed exact-one-field comparison; support verification-only reruns.
+- `scripts/verify-v26.18-networking.mjs` — Modified. Initialize overlapping Vite SSR roots sequentially to avoid repeated cyclic module-load stalls; preserve every retained networking assertion and timeout limit.
+- `scripts/verify-v26.21-authoring.mjs` — Added. Execute the retained authoring regression suite against actual 26.21 source and separate current reports; preserve regression provenance.
+- `scripts/verify-v26.21-delivery-user.mjs` — Added. Execute the retained delivery-user regression suite against actual 26.21 source and separate current reports; preserve regression provenance.
+- `scripts/verify-v26.21-delivery.mjs` — Added. Execute retained delivery regressions against actual 26.21; derive the signed-update fixture as a future version so downgrade/replay checks remain exercised rather than bypassed.
+- `scripts/verify-v26.21-focus.mjs` — Added. Execute the retained focus regression suite against actual 26.21 source and separate current reports; preserve regression provenance.
+- `scripts/verify-v26.21-foundations-user.mjs` — Added. Exercise new settings and inspector controls using real browser input; measure editable width and text-relative layout.
+- `scripts/verify-v26.21-foundations.mjs` — Added. Execute twelve regressions covering 5,000-shape grouping, 5,000-control ID allocation, observer batching, control identity, project lifetime, disposal, gameplay exclusion and preference migration/persistence/reset.
+- `scripts/verify-v26.21-hierarchy-user.mjs` — Added. Open the existing 5,001-entity project through the browser, enlarge text, scroll to the last row, verify bounded virtual rendering and select the final entity.
+- `scripts/verify-v26.21-layout-user.mjs` — Added. Exercise focused numeric resize/save/maximize/restore, actual saved values, floating/redocking both panels, and complete navigation labels in all locales at 100/150/200 percent text, including exact paired profiler budget capacity.
+- `scripts/verify-v26.21-lsp.mjs` — Added. Execute the retained lsp regression suite against actual 26.21 source and separate current reports; preserve regression provenance.
+- `scripts/verify-v26.21-menu-user.mjs` — Added. Execute the retained menu-user regression suite against actual 26.21 source and separate current reports; preserve regression provenance.
+- `scripts/verify-v26.21-package-user.mjs` — Added. Execute the retained package-user regression suite against actual 26.21 source and separate current reports; preserve regression provenance.
+- `scripts/verify-v26.21-palettes-user.mjs` — Added. Execute the retained palettes-user regression suite against actual 26.21 source and separate current reports; preserve regression provenance.
+- `scripts/verify-v26.21-quality-user.mjs` — Added. Execute the retained quality-user regression suite against actual 26.21 source and separate current reports; preserve regression provenance.
+- `scripts/verify-v26.21-renderer.mjs` — Added. Execute the retained renderer regression suite against actual 26.21 source and separate current reports; preserve regression provenance.
+- `scripts/verify-v26.21-reproducibility.mjs` — Added. Execute the retained reproducibility regression suite against actual 26.21 source and separate current reports; preserve regression provenance.
+- `scripts/verify-v26.21-save-recovery.mjs` — Added. Execute the retained save-recovery regression suite against actual 26.21 source and separate current reports; preserve regression provenance.
+- `scripts/verify-v26.21-template-library.mjs` — Added. Execute the retained template-library regression suite against actual 26.21 source and separate current reports; preserve regression provenance.
+- `scripts/verify-v26.21-template-output.mjs` — Added. Execute the retained template-output regression suite against actual 26.21 source and separate current reports; preserve regression provenance.
+- `src-tauri/Cargo.lock` — Modified. Align public/machine/build/test authority to 26.21 / 26.21.0 without changing Project Format 2/schema 29.
+- `src-tauri/Cargo.toml` — Modified. Align public/machine/build/test authority to 26.21 / 26.21.0 without changing Project Format 2/schema 29.
+- `src-tauri/tauri.conf.json` — Modified. Align public/machine/build/test authority to 26.21 / 26.21.0 without changing Project Format 2/schema 29.
+- `src/App.vue` — Modified. Install editor-only selected-value details and dispose them with the project edit router when the editor root unmounts.
+- `src/assets/editorReadability.css` — Added. Add editor-only text-relative label stacking, scaled help/fields, wrapping numeric/range pairs, bounded hierarchy layout and semantic-color full-value tooltip styling, bounded floating docks and readable wrapping profiler budget pairs; retain motion and controls.
+- `src/components/ConfigPanel.vue` — Modified. Fix reproduced rapid X/Y Undo grouping by including entity and originating control in the inspector merge identity; calls without a control remain separate.
+- `src/components/RenderingPanel.vue` — Modified. Link output-quality help to the current localized 26.21 lesson; preserve rendering controls.
+- `src/components/SceneSideBar.vue` — Modified. Move virtual spacing inside the scroll container so large scenes remain virtualized; synchronize row height with text scale and expose full names in rename tooltips; preserve row actions and drag/drop.
+- `src/components/WorkspaceManager.vue` — Modified. Consume dialog Escape after closing so it does not also clear the selected entity and hide the Inspector.
+- `src/editor/formLayoutCopy.ts` — Added. Add English, German and Chinese preference labels, options and explanatory help.
+- `src/editor/selectValueDetails.ts` — Added. Add editor-only wrapping selected-value tooltip for pointer/keyboard focus, preserve existing descriptions, reposition on scroll, dismiss on Escape and dispose on unmount.
+- `src/i18n.ts` — Modified. Align public/machine/build/test authority to 26.21 / 26.21.0 without changing Project Format 2/schema 29.
+- `src/layout/EditorLayout.vue` — Modified. Keep the floating hierarchy anchored beyond the actual text-scaled context rail, including the existing compact breakpoint; constrain floating height to the available editor area.
+- `src/layout/SideBar.vue` — Modified. Give context navigation text-scaled width, natural word wrapping, multiline leading and unclipped labels; prevent action shrinkage and expose scrolling while retaining icons, labels and actions.
+- `src/layout/TopBar.vue` — Modified. Allow Ctrl/Cmd+S while a form control has focus; commit blur-based edits and Vue updates before saving, preserving native text Undo/Copy/Paste and composition behavior.
+- `src/main.ts` — Modified. Load the editor readability stylesheet.
+- `src/panels/SettingsPanel.vue` — Modified. Expose the label preference and localized search terms; link help to the 26.21 localized lesson while preserving existing settings.
+- `src/projects/projectFormat.ts` — Modified. Align public/machine/build/test authority to 26.21 / 26.21.0 without changing Project Format 2/schema 29.
+- `src/projects/projectSession.ts` — Modified. Track a nonserialized session generation for reload/replacement, including reopening the same project.
+- `src/runtime/controlRegistry.ts` — Modified. Deduplicate mutation targets and index occupied IDs once per allocation batch, avoiding repeated label reads and document collision searches; preserve IDs/suffixes and skip detached nodes.
+- `src/runtime/projectMutationRouter.ts` — Modified. Separate DOM control merge identities; capture origin session and scope; recheck after lazy import; reject detached/read-only/editor-only controls and cancel timers/listeners.
+- `src/store/preferences.ts` — Modified. Add normalized, persisted Automatic/Above controls label preference, DOM application and reset default.
+- `src/world/compoundGeometry.ts` — Modified. Avoid per-shape whole-scene scans when no intact binding exists; retain the existing bound-group path, polygon resolution and boundary generation.
+- `tests/fixtures/migrations/public-schema-expected.json` — Modified. Align public/machine/build/test authority to 26.21 / 26.21.0 without changing Project Format 2/schema 29.
+
+Removed authored files: none. No features or animations intentionally removed.

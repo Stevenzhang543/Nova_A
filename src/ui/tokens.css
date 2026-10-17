@@ -1,0 +1,336 @@
+/* Nova_A editor design tokens — the single visual authority for the editor shell.
+ *
+ * Color: every surface, line and text tone is derived from the six palette roles
+ * (background, surface, primary, secondary, accent, text) of the user's palette system,
+ * so switching palettes restyles the whole editor without component overrides.
+ * Geometry: one density scale. "standard" is the default desktop density; "compact"
+ * tightens rows for large projects. Interface scale multiplies both.
+ */
+
+:root {
+  /* Palette roles: Midnight Blue (dark default). Overridden per data-palette below. */
+  --color-background: #0F141A;
+  --color-surface: #171E27;
+  --color-primary: #527397;
+  --color-secondary: #3F586F;
+  --color-accent: #6D8D8A;
+  --color-text-primary: #D8E0E8;
+  --ink: #ffffff;           /* text placed on a filled primary control */
+  --shade: #000000;         /* shadow ink */
+  --tint-hover: 6%;
+  --tint-press: 10%;
+
+  color-scheme: dark;
+  --ui-scale: 1;
+
+  /* Typography: platform UI faces first (Segoe UI Variable on Windows, SF on Apple), bundled Nunito Sans as the portable fallback. */
+  --font-ui: "Segoe UI Variable Text", "Segoe UI", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Nunito Sans Variable", "Noto Sans SC Variable", system-ui, sans-serif;
+  --font-display: "Segoe UI Variable Display", "Segoe UI", -apple-system, BlinkMacSystemFont, "SF Pro Display", "Nunito Sans Variable", "Noto Sans SC Variable", system-ui, sans-serif;
+  --font-cjk: "Microsoft YaHei UI", "PingFang SC", "Noto Sans SC Variable", sans-serif;
+  --font-mono: "Cascadia Code", "JetBrains Mono Variable", "SFMono-Regular", "Noto Sans Mono CJK SC", ui-monospace, Consolas, monospace;
+  --type-caption: calc(12px * var(--ui-scale));
+  --type-dense: calc(13px * var(--ui-scale));
+  --type-body: calc(13.5px * var(--ui-scale));
+  --type-code: calc(13px * var(--ui-scale));
+  --type-section: calc(14px * var(--ui-scale));
+  --type-page: calc(20px * var(--ui-scale));
+  --type-hero: calc(30px * var(--ui-scale));
+  --line-caption: 1.4;
+  --line-dense: 1.4;
+  --line-body: 1.45;
+  --line-control: 1.3;
+  --line-section: 1.35;
+  --line-page: 1.25;
+  --line-hero: 1.12;
+  --tracking-ui: 0;
+  --tracking-copy: 0.003em;
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-strong: 600;
+
+  /* Space: a 4px rhythm. */
+  --space-0: calc(2px * var(--ui-scale));
+  --space-1: calc(4px * var(--ui-scale));
+  --space-2: calc(8px * var(--ui-scale));
+  --space-3: calc(12px * var(--ui-scale));
+  --space-4: calc(16px * var(--ui-scale));
+  --space-5: calc(20px * var(--ui-scale));
+  --space-6: calc(24px * var(--ui-scale));
+  --space-7: calc(28px * var(--ui-scale));
+  --space-8: calc(32px * var(--ui-scale));
+  --space-tight: calc(6px * var(--ui-scale));
+  --space-section: calc(16px * var(--ui-scale));
+  --space-composition: calc(28px * var(--ui-scale));
+  --space-launch: calc(36px * var(--ui-scale));
+  --space-launch-large: calc(48px * var(--ui-scale));
+  --ui-space-micro: var(--space-0); --ui-space-xs: var(--space-1); --ui-space-sm: var(--space-2); --ui-space-md: var(--space-3); --ui-space-lg: var(--space-4); --ui-space-xl: var(--space-6);
+
+  /* Control geometry (standard density). */
+  --ui-control-height: calc(30px * var(--ui-scale));
+  --ui-input-height: calc(30px * var(--ui-scale));
+  --ui-standard-height: calc(32px * var(--ui-scale));
+  --ui-tab-height: calc(30px * var(--ui-scale));
+  --ui-tree-row-height: calc(28px * var(--ui-scale));
+  --ui-icon-size: calc(16px * var(--ui-scale));
+  --ui-number-width: calc(84px * var(--ui-scale));
+  --ui-slider-width: calc(120px * var(--ui-scale));
+  --ui-slider-track: calc(4px * var(--ui-scale));
+  --ui-slider-thumb: calc(16px * var(--ui-scale));
+  --ui-field-width: calc(260px * var(--ui-scale));
+  --ui-search-width: calc(240px * var(--ui-scale));
+  --ui-label-width: calc(128px * var(--ui-scale));
+  --ui-dialog-width: 600px;
+  --ui-rail-width: calc(44px * var(--ui-scale));
+  --ui-border-width: 1px;
+  --ui-toolbar-height: calc(40px * var(--ui-scale));
+  --ui-titlebar-height: calc(44px * var(--ui-scale));
+  --ui-statusbar-height: calc(26px * var(--ui-scale));
+  --ui-panel-header-height: calc(38px * var(--ui-scale));
+  --ui-header-padding-block: var(--space-1);
+  --ui-input-padding-block: calc(5px * var(--ui-scale));
+  --ui-control-padding: calc(10px * var(--ui-scale));
+  --ui-panel-inset: calc(14px * var(--ui-scale));
+  --ui-panel-gutter: calc(6px * var(--ui-scale));
+  --ui-header-inset: calc(14px * var(--ui-scale));
+  --ui-label-control-gap: var(--space-1);
+  --ui-label-value-gap: var(--space-3);
+  --ui-field-gap: calc(6px * var(--ui-scale));
+  --ui-section-gap: var(--space-4);
+  --ui-heading-content-gap: var(--space-2);
+  --ui-group-gap: var(--space-5);
+  --ui-control-gap: var(--space-2);
+  --ui-icon-label-gap: calc(7px * var(--ui-scale));
+  --ui-empty-inset: var(--space-6);
+  --ui-dialog-inset: var(--space-5);
+  --ui-brand-mark-size: calc(22px * var(--ui-scale));
+  --ui-brand-hero-size: calc(40px * var(--ui-scale));
+  --ui-launcher-width: 112ch;
+  --ui-launcher-column: 34ch;
+  --ui-launcher-gap: var(--space-launch);
+  --ui-launcher-inset: var(--space-composition);
+  --ui-launcher-motif-size: calc(168px * var(--ui-scale));
+  --ui-switch-width: calc(34px * var(--ui-scale));
+  --ui-switch-height: calc(20px * var(--ui-scale));
+  --ui-switch-thumb-size: calc(16px * var(--ui-scale));
+  --ui-switch-travel: calc(14px * var(--ui-scale));
+  --control-compact: var(--ui-control-height);
+  --control-default: var(--ui-input-height);
+  --control-comfortable: var(--ui-standard-height);
+  --control-launcher: calc(40px * var(--ui-scale));
+  --control-height-compact: var(--control-compact);
+  --control-height-default: var(--control-default);
+  --control-height-large: var(--control-launcher);
+  --font-xs: var(--type-dense);
+  --font-sm: var(--type-body);
+  --font-md: var(--type-section);
+
+  /* Shape: continuous, soft corners that scale with the control they round. */
+  --radius-xs: calc(5px * var(--ui-scale));
+  --radius-sm: calc(7px * var(--ui-scale));
+  --radius-md: calc(10px * var(--ui-scale));
+  --radius-lg: calc(12px * var(--ui-scale));
+  --radius-xl: calc(16px * var(--ui-scale));
+  --radius-pill: 999px;
+  --radius-control-small: var(--radius-xs);
+  --radius-input: var(--radius-sm);
+  --radius-control: var(--radius-sm);
+  --radius-panel: var(--radius-lg);
+  --radius-dialog: var(--radius-xl);
+  --radius-floating: var(--radius-lg);
+  --radius-launch: var(--radius-xl);
+
+  /* Layers. */
+  --ui-modal-layer: 9000;
+  --ui-popover-layer: 9100;
+  --ui-tooltip-layer: 9200;
+
+  /* Motion: one vocabulary shared by CSS transitions and the WAAPI driver in motion.ts. */
+  --motion-micro: 110ms;
+  --motion-fast: 170ms;
+  --motion-standard: 240ms;
+  --motion-emphasized: 340ms;
+  --ease-standard: cubic-bezier(.25, .9, .3, 1);
+  --ease-emphasized: cubic-bezier(.2, .95, .2, 1);
+  --ease-snappy: cubic-bezier(.3, 1.3, .45, 1);
+  --ease-smooth: cubic-bezier(.22, 1, .36, 1);
+  --ease-elastic: cubic-bezier(.3, 1.45, .4, 1);
+  --ease-exit: cubic-bezier(.4, 0, .9, .6);
+  --ease-spring: var(--ease-snappy);
+  --motion-control: var(--motion-micro);
+  --motion-panel: var(--motion-standard);
+  --motion-dialog: var(--motion-emphasized);
+  --motion-press-scale: .97;
+  --motion-slider-lift: 1.12;
+  --material-blur: 18px;
+  --material-opacity: 86%;
+
+  /* ---- Derived color system ------------------------------------------------ */
+  --bg-base: var(--color-background);
+  --bg-canvas: color-mix(in srgb, var(--color-background) 82%, black);
+  --surface-1: var(--color-surface);
+  --surface-2: color-mix(in srgb, var(--color-text-primary) 5%, var(--color-surface));
+  --surface-3: color-mix(in srgb, var(--color-text-primary) 9%, var(--color-surface));
+  --surface-hover: color-mix(in srgb, var(--color-text-primary) var(--tint-hover), var(--color-surface));
+  --surface-pressed: color-mix(in srgb, var(--color-text-primary) var(--tint-press), var(--color-surface));
+  --surface-raised: color-mix(in srgb, var(--color-text-primary) 8%, var(--color-surface));
+  --surface-popover: color-mix(in srgb, var(--color-text-primary) 6%, var(--color-surface));
+  --surface-inset: color-mix(in srgb, var(--color-background) 55%, var(--color-surface));
+  --surface-glass: color-mix(in srgb, var(--surface-popover) var(--material-opacity), transparent);
+  --surface-app: var(--bg-base);
+  --surface-dock: var(--bg-base);
+  --surface-panel: var(--surface-1);
+  --surface-header: var(--surface-1);
+  --surface-floating: var(--surface-popover);
+  --surface-overlay: var(--scrim);
+  --input-bg: color-mix(in srgb, var(--color-background) 45%, var(--color-surface));
+  --field-bg: var(--input-bg);
+  --text-primary: var(--color-text-primary);
+  --text-secondary: color-mix(in srgb, var(--color-text-primary) 80%, var(--color-surface));
+  --text-muted: color-mix(in srgb, var(--color-text-primary) 62%, var(--color-surface));
+  --text-tertiary: color-mix(in srgb, var(--color-text-primary) 46%, var(--color-surface));
+  --border-subtle: color-mix(in srgb, var(--color-text-primary) 11%, var(--color-surface));
+  --border-strong: color-mix(in srgb, var(--color-text-primary) 20%, var(--color-surface));
+  --border-separator: color-mix(in srgb, var(--color-text-primary) 8%, var(--color-surface));
+  --accent: color-mix(in srgb, var(--color-primary) 66%, var(--color-text-primary));
+  --accent-strong: color-mix(in srgb, var(--color-primary) 82%, var(--color-text-primary));
+  --accent-fill: var(--color-primary);
+  --accent-fill-hover: color-mix(in srgb, var(--color-primary) 88%, var(--color-text-primary));
+  --accent-contrast: var(--ink);
+  --accent-secondary: color-mix(in srgb, var(--color-secondary) 60%, var(--color-text-primary));
+  --accent-soft: color-mix(in srgb, var(--color-primary) 22%, transparent);
+  --creation: color-mix(in srgb, var(--color-accent) 72%, var(--color-text-primary));
+  --creation-soft: color-mix(in srgb, var(--color-accent) 18%, transparent);
+  --selection-bg: color-mix(in srgb, var(--color-primary) 34%, var(--color-surface));
+  --selection-quiet: color-mix(in srgb, var(--color-primary) 16%, var(--color-surface));
+  --selection-text: var(--text-primary);
+  --focus-ring: color-mix(in srgb, var(--color-primary) 55%, var(--color-text-primary));
+  --drag-target: var(--creation);
+  --disabled-opacity: .45;
+  --danger: #ec7a7a;
+  --danger-soft: color-mix(in srgb, var(--danger) 14%, transparent);
+  --success: #74c69a;
+  --success-soft: color-mix(in srgb, var(--success) 14%, transparent);
+  --warning: #e3bb6a;
+  --warning-soft: color-mix(in srgb, var(--warning) 13%, transparent);
+  --scrim: color-mix(in srgb, var(--color-background) 62%, transparent);
+  --shadow-xs: 0 1px 1px color-mix(in srgb, var(--shade) 22%, transparent), 0 2px 6px color-mix(in srgb, var(--shade) 12%, transparent);
+  --shadow-sm: 0 2px 6px color-mix(in srgb, var(--shade) 18%, transparent), 0 8px 22px color-mix(in srgb, var(--shade) 20%, transparent);
+  --shadow-md: 0 4px 12px color-mix(in srgb, var(--shade) 20%, transparent), 0 16px 40px color-mix(in srgb, var(--shade) 28%, transparent);
+  --shadow-lg: 0 8px 20px color-mix(in srgb, var(--shade) 22%, transparent), 0 28px 72px color-mix(in srgb, var(--shade) 38%, transparent);
+  --shadow-subtle: var(--shadow-xs);
+  --shadow-floating: var(--shadow-md);
+  --shadow-float: var(--shadow-md);
+  --hairline-highlight: inset 0 1px 0 color-mix(in srgb, var(--color-text-primary) 6%, transparent);
+  --glass-blur: blur(var(--material-blur)) saturate(140%);
+  --icon-filter: none;
+  --canvas-grid: color-mix(in srgb, var(--color-secondary) 26%, var(--bg-canvas));
+  --canvas-grid-label: var(--text-muted);
+  --canvas-x-axis: #b35d68;
+  --canvas-y-axis: #5c9c78;
+  --canvas-selection: #f2c45a;
+  --canvas-selection-fill: rgba(242, 196, 90, 0.2);
+  --canvas-handle: #f08a63;
+  --connection: color-mix(in srgb, var(--color-primary) 50%, #7fd0ff);
+  --connection-broken: var(--danger);
+  --brand-accent: var(--accent);
+  --brand-surface: color-mix(in srgb, var(--color-primary) 10%, var(--surface-panel));
+  --brand-line: color-mix(in srgb, var(--color-primary) 40%, var(--surface-panel));
+  --brand-gradient: linear-gradient(150deg, color-mix(in srgb, var(--color-primary) 16%, var(--surface-panel)), var(--surface-panel) 70%);
+  --brand-motif-opacity: .34;
+}
+
+/* Light themes: lighter shadows, darker accent text, white ink on primary fills. */
+:root[data-theme='light'] {
+  color-scheme: light;
+  --color-background: #F7F9FC;
+  --color-surface: #FFFFFF;
+  --color-primary: #4F6F8F;
+  --color-secondary: #8EA9B8;
+  --color-accent: #7FA6A0;
+  --color-text-primary: #263746;
+  --shade: #1d2a38;
+  --tint-hover: 5%;
+  --tint-press: 9%;
+  --bg-base: color-mix(in srgb, var(--color-background) 88%, var(--color-secondary));
+  --bg-canvas: color-mix(in srgb, var(--color-background) 92%, var(--color-secondary));
+  --surface-2: color-mix(in srgb, var(--color-text-primary) 4%, var(--color-surface));
+  --surface-3: color-mix(in srgb, var(--color-text-primary) 7%, var(--color-surface));
+  --surface-popover: var(--color-surface);
+  --surface-inset: color-mix(in srgb, var(--color-text-primary) 4%, var(--color-background));
+  --input-bg: var(--color-surface);
+  --text-secondary: color-mix(in srgb, var(--color-text-primary) 82%, var(--color-surface));
+  --text-muted: color-mix(in srgb, var(--color-text-primary) 66%, var(--color-surface));
+  --text-tertiary: color-mix(in srgb, var(--color-text-primary) 50%, var(--color-surface));
+  --border-subtle: color-mix(in srgb, var(--color-text-primary) 13%, var(--color-surface));
+  --border-strong: color-mix(in srgb, var(--color-text-primary) 24%, var(--color-surface));
+  --border-separator: color-mix(in srgb, var(--color-text-primary) 9%, var(--color-surface));
+  --accent: color-mix(in srgb, var(--color-primary) 88%, var(--color-text-primary));
+  --accent-strong: color-mix(in srgb, var(--color-primary) 70%, var(--color-text-primary));
+  --accent-fill-hover: color-mix(in srgb, var(--color-primary) 86%, var(--color-text-primary));
+  --accent-soft: color-mix(in srgb, var(--color-primary) 13%, transparent);
+  --creation: color-mix(in srgb, var(--color-accent) 70%, var(--color-text-primary));
+  --selection-bg: color-mix(in srgb, var(--color-primary) 20%, var(--color-surface));
+  --selection-quiet: color-mix(in srgb, var(--color-primary) 9%, var(--color-surface));
+  --focus-ring: var(--color-primary);
+  --danger: #c2424c;
+  --success: #2f8458;
+  --warning: #9a6a06;
+  --scrim: color-mix(in srgb, var(--color-text-primary) 26%, transparent);
+  --shadow-xs: 0 1px 2px color-mix(in srgb, var(--shade) 10%, transparent);
+  --shadow-sm: 0 1px 3px color-mix(in srgb, var(--shade) 8%, transparent), 0 6px 18px color-mix(in srgb, var(--shade) 9%, transparent);
+  --shadow-md: 0 2px 6px color-mix(in srgb, var(--shade) 8%, transparent), 0 14px 36px color-mix(in srgb, var(--shade) 13%, transparent);
+  --shadow-lg: 0 4px 12px color-mix(in srgb, var(--shade) 9%, transparent), 0 26px 64px color-mix(in srgb, var(--shade) 18%, transparent);
+  --hairline-highlight: none;
+  --icon-filter: none;
+  --canvas-grid: color-mix(in srgb, var(--color-secondary) 34%, var(--bg-canvas));
+  --canvas-x-axis: #c46872;
+  --canvas-y-axis: #4f9070;
+  --canvas-selection: #c98200;
+  --canvas-selection-fill: rgba(241, 168, 0, 0.16);
+  --canvas-handle: #d94f32;
+}
+
+/* The five palettes from the app color palette system. */
+:root[data-palette='cloud-blue'] { --color-background: #F7F9FC; --color-surface: #FFFFFF; --color-primary: #4F6F8F; --color-secondary: #8EA9B8; --color-accent: #7FA6A0; --color-text-primary: #263746; }
+:root[data-palette='meadow-cream'] { --color-background: #FBF7EA; --color-surface: #F1F3E7; --color-primary: #607A64; --color-secondary: #A5B58A; --color-accent: #C9AF78; --color-text-primary: #38463B; }
+:root[data-palette='blush-berry'] { --color-background: #FFF5F7; --color-surface: #F8E7EC; --color-primary: #9F5F75; --color-secondary: #D7A6B5; --color-accent: #A799BA; --color-text-primary: #4A3941; }
+:root[data-palette='midnight-blue'] { --color-background: #0F141A; --color-surface: #171E27; --color-primary: #527397; --color-secondary: #3F586F; --color-accent: #6D8D8A; --color-text-primary: #D8E0E8; }
+:root[data-palette='night-garden'] { --color-background: #171518; --color-surface: #211E23; --color-primary: #806F8D; --color-secondary: #5F6D78; --color-accent: #738778; --color-text-primary: #DDD8DF; }
+
+/* Compact density: same proportions, tighter rows for large hierarchies and inspectors. */
+:root[data-compact='true'] {
+  --type-body: calc(13px * var(--ui-scale));
+  --type-dense: calc(12.5px * var(--ui-scale));
+  --type-caption: calc(11.5px * var(--ui-scale));
+  --ui-control-height: calc(26px * var(--ui-scale));
+  --ui-input-height: calc(26px * var(--ui-scale));
+  --ui-standard-height: calc(28px * var(--ui-scale));
+  --ui-tab-height: calc(26px * var(--ui-scale));
+  --ui-tree-row-height: calc(24px * var(--ui-scale));
+  --ui-toolbar-height: calc(36px * var(--ui-scale));
+  --ui-titlebar-height: calc(40px * var(--ui-scale));
+  --ui-panel-header-height: calc(34px * var(--ui-scale));
+  --ui-input-padding-block: calc(3px * var(--ui-scale));
+  --ui-control-padding: calc(8px * var(--ui-scale));
+  --ui-field-gap: calc(4px * var(--ui-scale));
+  --ui-section-gap: var(--space-3);
+  --ui-panel-inset: calc(10px * var(--ui-scale));
+  --ui-header-inset: calc(10px * var(--ui-scale));
+}
+
+/* Increased contrast keeps the palette hue but strengthens text and every separator. */
+:root[data-high-contrast='true'] {
+  --text-secondary: var(--color-text-primary);
+  --text-muted: color-mix(in srgb, var(--color-text-primary) 86%, var(--color-surface));
+  --text-tertiary: color-mix(in srgb, var(--color-text-primary) 74%, var(--color-surface));
+  --border-subtle: color-mix(in srgb, var(--color-text-primary) 34%, var(--color-surface));
+  --border-strong: color-mix(in srgb, var(--color-text-primary) 56%, var(--color-surface));
+  --border-separator: color-mix(in srgb, var(--color-text-primary) 26%, var(--color-surface));
+  --selection-bg: color-mix(in srgb, var(--color-primary) 55%, var(--color-surface));
+  --material-opacity: 100%;
+}
+
+:root:lang(zh-CN) {
+  --tracking-ui: 0.01em;
+  --tracking-copy: 0.01em;
+}

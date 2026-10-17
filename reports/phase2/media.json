@@ -1,0 +1,47 @@
+{
+  "format": "nova-v26.28-media-audit",
+  "version": 1,
+  "release": "26.28",
+  "regressionOrigin": "26.28",
+  "engineVersion": "26.32.0",
+  "buildEngineVersion": "26.32.0",
+  "generatedAt": "2026-09-28T18:14:05.272Z",
+  "development": true,
+  "expectedRelease": "26.32",
+  "qualificationTarget": "26.28",
+  "qualifiedRelease": null,
+  "baselineVersion": "26.32.0",
+  "overlayVersion": "26.28.0",
+  "sourceRoots": [
+    "."
+  ],
+  "buildRoot": ".",
+  "status": "passed",
+  "checks": [
+    {
+      "name": "Nested parent fade multiplies child pose and scrubbing reverses without accumulating drift",
+      "status": "passed"
+    },
+    {
+      "name": "Nested sequence preserves final animation pose at non-looping endpoint",
+      "status": "passed"
+    },
+    {
+      "name": "Two nested fade envelopes multiply rather than replacing each other",
+      "status": "passed"
+    },
+    {
+      "name": "Reverse traversal enters nested endpoint once and explicit seek never emits commands",
+      "status": "passed"
+    },
+    {
+      "name": "Nested audio gains inherit parent fade and seek voice sample remains exact",
+      "status": "passed"
+    },
+    {
+      "name": "Audition mute and solo are detached from authored data, reset and dispose release voices",
+      "status": "passed"
+    }
+  ],
+  "scope": "Production timeline/animation/mixer/audition semantics with observable HTML media host. No physical audio, GPU or assistive-device qualification."
+}

@@ -1,0 +1,95 @@
+{
+  "format": "nova-v26.32-phase2-workflows-user-audit",
+  "version": 1,
+  "release": "26.32",
+  "regressionOrigin": "26.32",
+  "expectedRelease": "26.32",
+  "development": false,
+  "qualifiedRelease": null,
+  "generatedAt": "2026-09-28T18:43:24.974Z",
+  "status": "passed",
+  "checks": [
+    {
+      "name": "top-down: create from launcher, save, reload, run and stop",
+      "status": "passed"
+    }
+  ],
+  "observations": [
+    {
+      "name": "actual-project-download",
+      "file": "E:\\Nova_A\\reports\\phase2\\browser\\v26.17-phase2-top-down.nova",
+      "bytes": 884048
+    },
+    {
+      "name": "actual-project-download",
+      "file": "E:\\Nova_A\\reports\\phase2\\browser\\v26.17-phase2-top-down-reopened.nova",
+      "bytes": 884048
+    },
+    {
+      "name": "dismissed-notification",
+      "text": "Project migration"
+    },
+    {
+      "name": "dismissed-notification",
+      "text": "Project upgrade"
+    },
+    {
+      "name": "dismissed-notification",
+      "text": "Save project"
+    },
+    {
+      "name": "dismissed-notification",
+      "text": "Save Project"
+    },
+    {
+      "id": "top-down",
+      "saveKey": "nova_a.game_save.v2:31b08a88-ee42-406c-8d3c-6353c3bb24a5:slot2",
+      "values": {
+        "phase2_marker": true,
+        "phase2_score": 42
+      },
+      "scope": "Rhai authored through the editor and executed by actual browser runtime; Web Storage readback only."
+    },
+    {
+      "id": "top-down",
+      "input": "W",
+      "before": [
+        -1.2958333330233525,
+        3.073804019788013e-12
+      ],
+      "after": [
+        -1.2958333330233525,
+        1.4567747466848
+      ],
+      "focus": "<body>\n    <div id=\"app\" data-v-app=\"\"><section class=\"ui-workspace-host\" data-displayed-view=\"editor\"><div data-v-f516078e=\"\" class=\"editor-root\" data-control-scope=\"editor-shell\"><!----><header data-v-2e835e5f=\"\" data-v-f516078e=\"\" class=\"top-bar\" style=\"--menu-left: 75.234375px;\"><a data-v-2e835e5f=\"\" class=\"brand\" href=\"https://whitelists.top\" target=\"_blank\" rel=\"noreferrer\" aria-label=\"Nova_A by Whitelist\" data-surface=\"editor-shell\" data-testid=\"nova-editor-shell-link-1\" data-test-identit"
+    },
+    {
+      "name": "actual-project-download",
+      "file": "E:\\Nova_A\\reports\\phase2\\browser\\v26.17-phase2-top-down-stopped.nova",
+      "bytes": 884048
+    },
+    {
+      "id": "top-down",
+      "pixels": {
+        "colors": 139,
+        "nonDominant": 281270
+      },
+      "scenes": 2,
+      "assets": 7,
+      "scope": "Fresh creation and real save/reload/run/stop; top-down keyboard movement. Does not certify every template mechanic."
+    }
+  ],
+  "captures": [
+    "v26.32-phase2-workflows-top-down-running.png"
+  ],
+  "consoleErrors": [],
+  "browser": {
+    "protocolVersion": "1.3",
+    "product": "Edg/147.0.3912.72",
+    "revision": "@d4380ba2b9dc3452fbccdc737e69d7f67a09122c",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/147.0.0.0 Safari/537.36 Edg/147.0.0.0",
+    "jsVersion": "14.7.25.7"
+  },
+  "commandTimeoutMs": 30000,
+  "scope": "Development rebuild production bundle; not published-release qualification. Recorded real Edge input and DOM observations against production dist. Headless software rendering and download/file-input fallback; physical assistive technology and native OS picker behavior are not measured."
+}

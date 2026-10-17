@@ -1,0 +1,9 @@
+{
+  "format": "nova-retained-layout-baseline",
+  "version": 1,
+  "baselineCommit": "0bfc303",
+  "originalPath": "src/visual/graphLayoutEngine.ts",
+  "bytes": 20866,
+  "sha256": "d9cdf25ef2edac62cae0d016d5b335d8112adfb1feba6d82c7c6973cf478fb73",
+  "purpose": "26.24 同进程布局性能与路由回归的不可变 26.23 历史基线；解压后校验原始源码，不作为当前引擎实现。"
+}

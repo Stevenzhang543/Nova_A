@@ -1,0 +1,26 @@
+{
+  "format": "nova-v26.23-runtime-regressions",
+  "version": 1,
+  "release": "26.23",
+  "engineVersion": "26.32.0",
+  "expectedRelease": "26.23",
+  "qualifiedRelease": null,
+  "development": true,
+  "generatedAt": "2026-09-28T18:14:47.197Z",
+  "status": "passed",
+  "scope": "Actual metadata/parser/debug/profiler owners; profiler settings are a controlled capacity fixture. Separate runtime and browser tests cover gameplay, links and UI.",
+  "checks": [
+    {
+      "name": "Concurrent reload metadata is independent and empty previous source remains rollbackable",
+      "status": "passed"
+    },
+    {
+      "name": "Snapshot inspection handles maps and arrays without invoking accessors, prototypes or object conversion",
+      "status": "passed"
+    },
+    {
+      "name": "Bounded profiler history preserves sequence/reactivity and obeys capture lifetime",
+      "status": "passed"
+    }
+  ]
+}

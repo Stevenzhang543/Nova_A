@@ -1,0 +1,277 @@
+/** 脚本 API 编辑资料：定义引擎调用信息，提供查询、补全及可导出的接口说明。 */
+export const SCRIPT_API_VERSION = 2 as const
+export const SCRIPT_API_MINIMUM_VERSION = 1 as const
+
+export type ScriptApiNamespace =
+  | 'lifecycle' | 'scene' | 'object' | 'component' | 'transform' | 'input' | 'physics'
+  | 'ui' | 'audio' | 'animation' | 'navigation' | 'save' | 'timing' | 'logging'
+  | 'resources' | 'signals' | 'tasks' | 'testing' | 'gameplay' | 'network'
+
+export interface ScriptApiEntry {
+  name: string
+  signature: string
+  namespace: ScriptApiNamespace
+  category: string
+  detail: string
+  example: string
+  since: '1.0' | '2.0'
+  deprecated?: { replacement: string; removal: 'API v3'; reason: string }
+  documentation: string
+}
+
+export type ScriptApiThreadRule = 'main-thread' | 'fixed-step' | 'callback-boundary' | 'worker-safe'
+export type ScriptApiDeterminism = 'deterministic' | 'seeded' | 'host-dependent'
+export interface ScriptApiV2Binding extends ScriptApiEntry {
+  id: string
+  module: ScriptApiNamespace
+  callable: string
+  resultConvention: 'value' | 'result' | 'queued-command' | 'lifecycle'
+  lifetime: 'callback' | 'scene' | 'project' | 'persistent-save'
+  threadRule: ScriptApiThreadRule
+  determinism: ScriptApiDeterminism
+  permissions: readonly string[]
+}
+
+export interface ScriptApiV2Manifest {
+  format: 'nova-rhai-api-manifest'
+  version: 2
+  minimumCompatibleVersion: 1
+  errorModel: 'Result values are explicit; queued host mutations fail through diagnostics and never expose host exceptions.'
+  handleModel: 'Handles are typed, versioned, copied values whose validity must be checked at each callback boundary.'
+  entries: readonly ScriptApiV2Binding[]
+}
+
+type Spec = readonly [name: string, signature: string, namespace: ScriptApiNamespace, detail: string, example: string, replacement?: string]
+
+// Rhai callables remain compact flat snake_case names. `namespace` is the
+// frozen API v1 documentation, completion, permission and compatibility group.
+const SPECS: readonly Spec[] = [
+  ['awake', 'fn awake()', 'lifecycle', 'Runs once when this instance enters play.', 'fn awake() { log_info("ready"); }'],
+  ['start', 'fn start()', 'lifecycle', 'Runs after every active instance has awakened.', 'fn start() { signal_emit("ready", entity()); }'],
+  ['fixed_update', 'fn fixed_update(dt)', 'lifecycle', 'Runs once per fixed physics tick.', 'fn fixed_update(dt) { apply_force(2.0 * dt, 0.0); }'],
+  ['update', 'fn update(dt)', 'lifecycle', 'Runs once per rendered gameplay frame.', 'fn update(dt) { ui_set_value(time_elapsed()); }'],
+  ['late_update', 'fn late_update(dt)', 'lifecycle', 'Runs after update in the same frame.', 'fn late_update(dt) { log_debug(`frame ${time_frame()}`); }'],
+  ['on_destroy', 'fn on_destroy()', 'lifecycle', 'Runs before the owning entity is removed.', 'fn on_destroy() { task_cancel("load"); }'],
+  ['on_timer', 'fn on_timer(name)', 'lifecycle', 'Receives an expired named timer.', 'fn on_timer(name) { signal_emit(name, true); }'],
+  ['on_task', 'fn on_task(name)', 'tasks', 'Receives completion of a deferred task.', 'fn on_task(name) { log_info(name); }'],
+  ['on_signal', 'fn on_signal(name, payload, source)', 'signals', 'Receives a queued signal at a safe boundary.', 'fn on_signal(name, payload, source) { log_debug(name); }'],
+  ['on_collision_enter', 'fn on_collision_enter(other, px, py, nx, ny, rvx, rvy)', 'physics', 'Receives the first solid contact tick.', 'fn on_collision_enter(other, px, py, nx, ny, rvx, rvy) { log_info(other); }'],
+  ['on_collision_stay', 'fn on_collision_stay(other, px, py, nx, ny, rvx, rvy)', 'physics', 'Receives each continuing solid contact tick.', 'fn on_collision_stay(other, px, py, nx, ny, rvx, rvy) { }'],
+  ['on_collision_exit', 'fn on_collision_exit(other, px, py, nx, ny, rvx, rvy)', 'physics', 'Receives the end of a solid contact.', 'fn on_collision_exit(other, px, py, nx, ny, rvx, rvy) { }'],
+  ['on_trigger_enter', 'fn on_trigger_enter(other, px, py, nx, ny, rvx, rvy)', 'physics', 'Receives the first sensor overlap tick.', 'fn on_trigger_enter(other, px, py, nx, ny, rvx, rvy) { signal_emit("entered", other); }'],
+  ['on_trigger_stay', 'fn on_trigger_stay(other, px, py, nx, ny, rvx, rvy)', 'physics', 'Receives each continuing sensor overlap tick.', 'fn on_trigger_stay(other, px, py, nx, ny, rvx, rvy) { }'],
+  ['on_trigger_exit', 'fn on_trigger_exit(other, px, py, nx, ny, rvx, rvy)', 'physics', 'Receives the end of a sensor overlap.', 'fn on_trigger_exit(other, px, py, nx, ny, rvx, rvy) { }'],
+  ['entity_handle', 'entity_handle() -> Handle<Entity>', 'object', 'Returns this entity as a stable versioned handle.', 'let self = entity_handle();'],
+  ['find_entity_handle', 'find_entity_handle(name) -> Handle<Entity>', 'object', 'Finds an entity or returns an invalid handle with an error.', 'let enemy = find_entity_handle("Enemy");'],
+  ['entity', 'entity() -> string', 'object', 'Returns the current entity UUID.', 'let id = entity();'],
+  ['entity_name', 'entity_name() -> string', 'object', 'Returns the current entity display name.', 'log_info(entity_name());'],
+  ['find_entity', 'find_entity(name) -> string', 'object', 'Compatibility UUID lookup.', 'let id = find_entity("Camera");', 'find_entity_handle'],
+  ['query_tag', 'query_tag(tag, limit) -> Array<Handle<Entity>>', 'object', 'Returns at most 256 stable entity handles with a tag.', 'let enemies = query_tag("enemy", 32);'],
+  ['query_group', 'query_group(group, limit) -> Array<Handle<Entity>>', 'object', 'Returns at most 256 stable entity handles in a group.', 'let actors = query_group("actors", 64);'],
+  ['query_component', 'query_component(kind, limit) -> Array<Handle<Entity>>', 'object', 'Returns at most 256 entity handles owning a component kind.', 'let cameras = query_component("Camera2D", 8);'],
+  ['query_radius', 'query_radius(x, y, radius, limit) -> Array<Handle<Entity>>', 'object', 'Returns bounded handles inside a finite world-space radius.', 'let nearby = query_radius(0.0, 0.0, 8.0, 32);'],
+  ['entity_name_on', 'entity_name_on(handle) -> string', 'object', 'Reads the query-snapshot name for an entity handle.', 'let name = entity_name_on(handle);'],
+  ['entity_enabled_on', 'entity_enabled_on(handle) -> bool', 'object', 'Reads the query-snapshot enabled state for an entity handle.', 'if entity_enabled_on(handle) { }'],
+  ['entity_position_x_on', 'entity_position_x_on(handle) -> float', 'object', 'Reads query-snapshot world X for an entity handle.', 'let x = entity_position_x_on(handle);'],
+  ['entity_position_y_on', 'entity_position_y_on(handle) -> float', 'object', 'Reads query-snapshot world Y for an entity handle.', 'let y = entity_position_y_on(handle);'],
+  ['entity_set_position', 'entity_set_position(handle, x, y)', 'object', 'Queues a finite world position for a validated entity handle.', 'entity_set_position(target, 4.0, 2.0);'],
+  ['entity_set_rotation', 'entity_set_rotation(handle, radians)', 'object', 'Queues a world rotation for a validated entity handle.', 'entity_set_rotation(target, 1.57);'],
+  ['entity_set_scale', 'entity_set_scale(handle, x, y)', 'object', 'Queues a non-zero world scale for a validated entity handle.', 'entity_set_scale(target, 2.0, 2.0);'],
+  ['entity_set_enabled', 'entity_set_enabled(handle, enabled)', 'object', 'Enables or disables a validated entity.', 'entity_set_enabled(target, false);'],
+  ['entity_add_tag', 'entity_add_tag(handle, tag)', 'object', 'Adds one bounded tag to a validated entity.', 'entity_add_tag(target, "enemy");'],
+  ['entity_remove_tag', 'entity_remove_tag(handle, tag)', 'object', 'Removes one tag from a validated entity.', 'entity_remove_tag(target, "enemy");'],
+  ['entity_add_group', 'entity_add_group(handle, group)', 'object', 'Adds a validated entity to a bounded group.', 'entity_add_group(target, "actors");'],
+  ['entity_remove_group', 'entity_remove_group(handle, group)', 'object', 'Removes a validated entity from a group.', 'entity_remove_group(target, "actors");'],
+  ['entity_destroy', 'entity_destroy(handle)', 'object', 'Safely destroys the validated target at the structural boundary.', 'entity_destroy(target);'],
+  ['component_handle', 'component_handle(kind) -> Handle<Component>', 'component', 'Returns a stable component handle or explicit invalid handle.', 'let body = component_handle("RigidBody2D");'],
+  ['has_component', 'has_component(kind) -> bool', 'component', 'Reports whether this entity owns an enabled component.', 'if has_component("Animator") { animator_play("Idle"); }'],
+  ['get_component', 'get_component(kind) -> string', 'component', 'Legacy component URI lookup.', 'let body = get_component("RigidBody2D");', 'component_handle'],
+  ['component_set_enabled_on', 'component_set_enabled_on(handle, component, enabled)', 'component', 'Enables or disables an existing target component.', 'component_set_enabled_on(target, "DamageHitbox2D", false);'],
+  ['transform', 'transform() -> TransformSnapshot', 'transform', 'Reads one coherent world-transform snapshot.', 'let pose = transform();'],
+  ['set_position', 'set_position(x, y)', 'transform', 'Queues an exact finite world position.', 'set_position(4.0, 2.0);'],
+  ['set_rotation', 'set_rotation(radians)', 'transform', 'Queues world rotation in radians.', 'set_rotation(1.57079632679);'],
+  ['set_scale', 'set_scale(x, y)', 'transform', 'Queues world scale.', 'set_scale(2.0, 2.0);'],
+  ['input_down', 'input_down(action) -> bool', 'input', 'True while an action is held.', 'if input_down("Move") { }'],
+  ['input_pressed', 'input_pressed(action) -> bool', 'input', 'True on an action press edge.', 'if input_pressed("Jump") { apply_impulse(0.0, 8.0); }'],
+  ['input_released', 'input_released(action) -> bool', 'input', 'True on an action release edge.', 'if input_released("Fire") { }'],
+  ['input_performed', 'input_performed(action) -> bool', 'input', 'True when Press, Hold, Tap, or Multi-tap reaches Performed.', 'if input_performed("Confirm") { }'],
+  ['input_cancelled', 'input_cancelled(action) -> bool', 'input', 'True when an interaction is released before completion.', 'if input_cancelled("Charge") { }'],
+  ['input_phase', 'input_phase(action) -> string', 'input', 'Returns idle, started, performed, or cancelled.', 'let phase = input_phase("Charge");'],
+  ['input_duration', 'input_duration(action) -> float', 'input', 'Returns the current held duration in seconds.', 'let held = input_duration("Charge");'],
+  ['input_context_active', 'input_context_active(name) -> bool', 'input', 'Reports whether an input context is active.', 'if input_context_active("Menu") { }'],
+  ['input_map_active', 'input_map_active(name) -> bool', 'input', 'Reports whether an action map is active.', 'if input_map_active("Combat") { }'],
+  ['input_scheme', 'input_scheme() -> string', 'input', 'Returns the active control scheme.', 'let scheme = input_scheme();'],
+  ['input_context_push', 'input_context_push(name, priority, consume)', 'input', 'Pushes or updates a bounded input context.', 'input_context_push("Menu", 100, true);'],
+  ['input_context_pop', 'input_context_pop(name)', 'input', 'Removes an active non-root input context.', 'input_context_pop("Menu");'],
+  ['input_map_enable', 'input_map_enable(name)', 'input', 'Enables a bounded named action map.', 'input_map_enable("Combat");'],
+  ['input_map_disable', 'input_map_disable(name)', 'input', 'Disables a named non-default action map.', 'input_map_disable("Combat");'],
+  ['input_scheme_set', 'input_scheme_set(name)', 'input', 'Selects a named input scheme.', 'input_scheme_set("Gamepad");'],
+  ['input_axis', 'input_axis(action) -> float', 'input', 'Reads a scalar action.', 'let x = input_axis("Horizontal");'],
+  ['input_vector', 'input_vector(action) -> Vec2', 'input', 'Reads a Vector2 action.', 'let move = input_vector("Move");'],
+  ['input_vector_x', 'input_vector_x(action) -> float', 'input', 'Reads a Vector2 x component.', 'let x = input_vector_x("Move");'],
+  ['input_vector_y', 'input_vector_y(action) -> float', 'input', 'Reads a Vector2 y component.', 'let y = input_vector_y("Move");'],
+  ['mouse_x', 'mouse_x() -> float', 'input', 'Reads pointer x in the viewport.', 'let x = mouse_x();'],
+  ['mouse_y', 'mouse_y() -> float', 'input', 'Reads pointer y in the viewport.', 'let y = mouse_y();'],
+  ['mouse_world_x', 'mouse_world_x() -> float', 'input', 'Reads pointer x in game-camera world units.', 'set_position(mouse_world_x(), mouse_world_y());'],
+  ['mouse_world_y', 'mouse_world_y() -> float', 'input', 'Reads pointer y in game-camera world units.', 'set_position(mouse_world_x(), mouse_world_y());'],
+  ['view_min_x', 'view_min_x() -> float', 'input', 'Reads the active game camera left world bound.', 'if transform().position_x < view_min_x() { destroy(); }'],
+  ['view_max_x', 'view_max_x() -> float', 'input', 'Reads the active game camera right world bound.', 'if transform().position_x > view_max_x() { destroy(); }'],
+  ['view_min_y', 'view_min_y() -> float', 'input', 'Reads the active game camera bottom world bound.', 'if transform().position_y < view_min_y() { destroy(); }'],
+  ['view_max_y', 'view_max_y() -> float', 'input', 'Reads the active game camera top world bound.', 'if transform().position_y > view_max_y() { destroy(); }'],
+  ['viewport_width', 'viewport_width() -> float', 'input', 'Reads the current game viewport width in CSS pixels.', 'let aspect = viewport_width() / viewport_height();'],
+  ['viewport_height', 'viewport_height() -> float', 'input', 'Reads the current game viewport height in CSS pixels.', 'let aspect = viewport_width() / viewport_height();'],
+  ['wheel_x', 'wheel_x() -> float', 'input', 'Reads horizontal wheel delta.', 'let dx = wheel_x();'],
+  ['wheel_y', 'wheel_y() -> float', 'input', 'Reads vertical wheel delta.', 'let dy = wheel_y();'],
+  ['is_down', 'is_down(action) -> bool', 'input', 'Legacy held-action alias.', 'if is_down("Move") { }', 'input_down'],
+  ['was_pressed', 'was_pressed(action) -> bool', 'input', 'Legacy press-edge alias.', 'if was_pressed("Jump") { }', 'input_pressed'],
+  ['was_released', 'was_released(action) -> bool', 'input', 'Legacy release-edge alias.', 'if was_released("Fire") { }', 'input_released'],
+  ['axis', 'axis(action) -> float', 'input', 'Legacy scalar-action alias.', 'let x = axis("Horizontal");', 'input_axis'],
+  ['vector', 'vector(action) -> Vec2', 'input', 'Legacy Vector2-action alias.', 'let move = vector("Move");', 'input_vector'],
+  ['rigid_body', 'rigid_body() -> RigidBodySnapshot', 'physics', 'Reads body velocity, angular velocity, mass and type.', 'let body = rigid_body();'],
+  ['apply_force', 'apply_force(x, y)', 'physics', 'Applies force in newtons during a fixed step.', 'apply_force(12.0, 0.0);'],
+  ['apply_impulse', 'apply_impulse(x, y)', 'physics', 'Applies instantaneous impulse in N·s.', 'apply_impulse(0.0, 8.0);'],
+  ['set_velocity', 'set_velocity(x, y)', 'physics', 'Sets linear velocity in world units per second.', 'set_velocity(3.0, rigid_body().velocity_y);'],
+  ['set_angular_velocity', 'set_angular_velocity(radians_per_second)', 'physics', 'Sets angular velocity.', 'set_angular_velocity(0.5);'],
+  ['character_is_on_floor', 'character_is_on_floor() -> bool', 'physics', 'Reads authoritative floor state.', 'if character_is_on_floor() { }'],
+  ['character_is_on_wall', 'character_is_on_wall() -> bool', 'physics', 'Reads authoritative wall state.', 'if character_is_on_wall() { }'],
+  ['character_is_on_ceiling', 'character_is_on_ceiling() -> bool', 'physics', 'Reads authoritative ceiling state.', 'if character_is_on_ceiling() { }'],
+  ['can_coyote_jump', 'can_coyote_jump() -> bool', 'physics', 'Reports floor contact or an active coyote window.', 'if can_coyote_jump() { }'],
+  ['character_can_coyote_jump', 'character_can_coyote_jump() -> bool', 'physics', 'Legacy coyote-window name.', 'if character_can_coyote_jump() { }', 'can_coyote_jump'],
+  ['character_floor_normal', 'character_floor_normal() -> Vec2', 'physics', 'Returns the current floor normal.', 'let normal = character_floor_normal();'],
+  ['character_platform_velocity', 'character_platform_velocity() -> Vec2', 'physics', 'Returns supporting-platform velocity.', 'let platform = character_platform_velocity();'],
+  ['move_character', 'move_character(x, y)', 'physics', 'Queues CharacterBody2D displacement for the next fixed step.', 'move_character(2.0 * dt, 0.0);'],
+  ['ui_set_text', 'ui_set_text(text)', 'ui', 'Sets Text or TextRenderer2D content on this entity.', 'ui_set_text(`Score: ${save_get("score", 0)}`);'],
+  ['ui_set_value', 'ui_set_value(value)', 'ui', 'Sets Slider, ProgressBar or Checkbox value.', 'ui_set_value(0.75);'],
+  ['ui_set_text_on', 'ui_set_text_on(handle, text)', 'ui', 'Sets text on a validated target UI/world-text entity.', 'ui_set_text_on(label, "Ready");'],
+  ['ui_set_value_on', 'ui_set_value_on(handle, value)', 'ui', 'Sets a validated target Slider, ProgressBar, or Checkbox.', 'ui_set_value_on(health_bar, 0.75);'],
+  ['animator_handle', 'animator_handle() -> Handle<Animator>', 'animation', 'Returns this Animator as a stable handle.', 'let animator = animator_handle();'],
+  ['animator', 'animator() -> string', 'animation', 'Legacy Animator URI lookup.', 'let animator = animator();', 'animator_handle'],
+  ['animator_set_bool', 'animator_set_bool(name, value)', 'animation', 'Sets a Boolean Animator parameter.', 'animator_set_bool("moving", true);'],
+  ['animator_set_float', 'animator_set_float(name, value)', 'animation', 'Sets a float Animator parameter.', 'animator_set_float("speed", 3.0);'],
+  ['animator_set_integer', 'animator_set_integer(name, value)', 'animation', 'Sets an integer Animator parameter.', 'animator_set_integer("weapon", 2);'],
+  ['animator_trigger', 'animator_trigger(name)', 'animation', 'Raises an Animator trigger.', 'animator_trigger("jump");'],
+  ['animator_play', 'animator_play(state)', 'animation', 'Requests an Animator state.', 'animator_play("Run");'],
+  ['audio_source_handle', 'audio_source_handle() -> Handle<AudioSource>', 'audio', 'Returns this AudioSource as a stable handle.', 'let source = audio_source_handle();'],
+  ['audio_source', 'audio_source() -> string', 'audio', 'Legacy AudioSource URI lookup.', 'let source = audio_source();', 'audio_source_handle'],
+  ['audio_play', 'audio_play()', 'audio', 'Plays this entity AudioSource.', 'audio_play();'],
+  ['audio_pause', 'audio_pause()', 'audio', 'Pauses this entity AudioSource.', 'audio_pause();'],
+  ['audio_stop', 'audio_stop()', 'audio', 'Stops this entity AudioSource.', 'audio_stop();'],
+  ['navigation_set_target', 'navigation_set_target(x, y)', 'navigation', 'Sets this NavigationAgent2D world target.', 'navigation_set_target(10.0, 4.0);'],
+  ['instantiate', 'instantiate(prefab)', 'scene', 'Queues a prefab instance.', 'instantiate("asset://enemy-prefab");'],
+  ['spawn_at', 'spawn_at(prefab, x, y, rotation, scale_x, scale_y) -> Handle<Entity>', 'scene', 'Queues a prefab at an exact transform and returns a stable pending handle.', 'let enemy = spawn_at("asset://enemy", 4.0, 2.0, 0.0, 1.0, 1.0);'],
+  ['destroy', 'destroy()', 'scene', 'Queues safe entity destruction.', 'destroy();'],
+  ['despawn', 'despawn()', 'scene', 'Returns a pooled object or safely destroys it.', 'despawn();'],
+  ['scene_load', 'scene_load(scene)', 'scene', 'Queues a scene switch.', 'scene_load("Level 2");'],
+  ['scene_reload', 'scene_reload()', 'scene', 'Queues active-scene reload.', 'scene_reload();'],
+  ['scene_quit', 'scene_quit()', 'scene', 'Requests clean runtime shutdown.', 'scene_quit();'],
+  ['game_pause', 'game_pause(paused)', 'gameplay', 'Pauses or resumes scaled gameplay while input/update callbacks remain available.', 'game_pause(true);'],
+  ['game_paused', 'game_paused() -> bool', 'gameplay', 'Reports the current gameplay pause state.', 'if game_paused() { }'],
+  ['checkpoint_set', 'checkpoint_set(name)', 'gameplay', 'Captures bounded scene transforms, health, score, and session state.', 'checkpoint_set("room-2");'],
+  ['checkpoint_has', 'checkpoint_has(name) -> bool', 'gameplay', 'Reports whether a runtime checkpoint exists.', 'if checkpoint_has("room-2") { }'],
+  ['checkpoint_restore', 'checkpoint_restore(name)', 'gameplay', 'Restores a same-scene checkpoint or fails explicitly.', 'checkpoint_restore("room-2");'],
+  ['score_get', 'score_get() -> float', 'gameplay', 'Returns the bounded session score.', 'let score = score_get();'],
+  ['score_set', 'score_set(value)', 'gameplay', 'Sets the bounded session score.', 'score_set(0.0);'],
+  ['score_add', 'score_add(value)', 'gameplay', 'Adds to the bounded session score.', 'score_add(10.0);'],
+  ['session_get', 'session_get(key, fallback) -> value', 'gameplay', 'Reads a bounded serializable session value.', 'let wave = session_get("wave", 1);'],
+  ['session_set', 'session_set(key, value)', 'gameplay', 'Writes a bounded serializable session value.', 'session_set("wave", 2);'],
+  ['network_enabled', 'network_enabled() -> bool', 'network', 'Reports whether reviewed project networking and explicit permission are enabled.', 'if network_enabled() { }'],
+  ['network_connected', 'network_connected() -> bool', 'network', 'Reports whether the optional runtime has an active session transport.', 'if network_connected() { network_rpc("ready", true); }'],
+  ['network_is_authority', 'network_is_authority() -> bool', 'network', 'Reports whether this peer owns server or host authority.', 'if network_is_authority() { }'],
+  ['network_peer_count', 'network_peer_count() -> int', 'network', 'Returns the bounded number of known remote peers.', 'let peers = network_peer_count();'],
+  ['network_local_peer', 'network_local_peer() -> string', 'network', 'Returns the current bounded local peer identifier.', 'let peer = network_local_peer();'],
+  ['network_role', 'network_role() -> string', 'network', 'Returns client, server, or host.', 'if network_role() == "client" { }'],
+  ['network_tick', 'network_tick() -> int', 'network', 'Returns the authoritative network tick observed at this callback boundary.', 'let tick = network_tick();'],
+  ['network_rpc', 'network_rpc(name, payload)', 'network', 'Queues a declared RPC through explicit permission, authority, direction, schema, rate, payload, and bandwidth checks.', 'network_rpc("player.ready", #{ ready: true });'],
+  ['time', 'time() -> TimeSnapshot', 'timing', 'Returns delta, fixed delta, elapsed, scale and frame.', 'let now = time();'],
+  ['time_delta', 'time_delta() -> float', 'timing', 'Returns render delta seconds.', 'let dt = time_delta();'],
+  ['time_fixed_delta', 'time_fixed_delta() -> float', 'timing', 'Returns fixed-step seconds.', 'let dt = time_fixed_delta();'],
+  ['time_elapsed', 'time_elapsed() -> float', 'timing', 'Returns scaled elapsed seconds.', 'let elapsed = time_elapsed();'],
+  ['time_scale', 'time_scale() -> float', 'timing', 'Returns active time scale.', 'let scale = time_scale();'],
+  ['time_frame', 'time_frame() -> int', 'timing', 'Returns deterministic frame number.', 'let frame = time_frame();'],
+  ['random', 'random() -> float', 'timing', 'Returns a deterministic seeded value in [0, 1).', 'let roll = random();'],
+  ['random_range', 'random_range(minimum, maximum) -> float', 'timing', 'Returns a deterministic value in a finite range.', 'let x = random_range(-2.0, 2.0);'],
+  ['timer_start', 'timer_start(name, seconds, repeat)', 'tasks', 'Starts a validated entity-owned timer.', 'timer_start("pulse", 0.5, true);'],
+  ['timer_pause', 'timer_pause(name)', 'tasks', 'Pauses a timer.', 'timer_pause("pulse");'],
+  ['timer_resume', 'timer_resume(name)', 'tasks', 'Resumes a timer.', 'timer_resume("pulse");'],
+  ['timer_cancel', 'timer_cancel(name)', 'tasks', 'Cancels a timer.', 'timer_cancel("pulse");'],
+  ['task_wait', 'task_wait(name, seconds)', 'tasks', 'Schedules a cancellable deferred task.', 'task_wait("load", 0.25);'],
+  ['task_cancel', 'task_cancel(name)', 'tasks', 'Cancels an entity-owned task.', 'task_cancel("load");'],
+  ['signal_emit', 'signal_emit(name, payload)', 'signals', 'Queues a serializable broadcast signal.', 'signal_emit("player.ready", #{ lives: 3 });'],
+  ['signal_emit_to', 'signal_emit_to(entity_id, name, payload)', 'signals', 'Queues a serializable targeted signal.', 'signal_emit_to(entity(), "heal", 10);'],
+  ['save_has', 'save_has(key) -> bool', 'save', 'Reports whether a save key exists.', 'if save_has("checkpoint") { }'],
+  ['save_get', 'save_get(key, fallback) -> value', 'save', 'Reads a safe persistent value.', 'let score = save_get("score", 0);'],
+  ['save_set', 'save_set(key, value)', 'save', 'Queues a serializable persistent value.', 'save_set("score", 10);'],
+  ['save_delete', 'save_delete(key)', 'save', 'Deletes a persistent key.', 'save_delete("checkpoint");'],
+  ['save_clear', 'save_clear()', 'save', 'Clears in-memory save state.', 'save_clear();'],
+  ['save_load', 'save_load(slot)', 'save', 'Queues a named slot load.', 'save_load("slot1");'],
+  ['save_commit', 'save_commit(slot)', 'save', 'Atomically commits a named slot.', 'save_commit("slot1");'],
+  ['log_debug', 'log_debug(message)', 'logging', 'Writes a bounded Debug console event.', 'log_debug("tick");'],
+  ['log_info', 'log_info(message)', 'logging', 'Writes a bounded Info console event.', 'log_info("ready");'],
+  ['log_warning', 'log_warning(message)', 'logging', 'Writes a bounded Warning console event.', 'log_warning("low health");'],
+  ['log_error', 'log_error(message)', 'logging', 'Writes a bounded Error event without crashing.', 'log_error("missing target");'],
+  ['resource_handle', 'resource_handle(reference, type) -> Handle<Resource>', 'resources', 'Validates an asset URI and returns a stable typed handle.', 'let texture = resource_handle("asset://texture", "Texture2D");'],
+  ['api_version', 'api_version() -> int', 'resources', 'Returns the API version selected for this script asset.', 'expect(api_version() >= 1, "supported API");'],
+  ['api_current_version', 'api_current_version() -> int', 'resources', 'Returns the newest API implemented by this engine.', 'expect(api_current_version() == 2, "API v2 engine");'],
+  ['api_minimum_version', 'api_minimum_version() -> int', 'resources', 'Returns the oldest API version supported by the compatibility adapter.', 'expect(api_minimum_version() == 1, "API v1 adapter");'],
+  ['api_namespace', 'api_namespace(symbol) -> string', 'resources', 'Returns the documentation namespace of a flat symbol.', 'let group = api_namespace("scene_load");'],
+  ['expect', 'expect(condition, message) -> bool', 'testing', 'Records a test assertion without corrupting another instance.', 'expect(2 + 2 == 4, "math");']
+] as const
+
+export const SCRIPT_API: readonly ScriptApiEntry[] = SPECS.map(/** 把基础 API 元组展开为文档记录，附加分类、引入版本、弃用信息及手册锚点。 */ ([name, signature, namespace, detail, example, replacement]) => ({
+  name, signature, namespace, category: namespace[0].toUpperCase() + namespace.slice(1), detail, example, since: '1.0',
+  deprecated: replacement ? { replacement, removal: 'API v3', reason: 'API v2 keeps the API v1 adapter while directing new code to the typed canonical binding.' } : undefined,
+  documentation: `manual/index.html#api-${name.replace(/_/g, '-')}`
+}))
+
+const FIXED_STEP_BINDINGS = new Set(['fixed_update', 'apply_force', 'apply_impulse', 'set_velocity', 'set_angular_velocity', 'move_character'])
+const SEEDED_BINDINGS = new Set(['random', 'random_range'])
+const HOST_DEPENDENT_BINDINGS = new Set(['mouse_x', 'mouse_y', 'wheel_x', 'wheel_y'])
+const PERSISTENT_BINDINGS = new Set(['save_has', 'save_get', 'save_set', 'save_delete', 'save_clear', 'save_load', 'save_commit'])
+export const SCRIPT_API_V2_MANIFEST: ScriptApiV2Manifest = {
+  format: 'nova-rhai-api-manifest',
+  version: 2,
+  minimumCompatibleVersion: 1,
+  errorModel: 'Result values are explicit; queued host mutations fail through diagnostics and never expose host exceptions.',
+  handleModel: 'Handles are typed, versioned, copied values whose validity must be checked at each callback boundary.',
+  entries: SCRIPT_API.map(/** 按 API 分类与专用集合补充返回约定、生命周期、线程要求、确定性和权限元信息。 */ entry => ({
+    ...entry,
+    id: `${entry.namespace}.${entry.name}`,
+    module: entry.namespace,
+    callable: entry.name,
+    resultConvention: entry.namespace === 'lifecycle' || entry.name.startsWith('on_')
+      ? 'lifecycle'
+      : entry.signature.includes('->')
+        ? entry.namespace === 'resources' ? 'result' : 'value'
+        : 'queued-command',
+    lifetime: PERSISTENT_BINDINGS.has(entry.name) ? 'persistent-save' : entry.namespace === 'resources' ? 'project' : entry.name.endsWith('_handle') ? 'scene' : 'callback',
+    threadRule: FIXED_STEP_BINDINGS.has(entry.name) ? 'fixed-step' : entry.namespace === 'logging' || entry.namespace === 'testing' ? 'worker-safe' : 'callback-boundary',
+    determinism: SEEDED_BINDINGS.has(entry.name) ? 'seeded' : HOST_DEPENDENT_BINDINGS.has(entry.name) ? 'host-dependent' : 'deterministic',
+    permissions: entry.namespace === 'save' ? ['save-data'] : entry.namespace === 'resources' ? ['asset-read'] : entry.namespace === 'logging' ? ['console-write'] : entry.namespace === 'network' ? ['network-rpc'] : []
+  }))
+}
+
+export const SCRIPT_API_V1_TO_V2 = Object.freeze(Object.fromEntries(
+  SCRIPT_API.filter(/* 返回 entry.deprecated 的当前值。 */ entry => entry.deprecated).map(/* 返回按声明顺序构造的数组 [entry.name, entry.deprecated!.replacement]。 */ entry => [entry.name, entry.deprecated!.replacement])
+)) as Readonly<Record<string, string>>
+
+/** 按模板 `${JSON.stringify(SCRIPT_API_V2_MANIFEST, null, 2)}\n` 生成并返回字符串。 */ export function scriptApiManifestJson(): string { return `${JSON.stringify(SCRIPT_API_V2_MANIFEST, null, 2)}\n` }
+
+// Compatibility markers retained for archived static release audits:
+// name: 'entity_handle'; name: 'find_entity_handle'; name: 'component_handle';
+// name: 'animator_handle'; name: 'audio_source_handle'; name: 'task_wait';
+// name: 'task_cancel'; name: 'signal_emit'; name: 'signal_emit_to'; name: 'expect'
+
+/** 按脚本可调用名称查找公开 API 元信息。 */ export function apiEntry(name: string): ScriptApiEntry | undefined { return SCRIPT_API.find(/* 比较 entry.name 与 name，返回严格相等的判断结果。 */ entry => entry.name === name) }
+
+/** 按命名空间分组公开 API，保留登记顺序。 */ export function apiByNamespace(): ReadonlyMap<ScriptApiNamespace, readonly ScriptApiEntry[]> {
+  const groups = new Map<ScriptApiNamespace, ScriptApiEntry[]>()
+  for (const entry of SCRIPT_API) groups.set(entry.namespace, [...(groups.get(entry.namespace) ?? []), entry])
+  return groups
+}
+
+/** 从 API 登记表生成分命名空间的 Markdown，包含签名、说明、弃用迁移提示及转义后的示例。 */ export function generatedApiMarkdown(): string {
+  return [...apiByNamespace()].map(/** 生成单个命名空间标题及其中所有 API 条目。 */ ([namespace, entries]) => `## ${namespace}\n\n${entries.map(/** 将一个 API 渲染为包含弃用替代项和代码示例的 Markdown 条目。 */ entry => {
+    const warning = entry.deprecated ? ` **Deprecated:** use \`${entry.deprecated.replacement}\`; removal ${entry.deprecated.removal}.` : ''
+    return `- \`${entry.signature}\` — ${entry.detail}${warning}\n\n  Example: \`${entry.example.replace(/`/g, '\\`')}\``
+  }).join('\n')}`).join('\n\n')
+}

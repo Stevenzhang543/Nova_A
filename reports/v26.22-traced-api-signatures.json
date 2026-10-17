@@ -1,0 +1,965 @@
+{
+  "generatedAt": "2026-09-14T16:54:51.187Z",
+  "status": "passed",
+  "checks": [
+    {
+      "name": "matrix is fresh for the exact Rust source and locked engine",
+      "status": "passed"
+    },
+    {
+      "name": "every registered host overload appears with explicit parameter types and source location",
+      "status": "passed"
+    },
+    {
+      "name": "float and integer overloads cannot be silently interchanged",
+      "status": "passed"
+    },
+    {
+      "name": "handles and opaque values require actual producers",
+      "status": "passed"
+    },
+    {
+      "name": "disabled and internal calls are not offered as executable templates",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:animator_28_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:animator_handle_28_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:animator_play_28string_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:animator_set_bool_28string_2cbool_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:animator_set_float_28string_2cf64_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:animator_set_integer_28string_2ci64_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:animator_trigger_28string_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:api_current_version_28_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:api_minimum_version_28_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:api_namespace_28string_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:api_version_28_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:apply_force_28f64_2cf64_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:apply_impulse_28f64_2cf64_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:audio_pause_28_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:audio_play_28_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:audio_source_28_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:audio_source_handle_28_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:audio_stop_28_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:axis_28string_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:can_coyote_jump_28_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:character_can_coyote_jump_28_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:character_floor_normal_28_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:character_floor_normal_x_28_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:character_floor_normal_y_28_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:character_is_on_ceiling_28_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:character_is_on_floor_28_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:character_is_on_wall_28_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:character_platform_velocity_28_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:character_platform_velocity_x_28_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:character_platform_velocity_y_28_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:checkpoint_has_28string_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:checkpoint_restore_28string_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:checkpoint_set_28string_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:component_handle_28string_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:component_set_enabled_on_28map_2cstring_2cbool_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:despawn_28_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:destroy_28_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:editor_automation_28_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:editor_create_box_28string_2cf64_2cf64_2cf64_2cf64_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:editor_create_circle_28string_2cf64_2cf64_2cf64_2cf64_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:editor_create_text_asset_28string_2cstring_2cstring_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:editor_create_triangle_28string_2cf64_2cf64_2cf64_2cf64_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:editor_rename_28map_2cstring_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:editor_select_28map_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:editor_selected_28_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:editor_selected_count_28_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:entity_28_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:entity_add_group_28map_2cstring_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:entity_add_tag_28map_2cstring_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:entity_destroy_28map_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:entity_enabled_on_28map_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:entity_handle_28_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:entity_name_28_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:entity_name_on_28map_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:entity_position_x_on_28map_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:entity_position_y_on_28map_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:entity_remove_group_28map_2cstring_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:entity_remove_tag_28map_2cstring_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:entity_set_enabled_28map_2cbool_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:entity_set_position_28map_2cf64_2cf64_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:entity_set_rotation_28map_2cf64_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:entity_set_scale_28map_2cf64_2cf64_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:expect_28bool_2cstring_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:export_value_28string_2cbool_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:export_value_28string_2cDynamic_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:export_value_28string_2cf64_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:export_value_28string_2ci64_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:export_value_28string_2cstring_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:find_entity_28string_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:find_entity_handle_28string_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:game_pause_28bool_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:game_paused_28_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:get_component_28string_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:has_component_28string_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:input_axis_28string_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:input_cancelled_28string_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:input_context_active_28string_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:input_context_pop_28string_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:input_context_push_28string_2ci64_2cbool_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:input_down_28string_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:input_duration_28string_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:input_map_active_28string_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:input_map_disable_28string_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:input_map_enable_28string_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:input_performed_28string_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:input_phase_28string_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:input_pressed_28string_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:input_released_28string_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:input_scheme_28_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:input_scheme_set_28string_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:input_vector_28string_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:input_vector_x_28string_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:input_vector_y_28string_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:instantiate_28string_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:is_down_28string_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:log_debug_28string_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:log_error_28string_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:log_info_28string_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:log_warning_28string_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:mouse_world_x_28_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:mouse_world_y_28_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:mouse_x_28_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:mouse_y_28_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:move_character_28f64_2cf64_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:navigation_set_target_28f64_2cf64_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:network_connected_28_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:network_enabled_28_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:network_is_authority_28_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:network_local_peer_28_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:network_peer_count_28_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:network_role_28_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:network_rpc_28string_2cDynamic_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:network_tick_28_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:query_component_28string_2ci64_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:query_group_28string_2ci64_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:query_radius_28f64_2cf64_2cf64_2ci64_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:query_tag_28string_2ci64_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:random_28_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:random_range_28f64_2cf64_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:resource_handle_28string_2cstring_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:rigid_body_28_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:save_clear_28_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:save_commit_28string_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:save_delete_28string_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:save_get_28string_2cDynamic_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:save_has_28string_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:save_load_28string_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:save_set_28string_2cDynamic_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:scene_load_28string_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:scene_quit_28_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:scene_reload_28_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:score_add_28f64_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:score_get_28_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:score_set_28f64_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:session_get_28string_2cDynamic_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:session_set_28string_2cDynamic_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:set_angular_velocity_28f64_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:set_position_28f64_2cf64_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:set_rotation_28f64_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:set_scale_28f64_2cf64_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:set_velocity_28f64_2cf64_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:signal_emit_28string_2cDynamic_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:signal_emit_to_28string_2cstring_2cDynamic_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:spawn_at_28string_2cf64_2cf64_2cf64_2cf64_2cf64_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:task_cancel_28string_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:task_wait_28string_2cf64_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:time_28_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:time_delta_28_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:time_elapsed_28_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:time_fixed_delta_28_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:time_frame_28_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:time_scale_28_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:timer_cancel_28string_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:timer_pause_28string_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:timer_resume_28string_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:timer_start_28string_2cf64_2cbool_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:transform_28_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:ui_set_text_28string_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:ui_set_text_on_28map_2cstring_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:ui_set_value_28f64_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:ui_set_value_on_28map_2cf64_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:vector_28string_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:vector_x_28string_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:vector_y_28string_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:view_max_x_28_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:view_max_y_28_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:view_min_x_28_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:view_min_y_28_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:viewport_height_28_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:viewport_width_28_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:was_pressed_28string_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:was_released_28string_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:wheel_x_28_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM host overload rhai:wheel_y_28_29",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM lifecycle parameter awake",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM lifecycle parameter fixed_update",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM lifecycle parameter late_update",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM lifecycle parameter on_collision_enter",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM lifecycle parameter on_collision_exit",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM lifecycle parameter on_collision_stay",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM lifecycle parameter on_destroy",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM lifecycle parameter on_signal",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM lifecycle parameter on_task",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM lifecycle parameter on_timer",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM lifecycle parameter on_trigger_enter",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM lifecycle parameter on_trigger_exit",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM lifecycle parameter on_trigger_stay",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM lifecycle parameter start",
+      "status": "passed"
+    },
+    {
+      "name": "actual WASM lifecycle parameter update",
+      "status": "passed"
+    },
+    {
+      "name": "every suggested placeholder parses as Rhai, including exact range widths",
+      "status": "passed"
+    },
+    {
+      "name": "extension aliases only expose real arity-compatible WASM overloads",
+      "status": "passed"
+    },
+    {
+      "name": "extension authored strings, booleans and nested JSON survive actual WASM delivery",
+      "status": "passed"
+    },
+    {
+      "name": "extension invalid integer, handle and oversized defaults remain required",
+      "status": "passed"
+    },
+    {
+      "name": "isolated actual WASM: timestamp and elapsed",
+      "status": "passed"
+    },
+    {
+      "name": "isolated actual WASM: timestamp arithmetic",
+      "status": "passed"
+    },
+    {
+      "name": "isolated actual WASM: reflection and Fn/curry/call intrinsics",
+      "status": "passed"
+    },
+    {
+      "name": "isolated actual WASM: string, map, array and iterator packages",
+      "status": "passed"
+    },
+    {
+      "name": "isolated actual WASM: blob and JSON standard packages",
+      "status": "passed"
+    },
+    {
+      "name": "isolated actual WASM: print/debug consume their internal formatter return value",
+      "status": "passed"
+    }
+  ],
+  "hostOverloadsExecuted": 174,
+  "isolatedPlatformProbes": 6,
+  "signatureCount": 988,
+  "nodeOperationCoverage": [
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/rhaiApiSignatures.ts#getRhaiApiSignatures",
+      "source": "src/visual/rhaiApiSignatures.ts",
+      "line": 15,
+      "kind": "exported function",
+      "sourceSha256": "d844d2d3131b515636ae5ff9869569e1af8a154497814f47c4284ebb91b9cf5f",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-api-signatures/1/api.mjs",
+      "generatedSha256": "2e5003b7a19efc0e5fea529b803f843efab17f19c53bdf0d5c27be8ac3af1ad3",
+      "mapSha256": "8fc507f077102473372e3dca9c37af8a8e1a639a13fe0f22b2b402b7f347a6eb",
+      "entryCount": 8
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/rhaiApiSignatures.ts#rhaiApiCallTemplate",
+      "source": "src/visual/rhaiApiSignatures.ts",
+      "line": 17,
+      "kind": "exported function",
+      "sourceSha256": "d844d2d3131b515636ae5ff9869569e1af8a154497814f47c4284ebb91b9cf5f",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-api-signatures/1/api.mjs",
+      "generatedSha256": "2e5003b7a19efc0e5fea529b803f843efab17f19c53bdf0d5c27be8ac3af1ad3",
+      "mapSha256": "8fc507f077102473372e3dca9c37af8a8e1a639a13fe0f22b2b402b7f347a6eb",
+      "entryCount": 991
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/rhaiSyntax.ts#parseRhai",
+      "source": "src/visual/rhaiSyntax.ts",
+      "line": 279,
+      "kind": "exported function",
+      "sourceSha256": "25f8ff10d119f9b1b58d250f531b9a0b89d2b03b9b13cf583ca6f415ff871b77",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-api-signatures/1/language.mjs",
+      "generatedSha256": "a6f58e97378559a874c5db36c2af8f2b2525fefc8ef6c09ed99e4ee75147cfd7",
+      "mapSha256": "63091458c37e87ca50e5c9cfebac6a90ad439764950e1c7e93e31d3c42fea2b0",
+      "entryCount": 422
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/rhaiSyntax.ts#walkRhai",
+      "source": "src/visual/rhaiSyntax.ts",
+      "line": 282,
+      "kind": "exported function",
+      "sourceSha256": "25f8ff10d119f9b1b58d250f531b9a0b89d2b03b9b13cf583ca6f415ff871b77",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-api-signatures/1/language.mjs",
+      "generatedSha256": "a6f58e97378559a874c5db36c2af8f2b2525fefc8ef6c09ed99e4ee75147cfd7",
+      "mapSha256": "63091458c37e87ca50e5c9cfebac6a90ad439764950e1c7e93e31d3c42fea2b0",
+      "entryCount": 422
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphTypes.ts#graphUuid",
+      "source": "src/visual/graphTypes.ts",
+      "line": 112,
+      "kind": "exported function",
+      "sourceSha256": "f1301f1589f75fec7793cb026cf256eb2af3f020e75b2c670890622290e8cf25",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-api-signatures/1/palette.mjs",
+      "generatedSha256": "0e14c06d0b65da5992d09bd5268db01f75ab21792af648ccb49f86c4d1f83caf",
+      "mapSha256": "3fe69077413e622e8febabec328f0173f9a989233b902e66a93bdd2a78385ecd",
+      "entryCount": 29
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphSyntaxSchema.ts#isSyntaxNode",
+      "source": "src/visual/graphSyntaxSchema.ts",
+      "line": 41,
+      "kind": "exported function",
+      "sourceSha256": "58872a666776ac31cca70224adcbd86e3759abf72114b029a74ba56eaefb041d",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-api-signatures/1/palette.mjs",
+      "generatedSha256": "0e14c06d0b65da5992d09bd5268db01f75ab21792af648ccb49f86c4d1f83caf",
+      "mapSha256": "3fe69077413e622e8febabec328f0173f9a989233b902e66a93bdd2a78385ecd",
+      "entryCount": 12
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphSyntaxSchema.ts#syntaxFields",
+      "source": "src/visual/graphSyntaxSchema.ts",
+      "line": 42,
+      "kind": "exported function",
+      "sourceSha256": "58872a666776ac31cca70224adcbd86e3759abf72114b029a74ba56eaefb041d",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-api-signatures/1/palette.mjs",
+      "generatedSha256": "0e14c06d0b65da5992d09bd5268db01f75ab21792af648ccb49f86c4d1f83caf",
+      "mapSha256": "3fe69077413e622e8febabec328f0173f9a989233b902e66a93bdd2a78385ecd",
+      "entryCount": 6
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphSyntaxSchema.ts#syntaxNodeEditableFields",
+      "source": "src/visual/graphSyntaxSchema.ts",
+      "line": 44,
+      "kind": "exported function",
+      "sourceSha256": "58872a666776ac31cca70224adcbd86e3759abf72114b029a74ba56eaefb041d",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-api-signatures/1/palette.mjs",
+      "generatedSha256": "0e14c06d0b65da5992d09bd5268db01f75ab21792af648ccb49f86c4d1f83caf",
+      "mapSha256": "3fe69077413e622e8febabec328f0173f9a989233b902e66a93bdd2a78385ecd",
+      "entryCount": 6
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphSyntaxSchema.ts#initializeSyntaxNode",
+      "source": "src/visual/graphSyntaxSchema.ts",
+      "line": 93,
+      "kind": "exported function",
+      "sourceSha256": "58872a666776ac31cca70224adcbd86e3759abf72114b029a74ba56eaefb041d",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-api-signatures/1/palette.mjs",
+      "generatedSha256": "0e14c06d0b65da5992d09bd5268db01f75ab21792af648ccb49f86c4d1f83caf",
+      "mapSha256": "3fe69077413e622e8febabec328f0173f9a989233b902e66a93bdd2a78385ecd",
+      "entryCount": 6
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphSyntaxApi.ts#syntaxExtensionDefinitions",
+      "source": "src/visual/graphSyntaxApi.ts",
+      "line": 62,
+      "kind": "exported function",
+      "sourceSha256": "3c6c9f6a1c0cc9fd03a8bac7a6a38b79961b2b9ffea7d80452869d8bd96253af",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-api-signatures/1/palette.mjs",
+      "generatedSha256": "0e14c06d0b65da5992d09bd5268db01f75ab21792af648ccb49f86c4d1f83caf",
+      "mapSha256": "3fe69077413e622e8febabec328f0173f9a989233b902e66a93bdd2a78385ecd",
+      "entryCount": 13
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphSyntaxApi.ts#initializeSyntaxApiNode",
+      "source": "src/visual/graphSyntaxApi.ts",
+      "line": 80,
+      "kind": "exported function",
+      "sourceSha256": "3c6c9f6a1c0cc9fd03a8bac7a6a38b79961b2b9ffea7d80452869d8bd96253af",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-api-signatures/1/palette.mjs",
+      "generatedSha256": "0e14c06d0b65da5992d09bd5268db01f75ab21792af648ccb49f86c4d1f83caf",
+      "mapSha256": "3fe69077413e622e8febabec328f0173f9a989233b902e66a93bdd2a78385ecd",
+      "entryCount": 6
+    }
+  ],
+  "tracingScope": "Positive V8 function entries during the complete passing programmer suite, including fixture setup. Not per-assertion isolation, exhaustive domain coverage or performance qualification.",
+  "nodeOperationCoverageCase": "retained-26-12-api-signatures complete suite including fixture setup",
+  "nodeOperationCoverageAssertion": {
+    "name": "retained-26-12-api-signatures complete suite including fixture setup",
+    "status": "passed"
+  }
+}

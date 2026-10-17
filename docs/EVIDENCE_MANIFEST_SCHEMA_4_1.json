@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://whitelists.top/nova-a/evidence-manifest.schema.json",
+  "title": "Nova_A release evidence manifest",
+  "type": "object",
+  "required": ["format", "version", "release", "generatedAt", "source", "tool", "environment", "entries", "externalGates"],
+  "properties": {
+    "format": { "const": "nova-release-evidence-manifest" },
+    "version": { "const": 1 },
+    "release": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "source": { "type": "object", "required": ["commit", "dirty"], "properties": { "commit": { "type": "string" }, "dirty": { "type": "boolean" }, "signedTag": { "type": ["string", "null"] } } },
+    "tool": { "type": "object" },
+    "environment": { "type": "object" },
+    "entries": { "type": "array", "items": { "type": "object", "required": ["path", "sha256", "bytes", "source", "tool", "environment"], "properties": { "path": { "type": "string" }, "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }, "bytes": { "type": "integer", "minimum": 0 }, "source": { "type": "string" }, "tool": { "type": "string" }, "environment": { "type": "string" } } } },
+    "externalGates": { "type": "array" }
+  }
+}

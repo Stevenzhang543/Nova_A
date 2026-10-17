@@ -1,0 +1,69 @@
+{
+  "generatedAt": "2026-10-04T14:07:53.9859949Z",
+  "edits": [
+    {
+      "path": "scripts/verify-v26.37-native-disclosures-user.mjs",
+      "action": "added",
+      "beforeSha256": null,
+      "afterSha256": "f51aec75fe7560a7c13e71af41ae1305078ae75937b8f07af34e09eac63be7ca",
+      "why": "Target real native popover and ordinary/lazy content disclosure integration that production unit hosts cannot certify",
+      "consequence": "Adds eight bounded actual public pointer/keyboard checks, finite presentation traces, current logical aria/inert and reversal assertions, system Reduced Motion, and real project-manager DOM disposal. Uses no private app state, introduces no production behavior or new dependency, and releases diagnostic observers on failure."
+    },
+    {
+      "path": "scripts/verify-v26.37-native-disclosures-user.mjs",
+      "action": "modified",
+      "beforeSha256": "f51aec75fe7560a7c13e71af41ae1305078ae75937b8f07af34e09eac63be7ca",
+      "afterSha256": "2b106f8d91bbccb7d262f218c6a7ced22b81ebd34954ddf36ffd6329af8954f6",
+      "why": "A representative menu does not certify the twelve actual native popup callers",
+      "consequence": "Adds ninth group: all 8 Design menus and Assets/Script/Graph/Animation callers, exact logical aria/inert/finite settle and fixed summary geometry, per-caller screenshots, viewport/surface hit samples plus every enabled control after normal scrolling. Records all geometry failures before failing the group; uses only summaries/public navigation, never create/delete actions or panel maximization. Preserves original eight assertions."
+    },
+    {
+      "path": "scripts/verify-v26.37-native-disclosures-user.mjs",
+      "action": "modified",
+      "beforeSha256": "2b106f8d91bbccb7d262f218c6a7ced22b81ebd34954ddf36ffd6329af8954f6",
+      "afterSha256": "481e32515b1f1eb3b3cd0a2d9098ae7012e59e42f2ed6ab7a0c379771ce89ed2",
+      "why": "Exercise the real minimum desktop window and interpret the new native top-layer clipping contract correctly",
+      "consequence": "Preserves all first eight1600x900 groups; runs the single all12 matrix at1024x640/DPR1/UIscale1 and records actual conditions, then restores1600x900 on success. Surface probes remain center/four edge midpoints3px inside, never corner curves. Records actual :popover-open/data-ui-popover-layer surfaces. Enabled-control clip intersections stop at a real active top-layer surface while retaining its own scroll clipping, because outer DOM ancestors no longer clip that native surface; actual viewport/five-point/control elementFromPoint checks remain strict. No extra matrix, threshold relaxation, private state or production edit."
+    }
+  ],
+  "validation": {
+    "gateIntegration": "root-owned-pending",
+    "realGUI": "not-run-by-author",
+    "scope": "Headless software browser when invoked; no private owner registry or physical GPU/OS latency claim",
+    "syntax": "passed"
+  },
+  "geometryCorrection": {
+    "path": "scripts/verify-v26.37-native-disclosures-user.mjs",
+    "beforeSha256": "481e32515b1f1eb3b3cd0a2d9098ae7012e59e42f2ed6ab7a0c379771ce89ed2",
+    "afterSha256": "3e5aa79d141b94a781b15bac85ac7bf5648282cbd5cc06f0652c83f31b376ed2",
+    "before": "Immediate getBoundingClientRect forbade the separately required summary press spring",
+    "after": "Assert immediate untransformed layout box and exact rendered position after finite settlement; retain real viewport/edge/control hit tests and raw before/open/stable state",
+    "consequence": "Test correctly separates local press feedback from popup-induced layout displacement. No product source or real-data edits; no geometry waiver.",
+    "verification": "Actual first failed report and two PNGs retained in cache; current9-group run must be repeated"
+  },
+  "reducedNativeCorrection": {
+    "path": "scripts/verify-v26.37-native-disclosures-user.mjs",
+    "beforeSha256": "3e5aa79d141b94a781b15bac85ac7bf5648282cbd5cc06f0652c83f31b376ed2",
+    "afterSha256": "e51f38a5d42c142e29f6560f9246a9069d0dbbc66451dac4ee700225ad270220",
+    "before": "The test demanded exit-only inert/pointer-none even after Reduced Motion had completed native details collapse and restored authored styles",
+    "after": "Retained visible exits must be inert/pointer-none; already collapsed native content must fail actual hit testing. Popup aria/exit, latest target and finite cleanup remain strict.",
+    "consequence": "Test distinguishes native semantic collapse from retained animation content. Product source and data behavior are unchanged.",
+    "verification": "Second failed actual report/captures retained locally; repeat actual9-group check required"
+  },
+  "scrollBaselineCorrection": {
+    "path": "scripts/verify-v26.37-native-disclosures-user.mjs",
+    "beforeSha256": "e51f38a5d42c142e29f6560f9246a9069d0dbbc66451dac4ee700225ad270220",
+    "afterSha256": "28ab743d1af4d9ba4c3c8544e78ecf356d38746c6b1a31fa430959a9650db634",
+    "before": "Captured trigger geometry before the helper intentionally scrolls and focuses the control",
+    "after": "Prepare the same native scroll/focus position first, then compare before/open geometry with unchanged viewport conditions",
+    "consequence": "Intentional scrolling is not popup-induced layout movement. Exact trigger geometry, actual five-point hit testing and enabled-control reachability remain required; no product state writes."
+  },
+  "floatingGeometryCoverage": {
+    "path": "scripts/verify-v26.37-native-disclosures-user.mjs",
+    "beforeSha256": "28ab743d1af4d9ba4c3c8544e78ecf356d38746c6b1a31fa430959a9650db634",
+    "afterSha256": "da0e6bd6aec9f1633b43490139dc222f4b97735ac212f5ab73e61157eecf3553",
+    "before": "Native surface geometry omitted radius and four-way inset",
+    "after": "Read all four computed corners/insets for each actual minimum-window menu; require desired minimum semantic geometry independently from source token names",
+    "consequence": "Reject real local overrides or missing styling rather than assuming token changes took effect; viewport/hit/control checks remain strict"
+  }
+}

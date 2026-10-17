@@ -1,0 +1,1034 @@
+{
+  "schema": "nova-network-source-projection-history-v1",
+  "networkFixtureSha256": "dc2d2b4d2ed40adf52af1934a976321a157ec2a92b72d58f83998402bd3de7fd",
+  "history": [
+    {
+      "path": "src/runtime/productionRuntime.ts",
+      "accepted": [
+        {
+          "sha256": "975c223f1d7cef3b4f6e3660f4f1f00fb1cbad70515be9b0dd8230742e273c69",
+          "origins": [
+            {
+              "sourceRecordSha256": "f0b8d482998684ba38bcfcdfbc967b40c6c769ac3cf41b5e58f39d12925664ab",
+              "phase": "actual working652 full immutable bytes"
+            },
+            {
+              "sourceRecordSha256": "2159f6648acc3de860a25213a2d10aa90eb6d783fcf3b5324c20b9788f26dc53",
+              "phase": "previous complete648 baseline"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/runtime/networking.ts",
+      "accepted": [
+        {
+          "sha256": "b25103aff38617aa96ce546caf8dd40adcebbc8d71a4670b9261974c10868146",
+          "origins": [
+            {
+              "sourceRecordSha256": "f0b8d482998684ba38bcfcdfbc967b40c6c769ac3cf41b5e58f39d12925664ab",
+              "phase": "actual working652 full immutable bytes"
+            },
+            {
+              "sourceRecordSha256": "2159f6648acc3de860a25213a2d10aa90eb6d783fcf3b5324c20b9788f26dc53",
+              "phase": "previous complete648 baseline"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/runtime/networkReplay.ts",
+      "accepted": [
+        {
+          "sha256": "05150cdbc153907135ec3b134307180181a00e8921320b333803849c1f584187",
+          "origins": [
+            {
+              "sourceRecordSha256": "f0b8d482998684ba38bcfcdfbc967b40c6c769ac3cf41b5e58f39d12925664ab",
+              "phase": "actual working652 full immutable bytes"
+            },
+            {
+              "sourceRecordSha256": "2159f6648acc3de860a25213a2d10aa90eb6d783fcf3b5324c20b9788f26dc53",
+              "phase": "previous complete648 baseline"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/runtime/networkProduction.ts",
+      "accepted": [
+        {
+          "sha256": "973104b86822fb518d1bd65a21bd831e8b8e12a14d5d3d603327fdb657a3d9f9",
+          "origins": [
+            {
+              "sourceRecordSha256": "f0b8d482998684ba38bcfcdfbc967b40c6c769ac3cf41b5e58f39d12925664ab",
+              "phase": "actual working652 full immutable bytes"
+            },
+            {
+              "sourceRecordSha256": "2159f6648acc3de860a25213a2d10aa90eb6d783fcf3b5324c20b9788f26dc53",
+              "phase": "previous complete648 baseline"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/runtime/GameplayRuntimeCore.ts",
+      "accepted": [
+        {
+          "sha256": "75b6c2f8217684aec47639ee513eecf252eedb94c996bcfbb0a49f0fb9599443",
+          "origins": [
+            {
+              "sourceRecordSha256": "f0b8d482998684ba38bcfcdfbc967b40c6c769ac3cf41b5e58f39d12925664ab",
+              "phase": "actual working652 full immutable bytes"
+            },
+            {
+              "fixture": "scripts/lib/fixtures/graph-debug-owner-transform-v1.json",
+              "fixtureSha256": "2c889feb5fc79c98c0530a3d7b17a25a5d8567c487b3bbcbb6b13fe19c8e5ee9",
+              "jsonPointer": "/files/8/afterSha256",
+              "phase": "Approved complete historical before/post source of previous migration; not Network postimage"
+            }
+          ]
+        },
+        {
+          "sha256": "65f6d9c0f696d07ba834b6d18115a8b1fbfcb14288ffd4de727b8edd531df44e",
+          "origins": [
+            {
+              "sourceRecordSha256": "2159f6648acc3de860a25213a2d10aa90eb6d783fcf3b5324c20b9788f26dc53",
+              "phase": "previous complete648 baseline"
+            },
+            {
+              "sourceRecordSha256": "5a228f0f966daec07eccac310537f442ab3ffe3b009404eda9d0ae3ecfb22568",
+              "jsonPointer": "/files/376",
+              "phase": "actual sealed648 full source",
+              "closedHistorySource": "E:\\Nova_A\\scripts\\lib\\graphParticleSourceProjection.mjs",
+              "closedHistorySourceSha256": "e18c6046c2979d04fd353bba766b451fe9caae0bd5c0344409035a23e442aba8"
+            },
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/3/acceptedBefore/13/sha256",
+              "closedHistorySource": "E:\\Nova_A\\scripts\\lib\\graphParticleSourceProjection.mjs",
+              "closedHistorySourceSha256": "e18c6046c2979d04fd353bba766b451fe9caae0bd5c0344409035a23e442aba8"
+            },
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/3/beforeSha256",
+              "phase": "Approved complete historical before/post source of previous migration; not Network postimage"
+            },
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/3/acceptedBefore/13/sha256",
+              "phase": "Approved complete historical before/post source of previous migration; not Network postimage"
+            },
+            {
+              "fixture": "scripts/lib/fixtures/tileMapOwner.contract.json",
+              "fixtureSha256": "ae2a47a40c1215ace116116f867944b101a3af1bcd80836d05f4020c4ba140ad",
+              "jsonPointer": "/candidateFiles/6/sha256",
+              "phase": "Approved complete historical before/post source of previous migration; not Network postimage"
+            }
+          ]
+        },
+        {
+          "sha256": "542e3b20b7993155f742f1f199816b683bb122a5202d148c4126c4f85066ed37",
+          "origins": [
+            {
+              "fixture": "scripts/lib/fixtures/tileMapOwner.contract.json",
+              "fixtureSha256": "ae2a47a40c1215ace116116f867944b101a3af1bcd80836d05f4020c4ba140ad",
+              "jsonPointer": "/candidateFiles/6/beforeSha256",
+              "closedHistorySource": "E:\\Nova_A\\scripts\\lib\\graphParticleSourceProjection.mjs",
+              "closedHistorySourceSha256": "e18c6046c2979d04fd353bba766b451fe9caae0bd5c0344409035a23e442aba8"
+            },
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/3/acceptedBefore/0/sha256",
+              "closedHistorySource": "E:\\Nova_A\\scripts\\lib\\graphParticleSourceProjection.mjs",
+              "closedHistorySourceSha256": "e18c6046c2979d04fd353bba766b451fe9caae0bd5c0344409035a23e442aba8"
+            },
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/3/acceptedBefore/0/sha256",
+              "phase": "Approved complete historical before/post source of previous migration; not Network postimage"
+            },
+            {
+              "fixture": "scripts/lib/fixtures/tileMapOwner.contract.json",
+              "fixtureSha256": "ae2a47a40c1215ace116116f867944b101a3af1bcd80836d05f4020c4ba140ad",
+              "jsonPointer": "/candidateFiles/6/beforeSha256",
+              "phase": "Approved complete historical before/post source of previous migration; not Network postimage"
+            }
+          ]
+        },
+        {
+          "sha256": "796d7bc1915054fe9afa91f3738e72c958ff2dad21809fa358f40505314ea6dd",
+          "origins": [
+            {
+              "fixture": "scripts/lib/fixtures/tileMapOwner.contract.json",
+              "fixtureSha256": "ae2a47a40c1215ace116116f867944b101a3af1bcd80836d05f4020c4ba140ad",
+              "jsonPointer": "/candidateFiles/6/approvedHistoricalBeforeSha256/0",
+              "closedHistorySource": "E:\\Nova_A\\scripts\\lib\\graphParticleSourceProjection.mjs",
+              "closedHistorySourceSha256": "e18c6046c2979d04fd353bba766b451fe9caae0bd5c0344409035a23e442aba8"
+            },
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/3/acceptedBefore/1/sha256",
+              "closedHistorySource": "E:\\Nova_A\\scripts\\lib\\graphParticleSourceProjection.mjs",
+              "closedHistorySourceSha256": "e18c6046c2979d04fd353bba766b451fe9caae0bd5c0344409035a23e442aba8"
+            },
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/3/acceptedBefore/1/sha256",
+              "phase": "Approved complete historical before/post source of previous migration; not Network postimage"
+            },
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/3/standalone/beforeSha256",
+              "phase": "Approved complete historical before/post source of previous migration; not Network postimage"
+            },
+            {
+              "fixture": "scripts/lib/fixtures/tileMapOwner.contract.json",
+              "fixtureSha256": "ae2a47a40c1215ace116116f867944b101a3af1bcd80836d05f4020c4ba140ad",
+              "jsonPointer": "/candidateFiles/6/approvedHistoricalBeforeSha256/0",
+              "phase": "Approved complete historical before/post source of previous migration; not Network postimage"
+            }
+          ]
+        },
+        {
+          "sha256": "12e49ac5decc7baff824e1ebed42ffa509bbd36f029795b89b2d371ac7c0384c",
+          "origins": [
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/3/acceptedBefore/2/sha256",
+              "closedHistorySource": "E:\\Nova_A\\scripts\\lib\\graphParticleSourceProjection.mjs",
+              "closedHistorySourceSha256": "e18c6046c2979d04fd353bba766b451fe9caae0bd5c0344409035a23e442aba8"
+            },
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/3/acceptedBefore/2/sha256",
+              "phase": "Approved complete historical before/post source of previous migration; not Network postimage"
+            }
+          ]
+        },
+        {
+          "sha256": "0a78ac0f3ef0b8051c3be6c585d7d0e926b576629b8d84a34f936c34d79e19cd",
+          "origins": [
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/3/acceptedBefore/3/sha256",
+              "closedHistorySource": "E:\\Nova_A\\scripts\\lib\\graphParticleSourceProjection.mjs",
+              "closedHistorySourceSha256": "e18c6046c2979d04fd353bba766b451fe9caae0bd5c0344409035a23e442aba8"
+            },
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/3/acceptedBefore/3/sha256",
+              "phase": "Approved complete historical before/post source of previous migration; not Network postimage"
+            }
+          ]
+        },
+        {
+          "sha256": "e40d72df8b6f9137c8deec2bceec9e5162e9aba21924b42a96af1d1c0f685916",
+          "origins": [
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/3/acceptedBefore/4/sha256",
+              "closedHistorySource": "E:\\Nova_A\\scripts\\lib\\graphParticleSourceProjection.mjs",
+              "closedHistorySourceSha256": "e18c6046c2979d04fd353bba766b451fe9caae0bd5c0344409035a23e442aba8"
+            },
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/3/acceptedBefore/4/sha256",
+              "phase": "Approved complete historical before/post source of previous migration; not Network postimage"
+            }
+          ]
+        },
+        {
+          "sha256": "5b382ceb1d2b1e1acc089cf12305c156514dfa6dbc911c6a510547f40fb0972f",
+          "origins": [
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/3/acceptedBefore/5/sha256",
+              "closedHistorySource": "E:\\Nova_A\\scripts\\lib\\graphParticleSourceProjection.mjs",
+              "closedHistorySourceSha256": "e18c6046c2979d04fd353bba766b451fe9caae0bd5c0344409035a23e442aba8"
+            },
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/3/acceptedBefore/5/sha256",
+              "phase": "Approved complete historical before/post source of previous migration; not Network postimage"
+            }
+          ]
+        },
+        {
+          "sha256": "dea68e5f26e088cfeac6a6e0cec0a4a6cbd9b7cbbf93819a0ccca54946d0adbd",
+          "origins": [
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/3/acceptedBefore/6/sha256",
+              "closedHistorySource": "E:\\Nova_A\\scripts\\lib\\graphParticleSourceProjection.mjs",
+              "closedHistorySourceSha256": "e18c6046c2979d04fd353bba766b451fe9caae0bd5c0344409035a23e442aba8"
+            },
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/3/acceptedBefore/6/sha256",
+              "phase": "Approved complete historical before/post source of previous migration; not Network postimage"
+            }
+          ]
+        },
+        {
+          "sha256": "827f7c77ec67d7610845592e7501a982fa64eebe5a4514318069798e71fe18b2",
+          "origins": [
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/3/acceptedBefore/7/sha256",
+              "closedHistorySource": "E:\\Nova_A\\scripts\\lib\\graphParticleSourceProjection.mjs",
+              "closedHistorySourceSha256": "e18c6046c2979d04fd353bba766b451fe9caae0bd5c0344409035a23e442aba8"
+            },
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/3/acceptedBefore/7/sha256",
+              "phase": "Approved complete historical before/post source of previous migration; not Network postimage"
+            }
+          ]
+        },
+        {
+          "sha256": "0622330d62a617a63f67a781931e8bb6b68c0d34f028137a6298c7017db2930d",
+          "origins": [
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/3/acceptedBefore/8/sha256",
+              "closedHistorySource": "E:\\Nova_A\\scripts\\lib\\graphParticleSourceProjection.mjs",
+              "closedHistorySourceSha256": "e18c6046c2979d04fd353bba766b451fe9caae0bd5c0344409035a23e442aba8"
+            },
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/3/acceptedBefore/8/sha256",
+              "phase": "Approved complete historical before/post source of previous migration; not Network postimage"
+            }
+          ]
+        },
+        {
+          "sha256": "15938eb890f05a56611d98a613c389a6f9a1450ea87154e00f80e3a34058183d",
+          "origins": [
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/3/acceptedBefore/9/sha256",
+              "closedHistorySource": "E:\\Nova_A\\scripts\\lib\\graphParticleSourceProjection.mjs",
+              "closedHistorySourceSha256": "e18c6046c2979d04fd353bba766b451fe9caae0bd5c0344409035a23e442aba8"
+            },
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/3/acceptedBefore/9/sha256",
+              "phase": "Approved complete historical before/post source of previous migration; not Network postimage"
+            }
+          ]
+        },
+        {
+          "sha256": "a3ad6d2583a947f5cd29a0714b3ec489f4cab3223a97346cb2a987f3c26b765e",
+          "origins": [
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/3/acceptedBefore/10/sha256",
+              "closedHistorySource": "E:\\Nova_A\\scripts\\lib\\graphParticleSourceProjection.mjs",
+              "closedHistorySourceSha256": "e18c6046c2979d04fd353bba766b451fe9caae0bd5c0344409035a23e442aba8"
+            },
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/3/acceptedBefore/10/sha256",
+              "phase": "Approved complete historical before/post source of previous migration; not Network postimage"
+            }
+          ]
+        },
+        {
+          "sha256": "6158ab3f84237a0c658a4ded13a3a3473873063adaa45ccae225f8d9982b99c3",
+          "origins": [
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/3/acceptedBefore/11/sha256",
+              "closedHistorySource": "E:\\Nova_A\\scripts\\lib\\graphParticleSourceProjection.mjs",
+              "closedHistorySourceSha256": "e18c6046c2979d04fd353bba766b451fe9caae0bd5c0344409035a23e442aba8"
+            },
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/3/acceptedBefore/11/sha256",
+              "phase": "Approved complete historical before/post source of previous migration; not Network postimage"
+            }
+          ]
+        },
+        {
+          "sha256": "feeac7b450afd6d0d29120b510230a31226d6ae028f3760c02d921ce41242d2b",
+          "origins": [
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/3/acceptedBefore/12/sha256",
+              "closedHistorySource": "E:\\Nova_A\\scripts\\lib\\graphParticleSourceProjection.mjs",
+              "closedHistorySourceSha256": "e18c6046c2979d04fd353bba766b451fe9caae0bd5c0344409035a23e442aba8"
+            },
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/3/acceptedBefore/12/sha256",
+              "phase": "Approved complete historical before/post source of previous migration; not Network postimage"
+            }
+          ]
+        },
+        {
+          "sha256": "3e2350638aff2ed8b8319b1df3af9d4d974e25119e906c611743ba236222e34f",
+          "origins": [
+            {
+              "fixture": "scripts/lib/fixtures/graph-debug-owner-transform-v1.json",
+              "fixtureSha256": "2c889feb5fc79c98c0530a3d7b17a25a5d8567c487b3bbcbb6b13fe19c8e5ee9",
+              "jsonPointer": "/files/8/beforeSha256",
+              "phase": "Approved complete historical before/post source of previous migration; not Network postimage"
+            },
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/3/afterSha256",
+              "phase": "Approved complete historical before/post source of previous migration; not Network postimage"
+            }
+          ]
+        },
+        {
+          "sha256": "4be85f89cf2f5d26babe6d4dba29579a1ca5dc1dd30796790a9487f4743215e1",
+          "origins": [
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/3/standalone/afterSha256",
+              "phase": "Approved complete historical before/post source of previous migration; not Network postimage"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/runtime/gameplayWorldHost.ts",
+      "accepted": [
+        {
+          "sha256": "1ba71a19018a8825235ab566c68fc27f14f04eccc21e376f07e5c0ab1881e9af",
+          "origins": [
+            {
+              "sourceRecordSha256": "f0b8d482998684ba38bcfcdfbc967b40c6c769ac3cf41b5e58f39d12925664ab",
+              "phase": "actual working652 full immutable bytes"
+            },
+            {
+              "fixture": "scripts/lib/fixtures/graph-debug-owner-transform-v1.json",
+              "fixtureSha256": "2c889feb5fc79c98c0530a3d7b17a25a5d8567c487b3bbcbb6b13fe19c8e5ee9",
+              "jsonPointer": "/files/6/afterSha256",
+              "phase": "Approved complete historical before/post source of previous migration; not Network postimage"
+            }
+          ]
+        },
+        {
+          "sha256": "7758c6fde94b856c8fef9a82c6c8764e0b6c82e0087854972fa43d44b33a2160",
+          "origins": [
+            {
+              "sourceRecordSha256": "2159f6648acc3de860a25213a2d10aa90eb6d783fcf3b5324c20b9788f26dc53",
+              "phase": "previous complete648 baseline"
+            },
+            {
+              "sourceRecordSha256": "5a228f0f966daec07eccac310537f442ab3ffe3b009404eda9d0ae3ecfb22568",
+              "jsonPointer": "/files/432",
+              "phase": "actual sealed648 full source",
+              "closedHistorySource": "E:\\Nova_A\\scripts\\lib\\graphParticleSourceProjection.mjs",
+              "closedHistorySourceSha256": "e18c6046c2979d04fd353bba766b451fe9caae0bd5c0344409035a23e442aba8"
+            },
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/4/acceptedBefore/0/sha256",
+              "closedHistorySource": "E:\\Nova_A\\scripts\\lib\\graphParticleSourceProjection.mjs",
+              "closedHistorySourceSha256": "e18c6046c2979d04fd353bba766b451fe9caae0bd5c0344409035a23e442aba8"
+            },
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/4/acceptedBefore/10/sha256",
+              "closedHistorySource": "E:\\Nova_A\\scripts\\lib\\graphParticleSourceProjection.mjs",
+              "closedHistorySourceSha256": "e18c6046c2979d04fd353bba766b451fe9caae0bd5c0344409035a23e442aba8"
+            },
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/4/beforeSha256",
+              "phase": "Approved complete historical before/post source of previous migration; not Network postimage"
+            },
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/4/acceptedBefore/0/sha256",
+              "phase": "Approved complete historical before/post source of previous migration; not Network postimage"
+            },
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/4/acceptedBefore/10/sha256",
+              "phase": "Approved complete historical before/post source of previous migration; not Network postimage"
+            }
+          ]
+        },
+        {
+          "sha256": "272ec3ae1fbc5fcb334da670f650cf2651c7ffd7b54b8f0f294c6b4d829d888c",
+          "origins": [
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/4/acceptedBefore/1/sha256",
+              "closedHistorySource": "E:\\Nova_A\\scripts\\lib\\graphParticleSourceProjection.mjs",
+              "closedHistorySourceSha256": "e18c6046c2979d04fd353bba766b451fe9caae0bd5c0344409035a23e442aba8"
+            },
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/4/acceptedBefore/1/sha256",
+              "phase": "Approved complete historical before/post source of previous migration; not Network postimage"
+            },
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/4/standalone/beforeSha256",
+              "phase": "Approved complete historical before/post source of previous migration; not Network postimage"
+            }
+          ]
+        },
+        {
+          "sha256": "00591eea981f84e2779ee3679a2b255c00de0e897692e664909623d02ec8db7e",
+          "origins": [
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/4/acceptedBefore/2/sha256",
+              "closedHistorySource": "E:\\Nova_A\\scripts\\lib\\graphParticleSourceProjection.mjs",
+              "closedHistorySourceSha256": "e18c6046c2979d04fd353bba766b451fe9caae0bd5c0344409035a23e442aba8"
+            },
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/4/acceptedBefore/2/sha256",
+              "phase": "Approved complete historical before/post source of previous migration; not Network postimage"
+            }
+          ]
+        },
+        {
+          "sha256": "fc3240fb48899904d23ea7ec19871abe001768959b6ed5458bfd0f42ee9011ab",
+          "origins": [
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/4/acceptedBefore/3/sha256",
+              "closedHistorySource": "E:\\Nova_A\\scripts\\lib\\graphParticleSourceProjection.mjs",
+              "closedHistorySourceSha256": "e18c6046c2979d04fd353bba766b451fe9caae0bd5c0344409035a23e442aba8"
+            },
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/4/acceptedBefore/3/sha256",
+              "phase": "Approved complete historical before/post source of previous migration; not Network postimage"
+            }
+          ]
+        },
+        {
+          "sha256": "0a42f4308e9cdf5834b93a239ec0909979f687c5b4ad4027424ff2592e74eab8",
+          "origins": [
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/4/acceptedBefore/4/sha256",
+              "closedHistorySource": "E:\\Nova_A\\scripts\\lib\\graphParticleSourceProjection.mjs",
+              "closedHistorySourceSha256": "e18c6046c2979d04fd353bba766b451fe9caae0bd5c0344409035a23e442aba8"
+            },
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/4/acceptedBefore/4/sha256",
+              "phase": "Approved complete historical before/post source of previous migration; not Network postimage"
+            }
+          ]
+        },
+        {
+          "sha256": "0b50b947c481aad1c7706782f69f403581b9185f309d1f95f0670386d8ae9d89",
+          "origins": [
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/4/acceptedBefore/5/sha256",
+              "closedHistorySource": "E:\\Nova_A\\scripts\\lib\\graphParticleSourceProjection.mjs",
+              "closedHistorySourceSha256": "e18c6046c2979d04fd353bba766b451fe9caae0bd5c0344409035a23e442aba8"
+            },
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/4/acceptedBefore/5/sha256",
+              "phase": "Approved complete historical before/post source of previous migration; not Network postimage"
+            }
+          ]
+        },
+        {
+          "sha256": "7e44fbaadf121e0d67a8d3227e097cb58c1be381379728b445419d21c0275b28",
+          "origins": [
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/4/acceptedBefore/6/sha256",
+              "closedHistorySource": "E:\\Nova_A\\scripts\\lib\\graphParticleSourceProjection.mjs",
+              "closedHistorySourceSha256": "e18c6046c2979d04fd353bba766b451fe9caae0bd5c0344409035a23e442aba8"
+            },
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/4/acceptedBefore/6/sha256",
+              "phase": "Approved complete historical before/post source of previous migration; not Network postimage"
+            }
+          ]
+        },
+        {
+          "sha256": "304dc4d4e7d5205f908f9bb0ba0a49432581516fd893a1fba321a527f274f6c8",
+          "origins": [
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/4/acceptedBefore/7/sha256",
+              "closedHistorySource": "E:\\Nova_A\\scripts\\lib\\graphParticleSourceProjection.mjs",
+              "closedHistorySourceSha256": "e18c6046c2979d04fd353bba766b451fe9caae0bd5c0344409035a23e442aba8"
+            },
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/4/acceptedBefore/7/sha256",
+              "phase": "Approved complete historical before/post source of previous migration; not Network postimage"
+            }
+          ]
+        },
+        {
+          "sha256": "4f86ee7cb5f0aeb12aef6735aeb0f62b5e451316116924c979d9a29544e93111",
+          "origins": [
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/4/acceptedBefore/8/sha256",
+              "closedHistorySource": "E:\\Nova_A\\scripts\\lib\\graphParticleSourceProjection.mjs",
+              "closedHistorySourceSha256": "e18c6046c2979d04fd353bba766b451fe9caae0bd5c0344409035a23e442aba8"
+            },
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/4/acceptedBefore/8/sha256",
+              "phase": "Approved complete historical before/post source of previous migration; not Network postimage"
+            }
+          ]
+        },
+        {
+          "sha256": "8dd0186963800f5f5c284102dbab5ec6ea31933ecd50c99b920b279305828039",
+          "origins": [
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/4/acceptedBefore/9/sha256",
+              "closedHistorySource": "E:\\Nova_A\\scripts\\lib\\graphParticleSourceProjection.mjs",
+              "closedHistorySourceSha256": "e18c6046c2979d04fd353bba766b451fe9caae0bd5c0344409035a23e442aba8"
+            },
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/4/acceptedBefore/9/sha256",
+              "phase": "Approved complete historical before/post source of previous migration; not Network postimage"
+            }
+          ]
+        },
+        {
+          "sha256": "ca28392756fa1403ab10f4906d5eca25c72fc88b7e7929a992925f380e6e2bc1",
+          "origins": [
+            {
+              "fixture": "scripts/lib/fixtures/graph-debug-owner-transform-v1.json",
+              "fixtureSha256": "2c889feb5fc79c98c0530a3d7b17a25a5d8567c487b3bbcbb6b13fe19c8e5ee9",
+              "jsonPointer": "/files/6/beforeSha256",
+              "phase": "Approved complete historical before/post source of previous migration; not Network postimage"
+            },
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/4/afterSha256",
+              "phase": "Approved complete historical before/post source of previous migration; not Network postimage"
+            }
+          ]
+        },
+        {
+          "sha256": "93f2bd245eaf5ea36eab4e2bbe8277b986ecf250a069189a11f52b49dfe943be",
+          "origins": [
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/4/standalone/afterSha256",
+              "phase": "Approved complete historical before/post source of previous migration; not Network postimage"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/editor/gameplayWorldHost.ts",
+      "accepted": [
+        {
+          "sha256": "330f2ebebd65653d7f2540a4ca46a8d31392078c69b0e8ea8c9ae1b44646a829",
+          "origins": [
+            {
+              "sourceRecordSha256": "f0b8d482998684ba38bcfcdfbc967b40c6c769ac3cf41b5e58f39d12925664ab",
+              "phase": "actual working652 full immutable bytes"
+            },
+            {
+              "fixture": "scripts/lib/fixtures/graph-debug-owner-transform-v1.json",
+              "fixtureSha256": "2c889feb5fc79c98c0530a3d7b17a25a5d8567c487b3bbcbb6b13fe19c8e5ee9",
+              "jsonPointer": "/files/7/afterSha256",
+              "phase": "Approved complete historical before/post source of previous migration; not Network postimage"
+            }
+          ]
+        },
+        {
+          "sha256": "e9b1f5e90d1107ff04913c2ea4baf9685377e67fca8cf969ad9713041046c7c0",
+          "origins": [
+            {
+              "sourceRecordSha256": "2159f6648acc3de860a25213a2d10aa90eb6d783fcf3b5324c20b9788f26dc53",
+              "phase": "previous complete648 baseline"
+            },
+            {
+              "sourceRecordSha256": "5a228f0f966daec07eccac310537f442ab3ffe3b009404eda9d0ae3ecfb22568",
+              "jsonPointer": "/files/251",
+              "phase": "actual sealed648 full source",
+              "closedHistorySource": "E:\\Nova_A\\scripts\\lib\\graphParticleSourceProjection.mjs",
+              "closedHistorySourceSha256": "e18c6046c2979d04fd353bba766b451fe9caae0bd5c0344409035a23e442aba8"
+            },
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/5/acceptedBefore/0/sha256",
+              "closedHistorySource": "E:\\Nova_A\\scripts\\lib\\graphParticleSourceProjection.mjs",
+              "closedHistorySourceSha256": "e18c6046c2979d04fd353bba766b451fe9caae0bd5c0344409035a23e442aba8"
+            },
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/5/acceptedBefore/11/sha256",
+              "closedHistorySource": "E:\\Nova_A\\scripts\\lib\\graphParticleSourceProjection.mjs",
+              "closedHistorySourceSha256": "e18c6046c2979d04fd353bba766b451fe9caae0bd5c0344409035a23e442aba8"
+            },
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/5/beforeSha256",
+              "phase": "Approved complete historical before/post source of previous migration; not Network postimage"
+            },
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/5/acceptedBefore/0/sha256",
+              "phase": "Approved complete historical before/post source of previous migration; not Network postimage"
+            },
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/5/acceptedBefore/11/sha256",
+              "phase": "Approved complete historical before/post source of previous migration; not Network postimage"
+            }
+          ]
+        },
+        {
+          "sha256": "5a34fe8386047ec41944034d14f3c9b334ebafda707c47456d39c546acbefd43",
+          "origins": [
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/5/acceptedBefore/1/sha256",
+              "closedHistorySource": "E:\\Nova_A\\scripts\\lib\\graphParticleSourceProjection.mjs",
+              "closedHistorySourceSha256": "e18c6046c2979d04fd353bba766b451fe9caae0bd5c0344409035a23e442aba8"
+            },
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/5/acceptedBefore/1/sha256",
+              "phase": "Approved complete historical before/post source of previous migration; not Network postimage"
+            },
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/5/standalone/beforeSha256",
+              "phase": "Approved complete historical before/post source of previous migration; not Network postimage"
+            }
+          ]
+        },
+        {
+          "sha256": "c3a1205537460b41119797683d5ee4023088902381e04e3352cbbab6b8a6461e",
+          "origins": [
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/5/acceptedBefore/2/sha256",
+              "closedHistorySource": "E:\\Nova_A\\scripts\\lib\\graphParticleSourceProjection.mjs",
+              "closedHistorySourceSha256": "e18c6046c2979d04fd353bba766b451fe9caae0bd5c0344409035a23e442aba8"
+            },
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/5/acceptedBefore/2/sha256",
+              "phase": "Approved complete historical before/post source of previous migration; not Network postimage"
+            }
+          ]
+        },
+        {
+          "sha256": "cc01d76f06fe152acc10e4c447b12e0909151f3f28a0517277365a8f2c1b8c44",
+          "origins": [
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/5/acceptedBefore/3/sha256",
+              "closedHistorySource": "E:\\Nova_A\\scripts\\lib\\graphParticleSourceProjection.mjs",
+              "closedHistorySourceSha256": "e18c6046c2979d04fd353bba766b451fe9caae0bd5c0344409035a23e442aba8"
+            },
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/5/acceptedBefore/3/sha256",
+              "phase": "Approved complete historical before/post source of previous migration; not Network postimage"
+            }
+          ]
+        },
+        {
+          "sha256": "ac64e4be6257c637b6553077de743a23123373a100e5d3f1ea4cef3495cc7e42",
+          "origins": [
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/5/acceptedBefore/4/sha256",
+              "closedHistorySource": "E:\\Nova_A\\scripts\\lib\\graphParticleSourceProjection.mjs",
+              "closedHistorySourceSha256": "e18c6046c2979d04fd353bba766b451fe9caae0bd5c0344409035a23e442aba8"
+            },
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/5/acceptedBefore/4/sha256",
+              "phase": "Approved complete historical before/post source of previous migration; not Network postimage"
+            }
+          ]
+        },
+        {
+          "sha256": "d48c9285cb13afc98f4242eaba664cbed2641ffa44edb9f8d3ad3556ac7596d9",
+          "origins": [
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/5/acceptedBefore/5/sha256",
+              "closedHistorySource": "E:\\Nova_A\\scripts\\lib\\graphParticleSourceProjection.mjs",
+              "closedHistorySourceSha256": "e18c6046c2979d04fd353bba766b451fe9caae0bd5c0344409035a23e442aba8"
+            },
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/5/acceptedBefore/5/sha256",
+              "phase": "Approved complete historical before/post source of previous migration; not Network postimage"
+            }
+          ]
+        },
+        {
+          "sha256": "df66867a31bdf21f1ef85d9898cb2eeaa66570e43a8cec6df2d7702b195bfcac",
+          "origins": [
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/5/acceptedBefore/6/sha256",
+              "closedHistorySource": "E:\\Nova_A\\scripts\\lib\\graphParticleSourceProjection.mjs",
+              "closedHistorySourceSha256": "e18c6046c2979d04fd353bba766b451fe9caae0bd5c0344409035a23e442aba8"
+            },
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/5/acceptedBefore/6/sha256",
+              "phase": "Approved complete historical before/post source of previous migration; not Network postimage"
+            }
+          ]
+        },
+        {
+          "sha256": "d891d21a3fd532a9c13ad62c6211e448870fa7b2fbebcc35f271c8af0f127a49",
+          "origins": [
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/5/acceptedBefore/7/sha256",
+              "closedHistorySource": "E:\\Nova_A\\scripts\\lib\\graphParticleSourceProjection.mjs",
+              "closedHistorySourceSha256": "e18c6046c2979d04fd353bba766b451fe9caae0bd5c0344409035a23e442aba8"
+            },
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/5/acceptedBefore/7/sha256",
+              "phase": "Approved complete historical before/post source of previous migration; not Network postimage"
+            }
+          ]
+        },
+        {
+          "sha256": "40c5598cd76c9f7b14103b9bb4802f0e371dae5048607d6e21114e5d24cb69ef",
+          "origins": [
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/5/acceptedBefore/8/sha256",
+              "closedHistorySource": "E:\\Nova_A\\scripts\\lib\\graphParticleSourceProjection.mjs",
+              "closedHistorySourceSha256": "e18c6046c2979d04fd353bba766b451fe9caae0bd5c0344409035a23e442aba8"
+            },
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/5/acceptedBefore/8/sha256",
+              "phase": "Approved complete historical before/post source of previous migration; not Network postimage"
+            }
+          ]
+        },
+        {
+          "sha256": "80e81d1ed67032816f057f70c5f8a4a902bb213f71e2cc69b40b3d19890d2db8",
+          "origins": [
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/5/acceptedBefore/9/sha256",
+              "closedHistorySource": "E:\\Nova_A\\scripts\\lib\\graphParticleSourceProjection.mjs",
+              "closedHistorySourceSha256": "e18c6046c2979d04fd353bba766b451fe9caae0bd5c0344409035a23e442aba8"
+            },
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/5/acceptedBefore/9/sha256",
+              "phase": "Approved complete historical before/post source of previous migration; not Network postimage"
+            }
+          ]
+        },
+        {
+          "sha256": "61e1565c4f218e7691a1cb4c27256a60fdab67b162acf71b1b35a0258b5b02b8",
+          "origins": [
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/5/acceptedBefore/10/sha256",
+              "closedHistorySource": "E:\\Nova_A\\scripts\\lib\\graphParticleSourceProjection.mjs",
+              "closedHistorySourceSha256": "e18c6046c2979d04fd353bba766b451fe9caae0bd5c0344409035a23e442aba8"
+            },
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/5/acceptedBefore/10/sha256",
+              "phase": "Approved complete historical before/post source of previous migration; not Network postimage"
+            }
+          ]
+        },
+        {
+          "sha256": "5210c88a5a1179878bf7fa0597bf64df2b7b1dfc312342edb5b72b15ababceec",
+          "origins": [
+            {
+              "fixture": "scripts/lib/fixtures/graph-debug-owner-transform-v1.json",
+              "fixtureSha256": "2c889feb5fc79c98c0530a3d7b17a25a5d8567c487b3bbcbb6b13fe19c8e5ee9",
+              "jsonPointer": "/files/7/beforeSha256",
+              "phase": "Approved complete historical before/post source of previous migration; not Network postimage"
+            },
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/5/afterSha256",
+              "phase": "Approved complete historical before/post source of previous migration; not Network postimage"
+            }
+          ]
+        },
+        {
+          "sha256": "530457f3b8ec2577964e944a00d230fb5b6ce34fe927f4d5c017bef485047bf0",
+          "origins": [
+            {
+              "fixture": "scripts/fixtures/particle-owner-transform-v1.json",
+              "fixtureSha256": "5eeef56ece66da2bf9a939c11d1de0b55387f53ace6e9ab212766ab2a4c66814",
+              "jsonPointer": "/files/5/standalone/afterSha256",
+              "phase": "Approved complete historical before/post source of previous migration; not Network postimage"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/PlayerApp.vue",
+      "accepted": [
+        {
+          "sha256": "a8383706100e32c6ad076e004064a84b733bf9b1e2adef33927667a569a20b8e",
+          "origins": [
+            {
+              "sourceRecordSha256": "f0b8d482998684ba38bcfcdfbc967b40c6c769ac3cf41b5e58f39d12925664ab",
+              "phase": "actual working652 full immutable bytes"
+            },
+            {
+              "sourceRecordSha256": "2159f6648acc3de860a25213a2d10aa90eb6d783fcf3b5324c20b9788f26dc53",
+              "phase": "previous complete648 baseline"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/runtime/networkProtocol.ts",
+      "accepted": [
+        {
+          "sha256": "42145e811f2ec2532b8502590aba3e2b5d487f149e59efd9a0e8707579136062",
+          "origins": [
+            {
+              "sourceRecordSha256": "f0b8d482998684ba38bcfcdfbc967b40c6c769ac3cf41b5e58f39d12925664ab",
+              "phase": "actual working652 full immutable bytes"
+            },
+            {
+              "sourceRecordSha256": "2159f6648acc3de860a25213a2d10aa90eb6d783fcf3b5324c20b9788f26dc53",
+              "phase": "previous complete648 baseline"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/runtime/networkServices.ts",
+      "accepted": [
+        {
+          "sha256": "abedf625707dcb15e3af625373ba7e042581df4568dddc8742e27a78cdd26639",
+          "origins": [
+            {
+              "sourceRecordSha256": "f0b8d482998684ba38bcfcdfbc967b40c6c769ac3cf41b5e58f39d12925664ab",
+              "phase": "actual working652 full immutable bytes"
+            },
+            {
+              "sourceRecordSha256": "2159f6648acc3de860a25213a2d10aa90eb6d783fcf3b5324c20b9788f26dc53",
+              "phase": "previous complete648 baseline"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "policy": "Only exact whole approved pre-Network hashes pass unchanged. Actual post-Network always validates all19 linked sources before reverse to exact actual652. No mutable registry, shape fallback, historical Network-after exception or old-helper imports."
+}

@@ -1,0 +1,413 @@
+NOVA_A 26.35 — WEBSITE AND ONLINE EDITOR DEPLOYMENT MANUAL
+Prepared: 2 October 2026
+
+1. WHAT YOU HAVE
+
+E:\Nova_A\nova\ is the complete, separate delivery folder. It contains the
+copied Nova webpage and the extracted, already-built Nova_A 26.35 Web release.
+The original E:\Nova_A\www\nova\ and release ZIP were left untouched.
+
+The new "Try online mode" button sits beside "View Nova_A on GitHub" and opens
+./online/ in the same tab. Visitors arrive at the engine's project launcher,
+where they can create or open a project. This is the editor entrypoint;
+online/player.html is a standalone game player, not the launcher.
+
+The copied webpage's old C++20/GLFW/ImGui descriptions were updated to match
+the current Rust/WebAssembly/Vue 3/Tauri project. Its visual layout, Nova_v1
+section, existing button styles and theme behavior are retained. Website
+stylesheet, script and Nova-home links now use relative paths, so the package
+works at a domain root or inside a subdirectory.
+
+No Rust compilation, Vue build, Node server or application backend is required
+on your production host. The release is already compiled to static files.
+Optional cloud/multiplayer features require their own compatible services only
+when a project explicitly enables them.
+
+2. FOLDER LAYOUT
+
+nova/
+  index.html                  Edited Nova landing page
+  style.css                   Original Nova website styles
+  app.js                      Original website theme/year behavior
+  DEPLOYMENT.txt              This complete manual
+  online/
+    index.html                Nova_A editor entrypoint
+    player.html               Standalone player entrypoint
+    assets/                   Compiled JS, CSS, WASM, workers, fonts and images
+    browser-capabilities.js   Startup compatibility notice
+    manifest.webmanifest      Online-app metadata
+    nova-icon-192.png
+    nova-icon-512.png
+    player-manifest.json      Public asset inventory for game export
+    .vite/manifest.json       Original build metadata
+    manual/                   Bundled English, German and Chinese manual
+    FONT_LICENSES/
+    third-party/
+    LICENSE.md
+    HOSTING.md                 Release's original hosting guidance
+    README.md
+    release-metadata.json
+    SHA256SUMS.txt             Engine file integrity manifest
+  deployment/
+    preview.mjs               Optional local static preview, no dependencies
+    verify-package.mjs        Optional package integrity check, no dependencies
+    verify-deployed.mjs       Public upload integrity/MIME/404 checker
+    check-browser.mjs         Optional repository-specific Edge smoke check
+    PACKAGE_VALIDATION.json   Independent package and HTTP evidence
+    CHANGELOG.txt             Delivery changes and verification scope
+    qa/                       Browser report and screenshots
+
+The online/ directory contains all 272 files from the published ZIP, including
+hidden build metadata. Keep the engine directory intact and preserve names and
+letter case. Keeping .vite/ on disk does not require making it public: the
+editor uses the public player-manifest.json for Web export.
+
+3. PREVIEW LOCALLY ON WINDOWS
+
+Open PowerShell and run:
+
+  node E:\Nova_A\nova\deployment\preview.mjs
+
+Open this address in your browser:
+
+  http://127.0.0.1:4173/nova/
+
+Scroll to Nova_A and click "Try online mode". The target is:
+
+  http://127.0.0.1:4173/nova/online/
+
+The same local server also exposes root hosting for comparison:
+
+  http://127.0.0.1:4173/
+  http://127.0.0.1:4173/online/
+
+Press Ctrl+C in the preview terminal to stop it. The server listens only on
+127.0.0.1 and disables caching for inspection. It is a local preview tool.
+
+If port 4173 is already in use, choose a different port:
+
+  node E:\Nova_A\nova\deployment\preview.mjs 4174
+
+Then use http://127.0.0.1:4174/nova/.
+
+Do not double-click online/index.html or use file://. ES modules, WebAssembly,
+workers and fetches need HTTP(S). Node is needed only for these optional local
+tools, not for the production site. These tools were run with the project's
+installed Node 22.22.2.
+
+To recheck the release after moving or uploading/downloading the package:
+
+  node E:\Nova_A\nova\deployment\verify-package.mjs
+
+Expected output: 271 engine checksums, complete 272-file release, relative
+webpage links. Paths above may be adjusted if you move the folder; the two
+standalone tools locate their data relative to their own files.
+
+4. CHOOSE YOUR PRODUCTION URL
+
+Your confirmed production setup:
+  SSH account: whitelist@whitelists.top
+  Server directory: /srv/whitelists/nova/
+  Landing page: https://nova.whitelists.top/
+  Online editor: https://nova.whitelists.top/online/
+
+The CONTENTS of the local nova folder belong directly in /srv/whitelists/nova/.
+Do not create /srv/whitelists/nova/nova/. See SERVER_UPLOAD.txt for exact Windows
+upload, Linux publication, post-upload verification and future-version commands.
+The public page was reachable on 2 October 2026 and served the original Nova
+site through Nginx; its current server configuration has not been modified.
+
+Use the layout that matches your existing website configuration. The downloaded
+www/nova folder alone does not reveal whether it is a subdirectory of your main
+site or the document root of a dedicated Nova domain. Both are supported.
+
+Layout A — Nova is a subdirectory of the main website:
+
+  Server document root/
+    nova/
+      index.html
+      style.css
+      app.js
+      online/
+        index.html
+        assets/ ...
+
+  Page URL:   https://YOUR-DOMAIN/nova/
+  Editor URL: https://YOUR-DOMAIN/nova/online/
+
+Upload the CONTENTS of E:\Nova_A\nova\ into the existing server's nova folder.
+Do not nest the folder again as nova/nova/.
+
+Layout B — Nova has its own domain/subdomain document root:
+
+  Nova domain document root/
+    index.html
+    style.css
+    app.js
+    online/
+      index.html
+      assets/ ...
+
+  Page URL:   https://YOUR-NOVA-DOMAIN/
+  Editor URL: https://YOUR-NOVA-DOMAIN/online/
+
+Upload the CONTENTS of E:\Nova_A\nova\ into that domain's document root.
+The same ./online/ button works without a code change in either layout.
+
+5. UPLOAD AND PUBLISH
+
+1) Identify the actual Nova document root in your hosting panel. Make a backup
+   of the currently deployed Nova folder before changing the live site.
+2) Prepare the new folder in staging. Use your host's file manager, SFTP or
+   existing deployment process to upload index.html, style.css, app.js and the
+   entire online/ tree. Preserve license and third-party attribution files.
+3) Confirm online/index.html is directly inside online/, not inside an extra
+   dist/ or Nova_A-v26.35-web/ folder. Upload all nested files, not just HTML.
+4) Apply only the static-host settings in section 6 that your host needs.
+5) Test staging with the checklist in section 8.
+6) Publish the completed folder together using your host's staging/promote or
+   atomic directory-switch facility. Avoid a partially uploaded live release.
+7) Revalidate the landing HTML and bootstrap/manifest files in any CDN cache.
+   Open the public URL in a fresh browser tab and repeat the click test.
+
+DEPLOYMENT.txt and deployment/ contain local documentation and QA tools. They
+can be kept privately; they are not required for visitors. Uploading them is
+optional. The required website files are index.html, style.css, app.js and the
+complete online/ folder. No credentials or production changes were made here.
+
+6. STATIC-HOST SETTINGS
+
+Use HTTPS for the public site. Local loopback HTTP is sufficient for preview.
+Keep landing page and editor assets on the same origin for this arrangement.
+
+Your server must:
+
+  - Use index.html as the directory index.
+  - Canonicalize directory URLs with a trailing slash, including /nova/ and
+    /nova/online/ (or /online/ when Nova is the document root).
+  - Return real 404 statuses for missing JS, WASM, JSON and other files.
+    Do not route missing engine assets to the landing HTML or a SPA fallback.
+  - Serve .wasm as application/wasm.
+  - Serve .js as text/javascript or application/javascript.
+  - Serve .css as text/css, .json as application/json, .html as text/html.
+  - Serve .webmanifest as application/manifest+json and .woff2 as font/woff2.
+
+Cross-origin isolation (COOP/COEP) is not required by this release. If your site
+already uses a Content Security Policy, ensure it permits the release's module
+scripts, WebAssembly and same-origin workers. Inspect actual browser errors
+before adapting an existing policy; no global policy is supplied or changed.
+
+Caching:
+
+  Revalidate index/player HTML, browser-capabilities.js, manifest.webmanifest,
+  player-manifest.json and release-metadata.json (Cache-Control: no-cache).
+  Revalidate landing index.html as well. Hashed files in online/assets/ can use
+  long-lived immutable caching. Preserve previous hashed assets for open tabs
+  during upgrades. No-cache still allows storage; it requests revalidation.
+
+Apache example (optional; only when your host permits these .htaccess
+directives). Merge into the Nova directory's existing configuration, rather
+than replacing unrelated rules:
+
+  DirectoryIndex index.html
+  DirectorySlash On
+  AddType application/wasm .wasm
+  AddType text/javascript .js .mjs
+  AddType application/manifest+json .webmanifest
+
+  <IfModule mod_headers.c>
+    <FilesMatch "\.(html|webmanifest|json)$">
+      Header set Cache-Control "no-cache"
+    </FilesMatch>
+    <FilesMatch "^(browser-capabilities\.js|style\.css|app\.js)$">
+      Header set Cache-Control "no-cache"
+    </FilesMatch>
+  </IfModule>
+
+Existing catch-all rewrites must exclude the Nova static directory. Some shared
+hosts restrict overrides; a 500 error after an override change means you should
+restore that change and configure these settings through the host's panel.
+
+Nginx example for Layout A (server block already has root pointing at the
+parent website document root and its normal mime.types loaded):
+
+  location = /nova {
+    return 308 /nova/$is_args$args;
+  }
+  location /nova/ {
+    index index.html;
+    try_files $uri $uri/ =404;
+    add_header Cache-Control "no-cache";
+  }
+
+This deliberately uses conservative revalidation for the entire Nova tree;
+hashed-asset caching is an optional later optimization. Add a wasm mapping to
+your existing MIME configuration if it lacks application/wasm. An existing
+regex location or error_page rewrite can override this example; merge it with
+the actual host configuration and validate there. This snippet is not a full
+TLS/domain server configuration. For Layout B, adapt the scope to / in the
+dedicated Nova virtual host. No example configuration was installed or tested
+on a production Apache/Nginx server.
+
+Official directive references consulted for these optional examples:
+  https://httpd.apache.org/docs/2.4/mod/mod_dir.html#directoryindex
+  https://httpd.apache.org/docs/2.4/mod/mod_dir.html#directoryslash
+  https://httpd.apache.org/docs/2.4/mod/mod_mime.html#addtype
+  https://httpd.apache.org/docs/2.4/mod/mod_headers.html#header
+  https://nginx.org/en/docs/http/ngx_http_core_module.html#try_files
+
+7. FIRST USE AND PROJECT FILES
+
+Click Try online mode, then New Project or Open Project. For a new project,
+enter a name, choose a starter template and click Create Project. A first-run
+guide may appear; follow it or choose Skip for now. The launcher also offers
+the bundled manual and English/German/Chinese language selection.
+
+Use File > Save Project to keep a project backup. Depending on browser support,
+file access may use a picker or a download. Keep downloaded project files in a
+known local folder; browser recovery/storage is not a substitute for backups.
+Save before closing a tab, clearing browser data, or updating the deployed
+editor. The online deployment adds no shared project-storage service.
+
+The editor is online-only. No service worker provides an offline application
+shell, and offline reload is unsupported. An already-loaded tab may keep some
+work running in memory, but lazy tools, imports, builds and reload may need the
+network. Use landscape on touch devices; portrait shows an orientation prompt.
+Physical phone/tablet compatibility and installation were not tested here.
+
+To publish a game, use the editor's Web build and Download Web ZIP action.
+Extract that generated game package into a SEPARATE game directory and serve it
+over HTTP(S). Keep the exported player, game.nova-pak and integrity metadata
+together. Do not overwrite online/ with a game export. This manual concerns
+hosting the editor, not configuring a multiplayer game server.
+
+8. CHECK AFTER DEPLOYMENT
+
+Check the actual public HTTPS deployment, even though local verification passed:
+
+  [ ] Nova landing page renders with its normal fonts, colors and layout.
+  [ ] GitHub and Try online mode are together, and wrap on narrow screens.
+  [ ] Theme switching works.
+  [ ] Try online mode opens the expected online/ URL.
+  [ ] Nova_A launcher displays version 26.35.
+  [ ] New Project opens and a starter reaches the editor.
+  [ ] Browser Network panel has no missing engine assets.
+  [ ] The .wasm response has Content-Type application/wasm.
+  [ ] online/manifest.webmanifest and its two icons return successful responses.
+  [ ] online/player-manifest.json returns JSON, not a website HTML page.
+  [ ] A deliberately nonexistent online/assets/not-a-real-file.js returns 404.
+  [ ] Save a disposable project backup, reopen it and confirm your work remains.
+  [ ] Inspect the intended browsers and target devices on the public host.
+
+9. UPDATES AND ROLLBACK
+
+For a later engine version, stage a complete new release in a separate directory,
+verify its own SHA256SUMS.txt, test it, and update the copied landing version
+description. Publish HTML/manifests/assets as one coherent build. Keep an old
+deployable copy for rollback. Retain the old hashed assets in the served assets
+directory while old tabs may need them; switching to a new directory alone does
+not keep those old asset URLs alive. Alternatively use versioned editor URLs
+and keep the old version reachable until users have saved and reloaded.
+
+Do not replace just one JS/WASM file or mix a new player manifest with old
+assets. Users should save first, then reload to adopt a new deployment. If an
+upgrade fails, restore the previous complete website/editor deployment and
+invalidate stale HTML/manifest caches. Rollback is a server deployment action;
+it does not restore unsaved browser edits.
+
+10. TROUBLESHOOTING
+
+Unstyled landing page:
+  Confirm style.css and app.js are beside index.html. Their links must stay
+  relative. Inspect their requests for 404 responses or HTML fallback bodies.
+
+Button gives 404:
+  Confirm online/index.html exists at the button's resolved URL. Remove any
+  accidental extra nesting. Check directory indexes and trailing-slash redirects.
+
+Blank editor / failed module / unexpected token '<':
+  A missing JS file may be receiving HTML. Check the requested asset, MIME,
+  rewrite rules, letter case, upload completeness and any mixed-build cache.
+
+WASM MIME or initialization error:
+  Verify the .wasm response is successful, has application/wasm, and matches the
+  release checksum. Then inspect the actual browser error for capability/CSP
+  restrictions. Do not edit the compiled WASM file to work around hosting.
+
+Game export cannot find player assets:
+  Verify online/player-manifest.json and the full online/assets/ tree. Blocking
+  hidden .vite/ metadata is acceptable; the public manifest must remain reachable.
+
+Old page/engine after upload:
+  Revalidate HTML and manifests in the CDN/browser, save your project and reload.
+  Ensure the entire release is from one version.
+
+Offline reload fails:
+  This is the release's declared online-only behavior. Reconnect and use a saved
+  project backup; this deployment does not add offline caching.
+
+11. VERIFICATION AND SCOPE
+
+Source archive:
+  releases/v26.35/Nova_A-v26.35-web.zip
+Archive SHA-256:
+  f944a930057073360b64bfe2fad0b1e6da51cb2af1da4cf8ed20562f48bb8343
+
+Independent checks verified all 272 extracted files byte-for-byte against the
+ZIP and all 271 checksum-listed files. The checksum manifest itself is the
+272nd file. Original www/nova index/style/app hashes are unchanged. Local root
+and nested hosting passed 542 public-release HTTP byte comparisons, MIME,
+manifest/icon, missing-file and directory-redirect checks. Details are in
+deployment/PACKAGE_VALIDATION.json.
+
+Browser QA used Edge 147.0.3912.72 on loopback HTTP. It exercised actual button
+clicks at both hosting layouts, theme switching, 1440-pixel desktop and
+390/320-pixel narrow layouts, project creation and successful WASM loading. No
+uncaught browser exceptions or missing required assets were observed. Desktop,
+mobile and editor screenshots are in deployment/qa/. Narrow viewport emulation
+does not certify physical touch devices. All engine files remain the published
+build; no rebuild/typecheck of the unrelated engine source was needed.
+
+Optional browser audit rerun (requires the original Nova_A repository, its
+installed dependencies and Microsoft Edge; unlike preview/integrity checking,
+this helper is not standalone):
+
+  1) Start deployment/preview.mjs in one terminal.
+  2) From E:\Nova_A in another terminal, run:
+       node .\nova\deployment\check-browser.mjs
+     With another port:
+       node .\nova\deployment\check-browser.mjs http://127.0.0.1:4174
+
+This delivery has not been uploaded to a production server. Public HTTPS,
+provider-specific configuration, Firefox/Safari, physical devices and every
+engine/game workflow remain outside this website integration smoke check.
+For full engine usage, read online/manual/index.html and online/HOSTING.md.
+
+12. YOUR SERVER AND NEW VERSIONS
+
+Read SERVER_UPLOAD.txt for commands tailored to whitelist@whitelists.top and
+/srv/whitelists/nova/. It also explains the preferred future layout: publish
+each subsequent release into its own folder, for example online-v26.36/, test
+that URL, then switch the landing button. Keep the previous engine folder so
+open tabs and rollback still use the matching manifests and assets.
+Version folders do not isolate same-origin browser preferences or recovery
+storage. Keep downloaded project backups and avoid simultaneous editing of the
+same project across engine versions.
+
+After the initial upload, from your Windows project folder run:
+
+  node .\nova\deployment\verify-deployed.mjs https://nova.whitelists.top/
+
+This compares the current local website and selected engine with the actual
+HTTPS responses. It checks public file hashes, MIME, directory indexes,
+redirects, manifests/icons and real 404 responses. A passing report is saved as
+deployment/DEPLOYED_VALIDATION.json. The supplied report currently records a
+successful loopback rehearsal; its publicUrl identifies the actual target.
+Run again after upload to replace it with public-server results, then create,
+save and reopen a disposable project in the public browser editor.
+
+The engine's unchanged HOSTING.md also references repository-only supporting
+documents and historical audit reports that are not in the Web ZIP. Those
+references are not runtime website dependencies. Use the bundled HTML manual
+or the source repository for those supporting documents; release files were
+preserved to retain their original checksums.

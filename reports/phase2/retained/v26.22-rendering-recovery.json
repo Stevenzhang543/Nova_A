@@ -1,0 +1,105 @@
+{
+  "format": "nova-v26.22-rendering-recovery",
+  "version": 1,
+  "release": "26.22",
+  "regressionOrigin": "26.22",
+  "engineVersion": "26.32.0",
+  "expectedRelease": "26.32",
+  "development": true,
+  "qualifiedRelease": null,
+  "generatedAt": "2026-09-28T18:10:18.563Z",
+  "status": "passed",
+  "scope": "Actual session recovery store for material and particle asset identities; exact drafts, conflicts, departure and rollback. Browser adapters are tested separately. This does not assert global Save integration.",
+  "checks": [
+    {
+      "name": "material: Recover exact draft and detect a changed saved asset",
+      "status": "passed",
+      "covers": [
+        "src/editor/studioDraftRetention.ts#readStudioDraft",
+        "src/editor/studioDraftRetention.ts#retainStudioDraft"
+      ]
+    },
+    {
+      "name": "material: Isolate replacement records, projects and kinds",
+      "status": "passed",
+      "covers": [
+        "src/editor/studioDraftRetention.ts#readStudioDraft",
+        "src/editor/studioDraftRetention.ts#retainStudioDraft"
+      ]
+    },
+    {
+      "name": "material: Capture mounted drafts before departure and discard explicitly",
+      "status": "passed",
+      "covers": [
+        "src/editor/studioDraftRetention.ts#discardAuthoringDrafts",
+        "src/editor/studioDraftRetention.ts#hasPendingAuthoringDrafts",
+        "src/editor/studioDraftRetention.ts#listPendingAuthoringDrafts",
+        "src/editor/studioDraftRetention.ts#registerStudioDraftOwner"
+      ]
+    },
+    {
+      "name": "material: Clear only the intended project draft",
+      "status": "passed",
+      "covers": [
+        "src/editor/studioDraftRetention.ts#clearStudioDraft",
+        "src/editor/studioDraftRetention.ts#readStudioDraft",
+        "src/editor/studioDraftRetention.ts#retainStudioDraft"
+      ]
+    },
+    {
+      "name": "material: Rollback recovery requires the exact saved source",
+      "status": "passed",
+      "covers": [
+        "src/editor/studioDraftRetention.ts#readStudioDraft",
+        "src/editor/studioDraftRetention.ts#restoreAuthoringDrafts",
+        "src/editor/studioDraftRetention.ts#retainStudioDraft",
+        "src/editor/studioDraftRetention.ts#snapshotAuthoringDrafts"
+      ]
+    },
+    {
+      "name": "particle: Recover exact draft and detect a changed saved asset",
+      "status": "passed",
+      "covers": [
+        "src/editor/studioDraftRetention.ts#readStudioDraft",
+        "src/editor/studioDraftRetention.ts#retainStudioDraft"
+      ]
+    },
+    {
+      "name": "particle: Isolate replacement records, projects and kinds",
+      "status": "passed",
+      "covers": [
+        "src/editor/studioDraftRetention.ts#readStudioDraft",
+        "src/editor/studioDraftRetention.ts#retainStudioDraft"
+      ]
+    },
+    {
+      "name": "particle: Capture mounted drafts before departure and discard explicitly",
+      "status": "passed",
+      "covers": [
+        "src/editor/studioDraftRetention.ts#discardAuthoringDrafts",
+        "src/editor/studioDraftRetention.ts#hasPendingAuthoringDrafts",
+        "src/editor/studioDraftRetention.ts#listPendingAuthoringDrafts",
+        "src/editor/studioDraftRetention.ts#registerStudioDraftOwner"
+      ]
+    },
+    {
+      "name": "particle: Clear only the intended project draft",
+      "status": "passed",
+      "covers": [
+        "src/editor/studioDraftRetention.ts#clearStudioDraft",
+        "src/editor/studioDraftRetention.ts#readStudioDraft",
+        "src/editor/studioDraftRetention.ts#retainStudioDraft"
+      ]
+    },
+    {
+      "name": "particle: Rollback recovery requires the exact saved source",
+      "status": "passed",
+      "covers": [
+        "src/editor/studioDraftRetention.ts#readStudioDraft",
+        "src/editor/studioDraftRetention.ts#restoreAuthoringDrafts",
+        "src/editor/studioDraftRetention.ts#retainStudioDraft",
+        "src/editor/studioDraftRetention.ts#snapshotAuthoringDrafts"
+      ]
+    }
+  ]
+}
