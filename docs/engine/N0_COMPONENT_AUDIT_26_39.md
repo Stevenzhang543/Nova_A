@@ -1098,6 +1098,38 @@ EXIT=0
 
 **状态**：该修复为 **`VERIFIED`** —— 有 Rust 单测、真实浏览器端到端证据、以及完整工作流脚本通过。**W1 从 `PARTIAL` 推进为三个模板的创建→保存→重开→运行→停止链路通过**；W1 其余要求（Area 信号触发交互、保存为可复用场景并在关卡实例化）仍需单独验证。
 
+### 19.9 批次 C：W1 的运行时与编辑器证据（三套验证全部通过）
+
+在修复浮点导出后，把仓库里与 W1 相关、此前未跑或跑不通的验证逐一执行，得到**跨三层**的证据：
+
+**① `verify-engine-workflows.mjs` —— 3/3 模板通过**（§19.8 已记录）：launcher 创建 → 保存 → 重开 → 运行 → 停止。
+
+**② `verify-v26.34-game-scenarios.mjs` —— 7/7 通过**（真实模块 + bundled WASM）：
+
+| 检查 | 覆盖的 W1 要素 |
+|---|---|
+| Platformer executes authored Rhai against native collision, named inputs, animation, **jump audio** and Stop restoration | 脚本、原生碰撞、**命名输入**、动画、**音效**、Stop 还原 |
+| Top-down authored input moves the player and **instantiates its reusable enemy prefab** | **可复用预制体实例化** |
+| **Top-down trigger** executes save commands and a **real runtime scene transition**; Stop restores authored world | **sensor/Area → 信号 → 脚本 → 存档 + 场景切换** |
+| Responsive UI resolves rectangles, localized text, Unicode input, checkbox and button events | 游戏内 UI |
+
+其中触发器在模板里是 `shape('top-trigger', …, { body: 'Static', sensor: true })` —— **sensor 即 Area**，进入后经信号运行脚本并切换场景，正对应 W1 的"通过 Area 的 signal 触发一个简单交互"。
+
+**③ `verify-v26.34-authoring-user.mjs` —— 5/5 通过**（此前跑不通，原因见下）：
+- Fresh project 与真实导入 SVG 资产经 **Save Project 下载**后存活；
+- **可见对象创建 + 父级选择**构建嵌套预制体，局部变换与资源引用保持；
+- 嵌套预制体 revert / source apply / 独立位移支持**真实 Undo/Redo**；
+- 资源导入器实例化独立嵌套可复用层级并修复 UUID 关系；
+- **关闭并重开真实下载的项目**后身份、层级、覆盖与导入源保持。
+
+这对应 W1 的"保存角色为可复用场景，在关卡中实例化"。
+
+**该脚本此前失败的原因（测试维护缺陷，非产品缺陷）**：第 8 行把发布号硬编码为 `'26.34'`，第 10 行断言 `package.json` 版本等于它，而当前版本是 `26.38.0`。已改为**从 package.json 推导**发布号（与其他脚本一致），并把版本范围补上 `36`。修复后 5 项全部通过。
+
+**顺带排查**：扫描全部 `scripts/**/*.mjs` 中残留的 `26.3x` 版本固定，共 8 处，**全部是刻意为之**（发布专用脚本、26.34 基线证据、motion 基线必须停留在 pre-polish 版本），无需改动。
+
+**W1 状态更新**：运行时语义、launcher 全流程、编辑器作者流程**三层均有通过证据**。但**仍缺一项**：现有验证都不覆盖"**在编辑器里从零组装一个角色**"（手动添加 CharacterBody2D + 形状 + Sprite/帧动画 + Camera + 脚本、在 InputMap 里配置移动/跳跃、连接 Area 信号）—— 这正是 N3 纵向切片要交付的编辑工作流。故 **W1 仍为 `PARTIAL`**，但证据面已大幅收窄。
+
 ### 19.2 批次 B1：渲染抽取全部改用批量世界变换
 
 **改动**（`src/renderer/sceneRenderer.ts`，已解冻范围）：
