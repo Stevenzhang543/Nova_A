@@ -5,7 +5,7 @@ import {join} from 'node:path'
 import {withBrowserAudit} from './lib/browserUserAudit.mjs'
 import {worldUserControls17} from './lib/worldAudit17.mjs'
 const numericLayoutOnly=process.argv.includes('--numeric-layout-only');assert.ok(!numericLayoutOnly||process.argv.includes('--development'),'Targeted layout mode is development only');
-await withBrowserAudit({release:'26.22',name:numericLayoutOnly?'inspector-numeric-layout-user':'foundations-user',development:process.argv.includes('--development'),expectedRelease:process.argv.includes('--development')?JSON.parse(await readFile('package.json','utf8')).version.split('.').slice(0,2).join('.'):'26.22',height:1000},/** 结构说明（自动提取）：withBrowserAudit 回调；输入 a；直接调用 worldUserControls17、u.open、join、process.cwd、settings 等；等待异步结果。 */ async a=>{
+await withBrowserAudit({release:JSON.parse(await readFile('package.json','utf8')).version.split('.').slice(0,2).join('.'),name:numericLayoutOnly?'inspector-numeric-layout-user':'foundations-user',development:process.argv.includes('--development'),expectedRelease:process.argv.includes('--development')?JSON.parse(await readFile('package.json','utf8')).version.split('.').slice(0,2).join('.'):'26.22',height:1000},/** 结构说明（自动提取）：withBrowserAudit 回调；输入 a；直接调用 worldUserControls17、u.open、join、process.cwd、settings 等；等待异步结果。 */ async a=>{
  const u=worldUserControls17(a)
  await u.open(join(process.cwd(),'reference-projects/projects/creator-v2620-code-game/project.nova'))
  const settings=/** 结构说明（自动提取）：settings；无显式参数；直接调用 u.workspace、a.click、a.until；等待异步结果。 */ async()=>{await u.workspace('Manage');await a.click('.manage-body>nav button',1);await a.until("!!document.querySelector('[data-audit=form-label-layout]')");await a.click('.settings-search nav button',0)}

@@ -5,7 +5,7 @@ import {join} from 'node:path'
 import {withBrowserAudit} from './lib/browserUserAudit.mjs'
 import {worldUserControls17} from './lib/worldAudit17.mjs'
 const development=process.argv.includes('--development');
-await withBrowserAudit({release:'26.22',name:'playback-stability-user',development,expectedRelease:JSON.parse(await readFile('package.json','utf8')).version.split('.').slice(0,2).join('.'),width:1366,height:900},/** 结构说明（自动提取）：withBrowserAudit 回调；输入 a；直接调用 worldUserControls17、u.open、join、process.cwd、u.workspace 等；等待异步结果。 */ async a=>{
+await withBrowserAudit({release:JSON.parse(await readFile('package.json','utf8')).version.split('.').slice(0,2).join('.'),name:'playback-stability-user',development,expectedRelease:JSON.parse(await readFile('package.json','utf8')).version.split('.').slice(0,2).join('.'),width:1366,height:900},/** 结构说明（自动提取）：withBrowserAudit 回调；输入 a；直接调用 worldUserControls17、u.open、join、process.cwd、u.workspace 等；等待异步结果。 */ async a=>{
  const u=worldUserControls17(a);await u.open(join(process.cwd(),'reference-projects/projects/creator-v2622-code-game/project.nova'));await u.workspace('Design');await u.entity('Player');const before=await u.save('playback-stability-before-22');
  await a.client.send('Performance.enable');const measurements=[];
  await a.check('Fifty actual Play Pause Stop cycles preserve the authored project',/** 结构说明（自动提取）：a.check 回调；无显式参数；直接调用 u.activate、a.until、u.save、assert.deepEqual、a.client.send 等；包含循环处理；等待异步结果。 */ async()=>{

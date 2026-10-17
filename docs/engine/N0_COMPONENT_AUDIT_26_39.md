@@ -1184,6 +1184,20 @@ EXIT=0
 
 **同一类测试维护缺陷已连续出现两次**（authoring 与 input 各一处）：都是把发布号写成字面量。已排查全库其余 8 处版本字面量，均为刻意保留。
 
+### 19.12 批次 C：新增"过期版本固定"守卫，并修复 **19 个** 失效脚本
+
+**守卫 `scripts/verify-script-release-pins.mjs`**：同一类测试维护缺陷此前已出现三次（authoring、input、studio-playback），表现为**脚本静默失去可运行性而无人报警**。守卫只针对确切模式：`withBrowserAudit` 调用里 **字面量 `release:'26.xx'` 与从 `package.json` 派生的 `expectedRelease` 同时存在**，此时 harness（`browserUserAudit.mjs:51`）会断言二者相等，脚本必然失败。
+
+**两次收窄（都是"守卫写错"而非放宽容差）**：
+1. 初版扫描全库 `release:'26.xx'` → 命中 **数百** 处。绝大多数是**逐版本脚本固定自己的版本**（`verify-v26.XX-*.mjs` 本就该如此），完全合法。该版本**无意义**，已放弃。
+2. 改为"字面量 + 派生 expectedRelease"后仍误报 `verify-v26.26-template-library.mjs` —— 其 `expectedRelease: process.env… || '26.26'` 与 release **一致**。再收窄为"expectedRelease 且调用内出现 `package.json`"。
+
+**发现并修复 19 个真实失效脚本**，全部为 `verify-v26.22-*-user.mjs`：`release:'26.22'` 写死、`expectedRelease` 派生自 package.json，**默认运行必然失败**（仅带 `--development` 才跳过断言）。已统一改为同源派生。守卫现已通过。
+
+**抽查（诚实记录，不夸大）**：修复后运行 `verify-v26.22-scene-prefab-user.mjs`，**第 1 项通过**，第 2 项超时于 `document.querySelectorAll('.scene-tab').length===2`。已确认 **`.scene-tab` 选择器在当前源码中仍存在**（`SceneTabs.vue:9`），因此**不是选择器过期**；但"创建场景后应出现 2 个标签"未成立，**具体原因未确定**。
+
+**结论边界**：守卫只消除**版本固定**这一类失效，**不能保证**这 19 个 26.22 时代脚本在当前 UI 上通过 —— 它们可能另有 UI 漂移。已记为独立的 E2E 维护项，不并入 W1 结论。
+
 ### 19.2 批次 B1：渲染抽取全部改用批量世界变换
 
 **改动**（`src/renderer/sceneRenderer.ts`，已解冻范围）：
