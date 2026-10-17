@@ -73,6 +73,19 @@ await withBrowserAudit({ release, name: 'w1-character-authoring', width: 1600, h
     a.observations.push({ id: 'w1-character', kinds, sceneCount: saved.document.scenes.length })
   })
 
+  await a.check('The inspector lists the signals owned by the selected node', async () => {
+    await u.entity('Hero'); await u.expandInspector()
+    // 节点拥有 Area2D，因此应列出区域信号；未拥有的组件信号不得出现。
+    await a.until("!!document.querySelector('[data-signal-id=\"area.entered\"]')", 15000)
+    const listed = await a.evaluate("[...document.querySelectorAll('[data-signal-id]')].map(e => e.getAttribute('data-signal-id'))")
+    assert.ok(listed.includes('area.entered'), 'the Area2D signal must be listed, saw ' + listed.join(','))
+    assert.ok(listed.includes('area.exited'), 'the Area2D exit signal must be listed')
+    assert.ok(!listed.includes('portal.entered'), 'signals from components the node does not own must not appear, saw ' + listed.join(','))
+    const params = await a.evaluate("document.querySelector('[data-signal-id=\"area.entered\"]')?.textContent ?? ''")
+    assert.ok(params.includes('area: entity'), 'parameter name and type must be shown, saw ' + params)
+    a.observations.push({ id: 'w1-signals', listed })
+  })
+
   await a.check('Configure a movement action through the visible Input Map panel', async () => {
     await a.press('P', 10) // Ctrl+Shift+P 打开命令面板
     await a.until("!!document.querySelector('.command-palette')", 15000)

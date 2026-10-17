@@ -235,6 +235,14 @@
           <p v-if="selectedEntity.script2D.lastError" class="script-error">{{ selectedEntity.script2D.lastError }}</p>
         </InspectorSection>
 
+        <InspectorSection v-if="nodeSignals.length" :title="t('signals')" category="general">
+          <article v-for="signal in nodeSignals" :key="signal.id" class="signal-row" :data-signal-id="signal.id">
+            <strong class="signal-name">{{ signal.id }}</strong>
+            <small class="signal-scope">{{ signal.scope }}</small>
+            <span v-if="signal.params.length" class="signal-params">{{ signal.params.map(/* 参数以 名:类型 展示，不依赖翻译。 */ param => param.id + ': ' + param.type).join(', ') }}</span>
+          </article>
+        </InspectorSection>
+
         <InspectorSection v-if="selectedEntity.hasComponent('ShapeRenderer2D') && !selectedEntity.hasComponent('RectTransform')" :title="t('shapeSize')" category="render">
           <PropertyRow :label="t('absoluteSize')"><div class="pair"><NumericExpressionInput v-model="absoluteSizeX" :minimum="0.000001" :step="0.1" :resource-key="numericResourceKey + ':absoluteSizeX'" /><NumericExpressionInput v-model="absoluteSizeY" :minimum="0.000001" :step="0.1" :resource-key="numericResourceKey + ':absoluteSizeY'" /></div></PropertyRow>
         </InspectorSection>
@@ -366,6 +374,7 @@ import UiButton from '../ui/components/UiButton.vue'
 import EditorIcon from './EditorIcon.vue'
 import PathTextInput from './PathTextInput.vue'
 import type {ParsedPathText} from '../editor/pathTextDraft'
+import { signalsForEntity } from '../world/componentSignals'
 import {settleEditorDrafts} from '../editor/pendingDrafts'
 import ObjectOwnershipPanel from './ObjectOwnershipPanel.vue'
 import ObjectBlueprintEditor from './ObjectBlueprintEditor.vue'
@@ -589,6 +598,12 @@ const addableComponents = computed(/** 合并已移除与尚未添加的可选�
   const missing = optionalComponents.filter(/* 先计算 packageAvailable(kind)；仅当其为真值时求右侧 !selectedEntity.value!.componentMap.has(kind)，返回短路求值结果。 */ kind => packageAvailable(kind) && !selectedEntity.value!.componentMap.has(kind))
   return [...new Set([...removed, ...missing])]
 })
+/** 当前选中节点可发出的信号：由它实际拥有的组件决定（§23.4）。 */
+const nodeSignals = computed(/** 汇总节点组件对应的信号目录项。 */ () => {
+  const entity = selectedEntity.value
+  return entity ? signalsForEntity([...entity.componentMap.keys()]) : []
+})
+
 const filteredAddableComponents = computed(/** 按组件名、类型和分类标签筛选可添加组件。 */ () => {
   const needle = componentSearch.value.trim().toLocaleLowerCase()
   return addableComponents.value.filter(/** 判断组件的本地化名称、类型或分类是否匹配搜索词。 */ kind => !needle || `${componentTitle(kind)} ${kind} ${t(componentCategoryLabel(componentCategory(kind)))}`.toLocaleLowerCase().includes(needle))
