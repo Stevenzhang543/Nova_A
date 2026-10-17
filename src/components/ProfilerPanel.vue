@@ -291,6 +291,7 @@ import { enableOfficialPackage, OFFICIAL_NETWORKING_PACKAGE_ID, packageEnabled }
 import { exportReplay, normalizeReplayDocument, replayState, startReplayPlayback, startReplayRecording, stopReplay } from '../runtime/replay'
 import { runProjectTests, testReportJUnit, testRunnerState } from '../runtime/testRunner'
 import { t } from '../i18n'
+import { playSimulation } from '../editor/runCommands'
 import { audioRuntime } from '../runtime/audio'
 import { requestConfirmation } from '../store/dialog'
 import { editorState } from '../store/editor'
@@ -375,7 +376,7 @@ function captureStatusKey(status: 'passed' | 'failed' | 'unavailable' | 'estimat
 /** 两份脚本捕获都存在时计算差异，否则清空比较结果。 */ function compareScriptCaptures() { const first = profilerState.scriptCaptures[scriptCaptureA.value], second = profilerState.scriptCaptures[scriptCaptureB.value]; scriptComparison.value = first && second ? compareScriptProfiles(first, second) : [] }
 /** 捕获当前脚本性能并下载 JSON。 */ function exportCurrentScriptProfile() { const capture = captureScriptProfile(); download(`nova-script-profile-${Date.now()}.json`, JSON.stringify(capture, null, 2)) }
 
-/** 成功进入仿真后，以项目初始源和 tick 频率启动录制及游戏会话。 */ function recordReplay() { if (!toggleSimulation(true)) return; startReplayRecording(getSceneJSON(), physicsState.globalSettings.tickRate); gameplayRuntime.beginSession() }
+/** 成功进入仿真后，以项目初始源和 tick 频率启动录制；会话启动由共享命令负责。 */ async function recordReplay() { if (!await playSimulation()) return; startReplayRecording(getSceneJSON(), physicsState.globalSettings.tickRate) }
 /** 停止重放，若此前录制则导出文档为资源、选中新资源并记录历史。 */ function finishReplay() { const wasRecording = replayState.mode === 'recording'; const document = wasRecording ? exportReplay(physicsState.globalSettings.tickRate) : null; stopReplay(); if (document) { const asset = createTextAsset(`Replay ${new Date().toISOString().replace(/[:.]/g, '-')}`, 'replay', JSON.stringify(document, null, 2), 'Assets/Replays'); selectedReplay.value = asset.uuid; pushHistory('Record deterministic replay') } }
 /** 读取规范化重放，加载初始项目并启动会话，再开始重放。 */ function playReplay() { const source = readTextAsset(selectedReplay.value); if (!source) return; const document = normalizeReplayDocument(JSON.parse(source)); if (!loadProject(document.initialProject)) return; if (!toggleSimulation(true)) return; gameplayRuntime.beginSession(); startReplayPlayback(document) }
 /** 下载指定内容和媒体类型，下一轮释放临时对象地址。 */ function download(name: string, source: string, type = 'application/json') { const url = URL.createObjectURL(new Blob([source], { type })); const anchor = document.createElement('a'); anchor.href = url; anchor.download = name; anchor.click(); window.setTimeout(/* 调用 URL.revokeObjectURL(url) 并返回调用结果。 */ () => URL.revokeObjectURL(url), 0) }

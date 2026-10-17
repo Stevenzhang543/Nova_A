@@ -33,17 +33,17 @@ import EditorIcon, { type EditorIconName } from './EditorIcon.vue'
 import { vModalFocus } from '../editor/modalFocus'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { t } from '../i18n'
+import { playSimulation, stopSimulation } from '../editor/runCommands'
 import { addEditorLog, editorState as state, type BottomPanelTab, type EditorWorkspace } from '../store/editor'
 import { applyEditorWorkspace, navigateHistory, openEditorTool, openManageSection, resetEditorLayout, toggleEditorPanel, toggleFocusMode, workspaceState } from '../editor/workspaces'
 import { pluginRuntime, pluginState } from '../runtime/plugins'
 import { assetState } from '../assets/AssetDatabase'
-import { copySelectedEntities, deleteSelected, duplicateSelectedEntities, historyState, pasteEntities, physicsState, pushHistory, redo, saveProject, sceneManager, selectEntities, setActiveScene, stopPlayMode, toggleSimulation, undo } from '../store/physics'
+import { copySelectedEntities, deleteSelected, duplicateSelectedEntities, historyState, pasteEntities, physicsState, pushHistory, redo, saveProject, sceneManager, selectEntities, setActiveScene, undo } from '../store/physics'
 import { shortcutMatches, shortcutState } from '../editor/shortcuts'
 import { toggleEditorFullscreen } from '../runtime/editorWindow'
 import { preferencesState } from '../store/preferences'
 import { requestConfirmation } from '../store/dialog'
 import { completeTask, failTask, startTask } from '../runtime/editorFeedback'
-import { gameplayRuntime } from '../runtime/GameplayRuntime'
 import { applyCurrentProjectRepair, previewCurrentProjectRepair, validateCurrentProject } from '../runtime/projectIntegrity'
 import { focusStableControl, stableControlInventory } from '../runtime/controlRegistry'
 import { simulationPreflight } from '../runtime/simulationAuthoring26'
@@ -117,9 +117,10 @@ function cancel(element: Element): void {
     return
   }
   if (reviews.length) addEditorLog(`${t('simulationReadiness')}: ${t('mediaStatus_review')} (${reviews.length}) · ${reviews.map(/* 返回 issue.code 的当前值。 */ issue => issue.code).join(', ')}`, 'Physics')
-  if (!toggleSimulation(true)) return; gameplayRuntime.beginSession(); addEditorLog(t('physicsRunning'), 'Physics')
+  // 启动顺序由 editor/runCommands 唯一定义；预检已在本函数内完成。
+  await playSimulation(/* 预检已执行，此处不再重复。 */ () => true)
 }
-/** 停止游戏会话及播放模式并记录恢复日志。 */ function stopFromPalette(): void { gameplayRuntime.stopSession(); stopPlayMode(); addEditorLog(t('simulationRestored'), 'Physics') }
+/** 停止游戏会话并退出播放模式；顺序与日志由共享命令负责。 */ function stopFromPalette(): void { stopSimulation() }
 /** 验证当前项目，打开健康工具并记录通过或失败及问题数。 */ function validateFromPalette(): void { const report = validateCurrentProject(); openEditorTool('project'); addEditorLog(t(report.valid ? 'projectValidationPassed' : 'projectValidationFailed', { count: report.issues.length }), 'Project', report.valid ? 'info' : 'error') }
 /** 预览修复并确认变更，同意后应用并打开健康工具，失败记录错误。 */ async function repairFromPalette(): Promise<void> { const report = previewCurrentProjectRepair(); const approved = await requestConfirmation({ title: t('repairProject'), message: `${report.changes.join('\n')}\n\n${t('repairRemainingIssues', { count: report.remaining.length })}`, confirmLabel: t('repairProject'), cancelLabel: t('cancel'), destructive: false }); if (approved) { if (!applyCurrentProjectRepair(report)) addEditorLog(t('projectRepairFailed'), 'Project', 'error'); openEditorTool('project') } }
 

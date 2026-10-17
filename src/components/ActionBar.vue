@@ -13,9 +13,9 @@
 import { t } from '../i18n'
 import UiButton from '../ui/components/UiButton.vue'
 import { addEditorLog, editorState } from '../store/editor'
-import { physicsState as state, stopPlayMode, toggleSimulation } from '../store/physics'
-import { gameplayRuntime } from '../runtime/GameplayRuntime'
+import { physicsState as state } from '../store/physics'
 import { simulationPreflight as inspectSimulationPreflight } from '../runtime/simulationAuthoring26'
+import { playSimulation as runPlay, pauseSimulation as runPause, stepSimulation as runStep, stopSimulation as runStop, setEnsurePhysicsHook } from '../editor/runCommands'
 
 /** 等待物理 WASM 初始化并显示状态；失败时报告原因并阻止启动。 */ async function ensurePhysics(): Promise<boolean> {
   editorState.statusText = t('physicsLoading')
@@ -37,36 +37,19 @@ import { simulationPreflight as inspectSimulationPreflight } from '../runtime/si
   return true
 }
 
-/** 加载与预检通过后启动仿真和游戏会话，并更新状态日志。 */ async function playSimulation() {
-  if (!await ensurePhysics()) return
-  if (!simulationPreflight()) return
-  if (!toggleSimulation(true)) return
-  gameplayRuntime.beginSession()
-  editorState.statusText = t('physicsRunning')
-  addEditorLog(t('physicsRunning'), 'Physics')
-}
+// 播放/暂停/单步/停止的顺序由 editor/runCommands 唯一定义；此处只提供本界面的就绪与预检钩子，
+// 不再自行拼接顺序（§22.2：一个命令一个处理器）。
+/** 加载与预检通过后启动仿真和游戏会话。 */
+async function playSimulation() { setEnsurePhysicsHook(ensurePhysics); await runPlay(simulationPreflight) }
 
-/** 暂停仿真并记录状态。 */ function pauseSimulation() {
-  toggleSimulation(false)
-  editorState.statusText = t('physicsPaused')
-  addEditorLog(t('runtimePaused'), 'Physics')
-}
+/** 暂停仿真并记录状态。 */
+function pauseSimulation() { runPause() }
 
-/** 加载与预检通过后创建必要的暂停会话并执行一次游戏单步。 */ async function stepSimulation() {
-  if (!await ensurePhysics()) return
-  if (!simulationPreflight()) return
-  if (state.playMode === 'editing') { if (!toggleSimulation(true)) return; toggleSimulation(false) }
-  gameplayRuntime.stepOnce()
-  editorState.statusText = t('physicsStepped')
-  addEditorLog(t('physicsStepped'), 'Physics')
-}
+/** 通过预检后执行一次游戏单步。 */
+async function stepSimulation() { setEnsurePhysicsHook(ensurePhysics); await runStep(simulationPreflight) }
 
-/** 停止会话、退出播放模式并记录场景恢复状态。 */ function restoreSimulation() {
-  gameplayRuntime.stopSession()
-  stopPlayMode()
-  editorState.statusText = t('simulationRestored')
-  addEditorLog(t('simulationRestored'), 'Physics')
-}
+/** 停止会话并退出播放模式。 */
+function restoreSimulation() { runStop() }
 </script>
 
 <style scoped>

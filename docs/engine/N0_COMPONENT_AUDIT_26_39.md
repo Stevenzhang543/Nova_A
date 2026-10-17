@@ -1379,6 +1379,37 @@ EXIT=0
 
 **§23.4 仍缺**：双击定位到目标节点/函数、连接的**分组/参数 schema 校验**（当前只校验回调存在性）、以及视觉打磨（N6）。
 
+### 19.20 批次 D：§22.2 首个 Command Registry 落地并迁移三处调用点
+
+**问题（C 组 G1 的实证）**：播放动作此前在**三处各自实现**且行为不同——
+- `ActionBar.vue:40-64`：完整序列（就绪 → 预检 → 切换 → 开会话 → 状态 + 日志）；
+- `CommandPalette.vue:120`：`toggleSimulation(true)` + `beginSession()` + 一条日志，**跳过统一的状态更新**；
+- `ProfilerPanel.vue:378`：`toggleSimulation(true)` 后直接开始录制。
+
+同一命令、三套顺序，正是 §22.2 要消除的形态。
+
+**实现**：
+1. `src/editor/runCommandSequence.ts` —— **纯函数**，唯一定义 play/pause/step/stop 的**顺序与早退语义**，接受端口注入，因此可在 Node 用假端口验证；
+2. `src/editor/runCommands.ts` —— 接线层：把 store 与 `gameplayRuntime` 适配成端口，导出四个命令函数；默认就绪检查为 `await world.wasmReady && !world.wasmError`，三处因此**行为一致**；
+3. **迁移三处**：ActionBar 改为委托并注入自己的 `ensurePhysics` 与 `simulationPreflight`；CommandPalette 保留自己的预检日志但把启动交给共享命令，停止改用共享命令；ProfilerPanel 改用共享播放后再开始录制。
+
+**验证**：`scripts/verify-engine-run-commands.mjs` **6 项全部通过**：
+
+| 检查 | 内容 |
+|---|---|
+| 播放顺序 | `ensurePhysics → preflight → setPlaying(true) → beginSession → report → log` |
+| **早退** | 就绪失败 → **零副作用**；预检失败 → 不开启会话；切换被拒 → 不开启会话 |
+| 暂停 | 只切换与报告，**不跑预检** |
+| 单步 | 编辑态先进入再退出播放；已暂停时**不再切换** |
+| 停止 | `stopSession` **先于** `stopPlayMode` |
+| **迁移守护** | 三个 UI 文件都必须从 `editor/runCommands` 引入 |
+
+**回归**：重建 `dist` 后重跑 `verify-engine-workflows.mjs` —— **三个模板全部 PASS**（播放路径被我改动，因此必须回归验证，不能只看类型）。
+
+`pnpm check` 退出码 0。期间 `vue-tsc` 连续报出三处**因迁移而失效的导入**（TS6133），逐一清理。
+
+**§22.2 仍缺**：注册表的**元数据层**（commandId / label / icon / tooltip / scope / visibleWhen / enabledWhen / disabledReason / undoPolicy），以及其余重复动作（保存、撤销、删除、复制等）的迁移。本轮交付的是"**一个命令一个处理器**"的骨架与首个真实迁移，不是完整注册表。
+
 ### 19.2 批次 B1：渲染抽取全部改用批量世界变换
 
 **改动**（`src/renderer/sceneRenderer.ts`，已解冻范围）：
