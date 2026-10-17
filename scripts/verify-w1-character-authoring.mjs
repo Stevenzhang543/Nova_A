@@ -72,4 +72,35 @@ await withBrowserAudit({ release, name: 'w1-character-authoring', width: 1600, h
     }
     a.observations.push({ id: 'w1-character', kinds, sceneCount: saved.document.scenes.length })
   })
+
+  await a.check('Configure a movement action through the visible Input Map panel', async () => {
+    await a.press('P', 10) // Ctrl+Shift+P 打开命令面板
+    await a.until("!!document.querySelector('.command-palette')", 15000)
+    await a.fill('.command-palette input[type=search]', 'Input map')
+    await a.until("[...document.querySelectorAll('.command-results [role=option]')].some(o => /input map/i.test(o.textContent))", 15000)
+    await a.clickText('.command-results [role=option]', 'Input map')
+    await a.until("!!document.querySelector('.input-actions')", 15000)
+
+    const before = await a.evaluate("document.querySelectorAll('.input-action').length")
+    // 坐标点击在此面板上未命中（已用程序化 click 对照确认处理器正常），改用键盘路径：
+    // 聚焦按钮后按 Enter。这同时验证了该动作可经键盘完成。
+    await a.evaluate("(()=>{const b=[...document.querySelectorAll('.input-map-card .secondary-action')].find(x=>x.textContent.trim()==='Add action');b?.focus();return !!b})()")
+    await a.press('Enter')
+    await a.until(`document.querySelectorAll('.input-action').length===${before + 1}`, 15000)
+
+    // 新动作在列表末尾：命名并绑定一个按键，随后提交。
+    await a.fill('.input-action:last-of-type .input-action-heading input', 'Move')
+    await a.evaluate('document.activeElement?.blur()')
+    await a.fill('.input-action:last-of-type .input-binding input', 'KeyD')
+    await a.evaluate('document.activeElement?.blur()')
+    await wait(250)
+
+    const configured = await u.save('w1-character-inputmap')
+    const actions = configured.document.projectSettings?.inputMap ?? []
+    const move = actions.find(/** 找到刚配置的动作。 */ action => action.name === 'Move')
+    assert.ok(move, 'the configured action must survive into the saved document, saw ' + actions.map(/** 取动作名。 */ action => action.name).join(','))
+    assert.ok((move.bindings ?? []).some(/** 绑定必须包含刚录入的按键。 */ binding => binding.code === 'KeyD'),
+      'the recorded binding must survive, saw ' + JSON.stringify(move.bindings))
+    a.observations.push({ id: 'w1-input-map', actionCount: actions.length, move })
+  })
 })
