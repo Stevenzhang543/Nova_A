@@ -1589,6 +1589,10 @@ Object.assign(zh, {
   renderNoRequest: '当前画布作用域尚无已记录的绘制请求。',
   renderHistoricalWorldSubmission: '请求 {frame} 的历史 CPU 阶段摘要，其 WorldRenderer CPU API 提交已记录。此摘要不属于当前请求，也不代表 GPU 完成或屏幕显示时间。'
 })
+Object.assign(en, { signalConnections: 'Signal connections', missingCallback: 'Callback not found in the receiver script', removeConnection: 'Remove connection' })
+Object.assign(de, { signalConnections: 'Signalverbindungen', missingCallback: 'Rueckruf im Empfaengerskript nicht gefunden', removeConnection: 'Verbindung entfernen' })
+Object.assign(zh, { signalConnections: '信号连接', missingCallback: '接收方脚本中找不到该回调', removeConnection: '移除连接' })
+
 const dictionaries: Record<'en' | 'de' | 'zh', Dictionary> = { en, de, zh }
 
 /** Returns the localized value for an exact canonical English UI label when one exists. */

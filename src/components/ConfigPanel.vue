@@ -244,6 +244,15 @@
           </article>
         </InspectorSection>
 
+        <InspectorSection v-if="receiverConnections.length" :title="t('signalConnections')" category="general">
+          <article v-for="item in receiverConnections" :key="item.connection.signal + ':' + item.connection.callback + ':' + item.index" class="signal-connection-row" :data-connection-signal="item.connection.signal">
+            <strong class="signal-name">{{ item.connection.signal }}</strong>
+            <span class="signal-params">{{ item.connection.callback }}</span>
+            <small v-if="connectionCallbackMissing(item.connection.callback)" class="signal-warning" :data-missing-callback="item.connection.callback">{{ t('missingCallback') }}</small>
+            <button class="secondary-action signal-remove" @click="removeReceiverConnection(item.index)">{{ t('removeConnection') }}</button>
+          </article>
+        </InspectorSection>
+
         <UiDialog :open="signalConnectOpen" :title="t('connections')" dismiss-on-backdrop @close="signalConnectOpen = false">
           <label class="signal-connect-field"><span>{{ t('signals') }}</span><input :value="signalConnectSignal" readonly></label>
           <label class="signal-connect-field"><span>{{ t('selectedObject') }}</span>
@@ -387,7 +396,7 @@ import EditorIcon from './EditorIcon.vue'
 import PathTextInput from './PathTextInput.vue'
 import type {ParsedPathText} from '../editor/pathTextDraft'
 import { signalsForEntity } from '../world/componentSignals'
-import { addNodeSignalConnection, type ScriptAssetLike } from '../editor/signalConnections'
+import { addNodeSignalConnection, removeNodeSignalConnection, type ScriptAssetLike } from '../editor/signalConnections'
 import {settleEditorDrafts} from '../editor/pendingDrafts'
 import ObjectOwnershipPanel from './ObjectOwnershipPanel.vue'
 import ObjectBlueprintEditor from './ObjectBlueprintEditor.vue'
@@ -649,6 +658,41 @@ function commitSignalConnect(): void {
   if (rejected) return
   pushHistory('Connect signal')
   signalConnectOpen.value = false
+}
+
+/** 选中节点自己的脚本资源记录；没有脚本则为 undefined。 */
+const selectedScriptRecord = computed(/** 按脚本引用找到资源记录。 */ () => {
+  const reference = selectedEntity.value?.script2D?.scriptAsset
+  const uuid = reference ? assetGuid(reference) : null
+  return uuid ? assetState.records.find(/** 按身份匹配资源。 */ candidate => candidate.uuid === uuid) : undefined
+})
+
+/** 接收方脚本中已定义的函数名，用于校验连接的回调是否真的存在。 */
+const receiverScriptFunctions = computed(/** 从脚本源里提取 fn 名称。 */ () => {
+  const record = selectedScriptRecord.value
+  const source = record ? readTextAsset(record.source) : null
+  return source ? new Set([...source.matchAll(/fn\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(/g)].map(/** 取函数名。 */ match => match[1])) : new Set<string>()
+})
+
+/** 指向当前节点的已有连接，带原始索引以便删除。 */
+const receiverConnections = computed(/** 过滤出 target 为当前节点的连接。 */ () => {
+  const entity = selectedEntity.value
+  const connections = selectedScriptRecord.value?.script?.signalConnections ?? []
+  if (!entity) return []
+  return connections.map(/** 保留原始索引。 */ (connection, index) => ({ connection, index })).filter(/** 只保留指向当前节点的连接。 */ item => item.connection.target === entity.uuid)
+})
+
+/** 回调在该节点脚本里缺失，连接无法执行 —— 必须显式提示而不是让它静默失效。 */
+function connectionCallbackMissing(callback: string): boolean {
+  return !receiverScriptFunctions.value.has(callback)
+}
+
+/** 删除一条指向当前节点的连接并记录历史。 */
+function removeReceiverConnection(index: number): void {
+  const record = selectedScriptRecord.value
+  if (!record) return
+  if (!removeNodeSignalConnection(record as unknown as ScriptAssetLike, index)) return
+  pushHistory('Remove signal connection')
 }
 
 const filteredAddableComponents = computed(/** 按组件名、类型和分类标签筛选可添加组件。 */ () => {

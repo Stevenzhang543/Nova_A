@@ -1350,6 +1350,35 @@ EXIT=0
 - **双击定位**到目标节点/函数。
 - 视觉打磨留到 N6。
 
+### 19.19 批次 D：§23.4 连接闭环完成（建立 / 列表 / 告警 / 持久化 / 删除）
+
+**新增能力**：
+
+1. **已建立连接的列表**：新增 "Signal connections" 分区，只列出 `target` 为当前节点的连接（即"指向我"的连接），带原始索引以便删除；
+2. **回调签名校验**：解析接收方脚本源中的 `fn\s+名称(` 声明；若连接的 `callback` 在接收方脚本中不存在，显示 `missingCallback` 告警 —— **连接不会静默失效**；
+3. **删除**：移除连接并 `pushHistory('Remove signal connection')`，可撤销；
+4. 新增 3 个 i18n 键（en/de/zh）：`signalConnections`、`missingCallback`、`removeConnection`。
+
+**端到端验证**：新增 `scripts/verify-w1-signal-connection-user.mjs`，**PASS**。它使用 top-down 模板（节点已挂脚本），流程与断言：
+
+| 步骤 | 断言 |
+|---|---|
+| 给 Player **添加 Area2D**（模板里只有 sensor collider，没有该组件） | 信号区出现 `area.entered` |
+| 打开连接对话框，接收方选 Enemy，回调填 `on_enemy_signal` | 对话框提供的接收方**只包含拥有脚本的节点** |
+| 切到 Enemy 视角 | 连接出现在列表中，且**显示回调缺失告警** |
+| 保存 | 文档中**恰有 1 个**脚本资源带该连接，且 `source`/`target`/`enabled` 正确 |
+| **重开** | 连接**仍在** |
+| **删除** | 连接从 DOM 消失，且**保存后的文档中不再存在** |
+
+**过程中的三次定位（都是选择器/交互问题，不是产品缺陷）**：
+- 模板触发器只有 `sensor: true` 的碰撞体，**没有 Area2D 组件** → 改为先添加组件；
+- 添加组件后 Inspector 重组导致信号按钮**不可见** → 重新展开并滚动到视口；
+- `select` 需要选项 **value（uuid）** 而非标签 → 先按标签取 value 再选。
+
+`pnpm check` 退出码 0；`dist` 已在验证前重建。
+
+**§23.4 仍缺**：双击定位到目标节点/函数、连接的**分组/参数 schema 校验**（当前只校验回调存在性）、以及视觉打磨（N6）。
+
 ### 19.2 批次 B1：渲染抽取全部改用批量世界变换
 
 **改动**（`src/renderer/sceneRenderer.ts`，已解冻范围）：
