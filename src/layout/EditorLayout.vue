@@ -5,7 +5,6 @@
     <TopBar />
     <div class="workspace-control-row">
       <WorkspaceBar />
-      <ActionBar />
     </div>
     <ToolBar v-show="state.currentPage === 'scene' && state.activeWorkspace !== 'ui'" class="scene-toolbar-row" />
 
@@ -62,7 +61,6 @@ import StatusBar from "./StatusBar.vue"
 import ToolBar from "../components/ToolBar.vue" 
 import SceneSideBar from "../components/SceneSideBar.vue"
 import SceneTabs from "../components/SceneTabs.vue"
-import ActionBar from "../components/ActionBar.vue"
 import ContextMenu from "../components/ContextMenu.vue" // NEW
 import CommandPalette from "../components/CommandPalette.vue"
 import CreateObjectPalette from "../components/CreateObjectPalette.vue"
@@ -154,7 +152,7 @@ function leavePanelDrop(event: DragEvent) { if (!(event.currentTarget as HTMLEle
  z-index: 190;
 }
 .workspace-control-row :deep(.workspace-bar) { min-width: 0; flex: 1; border-bottom: 0; }
-.workspace-control-row :deep(.actionbar) { flex: 0 0 auto; }
+
 .editor-main { position: relative; width: 100%; max-width: 100%; flex: 1; display: flex; min-width: 0; min-height: 0; overflow: hidden; 
  gap: var(--ui-panel-gutter);
  padding: var(--ui-panel-gutter);

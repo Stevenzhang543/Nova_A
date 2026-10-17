@@ -90,6 +90,8 @@
       </div>
     </nav>
     <div class="top-spacer"></div>
+    <!-- 播放控制属于全局运行状态，放在顶栏右侧；控制行因此只承担工作区导航。 -->
+    <ActionBar />
     <span v-if="recoveryState.safeMode" class="safe-pill">{{ t('safeMode') }}</span>
     <span v-if="historyState.dirty" class="dirty-pill" :title="projectTransactionState.unsavedScopes.join(', ')">{{ t('unsavedChanges') }}</span>
     <span class="release-pill">{{ NOVA_RELEASE_NAME }}</span>
@@ -98,6 +100,7 @@
 </template>
 
 <script setup lang="ts">
+import ActionBar from '../components/ActionBar.vue'
 import EditorIcon from '../components/EditorIcon.vue'
 import NovaMark from '../ui/components/NovaMark.vue'
 import { installTransientPopover } from '../editor/transientPopover'

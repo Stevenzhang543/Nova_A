@@ -54,7 +54,11 @@
 /* Font-relative breakpoint scales with the saved font size as well as physical DPI. */
 @container ui-properties (max-width: 36em) { .ui-property-row { grid-template-columns: minmax(0,1fr); align-items: start; } }
 .settings-page { height: 100%; min-height: 0; overflow: auto; padding: var(--ui-panel-inset); background: var(--surface-panel); }
-.settings-page .page-header { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); margin-block-end: var(--ui-section-gap); }
+.settings-page .page-header { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); margin-block-end: var(--space-3); }
+/* Settings is a page, not a narrow inspector: let each label hug its own text so short labels do not
+   reserve a fixed column and push every control far to the right. */
+.settings-page .ui-property-row { grid-template-columns: max-content minmax(0, 1fr); column-gap: var(--ui-label-value-gap); }
+.settings-page .ui-property-label { align-self: center; }
 .settings-page h1 { margin: 0; font-size: var(--type-page); line-height: var(--line-page); }
 .settings-page .eyebrow { color: var(--text-muted); font-size: var(--type-caption); }
 .theme-switch,.settings-search,.settings-search nav { display: flex; align-items: center; flex-wrap: wrap; gap: var(--ui-control-gap); }
