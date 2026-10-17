@@ -13,7 +13,7 @@
     </header>
 
     <section class="settings-search" aria-label="Settings search">
-      <UiPropertyRow :label="t('searchSettings')"><input v-model="editorState.settingsSearch" type="search" :aria-label="t('searchSettings')" :placeholder="t('searchSettings')"></UiPropertyRow>
+      <label class="settings-search-field"><EditorIcon name="search" /><input v-model="editorState.settingsSearch" type="search" :aria-label="t('searchSettings')" :placeholder="t('searchSettings')"></label>
       <nav :aria-label="t('settingScope')"><button v-for="scope in settingScopes" :key="scope.id" :class="{ active: editorState.settingsScope === scope.id }" @click="editorState.settingsScope = scope.id">{{ t(scope.label) }}</button></nav>
     </section>
 
@@ -32,7 +32,7 @@
             <option v-for="(palette, index) in COLOR_PALETTES" :key="palette.id" :value="palette.id">{{ PALETTE_COPY[prefs.locale].names[index] }} · {{ t(palette.mode) }}</option>
           </select>
         </UiPropertyRow>
-        <p>{{ PALETTE_COPY[prefs.locale].hint }}</p><button class="secondary-action" data-audit="qualification-help" @click="openProductionManual(prefs.locale)">{{ t('documentation') }}</button>
+        <p class="setting-hint">{{ PALETTE_COPY[prefs.locale].hint }} <button class="link-action" data-audit="qualification-help" @click="openProductionManual(prefs.locale)">{{ t('documentation') }}</button></p>
         <UiPropertyRow :label="FORM_LAYOUT_COPY[prefs.locale].label" data-non-project-control>
           <select v-model="prefs.formLabelLayout" data-audit="form-label-layout" :aria-label="FORM_LAYOUT_COPY[prefs.locale].label">
             <option value="auto">{{ FORM_LAYOUT_COPY[prefs.locale].auto }}</option>
@@ -41,7 +41,7 @@
         </UiPropertyRow>
         <p>{{ FORM_LAYOUT_COPY[prefs.locale].hint }}</p>
         <UiPropertyRow :label="t('interfaceScale')">
-          <div class="value-control"><UiSlider v-model.number="prefs.uiScale" min="1" max="2" step="0.05" /><output>{{ Math.round(prefs.uiScale * 100) }}%</output></div>
+          <div class="value-control"><UiSlider :precise="false" v-model.number="prefs.uiScale" min="1" max="2" step="0.05" /><output>{{ Math.round(prefs.uiScale * 100) }}%</output></div>
         </UiPropertyRow>
         <UiPropertyRow :label="t('compactMode')"><UiToggle v-model="prefs.compactMode" /></UiPropertyRow>
         <UiPropertyRow :label="t('reduceMotion')"><UiToggle v-model="prefs.reduceMotion" /></UiPropertyRow>
@@ -90,10 +90,10 @@
 
       <UiPropertySection :title="t('audioSettings')" v-show="showCard('audioSettings masterVolume musicVolume sfxVolume uiVolume sampleRate', 'project')"  @change="commitAudioSettings">
 
-        <UiPropertyRow :label="t('masterVolume')"><div class="value-control"><UiSlider v-model.number="physics.audioSettings.masterVolume" min="0" max="1" step="0.01" /><output>{{ Math.round(physics.audioSettings.masterVolume * 100) }}%</output></div></UiPropertyRow>
-        <UiPropertyRow :label="t('musicVolume')"><div class="value-control"><UiSlider v-model.number="physics.audioSettings.buses.Music" min="0" max="1" step="0.01" /><output>{{ Math.round(physics.audioSettings.buses.Music * 100) }}%</output></div></UiPropertyRow>
-        <UiPropertyRow :label="t('sfxVolume')"><div class="value-control"><UiSlider v-model.number="physics.audioSettings.buses.SFX" min="0" max="1" step="0.01" /><output>{{ Math.round(physics.audioSettings.buses.SFX * 100) }}%</output></div></UiPropertyRow>
-        <UiPropertyRow :label="t('uiVolume')"><div class="value-control"><UiSlider v-model.number="physics.audioSettings.buses.UI" min="0" max="1" step="0.01" /><output>{{ Math.round(physics.audioSettings.buses.UI * 100) }}%</output></div></UiPropertyRow>
+        <UiPropertyRow :label="t('masterVolume')"><div class="value-control"><UiSlider :precise="false" v-model.number="physics.audioSettings.masterVolume" min="0" max="1" step="0.01" /><output>{{ Math.round(physics.audioSettings.masterVolume * 100) }}%</output></div></UiPropertyRow>
+        <UiPropertyRow :label="t('musicVolume')"><div class="value-control"><UiSlider :precise="false" v-model.number="physics.audioSettings.buses.Music" min="0" max="1" step="0.01" /><output>{{ Math.round(physics.audioSettings.buses.Music * 100) }}%</output></div></UiPropertyRow>
+        <UiPropertyRow :label="t('sfxVolume')"><div class="value-control"><UiSlider :precise="false" v-model.number="physics.audioSettings.buses.SFX" min="0" max="1" step="0.01" /><output>{{ Math.round(physics.audioSettings.buses.SFX * 100) }}%</output></div></UiPropertyRow>
+        <UiPropertyRow :label="t('uiVolume')"><div class="value-control"><UiSlider :precise="false" v-model.number="physics.audioSettings.buses.UI" min="0" max="1" step="0.01" /><output>{{ Math.round(physics.audioSettings.buses.UI * 100) }}%</output></div></UiPropertyRow>
         <UiPropertyRow :label="t('sampleRate')"><select v-model.number="physics.audioSettings.sampleRate"><option :value="44100">44.1 kHz</option><option :value="48000">48 kHz</option><option :value="96000">96 kHz</option></select></UiPropertyRow>
       </UiPropertySection>
 
@@ -158,11 +158,11 @@
         <UiPropertyRow :label="t('gridSize')"><input v-model.number="prefs.gridSize" type="number" min="0.000001" step="1"></UiPropertyRow>
         <UiPropertyRow :label="t('snapToGrid')"><UiToggle v-model="prefs.snapToGrid" /></UiPropertyRow>
         <UiPropertyRow :label="t('zoomSensitivity')">
-          <div class="value-control"><UiSlider v-model.number="prefs.zoomSensitivity" min="0.2" max="3" step="0.1" /><output>{{ prefs.zoomSensitivity.toFixed(1) }}×</output></div>
+          <div class="value-control"><UiSlider :precise="false" v-model.number="prefs.zoomSensitivity" min="0.2" max="3" step="0.1" /><output>{{ prefs.zoomSensitivity.toFixed(1) }}×</output></div>
         </UiPropertyRow>
         <UiPropertyRow :label="t('showConnections')"><UiToggle v-model="prefs.showConnections" /></UiPropertyRow>
         <UiPropertyRow :label="t('connectionThickness')">
-          <div class="value-control"><UiSlider v-model.number="prefs.connectionThickness" min="0.5" max="8" step="0.5" /><output>{{ prefs.connectionThickness }} px</output></div>
+          <div class="value-control"><UiSlider :precise="false" v-model.number="prefs.connectionThickness" min="0.5" max="8" step="0.5" /><output>{{ prefs.connectionThickness }} px</output></div>
         </UiPropertyRow>
         <UiPropertyRow :label="t('showDiagnostics')"><UiToggle v-model="prefs.showDiagnostics" /></UiPropertyRow>
         <UiPropertyRow :label="t('renderQuality')">
@@ -199,6 +199,7 @@
 
 <script setup lang="ts">
 import NumericExpressionInput from '../components/NumericExpressionInput.vue'
+import EditorIcon from '../components/EditorIcon.vue'
 import { openProductionManual } from '../runtime/openManual'
 import { NOVA_RELEASE_NAME } from '../projects/projectFormat'
 import { computed, onActivated, onDeactivated, onBeforeUnmount, onMounted, ref, watch } from 'vue'

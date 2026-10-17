@@ -119,12 +119,21 @@ function drawShadows(context: CanvasRenderingContext2D, lightEntity: Entity, lig
     context.save(); context.globalCompositeOperation = 'source-over'; context.fillStyle = `rgba(0,0,0,${caster.opacity})`
     if (!caster.selfShadows) { context.beginPath(); context.rect(0, 0, options.width, options.height); context.moveTo(boundary[0].x, boundary[0].y); for (const point of boundary.slice(1)) context.lineTo(point.x, point.y); context.closePath(); context.clip('evenodd') }
     if (activeRenderQuality.shadowQuality === 'Soft' || activeRenderQuality.shadowQuality === 'Ultra') context.filter = `blur(${activeRenderQuality.shadowQuality === 'Ultra' ? 8 : 4}px)`
+    // One path per caster, filled once: a blur filter is applied per fill call, so filling every edge quad
+    // separately ran one full-canvas blur per boundary segment (and darkened the seams where quads overlap).
+    context.beginPath()
     for (let index = 0; index < boundary.length; index++) {
       const first = boundary[index], second = boundary[(index + 1) % boundary.length]
       const extend = /* 沿远离光源的方向延伸边界点，得到阴影四边形的远端顶点。 */ (point: Vec2) => { const dx = point.x - lightScreen.x, dy = point.y - lightScreen.y, length = Math.max(1e-6, Math.hypot(dx, dy)); return { x: point.x + dx / length * shadowLength, y: point.y + dy / length * shadowLength } }
       const firstFar = extend(first), secondFar = extend(second)
-      context.beginPath(); context.moveTo(first.x, first.y); context.lineTo(second.x, second.y); context.lineTo(secondFar.x, secondFar.y); context.lineTo(firstFar.x, firstFar.y); context.closePath(); context.fill()
+      // Emit every quad with the same winding so the nonzero fill is their union (opposite windings would cancel).
+      const quad = [first, second, secondFar, firstFar]
+      let twiceArea = 0
+      for (let corner = 0; corner < 4; corner++) { const a = quad[corner], b = quad[(corner + 1) % 4]; twiceArea += a.x * b.y - b.x * a.y }
+      if (twiceArea < 0) quad.reverse()
+      context.moveTo(quad[0].x, quad[0].y); context.lineTo(quad[1].x, quad[1].y); context.lineTo(quad[2].x, quad[2].y); context.lineTo(quad[3].x, quad[3].y); context.closePath()
     }
+    context.fill('nonzero')
     context.restore()
   }
 }

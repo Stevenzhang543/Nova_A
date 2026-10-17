@@ -138,7 +138,17 @@ select option { color: var(--text-primary); background: var(--surface-popover); 
 .ui-tree-row:is(:hover,:focus-within) .ui-tree-actions { opacity: 1; }
 .ui-tree-actions button { min-height: calc(var(--ui-tree-row-height) - 4px); height: calc(var(--ui-tree-row-height) - 4px); width: calc(var(--ui-tree-row-height) - 4px); padding: 0; }
 
-/* Menus and popovers: one floating material. */
+/* Liquid Glass: the floating control layer. Content surfaces never use it.
+ * A glass element owns its stacking context so the sheen sits between its fill and its content. */
+.nv-glass { position: relative; isolation: isolate; background: var(--glass-regular); -webkit-backdrop-filter: var(--glass-filter); backdrop-filter: var(--glass-filter); box-shadow: var(--glass-rim), var(--glass-shadow); }
+.nv-glass::before { content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit; background: var(--glass-sheen); pointer-events: none; }
+.nv-glass--clear { background: var(--glass-clear); }
+.nv-glass--capsule { border-radius: var(--radius-pill); }
+/* Controls sitting on glass are thin overlays: no fill at rest, a tint on hover, a stronger one when on. */
+.nv-glass :is(button, summary, .ui-button):not(.ui-button--primary,.primary):hover:not(:disabled) { background: var(--glass-control-hover); }
+.nv-glass :is(button, summary, .ui-button):not(.ui-button--primary,.primary):active:not(:disabled) { background: var(--glass-control-pressed); }
+
+/* Menus and popovers: regular glass, opaque enough that text never depends on the blur. */
 .ui-menu { display: flex; flex-direction: column; gap: 1px; min-width: 20ch; padding: var(--space-1); max-width: calc(100vw - 2 * var(--ui-panel-inset)); background: var(--surface-floating); border: var(--ui-border-width) solid var(--border-subtle); border-radius: var(--radius-floating); box-shadow: var(--shadow-floating); }
 .ui-menu > button { display: flex; align-items: center; justify-content: flex-start; gap: var(--space-2); width: 100%; text-align: start; border-radius: var(--radius-xs); font-weight: var(--weight-regular); }
 .ui-menu > button:hover:not(:disabled) { background: var(--accent-fill); color: var(--accent-contrast); }

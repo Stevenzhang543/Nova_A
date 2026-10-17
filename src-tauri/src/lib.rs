@@ -1954,6 +1954,58 @@ fn runtime_mode() -> Result<bool, String> {
     Ok(runtime_package_bytes()?.is_some())
 }
 
+// Opt-in latency probe: a loopback collector URL from NOVA_LATENCY_PROBE, or nothing. Never a remote host.
+#[tauri::command]
+fn latency_probe_endpoint() -> Option<String> {
+    let value = std::env::var("NOVA_LATENCY_PROBE").ok()?;
+    let value = value.trim();
+    let allowed = ["http://127.0.0.1:", "http://localhost:"];
+    if value.len() > 64 || !allowed.iter().any(|prefix| value.starts_with(prefix)) {
+        return None;
+    }
+    let port = value.split(':').nth(2)?.trim_end_matches('/');
+    if port.is_empty() || !port.chars().all(|c| c.is_ascii_digit()) {
+        return None;
+    }
+    Some(value.trim_end_matches('/').to_owned())
+}
+
+// A .nova document passed as the first command-line argument (Open With / file association).
+// It is handed to the editor once per process; the editor still runs its normal open preflight.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct LaunchProject {
+    file_name: String,
+    directory: String,
+    source: String,
+}
+
+#[tauri::command]
+fn launch_project() -> Result<Option<LaunchProject>, String> {
+    static TAKEN: OnceLock<()> = OnceLock::new();
+    if TAKEN.set(()).is_err() {
+        return Ok(None);
+    }
+    let Some(argument) = std::env::args_os().skip(1).find(|value| {
+        Path::new(value)
+            .extension()
+            .is_some_and(|extension| extension.eq_ignore_ascii_case("nova"))
+    }) else {
+        return Ok(None);
+    };
+    let path = PathBuf::from(argument);
+    let metadata = fs::metadata(&path).map_err(|error| format!("Cannot open {}: {error}", path.display()))?;
+    if !metadata.is_file() || metadata.len() > 192 * 1024 * 1024 {
+        return Err(format!("{} is not a project document Nova_A can open.", path.display()));
+    }
+    let source = fs::read_to_string(&path).map_err(|error| format!("Cannot read {}: {error}", path.display()))?;
+    Ok(Some(LaunchProject {
+        file_name: path.file_name().map(|name| name.to_string_lossy().into_owned()).unwrap_or_else(|| "project.nova".into()),
+        directory: path.parent().map(|parent| parent.display().to_string()).unwrap_or_default(),
+        source,
+    }))
+}
+
 // 将当前运行包编码为前端可接收的数据。
 #[tauri::command]
 fn runtime_package() -> Result<Option<String>, String> {
@@ -3676,6 +3728,8 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             runtime_mode,
+            latency_probe_endpoint,
+            launch_project,
             runtime_package,
             runtime_overrides,
             launch_network_instances,

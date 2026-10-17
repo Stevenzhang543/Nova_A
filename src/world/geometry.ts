@@ -226,77 +226,87 @@ interface GeometryEntity {
   if (entity.autoInertia) entity.inertia = effectiveInertia(entity)
 }
 
+
+// Normalization runs every frame on observed objects: write only real changes, so observers are not
+// notified (and panels not re-rendered) for values that are already normal.
+function put<T extends object, K extends keyof T>(target: T, key: K, value: T[K]): void { if (target[key] !== value) target[key] = value }
+function putPoints(target: { vertices?: Vec2[] }, points: Vec2[]): void {
+  const current = target.vertices
+  if (current && current.length === points.length && current.every((point, index) => point.x === points[index].x && point.y === points[index].y)) return
+  target.vertices = points
+}
+
 /** 规范位置及角度，保证缩放量有限且非零，同时保留镜像符号。 */ function normalizeTransform(entity: GeometryEntity): void {
-  entity.transform.position.x = finiteNumber(entity.transform.position.x)
-  entity.transform.position.y = finiteNumber(entity.transform.position.y)
-  entity.transform.rotation = normalizeAngle(entity.transform.rotation)
-  entity.transform.scale.x = (finiteNumber(entity.transform.scale.x, 1) < 0 ? -1 : 1) * positiveNumber(entity.transform.scale.x, 1)
-  entity.transform.scale.y = (finiteNumber(entity.transform.scale.y, 1) < 0 ? -1 : 1) * positiveNumber(entity.transform.scale.y, 1)
+  put(entity.transform.position, 'x', finiteNumber(entity.transform.position.x))
+  put(entity.transform.position, 'y', finiteNumber(entity.transform.position.y))
+  put(entity.transform, 'rotation', normalizeAngle(entity.transform.rotation))
+  put(entity.transform.scale, 'x', (finiteNumber(entity.transform.scale.x, 1) < 0 ? -1 : 1) * positiveNumber(entity.transform.scale.x, 1))
+  put(entity.transform.scale, 'y', (finiteNumber(entity.transform.scale.y, 1) < 0 ? -1 : 1) * positiveNumber(entity.transform.scale.y, 1))
 }
 
 /** 规范平移及旋转运动、作用力和重力数值，并将阻尼限制为非负。 */ function normalizeMotion(entity: GeometryEntity): void {
-  entity.velocity.x = finiteNumber(entity.velocity.x)
-  entity.velocity.y = finiteNumber(entity.velocity.y)
-  entity.acceleration.x = finiteNumber(entity.acceleration.x)
-  entity.acceleration.y = finiteNumber(entity.acceleration.y)
-  entity.force.x = finiteNumber(entity.force.x)
-  entity.force.y = finiteNumber(entity.force.y)
-  entity.angularVelocity = finiteNumber(entity.angularVelocity)
-  entity.torque = finiteNumber(entity.torque)
-  entity.gravity = finiteNumber(entity.gravity)
-  entity.gravityScale = finiteNumber(entity.gravityScale, 1)
-  entity.linearDamping = Math.max(0, finiteNumber(entity.linearDamping, 0))
-  entity.angularDamping = Math.max(0, finiteNumber(entity.angularDamping, 0))
+  put(entity.velocity, 'x', finiteNumber(entity.velocity.x))
+  put(entity.velocity, 'y', finiteNumber(entity.velocity.y))
+  put(entity.acceleration, 'x', finiteNumber(entity.acceleration.x))
+  put(entity.acceleration, 'y', finiteNumber(entity.acceleration.y))
+  put(entity.force, 'x', finiteNumber(entity.force.x))
+  put(entity.force, 'y', finiteNumber(entity.force.y))
+  put(entity, 'angularVelocity', finiteNumber(entity.angularVelocity))
+  put(entity, 'torque', finiteNumber(entity.torque))
+  put(entity, 'gravity', finiteNumber(entity.gravity))
+  put(entity, 'gravityScale', finiteNumber(entity.gravityScale, 1))
+  put(entity, 'linearDamping', Math.max(0, finiteNumber(entity.linearDamping, 0)))
+  put(entity, 'angularDamping', Math.max(0, finiteNumber(entity.angularDamping, 0)))
 }
 
 /** 将恢复系数限制在零至一，恢复阈值及摩擦系数限制为非负。 */ function normalizeMaterial(entity: GeometryEntity): void {
-  entity.restitution = clampNumber(entity.restitution, 0, 1, 0)
-  entity.restitutionThreshold = Math.max(finiteNumber(entity.restitutionThreshold, 1), 0)
-  entity.staticFriction = Math.max(0, finiteNumber(entity.staticFriction, 0))
-  entity.dynamicFriction = Math.max(0, finiteNumber(entity.dynamicFriction, 0))
+  put(entity, 'restitution', clampNumber(entity.restitution, 0, 1, 0))
+  put(entity, 'restitutionThreshold', Math.max(finiteNumber(entity.restitutionThreshold, 1), 0))
+  put(entity, 'staticFriction', Math.max(0, finiteNumber(entity.staticFriction, 0)))
+  put(entity, 'dynamicFriction', Math.max(0, finiteNumber(entity.dynamicFriction, 0)))
 }
 
 /** 规范透明度与 RGB 整数通道，避免非法绘制颜色。 */ function normalizeAppearance(entity: GeometryEntity): void {
-  entity.transparency = clampNumber(entity.transparency, 0, 100, 100)
-  entity.color.r = Math.round(clampNumber(entity.color.r, 0, 255, 0))
-  entity.color.g = Math.round(clampNumber(entity.color.g, 0, 255, 180))
-  entity.color.b = Math.round(clampNumber(entity.color.b, 0, 255, 255))
+  put(entity, 'transparency', clampNumber(entity.transparency, 0, 100, 100))
+  put(entity.color, 'r', Math.round(clampNumber(entity.color.r, 0, 255, 0)))
+  put(entity.color, 'g', Math.round(clampNumber(entity.color.g, 0, 255, 180)))
+  put(entity.color, 'b', Math.round(clampNumber(entity.color.b, 0, 255, 255)))
 }
 
 /** 保留线及路径的点序并限制长度；椭圆规范半径，多边形使用凸包或对应形状的备用顶点。 */ function normalizeShape(entity: GeometryEntity): void {
   if ((entity.authoring?.kind === 'Line' || entity.authoring?.kind === 'Path') && entity.renderer) {
-    entity.renderer.vertices = entity.renderer.vertices.slice(0, 10_000).map(/** 构造并返回记录 { x: finiteNumber(point.x), y: finiteNumber(point.y) }，字段按当前实参及捕获状态求值。 */ point => ({ x: finiteNumber(point.x), y: finiteNumber(point.y) }))
-    if (entity.renderer.vertices.length < 2) entity.renderer.vertices = [{ x: -.5, y: 0 }, { x: .5, y: 0 }]
+    putPoints(entity.renderer, entity.renderer.vertices.slice(0, 10_000).map(/** 构造并返回记录 { x: finiteNumber(point.x), y: finiteNumber(point.y) }，字段按当前实参及捕获状态求值。 */ point => ({ x: finiteNumber(point.x), y: finiteNumber(point.y) })))
+    if (entity.renderer.vertices.length < 2) putPoints(entity.renderer, [{ x: -.5, y: 0 }, { x: .5, y: 0 }])
     return
   }
   if (entity.shapeType === 'Circle') {
     const radiusX = positiveNumber(entity.radiusX, 1)
     const radiusY = positiveNumber(entity.radiusY, radiusX)
     if (entity.renderer) {
-      entity.renderer.radiusX = radiusX
-      entity.renderer.radiusY = radiusY
+      put(entity.renderer, 'radiusX', radiusX)
+      put(entity.renderer, 'radiusY', radiusY)
     } else {
-      entity.radiusX = radiusX
-      entity.radiusY = radiusY
+      put(entity, 'radiusX', radiusX)
+      put(entity, 'radiusY', radiusY)
     }
     return
   }
   if (!entity.vertices) return
   const hull = convexHull(entity.vertices)
   if (hull.length >= 3 && polygonArea(hull) > MIN_AREA) {
-    if (entity.renderer) entity.renderer.vertices = hull
-    else entity.vertices = hull
+    if (entity.renderer) putPoints(entity.renderer, hull)
+    else putPoints(entity, hull)
   } else if (entity.shapeType === 'Triangle') {
     const fallback = [{ x: 0, y: 0.5 }, { x: 0.5, y: -0.5 }, { x: -0.5, y: -0.5 }]
-    if (entity.renderer) entity.renderer.vertices = fallback
-    else entity.vertices = fallback
+    if (entity.renderer) putPoints(entity.renderer, fallback)
+    else putPoints(entity, fallback)
   } else {
     const fallback = [
       { x: -0.5, y: -0.5 }, { x: 0.5, y: -0.5 },
       { x: 0.5, y: 0.5 }, { x: -0.5, y: 0.5 }
     ]
-    if (entity.renderer) entity.renderer.vertices = fallback
-    else entity.vertices = fallback
+    if (entity.renderer) putPoints(entity.renderer, fallback)
+    else putPoints(entity, fallback)
   }
 }
 
@@ -305,28 +315,28 @@ interface GeometryEntity {
   normalizeMotion(entity)
   normalizeMaterial(entity)
   normalizeAppearance(entity)
-  entity.layer = Math.min(Number.MAX_SAFE_INTEGER, Math.max(1, Math.round(finiteNumber(entity.layer, 1))))
+  put(entity, 'layer', Math.min(Number.MAX_SAFE_INTEGER, Math.max(1, Math.round(finiteNumber(entity.layer, 1)))))
   const collider = entity.getCollider?.()
   if (collider) {
-    collider.physicsLayer = Math.min(31, Math.max(0, Math.round(finiteNumber(collider.physicsLayer, 0))))
-    collider.collisionMask = Math.min(0xffff_ffff, Math.max(0, Math.round(finiteNumber(collider.collisionMask, 1)))) >>> 0
-    collider.offset.x = finiteNumber(collider.offset.x)
-    collider.offset.y = finiteNumber(collider.offset.y)
-    collider.rotation = normalizeAngle(collider.rotation)
-    collider.radiusX = positiveNumber(collider.radiusX, 1)
-    collider.radiusY = positiveNumber(collider.radiusY, collider.radiusX)
+    put(collider, 'physicsLayer', Math.min(31, Math.max(0, Math.round(finiteNumber(collider.physicsLayer, 0)))))
+    put(collider, 'collisionMask', Math.min(0xffff_ffff, Math.max(0, Math.round(finiteNumber(collider.collisionMask, 1)))) >>> 0)
+    put(collider.offset, 'x', finiteNumber(collider.offset.x))
+    put(collider.offset, 'y', finiteNumber(collider.offset.y))
+    put(collider, 'rotation', normalizeAngle(collider.rotation))
+    put(collider, 'radiusX', positiveNumber(collider.radiusX, 1))
+    put(collider, 'radiusY', positiveNumber(collider.radiusY, collider.radiusX))
     if (collider.shapeModel === 'Box') {
       const hull = convexHull(collider.vertices)
-      if (hull.length >= 3 && polygonArea(hull) > MIN_AREA) collider.vertices = hull
+      if (hull.length >= 3 && polygonArea(hull) > MIN_AREA) putPoints(collider, hull)
     }
   }
-  entity.mass = clampNumber(entity.mass, MIN_MASS, MAX_MASS, 1)
-  entity.density = clampNumber(entity.density, MIN_DENSITY, MAX_DENSITY, 1)
+  put(entity, 'mass', clampNumber(entity.mass, MIN_MASS, MAX_MASS, 1))
+  put(entity, 'density', clampNumber(entity.density, MIN_DENSITY, MAX_DENSITY, 1))
   normalizeShape(entity)
-  entity.inertia = entity.autoInertia
+  put(entity, 'inertia', entity.autoInertia
     ? effectiveInertia(entity)
     : Math.max(MIN_INERTIA, Math.abs(finiteNumber(
       entity.inertia,
       effectiveInertia({ ...entity, autoInertia: true })
-    )))
+    ))))
 }

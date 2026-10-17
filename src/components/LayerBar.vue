@@ -9,11 +9,11 @@ import { layerColorCss } from '../world/layers'
 /** 优先返回活动场景中已命名图层的名称，否则显示图层编号。 */ function layerName(id: number): string { return sceneManager.activeScene.settings.namedLayers.find(/* 比较 layer.id 与 id，返回严格相等的判断结果。 */ layer => layer.id === id)?.name ?? String(id) }
 </script>
 <style scoped>
-.layer-bar{position:absolute;inset-block-start:var(--space-2);inset-inline-start:var(--space-2);z-index:140;display:flex;align-items:center;gap:2px;max-width:calc(100% - var(--ui-space-lg));padding:2px;border:var(--ui-border-width) solid var(--border-subtle);border-radius:calc(var(--radius-control) + 2px);background:color-mix(in srgb,var(--surface-1) 88%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);box-shadow:var(--shadow-sm)}
+.layer-bar{display:flex;align-items:center;gap:2px;min-width:0;max-width:100%;padding:var(--radius-capsule-inset)}
 .layer-header{display:none}
 .layer-list{display:flex;min-width:0;overflow:auto;gap:2px;scrollbar-width:none}
-.layer-list button{display:flex;align-items:center;gap:var(--space-2);min-height:calc(var(--ui-control-height) - 6px);padding-inline:var(--space-2);white-space:nowrap;font-size:var(--type-dense);color:var(--text-secondary)}
+.layer-list button{display:flex;align-items:center;gap:var(--space-2);min-height:calc(var(--ui-control-height) - 2px);padding-inline:var(--space-3);border-radius:var(--radius-pill);white-space:nowrap;font-size:var(--type-dense);color:var(--text-secondary)}
 .layer-color{width:7px;height:7px;flex:none;border-radius:50%}
-.layer-list button.active{background:var(--surface-raised);color:var(--text-primary);box-shadow:var(--shadow-xs)}
-.add{width:calc(var(--ui-control-height) - 6px);height:calc(var(--ui-control-height) - 6px);min-height:0;color:var(--text-muted)}
+.layer-list button.active{background:var(--glass-control-hover);color:var(--text-primary)}
+.add{width:calc(var(--ui-control-height) - 2px);height:calc(var(--ui-control-height) - 2px);min-height:0;border-radius:var(--radius-pill);color:var(--text-secondary)}
 </style>

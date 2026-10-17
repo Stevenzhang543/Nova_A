@@ -1,4 +1,5 @@
 /** 二维世界及求解器桥接：管理实体与连接，同步运行缓冲、执行步进并提供物理查询和诊断。 */
+import { plainView } from './plainView'
 import { Entity } from './Entity'
 import { BoxEntity } from './BoxEntity'
 import { CircleEntity } from './CircleEntity'
@@ -363,8 +364,19 @@ export class World {
   private readonly host: Readonly<WorldHostServices>
   private nextId = 1
   private nextConnectionId = 1
-  entities: Entity[] = []
-  connections: Connection[] = []
+  private observedEntities: Entity[] = []
+  private observedConnections: Connection[] = []
+  private plainAccessDepth = 0
+  /** Inside a simulation frame the Runtime works on the plain objects; observers keep their proxies. */
+  get entities(): Entity[] { return this.plainAccessDepth > 0 ? plainView(this.observedEntities) : this.observedEntities }
+  set entities(value: Entity[]) { this.observedEntities = value }
+  get connections(): Connection[] { return this.plainAccessDepth > 0 ? plainView(this.observedConnections) : this.observedConnections }
+  set connections(value: Connection[]) { this.observedConnections = value }
+  /** Runs one simulation frame on plain entity storage. Hosts with proxied storage notify their observers afterwards. */
+  withPlainAccess<T>(run: () => T): T {
+    this.plainAccessDepth++
+    try { return run() } finally { this.plainAccessDepth-- }
+  }
   private wasmLoaded = false
   private runtime: WasmRuntimeWorld | null = null
   private runtimeDisposed = false

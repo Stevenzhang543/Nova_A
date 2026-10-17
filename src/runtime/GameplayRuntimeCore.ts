@@ -1,4 +1,5 @@
 /** 游戏脚本运行桥接：组织脚本实例和回调，将脚本命令应用到场景与各游戏子系统。 */
+import { latencyProbe } from './latencyProbe'
 import type { GameplayWorldHost } from './gameplayWorldHost'
 import type { PreparedRuntimeSceneTransition } from './runtimeSceneContracts'
 import { finiteNumber, normalizeEntity } from '../world/geometry'
@@ -679,6 +680,13 @@ export class GameplayRuntime {
   }
 
   /** 结构说明（自动提取）：frame；输入 frameDelta、viewport；直接调用 synchronizePerformanceWorld、flushHotReloads、performance.now、Object.assign、this.worldHost.state.world.update 等；写入 inputSnapshot、scriptsMs、quitRequested、editorState.statusText。 */ frame(frameDelta: number, viewport?: DOMRect): void {
+    // A playing frame reads and writes the plain world; the host refreshes its observers at its own rate.
+    const world = this.worldHost.state.world
+    if (this.worldHost.state.playMode === 'playing' && typeof world.withPlainAccess === 'function') { world.withPlainAccess(() => this.runFrame(frameDelta, viewport)); return }
+    this.runFrame(frameDelta, viewport)
+  }
+
+  private runFrame(frameDelta: number, viewport?: DOMRect): void {
     void this.gameFlow
     void this.worldGameplay
     void this.animationTimeline
@@ -712,6 +720,7 @@ export class GameplayRuntime {
     this.dispatchSignals()
     this.ensureLifecycle()
     const inputStarted = performance.now()
+    this.lastInputSampleAt = inputStarted
     const frameInput = this.decorateViewportInput(this.input.sample(this.worldHost.state.inputMap, viewport), viewport)
     const observedSample = observedOwner ? this.input.lastConsumedInputObservation : null
     let observedFixedCount = 0
@@ -741,6 +750,7 @@ export class GameplayRuntime {
           : { ...frameInput, pressed: {}, released: {}, performed: {}, cancelled: {}, edges: [] }
         this.inputSnapshot = this.replay.replayFixedInput(fixedInput)
         if (firstFixedStep) {
+          if (latencyProbe.enabled) latencyProbe.fixedStepConsumed(this.fixedStepSequence, this.lastInputSampleAt)
           if (observedSample && this.inputSnapshot === fixedInput) {
             observedFixedCount = 1
             // 消费该帧输入的正是这个固定步；用真实固定步编号记录消费 tick。
@@ -1208,7 +1218,20 @@ export class GameplayRuntime {
     }
   }
 
+  private lastInputSampleAt = 0
   private invalidateScriptWorld(): void { this.scriptWorldSource = null }
+
+  // Breakpoint lookup reads the static analysis of the authored document; parse it once per source text.
+  private readonly debugAnalysisCache = new Map<string, { language: ReturnType<typeof analyzeScript>; rich: ReturnType<typeof analyzeScript26> }>()
+  private debugAnalysis(source: string) {
+    let cached = this.debugAnalysisCache.get(source)
+    if (!cached) {
+      cached = { language: analyzeScript(source), rich: analyzeScript26(source) }
+      if (this.debugAnalysisCache.size >= 64) this.debugAnalysisCache.clear()
+      this.debugAnalysisCache.set(source, cached)
+    }
+    return cached
+  }
 
   private nextScriptWorldRevision(): number {
     if (this.scriptWorldRevision >= 0xffff_ffff) throw new Error('Script query revision exhausted; restart the Runtime world.')
@@ -1456,7 +1479,7 @@ export class GameplayRuntime {
     if (hasCallback && !bypassBreakpoint && scriptProjectSettings.debuggerEnabled && this.scriptDebugger.state.enabled && !this.scriptDebugger.state.paused) {
       // 断点属于作者文档；模块打包可能插入前缀，不能使用生成源码的行号。
       const debugSource = this.compiledDocuments.get(asset.uuid) ?? this.scriptServices.readSource(asset.uuid) ?? source
-      const language = analyzeScript(debugSource), fn = language.functions[functionName], rich = analyzeScript26(debugSource)
+      const { language, rich } = this.debugAnalysis(debugSource), fn = language.functions[functionName]
       const legacy = (asset.script?.breakpoints ?? []).map(/** 构造并返回记录 { id: `line-${line}-${index}`, line, functionName: '', condition: '', hitCondition: 0, logMessage: '', enabled: true, hitCount: 0 }，字段按当前实参及捕获状态求值。 */ (line, index): ScriptBreakpoint => ({ id: `line-${line}-${index}`, line, functionName: '', condition: '', hitCondition: 0, logMessage: '', enabled: true, hitCount: 0 }))
       const details = asset.script?.breakpointDetails?.length ? asset.script.breakpointDetails : legacy
       const breakpoint = details.find(/** 结构说明（自动提取）：details.find 回调；输入 point；直接调用 Boolean、statementAtLine；返回表达式求值结果。 */ point => point.enabled && fn && point.line >= fn.line && point.line <= fn.endLine && Boolean(statementAtLine(rich, point.line, functionName)) && (!point.functionName || point.functionName === functionName))

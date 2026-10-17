@@ -1,4 +1,5 @@
 /** Fixed-World animation execution. Original curves, clocks, blending, dispatch and Transform phase remain unchanged. */
+import { PlainKeyMap } from '../world/plainView'
 import {finiteNumber} from '../world/geometry'
 import type {Entity} from '../world/Entity'
 import type {Animator,AnimatorParameterValue} from '../world/components'
@@ -63,8 +64,8 @@ export class AnimationOwner {
   private timelineFrame=-1
   private evaluationOwner:Entity|null=null
   private evaluationEntities:Entity[]=[]
-  private spritePose=new Map<Entity,{base:string|null;output:string|null;touched:boolean}>()
-  private timelineSprites=new Map<Entity,{base:string|null;output:string|null}>()
+  private spritePose=new PlainKeyMap<Entity,{base:string|null;output:string|null;touched:boolean}>()
+  private timelineSprites=new PlainKeyMap<Entity,{base:string|null;output:string|null}>()
   onEvent: ((entity: Entity, event: AnimationEvent) => void) | null = null
   onCommand: ((entity: Entity, track: AnimationCommandTrack, command: AnimationCommand) => void) | null = null
 

@@ -11,12 +11,15 @@
         </header>
         <div class="inspector-search-row">
           <input v-model="estate.inspectorSearch" type="search" :placeholder="t('searchInspector')">
-          <UiButton icon="add" v-if="selectedEntity && addableComponents.length" class="add-component-trigger" @click="openComponentPicker">{{ t('addComponent') }}</UiButton>
+          <UiButton icon="add" v-if="selectedEntity && addableComponents.length" class="add-component-trigger" :label="t('addComponent')" @click="openComponentPicker" />
         </div>
+        <!-- One scrolling row: the categories, then the two view filters. -->
         <nav class="inspector-categories" :aria-label="t('inspectorCategories')">
           <button v-for="category in inspectorCategories" :key="category.id" :class="{ active: estate.inspectorCategory === category.id }" @click="estate.inspectorCategory = category.id">{{ t(category.label) }}</button>
+          <i class="inspector-filter-divider" aria-hidden="true"></i>
+          <button :class="{ active: estate.inspectorModifiedOnly }" :aria-pressed="estate.inspectorModifiedOnly" @click="estate.inspectorModifiedOnly = !estate.inspectorModifiedOnly">{{ t('modifiedOnly') }}</button>
+          <button :class="{ active: estate.inspectorPinnedOnly }" :aria-pressed="estate.inspectorPinnedOnly" @click="estate.inspectorPinnedOnly = !estate.inspectorPinnedOnly"><EditorIcon name="pin" /> {{ t('pinnedOnly') }}</button>
         </nav>
-        <div class="inspector-view-controls"><button :class="{ active: estate.inspectorModifiedOnly }" @click="estate.inspectorModifiedOnly = !estate.inspectorModifiedOnly">{{ t('modifiedOnly') }}</button><button :class="{ active: estate.inspectorPinnedOnly }" @click="estate.inspectorPinnedOnly = !estate.inspectorPinnedOnly"><EditorIcon name="pin" /> {{ t('pinnedOnly') }}</button></div>
       </div>
       <div v-if="selectedEntities.length > 1" class="settings-content multi-inspector">
         <InspectorSection :title="t('sharedProperties')" category="general" open>
@@ -33,71 +36,12 @@
         <p class="runtime-note">{{ t('runtimeIsolation') }}</p>
       </div>
       <div v-else-if="selectedEntity" class="settings-content" @change="onConfigChange" @pointerdown.capture="onInspectorPointerDown">
-        <InspectorSection :title="t('entitySettings')" category="general" open>
-          <PropertyRow :label="t('entityEnabled')" path="Entity.enabled"><ToggleSwitch v-model="selectedEntity.enabled" /></PropertyRow>
-          <PropertyRow :label="t('entityVisible')"><ToggleSwitch v-model="selectedEntity.editorVisible" /></PropertyRow>
-          <PropertyRow :label="t('renderVisibility')" path="Entity.visible"><ToggleSwitch v-model="selectedEntity.authoring.visible" /></PropertyRow>
-          <PropertyRow :label="t('entityLocked')"><ToggleSwitch v-model="selectedEntity.editorLocked" /></PropertyRow>
-          <PropertyRow :label="t('zOrder')" path="Authoring.zOrder"><NumericExpressionInput :model-value="selectedEntity.authoring.zOrder" :step="1" :resource-key="numericResourceKey + ':authoring.zOrder'" @update:model-value="setAuthoringOrder" /></PropertyRow>
-          <PropertyRow :label="t('renderLayer')" path="Authoring.renderLayer"><select :value="selectedEntity.layer" @change="setAuthoringLayer(Number(($event.target as HTMLSelectElement).value))"><option v-for="layer in estate.layers" :key="layer" :value="layer">{{ t('layer') }} {{ layer }}</option></select></PropertyRow>
-          <PropertyRow :label="t('sortingMode')" path="Authoring.sortMode"><select v-model="selectedEntity.authoring.sortMode"><option value="LayerThenOrder">{{ t('explicitOrder') }}</option><option value="YSort">{{ t('ySort') }}</option></select></PropertyRow>
-          <PropertyRow v-if="!selectedEntity.spriteRenderer" :label="t('objectOrigin')" path="Authoring.origin"><div class="pair"><NumericExpressionInput v-model="selectedEntity.authoring.origin.x" :step="0.01" :resource-key="numericResourceKey + ':selectedEntity.authoring.origin.x'" /><NumericExpressionInput v-model="selectedEntity.authoring.origin.y" :step="0.01" :resource-key="numericResourceKey + ':selectedEntity.authoring.origin.y'" /></div></PropertyRow>
-          <template v-if="selectedEntity.authoring.kind === 'CanvasLayer'">
-            <PropertyRow :label="t('screenSpaceCanvas')" path="Canvas.screenSpace"><ToggleSwitch v-model="selectedEntity.authoring.canvasLayer.screenSpace" /></PropertyRow>
-            <PropertyRow :label="t('followCamera')" path="Canvas.followCamera"><ToggleSwitch v-model="selectedEntity.authoring.canvasLayer.followCamera" /></PropertyRow>
-          </template>
-          <template v-if="selectedEntity.authoring.kind === 'ParallaxLayer'">
-            <PropertyRow :label="t('parallaxMotionScale')" path="Parallax.motionScale"><div class="pair"><NumericExpressionInput v-model="selectedEntity.authoring.parallax.motionScale.x" :step="0.05" :resource-key="numericResourceKey + ':selectedEntity.authoring.parallax.motionScale.x'" /><NumericExpressionInput v-model="selectedEntity.authoring.parallax.motionScale.y" :step="0.05" :resource-key="numericResourceKey + ':selectedEntity.authoring.parallax.motionScale.y'" /></div></PropertyRow>
-            <PropertyRow :label="t('parallaxRepeat')" path="Parallax.repeat"><div class="pair"><NumericExpressionInput v-model="selectedEntity.authoring.parallax.repeat.x" :minimum="0" :step="0.1" :resource-key="numericResourceKey + ':selectedEntity.authoring.parallax.repeat.x'" /><NumericExpressionInput v-model="selectedEntity.authoring.parallax.repeat.y" :minimum="0" :step="0.1" :resource-key="numericResourceKey + ':selectedEntity.authoring.parallax.repeat.y'" /></div></PropertyRow>
-            <PropertyRow :label="t('parallaxMirror')" path="Parallax.mirror"><ToggleSwitch v-model="selectedEntity.authoring.parallax.mirror" /></PropertyRow>
-            <PropertyRow :label="t('parallaxDepth')" path="Parallax.depth"><NumericExpressionInput v-model="selectedEntity.authoring.parallax.depth" :step="1" :resource-key="numericResourceKey + ':selectedEntity.authoring.parallax.depth'" /></PropertyRow>
-          </template>
-          <template v-if="selectedEntity.authoring.kind === 'Path'">
-            <PropertyRow :label="t('reusablePath')"><select v-model="selectedEntity.authoring.path.asset" @change="loadSelectedPathAsset"><option :value="null">{{ t('inlinePath') }}</option><option v-for="asset in pathAssets" :key="asset.uuid" :value="assetReference(asset.uuid)">{{ asset.name }}</option></select></PropertyRow>
-            <PropertyRow :label="t('pathClosed')" path="Path.closed"><ToggleSwitch v-model="selectedEntity.authoring.path.closed" /></PropertyRow>
-            <PropertyRow :label="t('pathSmoothing')" path="Path.smoothing"><NumberRange v-model="selectedEntity.authoring.path.smoothing" :min="0" :max="1" :step="0.01" /></PropertyRow>
-            <UiPropertyRow :label="t('pathPoints')" class="stacked-field"><PathTextInput :model-value="pathPointsText" kind="points" :resource-key="numericResourceKey + ':path.points'" rows="3" @commit="updatePathPoints" /></UiPropertyRow>
-            <UiPropertyRow :label="t('pathTangents')" class="stacked-field"><PathTextInput :model-value="pathTangentsText" kind="tangents" :maximum="selectedEntity.authoring.path.points.length" :resource-key="numericResourceKey + ':path.tangents'" rows="3" :placeholder="t('pathTangentsHint')" @commit="updatePathTangents" /></UiPropertyRow>
-<!-- 路径跟随目标过滤回调排除当前选中实体。 -->            <PropertyRow :label="t('pathFollower')"><select v-model="selectedEntity.authoring.path.follower.targetUuid"><option :value="null">{{ t('none') }}</option><option v-for="entity in state.world.entities.filter(entity => entity !== selectedEntity)" :key="entity.uuid" :value="entity.uuid">{{ entity.name }}</option></select></PropertyRow>
-            <PropertyRow :label="t('pathProgress')"><NumberRange v-model="selectedEntity.authoring.path.follower.progress" :min="0" :max="1" :step="0.001" /></PropertyRow>
-            <PropertyRow :label="t('pathSpeed')"><NumericExpressionInput v-model="selectedEntity.authoring.path.follower.speed" :step="0.01" :resource-key="numericResourceKey + ':selectedEntity.authoring.path.follower.speed'" /></PropertyRow>
-            <PropertyRow :label="t('orientToPath')"><ToggleSwitch v-model="selectedEntity.authoring.path.follower.orient" /></PropertyRow>
-            <button class="secondary-action" @click="saveSelectedPathAsset">{{ t('saveReusablePath') }}</button>
-          </template>
-          <PropertyRow :label="t('persistentEntity')"><ToggleSwitch v-model="selectedEntity.persistentAcrossScenes" /></PropertyRow>
-          <PropertyRow :label="t('entityTags')"><input v-model="tagsText" type="text"></PropertyRow>
-          <PropertyRow :label="t('entityGroups')"><input v-model="groupsText" type="text"></PropertyRow>
-          <PropertyRow :label="t('namedLayer')"><select v-model="selectedEntity.namedLayer"><option v-for="layer in sceneManager.activeScene.settings.namedLayers" :key="layer.id" :value="layer.name">{{ layer.name }}</option></select></PropertyRow>
-          <PropertyRow :label="t('entityOwnership')"><select v-model="selectedEntity.ownership"><option value="Scene">{{ t('sceneOwned') }}</option><option value="Prefab">{{ t('prefabOwned') }}</option><option value="Runtime">{{ t('runtimeOwned') }}</option></select></PropertyRow>
-<!-- 拥有者候选过滤回调排除当前选中实体。 -->          <PropertyRow :label="t('ownerEntity')"><select v-model="selectedEntity.ownerUuid"><option :value="null">{{ t('none') }}</option><option v-for="entity in state.world.entities.filter(entity => entity !== selectedEntity)" :key="entity.uuid" :value="entity.uuid">{{ entity.name }}</option></select></PropertyRow>
-          <PropertyRow :label="t('editorOnlyEntity')"><ToggleSwitch v-model="selectedEntity.editorOnly" /></PropertyRow>
-          <PropertyRow :label="t('runtimePersistence')"><select v-model="selectedEntity.runtimePersistence"><option value="Scene">{{ t('persistenceScene') }}</option><option value="Session">{{ t('persistenceSession') }}</option><option value="SaveGame">{{ t('persistenceSaveGame') }}</option><option value="Transient">{{ t('persistenceTransient') }}</option></select></PropertyRow>
-          <div v-if="selectedValidation.length" class="authoring-validation" role="status"><strong>{{ t('componentValidation') }}</strong><button v-for="issue in selectedValidation" :key="`${issue.code}:${issue.component}`" :class="issue.severity" :title="issue.fix">{{ issue.message }}</button></div>
-          <DiagnosticRow label="UUID" :value="selectedEntity.uuid" />
-          <template v-if="selectedEntity.prefabAsset">
-            <DiagnosticRow :label="t('prefabInstance')" :value="selectedEntity.prefabAsset" active />
-            <DiagnosticRow :label="t('prefabOverrides')" :value="String(prefabOverrideCount)" />
-            <details data-ui-motion-disclosure v-if="prefabComparison.length" class="prefab-compare">
-              <summary>{{ t('comparePrefabOverrides') }}</summary>
-              <article v-for="override in prefabComparison" :key="override.path"><code>{{ override.path }}</code><button @click="resetSelectedPrefabOverride(override.path)">{{ t('resetOverride') }}</button></article>
-            </details>
-            <details data-ui-motion-disclosure v-if="prefabConflicts.length" class="prefab-compare prefab-conflicts" open>
-              <summary>{{ t('prefabConflicts') }} · {{ prefabConflicts.length }}</summary>
-              <article v-for="conflict in prefabConflicts" :key="`${conflict.code}:${conflict.path ?? ''}`" :class="conflict.severity"><span>{{ conflict.message }}</span></article>
-            </details>
-            <div class="prefab-actions">
-              <button @click="locateSelectedPrefab">{{ t('locatePrefabSource') }}</button>
-              <button @click="applySelectedPrefab">{{ t('applyPrefab') }}</button>
-              <button @click="revertSelectedPrefab">{{ t('revertPrefab') }}</button>
-              <button @click="createSelectedPrefabVariant">{{ t('createPrefabVariant') }}</button>
-              <button @click="unpackSelectedPrefab">{{ t('unpackPrefab') }}</button>
-            </div>
-          </template>
-          <button v-else class="secondary-action" @click="createSelectedPrefab">{{ t('createPrefab') }}</button>
-          <template v-if="selectedEntity.sceneLayers.length">
-            <DiagnosticRow :label="t('sceneInstance')" :value="selectedEntity.sceneLayers[selectedEntity.sceneLayers.length - 1]?.asset ?? ''" active />
-            <button class="secondary-action" @click="unpackSelectedScene">{{ t('unpackScene') }}</button>
-          </template>
+        <InspectorSection :title="t('transform2D')" category="transform" open>
+          <ComponentTools kind="Transform2D" />
+          <PropertyRow :label="t('parentEntity')"><select v-model="selectedParentUuid"><option value="">{{ t('noParent') }}</option><option v-for="entity in parentCandidates" :key="entity.uuid" :value="entity.uuid">{{ entity.name }}_{{ entity.id }}</option></select></PropertyRow>
+          <PropertyRow :label="t('position')" path="Transform.position"><div class="pair"><NumericExpressionInput :resource-key="numericResourceKey" v-model="selectedEntity.transform.position.x" /><NumericExpressionInput :resource-key="numericResourceKey" v-model="selectedEntity.transform.position.y" /></div></PropertyRow>
+          <PropertyRow :label="t('rotationDegrees')" path="Transform.rotation"><NumberRange v-model="rotationDegrees" :min="-180" :max="180" :step="1" /></PropertyRow>
+          <PropertyRow :label="t('scale')" path="Transform.scale"><div class="pair"><NumericExpressionInput :resource-key="numericResourceKey" v-model="selectedEntity.transform.scale.x" :minimum="0.000001" /><NumericExpressionInput :resource-key="numericResourceKey" v-model="selectedEntity.transform.scale.y" :minimum="0.000001" /></div></PropertyRow>
         </InspectorSection>
 
         <InspectorSection v-if="selectedEntity.hasComponent('RigidBody2D')" :title="t('rigidBody2D')" category="physics" open>
@@ -111,7 +55,7 @@
           <PropertyRow :label="t('freezeRotation')"><ToggleSwitch v-model="selectedEntity.rigidBody.freezeRotation" /></PropertyRow>
         </InspectorSection>
 
-        <InspectorSection :title="t('connections')" category="physics" open>
+        <InspectorSection :title="t('connections')" category="physics" :open="selectedConnections.length > 0">
           <div v-if="selectedConnections.length" class="connection-list">
             <article v-for="connection in selectedConnections" :key="connection.id" class="connection-item" :class="connection.breakState">
               <button class="connection-main" :title="connection.binding ? t('boundAsCompound') : undefined" @click="openConnection(connection.id)">
@@ -268,13 +212,6 @@
           <PropertyRow :label="t('absoluteSize')"><div class="pair"><NumericExpressionInput v-model="absoluteSizeX" :minimum="0.000001" :step="0.1" :resource-key="numericResourceKey + ':absoluteSizeX'" /><NumericExpressionInput v-model="absoluteSizeY" :minimum="0.000001" :step="0.1" :resource-key="numericResourceKey + ':absoluteSizeY'" /></div></PropertyRow>
         </InspectorSection>
 
-        <InspectorSection :title="t('transform2D')" category="transform" open>
-          <ComponentTools kind="Transform2D" />
-          <PropertyRow :label="t('parentEntity')"><select v-model="selectedParentUuid"><option value="">{{ t('noParent') }}</option><option v-for="entity in parentCandidates" :key="entity.uuid" :value="entity.uuid">{{ entity.name }}_{{ entity.id }}</option></select></PropertyRow>
-          <PropertyRow :label="t('position')" path="Transform.position"><div class="pair"><NumericExpressionInput :resource-key="numericResourceKey" v-model="selectedEntity.transform.position.x" /><NumericExpressionInput :resource-key="numericResourceKey" v-model="selectedEntity.transform.position.y" /></div></PropertyRow>
-          <PropertyRow :label="t('rotationDegrees')" path="Transform.rotation"><NumberRange v-model="rotationDegrees" :min="-180" :max="180" :step="1" /></PropertyRow>
-          <PropertyRow :label="t('scale')" path="Transform.scale"><div class="pair"><NumericExpressionInput :resource-key="numericResourceKey" v-model="selectedEntity.transform.scale.x" :minimum="0.000001" /><NumericExpressionInput :resource-key="numericResourceKey" v-model="selectedEntity.transform.scale.y" :minimum="0.000001" /></div></PropertyRow>
-        </InspectorSection>
 
         <InspectorSection v-if="selectedEntity.hasComponent('RigidBody2D')" :title="t('transformMotion')" category="physics">
           <PropertyRow :label="t('linearVelocity')"><div class="pair"><NumericExpressionInput v-model="selectedEntity.velocity.x" :step="0.01" :resource-key="numericResourceKey + ':selectedEntity.velocity.x'" /><NumericExpressionInput v-model="selectedEntity.velocity.y" :step="0.01" :resource-key="numericResourceKey + ':selectedEntity.velocity.y'" /></div></PropertyRow>
@@ -359,6 +296,72 @@
         <RuntimeComponentsInspector :entity="selectedEntity" :search-query="estate.inspectorSearch" :category="estate.inspectorCategory" />
         <WorldComponentsInspector :entity="selectedEntity" />
         <GameplayComponentsInspector :entity="selectedEntity" />
+        <InspectorSection :title="t('entitySettings')" category="general">
+          <PropertyRow :label="t('entityEnabled')" path="Entity.enabled"><ToggleSwitch v-model="selectedEntity.enabled" /></PropertyRow>
+          <PropertyRow :label="t('entityVisible')"><ToggleSwitch v-model="selectedEntity.editorVisible" /></PropertyRow>
+          <PropertyRow :label="t('renderVisibility')" path="Entity.visible"><ToggleSwitch v-model="selectedEntity.authoring.visible" /></PropertyRow>
+          <PropertyRow :label="t('entityLocked')"><ToggleSwitch v-model="selectedEntity.editorLocked" /></PropertyRow>
+          <PropertyRow :label="t('zOrder')" path="Authoring.zOrder"><NumericExpressionInput :model-value="selectedEntity.authoring.zOrder" :step="1" :resource-key="numericResourceKey + ':authoring.zOrder'" @update:model-value="setAuthoringOrder" /></PropertyRow>
+          <PropertyRow :label="t('renderLayer')" path="Authoring.renderLayer"><select :value="selectedEntity.layer" @change="setAuthoringLayer(Number(($event.target as HTMLSelectElement).value))"><option v-for="layer in estate.layers" :key="layer" :value="layer">{{ t('layer') }} {{ layer }}</option></select></PropertyRow>
+          <PropertyRow :label="t('sortingMode')" path="Authoring.sortMode"><select v-model="selectedEntity.authoring.sortMode"><option value="LayerThenOrder">{{ t('explicitOrder') }}</option><option value="YSort">{{ t('ySort') }}</option></select></PropertyRow>
+          <PropertyRow v-if="!selectedEntity.spriteRenderer" :label="t('objectOrigin')" path="Authoring.origin"><div class="pair"><NumericExpressionInput v-model="selectedEntity.authoring.origin.x" :step="0.01" :resource-key="numericResourceKey + ':selectedEntity.authoring.origin.x'" /><NumericExpressionInput v-model="selectedEntity.authoring.origin.y" :step="0.01" :resource-key="numericResourceKey + ':selectedEntity.authoring.origin.y'" /></div></PropertyRow>
+          <template v-if="selectedEntity.authoring.kind === 'CanvasLayer'">
+            <PropertyRow :label="t('screenSpaceCanvas')" path="Canvas.screenSpace"><ToggleSwitch v-model="selectedEntity.authoring.canvasLayer.screenSpace" /></PropertyRow>
+            <PropertyRow :label="t('followCamera')" path="Canvas.followCamera"><ToggleSwitch v-model="selectedEntity.authoring.canvasLayer.followCamera" /></PropertyRow>
+          </template>
+          <template v-if="selectedEntity.authoring.kind === 'ParallaxLayer'">
+            <PropertyRow :label="t('parallaxMotionScale')" path="Parallax.motionScale"><div class="pair"><NumericExpressionInput v-model="selectedEntity.authoring.parallax.motionScale.x" :step="0.05" :resource-key="numericResourceKey + ':selectedEntity.authoring.parallax.motionScale.x'" /><NumericExpressionInput v-model="selectedEntity.authoring.parallax.motionScale.y" :step="0.05" :resource-key="numericResourceKey + ':selectedEntity.authoring.parallax.motionScale.y'" /></div></PropertyRow>
+            <PropertyRow :label="t('parallaxRepeat')" path="Parallax.repeat"><div class="pair"><NumericExpressionInput v-model="selectedEntity.authoring.parallax.repeat.x" :minimum="0" :step="0.1" :resource-key="numericResourceKey + ':selectedEntity.authoring.parallax.repeat.x'" /><NumericExpressionInput v-model="selectedEntity.authoring.parallax.repeat.y" :minimum="0" :step="0.1" :resource-key="numericResourceKey + ':selectedEntity.authoring.parallax.repeat.y'" /></div></PropertyRow>
+            <PropertyRow :label="t('parallaxMirror')" path="Parallax.mirror"><ToggleSwitch v-model="selectedEntity.authoring.parallax.mirror" /></PropertyRow>
+            <PropertyRow :label="t('parallaxDepth')" path="Parallax.depth"><NumericExpressionInput v-model="selectedEntity.authoring.parallax.depth" :step="1" :resource-key="numericResourceKey + ':selectedEntity.authoring.parallax.depth'" /></PropertyRow>
+          </template>
+          <template v-if="selectedEntity.authoring.kind === 'Path'">
+            <PropertyRow :label="t('reusablePath')"><select v-model="selectedEntity.authoring.path.asset" @change="loadSelectedPathAsset"><option :value="null">{{ t('inlinePath') }}</option><option v-for="asset in pathAssets" :key="asset.uuid" :value="assetReference(asset.uuid)">{{ asset.name }}</option></select></PropertyRow>
+            <PropertyRow :label="t('pathClosed')" path="Path.closed"><ToggleSwitch v-model="selectedEntity.authoring.path.closed" /></PropertyRow>
+            <PropertyRow :label="t('pathSmoothing')" path="Path.smoothing"><NumberRange v-model="selectedEntity.authoring.path.smoothing" :min="0" :max="1" :step="0.01" /></PropertyRow>
+            <UiPropertyRow :label="t('pathPoints')" class="stacked-field"><PathTextInput :model-value="pathPointsText" kind="points" :resource-key="numericResourceKey + ':path.points'" rows="3" @commit="updatePathPoints" /></UiPropertyRow>
+            <UiPropertyRow :label="t('pathTangents')" class="stacked-field"><PathTextInput :model-value="pathTangentsText" kind="tangents" :maximum="selectedEntity.authoring.path.points.length" :resource-key="numericResourceKey + ':path.tangents'" rows="3" :placeholder="t('pathTangentsHint')" @commit="updatePathTangents" /></UiPropertyRow>
+<!-- 路径跟随目标过滤回调排除当前选中实体。 -->            <PropertyRow :label="t('pathFollower')"><select v-model="selectedEntity.authoring.path.follower.targetUuid"><option :value="null">{{ t('none') }}</option><option v-for="entity in state.world.entities.filter(entity => entity !== selectedEntity)" :key="entity.uuid" :value="entity.uuid">{{ entity.name }}</option></select></PropertyRow>
+            <PropertyRow :label="t('pathProgress')"><NumberRange v-model="selectedEntity.authoring.path.follower.progress" :min="0" :max="1" :step="0.001" /></PropertyRow>
+            <PropertyRow :label="t('pathSpeed')"><NumericExpressionInput v-model="selectedEntity.authoring.path.follower.speed" :step="0.01" :resource-key="numericResourceKey + ':selectedEntity.authoring.path.follower.speed'" /></PropertyRow>
+            <PropertyRow :label="t('orientToPath')"><ToggleSwitch v-model="selectedEntity.authoring.path.follower.orient" /></PropertyRow>
+            <button class="secondary-action" @click="saveSelectedPathAsset">{{ t('saveReusablePath') }}</button>
+          </template>
+          <PropertyRow :label="t('persistentEntity')"><ToggleSwitch v-model="selectedEntity.persistentAcrossScenes" /></PropertyRow>
+          <PropertyRow :label="t('entityTags')"><input v-model="tagsText" type="text"></PropertyRow>
+          <PropertyRow :label="t('entityGroups')"><input v-model="groupsText" type="text"></PropertyRow>
+          <PropertyRow :label="t('namedLayer')"><select v-model="selectedEntity.namedLayer"><option v-for="layer in sceneManager.activeScene.settings.namedLayers" :key="layer.id" :value="layer.name">{{ layer.name }}</option></select></PropertyRow>
+          <PropertyRow :label="t('entityOwnership')"><select v-model="selectedEntity.ownership"><option value="Scene">{{ t('sceneOwned') }}</option><option value="Prefab">{{ t('prefabOwned') }}</option><option value="Runtime">{{ t('runtimeOwned') }}</option></select></PropertyRow>
+<!-- 拥有者候选过滤回调排除当前选中实体。 -->          <PropertyRow :label="t('ownerEntity')"><select v-model="selectedEntity.ownerUuid"><option :value="null">{{ t('none') }}</option><option v-for="entity in state.world.entities.filter(entity => entity !== selectedEntity)" :key="entity.uuid" :value="entity.uuid">{{ entity.name }}</option></select></PropertyRow>
+          <PropertyRow :label="t('editorOnlyEntity')"><ToggleSwitch v-model="selectedEntity.editorOnly" /></PropertyRow>
+          <PropertyRow :label="t('runtimePersistence')"><select v-model="selectedEntity.runtimePersistence"><option value="Scene">{{ t('persistenceScene') }}</option><option value="Session">{{ t('persistenceSession') }}</option><option value="SaveGame">{{ t('persistenceSaveGame') }}</option><option value="Transient">{{ t('persistenceTransient') }}</option></select></PropertyRow>
+          <div v-if="selectedValidation.length" class="authoring-validation" role="status"><strong>{{ t('componentValidation') }}</strong><button v-for="issue in selectedValidation" :key="`${issue.code}:${issue.component}`" :class="issue.severity" :title="issue.fix">{{ issue.message }}</button></div>
+          <DiagnosticRow label="UUID" :value="selectedEntity.uuid" />
+          <template v-if="selectedEntity.prefabAsset">
+            <DiagnosticRow :label="t('prefabInstance')" :value="selectedEntity.prefabAsset" active />
+            <DiagnosticRow :label="t('prefabOverrides')" :value="String(prefabOverrideCount)" />
+            <details data-ui-motion-disclosure v-if="prefabComparison.length" class="prefab-compare">
+              <summary>{{ t('comparePrefabOverrides') }}</summary>
+              <article v-for="override in prefabComparison" :key="override.path"><code>{{ override.path }}</code><button @click="resetSelectedPrefabOverride(override.path)">{{ t('resetOverride') }}</button></article>
+            </details>
+            <details data-ui-motion-disclosure v-if="prefabConflicts.length" class="prefab-compare prefab-conflicts" open>
+              <summary>{{ t('prefabConflicts') }} · {{ prefabConflicts.length }}</summary>
+              <article v-for="conflict in prefabConflicts" :key="`${conflict.code}:${conflict.path ?? ''}`" :class="conflict.severity"><span>{{ conflict.message }}</span></article>
+            </details>
+            <div class="prefab-actions">
+              <button @click="locateSelectedPrefab">{{ t('locatePrefabSource') }}</button>
+              <button @click="applySelectedPrefab">{{ t('applyPrefab') }}</button>
+              <button @click="revertSelectedPrefab">{{ t('revertPrefab') }}</button>
+              <button @click="createSelectedPrefabVariant">{{ t('createPrefabVariant') }}</button>
+              <button @click="unpackSelectedPrefab">{{ t('unpackPrefab') }}</button>
+            </div>
+          </template>
+          <button v-else class="secondary-action" @click="createSelectedPrefab">{{ t('createPrefab') }}</button>
+          <template v-if="selectedEntity.sceneLayers.length">
+            <DiagnosticRow :label="t('sceneInstance')" :value="selectedEntity.sceneLayers[selectedEntity.sceneLayers.length - 1]?.asset ?? ''" active />
+            <button class="secondary-action" @click="unpackSelectedScene">{{ t('unpackScene') }}</button>
+          </template>
+        </InspectorSection>
         <InspectorSection v-if="pluginInspectorContributions.length" :title="t('extensionActions')" category="general">
           <div class="plugin-inspector-actions">
             <button v-for="item in pluginInspectorContributions" :key="`${item.pluginId}:${item.kind}:${item.id}`" :title="item.description" @click="invokePluginInspector(item.kind,item.id,item.pluginId)"><span>{{ item.label }}</span><small>{{ item.pluginName }} · {{ t(`contribution_${item.kind}`) }}</small></button>
@@ -1222,17 +1225,17 @@ const commonComponentKinds = computed(/** 计算所有选中实体共同拥有�
 .config-panel { position: absolute; inset: 1px; overflow: auto; color: var(--text-secondary); background: var(--surface-1); scroll-padding-block: var(--ui-panel-inset); border-radius: calc(var(--radius-panel) - 1px); scrollbar-gutter: stable; }
 .config-panel.runtime { pointer-events: none; opacity: .72; }
 .settings-content { min-height: 100%; display: flex; flex-direction: column; padding: 0 0 var(--ui-panel-inset); gap: 0; }
-.inspector-sticky { position: sticky; top: 0; z-index: 4; box-sizing: border-box; overscroll-behavior: contain; padding: var(--space-3) var(--space-2) var(--space-2) var(--ui-panel-inset); border-bottom: var(--ui-border-width) solid var(--border-separator); background: color-mix(in srgb, var(--surface-1) 92%, transparent); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+.inspector-sticky { position: sticky; top: 0; z-index: 4; box-sizing: border-box; padding: var(--space-3) var(--ui-panel-inset) var(--space-2); border-bottom: var(--ui-border-width) solid var(--border-separator); background: var(--surface-1); }
 .inspector-search-row { display: flex; gap: var(--space-1); flex-wrap: nowrap; margin-top: var(--space-2); }
 .inspector-search-row > input { flex: 1 1 auto; width: auto; min-width: 0; }
-.add-component-trigger { flex: none; white-space: nowrap; padding: 0 var(--space-3); color: var(--accent-contrast); background: var(--accent-fill); box-shadow: var(--shadow-xs); }
+.add-component-trigger { flex: none; color: var(--accent-contrast); background: var(--accent-fill); box-shadow: var(--shadow-xs); }
 .add-component-trigger:hover:not(:disabled) { background: var(--accent-fill-hover); }
-.inspector-categories { margin-top: var(--space-2); display: flex; flex-wrap: wrap; gap: 2px; }
-.inspector-categories > button, .inspector-view-controls > button { flex: none; min-height: calc(var(--ui-control-height) - 6px); padding: 0 var(--space-2); border-radius: var(--radius-pill); font-size: var(--type-dense); font-weight: var(--weight-medium); color: var(--text-muted); }
-.inspector-categories > button.active, .inspector-view-controls > button.active { background: var(--selection-bg); color: var(--text-primary); }
-.inspector-view-controls { display: flex; gap: 2px; margin-top: 2px; flex-wrap: wrap; }
-.inspector-view-controls > button { display: inline-flex; align-items: center; gap: var(--space-1); }
-.inspector-view-controls .editor-icon { width: 12px; height: 12px; flex-basis: 12px; }
+.inspector-categories { margin: var(--space-2) calc(-1 * var(--ui-panel-inset)) 0; padding-inline: var(--ui-panel-inset); display: flex; align-items: center; gap: 2px; overflow-x: auto; scrollbar-width: none; mask-image: linear-gradient(90deg, transparent, black var(--ui-panel-inset), black calc(100% - var(--ui-panel-inset)), transparent); }
+.inspector-categories::-webkit-scrollbar { display: none; }
+.inspector-categories > button { flex: none; display: inline-flex; align-items: center; gap: var(--space-1); min-height: calc(var(--ui-control-height) - 6px); padding: 0 var(--space-2); border-radius: var(--radius-pill); font-size: var(--type-dense); font-weight: var(--weight-medium); color: var(--text-muted); white-space: nowrap; }
+.inspector-categories > button.active { background: var(--selection-bg); color: var(--text-primary); }
+.inspector-categories .editor-icon { width: 12px; height: 12px; flex-basis: 12px; }
+.inspector-filter-divider { flex: none; width: 1px; height: 14px; margin-inline: var(--space-1); background: var(--border-subtle); }
 .empty-inspector { height: 100%; padding: var(--space-4); display: flex; flex-direction: column; justify-content: center; align-items: center; color: var(--text-muted); text-align: center; }.empty-inspector > strong { margin-top: var(--space-3); color: var(--text-secondary); }.empty-ui-actions { width: 100%; margin-top: var(--space-2); display: grid; grid-template-columns: 1fr 1fr; gap: var(--ui-control-gap); }.runtime-note { color: var(--text-muted); line-height: 1.45; }
 .authoring-validation{padding:var(--space-2);display:grid;gap:var(--space-1);border:1px solid color-mix(in srgb,var(--warning) 40%,var(--border-subtle));background:color-mix(in srgb,var(--warning) 7%,transparent)}.authoring-validation strong{color:var(--warning)}
 .batch-toggle { min-width: 76px; border: 1px solid var(--border-subtle); color: var(--accent); background: var(--surface-3);
@@ -1243,7 +1246,7 @@ const commonComponentKinds = computed(/** 计算所有选中实体共同拥有�
 }
 .inspector-header { display: flex; align-items: baseline; gap: var(--space-2); min-width: 0; padding-inline-end: calc(var(--ui-control-height) + var(--space-1)); }
 .eyebrow { color: var(--accent); }
-h3 { margin: 0; min-width: 0; color: var(--text-primary); font-size: var(--type-page); font-weight: var(--weight-strong); line-height: var(--line-page); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+h3 { margin: 0; min-width: 0; color: var(--text-primary); font-size: calc(17px * var(--ui-scale)); font-weight: var(--weight-strong); line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 h3 small { color: var(--text-muted); }
 .entity-meta { display: inline-flex; align-items: baseline; gap: var(--space-2); flex: none; color: var(--text-muted); font-size: var(--type-caption); }
 .entity-id { font-variant-numeric: tabular-nums; color: var(--text-tertiary); }

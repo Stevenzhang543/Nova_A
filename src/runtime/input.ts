@@ -1,4 +1,5 @@
 /** 游戏输入系统：维护键盘、指针和动作映射，提供当前帧及边沿输入查询。 */
+import { latencyProbe } from './latencyProbe'
 import { applyGamepadAxisCalibration, sensorValue, TouchPointerDeduplicator } from './deviceInput'
 import { inputPromptForAction, inputPromptState, setInputModality } from './inputModality'
 
@@ -356,12 +357,12 @@ export class InputManager {
     if (!event.defaultPrevented && !event.isComposing && event.keyCode !== 229 && !this.isTypingTarget(event.target) && !this.edgeOverflowed) {
       const changed = !this.keyboard.has(event.code)
       this.keyboard.add(event.code); this.logicalKeys.add(logicalKey(event.key)); this.updateModifiers(event)
-      if (changed && !event.repeat) this.recordDigitalEdge('key', event.code, logicalKey(event.key), 0, true)
+      if (changed && !event.repeat) { if (latencyProbe.enabled) latencyProbe.inputReceived('key', event.code, true, event.timeStamp); this.recordDigitalEdge('key', event.code, logicalKey(event.key), 0, true) }
       if (!event.repeat) setInputModality('keyboard')
     }
   }
-  readonly onKeyUp = (event: KeyboardEvent) => { const changed = this.keyboard.delete(event.code); this.logicalKeys.delete(logicalKey(event.key)); this.updateModifiers(event); if (changed) this.recordDigitalEdge('key', event.code, logicalKey(event.key), 0, false, !this.observation || !event.defaultPrevented && !event.isComposing && event.keyCode !== 229 && !this.isTypingTarget(event.target)) }
-  readonly onMouseDown = (event: MouseEvent) => { if (this.acceptMouse(event) && !this.edgeOverflowed) { const changed = !this.mouseButtons.has(event.button); this.mouseButtons.add(event.button); if (changed) this.recordDigitalEdge('mouse', '', '', event.button, true, !this.observation || !event.defaultPrevented && !this.isTypingTarget(event.target)); setInputModality('mouse') } }
+  readonly onKeyUp = (event: KeyboardEvent) => { const changed = this.keyboard.delete(event.code); this.logicalKeys.delete(logicalKey(event.key)); this.updateModifiers(event); if (changed && latencyProbe.enabled) latencyProbe.inputReceived('key', event.code, false, event.timeStamp); if (changed) this.recordDigitalEdge('key', event.code, logicalKey(event.key), 0, false, !this.observation || !event.defaultPrevented && !event.isComposing && event.keyCode !== 229 && !this.isTypingTarget(event.target)) }
+  readonly onMouseDown = (event: MouseEvent) => { if (this.acceptMouse(event) && !this.edgeOverflowed) { const changed = !this.mouseButtons.has(event.button); this.mouseButtons.add(event.button); if (changed && latencyProbe.enabled) latencyProbe.inputReceived('mouse-button', String(event.button), true, event.timeStamp); if (changed) this.recordDigitalEdge('mouse', '', '', event.button, true, !this.observation || !event.defaultPrevented && !this.isTypingTarget(event.target)); setInputModality('mouse') } }
   readonly onMouseUp = (event: MouseEvent) => { if (this.acceptMouse(event) && this.mouseButtons.delete(event.button)) this.recordDigitalEdge('mouse', '', '', event.button, false, !this.observation || !event.defaultPrevented && !this.isTypingTarget(event.target)) }
   readonly onMouseMove = /** 结构说明（自动提取）：匿名回调；输入 event；直接调用 acceptMouse、Math.abs、setInputModality；写入 clientX、clientY、movementX、movementY。 */ (event: MouseEvent) => { if (!this.acceptMouse(event)) return; this.clientX = event.clientX; this.clientY = event.clientY; this.movementX += event.movementX; this.movementY += event.movementY; if (Math.abs(event.movementX) + Math.abs(event.movementY) >= 1) setInputModality('mouse') }
   /** Only unhandled game-surface wheel input belongs to gameplay; editor and native controls keep scrolling. */

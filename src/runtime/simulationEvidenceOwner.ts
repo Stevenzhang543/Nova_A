@@ -1,4 +1,5 @@
 /** Fixed-World bounded replay evidence. AI ownership is explicit in the checksum port. */
+import { plainView } from '../world/plainView'
 import type { Entity } from '../world/Entity'
 import type { Connection } from '../world/Connection'
 import type { World } from '../world/World'
@@ -65,7 +66,7 @@ export class SimulationEvidenceOwner {
     if (checksumPort.scope === 'fixed-world' && checksumPort.world !== world) throw new Error('SIMULATION_EVIDENCE_CHECKSUM_WORLD_MISMATCH: The checksum port must belong to the same fixed World.')
   }
   captureSimulationEvidence(frame: number, entities: readonly Entity[] = this.world.entities, connections: readonly Connection[] = this.world.connections): string {
-    if (entities !== this.world.entities || connections !== this.world.connections) throw new Error('SIMULATION_EVIDENCE_WORLD_ARRAY_MISMATCH: Capture only the fixed World entity and connection arrays.')
+    if (plainView(entities) !== plainView(this.world.entities) || plainView(connections) !== plainView(this.world.connections)) throw new Error('SIMULATION_EVIDENCE_WORLD_ARRAY_MISMATCH: Capture only the fixed World entity and connection arrays.')
     return captureSimulationEvidenceIntoState(this.state, frame, entities, connections, this.checksumPort)
   }
   clearSimulationEvidence(): void { clearSimulationEvidenceState(this.state) }

@@ -108,7 +108,7 @@ try {
   check('HotReload-commit-retains-real-source-and-detached-history', () => { assert.equal(rollback.source, previousSource); assert.equal(rollback.historyId, plan.id); assert.equal(observed.hotReload.at(-1), 'committed'); const history = api.reload.hotReloadHistory(); history[0].message = 'detached'; assert.notEqual(api.reload.scriptHotReloadState.history[0].message, 'detached') })
   assert.equal(api.reload.rollbackHotReload('owner-script'), previousSource)
   check('HotReload-rollback-and-clear-retain-original-session-rules', () => { assert.equal(api.reload.scriptHotReloadState.history[0].status, 'rolled-back'); api.reload.clearHotReloadSession(); assert.equal(api.reload.scriptHotReloadState.activePlan, null); assert.deepEqual(api.reload.scriptHotReloadState.rollbackSources, {}); assert.equal(api.reload.scriptHotReloadState.history.length, 1) })
-  api.coverage.resetScriptCoverage(); api.coverage.recordScriptCoverage('owner-script', candidateSource, 'update')
+  api.coverage.resetScriptCoverage(); api.coverage.recordScriptCoverage('owner-script', candidateSource, 'update'); api.coverage.flushScriptCoverage()
   const report = api.coverage.scriptCoverageReport()
   check('original-Coverage-functions-record-and-export-with-actual-Vue-notification', () => { assert.equal(report.files[0].scriptUuid, 'owner-script'); assert.deepEqual(report.files[0].coveredFunctions, ['update']); assert(observed.coverage.includes(1)); assert.match(api.coverage.scriptCoverageLcov(report), /FNDA:1,update/) })
   report.files[0].coveredFunctions.splice(0)

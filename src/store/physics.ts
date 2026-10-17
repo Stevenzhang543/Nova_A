@@ -16,7 +16,8 @@ import { preflightProjectValues } from '../projects/projectPreflight'
 import { cancelPendingProjectMutations, flushPendingProjectMutations, setProjectMutationRecorder } from '../runtime/projectMutationRouter'
 import { cancelEditorDrafts, settleEditorDrafts } from '../editor/pendingDrafts'
 
-import { reactive, markRaw } from 'vue'
+import { reactive, markRaw, toRaw } from 'vue'
+import { installPlainView } from '../world/plainView'
 import { DEFAULT_MAX_CATCH_UP_STEPS } from '../runtime/engineTiming'
 import { World, defaultCollisionMatrix, type EngineDiagnostics, type GlobalPhysicsSettings } from '../world/World'
 import { Camera } from '../world/Camera'
@@ -97,6 +98,8 @@ export function createEditorWorld(): World {
   const world:World=new World({ readTextAsset, assetRevision: () => assetState.generation, buildTileColliderDescriptors:component=>getEditorTileMapOwner(world).buildTileColliderDescriptors(component), recordPhysicsTelemetry });return world
 }
 
+// Playing frames run on the plain objects behind the editor's proxies; observers refresh separately.
+installPlainView(toRaw)
 const rawWorld = createEditorWorld()
 const rawCamera = new Camera()
 
@@ -128,6 +131,8 @@ export const physicsState = reactive<PhysicsState>({
   inputMap: defaultInputMap(),
   audioSettings: defaultAudioSettings()
 })
+// Development-only test hooks (stripped from production builds).
+if (import.meta.env.DEV) Object.assign(globalThis, { __novaPhysicsState: physicsState, __novaDev: { getSceneJSON: () => getSceneJSON(), loadProject: (source: string) => loadProject(source) } })
 
 export const sceneManager = reactive(new SceneManager())
 

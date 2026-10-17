@@ -59,6 +59,8 @@ import { normalizeSimulationFrameDelta } from '../runtime/engineTiming'
 import { UiNativeInputBridge, isExternalUiControl } from '../runtime/uiNativeInput'
 
 import { setInputModality } from '../runtime/inputModality'
+import { latencyProbe } from '../runtime/latencyProbe'
+import { resetRuntimePresentation, syncRuntimePresentation } from '../editor/runtimePresentationSync'
 import { activeTextDirection } from '../runtime/localization'
 
 // Runtime identity is fixed for this Canvas mount; the Editor keeps its existing default.
@@ -355,6 +357,17 @@ let canvasLogicalWidth = 0, canvasLogicalHeight = 0
   })
 }
 
+let presentationBaselined = false
+let lastWorldSubmissionAt: number | null = null, lastWorldDeferred = false
+// performance.memory is a costly getter in Chromium; the heap figure is sampled once per second.
+let heapSampledAt = -Infinity, heapMb: number | null = null
+function sampledHeapMb(now: number): number | null {
+  if (now - heapSampledAt < 1000) return heapMb
+  heapSampledAt = now
+  const memory = (performance as Performance & { memory?: { usedJSHeapSize: number } }).memory
+  heapMb = memory ? memory.usedJSHeapSize / (1024 * 1024) : null
+  return heapMb
+}
 /** 逐帧合并输入、更新相机与玩法、同步连接并渲染，按频率采集性能诊断。 */ function runFrame(time?: number) {
   if (document.hidden) return
   const now = time || performance.now(); const dt = (now - lastTime) / 1000; lastTime = now
@@ -382,7 +395,16 @@ let canvasLogicalWidth = 0, canvasLogicalHeight = 0
 
   if (editorState.currentPage === 'scene' && !state.simulationRunning) syncEditableConnections(true)
   const previousConsumedInput = inputReceiptTokens ? gameplayRuntime.lastFrameConsumedInput : null
+  const editorPresentation = !props.runtime
+  const playedBefore = editorPresentation && state.playMode === 'playing'
+  if (editorPresentation && playedBefore && !presentationBaselined) { resetRuntimePresentation(); syncRuntimePresentation(now, true); presentationBaselined = true }
   gameplayRuntime.frame(normalizeSimulationFrameDelta(dt), canvasRef.value?.getBoundingClientRect())
+  // Playing frames write plain objects; observers (Inspector, hierarchy) refresh at a presentation rate and on pause.
+  if (editorPresentation && presentationBaselined) {
+    const stillPlaying = state.playMode === 'playing'
+    syncRuntimePresentation(now, !stillPlaying)
+    if (!stillPlaying) presentationBaselined = false
+  }
   triggerRef(timelinePresentationState)
   const currentConsumedInput = inputReceiptTokens ? gameplayRuntime.lastFrameConsumedInput : null
   const freshConsumedInput = currentConsumedInput && currentConsumedInput !== previousConsumedInput
@@ -400,17 +422,20 @@ let canvasLogicalWidth = 0, canvasLogicalHeight = 0
       addEditorLog(t('connectionBroken', { name: connection.name }), 'Physics', 'warning')
     }
   }
+  const simulationEnded = performance.now()
   const renderingStarted = performance.now()
   const inputToken = inputReceiptTokens?.consumeLatest(freshConsumedInput)
   try { render(dt, inputToken) }
   finally { if (inputToken !== undefined) inputReceiptTokens?.release(inputToken) }
   const renderingMs = performance.now() - renderingStarted
+  if (latencyProbe.enabled) latencyProbe.frameCompleted({ rafTime: time ?? null, cpuStart: frameStarted, simulationEnd: simulationEnded, renderStart: renderingStarted,
+    submittedAt: lastWorldSubmissionAt, deferred: lastWorldDeferred, gpuMs: editorState.rendererStats.gpuMs ?? null,
+    fixedSteps: state.engineDiagnostics.stepsLastFrame ?? 0 })
   completePerformanceFrame()
   const frameObservation = currentPerformanceFrameObservation()
   const timings = gameplayRuntime.diagnostics.timings
   const frameMs = Math.max(0, dt * 1000)
   const measured = timings.physicsMs + timings.scriptsMs + timings.animationMs + timings.audioMs + timings.assetsMs + renderingMs
-  const memory = (performance as Performance & { memory?: { usedJSHeapSize: number } }).memory
   const sampleInterval = state.simulationRunning || editorState.currentPage === 'game' || prefs.performanceProfile === 'quality' ? 3 : prefs.performanceProfile === 'low-end' ? 30 : 12
   if (performanceSampleCounter++ % sampleInterval === 0) cachedPerformanceSample = samplePerformanceTools(profilerState.current.frame + 1, world.entities.map(/* 返回 entity.uuid 的当前值。 */ entity => entity.uuid), editorState.rendererStats)
   const performanceSample = cachedPerformanceSample
@@ -420,7 +445,7 @@ let canvasLogicalWidth = 0, canvasLogicalHeight = 0
       frameMs, physicsMs: timings.physicsMs, renderingMs, scriptsMs: timings.scriptsMs,
       animationMs: timings.animationMs, audioMs: timings.audioMs, assetsMs: timings.assetsMs,
       otherMs: Math.max(0, Math.min(performance.now() - frameStarted, frameMs || Number.POSITIVE_INFINITY) - measured),
-      fps: frameObservation.rafIntervalMs === null ? null : 1000 / frameObservation.rafIntervalMs, memoryMb: memory ? memory.usedJSHeapSize / (1024 * 1024) : null,
+      fps: frameObservation.rafIntervalMs === null ? null : 1000 / frameObservation.rafIntervalMs, memoryMb: sampledHeapMb(frameStarted),
       inputMs: timings.inputMs, allocations: performanceSample.allocations,
       gpuPasses: renderGraphState.passes.filter(/* 返回 pass.enabled 的当前值。 */ pass => pass.enabled).length, assetJobs: performanceSample.assetJobs,
       mainThreadMs: performanceRuntimeState.mainThreadMs, workerMs: performanceRuntimeState.workerMs,
@@ -834,6 +859,7 @@ const drawTools = new Set(['rectangle', 'circle', 'triangle'])
   // them. Retaining only the newest sample prevents an expensive drag or snap
   // operation from building an input backlog while still updating every frame.
   pendingMouseMove = e
+  if (latencyProbe.enabled && (gizmoDrag || pendingSelectDrag)) latencyProbe.inputReceived('editor-drag', 'pointermove', false, e.timeStamp)
 }
 
 /** 取出并清空最新样本，再执行本帧移动逻辑。 */ function flushPendingMouseMove() {
@@ -886,6 +912,7 @@ const drawTools = new Set(['rectangle', 'circle', 'triangle'])
       else { const uniform = Math.max(0.01, Math.hypot(current.x, current.y) / Math.max(Math.hypot(gizmoDrag.startLocal.x, gizmoDrag.startLocal.y), 1e-6)); factor = { x: uniform, y: uniform } }
       applyScale(gizmoDrag.snapshots, gizmoDrag.pivot, factor, world.entities)
     }
+    latencyProbe.editorCommandApplied()
     return
   }
 
@@ -1195,15 +1222,34 @@ function cancelActiveCanvasDrag() {
   }
 }
 
+let rulerPalette: { key: string; band: string; tick: string; text: string; edge: string } | null = null
+/** Ruler colors follow the active theme tokens; resolved once per theme/palette/contrast change, never per frame. */
+function rulerColors(): { band: string; tick: string; text: string; edge: string } {
+  const root = document.documentElement
+  const key = `${root.dataset.theme}|${root.dataset.palette}|${root.dataset.highContrast}|${root.dataset.reduceTransparency}`
+  if (rulerPalette?.key === key) return rulerPalette
+  const probe = document.createElement('span')
+  probe.style.cssText = 'position:absolute;visibility:hidden;pointer-events:none'
+  document.body.appendChild(probe)
+  const read = (token: string, fallback: string) => { probe.style.color = ''; probe.style.color = `var(${token}, ${fallback})`; return getComputedStyle(probe).color || fallback }
+  rulerPalette = { key, band: read('--surface-panel', '#171e27'), tick: read('--border-strong', '#4b5563'), text: read('--text-muted', '#a8b3c2'), edge: read('--border-subtle', '#2b3442') }
+  probe.remove()
+  return rulerPalette
+}
+
 /** 按缩放选择刻度密度，在画布顶部与左侧绘制标尺。 */ function renderScreenRulers(context: CanvasRenderingContext2D, width: number, height: number): void {
   if (!authoringState.rulersVisible || editorState.currentPage === 'game') return
-  const size = 18, step = Math.max(.000001, prefs.gridSize), worldLeft = -camera.offset.x / camera.scale, worldTop = camera.offset.y / camera.scale
+  const size = 20, step = Math.max(.000001, prefs.gridSize), worldLeft = -camera.offset.x / camera.scale, worldTop = camera.offset.y / camera.scale
   let tick = step
-  while (tick * camera.scale < 42) tick *= 10
-  context.save(); context.fillStyle = 'rgba(21, 27, 37, .9)'; context.fillRect(0, 0, width, size); context.fillRect(0, 0, size, height)
-  context.strokeStyle = 'rgba(132, 151, 178, .5)'; context.fillStyle = 'rgba(214, 225, 240, .78)'; context.font = '9px "JetBrains Mono Variable", monospace'; context.lineWidth = 1
-  for (let value = Math.floor(worldLeft / tick) * tick; value <= worldLeft + width / camera.scale; value += tick) { const x = camera.offset.x + value * camera.scale; context.beginPath(); context.moveTo(x, size - 5); context.lineTo(x, size); context.stroke(); context.fillText(Number(value.toFixed(4)).toString(), x + 2, 9) }
-  for (let value = Math.ceil((worldTop - height / camera.scale) / tick) * tick; value <= worldTop; value += tick) { const y = camera.offset.y - value * camera.scale; context.beginPath(); context.moveTo(size - 5, y); context.lineTo(size, y); context.stroke(); context.save(); context.translate(8, y - 2); context.rotate(-Math.PI / 2); context.fillText(Number(value.toFixed(4)).toString(), 0, 0); context.restore() }
+  while (tick * camera.scale < 56) tick *= 10
+  if (tick * camera.scale > 280) tick /= 2
+  const colors = rulerColors(), label = (value: number) => Number(value.toFixed(4)).toString()
+  context.save(); context.globalAlpha = .94; context.fillStyle = colors.band; context.fillRect(0, 0, width, size); context.fillRect(0, 0, size, height); context.globalAlpha = 1
+  context.fillStyle = colors.edge; context.fillRect(0, size - 1, width, 1); context.fillRect(size - 1, 0, 1, height)
+  context.strokeStyle = colors.tick; context.fillStyle = colors.text; context.font = '500 10px "JetBrains Mono Variable", ui-monospace, monospace'; context.lineWidth = 1; context.textBaseline = 'middle'
+  for (let value = Math.floor(worldLeft / tick) * tick; value <= worldLeft + width / camera.scale; value += tick) { const x = Math.round(camera.offset.x + value * camera.scale) + .5; if (x < size) continue; context.beginPath(); context.moveTo(x, size - 6); context.lineTo(x, size - 1); context.stroke(); context.fillText(label(value), x + 3, size / 2 - 1) }
+  for (let value = Math.ceil((worldTop - height / camera.scale) / tick) * tick; value <= worldTop; value += tick) { const y = Math.round(camera.offset.y - value * camera.scale) + .5; if (y < size) continue; context.beginPath(); context.moveTo(size - 6, y); context.lineTo(size - 1, y); context.stroke(); context.save(); context.translate(size / 2 - 1, y - 3); context.rotate(-Math.PI / 2); context.fillText(label(value), 0, 0); context.restore() }
+  context.fillStyle = colors.band; context.fillRect(0, 0, size, size)
   context.restore()
 }
 
@@ -1321,6 +1367,7 @@ function cancelActiveCanvasDrag() {
   const graphStarted = beginRenderGraph(renderGraphDiagnosticsOwner)
   let passStarted = graphStarted
   let worldSubmitted = false
+  lastWorldSubmissionAt = null; lastWorldDeferred = false
   if (renderer) {
     const renderedStats = renderWorld(renderer, world.entities, {
       width, height, pixelRatio: canvasPixelRatio,
@@ -1335,7 +1382,9 @@ function cancelActiveCanvasDrag() {
     }, sceneRendererEnvironment)
     Object.assign(editorState.rendererStats, renderedStats)
     worldSubmitted = typeof renderedStats.cpuSubmissionAtMs === 'number' && Number.isFinite(renderedStats.cpuSubmissionAtMs)
+    lastWorldDeferred = (renderedStats as { gpuSubmissionStatus?: string }).gpuSubmissionStatus === 'deferred'
     if (worldSubmitted) {
+      lastWorldSubmissionAt = renderedStats.cpuSubmissionAtMs!
       const packet = markPerformanceSubmission(renderedStats.cpuSubmissionAtMs!, consumedInputToken)
       // 把已消费但尚未关联的输入绑定到本次提交。只有第一次绑定生效，
       // 因此后续提交不会被误当作该输入的响应（主指令 §26.4）。

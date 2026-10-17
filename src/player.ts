@@ -13,6 +13,7 @@ import { installProductionStateAdapter } from './runtime/production'
 import { installScriptStateAdapter } from './runtime/scriptStateAdapter'
 import { installProfilerStateAdapter } from './runtime/profiler'
 import { installInputStateAdapter } from './runtime/inputStateAdapter'
+import { activateLatencyProbe } from './platform/latencyProbeHost'
 
 // Keep the existing compatibility Player's reactive presentation on the same targets.
 // A future framework-free Player leaves the Runtime's plain-state default in place.
@@ -29,4 +30,5 @@ const performanceHost = installPerformanceHost({ subscribeFrames: subscribePerfo
     renderScale: 1, particleScale: 1, revision: snapshot.revision, reason: snapshot.reasonCodes.join(',') }),
   subscribeActivity: listener => watch(() => physicsState.simulationRunning, running => listener(running ? 'playing' : 'interactive'), { immediate: true, flush: 'sync' }) })
 if (import.meta.hot) import.meta.hot.dispose(() => performanceHost.dispose())
+void activateLatencyProbe('web-player')
 createApp(PlayerApp).mount('#app')

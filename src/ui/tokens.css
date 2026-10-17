@@ -164,6 +164,29 @@
   --material-blur: 18px;
   --material-opacity: 86%;
 
+  /* Liquid Glass — the control layer that floats above content (viewport tools, menus, popovers,
+   * the command palette, notifications). Content surfaces (panels, lists, canvas) stay solid.
+   * Regular is the default variant: it blurs and tints what is underneath and keeps text legible
+   * over any content. Clear is only used over the scene canvas, with a dimming tint underneath.
+   * Reduce Transparency / Increase Contrast turn both into an opaque, frosted surface. */
+  --glass-blur-radius: 26px;
+  --glass-saturation: 175%;
+  --glass-regular: color-mix(in srgb, var(--surface-popover) 74%, transparent);
+  --glass-clear: color-mix(in srgb, var(--color-background) 46%, transparent);
+  --glass-filter: blur(var(--glass-blur-radius)) saturate(var(--glass-saturation));
+  /* Light comes from above: a bright specular rim on the top edge, a soft inner rim, and a shadow
+   * whose strength separates the glass from busy content without a hard outline. */
+  --glass-rim: inset 0 0.5px 0 color-mix(in srgb, white 55%, transparent), inset 0 0 0 0.5px color-mix(in srgb, var(--color-text-primary) 14%, transparent);
+  --glass-sheen: linear-gradient(180deg, color-mix(in srgb, white 16%, transparent), transparent 46%);
+  --glass-shadow: 0 1px 2px color-mix(in srgb, var(--shade) 14%, transparent), 0 10px 30px color-mix(in srgb, var(--shade) 22%, transparent);
+  --glass-control-hover: color-mix(in srgb, var(--color-text-primary) 9%, transparent);
+  --glass-control-pressed: color-mix(in srgb, var(--color-text-primary) 15%, transparent);
+
+  /* Concentric geometry: an inner corner is the outer corner minus the padding between them. */
+  --shell-gutter: calc(8px * var(--ui-scale));
+  --radius-shell: calc(14px * var(--ui-scale));
+  --radius-capsule-inset: calc(4px * var(--ui-scale));
+
   /* ---- Derived color system ------------------------------------------------ */
   --bg-base: var(--color-background);
   --bg-canvas: color-mix(in srgb, var(--color-background) 82%, black);
@@ -242,6 +265,11 @@
 /* Light themes: lighter shadows, darker accent text, white ink on primary fills. */
 :root[data-theme='light'] {
   color-scheme: light;
+  --glass-regular: color-mix(in srgb, var(--color-surface) 70%, transparent);
+  --glass-clear: color-mix(in srgb, var(--color-surface) 38%, transparent);
+  --glass-rim: inset 0 0.5px 0 color-mix(in srgb, white 90%, transparent), inset 0 0 0 0.5px color-mix(in srgb, var(--color-text-primary) 12%, transparent);
+  --glass-shadow: 0 1px 2px color-mix(in srgb, var(--shade) 8%, transparent), 0 10px 28px color-mix(in srgb, var(--shade) 14%, transparent);
+  --glass-sheen: linear-gradient(180deg, color-mix(in srgb, white 45%, transparent), transparent 50%);
   --color-background: #F7F9FC;
   --color-surface: #FFFFFF;
   --color-primary: #4F6F8F;
@@ -328,9 +356,19 @@
   --border-separator: color-mix(in srgb, var(--color-text-primary) 26%, var(--color-surface));
   --selection-bg: color-mix(in srgb, var(--color-primary) 55%, var(--color-surface));
   --material-opacity: 100%;
+  --glass-regular: var(--surface-popover);
+  --glass-clear: var(--surface-popover);
+  --glass-filter: none;
+  --glass-rim: inset 0 0 0 1px var(--border-strong);
 }
 
 :root:lang(zh-CN) {
   --tracking-ui: 0.01em;
   --tracking-copy: 0.01em;
 }
+
+/* Reduce Transparency: glass becomes frosted and opaque. */
+@media (prefers-reduced-transparency: reduce) {
+  :root { --glass-regular: var(--surface-popover); --glass-clear: var(--surface-popover); --glass-filter: none; --material-opacity: 100%; }
+}
+:root[data-reduce-transparency='true'] { --glass-regular: var(--surface-popover); --glass-clear: var(--surface-popover); --glass-filter: none; --material-opacity: 100%; }

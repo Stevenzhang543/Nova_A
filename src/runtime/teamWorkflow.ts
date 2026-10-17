@@ -550,6 +550,11 @@ interface ProjectLock { token: string; owner: string; createdAt: number; expires
   finally { lockedProjectId = ''; teamWorkflowState.lockToken = ''; teamWorkflowState.lockExpiresAt = 0; teamWorkflowState.status = '' }
 }
 
+/** Releases this editor's own lease, if it holds one. Called when the desktop window is about to close,
+ * where the WebView may be torn down without a pagehide event and the lease would otherwise block the
+ * next session from opening the project for its full duration. */
+export function releaseCurrentProjectLock(): void { if (lockedProjectId) releaseProjectLock(lockedProjectId) }
+
 // A normal reload/close destroys this document's in-memory token. Release only
 // its exact lease first; cached pages retain their token and must keep the lease.
 // Do not persist ownership credentials in sessionStorage, which tabs can clone.

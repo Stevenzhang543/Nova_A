@@ -1,4 +1,5 @@
 /** Fixed-World timeline execution, sharing its exact AnimationOwner and existing media-clock semantics. */
+import { PlainKeyMap } from '../world/plainView'
 import type {Entity} from '../world/Entity'
 import type {Canvas,TimelinePlayer} from '../world/components'
 import {finiteNumber} from '../world/geometry'
@@ -18,8 +19,8 @@ export class TimelineOwner {
   private animationSamples:TimelineAnimationSample[]=[]
   private audioVoices:TimelineVoiceRequest[]=[]
   private traversalVisits=0
-  private visibilityPose=new Map<Entity,{base:boolean;output:boolean}>()
-  private cameraPose=new Map<Entity,{base:boolean;output:boolean}>()
+  private visibilityPose=new PlainKeyMap<Entity,{base:boolean;output:boolean}>()
+  private cameraPose=new PlainKeyMap<Entity,{base:boolean;output:boolean}>()
   onEvent: ((owner: Entity, clip: TimelineClip, type: TimelineTrackType) => void) | null = null
   /** 结构说明（自动提取）：reset；无显式参数；直接调用 restoreSceneFlags、visibilityPose.clear、cameraPose.clear、this.ports.audio.reconcileTimelineVoices、states.clear 等。 */ reset(): void { this.restoreSceneFlags();this.visibilityPose.clear();this.cameraPose.clear();this.ports.audio.reconcileTimelineVoices([],[]);this.states.clear();this.presentation.diagnostics.splice(0); this.presentation.subtitles.splice(0); this.presentation.cameraBlends.splice(0); this.presentation.eventOrder.splice(0); this.ports.camera.publishBlend(null) }
 

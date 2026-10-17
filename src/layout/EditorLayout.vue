@@ -15,14 +15,17 @@
 </template>
       </div>
       <div class="editor-workspace" :inert="Boolean(workspaceState.maximizedPanel && workspaceState.maximizedPanel !== 'bottom')" :data-drop-target="dragTarget === 'floating'" @dragover="previewPanelDrop($event, 'floating')" @dragleave="leavePanelDrop" @drop="dropPanel($event, 'floating')">
-        <div v-show="state.currentPage === 'scene' && state.activeWorkspace !== 'ui'" class="viewport-header" :inert="workspaceState.maximizedPanel === 'bottom'">
-          <ToolBar class="scene-toolbar-row" />
-          <SceneTabs v-show="state.activeWorkspace === 'design' && !state.distractionFree" />
-        </div>
-        <div class="editor-content" :inert="workspaceState.maximizedPanel === 'bottom'">
+        <div class="editor-content" :class="{ 'with-rulers': authoringState.rulersVisible && state.currentPage === 'scene' }" :inert="workspaceState.maximizedPanel === 'bottom'">
           <div :class="['persistent-viewport', `${state.currentPage}-view`, { inactive: displayedWorkspace !== 'canvas' }]">
-            <LayerBar v-if="state.currentPage === 'scene'" />
             <WorldCanvas />
+          </div>
+          <!-- The scene is the content; its controls float above it on glass instead of taking a row. -->
+          <div v-show="state.currentPage === 'scene' && state.activeWorkspace !== 'ui' && displayedWorkspace === 'canvas'" class="viewport-chrome">
+            <div class="viewport-chrome-start">
+              <SceneTabs v-show="state.activeWorkspace === 'design' && !state.distractionFree" class="nv-glass nv-glass--capsule" />
+            </div>
+            <ToolBar class="viewport-chrome-tools nv-glass nv-glass--capsule" />
+            <div class="viewport-chrome-end"><LayerBar class="nv-glass nv-glass--capsule" /></div>
           </div>
           <UiAsyncWorkspace :view="requestedWorkspace" :loaders="workspaceLoaders" @display="displayedWorkspace = $event" />
         </div>
@@ -73,6 +76,7 @@ import { editorState as state, closeContextMenu } from "../store/editor"
 import { physicsState } from '../store/physics'
 import { dockEditorPanel, initializeEditorWorkspaces, restorePanelLayout, workspaceState } from '../editor/workspaces'
 import { recoveryState } from '../runtime/recovery'
+import { authoringState } from '../editor/authoring2d'
 import { recordWarmStartup } from '../runtime/largeWorldPerformance'
 import { t } from '../i18n'
 
@@ -153,11 +157,15 @@ function leavePanelDrop(event: DragEvent) { if (!(event.currentTarget as HTMLEle
 .dock-group.split { flex-direction: column; overflow: hidden; gap: var(--ui-panel-gutter); }
 .dock-group.split > :deep(*) { min-height: 0; max-height: none; height: auto; flex: 1 1 0; }
 .editor-workspace { min-width: 0; flex: 1; display: flex; flex-direction: column; min-height: 0; gap: var(--ui-panel-gutter); }
-/* The viewport header carries the scene tools and scene tabs in one row above the canvas. */
-.viewport-header { flex: 0 0 auto; display: flex; align-items: center; gap: var(--space-1); min-width: 0; min-height: var(--ui-toolbar-height); padding-inline: var(--space-1); border-radius: var(--radius-panel); background: var(--surface-1); box-shadow: inset 0 0 0 var(--ui-border-width) var(--border-separator); }
-.viewport-header > .scene-toolbar-row { flex: 0 0 auto; }
-.viewport-header > :deep(.scene-tabs) { flex: 1 1 auto; min-width: 0; }
-.editor-content { min-height: 0; flex: 1; position: relative; overflow: hidden; background: var(--bg-canvas); border-radius: var(--radius-panel); box-shadow: inset 0 0 0 var(--ui-border-width) var(--border-separator); }
+/* Floating viewport controls: scene tabs at the leading edge, tools centred, layers at the trailing
+ * edge. The row itself ignores the pointer so the canvas stays directly manipulable around them. */
+.viewport-chrome { position: absolute; inset: var(--space-2) var(--space-2) auto var(--space-2); z-index: 300; display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--space-2); pointer-events: none; }
+.editor-content.with-rulers .viewport-chrome { inset-block-start: calc(20px + var(--space-2)); inset-inline-start: calc(20px + var(--space-2)); }
+.viewport-chrome-start, .viewport-chrome-end { flex: 1 1 0; min-width: max-content; display: flex; pointer-events: none; }
+.viewport-chrome-end { justify-content: flex-end; }
+.viewport-chrome-start > *, .viewport-chrome-end > *, .viewport-chrome-tools { pointer-events: auto; }
+.viewport-chrome-tools { flex: none; padding: var(--radius-capsule-inset); }
+.editor-content { min-height: 0; flex: 1; position: relative; overflow: hidden; container: viewport / inline-size; background: var(--bg-canvas); border-radius: var(--radius-panel); box-shadow: inset 0 0 0 var(--ui-border-width) var(--border-separator); }
 /* Running the game is visible at a glance: the viewport frame takes the run state's color. */
 .editor-content::after { content: ''; position: absolute; inset: 0; z-index: 400; border-radius: inherit; pointer-events: none; box-shadow: inset 0 0 0 0 transparent; transition: box-shadow var(--motion-standard) var(--ease-standard); }
 .editor-root[data-play-mode='playing'] .editor-content::after { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--success) 70%, transparent); }

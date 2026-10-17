@@ -1,7 +1,7 @@
 <!-- 场景标签栏：切换场景并管理载入、继承和场景设置。 -->
 <template>
   <section class="scene-tabs" data-control-scope="scene-tabs" :data-resource-key="`scene:${active.uuid}`" :aria-label="t('sceneTabs')">
-    <div class="history-actions">
+    <div v-if="sceneManager.navigationHistory.length > 1" class="history-actions">
       <UiButton :disabled="sceneManager.navigationIndex <= 0" :label="t('previousScene')" @click="navigate(-1)" icon="back" />
       <UiButton :disabled="sceneManager.navigationIndex >= sceneManager.navigationHistory.length - 1" :label="t('nextScene')" @click="navigate(1)" icon="forward" />
     </div>
@@ -73,14 +73,14 @@ watch(/** 收集实体标识、组件种类和预制体覆盖数量作为校验�
 </script>
 
 <style scoped>
-.scene-tabs{display:flex;align-items:center;position:relative;min-width:0;flex:none;gap:var(--space-1);padding-inline:var(--space-1) 0;border-inline-start:var(--ui-border-width) solid var(--border-separator)}
+.scene-tabs{display:flex;align-items:center;position:relative;min-width:0;flex:none;gap:2px;padding:var(--radius-capsule-inset)}
 .history-actions,.scene-tab-entry{display:flex;align-items:center;flex:none}
-.history-actions .ui-button,.scene-tabs>.ui-button,.scene-menu>summary{width:calc(var(--ui-control-height) - 2px);height:calc(var(--ui-control-height) - 2px);min-height:0;color:var(--text-muted)}
+.history-actions .ui-button,.scene-tabs>.ui-button,.scene-menu>summary{width:calc(var(--ui-control-height) - 2px);height:calc(var(--ui-control-height) - 2px);min-height:0;border-radius:var(--radius-pill);color:var(--text-secondary)}
 .tab-strip{display:flex;align-items:center;gap:2px;min-width:0;flex:1;overflow:auto;scrollbar-width:none}
 .tab-strip::-webkit-scrollbar{display:none}
-.scene-tab{display:flex;align-items:center;gap:var(--space-2);max-width:26ch;min-height:calc(var(--ui-control-height) - 2px);border:0;background:transparent;color:var(--text-secondary);font-weight:var(--weight-medium)}
+.scene-tab{display:flex;align-items:center;gap:var(--space-2);max-width:26ch;min-height:calc(var(--ui-control-height) - 2px);padding-inline:var(--space-3);border:0;border-radius:var(--radius-pill);background:transparent;color:var(--text-secondary);font-weight:var(--weight-medium)}
 .scene-tab>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.scene-tab.active{background:var(--surface-raised);color:var(--text-primary);box-shadow:var(--shadow-xs),var(--hairline-highlight)}
+.scene-tab.active{background:var(--glass-control-hover);color:var(--text-primary)}
 .scene-tab i{width:6px;height:6px;flex:none;border-radius:50%;background:var(--success)}
 .scene-tab i.warning{background:var(--warning)}
 .scene-tab i.error{background:var(--danger)}
@@ -90,11 +90,11 @@ watch(/** 收集实体标识、组件种类和预制体覆盖数量作为校验�
 .scene-menu{position:relative}
 .scene-menu>summary{display:grid;place-items:center;padding:0;list-style:none}
 .scene-menu>summary::-webkit-details-marker{display:none}
-.scene-menu>div{position:absolute;top:calc(100% + var(--space-1));right:0;z-index:1000;min-width:30ch;padding:var(--space-1);display:grid;gap:1px;border:var(--ui-border-width) solid var(--border-subtle);border-radius:var(--radius-floating);background:var(--surface-popover);box-shadow:var(--shadow-md)}
+.scene-menu>div{position:absolute;top:calc(100% + var(--space-2));left:0;z-index:1000;min-width:30ch;padding:var(--space-1);display:grid;gap:1px;border:var(--ui-border-width) solid var(--border-subtle);border-radius:var(--radius-floating);background:var(--surface-popover);box-shadow:var(--shadow-md)}
 .scene-menu>div button{width:100%;display:grid;gap:2px;text-align:start;height:auto;min-height:var(--ui-control-height);padding:var(--space-2);border-radius:var(--radius-xs)}
 .scene-menu>div button strong{font-weight:var(--weight-medium)}
 .scene-menu small{color:var(--text-muted);white-space:normal;font-size:var(--type-caption);font-weight:var(--weight-regular)}
-.scene-settings{position:absolute;right:0;top:calc(100% + var(--space-1));width:min(28rem,90vw);max-height:70vh;overflow:auto;z-index:1000;padding:var(--space-3);display:grid;gap:var(--space-2);border:var(--ui-border-width) solid var(--border-subtle);border-radius:var(--radius-floating);background:var(--surface-popover);box-shadow:var(--shadow-md)}
+.scene-settings{position:absolute;left:0;top:calc(100% + var(--space-2));width:min(28rem,90vw);max-height:70vh;overflow:auto;z-index:1000;padding:var(--space-3);display:grid;gap:var(--space-2);border:var(--ui-border-width) solid var(--border-subtle);border-radius:var(--radius-floating);background:var(--surface-popover);box-shadow:var(--shadow-md)}
 .scene-settings>header,.named-layers>header{display:flex;align-items:center;justify-content:space-between}
 .scene-settings>header>div{display:grid}
 .scene-settings>header small{color:var(--text-muted);font-size:var(--type-caption)}

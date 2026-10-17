@@ -129,15 +129,16 @@ onBeforeUnmount(/** 卸载时移除工具键盘监听。 */ () => window.removeE
 <style scoped>
 .toolbar{flex:none;min-width:0}
 .toolbar-content{display:flex;align-items:center;gap:1px}
-.toolbar-content>.ui-button,.tool-menu>summary{width:calc(var(--ui-control-height) - 2px);height:calc(var(--ui-control-height) - 2px);min-height:0;color:var(--text-secondary)}
+.toolbar-content>.ui-button,.tool-menu>summary{width:calc(var(--ui-control-height) + 2px);height:calc(var(--ui-control-height) - 2px);min-height:0;border-radius:var(--radius-pill);color:var(--text-secondary)}
 .toolbar-content>.ui-button:hover:not(:disabled),.tool-menu>summary:hover{color:var(--text-primary)}
-.toolbar-content>.ui-button.active{background:var(--accent-fill);color:var(--accent-contrast);box-shadow:var(--shadow-xs)}
+.toolbar-content>.ui-button.active{background:var(--accent-fill);color:var(--accent-contrast);box-shadow:0 1px 3px color-mix(in srgb,var(--shade) 25%,transparent)}
+.toolbar-content>.ui-button.active:hover:not(:disabled){background:var(--accent-fill-hover)}
 .divider{height:calc(var(--ui-icon-size) + 2px);width:1px;background:var(--border-subtle);margin-inline:var(--space-1)}
 .tool-menu{position:relative}
 .tool-menu>summary{display:grid;place-items:center;padding:0;list-style:none;border:0}
 .tool-menu>summary::-webkit-details-marker{display:none}
 .tool-menu[open]>summary{background:var(--surface-pressed);color:var(--text-primary)}
-.menu-popover{position:absolute;top:calc(100% + var(--space-1));left:0;z-index:1200;max-width:calc(100vw - var(--ui-space-xl));padding:var(--space-3);border:var(--ui-border-width) solid var(--border-subtle);border-radius:var(--radius-floating);background:var(--surface-popover);box-shadow:var(--shadow-md)}
+.menu-popover{position:absolute;top:calc(100% + var(--space-2));left:50%;translate:-50% 0;z-index:1200;max-width:calc(100vw - var(--ui-space-xl));padding:var(--space-3);border:var(--ui-border-width) solid var(--border-subtle);border-radius:var(--radius-floating);background:var(--surface-popover);box-shadow:var(--shadow-md)}
 .menu-popover h3{font-size:var(--type-caption);font-weight:var(--weight-medium);margin:0 0 var(--space-1);color:var(--text-muted)}
 .tool-grid,.action-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px;min-width:30ch}
 .tool-grid button,.action-grid button{display:flex;align-items:center;justify-content:flex-start;gap:var(--space-2);text-align:start;white-space:nowrap;font-weight:var(--weight-regular)}

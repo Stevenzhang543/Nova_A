@@ -11,8 +11,7 @@
 .ui-property-section > summary:hover { background: color-mix(in srgb, var(--surface-hover) 70%, transparent); }
 .ui-property-section > summary::-webkit-details-marker { display: none; }
 .ui-property-section > summary > .editor-icon { color: var(--text-muted); width: calc(14px * var(--ui-scale)); height: calc(14px * var(--ui-scale)); flex-basis: calc(14px * var(--ui-scale)); }
-.ui-property-section > summary > .editor-icon { transform: rotate(-90deg); }
-.ui-property-section[open] > summary > .editor-icon { transform: none; }
+/* Chevron direction lives in motion.css (one rotate property); a second transform here doubled the turn to 180°. */
 .ui-section-actions { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-1); margin-inline-start: auto; min-width: 0; color: var(--text-muted); font-weight: var(--weight-regular); }
 .ui-section-body { display: flex; flex-direction: column; gap: var(--ui-field-gap); min-width: 0; padding: var(--space-1) var(--ui-panel-inset) var(--ui-panel-inset); }
 .ui-section-body > :is(p,small) { margin: 0; color: var(--text-muted); overflow-wrap: anywhere; font-size: var(--type-caption); line-height: var(--line-body); }
@@ -75,12 +74,29 @@ input[type=range]:disabled { opacity: var(--disabled-opacity); }
 .settings-page { height: 100%; min-height: 0; overflow: auto; padding: var(--space-5) var(--space-6); background: var(--surface-panel); }
 .settings-page .page-header { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); margin-block-end: var(--space-3); }
 /* Settings is a page, not a narrow inspector: each label hugs its own text. */
-.settings-page .ui-property-row { grid-template-columns: minmax(12ch, max-content) minmax(0, 1fr); column-gap: var(--space-5); }
+/* Settings reads like a grouped settings list: label at the leading edge, its control at the trailing edge,
+ * so every switch, menu and slider lines up on one column regardless of label length. */
+.settings-page .ui-property-row { grid-template-columns: minmax(0, 1fr) minmax(0, max-content); column-gap: var(--space-5); min-height: calc(32px * var(--ui-scale)); }
 .settings-page .ui-property-label { align-self: center; }
+.settings-page .ui-property-control { justify-content: flex-end; }
+.settings-page .ui-property-control > select { flex: 0 1 calc(260px * var(--ui-scale)); width: calc(260px * var(--ui-scale)); }
+.settings-page .ui-property-control > input:not([type='checkbox'],[type='radio'],[type='range'],[type='color']) { flex: 0 1 calc(260px * var(--ui-scale)); width: calc(260px * var(--ui-scale)); }
+.settings-page .ui-property-control .value-control { justify-content: flex-end; flex-wrap: nowrap; }
+.settings-page .value-control > output { min-width: 5ch; }
+.settings-page .value-control .ui-slider--track-only { width: calc(180px * var(--ui-scale)); }
+.settings-sections > .ui-property-section { border: 0; }
+.settings-sections .ui-section-body { padding: var(--space-2) var(--space-4); border-radius: var(--radius-panel); background: color-mix(in srgb, var(--text-primary) 3.5%, transparent); border: var(--ui-border-width) solid var(--border-separator); }
+.settings-sections .ui-section-body > .ui-property-row + .ui-property-row { border-block-start: var(--ui-border-width) solid var(--border-separator); padding-block-start: var(--ui-field-gap); }
+.settings-page .setting-hint { margin-block-start: calc(var(--ui-field-gap) * -.5); }
+.settings-page .link-action { display: inline; min-height: 0; padding: 0; border: 0; background: none; color: var(--accent); font: inherit; cursor: pointer; }
+.settings-page .link-action:hover { text-decoration: underline; }
+.settings-search-field { position: relative; display: flex; align-items: center; flex: 1 1 calc(320px * var(--ui-scale)); max-width: calc(420px * var(--ui-scale)); min-width: 0; }
+.settings-search-field > .editor-icon { position: absolute; inset-inline-start: var(--space-3); color: var(--text-muted); pointer-events: none; }
+.settings-page .settings-search-field > input[type='search'] { width: 100%; padding-inline-start: calc(var(--space-3) * 2 + 14px * var(--ui-scale)); border-radius: var(--radius-pill); }
 .settings-page h1 { margin: 0; font-size: var(--type-page); line-height: var(--line-page); }
 .settings-page .eyebrow { color: var(--text-muted); font-size: var(--type-caption); }
 .theme-switch, .settings-search, .settings-search nav { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-1); }
-.settings-search { padding-block: var(--space-3); }
+.settings-search { padding-block: var(--space-3); gap: var(--space-3); }
 .settings-search > label { display: flex; align-items: center; flex-wrap: wrap; gap: var(--ui-label-value-gap); min-width: 0; }
 .settings-sections { max-width: 100%; }
 .settings-sections .ui-section-body { max-width: calc(var(--ui-number-width) * 10); }

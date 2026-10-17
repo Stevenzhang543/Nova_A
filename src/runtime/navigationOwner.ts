@@ -1,4 +1,5 @@
 /** 二维寻路运行：建立导航数据并执行路径、流场及代理移动相关计算。 */
+import { plainView } from '../world/plainView'
 import type { Entity } from '../world/Entity'
 import type { NavigationAgent2D, NavigationObstacle2D, NavigationRegion2D } from '../world/components'
 import { finiteNumber } from '../world/geometry'
@@ -118,7 +119,7 @@ interface NavigationInputs {
     }
     return value
   }
-  return { signature: JSON.stringify([regionEntity.enabled, entities.includes(regionEntity), region.enabled, region.polygon, region.cellSize, region.agentRadius, clearance, region.navigationLayer, region.navigationMask, region.navigationMode, region.algorithm, region.allowDiagonal, region.traversalCost, region.source, region.sourceEntityUuid, region.clusterSize, region.links, areas, transform, shapes, tile.signature]), polygon, shapes, clearance, tile, cost }
+  return { signature: JSON.stringify([regionEntity.enabled, plainView(entities).includes(plainView(regionEntity)), region.enabled, region.polygon, region.cellSize, region.agentRadius, clearance, region.navigationLayer, region.navigationMask, region.navigationMode, region.algorithm, region.allowDiagonal, region.traversalCost, region.source, region.sourceEntityUuid, region.clusterSize, region.links, areas, transform, shapes, tile.signature]), polygon, shapes, clearance, tile, cost }
 }
 /** 结构说明（自动提取）：navigationCostMultiplier；输入 regionEntity、region、point、entities；直接调用 worldPointToLocal、finiteNumber、Math.max、Math.abs、Math.min；写入 multiplier；返回路径包含 multiplier；包含循环处理。 */ function navigationCostMultiplier(regionEntity: Entity, region: NavigationRegion2D, point: Vec2, entities: Entity[]): number {
   const local = worldPointToLocal(regionEntity, point, entities)
@@ -840,11 +841,11 @@ private isOpen(): boolean { return this.lifecycle === 'open' && this.diagnosticL
     try { this.runtime.resetNavigation() } finally { this.lifecycle = 'closed' }
   }
   private requireEntities(entities: Entity[], regionEntity?: Entity): void {
-    if (entities !== this.world.entities) {
-      const members = new Set(this.world.entities)
-      if (entities.some(entity => !members.has(entity))) throw new Error('NAVIGATION_WORLD_ENTITY_MISMATCH: Use actual members of the fixed World.')
+    if (plainView(entities) !== plainView(this.world.entities)) {
+      const members = new Set(plainView(this.world.entities))
+      if (entities.some(entity => !members.has(plainView(entity)))) throw new Error('NAVIGATION_WORLD_ENTITY_MISMATCH: Use actual members of the fixed World.')
     }
-    if (regionEntity && !entities.includes(regionEntity)) throw new Error('NAVIGATION_WORLD_ENTITY_MISMATCH: The region must belong to the supplied member set.')
+    if (regionEntity && !plainView(entities).includes(plainView(regionEntity))) throw new Error('NAVIGATION_WORLD_ENTITY_MISMATCH: The region must belong to the supplied member set.')
   }
   inspectNavigationCache(): ReturnType<NavigationRuntime['inspectNavigationCache']> {
     this.requireOpen()

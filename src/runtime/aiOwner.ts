@@ -1,4 +1,5 @@
 /** Fixed-World AI Owner; original algorithms share one private lexical state per instance. */
+import { plainView } from '../world/plainView'
 import type { Entity } from '../world/Entity'
 import type { BehaviorTree2D, NavigationAgent2D, StateMachine2D } from '../world/components'
 import { worldTransform } from '../world/hierarchy'
@@ -266,9 +267,9 @@ export class AiOwner {
   }
   get emitAiSignal(): (name: string, entity: Entity) => void { return this.runtime.emitAiSignal }
   updateAi(entities: Entity[], dt: number, frame: number): void {
-    if (entities !== this.world.entities) {
-      const members = new Set(this.world.entities)
-      if (!Array.isArray(entities) || entities.some(entity => !members.has(entity))) throw new Error('AI_WORLD_ENTITIES_REQUIRED: Every supplied object must belong to this fixed World.')
+    if (plainView(entities) !== plainView(this.world.entities)) {
+      const members = new Set(plainView(this.world.entities))
+      if (!Array.isArray(entities) || entities.some(entity => !members.has(plainView(entity)))) throw new Error('AI_WORLD_ENTITIES_REQUIRED: Every supplied object must belong to this fixed World.')
     }
     this.runtime.updateAi(entities, dt, frame)
   }

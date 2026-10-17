@@ -31,6 +31,8 @@ import { editorState } from './store/editor'
 import { applySafeModeRestrictions, initializeRecoverySession } from './runtime/recovery'
 import { disposeEditorWindow, initializeEditorWindow, toggleEditorFullscreen } from './runtime/editorWindow'
 import { navigateHistory } from './editor/workspaces'
+import { activateLatencyProbe } from './platform/latencyProbeHost'
+import { openLaunchProject } from './platform/launchProject'
 import { shortcutMatches } from './editor/shortcuts'
 import { installSelectValueDetails, disposeSelectValueDetails } from './editor/selectValueDetails'
 import { installStableControlRegistry } from './runtime/controlRegistry'
@@ -66,12 +68,13 @@ let editorShortcutsInstalled = false
   else if (shortcutMatches(event, 'statusCenter')) { event.preventDefault(); editorState.statusCenterOpen = !editorState.statusCenterOpen }
 }
 onMounted(/** 挂载时依据查询参数或原生运行模式选择入口，原生检测失败回退编辑器并初始化。 */ async () => {
+  void activateLatencyProbe('app')
   if (new URLSearchParams(location.search).get('player') === '1') { mode.value = 'player'; return }
   if ('__TAURI_INTERNALS__' in window) {
     try {
       const { invoke } = await import('@tauri-apps/api/core')
       mode.value = await invoke<boolean>('runtime_mode') ? 'player' : 'editor'
-      if (mode.value === 'editor') await prepareEditor()
+      if (mode.value === 'editor') { await prepareEditor(); void openLaunchProject() }
       return
     } catch { /* The editor remains available if runtime detection fails. */ }
   }
@@ -89,15 +92,16 @@ async function installUnsavedQuitGuard() {
   try {
     const { getCurrentWindow } = await import('@tauri-apps/api/window')
     const appWindow = getCurrentWindow()
+    const { releaseCurrentProjectLock } = await import('./runtime/teamWorkflow')
     let asking = false
     await appWindow.onCloseRequested(async event => {
-      if (!unsaved()) return
+      if (!unsaved()) { releaseCurrentProjectLock(); return }
       event.preventDefault()
       if (asking) return
       asking = true
       try {
         const quit = await requestConfirmation({ title: t('quitUnsavedTitle'), message: t('quitUnsavedMessage', { name: projectSessionState.name }), confirmLabel: t('quitDiscard'), cancelLabel: t('quitKeepEditing'), destructive: true })
-        if (quit) await appWindow.destroy()
+        if (quit) { releaseCurrentProjectLock(); await appWindow.destroy() }
       } finally { asking = false }
     })
   } catch (error) { console.warn('Unsaved-change quit guard unavailable', error) }

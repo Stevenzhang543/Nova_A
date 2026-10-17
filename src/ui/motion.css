@@ -41,7 +41,7 @@ input[type="range"][data-ui-range-dragging="true"]:not(.canvas-container *):not(
 .ui-tabs.ui-tabs--motion > button.active { box-shadow: none; }
 
 .ui-property-section > summary > .editor-icon, [data-ui-motion-chevron] { transition: rotate var(--motion-standard) var(--ease-smooth); }
-.ui-property-section[data-ui-disclosure-open="false"] > summary > .editor-icon, [aria-expanded="false"] > [data-ui-motion-chevron] { rotate: -90deg; }
+.ui-property-section[data-ui-disclosure-open="false"] > summary > .editor-icon, .ui-property-section:not([open]):not([data-ui-disclosure-open]) > summary > .editor-icon, [aria-expanded="false"] > [data-ui-motion-chevron] { rotate: -90deg; }
 .ui-property-section[data-ui-disclosure-open="true"] > summary > .editor-icon, [aria-expanded="true"] > [data-ui-motion-chevron] { rotate: 0deg; }
 
 /* Drag and drop: the dragged source dims, targets light up, the preview follows the pointer exactly. */
@@ -58,8 +58,9 @@ html[data-ui-motion="light"] .ui-drag-settle { box-shadow: none; }
 
 /* Floating material: translucency only on transient surfaces, never on panels holding long text. */
 @supports (backdrop-filter: blur(1px)) {
-  html[data-ui-motion="on"]:not([data-high-contrast="true"]) :is(.ui-menu, .command-palette, .dropdown, .workspace-popover, .menu-popover) {
-    background: var(--surface-glass); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+  html:not([data-high-contrast="true"]) :is(.ui-menu, .command-palette, .dropdown, .workspace-popover, .menu-popover) {
+    background: color-mix(in srgb, var(--surface-popover) 93%, transparent); backdrop-filter: var(--glass-filter); -webkit-backdrop-filter: var(--glass-filter);
+    box-shadow: var(--glass-rim), var(--shadow-md);
   }
 }
 html:is([data-ui-motion="light"],[data-ui-motion="reduced"]) :is(.ui-menu, .command-palette, .dropdown, .workspace-popover, .menu-popover) { backdrop-filter: none; background: var(--surface-popover); }

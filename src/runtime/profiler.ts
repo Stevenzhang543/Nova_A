@@ -176,11 +176,20 @@ export function scriptProfileCaptureCollectionEvidence(capture: Pick<ScriptProfi
   item.calls++; item.lastMs = Math.max(0, durationMs); item.totalMs += item.lastMs; item.maximumMs = Math.max(item.maximumMs, item.lastMs); item.allocationEstimateBytes += Math.max(0, Math.round(allocationEstimateBytes))
   functionProfiles.set(key, item)
   if (newIdentity) profilerState.scriptCollection = scriptCollectionBudget.admit(weight)
-  const values = [...functionProfiles.values()].sort(/* 计算表达式 second.totalMs - first.totalMs 并返回结果，沿用操作数的原有类型规则。 */ (first, second) => second.totalMs - first.totalMs).slice(0, 2_000)
+  // Counting stays per call; the observed, sorted list is republished at a presentation rate.
+  if (!scriptFunctionPublishTimer) scriptFunctionPublishTimer = setTimeout(publishScriptFunctions, SCRIPT_FUNCTION_PUBLISH_MS)
+}
+const SCRIPT_FUNCTION_PUBLISH_MS = 250
+let scriptFunctionPublishTimer: ReturnType<typeof setTimeout> | null = null
+/** Publishes the accumulated function statistics (sorted by total time) to the observed profiler state. */
+export function publishScriptFunctions(): void {
+  if (scriptFunctionPublishTimer) { clearTimeout(scriptFunctionPublishTimer); scriptFunctionPublishTimer = null }
+  const values = [...functionProfiles.values()].sort((first, second) => second.totalMs - first.totalMs).slice(0, 2_000).map(item => ({ ...item }))
   profilerState.scriptFunctions.splice(0, profilerState.scriptFunctions.length, ...values)
 }
 
 /** 复制当前函数统计为带版本的捕获记录，保留最近十六次。 */ export function captureScriptProfile(engineVersion = NOVA_ENGINE_VERSION): ScriptProfileCapture {
+  publishScriptFunctions()
   const capture: ScriptProfileCapture = { format: 'nova-script-profile', version: 1, engineVersion, createdAt: new Date().toISOString(), collection: currentScriptProfileCollection(), entries: profilerState.scriptFunctions.map(/** 构造并返回记录 { ...item }，字段按当前实参及捕获状态求值。 */ item => ({ ...item })) }
   profilerState.scriptCaptures.push(capture)
   if (profilerState.scriptCaptures.length > 16) profilerState.scriptCaptures.splice(0, profilerState.scriptCaptures.length - 16)
@@ -220,6 +229,7 @@ export type FrameProfileSample = Pick<FrameProfile, 'frameMs' | 'physicsMs' | 'r
   profilerState.scriptFunctions.splice(0)
   profilerState.markers.splice(0); profilerState.counters.splice(0); profilerState.annotations.splice(0)
   functionProfiles.clear()
+  if (scriptFunctionPublishTimer) { clearTimeout(scriptFunctionPublishTimer); scriptFunctionPublishTimer = null }
   profilerState.scriptCollection = scriptCollectionBudget.clear()
   Object.assign(profilerState.current, EMPTY)
 }

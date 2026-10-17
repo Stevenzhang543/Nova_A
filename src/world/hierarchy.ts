@@ -1,4 +1,5 @@
 /** 实体层级变换：缓存标识索引，合成父子变换，并在重设父级时防止环和保持世界姿态。 */
+import { plainView } from './plainView'
 import type { Entity } from './Entity'
 import { finiteNumber, normalizeAngle, positiveNumber } from './geometry'
 import type { Vec2 } from './types'
@@ -22,7 +23,9 @@ let preparedLookup: HierarchyLookup | null = null
 /** Build the hierarchy identity table once for a frame or batch operation.
  * Lookups remain exact for transform edits because entity identity and parent
  * UUIDs are authoritative; structural array changes trigger a rebuild. */
-/** 按数组身份、长度和首尾对象复用标识索引；检测到这些结构变化时重新建立映射。 */ export function prepareHierarchyIndex(entities: readonly Entity[]): void {
+/** 按数组身份、长度和首尾对象复用标识索引；检测到这些结构变化时重新建立映射。 */ export function prepareHierarchyIndex(observed: readonly Entity[]): void {
+  // Proxied and plain views of one world share one index (parents are only read through it).
+  const entities = plainView(observed)
   if (preparedLookup?.entities === entities && preparedLookup.length === entities.length && preparedLookup.first === entities[0] && preparedLookup.last === entities[entities.length - 1]) return
   preparedLookup = { entities, byUuid: new Map(entities.map((entity, index) => [entity.uuid, { entity, index }])), length: entities.length, first: entities[0], last: entities[entities.length - 1] }
 }
@@ -31,7 +34,8 @@ let preparedLookup: HierarchyLookup | null = null
 
 /** Resolve current identity even when an in-place replacement preserves length and endpoints.
  * Existing valid lookups stay O(1); a stale or missing identity rebuilds once for this query. */
-function hierarchyEntity(uuid: string, entities: readonly Entity[]): Entity | undefined {
+function hierarchyEntity(uuid: string, observed: readonly Entity[]): Entity | undefined {
+  const entities = plainView(observed)
   prepareHierarchyIndex(entities)
   const entry = preparedLookup!.byUuid.get(uuid)
   if (entry && entities[entry.index] === entry.entity) return entry.entity

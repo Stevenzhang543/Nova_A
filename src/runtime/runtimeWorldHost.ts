@@ -1,4 +1,5 @@
 /** One concrete Gameplay host. Algorithms stay in their already qualified Owners. */
+import { plainView } from '../world/plainView'
 import type { Entity } from '../world/Entity'
 import { createEntityBuilder } from '../world/entityBuilder'
 import { readEntityAuthoringData } from '../world/entitySerialization'
@@ -134,7 +135,7 @@ export class RuntimeWorldHost implements GameplayWorldHost {
   return this.animation=new AnimationTimelineOwner(this.world,{resources,unwrapEntity:value=>{this.assertCurrent();return c.unwrapEntity(value as Entity)},animatorIndices:entities=>{this.assertCurrent();if(entities!==this.world.entities)throw new Error('RUNTIME_ANIMATOR_INDEX_WORLD_MISMATCH');scheduler.synchronize(entities);return scheduler.indices('Animator')},audio:{reconcileTimelineVoices:(...a)=>{this.assertCurrent();return audio.reconcileTimelineVoices(...a)}},locale:{currentLocale:()=>{this.assertCurrent();return c.locale.currentLocale()},localize:(...a)=>{this.assertCurrent();return c.locale.localize(...a)}},camera:{publishBlend:value=>{this.assertCurrent();c.camera.publishBlend(value)}},trace:{nowMilliseconds:()=>{this.assertCurrent();return c.nowMilliseconds()}}})
  }
  createSaveOwner(){this.assertCurrent();return this.save??=createRuntimeSaveOwner({...this.options.capabilities.save,projectId:()=>{this.assertCurrent();return this.configuration.projectId},configuration:()=>{this.assertCurrent();return this.configuration.save}})}
- readEntityAuthoringData(entity:Entity){this.assertCurrent();if(!this.world.entities.includes(entity))throw new Error('RUNTIME_AUTHORING_ENTITY_WORLD_MISMATCH');return readEntityAuthoringData(entity)}
+ readEntityAuthoringData(entity:Entity){this.assertCurrent();if(!plainView(this.world.entities).includes(plainView(entity)))throw new Error('RUNTIME_AUTHORING_ENTITY_WORLD_MISMATCH');return readEntityAuthoringData(entity)}
  deleteEntity(id:number){this.assertCurrent();deleteEntitySubtreeInWorld(this.world,id)}
  prepareRuntimeSceneTransition(identifier?:string){this.assertCurrent();return this.sceneOwner.prepareRuntimeSceneTransition(identifier)}
  log(...args:Parameters<GameplayWorldHost['log']>){this.assertCurrent();this.options.capabilities.log(...args)}

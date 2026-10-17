@@ -1,4 +1,5 @@
 /** One fixed World owns the original streaming maps, transitions and handoffs. */
+import { plainView } from '../world/plainView'
 import { StreamLifecycleOwner } from './streamLifecycle'
 import type { Entity } from '../world/Entity'
 import type { WorldChunk2D } from '../world/components'
@@ -189,6 +190,14 @@ interface StreamedEntityState {
   const started = performance.now(), byEntity = new Map(entities.map(/* 返回按声明顺序构造的数组 [entity.uuid, entity]。 */ entity => [entity.uuid, entity]))
   const raw = entities.flatMap(/** 结构说明（自动提取）：entities.flatMap 回调；输入 entity；直接调用 entity.getComponent。 */ entity => { const chunk = entity.getComponent<WorldChunk2D>('WorldChunk2D'); return entity.enabled && chunk?.enabled ? [{ entity, chunk }] : [] })
   if (raw.length > 10_000) throw new Error('STREAM_LIMIT: at most 10000 authored cells are supported.')
+  // A world without streamed cells has nothing to plan; skip the per-step publication of an unchanged empty state.
+  if (!raw.length && !snapshots.size && !controllers.size && !initializedMembers.size) {
+    if (worldStreamingState.cells.length) publishStreamingState()
+    if (worldStreamingState.processedThisFrame) worldStreamingState.processedThisFrame = 0
+    if (worldStreamingState.deferredThisFrame) worldStreamingState.deferredThisFrame = 0
+    performanceRuntimeState.streamingProcessed = 0; performanceRuntimeState.streamingDeferred = 0
+    return
+  }
   const live = new Set(raw.map(/* 返回 value.entity.uuid 的当前值。 */ value => value.entity.uuid))
   for (const [uuid, snapshot] of snapshots) if (!live.has(uuid)) {
     controllers.get(uuid)?.abort(); controllers.delete(uuid); loadingReservations.delete(uuid)
@@ -374,7 +383,7 @@ export class WorldStreamingOwner {
   get isDisposed(): boolean { return !this.isOpen() }
   private requireOpen(): void { if (!this.isOpen()) throw new Error('STREAM_OWNER_DISPOSED'); if (this.activationPending) throw new Error('STREAM_DIAGNOSTICS_NOT_ACTIVATED') }
   private requireEntities(entities: Entity[], full: boolean): void {
-    if (entities === this.world.entities) return
+    if (plainView(entities) === plainView(this.world.entities)) return
     if (full) throw new Error('STREAM_WORLD_ENTITIES_MISMATCH')
     const members = new Set(this.world.entities.map(this.lifecycle.lifetimes.unwrapEntity))
     if (entities.some(entity => !members.has(this.lifecycle.lifetimes.unwrapEntity(entity)))) throw new Error('STREAM_WORLD_ENTITIES_MISMATCH')

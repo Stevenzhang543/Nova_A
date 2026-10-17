@@ -1,4 +1,5 @@
 /** Shared resource cache; fixed-World command/cache/time owner. Original math is retained. */
+import { plainView } from '../world/plainView'
 import {BoundedImportCache} from '../assets/importRetention'
 import {normalizeTileSet,type TileDefinition,type TileSetDocument} from './tileSetValues'
 import {normalizeTileMap,integer,MAX_TILESET_TILES,MAX_TILEMAP_CELLS} from './tileMapValues'
@@ -420,8 +421,8 @@ export class TileMapOwner {
  readonly resources:TileSetResourceOwner
  private readonly impl:ReturnType<typeof createTileImplementation>
  constructor(ports:TileMapPorts){if(!ports?.world||!Array.isArray(ports.world.entities)||!(ports.resources instanceof TileSetResourceOwner)||typeof ports.nowMilliseconds!=='function')throw new Error('TILE_WORLD_PORTS_REQUIRED');this.world=ports.world;this.resources=ports.resources;this.impl=createTileImplementation({...ports,nowMilliseconds:ports.nowMilliseconds.bind(ports)})}
- private requireComponent(component:TileMap2D){if(!this.world.entities.some(v=>v.getComponent('TileMap2D')===component))throw new Error('TILE_COMPONENT_WORLD_MISMATCH')}
- private requireMembers(entity:Entity,component:TileMap2D,entities:Entity[]){if(entities!==this.world.entities||!entities.includes(entity)||entity.getComponent('TileMap2D')!==component)throw new Error('TILE_WORLD_MISMATCH')}
+ private requireComponent(component:TileMap2D){const plain=plainView(component);if(!this.world.entities.some(v=>plainView(v.getComponent('TileMap2D'))===plain))throw new Error('TILE_COMPONENT_WORLD_MISMATCH')}
+ private requireMembers(entity:Entity,component:TileMap2D,entities:Entity[]){const members=plainView(entities);if(members!==plainView(this.world.entities)||!members.includes(plainView(entity))||plainView(entity.getComponent('TileMap2D'))!==plainView(component))throw new Error('TILE_WORLD_MISMATCH')}
  readTileSet(reference:string|null|undefined){return this.resources.readTileSet(reference)}
  
   tileMapView(component: TileMap2D): TileMap2D { return this.impl.tileMapView(component) }
