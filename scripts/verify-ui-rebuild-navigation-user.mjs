@@ -44,9 +44,12 @@ try {
   })
   await a.check('Graph zoom and local search survive workspace deactivation and remain interactive',async()=>{
    await u.activate('.logic-tabs button',1);if(await a.evaluate("!!document.querySelector('.conversion-review-actions button')"))await u.activate('.conversion-review-actions button')
-   await a.until("!!document.querySelector('.graph-editor')");await a.fill('.graph-palette input[type=search]','number');const before=await a.evaluate("Number(document.querySelector('.canvas-controls input[type=range]').value)")
+   await a.until("!!document.querySelector('.graph-editor')");await a.fill('.graph-palette input[type=search]','number');
+   // 图编辑器外壳先挂载、工具栏随后出现；必须等待真正要读取的控件，而不是外壳。
+   await a.until("!!document.querySelector('.canvas-controls input[type=range]')",15000);const before=await a.evaluate("Number(document.querySelector('.canvas-controls input[type=range]').value)")
    await a.click('.canvas-controls input[type=range]');await a.press('Home');await a.press('ArrowRight');await a.press('ArrowRight');await a.press('Tab');const zoom=await a.evaluate("Number(document.querySelector('.canvas-controls input[type=range]').value)")
-   const id=await a.evaluate("window.__novaUiAudit.id(document.querySelector('.graph-editor'))");await u.workspace('Design');await u.workspace('Script');assert.equal(await a.evaluate("window.__novaUiAudit.id(document.querySelector('.graph-editor'))"),id);assert.equal(await a.evaluate("document.querySelector('.graph-palette input[type=search]').value"),'number');assert.equal(await a.evaluate("Number(document.querySelector('.canvas-controls input[type=range]').value)"),zoom)
+   // 读取身份前显式等待元素存在：该元素在懒加载工作区替换期间可能瞬时缺席，直接读取会造成偶发失败。
+   await a.until("!!document.querySelector('.graph-editor')",10000);const id=await a.evaluate("window.__novaUiAudit.id(document.querySelector('.graph-editor'))");await u.workspace('Design');await u.workspace('Script');await a.until("!!document.querySelector('.graph-palette input[type=search]')&&!!document.querySelector('.canvas-controls input[type=range]')",15000);assert.equal(await a.evaluate("window.__novaUiAudit.id(document.querySelector('.graph-editor'))"),id);assert.equal(await a.evaluate("document.querySelector('.graph-palette input[type=search]').value"),'number');assert.equal(await a.evaluate("Number(document.querySelector('.canvas-controls input[type=range]').value)"),zoom)
    await u.activate('.canvas-controls button[title="Zoom in"]');assert.ok(await a.evaluate(`Number(document.querySelector('.canvas-controls input[type=range]').value)>${zoom}`));await a.capture('graph-reactivated');a.observations.push({name:'graph-zoom-reactivation',before,zoom})
    // Graph view metadata is an authored draft. Commit it through the existing
    // asset save command before the following project-save regression.
