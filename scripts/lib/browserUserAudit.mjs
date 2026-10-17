@@ -45,7 +45,8 @@ export async function withBrowserAudit({ release, name, width = 1440, height = 9
     assert.equal(JSON.parse(await readFile(join(root, 'package.json'), 'utf8')).version, qualificationTarget + '.0', 'Retained browser regression must target the actual source authority')
     release = qualificationTarget; expectedRelease = qualificationTarget
   }
-  assert.match(release, /^26\.(?:1[3-9]|2[0-9]|3[0-9])$/); assert.match(name, /^[a-z0-9-]+$/)
+  // Calendar labels continue past 39: allow every 26.13-26.99 rather than stopping at the previous release.
+  assert.match(release, /^26\.(?:1[3-9]|[2-9][0-9])$/); assert.match(name, /^[a-z0-9-]+$/)
   assert.ok(Number.isFinite(commandTimeoutMs) && commandTimeoutMs >= 30000 && commandTimeoutMs <= 180000, 'Bounded diagnostic command deadline');
   assert.match(expectedRelease, /^26\.\d{2}$/)
   if (!development) assert.equal(expectedRelease, release, 'Qualification must exercise its actual public version')
