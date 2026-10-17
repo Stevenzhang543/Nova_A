@@ -26,7 +26,8 @@ Every source file changed from commit `74f8d2a` (the 26.39 code state handed ove
 - `src/components/PresentationPanel.vue` — UI workspace: counts as compact metric tiles, UI hierarchy as list rows, preview options (scale, safe area, RTL) laid out inline; checkboxes there were squeezed to a 2 px line.
 - `src/components/CommandPalette.vue`, `src/components/EditorFeedback.vue`, `src/components/EditorBottomPanel.vue`, `src/components/BuildSettingsPanel.vue`, `src/components/NetworkStudioPanel.vue`, `src/components/PhysicsSettingsPanel.vue`, `src/panels/SettingsPanel.vue` — Restyled; bottom dock keeps every tool one click away at medium widths; filled primary actions use the accent fill.
 - `src/store/editor.ts` — Default hierarchy and inspector widths for the new density.
-- `src/i18n.ts` — Strings for Saved/Edited and Export cancelled (en/de/zh).
+- `src/App.vue`, `src-tauri/capabilities/default.json` — Closing the editor with unsaved project changes asks first: an in-app confirmation for the desktop window (the window is then destroyed, which needs `core:window:allow-destroy`), the browser's leave prompt on the Web.
+- `src/i18n.ts` — Strings for Saved/Edited, Export cancelled and the quit confirmation (en/de/zh).
 
 ## Build, release and tests
 
@@ -34,6 +35,7 @@ Every source file changed from commit `74f8d2a` (the 26.39 code state handed ove
 - `docs/WEB_HOSTING_26_40.md` — Regenerated from the 26.38 notes as UTF-8 (the previous file was garbled).
 - `docs/RELEASE_NOTES_26_40.md`, `docs/EDIT_LEDGER_26_40.md` — This release's notes and ledger.
 - `scripts/build-release-26.40.cmd` — One Windows build: `pnpm build`, `pnpm tauri build`, packaging, with a log.
+- `scripts/package-release-26.40.cmd` — Repackage from the existing build outputs when only release documents changed.
 - `scripts/package-release-26.40.ps1` — Assembles the eleven-file set from one build, checks exact Windows product versions and freshness, stages before publishing. Archives use forward-slash entries and fixed timestamps like the 26.38 packager; the Web archive carries README, release metadata and its own checksum list; checksum files use LF line endings so `sha256sum -c` works. Replaces the two previous 26.40 packaging scripts (`package-release-26.40-stage2.ps1` removed).
 - `scripts/lib/browserUserAudit.mjs` — `NOVA_AUDIT_BROWSER` selects a Chromium executable where Edge is not installed.
-- `scripts/verify-2640-editor-workflow.mjs` — Regression test for the 26.40 editor fixes with real input.
+- `scripts/verify-2640-editor-workflow.mjs` — Regression test for the 26.40 editor fixes with real input, including the leave prompt.

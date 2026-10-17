@@ -78,6 +78,30 @@ onMounted(/** 挂载时依据查询参数或原生运行模式选择入口，原
   mode.value = 'editor'
   await prepareEditor()
 })
+/** Closing the editor with unsaved project changes asks first (native window) or uses the browser's leave prompt. */
+async function installUnsavedQuitGuard() {
+  const [{ historyState }, { projectTransactionState }, { requestConfirmation }, { t }] = await Promise.all([import('./store/physics'), import('./runtime/projectTransactions'), import('./store/dialog'), import('./i18n')])
+  const unsaved = () => !projectManager.visible && !recoveryState.readOnly && (historyState.dirty || projectTransactionState.unsavedScopes.length > 0)
+  if (!('__TAURI_INTERNALS__' in window)) {
+    window.addEventListener('beforeunload', event => { if (unsaved()) { event.preventDefault(); event.returnValue = '' } })
+    return
+  }
+  try {
+    const { getCurrentWindow } = await import('@tauri-apps/api/window')
+    const appWindow = getCurrentWindow()
+    let asking = false
+    await appWindow.onCloseRequested(async event => {
+      if (!unsaved()) return
+      event.preventDefault()
+      if (asking) return
+      asking = true
+      try {
+        const quit = await requestConfirmation({ title: t('quitUnsavedTitle'), message: t('quitUnsavedMessage', { name: projectSessionState.name }), confirmLabel: t('quitDiscard'), cancelLabel: t('quitKeepEditing'), destructive: true })
+        if (quit) await appWindow.destroy()
+      } finally { asking = false }
+    })
+  } catch (error) { console.warn('Unsaved-change quit guard unavailable', error) }
+}
 /** 安装编辑服务，先初始化窗口，再注册快捷键与恢复会话，尝试安全恢复并应用安全模式限制。 */ async function prepareEditor() {
   installStableControlRegistry()
   installSelectValueDetails()
@@ -85,6 +109,7 @@ onMounted(/** 挂载时依据查询参数或原生运行模式选择入口，原
   // Native window placement is intentionally first: recovery scanning and
   // workspace initialization must not leave the launcher visibly unmaximized.
   await initializeEditorWindow()
+  void installUnsavedQuitGuard()
   if (!editorShortcutsInstalled) {
     window.addEventListener('keydown', handleGlobalShortcut)
     editorShortcutsInstalled = true

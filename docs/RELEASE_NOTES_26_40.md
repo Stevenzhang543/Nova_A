@@ -15,6 +15,7 @@ Engine 26.40.0. Project format 2 / schema 29 is unchanged; 26.38 and 26.39 proje
 | Browser editor | New projects defaulted the build target to the desktop OS, which the browser cannot build. | The browser editor defaults to Web. |
 | Browser saving | Every Ctrl+S asked for a destination again. | The chosen file is reused for the rest of the session; a revoked handle falls back to asking. |
 | Title bar state | "Saved" could show while project scopes were unsaved. | One dirty state: document history or any unsaved scope. |
+| Quitting | Closing the desktop window (or the browser tab) discarded unsaved project changes without a word. | With unsaved changes, closing asks first: Quit without saving or Keep editing. |
 | UI workspace | The Safe area and RTL checkboxes in the responsive preview were squeezed to a 2 px line. | Checkboxes keep their size in narrow property rows; the preview options sit inline. |
 | New Project | Renaming the project left the suggested folder at `Projects/My Game`. | The suggested folder follows the name until the location is edited. |
 | Hosting notes | The 26.40 Web hosting notes were saved with a broken encoding (garbled arrows, German and Chinese). | Regenerated as UTF-8. |
@@ -40,7 +41,7 @@ Recorded in the release evidence archive:
 
 - `vue-tsc --noEmit` and the node configuration typecheck pass; the production Vite build succeeds.
 - `cargo test --workspace` (198 tests), `cargo fmt --check` and `cargo clippy --workspace --all-targets -D warnings` pass.
-- The new `scripts/verify-2640-editor-workflow.mjs` drives the built editor with real pointer and keyboard input (New Project at 1366×768 and 1280×720, create a platformer, drag and Undo, Play/Stop restore, cancelled Web export, reopen without migration prompt): 6/6 pass.
+- The new `scripts/verify-2640-editor-workflow.mjs` drives the built editor with real pointer and keyboard input (New Project at 1366×768 and 1280×720, create a platformer, drag and Undo, Play/Stop restore, cancelled Web export, leave prompt with unsaved changes, reopen without migration prompt): 7/7 pass.
 - Ten existing engine verifiers from the previous rounds (signals, run commands, shortcut labels, component schema, input consumption, gizmo cancel, signal queue, transform oracle and hierarchy): 92/92 checks pass.
 - A Web game exported from the built editor was extracted, served over HTTP and played with keyboard and pointer input without errors.
 

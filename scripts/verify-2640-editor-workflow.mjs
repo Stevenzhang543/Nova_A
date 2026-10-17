@@ -5,7 +5,8 @@
  *  - the Select tool moves a selected object by dragging, and Undo restores it;
  *  - Play shows a running state and Stop restores the authored position;
  *  - reopening a current-schema recent project goes straight to the editor (no migration prompt);
- *  - dismissing the Web export folder picker is a cancellation, not a failed build.
+ *  - dismissing the Web export folder picker is a cancellation, not a failed build;
+ *  - leaving an edited project asks first instead of discarding the changes silently.
  *
  * Usage: pnpm build (or vite build) first, then `node scripts/verify-2640-editor-workflow.mjs`.
  * Set NOVA_AUDIT_BROWSER to a Chromium executable on systems without Microsoft Edge. */
@@ -98,9 +99,17 @@ await withBrowserAudit({ release, name: 'editor-workflow-2640', width: 1366, hei
     assert.match(await evaluate("document.querySelector('.status-bar .status')?.textContent || ''"), /cancel/i)
   })
 
+  await check('Leaving with unsaved changes asks first', async () => {
+    const prompts = []
+    const stop = client.on('Page.javascriptDialogOpening', params => { prompts.push(params.type); void client.send('Page.handleJavaScriptDialog', { accept: true }) })
+    try {
+      await evaluate("setTimeout(() => location.reload(), 0); true")
+      await wait(1500)
+    } finally { stop() }
+    assert.deepEqual(prompts, ['beforeunload'], 'An edited project must not be left silently')
+  })
+
   await check('Reopening a current-schema recent project skips the migration prompt', async () => {
-    await evaluate("location.reload(); true")
-    await wait(1500)
     await until("!!document.querySelector('.project-manager .recent-main')", 30000)
     await click('.project-manager .recent-main')
     await until("!!document.querySelector('.editor-root .top-bar') || !!document.querySelector('.upgrade-dialog')", 30000)

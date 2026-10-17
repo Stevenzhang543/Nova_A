@@ -1594,9 +1594,9 @@ Object.assign(de, { signalConnections: 'Signalverbindungen', missingCallback: 'R
 Object.assign(zh, { signalConnections: '信号连接', missingCallback: '接收方脚本中找不到该回调', removeConnection: '移除连接' })
 
 // 26.40 editor shell and feedback copy.
-Object.assign(en, { exportCancelled: 'Export cancelled', editedState: 'Edited', savedState: 'Saved' })
-Object.assign(de, { exportCancelled: 'Export abgebrochen', editedState: 'Bearbeitet', savedState: 'Gespeichert' })
-Object.assign(zh, { exportCancelled: '已取消导出', editedState: '已编辑', savedState: '已保存' })
+Object.assign(en, { exportCancelled: 'Export cancelled', editedState: 'Edited', savedState: 'Saved', quitUnsavedTitle: 'Quit with unsaved changes?', quitUnsavedMessage: '“{name}” has changes that are not saved to a project file. A recovery snapshot may not include the latest edits.', quitDiscard: 'Quit without saving', quitKeepEditing: 'Keep editing' })
+Object.assign(de, { exportCancelled: 'Export abgebrochen', editedState: 'Bearbeitet', savedState: 'Gespeichert', quitUnsavedTitle: 'Mit ungespeicherten Änderungen beenden?', quitUnsavedMessage: '„{name}“ enthält Änderungen, die nicht in einer Projektdatei gespeichert sind. Ein Wiederherstellungsstand enthält die letzten Änderungen möglicherweise nicht.', quitDiscard: 'Ohne Speichern beenden', quitKeepEditing: 'Weiter bearbeiten' })
+Object.assign(zh, { exportCancelled: '已取消导出', editedState: '已编辑', savedState: '已保存', quitUnsavedTitle: '退出并放弃未保存的更改？', quitUnsavedMessage: '“{name}”有尚未保存到项目文件的更改，恢复快照可能不包含最新编辑。', quitDiscard: '不保存并退出', quitKeepEditing: '继续编辑' })
 
 const dictionaries: Record<'en' | 'de' | 'zh', Dictionary> = { en, de, zh }
 

@@ -13,6 +13,7 @@
     "core:window:allow-set-min-size",
     "core:window:allow-set-decorations",
     "core:window:allow-close",
+    "core:window:allow-destroy",
     "core:window:allow-center",
     "core:window:allow-maximize",
     "core:window:allow-unmaximize",
