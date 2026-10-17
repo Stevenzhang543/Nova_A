@@ -15,12 +15,28 @@ if ($null -eq $info) { throw "Not a calendar release label: $Label" }
 $machine = $info.MachineVersion
 $release = Join-Path $root "releases/v$Label"
 $stage = Join-Path $root ".cache/package-$Label"
-Add-Type -AssemblyName System.IO.Compression.FileSystem
+Add-Type -AssemblyName System.IO.Compression
 
+# Entries use forward slashes and a fixed timestamp (as the 26.38 packager does), so the archives
+# extract correctly on every platform and repeat byte-for-byte from the same inputs.
 function New-Zip([string]$Source, [string]$Target) {
   if (Test-Path -LiteralPath $Target) { Remove-Item -LiteralPath $Target -Force }
-  [System.IO.Compression.ZipFile]::CreateFromDirectory($Source, $Target, [System.IO.Compression.CompressionLevel]::Optimal, $false)
+  $base = (Resolve-Path -LiteralPath $Source).Path.TrimEnd('\')
+  $stream = [IO.File]::Open($Target, [IO.FileMode]::CreateNew, [IO.FileAccess]::Write, [IO.FileShare]::None)
+  $archive = [IO.Compression.ZipArchive]::new($stream, [IO.Compression.ZipArchiveMode]::Create, $false)
+  try {
+    [string[]]$files = @(Get-ChildItem -LiteralPath $base -File -Recurse | ForEach-Object FullName)
+    [Array]::Sort($files, [StringComparer]::Ordinal)
+    foreach ($file in $files) {
+      $entry = $archive.CreateEntry($file.Substring($base.Length).TrimStart('\').Replace('\', '/'), [IO.Compression.CompressionLevel]::Optimal)
+      $entry.LastWriteTime = [DateTimeOffset]::new(2000, 1, 1, 0, 0, 0, [TimeSpan]::Zero)
+      $input = [IO.File]::OpenRead($file); $output = $entry.Open()
+      try { $input.CopyTo($output) } finally { $output.Dispose(); $input.Dispose() }
+    }
+  } finally { $archive.Dispose(); $stream.Dispose() }
 }
+function Get-Sha256Lower([string]$Path) { (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant() }
+function Write-Utf8Lines([string]$Path, [string[]]$Lines) { [IO.File]::WriteAllText($Path, (($Lines -join "`n") + "`n"), [Text.UTF8Encoding]::new($false)) }
 function Copy-Tree([string]$From, [string]$To) {
   New-Item -ItemType Directory -Force -Path $To | Out-Null
   Copy-Item -Path (Join-Path $From '*') -Destination $To -Recurse -Force
@@ -59,6 +75,21 @@ Copy-Tree $dist $web
 Copy-Tree (Join-Path $root 'nova/online/FONT_LICENSES') (Join-Path $web 'FONT_LICENSES')
 Copy-Item -LiteralPath (Join-Path $root 'LICENSE.md') -Destination (Join-Path $web 'LICENSE.md') -Force
 Copy-Item -LiteralPath (Join-Path $root "docs/WEB_HOSTING_$($Label.Replace('.', '_')).md") -Destination (Join-Path $web 'HOSTING.md') -Force
+$sourceCommit = (& git -C $root rev-parse HEAD).Trim()
+$webReadme = @"
+# Nova_A $Label Web Package
+
+Serve this directory from an HTTP(S) origin; do not open ``index.html`` with ``file://``. ``index.html`` opens the editor and ``player.html`` the standalone player. Keep file names and serve ``.wasm`` as ``application/wasm``. Hashed files under ``assets/`` can be cached as immutable; revalidate HTML and ``release-metadata.json``. Cross-origin isolation is not required. See HOSTING.md for static deployment.
+
+Verify every packaged file against ``SHA256SUMS.txt``. Release metadata is in ``release-metadata.json``.
+"@
+[IO.File]::WriteAllText((Join-Path $web 'README.md'), $webReadme, [Text.UTF8Encoding]::new($false))
+$webMetadata = [ordered]@{ product = 'Nova_A'; version = $Label; machineVersion = $machine; format = 'nova-web-release'; projectFormat = 2; schema = 29; sourceCommit = $sourceCommit; entrypoints = @('index.html', 'player.html'); contentManifest = 'SHA256SUMS.txt'; hosting = [ordered]@{ protocol = 'http-or-https'; wasmMime = 'application/wasm'; hashedAssetCaching = 'immutable'; htmlCaching = 'revalidate'; crossOriginIsolationRequired = $false } } | ConvertTo-Json -Depth 4
+[IO.File]::WriteAllText((Join-Path $web 'release-metadata.json'), "$webMetadata`n", [Text.UTF8Encoding]::new($false))
+$webBase = (Resolve-Path -LiteralPath $web).Path.TrimEnd('\')
+[string[]]$webFiles = @(Get-ChildItem -LiteralPath $webBase -File -Recurse | Where-Object Name -ne 'SHA256SUMS.txt' | ForEach-Object FullName)
+[Array]::Sort($webFiles, [StringComparer]::Ordinal)
+Write-Utf8Lines (Join-Path $web 'SHA256SUMS.txt') @($webFiles | ForEach-Object { '{0}  {1}' -f (Get-Sha256Lower $_), $_.Substring($webBase.Length).TrimStart('\').Replace('\', '/') })
 New-Zip $web (Join-Path $out "Nova_A-v$Label-web.zip")
 
 # 3. Source: exactly the committed tree (no caches, builds, releases or local tooling).
@@ -84,8 +115,8 @@ Copy-Item -LiteralPath (Join-Path $root "docs/EDIT_LEDGER_$($Label.Replace('.', 
 Assert-WindowsReleaseArtifactVersions -Portable (Join-Path $out "Nova_A-v$Label-windows-x64-portable.exe") -Setup (Join-Path $out "Nova_A-v$Label-windows-x64-setup.exe") -Msi (Join-Path $out "Nova_A-v$Label-windows-x64.msi") -MachineVersion $machine
 
 # 7. Checksums over every artifact.
-$lines = Get-ChildItem -LiteralPath $out -File | Sort-Object Name | ForEach-Object { "$((Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant())  $($_.Name)" }
-Set-Content -LiteralPath (Join-Path $out 'SHA256SUMS.txt') -Value ($lines -join "`n") -Encoding ASCII
+$lines = @(Get-ChildItem -LiteralPath $out -File | Sort-Object Name | ForEach-Object { '{0}  {1}' -f (Get-Sha256Lower $_.FullName), $_.Name })
+Write-Utf8Lines (Join-Path $out 'SHA256SUMS.txt') $lines
 $expected = @('EDIT_LEDGER.md','LICENSE.md',"Nova_A-v$Label-reference-projects.zip","Nova_A-v$Label-release-evidence.zip","Nova_A-v$Label-source.zip","Nova_A-v$Label-web.zip","Nova_A-v$Label-windows-x64-portable.exe","Nova_A-v$Label-windows-x64-setup.exe","Nova_A-v$Label-windows-x64.msi",'RELEASE_NOTES.md','SHA256SUMS.txt')
 $actual = @(Get-ChildItem -LiteralPath $out -File | ForEach-Object Name | Sort-Object)
 if (@(Compare-Object ($expected | Sort-Object) $actual).Count -gt 0) { throw "Release set differs from the eleven-file contract: $($actual -join ', ')" }

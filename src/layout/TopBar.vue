@@ -271,7 +271,7 @@ onUnmounted(/** 卸载时移除键盘和尺寸监听并释放弹出菜单行为�
 .menu-item>button:hover,.menu-item>button.active{color:var(--text-primary)}
 .menu-item>button.active{background:var(--surface-pressed)}
 .top-workspaces{flex:1 1 auto;min-width:0;justify-content:center}
-.project-chip{display:flex;align-items:center;gap:var(--space-2);flex:0 1 auto;min-width:0;max-width:22ch;padding-inline:var(--space-2);font-size:var(--type-dense)}
+.project-chip{display:flex;align-items:center;gap:var(--space-2);flex:0 1 auto;min-width:0;max-width:36ch;padding-inline:var(--space-2);font-size:var(--type-dense)}
 .project-chip strong{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:var(--weight-medium)}
 .project-state{display:inline-flex;align-items:center;gap:var(--space-1);flex:none;color:var(--text-muted);font-size:var(--type-caption)}
 .project-state i{inline-size:6px;block-size:6px;border-radius:50%;background:var(--success);transition:background-color var(--motion-fast) var(--ease-standard)}

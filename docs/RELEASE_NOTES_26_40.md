@@ -15,6 +15,8 @@ Engine 26.40.0. Project format 2 / schema 29 is unchanged; 26.38 and 26.39 proje
 | Browser editor | New projects defaulted the build target to the desktop OS, which the browser cannot build. | The browser editor defaults to Web. |
 | Browser saving | Every Ctrl+S asked for a destination again. | The chosen file is reused for the rest of the session; a revoked handle falls back to asking. |
 | Title bar state | "Saved" could show while project scopes were unsaved. | One dirty state: document history or any unsaved scope. |
+| UI workspace | The Safe area and RTL checkboxes in the responsive preview were squeezed to a 2 px line. | Checkboxes keep their size in narrow property rows; the preview options sit inline. |
+| New Project | Renaming the project left the suggested folder at `Projects/My Game`. | The suggested folder follows the name until the location is edited. |
 | Hosting notes | The 26.40 Web hosting notes were saved with a broken encoding (garbled arrows, German and Chinese). | Regenerated as UTF-8. |
 | Development server | Vite watched `releases/`, `release-audits/`, `.cache/` and build folders. | Those trees are ignored. |
 | Rust gates | One `rustfmt` regression from the previous round in `nova_script` tests. | Formatted; `cargo fmt --check` and `clippy -D warnings` pass. |
@@ -42,7 +44,11 @@ Recorded in the release evidence archive:
 - Ten existing engine verifiers from the previous rounds (signals, run commands, shortcut labels, component schema, input consumption, gizmo cancel, signal queue, transform oracle and hierarchy): 92/92 checks pass.
 - A Web game exported from the built editor was extracted, served over HTTP and played with keyboard and pointer input without errors.
 
-Windows packaging and launch results are recorded separately in this file's Windows section once the release build has run.
+## Windows
+
+- Built on Windows x64 with `scripts/build-release-26.40.cmd`: WebAssembly core, `vue-tsc`, Vite build, Tauri release build, MSI (WiX) and NSIS installer; product versions checked as 26.40.0 by the packaging script.
+- The portable executable was started from this release folder: the launcher shows 26.40, a Platformer project was created, the player was dragged with the Select tool and restored with Ctrl+Z, Play moved and jumped the character with D and Space, and Stop restored the scene.
+- The installers were built and versioned but not installed on the build machine.
 
 ## Limits
 

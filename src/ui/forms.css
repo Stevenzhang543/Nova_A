@@ -25,7 +25,7 @@
 .ui-property-label > small { color: var(--text-muted); font-size: var(--type-caption); }
 .ui-property-control { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-1) var(--ui-control-gap); min-width: 0; }
 .ui-property-control > :is(div,span):not(.numeric-draft,.ui-slider,.path-text-draft) { min-width: 0; }
-.ui-property-control > :is(input,select,textarea) { max-width: 100%; }
+.ui-property-control > :is(input:not([type='checkbox'],[type='radio']),select,textarea) { max-width: 100%; }
 .ui-property-control > :is(input:not([type='checkbox'],[type='radio'],[type='range'],[type='color']),select) { flex: 1 1 auto; width: auto; }
 .ui-property-help { flex-basis: 100%; color: var(--text-muted); overflow-wrap: anywhere; font-size: var(--type-caption); }
 .ui-property-row--stacked { grid-template-columns: minmax(0,1fr); align-items: start; }

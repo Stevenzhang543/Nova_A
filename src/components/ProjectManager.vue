@@ -164,6 +164,13 @@ const moreActionsLabel = computed(/** 按偏好语言返回更多项目操作标
 /** 仅在没有忙碌操作时关闭创建面板。 */ function closeCreation() { if (!state.busy) creationOpen.value = false }
 const projectName = ref('My Game')
 const projectLocation = ref('Projects/My Game')
+// The suggested folder follows the name until the user edits the location themselves.
+let suggestedLocation = projectLocation.value
+watch(projectName, name => {
+  if (projectLocation.value !== suggestedLocation) return
+  const folder = name.trim().replace(/[<>:"/\\|?*\u0000-\u001f]+/g, ' ').replace(/\s+/g, ' ').replace(/[. ]+$/g, '').trim()
+  projectLocation.value = suggestedLocation = `Projects/${folder || 'My Game'}`
+})
 const selectedTemplate = ref<ProjectTemplateId | null>('empty')
 const selectedCategory = ref<ProjectTemplateCategory | 'all'>('all')
 const categories = ['all', ...PROJECT_TEMPLATE_CATEGORIES] as const
