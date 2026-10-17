@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-16T19:00:39.940Z",
+  "generatedAt": "2026-10-17T09:58:47.689Z",
   "checks": [
     {
       "name": "A label is derived from the live binding of the requested command",

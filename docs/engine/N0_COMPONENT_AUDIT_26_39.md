@@ -1041,6 +1041,27 @@ pnpm check                                                  # vue-tsc + tsc
 
 **未覆盖并如实记录**：真实端到端显示延迟（**任何 CPU 时间戳都无法确立**）、首次消费步之后的多步归因、以及"该次提交是否确实包含受影响像素"（需真实渲染器运行）。
 
+### 19.7 批次 C 起步：W1 现状实测（找到既有失败并**证明不是我引入**）
+
+进入 N3/W1 前先跑既有验证脚本摸清现状，而不是先假设缺什么。
+
+**运行 `scripts/verify-engine-workflows.mjs`（逐模板串行）**：
+
+| 模板 | 结果 |
+|---|---|
+| **platformer** | **PASS** —— `create from launcher, save, reload, run and stop` 全通过（含真实保存/重开/运行/停止） |
+| **top-down** | **FAIL** —— 超时于 `.actionbar button` 的 `active` 状态，即**点击播放后按钮未进入 active** |
+
+**责任归属已用对照实验确定**：把批次 B 改过的运行时/渲染/层级文件**精确回退到 B1 之前的提交**（`03b5100`）后重跑同一用例，**同样超时**。因此是**既有失败**，不是 B1–B5 引入的回归。（实验后已完整恢复；核实源码全部完好，仅 `reports/*.json` 被重新生成。）
+
+**该用例不在 26.38 的 14 个发布门禁内**（native-build / wasm / web / typescript / focus / motion-logic / user-interactions / browser-layout / windows / headless / hygiene / manual / performance / product）。也就是说：**这是一个未被发布验证覆盖的失败**，本身即为重要事实。
+
+**已排除的假设**：测试追加的 `save_set` / `save_commit` **是真实脚本 API**（`scriptApiCatalog.ts:203,207`；`crates/nova_script/src/lib.rs:2212,2275`），不是"测试调用了不存在的函数"。
+
+**尚未确定的原因**：`pendingReloads` 只被 `flushHotReloads` 消费、会话重置时清空，**未发现它直接阻塞播放**；脚本保存之前的步骤均已通过。播放未激活的确切原因**仍需定位**，本轮**没有修**，也不臆测结论。
+
+**W1 判定范围**：platformer 模板的创建→保存→重开→运行→停止**已由脚本验证通过**；top-down 模板在同一链路失败，故 **W1 整体不能标为通过**，当前为 **`PARTIAL`**。
+
 ### 19.2 批次 B1：渲染抽取全部改用批量世界变换
 
 **改动**（`src/renderer/sceneRenderer.ts`，已解冻范围）：
