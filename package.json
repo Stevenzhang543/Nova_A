@@ -564,7 +564,9 @@
     "verify:v26.38:motion": "node scripts/verify-v26.37-motion.mjs",
     "verify:v26.38:comfortable-user": "node scripts/verify-v26.37-comfortable-user.mjs",
     "evidence:v26.38": "node scripts/generate-calendar-release-evidence.mjs --release=26.38 --engine=26.38.0",
-    "release:v26.38": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-release.ps1 -Version 26.38.0 -ReleaseLabel 26.38"
+    "release:v26.38": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-release.ps1 -Version 26.38.0 -ReleaseLabel 26.38",
+    "verify:v26.40:workflow": "node scripts/verify-2640-editor-workflow.mjs",
+    "release:v26.40": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-release-26.40.ps1"
   },
   "dependencies": {
     "@fontsource-variable/jetbrains-mono": "^5.3.0",
