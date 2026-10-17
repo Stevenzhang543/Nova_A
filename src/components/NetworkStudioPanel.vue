@@ -451,7 +451,7 @@ onBeforeUnmount(/* 调用 stopLocalLobbyDirectory() 并返回调用结果。 */ 
   overflow-x: auto;
   overscroll-behavior-inline: contain;
 }
-.primary { color: var(--accent-contrast) !important; border-color: var(--accent) !important; background: var(--accent) !important; }
+.primary { color: var(--accent-contrast) !important; border-color: transparent !important; background: var(--accent-fill) !important; }
 .studio-header [role="tab"]:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .studio-header > output {
   max-width: 150px;

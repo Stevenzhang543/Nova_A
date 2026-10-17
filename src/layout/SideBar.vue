@@ -42,5 +42,11 @@ const actions = computed<ContextAction[]>(/** 按调试、管理、脚本、动�
 </script>
 
 <style scoped>
-.sidebar{inline-size:calc(var(--ui-control-height) + 2 * var(--ui-space-xs));flex:none;padding:var(--ui-space-xs);display:flex;flex-direction:column;gap:var(--ui-space-sm);border-right:1px solid var(--border-subtle);background:var(--surface-1);z-index:160}.sidebar>header{display:none}nav{display:flex;flex:1;min-height:0;flex-direction:column;gap:var(--ui-space-xs);overflow-y:auto;scrollbar-width:thin}.sidebar .ui-button{flex:none}.create{margin-top:auto;color:var(--creation)}
+.sidebar{inline-size:var(--ui-rail-width);flex:none;padding:var(--space-1) 0;display:flex;flex-direction:column;align-items:center;gap:var(--space-1);border-radius:var(--radius-panel);background:var(--surface-1);box-shadow:inset 0 0 0 var(--ui-border-width) var(--border-separator);z-index:160}
+.sidebar>header{display:none}
+nav{display:flex;flex:1;min-height:0;flex-direction:column;align-items:center;gap:2px;overflow-y:auto;scrollbar-width:none}
+.sidebar .ui-button{flex:none;width:calc(var(--ui-rail-width) - 2 * var(--space-1));height:calc(var(--ui-rail-width) - 2 * var(--space-1));color:var(--text-muted)}
+.sidebar .ui-button:hover:not(:disabled){color:var(--text-primary)}
+.sidebar .ui-button.active{background:var(--selection-bg);color:var(--text-primary)}
+.create{margin-top:auto;color:var(--creation)!important}
 </style>

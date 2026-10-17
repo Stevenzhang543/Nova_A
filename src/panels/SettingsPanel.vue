@@ -337,7 +337,7 @@ watch(/* 返回 prefs.locale 的当前值。 */ () => prefs.locale, /** 偏好�
 .matrix-header b, .matrix-row > b { color: var(--text-muted); text-align: center; }
 .matrix-row { margin-bottom: var(--space-0); }
 .matrix-row button { width: 18px; height: 18px; padding: 0; border: 1px solid var(--border-subtle); background: var(--surface-3); }
-.matrix-row button.active { border-color: color-mix(in srgb, var(--accent) 76%, white); background: var(--accent); }
+.matrix-row button.active { border-color: var(--accent-fill); background: var(--accent-fill); color: var(--accent-contrast); }
 h2 { margin: 0; }
 p { color: var(--text-muted); margin: 0; font-size: var(--type-caption); line-height: var(--line-body); }
 .value-control { width: max-content; max-width: 100%; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: var(--ui-control-gap); }

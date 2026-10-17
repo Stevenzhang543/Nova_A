@@ -211,4 +211,20 @@ onMounted(/* 调用 window.addEventListener('keydown', globalShortcut) 并返回
 onUnmounted(/* 调用 window.removeEventListener('keydown', globalShortcut) 并返回调用结果。 */ () => window.removeEventListener('keydown', globalShortcut))
 </script>
 
-<style scoped>.palette-scrim{position:fixed;inset:0;z-index:3000;display:flex;align-items:flex-start;justify-content:center;padding:12vh var(--ui-space-lg) var(--ui-space-lg);background:var(--scrim)}.command-palette{width:min(76ch,100%);max-height:70vh;display:flex;flex-direction:column;border:1px solid var(--border-strong);border-radius:var(--radius-dialog);background:var(--surface-popover);box-shadow:var(--shadow-lg);overflow:hidden}.command-palette>header{display:flex;gap:var(--ui-space-sm);align-items:center;padding:var(--ui-space-sm);border-bottom:1px solid var(--border-subtle)}header input{flex:1;min-width:0}.command-results{min-height:0;overflow:auto}.command-results button{width:100%;display:grid;grid-template-columns:var(--ui-icon-size) minmax(0,1fr) auto;gap:var(--ui-space-sm);text-align:left;min-height:calc(2 * var(--ui-tree-row-height));padding:var(--ui-space-xs) var(--ui-space-sm);border:0;border-radius:var(--radius-control);background:transparent}.command-results button.active{background:var(--selection-bg)}.command-results small{display:block;font-size:var(--type-caption);color:var(--text-muted)}.command-results p{padding:var(--ui-space-sm);color:var(--text-muted)}kbd{font-size:var(--type-caption);color:var(--text-muted);align-self:center}footer{display:flex;gap:var(--ui-space-lg);padding:var(--ui-space-xs) var(--ui-space-sm);border-top:1px solid var(--border-subtle);font-size:var(--type-caption);color:var(--text-muted)}</style>
+<style scoped>
+.palette-scrim{position:fixed;inset:0;z-index:3000;display:flex;align-items:flex-start;justify-content:center;padding:14vh var(--space-4) var(--space-4);background:color-mix(in srgb,var(--scrim) 60%,transparent)}
+/* Spotlight-like: one search field, a dense result list, keyboard hints. */
+.command-palette{width:min(72ch,100%);max-height:66vh;display:flex;flex-direction:column;border:var(--ui-border-width) solid var(--border-subtle);border-radius:var(--radius-dialog);background:var(--surface-popover);box-shadow:var(--shadow-lg),var(--hairline-highlight);overflow:hidden}
+.command-palette>header{display:flex;gap:var(--space-2);align-items:center;min-height:calc(var(--ui-control-height) + var(--space-5));padding:0 var(--space-3) 0 var(--space-4);border-bottom:var(--ui-border-width) solid var(--border-separator)}
+.command-palette>header>.editor-icon{width:18px;height:18px;flex-basis:18px;color:var(--text-muted)}
+header input{flex:1;min-width:0;height:auto;padding:0;border:0!important;background:transparent!important;box-shadow:none!important;font-size:calc(16px * var(--ui-scale))}
+.command-results{min-height:0;overflow:auto;padding:var(--space-1)}
+.command-results button{width:100%;display:grid;grid-template-columns:var(--ui-icon-size) minmax(0,1fr) auto;align-items:center;column-gap:var(--space-3);row-gap:0;text-align:left;min-height:calc(var(--ui-control-height) + var(--space-3));padding:var(--space-1) var(--space-3);border:0;border-radius:var(--radius-md);background:transparent;font-weight:var(--weight-regular)}
+.command-results button:hover:not(.active){background:var(--surface-hover)}
+.command-results button.active{background:var(--accent-fill);color:var(--accent-contrast)}
+.command-results button.active small,.command-results button.active kbd{color:inherit;opacity:.8}
+.command-results small{display:block;font-size:var(--type-caption);color:var(--text-muted)}
+.command-results p{padding:var(--space-3);color:var(--text-muted)}
+kbd{font-size:var(--type-caption);color:var(--text-muted);align-self:center}
+footer{display:flex;gap:var(--space-4);padding:var(--space-2) var(--space-4);border-top:var(--ui-border-width) solid var(--border-separator);font-size:var(--type-caption);color:var(--text-muted)}
+</style>

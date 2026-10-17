@@ -42,13 +42,14 @@ onBeforeUnmount(/** 卸载时释放捕获和样式，不再向父组件发送更
 </script>
 
 <style scoped>
-.panel-resize-handle{position:absolute;z-index:12;touch-action:none;user-select:none;outline:none;border:0;background:transparent;transition:background var(--motion-micro) var(--ease-standard)}
-.panel-resize-handle.vertical{top:0;bottom:0;width:8px;cursor:ew-resize}
-.panel-resize-handle.horizontal{left:0;right:0;height:8px;cursor:ns-resize}
-.panel-resize-handle::after{content:'';position:absolute;border-radius:4px;background:var(--border-strong);opacity:.85}
-.panel-resize-handle.vertical::after{width:3px;height:40px;left:3px;top:calc(50% - 20px)}
-.panel-resize-handle.horizontal::after{height:3px;width:40px;top:3px;left:calc(50% - 20px)}
-.panel-resize-handle:hover,.panel-resize-handle:focus-visible,.panel-resize-handle.dragging{background:var(--accent-soft)}
-.panel-resize-handle:focus-visible::after,.panel-resize-handle:hover::after,.panel-resize-handle.dragging::after{background:var(--accent)}
+.panel-resize-handle{position:absolute;z-index:12;touch-action:none;user-select:none;outline:none;border:0;padding:0;min-height:0;background:transparent!important}
+.panel-resize-handle.vertical{top:var(--space-3);bottom:var(--space-3);width:8px;cursor:ew-resize}
+.panel-resize-handle.horizontal{left:var(--space-3);right:var(--space-3);height:8px;cursor:ns-resize}
+/* Invisible until the pointer finds it, then a thin line shows exactly where the edge will move. */
+.panel-resize-handle::after{content:'';position:absolute;border-radius:2px;background:var(--accent);opacity:0;transition:opacity var(--motion-fast) var(--ease-standard)}
+.panel-resize-handle.vertical::after{width:2px;top:0;bottom:0;left:3px}
+.panel-resize-handle.horizontal::after{height:2px;left:0;right:0;top:3px}
+.panel-resize-handle:hover::after{opacity:.55;transition-delay:120ms}
+.panel-resize-handle:focus-visible::after,.panel-resize-handle.dragging::after{opacity:1;transition-delay:0ms}
 .panel-resize-handle.disabled{display:none}
 </style>

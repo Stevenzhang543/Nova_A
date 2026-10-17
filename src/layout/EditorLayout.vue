@@ -1,12 +1,8 @@
 <!-- 编辑器主布局：按需加载工作区，保留画布与检查器，并管理面板停靠和空闲预热。 -->
 <template>
-  <div class="editor-root" data-control-scope="editor-shell" :class="{ 'read-only': recoveryState.readOnly }" @contextmenu.prevent @click="closeContextMenu">
+  <div class="editor-root" data-control-scope="editor-shell" :data-play-mode="physicsState.playMode" :class="{ 'read-only': recoveryState.readOnly }" @contextmenu.prevent @click="closeContextMenu">
     <div v-if="recoveryState.readOnly" class="read-only-banner" role="status">{{ t('readOnlyRecoveryBanner') }}</div>
     <TopBar />
-    <div class="workspace-control-row">
-      <WorkspaceBar />
-    </div>
-    <ToolBar v-show="state.currentPage === 'scene' && state.activeWorkspace !== 'ui'" class="scene-toolbar-row" />
 
     <div class="editor-main" :data-maximized-panel="workspaceState.maximizedPanel">
       <SideBar v-show="!state.distractionFree" :inert="Boolean(workspaceState.maximizedPanel)" />
@@ -19,7 +15,10 @@
 </template>
       </div>
       <div class="editor-workspace" :inert="Boolean(workspaceState.maximizedPanel && workspaceState.maximizedPanel !== 'bottom')" :data-drop-target="dragTarget === 'floating'" @dragover="previewPanelDrop($event, 'floating')" @dragleave="leavePanelDrop" @drop="dropPanel($event, 'floating')">
-        <SceneTabs :inert="workspaceState.maximizedPanel === 'bottom'" v-show="state.currentPage === 'scene' && state.activeWorkspace === 'design' && !state.distractionFree" />
+        <div v-show="state.currentPage === 'scene' && state.activeWorkspace !== 'ui'" class="viewport-header" :inert="workspaceState.maximizedPanel === 'bottom'">
+          <ToolBar class="scene-toolbar-row" />
+          <SceneTabs v-show="state.activeWorkspace === 'design' && !state.distractionFree" />
+        </div>
         <div class="editor-content" :inert="workspaceState.maximizedPanel === 'bottom'">
           <div :class="['persistent-viewport', `${state.currentPage}-view`, { inactive: displayedWorkspace !== 'canvas' }]">
             <LayerBar v-if="state.currentPage === 'scene'" />
@@ -55,7 +54,6 @@
 
 <script setup lang="ts">
 import TopBar from "./TopBar.vue"
-import WorkspaceBar from "../components/WorkspaceBar.vue"
 import SideBar from "./SideBar.vue"
 import StatusBar from "./StatusBar.vue"
 import ToolBar from "../components/ToolBar.vue" 
@@ -147,29 +145,28 @@ function leavePanelDrop(event: DragEvent) { if (!(event.currentTarget as HTMLEle
 
 <style scoped>
 .editor-root { position: fixed; inset: 0; width: auto; max-width: none; display: flex; flex-direction: column; height: auto; min-width: 0; min-height: 0; overflow: hidden; background: var(--bg-base); color: var(--text-primary); }
-.read-only-banner{min-height:var(--ui-control-height);flex:0 0 var(--ui-control-height);display:grid;place-items:center;color:var(--warning);background:color-mix(in srgb,var(--warning) 12%,var(--surface-1));border-bottom:1px solid var(--warning);font-size:var(--type-dense)}.read-only :deep(.config-wrapper),.read-only .persistent-viewport{pointer-events:none;filter:saturate(.72)}
-.workspace-control-row { position:relative; min-width: 0; flex: 0 0 auto; min-height: var(--ui-toolbar-height); display: flex; align-items: stretch; overflow:visible; border-bottom: 1px solid var(--border-subtle); background: color-mix(in srgb, var(--surface-1) 94%, var(--bg-base)); isolation: isolate; 
- z-index: 190;
-}
-.workspace-control-row :deep(.workspace-bar) { min-width: 0; flex: 1; border-bottom: 0; }
-
-.editor-main { position: relative; width: 100%; max-width: 100%; flex: 1; display: flex; min-width: 0; min-height: 0; overflow: hidden; 
- gap: var(--ui-panel-gutter);
- padding: var(--ui-panel-gutter);
-}
+.read-only-banner { min-height: var(--ui-control-height); flex: 0 0 auto; display: grid; place-items: center; color: var(--warning); background: var(--warning-soft); border-bottom: var(--ui-border-width) solid color-mix(in srgb, var(--warning) 40%, transparent); font-size: var(--type-dense); }
+.read-only :deep(.config-wrapper), .read-only .persistent-viewport { pointer-events: none; filter: saturate(.72); }
+.editor-main { position: relative; width: 100%; max-width: 100%; flex: 1; display: flex; min-width: 0; min-height: 0; overflow: hidden; gap: var(--ui-panel-gutter); padding: var(--ui-panel-gutter); }
 .dock-group { min-width: 0; display: flex; flex: 0 0 auto; }
-.dock-group[data-drop-target='true'], .editor-workspace[data-drop-target='true'] { outline: 2px solid var(--drag-target); outline-offset: -3px; background: color-mix(in srgb, var(--drag-target) 7%, transparent); }
-.dock-group.split{flex-direction:column;overflow:hidden}.dock-group.split>:deep(*){min-height:0;max-height:none;height:auto;flex:1 1 0}
-.scene-toolbar-row { flex: 0 0 auto; }
-.editor-workspace { min-width: 0; flex: 1; display: flex; flex-direction: column; 
- min-height: 0;
- gap: var(--ui-panel-gutter);
-}
-.editor-content { min-height: 0; flex: 1; position: relative; overflow: hidden; background: var(--bg-canvas); 
- border-radius: var(--radius-panel);
-}
+.dock-group[data-drop-target='true'], .editor-workspace[data-drop-target='true'] { outline: 2px solid var(--drag-target); outline-offset: -2px; border-radius: var(--radius-panel); background: var(--creation-soft); }
+.dock-group.split { flex-direction: column; overflow: hidden; gap: var(--ui-panel-gutter); }
+.dock-group.split > :deep(*) { min-height: 0; max-height: none; height: auto; flex: 1 1 0; }
+.editor-workspace { min-width: 0; flex: 1; display: flex; flex-direction: column; min-height: 0; gap: var(--ui-panel-gutter); }
+/* The viewport header carries the scene tools and scene tabs in one row above the canvas. */
+.viewport-header { flex: 0 0 auto; display: flex; align-items: center; gap: var(--space-1); min-width: 0; min-height: var(--ui-toolbar-height); padding-inline: var(--space-1); border-radius: var(--radius-panel); background: var(--surface-1); box-shadow: inset 0 0 0 var(--ui-border-width) var(--border-separator); }
+.viewport-header > .scene-toolbar-row { flex: 0 0 auto; }
+.viewport-header > :deep(.scene-tabs) { flex: 1 1 auto; min-width: 0; }
+.editor-content { min-height: 0; flex: 1; position: relative; overflow: hidden; background: var(--bg-canvas); border-radius: var(--radius-panel); box-shadow: inset 0 0 0 var(--ui-border-width) var(--border-separator); }
+/* Running the game is visible at a glance: the viewport frame takes the run state's color. */
+.editor-content::after { content: ''; position: absolute; inset: 0; z-index: 400; border-radius: inherit; pointer-events: none; box-shadow: inset 0 0 0 0 transparent; transition: box-shadow var(--motion-standard) var(--ease-standard); }
+.editor-root[data-play-mode='playing'] .editor-content::after { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--success) 70%, transparent); }
+.editor-root[data-play-mode='paused'] .editor-content::after { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--warning) 70%, transparent); }
 .persistent-viewport { position: absolute; inset: 0; contain: layout paint; isolation: isolate; }
 .persistent-viewport.inactive { visibility: hidden; pointer-events: none; }
-.floating-dock{position:absolute;z-index:520;width:min(360px,35vw);height:min(620px,72vh);max-height:calc(100% - 60px);display:flex;flex-direction:column;overflow:hidden;border:1px solid var(--border-strong);border-radius:var(--radius-dialog);background:var(--surface-1);box-shadow:var(--shadow-lg)}.floating-dock>header{min-height:var(--ui-toolbar-height);padding:0 var(--space-2);display:flex;align-items:center;justify-content:space-between;cursor:grab;border-bottom:1px solid var(--border-subtle)}.floating-dock>:deep(.sidebar-container),.floating-dock>:deep(.config-wrapper){width:100%!important;max-width:none;height:auto;min-height:0;flex:1}.hierarchy-float{left:var(--ui-rail-width);top:var(--space-3)}.inspector-float{right:var(--space-3);top:var(--space-3)}
-@media (max-width: 720px) { .workspace-control-row :deep(.mode-label) { display: none; } }
+.floating-dock { position: absolute; z-index: 520; width: min(360px, 35vw); height: min(620px, 72vh); max-height: calc(100% - 60px); display: flex; flex-direction: column; overflow: hidden; border: var(--ui-border-width) solid var(--border-subtle); border-radius: var(--radius-dialog); background: var(--surface-1); box-shadow: var(--shadow-lg); }
+.floating-dock > header { min-height: var(--ui-panel-header-height); padding: 0 var(--space-1) 0 var(--space-3); display: flex; align-items: center; justify-content: space-between; cursor: grab; border-bottom: var(--ui-border-width) solid var(--border-separator); }
+.floating-dock > :deep(.sidebar-container), .floating-dock > :deep(.config-wrapper) { width: 100% !important; max-width: none; height: auto; min-height: 0; flex: 1; }
+.hierarchy-float { left: var(--ui-rail-width); top: var(--space-3); }
+.inspector-float { right: var(--space-3); top: var(--space-3); }
 </style>

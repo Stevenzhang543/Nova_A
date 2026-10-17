@@ -1593,6 +1593,11 @@ Object.assign(en, { signalConnections: 'Signal connections', missingCallback: 'C
 Object.assign(de, { signalConnections: 'Signalverbindungen', missingCallback: 'Rueckruf im Empfaengerskript nicht gefunden', removeConnection: 'Verbindung entfernen' })
 Object.assign(zh, { signalConnections: '信号连接', missingCallback: '接收方脚本中找不到该回调', removeConnection: '移除连接' })
 
+// 26.40 editor shell and feedback copy.
+Object.assign(en, { exportCancelled: 'Export cancelled', editedState: 'Edited', savedState: 'Saved' })
+Object.assign(de, { exportCancelled: 'Export abgebrochen', editedState: 'Bearbeitet', savedState: 'Gespeichert' })
+Object.assign(zh, { exportCancelled: '已取消导出', editedState: '已编辑', savedState: '已保存' })
+
 const dictionaries: Record<'en' | 'de' | 'zh', Dictionary> = { en, de, zh }
 
 /** Returns the localized value for an exact canonical English UI label when one exists. */

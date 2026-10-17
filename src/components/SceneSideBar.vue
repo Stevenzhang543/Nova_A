@@ -29,7 +29,6 @@
         <div class="hierarchy-filters"><select class="hierarchy-filter-wide" v-model="authoringState.selectionFilter" :aria-label="t('selectionFilter')"><option v-for="filter in selectionFilters" :key="filter" :value="filter">{{ t(`selection${filter}`) }}</option></select><select class="hierarchy-filter-wide" v-model="authoringState.tagFilter" :aria-label="t('tagFilter')"><option value="">{{ t('allTags') }}</option><option v-for="tag in availableTags" :key="tag" :value="tag"># {{ tag }}</option></select><select v-model="selectedSavedFilter" :aria-label="t('savedFilters')" @change="applySavedFilter"><option value="">{{ t('savedFilters') }}</option><option v-for="filter in authoringState.savedFilters" :key="filter.id" :value="filter.id">{{ filter.name }}</option></select><UiButton :label="t('saveFilter')" @click="saveCurrentFilter" icon="star" /><UiButton :class="{ active: authoringState.performanceMode }" :label="t('viewportPerformanceMode')" @click="authoringState.performanceMode = !authoringState.performanceMode" icon="bolt" /></div></details></div>
       </div>
 
-      <nav class="breadcrumbs" :class="{ empty: !breadcrumbs.length }" :aria-label="t('hierarchyBreadcrumb')" :aria-hidden="!breadcrumbs.length" :inert="!breadcrumbs.length"><button v-for="(entity, index) in breadcrumbs" :key="entity.uuid" :title="entity.name" @click="selectBreadcrumb(entity)"><EditorIcon v-if="index" name="forward" />{{ entity.name }}</button></nav>
 
       <div ref="entityList" class="entity-list" @scroll="onHierarchyScroll" @dragover="previewRootDrop" @drop="dropOnRoot($event)">
         <div class="hierarchy-rows" :style="{ paddingTop: `${virtualPaddingTop}px`, paddingBottom: `${virtualPaddingBottom}px` }">
@@ -61,7 +60,7 @@
           @drop.prevent.stop="dropOnEntity($event, row.entity)"
         >
           <button class="disclosure" :class="{ placeholder: !row.hasChildren }" :aria-expanded="row.hasChildren ? row.expanded : undefined" :aria-label="row.expanded ? t('collapsePanel') : t('expandPanel')" @click.stop="toggleExpanded(row.entity.uuid)"><EditorIcon v-if="row.hasChildren" name="down" data-ui-motion-chevron /></button>
-          <EditorIcon class="shape-icon" :name="getIcon(row.entity.shapeType)" />
+          <EditorIcon class="shape-icon" :name="entityIcon(row.entity)" />
           <button v-if="editingId !== row.entity.id" type="button" class="name" :aria-pressed="state.selectedEntityIds.includes(row.entity.id)" @click.stop="selectEntity($event, row.entity)" :title="`${row.entity.name} (${row.entity.id}) — ${t('renameHint')}`" @dblclick.stop="startEdit(row.entity)"><span class="entity-name"><mark v-if="searchQuery && row.entity.name.toLocaleLowerCase().includes(searchQuery.toLocaleLowerCase())">{{ row.entity.name }}</mark><template v-else>{{ row.entity.name }}</template></span><small>{{ row.entity.id }}</small></button>
           <input v-else v-model="editName" v-focus class="edit-input" @click.stop @blur="finishEdit(row.entity)" @keyup.enter="finishEdit(row.entity)" @keyup.escape="cancelEdit">
           <span v-if="row.entity.prefabAsset" class="status-mark" :title="t('prefabInstance')">P</span><span v-if="row.entity.sceneLayers.length" class="status-mark scene" :title="t('sceneInstance')">S</span><span v-if="Object.keys(row.entity.prefabOverrides).length" class="status-mark override" :title="t('prefabOverrides')"><EditorIcon name="circle" /></span>
@@ -75,6 +74,8 @@
         <p v-if="!hierarchyRows.length" class="empty-state">{{ t('noEntitiesFound') }}</p>
         <button v-if="draggingIds.length" class="root-drop" data-ui-drop="valid" @dragover="previewRootDrop" @drop.prevent.stop="dropOnRoot($event)">{{ t('reparentToRoot') }}</button>
       </div>
+      <!-- Path bar: a fixed footer, so selecting a nested object never shifts the list under the pointer. -->
+      <nav class="breadcrumbs" :aria-label="t('hierarchyBreadcrumb')"><span class="crumb-root">{{ sceneManager.activeScene.name }}</span><button v-for="entity in breadcrumbs" :key="entity.uuid" :title="entity.name" @click="selectBreadcrumb(entity)"><EditorIcon name="forward" /><span>{{ entity.name }}</span></button></nav>
     </div>
     <Teleport to="body"><div ref="sidebarMenuRoot" class="sidebar-action-menu" :inert="!sidebarMenu" :aria-hidden="!sidebarMenu" :style="{ left: `${sidebarMenuPosition.x}px`, top: `${sidebarMenuPosition.y}px`, pointerEvents: sidebarMenu ? 'auto' : 'none' }" @click.stop @contextmenu.prevent>
       <UiMenu :open="Boolean(sidebarMenu)" @close="closeSidebarMenu()">
@@ -98,7 +99,7 @@
         </template>
       </UiMenu>
     </div></Teleport>
-    <PanelResizeHandle v-show="!isCollapsed" v-model="panelWidth" orientation="vertical" :minimum="0" :maximum="500" :reset-value="280" :reverse="dock==='right'" :label="t('hierarchy')" :disabled="workspaceState.maximizedPanel==='hierarchy'" @dragging="isDragging=$event" @commit="commitPanelWidth" />
+    <PanelResizeHandle v-show="!isCollapsed" v-model="panelWidth" orientation="vertical" :minimum="0" :maximum="500" :reset-value="264" :reverse="dock==='right'" :label="t('hierarchy')" :disabled="workspaceState.maximizedPanel==='hierarchy'" @dragging="isDragging=$event" @commit="commitPanelWidth" />
   </aside>
 </template>
 
@@ -107,7 +108,7 @@ import UiButton from '../ui/components/UiButton.vue'
 import UiMenu from '../ui/components/UiMenu.vue'
 import UiTreeRow from '../ui/components/UiTreeRow.vue'
 import UiPanelHeader from '../ui/components/UiPanelHeader.vue'
-import EditorIcon from './EditorIcon.vue'
+import EditorIcon, { type EditorIconName } from './EditorIcon.vue'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { t } from '../i18n'
 import { preferencesState } from '../store/preferences'
@@ -201,7 +202,7 @@ watch(() => [sceneManager.activeSceneUuid, state.playMode, editorState.currentPa
 const entityList = ref<HTMLElement | null>(null)
 const hierarchyScrollTop = ref(0)
 const hierarchyViewportHeight = ref(400)
-const hierarchyRowHeight = computed(/* 与共享 Comfortable40 / Compact28 行高一致；缩放一次并保留小数，避免累计漂移。 */ () => (preferencesState.compactMode ? 28 : 40) * preferencesState.uiScale), hierarchyOverscan = 12
+const hierarchyRowHeight = computed(/* 与共享行高令牌一致（标准 28 / 紧凑 24）；缩放一次并保留小数，避免累计漂移。 */ () => (preferencesState.compactMode ? 24 : 28) * preferencesState.uiScale), hierarchyOverscan = 12
 let hierarchyResizeObserver: ResizeObserver | null = null
 let lastSelectedId: number | null = null
 let applyingSelectionHistory = false
@@ -267,7 +268,7 @@ const hierarchyRows = computed(/** 建立父子映射及置顶排序，按搜索
   for (const entity of state.world.entities) visit(entity, 0, visited)
   return rows
 })
-const hierarchyContentInset = computed(() => (preferencesState.compactMode ? 12 : 20) * preferencesState.uiScale)
+const hierarchyContentInset = computed(() => (preferencesState.compactMode ? 2 : 4) * preferencesState.uiScale)
 const virtualStart = computed(() => Math.min(hierarchyRows.value.length, Math.max(0, Math.floor((hierarchyScrollTop.value - hierarchyContentInset.value) / hierarchyRowHeight.value) - hierarchyOverscan)))
 const virtualEnd = computed(() => Math.max(virtualStart.value, Math.min(hierarchyRows.value.length, Math.ceil((hierarchyScrollTop.value + hierarchyViewportHeight.value - hierarchyContentInset.value) / hierarchyRowHeight.value) + hierarchyOverscan)))
 const virtualHierarchyRows = computed(/* 调用 hierarchyRows.value.slice(virtualStart.value, virtualEnd.value) 并返回调用结果。 */ () => hierarchyRows.value.slice(virtualStart.value, virtualEnd.value))
@@ -333,7 +334,22 @@ const breadcrumbs = computed(/** 从选中实体沿父级向上构建面包屑�
 }
 function cancelEdit() { editingId.value = null; editName.value = ''; editorState.renameRequestId = null }
 /** 提交有效实体名称并记录资源范围历史，随后清除重命名请求。 */ function finishEdit(entity: Entity) { if (editingId.value !== entity.id) return; const name = editName.value.trim(); if (name && name !== entity.name) { entity.name = name.slice(0, 80); pushHistory('Rename entity', `rename:${entity.uuid}`) } editingId.value = null; editorState.renameRequestId = null }
-/* 根据 type === 'Circle' 的真假，分别返回 '○' 或 type === 'Triangle' ? '△' : type === 'Box' ? '□' : '·'。 */ function getIcon(type: string) { return type === 'Circle' ? 'circle' : type === 'Triangle' ? 'triangle' : type === 'Box' ? 'rectangle' : 'design' }
+/* 根据 type === 'Circle' 的真假，分别返回 '○' 或 type === 'Triangle' ? '△' : type === 'Box' ? '□' : '·'。 */ function getIcon(type: string) { return type === 'Circle' ? 'circle' : type === 'Triangle' ? 'triangle' : type === 'Box' ? 'rectangle' : 'node' }
+/** The row icon names what the object is: its defining component first, then its authored shape. */
+function entityIcon(entity: Entity): EditorIconName {
+  const has = (kind: string) => entity.hasComponent(kind as Parameters<Entity['hasComponent']>[0])
+  if (has('Camera2D')) return 'camera'
+  if (has('TileMap2D')) return 'grid'
+  if (has('Light2D')) return 'light'
+  if (has('Text') || has('TextRenderer2D')) return 'text'
+  if (has('Canvas') || has('RectTransform') || has('Button') || has('Panel')) return 'ui'
+  if (has('CharacterBody2D') || has('PlatformController2D') || has('TopDownController2D')) return 'person'
+  if (has('SpriteRenderer2D') || has('Image')) return 'image'
+  if (has('ParticleEmitter2D')) return 'sparkle'
+  if (has('AudioSource')) return 'audio'
+  if (has('NavigationRegion2D')) return 'path'
+  return getIcon(entity.shapeType) as EditorIconName
+}
 
 /** 支持 Shift 范围选择、修饰键切换或替换选择，并同步活动图层。 */ function selectEntity(event: MouseEvent, entity: Entity) {
   if (event.shiftKey && lastSelectedId !== null) {
@@ -420,51 +436,98 @@ watch(/** 组合场景、选择集合及主选择为历史监听标记。 */ () 
 
 const collapseThreshold = 140
 /** 结束宽度拖动，低于阈值则折叠，否则限制最小宽度并保存布局。 */ function commitPanelWidth(value:number) { isDragging.value=false;if(value<collapseThreshold){isCollapsed.value=true;panelWidth.value=0}else{panelWidth.value=Math.max(260,value);editorState.hierarchyWidth=panelWidth.value} }
-/** 展开面板并恢复已保存宽度或默认宽度。 */ function expandPanel() { isCollapsed.value = false; panelWidth.value = editorState.hierarchyWidth || 280 }
+/** 展开面板并恢复已保存宽度或默认宽度。 */ function expandPanel() { isCollapsed.value = false; panelWidth.value = editorState.hierarchyWidth || 264 }
 onMounted(/** 挂载时记录层级视口高度并注册尺寸观察器。 */ () => { document.addEventListener('pointerdown', dismissSidebarMenu, true); document.addEventListener('keydown', leaveSidebarMenu, true); window.addEventListener('resize', resizeSidebarMenu); if (entityList.value) { hierarchyViewportHeight.value = entityList.value.clientHeight; hierarchyResizeObserver = new ResizeObserver(/** 从尺寸观察结果更新虚拟列表视口高度。 */ entries => { hierarchyViewportHeight.value = entries[0]?.contentRect.height ?? hierarchyViewportHeight.value }); hierarchyResizeObserver.observe(entityList.value) } })
 onBeforeUnmount(/** Release animations while the mounted row references are still available. */ () => { document.removeEventListener('pointerdown', dismissSidebarMenu, true); document.removeEventListener('keydown', leaveSidebarMenu, true); window.removeEventListener('resize', resizeSidebarMenu); closeSidebarMenu(false); hierarchyResizeObserver?.disconnect(); for (const element of hierarchyElements()) cancelMotion(element); finishEntityDrag() })
 </script>
 
 <style scoped>
-.sidebar-container{position:relative;height:100%;flex:none;display:flex;min-width:0;background:var(--ui-bg-1,var(--surface-1));border-inline-end:1px solid var(--border-subtle);
- border-radius: var(--radius-panel);
-}
-.sidebar-container.left > .panel-resize-handle{inset-inline-end:0}
-.scene-sidebar{container: hierarchy-host / inline-size;min-width:0;flex:1;display:flex;flex-direction:column;overflow:hidden;
- border-radius: var(--radius-panel);
-}.scene-manager{flex:none;border-bottom:1px solid var(--border-subtle)}
-.scene-list{max-height:calc(4 * var(--ui-tree-row-height));overflow:auto;padding:var(--ui-panel-inset);}.scene-item{display:flex;align-items:center}.scene-main{display:flex;align-items:center;flex:1;min-width:0;min-height:var(--ui-tree-row-height);gap:var(--ui-control-gap);padding-inline:0;}.scene-main span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.scene-main input{min-width:0;width:100%}.scene-item.active{background:var(--surface-active,var(--accent-soft))}.scene-item.unloaded{opacity:.5}
-.hierarchy-header{flex:none;border-bottom:1px solid var(--border-subtle);
- padding: var(--ui-panel-inset);
-}.hierarchy-header>div:first-child{display:flex;align-items:center;justify-content:space-between}.hierarchy-actions{display:flex;align-items:center;gap:var(--ui-control-gap)}.hierarchy-search-row{display:flex;position:relative;gap:var(--ui-control-gap);margin-top:var(--ui-heading-content-gap);}.search{min-width:0;flex:1;display:flex;align-items:center;gap:var(--ui-control-gap);}.search input{width:100%;min-width:0}.hierarchy-filter-menu>summary{display:grid;place-items:center;inline-size:var(--ui-control-height);block-size:var(--ui-control-height);list-style:none;cursor:pointer}.hierarchy-filter-menu>summary::-webkit-details-marker{display:none}.hierarchy-filters{position:absolute;top:100%;inset-inline-end:0;z-index:30;display:grid;grid-template-columns:minmax(0,1fr) auto auto;width:min(100%,24rem);background:var(--surface-2);border:1px solid var(--border-subtle);box-shadow:var(--shadow-float);gap:var(--ui-control-gap);padding:var(--space-3);border-radius:var(--radius-floating);}.hierarchy-filter-wide{grid-column:1/-1}
-.breadcrumbs{display:flex;flex:none;align-items:flex-start;min-width:0;block-size:calc(var(--ui-control-height) + var(--ui-space-sm) + var(--ui-border-width));overflow:auto;gap:var(--ui-space-micro);border-bottom:var(--ui-border-width) solid var(--border-subtle)}.breadcrumbs.empty{visibility:hidden}.breadcrumbs button{display:flex;align-items:center;white-space:nowrap}.entity-list{min-height:0;flex:1;overflow:auto}.entity-item{position:relative;gap:var(--ui-space-micro)}.entity-item.disabled{opacity:.5}.entity-item.hidden .name{text-decoration:line-through}.entity-item.drop-target{outline:1px solid var(--accent);outline-offset:-1px}.entity-item.primary{box-shadow:inset 2px 0 var(--accent)}.name{min-width:0;flex:1;display:flex;align-items:center;gap:var(--ui-space-xs);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:transparent;border:0;text-align:start;padding:0;height:100%;min-height:0;font:inherit;color:inherit}.name small{color:var(--text-muted)}.name mark{color:inherit;background:var(--accent-soft)}.edit-input{min-width:0;flex:1}.disclosure,.state-button{flex:none;inline-size:var(--ui-tree-row-height);block-size:var(--ui-tree-row-height);min-inline-size:var(--ui-tree-row-height);min-height:0;padding:0;display:grid;place-items:center;border:0;background:transparent}.disclosure.placeholder{visibility:hidden}.state-button{opacity:0}.entity-item:hover .state-button,.entity-item:focus-within .state-button,.state-button.active,.entity-item.hidden .state-button,.entity-item.locked .state-button{opacity:1}.status-mark{font-size:var(--type-caption);color:var(--text-muted)}.empty-state{color:var(--text-muted);padding:var(--ui-panel-inset);}.root-drop{margin:var(--ui-space-xs);border:1px dashed var(--accent)}.expand{position:absolute;inset-inline-start:0;top:50%}.right .panel-resize-handle{inset-inline-start:0}
-
+.sidebar-container{position:relative;height:100%;flex:none;display:flex;min-width:0;border-radius:var(--radius-panel);background:var(--surface-1);box-shadow:inset 0 0 0 var(--ui-border-width) var(--border-separator)}
+.sidebar-container.left>.panel-resize-handle{inset-inline-end:0}
+.right .panel-resize-handle{inset-inline-start:0}
+.scene-sidebar{container:hierarchy-host/inline-size;min-width:0;flex:1;display:flex;flex-direction:column;overflow:hidden;border-radius:var(--radius-panel)}
+.scene-manager{flex:none;border-bottom:var(--ui-border-width) solid var(--border-separator)}
+.scene-manager :deep(.ui-panel-header){border-bottom:0;background:transparent}
+.scene-list{max-height:calc(4 * var(--ui-tree-row-height) + var(--space-2));overflow:auto;padding:0 var(--space-2) var(--space-2)}
+.scene-item{display:flex;align-items:center;border-radius:var(--radius-control)}
+.scene-item:hover:not(.active){background:var(--surface-hover)}
+.scene-main{display:flex;align-items:center;flex:1;min-width:0;min-height:var(--ui-tree-row-height);gap:var(--space-2);padding-inline:var(--space-2);cursor:default}
+.scene-main>i{width:6px;height:6px;flex:none;border-radius:50%;background:var(--text-tertiary)}
+.scene-item.active .scene-main>i{background:var(--accent)}
+.scene-main span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.scene-main input{min-width:0;width:100%}
+.scene-item.active{background:var(--selection-quiet);font-weight:var(--weight-medium)}
+.scene-item.unloaded{opacity:.55}
+.load-toggle{width:calc(var(--ui-tree-row-height) - 4px);height:calc(var(--ui-tree-row-height) - 4px);min-height:0;padding:0;display:grid;place-items:center;color:var(--text-muted)}
+.hierarchy-header{flex:none;padding:var(--space-2) var(--space-2) var(--space-2) var(--ui-header-inset)}
+.hierarchy-header>div:first-child{display:flex;align-items:center;justify-content:space-between;gap:var(--space-2);min-height:var(--ui-control-height)}
+.hierarchy-title{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--type-section);font-weight:var(--weight-strong)}
+.hierarchy-actions{display:flex;align-items:center;gap:0;flex:none}
+.hierarchy-actions>small{margin-inline-end:var(--space-1)}
+.hierarchy-actions>small:not(:empty){min-width:20px;padding:0 6px;border-radius:var(--radius-pill);background:var(--surface-3);color:var(--text-muted);font-size:var(--type-caption);text-align:center}
+.hierarchy-actions .ui-button{color:var(--text-muted)}
+.hierarchy-search-row{display:flex;position:relative;gap:var(--space-1);margin-top:var(--space-1);padding-inline-end:var(--space-1)}
+.search{position:relative;min-width:0;flex:1;display:flex;align-items:center}
+.search>.editor-icon{position:absolute;inset-inline-start:var(--space-2);color:var(--text-tertiary);width:14px;height:14px;flex-basis:14px}
+.search input{width:100%;min-width:0;flex:1;padding-inline-start:calc(var(--space-2) + 20px)}
+.hierarchy-filter-menu>summary{display:grid;place-items:center;inline-size:var(--ui-control-height);block-size:var(--ui-control-height);padding:0;list-style:none;color:var(--text-muted)}
+.hierarchy-filter-menu>summary::-webkit-details-marker{display:none}
+.hierarchy-filters{position:absolute;top:calc(100% + var(--space-1));inset-inline-end:0;z-index:30;display:grid;grid-template-columns:minmax(0,1fr) auto auto;width:min(100%,24rem);gap:var(--space-1);padding:var(--space-2);border:var(--ui-border-width) solid var(--border-subtle);border-radius:var(--radius-floating);background:var(--surface-popover);box-shadow:var(--shadow-md)}
+.hierarchy-filter-wide{grid-column:1/-1;width:100%}
+.entity-list{min-height:0;flex:1;overflow:auto}
+.hierarchy-rows{padding-inline:var(--space-2)}
+.entity-item{position:relative;gap:var(--space-1);color:var(--text-secondary)}
+.entity-item.selected{color:var(--text-primary)}
+.entity-item.disabled{opacity:.5}
+.entity-item.hidden .name{text-decoration:line-through;text-decoration-color:var(--text-tertiary)}
+.entity-item.drop-target{outline:1.5px solid var(--drag-target);outline-offset:-1.5px}
+.entity-item.primary{box-shadow:none}
+.shape-icon{color:var(--text-muted);width:14px;height:14px;flex-basis:14px}
+.entity-item.selected .shape-icon{color:var(--accent)}
+.name{min-width:0;flex:1;display:flex;align-items:center;gap:var(--space-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:transparent!important;border:0;text-align:start;padding:0 0 0 var(--space-1);height:100%;min-height:0;font:inherit;font-weight:var(--weight-regular);color:inherit;box-shadow:none!important}
+.entity-item.primary .name{font-weight:var(--weight-medium)}
+.name small{color:var(--text-tertiary);font-size:var(--type-caption);font-variant-numeric:tabular-nums}
+.name mark{color:inherit;background:var(--warning-soft);border-radius:3px}
+.edit-input{min-width:0;flex:1}
+.disclosure,.state-button{flex:none;inline-size:calc(var(--ui-tree-row-height) - 6px);block-size:calc(var(--ui-tree-row-height) - 6px);min-inline-size:0;min-height:0;padding:0;display:grid;place-items:center;border:0;background:transparent;color:var(--text-muted)}
+.disclosure .editor-icon{width:12px;height:12px;flex-basis:12px}
+.disclosure.placeholder{visibility:hidden}
+.state-button{opacity:0;transition:opacity var(--motion-micro) var(--ease-standard)}
+.state-button .editor-icon{width:14px;height:14px;flex-basis:14px}
+.entity-item:hover .state-button,.entity-item:focus-within .state-button,.state-button.active,.entity-item.hidden .state-button,.entity-item.locked .state-button{opacity:1}
+.status-mark{display:inline-grid;place-items:center;min-width:16px;height:16px;padding:0 3px;border-radius:4px;background:var(--surface-3);font-size:10px;font-weight:var(--weight-strong);color:var(--text-muted)}
+.status-mark.override{background:transparent;color:var(--warning)}
+.status-mark .editor-icon{width:10px;height:10px}
+.empty-state{color:var(--text-muted);padding:var(--ui-panel-inset);font-size:var(--type-dense)}
+.root-drop{margin:var(--space-2);border:1.5px dashed var(--drag-target);width:calc(100% - 2 * var(--space-2))}
+.breadcrumbs{display:flex;flex:none;align-items:center;min-width:0;min-height:calc(var(--ui-tree-row-height) + 2px);padding:0 var(--space-3);gap:2px;overflow-x:auto;scrollbar-width:none;border-top:var(--ui-border-width) solid var(--border-separator);color:var(--text-muted);font-size:var(--type-caption)}
+.breadcrumbs::-webkit-scrollbar{display:none}
+.crumb-root{flex:none;white-space:nowrap}
+.breadcrumbs button{display:flex;align-items:center;gap:2px;flex:none;min-height:calc(var(--ui-tree-row-height) - 6px);padding:0 var(--space-1);white-space:nowrap;font-size:var(--type-caption);font-weight:var(--weight-regular);color:var(--text-secondary)}
+.breadcrumbs button .editor-icon{width:10px;height:10px;flex-basis:10px;color:var(--text-tertiary)}
+.breadcrumbs button:last-child{color:var(--text-primary)}
+.expand{position:absolute;inset-inline-start:0;top:50%}
 /* The host's font-relative breakpoint follows saved UI scale, never dock width. */
 .compact-action{display:none}
-.hierarchy-title{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.hierarchy-header>div:first-child{gap:var(--ui-control-gap)}
-.hierarchy-actions{flex:none}
-.search input{flex:1;min-width:0}
 .entity-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .name small{flex:none}
-.row-overflow{flex:none;inline-size:var(--ui-tree-row-height);block-size:var(--ui-tree-row-height);min-inline-size:var(--ui-tree-row-height);min-height:0;padding:0}
-.sidebar-action-menu{position:fixed;z-index:var(--ui-popover-layer);inline-size:min(calc(7 * var(--ui-control-height)),calc(100vw - 2 * var(--ui-space-sm)));max-inline-size:calc(100vw - 2 * var(--ui-space-sm));max-block-size:calc(100dvh - 2 * var(--ui-space-sm))}
+.row-overflow{flex:none;inline-size:calc(var(--ui-tree-row-height) - 6px);block-size:calc(var(--ui-tree-row-height) - 6px);min-inline-size:0;min-height:0;padding:0;color:var(--text-muted);opacity:0}
+.entity-item:hover .row-overflow,.entity-item:focus-within .row-overflow,.row-overflow[aria-expanded='true']{opacity:1}
+.sidebar-action-menu{position:fixed;z-index:var(--ui-popover-layer);inline-size:min(calc(8 * var(--ui-control-height)),calc(100vw - 2 * var(--ui-space-sm)));max-inline-size:calc(100vw - 2 * var(--ui-space-sm));max-block-size:calc(100dvh - 2 * var(--ui-space-sm))}
 .sidebar-action-menu :deep(.ui-menu){max-inline-size:inherit;max-block-size:inherit;overflow:auto}
 .sidebar-action-menu :deep(.ui-menu>button){white-space:normal}
-.sidebar-menu-title{font-size:var(--type-section);overflow-wrap:anywhere}
-.sidebar-action-menu small,.sidebar-menu-status{color:var(--text-muted);font-size:var(--type-caption)}
+.sidebar-menu-title{padding:var(--space-1) var(--space-2) 0;font-size:var(--type-body);overflow-wrap:anywhere}
+.sidebar-action-menu small,.sidebar-menu-status{padding:0 var(--space-2) var(--space-1);color:var(--text-muted);font-size:var(--type-caption)}
 .sidebar-menu-status{display:grid;gap:var(--ui-space-micro)}
-@container hierarchy-host (max-width:24em){
+@container hierarchy-host (max-width:22em){
   .compact-action{display:inline-flex}
-  .scene-direct-action,.hierarchy-direct-action,.entity-item>.state-button,.entity-item>.status-mark,.name small,.search>.editor-icon{display:none}
+  .scene-direct-action,.hierarchy-direct-action,.entity-item>.state-button,.entity-item>.status-mark,.name small{display:none}
   .entity-item>.disclosure.placeholder{display:none}
   .entity-item{padding-inline-start:min(calc(var(--tree-depth,0) * var(--space-3)),var(--space-3))}
-  .hierarchy-filters{grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--ui-control-gap);padding:var(--space-3);border-radius:var(--radius-floating);}
+  .hierarchy-filters{grid-template-columns:repeat(2,minmax(0,1fr))}
   .hierarchy-filters>select{grid-column:1/-1;width:100%}
   .hierarchy-filters>.ui-button{justify-self:start}
 }
-/* Row-local rename geometry matches the exact virtual stride. */
-.hierarchy-rows{padding-inline:var(--ui-panel-inset)}
-.edit-input,.scene-main input{height:var(--ui-tree-row-height);min-height:0;min-width:0;max-width:100%;font-size:var(--type-body);line-height:var(--line-control);padding-inline:var(--space-3);padding-block:max(0px,calc((var(--ui-tree-row-height) - var(--type-body) * var(--line-control) - 2 * var(--ui-border-width)) / 2));border-width:var(--ui-border-width);border-radius:var(--radius-input)}
+.edit-input,.scene-main input{height:calc(var(--ui-tree-row-height) - 2px);min-height:0;min-width:0;max-width:100%;font-size:var(--type-body);line-height:var(--line-control);padding-inline:var(--space-2);padding-block:0;border-width:var(--ui-border-width);border-radius:var(--radius-xs)}
 .edit-input{width:100%}
 </style>

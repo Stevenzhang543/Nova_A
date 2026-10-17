@@ -1,11 +1,11 @@
 <!-- 仿真操作栏：管理物理加载、场景预检和播放会话。 -->
 <template>
-  <div class="actionbar" role="toolbar" :aria-label="t('play')">
-    <UiButton :class="{ active: state.playMode === 'playing' }" :aria-label="t('play')" :aria-pressed="state.playMode === 'playing'" :label="t('play')" @click="playSimulation" icon="play" />
+  <div class="actionbar" role="toolbar" :aria-label="t('play')" :data-play-mode="state.playMode">
+    <UiButton class="play-button" :class="{ active: state.playMode === 'playing' }" :aria-label="t('play')" :aria-pressed="state.playMode === 'playing'" :label="t('play')" @click="playSimulation" icon="play" />
     <UiButton :class="{ active: state.playMode === 'paused' }" :disabled="state.playMode === 'editing'" :label="t('pause')" :aria-label="t('pause')" :aria-pressed="state.playMode === 'paused'" @click="pauseSimulation" icon="pause" />
     <UiButton class="step-button" :label="t('step')" :aria-label="t('step')" @click="stepSimulation" icon="step" />
     <UiButton :disabled="state.playMode === 'editing'" :aria-label="t('stop')" :label="t('stop')" @click="restoreSimulation" icon="stop" />
-    <span class="mode-label" role="status">{{ t(state.playMode === 'playing' ? 'playMode' : state.playMode === 'paused' ? 'runtimePaused' : 'editingMode') }}</span>
+    <span class="mode-label" role="status"><i aria-hidden="true"></i>{{ t(state.playMode === 'playing' ? 'playMode' : state.playMode === 'paused' ? 'runtimePaused' : 'editingMode') }}</span>
   </div>
 </template>
 
@@ -53,7 +53,23 @@ function restoreSimulation() { runStop() }
 </script>
 
 <style scoped>
-.actionbar { flex: 0 0 auto; min-width: max-content; display:flex; align-items:center; gap:var(--ui-space-micro); padding-inline:var(--ui-space-xs); border-left:1px solid var(--border-subtle); }
-.mode-label { max-width:12ch; margin-inline-start:var(--ui-space-xs); color:var(--text-muted); font-size:var(--type-caption); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.actionbar{
+  flex:0 0 auto;min-width:max-content;display:flex;align-items:center;gap:1px;padding:2px;
+  border-radius:calc(var(--radius-control) + 2px);background:var(--surface-inset);box-shadow:inset 0 0 0 var(--ui-border-width) var(--border-separator);
+  transition:background-color var(--motion-standard) var(--ease-standard),box-shadow var(--motion-standard) var(--ease-standard);
+}
+.actionbar .ui-button{width:calc(var(--ui-control-height) - 2px);height:calc(var(--ui-control-height) - 4px);min-height:0;min-width:0;color:var(--text-secondary)}
+.actionbar .ui-button:hover:not(:disabled){color:var(--text-primary)}
+.actionbar .play-button{color:var(--success)}
+.actionbar .ui-button.active{background:var(--surface-raised);color:var(--text-primary);box-shadow:var(--shadow-xs)}
+.actionbar[data-play-mode='playing']{background:color-mix(in srgb,var(--success) 14%,var(--surface-inset));box-shadow:inset 0 0 0 var(--ui-border-width) color-mix(in srgb,var(--success) 40%,transparent)}
+.actionbar[data-play-mode='playing'] .play-button{background:var(--success);color:#0c1a12}
+.actionbar[data-play-mode='paused']{background:color-mix(in srgb,var(--warning) 14%,var(--surface-inset));box-shadow:inset 0 0 0 var(--ui-border-width) color-mix(in srgb,var(--warning) 40%,transparent)}
+.mode-label{display:inline-flex;align-items:center;gap:var(--space-1);max-width:12ch;padding-inline:var(--space-2) var(--space-2);color:var(--text-muted);font-size:var(--type-caption);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mode-label i{inline-size:6px;block-size:6px;border-radius:50%;background:var(--text-tertiary);flex:none}
+.actionbar[data-play-mode='playing'] .mode-label{color:var(--success)}
+.actionbar[data-play-mode='playing'] .mode-label i{background:var(--success)}
+.actionbar[data-play-mode='paused'] .mode-label{color:var(--warning)}
+.actionbar[data-play-mode='paused'] .mode-label i{background:var(--warning)}
 @media(max-width:1100px){.mode-label{position:absolute;inline-size:1px;block-size:1px;overflow:hidden;clip-path:inset(50%)}}
 </style>

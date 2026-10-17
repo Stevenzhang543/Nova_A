@@ -1,13 +1,13 @@
 <!-- 对象属性检查器：编辑实体组件、资源绑定及场景属性，协调验证和历史。 -->
 <template>
   <div class="config-wrapper" data-doc="manual/inspector" :class="[dock,{'panel-maximized':workspaceState.maximizedPanel==='inspector'}]" :style="{ width: `${panelWidth}px` }">
-    <PanelResizeHandle v-model="panelWidth" orientation="vertical" :minimum="320" :maximum="560" :reset-value="380" :reverse="dock==='right'" :label="t('inspector')" :disabled="workspaceState.maximizedPanel==='inspector'" @commit="estate.inspectorWidth=$event" />
+    <PanelResizeHandle v-model="panelWidth" orientation="vertical" :minimum="260" :maximum="560" :reset-value="320" :reverse="dock==='right'" :label="t('inspector')" :disabled="workspaceState.maximizedPanel==='inspector'" @commit="estate.inspectorWidth=$event" />
     <PanelMaximizeButton panel="inspector" class="inspector-maximize" />
     <aside :data-resource-key="numericResourceKey" class="config-panel" data-ui-motion-surface="smooth" :data-ui-motion-key="numericResourceKey" :class="{ runtime: !canEdit }" :inert="!canEdit">
       <div v-if="selectedEntities.length" class="inspector-sticky">
         <header class="inspector-header">
-          <span class="eyebrow">{{ t('entitySettings') }}</span>
-          <h3>{{ selectedEntities.length > 1 ? t('multiSelected', { count: selectedEntities.length }) : `${selectedEntity?.name}_${selectedEntity?.id}` }}</h3>
+          <h3 :title="selectedEntities.length > 1 ? undefined : `${selectedEntity?.name} · ${selectedEntity?.uuid}`">{{ selectedEntities.length > 1 ? t('multiSelected', { count: selectedEntities.length }) : selectedEntity?.name }}</h3>
+          <span v-if="selectedEntities.length === 1 && selectedEntity" class="entity-meta"><span>{{ selectedEntity.shapeType }}</span><span class="entity-id">#{{ selectedEntity.id }}</span></span>
         </header>
         <div class="inspector-search-row">
           <input v-model="estate.inspectorSearch" type="search" :placeholder="t('searchInspector')">
@@ -462,10 +462,14 @@ const PropertyRow = defineComponent({ props: { label: { type: String, required: 
   if (estate.inspectorPinnedOnly && (!props.path || !estate.pinnedInspectorProperties.includes(props.path))) return null
   if (estate.inspectorModifiedOnly && (!props.path || !modifiedPropertyPaths.value.has(props.path))) return null
   const metadata = props.path ? propertyMetadata(props.path) : undefined
-  return h(UiPropertyRow, { label: props.label, unit: metadata?.unit, class: ['property-row', { modified: props.path && modifiedPropertyPaths.value.has(props.path), pinned: props.path && estate.pinnedInspectorProperties.includes(props.path) }], 'data-property-path': props.path || undefined, title: metadata?.help, onContextmenu: props.path ? (event: MouseEvent) => openPropertyMenu(event, props.path) : undefined }, {
+  // Defaults and the write destination are reference information: they live in the row tooltip and the
+  // property context menu instead of a disclosure under every field. Prefab overrides stay visible inline.
+  const overridden = Boolean(props.path) && selectedEntity.value?.prefabOverrides[props.path] !== undefined
+  const tooltip = props.path ? [metadata?.help, metadata ? `${propertyCopy.value.defaults}: ${metadata.defaults.join(', ')}` : '', `${propertyCopy.value.destination}: ${numericResourceKey.value}/${props.path}`].filter(Boolean).join('\n') : metadata?.help
+  return h(UiPropertyRow, { label: props.label, unit: metadata?.unit, class: ['property-row', { modified: props.path && modifiedPropertyPaths.value.has(props.path), pinned: props.path && estate.pinnedInspectorProperties.includes(props.path), overridden }], 'data-property-path': props.path || undefined, title: tooltip, onContextmenu: props.path ? (event: MouseEvent) => openPropertyMenu(event, props.path) : undefined }, {
     label: () => [props.path && estate.pinnedInspectorProperties.includes(props.path) ? h(EditorIcon, {name:'pin'}) : null, props.label],
     default: () => namePropertyControls(slots.default?.() ?? [], props.label),
-    details: () => props.path ? h('details', {class:'property-details', 'data-non-project-control':''}, [h('summary', propertyCopy.value.details), metadata ? h('small', propertyCopy.value.defaults + ': ' + metadata.defaults.join(', ')) : null, h('small', propertyCopy.value.destination + ': ' + numericResourceKey.value + '/' + props.path), selectedEntity.value?.prefabOverrides[props.path] !== undefined ? h('small', propertyCopy.value.override) : null]) : null,
+    details: () => overridden ? h('small', { class: 'property-details property-override' }, propertyCopy.value.override) : null,
   })
 } } })
 const DiagnosticRow = defineComponent({ props: { label: { type: String, required: true }, value: { type: String, required: true }, active: Boolean }, /** 建立显示标签、数值和激活样式的诊断行。 */ setup(props) { return /* 调用 h('div', { class: ['diagnostic-row', { active: props.active }] }, [h('span', props.label), h('code', props.value)]) 并返回调用结果。 */ () => h('div', { class: ['diagnostic-row', { active: props.active }] }, [h('span', props.label), h('code', props.value)]) } })
@@ -1212,46 +1216,23 @@ const commonComponentKinds = computed(/** 计算所有选中实体共同拥有�
 </script>
 
 <style scoped>
-.config-wrapper { position: relative; flex: 0 0 auto; z-index: 180; background: var(--surface-1);
- min-width: 0;
- max-width: none;
- border-radius: var(--radius-panel);
-}.config-wrapper.right{border-left:1px solid var(--border-subtle)}.config-wrapper.left{border-right:1px solid var(--border-subtle)}
+.config-wrapper { position: relative; flex: 0 0 auto; z-index: 180; min-width: 0; max-width: none; border-radius: var(--radius-panel); background: var(--surface-1); box-shadow: inset 0 0 0 var(--ui-border-width) var(--border-separator); }
 .resize-handle { position: absolute; inset: 0 auto 0 0; width: 8px; cursor: ew-resize; z-index: 6; }
 .config-wrapper.left .resize-handle { inset: 0 0 0 auto; }
-.config-panel { position: absolute; inset: 0; overflow: auto; color: var(--text-secondary); background: var(--surface-1);
- scroll-padding-block: var(--ui-panel-inset);
- border-radius: var(--radius-panel);
-}
+.config-panel { position: absolute; inset: 1px; overflow: auto; color: var(--text-secondary); background: var(--surface-1); scroll-padding-block: var(--ui-panel-inset); border-radius: calc(var(--radius-panel) - 1px); scrollbar-gutter: stable; }
 .config-panel.runtime { pointer-events: none; opacity: .72; }
-.settings-content { min-height: 100%; display: flex; flex-direction: column;
- padding: var(--ui-section-gap) 0 var(--ui-panel-inset);
- gap: var(--ui-section-gap);
-}
-.inspector-sticky { box-sizing: border-box; overscroll-behavior: contain; border-bottom: 1px solid var(--border-subtle);
- position: relative;
- max-height: none;
- overflow: visible;
- padding: var(--ui-panel-inset) var(--ui-panel-inset) 0;
- background: var(--surface-1);
-}
-.inspector-search-row { display: flex;
- gap: var(--ui-control-gap);
- flex-wrap: wrap;
-}.add-component-trigger { min-width: 96px; border: 1px solid var(--accent); color: var(--accent-contrast); background: var(--accent); white-space: nowrap;
- min-height: var(--ui-control-height);
- height: var(--ui-control-height);
- padding: 0 var(--space-4);
- font-size: var(--type-body);
- line-height: var(--line-control);
- border-radius: var(--radius-control);
-}
-.inspector-categories { margin-top: var(--space-2); display: flex; gap: var(--ui-control-gap); overflow-x: auto; scrollbar-width: none; }.inspector-categories::-webkit-scrollbar { display: none; }
-.inspector-view-controls{display:flex;
- gap: var(--ui-control-gap);
- margin-top: var(--ui-control-gap);
- flex-wrap: wrap;
-}
+.settings-content { min-height: 100%; display: flex; flex-direction: column; padding: 0 0 var(--ui-panel-inset); gap: 0; }
+.inspector-sticky { position: sticky; top: 0; z-index: 4; box-sizing: border-box; overscroll-behavior: contain; padding: var(--space-3) var(--space-2) var(--space-2) var(--ui-panel-inset); border-bottom: var(--ui-border-width) solid var(--border-separator); background: color-mix(in srgb, var(--surface-1) 92%, transparent); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+.inspector-search-row { display: flex; gap: var(--space-1); flex-wrap: nowrap; margin-top: var(--space-2); }
+.inspector-search-row > input { flex: 1 1 auto; width: auto; min-width: 0; }
+.add-component-trigger { flex: none; white-space: nowrap; padding: 0 var(--space-3); color: var(--accent-contrast); background: var(--accent-fill); box-shadow: var(--shadow-xs); }
+.add-component-trigger:hover:not(:disabled) { background: var(--accent-fill-hover); }
+.inspector-categories { margin-top: var(--space-2); display: flex; flex-wrap: wrap; gap: 2px; }
+.inspector-categories > button, .inspector-view-controls > button { flex: none; min-height: calc(var(--ui-control-height) - 6px); padding: 0 var(--space-2); border-radius: var(--radius-pill); font-size: var(--type-dense); font-weight: var(--weight-medium); color: var(--text-muted); }
+.inspector-categories > button.active, .inspector-view-controls > button.active { background: var(--selection-bg); color: var(--text-primary); }
+.inspector-view-controls { display: flex; gap: 2px; margin-top: 2px; flex-wrap: wrap; }
+.inspector-view-controls > button { display: inline-flex; align-items: center; gap: var(--space-1); }
+.inspector-view-controls .editor-icon { width: 12px; height: 12px; flex-basis: 12px; }
 .empty-inspector { height: 100%; padding: var(--space-4); display: flex; flex-direction: column; justify-content: center; align-items: center; color: var(--text-muted); text-align: center; }.empty-inspector > strong { margin-top: var(--space-3); color: var(--text-secondary); }.empty-ui-actions { width: 100%; margin-top: var(--space-2); display: grid; grid-template-columns: 1fr 1fr; gap: var(--ui-control-gap); }.runtime-note { color: var(--text-muted); line-height: 1.45; }
 .authoring-validation{padding:var(--space-2);display:grid;gap:var(--space-1);border:1px solid color-mix(in srgb,var(--warning) 40%,var(--border-subtle));background:color-mix(in srgb,var(--warning) 7%,transparent)}.authoring-validation strong{color:var(--warning)}
 .batch-toggle { min-width: 76px; border: 1px solid var(--border-subtle); color: var(--accent); background: var(--surface-3);
@@ -1260,7 +1241,12 @@ const commonComponentKinds = computed(/** 计算所有选中实体共同拥有�
  font-size: var(--type-body);
  border-radius: var(--radius-control);
 }
-.inspector-header { padding: 0 var(--space-0) var(--space-2); }.eyebrow { color: var(--accent); }h3 { margin: var(--space-0) 0 0; color: var(--text-primary); line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }h3 small { color: var(--text-muted); }
+.inspector-header { display: flex; align-items: baseline; gap: var(--space-2); min-width: 0; padding-inline-end: calc(var(--ui-control-height) + var(--space-1)); }
+.eyebrow { color: var(--accent); }
+h3 { margin: 0; min-width: 0; color: var(--text-primary); font-size: var(--type-page); font-weight: var(--weight-strong); line-height: var(--line-page); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+h3 small { color: var(--text-muted); }
+.entity-meta { display: inline-flex; align-items: baseline; gap: var(--space-2); flex: none; color: var(--text-muted); font-size: var(--type-caption); }
+.entity-id { font-variant-numeric: tabular-nums; color: var(--text-tertiary); }
 :deep(.component-tools) { display: flex; align-items: center; justify-content: flex-end;
  min-height: var(--ui-control-height);
  gap: var(--ui-control-gap);
@@ -1279,7 +1265,7 @@ const commonComponentKinds = computed(/** 计算所有选中实体共同拥有�
  gap: var(--ui-label-control-gap);
 }
 .color-well { border: 3px solid var(--surface-3); width: var(--ui-control-height); height: var(--ui-control-height); border-radius: var(--radius-control); }
-.primary-action, .secondary-action { width: 100%; display: flex; align-items: center; justify-content: center; border: 1px solid var(--accent); color: var(--accent-contrast); background: var(--accent); min-height: var(--ui-control-height); gap: var(--ui-control-gap); font-size: var(--type-body); border-radius: var(--radius-control); }.secondary-action { border-color: var(--border-subtle); color: var(--text-secondary); background: var(--surface-3); }
+.primary-action, .secondary-action { width: 100%; display: flex; align-items: center; justify-content: center; border: 1px solid transparent; color: var(--accent-contrast); background: var(--accent-fill); min-height: var(--ui-control-height); gap: var(--ui-control-gap); font-size: var(--type-body); border-radius: var(--radius-control); }.secondary-action { border-color: var(--border-subtle); color: var(--text-secondary); background: var(--surface-3); }
 .prefab-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--ui-control-gap); }
 .prefab-compare{padding:var(--space-1);border:1px solid var(--border-subtle)}.prefab-compare summary{cursor:pointer;color:var(--text-secondary)}.prefab-compare article{min-width:0;display:flex;align-items:center;gap:var(--space-1);padding-top:var(--space-1)}.prefab-compare code{min-width:0;flex:1;overflow:hidden;color:var(--accent);text-overflow:ellipsis;white-space:nowrap}.prefab-conflicts article{line-height:1.35}.prefab-conflicts article.error{color:var(--danger)}.prefab-conflicts article.warning{color:var(--warning)}
 .script-error { margin: 0; padding: var(--space-2); overflow-wrap: anywhere; border: 1px solid color-mix(in srgb, var(--danger) 50%, var(--border-subtle)); color: var(--danger); background: var(--danger-soft); line-height: 1.45; }
@@ -1294,8 +1280,6 @@ const commonComponentKinds = computed(/** 计算所有选中实体共同拥有�
 @media (max-width: 560px) { .component-picker-list>section { grid-template-columns: repeat(auto-fit,minmax(min(100%,calc(260px * var(--ui-scale))),1fr)); gap: var(--ui-control-gap); } }
 /* Dock width, not window width, determines when labels need their own line. */
 .config-wrapper { container: nova-inspector / inline-size; }
-.inspector-categories { scrollbar-width: thin; }
-.inspector-categories::-webkit-scrollbar { display: initial; height: 5px; }
 @container nova-inspector (max-width: 22em) {
   .inspector-search-row { flex-wrap: wrap; }
   .inspector-view-controls { flex-wrap: wrap; }

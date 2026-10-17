@@ -25,7 +25,7 @@
         </div>
         <div ref="welcomeActions" class="quick-actions main-project-actions">
           <UiButton class="new-project" variant="primary" icon="add" :disabled="state.busy" @click="creationOpen = true">{{ t('newProject') }}</UiButton>
-          <UiButton class="primary open-project" icon="folder" :disabled="state.busy" @click="chooseProject('open')">{{ t('openProject') }}</UiButton>
+          <UiButton class="open-project" icon="folder" :disabled="state.busy" @click="chooseProject('open')">{{ t('openProject') }}</UiButton>
           <UiButton v-if="state.currentSnapshot" icon="forward" :disabled="state.busy" @click="continueCurrentProject">{{ t('continueProject') }}</UiButton>
         </div>
         <details class="more-project-actions" data-ui-motion-disclosure><summary>{{ moreActionsLabel }}</summary><div class="quick-actions"><button :disabled="state.busy" @click="chooseProject('add')">{{ t('addExistingProject') }}</button>
@@ -37,22 +37,21 @@
 
       <Teleport to="body"><UiMotionTransition modal><UiDialog motion-owner="parent" v-if="creationOpen" class="creation-dialog" :title="t('newProject')" @close="closeCreation"><section class="creation-card">
         <p v-if="state.error" class="error" role="alert">{{ state.error }}</p>
-        <header><div><span>{{ t('newProject') }}</span><strong>{{ projectName || t('untitledProject') }}</strong></div><label>{{ t('projectName') }}<input v-model="projectName" maxlength="80" @keydown.enter="create"></label></header>
-        <label class="project-location"><span>{{ t('projectLocation') }}</span><input v-model.trim="projectLocation" maxlength="500" :aria-invalid="Boolean(pathError)"><small :class="{ 'path-error': pathError }">{{ pathError || t('projectFolderHint') }}</small></label>
-        <nav class="template-categories" role="tablist" :aria-label="t('templateCategories')">
-          <button v-for="category in categories" :key="category" :data-template-category="category" type="button" role="tab" :aria-selected="selectedCategory === category" :class="{ active: selectedCategory === category }" @click="selectCategory(category)">
-            <EditorIcon :name="categoryIcon[category]" /><strong>{{ categoryName(category) }}</strong><small>{{ templateCount(category) }}</small>
-          </button>
-        </nav>
-        <p class="category-description">{{ selectedCategory === 'all' ? libraryText.browse : categoryDescription(selectedCategory) }}</p>
-        <div class="template-library-tools">
-          <label><span>{{ t('searchTemplates') }}</span><input v-model.trim="templateQuery" type="search" :placeholder="t('searchTemplatesPlaceholder')"></label>
-          <label><span>{{ t('difficulty') }}</span><select v-model="templateDifficulty"><option value="all">{{ t('allDifficulties') }}</option><option value="beginner">{{ t('beginner') }}</option><option value="intermediate">{{ t('intermediate') }}</option><option value="advanced">{{ t('advanced') }}</option></select></label>
-          <label><span>{{ libraryText.sort }}</span><select v-model="templateSort"><option value="catalog">{{ libraryText.catalog }}</option><option value="newest">{{ libraryText.newest }}</option><option value="name">{{ t('name') }}</option><option value="time">{{ libraryText.quickest }}</option></select></label>
+        <div class="creation-browse">
+          <nav class="template-categories" role="tablist" :aria-label="t('templateCategories')">
+            <button v-for="category in categories" :key="category" :data-template-category="category" type="button" role="tab" :aria-selected="selectedCategory === category" :class="{ active: selectedCategory === category }" @click="selectCategory(category)">
+              <EditorIcon :name="categoryIcon[category]" /><strong>{{ categoryName(category) }}</strong><small>{{ templateCount(category) }}</small>
+            </button>
+          </nav>
+          <div class="template-library-tools">
+            <label class="template-search"><EditorIcon name="search" /><input v-model.trim="templateQuery" type="search" :aria-label="t('searchTemplates')" :placeholder="t('searchTemplatesPlaceholder')"></label>
+            <select v-model="templateDifficulty" :aria-label="t('difficulty')"><option value="all">{{ t('allDifficulties') }}</option><option value="beginner">{{ t('beginner') }}</option><option value="intermediate">{{ t('intermediate') }}</option><option value="advanced">{{ t('advanced') }}</option></select>
+            <select v-model="templateSort" :aria-label="libraryText.sort"><option value="catalog">{{ libraryText.catalog }}</option><option value="newest">{{ libraryText.newest }}</option><option value="name">{{ t('name') }}</option><option value="time">{{ libraryText.quickest }}</option></select>
+          </div>
         </div>
-        <div class="template-results"><span role="status" aria-live="polite">{{ libraryText.results.replace('{count}', String(visibleTemplates.length)).replace('{total}', String(templates.length)) }}</span><button type="button" @click="resetTemplateFilters">{{ libraryText.reset }}</button></div>
+        <div class="template-results"><span role="status" aria-live="polite">{{ selectedCategory === 'all' ? libraryText.browse : categoryDescription(selectedCategory) }} · {{ libraryText.results.replace('{count}', String(visibleTemplates.length)).replace('{total}', String(templates.length)) }}</span><button type="button" @click="resetTemplateFilters">{{ libraryText.reset }}</button></div>
         <div class="creation-library"><div class="template-grid">
-          <button v-for="template in visibleTemplates" :key="template.id" :data-template-id="template.id" :class="{ selected: selectedTemplate === template.id }" :aria-pressed="selectedTemplate === template.id" @click="selectedTemplate = template.id">
+          <button v-for="template in visibleTemplates" :key="template.id" :data-template-id="template.id" :class="{ selected: selectedTemplate === template.id }" :aria-pressed="selectedTemplate === template.id" @click="selectedTemplate = template.id" @dblclick="create">
             <span class="template-preview"><img :src="templatePreview(template.id)" :alt="`${libraryText.previewOf} ${templateName(template.id, template.name)}`" loading="lazy" width="640" height="360"><small>{{ libraryText.preview }}</small></span>
             <strong>{{ templateName(template.id, template.name) }}</strong>
             <small>{{ templateDescription(template.id, template.description) }}</small>
@@ -63,16 +62,27 @@
           <p v-if="!visibleTemplates.length" class="template-empty">{{ t('noMatchingTemplates') }}</p>
         </div>
         <section v-if="selectedTemplateRecord && selectedGuide" class="template-details" :aria-label="t('templateDetails')">
+          <img class="detail-preview" :src="templatePreview(selectedTemplateRecord.id)" alt="" width="640" height="360">
           <header><strong>{{ templateName(selectedTemplateRecord.id, selectedTemplateRecord.name) }}</strong><small>{{ t(selectedTemplateRecord.difficulty) }} · {{ t('setupMinutes', { count: selectedTemplateRecord.setupMinutes }) }}</small></header>
+          <p class="detail-description">{{ templateDescription(selectedTemplateRecord.id, selectedTemplateRecord.description) }}</p>
           <p class="selected-requirements">{{ selectedGuide.requirements.join(' · ') }}</p><p>{{ templateFeatures(selectedTemplateRecord.id, selectedTemplateRecord.features).join(' · ') }}</p><p v-if="selectedGuide.foundation" class="template-foundation">{{ libraryText.foundation }}: {{ templateName(selectedGuide.foundation, selectedGuide.foundation) }}</p>
           <div class="template-instructions"><section><h3>{{ libraryText.controls }}</h3><p>{{ selectedGuide.controls }}</p></section><section><h3>{{ libraryText.expected }}</h3><p>{{ selectedGuide.expected }}</p></section></div>
-          <nav class="template-help" :aria-label="t('documentation')"><button type="button" :aria-label="`${libraryText.guide}: ${templateName(selectedTemplateRecord.id, selectedTemplateRecord.name)}`" @click="openTemplateManual(selectedGuide.manualSection)">{{ libraryText.guide }}</button><button type="button" :aria-label="`${libraryText.task}: ${templateName(selectedTemplateRecord.id, selectedTemplateRecord.name)}`" @click="openTemplateManual(selectedGuide.taskSection)">{{ libraryText.task }}</button></nav>
+          <nav class="template-help" :aria-label="t('documentation')"><button type="button" :aria-label="`${libraryText.guide}: ${templateName(selectedTemplateRecord.id, selectedTemplateRecord.name)}`" @click="openTemplateManual(selectedGuide.manualSection)"><EditorIcon name="help" />{{ libraryText.guide }}</button><button type="button" :aria-label="`${libraryText.task}: ${templateName(selectedTemplateRecord.id, selectedTemplateRecord.name)}`" @click="openTemplateManual(selectedGuide.taskSection)"><EditorIcon name="learn" />{{ libraryText.task }}</button></nav>
           <small>{{ libraryText.captureHint }}</small>
         </section>
-        </div><p class="template-selection" aria-live="polite">{{ selectedTemplateRecord ? `${libraryText.selected}: ${templateName(selectedTemplateRecord.id, selectedTemplateRecord.name)}` : t('noMatchingTemplates') }}</p>
-        <UiButton class="create-button" variant="primary" icon="add" :disabled="state.busy || Boolean(pathError) || !projectName.trim() || !selectedTemplateRecord" :title="pathError" @click="create">{{ state.busy ? t('preparingProject') : t('createProject') }}</UiButton>
+        </div>
       </section>
-
+      <template #footer>
+        <!-- Name, location and the primary action stay pinned below the library at every window height. -->
+        <div class="creation-fields">
+          <label><span>{{ t('projectName') }}</span><input v-model="projectName" maxlength="80" @keydown.enter="create"></label>
+          <label class="project-location"><span>{{ t('projectLocation') }}</span><input v-model.trim="projectLocation" maxlength="500" :aria-invalid="Boolean(pathError)" :title="pathError || t('projectFolderHint')"></label>
+          <small class="location-hint" :class="{ 'path-error': pathError }">{{ pathError || t('projectFolderHint') }}</small>
+        </div>
+        <p class="template-selection" aria-live="polite">{{ selectedTemplateRecord ? `${libraryText.selected}: ${templateName(selectedTemplateRecord.id, selectedTemplateRecord.name)}` : t('noMatchingTemplates') }}</p>
+        <UiButton class="cancel-button" @click="closeCreation">{{ t('cancel') }}</UiButton>
+        <UiButton class="create-button" variant="primary" icon="add" :disabled="state.busy || Boolean(pathError) || !projectName.trim() || !selectedTemplateRecord" :title="pathError" @click="create">{{ state.busy ? t('preparingProject') : t('createProject') }}</UiButton>
+      </template>
       </UiDialog></UiMotionTransition></Teleport>
 
       <section class="recents-card">
@@ -243,48 +253,135 @@ const pathError = computed(/** 校验项目位置非空、无非法字符或父�
 
 <style scoped>
 .project-manager { height: 100%; min-height: 0; display: flex; flex-direction: column; background: var(--surface-app); color: var(--text-primary); overflow: auto; }
-.manager-header { display: flex; justify-content: space-between; align-items: center; gap: var(--ui-space-lg); padding: var(--ui-space-sm) var(--ui-launcher-inset); border-bottom: var(--ui-border-width) solid var(--border-separator); background: var(--surface-panel); flex: none; }
-.identity { display: flex; align-items: center; gap: var(--ui-space-sm); text-decoration: none; color: var(--text-primary); }
-.identity .nova-mark { color: var(--brand-accent); }
-.manager-header nav { display: flex; align-items: center; gap: var(--ui-space-sm); min-width: 0; flex-wrap: wrap; justify-content: flex-end; }
+.manager-header { display: flex; justify-content: space-between; align-items: center; gap: var(--space-4); min-height: var(--ui-titlebar-height); padding: 0 var(--space-3) 0 var(--space-4); border-bottom: var(--ui-border-width) solid var(--border-separator); background: var(--surface-1); flex: none; }
+.identity { display: flex; align-items: center; gap: var(--space-2); text-decoration: none; color: var(--text-primary); font-size: var(--type-section); }
+.identity:hover { text-decoration: none; }
+.manager-header nav { display: flex; align-items: center; gap: var(--space-2); min-width: 0; flex-wrap: wrap; justify-content: flex-end; }
 .manager-header select { width: auto; }
-.version { color: var(--text-muted); font-size: var(--type-caption); white-space: nowrap; }
-.manager-shell { width: min(var(--ui-launcher-width),100%); margin-inline: auto; display: grid; grid-template-columns: minmax(0,var(--ui-launcher-column)) minmax(0,1fr); gap: var(--ui-launcher-gap); padding: var(--ui-launcher-inset); flex: 1; align-content: start; }
-.welcome { min-width: 0; }
-.welcome-intro { position: relative; isolation: isolate; overflow: hidden; display: grid; gap: var(--ui-space-sm); padding: var(--ui-space-xl); border-radius: var(--radius-launch); background: var(--brand-gradient); }
+.manual-link { color: var(--text-secondary); }
+.version { padding: 0 var(--space-2); border-radius: var(--radius-pill); background: var(--surface-3); color: var(--text-muted); font-size: var(--type-caption); white-space: nowrap; }
+.manager-shell { width: min(1040px, 100%); margin-inline: auto; display: grid; grid-template-columns: minmax(0, 320px) minmax(0, 1fr); gap: var(--space-8); padding: clamp(var(--space-5), 6vh, var(--space-launch-large)) var(--space-6) var(--space-6); flex: 1; align-content: start; }
+.welcome { min-width: 0; display: flex; flex-direction: column; }
+.welcome-intro { position: relative; isolation: isolate; overflow: hidden; display: grid; gap: var(--space-2); padding: var(--space-6); border-radius: var(--radius-launch); background: var(--brand-gradient); box-shadow: inset 0 0 0 var(--ui-border-width) var(--border-separator), var(--shadow-sm); }
 .welcome-intro > :not(.welcome-motif) { position: relative; z-index: 1; }
-.welcome-brand { display: flex; align-items: center; gap: var(--ui-space-sm); margin-block-end: var(--ui-space-md); }
-.welcome-brand .nova-mark { inline-size: var(--ui-brand-hero-size); block-size: var(--ui-brand-hero-size); color: var(--brand-accent); }
+.welcome-brand { display: flex; align-items: center; gap: var(--space-3); margin-block-end: var(--space-2); }
+.welcome-brand .nova-mark { inline-size: var(--ui-brand-hero-size); block-size: var(--ui-brand-hero-size); border-radius: 10px; }
 .welcome-brand strong { font-family: var(--font-display); font-size: var(--type-page); }
 .welcome-eyebrow { color: var(--text-muted); font-size: var(--type-caption); }
-.welcome h1 { font-family: var(--font-display); font-size: var(--type-hero); font-weight: 600; line-height: var(--line-control); overflow-wrap: anywhere; text-wrap: balance; }
-.welcome-description { color: var(--text-secondary); font-size: var(--type-dense); line-height: var(--line-body); }
-.welcome-motif { position: absolute; z-index: 0; inset-block-start: 0; inset-inline-end: calc(-1 * var(--ui-space-xl)); inline-size: var(--ui-launcher-motif-size); block-size: var(--ui-launcher-motif-size); max-inline-size: 80%; opacity: var(--brand-motif-opacity); pointer-events: none; }
-.motif-grid { stroke: var(--brand-line); stroke-width: 1; opacity: var(--disabled-opacity); }
+.welcome h1 { font-family: var(--font-display); font-size: calc(26px * var(--ui-scale)); font-weight: var(--weight-strong); line-height: var(--line-hero); letter-spacing: -0.01em; overflow-wrap: anywhere; text-wrap: balance; }
+.welcome-description { color: var(--text-secondary); font-size: var(--type-body); line-height: var(--line-body); }
+.welcome-motif { position: absolute; z-index: 0; inset-block-start: calc(-1 * var(--space-3)); inset-inline-end: calc(-1 * var(--space-6)); inline-size: var(--ui-launcher-motif-size); block-size: var(--ui-launcher-motif-size); max-inline-size: 80%; opacity: var(--brand-motif-opacity); pointer-events: none; }
+.motif-grid { stroke: var(--brand-line); stroke-width: 1; opacity: .45; }
 .motif-vector { stroke: var(--brand-line); stroke-width: 1.5; }
 .motif-node { fill: var(--brand-accent); }
-.quick-actions { display: flex; flex-direction: column; gap: var(--ui-space-sm); margin-block: var(--ui-space-lg); }
+.quick-actions { display: flex; flex-direction: column; gap: var(--space-1); margin-block: var(--space-4) var(--space-3); }
 .quick-actions button { text-align: left; justify-content: flex-start; }
-.main-project-actions > button { min-height: var(--ui-standard-height); padding-inline: var(--ui-space-md); }
-.open-project { background: var(--surface-2); }
-.more-project-actions { padding-block-start: var(--ui-space-sm); border-top: var(--ui-border-width) solid var(--border-separator); }
-.more-project-actions > summary { color: var(--text-muted); font-size: var(--type-body); line-height: var(--line-body); }
-.recents-card { min-width: 0; padding-block-start: var(--ui-space-md); }
-.recents-card > header { display: flex; justify-content: space-between; gap: var(--ui-space-sm); align-items: center; flex-wrap: wrap; padding-block: var(--ui-space-sm) var(--ui-space-md); border-bottom: var(--ui-border-width) solid var(--border-separator); }
-.recents-card > header > div { display: flex; gap: var(--ui-space-sm); align-items: baseline; font-size: var(--type-section); }
-.recents-card > header > div > strong { font-size: var(--type-caption); color: var(--text-muted); }
+.main-project-actions > button { min-height: var(--control-launcher); padding-inline: var(--space-3); font-size: var(--type-body); }
+.main-project-actions > button:not(.new-project) { background: var(--surface-1); box-shadow: inset 0 0 0 var(--ui-border-width) var(--border-separator); }
+.main-project-actions > button:not(.new-project):hover:not(:disabled) { background: var(--surface-hover); }
+.more-project-actions { padding-block-start: var(--space-2); border-top: var(--ui-border-width) solid var(--border-separator); }
+.more-project-actions > summary { display: flex; align-items: center; color: var(--text-muted); font-size: var(--type-dense); font-weight: var(--weight-regular); }
+.more-project-actions > summary { list-style: none; gap: var(--space-2); }
+.more-project-actions > summary::-webkit-details-marker { display: none; }
+.more-project-actions > summary::before { content: ''; width: 5px; height: 5px; margin-inline: 3px 2px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; rotate: -45deg; transition: rotate var(--motion-fast) var(--ease-smooth); }
+.more-project-actions[open] > summary::before { rotate: 45deg; }
+.more-project-actions .quick-actions { margin-block: var(--space-1) 0; }
+.more-project-actions .quick-actions button { font-weight: var(--weight-regular); color: var(--text-secondary); }
+.recents-card { min-width: 0; display: flex; flex-direction: column; }
+.recents-card > header { display: flex; justify-content: space-between; gap: var(--space-2); align-items: baseline; flex-wrap: wrap; padding-block: var(--space-1) var(--space-3); }
+.recents-card > header > div { display: flex; gap: var(--space-2); align-items: baseline; font-size: var(--type-page); font-weight: var(--weight-strong); font-family: var(--font-display); }
+.recents-card > header > div > strong { min-width: 22px; padding: 0 7px; border-radius: var(--radius-pill); background: var(--surface-3); font-size: var(--type-caption); color: var(--text-muted); font-family: var(--font-ui); text-align: center; }
 .recents-card > header small { flex-basis: 100%; color: var(--text-muted); font-size: var(--type-caption); }
-.recent-list > article { display: flex; align-items: center; gap: var(--ui-space-sm); border-bottom: var(--ui-border-width) solid var(--border-separator); }
-.recent-main { flex: 1; min-width: 0; display: grid; grid-template-columns: var(--ui-standard-height) minmax(0,1fr) auto; gap: var(--ui-space-sm); align-items: center; text-align: left; padding: var(--ui-space-md) var(--ui-space-xs); border: 0; border-radius: var(--radius-control); background: transparent; }
-.recent-mark { display: grid; place-items: center; inline-size: var(--ui-standard-height); block-size: var(--ui-standard-height); color: var(--accent); background: var(--accent-soft); border-radius: var(--radius-control); font-weight: 600; }
-.recent-main strong,.recent-main small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.recent-main small,.recent-main em { color: var(--text-muted); font-size: var(--type-caption); font-style: normal; }
-.empty-recents { display: flex; align-items: flex-start; gap: var(--ui-space-md); padding: var(--ui-empty-inset) var(--ui-space-xs); color: var(--text-muted); font-size: var(--type-dense); }
-.empty-recents > .editor-icon { color: var(--accent); margin-block-start: var(--ui-space-micro); }
-.empty-recents p { max-inline-size: 44ch; overflow-wrap: anywhere; }
-.project-manager > footer { display: flex; justify-content: space-between; gap: var(--ui-space-lg); padding: var(--ui-space-sm) var(--ui-launcher-inset); border-top: var(--ui-border-width) solid var(--border-separator); font-size: var(--type-caption); color: var(--text-muted); }
+.recent-list { display: grid; gap: 2px; padding: var(--space-1); border-radius: var(--radius-lg); background: var(--surface-1); box-shadow: inset 0 0 0 var(--ui-border-width) var(--border-separator); }
+.recent-list > article { position: relative; display: flex; align-items: center; gap: var(--space-1); }
+.recent-main { flex: 1; min-width: 0; display: grid; grid-template-columns: calc(36px * var(--ui-scale)) minmax(0,1fr) auto; gap: var(--space-3); align-items: center; min-height: calc(52px * var(--ui-scale)); text-align: left; padding: var(--space-2) var(--space-3); border: 0; border-radius: var(--radius-md); background: transparent; font-weight: var(--weight-regular); }
+.recent-main:hover:not(:disabled) { background: var(--surface-hover); }
+.recent-mark { display: grid; place-items: center; inline-size: calc(36px * var(--ui-scale)); block-size: calc(36px * var(--ui-scale)); color: var(--accent-contrast); background: linear-gradient(150deg, color-mix(in srgb, var(--color-primary) 80%, white), var(--color-primary)); border-radius: 9px; font-weight: var(--weight-strong); box-shadow: var(--shadow-xs); }
+.recent-main strong, .recent-main small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.recent-main strong { font-weight: var(--weight-medium); }
+.recent-main small, .recent-main em { color: var(--text-muted); font-size: var(--type-caption); font-style: normal; }
+.recent-main em { padding: 2px var(--space-2); border-radius: var(--radius-pill); opacity: 0; transition: opacity var(--motion-micro) var(--ease-standard); }
+.recent-main:hover em, .recent-main:focus-visible em { opacity: 1; background: var(--accent-fill); color: var(--accent-contrast); }
+.remove-recent { color: var(--text-muted); opacity: 0; transition: opacity var(--motion-micro) var(--ease-standard); }
+.recent-list > article:hover .remove-recent, .remove-recent:focus-visible { opacity: 1; }
+.empty-recents { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-2); min-height: calc(220px * var(--ui-scale)); padding: var(--ui-empty-inset); border-radius: var(--radius-lg); border: 1px dashed var(--border-subtle); color: var(--text-muted); font-size: var(--type-body); text-align: center; }
+.empty-recents > .editor-icon { width: 28px; height: 28px; color: var(--text-tertiary); }
+.empty-recents p { max-inline-size: 40ch; overflow-wrap: anywhere; }
+.project-manager > footer { display: flex; justify-content: space-between; gap: var(--space-4); padding: var(--space-2) var(--space-4); border-top: var(--ui-border-width) solid var(--border-separator); font-size: var(--type-caption); color: var(--text-muted); }
 
-.creation-dialog :deep(.ui-dialog){width:min(120ch,100%);max-height:calc(100vh - var(--ui-space-xl))}.creation-card{min-width:0;display:grid;gap: var(--ui-field-gap);}.creation-card>header{display:grid;grid-template-columns:1fr 2fr;align-items:center;gap: var(--ui-field-gap);}.creation-card>header>div{display:none}.creation-card>header>label{grid-column:1/-1}.creation-card>header label,.project-location{display:grid;grid-template-columns:18ch minmax(0,1fr);align-items:center;gap:var(--ui-space-sm);column-gap: var(--space-4);row-gap: var(--ui-label-control-gap);}.project-location small{grid-column:2;color:var(--text-muted);font-size:var(--type-caption)}.template-categories{display:flex;gap:var(--ui-space-xs);overflow-x:auto;border-bottom:1px solid var(--border-subtle)}.template-categories button{display:flex;align-items:center;gap:var(--ui-icon-label-gap);flex:none;border-color:transparent;border-radius:var(--radius-xs) var(--radius-xs) 0 0;background:transparent}.template-categories small{color:var(--text-muted)}.category-description{font-size:var(--type-caption);color:var(--text-muted);margin:0}.template-library-tools{display:flex;align-items:center;flex-wrap:wrap;gap: var(--ui-control-gap);}.template-library-tools>label{display:flex;align-items:center;min-width:0;gap: var(--space-4);}.template-library-tools>label:first-child{flex:1 1 auto}.template-library-tools input{flex:1 1 auto;min-width:12ch;width:auto}.template-library-tools>label>span{flex:none;white-space:nowrap;font-size:var(--type-body);line-height:var(--line-body);color:var(--text-muted)}.template-results{display:flex;justify-content:space-between;align-items:center;font-size:var(--type-caption);color:var(--text-muted)}.creation-library{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(24ch,1fr);gap:var(--ui-space-lg);min-height:0}.template-grid{display:flex;flex-direction:column;max-height:40vh;overflow:auto;border-block:1px solid var(--border-subtle);gap: var(--space-2);}.template-grid>button{position:relative;display:grid;grid-template-columns:84px minmax(0,1fr);text-align:left;border:0;border-bottom:1px solid var(--border-subtle);background:transparent;flex:none;border-radius: var(--radius-control);padding: var(--space-3) var(--space-4);gap: var(--ui-control-gap);}.template-grid>button.selected{background:var(--selection-bg)}.template-preview{grid-row:1/4;align-self:center;display:block}.template-preview img{width:84px;height:auto;aspect-ratio:16/9;object-fit:cover;border-radius:var(--radius-xs)}.template-preview>small,.template-requirements,.feature-list{display:none}.template-grid>button>strong,.template-grid>button>small{min-width:0;white-space:normal}.template-grid>button>small{color:var(--text-muted);font-size:var(--type-caption)}.template-meta{display:flex;gap:var(--ui-space-sm);font-size:var(--type-caption);color:var(--text-muted)}.template-meta b{font-weight:500}.template-details{max-height:40vh;overflow:auto;padding-inline-start:var(--ui-space-sm);border-left:1px solid var(--border-subtle)}.template-details>header{display:grid;gap:var(--ui-control-gap);margin-block-end:var(--ui-space-sm)}.template-details small,.template-details p{font-size:var(--type-caption);color:var(--text-muted);overflow-wrap:anywhere}.template-instructions{display:grid;gap:var(--ui-space-sm);margin-block:var(--ui-space-md)}.template-instructions h3{font-size:var(--type-dense);margin-block-end:var(--ui-space-xs)}.template-help{display:flex;gap:var(--ui-space-xs);flex-wrap:wrap}.template-selection{margin:0;font-size:var(--type-caption);color:var(--text-muted)}.create-button{justify-self:end}.error,.path-error,.lock-warning{color:var(--danger)}.template-empty{padding:var(--ui-space-sm);color:var(--text-muted)}
-.upgrade-dialog{display:grid;gap:var(--ui-space-sm)}.upgrade-flow,.upgrade-stats{display:flex;gap:var(--ui-space-sm);flex-wrap:wrap;align-items:center}.compatibility-summary{display:grid;gap:var(--ui-space-xs)}.preflight>div{display:flex;gap:var(--ui-space-sm);align-items:center;border-bottom:1px solid var(--border-subtle)}.preflight p{display:grid;gap:var(--ui-space-xs)}.preflight small{color:var(--text-muted)}.preflight .passed{color:var(--success)}.preflight .blocked{color:var(--danger)}.preflight .warning{color:var(--warning)}.backup-choice{display:flex;gap:var(--ui-space-sm);align-items:center}.upgrade-dialog>footer{display:flex;justify-content:flex-end;gap:var(--ui-space-xs);flex-wrap:wrap}.read-only-dialog textarea{height:45vh;width:100%;font-family:var(--font-mono)}
-@media(max-width:720px){.manager-shell{grid-template-columns:minmax(0,1fr);gap:var(--ui-space-lg);padding:var(--ui-space-lg)}.manager-header,.project-manager>footer{padding-inline:var(--ui-space-lg)}.welcome-intro{padding:var(--ui-space-lg)}.main-project-actions{max-inline-size:var(--ui-launcher-column)}.recents-card{padding:0}.creation-library{grid-template-columns:minmax(0,1fr)}.template-details{border-left:0;max-height:30vh}.creation-card>header label,.project-location{grid-template-columns:minmax(0,1fr);column-gap: var(--space-4);row-gap: var(--ui-label-control-gap);}.project-location small{grid-column:1}.manager-header .version{display:none}}
+/* New Project: browse on top, the decision (name, location, Create) pinned in the footer. */
+.creation-dialog :deep(.ui-dialog) { width: min(1100px, 100%); height: min(780px, calc(100dvh - 2 * var(--space-5))); max-height: none; }
+.creation-dialog :deep(.ui-dialog-body) { flex: 1; display: flex; padding: 0; overflow: hidden; }
+.creation-dialog :deep(.ui-dialog-footer) { justify-content: flex-start; flex-wrap: wrap; gap: var(--space-2) var(--space-3); padding-block: var(--space-3); }
+.creation-card { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-3) var(--ui-dialog-inset) 0; }
+.creation-browse { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+.template-categories { display: flex; gap: 2px; padding: 2px; border-radius: calc(var(--radius-control) + 2px); background: var(--surface-inset); overflow-x: auto; scrollbar-width: none; flex: none; }
+.template-categories button { display: flex; align-items: center; gap: var(--space-2); flex: none; min-height: calc(var(--ui-control-height) - 2px); padding-inline: var(--space-3); border: 0; border-radius: var(--radius-control); background: transparent; color: var(--text-muted); }
+.template-categories button strong { font-weight: var(--weight-medium); }
+.template-categories button.active { background: var(--surface-raised); color: var(--text-primary); box-shadow: var(--shadow-xs); }
+.template-categories small { color: var(--text-tertiary); font-size: var(--type-caption); font-variant-numeric: tabular-nums; }
+.template-categories .editor-icon { width: 14px; height: 14px; }
+.template-library-tools { display: flex; align-items: center; flex: 1 1 320px; min-width: 0; gap: var(--space-1); }
+.template-search { position: relative; flex: 1 1 auto; min-width: 12ch; display: flex; align-items: center; }
+.template-search > .editor-icon { position: absolute; inset-inline-start: var(--space-2); width: 14px; height: 14px; color: var(--text-tertiary); }
+.template-search input { width: 100%; padding-inline-start: calc(var(--space-2) + 20px); }
+.template-library-tools select { width: auto; flex: none; }
+.template-results { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); font-size: var(--type-caption); color: var(--text-muted); }
+.template-results > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.template-results button { min-height: 0; padding: var(--space-0) var(--space-2); font-size: var(--type-caption); color: var(--accent); }
+.creation-library { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(28ch, 1fr); gap: var(--space-4); }
+.template-grid { min-height: 0; display: flex; flex-direction: column; gap: 2px; overflow: auto; padding: 2px var(--space-1) var(--space-3) 2px; }
+.template-grid > button { position: relative; display: grid; grid-template-columns: 96px minmax(0,1fr); column-gap: var(--space-3); row-gap: 2px; text-align: left; padding: var(--space-2); border: 0; border-radius: var(--radius-md); background: transparent; flex: none; font-weight: var(--weight-regular); }
+.template-grid > button:hover:not(.selected) { background: var(--surface-hover); }
+.template-grid > button.selected { background: var(--selection-bg); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-primary) 50%, transparent); }
+.template-preview { grid-row: 1 / 4; align-self: center; display: block; }
+.template-preview img { display: block; width: 96px; height: auto; aspect-ratio: 16/9; object-fit: cover; border-radius: var(--radius-sm); background: var(--bg-canvas); box-shadow: inset 0 0 0 1px var(--border-separator); }
+.template-preview > small, .template-requirements, .feature-list { display: none; }
+.template-grid > button > strong, .template-grid > button > small { min-width: 0; white-space: normal; }
+.template-grid > button > strong { font-weight: var(--weight-medium); }
+.template-grid > button > small { color: var(--text-muted); font-size: var(--type-caption); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.template-meta { display: flex; gap: var(--space-2); font-size: var(--type-caption); color: var(--text-tertiary); }
+.template-meta b { font-weight: var(--weight-medium); color: var(--text-muted); }
+.template-details { min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: var(--space-2); padding: 0 var(--space-1) var(--space-3) var(--space-4); border-left: var(--ui-border-width) solid var(--border-separator); }
+.detail-preview { width: 100%; height: auto; aspect-ratio: 16/9; object-fit: cover; border-radius: var(--radius-md); background: var(--bg-canvas); box-shadow: inset 0 0 0 1px var(--border-separator), var(--shadow-xs); }
+.template-details > header { display: grid; gap: 2px; }
+.template-details > header strong { font-size: var(--type-section); }
+.template-details small, .template-details p { font-size: var(--type-caption); color: var(--text-muted); overflow-wrap: anywhere; }
+.template-details .detail-description { font-size: var(--type-body); color: var(--text-secondary); }
+.template-instructions { display: grid; gap: var(--space-2); }
+.template-instructions h3 { font-size: var(--type-dense); margin-block-end: 2px; color: var(--text-primary); }
+.template-help { display: flex; gap: var(--space-1); flex-wrap: wrap; }
+.template-help button { display: inline-flex; align-items: center; gap: var(--space-1); color: var(--accent); }
+.creation-fields { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 2px var(--space-3); flex: 1 1 520px; min-width: 0; }
+.creation-fields > label { display: flex; align-items: center; gap: var(--space-2); min-width: 0; color: var(--text-secondary); white-space: nowrap; }
+.creation-fields input { flex: 1; width: auto; min-width: 0; }
+.location-hint { grid-column: 2; color: var(--text-muted); font-size: var(--type-caption); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.template-selection { display: none; }
+.cancel-button { margin-inline-start: auto; }
+.create-button { min-width: calc(140px * var(--ui-scale)); }
+.error, .path-error, .lock-warning { color: var(--danger); }
+.template-empty { padding: var(--space-3); color: var(--text-muted); }
+
+.upgrade-dialog { display: grid; gap: var(--space-3); }
+.upgrade-flow, .upgrade-stats { display: flex; gap: var(--space-2); flex-wrap: wrap; align-items: center; }
+.compatibility-summary { display: grid; gap: var(--space-1); }
+.preflight > div { display: flex; gap: var(--space-2); align-items: center; padding-block: var(--space-1); border-bottom: var(--ui-border-width) solid var(--border-separator); }
+.preflight p { display: grid; gap: 2px; }
+.preflight small { color: var(--text-muted); }
+.preflight .passed { color: var(--success); }
+.preflight .blocked { color: var(--danger); }
+.preflight .warning { color: var(--warning); }
+.backup-choice { display: flex; gap: var(--space-2); align-items: center; }
+.upgrade-dialog > footer { display: flex; justify-content: flex-end; gap: var(--space-1); flex-wrap: wrap; }
+.read-only-dialog textarea { height: 45vh; width: 100%; font-family: var(--font-mono); }
+
+@media (max-width: 860px) {
+  .manager-shell { grid-template-columns: minmax(0, 1fr); gap: var(--space-5); padding: var(--space-5); }
+  .main-project-actions { max-inline-size: 360px; }
+  .creation-library { grid-template-columns: minmax(0, 1fr); }
+  .template-details { display: none; }
+  .creation-fields { grid-template-columns: minmax(0, 1fr); }
+  .location-hint { grid-column: 1; }
+  .manager-header .version { display: none; }
+}
 </style>

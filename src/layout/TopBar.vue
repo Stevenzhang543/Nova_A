@@ -1,6 +1,6 @@
 <!-- 顶部菜单栏：执行项目和编辑命令，管理短暂弹出菜单、焦点及全局快捷键。 -->
 <template>
-  <header ref="topBar" class="top-bar" :style="{ '--menu-left': `${menuLeft}px` }">
+  <header ref="topBar" class="top-bar" :data-play-mode="physicsState.playMode" :style="{ '--menu-left': `${menuLeft}px` }">
     <a class="brand" href="https://whitelists.top" target="_blank" rel="noreferrer" aria-label="Nova_A by Whitelist">
       <NovaMark /><span>Nova_A</span>
     </a>
@@ -30,7 +30,7 @@
 
       </div>
       <div class="menu-item menu-popover-host">
-        <Transition name="menu" mode="out-in" @enter="positionMenu" @before-leave="deactivateMenu">
+        <Transition name="menu" @enter="positionMenu" @before-leave="deactivateMenu">
           <div v-if="activeMenu === 'file'" :key="'file'" class="dropdown">
           <button :disabled="!isEditing" @click="handleProjectManager"><span>{{ t('projectManager') }}</span></button>
           <hr>
@@ -79,7 +79,7 @@
           <button @click="handleShortcutEditor"><span>{{ t('shortcutEditor') }}</span><kbd>{{ shortcutLabel('shortcutEditor') }}</kbd></button>
         </div>
           <div v-else-if="activeMenu === 'help'" :key="'help'" class="dropdown dropdown-right">
-          <button @click="handleManual"><span>{{ t('manual') }}</span><kbd>5.0 · {{ t('offline') }}</kbd></button>
+          <button @click="handleManual"><span>{{ t('manual') }}</span><kbd>{{ t('offline') }}</kbd></button>
           <button @click="handleManualSection('first-game')"><span>{{ t('firstGameTutorial') }}</span></button>
           <button @click="handleManualSection('package-sdk')"><span>{{ t('packageSdk') }}</span></button>
           <button @click="handleManualSection('release-engineering')"><span>{{ t('releaseEngineeringGuide') }}</span></button>
@@ -89,18 +89,23 @@
         </Transition>
       </div>
     </nav>
-    <div class="top-spacer"></div>
-    <!-- 播放控制属于全局运行状态，放在顶栏右侧；控制行因此只承担工作区导航。 -->
+    <!-- One title bar: menus, the workspace switcher, then the document's state and the run controls. -->
+    <WorkspaceBar section="switcher" class="top-workspaces" />
+    <div class="project-chip" :class="{ dirty: projectDirty }" role="status" :title="projectDirty ? `${t('unsavedChanges')} · ${projectTransactionState.unsavedScopes.join(', ')}` : t('saved')">
+      <span v-if="recoveryState.safeMode" class="safe-pill">{{ t('safeMode') }}</span>
+      <strong>{{ projectSessionState.name }}</strong>
+      <span class="project-state"><i aria-hidden="true"></i>{{ projectDirty ? t('editedState') : t('savedState') }}</span>
+    </div>
     <ActionBar />
-    <span v-if="recoveryState.safeMode" class="safe-pill">{{ t('safeMode') }}</span>
-    <span v-if="historyState.dirty" class="dirty-pill" :title="projectTransactionState.unsavedScopes.join(', ')">{{ t('unsavedChanges') }}</span>
-    <span class="release-pill">{{ NOVA_RELEASE_NAME }}</span>
+    <WorkspaceBar section="tools" class="top-tools" />
     <input ref="fileInput" type="file" hidden accept="application/json,.nova,.json" @change="handleFileSelected">
   </header>
 </template>
 
 <script setup lang="ts">
 import ActionBar from '../components/ActionBar.vue'
+import WorkspaceBar from '../components/WorkspaceBar.vue'
+import { projectSessionState } from '../projects/projectSession'
 import EditorIcon from '../components/EditorIcon.vue'
 import NovaMark from '../ui/components/NovaMark.vue'
 import { installTransientPopover } from '../editor/transientPopover'
@@ -120,7 +125,6 @@ import { recoveryState } from '../runtime/recovery'
 import { completeTask, failTask, startTask } from '../runtime/editorFeedback'
 import { toggleEditorFullscreen } from '../runtime/editorWindow'
 import { projectTransactionState } from '../runtime/projectTransactions'
-import { NOVA_RELEASE_NAME } from '../projects/projectFormat'
 
 const activeMenu = ref<string | null>(null)
 const topBar = ref<HTMLElement | null>(null)
@@ -128,6 +132,8 @@ const menuLeft = ref(0)
 const fileInput = ref<HTMLInputElement | null>(null)
 let disposeMenu: (() => void) | undefined
 const projectUrl = 'https://github.com/Stevenzhang543/Nova_A/'
+// The title shows one truth for unsaved work: document history or any unsaved project scope.
+const projectDirty = computed(() => historyState.dirty || projectTransactionState.unsavedScopes.length > 0)
 const isEditing = computed(/** 只有编辑模式且非只读恢复会话才允许项目编辑。 */ () => physicsState.playMode === 'editing' && !recoveryState.readOnly)
 
 /** 按偏好决定直接允许或显示破坏性确认对话框。 */ function confirmDestructive(title: string, message: string): Promise<boolean> {
@@ -214,7 +220,6 @@ const isEditing = computed(/** 只有编辑模式且非只读恢复会话才允�
   const reader = new FileReader()
   reader.onload = /** 文件文本打开成功后记录历史及载入状态日志。 */ async event => {
     if (typeof event.target?.result === 'string' && await openProjectDocument(event.target.result, file.name)) {
-      pushHistory()
       editorState.statusText = t('loaded')
       addEditorLog(t('loaded'), 'Project')
     }
@@ -253,7 +258,45 @@ onUnmounted(/** 卸载时移除键盘和尺寸监听并释放弹出菜单行为�
 </script>
 
 <style scoped>
-.top-bar{min-height:var(--ui-control-height);display:flex;align-items:center;gap:var(--ui-space-sm);padding-inline:var(--ui-space-sm);border-bottom:1px solid var(--border-subtle);background:var(--surface-1);position:relative;z-index:600;flex:none}.brand{display:flex;gap:var(--ui-space-xs);align-items:center;color:var(--text-primary);text-decoration:none;font-weight:600;white-space:nowrap}.menu-container{display:flex;min-width:0;overflow-x:auto}.menu-item{flex:none}.menu-item>button{border-color:transparent;background:transparent}.top-spacer{flex:1}.release-pill,.safe-pill,.dirty-pill{font-size:var(--type-caption);white-space:nowrap;color:var(--text-muted)}.dirty-pill{color:var(--warning)}.safe-pill{color:var(--danger)}
-.dropdown{position:fixed;top:calc(var(--ui-control-height) + 1px);left:var(--menu-left);z-index:650;display:flex;flex-direction:column;min-width:26ch;overflow:auto;border:1px solid var(--border-strong);background:var(--surface-popover);box-shadow:var(--shadow-md);padding:var(--space-3);border-radius:var(--radius-floating);max-width:min(54ch,calc(100vw - 2 * var(--ui-panel-inset)));max-height:calc(100vh - var(--ui-control-height) - var(--ui-panel-inset))}.dropdown button{display:flex;justify-content:space-between;gap:var(--ui-space-lg);text-align:left;border-color:transparent;background:transparent}.dropdown kbd{color:var(--text-muted);font-size:var(--type-caption);margin-inline-start:auto}.dropdown hr{inline-size:100%;border:0;border-top:1px solid var(--border-subtle);margin-block:var(--ui-space-xs)}.danger{color:var(--danger)}
-@media(max-width:900px){.release-pill{display:none}.brand>span:last-child{display:none}}
+.top-bar{
+  position:relative;z-index:600;flex:none;min-width:0;height:var(--ui-titlebar-height);
+  display:flex;align-items:center;gap:var(--space-1);padding-inline:var(--space-2) var(--space-2);
+  background:var(--surface-1);border-bottom:var(--ui-border-width) solid var(--border-separator);
+}
+.brand{display:flex;gap:var(--space-2);align-items:center;flex:none;height:var(--ui-control-height);padding-inline:var(--space-1) var(--space-2);border-radius:var(--radius-control);color:var(--text-primary);text-decoration:none;font-weight:var(--weight-strong);font-size:var(--type-section);white-space:nowrap}
+.brand:hover{background:var(--surface-hover);text-decoration:none}
+.menu-container{display:flex;flex:none;min-width:0;gap:1px}
+.menu-item{flex:none}
+.menu-item>button{min-height:calc(var(--ui-control-height) - 2px);padding-inline:var(--space-2);border-color:transparent;background:transparent;font-weight:var(--weight-regular);color:var(--text-secondary)}
+.menu-item>button:hover,.menu-item>button.active{color:var(--text-primary)}
+.menu-item>button.active{background:var(--surface-pressed)}
+.top-workspaces{flex:1 1 auto;min-width:0;justify-content:center}
+.project-chip{display:flex;align-items:center;gap:var(--space-2);flex:0 1 auto;min-width:0;max-width:22ch;padding-inline:var(--space-2);font-size:var(--type-dense)}
+.project-chip strong{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:var(--weight-medium)}
+.project-state{display:inline-flex;align-items:center;gap:var(--space-1);flex:none;color:var(--text-muted);font-size:var(--type-caption)}
+.project-state i{inline-size:6px;block-size:6px;border-radius:50%;background:var(--success);transition:background-color var(--motion-fast) var(--ease-standard)}
+.project-chip.dirty .project-state{color:var(--warning)}
+.project-chip.dirty .project-state i{background:var(--warning)}
+.safe-pill{flex:none;padding:0 var(--space-2);border-radius:var(--radius-pill);color:var(--danger);background:var(--danger-soft);font-size:var(--type-caption)}
+.top-tools{flex:none}
+.dropdown{
+  position:fixed;top:calc(var(--ui-titlebar-height) - 2px);left:var(--menu-left);z-index:650;display:flex;flex-direction:column;gap:1px;
+  min-width:30ch;overflow:auto;padding:var(--space-1);border:var(--ui-border-width) solid var(--border-subtle);border-radius:var(--radius-floating);
+  background:var(--surface-popover);box-shadow:var(--shadow-md),var(--hairline-highlight);
+  max-width:min(54ch,calc(100vw - 2 * var(--ui-panel-inset)));max-height:calc(100vh - var(--ui-titlebar-height) - var(--ui-panel-inset));
+}
+.dropdown button{display:flex;align-items:center;justify-content:space-between;gap:var(--space-5);min-height:calc(var(--ui-control-height) - 4px);padding-block:0;text-align:left;border-color:transparent;border-radius:var(--radius-xs);background:transparent;font-weight:var(--weight-regular)}
+.dropdown button:hover:not(:disabled){background:var(--accent-fill);color:var(--accent-contrast)}
+.dropdown button:hover:not(:disabled) kbd,.dropdown button:hover:not(:disabled) .editor-icon{color:inherit}
+.dropdown kbd{color:var(--text-muted);font-size:var(--type-caption);margin-inline-start:auto}
+.dropdown hr{inline-size:calc(100% - 2 * var(--space-2));margin:var(--space-1) auto;border:0;border-top:var(--ui-border-width) solid var(--border-separator)}
+.danger{color:var(--danger)}
+/* Menus open at once with a short settle and close faster than they open; switching menus never waits. */
+.menu-enter-active{transition:opacity var(--motion-micro) var(--ease-standard),translate var(--motion-fast) var(--ease-smooth)}
+.menu-leave-active{transition:opacity 90ms var(--ease-exit);pointer-events:none}
+.menu-enter-from{opacity:0;translate:0 -4px}
+.menu-leave-to{opacity:0}
+@media(max-width:1280px){.project-chip strong{display:none}}
+@media(max-width:1180px){.project-chip{display:none}.brand>span:last-child{display:none}}
+@media(max-width:900px){.menu-item>button{padding-inline:var(--space-1)}}
 </style>

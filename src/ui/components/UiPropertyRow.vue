@@ -17,7 +17,7 @@ export default defineComponent({
   setup(props, { slots }) {
     provide('ui-property-label', computed(() => props.label))
     return () => h('div', { class: ['ui-property-row', { 'ui-property-row--stacked': props.stacked }], role: 'group', 'aria-label': props.label }, [
-      h('span', { class: 'ui-property-label', title: props.help }, [slots.label?.() ?? props.label, props.unit ? h('small', props.unit) : null]),
+      h('span', { class: 'ui-property-label', title: props.help }, [slots.label?.() ?? props.label, props.unit && !props.label.includes('(') ? h('small', props.unit) : null]),
       h('div', { class: 'ui-property-control' }, [...nameControls(slots.default?.() ?? [], props.label), props.help ? h('small', { class: 'ui-property-help' }, props.help) : null]),
       slots.details?.(),
     ])
