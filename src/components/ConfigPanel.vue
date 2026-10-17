@@ -240,8 +240,20 @@
             <strong class="signal-name">{{ signal.id }}</strong>
             <small class="signal-scope">{{ signal.scope }}</small>
             <span v-if="signal.params.length" class="signal-params">{{ signal.params.map(/* 参数以 名:类型 展示，不依赖翻译。 */ param => param.id + ': ' + param.type).join(', ') }}</span>
+            <button class="secondary-action signal-connect" :data-connect-signal="signal.id" @click="openSignalConnect(signal.id)">{{ t('addConnection') }}</button>
           </article>
         </InspectorSection>
+
+        <UiDialog :open="signalConnectOpen" :title="t('connections')" dismiss-on-backdrop @close="signalConnectOpen = false">
+          <label class="signal-connect-field"><span>{{ t('signals') }}</span><input :value="signalConnectSignal" readonly></label>
+          <label class="signal-connect-field"><span>{{ t('selectedObject') }}</span>
+            <select v-model="signalConnectTarget" :aria-label="t('selectedObject')">
+              <option v-for="entity in signalTargets" :key="entity.uuid" :value="entity.uuid">{{ entity.name }}</option>
+            </select>
+          </label>
+          <label class="signal-connect-field"><span>{{ t('callbackFunction') }}</span><input v-model.trim="signalConnectCallback" :placeholder="t('callbackFunction')"></label>
+          <UiButton class="primary" :disabled="!signalConnectTarget || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(signalConnectCallback)" @click="commitSignalConnect">{{ t('addConnection') }}</UiButton>
+        </UiDialog>
 
         <InspectorSection v-if="selectedEntity.hasComponent('ShapeRenderer2D') && !selectedEntity.hasComponent('RectTransform')" :title="t('shapeSize')" category="render">
           <PropertyRow :label="t('absoluteSize')"><div class="pair"><NumericExpressionInput v-model="absoluteSizeX" :minimum="0.000001" :step="0.1" :resource-key="numericResourceKey + ':absoluteSizeX'" /><NumericExpressionInput v-model="absoluteSizeY" :minimum="0.000001" :step="0.1" :resource-key="numericResourceKey + ':absoluteSizeY'" /></div></PropertyRow>
@@ -375,6 +387,7 @@ import EditorIcon from './EditorIcon.vue'
 import PathTextInput from './PathTextInput.vue'
 import type {ParsedPathText} from '../editor/pathTextDraft'
 import { signalsForEntity } from '../world/componentSignals'
+import { addNodeSignalConnection, type ScriptAssetLike } from '../editor/signalConnections'
 import {settleEditorDrafts} from '../editor/pendingDrafts'
 import ObjectOwnershipPanel from './ObjectOwnershipPanel.vue'
 import ObjectBlueprintEditor from './ObjectBlueprintEditor.vue'
@@ -603,6 +616,40 @@ const nodeSignals = computed(/** 汇总节点组件对应的信号目录项。 *
   const entity = selectedEntity.value
   return entity ? signalsForEntity([...entity.componentMap.keys()]) : []
 })
+
+/** 可作为信号接收方的节点：必须挂接脚本资源，回调才能在运行时被调用。 */
+const signalTargets = computed(/** 只列出拥有脚本资源的实体。 */ () => state.world.entities.filter(entity => Boolean(entity.script2D?.scriptAsset)))
+const signalConnectOpen = ref(false)
+const signalConnectSignal = ref('')
+const signalConnectTarget = ref('')
+const signalConnectCallback = ref('on_signal')
+
+/** 打开某条信号的连接对话框，默认接收方取第一个拥有脚本的节点。 */
+function openSignalConnect(signalId: string): void {
+  signalConnectSignal.value = signalId
+  signalConnectTarget.value = signalTargets.value[0]?.uuid ?? ''
+  signalConnectCallback.value = 'on_signal'
+  signalConnectOpen.value = true
+}
+
+/** 把连接写入**接收方**脚本资源并记录历史；复用运行时既有的 signalConnections，不新建派发模型。 */
+function commitSignalConnect(): void {
+  const source = selectedEntity.value
+  const target = state.world.entities.find(/** 按 uuid 找到接收方。 */ entity => entity.uuid === signalConnectTarget.value)
+  const uuid = target?.script2D?.scriptAsset ? assetGuid(target.script2D.scriptAsset) : null
+  const record = uuid ? assetState.records.find(/** 按身份找到脚本资源。 */ candidate => candidate.uuid === uuid) : undefined
+  if (!source || !target || !record) return
+  const rejected = addNodeSignalConnection(record as unknown as ScriptAssetLike, {
+    signal: signalConnectSignal.value,
+    source: source.uuid,
+    target: target.uuid,
+    callback: signalConnectCallback.value,
+  })
+  // 非法输入由按钮禁用拦截；此处只可能是重复连接，已存在即无需再建。
+  if (rejected) return
+  pushHistory('Connect signal')
+  signalConnectOpen.value = false
+}
 
 const filteredAddableComponents = computed(/** 按组件名、类型和分类标签筛选可添加组件。 */ () => {
   const needle = componentSearch.value.trim().toLocaleLowerCase()

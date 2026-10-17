@@ -86,6 +86,21 @@ await withBrowserAudit({ release, name: 'w1-character-authoring', width: 1600, h
     a.observations.push({ id: 'w1-signals', listed })
   })
 
+  await a.check('The signals section opens a connection dialog for the chosen signal', async () => {
+    await u.entity('Hero'); await u.expandInspector()
+    await a.until("!!document.querySelector('[data-connect-signal=\"area.entered\"]')", 15000)
+    await a.click('[data-connect-signal="area.entered"]')
+    await a.until("!!document.querySelector('.ui-dialog')", 10000)
+
+    const dialog = await a.evaluate("(()=>{const d=document.querySelector('.ui-dialog');const input=d?.querySelector('input[readonly]');const confirm=d?.querySelector('button.primary');return {signal: input?.value ?? null, disabled: confirm?.disabled ?? null, selects: d?.querySelectorAll('select').length ?? 0}})()")
+    assert.equal(dialog.signal, 'area.entered', 'the dialog must carry the chosen signal, saw ' + String(dialog.signal))
+    assert.ok(dialog.selects >= 1, 'the dialog must offer a receiver selection')
+    // 空场景里还没有挂脚本的节点，因此确认按钮必须保持禁用，而不是允许建立一条无法执行的连接。
+    assert.equal(dialog.disabled, true, 'confirm must stay disabled while no receiver with a script exists')
+    await a.press('Escape')
+    a.observations.push({ id: 'w1-signal-dialog', ...dialog })
+  })
+
   await a.check('Configure a movement action through the visible Input Map panel', async () => {
     await a.press('P', 10) // Ctrl+Shift+P 打开命令面板
     await a.until("!!document.querySelector('.command-palette')", 15000)
