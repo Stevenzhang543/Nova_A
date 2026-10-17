@@ -39,7 +39,7 @@ import { applyEditorWorkspace, navigateHistory, openEditorTool, openManageSectio
 import { pluginRuntime, pluginState } from '../runtime/plugins'
 import { assetState } from '../assets/AssetDatabase'
 import { copySelectedEntities, deleteSelected, duplicateSelectedEntities, historyState, pasteEntities, physicsState, pushHistory, redo, saveProject, sceneManager, selectEntities, setActiveScene, undo } from '../store/physics'
-import { shortcutMatches, shortcutState } from '../editor/shortcuts'
+import { shortcutLabel, shortcutMatches, shortcutState } from '../editor/shortcuts'
 import { toggleEditorFullscreen } from '../runtime/editorWindow'
 import { preferencesState } from '../store/preferences'
 import { requestConfirmation } from '../store/dialog'
@@ -132,15 +132,15 @@ const toolCommand = /** 构造打开指定底部工具的命令描述。 */ (tab
 })
 const commands = computed<EditorCommand[]>(/** 组装编辑、运行、工作区、资源、场景、实体、设置、控件与插件命令列表。 */ () => [
   { id: 'create-object', label: 'createObject', group: 'edit', icon: '＋', keywords: 'add create object sprite camera text collider script light', shortcut: 'Shift+A', run: /** 打开对象创建面板。 */ () => { state.createObjectPaletteOpen = true } },
-  { id: 'project-save', label: 'saveProject', group: 'file', icon: 'SV', keywords: 'save atomic project file', shortcut: 'Ctrl+S', run: /** 异步启动项目保存命令。 */ () => { void saveFromPalette() } },
+  { id: 'project-save', label: 'saveProject', group: 'file', icon: 'SV', keywords: 'save atomic project file', shortcut: shortcutLabel('saveProject', 'inline'), run: /** 异步启动项目保存命令。 */ () => { void saveFromPalette() } },
   { id: 'project-validate', label: 'validateProject', group: 'file', icon: '✓', keywords: 'validate project format references schema repair', run: validateFromPalette },
   { id: 'project-repair', label: 'repairProject', group: 'file', icon: '↺', keywords: 'repair project format schema dependencies backup rollback', run: /** 异步启动项目修复命令。 */ () => { void repairFromPalette() } },
-  { id: 'edit-undo', label: 'undo', group: 'edit', icon: '↶', keywords: 'undo history transaction', shortcut: 'Ctrl+Z', run: /** 仅在编辑模式且可撤销时执行撤销。 */ () => { if (isEditing.value && historyState.canUndo) undo() } },
-  { id: 'edit-redo', label: 'redo', group: 'edit', icon: '↷', keywords: 'redo history transaction', shortcut: 'Ctrl+Y', run: /** 仅在编辑模式且可重做时执行重做。 */ () => { if (isEditing.value && historyState.canRedo) redo() } },
-  { id: 'edit-copy', label: 'copy', group: 'edit', icon: 'CP', keywords: 'copy selected objects entities', shortcut: 'Ctrl+C', run: /** 复制已选实体。 */ () => { copySelectedEntities() } },
-  { id: 'edit-paste', label: 'paste', group: 'edit', icon: 'PS', keywords: 'paste copied objects entities', shortcut: 'Ctrl+V', run: /** 仅在编辑模式粘贴实体。 */ () => { if (isEditing.value) pasteEntities() } },
-  { id: 'edit-duplicate', label: 'duplicate', group: 'edit', icon: 'D+', keywords: 'duplicate selected objects entities', shortcut: 'Ctrl+D', run: /** 仅在编辑模式复制出已选实体副本。 */ () => { if (isEditing.value) duplicateSelectedEntities() } },
-  { id: 'edit-delete', label: 'deleteSelected', group: 'edit', icon: '⌫', keywords: 'delete selected objects entities', shortcut: 'Delete', run: /** 异步启动删除选择命令。 */ () => { void deleteFromPalette() } },
+  { id: 'edit-undo', label: 'undo', group: 'edit', icon: '↶', keywords: 'undo history transaction', shortcut: shortcutLabel('undo', 'inline'), run: /** 仅在编辑模式且可撤销时执行撤销。 */ () => { if (isEditing.value && historyState.canUndo) undo() } },
+  { id: 'edit-redo', label: 'redo', group: 'edit', icon: '↷', keywords: 'redo history transaction', shortcut: shortcutLabel('redo', 'inline'), run: /** 仅在编辑模式且可重做时执行重做。 */ () => { if (isEditing.value && historyState.canRedo) redo() } },
+  { id: 'edit-copy', label: 'copy', group: 'edit', icon: 'CP', keywords: 'copy selected objects entities', shortcut: shortcutLabel('copySelection', 'inline'), run: /** 复制已选实体。 */ () => { copySelectedEntities() } },
+  { id: 'edit-paste', label: 'paste', group: 'edit', icon: 'PS', keywords: 'paste copied objects entities', shortcut: shortcutLabel('pasteSelection', 'inline'), run: /** 仅在编辑模式粘贴实体。 */ () => { if (isEditing.value) pasteEntities() } },
+  { id: 'edit-duplicate', label: 'duplicate', group: 'edit', icon: 'D+', keywords: 'duplicate selected objects entities', shortcut: shortcutLabel('duplicateSelection', 'inline'), run: /** 仅在编辑模式复制出已选实体副本。 */ () => { if (isEditing.value) duplicateSelectedEntities() } },
+  { id: 'edit-delete', label: 'deleteSelected', group: 'edit', icon: '⌫', keywords: 'delete selected objects entities', shortcut: shortcutLabel('deleteSelection', 'inline'), run: /** 异步启动删除选择命令。 */ () => { void deleteFromPalette() } },
   { id: 'runtime-play', label: 'play', group: 'runtime', icon: '▶', keywords: 'play run game physics simulation', run: /** 异步启动仿真命令。 */ () => { void playFromPalette() } },
   { id: 'runtime-stop', label: 'stop', group: 'runtime', icon: '■', keywords: 'stop game physics simulation restore', run: stopFromPalette },
   workspaceCommand('design', 'workspaceDesign', '◇'), workspaceCommand('script', 'workspaceScript', '</>'), workspaceCommand('animation', 'workspaceAnimation', '◆'), workspaceCommand('ui', 'workspaceUi', '▣'), workspaceCommand('debug', 'workspaceDebug', '◎'), workspaceCommand('manage', 'workspaceManage', '⚙'),

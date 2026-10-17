@@ -110,6 +110,15 @@ await test('Navigation keys render from the source and keep their arrow chips', 
   assert.ok(!/Alt[+ ]?←|Alt[+ ]?→/.test(stripped), 'no hardcoded arrow bindings may remain')
 })
 
+await test('The command palette hints derive from the shortcut source', () => {
+  const palette = fs.readFileSync('src/components/CommandPalette.vue', 'utf8').replaceAll('\r\n', '\n')
+  for (const id of ['saveProject', 'undo', 'redo', 'copySelection', 'pasteSelection', 'duplicateSelection', 'deleteSelection']) {
+    assert.ok(palette.includes("shortcutLabel('" + id + "', 'inline')"), 'the palette must derive the ' + id + ' hint from the source')
+  }
+  assert.ok(!/shortcut: 'Ctrl\+[SZYCV]'/.test(palette), 'no hardcoded Ctrl shortcut may remain in the palette entries')
+  assert.ok(!/shortcut: 'Delete'/.test(palette), 'no hardcoded Delete shortcut may remain in the palette entries')
+})
+
 const out = process.env.NOVA_SHORTCUT_LABEL_REPORT || 'reports/phase2/shortcut-labels.json'
 fs.mkdirSync(out.slice(0, out.lastIndexOf('/')), { recursive: true })
 fs.writeFileSync(out, JSON.stringify({ generatedAt: new Date().toISOString(), checks, status: checks.some(/** 任一失败即整体失败。 */ c => c.status === 'failed') ? 'failed' : 'passed' }, null, 2) + '\n')

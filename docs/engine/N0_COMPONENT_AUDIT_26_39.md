@@ -1410,6 +1410,20 @@ EXIT=0
 
 **§22.2 仍缺**：注册表的**元数据层**（commandId / label / icon / tooltip / scope / visibleWhen / enabledWhen / disabledReason / undoPolicy），以及其余重复动作（保存、撤销、删除、复制等）的迁移。本轮交付的是"**一个命令一个处理器**"的骨架与首个真实迁移，不是完整注册表。
 
+### 19.21 批次 D：命令面板的快捷键提示改为派生（消除第二处硬编码）
+
+**问题**：`CommandPalette.vue` 的 7 个编辑命令条目把 `shortcut` 写成字面量（`'Ctrl+S'`、`'Ctrl+Z'`、`'Ctrl+Y'`、`'Ctrl+C'`、`'Ctrl+V'`、`'Ctrl+D'`、`'Delete'`）。这与 §19.13 修好的 TopBar 是**同一类漂移**：`shortcuts.ts` 才是绑定权威，面板里的字面量在用户改键后会**继续显示旧键**。
+
+**修复**：7 处全部改为 `shortcutLabel('<id>', 'inline')`，其中 id 与 `shortcuts.ts` 登记的一致（`saveProject`/`undo`/`redo`/`copySelection`/`pasteSelection`/`duplicateSelection`/`deleteSelection`）。
+
+**验证**：`verify-editor-shortcut-labels.mjs` 增至 **12 项全部通过**，新增守卫断言：
+- 7 个 id 都必须以 `shortcutLabel(id, 'inline')` 形式派生；
+- 面板中**不得再出现** `shortcut: 'Ctrl+[SZYCV]'` 或 `shortcut: 'Delete'` 字面量。
+
+**回归**：重建 `dist` 后运行 `verify-ui-rebuild-navigation-user.mjs` —— **6 项全部通过**（含"通过真实命令保存"一项，覆盖命令面板路径）。`pnpm check` 退出码 0。
+
+**与 §22.2 的关系**：这一步消除的是"同一快捷键知识存在两份"的漂移，**还不是**完整注册表；但它是注册表 `shortcut` 字段能可靠工作的前提 —— 现在面板、TopBar、快捷键编辑器三者共用同一份绑定。
+
 ### 19.2 批次 B1：渲染抽取全部改用批量世界变换
 
 **改动**（`src/renderer/sceneRenderer.ts`，已解冻范围）：
