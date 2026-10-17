@@ -1309,6 +1309,25 @@ EXIT=0
 - **参数 schema 的类型校验**（当前只展示，不校验）。
 - 视觉打磨（行样式与既有分区的一致性）留到 N6。
 
+### 19.17 批次 D：节点信号连接模型（复用既有 dispatch，不造第二套）
+
+**先读后写**：确认运行时已在 `GameplayRuntimeCore.dispatchSignals`（:1970 附近）按 `signal/source/target` 过滤并调用 `callback`，连接存放在**接收方脚本资源**的 `signalConnections`。因此节点连接**不需要新模型**：一条连接 = 接收方脚本资源上的一条记录，`source` 限定发出对象，`callback` 是接收方脚本函数名。
+
+**新增 `src/editor/signalConnections.ts`**（纯函数，可在 Node 独立验证）：
+
+- `validateNodeSignalConnection` —— 信号非空且 ≤128、source/target 非空、**callback 必须是合法标识符**（`^[A-Za-z_][A-Za-z0-9_]*$`）；
+- `addNodeSignalConnection` —— 校验通过才追加，**重复连接被拒绝**而不是静默叠加；被拒时**完全不变更资源**（连 `script` 结构都不创建）；
+- `removeNodeSignalConnection` —— 索引检查；
+- `nodeConnectionsFor` / `connectionCountForSignal` —— 按接收对象与信号名查询。
+
+**验证**：`scripts/verify-engine-signal-connections.mjs` **6 项全部通过**，其中最后一项是**架构边界守护**：剥离注释后断言模块**不包含** `emitSignal`/`dispatchSignals`/`on_signal`，并断言运行时**仍是唯一派发所有者**。
+
+**两次断言自我修正（都是规则写错）**：
+1. 被拒输入后断言 `asset.script.signalConnections.length === 0` —— 但代码正确地**根本没创建**该结构，断言应改为 `asset.script === undefined`；
+2. 边界守护再次扫到**注释里的说明文字**（第三次同类失误），已改为先剥离注释再检查代码。
+
+`pnpm check` 退出码 0。**尚未接入 UI 对话框**（下一步），也未做连接的持久化往返与 Undo 的端到端验证。
+
 ### 19.2 批次 B1：渲染抽取全部改用批量世界变换
 
 **改动**（`src/renderer/sceneRenderer.ts`，已解冻范围）：
