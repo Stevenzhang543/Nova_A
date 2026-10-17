@@ -195,6 +195,9 @@ let tileHover: { x: number; y: number } | null = null
 
 let savedCameraState: { scale: number, offset: Vec2 } | null = null;
 let hasMovedEntity = false;
+// Select-tool press on a selected object: becomes a move drag only after the pointer travels a few pixels,
+// so a plain click still just selects and never writes a transform.
+let pendingSelectDrag: { world: Vec2; screen: Vec2 } | null = null
 
 watch(/* 返回 authoringState.viewportRequest?.id 的当前值。 */ () => authoringState.viewportRequest?.id, /** 按聚焦选择或摄像机请求计算目标边界，使其居中并适应画布。 */ () => {
   const request = authoringState.viewportRequest
@@ -706,9 +709,9 @@ const drawTools = new Set(['rectangle', 'circle', 'triangle'])
   if (distanceToSegment(point, gizmo.pivot, yEnd) <= 7 * unit) return 'y'
   return null
 }
-/** 开始变换拖动时保存轴心、初始指针与实体变换快照。 */ function beginGizmoDrag(axis: GizmoAxis, point: Vec2) {
+/** 开始变换拖动时保存轴心、初始指针与实体变换快照。 */ function beginGizmoDrag(axis: GizmoAxis, point: Vec2, toolOverride?: 'move') {
   const gizmo = currentGizmo()
-  const tool = state.activeTool
+  const tool = toolOverride ?? state.activeTool
   if (!gizmo || (tool !== 'move' && tool !== 'rotate' && tool !== 'scale' && tool !== 'rect')) return
   const local = rotateVector({ x: point.x - gizmo.pivot.x, y: point.y - gizmo.pivot.y }, -gizmo.rotation)
   gizmoDrag = {
@@ -803,6 +806,7 @@ const drawTools = new Set(['rectangle', 'circle', 'triangle'])
     const entity = world.entities.find(/* 比较 candidate.id 与 hitId，返回严格相等的判断结果。 */ candidate => candidate.id === hitId)
     if (!state.selectedEntityIds.includes(hitId) || e.ctrlKey || e.metaKey || e.shiftKey) selectEntities([hitId], selectionMode(e), hitId)
     if (state.playMode === 'editing' && state.activeTool === 'move' && entity && !entity.editorLocked && state.selectedEntityIds.includes(hitId)) beginGizmoDrag('xy', wPos)
+    else if (state.playMode === 'editing' && state.activeTool === 'select' && entity && !entity.editorLocked && state.selectedEntityIds.includes(hitId) && !(e.ctrlKey || e.metaKey || e.shiftKey)) pendingSelectDrag = { world: wPos, screen: sPos }
     return
   }
 
@@ -855,6 +859,12 @@ const drawTools = new Set(['rectangle', 'circle', 'triangle'])
   if (authoringState.measurement.active && authoringState.measurement.start) { authoringState.measurement.end = snapPoint(wPos); return }
   if (isPanning && lastMouseScreen) { camera.targetScale = null; camera.targetOffset = null; camera.offset.x += sPos.x - lastMouseScreen.x; camera.offset.y += sPos.y - lastMouseScreen.y; lastMouseScreen = sPos; return }
 
+  if (pendingSelectDrag && !gizmoDrag) {
+    if (Math.hypot(sPos.x - pendingSelectDrag.screen.x, sPos.y - pendingSelectDrag.screen.y) < 4) return
+    const origin = pendingSelectDrag.world
+    pendingSelectDrag = null
+    beginGizmoDrag('xy', origin, 'move')
+  }
   if (gizmoDrag) {
     hasMovedEntity = true
     if (gizmoDrag.tool === 'move') {
@@ -917,6 +927,7 @@ const drawTools = new Set(['rectangle', 'circle', 'triangle'])
 
 /** 结束全部画布拖动并清空指针、几何及变换快照。 */ function finishCanvasDrag() {
   isDragging = isPanning = isVertexDragging = false
+  pendingSelectDrag = null
   canvasDragMode = 'none'; dragStart = dragNow = lastMouseScreen = null; dragMeta = null; dragEntityId = null; gizmoDrag = null
 }
 

@@ -1,4 +1,5 @@
 /** 游戏导出：收集项目与依赖资源，组织目标产物并提供下载或保存流程。 */
+import { t } from '../i18n'
 import { assertStudioDraftsSaved } from '../editor/studioSaveBoundary'
 import { assetState } from '../assets/AssetDatabase'
 import { selectBuildAssets } from '../assets/assetProduction'
@@ -271,7 +272,18 @@ interface ViteManifestEntry { file: string; css?: string[]; assets?: string[]; i
   return result
 }
 
-/** 结构说明（自动提取）：failBuild；输入 error；直接调用 String、addEditorLog；写入 buildProgress.phase、buildProgress.message、buildProgress.percent、editorState.statusText；返回路径包含 message。 */ export function failBuild(error: unknown): string {
+/** 结构说明（自动提取）：failBuild；输入 error；直接调用 String、addEditorLog；写入 buildProgress.phase、buildProgress.message、buildProgress.percent、editorState.statusText；返回路径包含 message。 */ export function isUserCancellation(error: unknown): boolean {
+  return typeof DOMException !== 'undefined' && error instanceof DOMException && error.name === 'AbortError'
+}
+
+/** Dismissing a folder picker is a choice, not a failed build: reset progress quietly and keep history clean. */
+export function cancelBuild(): string {
+  buildProgress.phase = 'idle'; buildProgress.message = ''; buildProgress.percent = 0
+  editorState.statusText = t('exportCancelled')
+  return editorState.statusText
+}
+
+/** 结构说明：failBuild；记录失败构建。 */ export function failBuild(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error)
   buildProgress.phase = 'failed'; buildProgress.message = message; buildProgress.percent = 0
   editorState.statusText = message

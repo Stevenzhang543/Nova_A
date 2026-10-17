@@ -4491,7 +4491,9 @@ mod tests {
         let mut injected = live_context("enemy-1", 11);
         injected.properties = first.properties;
         // 模拟文档保存后的整数写法：2.0 经 JSON 往返变成 2。
-        injected.properties.insert("patrol_speed".into(), Value::from(2));
+        injected
+            .properties
+            .insert("patrol_speed".into(), Value::from(2));
         let second = runtime
             .execute_instance("enemy", "fixed_update", 1, 11, injected)
             .unwrap();

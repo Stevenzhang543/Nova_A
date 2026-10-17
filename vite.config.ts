@@ -55,8 +55,8 @@ export default defineConfig(/** 提供 Vue 插件、多入口输出和 Tauri 开
         }
       : undefined,
     watch: {
-      // 3. tell Vite to ignore watching `src-tauri`
-      ignored: ["**/src-tauri/**"],
+      // 3. never watch native, release or generated trees: large archives there must not trigger reload loops
+      ignored: ["**/src-tauri/**", "**/releases/**", "**/release-audits/**", "**/.cache/**", "**/target/**", "**/dist/**", "**/reports/**", "**/godot-master/**", "**/.pnpm-store/**"],
     },
   },
 }));

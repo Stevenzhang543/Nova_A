@@ -49,7 +49,7 @@ import { defaultAudioSettings, normalizeAudioSettings, type AudioProjectSettings
 import {getEditorTileMapOwner} from '../editor/tileMapAdapter'
 import { buildSettings, normalizeBuildSettings, serializeBuildSettings } from '../runtime/buildSettings'
 import { normalizeScriptSettings, scriptProjectSettings, serializeScriptSettings } from '../runtime/scriptSettings'
-import { hydrateProjectMetadata, serializeProjectMetadata } from '../projects/projectSession'
+import { hydrateProjectMetadata, projectSessionState, serializeProjectMetadata } from '../projects/projectSession'
 import { NOVA_PROJECT_FORMAT, NOVA_PROJECT_FORMAT_MAJOR, NOVA_PROJECT_SCHEMA_VERSION, projectCompatibility } from '../projects/projectFormat'
 import { hydrateProjectManifest, serializeProjectManifest } from '../projects/projectManifest'
 import { canonicalProjectText } from '../projects/projectData'
@@ -882,6 +882,8 @@ export function getPerformanceAuthoringSource(): string { return simulationSnaps
   return simulationSnapshot !== null
 }
 
+type BrowserProjectFileHandle = { createWritable: () => Promise<{ write: (value: string) => Promise<void>; close: () => Promise<void>; abort?: () => Promise<void> }> }
+let browserSaveHandle: { sessionId: string; handle: BrowserProjectFileHandle } | null = null
 /** 结算编辑并检查只读状态，选择原生事务、浏览器文件或下载保存通道，成功后更新手动保存与外部变更基线。 */ export async function saveProject(): Promise<boolean> {
   if (!settlePendingDocumentEdits()) return false
   assertStudioDraftsSaved()
@@ -893,7 +895,10 @@ export function getPerformanceAuthoringSource(): string { return simulationSnaps
   } else if ('showSaveFilePicker' in window) {
     const saveState: { staged: { write: (value: string) => Promise<void>; close: () => Promise<void>; abort?: () => Promise<void> } | null } = { staged: null }
     try {
-      const handle = await (window as unknown as { showSaveFilePicker: (options: unknown) => Promise<{ createWritable: () => Promise<{ write: (value: string) => Promise<void>; close: () => Promise<void>; abort?: () => Promise<void> }> }> }).showSaveFilePicker({ suggestedName: 'project.nova', types: [{ description: 'Nova_A Project', accept: { 'application/json': ['.nova', '.json'] } }] })
+      // The browser hands out a file handle once; later saves of the same session write to it directly instead of asking again.
+      const remembered = browserSaveHandle?.sessionId === projectSessionState.id ? browserSaveHandle.handle : null
+      const handle = remembered ?? await (window as unknown as { showSaveFilePicker: (options: unknown) => Promise<BrowserProjectFileHandle> }).showSaveFilePicker({ suggestedName: 'project.nova', types: [{ description: 'Nova_A Project', accept: { 'application/json': ['.nova', '.json'] } }] })
+      browserSaveHandle = { sessionId: projectSessionState.id, handle }
       await commitProjectTransaction(jsonString, { label: 'Save project', scopes: [...projectTransactionState.unsavedScopes], sink: {
         kind: 'browser-file', writable: true, destination: 'project.nova',
         /** 从保存事务提取项目文本，写入浏览器文件并关闭句柄，成功后清空暂存引用。 */ async write(files) {
@@ -903,6 +908,8 @@ export function getPerformanceAuthoringSource(): string { return simulationSnaps
       } })
     } catch (error) {
       if (saveState.staged?.abort) try { await saveState.staged.abort() } catch { /* Preserve the original transaction error. */ }
+      // A revoked or stale handle must not block saving: forget it so the next save asks for a destination again.
+      if (error instanceof DOMException && error.name !== 'AbortError') browserSaveHandle = null
       if (error instanceof DOMException && error.name === 'AbortError') return false
       throw error
     }

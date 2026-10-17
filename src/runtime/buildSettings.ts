@@ -148,16 +148,19 @@ const BUILD_LOCAL_KEY = 'nova_a.build_local.v1'
 const buildLocal = localBuildSettings()
 
 export const exportCapabilities = reactive<ExportCapabilities>({ ...DEFAULT_CAPABILITIES })
+// A browser-hosted editor can only produce Web packages, so new documents start on the target it can build.
+const DEFAULT_TARGET: BuildTarget = typeof window !== 'undefined' && !('__TAURI_INTERNALS__' in window) ? 'web'
+  : DEFAULT_CAPABILITIES.host === 'unknown' ? 'web' : DEFAULT_CAPABILITIES.host
 
 export const buildSettings = reactive<BuildSettings>({
   gameName: 'MyGame',
-  target: DEFAULT_CAPABILITIES.host === 'unknown' ? 'web' : DEFAULT_CAPABILITIES.host,
+  target: DEFAULT_TARGET,
   architecture: 'x86_64',
   runtimeMode: 'game',
   profile: 'debug',
   sceneOrder: [],
   startupSceneUuid: '',
-  packageIntoExecutable: DEFAULT_CAPABILITIES.host === 'windows' || DEFAULT_CAPABILITIES.host === 'linux',
+  packageIntoExecutable: DEFAULT_TARGET === 'windows' || DEFAULT_TARGET === 'linux',
   developmentBuild: true,
   outputDirectory: buildLocal.outputDirectory,
   presetName: 'desktop-debug',
@@ -171,7 +174,7 @@ export const buildSettings = reactive<BuildSettings>({
     structuredLogs: true, crashReports: false, telemetryEnabled: false, telemetryEndpoint: '', privacyPolicyUrl: '',
     cacheMode: 'incremental', include: ['Assets/**'], exclude: ['**/*.psd', '**/*.kra', '.nova/**'], stripUnusedAssets: false,
     sizeReport: true, dependencyReport: true, debugSymbols: true, crashSymbols: true,
-    releaseChannel: 'development', exportTemplate: defaultExportTemplateId(DEFAULT_CAPABILITIES.host === 'unknown' ? 'web' : DEFAULT_CAPABILITIES.host, 'x86_64', 'game'), provenance: true, sbom: true, webHeaders: true,
+    releaseChannel: 'development', exportTemplate: defaultExportTemplateId(DEFAULT_TARGET, 'x86_64', 'game'), provenance: true, sbom: true, webHeaders: true,
     deploymentMode: 'local', deploymentDestination: '', signingHook: '', notarizationHook: '', cleanMachineJob: false,
     contentCache: true, deltaBuilds: true, ciMatrixVersion: 1, deploymentConnectorId: 'local', deploymentPermissionGranted: false
   }

@@ -38,7 +38,12 @@ export async function bootstrapRuntimeWorld(options: RuntimeWorldBootstrapOption
   await world.wasmReady
   assertLoading()
   if(world.wasmError)throw world.wasmError
-  const state:GameplayWorldState={...structuredClone(options.initialState),world}
+  const initial=structuredClone(options.initialState)
+  // structuredClone keeps only data: give the camera its class back, or every pointer event in an exported game
+  // fails on camera.screenToWorld (the view's coordinate conversion lives on the prototype).
+  const cameraPrototype=Object.getPrototypeOf(options.initialState.camera)
+  if(cameraPrototype&&cameraPrototype!==Object.prototype)initial.camera=Object.assign(Object.create(cameraPrototype),initial.camera)
+  const state:GameplayWorldState={...initial,world}
   host=new RuntimeWorldHost({state,scenes,resources:options.resources,configuration:options.configuration,capabilities:options.capabilities})
   // This is the existing record decoder, not a second entity builder or UUID scheme.
   const loaded=host.sceneOwner.sceneData.loadEntities(data.entities as SceneEntityData[])

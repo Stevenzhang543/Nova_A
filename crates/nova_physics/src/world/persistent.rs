@@ -77,6 +77,10 @@ pub struct PhysicsWorld {
     contacts: HashMap<(u32, u32, u32, u32), PhysicsContact>,
     transient_forces: HashMap<u32, (f64, f64, f64)>,
     configuration_dirty: bool,
+    // Bodies whose record changed without changing order, layer or the body set. They are refreshed in
+    // place in the retained solver at the next step, which keeps contact warm-starting and avoids
+    // rebuilding every body because one kinematic or scripted body moved.
+    refreshed_bodies: Vec<usize>,
     solver: Option<SolverWorld>,
     configuration_rebuilds: u64,
     physics_steps: u64,
@@ -189,13 +193,14 @@ impl PhysicsWorld {
                     .into_iter()
                     .any(/* 判断 record . values [field] != values [field] 是否成立，供过滤或有效性检查使用。 */ |field| record.values[field] != values[field])
                     || record.values[34..42] != values[34..42];
+                let structural = record.order != order || record.values[33] != values[33];
                 record.order = order;
                 record.values.copy_from_slice(values);
                 if transform_changed {
                     record.values[49] = 0.0;
                     record.values[50] = 0.0;
                 }
-                self.configuration_dirty = true;
+                self.mark_body_changed(index, structural);
             }
             return Ok(changed);
         }
@@ -435,6 +440,7 @@ impl PhysicsWorld {
         self.transient_forces.clear();
         self.solver = None;
         self.configuration_dirty = false;
+        self.refreshed_bodies.clear();
         self.configuration_rebuilds = 0;
         self.physics_steps = 0;
     }
@@ -442,6 +448,7 @@ impl PhysicsWorld {
     // 推进物理世界一个时间步，更新求解状态、缓存和事件。
     pub fn step(&mut self, dt: f64, global_gravity: f64, air_friction: f64) {
         self.rebuild_dense_if_needed();
+        self.refresh_changed_bodies();
         if self.dense_bodies.is_empty() {
             return;
         }
@@ -556,6 +563,7 @@ impl PhysicsWorld {
             &child_shapes,
         ));
         self.configuration_rebuilds = self.configuration_rebuilds.saturating_add(1);
+        self.refreshed_bodies.clear();
         self.state_buffer.clear();
         self.state_buffer.extend_from_slice(&self.dense_bodies);
         self.state_buffer.extend_from_slice(&self.dense_connections);
@@ -721,9 +729,50 @@ impl PhysicsWorld {
         let Some(index) = self.body_index.get(&handle).copied() else {
             return Err("body handle does not exist");
         };
+        let layer = self.bodies[index].values[33];
         update(&mut self.bodies[index].values);
-        self.configuration_dirty = true;
+        let structural = self.bodies[index].values[33] != layer;
+        self.mark_body_changed(index, structural);
         Ok(())
+    }
+
+    // 记录单个刚体的记录变化：结构性变化（顺序、图层）或尚无保留求解器时整体重建，否则只在下一步原位刷新该刚体。
+    fn mark_body_changed(&mut self, index: usize, structural: bool) {
+        if structural || self.configuration_dirty || self.solver.is_none() {
+            self.configuration_dirty = true;
+            return;
+        }
+        if !self.refreshed_bodies.contains(&index) {
+            self.refreshed_bodies.push(index);
+        }
+    }
+
+    // 将排队的刚体记录写入保留求解器：与整体重建得到相同的刚体，但保留接触冲量缓存与其他刚体。
+    fn refresh_changed_bodies(&mut self) {
+        if self.refreshed_bodies.is_empty() {
+            return;
+        }
+        let pending = std::mem::take(&mut self.refreshed_bodies);
+        let Some(solver) = self.solver.as_mut() else {
+            self.configuration_dirty = true;
+            return;
+        };
+        for index in pending {
+            let base = index * STRIDE;
+            let (Some(record), true) = (self.bodies.get(index), base + STRIDE <= solver.data.len() && base + STRIDE <= self.dense_bodies.len() && index < solver.bodies.len()) else {
+                self.configuration_dirty = true;
+                continue;
+            };
+            solver.data[base..base + STRIDE].copy_from_slice(&record.values);
+            self.dense_bodies[base..base + STRIDE].copy_from_slice(&record.values);
+            let mut body = Body::from_data(&solver.data, base);
+            body.apply_collider_children(&record.collider_shapes);
+            solver.bodies[index] = body;
+        }
+        if self.configuration_dirty {
+            // A queued index no longer matched the retained layout: fall back to the full rebuild.
+            self.rebuild_dense_if_needed();
+        }
     }
 }
 
@@ -754,16 +803,55 @@ mod persistent_world_tests {
         assert_eq!(world.physics_steps(), 2);
     }
 
-    // 验证配置命令延迟到下一物理步才触发重建。
+    // 验证运动命令在下一物理步原位生效，不重建保留求解器。
     #[test]
-    fn command_changes_rebuild_only_on_the_next_step() {
+    fn command_changes_apply_on_the_next_step_without_rebuilding() {
         let mut world = PhysicsWorld::new();
         world.create_body(1, 0, &body_record()).unwrap();
         world.step(1.0 / 60.0, 0.0, 0.0);
         world.set_velocity(1, 3.0, 0.0, 0.0).unwrap();
         assert_eq!(world.configuration_rebuilds(), 1);
         world.step(1.0 / 60.0, 0.0, 0.0);
+        assert_eq!(world.configuration_rebuilds(), 1);
+        assert!((world.state()[4] - 3.0).abs() < 1.0e-9, "the new velocity is simulated");
+        assert!(world.state()[2] > 0.0, "the body moved with the new velocity");
+    }
+
+    // 验证原位刷新与整体重建得到相同的模拟结果。
+    #[test]
+    fn in_place_body_refresh_matches_a_full_rebuild() {
+        let mut moved = body_record();
+        moved[2] = 4.0;
+        moved[3] = -1.5;
+        moved[4] = 2.0;
+        let mut retained = PhysicsWorld::new();
+        retained.create_body(1, 0, &body_record()).unwrap();
+        retained.step(1.0 / 60.0, -9.8, 0.0);
+        retained.upsert_body(1, 0, &moved).unwrap();
+        retained.step(1.0 / 60.0, -9.8, 0.0);
+        let mut rebuilt = PhysicsWorld::new();
+        rebuilt.create_body(1, 0, &moved).unwrap();
+        rebuilt.step(1.0 / 60.0, -9.8, 0.0);
+        assert_eq!(retained.configuration_rebuilds(), 1);
+        for field in [2_usize, 3, 4, 5, 14, 15] {
+            assert!((retained.state()[field] - rebuilt.state()[field]).abs() < 1.0e-12, "field {field} differs");
+        }
+    }
+
+    // 验证改变图层或顺序仍整体重建，保证连接与碰撞筛选一致。
+    #[test]
+    fn layer_and_order_changes_still_rebuild() {
+        let mut world = PhysicsWorld::new();
+        world.create_body(1, 0, &body_record()).unwrap();
+        world.step(1.0 / 60.0, 0.0, 0.0);
+        let mut layered = body_record();
+        layered[33] = 3.0;
+        world.upsert_body(1, 0, &layered).unwrap();
+        world.step(1.0 / 60.0, 0.0, 0.0);
         assert_eq!(world.configuration_rebuilds(), 2);
+        world.upsert_body(1, 5, &layered).unwrap();
+        world.step(1.0 / 60.0, 0.0, 0.0);
+        assert_eq!(world.configuration_rebuilds(), 3);
     }
 
     // 验证临时力累加一次生效且不重建求解器。

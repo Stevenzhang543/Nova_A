@@ -7,7 +7,7 @@ import { analyzeProjectUpgrade, downloadProjectBackup, dryRunProjectMigration, r
 import { acquireProjectLock, inspectProjectLock, markSourceBaseline, releaseProjectLock } from '../runtime/teamWorkflow'
 import { canonicalProjectText, MAX_PROJECT_DOCUMENT_CHARACTERS, validateProjectDocument, type ProjectValidationReport } from './projectData'
 import { recoveryState } from '../runtime/recovery'
-import { appendTaskLog, cancelTask, completeTask, failTask, startTask } from '../runtime/editorFeedback'
+import { appendTaskLog, cancelTask, completeTask, failTask, startTask, updateTask } from '../runtime/editorFeedback'
 import { markProjectDirty, setProjectTransactionDirectory } from '../runtime/projectTransactions'
 import { assetState, readTextAsset } from '../assets/AssetDatabase'
 import { listPendingAuthoringDrafts, restoreAuthoringDrafts, snapshotAuthoringDrafts } from '../editor/studioDraftRetention'
@@ -120,9 +120,14 @@ export const projectManagerState = reactive({
     try { const parsed=JSON.parse(source) as Record<string,unknown>, metadata=parsed.projectMetadata as Record<string,unknown>|undefined; sourceProjectId=String(metadata?.id??'') } catch { /* analyzeProjectUpgrade already parsed safely. */ }
     const lock=sourceProjectId&&!importAsCopy?inspectProjectLock(sourceProjectId):{locked:false,owner:'',expiresAt:0}
     projectManagerState.lockConflict=lock.locked?{projectId:sourceProjectId,owner:lock.owner,expiresAt:lock.expiresAt}:null
-    projectManagerState.pendingUpgrade = { source, fileName, importAsCopy, projectDirectory: projectDirectory.trim().slice(0, 500), preview }
-    projectManagerState.visible = true
+    const pending = { source, fileName, importAsCopy, projectDirectory: projectDirectory.trim().slice(0, 500), preview }
     projectManagerState.error = ''
+    // A current-schema project with nothing to migrate, no lock and no package warning opens directly; the same
+    // dry run and validation still run, only the confirmation step is skipped because there is nothing to confirm.
+    // The confirmation dialog is never mounted for that path, so it cannot flash while the project loads.
+    if (!preview.requiresMigration && !lock.locked && !preview.warnings.length) return applyProjectUpgrade(pending)
+    projectManagerState.pendingUpgrade = pending
+    projectManagerState.visible = true
     return false
   } catch (error) {
     projectManagerState.error = error instanceof Error ? error.message : String(error)
@@ -182,12 +187,16 @@ export const projectManagerState = reactive({
 }
 
 /** 对待打开项目执行迁移试运行和校验，按需备份，再处理锁和加载，完整记录任务成功、取消或失败。 */ export async function applyPendingProjectUpgrade(forceReadOnly = false): Promise<boolean> {
-  if (projectManagerState.busy) return false
   const pending = projectManagerState.pendingUpgrade
   if (!pending) return false
+  return applyProjectUpgrade(pending, forceReadOnly)
+}
+type PendingProjectUpgrade = NonNullable<typeof projectManagerState.pendingUpgrade>
+async function applyProjectUpgrade(pending: PendingProjectUpgrade, forceReadOnly = false): Promise<boolean> {
+  if (projectManagerState.busy) return false
   projectManagerState.busy = true
   projectManagerState.error = ''
-  const task = startTask('Project migration', { detail: `Schema ${pending.preview.sourceSchema} → ${pending.preview.targetSchema}`, progress: .05, logs: ['Dry run started'], resources: [{ label: pending.preview.projectName, href: pending.fileName }] })
+  const task = startTask(pending.preview.requiresMigration ? 'Project migration' : 'Open project', { detail: `Schema ${pending.preview.sourceSchema} → ${pending.preview.targetSchema}`, progress: .05, logs: ['Dry run started'], resources: [{ label: pending.preview.projectName, href: pending.fileName }] })
   try {
     const { physicsState } = await physicsModule()
     await physicsState.world.wasmReady
@@ -210,7 +219,9 @@ export const projectManagerState = reactive({
     if (!opened && replacementDeclined) { cancelTask(task); return false }
     if (!opened) throw new Error(projectManagerState.error || 'Migrated project could not be opened.')
     projectManagerState.pendingUpgrade = null
-    recordMigrationApplied(dryRun); projectManagerState.lockConflict=null; completeTask(task, `Migration ${dryRun.id} committed; rollback retained.`)
+    projectManagerState.lockConflict=null
+    if (pending.preview.requiresMigration) { recordMigrationApplied(dryRun); completeTask(task, `Migration ${dryRun.id} committed; rollback retained.`) }
+    else updateTask(task, { status: 'complete', progress: 1, detail: 'Opened without migration.' })
     return true
   } catch (error) {
     projectManagerState.error = error instanceof Error ? error.message : String(error)

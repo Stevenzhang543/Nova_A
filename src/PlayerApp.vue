@@ -49,6 +49,7 @@ import { bootstrapRuntimeWorld } from './runtime/runtimeWorldBootstrap'
 import type { RuntimeWorldConfiguration, RuntimeWorldInitialState, RuntimeWorldSurface, RuntimeWorldView } from './runtime/runtimeWorldHostContracts'
 import { createEditorRuntimeWorldPlatform, createEditorRuntimeWorldSurface } from './editor/runtimeWorldHostPlatformAdapter'
 import { World } from './world/World'
+import { Camera } from './world/Camera'
 import { createInitialWorldGameplayState } from './runtime/worldGameplayOwner'
 import { serializeWorldGameplaySettings } from './runtime/worldGameplay'
 import { createInitialRuntimePresentationState } from './runtime/presentationOwner'
@@ -249,7 +250,7 @@ onMounted(/** 挂载时加载项目和受限参数，等待物理模块并启动
     if (physicsState.world !== world || getProjectSessionGeneration() !== loadedGeneration) throw new Error('RUNTIME_PROJECT_WORLD_CHANGED: The package load belongs to an earlier project or World.')
     const configuration = captureRuntimeWorldConfiguration(resources.catalog.projectId)
     const initialState: RuntimeWorldInitialState & { simulationRunning: boolean } = {
-      camera: structuredClone(toRaw(physicsState.camera)), globalSettings: structuredClone(toRaw(physicsState.globalSettings)),
+      camera: Object.assign(new Camera(), structuredClone(toRaw(physicsState.camera))), globalSettings: structuredClone(toRaw(physicsState.globalSettings)),
       playMode: 'playing', simulationRunning: true, engineDiagnostics: structuredClone(toRaw(physicsState.engineDiagnostics)),
       inputMap: structuredClone(toRaw(physicsState.inputMap)), audioSettings: structuredClone(toRaw(physicsState.audioSettings))
     }
