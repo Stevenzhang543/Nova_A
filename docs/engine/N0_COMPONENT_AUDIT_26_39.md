@@ -1130,6 +1130,28 @@ EXIT=0
 
 **W1 状态更新**：运行时语义、launcher 全流程、编辑器作者流程**三层均有通过证据**。但**仍缺一项**：现有验证都不覆盖"**在编辑器里从零组装一个角色**"（手动添加 CharacterBody2D + 形状 + Sprite/帧动画 + Camera + 脚本、在 InputMap 里配置移动/跳跃、连接 Area 信号）—— 这正是 N3 纵向切片要交付的编辑工作流。故 **W1 仍为 `PARTIAL`**，但证据面已大幅收窄。
 
+### 19.10 批次 C：N3 编辑器纵向切片（新增验收脚本，**已通过**）
+
+新增 `scripts/verify-w1-character-authoring.mjs`：**全部经可见编辑器控件**从空场景组装角色，不使用私有 API。
+
+**流程**（每步均真实 UI 操作）：
+
+1. 新建项目 → 选 **`empty`「Clear Scene」** 模板；
+2. 工具栏创建对象 → 调色板搜索 **Rectangle** → 创建 → 双击层级行**重命名**为 `Hero` → Inspector 设位置 (0,4)；
+3. 经 Inspector 的 **Add Component** 按钮 + 选择器依次添加：
+   `CharacterBody2D`、`SpriteRenderer2D`、`Camera2D`、`Script2D`、`Area2D`；
+4. `Save Project` → 在**保存后的文档**中断言 `Hero` 含
+   `ShapeRenderer2D`、`CharacterBody2D`、`SpriteRenderer2D`、`Camera2D`、`Script2D`、`Area2D`。
+
+**结果：PASS**（`EXIT=0`）。
+
+**过程中确认的两个产品事实（不是缺陷，但决定了正确用法）**：
+
+1. **collider 不能通过「添加组件」添加** —— `addableComponents` 只来自 `ConfigPanel.vue:576` 的 `optionalComponents` 白名单，其中**不含** `BoxCollider2D`/`EllipseCollider2D`。碰撞体必须由**对象种类**（Rectangle/Circle/Polygon/Collider）创建。我最初的测试按"添加组件"写，因此失败；改为创建 Rectangle 后通过。
+2. 可加白名单**包含** `CharacterBody2D`、`Area2D`、`SpriteRenderer2D`、`Camera2D`、`Script2D`，因此第 3 步成立。
+
+**W1 状态**：现有三套既有验证 + 本脚本，已覆盖运行时语义、launcher 全流程、编辑器作者流程、以及**从零组装角色**。**仍缺**（下一批）：经 UI 配置 **InputMap** 动作、连接 **Area 信号**、把角色**保存为可复用场景并在另一场景实例化**、以及组装后**运行验证行为**。故 W1 仍为 `PARTIAL`。
+
 ### 19.2 批次 B1：渲染抽取全部改用批量世界变换
 
 **改动**（`src/renderer/sceneRenderer.ts`，已解冻范围）：
