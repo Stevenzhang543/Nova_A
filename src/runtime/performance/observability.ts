@@ -53,6 +53,8 @@ export class FrameObservability {
   private readonly rafIntervals = new IntervalRing()
   private readonly submissionIntervals = new IntervalRing()
   private readonly inputLatencies = new IntervalRing(true)
+  /** 已接受的提交次数，用作渲染包身份。 */
+  private submissions = 0
   readonly current: FrameObservation = { cpuFrameMs: null, rafIntervalMs: null, submissionIntervalMs: null, inputToSubmitMs: null, gpuMs: null }
 
   begin(cpuStartedAt: number, rafTimestamp?: number): void {
@@ -84,6 +86,8 @@ export class FrameObservability {
     this.current.submissionIntervalMs = null
     this.current.inputToSubmitMs = null
     if (this.lastSubmission !== null && now <= this.lastSubmission) return
+    // 提交序号：为首次受影响的渲染包提供稳定身份，供输入消费台账绑定。
+    this.submissions += 1
     if (this.lastSubmission !== null && now > this.lastSubmission) {
       this.current.submissionIntervalMs = now - this.lastSubmission
       this.submissionIntervals.push(this.current.submissionIntervalMs)
@@ -103,6 +107,8 @@ export class FrameObservability {
     this.frameStart = null
     return { ...this.current }
   }
+  /** 最近一次被接受提交的序号；尚无提交时为 0。 */
+  submissionOrdinal(): number { return this.submissions }
   rafStatistics(): IntervalStatistics { return intervalStatistics(this.rafIntervals.snapshot()) }
   submissionStatistics(): IntervalStatistics { return intervalStatistics(this.submissionIntervals.snapshot()) }
   latencyPercentile(quantile = .95): ObservedMetric {
@@ -116,6 +122,7 @@ export class FrameObservability {
   }
   reset(): void {
     this.frameStart = this.lastRaf = this.lastSubmission = null
+    this.submissions = 0
     this.inputs.clear(); this.rafIntervals.clear(); this.submissionIntervals.clear(); this.inputLatencies.clear()
     Object.assign(this.current, { cpuFrameMs: null, rafIntervalMs: null, submissionIntervalMs: null, inputToSubmitMs: null, gpuMs: null })
   }

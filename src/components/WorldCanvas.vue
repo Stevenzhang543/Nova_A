@@ -1324,7 +1324,12 @@ function cancelActiveCanvasDrag() {
     }, sceneRendererEnvironment)
     Object.assign(editorState.rendererStats, renderedStats)
     worldSubmitted = typeof renderedStats.cpuSubmissionAtMs === 'number' && Number.isFinite(renderedStats.cpuSubmissionAtMs)
-    if (worldSubmitted) markPerformanceSubmission(renderedStats.cpuSubmissionAtMs!, consumedInputToken)
+    if (worldSubmitted) {
+      const packet = markPerformanceSubmission(renderedStats.cpuSubmissionAtMs!, consumedInputToken)
+      // 把已消费但尚未关联的输入绑定到本次提交。只有第一次绑定生效，
+      // 因此后续提交不会被误当作该输入的响应（主指令 §26.4）。
+      gameplayRuntime.bindConsumedInputToPacket(packet)
+    }
   }
   passStarted = recordRenderPass('World', passStarted, worldSubmitted, worldSubmitted ? editorState.rendererStats.drawCalls : 0, renderGraphDiagnosticsOwner)
   if (!worldSubmitted) {

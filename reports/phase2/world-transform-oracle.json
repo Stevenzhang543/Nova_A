@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-16T18:52:09.255Z",
+  "generatedAt": "2026-10-16T19:00:34.318Z",
   "purpose": "Independent reference semantics that any batch or cached transform path must match exactly.",
   "lifecycleCoverage": [
     "hierarchy order parent first",

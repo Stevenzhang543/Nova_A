@@ -146,7 +146,8 @@ export function markPerformanceInput(now = performance.now()): number | null { r
 export function forgetPerformanceInput(sequence: number): void { frameObservability.forgetInput(sequence) }
 export function rebasePerformanceFrameContinuity(): void { frameObservability.rebaseFrameContinuity() }
 /** Called after the renderer's CPU API submission, never GPU completion or display presentation. */
-export function markPerformanceSubmission(now = performance.now(), consumedInputSequence?: number): void { frameObservability.submission(now, consumedInputSequence) }
+/** 返回本次提交的序号，供输入消费台账绑定首次受影响的渲染包；被拒绝的提交沿用上一次序号。 */
+export function markPerformanceSubmission(now = performance.now(), consumedInputSequence?: number): number { frameObservability.submission(now, consumedInputSequence); return frameObservability.submissionOrdinal() }
 export function currentPerformanceFrameObservation() { return { ...frameObservability.current } }
 /** 结构说明（自动提取）：recordWorkerPerformance；输入 workerMs、queueWaitMs、fallback、stale；直接调用 Math.max、finite；写入 performanceRuntimeState.workerMs、performanceRuntimeState.queueWaitMs。 */ export function recordWorkerPerformance(workerMs: number, queueWaitMs: number, fallback = false, stale = false): void {
   performanceRuntimeState.workerMs = Math.max(0, finite(workerMs, 0, 0, 60_000))

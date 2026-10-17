@@ -1013,6 +1013,34 @@ pnpm check                                                  # vue-tsc + tsc
 
 **未覆盖并如实记录**：运行时与渲染器接线、真实端到端显示延迟、与固定步补算路径的交互。
 
+### 19.6 批次 B5：G1 追踪身份**全链路接通**
+
+**先读后写（上一批教训）**：动手前先确认了消费面与提交点的真实形状，由此发现两个必须澄清的事实：
+
+1. **`time.value.frame` 不是固定步 tick**。`time.beginFrame` 每**渲染帧**调用一次（`GameplayRuntimeCore.ts:715`），一次帧内的多次补算**共用同一个 `value.frame`**。若拿它当"消费 tick"，正是 §26.4 禁止的混淆（渲染帧 vs 模拟步）。因此**单独维护 `fixedStepSequence`**。
+2. **提交点没有稳定身份**。`markPerformanceSubmission` 原来返回 `void`，无法标识"首次受影响的 packet"。因此让 `FrameObservability` 记录**提交序号**（仅在提交被接受时递增），并由 `markPerformanceSubmission` 返回。
+
+**接线（三处，全链路）**：
+
+| 阶段 | 位置 | 动作 |
+|---|---|---|
+| 接收 | `receipt` 回调 | `inputConsumption.track(inputEpoch, sequence)` |
+| 消费 | 固定步回调的 `firstFixedStep` 分支 | `markConsumed(…, this.fixedStepSequence)` —— 用**真实固定步编号** |
+| 提交 | `WorldCanvas.vue:1327` 真实提交点 | `const packet = markPerformanceSubmission(…); gameplayRuntime.bindConsumedInputToPacket(packet)` |
+
+`bindConsumedInputToPacket` 内部经 `pending()` 取"已消费但未关联"的输入，由 `markFirstAffectedPacket` **保证只有第一次绑定生效** —— 因此后续提交不会被误当作该输入的响应。
+
+**验证**：消费台账测试增至 **11 项全部通过**，新增两项守护：
+
+- **运行时确实使用真实固定步编号**：断言 `markConsumed` 传入的是 `fixedStepSequence`，并**显式断言没有把 `time.value.frame` 当消费 tick**；
+- **链路在真实提交点闭合**：断言捕获提交序号、在提交之后绑定、且序号来自 observability owner。
+
+**两次断言修正（均属"断言写错"而非放宽容差）**：
+1. 非重复守护初版扫描全文，把**说明边界的注释**判成违规 → 改为先剥离注释再查代码；
+2. 提交点守护的正则用 `[^)]*`，无法跨越 `performance.now()` 的括号 → 改为匹配返回类型与来源。
+
+**未覆盖并如实记录**：真实端到端显示延迟（**任何 CPU 时间戳都无法确立**）、首次消费步之后的多步归因、以及"该次提交是否确实包含受影响像素"（需真实渲染器运行）。
+
 ### 19.2 批次 B1：渲染抽取全部改用批量世界变换
 
 **改动**（`src/renderer/sceneRenderer.ts`，已解冻范围）：

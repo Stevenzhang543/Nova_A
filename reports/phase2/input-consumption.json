@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-16T18:54:43.041Z",
+  "generatedAt": "2026-10-16T19:00:55.381Z",
   "covers": [
     "idempotent tracking",
     "first consuming tick wins",
@@ -11,9 +11,9 @@
     "non-duplication of latency measurement"
   ],
   "notCovered": [
-    "runtime and renderer wiring",
-    "real end-to-end display latency",
-    "interaction with the fixed-step catch-up path"
+    "real end-to-end display latency, which no CPU timestamp can establish",
+    "multi-step catch-up attribution beyond the first consuming step",
+    "whether a submission actually contained the affected pixels, which only a real renderer run can show"
   ],
   "checks": [
     {
@@ -50,6 +50,14 @@
     },
     {
       "name": "This ledger does not duplicate the existing receipt-to-submit measurement",
+      "status": "passed"
+    },
+    {
+      "name": "The runtime wires the ledger and uses a real fixed-step number as the tick",
+      "status": "passed"
+    },
+    {
+      "name": "The chain closes at the real submission site with a stable packet identity",
       "status": "passed"
     }
   ],

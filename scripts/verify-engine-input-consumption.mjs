@@ -105,12 +105,36 @@ await test('This ledger does not duplicate the existing receipt-to-submit measur
     'the ledger must reuse the existing identity pair rather than inventing its own numbering')
 })
 
+await test('The runtime wires the ledger and uses a real fixed-step number as the tick', () => {
+  const core = fs.readFileSync('src/runtime/GameplayRuntimeCore.ts', 'utf8').replaceAll('\r\n', '\n')
+  assert.ok(core.includes('new InputConsumptionLedger()'), 'the runtime must own the ledger')
+  assert.ok(core.includes('this.inputConsumption.track(receipt.inputEpoch, receipt.sequence)'), 'receipts must be tracked')
+  assert.ok(core.includes('this.fixedStepSequence += 1'), 'a real fixed-step counter must exist')
+  assert.ok(/for \(const receipt of observedSample\.receipts\) this\.inputConsumption\.markConsumed\([^)]*this\.fixedStepSequence\)/.test(core),
+    'consumption must be recorded with the fixed-step number, not the render frame')
+  assert.ok(!/markConsumed\([^)]*this\.time\.value\.frame\)/.test(core),
+    'the render frame counter must not be passed off as the consumption tick')
+  assert.ok(core.includes('bindConsumedInputToPacket('), 'the host must be able to bind the first affected packet')
+  assert.ok(core.includes('this.inputConsumption.clear()'), 'a session reset must clear the ledger')
+})
+
+await test('The chain closes at the real submission site with a stable packet identity', () => {
+  const canvas = fs.readFileSync('src/components/WorldCanvas.vue', 'utf8').replaceAll('\r\n', '\n')
+  const perf = fs.readFileSync('src/runtime/largeWorldPerformance.ts', 'utf8').replaceAll('\r\n', '\n')
+  assert.ok(/const packet = markPerformanceSubmission\(/.test(canvas), 'the submission ordinal must be captured at the real submission site')
+  assert.ok(canvas.includes('gameplayRuntime.bindConsumedInputToPacket(packet)'), 'the submission site must bind the affected packet')
+  assert.ok(canvas.indexOf('markPerformanceSubmission(') < canvas.indexOf('bindConsumedInputToPacket(packet)'),
+    'binding must happen after the submission is accepted')
+  assert.ok(/: number \{ frameObservability\.submission\(/.test(perf), 'the submission marker must return the ordinal from the observability owner')
+  assert.ok(perf.includes('frameObservability.submissionOrdinal()'), 'the ordinal must come from the observability owner')
+})
+
 const out = process.env.NOVA_INPUT_CONSUMPTION_REPORT || 'reports/phase2/input-consumption.json'
 fs.mkdirSync(out.slice(0, out.lastIndexOf('/')), { recursive: true })
 fs.writeFileSync(out, JSON.stringify({
   generatedAt: new Date().toISOString(),
   covers: ['idempotent tracking', 'first consuming tick wins', 'first affected packet wins', 'ordering constraint', 'invalid identity rejection', 'bounded retention', 'pending backlog', 'non-duplication of latency measurement'],
-  notCovered: ['runtime and renderer wiring', 'real end-to-end display latency', 'interaction with the fixed-step catch-up path'],
+  notCovered: ['real end-to-end display latency, which no CPU timestamp can establish', 'multi-step catch-up attribution beyond the first consuming step', 'whether a submission actually contained the affected pixels, which only a real renderer run can show'],
   checks,
   status: checks.some(/** 任一失败即整体失败。 */ c => c.status === 'failed') ? 'failed' : 'passed',
 }, null, 2) + '\n')

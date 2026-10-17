@@ -6,6 +6,7 @@ import type { Entity } from '../world/Entity'
 import type { Animator, AudioSource, Checkbox, NavigationAgent2D, ProgressBar, ScriptPropertyValue, Slider, Text as UIText, TextRenderer2D, TimelinePlayer } from '../world/components'
 import { hierarchyOrder, worldTransform, setWorldTransform, subtreeEntities } from '../world/hierarchy'
 import { SignalQueue, type SignalQueueStats } from './signalQueue'
+import { InputConsumptionLedger, type InputConsumptionStats } from './inputConsumption'
 import type { RuntimePhysicsEvent } from '../world/World'
 import { INPUT_EDGE_CAPACITY, InputManager, type InputActionEdge, type InputSnapshot, type InputReceiptObservation, type InputSampleObservation, type InputObservationResetReason } from './input'
 import { RuntimeTime, type TimerExpiration } from './time'
@@ -436,6 +437,11 @@ export class GameplayRuntime {
   private contractValidations = new Map<string, { signature: string; error: string | null }>()
   private pendingReloads = new Map<string, string>()
   private signalQueue = new SignalQueue()
+  /** 输入消费台账：登记序号、消费 tick 与首次受影响 packet（§26.4 要求的身份绑定）。 */
+  private inputConsumption = new InputConsumptionLedger()
+  /** 固定步序号。time.value.frame 是**渲染帧**计数器（一次帧内多次补算共用同一值），
+   * 因此不能冒充"消费 tick"，这里单独维护真实固定步编号。 */
+  private fixedStepSequence = 0
   private pendingDebugInvocation: PendingDebugInvocation | null = null
   private pendingGraphExecution: PendingGraphExecution | null = null
   private networkUnsubscribe: (() => void) | null = null
@@ -503,6 +509,8 @@ export class GameplayRuntime {
       nowMs: callbacks.nowMs,
       receipt: receipt => {
         if (this.inputObservation !== owner || !this.active || this.hostSuspended || this.worldHost.state.playMode !== 'playing' || this.replay.state.mode === 'playback') return
+        // 登记身份而不测量延迟：延迟由 observability 的既有机制负责。
+        this.inputConsumption.track(receipt.inputEpoch, receipt.sequence)
         try { callbacks.receipt(Object.freeze({ ...receipt, worldEpoch: this.playSessionIdentity })) }
         catch (error) { this.failInputObservation(owner, 'receipt', error) }
       },
@@ -727,12 +735,17 @@ export class GameplayRuntime {
       this.worldHost.state.globalSettings,
       /** 结构说明（自动提取）：this.worldHost.state.world.update 回调；输入 fixedDelta；直接调用 performance.now、replayFixedInput、runPhase、flushEntityCommands、updateGameplayComponents 等；写入 inputSnapshot、fixedPressed、fixedReleased、firstFixedStep 等。 */ fixedDelta => {
         const fixedScriptsStarted = performance.now()
+        this.fixedStepSequence += 1
         const fixedInput = firstFixedStep
           ? { ...frameInput, pressed: { ...this.fixedPressed }, released: { ...this.fixedReleased }, edges: this.fixedEdges }
           : { ...frameInput, pressed: {}, released: {}, performed: {}, cancelled: {}, edges: [] }
         this.inputSnapshot = this.replay.replayFixedInput(fixedInput)
         if (firstFixedStep) {
-          if (observedSample && this.inputSnapshot === fixedInput) observedFixedCount = 1
+          if (observedSample && this.inputSnapshot === fixedInput) {
+            observedFixedCount = 1
+            // 消费该帧输入的正是这个固定步；用真实固定步编号记录消费 tick。
+            for (const receipt of observedSample.receipts) this.inputConsumption.markConsumed(receipt.inputEpoch, receipt.sequence, this.fixedStepSequence)
+          }
           this.fixedPressed = {}
           this.fixedReleased = {}
           this.fixedEdges = []
@@ -896,6 +909,8 @@ export class GameplayRuntime {
     this.pendingDynamicCommands = []
     this.pendingHandleResolutions.clear()
     this.signalQueue.clear()
+    this.inputConsumption.clear()
+    this.fixedStepSequence = 0
     this.pendingReloads.clear()
     this.worldGameplayOwner.objectPoolOwner.setPoolRuntimeHooks()
     this.contractValidations.clear()
@@ -1054,6 +1069,19 @@ export class GameplayRuntime {
 
   /** 信号队列的可观测状态：发送/派发/丢弃计数与序号区间。§5.3 不允许静默丢弃，故对外暴露。 */
   signalQueueStats(): SignalQueueStats { return this.signalQueue.stats() }
+
+  /** 输入消费台账的可观测状态；延迟仍由 observability 提供，两者互不重复。 */
+  inputConsumptionStats(): InputConsumptionStats { return this.inputConsumption.stats() }
+
+  /** 由宿主在**提交**渲染包时调用，把已消费但未关联的输入绑定到该包。
+   * 只有第一次绑定生效，因此同一输入不会被后续提交冒充为"已响应"（§26.4）。 */
+  bindConsumedInputToPacket(packet: number): number {
+    let bound = 0
+    for (const record of this.inputConsumption.pending()) {
+      if (this.inputConsumption.markFirstAffectedPacket(record.inputEpoch, record.sequence, packet)) bound += 1
+    }
+    return bound
+  }
 
   /** 结构说明（自动提取）：debugContinue；无显式参数；直接调用 clearScriptDebugger、requestDebugStep、requestGraphStep、this.worldHost.state.world.entities.find、processScriptCommands 等；写入 pendingGraphExecution、this.worldHost.state.playMode、pendingDebugInvocation。 */ debugContinue(): void {
     if (this.pendingGraphExecution) {
