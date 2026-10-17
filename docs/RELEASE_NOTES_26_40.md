@@ -49,6 +49,7 @@ Recorded in the release evidence archive:
 
 - Built on Windows x64 with `scripts/build-release-26.40.cmd`: WebAssembly core, `vue-tsc`, Vite build, Tauri release build, MSI (WiX) and NSIS installer; product versions checked as 26.40.0 by the packaging script.
 - The portable executable was started from this release folder: the launcher shows 26.40, a Platformer project was created, the player was dragged with the Select tool and restored with Ctrl+Z, Play moved and jumped the character with D and Space, and Stop restored the scene.
+- After the last fixes the release was rebuilt and the new portable executable started again: the suggested project folder followed the typed name, the UI workspace showed full-size Safe area and RTL checkboxes and the full project name in the title bar, closing with unsaved changes asked first (Keep editing kept the window, Quit without saving closed it), and closing from the launcher closed at once. The drag, Play and Stop checks above were made on the first build of the same day.
 - The installers were built and versioned but not installed on the build machine.
 
 ## Limits
