@@ -1062,6 +1062,42 @@ pnpm check                                                  # vue-tsc + tsc
 
 **W1 判定范围**：platformer 模板的创建→保存→重开→运行→停止**已由脚本验证通过**；top-down 模板在同一链路失败，故 **W1 整体不能标为通过**，当前为 **`PARTIAL`**。
 
+### 19.8 批次 C：W1 阻塞已定位并修复 —— **三个模板全部通过**
+
+**定位过程（先取证、不猜）**：写 `scripts/diagnose-topdown-play.mjs`，在真实浏览器里抓取播放前后按钮状态、预检文本与控制台错误。结果：
+
+- **播放其实成功**：点击后 Pause 按钮进入 `active`、Stop/Step 可用；工作流测试断言的是**索引 0（Play）**，与实际高亮位置不同；
+- **发现真正的问题**：控制台报
+  `Error Script Enemy: Function not found: set_velocity (i64, f64) (line 8)`
+  —— 出厂 **top-down 模板的 Enemy 脚本**在播放时抛运行期错误。
+
+**根因（已证到代码行）**：
+
+1. `@export(type="float", …) let patrol_speed = 2.0;` 的默认值在项目文档里是 `2`——**JSON 不区分整数与浮点**；
+2. `crates/nova_script/src/lib.rs:3425` 的 `json_to_dynamic` 对整数值返回 `Dynamic::from_int`（**i64**）；
+3. 注入后 `patrol_speed` 是整数，`set_velocity(patrol_speed, …)` 因物理绑定只接受 `f64` 而**找不到重载**。
+
+**修复（类型感知注入）**：新增 `json_to_export_dynamic(&ExportedProperty, &Value)`，当声明类型为 `float` 且值为整数时提升为浮点；注入点 `:877-884` 改用它。JSON 写法不再决定脚本变量的数值类型。
+
+**回归测试**：`integral_json_value_for_float_export_is_injected_as_float` —— 构造整数形式的 `patrol_speed`，断言**无 `Function not found`** 且 `SetVelocity { x: 2.0 }`。`nova_script` 测试 **38 项全通过**。
+
+**端到端验证（关键）**：仅改 Rust 不够——审计 harness 服务的是 `dist`。依次执行 `pnpm build:wasm:dev` → `vite build` → 重跑诊断：**`consoleErrors: []`**，错误消失。
+
+**最终结果**：`verify-engine-workflows.mjs` **三个模板全部 PASS**：
+
+```text
+PASS platformer: create from launcher, save, reload, run and stop
+PASS top-down: create from launcher, save, reload, run and stop
+PASS responsive-ui: create from launcher, save, reload, run and stop
+EXIT=0
+```
+
+其中 **top-down 与 responsive-ui 此前从未通过**（后者此前根本跑不到）。这同时解释了 §19.7 记录的"播放未激活"：脚本运行期错误使播放流程异常，而不是按钮逻辑本身有问题。
+
+**全量回归**：`cargo test --workspace` **196 项全部通过**；`pnpm check` 退出码 0。
+
+**状态**：该修复为 **`VERIFIED`** —— 有 Rust 单测、真实浏览器端到端证据、以及完整工作流脚本通过。**W1 从 `PARTIAL` 推进为三个模板的创建→保存→重开→运行→停止链路通过**；W1 其余要求（Area 信号触发交互、保存为可复用场景并在关卡实例化）仍需单独验证。
+
 ### 19.2 批次 B1：渲染抽取全部改用批量世界变换
 
 **改动**（`src/renderer/sceneRenderer.ts`，已解冻范围）：

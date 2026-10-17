@@ -878,7 +878,7 @@ impl ScriptRuntime {
                 if let Some(value) = context
                     .properties
                     .get(&exported.name)
-                    .and_then(json_to_dynamic)
+                    .and_then(|value| json_to_export_dynamic(exported, value))
                 {
                     instance.scope.set_value(&exported.name, value);
                 }
@@ -3418,6 +3418,20 @@ fn dynamic_to_json(value: Dynamic) -> Option<Value> {
 }
 
 // 递归把 JSON 标量、数组及对象转换为 Rhai 动态值。
+/// 按导出声明类型把 JSON 值转换为 Rhai 动态值。
+/// JSON 不区分整数与浮点：\`@export(type="float")\` 的默认值 2.0 在文档里写成 2，
+/// 若原样注入会得到 i64，使 \`set_velocity(2, y)\` 找不到只接受 f64 的物理绑定。
+/// 这里按声明的 value_type 把整数值提升为浮点，避免脚本作者被数字书写形式坑到。
+fn json_to_export_dynamic(exported: &ExportedProperty, value: &Value) -> Option<Dynamic> {
+    let dynamic = json_to_dynamic(value)?;
+    if exported.value_type == "float" {
+        if let Ok(integer) = dynamic.as_int() {
+            return Some(Dynamic::from_float(integer as f64));
+        }
+    }
+    Some(dynamic)
+}
+
 fn json_to_dynamic(value: &Value) -> Option<Dynamic> {
     match value {
         Value::Null => Some(Dynamic::UNIT),
@@ -4457,6 +4471,46 @@ mod tests {
         assert!(ScriptRuntime::new()
             .validate("@export(min=10,max=1) let broken = 2.0;")
             .is_err());
+    }
+
+    // 浮点导出属性在 JSON 里是整数写法时，也必须以浮点注入。
+    // 否则 set_velocity(i64, f64) 找不到只接受 f64 的物理绑定，出厂 top-down 模板的 Enemy 脚本即会报错。
+    #[test]
+    fn integral_json_value_for_float_export_is_injected_as_float() {
+        let mut runtime = ScriptRuntime::new();
+        runtime
+            .upsert(
+                "enemy",
+                "@export(type=\"float\", group=\"AI\") let patrol_speed = 2.0;\nfn fixed_update(dt) { set_velocity(patrol_speed, 0.0); }",
+            )
+            .unwrap();
+        // 首次执行只做初始化；导出属性注入发生在实例已初始化之后。
+        let first = runtime
+            .execute_instance("enemy", "fixed_update", 1, 11, live_context("enemy-1", 11))
+            .unwrap();
+        let mut injected = live_context("enemy-1", 11);
+        injected.properties = first.properties;
+        // 模拟文档保存后的整数写法：2.0 经 JSON 往返变成 2。
+        injected.properties.insert("patrol_speed".into(), Value::from(2));
+        let second = runtime
+            .execute_instance("enemy", "fixed_update", 1, 11, injected)
+            .unwrap();
+        assert!(
+            second
+                .logs
+                .iter()
+                .all(|log| !log.message.contains("Function not found")),
+            "an integral JSON value for a float export must not break f64 physics bindings: {:?}",
+            second.logs
+        );
+        assert!(
+            matches!(
+                second.commands.first(),
+                Some(ScriptCommand::SetVelocity { x, y }) if (*x - 2.0).abs() < 1e-9 && y.abs() < 1e-9
+            ),
+            "patrol_speed must reach the binding as 2.0, saw {:?}",
+            second.commands
+        );
     }
 
     // 验证稳定句柄和第二版接口仍遵守沙箱命令边界。
