@@ -38,7 +38,9 @@ try {
 } finally {await opened.close()}
 if(process.argv.includes('--fixture-only')) process.exit(0)
 
-await withBrowserAudit({release:'26.34',name:'input-user',qualifyRelease:false,expectedRelease:JSON.parse(await readFile('package.json','utf8')).version.split('.').slice(0,2).join('.'),width:1600,height:1000},async a=>{
+// Derive both values from the package so the harness assertion compares the real release, not a pin.
+const currentRelease=JSON.parse(await readFile('package.json','utf8')).version.split('.').slice(0,2).join('.')
+await withBrowserAudit({release:currentRelease,name:'input-user',qualifyRelease:false,expectedRelease:currentRelease,width:1600,height:1000},async a=>{
   const u=worldUserControls17(a),node=key=>`[data-ui-uuid="${ids[key]}"]`
   const read=async()=>{
     const label=await a.evaluate(`document.querySelector(${JSON.stringify(node('counter'))})?.getAttribute('aria-label')`)

@@ -1152,6 +1152,38 @@ EXIT=0
 
 **W1 状态**：现有三套既有验证 + 本脚本，已覆盖运行时语义、launcher 全流程、编辑器作者流程、以及**从零组装角色**。**仍缺**（下一批）：经 UI 配置 **InputMap** 动作、连接 **Area 信号**、把角色**保存为可复用场景并在另一场景实例化**、以及组装后**运行验证行为**。故 W1 仍为 `PARTIAL`。
 
+### 19.11 批次 C：InputMap 编辑器**已存在**，并再修复一处过期版本断言
+
+**先纠正一个可能的误判**：我原以为 §9 要求的"ActionMap 可视化配置"缺失。**逐文件查证后确认它存在且相当完整** —— `src/panels/SettingsPanel.vue:104-153`：
+
+| 能力 | 位置 |
+|---|---|
+| 新增 / 删除 / 复制动作 | `:153`、`:116`、`:117` |
+| 动作名、类型（button/axis/vector2） | `:110-111` |
+| 上下文、动作映射、控制方案、交互方式（press/hold/tap/multiTap）、优先级、回调函数 | `:122-132` |
+| 多设备绑定（device/code/轴/缩放/手柄索引/死区/阈值） | `:135-148` |
+| **冲突提示**（`inputConflicts` role=alert） | `:106` |
+| 按名称/设备筛选 | `:104` |
+
+**打开路径**：命令面板的 `setting-inputMap` 命令 → `openManageSection('settings')` + 把 `state.settingsSearch` 设为该栏目名（`CommandPalette.vue:169`）。
+
+因此 W1 缺的不是 **InputMap 编辑能力**，而是**尚未有验证脚本覆盖"经该 UI 配置动作"这一步**。这一点必须如实区分。
+
+**顺带修复：`verify-v26.34-input-user.mjs` 的过期版本断言。**
+该脚本第 41 行 `release:'26.34'` 硬编码，而同处的 `expectedRelease` 从 `package.json` 推导（`26.38`）；`browserUserAudit.mjs:51` 断言二者相等，因此**该脚本一直无法运行**。已改为两者同源派生。
+
+**修复后该脚本 8 项全部通过**：
+- Authored project starts real Rhai input counters through normal Play
+- Scrollable game Panel moves its child without activating gameplay wheel
+- Bare Game canvas wheel reaches the named action exactly once
+- Native game TextInput owns wheel and typed keys
+- Inspector and Design canvas wheel remain excluded while Play continues
+- Returning to Game restores bare wheel and leaves keyboard gameplay unchanged
+- Profiler evidence visibly separates estimates from measured budgets
+- Imported font availability note is visible beside supported and metadata controls
+
+**同一类测试维护缺陷已连续出现两次**（authoring 与 input 各一处）：都是把发布号写成字面量。已排查全库其余 8 处版本字面量，均为刻意保留。
+
 ### 19.2 批次 B1：渲染抽取全部改用批量世界变换
 
 **改动**（`src/renderer/sceneRenderer.ts`，已解冻范围）：
