@@ -980,6 +980,36 @@ Voraussetzungen: Offline bereit
 
 Danach Stop ausführen und die wiederhergestellte Ausgangsszene prüfen. Projekt speichern, erneut öffnen und das Ergebnis wiederholen; anschließend den exportierten Player vergleichen. Ein erfolgreicher Start allein bestätigt nicht jedes Spielverhalten.
 
+### Skyline-Trilogie (platformer-trilogy)
+
+Steuerung und Einrichtung: Play: A/D oder Pfeiltasten laufen, Leertaste/W springen (halten für mehr Höhe), R startet die Stufe neu. Vorher in die Spielansicht klicken.
+
+Erwartetes Ergebnis: Drei Stufen laden nacheinander; Stufe 3 öffnet das Tor nach zehn Münzen und zeigt Gesamtzeit und Stürze.
+
+Voraussetzungen: Offline bereit · Tastatur
+
+Danach Stop ausführen und die wiederhergestellte Ausgangsszene prüfen. Projekt speichern, erneut öffnen und das Ergebnis wiederholen; anschließend den exportierten Player vergleichen. Ein erfolgreicher Start allein bestätigt nicht jedes Spielverhalten.
+
+### Pendelpost (pendulum-post)
+
+Steuerung und Einrichtung: Play: Ein Seilglied in der Spielansicht anklicken, um es zu schneiden, oder 1/2 drücken, um eine Kugel zu lösen. Beide Kugeln in den Becher bringen; R startet neu.
+
+Erwartetes Ergebnis: Geschnittene Ketten lassen ihre Kugeln fallen; zwei Kugeln im Becher zeigen die Lieferanzeige mit Bewertung.
+
+Voraussetzungen: Offline bereit · Zeiger · Tastatur
+
+Danach Stop ausführen und die wiederhergestellte Ausgangsszene prüfen. Projekt speichern, erneut öffnen und das Ergebnis wiederholen; anschließend den exportierten Player vergleichen. Ein erfolgreicher Start allein bestätigt nicht jedes Spielverhalten.
+
+### Reflexlabor (reflex-lab)
+
+Steuerung und Einrichtung: Play: Leertaste, Eingabe, Linksklick oder Gamepad-A startet eine Runde; erneut drücken, sobald die Lampe grün wird. M wechselt zur Latenz-Markerszene, R setzt zurück.
+
+Erwartetes Ergebnis: Fünf gültige Runden melden Durchschnitt, Bestwert und schlechteste Reaktionszeit; die Markerszene zeigt ein weißes Quadrat, solange die Leertaste gehalten wird.
+
+Voraussetzungen: Offline bereit · Tastatur · Zeiger
+
+Danach Stop ausführen und die wiederhergestellte Ausgangsszene prüfen. Projekt speichern, erneut öffnen und das Ergebnis wiederholen; anschließend den exportierten Player vergleichen. Ein erfolgreicher Start allein bestätigt nicht jedes Spielverhalten.
+
 <!-- NOVA_V2615_END -->
 
 <!-- NOVA_V2614_START -->

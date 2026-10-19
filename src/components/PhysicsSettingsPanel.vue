@@ -21,9 +21,10 @@
         <UiPropertyRow :label="t('globalGravity')"><div><NumericExpressionInput v-model="physics.globalSettings.gravity" :step="0.01" resource-key="project:physics.globalSettings.gravity" /><em>m/s²</em></div></UiPropertyRow>
         <UiPropertyRow :label="t('globalAirDamping')"><div><NumericExpressionInput v-model="physics.globalSettings.airFriction" :minimum="0" :step="0.01" resource-key="project:physics.globalSettings.airFriction" /><em>s⁻¹</em></div></UiPropertyRow>
         <UiPropertyRow :label="t('timeScale')"><NumericExpressionInput v-model="physics.globalSettings.timeScale" :minimum="0" :step="0.1" resource-key="project:physics.globalSettings.timeScale" /></UiPropertyRow>
-        <UiPropertyRow :label="t('physicsTickRate')"><div><NumericExpressionInput v-model="physics.globalSettings.profile.tickRate" :minimum="1" :maximum="1000" :step="1" resource-key="project:physics.globalSettings.profile.tickRate" /><em>Hz</em></div></UiPropertyRow>
+        <UiPropertyRow :label="t('physicsTickRate')" :help="t('physicsTickRateHelp')"><div><NumericExpressionInput v-model="physics.globalSettings.profile.tickRate" :minimum="1" :maximum="1000" :step="1" resource-key="project:physics.globalSettings.profile.tickRate" /><em>Hz</em></div></UiPropertyRow>
         <UiPropertyRow :label="t('maxCatchUpSteps')"><NumericExpressionInput v-model="physics.globalSettings.profile.maxCatchUpSteps" :minimum="1" :maximum="240" :step="1" resource-key="project:physics.globalSettings.profile.maxCatchUpSteps" /></UiPropertyRow>
         <UiPropertyRow :label="t('physicsInterpolation')"><select v-model="physics.globalSettings.profile.interpolation"><option value="Interpolate">{{ t('interpolate') }}</option><option value="None">{{ t('noInterpolation') }}</option></select></UiPropertyRow>
+        <UiPropertyRow :label="t('timerClock')" :help="t('timerClockHelp')"><select v-model="timerClock"><option value="frame">{{ t('timerClockFrame') }}</option><option value="fixed">{{ t('timerClockFixed') }}</option></select></UiPropertyRow>
         <UiPropertyRow :label="t('sleepLinearThreshold')"><div><NumericExpressionInput v-model="physics.globalSettings.profile.sleepLinearThreshold" :minimum="0" :step="0.0001" resource-key="project:physics.globalSettings.profile.sleepLinearThreshold" /><em>m/s</em></div></UiPropertyRow>
         <UiPropertyRow :label="t('sleepAngularThreshold')"><div><NumericExpressionInput v-model="physics.globalSettings.profile.sleepAngularThreshold" :minimum="0" :step="0.0001" resource-key="project:physics.globalSettings.profile.sleepAngularThreshold" /><em>rad/s</em></div></UiPropertyRow>
         <UiPropertyRow :label="t('timeToSleep')"><div><NumericExpressionInput v-model="physics.globalSettings.profile.timeToSleep" :minimum="0" :step="0.05" resource-key="project:physics.globalSettings.profile.timeToSleep" /><em>s</em></div></UiPropertyRow>
@@ -98,6 +99,11 @@ import { openEditorTool } from '../editor/workspaces'
 import { t } from '../i18n'
 import { normalizeGlobalSettings, physicsState as physics, pushHistory } from '../store/physics'
 import { PHYSICS_CONFORMANCE_CASES, PHYSICS_SHAPE_SUPPORT, PHYSICS_UNITS, applyPhysicsProfile, defaultPhysicsMaterial, normalizePhysicsMaterial, type PhysicsCombineMode, type PhysicsMaterialAsset2D } from '../runtime/physicsProduction'
+/** 26.42 S-2: timers advance with frame time (default, 26.41 behaviour) or with each fixed physics step. */
+const timerClock = computed<'frame' | 'fixed'>({
+  get: () => physics.globalSettings.timerClock === 'fixed' ? 'fixed' : 'frame',
+  set: value => { if (value === 'fixed') physics.globalSettings.timerClock = 'fixed'; else delete physics.globalSettings.timerClock; pushHistory('Change timer clock') }
+})
 
 const form17 = useSimulationFormGuard17(commit)
 const tab = ref<'simulation' | 'layers' | 'materials' | 'conformance'>('simulation')

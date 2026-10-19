@@ -1,6 +1,6 @@
 <!-- 编辑器主布局：按需加载工作区，保留画布与检查器，并管理面板停靠和空闲预热。 -->
 <template>
-  <div class="editor-root" data-control-scope="editor-shell" :data-play-mode="physicsState.playMode" :class="{ 'read-only': recoveryState.readOnly }" @contextmenu.prevent @click="closeContextMenu">
+  <div class="editor-root" data-control-scope="editor-shell" :data-play-mode="physicsState.playMode" :data-chrome-idle="chromeIdle || undefined" :class="{ 'read-only': recoveryState.readOnly }" @contextmenu.prevent @click="closeContextMenu">
     <div v-if="recoveryState.readOnly" class="read-only-banner" role="status">{{ t('readOnlyRecoveryBanner') }}</div>
     <TopBar />
 
@@ -133,6 +133,23 @@ onBeforeUnmount(/** 卸载时取消预热并移除一次性输入监听。 */ ()
   endPanelDrag()
   for (const element of document.querySelectorAll<HTMLElement>('.floating-dock')) cancelMotion(element)
 })
+// 26.42 G0：Play 中视口浮层 1.5 s 无指针移动后淡出；移动指针立即恢复。只在 Play 时监听。
+const chromeIdle = ref(false)
+let chromeIdleTimer = 0, chromeWokeAt = 0
+function wakeViewportChrome(): void {
+  const now = performance.now()
+  if (!chromeIdle.value && now - chromeWokeAt < 120) return
+  chromeWokeAt = now; chromeIdle.value = false
+  window.clearTimeout(chromeIdleTimer)
+  chromeIdleTimer = window.setTimeout(() => { chromeIdle.value = true }, 1_500)
+}
+watch(() => physicsState.playMode, mode => {
+  window.removeEventListener('pointermove', wakeViewportChrome, true)
+  window.clearTimeout(chromeIdleTimer); chromeIdle.value = false
+  // Capture phase: the game canvas may stop pointer events from bubbling while it owns the pointer.
+  if (mode === 'playing') { window.addEventListener('pointermove', wakeViewportChrome, { passive: true, capture: true }); chromeWokeAt = 0; wakeViewportChrome() }
+}, { immediate: true })
+onBeforeUnmount(() => { window.removeEventListener('pointermove', wakeViewportChrome, true); window.clearTimeout(chromeIdleTimer) })
 const draggedPanel = ref<'hierarchy' | 'inspector' | ''>(''), dragTarget = ref('')
 /** 检查指定面板是否为浮动面板。 */ function isFloating(panel: 'hierarchy' | 'inspector'): boolean { return workspaceState.floatingPanels.includes(panel) }
 let panelDragFromControl = false
@@ -165,6 +182,10 @@ function leavePanelDrop(event: DragEvent) { if (!(event.currentTarget as HTMLEle
 .viewport-chrome-end { justify-content: flex-end; }
 .viewport-chrome-start > *, .viewport-chrome-end > *, .viewport-chrome-tools { pointer-events: auto; }
 .viewport-chrome-tools { flex: none; padding: var(--radius-capsule-inset); }
+/* 26.42 G0: while the game runs the floating controls use static glass and fade out after 1.5 s without pointer movement; any movement or keyboard focus brings them back. */
+.editor-root[data-play-mode='playing'] .viewport-chrome { transition: opacity var(--motion-fast) var(--ease-smooth); }
+.editor-root[data-play-mode='playing'][data-chrome-idle] .viewport-chrome:not(:focus-within) { opacity: 0; transition-duration: var(--motion-panel); }
+@media (prefers-reduced-motion: reduce) { .editor-root[data-play-mode='playing'] .viewport-chrome { transition: none; } }
 .editor-content { min-height: 0; flex: 1; position: relative; overflow: hidden; container: viewport / inline-size; background: var(--bg-canvas); border-radius: var(--radius-panel); box-shadow: inset 0 0 0 var(--ui-border-width) var(--border-separator); }
 /* Running the game is visible at a glance: the viewport frame takes the run state's color. */
 .editor-content::after { content: ''; position: absolute; inset: 0; z-index: 400; border-radius: inherit; pointer-events: none; box-shadow: inset 0 0 0 0 transparent; transition: box-shadow var(--motion-standard) var(--ease-standard); }

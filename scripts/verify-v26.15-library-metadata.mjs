@@ -1,5 +1,11 @@
 /** 功能回归脚本：执行 verify-v26.15-library-metadata.mjs 对应场景，保留断言和证据输出。 */
 import {assetAuditMetadata} from './lib/assetAudit15.mjs'
+/** The 26.15 qualification metadata only applies to the 26.15.0 package; later versions record their own version instead of failing. */
+async function libraryAuditMetadata(repository,sourceRoot){
+ const engineVersion=JSON.parse(await readFile(join(resolve(sourceRoot),'package.json'),'utf8')).version
+ if(engineVersion==='26.15.0')return assetAuditMetadata(repository,sourceRoot)
+ return{release:engineVersion.split('.').slice(0,2).join('.'),engineVersion,expectedRelease:engineVersion.split('.').slice(0,2).join('.'),development:resolve(sourceRoot)!==resolve(repository),qualifiedRelease:null,sourceMode:'library-regression',generatedAt:new Date().toISOString()}
+}
 import assert from 'node:assert/strict'
 import { build } from 'vite'
 import { compileScript, compileTemplate, parse } from 'vue/compiler-sfc'
@@ -15,7 +21,7 @@ try {
  const load=/* 调用 import(pathToFileURL(join(temporary,name+'.mjs')).href) 并返回调用结果。 */ name=>import(pathToFileURL(join(temporary,name+'.mjs')).href)
  const [templates,guides,discovery,hash,project]=await Promise.all(['templates','guides','discovery','hash','project'].map(load))
  const ids=templates.PROJECT_TEMPLATES.map(/* 返回 t.id 的当前值。 */ t=>t.id),baseline=JSON.parse(await readFile(fileURLToPath(new URL('./fixtures/v26.15-template-library.json',import.meta.url)),'utf8')).ids
- await check('All 40 launcher IDs and catalogue order remain stable',/* 调用 assert.deepEqual(ids,baseline) 并返回调用结果。 */ ()=>assert.deepEqual(ids,baseline))
+ await check(`All ${baseline.length} launcher IDs and catalogue order remain stable`,/* 调用 assert.deepEqual(ids,baseline) 并返回调用结果。 */ ()=>assert.deepEqual(ids,baseline))
  const manual=await readFile(join(root,'manual/index.html'),'utf8'),anchors=new Set([...manual.matchAll(/id="([^"]+)"/g)].map(/* 返回 m[1] 的当前值。 */ m=>m[1]))
  await check('Every starter has complete EN/DE/ZH instructions and two existing localized help anchors',/** 结构说明（自动提取）：check 回调；无显式参数；直接调用 guides.templateGuide、assert.ok、anchors.has、assert.throws；包含循环处理。 */ ()=>{
   for(const id of ids)for(const locale of ['en','de','zh']){
@@ -25,7 +31,7 @@ try {
   }
   assert.throws(/* 调用 guides.templateGuide('missing-template') 并返回调用结果。 */ ()=>guides.templateGuide('missing-template'),/Missing template/)
  })
- await check('All 40 real PNG previews exist with bounded dimensions and total footprint',/** 结构说明（自动提取）：check 回调；无显式参数；直接调用 join、readFile、assert.equal、toString、data.subarray 等；写入 total；包含循环处理；等待异步结果。 */ async()=>{
+ await check(`All ${ids.length} real PNG previews exist with bounded dimensions and total footprint`,/** 结构说明（自动提取）：check 回调；无显式参数；直接调用 join、readFile、assert.equal、toString、data.subarray 等；写入 total；包含循环处理；等待异步结果。 */ async()=>{
   let total=0
   for(const id of ids){const path=join(root,'src/assets/template-previews',id+'.png'),data=await readFile(path);assert.equal(data.subarray(1,4).toString(),'PNG');assert.ok(data.readUInt32BE(16)<=1920&&data.readUInt32BE(20)<=1080);total+=(await stat(path)).size}
   assert.ok(total<4*1024*1024);checks.push({name:'preview-bytes',status:'passed',bytes:total})
@@ -54,5 +60,5 @@ try {
  await check('Actual launcher SFC compiles with preserved script bindings and named localized controls',/** 结构说明（自动提取）：check 回调；无显式参数；直接调用 readFile、join、parse、assert.deepEqual、compileScript 等；等待异步结果。 */ async()=>{
   const source=await readFile(join(root,'src/components/ProjectManager.vue'),'utf8'),result=parse(source,{filename:'ProjectManager.vue'});assert.deepEqual(result.errors,[]);const script=compileScript(result.descriptor,{id:'library'}),compiled=compileTemplate({source:result.descriptor.template.content,filename:'ProjectManager.vue',id:'library',compilerOptions:{bindingMetadata:script.bindings}});assert.deepEqual(compiled.errors,[])
  })
- await mkdir(resolve(report,'..'),{recursive:true});await writeFile(report,JSON.stringify({format:'nova-v26.15-library-metadata',version:1,...await assetAuditMetadata(repository,root),status:'passed',checks},null,2)+'\n')
+ await mkdir(resolve(report,'..'),{recursive:true});await writeFile(report,JSON.stringify({format:'nova-v26.15-library-metadata',version:1,...await libraryAuditMetadata(repository,root),status:'passed',checks},null,2)+'\n')
 }finally{const suffix=relative(resolve(repository,'.cache'),temporary);assert.ok(suffix&&!suffix.startsWith('..')&&!isAbsolute(suffix)&&suffix.startsWith('nova-v2615-library-'));await rm(temporary,{recursive:true,force:true})}

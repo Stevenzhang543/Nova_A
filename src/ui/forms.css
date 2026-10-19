@@ -102,3 +102,23 @@ input[type=range]:disabled { opacity: var(--disabled-opacity); }
 .settings-sections .ui-section-body { max-width: calc(var(--ui-number-width) * 10); }
 html[data-form-label-layout='stacked'] .ui-property-row { grid-template-columns: minmax(0,1fr); align-items: start; }
 .property-override { grid-column: 1 / -1; color: var(--warning); }
+
+/* 26.42 G0 — inset-grouped Inspector (docs/DEV_MANUAL_26_42.md WP-G).
+ * The group header stays outside the card; the body becomes a 12px-radius card
+ * inset 8px from the dock edge, rows ≥36px separated by hairlines inset 12px. */
+.ui-property-section.inspector-section { border-block-end: 0; padding-block-end: var(--space-2); }
+.ui-property-section.inspector-section > summary { padding-inline: calc(var(--space-2) + var(--space-3)) var(--space-3); min-height: calc(30px * var(--ui-scale)); font-size: var(--type-section); }
+.ui-property-section.inspector-section > summary:hover { background: transparent; color: var(--accent); }
+.ui-property-section.inspector-section > .ui-section-body {
+  margin-inline: var(--space-2); padding: var(--space-1) var(--space-3); gap: 0;
+  border-radius: var(--radius-group); background: var(--surface-raised);
+  box-shadow: 0 0 0 var(--ui-border-width) var(--border-separator);
+}
+.ui-property-section.inspector-section > .ui-section-body > .ui-property-row { min-height: calc(36px * var(--ui-scale)); padding-block: var(--space-1); }
+.ui-property-section.inspector-section > .ui-section-body > :is(.ui-property-row, .ui-property-row--stacked) + :is(.ui-property-row, .ui-property-row--stacked) {
+  border-block-start: var(--ui-border-width) solid var(--separator, var(--border-separator));
+}
+.ui-property-section.inspector-section > .ui-section-body > :is(p, small, .ui-property-help):last-child { padding-block-end: var(--space-2); }
+.ui-property-section.inspector-section > .ui-section-body > :not(.ui-property-row):not(:first-child) { margin-block-start: var(--space-2); }
+:root[data-reduce-transparency='true'] .ui-property-section.inspector-section > .ui-section-body,
+:root[data-high-contrast='true'] .ui-property-section.inspector-section > .ui-section-body { box-shadow: 0 0 0 var(--ui-border-width) var(--border-strong); }

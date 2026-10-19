@@ -1,6 +1,80 @@
-# Nova_A 26.41 — input, output and display latency results
+# Nova_A input, output and display latency results (26.41, 26.42)
 
-All numbers below were measured on one machine in one session (17 October 2026) with the procedure described here. They are not a guarantee for other hardware. Nothing in this file is estimated: a missing measurement is written N/A.
+All numbers below were measured on one machine with the procedure described here (26.41: 17 October 2026; 26.42: 18 and 19 October 2026). They are not a guarantee for other hardware. Nothing in this file is estimated: a missing measurement is written N/A.
+
+## 26.42 release build (19 October 2026)
+
+The packaged portable executable, started from `releases/v26.42` (`.cache/_latency/launch-rel42-test.cmd`, with `NOVA_LATENCY_PROBE`), opened the same `LatencyTest.nova` through the upgrade check (26.40 → 26.42, in memory; the file was not rewritten). Window maximized, bottom panel open, editor Play, `--roi 1285 332` as for `d42`. This build includes everything in the development build below plus soft shadows, normal maps on the GPU, the fixed-step timer clock (not enabled in this older project) and the desynchronized-canvas switch (off). P50 / P95 in ms, 100 trials per edge, clock-mapping error 1.45–1.5 ms, 200 of 200 inputs matched to probe records.
+
+| Stage | 26.42 `d42` (18 Oct), 60 Hz | **26.42 release (`rel42`), 60 Hz** |
+| --- | --- | --- |
+| SendInput → handler | 5.6 / 8.2 | 5.4 / 8.4 |
+| handler → consumed | 8.5 / 12.3 | 6.3 / 12.4 |
+| consumed → submit | 3.5 / 4.5 | 3.3 / 4.6 |
+| submit → capture | 2.2 / 2.9 | 2.3 / 2.9 |
+| **SendInput → capture, key down** | **19.5 / 26.0** | **18.5 / 26.0** |
+| SendInput → capture, key up | 17.3 / 25.7 | 18.7 / 26.0 |
+
+Frames, 60 s of movement and jumps (`rel42-frames`): 238.95 world submissions per second (11 of 15 780 frames deferred by fence credit), Runtime frame (simulation) mean 1.15 ms, CPU frame start → submission P50 1.9 ms, renderer GPU timer P50 0.045 ms (0.03 ms in `d42`; the scene's light now also runs the shadow-mask passes), submission gaps over 16.7 ms: 5 in 66 s.
+
+The release build is within measurement noise of the development build: the end-to-end key-down P50 differs by 1 ms with a clock-mapping error of 1.5 ms, and P95 is identical. The Windows export from the release editor (`Build and run`, same project) started and responded to keyboard input; it was not measured again.
+
+Raw records: `.cache/_latency/results42/rel42-*`, `h-rel42-*.log`; command files `launch-rel42-test.cmd`, `h42-rel42-key.cmd`, `h42-rel42-frames.cmd` (copies in the release evidence archive under `latency/`).
+
+## 26.42 development build (18 October 2026)
+
+Same machine, method and definitions as the 26.41 sections below; measured in a new session on 18 October 2026 with the development build `d42` (26.42 working tree including GPU lighting, P-A overlay skip and the Play-mode glass rules; built by `.cache/_latency/build-checks-26.42.cmd`). The scene is the same `LatencyTest.nova` (Platformer with its 2D point light and shadow casters, 60 Hz) opened through the normal upgrade check; the editor window was maximized, with the bottom panel open (the 26.41 runs had a different panel layout, so the capture region moved: `--roi 1285 332`). The 26.41 release could not be re-run in this session (its folder was not reachable from the harness), so the 26.41 column repeats the 17 October values. P50 / P95 in ms, key down, 100 trials each, clock-mapping error 1.5–1.6 ms.
+
+| Stage | 26.41 release (17 Oct) | 26.42 `d42`, 60 Hz | 26.42 `d42`, 120 Hz (`LatencyTest-t120`) |
+| --- | --- | --- | --- |
+| SendInput → handler | — | 5.6 / 8.2 | 5.5 / 8.6 |
+| handler → consumed | — | 8.5 / 12.3 | 3.3 / 4.5 |
+| consumed → submit | — | 3.5 / 4.5 | 3.4 / 4.4 |
+| handler → submit | 9.8 (P50) | 11.6 / 16.0 | 6.7 / 8.5 |
+| submit → capture | — | 2.2 / 2.9 | 2.3 / 3.3 |
+| **SendInput → capture (end to end)** | **23.1 (P50)** | **19.5 / 26.0** | **13.7 / 18.8** |
+
+Frames, 60 s of movement and jumps (probe):
+
+| | 26.41 release | 26.42 `d42`, 60 Hz | 26.42 `d42`, 120 Hz |
+| --- | --- | --- | --- |
+| World submissions per second (240 Hz display) | 233.4 | 239.0 | 237.6 |
+| Frames deferred by fence credit | — | 17 of 16 029 | 22 of 15 701 |
+| Runtime frame (simulation), mean ms | 1.2 | 1.14 | 1.55 |
+| CPU frame start → submission, P50 ms | — | 1.9 | 3.0 |
+| GPU timer (world pass, now including the light pass), P50 ms | — | 0.03 | 0.03 |
+
+- With the light drawn by the WebGL2 renderer the lit scene reaches the desktop capture 2.2 ms (P50) after the submission. 26.41 measured 2.6 ms for the same scene *without* a light; the Canvas 2D light overlay was the reason the lit scene was slower. End to end the lit scene is now 19.5 ms P50, about the 18.5 ms the unlit scene measured in 26.41.
+- At 120 Hz the wait for the next fixed step falls from 8.5 to 3.3 ms (P50) and end to end from 19.5 to 13.7 ms; the Runtime frame costs 0.4 ms more on average. New template projects use 120 Hz (P-B); existing projects keep their rate.
+- "handler → submit" is higher at 60 Hz in this session than the 26.41 value because the 26.41 figure was measured with a different panel layout and session; the end-to-end figure, which does not depend on the probe, is the comparison to use.
+
+P-C (character interpolation), physics-driven marker (`--marker character`: Kinematic body with CharacterBody2D moved by `move_character`), 60 Hz, P50 / P95:
+
+| | Interpolate (`char-i60`) | None (`char-n60`) |
+| --- | --- | --- |
+| handler → consumed | 7.7 / 12.3 | 8.9 / 12.2 |
+| submit → capture | 2.3 / 5.7 | 2.0 / 2.7 |
+| SendInput → capture | 18.5 / 28.4 | 19.2 / 26.2 |
+
+The difference between Interpolate and None is below the 3 ms decision threshold of the development manual (and within the clock-mapping error), so per-body interpolation modes were not implemented in 26.42.
+
+Exported Windows Player (M-2). With the content-security-policy fix (edit ledger, P-E1) the same `LatencyTest.nova` exported for Windows from `d42` (Build Settings: Windows, Production qualified, x86_64, debug profile, game data packed into the executable) without the "Failed to fetch" audio error that blocked 26.41. The exported `My Game.exe` was started with `NOVA_LATENCY_PROBE` and measured the same way (`--image "My Game.exe" --roi 1278 597`, its own window maximized, the 60 Hz scene with the light):
+
+| | Editor Play (`d42`) | Exported Player (`player`) |
+| --- | --- | --- |
+| SendInput → handler | 5.6 / 8.2 | 4.2 / 5.9 |
+| handler → consumed | 8.5 / 12.3 | 9.1 / 14.1 |
+| consumed → submit | 3.5 / 4.5 | 2.1 / 2.6 |
+| submit → capture | 2.2 / 2.9 | 4.1 / 4.5 |
+| **SendInput → capture** | **19.5 / 26.0** | **18.9 / 26.1** |
+| World submissions per second | 239.0 | 239.8 |
+| Runtime frame (simulation), mean ms | 1.14 | 0.80 |
+
+The exported Player is not slower than editor Play end to end; its submit → capture stage is about 2 ms longer, which was not investigated further. The Player still runs the Vue-based `PlayerApp` (P-E2, a Vue-free Player host, was not done in this round). The jump sound was not checked by ear.
+
+Not measured in this round: drag latency, the 26.41 release in the same session, the Web Player, PresentMon, photon latency.
+
+Raw records: `.cache/_latency/results42/` (`<label>-<mode>-trials.json`, `-probe.jsonl`, `-joined.csv`, `-frames.csv`, `-summary.json`, `h-<label>-<mode>.log`), test projects `LatencyTest.nova`, `LatencyTest-t120.nova`, `LatencyTest-char-{Interpolate,None}-60.nova`, command files `h42-*.cmd`, `launch-d42-*.cmd`.
 
 ## What was measured
 

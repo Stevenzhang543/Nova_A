@@ -46,6 +46,8 @@ export interface GlobalPhysicsSettings {
   interpolation: PhysicsInterpolationMode
   layers: PhysicsLayerDefinition[]
   profile: PhysicsSimulationProfile2D
+  /** 26.42 S-2: clock that advances script timers. Missing means 'frame' (the behaviour before 26.42). */
+  timerClock?: 'frame' | 'fixed'
 }
 
 export interface EngineDiagnostics {

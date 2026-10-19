@@ -729,7 +729,8 @@ export class GameplayRuntime {
     this.inputSnapshot = frameInput
     this.dispatchInputCallbacks(frameInput)
     this.latchFixedInput(frameInput)
-    const expired = this.time.beginFrame(frameDelta, this.worldHost.state.globalSettings.tickRate, this.worldHost.state.globalSettings.timeScale)
+    const fixedTimers = this.worldHost.state.globalSettings.timerClock === 'fixed'
+    const expired = this.time.beginFrame(frameDelta, this.worldHost.state.globalSettings.tickRate, this.worldHost.state.globalSettings.timeScale, !fixedTimers)
     let scriptsMs = 0
     const timerScriptsStarted = performance.now()
     this.dispatchTimerExpirations(expired)
@@ -762,6 +763,8 @@ export class GameplayRuntime {
         }
         firstFixedStep = false
         this.time.value.fixedDelta = fixedDelta
+        // Fixed timer clock: timers that expire in this step fire before its fixed_update.
+        if (fixedTimers) this.dispatchTimerExpirations(this.time.advanceFixed(fixedDelta))
         this.runPhase('fixed_update')
         this.flushEntityCommands()
         this.gameplayComponents.updateGameplayComponents(this.worldHost.state.world.entities, this.inputSnapshot, fixedDelta, /* 调用 this.emitSignal(name, payload, target, source) 并返回调用结果。 */ (name, payload, target, source) => this.emitSignal(name, payload, target, source), /** 结构说明（自动提取）：updateGameplayComponents 回调；输入 prefab、owner；直接调用 worldTransform、spawnRuntimePrefab。 */ (prefab, owner) => {
@@ -838,7 +841,9 @@ export class GameplayRuntime {
     this.fixedPressed = {}
     this.fixedReleased = {}
     this.fixedEdges = []
-    this.dispatchTimerExpirations(this.time.beginFrame(this.time.value.fixedDelta, this.worldHost.state.globalSettings.tickRate, this.worldHost.state.globalSettings.timeScale))
+    const fixedTimers = this.worldHost.state.globalSettings.timerClock === 'fixed'
+    this.dispatchTimerExpirations(this.time.beginFrame(this.time.value.fixedDelta, this.worldHost.state.globalSettings.tickRate, this.worldHost.state.globalSettings.timeScale, !fixedTimers))
+    if (fixedTimers) this.dispatchTimerExpirations(this.time.advanceFixed(this.time.value.fixedDelta))
     this.runPhase('fixed_update')
     this.flushEntityCommands()
     this.gameplayComponents.updateGameplayComponents(this.worldHost.state.world.entities, this.inputSnapshot, this.time.value.fixedDelta, /* 调用 this.emitSignal(name, payload, target, source) 并返回调用结果。 */ (name, payload, target, source) => this.emitSignal(name, payload, target, source), /** 结构说明（自动提取）：updateGameplayComponents 回调；输入 prefab、owner；直接调用 worldTransform、spawnRuntimePrefab。 */ (prefab, owner) => {

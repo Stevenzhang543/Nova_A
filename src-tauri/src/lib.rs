@@ -1954,6 +1954,12 @@ fn runtime_mode() -> Result<bool, String> {
     Ok(runtime_package_bytes()?.is_some())
 }
 
+// 26.42 P-E3: opt-in low-latency (desynchronized) game canvas for the Player, NOVA_DESYNCHRONIZED=1. Off by default.
+#[tauri::command]
+fn canvas_desynchronized() -> bool {
+    std::env::var("NOVA_DESYNCHRONIZED").is_ok_and(|value| value.trim() == "1")
+}
+
 // Opt-in latency probe: a loopback collector URL from NOVA_LATENCY_PROBE, or nothing. Never a remote host.
 #[tauri::command]
 fn latency_probe_endpoint() -> Option<String> {
@@ -3729,6 +3735,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             runtime_mode,
             latency_probe_endpoint,
+            canvas_desynchronized,
             launch_project,
             runtime_package,
             runtime_overrides,

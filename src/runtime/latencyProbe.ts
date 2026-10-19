@@ -44,6 +44,8 @@ class LatencyProbe {
   enabled = false
   endpoint = ''
   label = ''
+  /** 26.42 P-E3: context attributes reported with every batch (for example whether the canvas is desynchronized). */
+  readonly context: Record<string, string | number | boolean | null> = {}
   private nextId = 1
   private frameSerial = 0
   private pending: ProbeInputRecord[] = []
@@ -130,7 +132,7 @@ class LatencyProbe {
     // Inputs still waiting for more than two seconds are reported as incomplete rather than dropped silently.
     const stale = this.pending.filter(record => now - record.receivedAt > 2000)
     if (stale.length) this.pending = this.pending.filter(record => now - record.receivedAt <= 2000)
-    const body = JSON.stringify({ label: this.label, timeOrigin: performance.timeOrigin, sentAt: now, dropped: this.dropped,
+    const body = JSON.stringify({ label: this.label, context: this.context, timeOrigin: performance.timeOrigin, sentAt: now, dropped: this.dropped,
       syncs: this.syncs.splice(0), inputs: this.completed.splice(0), incomplete: stale, frames: this.frames.splice(0) })
     try { await fetch(`${this.endpoint}/probe`, { method: 'POST', body, headers: { 'content-type': 'application/json' } }) } catch { /* Collector gone: the probe never blocks the app. */ }
     // Re-measure the clock mapping every ten seconds so slow drift stays inside the reported error.

@@ -18,7 +18,7 @@
     </section>
 
     <div class="ui-section-list settings-sections">
-      <UiPropertySection :title="t('appearanceSettings')" v-show="showCard('appearanceSettings formLabelLayout theme color palette language interfaceScale compactMode reduceMotion highContrast launchMaximized workspaceLayoutScope shortcutEditor', 'editor')" >
+      <UiPropertySection :title="t('appearanceSettings')" v-show="showCard('appearanceSettings formLabelLayout theme color palette language interfaceScale compactMode reduceMotion reduceTransparency transparency glass highContrast launchMaximized workspaceLayoutScope shortcutEditor', 'editor')" >
 
         <UiPropertyRow :label="t('language')">
           <select v-model="prefs.locale">
@@ -45,6 +45,7 @@
         </UiPropertyRow>
         <UiPropertyRow :label="t('compactMode')"><UiToggle v-model="prefs.compactMode" /></UiPropertyRow>
         <UiPropertyRow :label="t('reduceMotion')"><UiToggle v-model="prefs.reduceMotion" /></UiPropertyRow>
+        <UiPropertyRow :label="t('reduceTransparency')"><UiToggle v-model="prefs.reduceTransparency" data-audit="reduce-transparency" /></UiPropertyRow>
         <UiPropertyRow :label="t('highContrast')"><UiToggle v-model="prefs.highContrast" /></UiPropertyRow>
         <UiPropertyRow :label="t('launchMaximized')"><UiToggle v-model="prefs.launchMaximized" /></UiPropertyRow>
         <UiPropertyRow :label="t('workspaceLayoutScope')"><select v-model="prefs.workspaceLayoutScope"><option value="user">{{ t('editorScope') }}</option><option value="project">{{ t('projectScope') }}</option></select></UiPropertyRow>

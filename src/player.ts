@@ -30,5 +30,15 @@ const performanceHost = installPerformanceHost({ subscribeFrames: subscribePerfo
     renderScale: 1, particleScale: 1, revision: snapshot.revision, reason: snapshot.reasonCodes.join(',') }),
   subscribeActivity: listener => watch(() => physicsState.simulationRunning, running => listener(running ? 'playing' : 'interactive'), { immediate: true, flush: 'sync' }) })
 if (import.meta.hot) import.meta.hot.dispose(() => performanceHost.dispose())
-void activateLatencyProbe('web-player')
-createApp(PlayerApp).mount('#app')
+/** 26.42 P-E3: `?desynchronized=1` (Web) or NOVA_DESYNCHRONIZED=1 (desktop) requests a desynchronized game canvas. */
+async function readDesynchronizedSwitch(): Promise<boolean> {
+  if ('__TAURI_INTERNALS__' in window) {
+    try { const { invoke } = await import('@tauri-apps/api/core'); return (await invoke<boolean>('canvas_desynchronized')) === true } catch { return false }
+  }
+  return new URLSearchParams(location.search).get('desynchronized') === '1'
+}
+void (async () => {
+  ;(globalThis as { __NOVA_DESYNCHRONIZED_CANVAS__?: boolean }).__NOVA_DESYNCHRONIZED_CANVAS__ = await readDesynchronizedSwitch()
+  await activateLatencyProbe('web-player')
+  createApp(PlayerApp).mount('#app')
+})()

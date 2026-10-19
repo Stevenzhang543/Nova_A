@@ -35,14 +35,18 @@ export class RuntimeTime {
   private generation = 0
   private pending = new Map<string, { generation: number; count: number }>()
 
-  /** 规范化倍率、固定步长和帧时长，累计缩放时间及帧号并推进计时器。 */ beginFrame(frameDelta: number, tickRate: number, scale: number): TimerExpiration[] {
+  /** 规范化倍率、固定步长和帧时长，累计缩放时间及帧号；frame 时钟下按帧时长推进计时器。 */ beginFrame(frameDelta: number, tickRate: number, scale: number, advanceTimers = true): TimerExpiration[] {
     this.value.scale = Number.isFinite(scale) ? Math.min(100, Math.max(0, scale)) : 1
     this.value.fixedDelta = 1 / Math.min(1000, Math.max(1, Number.isFinite(tickRate) ? tickRate : 60))
     this.value.delta = normalizeSimulationFrameDelta(frameDelta) * this.value.scale
     this.value.elapsed += this.value.delta
     this.value.frame = Math.min(Number.MAX_SAFE_INTEGER, this.value.frame + 1)
-    return this.advanceTimers(this.value.delta)
+    return advanceTimers ? this.advanceTimers(this.value.delta) : []
   }
+
+  /** 26.42 S-2: the `fixed` timer clock advances timers by each fixed step instead of the frame time, so a
+   * timer expires in the same fixed step at every display rate. */
+  advanceFixed(fixedDelta: number): TimerExpiration[] { return this.advanceTimers(Number.isFinite(fixedDelta) ? Math.max(0, fixedDelta) : 0) }
 
   /* 调用 this.create(entityUuid, name, seconds, repeat, 'timer') 并返回调用结果。 */ start(entityUuid: string, name: string, seconds: number, repeat: boolean): boolean { return this.create(entityUuid, name, seconds, repeat, 'timer') }
 

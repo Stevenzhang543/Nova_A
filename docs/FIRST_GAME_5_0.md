@@ -1,3 +1,5 @@
+> 26.42: a shorter, current walkthrough is in [QUICKSTART_26_42.en.md](./QUICKSTART_26_42.en.md) ([中文](./QUICKSTART_26_42.zh.md)). This original guide is kept unchanged below.
+
 # Build your first Nova_A 5.0 game
 
 Create a **Platformer** project in the launcher. Give it a valid project path and open it. The template is authored in Rhai API v2 and uses Project Format 2 schema 29. In Design, select the player, inspect Transform2D, RigidBody2D/CharacterBody2D and Collider2D, and use Play/Stop to verify input and collision. Grid/world units are metres; a transform delta of 10 moves exactly 10 world units.

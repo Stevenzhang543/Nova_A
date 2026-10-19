@@ -4,7 +4,7 @@ Nova_A is an open-source 2D physics and game engine with a visual editor. It com
 
 Build physics experiments, platformers, top-down games, animated scenes and interactive 2D interfaces. Work with scenes and components, write Rhai scripts, or use the visual scripting tools.
 
-[中文介绍](./README.zh-CN.md) · [User manual](./manual/index.html) · [Example projects](./reference-projects/README.md) · [MIT license](./LICENSE.md)
+[中文介绍](./README.zh-CN.md) · [30-minute quick start](./docs/QUICKSTART_26_42.en.md) · [User manual](./manual/index.html) · [Example projects](./reference-projects/README.md) · [MIT license](./LICENSE.md)
 
 ## Features
 

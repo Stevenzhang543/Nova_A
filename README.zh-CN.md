@@ -35,6 +35,8 @@ Nova_A 是一款开源 2D 游戏引擎与桌面编辑器，使用 Rust、WebAsse
 
 版本 **26.10** 完成当前年度路线，形成稳定、轻量的 2D 创作平台，同时保持 Project Format 2/schema 29 与全部冻结契约。该版本整合压感笔与无障碍输入、可取消且照顾低配置设备的加载流程、租约安全 Worker、大世界缓存查询、安全失败的语义协作、逐操作平台就绪证据、三个完整创作参考项目，以及中／英／德三语任务手册。确实需要其他主机、真实硬件、签名凭据、公共基础设施或独立人员的工作仍明确标记为外部验证。
 
+**快速入门：** [30 分钟做出第一个游戏](./docs/QUICKSTART_26_42.zh.md)
+
 **手册：** [中英德三语交互网页](./manual/index.html) · [中文 Markdown](./manual/MANUAL.zh-CN.md) · [English](./manual/MANUAL.en.md) · [Deutsch](./manual/MANUAL.de.md)
 
 ## 26.10 更新内容

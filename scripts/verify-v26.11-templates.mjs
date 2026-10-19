@@ -16,14 +16,15 @@ const report = /** 写入模板行为检查报告，并明确记录源码与WASM
 }
 try {
   await writeFile(join(compiled, 'package.json'), '{"type":"module"}\n')
-  await build({ configFile: false, root, logLevel: 'error', ssr: { noExternal: true }, build: { ssr: true, outDir: compiled, emptyOutDir: false, rollupOptions: { input: { templates: join(root, 'src/projects/templates.ts'), discovery: join(root, 'src/projects/templateDiscovery.ts'), components: join(root, 'src/world/components.ts'), particles: join(root, 'src/runtime/particles.ts'), box: join(root, 'src/world/BoxEntity.ts') }, output: { entryFileNames: '[name].mjs' } } } })
+  await build({ configFile: false, root, logLevel: 'error', ssr: { noExternal: true }, build: { ssr: true, outDir: compiled, emptyOutDir: false, rollupOptions: { input: { templates: join(root, 'src/projects/templates.ts'), discovery: join(root, 'src/projects/templateDiscovery.ts'), components: join(root, 'src/world/components.ts'), particles: join(root, 'src/runtime/particleOwner.ts'), box: join(root, 'src/world/BoxEntity.ts') }, output: { entryFileNames: '[name].mjs' } } } })
   const { PROJECT_TEMPLATES: catalog, createTemplateProject } = await import(pathToFileURL(join(compiled, 'templates.mjs')).href)
   const { discoverTemplates } = await import(pathToFileURL(join(compiled, 'discovery.mjs')).href)
   const { ParticleEmitter2D, pasteComponentValues } = await import(pathToFileURL(join(compiled, 'components.mjs')).href)
-  const { ParticleRuntime } = await import(pathToFileURL(join(compiled, 'particles.mjs')).href)
+  // 26.42: the legacy ParticleRuntime shim needs the editor's installed port; drive the pure fixed-World owner directly.
+  const { RuntimeParticleOwner } = await import(pathToFileURL(join(compiled, 'particles.mjs')).href)
   const { BoxEntity } = await import(pathToFileURL(join(compiled, 'box.mjs')).href)
   const additions = catalog.filter(/* 比较 value.introduced 与 '26.11'，返回严格相等的判断结果。 */ value => value.introduced === '26.11')
-  check('40 unique starters; 20 additional localized recipes', /** 验证模板总量、新增数量、标识唯一性及中德文名称描述。 */ () => { assert.equal(catalog.length, 40); assert.equal(additions.length, 20); assert.equal(new Set(catalog.map(/* 返回 value.id 的当前值。 */ value => value.id)).size, 40); for (const item of additions) for (const locale of ['de', 'zh']) { assert.ok(item.localized[locale].name); assert.ok(item.localized[locale].description) } })
+  check('43 unique starters; 20 additional localized recipes', /** 验证模板总量、新增数量、标识唯一性及中德文名称描述。 */ () => { assert.equal(catalog.length, 43); assert.equal(additions.length, 20); assert.equal(new Set(catalog.map(/* 返回 value.id 的当前值。 */ value => value.id)).size, 43); for (const item of additions) for (const locale of ['de', 'zh']) { assert.ok(item.localized[locale].name); assert.ok(item.localized[locale].description) } })
   check('Every original and new particle recipe hydrates its authored fields', /** 逐模板验证粒子字段都可被组件识别并完整恢复，且初始不透明度处于预期范围。 */ () => {
     for (const descriptor of catalog) for (const scene of createTemplateProject(descriptor.id, descriptor.name).scenes) for (const entity of scene.entities) for (const part of entity.components.filter(/* 比较 value.kind 与 'ParticleEmitter2D'，返回严格相等的判断结果。 */ value => value.kind === 'ParticleEmitter2D')) {
       const emitter = new ParticleEmitter2D()
@@ -39,24 +40,24 @@ try {
       const entity = new BoxEntity(index + 1, transform.position, { x: 1, y: 1 }, value.uuid)
       const emitter = new ParticleEmitter2D(part.uuid); pasteComponentValues(emitter, part.data); entity.addComponent(emitter); return entity
     })
-    const runtime = new ParticleRuntime(), commands = []
-    runtime.reset(); runtime.update(entities, .1, true)
+    const runtime = new RuntimeParticleOwner({ entities }, { resources: { generation: 0, resolveTexture: () => null }, readBudget: () => ({ particleBudget: 4_000, adaptiveParticleScale: 1 }), emitterIndices: () => null, nowMs: () => performance.now() }), commands = []
+    runtime.reset(); runtime.update(.1, true)
     runtime.submit({ stats: { backend: 'Canvas2D' }, submitShape: /* 调用 commands.push(command) 并返回调用结果。 */ command => commands.push(command), submitSprite: /* 调用 commands.push(command) 并返回调用结果。 */ command => commands.push(command) }, entities)
     assert.ok(commands.length > 0)
     assert.ok(commands.every(/* 比较 (command.fill?.a ?? command.tint?.a ?? 0) 与 .1，返回大于的判断结果。 */ command => (command.fill?.a ?? command.tint?.a ?? 0) > .1))
     if (id === 'rain-room') assert.ok(commands.every(/* 比较 command.position.y 与 5，返回小于的判断结果。 */ command => command.position.y < 5), 'rain should fall')
     if (id === 'starfield') assert.ok(commands.every(/* 比较 command.position.x 与 8.5，返回小于的判断结果。 */ command => command.position.x < 8.5), 'stars should drift left')
-    runtime.reset()
+    runtime.dispose()
   })
   const display = /** 创建指定语言的模板显示文本提取器，缺失翻译时使用默认名称和描述。 */ locale => /** 拼接模板的本地化名称和描述，缺失时回退到默认文本。 */ item => `${item.localized?.[locale]?.name ?? item.name} ${item.localized?.[locale]?.description ?? item.description}`
   const filters = { category: 'all', difficulty: 'all', query: '', sort: 'catalog', locale: 'en' }
   check('Localized, multiword, category, difficulty, empty and sorted discovery', /** 验证模板多语言搜索、空结果、类别难度过滤及新增和时长排序。 */ () => {
-    assert.equal(discoverTemplates(catalog, filters, display('en')).length, 40)
+    assert.equal(discoverTemplates(catalog, filters, display('en')).length, 43)
     assert.deepEqual(discoverTemplates(catalog, { ...filters, query: '轨道 闪避', locale: 'zh' }, display('zh')).map(/* 返回 item.id 的当前值。 */ item => item.id), ['orbit-dodge'])
     assert.deepEqual(discoverTemplates(catalog, { ...filters, query: 'Münzpfad', locale: 'de' }, display('de')).map(/* 返回 item.id 的当前值。 */ item => item.id), ['coin-trail'])
     assert.equal(discoverTemplates(catalog, { ...filters, query: 'no-such-template' }, display('en')).length, 0)
     assert.ok(discoverTemplates(catalog, { ...filters, category: 'game', difficulty: 'beginner' }, display('en')).every(/* 先计算 item.category === 'game'；仅当其为真值时求右侧 item.difficulty === 'beginner'，返回短路求值结果。 */ item => item.category === 'game' && item.difficulty === 'beginner'))
-    assert.ok(discoverTemplates(catalog, { ...filters, sort: 'newest' }, display('en')).slice(0, 20).every(/* 比较 item.introduced 与 '26.11'，返回严格相等的判断结果。 */ item => item.introduced === '26.11'))
+    const newest = discoverTemplates(catalog, { ...filters, sort: 'newest' }, display('en')); assert.ok(newest.slice(0, 3).every(item => item.introduced === '26.42')); assert.ok(newest.slice(3, 23).every(/* 比较 item.introduced 与 '26.11'，返回严格相等的判断结果。 */ item => item.introduced === '26.11'))
     const quick = discoverTemplates(catalog, { ...filters, sort: 'time' }, display('en')); assert.ok(quick.every(/* 先计算 index === 0；仅当其为假值时求右侧 quick[index - 1].setupMinutes <= item.setupMinutes，返回短路求值结果。 */ (item, index) => index === 0 || quick[index - 1].setupMinutes <= item.setupMinutes))
   })
   const wasm = await import(pathToFileURL(join(root, 'nova_core/pkg/nova_core.js')).href)
@@ -92,6 +93,19 @@ try {
       try {
         runtime.compile_cached(asset.uuid, asset.source)
         const run = /* 调用 JSON.parse(runtime.execute_cached_json(asset.uuid, fn, JSON.stringify(data))) 并返回调用结果。 */ (fn, data) => JSON.parse(runtime.execute_cached_json(asset.uuid, fn, JSON.stringify(data)))
+        if (descriptor.category === 'game' && owner.name.startsWith('Hazard ')) {
+          // 26.42 S-5: moving hazards drive themselves with set_position instead of a cross-entity write each frame.
+          check(`${descriptor.id}/${owner.name}: hazard moves itself and stops when the course ends`, () => {
+            const started = run('start', context(project, owner))
+            assert.ok(started.commands.some(command => command.type === 'setPosition'))
+            const moved = run('update', context(project, owner, started.properties))
+            assert.ok(moved.properties.elapsed > 0 && moved.commands.some(command => command.type === 'setPosition'))
+            assert.ok(!moved.commands.some(command => command.type === 'targetSetPosition'))
+            const stopped = run('on_signal', { ...context(project, owner, moved.properties), event: { name: 'course.finished', source: '', payload: {} } })
+            assert.equal(stopped.properties.running, false)
+          })
+          continue
+        }
         if (descriptor.category !== 'game') {
           check(`${descriptor.id}/${asset.name}: actual WASM orbit tick`, /** 验证更新脚本提交位置修改命令并维护有限的角度属性。 */ () => { const result = run('update', context(project, owner)); assert.ok(result.commands.some(/* 比较 command.type 与 'setPosition'，返回严格相等的判断结果。 */ command => command.type === 'setPosition')); assert.ok(Number.isFinite(result.properties.angle)) })
           continue
@@ -120,7 +134,15 @@ try {
           // Execute once to read the actual moving hazard command, then sample that
           // exact elapsed time at its reported position in an independent tick.
           const first = run('update', context(project, owner, current.properties))
-          const moving = first.commands.find(/* 比较 command.type 与 'targetSetPosition'，返回严格相等的判断结果。 */ command => command.type === 'targetSetPosition')
+          let moving = first.commands.find(/* 比较 command.type 与 'targetSetPosition'，返回严格相等的判断结果。 */ command => command.type === 'targetSetPosition')
+          // 26.42: moving hazards run their own script; evaluate it at the player's elapsed time for the same tick.
+          const hazardScript = hazards[0].components.find(part => part.kind === 'Script2D')
+          if (!moving && hazardScript) {
+            const hazardAsset = project.assets.find(value => `asset://${value.uuid}` === hazardScript.data.scriptAsset)
+            runtime.compile_cached(hazardAsset.uuid, hazardAsset.source)
+            const tick = JSON.parse(runtime.execute_cached_json(hazardAsset.uuid, 'update', JSON.stringify(context(project, hazards[0], { elapsed: current.properties.elapsed, running: true }))))
+            moving = tick.commands.find(command => command.type === 'setPosition')
+          }
           const hitPosition = moving ? { x: moving.x, y: moving.y } : pose(hazards[0])
           const hit = run('update', context(project, owner, current.properties, hitPosition)); assert.equal(hit.properties.finished, true); assert.ok(hit.commands.some(/* 调用 command.text?.includes('Hazard hit') 并返回调用结果。 */ command => command.text?.includes('Hazard hit')))
         })

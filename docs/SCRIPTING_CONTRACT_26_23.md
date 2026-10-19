@@ -20,6 +20,13 @@ A script invocation sees the supplied serialized host context and emits validate
 
 The VM currently limits operations to 100,000, call depth to 32, expression depth to 64/32, strings to 262,144, arrays to 8,192 entries, maps to 4,096 entries, commands to 4,096 and logs to 512 per invocation. Direct and function-pointer attempts to sleep are both rejected. These are VM limits; browser scheduling and native host command validation are additional boundaries.
 
+## Timing within a frame (26.42 note)
+
+- Writes are queued. `set_position`, `set_velocity`, `entity_set_position`, `apply_impulse` and other world-changing calls emit commands that the host applies after the callback returns. `transform()`, `rigid_body()`, `entity_position_x_on()` and other reads inside the same callback return the snapshot taken before the callback started; script variables, including exported properties, change immediately. Verified by `scripts/verify-2642-script-write-read.mjs`.
+- Physics events are dispatched once per frame. When a frame runs several fixed steps, collision and trigger callbacks for all of them are delivered after the last step (`dispatchPhysicsEvents` in `GameplayRuntimeCore`), so a callback can arrive one or more steps after the contact began. Code that needs step-exact behaviour should query contacts or positions in `fixed_update`. Draining events after every step is planned for 26.43 together with replay and network determinism tests.
+- Timers started with `timer_start` advance with frame time by default. Scenes with `globalSettings.timerClock: 'fixed'` (26.42 templates; Physics → Timer clock) advance timers with each fixed step and dispatch expirations before that step's `fixed_update`; `scripts/verify-2642-fixed-timers.mjs` checks that the expiring step is identical at 60, 144 and 240 Hz.
+- `input_pressed` is true in the first fixed step after the press; presses are held until a step runs.
+
 ## Safe hot reload
 
 The currently running generation remains authoritative until the entire affected candidate bundle compiles and compatible state transfers have been prepared. Changing an imported module invalidates its dependent roots. An error in one root retains every old program and instance in the transaction. Preserve only exported properties whose type and serialization lifetime remain compatible; a changed persistent layout requires restart. Explicit recreation initializes instance state according to policy.

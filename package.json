@@ -1,7 +1,7 @@
 {
   "name": "nova_a",
   "private": true,
-  "version": "26.41.0",
+  "version": "26.42.0",
   "homepage": "https://github.com/Stevenzhang543/Nova_A/",
   "repository": {
     "type": "git",
@@ -568,7 +568,8 @@
     "verify:v26.40:workflow": "node scripts/verify-2640-editor-workflow.mjs",
     "verify:v26.41:ui": "node scripts/verify-2641-editor-ui.mjs",
     "release:v26.40": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-release-26.40.ps1",
-    "release:v26.41": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-release-26.41.ps1"
+    "release:v26.41": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-release-26.41.ps1",
+    "release:v26.42": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-release-26.42.ps1"
   },
   "dependencies": {
     "@fontsource-variable/jetbrains-mono": "^5.3.0",

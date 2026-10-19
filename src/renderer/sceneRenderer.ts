@@ -1,4 +1,6 @@
 /** 场景绘制编排：把当前场景、相机及可绘制组件转换为渲染后端提交的绘制命令。 */
+import { buildGpuLighting } from './lighting2dGpu'
+import type { LightingEnvironment } from './LightingEnvironment'
 import { compoundGeometries } from '../world/compoundGeometry'
 import type { Connection } from '../world/Connection'
 import type { Camera2D, ParticleEmitter2D, ShapeRenderer2D, SpriteRenderer2D, TextRenderer2D, TileMap2D } from '../world/components'
@@ -27,6 +29,8 @@ export interface SceneRenderOptions {
   performanceMode?: boolean
   /** One explicit clock advance; camera queries and lighting never advance it. */
   deltaSeconds?: number
+  /** 26.42 P-D: draw 2D lighting on the GPU when the renderer supports it; the result is reported in stats.lightingBackend. */
+  lighting?: { environment: LightingEnvironment }
 }
 
 export interface ActiveCamera {
@@ -184,6 +188,7 @@ function submitSprite(renderer: Renderer2D, entity: Entity, sprite: SpriteRender
   const base = authoringPosition(entity, transform.position, entities, view), parallaxLayer = ancestorParallax(entity, entities), parallax = parallaxLayer?.authoring.parallax
   const repeatX = parallax && parallax.repeat.x > 0 ? [-1, 0, 1] : [0], repeatY = parallax && parallax.repeat.y > 0 ? [-1, 0, 1] : [0]
   const mesh = frameSpriteMesh(entity, sprite, meshes, environment)
+  const normalMap = sprite.normalMapAsset && !sprite.nineSlice.enabled ? environment.assets.resolveTexture(sprite.normalMapAsset, state.sampling) : null
   for (const y of repeatY) for (const x of repeatX) {
     const mirrored = parallax?.mirror === true && Math.abs(x + y) % 2 === 1
     renderer.submitSprite({
@@ -193,7 +198,7 @@ function submitSprite(renderer: Renderer2D, entity: Entity, sprite: SpriteRender
       sortingLayer: sprite.sortingLayer, orderInLayer: authoredOrder(entity, sprite.orderInLayer, entities) + (parallax?.depth ?? 0) * .000001,
       material: sprite.material, blendMode: state.blendMode,
       nineSlice: sprite.nineSlice.enabled ? { left: sprite.nineSlice.left, top: sprite.nineSlice.top, right: sprite.nineSlice.right, bottom: sprite.nineSlice.bottom } : null,
-      mesh
+      mesh, normalMap
     })
   }
 }
@@ -383,9 +388,17 @@ export function renderWorld(renderer: Renderer2D, entities: Entity[], options: S
       }
     }
   }
+  let lightingBackend: 'WebGL2' | 'Canvas2D' | 'Off' = 'Off', lightingFallbackReason: string | null = null
+  if (options.lighting?.environment.settings.lightingEnabled) {
+    if (renderer.submitLighting && renderer.supportsGpuLighting?.()) {
+      const built = buildGpuLighting(entities, options.gameView, options.activeLayer, options.lighting.environment)
+      if (built.frame) { renderer.submitLighting(built.frame); lightingBackend = 'WebGL2' }
+      else { lightingBackend = 'Canvas2D'; lightingFallbackReason = built.fallback }
+    } else { lightingBackend = 'Canvas2D'; lightingFallbackReason = renderer.stats.backend === 'WebGL2' ? 'gpu lighting unavailable' : 'Canvas2D renderer' }
+  }
   const stats = renderer.endFrame()
   for (const preload of preloadJobs) preload()
-  return { ...stats, textureUploadQueue: renderer.stats.textureUploadQueue, textureUploadQueueBytes: renderer.stats.textureUploadQueueBytes, textureUploadDeferrals: renderer.stats.textureUploadDeferrals }
+  return { ...stats, lightingBackend, lightingFallbackReason, textureUploadQueue: renderer.stats.textureUploadQueue, textureUploadQueueBytes: renderer.stats.textureUploadQueueBytes, textureUploadDeferrals: renderer.stats.textureUploadDeferrals }
 }
 
 /* 根据缩放调整网格间距，在数量上限内提交固定屏幕线宽的编辑网格。 */

@@ -1,4 +1,5 @@
 /** WebGL 2 渲染实现：管理着色器、批次、纹理驻留、多重采样和后处理目标，并回收 GPU 资源。 */
+import { GpuLighting2D, type GpuLightingFrame, type GpuNormalDraw } from './lighting2dGpu'
 import { RequiredResourceUploadTracker, type RequiredResourceUploadRequest, type RequiredResourceUploadSnapshot, type RequiredResourceUploadAck } from './requiredResourceUpload'
 import { nineSliceGeometry, shapeGeometry, spriteGeometry, strokeGeometry, type GeometryData } from './geometry'
 import { analyzeMaterialShader, defaultMaterial, reflectShaderUniforms, reportMaterialFallback, resolvedMaterialFragment, resolveMaterial, type Material2DResource } from './materials'
@@ -344,6 +345,12 @@ export class WebGL2Renderer implements Renderer2D {
   private destroyed = false
   private submissionFaulted = false
   private initializingAdmittedFrame = false
+  // 26.42 P-D: GPU 2D lighting owner (one per context), the frame's lights and the cameras they apply to.
+  private gpuLighting: GpuLighting2D | null = null
+  private gpuLightingUnavailable = false
+  private pendingLighting: GpuLightingFrame | null = null
+  private readonly frameCameras: CameraRenderView[] = []
+  private readonly normalSprites: Array<{ command: SpriteRenderCommand; cameraIndex: number }> = []
   private readonly onContextLost = /* 处理上下文丢失，暂停绘制并丢弃无效 GPU 计时状态，同时更新诊断。 */ (event: Event) => {
     event.preventDefault()
     this.contextLost = true
@@ -356,6 +363,7 @@ export class WebGL2Renderer implements Renderer2D {
   private readonly onContextRestored = /* 上下文恢复后清空旧纹理引用并请求上层重建，在重建前继续暂停绘制。 */ () => {
     // Objects from the lost context are invalid; remain suspended until the owner rebuilds.
     this.contextLost = true
+    this.gpuLighting = null
     this.textureCache.clear()
     this.textureMemoryBytes = 0
     this.textureCount = 0
@@ -364,9 +372,12 @@ export class WebGL2Renderer implements Renderer2D {
 
   /* 初始化 WebGL2 能力、缓冲区和默认资源，失败时注销事件并释放上下文。 */
   constructor(private readonly canvas: HTMLCanvasElement, private readonly environment: RendererEnvironment = defaultRendererEnvironment()) {
-    const gl = canvas.getContext('webgl2', { alpha: false, antialias: this.environment.settings.antiAliasing !== 'Off', depth: false, premultipliedAlpha: true, powerPreference: 'high-performance' })
+    // 26.42 P-E3: the Player may opt into a desynchronized (low-latency) canvas; off unless the host asks.
+    const desynchronized = (globalThis as { __NOVA_DESYNCHRONIZED_CANVAS__?: boolean }).__NOVA_DESYNCHRONIZED_CANVAS__ === true
+    const gl = canvas.getContext('webgl2', { alpha: false, antialias: this.environment.settings.antiAliasing !== 'Off', depth: false, premultipliedAlpha: true, powerPreference: 'high-performance', ...(desynchronized ? { desynchronized: true } : {}) })
     if (!gl) throw new Error('WebGL2 is unavailable')
     this.gl = gl
+    this.stats.desynchronized = desynchronized ? (gl.getContextAttributes() as (WebGLContextAttributes & { desynchronized?: boolean }) | null)?.desynchronized === true : false
     this.supportedSamples = Array.from(gl.getInternalformatParameter(gl.RENDERBUFFER, gl.RGBA8, gl.SAMPLES) as Int32Array)
     this.defaultSamples = gl.getParameter(gl.SAMPLES) as number
     this.maximumSurfaceDimension = gl.getParameter(gl.MAX_RENDERBUFFER_SIZE) as number
@@ -444,6 +455,9 @@ export class WebGL2Renderer implements Renderer2D {
     this.packets.length = 0
     this.sequence = 0
     this.cameraIndex = -1
+    this.pendingLighting = null
+    this.frameCameras.length = 0
+    this.normalSprites.length = 0
     this.stats.cpuSubmissionAtMs = null
     if (this.destroyed || this.contextLost || this.gl.isContextLost() || this.submissionFaulted) {
       this.frameSuspended = true
@@ -513,12 +527,23 @@ export class WebGL2Renderer implements Renderer2D {
   }
 
   /* 记录当前相机并递增序号，使后续几何命令绑定到该相机。 */
-  beginCamera(camera: CameraRenderView): void { this.camera = camera; this.cameraIndex++ }
+  beginCamera(camera: CameraRenderView): void { this.camera = camera; this.cameraIndex++; this.frameCameras.push(camera) }
+
+  /** Compile the light programs once; a failure keeps the Canvas 2D lighting path for this renderer's lifetime. */
+  supportsGpuLighting(): boolean {
+    if (this.gpuLighting) return true
+    if (this.gpuLightingUnavailable || this.destroyed || this.contextLost) return false
+    try { this.gpuLighting = new GpuLighting2D(this.gl); this.stats.shaderCompiles += 2; return true }
+    catch (error) { this.gpuLightingUnavailable = true; console.warn('Nova_A GPU 2D lighting unavailable; using the Canvas 2D lighting path.', error); return false }
+  }
+
+  submitLighting(frame: GpuLightingFrame): void { if (this.gpuLighting && !this.frameSuspended) this.pendingLighting = frame }
 
   /* 验证精灵网格规模后生成普通、九宫格或蒙皮几何并入队。 */
   submitSprite(command: SpriteRenderCommand): void {
     if (command.mesh && (command.mesh.positions.length > MAX_PACKET_VERTICES || command.mesh.uvs.length > MAX_PACKET_VERTICES || command.mesh.indices.length > MAX_PACKET_VERTICES * 3)) return
     this.stats.sprites++
+    if (command.normalMap && this.gpuLighting && this.normalSprites.length < 2048) this.normalSprites.push({ command, cameraIndex: this.cameraIndex })
     const material = command.material || 'Default'
     if (this.instanceProgram && !command.mesh && !command.nineSlice && (material === 'Default' || material === 'Particles' || material.startsWith('__'))) {
       this.queueSpriteInstance(command)
@@ -599,6 +624,27 @@ export class WebGL2Renderer implements Renderer2D {
     flush()
     this.stats.batchBreaks = Math.max(0, this.stats.batches - 1)
     const gl = this.gl
+    // Lighting multiplies the finished world colour before the MSAA resolve and post process (and inside the GPU timer).
+    if (this.pendingLighting && this.gpuLighting) {
+      try {
+        const normalDraws: GpuNormalDraw[] = []
+        for (const { command, cameraIndex } of this.normalSprites) {
+          const geometry = spriteGeometry({ ...command, texture: command.normalMap! })
+          if (geometry.positions.length < 3 || geometry.uvs.length !== geometry.positions.length) continue
+          const vertices = new Float32Array(geometry.positions.length * 4)
+          geometry.positions.forEach((point, index) => { vertices[index * 4] = point.x; vertices[index * 4 + 1] = point.y; vertices[index * 4 + 2] = geometry.uvs[index].x; vertices[index * 4 + 3] = geometry.uvs[index].y })
+          const flip = (value: number, flipped: boolean) => (value < 0 ? -1 : 1) * (flipped ? -1 : 1)
+          normalDraws.push({ cameraIndex: Math.max(0, cameraIndex), vertices, indices: Uint32Array.from(geometry.indices), texture: this.resolveTexture(command.normalMap!, 'Linear'), rotation: command.rotation, flipX: flip(command.scale.x, command.flipX), flipY: flip(command.scale.y, command.flipY) })
+        }
+        const draws = this.gpuLighting.render(this.pendingLighting, this.frameCameras.length ? this.frameCameras : [this.camera], this.frame, this.canvas, this.effectsTargetActive ? this.sampleFramebuffer ?? this.framebuffer : null, normalDraws)
+        this.stats.drawCalls += draws; this.stats.passes++; this.stats.renderTargets++
+        this.stats.lights = this.gpuLighting.lastLightCount
+      } catch (error) {
+        console.warn('Nova_A GPU 2D lighting failed; later frames use the Canvas 2D lighting path.', error)
+        this.gpuLighting.destroy(); this.gpuLighting = null; this.gpuLightingUnavailable = true
+      }
+      this.pendingLighting = null
+    }
     if (this.effectsTargetActive && this.sampleFramebuffer) {
       gl.bindFramebuffer(gl.READ_FRAMEBUFFER, this.sampleFramebuffer)
       gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, this.framebuffer)
@@ -686,6 +732,8 @@ export class WebGL2Renderer implements Renderer2D {
     const gl = this.gl
     this.discardGpuTimers(!this.contextLost && !gl.isContextLost())
     this.invalidateSubmissions(!this.contextLost && !gl.isContextLost())
+    if (this.gpuLighting && !this.contextLost && !gl.isContextLost()) this.gpuLighting.destroy()
+    this.gpuLighting = null; this.pendingLighting = null
     for (const value of this.textCache.values()) { const surface = value.region.source as HTMLCanvasElement; surface.width = 0; surface.height = 0 }
     this.vertexUpload = new Float32Array(0); this.indexUpload = new Uint32Array(0)
     this.instanceData = new Float32Array(0); this.instanceUpload = new Float32Array(0); this.instanceFloats = 0

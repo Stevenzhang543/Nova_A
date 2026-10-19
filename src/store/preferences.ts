@@ -18,6 +18,8 @@ export interface Preferences extends EditorPerformanceOverrides {
   uiScale: number
   compactMode: boolean
   reduceMotion: boolean
+  /** Opaque materials instead of live glass and blur (iOS "Reduce Transparency"). */
+  reduceTransparency: boolean
   highContrast: boolean
   gridSize: number
   snapToGrid: boolean
@@ -46,13 +48,14 @@ const LIGHT_CONTRAST_MIGRATION_KEY = 'nova_a.light-contrast-default.v1.1'
 const defaults: Preferences = {
   ...DEFAULT_EDITOR_PERFORMANCE_OVERRIDES,
   theme: 'dark',
-  lightPalette: 'cloud-blue',
-  darkPalette: 'midnight-blue',
+  lightPalette: 'neutral-light',
+  darkPalette: 'neutral-dark',
   locale: 'en',
   formLabelLayout: 'auto',
   uiScale: 1,
   compactMode: false,
   reduceMotion: false,
+  reduceTransparency: false,
   highContrast: false,
   gridSize: 10,
   snapToGrid: false,
@@ -104,6 +107,7 @@ const defaults: Preferences = {
     uiScale: finiteRange(parsed.uiScale, defaults.uiScale, 1, 2),
     compactMode: storedBoolean(parsed.compactMode, defaults.compactMode),
     reduceMotion: storedBoolean(parsed.reduceMotion, defaults.reduceMotion),
+    reduceTransparency: storedBoolean(parsed.reduceTransparency, defaults.reduceTransparency),
     highContrast: resetLegacyLightContrast ? false : storedBoolean(parsed.highContrast, defaults.highContrast),
     gridSize: finiteRange(parsed.gridSize, defaults.gridSize, 0.000001, 1e12),
     snapToGrid: storedBoolean(parsed.snapToGrid, defaults.snapToGrid),
@@ -148,6 +152,12 @@ export const editorPerformancePreferences = computed(/** 合并用户覆盖与�
 /** 只更新系统来源的减少动效信号，不覆盖用户设置。 */
 function updateSystemMotion(event: MediaQueryListEvent): void { systemReducedMotion.value = event.matches }
 motionMedia?.addEventListener('change', updateSystemMotion)
+/** An inactive window keeps glass tinted but stops re-blurring what is behind it. */
+let windowActive = typeof document === 'undefined' || document.hasFocus()
+if (typeof window !== 'undefined') {
+  window.addEventListener('focus', () => { windowActive = true; applyPreferences() })
+  window.addEventListener('blur', () => { windowActive = false; applyPreferences() })
+}
 
 
 /** 将当前偏好写入根元素数据属性、界面缩放变量和文档语言；无文档环境直接返回。 */ export function applyPreferences(): void {
@@ -160,6 +170,10 @@ motionMedia?.addEventListener('change', updateSystemMotion)
   root.dataset.density = preferencesState.compactMode ? 'compact' : 'comfortable'
   root.dataset.reduceMotion = String(preferencesState.reduceMotion)
   root.dataset.highContrast = String(preferencesState.highContrast)
+  root.dataset.reduceTransparency = String(preferencesState.reduceTransparency)
+  // Live glass only where it is cheap: Reduce Transparency turns it off, the low-end profile and an
+  // inactive window keep the tint without a backdrop blur (Play mode is handled on .editor-root).
+  root.dataset.glass = preferencesState.reduceTransparency ? 'off' : preferencesState.performanceProfile === 'low-end' || !windowActive ? 'static' : 'live'
   root.dataset.performanceProfile = preferencesState.performanceProfile
   // Accessibility reduces movement; the performance budget only reduces decoration.
   root.dataset.uiMotion = preferencesState.reduceMotion || systemReducedMotion.value

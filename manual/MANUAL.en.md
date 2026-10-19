@@ -999,6 +999,36 @@ Requirements: Ready offline
 
 After following these controls, stop and confirm authored state is restored. Save and reopen the project, repeat the result, then compare its exported player. A successful start alone does not certify all game behavior.
 
+### Skyline Trilogy (platformer-trilogy)
+
+Controls and setup: Play: A/D or arrows to run, Space/W to jump (hold for height), R restarts the stage. Click the Game viewport before using keys.
+
+Expected result: Three stages load in order; stage 3 opens its gate after ten coins and shows the total time and falls.
+
+Requirements: Ready offline · Keyboard
+
+After following these controls, stop and confirm authored state is restored. Save and reopen the project, repeat the result, then compare its exported player. A successful start alone does not certify all game behavior.
+
+### Pendulum Post (pendulum-post)
+
+Controls and setup: Play: click a rope link in the Game view to cut it, or press 1/2 to release a ball. Deliver both balls into the cup; R restarts.
+
+Expected result: Cut chains drop their balls; two balls in the cup show the delivery panel with a cut rating.
+
+Requirements: Ready offline · Pointer · Keyboard
+
+After following these controls, stop and confirm authored state is restored. Save and reopen the project, repeat the result, then compare its exported player. A successful start alone does not certify all game behavior.
+
+### Reflex Lab (reflex-lab)
+
+Controls and setup: Play: press Space, Enter, left click or gamepad A to arm a round, then again when the lamp turns green. M switches to the latency marker scene; R resets.
+
+Expected result: Five valid rounds report average, best and worst reaction times; the marker scene shows a white square while Space is held.
+
+Requirements: Ready offline · Keyboard · Pointer
+
+After following these controls, stop and confirm authored state is restored. Save and reopen the project, repeat the result, then compare its exported player. A successful start alone does not certify all game behavior.
+
 <!-- NOVA_V2615_END -->
 
 <!-- NOVA_V2614_START -->

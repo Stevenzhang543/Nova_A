@@ -1,6 +1,6 @@
 {
   "productName": "Nova_A",
-  "version": "26.41.0",
+  "version": "26.42.0",
   "identifier": "top.whitelists.novaa",
   "build": {
     "beforeDevCommand": "pnpm dev",
@@ -24,7 +24,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; connect-src 'self' ipc: http://ipc.localhost http: https: ws: wss:; img-src 'self' asset: http://asset.localhost data: blob: http: https:; style-src 'self' 'unsafe-inline'; script-src 'self' 'wasm-unsafe-eval'; font-src 'self' data:"
+      "csp": "default-src 'self'; connect-src 'self' ipc: http://ipc.localhost http: https: ws: wss: data: blob:; media-src 'self' data: blob: asset: http://asset.localhost; img-src 'self' asset: http://asset.localhost data: blob: http: https:; style-src 'self' 'unsafe-inline'; script-src 'self' 'wasm-unsafe-eval'; font-src 'self' data:"
     }
   },
   "bundle": {

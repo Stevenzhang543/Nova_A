@@ -89,6 +89,8 @@ function normalizeGlobalSettings(): void {
   physicsState.globalSettings.tickRate = Math.min(1000, Math.max(1, finiteNumber(physicsState.globalSettings.tickRate, 60)))
   physicsState.globalSettings.maxCatchUpSteps = Math.min(240, Math.max(1, Math.round(finiteNumber(physicsState.globalSettings.maxCatchUpSteps, DEFAULT_MAX_CATCH_UP_STEPS))))
   physicsState.globalSettings.interpolation = physicsState.globalSettings.interpolation === 'None' ? 'None' : 'Interpolate'
+  // Only an explicit fixed clock is stored, so projects saved before 26.42 keep their exact content.
+  if (physicsState.globalSettings.timerClock !== 'fixed') delete physicsState.globalSettings.timerClock
   physicsState.globalSettings.profile = normalizePhysicsProfile({
     ...(physicsState.globalSettings.profile ?? defaultPhysicsProfile()),
     tickRate: physicsState.globalSettings.tickRate,
@@ -114,6 +116,8 @@ function loadGlobalSettings(scene: Record<string, unknown>): void {
   physicsState.globalSettings.tickRate = finiteNumber(settings.tickRate, physicsState.globalSettings.tickRate)
   physicsState.globalSettings.maxCatchUpSteps = finiteNumber(settings.maxCatchUpSteps, physicsState.globalSettings.maxCatchUpSteps)
   physicsState.globalSettings.interpolation = settings.interpolation === 'None' ? 'None' : 'Interpolate'
+  if (settings.timerClock === 'fixed') physicsState.globalSettings.timerClock = 'fixed'
+  else delete physicsState.globalSettings.timerClock
   physicsState.globalSettings.profile = normalizePhysicsProfile(settings.profile ?? {
     tickRate: physicsState.globalSettings.tickRate,
     maxCatchUpSteps: physicsState.globalSettings.maxCatchUpSteps,

@@ -535,6 +535,8 @@ watch(/* 比较 renderingSettings.antiAliasing 与 'Off'，返回严格相等的
     }
     if (renderCanvasRef.value) renderer.resize(renderCanvasRef.value.clientWidth, renderCanvasRef.value.clientHeight, canvasPixelRatio)
     rendererContextAntialias = contextAntialias
+    rendererBackend.value = renderer.stats.backend
+    if (latencyProbe.enabled) { latencyProbe.context.backend = renderer.stats.backend; latencyProbe.context.desynchronized = renderer.stats.desynchronized === true }
     reportRendererReset()
   } catch (error) { reportRecoverableError(error, 'Renderer initialization', 'Renderer') }
 }
@@ -1378,8 +1380,11 @@ function rulerColors(): { band: string; tick: string; text: string; edge: string
       canvasColor: palette.canvas,
       connections: world.connections,
       editorGrid: { enabled: editorState.showGrid, step: prefs.gridSize, color: palette.grid },
-      performanceMode: authoringState.performanceMode
+      performanceMode: authoringState.performanceMode,
+      lighting: { environment: lightingEnvironment }
     }, sceneRendererEnvironment)
+    lightingOnGpu = renderedStats.lightingBackend === 'WebGL2'
+    if (renderedStats.lightingBackend) { lightingStats.backend = renderedStats.lightingBackend; lightingStats.fallback = renderedStats.lightingFallbackReason ?? null; lightingStats.lights = renderedStats.lights ?? 0 }
     Object.assign(editorState.rendererStats, renderedStats)
     worldSubmitted = typeof renderedStats.cpuSubmissionAtMs === 'number' && Number.isFinite(renderedStats.cpuSubmissionAtMs)
     lastWorldDeferred = (renderedStats as { gpuSubmissionStatus?: string }).gpuSubmissionStatus === 'deferred'
@@ -1399,20 +1404,37 @@ function rulerColors(): { band: string; tick: string; text: string; edge: string
     return
   }
   const nextWidth = Math.max(1, Math.round(width * canvasPixelRatio)), nextHeight = Math.max(1, Math.round(height * canvasPixelRatio))
-  if (cvs.width !== nextWidth || cvs.height !== nextHeight) { cvs.width = nextWidth; cvs.height = nextHeight }
+  const resized = cvs.width !== nextWidth || cvs.height !== nextHeight
+  if (resized) { cvs.width = nextWidth; cvs.height = nextHeight; overlayStats.resizes++ }
+  const isGameView = editorState.currentPage === 'game'
+  // 26.42 P-A: the Game view overlay is often empty (no light, post effect, debug view, UI or point gizmo).
+  // Then it is cleared once after the last frame that drew and skipped afterwards; resizing (which also
+  // covers DPR changes) clears the bitmap by itself. `?overlaySkip=0` restores the clear on every frame.
+  if (overlaySkipEnabled && isGameView && !gameOverlayHasContent(world.entities)) {
+    // Assigning the backing-store size above already cleared the bitmap.
+    if (resized) overlayDrewLastFrame = false
+    if (overlayDrewLastFrame) { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cvs.width, cvs.height); overlayDrewLastFrame = false; overlayStats.clears++ }
+    else overlayStats.skipped++
+    for (const name of ['Lighting', 'PostProcess', 'EditorOverlay', 'UI'] as const) passStarted = recordRenderPass(name, passStarted, false, 0, renderGraphDiagnosticsOwner)
+    finishOverlayFrame(width, height, isGameView, graphStarted, passStarted)
+    return
+  }
+  overlayDrewLastFrame = true
   ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high'; ctx.lineCap = 'round'; ctx.lineJoin = 'round'
   // Reset and clear in backing-store pixels. This prevents retained overlay
   // fragments when DPR, axes, scenes, or panel dimensions change together.
   ctx.setTransform(1, 0, 0, 1, 0, 0)
   ctx.clearRect(0, 0, cvs.width, cvs.height)
+  overlayStats.clears++
   ctx.setTransform(canvasPixelRatio, 0, 0, canvasPixelRatio, 0, 0)
-  const isGameView = editorState.currentPage === 'game'
-  renderLighting2D(ctx, world.entities, {
+  // 26.42 P-D: with GPU lighting the light is already in the world surface; this Canvas 2D pass is the fallback.
+  if (!lightingOnGpu) renderLighting2D(ctx, world.entities, {
     width, height, editorCamera: { scale: camera.scale, offset: { ...camera.offset } },
     gameView: isGameView, activeLayer: activeCanvasLayer()
   }, lightingEnvironment)
   passStarted = recordRenderPass('Lighting', passStarted, renderingSettings.lightingEnabled, 0, renderGraphDiagnosticsOwner)
-  renderPostProcessOverlay(ctx, width, height, lightingEnvironment)
+  // The WebGL2 post shader already applies the vignette; only the Canvas 2D renderer needs it drawn here.
+  if (rendererBackend.value !== 'WebGL2') renderPostProcessOverlay(ctx, width, height, lightingEnvironment)
   renderDebugView2D(ctx, world.entities, {
     width, height, editorCamera: { scale: camera.scale, offset: { ...camera.offset } },
     gameView: isGameView, activeLayer: activeCanvasLayer()
@@ -1570,6 +1592,35 @@ function rulerColors(): { band: string; tick: string; text: string; edge: string
   drawWorldGameplayDebug(ctx)
   ctx.restore()
   passStarted = recordRenderPass('EditorOverlay', passStarted, !isGameView, 1, renderGraphDiagnosticsOwner)
+  finishOverlayFrame(width, height, isGameView, graphStarted, passStarted)
+}
+
+let overlayDrewLastFrame = true
+/** 26.42 P-D: lighting drawn by the WebGL2 renderer this frame; the backend of the current world renderer. */
+let lightingOnGpu = false
+const rendererBackend = ref<'WebGL2' | 'Canvas2D' | null>(null)
+/** Read by verify-2642-lighting and the latency probe (globalThis.__novaLighting); mutated in place, no per-frame allocation. */
+const lightingStats: { backend: string; fallback: string | null; lights: number } = { backend: 'Off', fallback: null, lights: 0 }
+if (!props.runtime) (globalThis as { __novaLighting?: typeof lightingStats }).__novaLighting = lightingStats
+/** The WebGL2 renderer applies exposure, contrast, saturation, blur and bloom in its post shader; a CSS filter on top applied them twice. */
+function renderCanvasFilter(): string { return rendererBackend.value === 'WebGL2' ? 'none' : worldPostProcessFilter(lightingEnvironment) }
+/** P-A 计数（clears = 整屏清空次数，skipped = 跳过的帧，resizes = 尺寸或 DPR 变化，这类清空不计入预算）；verify-2642-glass-budget 与延迟探针读取 globalThis.__novaOverlayStats。 */
+const overlayStats = { clears: 0, skipped: 0, resizes: 0 }
+if (!props.runtime) (globalThis as { __novaOverlayStats?: typeof overlayStats }).__novaOverlayStats = overlayStats
+const overlaySkipEnabled = typeof location === 'undefined' || new URLSearchParams(location.search).get('overlaySkip') !== '0'
+/** 26.42 P-A：游戏视图本帧是否有任何叠加内容（光照、后处理、调试视图、游戏 UI 或点编辑手柄）。判断偏保守：拿不准就视为有内容。 */
+function gameOverlayHasContent(entities: readonly Entity[]): boolean {
+  const settings = lightingEnvironment.settings
+  if ((settings.lightingEnabled && !lightingOnGpu) || settings.debugView !== 'None') return true
+  if (settings.postProcessing.enabled && rendererBackend.value !== 'WebGL2') return true
+  if (['path', 'polygon', 'collider', 'pivot'].includes(state.activeTool) && state.selectedEntityId !== null) return true
+  for (const entity of entities) if (entity.hasComponent('RectTransform')) return true
+  return false
+}
+/** 叠加层收尾：解析游戏 UI（输入命中依赖它）、无障碍节点、渲染图统计和渲染纹理捕获；跳过帧与绘制帧共用。 */
+function finishOverlayFrame(width: number, height: number, isGameView: boolean, graphStarted: number, passStarted: number): void {
+  if (!ctx) return
+  const selectedIds = new Set(state.selectedEntityIds)
   const uiEntities = isGameView ? world.entities : world.entities.filter(/* 比较 entity.layer 与 editorState.activeLayer，返回严格相等的判断结果。 */ entity => entity.layer === editorState.activeLayer)
   gameUiRuntime.render(ctx, width, height, uiEntities, { editor: !isGameView, selectedEntityIds: selectedIds })
   renderScreenRulers(ctx, width, height)
@@ -1580,7 +1631,7 @@ function rulerColors(): { band: string; tick: string; text: string; edge: string
   completeRenderGraph(graphStarted, editorState.rendererStats, passStarted, passStarted, renderGraphDiagnosticsOwner)
   editorState.rendererStats.passes = 5
   if (renderCanvasRef.value) {
-    captureRenderSurface(renderCanvasRef.value, canvasRef.value, worldPostProcessFilter(lightingEnvironment))
+    captureRenderSurface(renderCanvasRef.value, canvasRef.value, renderCanvasFilter())
     const renderTextureCameras = isGameView ? activeGameCameras(world.entities, width, height).filter(/* 返回 camera.component.renderTexture 的当前值。 */ camera => camera.component.renderTexture) : []
     editorState.rendererStats.renderTargets += new Set(renderTextureCameras.map(/* 返回 camera.component.renderTexture 的当前值。 */ camera => camera.component.renderTexture)).size
     for (const activeCamera of renderTextureCameras) {
@@ -1731,7 +1782,7 @@ function rulerColors(): { band: string; tick: string; text: string; edge: string
 
 <template>
   <div ref="gameSurfaceRef" class="canvas-container" @dragover="onAssetDragOver" @drop="onAssetDrop">
-    <canvas :key="renderCanvasKey" ref="renderCanvasRef" class="render-canvas" :style="{ filter: worldPostProcessFilter(lightingEnvironment) }" aria-hidden="true" />
+    <canvas :key="renderCanvasKey" ref="renderCanvasRef" class="render-canvas" :style="{ filter: renderCanvasFilter() }" aria-hidden="true" />
     <canvas ref="canvasRef" class="overlay-canvas" data-game-input-surface tabindex="0" :aria-label="editorState.currentPage === 'game' ? t('game') : t('scene')" @touchstart="touchPointer !== null && $event.stopPropagation()" @touchmove="touchPointer !== null && $event.stopPropagation()" @pointerdown="onUiPointerDown" @pointermove="onUiPointerMove" @pointerup="onUiPointerUp" @pointercancel="onUiPointerCancel" @lostpointercapture="onUiPointerCancel" @mousedown="onMouseDown" @mousemove="onMouseMove" @mouseup="onMouseUp" @dblclick="onDoubleClick" @wheel="onWheel" @contextmenu.prevent />
     <VirtualControlsOverlay v-if="editorState.currentPage === 'game'" :runtime="gameplayRuntime" :world="gameplayRuntime.presentation.world" :input-actions="state.inputMap" />
     <div v-if="editorState.currentPage === 'game' && accessibilityNodes.length" class="game-ui-a11y" aria-label="Game UI">

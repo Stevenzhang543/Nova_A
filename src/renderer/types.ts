@@ -1,4 +1,5 @@
 /** 二维渲染接口类型：声明绘制命令、相机、纹理及渲染后端之间的数据约定。 */
+import type { GpuLightingFrame } from './lighting2dGpu'
 import type { RequiredResourceUploadRequest, RequiredResourceUploadSnapshot, RequiredResourceUploadAck } from './requiredResourceUpload'
 export type { RequiredResourceUploadRequest, RequiredResourceUploadSnapshot, RequiredResourceUploadAck, RequiredResourceVersion } from './requiredResourceUpload'
 import type { Vec2 } from '../world/types'
@@ -72,6 +73,8 @@ export interface SpriteRenderCommand extends RenderOrder {
   texture: TextureRegion
   nineSlice?: { left: number; top: number; right: number; bottom: number } | null
   mesh?: { positions: Vec2[]; uvs: Vec2[]; indices: number[] } | null
+  /** 26.42: normal map region for GPU lighting (same layout as `texture`); ignored by renderers without it. */
+  normalMap?: TextureRegion | null
 }
 
 export interface TextRenderCommand extends RenderOrder {
@@ -140,6 +143,12 @@ export interface RendererStats {
   shaderFallbacks: number
   contextLosses: number
   batchBreakReasons: Record<string, number>
+  /** 26.42: where this frame's 2D lighting was drawn ('Off' when lighting is disabled) and why the GPU path was not used. */
+  /** 26.42 P-E3: the WebGL2 context was created desynchronized (Player opt-in). */
+  desynchronized?: boolean
+  lightingBackend?: 'WebGL2' | 'Canvas2D' | 'Off'
+  lightingFallbackReason?: string | null
+  lights?: number
 }
 
 export interface Renderer2D {
@@ -164,6 +173,10 @@ export interface Renderer2D {
   submitText(command: TextRenderCommand): void
   submitTileChunk(command: TileChunkRenderCommand): void
   endCamera(): void
+  /** 26.42 P-D: GPU 2D lighting. `supportsGpuLighting` compiles the light programs once; false keeps Canvas 2D lighting. */
+  supportsGpuLighting?(): boolean
+  /** Lights for the frame being recorded; drawn and multiplied into the scene inside endFrame. */
+  submitLighting?(frame: GpuLightingFrame): void
   endFrame(): RendererStats
   destroy(): void
 }

@@ -40,7 +40,10 @@
     "rain-room",
     "starfield",
     "orbit-gallery",
-    "sprite-wall"
+    "sprite-wall",
+    "platformer-trilogy",
+    "pendulum-post",
+    "reflex-lab"
   ],
   "scope": "Stable launcher catalogue order captured through real visible starter selection on the 26.14+26.15 development overlay."
 }

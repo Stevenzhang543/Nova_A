@@ -61,6 +61,21 @@ const controls = {
     "Play previews the arena offline. For multiplayer, start a compatible WebSocket server, then enable Networking in Manage and set its endpoint (default ws://127.0.0.1:7777). The sample does not start a server or add player movement.",
     "Play zeigt die Arena offline. Für Mehrspieler einen kompatiblen WebSocket-Server starten, dann Networking in Manage aktivieren und den Endpunkt setzen (Standard ws://127.0.0.1:7777). Die Vorlage startet keinen Server und enthält keine Spielerbewegung.",
     "播放可离线预览竞技场。多人联机需先启动兼容的 WebSocket 服务器，再在管理中启用网络并设置地址（默认 ws://127.0.0.1:7777）。模板不会启动服务器，也未添加玩家移动。"
+  ],
+  "trilogy": [
+    "Play: A/D or arrows to run, Space/W to jump (hold for height), R restarts the stage. Click the Game viewport before using keys.",
+    "Play: A/D oder Pfeiltasten laufen, Leertaste/W springen (halten für mehr Höhe), R startet die Stufe neu. Vorher in die Spielansicht klicken.",
+    "播放后用 A/D 或方向键奔跑，空格/W 跳跃（按住跳得更高），R 重开本关；先点击游戏视口再按键。"
+  ],
+  "pendulum": [
+    "Play: click a rope link in the Game view to cut it, or press 1/2 to release a ball. Deliver both balls into the cup; R restarts.",
+    "Play: Ein Seilglied in der Spielansicht anklicken, um es zu schneiden, oder 1/2 drücken, um eine Kugel zu lösen. Beide Kugeln in den Becher bringen; R startet neu.",
+    "播放后在游戏视口点击绳索链节将其剪断，或按 1/2 直接松开小球；把两颗球都送进杯中，R 重开。"
+  ],
+  "reflex": [
+    "Play: press Space, Enter, left click or gamepad A to arm a round, then again when the lamp turns green. M switches to the latency marker scene; R resets.",
+    "Play: Leertaste, Eingabe, Linksklick oder Gamepad-A startet eine Runde; erneut drücken, sobald die Lampe grün wird. M wechselt zur Latenz-Markerszene, R setzt zurück.",
+    "播放后按空格、回车、鼠标左键或手柄 A 开始一轮，灯变绿时再按一次。M 切换到延迟标记场景，R 重置。"
   ]
 } as const
 const guides: readonly TemplateGuideRecord[] = [
@@ -658,7 +673,25 @@ const guides: readonly TemplateGuideRecord[] = [
     "requirements": [
       "offline"
     ]
-  }
+  },
+  { "id": "platformer-trilogy", "control": "trilogy", "manualSection": "v6-physics-one-way-platforms", "taskSection": "v6-physics-one-way-platforms",
+    "expected": [
+      "Three stages load in order; stage 3 opens its gate after ten coins and shows the total time and falls.",
+      "Drei Stufen laden nacheinander; Stufe 3 öffnet das Tor nach zehn Münzen und zeigt Gesamtzeit und Stürze.",
+      "三个关卡依次加载；第三关集齐十枚金币后终点生效，并显示总用时与掉落次数。"
+    ], "requirements": ["offline", "keyboard"] },
+  { "id": "pendulum-post", "control": "pendulum", "manualSection": "v6-physics-revolute-joint", "taskSection": "v6-physics-revolute-joint",
+    "expected": [
+      "Cut chains drop their balls; two balls in the cup show the delivery panel with a cut rating.",
+      "Geschnittene Ketten lassen ihre Kugeln fallen; zwei Kugeln im Becher zeigen die Lieferanzeige mit Bewertung.",
+      "剪断链条后小球下落；两颗球都进杯后显示投递完成面板与剪断次数评级。"
+    ], "requirements": ["offline", "pointer", "keyboard"] },
+  { "id": "reflex-lab", "control": "reflex", "manualSection": "v6-debug-render-physics-audio-and-script-timing", "taskSection": "v6-debug-render-physics-audio-and-script-timing",
+    "expected": [
+      "Five valid rounds report average, best and worst reaction times; the marker scene shows a white square while Space is held.",
+      "Fünf gültige Runden melden Durchschnitt, Bestwert und schlechteste Reaktionszeit; die Markerszene zeigt ein weißes Quadrat, solange die Leertaste gehalten wird.",
+      "完成五轮有效测试后显示平均、最佳与最差反应时间；标记场景在按住空格时显示白色方块。"
+    ], "requirements": ["offline", "keyboard", "pointer"] }
 ]
 const requirementText: Record<TemplateRequirement, Localized> = {
  offline: ['Ready offline', 'Offline bereit', '离线可用'], keyboard: ['Keyboard', 'Tastatur', '键盘'], pointer: ['Pointer', 'Zeiger', '指针'], audio: ['Audio included', 'Audio enthalten', '包含音频'], twoPlayers: ['Two local players', 'Zwei lokale Spieler', '本地双人'], optionalServer: ['Server optional', 'Server optional', '服务器可选']
