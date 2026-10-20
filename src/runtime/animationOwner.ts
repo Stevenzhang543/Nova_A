@@ -5,7 +5,7 @@ import type {Entity} from '../world/Entity'
 import type {Animator,AnimatorParameterValue} from '../world/components'
 import type {AssetRecord} from './runtimeAssetRecordContracts'
 import {MediaClock} from './mediaClock'
-import {TRACKS,defaultAnimationClip,normalizeAnimationClip,animationClipLength,sampleAnimationTrack,reduceAnimationKeys,animationDispatchesBetween,parameterValue,conditionMatches,type AnimatableProperty,type AnimationKeyframe,type AnimationEvent,type AnimationCommand,type AnimationCommandTrack,type AnimationClipDocument,type BlendTreeChild,type AnimatorState,type AnimatorTransition} from './animationDocuments'
+import {ANY_STATE,findAnimatorState,TRACKS,defaultAnimationClip,normalizeAnimationClip,animationClipLength,sampleAnimationTrack,reduceAnimationKeys,animationDispatchesBetween,parameterValue,conditionMatches,type AnimatableProperty,type AnimationKeyframe,type AnimationEvent,type AnimationCommand,type AnimationCommandTrack,type AnimationClipDocument,type BlendTreeChild,type AnimatorState,type AnimatorTransition} from './animationDocuments'
 import {validateAnimationTimelinePorts,type AnimationWorld,type AnimationTimelinePorts,type AnimationRecordingObservers,type AnimationAuthoring} from './animationTimelineContracts'
 import {AnimationTimelineDocumentReader} from './animationTimelineDocumentReader'
 interface LayerRuntimeState { stateId: string; time: number; clock:MediaClock; previousClock:MediaClock|null; previousStateId: string | null; previousTime: number; blendTime: number; blendDuration: number; interruption: AnimatorTransition['interruption'] }
@@ -67,12 +67,31 @@ export class AnimationOwner {
   private spritePose=new PlainKeyMap<Entity,{base:string|null;output:string|null;touched:boolean}>()
   private timelineSprites=new PlainKeyMap<Entity,{base:string|null;output:string|null}>()
   onEvent: ((entity: Entity, event: AnimationEvent) => void) | null = null
+  /** 26.44: a layer left `previous` (null when the layer starts) and entered `next`. */
+  onStateChange: ((entity: Entity, layerId: string, previous: AnimatorState | null, next: AnimatorState) => void) | null = null
+  // 26.44: crossfades requested by scripts, applied to the base layer at the next update.
+  private crossfades = new Map<string, { state: string; seconds: number }>()
+  /** 26.44: blend the entity's base layer to `state` (id or name) over `seconds`. */ crossfade(entity: Entity, state: string, seconds: number): boolean {
+    if (!entity?.uuid || !String(state ?? '').trim()) return false
+    this.crossfades.set(entity.uuid, { state: String(state).trim().slice(0, 80), seconds: Math.min(60, Math.max(0, finiteNumber(seconds))) })
+    return true
+  }
+  /** 26.44: base-layer state as scripts see it (name, id, normalised time, blending). */ animatorSnapshot(entity: Entity): { state: string; stateId: string; normalizedTime: number; inTransition: boolean } | null {
+    const animator = entity.getComponent<Animator>('Animator'), runtime = this.runtime.get(entity.uuid)
+    if (!animator || !runtime) return null
+    const controller = this.documents.readAnimatorController(animator.controllerAsset)
+    const layerId = controller?.layers[0]?.id, layer = layerId ? runtime.layers.get(layerId) : undefined
+    if (!controller || !layer) return null
+    const state = controller.states.find(candidate => candidate.id === layer.stateId)
+    const clip = state ? this.stateClip(state, animator) : null, length = clip ? animationClipLength(clip) : 0
+    return { state: state?.name ?? '', stateId: layer.stateId, normalizedTime: length > 0 ? layer.clock.seconds / length : 1, inTransition: Boolean(layer.previousStateId) }
+  }
   onCommand: ((entity: Entity, track: AnimationCommandTrack, command: AnimationCommand) => void) | null = null
 
   private recordingResetObservers:AnimationRecordingObservers
   /** Editor preview owners can transfer the exact recording before a global Stop clears runtime state. */
   /** 结构说明（自动提取）：observeRecordingReset；输入 observer；直接调用 recordingResetObservers.add。 */ observeRecordingReset(observer:(document:AnimationClipDocument)=>void):()=>void {this.recordingResetObservers.add(observer);return/* 调用 this.recordingResetObservers.delete(observer) 并返回调用结果。 */ ()=>this.recordingResetObservers.delete(observer)}
-  /** 结构说明（自动提取）：reset；无显式参数；直接调用 readRuntimeRecordingDraft、observer、structuredClone、runtime.clear、directPlayback.clear 等；写入 recording、frameSerial、timelineFrame、evaluationOwner 等；包含循环处理。 */ reset(): void { const captured=this.recordingResetObservers.size?this.readRuntimeRecordingDraft():null;if(captured)for(const observer of this.recordingResetObservers)observer(structuredClone(captured));this.runtime.clear(); this.recording = null; this.directPlayback.clear();this.appliedPose.clear();this.timelinePose.clear();this.frameSerial=0;this.timelineFrame=-1;this.spritePose.clear();this.timelineSprites.clear();this.evaluationOwner=null;this.evaluationEntities=[] }
+  /** 结构说明（自动提取）：reset；无显式参数；直接调用 readRuntimeRecordingDraft、observer、structuredClone、runtime.clear、directPlayback.clear 等；写入 recording、frameSerial、timelineFrame、evaluationOwner 等；包含循环处理。 */ reset(): void { this.crossfades.clear(); const captured=this.recordingResetObservers.size?this.readRuntimeRecordingDraft():null;if(captured)for(const observer of this.recordingResetObservers)observer(structuredClone(captured));this.runtime.clear(); this.recording = null; this.directPlayback.clear();this.appliedPose.clear();this.timelinePose.clear();this.frameSerial=0;this.timelineFrame=-1;this.spritePose.clear();this.timelineSprites.clear();this.evaluationOwner=null;this.evaluationEntities=[] }
   /** 结构说明（自动提取）：playClipOnce；输入 entityUuid、reference；直接调用 readAnimationClip、directPlayback.set、MediaClock。 */ playClipOnce(entityUuid: string, reference: string): boolean { if (!entityUuid || !this.documents.readAnimationClip(reference)) return false; this.directPlayback.set(entityUuid, { reference, time: 0, clock: new MediaClock() }); return true }
   /** Detached transport state for the editor; does not advance or initialize playback. */
   /** 结构说明（自动提取）：inspectClipPlayback；输入 entityUuid；直接调用 directPlayback.get、readAnimationClip、animationClipLength。 */ inspectClipPlayback(entityUuid: string): { reference: string; time: number; duration: number } | null {
@@ -157,13 +176,31 @@ export class AnimationOwner {
       controller.layers.forEach(/** 结构说明（自动提取）：controller.layers.forEach 回调；输入 layer、layerIndex；直接调用 Math.min、Math.max、layers.get、controller.states.some、MediaClock 等；写入 layerState、layerState.previousStateId、layerState.previousClock、layerState.previousTime 等；包含循环处理。 */ (layer, layerIndex) => {
         const weight = Math.min(1, Math.max(0, animator.layerWeights[layer.id] ?? layer.weight))
         let layerState = state!.layers.get(layer.id)
-        const requested = layerIndex === 0 && animator.currentState && controller.states.some(/* 比较 candidate.id 与 animator.currentState，返回严格相等的判断结果。 */ candidate => candidate.id === animator.currentState) ? animator.currentState : ''
+        // 26.44: scripts and blocks may name the state ("Run") instead of using its id.
+        const requested = layerIndex === 0 && animator.currentState ? findAnimatorState(controller, animator.currentState)?.id ?? '' : ''
+        const stateOf = (id: string | null) => id ? controller.states.find(candidate => candidate.id === id) ?? null : null
         if (!layerState || !controller.states.some(/* 比较 candidate.id 与 layerState!.stateId，返回严格相等的判断结果。 */ candidate => candidate.id === layerState!.stateId)) {
           layerState = { stateId: requested || layer.defaultState, time: 0,clock:new MediaClock(),previousClock:null, previousStateId: null, previousTime: 0, blendTime: 0, blendDuration: 0, interruption: 'None' }
           state!.layers.set(layer.id, layerState)
+          const entered = stateOf(layerState.stateId); if (entered) this.onStateChange?.(entity, layer.id, null, entered)
         } else if (requested && requested !== layerState.stateId) {
+          const left = stateOf(layerState.stateId)
           layerState.previousStateId = null;layerState.previousClock=null; layerState.previousTime = layerState.time
           layerState.stateId = requested; layerState.time = 0;layerState.clock.seek(0); layerState.blendTime = 0; layerState.blendDuration = 0
+          const entered = stateOf(requested); if (entered) this.onStateChange?.(entity, layer.id, left, entered)
+        }
+        // 26.44: a crossfade blends from the current state like a transition with this duration.
+        const crossfade = layerIndex === 0 ? this.crossfades.get(entity.uuid) : undefined
+        if (crossfade) {
+          this.crossfades.delete(entity.uuid)
+          const target = findAnimatorState(controller, crossfade.state)
+          if (target && target.id !== layerState.stateId) {
+            const left = stateOf(layerState.stateId)
+            layerState.previousStateId = crossfade.seconds > 0 ? layerState.stateId : null; layerState.previousTime = layerState.time; layerState.previousClock = crossfade.seconds > 0 ? new MediaClock(layerState.clock.seconds) : null
+            layerState.stateId = target.id; layerState.time = 0; layerState.clock.seek(0); layerState.blendTime = 0; layerState.blendDuration = crossfade.seconds; layerState.interruption = 'None'
+            animator.currentState = target.id
+            this.onStateChange?.(entity, layer.id, left, target)
+          }
         }
         const synchronized = layer.synchronizedTiming && layer.synchronizedLayer ? state!.layers.get(layer.synchronizedLayer) : null
         let activeState = controller.states.find(/* 比较 candidate.id 与 layerState!.stateId，返回严格相等的判断结果。 */ candidate => candidate.id === layerState!.stateId) ?? controller.states[0]
@@ -172,8 +209,9 @@ export class AnimationOwner {
         if(synchronized&&!layerState.previousStateId){const sourceState=controller.states.find(/* 比较 candidate.id 与 synchronized.stateId，返回严格相等的判断结果。 */ candidate=>candidate.id===synchronized.stateId),sourceClip=sourceState?this.stateClip(sourceState,animator):null,sourceLength=sourceClip?animationClipLength(sourceClip):activeLength;layerState.clock.seek(sourceLength>0?synchronized.clock.seconds/sourceLength*activeLength:synchronized.clock.seconds);layerState.time=activeLength>0?((layerState.clock.seconds%activeLength)+activeLength)%activeLength:0}
         const normalizedTime = activeLength > 0 ? layerState.clock.seconds / activeLength : 1
         const transitionSources=!layerState.previousStateId?[activeState.id]:layerState.interruption==='Source'?[layerState.previousStateId]:layerState.interruption==='Destination'?[activeState.id]:layerState.interruption==='SourceThenDestination'?[layerState.previousStateId,activeState.id]:[]
-        let transition:AnimatorTransition|undefined
-        for(const sourceId of transitionSources){
+        // 26.44: transitions from Any State are checked first (as in Unity); they never re-enter the active state.
+        let transition:AnimatorTransition|undefined=controller.transitions.find(candidate=>candidate.from===ANY_STATE&&candidate.to!==activeState.id&&(!candidate.hasExitTime||normalizedTime>=candidate.exitTime)&&candidate.conditions.every(condition=>conditionMatches(animator.parameters[condition.parameter]??false,condition)))
+        if(!transition)for(const sourceId of transitionSources){
           const sourceState=controller.states.find(/* 比较 candidate.id 与 sourceId，返回严格相等的判断结果。 */ candidate=>candidate.id===sourceId),sourceClip=sourceState?this.stateClip(sourceState,animator):null,sourceLength=sourceClip?animationClipLength(sourceClip):0
           const phase=sourceId===activeState.id?normalizedTime:sourceLength>0?(layerState.previousClock?.seconds??layerState.previousTime)/sourceLength:1
           transition=controller.transitions.find(/** 结构说明（自动提取）：controller.transitions.find 回调；输入 candidate；直接调用 candidate.conditions.every；返回表达式求值结果。 */ candidate=>candidate.from===sourceId&&candidate.to!==activeState.id&&(!candidate.hasExitTime||phase>=candidate.exitTime)&&candidate.conditions.every(/* 调用 conditionMatches(animator.parameters[condition.parameter]??false,condition) 并返回调用结果。 */ condition=>conditionMatches(animator.parameters[condition.parameter]??false,condition)))
@@ -185,6 +223,7 @@ export class AnimationOwner {
             if (parameter?.type === 'Trigger') consumedTriggers.add(parameter.name)
           }
           const destination = controller.states.find(/* 比较 candidate.id 与 transition.to，返回严格相等的判断结果。 */ candidate => candidate.id === transition.to) ?? activeState
+          if (destination !== activeState) this.onStateChange?.(entity, layer.id, activeState, destination)
           const destinationClip = this.stateClip(destination, animator)
           layerState.previousStateId = layerState.stateId; layerState.previousTime = layerState.time;layerState.previousClock=new MediaClock(layerState.clock.seconds)
           layerState.stateId = transition.to

@@ -43,7 +43,9 @@ export interface ScriptTestResult {
 
 
 export interface DebugHost { continue(): void; step(mode: Exclude<DebugStepMode, 'continue'>): void; cancelTask(id: string): boolean }
-export const DEBUG_CAPABILITIES = Object.freeze({ vmSuspension: false, vmStack: false, vmLocals: false, callbackBreakpoints: true, callbackStep: true, commandReplayStep: true, snapshotWatches: true, caughtExceptionPause: false })
+// 26.44: Rhai scripts stop at lines with their VM stack and locals by re-running the callback up to
+// the stop (snapshot, abort, re-run); the VM itself is never suspended mid-call.
+export const DEBUG_CAPABILITIES = Object.freeze({ vmSuspension: false, vmStack: true, vmLocals: true, lineBreakpoints: true, vmStep: true, callbackBreakpoints: true, callbackStep: true, commandReplayStep: true, snapshotWatches: true, caughtExceptionPause: false })
 export interface ScriptDebugWorld { readonly entities: readonly unknown[] }
 export function createInitialScriptDebugState() { return {
   enabled: true,
@@ -163,11 +165,12 @@ function evaluateDebugWatches(): void {
   }
 }
 
-function pauseScriptDebugger(frame: DebugFrame, locals: Record<string, unknown>, reason: string): void {
+function pauseScriptDebugger(frame: DebugFrame, locals: Record<string, unknown>, reason: string, stack?: DebugFrame[]): void {
   scriptDebugState.paused = true
   scriptDebugState.reason = reason
-  // 旧回调不是当前调用栈；只保存宿主确实提供的这一个快照位置。
-  scriptDebugState.callStack.splice(0, scriptDebugState.callStack.length, { ...frame, sessionRevision: scriptDebugState.sessionRevision, pauseId: scriptDebugState.pauseCount + 1 })
+  // 旧回调不是当前调用栈；只保存宿主确实提供的位置（26.44：VM 停止时为完整的脚本调用栈，最内层在前）。
+  const frames = stack?.length ? stack : [frame]
+  scriptDebugState.callStack.splice(0, scriptDebugState.callStack.length, ...frames.map(item => ({ ...item, sessionRevision: scriptDebugState.sessionRevision, pauseId: scriptDebugState.pauseCount + 1 })))
   scriptDebugState.locals = locals
   scriptDebugState.selectedFrame = 0
   scriptDebugState.pauseCount++

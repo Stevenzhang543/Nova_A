@@ -34,7 +34,7 @@ export interface TilePlacementDescriptor {
   flipY: boolean
 }
 
-interface ChunkCache { signature: string; revision: number; chunks: Map<string, TileChunkRenderCommand>; dirty: Set<string>; cameraOffsets: Map<string, Vec2> }
+interface ChunkCache { signature: string; revision: number; chunks: Map<string, TileChunkRenderCommand>; dirty: Set<string>; cameraOffsets: Map<string, Vec2>; animationTick: string; animatedChunks: Set<string> }
 function createTileResourceImplementation(ports:TileResourcePorts){
  const assetState=ports,resolveAsset=ports.resolveAsset.bind(ports),readTextAsset=ports.readTextAsset.bind(ports)
  const parsedTileSets = new BoundedImportCache<string, {asset: TileResourceRecord; source: string; generation: number; value: TileSetDocument | null}>(128, 64 * 1024 * 1024)
@@ -187,7 +187,7 @@ function advanceLocalTileRevision(component: TileMap2D): void {
   return animation.frames[raw % animation.frames.length]
 }
 
-/** 结构说明（自动提取）：chunkCommand；输入 entity、component、layer、tileSet、chunkX、chunkY、entities、cameraPosition；直接调用 worldTransform、Math.min、animationTile、tileAnimationTime、tileSet.sources.find 等；写入 position.x、position.y；包含循环处理。 */ function chunkCommand(entity: Entity, component: TileMap2D, layer: TileMap2D['layers'][number], tileSet: TileSetDocument, chunkX: number, chunkY: number, entities: Entity[], cameraPosition?: Vec2): TileChunkRenderCommand {
+/** 结构说明（自动提取）：chunkCommand；输入 entity、component、layer、tileSet、chunkX、chunkY、entities、cameraPosition；直接调用 worldTransform、Math.min、animationTile、tileAnimationTime、tileSet.sources.find 等；写入 position.x、position.y；包含循环处理。 */ function chunkCommand(entity: Entity, component: TileMap2D, layer: TileMap2D['layers'][number], tileSet: TileSetDocument, chunkX: number, chunkY: number, entities: Entity[], cameraPosition?: Vec2, animated: { value: boolean } = { value: false }): TileChunkRenderCommand {
   const transform = worldTransform(entity, entities)
   const sprites: TileChunkRenderCommand['sprites'] = []
   const startX = chunkX * component.chunkSize, startY = chunkY * component.chunkSize
@@ -197,6 +197,7 @@ function advanceLocalTileRevision(component: TileMap2D): void {
     const value = layer.tiles[cellIndex]
     if (value < 0 || value >= tileSet.columns * tileSet.rows) continue
     const definition = tileSet.tiles[value]
+    if (definition?.animation?.frames.length) animated.value = true
     const frame = animationTile(definition, tileAnimationTime()) ?? value
     const frameDefinition = tileSet.tiles[frame] ?? definition
     const source = tileSet.sources.find(/* 比较 candidate.id 与 frameDefinition?.sourceId，返回严格相等的判断结果。 */ candidate => candidate.id === frameDefinition?.sourceId) ?? tileSet.sources[0]
@@ -270,12 +271,17 @@ function advanceLocalTileRevision(component: TileMap2D): void {
   if (!tileSet || !asset) return []
   const transform = worldTransform(entity, entities)
   const hasAnimation = tileSet.tiles.some(/* 返回 tile.animation?.frames.length 的当前值。 */ tile => tile.animation?.frames.length)
-  const animationTick = hasAnimation ? tileSet.tiles.filter(/* 返回 tile.animation?.frames.length 的当前值。 */ tile=>tile.animation?.frames.length).map(/* 调用 animationTile(tile,tileAnimationTime()) 并返回调用结果。 */ tile=>animationTile(tile,tileAnimationTime())).join(',') : 0
-  const signature = [assetState.generation, textureContentRevision(), component.width, component.height, component.chunkSize, component.tileSize.x, component.tileSize.y, component.tileSetAsset, asset.sourceModified, transform.position.x, transform.position.y, transform.rotation, transform.scale.x, transform.scale.y, component.tint.r, component.tint.g, component.tint.b, component.opacity, component.filterMode, component.sortingLayer, component.orderInLayer, component.material, animationTick, ...component.layers.map(/** 按模板 `${layer.id}:${layer.visible}:${layer.opacity}:${layer.blendMode}:${layer.parallax.x}:${layer.parallax.y}:${layer.zOrder}` 生成并返回字符串。 */ layer => `${layer.id}:${layer.visible}:${layer.opacity}:${layer.blendMode}:${layer.parallax.x}:${layer.parallax.y}:${layer.zOrder}`)].join(':')
+  // 26.44: an animated tile's frame change rebuilds only the chunks that hold animated tiles (it used to drop every chunk).
+  const animationTick = hasAnimation ? tileSet.tiles.filter(/* 返回 tile.animation?.frames.length 的当前值。 */ tile=>tile.animation?.frames.length).map(/* 调用 animationTile(tile,tileAnimationTime()) 并返回调用结果。 */ tile=>animationTile(tile,tileAnimationTime())).join(',') : ''
+  const signature = [assetState.generation, textureContentRevision(), component.width, component.height, component.chunkSize, component.tileSize.x, component.tileSize.y, component.tileSetAsset, asset.sourceModified, transform.position.x, transform.position.y, transform.rotation, transform.scale.x, transform.scale.y, component.tint.r, component.tint.g, component.tint.b, component.opacity, component.filterMode, component.sortingLayer, component.orderInLayer, component.material, ...component.layers.map(/** 按模板 `${layer.id}:${layer.visible}:${layer.opacity}:${layer.blendMode}:${layer.parallax.x}:${layer.parallax.y}:${layer.zOrder}` 生成并返回字符串。 */ layer => `${layer.id}:${layer.visible}:${layer.opacity}:${layer.blendMode}:${layer.parallax.x}:${layer.parallax.y}:${layer.zOrder}`)].join(':')
   let cache = chunkCaches.get(component)
   if (!cache || cache.signature !== signature || cache.revision !== component.revision) {
-    cache = { signature, revision: component.revision, chunks: new Map(), dirty: new Set(), cameraOffsets: new Map() }
+    cache = { signature, revision: component.revision, chunks: new Map(), dirty: new Set(), cameraOffsets: new Map(), animationTick, animatedChunks: new Set() }
     chunkCaches.set(component, cache)
+  }
+  if (cache.animationTick !== animationTick) {
+    for (const key of cache.animatedChunks) cache.chunks.delete(key)
+    cache.animationTick = animationTick
   }
   const columns = Math.ceil(component.width / component.chunkSize), rows = Math.ceil(component.height / component.chunkSize)
   const commands: TileChunkRenderCommand[] = []
@@ -294,9 +300,11 @@ function advanceLocalTileRevision(component: TileMap2D): void {
       const key = `${layer.id}:${x}:${y}`
       let command = cache.chunks.get(key)
       if (!command || cache.dirty.has(key)) {
-        command = chunkCommand(entity, component, layer, tileSet, x, y, entities, cameraPosition)
+        const animated = { value: false }
+        command = chunkCommand(entity, component, layer, tileSet, x, y, entities, cameraPosition, animated)
         cache.chunks.set(key, command)
         cache.dirty.delete(key)
+        if (animated.value) cache.animatedChunks.add(key); else cache.animatedChunks.delete(key)
       }
       if (command.sprites.length) commands.push(command)
     }

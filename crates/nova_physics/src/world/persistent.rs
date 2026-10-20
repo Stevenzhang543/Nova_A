@@ -85,6 +85,11 @@ pub struct PhysicsWorld {
     configuration_rebuilds: u64,
     physics_steps: u64,
     quality: SolverQuality,
+    // 26.44: cached query proxies (see QueryProxy), dropped when a body record changes shape,
+    // filter or membership; poses are refreshed in place.
+    query_cache: std::cell::RefCell<Option<std::sync::Arc<Vec<QueryProxy>>>>,
+    // 26.44: characters dropping through one-way platforms: remaining seconds per body handle.
+    one_way_pass: HashMap<u32, f64>,
 }
 
 impl PhysicsWorld {
@@ -186,6 +191,7 @@ impl PhysicsWorld {
             return Err("body record has the wrong length");
         }
         if let Some(&index) = self.body_index.get(&handle) {
+            let before = self.bodies[index].values.clone();
             let record = &mut self.bodies[index];
             let changed = record.order != order || record.values != values;
             if changed {
@@ -200,6 +206,7 @@ impl PhysicsWorld {
                     record.values[49] = 0.0;
                     record.values[50] = 0.0;
                 }
+                self.note_record_change(index, &before);
                 self.mark_body_changed(index, structural);
             }
             return Ok(changed);
@@ -210,6 +217,7 @@ impl PhysicsWorld {
             values: values.to_vec(),
             collider_shapes: Vec::new(),
         });
+        self.invalidate_query_cache();
         self.rebuild_indexes();
         self.configuration_dirty = true;
         self.events.push(PhysicsEvent::BodyCreated { handle });
@@ -233,6 +241,8 @@ impl PhysicsWorld {
             self.events.push(PhysicsEvent::ContactEnded(contact));
         }
         self.bodies.remove(index);
+        self.invalidate_query_cache();
+        self.one_way_pass.remove(&handle);
         self.rebuild_indexes();
         self.configuration_dirty = true;
         self.events.push(PhysicsEvent::BodyDestroyed { handle });
@@ -261,6 +271,7 @@ impl PhysicsWorld {
         }
         self.bodies[index].collider_shapes.clear();
         self.bodies[index].collider_shapes.extend_from_slice(values);
+        self.invalidate_query_cache();
         self.configuration_dirty = true;
         Ok(true)
     }
@@ -430,6 +441,8 @@ impl PhysicsWorld {
         }
         self.bodies.clear();
         self.connections.clear();
+        self.invalidate_query_cache();
+        self.one_way_pass.clear();
         self.body_index.clear();
         self.connection_index.clear();
         self.dense_bodies.clear();
@@ -470,6 +483,11 @@ impl PhysicsWorld {
             body.torque = finite_or(body.torque + torque, body.torque);
         }
         solver.step(dt, global_gravity, air_friction);
+        // 26.44: one-way drop-through timers run on physics time.
+        let elapsed = finite_or(dt, 0.0).max(0.0);
+        for remaining in self.one_way_pass.values_mut() {
+            *remaining -= elapsed;
+        }
         for (handle, (x, y, torque)) in transient_forces {
             let Some(index) = self.body_index.get(&handle).copied() else {
                 continue;
@@ -541,6 +559,7 @@ impl PhysicsWorld {
             return;
         }
         self.bodies.sort_by_key(/* 返回当前快照值 record . order。 */ |record| record.order);
+        self.invalidate_query_cache();
         self.connections.sort_by_key(/* 返回当前快照值 record . order。 */ |record| record.order);
         self.rebuild_indexes();
         self.dense_bodies.clear();
@@ -582,6 +601,7 @@ impl PhysicsWorld {
                 &self.dense_connections[index * CONNECTION_STRIDE..(index + 1) * CONNECTION_STRIDE],
             );
         }
+        self.refresh_query_poses(None);
     }
 
     // 比较前后刚体与连接状态，生成休眠、唤醒或断裂事件。
@@ -730,7 +750,9 @@ impl PhysicsWorld {
             return Err("body handle does not exist");
         };
         let layer = self.bodies[index].values[33];
+        let before = self.bodies[index].values.clone();
         update(&mut self.bodies[index].values);
+        self.note_record_change(index, &before);
         let structural = self.bodies[index].values[33] != layer;
         self.mark_body_changed(index, structural);
         Ok(())
@@ -768,6 +790,7 @@ impl PhysicsWorld {
             let mut body = Body::from_data(&solver.data, base);
             body.apply_collider_children(&record.collider_shapes);
             solver.bodies[index] = body;
+            solver.forget_resting_body(index);
         }
         if self.configuration_dirty {
             // A queued index no longer matched the retained layout: fall back to the full rebuild.

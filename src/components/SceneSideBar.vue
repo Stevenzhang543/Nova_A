@@ -2,6 +2,12 @@
 <template>
   <aside class="sidebar-container" :style="{ width: isCollapsed ? `${44 * preferencesState.uiScale}px` : `${panelWidth}px` }" :class="[dock, { 'jelly-slide': !isDragging, 'no-transition': isDragging, 'panel-maximized': workspaceState.maximizedPanel==='hierarchy' }]">
     <UiButton v-if="isCollapsed" class="expand" icon="forward" :label="t('expandPanel')" @click="expandPanel" />
+    <!-- 26.44 G1: the workspace context tools (formerly a separate rail) live at the top of this panel;
+         collapsed, the panel is the rail. -->
+    <nav v-if="contextTools" class="context-tools" :class="{ vertical: isCollapsed }" data-control-scope="context-rail" :aria-label="t('contextTools')">
+      <UiButton v-for="item in contextActions" :key="item.id" :icon="item.icon" :label="`${t(item.label)} · ${t(item.hint)}`" :title="`${t(item.label)} · ${t(item.hint)}`" :class="{ active: item.active }" :aria-pressed="item.active" @click="item.run" />
+      <UiButton class="create" icon="add" :label="t('createObject')" :title="t('createObject')" :disabled="!canEdit" @click="editorState.createObjectPaletteOpen = true" />
+    </nav>
     <div v-show="!isCollapsed" class="scene-sidebar">
       <section class="scene-manager">
         <UiPanelHeader :title="t('scenes')">
@@ -123,8 +129,10 @@ import { authoringState, saveHierarchyFilter, toggleHierarchyPin } from '../edit
 import { workspaceState } from '../editor/workspaces'
 import PanelMaximizeButton from './PanelMaximizeButton.vue'
 import PanelResizeHandle from './PanelResizeHandle.vue'
+import { useContextActions } from '../editor/contextActions'
 
-const props = withDefaults(defineProps<{ dock?: 'left' | 'right' }>(), { dock: 'left' })
+const props = withDefaults(defineProps<{ dock?: 'left' | 'right'; contextTools?: boolean }>(), { dock: 'left', contextTools: false })
+const contextActions = useContextActions()
 const dock = computed(/* 返回 props.dock 的当前值。 */ () => props.dock)
 const panelWidth = ref(editorState.hierarchyWidth)
 watch(/* 返回 editorState.hierarchyWidth 的当前值。 */ () => editorState.hierarchyWidth, /** 非拖拽期间同步外部面板宽度并展开侧栏。 */ value => { if (!isDragging.value) { panelWidth.value=value;isCollapsed.value=false } })
@@ -445,6 +453,14 @@ onBeforeUnmount(/** Release animations while the mounted row references are stil
 .sidebar-container{position:relative;height:100%;flex:none;display:flex;min-width:0;border-radius:var(--radius-panel);background:var(--surface-1);box-shadow:inset 0 0 0 var(--ui-border-width) var(--border-separator)}
 .sidebar-container.left>.panel-resize-handle{inset-inline-end:0}
 .right .panel-resize-handle{inset-inline-start:0}
+.sidebar-container:has(>.context-tools:not(.vertical)){flex-direction:column}
+.context-tools{flex:none;display:flex;align-items:center;gap:2px;padding:var(--space-1) var(--space-2);border-bottom:var(--ui-border-width) solid var(--border-separator);overflow-x:auto;scrollbar-width:none}
+.context-tools :deep(.ui-button){flex:none;width:var(--ui-control-height);height:var(--ui-control-height);min-height:0;padding:0;color:var(--text-muted)}
+.context-tools :deep(.ui-button:hover:not(:disabled)){color:var(--text-primary)}
+.context-tools :deep(.ui-button.active){background:var(--selection-bg);color:var(--text-primary)}
+.context-tools :deep(.ui-button.create){margin-inline-start:auto;color:var(--creation)}
+.context-tools.vertical{position:absolute;inset:var(--space-1) 0 auto;flex-direction:column;padding:0;border-bottom:0}
+.context-tools.vertical :deep(.ui-button.create){margin:var(--space-1) 0 0}
 .scene-sidebar{container:hierarchy-host/inline-size;min-width:0;flex:1;display:flex;flex-direction:column;overflow:hidden;border-radius:var(--radius-panel)}
 .scene-manager{flex:none;border-bottom:var(--ui-border-width) solid var(--border-separator)}
 .scene-manager :deep(.ui-panel-header){border-bottom:0;background:transparent}

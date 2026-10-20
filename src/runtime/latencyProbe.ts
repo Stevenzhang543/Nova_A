@@ -40,10 +40,18 @@ export interface ProbeFrameRecord {
 const MAX_PENDING = 4096
 const MAX_BATCH_FRAMES = 4096
 
+/** 26.44: how batches reach the collector. The desktop host passes them through native code (browser
+ * network policies such as WebView2's Local Network Access checks dropped direct requests in 26.43);
+ * the Web build uses fetch. */
+export type LatencyProbeTransport = (path: '/sync' | '/probe', body: string | null) => Promise<string>
+
 class LatencyProbe {
   enabled = false
   endpoint = ''
   label = ''
+  private transport: LatencyProbeTransport | null = null
+  /** Requests that failed (collector gone or blocked); reported with the next batch that gets through. */
+  private failures = 0
   /** 26.42 P-E3: context attributes reported with every batch (for example whether the canvas is desynchronized). */
   readonly context: Record<string, string | number | boolean | null> = {}
   private nextId = 1
@@ -56,12 +64,17 @@ class LatencyProbe {
   private syncs: Array<{ t0: number; t1: number; collector: number }> = []
 
   /** Enables the probe only for a loopback HTTP collector. */
-  configure(endpoint: string, label: string): boolean {
+  configure(endpoint: string, label: string, transport?: LatencyProbeTransport): boolean {
     let url: URL
     try { url = new URL(endpoint) } catch { return false }
     if (url.protocol !== 'http:' || !['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname)) return false
     this.endpoint = url.origin
     this.label = label.slice(0, 80)
+    this.transport = transport ?? (async (path, body) => {
+      const response = await fetch(`${this.endpoint}${path}`, body === null ? { cache: 'no-store' } : { method: 'POST', body, headers: { 'content-type': 'application/json' } })
+      if (!response.ok) throw new Error(`collector answered ${response.status}`)
+      return response.text()
+    })
     this.enabled = true
     void this.synchronizeClock()
     setInterval(() => { void this.flush() }, 1000)
@@ -118,11 +131,11 @@ class LatencyProbe {
     for (let index = 0; index < 24; index++) {
       try {
         const t0 = performance.now()
-        const response = await fetch(`${this.endpoint}/sync`, { cache: 'no-store' })
+        const text = await this.transport!('/sync', null)
         const t1 = performance.now()
-        const body = await response.json() as { collectorMs?: number }
+        const body = JSON.parse(text) as { collectorMs?: number }
         if (typeof body.collectorMs === 'number') this.syncs.push({ t0, t1, collector: body.collectorMs })
-      } catch { return }
+      } catch (error) { this.reportFailure(error); return }
     }
   }
 
@@ -132,11 +145,16 @@ class LatencyProbe {
     // Inputs still waiting for more than two seconds are reported as incomplete rather than dropped silently.
     const stale = this.pending.filter(record => now - record.receivedAt > 2000)
     if (stale.length) this.pending = this.pending.filter(record => now - record.receivedAt <= 2000)
-    const body = JSON.stringify({ label: this.label, context: this.context, timeOrigin: performance.timeOrigin, sentAt: now, dropped: this.dropped,
+    const body = JSON.stringify({ label: this.label, context: this.context, timeOrigin: performance.timeOrigin, sentAt: now, dropped: this.dropped, failures: this.failures,
       syncs: this.syncs.splice(0), inputs: this.completed.splice(0), incomplete: stale, frames: this.frames.splice(0) })
-    try { await fetch(`${this.endpoint}/probe`, { method: 'POST', body, headers: { 'content-type': 'application/json' } }) } catch { /* Collector gone: the probe never blocks the app. */ }
+    try { await this.transport!('/probe', body) } catch (error) { this.reportFailure(error) /* Collector gone: the probe never blocks the app. */ }
     // Re-measure the clock mapping every ten seconds so slow drift stays inside the reported error.
     if (++this.flushes % 10 === 0) void this.synchronizeClock()
+  }
+
+  /** The first failure is logged once, so a blocked collector is visible in the console. */
+  private reportFailure(error: unknown): void {
+    if (this.failures++ === 0) console.warn(`Nova_A latency probe could not reach ${this.endpoint}: ${error instanceof Error ? error.message : String(error)}`)
   }
 }
 

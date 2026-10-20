@@ -5,21 +5,18 @@
     <PanelMaximizeButton panel="inspector" class="inspector-maximize" />
     <aside :data-resource-key="numericResourceKey" class="config-panel" data-ui-motion-surface="smooth" :data-ui-motion-key="numericResourceKey" :class="{ runtime: !canEdit }" :inert="!canEdit">
       <div v-if="selectedEntities.length" class="inspector-sticky">
+        <!-- 26.44 G1: two rows. The name and Add component; then search with one filter menu
+             (category, modified only, pinned only). An active filter shows as a token that clears it. -->
         <header class="inspector-header">
           <h3 :title="selectedEntities.length > 1 ? undefined : `${selectedEntity?.name} · ${selectedEntity?.uuid}`">{{ selectedEntities.length > 1 ? t('multiSelected', { count: selectedEntities.length }) : selectedEntity?.name }}</h3>
           <span v-if="selectedEntities.length === 1 && selectedEntity" class="entity-meta"><span>{{ selectedEntity.shapeType }}</span><span class="entity-id">#{{ selectedEntity.id }}</span></span>
+          <UiButton icon="add" v-if="selectedEntity && addableComponents.length" class="add-component-trigger" :label="t('addComponent')" @click="openComponentPicker" />
         </header>
         <div class="inspector-search-row">
-          <input v-model="estate.inspectorSearch" type="search" :placeholder="t('searchInspector')">
-          <UiButton icon="add" v-if="selectedEntity && addableComponents.length" class="add-component-trigger" :label="t('addComponent')" @click="openComponentPicker" />
+          <input v-model="estate.inspectorSearch" type="search" :placeholder="t('searchInspector')" :aria-label="t('searchInspector')">
+          <button v-if="inspectorFilterActive" type="button" class="inspector-filter-token" :title="`${t('inspectorFilter')}: ${inspectorFilterSummary}`" :aria-label="`${inspectorFilterSummary} · ${t('clear')}`" @click="clearInspectorFilters"><span>{{ inspectorFilterSummary }}</span><EditorIcon name="close" /></button>
+          <UiButton ref="filterTrigger" icon="filter" class="inspector-filter-trigger" :class="{ filtering: inspectorFilterActive }" :label="t('inspectorFilter')" aria-haspopup="menu" :aria-expanded="filterMenu.visible" @click.stop="toggleFilterMenu" />
         </div>
-        <!-- One scrolling row: the categories, then the two view filters. -->
-        <nav class="inspector-categories" :aria-label="t('inspectorCategories')">
-          <button v-for="category in inspectorCategories" :key="category.id" :class="{ active: estate.inspectorCategory === category.id }" @click="estate.inspectorCategory = category.id">{{ t(category.label) }}</button>
-          <i class="inspector-filter-divider" aria-hidden="true"></i>
-          <button :class="{ active: estate.inspectorModifiedOnly }" :aria-pressed="estate.inspectorModifiedOnly" @click="estate.inspectorModifiedOnly = !estate.inspectorModifiedOnly">{{ t('modifiedOnly') }}</button>
-          <button :class="{ active: estate.inspectorPinnedOnly }" :aria-pressed="estate.inspectorPinnedOnly" @click="estate.inspectorPinnedOnly = !estate.inspectorPinnedOnly"><EditorIcon name="pin" /> {{ t('pinnedOnly') }}</button>
-        </nav>
       </div>
       <div v-if="selectedEntities.length > 1" class="settings-content multi-inspector">
         <InspectorSection :title="t('sharedProperties')" category="general" open>
@@ -382,6 +379,12 @@
             <p v-if="!componentGroups.length">{{ t('noComponentsFound') }}</p>
           </div>
       </UiDialog>
+      <UiMenu :open="filterMenu.visible" ref="filterMenuRoot" class="inspector-filter-menu" :style="{ left: `${filterMenu.x}px`, top: `${filterMenu.y}px` }" @close="closeFilterMenu(true)">
+        <button v-for="category in inspectorCategories" :key="category.id" type="button" :class="{ active: estate.inspectorCategory === category.id }" :aria-current="estate.inspectorCategory === category.id ? 'true' : undefined" @click="chooseInspectorCategory(category.id)"><EditorIcon :name="estate.inspectorCategory === category.id ? 'check' : 'circle'" :class="{ placeholder: estate.inspectorCategory !== category.id }" /><span>{{ category.id === 'all' ? t('allProperties') : t(category.label) }}</span></button>
+        <hr>
+        <button type="button" :class="{ active: estate.inspectorModifiedOnly }" :aria-current="estate.inspectorModifiedOnly ? 'true' : undefined" @click="toggleInspectorFilter('inspectorModifiedOnly')"><EditorIcon :name="estate.inspectorModifiedOnly ? 'check' : 'circle'" :class="{ placeholder: !estate.inspectorModifiedOnly }" /><span>{{ t('modifiedOnly') }}</span></button>
+        <button type="button" :class="{ active: estate.inspectorPinnedOnly }" :aria-current="estate.inspectorPinnedOnly ? 'true' : undefined" @click="toggleInspectorFilter('inspectorPinnedOnly')"><EditorIcon :name="estate.inspectorPinnedOnly ? 'check' : 'circle'" :class="{ placeholder: !estate.inspectorPinnedOnly }" /><span>{{ t('pinnedOnly') }}</span></button>
+      </UiMenu>
       <UiMenu :open="propertyMenu.visible" class="property-menu" @close="closePropertyMenu" :style="{ left: `${propertyMenu.x}px`, top: `${propertyMenu.y}px` }"><strong>{{ propertyMenu.path }}</strong><UiButton icon="reset" @click="resetPropertyValue">{{ t('resetProperty') }}</UiButton><UiButton icon="undo" @click="revertPropertyOverride">{{ t('revertOverride') }}</UiButton><button @click="copyPropertyValue">{{ t('copyValue') }}</button><button :disabled="!propertyClipboard" @click="pastePropertyValue">{{ t('pasteValue') }}</button><button @click="copyPropertyPath">{{ t('copyPropertyPath') }}</button><UiButton icon="animation" @click="keyframeProperty">{{ t('keyframeProperty') }}</UiButton><UiButton icon="pin" @click="togglePropertyPin">{{ isCurrentPropertyPinned ? t('unpinProperty') : t('pinProperty') }}</UiButton><p v-if="currentPropertyMetadata">{{ currentPropertyMetadata.help }}<template v-if="currentPropertyMetadata.unit"> · {{ currentPropertyMetadata.unit }}</template><template v-if="currentPropertyMetadata.minimum !== undefined"> · {{ currentPropertyMetadata.minimum }}…{{ currentPropertyMetadata.maximum ?? '∞' }}</template></p></UiMenu>
     </Teleport>
     <ConnectionBuilder v-if="selectedEntity && builderOpen" :selected-id="selectedEntity.id" :connection-id="editingConnectionId" @close="builderOpen = false" />
@@ -619,6 +622,38 @@ const inspectorCategories = [
   { id: 'physics' as const, label: 'categoryPhysics' as const }, { id: 'gameplay' as const, label: 'categoryGameplay' as const },
   { id: 'ui' as const, label: 'categoryUi' as const }
 ]
+/** 26.44 G1: the Inspector filter menu (replaces the row of category chips). */
+const filterMenu = reactive({ visible: false, x: 0, y: 0 })
+const filterTrigger = ref<{ $el?: HTMLElement } | null>(null), filterMenuRoot = ref<{ $el?: HTMLElement } | null>(null)
+const inspectorFilterActive = computed(() => estate.inspectorCategory !== 'all' || estate.inspectorModifiedOnly || estate.inspectorPinnedOnly)
+const inspectorFilterSummary = computed(() => [
+  estate.inspectorCategory !== 'all' ? t(inspectorCategories.find(category => category.id === estate.inspectorCategory)?.label ?? 'all') : '',
+  estate.inspectorModifiedOnly ? t('modifiedOnly') : '', estate.inspectorPinnedOnly ? t('pinnedOnly') : ''
+].filter(Boolean).join(' · '))
+function closeFilterMenu(restoreFocus = false) {
+  if (!filterMenu.visible) return
+  filterMenu.visible = false
+  window.removeEventListener('pointerdown', closeFilterMenuOutside, true)
+  if (restoreFocus) filterTrigger.value?.$el?.focus?.({ preventScroll: true })
+}
+function closeFilterMenuOutside(event: PointerEvent) {
+  const target = event.target instanceof Node ? event.target : null
+  if (target && (filterMenuRoot.value?.$el?.contains?.(target) || filterTrigger.value?.$el?.contains?.(target))) return
+  closeFilterMenu()
+}
+function toggleFilterMenu(event: MouseEvent) {
+  if (filterMenu.visible) { closeFilterMenu(); return }
+  const anchor = (event.currentTarget as HTMLElement | null)?.getBoundingClientRect()
+  const width = 232 * prefs.uiScale
+  filterMenu.x = Math.max(8, Math.min((anchor?.right ?? event.clientX) - width, window.innerWidth - width - 8))
+  filterMenu.y = Math.min((anchor?.bottom ?? event.clientY) + 6, window.innerHeight - 320)
+  filterMenu.visible = true
+  window.addEventListener('pointerdown', closeFilterMenuOutside, true)
+}
+function chooseInspectorCategory(category: typeof estate.inspectorCategory) { estate.inspectorCategory = category; closeFilterMenu(true) }
+function toggleInspectorFilter(key: 'inspectorModifiedOnly' | 'inspectorPinnedOnly') { estate[key] = !estate[key]; closeFilterMenu(true) }
+function clearInspectorFilters() { estate.inspectorCategory = 'all'; estate.inspectorModifiedOnly = false; estate.inspectorPinnedOnly = false }
+onUnmounted(() => window.removeEventListener('pointerdown', closeFilterMenuOutside, true))
 const componentSearch = ref('')
 const componentSearchInput = ref<HTMLInputElement | null>(null)
 const addableComponents = computed(/** 合并已移除与尚未添加的可选组件，并考虑官方包可用性。 */ () => {
@@ -1231,12 +1266,17 @@ const commonComponentKinds = computed(/** 计算所有选中实体共同拥有�
 .inspector-search-row > input { flex: 1 1 auto; width: auto; min-width: 0; }
 .add-component-trigger { flex: none; color: var(--accent-contrast); background: var(--accent-fill); box-shadow: var(--shadow-xs); }
 .add-component-trigger:hover:not(:disabled) { background: var(--accent-fill-hover); }
-.inspector-categories { margin: var(--space-2) calc(-1 * var(--ui-panel-inset)) 0; padding-inline: var(--ui-panel-inset); display: flex; align-items: center; gap: 2px; overflow-x: auto; scrollbar-width: none; mask-image: linear-gradient(90deg, transparent, black var(--ui-panel-inset), black calc(100% - var(--ui-panel-inset)), transparent); }
-.inspector-categories::-webkit-scrollbar { display: none; }
-.inspector-categories > button { flex: none; display: inline-flex; align-items: center; gap: var(--space-1); min-height: calc(var(--ui-control-height) - 6px); padding: 0 var(--space-2); border-radius: var(--radius-pill); font-size: var(--type-dense); font-weight: var(--weight-medium); color: var(--text-muted); white-space: nowrap; }
-.inspector-categories > button.active { background: var(--selection-bg); color: var(--text-primary); }
-.inspector-categories .editor-icon { width: 12px; height: 12px; flex-basis: 12px; }
-.inspector-filter-divider { flex: none; width: 1px; height: 14px; margin-inline: var(--space-1); background: var(--border-subtle); }
+.inspector-filter-trigger { flex: none; color: var(--text-muted); }
+.inspector-filter-trigger.filtering { color: var(--accent); }
+.inspector-filter-token { flex: 0 1 auto; display: inline-flex; align-items: center; gap: var(--space-1); min-width: 0; max-width: 48%; height: var(--ui-control-height); padding: 0 var(--space-1) 0 var(--space-2); border: 0; border-radius: var(--radius-pill); background: var(--selection-bg); color: var(--text-primary); font-size: var(--type-dense); font-weight: var(--weight-medium); cursor: pointer; }
+.inspector-filter-token > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.inspector-filter-token .editor-icon { flex: none; width: 12px; height: 12px; color: var(--text-muted); }
+.inspector-filter-menu { position: fixed; z-index: 1600; display: flex; flex-direction: column; width: calc(232px * var(--ui-scale)); padding: var(--space-1); border-radius: var(--radius-menu, 16px); background: var(--surface-1); box-shadow: var(--shadow-menu, 0 12px 32px rgb(0 0 0 / 0.28)), inset 0 0 0 var(--ui-border-width) var(--border-separator); }
+.inspector-filter-menu > button { display: flex; align-items: center; gap: var(--space-2); min-height: var(--ui-control-height); padding: 0 var(--space-2); border: 0; border-radius: var(--radius-control); background: transparent; color: var(--text-primary); font-size: var(--type-body); text-align: start; cursor: pointer; }
+.inspector-filter-menu > button:hover, .inspector-filter-menu > button:focus-visible { background: var(--fill-hover, var(--surface-3)); }
+.inspector-filter-menu > button .editor-icon { flex: none; width: 14px; height: 14px; color: var(--accent); }
+.inspector-filter-menu > button .editor-icon.placeholder { visibility: hidden; }
+.inspector-filter-menu > hr { width: 100%; height: var(--ui-border-width); margin: var(--space-1) 0; border: 0; background: var(--border-separator); }
 .empty-inspector { height: 100%; padding: var(--space-4); display: flex; flex-direction: column; justify-content: center; align-items: center; color: var(--text-muted); text-align: center; }.empty-inspector > strong { margin-top: var(--space-3); color: var(--text-secondary); }.empty-ui-actions { width: 100%; margin-top: var(--space-2); display: grid; grid-template-columns: 1fr 1fr; gap: var(--ui-control-gap); }.runtime-note { color: var(--text-muted); line-height: 1.45; }
 .authoring-validation{padding:var(--space-2);display:grid;gap:var(--space-1);border:1px solid color-mix(in srgb,var(--warning) 40%,var(--border-subtle));background:color-mix(in srgb,var(--warning) 7%,transparent)}.authoring-validation strong{color:var(--warning)}
 .batch-toggle { min-width: 76px; border: 1px solid var(--border-subtle); color: var(--accent); background: var(--surface-3);
@@ -1245,7 +1285,8 @@ const commonComponentKinds = computed(/** 计算所有选中实体共同拥有�
  font-size: var(--type-body);
  border-radius: var(--radius-control);
 }
-.inspector-header { display: flex; align-items: baseline; gap: var(--space-2); min-width: 0; padding-inline-end: calc(var(--ui-control-height) + var(--space-1)); }
+.inspector-header { display: flex; align-items: center; gap: var(--space-2); min-width: 0; padding-inline-end: calc(var(--ui-control-height) + var(--space-1)); }
+.inspector-header > .add-component-trigger { margin-inline-start: auto; }
 .eyebrow { color: var(--accent); }
 h3 { margin: 0; min-width: 0; color: var(--text-primary); font-size: calc(17px * var(--ui-scale)); font-weight: var(--weight-strong); line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 h3 small { color: var(--text-muted); }

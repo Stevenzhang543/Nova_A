@@ -36,6 +36,11 @@
           <select v-model="paletteRef" @change="applyPalette"><option value="">{{ t('allTiles') }}</option><option v-for="asset in palettes" :key="asset.uuid" :value="assetReference(asset.uuid)">{{ asset.name }}</option></select>
           <select v-model="brushRef" @change="applyBrush"><option value="">{{ t('defaultBrush') }}</option><option v-for="asset in brushes" :key="asset.uuid" :value="assetReference(asset.uuid)">{{ asset.name }}</option></select>
           <select v-model="terrainRef" @change="applyTerrain"><option value="">{{ t('noTerrainRules') }}</option><option v-for="asset in terrains" :key="asset.uuid" :value="assetReference(asset.uuid)">{{ asset.name }}</option></select>
+          <template v-if="terrainDocument">
+            <select :value="terrainDocument.mode" :aria-label="t('terrainMode')" @change="setTerrainMode"><option value="cardinal">{{ t('terrainCardinal') }}</option><option value="blob">{{ t('terrainBlob') }}</option></select>
+            <input :value="terrainDocument.connects.join(', ')" :placeholder="t('terrainConnects')" :aria-label="t('terrainConnects')" @change="setTerrainConnects">
+            <button :title="t('terrainTemplateHint')" @click="layOutTerrain">{{ t('terrainTemplate') }}</button>
+          </template>
           <input v-model="tileSearch" type="search" :placeholder="t('searchTiles')">
         </div>
         <div class="palette-grid" :style="{ gridTemplateColumns: `repeat(${Math.min(tileSet.columns, 12)}, var(--ui-standard-height))` }">
@@ -93,6 +98,9 @@ import {
   copyTileSelection,
   createBrushPreset,
   createTerrainRules,
+  readTerrainRules,
+  saveTerrainRules,
+  terrainTemplateRules,
   createTilePalette,
   createTileSet,
   copyEditableTileSet,
@@ -174,10 +182,48 @@ watch(selectedEntity, /** 实体选择变化时仅为瓦片地图设置编辑目
 }
 /** 为当前地图及选中瓦片创建调色板，选中并记录历史。 */ function createPalette() { if (!tileMap.value) return; const asset = createTilePalette(tileMap.value.tileSetAsset, [tilemapEditorState.tileIndex]); paletteRef.value = assetReference(asset.uuid); pushHistory('Create tile palette') }
 /** 创建笔刷预设，选中并记录历史。 */ function createBrush() { const asset = createBrushPreset(); brushRef.value = assetReference(asset.uuid); pushHistory('Create brush preset') }
-/** 创建地形规则，选中并记录历史。 */ function createTerrain() { const asset = createTerrainRules(); terrainRef.value = assetReference(asset.uuid); pushHistory('Create terrain rules') }
+/** 创建地形规则，选中并记录历史。 */ function createTerrain() {
+  // 26.44: named after the selected tile's terrain and bound to the selected map.
+  const asset = createTerrainRules({ terrain: selectedDefinition.value?.terrain || 'Ground' }); terrainRef.value = assetReference(asset.uuid)
+  if (tileMap.value) tileMap.value.terrainRulesAsset = terrainRef.value
+  tilemapEditorState.terrainRulesAsset = terrainRef.value
+  pushHistory('Create terrain rules')
+}
 /** 调色板有瓦片时选中首项。 */ function applyPalette() { const palette = readTilePalette(paletteRef.value); if (palette?.tiles.length) tilemapEditorState.tileIndex = palette.tiles[0] }
 /** 设置当前笔刷预设资源引用或空值。 */ function applyBrush() { tilemapEditorState.brushPresetAsset = brushRef.value || null }
-/** 设置当前地形规则引用或空值。 */ function applyTerrain() { tilemapEditorState.terrainRulesAsset = terrainRef.value || null }
+/** 设置当前地形规则引用或空值（26.44：保存在所选地图上，可撤销）。 */ function applyTerrain() {
+  tilemapEditorState.terrainRulesAsset = terrainRef.value || null
+  if (tileMap.value && tileMap.value.terrainRulesAsset !== (terrainRef.value || null)) { tileMap.value.terrainRulesAsset = terrainRef.value || null; pushHistory('Assign terrain rules') }
+}
+/** 26.44: the selected rules document (re-read when the asset changes). */
+const terrainDocument = computed(() => { void assetState.generation; return terrainRef.value ? readTerrainRules(terrainRef.value) : null })
+/** 26.44: switching between 16-tile and 47-tile rules keeps the terrain and connections. */
+function setTerrainMode(event: Event) {
+  const document = terrainDocument.value, mode = (event.target as HTMLSelectElement).value === 'blob' ? 'blob' : 'cardinal'
+  if (!document || document.mode === mode || !saveTerrainRules(terrainRef.value, { ...document, mode, rules: {} })) return
+  pushHistory('Change terrain mode')
+}
+function setTerrainConnects(event: Event) {
+  const document = terrainDocument.value
+  if (!document) return
+  const connects = (event.target as HTMLInputElement).value.split(',').map(name => name.trim()).filter(Boolean)
+  if (saveTerrainRules(terrainRef.value, { ...document, connects })) pushHistory('Edit terrain connections')
+}
+/** Reads the rules from a template block of the TileSet that starts at the selected tile. */
+function layOutTerrain() {
+  const document = terrainDocument.value
+  if (!document || !tileSet.value) return
+  const terrain = selectedDefinition.value?.terrain || document.terrain
+  const rules = terrainTemplateRules(document.mode, tilemapEditorState.tileIndex, tileSet.value.columns)
+  // Untagged tiles of the block get the terrain, so painted cells stay terrain if the rules change later.
+  if (!importedMap.value) {
+    let tagged = false
+    for (const tile of Object.values(rules)) { const definition = tileSet.value.tiles[tile]; if (definition && !definition.terrain) { definition.terrain = terrain; tagged = true } }
+    if (tagged) saveSet()
+  }
+  if (saveTerrainRules(terrainRef.value, { ...document, terrain, rules })) { pushHistory('Lay out terrain rules'); runDiagnostics() }
+}
+watch(tileMap, /** 26.44: the panel shows the selected map's terrain rules. */ map => { if (map?.terrainRulesAsset) { terrainRef.value = map.terrainRulesAsset; tilemapEditorState.terrainRulesAsset = map.terrainRulesAsset } }, { immediate: true })
 /** 激活指定瓦片层成功后记录历史。 */ function activateLayer(index: number) { if (tileMap.value && setActiveTileLayer(tileMap.value, index)) pushHistory('Switch tile layer') }
 /** 向地图添加瓦片层并记录历史。 */ function addLayer() { if (!tileMap.value) return; addTileLayer(tileMap.value); pushHistory('Add tile layer') }
 /** 复制当前瓦片层并记录历史。 */ function duplicateLayer() { if (!tileMap.value) return; duplicateTileLayer(tileMap.value); pushHistory('Duplicate tile layer') }

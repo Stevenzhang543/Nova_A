@@ -130,6 +130,12 @@ export interface CharacterMoveResult2D {
   velocityMotion?: [number, number]
   /** 26.43: the character stood on a walkable floor before the move. */
   groundedAtStart?: boolean
+  /** 26.44: runtime handle of the body the character stands on (0 when not on a floor). */
+  floorHandle?: number
+  /** 26.44: the floor is a one-way platform. */
+  floorOneWay?: boolean
+  /** 26.44: push out of overlapping bodies before the move (a correction, not velocity). */
+  recoveryMotion?: [number, number]
 }
 
 export interface PhysicsQueryHit2D {
@@ -262,6 +268,14 @@ interface ConnectionRecord {
   entity.rigidBody.sleepTimer = Math.max(0, finiteNumber(output[index + 50], 0))
 }
 
+/** 26.44: only the per-step contact diagnostics of a body whose pose and motion did not change. */ function readContactDiagnostics(output: Float64Array, entityIndex: number, entity: Entity): void {
+  const index = entityIndex * PHYSICS_STRIDE
+  entity.contactCount = Math.max(0, Math.round(finiteNumber(output[index + 29], 0)))
+  entity.contactNormal.x = finiteNumber(output[index + 30], 0)
+  entity.contactNormal.y = finiteNumber(output[index + 31], 0)
+  entity.penetrationDepth = Math.max(0, finiteNumber(output[index + 32], 0))
+}
+
 /** 筛选仍有效且两端均有活动刚体的连接，必要时初始化碰撞绳节点并展开为分段求解记录。 */ function collectConnectionRecords(entities: Entity[], connections: Connection[], allEntities: Entity[] = entities): ConnectionRecord[] {
   const entityIndexes = new Map(entities.map(/* 返回按声明顺序构造的数组 [entity.id, index]。 */ (entity, index) => [entity.id, index]))
   const records: ConnectionRecord[] = []
@@ -392,6 +406,8 @@ export class World {
   private runtimeDisposed = false
   private nextRuntimeHandle = 1
   private bodyHandles = new Map<number, number>()
+  // 26.44: entity count at the last full physics sync (queries in between only send changed poses).
+  private fullSyncEntityCount = -1
   private connectionHandles = new Map<string, number>()
   private bodyRecords = new Map<number, Float64Array>()
   private nativeBodyPoses = new Map<number, { x: number; y: number; rotation: number }>()
@@ -708,6 +724,19 @@ export class World {
     return result
   }
 
+  /** 26.44: entity (the project-owned one for baked tile collision) of a character's floor handle. */ entityForBodyHandle(handle: number | undefined): Entity | null {
+    return typeof handle === 'number' && handle > 0 ? this.entityForHandle(handle) : null
+  }
+
+  /** 26.44: let a character drop through one-way platforms for `seconds` (it keeps passing while it still overlaps one). */ dropThroughOneWay(entity: Entity, seconds: number): boolean {
+    this.prepareQuery()
+    const handle = this.bodyHandles.get(entity.id)
+    if (!this.runtime || handle === undefined) return false
+    const runtime = this.runtime as unknown as { set_one_way_pass_through?: (handle: number, seconds: number) => void }
+    if (typeof runtime.set_one_way_pass_through !== 'function') return false
+    try { runtime.set_one_way_pass_through(handle, Math.min(10, Math.max(0, finiteNumber(seconds)))); return true } catch { return false }
+  }
+
   /** 同步运行体后施加一次临时力与扭矩；没有有效运行句柄时返回假。 */ applyTransientForce(entity: Entity, force: Vec2, torque = 0): boolean {
     this.prepareQuery()
     const handle = this.bodyHandles.get(entity.id)
@@ -746,6 +775,7 @@ export class World {
   /** 清空求解器和对应句柄、差异记录、瓦片碰撞及计时缓存，重置运行句柄分配器。 */ invalidateRuntime(): void {
     invalidateHierarchyIndex()
     this.runtime?.clear()
+    this.fullSyncEntityCount = -1
     this.bodyHandles.clear()
     this.connectionHandles.clear()
     this.bodyRecords.clear()
@@ -779,7 +809,29 @@ export class World {
     return this.nextRuntimeHandle++
   }
 
-  /** 仅在 WASM 已就绪时把当前编辑数据同步到查询世界。 */ private prepareQuery(): void { if (this.wasmLoaded) this.synchronizeRuntime(this.lastSettings) }
+  /** 仅在 WASM 已就绪时把当前编辑数据同步到查询世界。26.44: between full syncs (one per fixed step) a query
+   * only sends the poses that scripts changed; the full sync (shapes, materials, added or removed
+   * bodies) runs when the entity list changed or no full sync has happened yet. Before 26.44 every
+   * query and every character move re-encoded every body (14 ms per query with 2,600 bodies). */ private prepareQuery(): void {
+    if (!this.wasmLoaded) return
+    if (this.fullSyncEntityCount !== this.entities.length || !this.synchronizePoses()) this.synchronizeRuntime(this.lastSettings)
+  }
+
+  /** 26.44: send changed world poses of the bodies of the last full sync; false when a full sync is needed. */ private synchronizePoses(): boolean {
+    const runtime = this.runtime
+    if (!runtime) return true
+    for (const entity of this.activeBodies) {
+      if (this.tileCollisionOwners.has(entity.id)) continue
+      const handle = this.bodyHandles.get(entity.id), cached = handle === undefined ? undefined : this.bodyRecords.get(handle)
+      if (handle === undefined || !cached || !entity.enabled) return false
+      const transform = worldTransform(entity, this.entities)
+      if (Object.is(transform.position.x, cached[2]) && Object.is(transform.position.y, cached[3]) && Object.is(transform.rotation, cached[14])) continue
+      cached[2] = transform.position.x; cached[3] = transform.position.y; cached[14] = transform.rotation
+      runtime.upsert_body(handle, this.bodyOrders.get(handle) ?? 0, cached)
+      this.storeNativeBodyPose(handle, cached[2], cached[3], cached[14])
+    }
+    return true
+  }
 
   /** 查找运行句柄对应的活动体，并将合成瓦片碰撞体还原为其项目拥有实体。 */ private entityForHandle(handle: number): Entity | null {
     const entity = this.activeBodies.find(/* 比较 this.bodyHandles.get(candidate.id) 与 handle，返回严格相等的判断结果。 */ candidate => this.bodyHandles.get(candidate.id) === handle) ?? null
@@ -803,6 +855,7 @@ export class World {
   /** 准备活动碰撞体与连接，只有顺序或 ABI 数据改变时更新求解器，销毁已离开活动集合的运行对象。 */ private synchronizeRuntime(settings: GlobalPhysicsSettings): void {
     const runtime = this.runtime
     if (!runtime) return
+    this.fullSyncEntityCount = this.entities.length
     this.rebuildTileCollisionBodies()
     const colliderSets = new Map<number, ReturnType<typeof prepareColliderSet>>()
     this.colliderPreparationIssues.clear()
@@ -971,6 +1024,17 @@ export class World {
     const previousLength = this.copyBorrowedRuntimeState(true, this.previousBodyBuffer, bodyLength)
     this.activeBodies.forEach(/** 恢复单个刚体状态，可选插值显示姿态，并缓存回写记录避免无变化的重复同步。 */ (entity, index) => {
       const handle = this.bodyHandles.get(entity.id), offset = index * PHYSICS_STRIDE
+      // 26.44: a static body, or a body that slept through the step without moving, has nothing to
+      // read back except its contact diagnostics; its cached record (written at the last sync) stays
+      // valid. Re-reading and re-encoding every resting tile and body each step dominated large scenes.
+      const cached = handle !== undefined ? this.bodyRecords.get(handle) : undefined
+      const unchanged = cached !== undefined && this.stateBuffer[offset + 9] > .5
+        || (cached !== undefined && this.stateBuffer[offset + 49] > .5 && cached[49] > .5
+          && Object.is(cached[2], this.stateBuffer[offset + 2]) && Object.is(cached[3], this.stateBuffer[offset + 3]) && Object.is(cached[14], this.stateBuffer[offset + 14]))
+      if (unchanged) {
+        readContactDiagnostics(this.stateBuffer, index, entity)
+        return
+      }
       if (handle !== undefined) this.storeNativeBodyPose(handle, this.stateBuffer[offset + 2], this.stateBuffer[offset + 3], this.stateBuffer[offset + 14])
       readEntityRecord(this.stateBuffer, index, entity, this.entities)
       if (settings.interpolation === 'Interpolate' && previousLength === bodyLength && alpha < 1) {

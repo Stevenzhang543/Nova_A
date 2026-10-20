@@ -78,3 +78,37 @@ const location = /** 按模板 `${asset.path}:${line}:${column}` 生成并返回
   visit(root, 1)
   return chunks.join('\n\n')
 }
+
+/** 26.44: maps lines of a compiled script bundle (see resolveProjectScriptBundle) to the module and
+ * line they came from, for line breakpoints and debugger stops. The root script is the last chunk and
+ * is found by its own header; the other chunks are found by the headers that follow a blank line. */
+export interface ScriptBundleLines {
+  /** Compiled line of an authored line of the root script. */
+  toCompiled(line: number): number
+  /** Where a compiled line came from; `root` is false for a module this script uses. */
+  locate(line: number): { root: boolean; path: string; line: number }
+}
+export function scriptBundleLines(bundle: string, rootPath: string): ScriptBundleLines {
+  const lines = bundle.split('\n')
+  const rootHeader = `// module: ${rootPath.replace(/[\r\n]/g, ' ')}`
+  let rootIndex = -1
+  for (let index = lines.length - 1; index >= 0; index--) if (lines[index].replace(/\r$/, '') === rootHeader) { rootIndex = index; break }
+  // Starts (0-based header lines) of every chunk; the first chunk starts at line 0.
+  const starts: Array<{ index: number; path: string }> = []
+  for (let index = 0; index < lines.length; index++) {
+    const text = lines[index].replace(/\r$/, '')
+    if (text.startsWith('// module: ') && (index === 0 || index === rootIndex || lines[index - 1].replace(/\r$/, '') === '')) starts.push({ index, path: text.slice('// module: '.length) })
+    if (index === rootIndex) break
+  }
+  const rootOffset = rootIndex >= 0 ? rootIndex + 1 : 0
+  return {
+    toCompiled: line => line + rootOffset,
+    locate(line) {
+      if (rootIndex < 0) return { root: true, path: rootPath, line }
+      if (line > rootIndex + 1) return { root: true, path: rootPath, line: line - rootOffset }
+      let chunk = starts[0] ?? { index: 0, path: rootPath }
+      for (const start of starts) if (start.index < line) chunk = start
+      return { root: false, path: chunk.path, line: Math.max(1, line - chunk.index - 1) }
+    }
+  }
+}

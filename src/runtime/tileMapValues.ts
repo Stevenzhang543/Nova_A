@@ -18,6 +18,7 @@ export const MAX_TILEMAP_CELLS = 4_194_304
     y: Math.min(1e6, Math.max(1e-6, Math.abs(finiteNumber(component.tileSize?.y, 1))))
   }
   component.chunkSize = integer(component.chunkSize, 32, 4, 128)
+  component.terrainRulesAsset = typeof component.terrainRulesAsset === 'string' && component.terrainRulesAsset ? component.terrainRulesAsset.slice(0, 512) : null
   component.tiles = Array.from({ length: component.width * component.height }, /* 调用 integer(component.tiles?.[index], -1, -1, MAX_TILESET_TILES - 1) 并返回调用结果。 */ (_, index) => integer(component.tiles?.[index], -1, -1, MAX_TILESET_TILES - 1))
   const rawLayers = Array.isArray(component.layers) ? component.layers.slice(0, 128) : []
   component.layers = (rawLayers.length ? rawLayers : [{ id: crypto.randomUUID(), name: 'Base', visible: true, locked: false, opacity: 1, blendMode: 'Alpha' as const, parallax: { x: 1, y: 1 }, zOrder: 0, collisionEnabled: true, navigationEnabled: true, occlusionEnabled: true, tiles: component.tiles, transforms: Array(component.width * component.height).fill(0) as TileCellTransform2D[] }]).map(/** 结构说明（自动提取）：map 回调；输入 layer、index；直接调用 layer.id.slice、layer.name.trim、slice、Math.min、Math.max 等；返回表达式求值结果。 */ (layer, index) => ({

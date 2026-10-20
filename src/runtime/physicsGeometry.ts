@@ -162,7 +162,44 @@ export interface PreparedColliderSet2D {
 
 /** Converts one authoring collider into exact convex children. Static chain and
  * concave shapes are accepted; dynamic concave ownership is explicitly blocked. */
-/** 结构说明（自动提取）：prepareColliderSet；输入 source、dynamic；直接调用 Math.min、prepareOne、shapes.push；写入 decomposed；包含循环处理。 */ export function prepareColliderSet(source: ColliderSource2D, dynamic: boolean): PreparedColliderSet2D {
+// 26.44: prepared shapes per collider, reused while the inputs are unchanged (compared exactly, as
+// numbers). Physics sync used to rebuild (hull, decomposition) every collider twice per fixed step
+// and once per query.
+interface PreparedColliderMemo { model: string; inputs: Float64Array; children: string; result: PreparedColliderSet2D }
+// One slot per body kind (static/kinematic and dynamic preparation differ, and both are asked for).
+const preparedColliderMemo = new WeakMap<ColliderSource2D, [PreparedColliderMemo | null, PreparedColliderMemo | null]>()
+let colliderInputScratch = new Float64Array(64)
+/** 26.44: writes every number prepareColliderSet reads from a collider into the scratch buffer; returns the count. */ function colliderInputs(source: ColliderSource2D, dynamic: boolean): number {
+  const vertices = Array.isArray(source.vertices) ? source.vertices : []
+  const length = 15 + vertices.length * 2
+  if (colliderInputScratch.length < length) colliderInputScratch = new Float64Array(length * 2)
+  const values = colliderInputScratch
+  values[0] = dynamic ? 1 : 0; values[1] = source.offset?.x; values[2] = source.offset?.y; values[3] = source.rotation
+  values[4] = source.size?.x; values[5] = source.size?.y; values[6] = source.radiusX; values[7] = source.radiusY
+  values[8] = source.sensor ? 1 : 0; values[9] = source.physicsLayer; values[10] = source.collisionMask; values[11] = source.oneWay ? 1 : 0
+  values[12] = source.oneWayNormal?.x; values[13] = source.oneWayNormal?.y; values[14] = vertices.length
+  for (let index = 0; index < vertices.length; index++) { values[15 + index * 2] = vertices[index]?.x; values[16 + index * 2] = vertices[index]?.y }
+  return length
+}
+
+/** 26.44: prepareColliderSet with a per-collider memo (results are shared: callers must not mutate them). */ export function prepareColliderSet(source: ColliderSource2D, dynamic: boolean): PreparedColliderSet2D {
+  if (!source || typeof source !== 'object') return prepareColliderSetUncached(source, dynamic)
+  const length = colliderInputs(source, dynamic)
+  const children = source.shapes?.length ? JSON.stringify(source.shapes) : ''
+  const slots = preparedColliderMemo.get(source) ?? [null, null]
+  const cached = slots[dynamic ? 1 : 0]
+  if (cached && cached.model === source.shapeModel && cached.children === children && cached.inputs.length === length) {
+    let same = true
+    for (let index = 0; index < length && same; index++) same = Object.is(cached.inputs[index], colliderInputScratch[index])
+    if (same) return cached.result
+  }
+  const result = prepareColliderSetUncached(source, dynamic)
+  slots[dynamic ? 1 : 0] = { model: source.shapeModel, inputs: colliderInputScratch.slice(0, length), children, result }
+  preparedColliderMemo.set(source, slots)
+  return result
+}
+
+/** 结构说明（自动提取）：prepareColliderSet；输入 source、dynamic；直接调用 Math.min、prepareOne、shapes.push；写入 decomposed；包含循环处理。 */ function prepareColliderSetUncached(source: ColliderSource2D, dynamic: boolean): PreparedColliderSet2D {
   if (dynamic && source.shapeModel === 'ConcavePolygon') return { shapes: [], blockedReason: 'Dynamic ConcavePolygon is unsupported. Use a static body or convex child shapes.', decomposed: false }
   if (dynamic && source.shapeModel === 'Chain') return { shapes: [], blockedReason: 'Dynamic Chain is unsupported. Use a static/kinematic body or finite convex segment children.', decomposed: false }
   const primarySize = source.shapeModel === 'Circle' ? { x: source.radiusX * 2, y: source.radiusY * 2 } : source.size

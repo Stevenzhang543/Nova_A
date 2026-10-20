@@ -363,7 +363,7 @@ mod tests {
         assert!((output[15] - 0.2).abs() < 1.0e-12);
     }
 
-    // 验证偏心穿透修正计入转动有效质量。
+    // 验证偏心穿透的软约束推出计入转动有效质量（26.44 Soft Step）。
     #[test]
     fn off_center_penetration_correction_respects_rotational_effective_mass() {
         let dynamic = Body::from_data(&box_record(1.0, 0.0, 0.0, 2.0, 2.0), 0);
@@ -371,7 +371,7 @@ mod tests {
         static_record[9] = 1.0;
         let static_body = Body::from_data(&static_record, 0);
         let mut bodies = vec![dynamic, static_body];
-        let contact = Contact {
+        let mut contact = Contact {
             body_a: 0,
             body_b: 1,
             child_a: 0,
@@ -381,23 +381,40 @@ mod tests {
             tangent: Vec2::new(0.0, 1.0),
             depth: 0.2,
             radius_a: Vec2::new(0.0, 1.0),
-            radius_b: Vec2::ZERO,
+            radius_b: Vec2::new(-2.0, 1.0),
+            local_a: Vec2::new(0.0, 1.0),
+            local_b: Vec2::new(-2.0, 1.0),
             initial_relative_velocity: Vec2::ZERO,
-            restitution_bias: 0.0,
+            initial_normal_velocity: 0.0,
+            restitution: 0.0,
+            restitution_threshold: 1.0,
             static_friction: 0.0,
             dynamic_friction: 0.0,
+            normal_mass: 0.0,
+            tangent_mass: 0.0,
             normal_impulse: 0.0,
             tangent_impulse: 0.0,
+            max_normal_impulse: 0.0,
             is_sensor: false,
-            position_weight: 1.0,
             active: true,
-            slop: LINEAR_SLOP,
+            against_immovable: false,
         };
-        correct_contact_position(&mut bodies, &contact);
-        assert!(bodies[0].position.x < 0.0);
-        assert!(bodies[0].angle > 0.0);
-        assert!(bodies[0].position.x.is_finite() && bodies[0].angle.is_finite());
+        prepare_contact(&bodies, &mut contact);
+        assert!(contact.against_immovable);
+        assert!((contact_separation(&bodies, &contact) + 0.2).abs() < 1.0e-12);
+        let settings = StepSolverSettings::new(1.0 / 480.0);
+        solve_contact_normal(&mut bodies, &mut contact, &settings, true);
+        // Pushed out along -x, with the off-centre anchor turning the body (positive spin).
+        assert!(bodies[0].velocity.x < 0.0);
+        assert!(bodies[0].velocity.x >= -CONTACT_PUSH_MAX_SPEED - 1.0e-9);
+        assert!(bodies[0].angular_velocity > 0.0);
+        assert!(bodies[0].velocity.x.is_finite() && bodies[0].angular_velocity.is_finite());
         assert_eq!(bodies[1].position, Vec2::new(2.0, 0.0));
+        assert_eq!(bodies[1].velocity, Vec2::ZERO);
+        // The relax pass removes the push-out speed instead of adding more.
+        let pushed = bodies[0].velocity.x;
+        solve_contact_normal(&mut bodies, &mut contact, &settings, false);
+        assert!(bodies[0].velocity.x >= pushed);
     }
 
     // 验证指数空气阻尼对时间步划分保持一致。
@@ -472,8 +489,22 @@ mod tests {
         let connection = connection_record(0, 1, 2.0);
         let output = step_physics_with_connections(&bodies, &connection, 0.1, 0.0, 0.0);
         let distance = output[STRIDE + 2] - output[2];
-        assert!(distance <= 2.0 + 1.0e-6, "distance={distance}");
+        // 26.44 Soft Step: the string stops the separation within the step (a little elastic
+        // overshoot) and then holds its length exactly.
+        assert!(distance <= 2.0 + 1.0e-3, "distance={distance}");
         assert_eq!(output[bodies.len() + 17], 0.0);
+        let world = settled_world(&bodies, &connection, 1.0 / 60.0, 60);
+        let distance = world.bodies[1].position.sub(world.bodies[0].position).length();
+        assert!(distance <= 2.0 + 1.0e-5, "settled distance={distance}");
+    }
+
+    // 26.44: 用保留关节累计冲量的求解世界连续推进若干步。
+    fn settled_world(bodies: &[f64], connections: &[f64], dt: f64, steps: usize) -> SolverWorld {
+        let mut world = SolverWorld::new(bodies, connections, SolverQuality::default());
+        for _ in 0..steps {
+            world.step(dt, 0.0, 0.0);
+        }
+        world
     }
 
     // 验证可伸长绳施加带阻尼的胡克张力。
@@ -1154,6 +1185,245 @@ mod tests {
         }
     }
 
+    // 26.44: a friction impulse left from an earlier substep is removed once the normal impulse is
+    // zero. It used to stay and be warm-started every substep, which pumped energy into piles until
+    // they exploded (random pile stress test: every seed reached 1e50 m/s).
+    #[test]
+    fn friction_impulse_is_cleared_when_the_normal_impulse_is_zero() {
+        let mut ground_record = box_record(1.0, 0.0, -0.5, 10.0, 1.0);
+        ground_record[9] = 1.0;
+        let mut bodies = vec![Body::from_data(&box_record(2.0, 0.0, 0.5, 1.0, 1.0), 0), Body::from_data(&ground_record, 0)];
+        bodies[0].velocity = Vec2::new(2.0, 0.0);
+        let mut contact = Contact {
+            body_a: 1,
+            body_b: 0,
+            child_a: 0,
+            child_b: 0,
+            feature_id: 0,
+            normal: Vec2::new(0.0, 1.0),
+            tangent: Vec2::new(1.0, 0.0),
+            depth: 0.0,
+            radius_a: Vec2::new(0.5, 0.5),
+            radius_b: Vec2::new(0.5, -0.5),
+            local_a: Vec2::new(0.5, 0.5),
+            local_b: Vec2::new(0.5, -0.5),
+            initial_relative_velocity: Vec2::ZERO,
+            initial_normal_velocity: 0.0,
+            restitution: 0.0,
+            restitution_threshold: 1.0,
+            static_friction: 0.6,
+            dynamic_friction: 0.6,
+            normal_mass: 0.0,
+            tangent_mass: 0.0,
+            normal_impulse: 0.0,
+            tangent_impulse: -0.4,
+            max_normal_impulse: 0.0,
+            is_sensor: false,
+            active: true,
+            against_immovable: false,
+        };
+        prepare_contact(&bodies, &mut contact);
+        let before = bodies[0].velocity;
+        solve_contact_friction(&mut bodies, &mut contact);
+        assert_eq!(contact.tangent_impulse, 0.0);
+        // Removing the stale -0.4 N·s gives it back to the box: it was already applied once.
+        assert!(bodies[0].velocity.x > before.x);
+        warm_start_contact(&mut bodies, &contact);
+        assert_eq!(contact.tangent_impulse, 0.0);
+    }
+
+    // 26.44: a slightly tilted box lying across tile seams stays on the floor, also when a heavy
+    // box lands on it. Each tile saw the box's tilted face on its seam corner (an internal edge)
+    // and dropped the contact, so the box fell through the floor (26.43 and the first 26.44
+    // builds); now such a contact is moved to the tile's top face.
+    #[test]
+    fn tilted_box_across_tile_seams_stays_on_the_floor() {
+        for (angle, x) in [(0.06, 0.1), (-0.06, -1.1), (0.06, -0.9), (-0.06, -0.1)] {
+            let mut world = PhysicsWorld::new();
+            world.set_quality_iterations(8, 20, 16, 0.001, 0.001, 0.5);
+            for index in 0..12_u32 {
+                let mut tile = box_record(1.0 + index as f64, index as f64 - 6.0, -0.5, 1.0, 1.0);
+                tile[9] = 1.0;
+                world.create_body(1 + index, index, &tile).unwrap();
+            }
+            let mut body = box_record(99.0, x, 0.36, 1.26, 0.67);
+            body[8] = 2.5;
+            body[14] = angle;
+            world.create_body(100, 100, &body).unwrap();
+            let mut heavy = box_record(100.0, x, 3.0, 1.0, 1.0);
+            heavy[8] = 10.0;
+            heavy[14] = 0.3;
+            world.create_body(101, 101, &heavy).unwrap();
+            let base = 12 * STRIDE;
+            let mut lowest = f64::INFINITY;
+            for _ in 0..180 {
+                world.step(1.0 / 60.0, 9.80665, 0.0);
+                world.drain_events();
+                lowest = lowest.min(world.state()[base + 3]);
+            }
+            assert!(lowest > 0.25, "angle {angle} at x {x}: the box sank to y = {lowest}");
+        }
+    }
+
+    // 26.44: sleeping bodies keep their contacts without colliding again (resting pairs). The
+    // contact keeps being reported, a teleported kinematic body still pushes a sleeping box, and a
+    // record change (here the collision mask) drops the kept contacts.
+    #[test]
+    fn resting_contacts_are_kept_while_asleep_and_dropped_on_change() {
+        let mut world = PhysicsWorld::new();
+        world.set_quality_iterations(8, 20, 16, 0.001, 0.001, 0.5);
+        let mut ground = box_record(1.0, 0.0, -0.5, 20.0, 1.0);
+        ground[9] = 1.0;
+        world.create_body(1, 0, &ground).unwrap();
+        let resting = box_record(2.0, 0.0, 0.5, 1.0, 1.0);
+        world.create_body(2, 1, &resting).unwrap();
+        let mut platform = box_record(3.0, 4.0, 0.5, 1.0, 1.0);
+        platform[24] = 1.0;
+        world.create_body(3, 2, &platform).unwrap();
+        for _ in 0..120 {
+            world.step(1.0 / 60.0, 9.80665, 0.0);
+            world.drain_events();
+        }
+        assert!(world.state()[STRIDE + 49] > 0.5, "the box sleeps");
+        for _ in 0..30 {
+            world.step(1.0 / 60.0, 9.80665, 0.0);
+            let events = world.drain_events();
+            assert!(events.iter().any(|event| matches!(event, PhysicsEvent::ContactStayed(contact) if contact.first == 1 && contact.second == 2)));
+            assert!(!events.iter().any(|event| matches!(event, PhysicsEvent::ContactEnded(_))));
+        }
+        // A kinematic body moved by a script into the sleeping box pushes it away.
+        world.set_transform(3, 0.85, 0.5, 0.0).unwrap();
+        for _ in 0..30 {
+            world.step(1.0 / 60.0, 9.80665, 0.0);
+            world.drain_events();
+        }
+        let pushed = world.state()[STRIDE + 2];
+        assert!(pushed < -0.1, "the box was pushed to x = {pushed}");
+        // Let it sleep again, then turn its collisions off: the kept ground contact must go.
+        world.set_transform(3, 6.0, 0.5, 0.0).unwrap();
+        for _ in 0..120 {
+            world.step(1.0 / 60.0, 9.80665, 0.0);
+            world.drain_events();
+        }
+        assert!(world.state()[STRIDE + 49] > 0.5, "the box sleeps again");
+        let mut values = world.state()[STRIDE..2 * STRIDE].to_vec();
+        values[42] = 0.0;
+        world.upsert_body(2, 1, &values).unwrap();
+        world.step(1.0 / 60.0, 9.80665, 0.0);
+        let events = world.drain_events();
+        assert!(events.iter().any(|event| matches!(event, PhysicsEvent::ContactEnded(contact) if contact.first == 1 && contact.second == 2)));
+        // Woken, it falls through the floor it no longer collides with.
+        world.set_velocity(2, 0.0, 0.0, 0.0).unwrap();
+        for _ in 0..30 {
+            world.step(1.0 / 60.0, 9.80665, 0.0);
+            assert!(!world.drain_events().iter().any(|event| matches!(event, PhysicsEvent::ContactStayed(contact) if contact.first == 1 && contact.second == 2)));
+        }
+        assert!(world.state()[STRIDE + 3] < 0.0, "without collisions the box falls through, y = {}", world.state()[STRIDE + 3]);
+    }
+
+    // 26.44: a chain of revolute joints swinging down from horizontal stays together: the soft joints
+    // and the end-of-step position projection keep every anchor gap under 2.5 mm (2.9 mm without it).
+    #[test]
+    fn revolute_chain_stays_connected_while_swinging() {
+        let mut world = PhysicsWorld::new();
+        world.set_quality_iterations(8, 20, 16, 0.001, 0.001, 0.5);
+        let mut anchor = box_record(1.0, 0.0, 10.0, 0.2, 0.2);
+        anchor[9] = 1.0;
+        world.create_body(1, 0, &anchor).unwrap();
+        let links = 12_u32;
+        for index in 0..links {
+            let mut link = box_record(2.0 + index as f64, 0.5 * (index as f64 + 0.5), 10.0, 0.5, 0.1);
+            link[8] = 0.05;
+            link[42] = 0.0;
+            world.create_body(2 + index, 1 + index, &link).unwrap();
+        }
+        for index in 0..links {
+            let mut joint = connection_record(index as usize, index as usize + 1, 0.0001);
+            joint[0] = 100.0 + index as f64;
+            joint[3] = if index == 0 { 0.0 } else { 0.25 };
+            joint[5] = -0.25;
+            joint[9] = 0.0;
+            joint[18] = 3.0;
+            world.upsert_connection(100 + index, index, &joint).unwrap();
+        }
+        let mut largest: f64 = 0.0;
+        for _ in 0..180 {
+            world.step(1.0 / 60.0, 9.80665, 0.0);
+            let state = world.state();
+            let point = |body: usize, local_x: f64| {
+                let base = body * STRIDE;
+                (state[base + 2] + local_x * state[base + 14].cos(), state[base + 3] + local_x * state[base + 14].sin())
+            };
+            for index in 0..links as usize {
+                let a = point(index, if index == 0 { 0.0 } else { 0.25 });
+                let b = point(index + 1, -0.25);
+                largest = largest.max((a.0 - b.0).hypot(a.1 - b.1));
+            }
+        }
+        assert!(largest < 0.0025, "largest joint gap {largest}");
+    }
+
+    // 26.44: random piles of rotated boxes and ellipses dropped on a single floor and on a tile
+    // floor stay inside the walls and never move faster than free fall allows (the full sweep is
+    // `cargo run --release -p nova_physics --example physics_stress`).
+    #[test]
+    fn random_piles_stay_stable() {
+        let record = |shape: f64, x: f64, y: f64, width: f64, height: f64, is_static: bool, mass: f64, angle: f64| {
+            let mut values = if shape == 1.0 { ellipse_record(0.0, x, y, width, height) } else { box_record(0.0, x, y, width, height) };
+            values[8] = mass;
+            values[9] = if is_static { 1.0 } else { 0.0 };
+            values[11] = 0.6;
+            values[20] = 0.6;
+            values[14] = angle;
+            values
+        };
+        for (seed, tiles) in [(3_u64, false), (8, true)] {
+            let mut state = seed * 7919 + 13;
+            let mut random = move || {
+                state ^= state << 13;
+                state ^= state >> 7;
+                state ^= state << 17;
+                (state >> 11) as f64 / (1_u64 << 53) as f64
+            };
+            let mut world = PhysicsWorld::new();
+            world.set_quality_iterations(8, 20, 16, 0.001, 0.001, 0.5);
+            let mut statics = Vec::new();
+            if tiles {
+                statics.extend((0..30).map(|column| record(0.0, column as f64 - 15.0, -0.5, 1.0, 1.0, true, 1.0, 0.0)));
+            } else {
+                statics.push(record(0.0, 0.0, -0.5, 40.0, 1.0, true, 1.0, 0.0));
+            }
+            statics.push(record(0.0, -15.5, 8.0, 1.0, 16.0, true, 1.0, 0.0));
+            statics.push(record(0.0, 14.5, 8.0, 1.0, 16.0, true, 1.0, 0.0));
+            let mut handle = 1_u32;
+            for values in statics {
+                world.create_body(handle, handle, &values).unwrap();
+                handle += 1;
+            }
+            for _ in 0..50 {
+                let shape = if random() < 0.3 { 1.0 } else { 0.0 };
+                let size = 0.3 + random() * 1.2;
+                let aspect = 0.5 + random() * 1.5;
+                let mass = 0.2 + random() * 8.0;
+                let x = -13.0 + random() * 26.0;
+                let y = 1.0 + random() * 10.0;
+                let angle = if random() < 0.5 { 0.0 } else { (random() - 0.5) * 3.0 };
+                let (width, height) = if shape == 1.0 { (size * 0.5, size * aspect * 0.5) } else { (size, size * aspect) };
+                world.create_body(handle, handle, &record(shape, x, y, width, height, false, mass, angle)).unwrap();
+                handle += 1;
+            }
+            for step in 0..180 {
+                world.step(1.0 / 60.0, 9.80665, 0.0);
+                world.drain_events();
+                for body in world.state().chunks_exact(STRIDE).filter(|body| body[9] < 0.5) {
+                    let speed = body[4].hypot(body[5]);
+                    assert!(speed.is_finite() && speed < 20.0, "seed {seed} step {step}: speed {speed}");
+                    assert!(body[3] > -0.5 && body[2].abs() < 15.0, "seed {seed} step {step}: body left at ({}, {})", body[2], body[3]);
+                }
+            }
+        }
+    }
+
     // 26.43: exposed faces still block: a wall built from stacked tiles stops a sliding box, and a
     // ball rolls off the end of a tile row.
     #[test]
@@ -1329,7 +1599,10 @@ mod tests {
         joint[18] = 2.0;
         let output = step_physics_with_connections(&bodies, &joint, 0.1, 0.0, 0.0);
         let distance = Vec2::new(output[STRIDE + 2] - output[2], output[STRIDE + 3] - output[3]).length();
-        assert!((distance - 2.0).abs() < 1.0e-5, "distance={distance}, a=({},{}), b=({},{}), va=({},{}), vb=({},{})", output[2], output[3], output[STRIDE + 2], output[STRIDE + 3], output[4], output[5], output[STRIDE + 4], output[STRIDE + 5]);
+        assert!((distance - 2.0).abs() < 1.0e-3, "distance={distance}, a=({},{}), b=({},{}), va=({},{}), vb=({},{})", output[2], output[3], output[STRIDE + 2], output[STRIDE + 3], output[4], output[5], output[STRIDE + 4], output[STRIDE + 5]);
+        let world = settled_world(&bodies, &joint, 1.0 / 60.0, 60);
+        let distance = world.bodies[1].position.sub(world.bodies[0].position).length();
+        assert!((distance - 2.0).abs() < 1.0e-5, "settled distance={distance}");
     }
 
     // 验证绳关节在限长内松弛，超过限长时约束伸展。
@@ -1346,7 +1619,12 @@ mod tests {
         stretched_bodies.extend(ellipse_record(2.0, 1.5, 0.0, 0.1, 0.1));
         let stretched = step_physics_with_connections(&stretched_bodies, &rope, 1.0 / 60.0, 0.0, 0.0);
         let distance = stretched[STRIDE + 2] - stretched[2];
-        assert!(distance <= 2.0 + 1.0e-6, "distance={distance}");
+        // 26.44 Soft Step: an over-stretched rope is pulled back to its length over a few steps
+        // (no position projection kick), then holds it.
+        assert!(distance < 2.2, "distance={distance}");
+        let world = settled_world(&stretched_bodies, &rope, 1.0 / 60.0, 60);
+        let distance = world.bodies[1].position.x - world.bodies[0].position.x;
+        assert!(distance <= 2.0 + 1.0e-4, "settled distance={distance}");
     }
 
     // 验证转动关节保持锚点重合并允许相对旋转。
@@ -1364,8 +1642,13 @@ mod tests {
         let output = step_physics_with_connections(&bodies, &joint, 0.05, 0.0, 0.0);
         let anchor_a = Vec2::new(output[2], output[3]).add(rotate(Vec2::new(1.0, 0.0), output[14]));
         let anchor_b = Vec2::new(output[STRIDE + 2], output[STRIDE + 3]).add(rotate(Vec2::new(-1.0, 0.0), output[STRIDE + 14]));
-        assert!(anchor_b.sub(anchor_a).length() < 1.0e-5);
+        assert!(anchor_b.sub(anchor_a).length() < 1.0e-3, "gap {}", anchor_b.sub(anchor_a).length());
         assert!((output[STRIDE + 14] - output[14]).abs() > 1.0e-4);
+        let world = settled_world(&bodies, &joint, 1.0 / 60.0, 60);
+        let (a, b) = (&world.bodies[0], &world.bodies[1]);
+        let gap = b.position.add(rotate(Vec2::new(-1.0, 0.0), b.angle)).sub(a.position.add(rotate(Vec2::new(1.0, 0.0), a.angle))).length();
+        assert!(gap < 1.0e-5, "settled gap {gap}");
+        assert!(normalize_angle(b.angle - a.angle).abs() > 1.0e-3, "the hinge still turns");
     }
 
     // 验证移动关节锁定垂直运动并应用轴向限位。
@@ -1380,14 +1663,14 @@ mod tests {
         joint[31] = 1.0;
         joint[32] = -2.0;
         joint[33] = 2.0;
-        let mut parsed = vec![Body::from_data(&bodies, 0), Body::from_data(&bodies, STRIDE)];
-        let parsed_joint = ConnectionConstraint::from_data(&joint, 0, 2).unwrap();
-        correct_prismatic_position(&mut parsed, &parsed_joint);
-        assert!(parsed[1].position.y.abs() < 1.0e-9);
-        assert!(parsed[1].position.x <= 2.0 + 1.0e-9);
+        // 26.44 Soft Step: a body placed 2 m off the axis and beyond the limit is brought back
+        // over a fraction of a second, without a projection kick.
         let output = step_physics_with_connections(&bodies, &joint, 0.05, 0.0, 0.0);
-        assert!(output[STRIDE + 3].abs() < 1.0e-5, "x={}, y={}, vx={}, vy={}", output[STRIDE + 2], output[STRIDE + 3], output[STRIDE + 4], output[STRIDE + 5]);
-        assert!(output[STRIDE + 2] <= 2.0 + 1.0e-5, "x={}", output[STRIDE + 2]);
+        assert!(output[STRIDE + 3].abs() < 2.0 * 0.5, "y={}", output[STRIDE + 3]);
+        let world = settled_world(&bodies, &joint, 1.0 / 60.0, 120);
+        let b = &world.bodies[1];
+        assert!(b.position.y.abs() < 1.0e-4, "x={}, y={}, vx={}, vy={}", b.position.x, b.position.y, b.velocity.x, b.velocity.y);
+        assert!(b.position.x <= 2.0 + 1.0e-4, "x={}", b.position.x);
     }
 
     // 验证弹簧关节在拉伸和压缩两侧产生胡克力。

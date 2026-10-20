@@ -137,18 +137,68 @@ export function readTileSet(reference:string|null|undefined):TileSetDocument|nul
 
 export interface TilePaletteDocument { version: 1; tileSetAsset: string | null; tiles: number[] }
 export interface BrushPresetDocument { version: 1; name: string; size: number; shape: 'Circle' | 'Square'; scatter: number }
-export interface TerrainRulesDocument { version: 1; terrain: string; rules: Record<string, number> }
+/** Terrain rules: `cardinal` masks use the four edge neighbours (up 1, right 2, down 4, left 8; 16 tiles);
+ * `blob` masks use all eight (N 1, NE 2, E 4, SE 8, S 16, SW 32, W 64, NW 128) and count a corner only
+ * when both of its edges are set, which leaves the 47 tiles of the usual "blob" set. `connects` lists
+ * other terrains that count as neighbours (grass joining ground). Version 1 documents are cardinal. */
+export type TerrainMode = 'cardinal' | 'blob'
+export interface TerrainRulesDocument { version: 1 | 2; terrain: string; mode: TerrainMode; connects: string[]; rules: Record<string, number> }
 
 /** 结构说明（自动提取）：createTilePalette；输入 tileSetAsset、tiles；直接调用 createTextAsset、JSON.stringify、map、tiles.slice。 */ export function createTilePalette(tileSetAsset: string | null, tiles: number[]): AssetRecord {
   return createTextAsset('New Tile Palette', 'tilePalette', JSON.stringify({ version: 1, tileSetAsset, tiles: tiles.slice(0, MAX_TILESET_TILES).map(/* 调用 integer(value, -1, -1, MAX_TILESET_TILES - 1) 并返回调用结果。 */ value => integer(value, -1, -1, MAX_TILESET_TILES - 1)) }, null, 2), 'Assets/TilePalettes')
 }
 /** 结构说明（自动提取）：createBrushPreset；无显式参数；直接调用 createTextAsset、JSON.stringify。 */ export function createBrushPreset(): AssetRecord { return createTextAsset('New Brush Preset', 'brushPreset', JSON.stringify({ version: 1, name: 'Soft square', size: 1, shape: 'Square', scatter: 0 }, null, 2), 'Assets/BrushPresets') }
-/** 结构说明（自动提取）：createTerrainRules；无显式参数；直接调用 createTextAsset、JSON.stringify。 */ export function createTerrainRules(): AssetRecord { return createTextAsset('New Terrain Rules', 'terrainRules', JSON.stringify({ version: 1, terrain: 'Ground', rules: { '0': 0 } }, null, 2), 'Assets/TerrainRules') }
+/** 结构说明（自动提取）：createTerrainRules；无显式参数；直接调用 createTextAsset、JSON.stringify。 */ export function createTerrainRules(document?: Partial<TerrainRulesDocument>): AssetRecord { return createTextAsset('New Terrain Rules', 'terrainRules', JSON.stringify({ version: 2, terrain: document?.terrain ?? 'Ground', mode: document?.mode ?? 'cardinal', connects: document?.connects ?? [], rules: document?.rules ?? { '0': 0 } }, null, 2), 'Assets/TerrainRules') }
 
 /** 结构说明（自动提取）：readAssetJson；输入 reference、type；直接调用 resolveAsset、readTextAsset、JSON.parse。 */ function readAssetJson(reference: string | null, type: string): Record<string, unknown> | null { const asset = resolveAsset(reference), source = readTextAsset(reference); if (!asset || asset.assetType !== type || !source) return null; try { const value = JSON.parse(source); return value && typeof value === 'object' ? value as Record<string, unknown> : null } catch { return null } }
 /** 结构说明（自动提取）：readBrushPreset；输入 reference；直接调用 readAssetJson、value.name.slice、integer、Math.min、Math.max 等。 */ export function readBrushPreset(reference: string | null): BrushPresetDocument | null { const value = readAssetJson(reference, 'brushPreset'); if (!value) return null; return { version: 1, name: typeof value.name === 'string' ? value.name.slice(0, 80) : 'Brush', size: integer(value.size, 1, 1, 64), shape: value.shape === 'Circle' ? 'Circle' : 'Square', scatter: Math.min(1, Math.max(0, finiteNumber(value.scatter))) } }
 /** 结构说明（自动提取）：readTilePalette；输入 reference；直接调用 readAssetJson、Array.isArray、map、value.tiles.slice。 */ export function readTilePalette(reference: string | null): TilePaletteDocument | null { const value = readAssetJson(reference, 'tilePalette'); if (!value) return null; return { version: 1, tileSetAsset: typeof value.tileSetAsset === 'string' ? value.tileSetAsset : null, tiles: Array.isArray(value.tiles) ? value.tiles.slice(0, MAX_TILESET_TILES).map(/* 调用 integer(tile, -1, -1, MAX_TILESET_TILES - 1) 并返回调用结果。 */ tile => integer(tile, -1, -1, MAX_TILESET_TILES - 1)) : [] } }
-/** 结构说明（自动提取）：readTerrainRules；输入 reference；直接调用 readAssetJson、Object.entries、String、integer、value.terrain.slice；写入 rules[…]；包含循环处理。 */ export function readTerrainRules(reference: string | null): TerrainRulesDocument | null { const value = readAssetJson(reference, 'terrainRules'); if (!value) return null; const rules: Record<string, number> = {}; if (value.rules && typeof value.rules === 'object') for (const [mask, tile] of Object.entries(value.rules as Record<string, unknown>)) rules[String(integer(mask, 0, 0, 15))] = integer(tile, -1, -1, MAX_TILESET_TILES - 1); return { version: 1, terrain: typeof value.terrain === 'string' ? value.terrain.slice(0, 80) : '', rules } }
+/** 结构说明（自动提取）：readTerrainRules；输入 reference；直接调用 readAssetJson、Object.entries、String、integer、value.terrain.slice；写入 rules[…]；包含循环处理。 */ export function readTerrainRules(reference: string | null): TerrainRulesDocument | null {
+  const value = readAssetJson(reference, 'terrainRules'); if (!value) return null
+  const mode: TerrainMode = value.version === 2 && value.mode === 'blob' ? 'blob' : 'cardinal'
+  const rules: Record<string, number> = {}
+  if (value.rules && typeof value.rules === 'object') for (const [mask, tile] of Object.entries(value.rules as Record<string, unknown>)) {
+    const raw = integer(mask, 0, 0, mode === 'blob' ? 255 : 15)
+    rules[String(mode === 'blob' ? canonicalBlobMask(raw) : raw)] = integer(tile, -1, -1, MAX_TILESET_TILES - 1)
+  }
+  const connects = Array.isArray(value.connects) ? value.connects.filter((name): name is string => typeof name === 'string' && !!name.trim()).slice(0, 16).map(name => name.trim().slice(0, 80)) : []
+  return { version: value.version === 2 ? 2 : 1, terrain: typeof value.terrain === 'string' ? value.terrain.slice(0, 80) : '', mode, connects, rules }
+}
+
+/** 26.44: writes a terrain rules asset (returns false for a missing or wrong asset). */
+export function saveTerrainRules(reference: string, document: TerrainRulesDocument): boolean {
+  const asset = resolveAsset(reference)
+  if (!asset || asset.assetType !== 'terrainRules') return false
+  const masks = document.mode === 'blob' ? 255 : 15
+  const rules = Object.fromEntries(Object.entries(document.rules).filter(([mask, tile]) => Number.isInteger(Number(mask)) && Number(mask) >= 0 && Number(mask) <= masks && Number.isInteger(tile)).sort((a, b) => Number(a[0]) - Number(b[0])))
+  return updateTextAssetTransactional(asset.uuid, `${JSON.stringify({ version: 2, terrain: document.terrain.slice(0, 80), mode: document.mode, connects: document.connects.slice(0, 16), rules }, null, 2)}\n`)
+}
+
+/** 26.44: a blob mask with the corners that are not backed by both of their edges cleared. */
+export function canonicalBlobMask(mask: number): number {
+  let result = mask & 0b0101_0101
+  if ((mask & 2) && (mask & 1) && (mask & 4)) result |= 2
+  if ((mask & 8) && (mask & 4) && (mask & 16)) result |= 8
+  if ((mask & 32) && (mask & 16) && (mask & 64)) result |= 32
+  if ((mask & 128) && (mask & 64) && (mask & 1)) result |= 128
+  return result
+}
+/** The 47 masks of a blob set, ascending (the order the template generator lays them out in). */
+export const BLOB_MASKS: readonly number[] = Object.freeze([...new Set(Array.from({ length: 256 }, (_, mask) => canonicalBlobMask(mask)))].sort((a, b) => a - b))
+/** The masks a rules document must cover for its mode. */
+export function terrainMasks(mode: TerrainMode): readonly number[] { return mode === 'blob' ? BLOB_MASKS : Array.from({ length: 16 }, (_, mask) => mask) }
+
+/** 26.44: rules laid out as a template block of a TileSet: cardinal masks as a 4×4 block in mask order,
+ * blob masks in ascending order, `columns` per row (8 by default), starting at tile `first`. */
+export function terrainTemplateRules(mode: TerrainMode, first: number, tileSetColumns: number, columns = mode === 'blob' ? 8 : 4): Record<string, number> {
+  const rules: Record<string, number> = {}
+  const origin = { x: first % Math.max(1, tileSetColumns), y: Math.floor(first / Math.max(1, tileSetColumns)) }
+  terrainMasks(mode).forEach((mask, order) => {
+    const x = origin.x + order % columns, y = origin.y + Math.floor(order / columns)
+    rules[String(mask)] = x < tileSetColumns ? y * tileSetColumns + x : -1
+  })
+  return rules
+}
 
 /** 结构说明（自动提取）：bakeTileMap；输入 component；直接调用 normalizeTileMap、readRuntimeTileSet、filter、flatMap、component.layers.filter 等。 */ export function bakeTileMap(component: TileMap2D): { collision: number; navigation: number; occluders: number; chunks: number } {
   normalizeTileMap(component); const set = readRuntimeTileSet(component.tileSetAsset)
@@ -206,15 +256,18 @@ export interface TilemapDiagnostic { severity: 'info' | 'warning' | 'error'; cod
 
 /** 结构说明（自动提取）：validateTerrainRules；输入 document；直接调用 filter、Array.from、missing.join。 */ export function validateTerrainRules(document: TerrainRulesDocument | null): TilemapDiagnostic[] {
   if (!document) return []
-  const missing = Array.from({ length: 16 }, /* 返回 mask 的当前值。 */ (_, mask) => mask).filter(/* 先计算 !Number.isInteger(document.rules[String(mask)])；仅当其为假值时求右侧 document.rules[String(mask)] < 0，返回短路求值结果。 */ mask => !Number.isInteger(document.rules[String(mask)]) || document.rules[String(mask)] < 0)
-  return missing.length ? [{ severity: 'error', code: 'invalid-terrain', message: `Terrain ${document.terrain || 'unnamed'} has no valid transition for masks ${missing.join(', ')}.` }] : []
+  const missing = terrainMasks(document.mode).filter(/* 先计算 !Number.isInteger(document.rules[String(mask)])；仅当其为假值时求右侧 document.rules[String(mask)] < 0，返回短路求值结果。 */ mask => !Number.isInteger(document.rules[String(mask)]) || document.rules[String(mask)] < 0)
+  if (!missing.length) return []
+  // A blob set may leave out tiles: those cells fall back to the tile for the same edges without corners.
+  if (document.mode === 'blob') return [{ severity: missing.length === BLOB_MASKS.length ? 'error' : 'warning', code: 'invalid-terrain', message: `Terrain ${document.terrain || 'unnamed'} (47-tile blob) has no tile for ${missing.length} masks: ${missing.slice(0, 12).join(', ')}${missing.length > 12 ? ', …' : ''}.` }]
+  return [{ severity: 'error', code: 'invalid-terrain', message: `Terrain ${document.terrain || 'unnamed'} has no valid transition for masks ${missing.join(', ')}.` }]
 }
 
 /** 结构说明（自动提取）：diagnoseTileMap；输入 component；直接调用 tileMapView、readRuntimeTileSet、validateTerrainRules、readTerrainRules、Math.floor 等；写入 component；包含循环处理。 */ export function diagnoseTileMap(component: TileMap2D): TilemapDiagnostic[] {
   component = tileMapView(component)
   const tileSet = readRuntimeTileSet(component.tileSetAsset)
   if (!tileSet) return [{ severity: 'error', code: 'missing-tile', message: 'The tilemap has no readable TileSet 2.0 asset.' }]
-  const issues: TilemapDiagnostic[] = [...validateTerrainRules(readTerrainRules(tilemapEditorState.terrainRulesAsset))]
+  const issues: TilemapDiagnostic[] = [...validateTerrainRules(readTerrainRules(terrainRulesReference(component)))]
   let overdraw = 0, navigationTiles = 0, collisionTiles = 0
   for (let cellIndex = 0; cellIndex < component.width * component.height; cellIndex++) {
     let visibleAtCell = 0
@@ -279,45 +332,100 @@ export interface TilemapDiagnostic { severity: 'info' | 'warning' | 'error'; cod
   return ((value ^ value >>> 16) >>> 0) / 0xffff_ffff
 }
 
-/** 结构说明（自动提取）：terrainTile；输入 component、cell、fallback；直接调用 readTerrainRules、readRuntimeTileSet、matches、String；返回路径包含 fallback。 */ function terrainTile(component: TileMap2D, cell: { x: number; y: number }, fallback: number): number {
-  const terrain = readTerrainRules(tilemapEditorState.terrainRulesAsset)
-  const tileSet = readRuntimeTileSet(component.tileSetAsset)
-  if (!terrain || !tileSet || !terrain.terrain) return fallback
-  const matches = /** 结构说明（自动提取）：matches；输入 x、y。 */ (x: number, y: number) => {
-    if (x < 0 || y < 0 || x >= component.width || y >= component.height) return false
-    return tileSet.tiles[component.tiles[y * component.width + x]]?.terrain === terrain.terrain
+/** 26.44: the terrain rules a map paints with: its own reference, else the one chosen in the TileMap panel. */
+export function terrainRulesReference(component: TileMap2D): string | null { return component.terrainRulesAsset || tilemapEditorState.terrainRulesAsset || null }
+
+interface TerrainContext { rules: TerrainRulesDocument; tileSet: TileSetDocument; connected: Set<string>; ruleTiles: Set<number> }
+/** Parsed once per edit (rules and TileSet are read from their assets). */
+function terrainContext(component: TileMap2D): TerrainContext | null {
+  const reference = terrainRulesReference(component)
+  if (!reference) return null
+  const rules = readTerrainRules(reference), tileSet = readRuntimeTileSet(component.tileSetAsset)
+  if (!rules || !tileSet || !rules.terrain) return null
+  return { rules, tileSet, connected: new Set([rules.terrain, ...rules.connects]), ruleTiles: new Set(Object.values(rules.rules).filter(tile => tile >= 0)) }
+}
+/** A tile the rules place (or tagged with their terrain): auto-tiling may replace it. */
+function ownsTerrain(context: TerrainContext, value: number | undefined): boolean { return value !== undefined && value >= 0 && (context.ruleTiles.has(value) || context.tileSet.tiles[value]?.terrain === context.rules.terrain) }
+/** A tile that counts as a neighbour of the terrain (its own tiles and the connected terrains). */
+function connectsTerrain(context: TerrainContext, value: number | undefined): boolean { return value !== undefined && value >= 0 && (context.ruleTiles.has(value) || context.connected.has(context.tileSet.tiles[value]?.terrain ?? '')) }
+
+/** 结构说明（自动提取）：terrainTile；输入 component、cell、fallback；直接调用 readTerrainRules、readRuntimeTileSet、matches、String；返回路径包含 fallback。 */ function terrainTile(component: TileMap2D, context: TerrainContext, cell: { x: number; y: number }, fallback: number): number {
+  const matches = /** 结构说明（自动提取）：matches；输入 x、y。 */ (x: number, y: number) => x >= 0 && y >= 0 && x < component.width && y < component.height && connectsTerrain(context, component.tiles[y * component.width + x])
+  const { rules } = context.rules
+  if (context.rules.mode === 'blob') {
+    const mask = canonicalBlobMask((matches(cell.x, cell.y + 1) ? 1 : 0) | (matches(cell.x + 1, cell.y + 1) ? 2 : 0) | (matches(cell.x + 1, cell.y) ? 4 : 0) | (matches(cell.x + 1, cell.y - 1) ? 8 : 0)
+      | (matches(cell.x, cell.y - 1) ? 16 : 0) | (matches(cell.x - 1, cell.y - 1) ? 32 : 0) | (matches(cell.x - 1, cell.y) ? 64 : 0) | (matches(cell.x - 1, cell.y + 1) ? 128 : 0))
+    const exact = rules[String(mask)], edges = rules[String(mask & 0b0101_0101)]
+    return exact !== undefined && exact >= 0 ? exact : edges !== undefined && edges >= 0 ? edges : fallback
   }
   const mask = (matches(cell.x, cell.y + 1) ? 1 : 0)
     | (matches(cell.x + 1, cell.y) ? 2 : 0)
     | (matches(cell.x, cell.y - 1) ? 4 : 0)
     | (matches(cell.x - 1, cell.y) ? 8 : 0)
-  return terrain.rules[String(mask)] ?? fallback
+  const tile = rules[String(mask)]
+  return tile !== undefined && tile >= 0 ? tile : fallback
+}
+
+/** Re-picks the terrain tile of every owned cell in and around the changed cells (all eight neighbours,
+ * so blob corners follow too); cells in `keep` (a pasted stamp) stay as they are. */
+function retileTerrain(component: TileMap2D, context: TerrainContext, changed: Iterable<number>, keep?: Set<number>): boolean {
+  const candidates = new Set<number>()
+  for (const index of changed) {
+    const x = index % component.width, y = (index - x) / component.width
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+      const nx = x + dx, ny = y + dy
+      if (nx >= 0 && ny >= 0 && nx < component.width && ny < component.height) candidates.add(ny * component.width + nx)
+    }
+  }
+  let changedAny = false
+  for (const index of candidates) {
+    if (keep?.has(index)) continue
+    const value = component.tiles[index]
+    if (!ownsTerrain(context, value)) continue
+    const cell = { x: index % component.width, y: Math.floor(index / component.width) }
+    const next = terrainTile(component, context, cell, value)
+    if (next !== value && setTile(component, cell, next, 0)) changedAny = true
+  }
+  return changedAny
+}
+
+/** One tool operation: raw writes first, then one auto-tile pass over everything they touched. */
+function tileEdit(component: TileMap2D, options: { exact?: boolean } = {}) {
+  const context = terrainContext(component)
+  const touched: number[] = [], kept = new Set<number>()
+  let changed = false
+  return {
+    write(cell: { x: number; y: number }, value: number, transform: TileCellTransform2D = tilemapEditorState.transform): boolean {
+      const inside = cell.x >= 0 && cell.y >= 0 && cell.x < component.width && cell.y < component.height
+      if (context && inside && !options.exact && ownsTerrain(context, value)) {
+        // Painting the terrain over itself keeps the tile the rules chose; terrain tiles are never rotated.
+        if (ownsTerrain(context, component.tiles[tileIndex(component, cell)])) return false
+        transform = 0
+      }
+      if (!setTile(component, cell, value, transform)) return false
+      changed = true
+      if (context) { const index = tileIndex(component, cell); touched.push(index); if (options.exact) kept.add(index) }
+      return true
+    },
+    finish(): boolean {
+      if (context && touched.length) changed = retileTerrain(component, context, touched, options.exact ? kept : undefined) || changed
+      touched.length = 0
+      return changed
+    }
+  }
 }
 
 /** 结构说明（自动提取）：applyPaintCell；输入 component、center、value；直接调用 readBrushPreset、Math.floor、Math.hypot、Math.max、deterministicUnit 等；写入 changed；返回路径包含 changed；包含循环处理。 */ function applyPaintCell(component: TileMap2D, center: { x: number; y: number }, value: number): boolean {
   const preset = readBrushPreset(tilemapEditorState.brushPresetAsset) ?? { version: 1 as const, name: 'Default', size: 1, shape: 'Square' as const, scatter: 0 }
   const radius = Math.floor((preset.size - 1) / 2)
-  let changed = false
-  const touched: Array<{ x: number; y: number }> = []
+  const edit = tileEdit(component)
   for (let y = center.y - radius; y <= center.y + radius; y++) for (let x = center.x - radius; x <= center.x + radius; x++) {
     const cell = { x, y }
     if (preset.shape === 'Circle' && Math.hypot(x - center.x, y - center.y) > Math.max(.5, preset.size / 2)) continue
     if (preset.scatter > 0 && deterministicUnit(cell) < preset.scatter) continue
-    if (setTile(component, cell, terrainTile(component, cell, value))) { changed = true; touched.push(cell) }
+    edit.write(cell, value)
   }
-  if (tilemapEditorState.terrainRulesAsset && touched.length) {
-    const candidates = new Map<string, { x: number; y: number }>()
-    for (const cell of touched) for (const offset of [[0, 0], [0, 1], [1, 0], [0, -1], [-1, 0]] as const) {
-      const candidate = { x: cell.x + offset[0], y: cell.y + offset[1] }
-      candidates.set(`${candidate.x}:${candidate.y}`, candidate)
-    }
-    for (const candidate of candidates.values()) {
-      if (candidate.x < 0 || candidate.y < 0 || candidate.x >= component.width || candidate.y >= component.height) continue
-      const current = component.tiles[tileIndex(component, candidate)]
-      if (current >= 0) changed = setTile(component, candidate, terrainTile(component, candidate, current)) || changed
-    }
-  }
-  return changed
+  return edit.finish()
 }
 
 /** 结构说明（自动提取）：rasterLine；输入 start、end；直接调用 Math.abs、cells.push；写入 error、x、y；返回路径包含 cells；包含循环处理。 */ function rasterLine(start: { x: number; y: number }, end: { x: number; y: number }): Array<{ x: number; y: number }> {
@@ -344,7 +452,7 @@ export interface TileStroke { start: { x: number; y: number }; previous: { x: nu
   else if (tilemapEditorState.tool === 'fill') stroke.changed = floodFill(component, cell, tilemapEditorState.tileIndex)
   else if (tilemapEditorState.tool === 'brush') stroke.changed = applyPaintCell(component, cell, tilemapEditorState.tileIndex)
   else if (tilemapEditorState.tool === 'stamp' || tilemapEditorState.tool === 'pattern') stroke.changed = pasteTileClipboard(component, cell, tilemapEditorState.tool === 'pattern')
-  else if (tilemapEditorState.tool === 'eraser') stroke.changed = setTile(component, cell, -1)
+  else if (tilemapEditorState.tool === 'eraser') { const edit = tileEdit(component); edit.write(cell, -1); stroke.changed = edit.finish() }
   else if (tilemapEditorState.tool === 'selection') tilemapEditorState.selection = { start: { ...cell }, end: { ...cell } }
   return stroke
 }
@@ -352,21 +460,28 @@ export interface TileStroke { start: { x: number; y: number }; previous: { x: nu
 /** 结构说明（自动提取）：continueTileStroke；输入 component、stroke、cell；直接调用 rasterLine、applyPaintCell、setTile；写入 stroke.changed、tilemapEditorState.selection.end、stroke.previous；包含循环处理。 */ export function continueTileStroke(component: TileMap2D, stroke: TileStroke, cell: { x: number; y: number }): void {
   if (tilemapEditorState.tool === 'brush' || tilemapEditorState.tool === 'eraser') {
     const value = tilemapEditorState.tool === 'eraser' ? -1 : tilemapEditorState.tileIndex
-    for (const point of rasterLine(stroke.previous, cell)) stroke.changed = (tilemapEditorState.tool === 'brush' ? applyPaintCell(component, point, value) : setTile(component, point, value)) || stroke.changed
+    if (tilemapEditorState.tool === 'brush') for (const point of rasterLine(stroke.previous, cell)) stroke.changed = applyPaintCell(component, point, value) || stroke.changed
+    else { const edit = tileEdit(component); for (const point of rasterLine(stroke.previous, cell)) edit.write(point, value); stroke.changed = edit.finish() || stroke.changed }
   } else if (tilemapEditorState.tool === 'selection' && tilemapEditorState.selection) tilemapEditorState.selection.end = { ...cell }
   stroke.previous = { ...cell }
 }
 
 /** 结构说明（自动提取）：endTileStroke；输入 component、stroke、cell；直接调用 Math.min、Math.max、setTile、terrainTile、rasterLine 等；写入 stroke.changed；返回路径包含 stroke.changed；包含循环处理。 */ export function endTileStroke(component: TileMap2D, stroke: TileStroke, cell: { x: number; y: number }): boolean {
-  if (tilemapEditorState.tool === 'rectangle') {
-    const left = Math.min(stroke.start.x, cell.x), right = Math.max(stroke.start.x, cell.x)
-    const bottom = Math.min(stroke.start.y, cell.y), top = Math.max(stroke.start.y, cell.y)
-    for (let y = bottom; y <= top; y++) for (let x = left; x <= right; x++) stroke.changed = setTile(component, { x, y }, terrainTile(component, { x, y }, tilemapEditorState.tileIndex)) || stroke.changed
-  }
-  if (tilemapEditorState.tool === 'line') for (const point of rasterLine(stroke.start, cell)) stroke.changed = setTile(component, point, terrainTile(component, point, tilemapEditorState.tileIndex)) || stroke.changed
-  if (tilemapEditorState.tool === 'replace') {
-    const target = component.tiles[tileIndex(component, stroke.start)]
-    for (let index = 0; index < component.tiles.length; index++) if (component.tiles[index] === target) stroke.changed = setTile(component, { x: index % component.width, y: Math.floor(index / component.width) }, tilemapEditorState.tileIndex) || stroke.changed
+  // 26.44: every tool writes its cells first and then auto-tiles them and their neighbours once.
+  if (tilemapEditorState.tool === 'rectangle' || tilemapEditorState.tool === 'line' || tilemapEditorState.tool === 'replace') {
+    const edit = tileEdit(component)
+    if (tilemapEditorState.tool === 'rectangle') {
+      const left = Math.min(stroke.start.x, cell.x), right = Math.max(stroke.start.x, cell.x)
+      const bottom = Math.min(stroke.start.y, cell.y), top = Math.max(stroke.start.y, cell.y)
+      for (let y = bottom; y <= top; y++) for (let x = left; x <= right; x++) edit.write({ x, y }, tilemapEditorState.tileIndex)
+    } else if (tilemapEditorState.tool === 'line') for (const point of rasterLine(stroke.start, cell)) edit.write(point, tilemapEditorState.tileIndex)
+    else {
+      const target = component.tiles[tileIndex(component, stroke.start)]
+      const cells: Array<{ x: number; y: number }> = []
+      for (let index = 0; index < component.tiles.length; index++) if (component.tiles[index] === target) cells.push({ x: index % component.width, y: Math.floor(index / component.width) })
+      for (const point of cells) edit.write(point, tilemapEditorState.tileIndex)
+    }
+    stroke.changed = edit.finish() || stroke.changed
   }
   if (stroke.changed) advanceLocalTileRevision(component)
   if (stroke.changed) {
@@ -407,15 +522,16 @@ export interface TileStroke { start: { x: number; y: number }; previous: { x: nu
 
 /** 结构说明（自动提取）：pasteTileClipboard；输入 component、origin、repeat；直接调用 setTile、Math.max；写入 changed；返回路径包含 changed；包含循环处理。 */ export function pasteTileClipboard(component: TileMap2D, origin: { x: number; y: number }, repeat = false): boolean {
   const clipboard = tilemapEditorState.clipboard
-  if (!clipboard) return setTile(component, origin, tilemapEditorState.tileIndex)
-  let changed = false
+  if (!clipboard) { const edit = tileEdit(component); edit.write(origin, tilemapEditorState.tileIndex); return edit.finish() }
+  // Stamps paste exactly; the terrain around them is auto-tiled to join the pasted cells.
+  const edit = tileEdit(component, { exact: true })
   const width = repeat ? Math.max(clipboard.width, component.width - origin.x) : clipboard.width
   const height = repeat ? Math.max(clipboard.height, component.height - origin.y) : clipboard.height
   for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
     const source = (y % clipboard.height) * clipboard.width + x % clipboard.width
-    changed = setTile(component, { x: origin.x + x, y: origin.y + y }, clipboard.tiles[source], clipboard.transforms[source]) || changed
+    edit.write({ x: origin.x + x, y: origin.y + y }, clipboard.tiles[source], clipboard.transforms[source])
   }
-  return changed
+  return edit.finish()
 }
 
 /** 结构说明（自动提取）：transformTileSelection；输入 component、operation；直接调用 copyTileSelection、fill、Array、selectionBounds、pasteTileClipboard；写入 tiles[…]、transforms[…]、tilemapEditorState.clipboard；包含循环处理。 */ export function transformTileSelection(component: TileMap2D, operation: 'rotate' | 'mirrorX' | 'mirrorY'): boolean {
@@ -444,18 +560,22 @@ export interface TileStroke { start: { x: number; y: number }; previous: { x: nu
   if (target === replacement) return false
   const pending = [start]
   const visited = new Uint8Array(component.width * component.height)
-  let changed = false
+  const region: Array<{ x: number; y: number }> = []
   while (pending.length) {
     const cell = pending.pop()!
     const index = tileIndex(component, cell)
     if (visited[index] || component.tiles[index] !== target) continue
     visited[index] = 1
-    changed = setTile(component, cell, replacement) || changed
+    region.push(cell)
     if (cell.x > 0) pending.push({ x: cell.x - 1, y: cell.y })
     if (cell.x + 1 < component.width) pending.push({ x: cell.x + 1, y: cell.y })
     if (cell.y > 0) pending.push({ x: cell.x, y: cell.y - 1 })
     if (cell.y + 1 < component.height) pending.push({ x: cell.x, y: cell.y + 1 })
   }
+  // The region is found first and written after, so auto-tiling and variants never change what the fill matches.
+  const edit = tileEdit(component)
+  for (const cell of region) edit.write(cell, replacement)
+  const changed = edit.finish()
   if (changed) advanceLocalTileRevision(component)
   return changed
 }

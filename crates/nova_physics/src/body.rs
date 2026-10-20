@@ -513,8 +513,10 @@ impl Body {
         normal_to_other.dot(allowed) >= 0.5 && on_blocking_side && approaching_or_resting
     }
 
-    // 按时间步积分力、重力、阻尼及角运动，同时遵守静态和休眠限制。
-    fn integrate(&mut self, dt: f64, global_gravity: f64, air_friction: f64) {
+    // 26.44 Soft Step: velocity and position are integrated separately in each substep (forces,
+    // gravity and damping first, then the solver, then positions from the solved velocity).
+    // 按时间步积分力、重力和阻尼到速度；静态与休眠刚体不动。
+    fn integrate_velocity(&mut self, dt: f64, global_gravity: f64, air_friction: f64) {
         if self.is_static {
             return;
         }
@@ -523,7 +525,6 @@ impl Body {
             self.angular_velocity = 0.0;
             return;
         }
-
         if !self.is_kinematic {
             let acceleration = self
                 .acceleration
@@ -540,20 +541,28 @@ impl Body {
             self.velocity = self.velocity.mul(linear_decay);
             self.angular_velocity *= angular_decay;
         }
+        self.velocity = self.velocity.finite_or(Vec2::ZERO);
+        if self.freeze_rotation {
+            self.angular_velocity = 0.0;
+        }
+        self.angular_velocity = finite_or(self.angular_velocity, 0.0);
+    }
 
+    // 用已求解的速度推进位置与角度。
+    fn integrate_position(&mut self, dt: f64) {
+        if self.is_static || self.sleeping {
+            return;
+        }
         let previous_position = self.position;
         self.position = self
             .position
             .add(self.velocity.mul(dt))
             .finite_or(previous_position);
-        self.velocity = self.velocity.finite_or(Vec2::ZERO);
-        self.angle = if self.freeze_rotation {
+        if self.freeze_rotation {
             self.angular_velocity = 0.0;
-            self.angle
         } else {
-            normalize_angle(self.angle + self.angular_velocity * dt)
-        };
-        self.angular_velocity = finite_or(self.angular_velocity, 0.0);
+            self.angle = normalize_angle(self.angle + self.angular_velocity * dt);
+        }
     }
 
     // 计算刚体上偏移点的线速度，包含角速度贡献。
@@ -581,11 +590,28 @@ impl Body {
         // (synchronize_sleep_islands); commands from scripts wake bodies through their records.
     }
 
-    // 依据速度阈值和持续时间更新休眠状态。
+    // 依据速度阈值和持续时间更新休眠状态（测试用：以当前速度作为运动量）。
+    #[cfg(test)]
     fn update_sleep_state(
         &mut self,
         dt: f64,
         _has_contact: bool,
+        linear_threshold: f64,
+        angular_threshold: f64,
+        time_to_sleep: f64,
+    ) {
+        let (linear_speed, angular_speed) = (self.velocity.length(), self.angular_velocity.abs());
+        self.update_sleep_with_motion(dt, linear_speed, angular_speed, linear_threshold, angular_threshold, time_to_sleep);
+    }
+
+    // 26.44: sleep from the motion actually made over the step. With Soft Step the velocity left
+    // by the relax pass can carry tiny residuals in large stacks while the bodies do not move;
+    // the step's displacement is the better measure of rest.
+    fn update_sleep_with_motion(
+        &mut self,
+        dt: f64,
+        linear_speed: f64,
+        angular_speed: f64,
         linear_threshold: f64,
         angular_threshold: f64,
         time_to_sleep: f64,
@@ -598,8 +624,7 @@ impl Body {
         let linear_threshold = non_negative(linear_threshold, 1.0e-3);
         let angular_threshold = non_negative(angular_threshold, 1.0e-3);
         let time_to_sleep = non_negative(time_to_sleep, 0.5);
-        let slow = self.velocity.length_squared() <= linear_threshold * linear_threshold
-            && self.angular_velocity.abs() <= angular_threshold;
+        let slow = linear_speed <= linear_threshold && angular_speed <= angular_threshold;
         if slow {
             self.sleep_timer += dt;
             if self.sleep_timer >= time_to_sleep {

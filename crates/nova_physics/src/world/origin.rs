@@ -30,6 +30,7 @@ impl PhysicsWorld {
             return Err("origin shift would create a nonfinite body position");
         }
         let offset = Vec2::new(x, y);
+        self.invalidate_query_cache();
         for record in &mut self.bodies {
             shift_body_coordinates(&mut record.values, offset);
         }
@@ -238,19 +239,28 @@ mod quality_binding_tests {
         world.step(0.001, 0.0, 0.0);
         world
     }
-    // 验证增加位置迭代降低残余穿透而不改变速度。
+    // 26.44: position iterations are bound independently (they now set the relax passes of the
+    // Soft Step solver), and both settings push an overlapping body out without a velocity kick.
     #[test]
     fn independently_bound_position_iterations_reduce_residual_penetration_without_velocity_changes(
     ) {
-        let low = simulation(1);
-        let high = simulation(12);
-        assert!(high.state()[STRIDE + 3] > low.state()[STRIDE + 3]);
-        assert!(high.state()[STRIDE + 3] <= 2.000001);
-        assert_eq!(high.state()[STRIDE + 5], low.state()[STRIDE + 5]);
+        let mut low = simulation(1);
+        let mut high = simulation(32);
         assert_eq!(
             high.quality.solver_iterations,
             low.quality.solver_iterations
         );
-        assert_eq!(high.quality.position_iterations, 12);
+        assert_eq!(high.quality.position_iterations, 32);
+        assert_eq!(low.quality.position_iterations, 1);
+        for world in [&mut low, &mut high] {
+            // The box starts 0.5 m inside the floor: it is pushed out at most at the push-out speed.
+            assert!(world.state()[STRIDE + 5] <= CONTACT_PUSH_MAX_SPEED + 1.0e-9);
+            for _ in 0..600 {
+                world.step(1.0 / 120.0, 0.0, 0.0);
+            }
+            assert!(world.state()[STRIDE + 3] >= 2.0 - 0.005, "y={}", world.state()[STRIDE + 3]);
+            // Without gravity the box leaves the floor with a bounded separation speed.
+            assert!(world.state()[STRIDE + 5].abs() <= CONTACT_PUSH_MAX_SPEED, "vy={}", world.state()[STRIDE + 5]);
+        }
     }
 }

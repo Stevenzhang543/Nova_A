@@ -92,17 +92,34 @@ fn closest_collider_point(body: &Body, point: Vec2) -> Vec2 {
         .add(rotate(closest, body.collider_angle()))
 }
 
+/// 26.44: one query proxy per body and per collider child, with its world bounds. Built once and
+/// reused until a body record changes (poses are refreshed in place after each step and after a
+/// transform change); before, every query rebuilt every body, which cost a character move about
+/// 1 ms per cast in a 2,000-tile level.
+#[derive(Clone, Debug)]
+struct QueryProxy {
+    handle: u32,
+    collider: u32,
+    record: usize,
+    body: Body,
+    bounds: Aabb,
+}
+
 impl PhysicsWorld {
-    // 展开碰撞体记录并保留所有者和子形状身份。
-    fn query_records_with_identity(&self) -> Vec<(u32, u32, Body)> {
-        let mut records = Vec::new();
-        for record in &self.bodies {
+    // 展开碰撞体记录并保留所有者和子形状身份（缓存，见 QueryProxy）。
+    fn query_proxies(&self) -> std::sync::Arc<Vec<QueryProxy>> {
+        if let Some(cached) = self.query_cache.borrow().as_ref() {
+            return cached.clone();
+        }
+        let mut proxies = Vec::new();
+        for (record_index, record) in self.bodies.iter().enumerate() {
             let mut body = Body::from_data(&record.values, 0);
             body.apply_collider_children(&record.collider_shapes);
             // Move child descriptors out before cloning the query proxy: avoid
             // cloning every sibling for each child of a compound body.
             let children = std::mem::take(&mut body.collider_children);
-            records.push((record.handle, 0, body.clone()));
+            let bounds = body.compound_aabb();
+            proxies.push(QueryProxy { handle: record.handle, collider: 0, record: record_index, body: body.clone(), bounds });
             for child in children {
                 let mut proxy = body.clone();
                 proxy.shape = child.shape;
@@ -113,10 +130,57 @@ impl PhysicsWorld {
                 proxy.collision_mask = child.collision_mask;
                 proxy.one_way = child.one_way;
                 proxy.one_way_normal = child.one_way_normal;
-                records.push((record.handle, child.id, proxy));
+                let bounds = proxy.compound_aabb();
+                proxies.push(QueryProxy { handle: record.handle, collider: child.id, record: record_index, body: proxy, bounds });
             }
         }
-        records
+        let proxies = std::sync::Arc::new(proxies);
+        *self.query_cache.borrow_mut() = Some(proxies.clone());
+        proxies
+    }
+
+    // 26.44: 刚体集合、形状或过滤变化后丢弃查询缓存。
+    fn invalidate_query_cache(&mut self) {
+        *self.query_cache.get_mut() = None;
+    }
+
+    // 26.44: 只更新缓存代理的位姿与包围盒（步进或变换命令之后）；record 为 None 时更新全部。
+    fn refresh_query_poses(&mut self, record: Option<usize>) {
+        let Some(cached) = self.query_cache.get_mut().as_mut() else {
+            return;
+        };
+        let proxies = std::sync::Arc::make_mut(cached);
+        for proxy in proxies.iter_mut().filter(|proxy| record.map_or(true, |index| index == proxy.record)) {
+            let Some(values) = self.bodies.get(proxy.record).map(|record| &record.values) else {
+                continue;
+            };
+            let position = Vec2::new(finite_or(values[2], 0.0), finite_or(values[3], 0.0));
+            let angle = normalize_angle(finite_or(values[14], 0.0));
+            if proxy.body.position != position || proxy.body.angle != angle {
+                proxy.body.position = position;
+                proxy.body.angle = angle;
+                proxy.bounds = proxy.body.compound_aabb();
+            }
+        }
+    }
+
+    // 26.44: 比较记录修改前后：只有位姿、速度或休眠字段变化时原位更新查询代理，否则整体失效。
+    fn note_record_change(&mut self, record: usize, before: &[f64]) {
+        let Some(after) = self.bodies.get(record).map(|record| record.values.clone()) else {
+            self.invalidate_query_cache();
+            return;
+        };
+        const POSE_OR_MOTION: [usize; 7] = [2, 3, 4, 5, 14, 15, 49];
+        let other_changed = before
+            .iter()
+            .zip(&after)
+            .enumerate()
+            .any(|(field, (old, new))| old.to_bits() != new.to_bits() && !POSE_OR_MOTION.contains(&field) && field != 50);
+        if other_changed {
+            self.invalidate_query_cache();
+        } else {
+            self.refresh_query_poses(Some(record));
+        }
     }
 
     // 先应用身份、层和传感器过滤，再执行精确查询、稳定排序及去重。
@@ -185,25 +249,27 @@ impl PhysicsWorld {
             _ => None,
         };
         let mut hits = Vec::new();
-        for (handle, collider, body) in self.query_records_with_identity() {
+        for proxy in self.query_proxies().iter() {
+            let (handle, collider, body) = (proxy.handle, proxy.collider, &proxy.body);
             if excluded.contains(&handle)
-                || !query_enabled(request.layer_mask, &body)
+                || !query_enabled(request.layer_mask, body)
                 || (!request.include_sensors && body.is_sensor)
             {
                 continue;
             }
             let hit = match request.kind {
-                PhysicsQueryKind2D::Ray => ray_body(&body, origin, direction, request.distance),
+                PhysicsQueryKind2D::Ray => ray_body(body, origin, direction, request.distance),
                 PhysicsQueryKind2D::Sweep => cast_box_against_body(
                     origin,
                     request.size,
                     request.angle,
                     direction,
                     request.distance,
-                    &body,
+                    body,
+                    false,
                 ),
                 PhysicsQueryKind2D::Nearest => {
-                    let point = closest_collider_point(&body, origin);
+                    let point = closest_collider_point(body, origin);
                     let delta = origin.sub(point);
                     let distance = delta.length();
                     let normal = delta.normalized_or(Vec2::ZERO);
@@ -218,8 +284,8 @@ impl PhysicsWorld {
                 | PhysicsQueryKind2D::Circle
                 | PhysicsQueryKind2D::Box => {
                     let overlaps = shape.as_ref().map_or_else(
-                        /* 计算并返回 point_in_body (& body , origin)，用于当前 query_filtered 流程。 */ || point_in_body(&body, origin),
-                        /* 判断 ! collide (query , & body) . is_empty () 是否成立，供过滤或有效性检查使用。 */ |query| !collide(query, &body).is_empty(),
+                        /* 计算并返回 point_in_body (& body , origin)，用于当前 query_filtered 流程。 */ || point_in_body(body, origin),
+                        /* 判断 ! collide (query , & body) . is_empty () 是否成立，供过滤或有效性检查使用。 */ |query| !collide(query, body).is_empty(),
                     );
                     overlaps.then_some(PhysicsQueryHit {
                         handle,

@@ -102,8 +102,13 @@ fn gjk(body_a: &Body, body_b: &Body) -> Option<Vec<SupportPoint>> {
 #[derive(Clone, Copy, Debug)]
 struct Manifold {
     normal: Vec2,
+    /// Penetration depth. 26.44: negative for a speculative contact (the shapes are still apart
+    /// by -depth); only `collide_speculative` produces those.
     depth: f64,
     point: Vec2,
+    /// 26.44: identity of the contact feature (reference edge, incident edge, clip point), stable
+    /// while the same faces touch, so warm starting survives contact reordering.
+    feature: u32,
 }
 
 // 从最接近原点的边插值得到接触点、法线和穿透深度。
@@ -135,6 +140,7 @@ fn manifold_from_edge(
         normal,
         depth: non_negative(depth, 0.0),
         point: point_a.add(point_b).mul(0.5),
+        feature: 0,
     }
 }
 
@@ -273,13 +279,14 @@ fn outward_edge_normal(vertices: &[Vec2], index: usize) -> Vec2 {
     Vec2::new(edge.y, -edge.x).normalized_or(Vec2::new(1.0, 0.0))
 }
 
-// 根据半平面裁剪线段，保留内部端点并插入交点。
-fn clip_segment_to_plane(points: &[Vec2], normal: Vec2, offset: f64) -> Vec<Vec2> {
+// 根据半平面裁剪线段，保留内部端点并插入交点。26.44: 每个点带特征号（入射顶点或裁剪平面），
+// 同一对面接触时保持不变，供热启动识别同一接触点。
+fn clip_segment_to_plane(points: &[(Vec2, u32)], normal: Vec2, offset: f64, plane_feature: u32) -> Vec<(Vec2, u32)> {
     if points.len() < 2 {
         return Vec::new();
     }
-    let first_distance = points[0].dot(normal) - offset;
-    let second_distance = points[1].dot(normal) - offset;
+    let first_distance = points[0].0.dot(normal) - offset;
+    let second_distance = points[1].0.dot(normal) - offset;
     let mut clipped = Vec::with_capacity(2);
     if first_distance <= 0.0 {
         clipped.push(points[0]);
@@ -289,7 +296,7 @@ fn clip_segment_to_plane(points: &[Vec2], normal: Vec2, offset: f64) -> Vec<Vec2
     }
     if first_distance * second_distance < 0.0 {
         let interpolation = first_distance / (first_distance - second_distance);
-        clipped.push(points[0].add(points[1].sub(points[0]).mul(interpolation)));
+        clipped.push((points[0].0.add(points[1].0.sub(points[0].0).mul(interpolation)), plane_feature));
     }
     clipped.truncate(2);
     clipped
@@ -297,32 +304,40 @@ fn clip_segment_to_plane(points: &[Vec2], normal: Vec2, offset: f64) -> Vec<Vec2
 
 // 使用分离轴和参考边裁剪产生多边形接触点集合。
 fn polygon_manifolds(body_a: &Body, body_b: &Body) -> Option<Vec<Manifold>> {
+    polygon_manifolds_within(body_a, body_b, 0.0)
+}
+
+// 26.44: SAT with a speculative margin. Polygons up to `margin` apart still produce clip points
+// (negative depth), so the solver can stop an approaching body exactly at the surface.
+fn polygon_manifolds_within(body_a: &Body, body_b: &Body, margin: f64) -> Option<Vec<Manifold>> {
     let vertices_a = world_polygon_vertices(body_a)?;
     let vertices_b = world_polygon_vertices(body_b)?;
     let center_direction = body_b.collider_position().sub(body_a.collider_position());
-    let mut minimum_overlap = f64::INFINITY;
-    let mut collision_normal = Vec2::new(1.0, 0.0);
-    let mut reference_is_a = true;
-
-    for (vertices, from_a) in [(&vertices_a, true), (&vertices_b, false)] {
+    let margin = margin.max(0.0);
+    // Best (least overlapping) axis of each polygon.
+    let mut best = [(f64::INFINITY, Vec2::new(1.0, 0.0)); 2];
+    for (slot, vertices) in [&vertices_a, &vertices_b].into_iter().enumerate() {
         for edge_index in 0..vertices.len() {
             let mut axis = outward_edge_normal(vertices, edge_index);
             let (minimum_a, maximum_a) = project_polygon(&vertices_a, axis);
             let (minimum_b, maximum_b) = project_polygon(&vertices_b, axis);
             let overlap = maximum_a.min(maximum_b) - minimum_a.max(minimum_b);
-            if overlap <= 0.0 {
+            if overlap <= -margin || (margin == 0.0 && overlap <= 0.0) {
                 return None;
             }
             if axis.dot(center_direction) < 0.0 {
                 axis = axis.neg();
             }
-            if overlap < minimum_overlap {
-                minimum_overlap = overlap;
-                collision_normal = axis;
-                reference_is_a = from_a;
+            if overlap < best[slot].0 {
+                best[slot] = (overlap, axis);
             }
         }
     }
+    // 26.44: prefer A's face unless B's is clearly better (as Box2D does), so the reference face
+    // does not flip between equal faces from step to step (that lost warm starting and jittered
+    // stacks of equal boxes).
+    let reference_is_a = best[1].0 >= best[0].0 - 0.1 * LINEAR_SLOP;
+    let (minimum_overlap, collision_normal) = if reference_is_a { best[0] } else { best[1] };
 
     let (reference_vertices, incident_vertices, reference_normal) = if reference_is_a {
         (&vertices_a, &vertices_b, collision_normal)
@@ -346,26 +361,33 @@ fn polygon_manifolds(body_a: &Body, body_b: &Body) -> Option<Vec<Manifold>> {
     let tangent = reference_end
         .sub(reference_start)
         .normalized_or(reference_normal.perp());
+    // Feature numbers: 1 and 2 are the incident edge's vertices, 3 and 4 the clip planes at the
+    // reference edge's start and end.
     let incident_segment = [
-        incident_vertices[incident_edge_index],
-        incident_vertices[(incident_edge_index + 1) % incident_vertices.len()],
+        (incident_vertices[incident_edge_index], 1),
+        (incident_vertices[(incident_edge_index + 1) % incident_vertices.len()], 2),
     ];
 
     let clipped_to_start = clip_segment_to_plane(
         &incident_segment,
         tangent.neg(),
         -tangent.dot(reference_start),
+        3,
     );
-    let clipped = clip_segment_to_plane(&clipped_to_start, tangent, tangent.dot(reference_end));
+    let clipped = clip_segment_to_plane(&clipped_to_start, tangent, tangent.dot(reference_end), 4);
     let reference_offset = reference_normal.dot(reference_start);
     let mut manifolds = Vec::with_capacity(2);
-    for point in clipped {
+    let feature_base = ((reference_edge_index as u32 & 0xff) << 16)
+        | ((incident_edge_index as u32 & 0xff) << 8)
+        | if reference_is_a { 0 } else { 0x0100_0000 };
+    for (point, point_feature) in clipped {
         let separation = point.dot(reference_normal) - reference_offset;
-        if separation <= 0.0 {
+        if separation <= margin {
             manifolds.push(Manifold {
                 normal: collision_normal,
-                depth: (-separation).min(minimum_overlap),
+                depth: if separation <= 0.0 { (-separation).min(minimum_overlap.max(0.0)) } else { -separation },
                 point: point.sub(reference_normal.mul(separation * 0.5)),
+                feature: feature_base | point_feature,
             });
         }
     }
@@ -374,6 +396,157 @@ fn polygon_manifolds(body_a: &Body, body_b: &Body) -> Option<Vec<Manifold>> {
         None
     } else {
         Some(manifolds)
+    }
+}
+
+// 26.44: 以参考多边形的指定面为参考面裁剪入射多边形（内部边修正用）。法线固定为该面的外法线，
+// 点的分离量沿该法线测量；保留分离量不超过 margin 的点。reference_is_a 决定法线方向约定（A 指向 B）。
+fn polygon_face_manifolds(reference: &Body, face: usize, incident: &Body, margin: f64, reference_is_a: bool) -> Vec<Manifold> {
+    let (Some(reference_vertices), Some(incident_vertices)) = (world_polygon_vertices(reference), world_polygon_vertices(incident)) else {
+        return Vec::new();
+    };
+    if reference_vertices.len() < 3 || incident_vertices.len() < 3 || face >= reference_vertices.len() {
+        return Vec::new();
+    }
+    // Outward normals corrected by the centroid, so either winding works.
+    let outward = |vertices: &[Vec2], index: usize| {
+        let centroid = vertices.iter().fold(Vec2::ZERO, |sum, vertex| sum.add(*vertex)).mul(1.0 / vertices.len() as f64);
+        let start = vertices[index];
+        let end = vertices[(index + 1) % vertices.len()];
+        let normal = outward_edge_normal(vertices, index);
+        if normal.dot(start.add(end).mul(0.5).sub(centroid)) < 0.0 { normal.neg() } else { normal }
+    };
+    let normal = outward(&reference_vertices, face);
+    let incident_edge = (0..incident_vertices.len())
+        .min_by(|left, right| outward(&incident_vertices, *left).dot(normal).total_cmp(&outward(&incident_vertices, *right).dot(normal)))
+        .unwrap_or(0);
+    let start = reference_vertices[face];
+    let end = reference_vertices[(face + 1) % reference_vertices.len()];
+    let tangent = end.sub(start).normalized_or(normal.perp());
+    let segment = [
+        (incident_vertices[incident_edge], 1),
+        (incident_vertices[(incident_edge + 1) % incident_vertices.len()], 2),
+    ];
+    let clipped = clip_segment_to_plane(&segment, tangent.neg(), -tangent.dot(start), 3);
+    let clipped = clip_segment_to_plane(&clipped, tangent, tangent.dot(end), 4);
+    let offset = normal.dot(start);
+    let feature_base = 0x0200_0000 | ((face as u32 & 0xff) << 16) | ((incident_edge as u32 & 0xff) << 8) | if reference_is_a { 0 } else { 0x0100_0000 };
+    clipped
+        .into_iter()
+        .filter_map(|(point, point_feature)| {
+            let separation = point.dot(normal) - offset;
+            (separation <= margin.max(0.0)).then(|| Manifold {
+                normal: if reference_is_a { normal } else { normal.neg() },
+                depth: -separation,
+                point: point.sub(normal.mul(separation * 0.5)),
+                feature: feature_base | point_feature,
+            })
+        })
+        .collect()
+}
+
+// 26.44: GJK distance between separated convex shapes: closest points on A and B and their
+// distance; None when the shapes overlap (then EPA gives the penetration).
+fn gjk_distance(body_a: &Body, body_b: &Body) -> Option<(Vec2, Vec2, f64)> {
+    let initial = body_a
+        .collider_position()
+        .sub(body_b.collider_position())
+        .normalized_or(Vec2::new(1.0, 0.0));
+    let mut simplex: Vec<(SupportPoint, f64)> = vec![(minkowski_support(body_a, body_b, initial.neg()), 1.0)];
+    let mut closest = simplex[0].0.point;
+    for _ in 0..40 {
+        let distance_squared = closest.length_squared();
+        if distance_squared <= EPSILON * EPSILON {
+            return None;
+        }
+        let candidate = minkowski_support(body_a, body_b, closest.neg());
+        // No further progress toward the origin: `closest` is the distance vector.
+        if distance_squared - closest.dot(candidate.point) <= 1.0e-10 * distance_squared.max(1.0e-12) {
+            break;
+        }
+        if simplex.iter().any(|(existing, _)| existing.point.sub(candidate.point).length_squared() <= EPSILON * EPSILON) {
+            break;
+        }
+        simplex.push((candidate, 0.0));
+        closest = reduce_simplex(&mut simplex)?;
+    }
+    let mut point_a = Vec2::ZERO;
+    let mut point_b = Vec2::ZERO;
+    for (support, weight) in &simplex {
+        point_a = point_a.add(support.point_a.mul(*weight));
+        point_b = point_b.add(support.point_b.mul(*weight));
+    }
+    let distance = point_b.sub(point_a).length();
+    if !distance.is_finite() || distance <= EPSILON {
+        return None;
+    }
+    Some((point_a, point_b, distance))
+}
+
+// 把单纯形缩减为离原点最近的子单纯形并写入重心坐标；原点在三角形内（重叠）时返回 None。
+fn reduce_simplex(simplex: &mut Vec<(SupportPoint, f64)>) -> Option<Vec2> {
+    let segment = |a: SupportPoint, b: SupportPoint| -> (Vec<(SupportPoint, f64)>, Vec2) {
+        let edge = b.point.sub(a.point);
+        let length_squared = edge.length_squared();
+        let t = if length_squared > EPSILON * EPSILON { (-a.point.dot(edge) / length_squared).clamp(0.0, 1.0) } else { 0.0 };
+        let point = a.point.add(edge.mul(t));
+        if t <= 0.0 {
+            (vec![(a, 1.0)], a.point)
+        } else if t >= 1.0 {
+            (vec![(b, 1.0)], b.point)
+        } else {
+            (vec![(a, 1.0 - t), (b, t)], point)
+        }
+    };
+    match simplex.len() {
+        1 => {
+            simplex[0].1 = 1.0;
+            Some(simplex[0].0.point)
+        }
+        2 => {
+            let (reduced, point) = segment(simplex[0].0, simplex[1].0);
+            *simplex = reduced;
+            Some(point)
+        }
+        _ => {
+            let (a, b, c) = (simplex[0].0, simplex[1].0, simplex[2].0);
+            let area = b.point.sub(a.point).cross(c.point.sub(a.point));
+            let inside = |p: Vec2, q: Vec2| area * q.sub(p).cross(p.neg()) >= 0.0;
+            if area.abs() > EPSILON * EPSILON && inside(a.point, b.point) && inside(b.point, c.point) && inside(c.point, a.point) {
+                return None;
+            }
+            let mut best: Option<(Vec<(SupportPoint, f64)>, Vec2)> = None;
+            for (p, q) in [(a, b), (b, c), (c, a)] {
+                let candidate = segment(p, q);
+                if best.as_ref().map_or(true, |(_, point)| candidate.1.length_squared() < point.length_squared()) {
+                    best = Some(candidate);
+                }
+            }
+            let (reduced, point) = best?;
+            *simplex = reduced;
+            Some(point)
+        }
+    }
+}
+
+// 26.44: contact generation for the solver, with a speculative margin. Pairs up to `margin` apart
+// get contacts with negative depth; overlapping pairs are handled exactly like `collide`.
+fn collide_speculative(body_a: &Body, body_b: &Body, margin: f64) -> Vec<Manifold> {
+    if margin <= 0.0 {
+        return collide(body_a, body_b);
+    }
+    if world_polygon_vertices(body_a).is_some() && world_polygon_vertices(body_b).is_some() {
+        return polygon_manifolds_within(body_a, body_b, margin).unwrap_or_default();
+    }
+    if let Some(manifold) = collide_gjk(body_a, body_b) {
+        return vec![manifold];
+    }
+    match gjk_distance(body_a, body_b) {
+        Some((point_a, point_b, distance)) if distance <= margin => {
+            let normal = point_b.sub(point_a).mul(1.0 / distance);
+            vec![Manifold { normal, depth: -distance, point: point_a.add(point_b).mul(0.5), feature: 0 }]
+        }
+        _ => Vec::new(),
     }
 }
 

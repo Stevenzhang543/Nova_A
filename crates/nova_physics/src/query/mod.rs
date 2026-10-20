@@ -28,6 +28,14 @@ pub struct CharacterMoveResult {
     pub velocity_motion: [f64; 2],
     /// 26.43: the character stood on a walkable floor before this move (contact probe).
     pub grounded_at_start: bool,
+    /// 26.44: handle of the body the character stands on (0 when not on a floor), so callers can
+    /// follow a platform that is moved by a script or an animation.
+    pub floor_handle: u32,
+    /// 26.44: the floor is a one-way platform (the character can drop through it).
+    pub floor_one_way: bool,
+    /// 26.44: how far the character was pushed out of bodies it overlapped before moving (a platform
+    /// moved into it). A correction like the step lift: not part of `velocity_motion`.
+    pub recovery_motion: [f64; 2],
 }
 
 // 检查刚体层是否命中查询掩码。
@@ -253,13 +261,6 @@ fn ray_aabb_interval(
 }
 
 impl PhysicsWorld {
-    // 读取当前持久刚体数据并展开可查询的碰撞形状。
-    fn query_records(&self) -> Vec<(u32, Body)> {
-        self.query_records_with_identity()
-            .into_iter()
-            .map(/* 计算并返回 (handle , body)，用于当前 query_records 流程。 */ |(handle, _, body)| (handle, body))
-            .collect()
-    }
 
     // 按掩码执行射线查询，返回按距离稳定排序的全部命中。
     pub fn raycast_all(
@@ -273,13 +274,14 @@ impl PhysicsWorld {
         let direction = Vec2::new(finite_or(direction[0], 1.0), finite_or(direction[1], 0.0));
         let distance = non_negative(distance, 0.0);
         let mut hits: Vec<_> = self
-            .query_records()
-            .into_iter()
-            .filter_map(/* 先检查查询掩码，再计算精确交点并补入所属刚体句柄。 */ |(handle, body)| {
-                if !query_enabled(mask, &body) {
+            .query_proxies()
+            .iter()
+            .filter_map(/* 先检查查询掩码与包围盒，再计算精确交点并补入所属刚体句柄。 */ |proxy| {
+                let (handle, body) = (proxy.handle, &proxy.body);
+                if !query_enabled(mask, body) || ray_aabb_interval(origin, direction, distance, proxy.bounds).is_none() {
                     return None;
                 }
-                ray_body(&body, origin, direction, distance).map(/* 计算并返回 hit . handle = handle ; hit，用于当前 raycast_all 流程。 */ |mut hit| {
+                ray_body(body, origin, direction, distance).map(/* 计算并返回 hit . handle = handle ; hit，用于当前 raycast_all 流程。 */ |mut hit| {
                     hit.handle = handle;
                     hit
                 })
@@ -315,11 +317,12 @@ impl PhysicsWorld {
     pub fn overlap_point(&self, point: [f64; 2], mask: u32) -> Vec<u32> {
         let point = Vec2::new(finite_or(point[0], 0.0), finite_or(point[1], 0.0));
         let mut owners = HashSet::new();
-        self.query_records()
-            .into_iter()
-            .filter_map(/* 判断 (query_enabled (mask , & body) && point_in_body (& body , point) && owners . insert (handle)) . then_some (handle) 是否成立，供过滤或有效性检查使用。 */ |(handle, body)| {
-                (query_enabled(mask, &body) && point_in_body(&body, point) && owners.insert(handle))
-                    .then_some(handle)
+        self.query_proxies()
+            .iter()
+            .filter_map(/* 掩码、包围盒与精确点测试都通过时收集所属刚体（去重）。 */ |proxy| {
+                let inside = proxy.bounds.min_x <= point.x && point.x <= proxy.bounds.max_x && proxy.bounds.min_y <= point.y && point.y <= proxy.bounds.max_y;
+                (inside && query_enabled(mask, &proxy.body) && point_in_body(&proxy.body, point) && owners.insert(proxy.handle))
+                    .then_some(proxy.handle)
             })
             .collect()
     }
@@ -353,13 +356,15 @@ impl PhysicsWorld {
     // 对候选刚体执行精确形状相交测试，收集重叠身份。
     fn overlap_shape(&self, query: &Body, mask: u32) -> Vec<u32> {
         let mut owners = HashSet::new();
-        self.query_records()
-            .into_iter()
-            .filter_map(/* 判断 (query_enabled (mask , & body) && ! collide (query , & body) . is_empty () && owners . insert (handle)) . then_some (handle) 是否成立，供过滤或有效性检查使用。 */ |(handle, body)| {
-                (query_enabled(mask, &body)
-                    && !collide(query, &body).is_empty()
-                    && owners.insert(handle))
-                .then_some(handle)
+        let bounds = query.compound_aabb();
+        self.query_proxies()
+            .iter()
+            .filter_map(/* 掩码、包围盒与精确相交都通过时收集所属刚体（去重）。 */ |proxy| {
+                (proxy.bounds.overlaps(bounds)
+                    && query_enabled(mask, &proxy.body)
+                    && !collide(query, &proxy.body).is_empty()
+                    && owners.insert(proxy.handle))
+                .then_some(proxy.handle)
             })
             .collect()
     }
@@ -389,35 +394,57 @@ impl PhysicsWorld {
         mask: u32,
         excluded_handle: Option<u32>,
     ) -> Option<PhysicsQueryHit> {
+        self.shape_cast_filtered(center, size, angle, direction, distance, mask, excluded_handle, false)
+    }
+
+    // 形状扫掠：先用扫掠包围盒剔除，再精确扫掠；skip_one_way 时忽略单向平台（角色下穿）。
+    #[allow(clippy::too_many_arguments)]
+    fn shape_cast_filtered(
+        &self,
+        center: [f64; 2],
+        size: [f64; 2],
+        angle: f64,
+        direction: [f64; 2],
+        distance: f64,
+        mask: u32,
+        excluded_handle: Option<u32>,
+        skip_one_way: bool,
+    ) -> Option<PhysicsQueryHit> {
         let start = Vec2::new(finite_or(center[0], 0.0), finite_or(center[1], 0.0));
         let direction = Vec2::new(finite_or(direction[0], 1.0), finite_or(direction[1], 0.0));
-        self.query_records()
-            .into_iter()
-            .filter_map(/* 排除自身、不匹配掩码及角色查询中的传感器，再执行精确矩形扫掠。 */ |(handle, body)| {
+        let distance = non_negative(distance, 0.0);
+        let unit = direction.normalized_or(Vec2::new(1.0, 0.0));
+        // Bounds of the query box over the whole sweep.
+        let shape = box_shape(positive(size[0].abs(), MIN_DIMENSION) * 0.5, positive(size[1].abs(), MIN_DIMENSION) * 0.5);
+        let from = shape.aabb(start, normalize_angle(angle));
+        let to = shape.aabb(start.add(unit.mul(distance)), normalize_angle(angle));
+        let swept = Aabb {
+            min_x: from.min_x.min(to.min_x),
+            max_x: from.max_x.max(to.max_x),
+            min_y: from.min_y.min(to.min_y),
+            max_y: from.max_y.max(to.max_y),
+        };
+        self.query_proxies()
+            .iter()
+            .filter_map(/* 排除自身、不匹配掩码及角色查询中的传感器，再执行精确矩形扫掠。 */ |proxy| {
+                let (handle, body) = (proxy.handle, &proxy.body);
                 if Some(handle) == excluded_handle
-                    || !query_enabled(mask, &body)
+                    || !proxy.bounds.overlaps(swept)
+                    || !query_enabled(mask, body)
                     || (excluded_handle.is_some() && body.is_sensor)
+                    || (skip_one_way && body.one_way)
                 {
                     return None;
                 }
-                cast_box_against_body(
-                    start,
-                    size,
-                    angle,
-                    direction,
-                    non_negative(distance, 0.0),
-                    &body,
+                cast_box_against_body(start, size, angle, direction, distance, body, excluded_handle.is_some()).map(
+                    /* 补入命中所属刚体句柄。 */
+                    |mut hit| {
+                        hit.handle = handle;
+                        hit
+                    },
                 )
-                .map(/* 计算并返回 hit . handle = handle ; hit，用于当前 shape_cast_excluding 流程。 */ |mut hit| {
-                    hit.handle = handle;
-                    hit
-                })
             })
-            .min_by(/* 按 a . distance . total_cmp (& b . distance) . then (a . handle . cmp (& b . handle)) 比较顺序，供稳定排序使用。 */ |a, b| {
-                a.distance
-                    .total_cmp(&b.distance)
-                    .then(a.handle.cmp(&b.handle))
-            })
+            .min_by(/* 按距离和句柄稳定排序。 */ |a, b| a.distance.total_cmp(&b.distance).then(a.handle.cmp(&b.handle)))
     }
 
     // 求解角色矩形移动、滑动、坡面、台阶和地面吸附，并报告接触状态。
@@ -491,7 +518,13 @@ impl PhysicsWorld {
             remaining_motion: [requested.x, requested.y],
             ..CharacterMoveResult::default()
         };
-        let mut position = start;
+        // 26.44: a character dropping through one-way platforms ignores them until the drop time has
+        // run out and it no longer overlaps one.
+        let pass_one_way = self.one_way_pass_active(handle, start, size, angle, mask);
+        // 26.44: push the character out of solid bodies it overlaps before moving (a platform moved
+        // into it by a script or an animation, a teleport), as Godot's move_and_slide recovers.
+        let mut position = self.recover_character(handle, start, size, angle, mask, margin);
+        result.recovery_motion = [position.x - start.x, position.y - start.y];
         let mut remaining = requested;
         let mut velocity_motion = Vec2::ZERO;
         // 26.43: steps and floor snapping only apply to a character that already stands on a
@@ -500,7 +533,7 @@ impl PhysicsWorld {
         // height was lifted mid-air, and the lift reached scripts as upward velocity.
         let grounded_at_start = requested.y <= EPSILON
             && self
-                .shape_cast_excluding(
+                .shape_cast_filtered(
                     [position.x, position.y],
                     size,
                     angle,
@@ -508,6 +541,7 @@ impl PhysicsWorld {
                     margin * 4.0 + 1.0e-4,
                     mask,
                     Some(handle),
+                    pass_one_way,
                 )
                 .is_some_and(/* 只有可行走的地面算作站立。 */ |hit| {
                     Vec2::new(hit.normal[0], hit.normal[1])
@@ -523,7 +557,7 @@ impl PhysicsWorld {
                 break;
             }
             let direction = remaining.mul(1.0 / distance);
-            let hit = self.shape_cast_excluding(
+            let hit = self.shape_cast_filtered(
                 [position.x, position.y],
                 size,
                 angle,
@@ -531,6 +565,7 @@ impl PhysicsWorld {
                 distance + margin,
                 mask,
                 Some(handle),
+                pass_one_way,
             );
             let Some(hit) = hit else {
                 position = position.add(remaining);
@@ -546,16 +581,9 @@ impl PhysicsWorld {
             if normal.y >= slope_cosine {
                 result.on_floor = true;
                 result.floor_normal = [normal.x, normal.y];
-                if let Some(platform) = self
-                    .bodies
-                    .iter()
-                    .find(/* 判断 record . handle == hit . handle 是否成立，供过滤或有效性检查使用。 */ |record| record.handle == hit.handle)
-                {
-                    result.platform_velocity = [
-                        finite_or(platform.values[4], 0.0),
-                        finite_or(platform.values[5], 0.0),
-                    ];
-                }
+                result.floor_handle = hit.handle;
+                result.floor_one_way = self.body_is_one_way(hit.handle);
+                result.platform_velocity = self.support_point_velocity(hit.handle, position.add(Vec2::new(0.0, -size[1] * 0.5)));
             } else if normal.y <= -slope_cosine {
                 result.on_ceiling = true;
                 result.ceiling_normal = [normal.x, normal.y];
@@ -582,22 +610,16 @@ impl PhysicsWorld {
                     slope_cosine,
                     mask,
                     handle,
+                    pass_one_way,
                 ) {
                     position = landed;
                     // The horizontal part is requested motion; the lift is a correction.
                     velocity_motion = velocity_motion.add(Vec2::new(untravelled.x, 0.0));
                     result.on_floor = true;
                     result.floor_normal = floor.normal;
-                    if let Some(platform) = self
-                        .bodies
-                        .iter()
-                        .find(/* 台阶顶面所属刚体。 */ |record| record.handle == floor.handle)
-                    {
-                        result.platform_velocity = [
-                            finite_or(platform.values[4], 0.0),
-                            finite_or(platform.values[5], 0.0),
-                        ];
-                    }
+                    result.floor_handle = floor.handle;
+                    result.floor_one_way = self.body_is_one_way(floor.handle);
+                    result.platform_velocity = self.support_point_velocity(floor.handle, position.add(Vec2::new(0.0, -size[1] * 0.5)));
                     remaining = Vec2::ZERO;
                     break;
                 }
@@ -618,7 +640,7 @@ impl PhysicsWorld {
         // on the floor; snapping below may put it back on a lower floor.
         if result.on_floor
             && self
-                .shape_cast_excluding(
+                .shape_cast_filtered(
                     [position.x, position.y],
                     size,
                     angle,
@@ -626,12 +648,15 @@ impl PhysicsWorld {
                     margin * 4.0 + 1.0e-4,
                     mask,
                     Some(handle),
+                    pass_one_way,
                 )
                 .is_none()
         {
             result.on_floor = false;
             result.floor_normal = [0.0, 0.0];
             result.platform_velocity = [0.0, 0.0];
+            result.floor_handle = 0;
+            result.floor_one_way = false;
         }
         // Snapping keeps a walking character on slopes and steps down; it does not pull a
         // falling character to the ground early. A move with no vertical part (an idle refresh
@@ -641,7 +666,7 @@ impl PhysicsWorld {
             && requested.y <= EPSILON
             && (grounded_at_start || requested.y.abs() <= EPSILON)
         {
-            if let Some(hit) = self.shape_cast_excluding(
+            if let Some(hit) = self.shape_cast_filtered(
                 [position.x, position.y],
                 size,
                 angle,
@@ -649,6 +674,7 @@ impl PhysicsWorld {
                 floor_snap + margin,
                 mask,
                 Some(handle),
+                pass_one_way,
             ) {
                 let normal =
                     Vec2::new(hit.normal[0], hit.normal[1]).normalized_or(Vec2::new(0.0, 1.0));
@@ -656,16 +682,9 @@ impl PhysicsWorld {
                     position.y -= (hit.distance - margin).clamp(0.0, floor_snap);
                     result.on_floor = true;
                     result.floor_normal = [normal.x, normal.y];
-                    if let Some(platform) = self
-                        .bodies
-                        .iter()
-                        .find(/* 判断 record . handle == hit . handle 是否成立，供过滤或有效性检查使用。 */ |record| record.handle == hit.handle)
-                    {
-                        result.platform_velocity = [
-                            finite_or(platform.values[4], 0.0),
-                            finite_or(platform.values[5], 0.0),
-                        ];
-                    }
+                    result.floor_handle = hit.handle;
+                    result.floor_one_way = self.body_is_one_way(hit.handle);
+                    result.platform_velocity = self.support_point_velocity(hit.handle, position.add(Vec2::new(0.0, -size[1] * 0.5)));
                 }
             }
         }
@@ -677,6 +696,87 @@ impl PhysicsWorld {
         result.remaining_motion = [remaining.x, remaining.y];
         result.velocity_motion = [velocity_motion.x, velocity_motion.y];
         Ok(result)
+    }
+
+    // 26.44: 刚体（或其任一碰撞子形状）是否为单向平台。
+    fn body_is_one_way(&self, handle: u32) -> bool {
+        self.query_proxies().iter().any(|proxy| proxy.handle == handle && proxy.body.one_way)
+    }
+
+    // 26.44: 支撑体在角色脚下一点的速度（线速度加角速度叉半径），供移动或旋转的平台携带角色。
+    fn support_point_velocity(&self, support: u32, point: Vec2) -> [f64; 2] {
+        let Some(record) = self.bodies.iter().find(|record| record.handle == support) else {
+            return [0.0, 0.0];
+        };
+        let velocity = Vec2::new(finite_or(record.values[4], 0.0), finite_or(record.values[5], 0.0));
+        let angular = finite_or(record.values[15], 0.0);
+        let radius = point.sub(Vec2::new(finite_or(record.values[2], 0.0), finite_or(record.values[3], 0.0)));
+        [velocity.x - angular * radius.y, velocity.y + angular * radius.x]
+    }
+
+    // 26.44: 开始让角色向下穿过单向平台，持续 seconds 秒（之后只要仍与单向平台重叠就继续）。
+    pub fn set_one_way_pass_through(&mut self, handle: u32, seconds: f64) -> Result<(), &'static str> {
+        if !self.body_index.contains_key(&handle) {
+            return Err("character body handle does not exist");
+        }
+        let seconds = finite_or(seconds, 0.0).clamp(0.0, 10.0);
+        if seconds > 0.0 {
+            self.one_way_pass.insert(handle, seconds);
+        } else {
+            self.one_way_pass.remove(&handle);
+        }
+        Ok(())
+    }
+
+    // 26.44: 下穿是否仍在进行：计时未结束，或角色仍与某个单向平台重叠。
+    fn one_way_pass_active(&mut self, handle: u32, center: Vec2, size: [f64; 2], angle: f64, mask: u32) -> bool {
+        let Some(remaining) = self.one_way_pass.get(&handle).copied() else {
+            return false;
+        };
+        if remaining > 0.0 {
+            return true;
+        }
+        let query = query_shape(box_shape(size[0] * 0.5, size[1] * 0.5), center, normalize_angle(angle));
+        let bounds = query.compound_aabb();
+        let overlapping = self.query_proxies().iter().any(|proxy| {
+            proxy.handle != handle
+                && proxy.body.one_way
+                && query_enabled(mask, &proxy.body)
+                && proxy.bounds.overlaps(bounds)
+                && !collide(&query, &proxy.body).is_empty()
+        });
+        if !overlapping {
+            self.one_way_pass.remove(&handle);
+        }
+        overlapping
+    }
+
+    // 26.44: 把角色推出与之重叠的实体（最多四次，每次沿最深接触的法线），返回新位置。单向平台与传感器不参与。
+    fn recover_character(&self, handle: u32, center: Vec2, size: [f64; 2], angle: f64, mask: u32, margin: f64) -> Vec2 {
+        let shape = box_shape(positive(size[0].abs(), MIN_DIMENSION) * 0.5, positive(size[1].abs(), MIN_DIMENSION) * 0.5);
+        let proxies = self.query_proxies();
+        let mut position = center;
+        for _ in 0..4 {
+            let query = query_shape(shape.clone(), position, normalize_angle(angle));
+            let bounds = query.compound_aabb();
+            let mut deepest: Option<(f64, Vec2)> = None;
+            for proxy in proxies.iter() {
+                if proxy.handle == handle || proxy.body.is_sensor || proxy.body.one_way || !query_enabled(mask, &proxy.body) || !proxy.bounds.overlaps(bounds) {
+                    continue;
+                }
+                for manifold in collide(&query, &proxy.body) {
+                    if manifold.depth > margin && deepest.map_or(true, |(depth, _)| manifold.depth > depth) {
+                        // The manifold normal points from the character to the body.
+                        deepest = Some((manifold.depth, manifold.normal.neg()));
+                    }
+                }
+            }
+            let Some((depth, normal)) = deepest else {
+                break;
+            };
+            position = position.add(normal.normalized_or(Vec2::new(0.0, 1.0)).mul(depth + margin));
+        }
+        position
     }
 
     // 26.43: 抬起台阶高度、前移剩余水平位移、再向下落到可行走的台阶顶面；任何一步受阻或落点不可行走则放弃台阶。
@@ -692,8 +792,9 @@ impl PhysicsWorld {
         slope_cosine: f64,
         mask: u32,
         handle: u32,
+        pass_one_way: bool,
     ) -> Option<(Vec2, PhysicsQueryHit)> {
-        let ceiling_hit = self.shape_cast_excluding(
+        let ceiling_hit = self.shape_cast_filtered(
             [position.x, position.y],
             size,
             angle,
@@ -701,6 +802,7 @@ impl PhysicsWorld {
             step_height + margin,
             mask,
             Some(handle),
+            pass_one_way,
         );
         if ceiling_hit.is_some() {
             return None;
@@ -709,7 +811,7 @@ impl PhysicsWorld {
         let forward_length = untravelled.length();
         let forward_direction = untravelled.mul(1.0 / forward_length);
         if self
-            .shape_cast_excluding(
+            .shape_cast_filtered(
                 [raised.x, raised.y],
                 size,
                 angle,
@@ -717,13 +819,14 @@ impl PhysicsWorld {
                 forward_length + margin,
                 mask,
                 Some(handle),
+                pass_one_way,
             )
             .is_some()
         {
             return None;
         }
         let forward = raised.add(untravelled);
-        let floor = self.shape_cast_excluding(
+        let floor = self.shape_cast_filtered(
             [forward.x, forward.y],
             size,
             angle,
@@ -731,6 +834,7 @@ impl PhysicsWorld {
             step_height + margin * 2.0,
             mask,
             Some(handle),
+            pass_one_way,
         )?;
         let normal = Vec2::new(floor.normal[0], floor.normal[1]).normalized_or(Vec2::new(0.0, 1.0));
         if normal.y < slope_cosine {
@@ -1124,6 +1228,119 @@ mod query_tests {
         assert!(result.on_floor);
         assert!(result.floor_normal[1] >= 0.5_f64.cos());
     }
+
+    // 26.44 测试辅助：用默认坡度、无台阶与吸附移动 2×2 角色。
+    fn move_box(world: &mut PhysicsWorld, handle: u32, dx: f64, dy: f64) -> CharacterMoveResult {
+        world.move_character_box(handle, [2.0, 2.0], [dx, dy], std::f64::consts::FRAC_PI_4, 0.0, 0.0, 4, 1.0e-5, u32::MAX).unwrap()
+    }
+
+    // 26.44: cached query proxies follow transforms, steps, shape changes and removal.
+    #[test]
+    fn query_cache_follows_transforms_steps_and_shape_changes() {
+        let mut world = PhysicsWorld::new();
+        world.create_body(1, 0, &box_record(5.0, 0.0, 0)).unwrap();
+        assert_eq!(world.raycast([0.0, 0.0], [1.0, 0.0], 10.0, u32::MAX).map(|hit| hit.handle), Some(1));
+        world.set_transform(1, 5.0, 5.0, 0.0).unwrap();
+        assert!(world.raycast([0.0, 0.0], [1.0, 0.0], 10.0, u32::MAX).is_none());
+        let mut falling = box_record(0.0, 4.0, 0);
+        falling[9] = 0.0;
+        falling[17] = 1.0;
+        world.create_body(2, 1, &falling).unwrap();
+        assert!(world.raycast([0.0, 10.0], [0.0, -1.0], 20.0, u32::MAX).is_some());
+        for _ in 0..30 {
+            world.step(1.0 / 60.0, 9.80665, 0.0);
+        }
+        let y = world.state()[STRIDE + 3];
+        assert!(y < 3.0, "the box fell to {y}");
+        let hit = world.raycast([0.0, 10.0], [0.0, -1.0], 20.0, u32::MAX).unwrap();
+        assert!((hit.point[1] - (y + 1.0)).abs() < 1.0e-6, "hit {} for a box at {y}", hit.point[1]);
+        let mut wide = box_record(5.0, 5.0, 0);
+        wide[12] = 20.0;
+        world.upsert_body(1, 0, &wide).unwrap();
+        let hit = world.raycast([-8.0, 5.0], [1.0, 0.0], 10.0, u32::MAX).unwrap();
+        assert!((hit.point[0] + 5.0).abs() < 1.0e-6);
+        world.destroy_body(1);
+        assert!(world.raycast([-8.0, 5.0], [1.0, 0.0], 20.0, u32::MAX).is_none());
+    }
+
+    // 26.44: a platform moved into a standing character pushes it out before it moves. The push is
+    // a correction (not velocity) and the support body is reported.
+    #[test]
+    fn character_recovers_from_overlap_and_reports_its_support() {
+        let mut world = PhysicsWorld::new();
+        world.create_body(1, 0, &box_record(0.0, 1.0, 0)).unwrap();
+        let mut platform = box_record(0.0, -1.0, 0);
+        platform[9] = 0.0;
+        platform[24] = 1.0;
+        world.create_body(2, 1, &platform).unwrap();
+        let standing = move_box(&mut world, 1, 0.0, -0.1);
+        assert!(standing.on_floor);
+        assert_eq!(standing.floor_handle, 2);
+        world.set_transform(2, 0.0, -0.7, 0.0).unwrap();
+        let moved = move_box(&mut world, 1, 0.0, -0.01);
+        assert!(moved.on_floor);
+        assert!((moved.position[1] - 1.3).abs() < 0.01, "y = {}", moved.position[1]);
+        assert!(moved.recovery_motion[1] > 0.29);
+        assert!(moved.velocity_motion[1].abs() < 0.02);
+        // Overlapping, the character can still walk out sideways instead of being stuck.
+        world.set_transform(2, 0.0, -0.5, 0.0).unwrap();
+        let walked = move_box(&mut world, 1, 0.5, 0.0);
+        assert!((walked.position[0] - 0.5).abs() < 1.0e-6);
+    }
+
+    // 26.44: on a rotating platform the carried velocity is the platform's velocity under the feet.
+    #[test]
+    fn character_on_rotating_platform_gets_the_point_velocity() {
+        let mut world = PhysicsWorld::new();
+        world.create_body(1, 0, &box_record(3.0, 1.5, 0)).unwrap();
+        let mut platform = box_record(0.0, -1.0, 0);
+        platform[9] = 0.0;
+        platform[24] = 1.0;
+        platform[12] = 8.0;
+        platform[4] = 0.5;
+        platform[15] = 1.0;
+        world.create_body(2, 1, &platform).unwrap();
+        let landed = move_box(&mut world, 1, 0.0, -1.0);
+        assert!(landed.on_floor);
+        // Feet at (3, 0), platform centre (0, -1): v + w x r = (0.5 - 1, 0 + 3).
+        assert!((landed.platform_velocity[0] + 0.5).abs() < 1.0e-3, "{:?}", landed.platform_velocity);
+        assert!((landed.platform_velocity[1] - 3.0).abs() < 1.0e-3, "{:?}", landed.platform_velocity);
+    }
+
+    // 26.44: a character drops through a one-way platform on request, lands on the ground below,
+    // and the platform blocks it again from above once it has passed.
+    #[test]
+    fn character_drops_through_one_way_platform() {
+        let mut world = PhysicsWorld::new();
+        world.create_body(1, 0, &box_record(0.0, 1.0, 0)).unwrap();
+        let mut one_way = box_record(0.0, -0.5, 0);
+        one_way[12] = 6.0;
+        one_way[13] = 1.0;
+        one_way[51] = 1.0;
+        one_way[53] = 1.0;
+        world.create_body(2, 1, &one_way).unwrap();
+        let mut ground = box_record(0.0, -6.0, 0);
+        ground[12] = 20.0;
+        world.create_body(3, 2, &ground).unwrap();
+        let standing = move_box(&mut world, 1, 0.0, -0.2);
+        assert!(standing.on_floor);
+        assert_eq!(standing.floor_handle, 2);
+        assert!(standing.floor_one_way);
+        // Without the request the platform holds.
+        assert_eq!(move_box(&mut world, 1, 0.0, -0.2).floor_handle, 2);
+        world.set_one_way_pass_through(1, 0.2).unwrap();
+        let mut last = standing;
+        for _ in 0..20 {
+            last = move_box(&mut world, 1, 0.0, -0.4);
+            world.step(1.0 / 60.0, 9.80665, 0.0);
+        }
+        assert!(last.on_floor);
+        assert_eq!(last.floor_handle, 3);
+        assert!((last.position[1] + 4.0).abs() < 0.01, "y = {}", last.position[1]);
+        // Back on top of the platform (teleport), it holds again: the pass ended.
+        world.set_transform(1, 0.0, 1.0, 0.0).unwrap();
+        assert_eq!(move_box(&mut world, 1, 0.0, -0.2).floor_handle, 2);
+    }
 }
 
 // 连续计算移动矩形与目标形状的首次接触，避免离散采样穿透。
@@ -1134,6 +1351,7 @@ fn cast_box_against_body(
     direction: Vec2,
     distance: f64,
     body: &Body,
+    allow_exit: bool,
 ) -> Option<PhysicsQueryHit> {
     let direction = direction.normalized_or(Vec2::new(1.0, 0.0));
     let shape = box_shape(
@@ -1172,6 +1390,11 @@ fn cast_box_against_body(
     };
     if let Some(manifold) = collides_at(0.0) {
         let surface_normal = manifold.normal.neg();
+        // 26.44 (character moves): already overlapping, moving out of the body (or along it) is not
+        // blocked; only moving further in is. Before, an overlapping character could not move.
+        if allow_exit && direction.dot(surface_normal) >= 0.0 {
+            return None;
+        }
         let hit = PhysicsQueryHit {
             handle: 0,
             point: [manifold.point.x, manifold.point.y],

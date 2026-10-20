@@ -24,7 +24,7 @@ import type { RuntimeSaveOwner, SaveValue } from './runtimeSaveOwner'
 
 import { analyzeScript } from './scriptAnalysis'
 import { analyzeScript26, statementAtLine } from './scriptAnalysisAnnotations'
-import { ScriptDebugOwner, debugSourceRevision, evaluateDebugExpression, type DebugStepMode, type ScriptTestResult } from './scriptDebugOwner'
+import { ScriptDebugOwner, debugSourceRevision, evaluateDebugExpression, type DebugFrame, type DebugStepMode, type ScriptTestResult } from './scriptDebugOwner'
 import { scriptProjectSettings } from './scriptSettings'
 import { WorldGameplayOwner } from './worldGameplayOwner'
 import { GraphDebugOwner, type GraphTraceCommand } from './graphDebugOwner'
@@ -42,13 +42,15 @@ import { recordScriptCoverage, resetScriptCoverage } from './scriptCoverage'
 import { planGraphHotReload } from '../visual/graphRuntimeHotReload'
 import type { PendingEntityResolution, RuntimeEntityHandle, RuntimeEntitySnapshot, TargetMutation } from './dynamicObjectsOwner'
 import { GameFlowOwner } from './gameFlowOwner'
-import type { GameplayComponentsOwner } from './gameplayComponentsOwner'
+import type { GameplayComponentsOwner, GameplayWorldOptions } from './gameplayComponentsOwner'
 import { activeGameCamera, gameScreenToWorld, visibleWorldBounds } from '../renderer/sceneRenderer'
 import { parseScriptContract, validateScriptContract, type ScriptContractReport } from './scriptContracts'
 import { eventCallbackFamily, type ObjectEventKind } from './eventSheetReader'
-import { resolveProjectScriptBundle } from './scriptModules'
+import { resolveProjectScriptBundle, scriptBundleLines, type ScriptBundleLines } from './scriptModules'
 import { createGlobalScriptHosts, removeGlobalScriptHosts, type GlobalScriptHost } from './globalScripts'
 import { RuntimeVideoOwner } from './videoOwner'
+import { TweenOwner } from './tweens'
+import { PhysicsRecorder, type PhysicsRecorderStatus } from './physicsRecorder'
 
 type LifecycleFunction = 'awake' | 'start' | 'fixed_update' | 'update' | 'late_update' | 'on_destroy' | 'on_timer' | 'on_task' | 'on_signal'
 
@@ -105,6 +107,10 @@ type ScriptCommand =
   | { type: 'animatorSetInteger'; name: string; value: number }
   | { type: 'animatorTrigger'; name: string }
   | { type: 'animatorPlay'; state: string }
+  | { type: 'animatorCrossfade'; state: string; seconds: number }
+  | { type: 'characterDropThrough'; seconds: number }
+  | { type: 'tween'; target: string; generation: number; property: string; to: number; seconds: number; easing: string; delay: number; loops: number; yoyo: boolean; relative: boolean; signal: string }
+  | { type: 'tweenStop'; target: string; generation: number; property: string }
   | { type: 'audioPlay' }
   | { type: 'audioPause' }
   | { type: 'audioStop' }
@@ -172,7 +178,10 @@ interface PendingScriptCall { source: string; target: ScriptCallTarget; function
 /** Calls run per command flush before the rest wait for the next flush (guards call loops). */
 const MAX_SCRIPT_CALLS_PER_FLUSH = 512
 const MAX_PENDING_SCRIPT_CALLS = 10_000
-interface PendingDebugInvocation { entityUuid: string; scriptUuid: string; functionName: string; contact?: ScriptContact; event?: ScriptEvent; logicAsset?: string | null; callbackKind?: string }
+interface PendingDebugInvocation { entityUuid: string; scriptUuid: string; functionName: string; contact?: ScriptContact; event?: ScriptEvent; logicAsset?: string | null; callbackKind?: string; resume?: { afterEvent: number; depth: number } }
+/** 26.44: a debug run's stop, as returned by the Rust script runtime (lines of the compiled bundle). */
+interface ScriptDebugPauseRecord { event: number; line: number; column: number; depth: number; locals: Array<{ name: string; value: unknown; constant: boolean }>; stack: Array<{ function: string; line: number }> }
+type ScriptDebugResume = { afterEvent: number; depth: number; mode: DebugStepMode }
 interface PendingGraphExecution {
   entityUuid: string
   scriptUuid: string
@@ -429,6 +438,10 @@ export class GameplayRuntime {
   readonly inputQueueDiagnostics = { capacity: INPUT_EDGE_CAPACITY * 128, overflows: 0, dropped: 0 }
   private pendingDestroy = new Map<number, number>()
   private pendingPrefabs: Array<{ sourceUuid: string; sourceGeneration: number; allowRetiredSource: boolean; reference: string; position: { x: number; y: number } }> = []
+  // 26.44: tweens started by scripts and blocks (run on the fixed step after the animators).
+  private readonly tweens = new TweenOwner()
+  // 26.44: ring buffer of body states per fixed step for scrubbing and continuing while paused.
+  private readonly physicsRecorder = new PhysicsRecorder()
   private pendingDynamicCommands: Array<{ sourceUuid: string; sourceGeneration: number; allowRetiredSource: boolean; command: Exclude<ScriptCommand, GraphTraceCommand> }> = []
   private callbackWorld: Entity[] | null = null
   private authoredEntities = new Map<string, { origin: 'scene' | 'runtime-spawned'; data: Record<string, unknown> }>()
@@ -624,6 +637,7 @@ export class GameplayRuntime {
     for (const key of Object.keys(this.scriptContextDiagnostics) as (keyof typeof this.scriptContextDiagnostics)[]) this.scriptContextDiagnostics[key] = 0
     this.authoredEntities.clear(); this.compiledExports.clear()
     for (const entity of this.worldHost.state.world.entities) this.captureAuthoredEntity(entity, 'scene')
+    this.physicsRecorder.reset()
     this.active = true
     const sessionGeneration = ++this.sessionGeneration
     this.animationTimeline.markMembershipDirty()
@@ -673,6 +687,11 @@ export class GameplayRuntime {
       try { payload = event.payload ? JSON.parse(event.payload) : null } catch { /* Plain text payload. */ }
       this.emitSignal(event.signal, payload, entity.uuid, `animation:${entity.uuid}`)
     }
+    // 26.44: Animator state changes as signals (scripts: on_signal("animator.state_entered", ...)).
+    this.animationTimeline.animation.onStateChange = (entity, layer, previous, next) => {
+      if (previous) this.emitSignal('animator.state_exited', { state: previous.name, id: previous.id, layer, next: next.name }, entity.uuid, `animation:${entity.uuid}`)
+      this.emitSignal('animator.state_entered', { state: next.name, id: next.id, layer, previous: previous?.name ?? '' }, entity.uuid, `animation:${entity.uuid}`)
+    }
     this.animationTimeline.animation.onCommand = /** 结构说明（自动提取）：匿名回调；输入 entity、track、command；直接调用 this.worldHost.state.world.entities.find、JSON.parse、runEntityFunction、command.value.slice、target.getComponent 等；写入 payload、audio.audioClip、animator.currentState、player.timelineAsset 等。 */ (entity, track, command) => {
       const target = track.targetEntityUuid ? this.worldHost.state.world.entities.find(/* 比较 candidate.uuid 与 track.targetEntityUuid，返回严格相等的判断结果。 */ candidate => candidate.uuid === track.targetEntityUuid) ?? entity : entity
       let payload: unknown = command.payload
@@ -720,6 +739,8 @@ export class GameplayRuntime {
   }
 
   private runFrame(frameDelta: number, viewport?: DOMRect): void {
+    // 26.44: a scrubbed physics view is only shown while paused; running restores the live poses.
+    if (this.physicsRecorder.scrubbing && this.worldHost.state.playMode === 'playing') this.physicsRecorder.endScrub(this.worldHost.state.world.entities)
     void this.gameFlow
     void this.worldGameplay
     void this.animationTimeline
@@ -804,17 +825,19 @@ export class GameplayRuntime {
         this.gameplayComponents.updateGameplayComponents(this.worldHost.state.world.entities, this.inputSnapshot, fixedDelta, /* 调用 this.emitSignal(name, payload, target, source) 并返回调用结果。 */ (name, payload, target, source) => this.emitSignal(name, payload, target, source), /** 结构说明（自动提取）：updateGameplayComponents 回调；输入 prefab、owner；直接调用 worldTransform、spawnRuntimePrefab。 */ (prefab, owner) => {
           const transform = worldTransform(owner, this.worldHost.state.world.entities)
           return this.worldGameplay.dynamicObjectsOwner.spawnRuntimePrefab(prefab, { position: transform.position, rotation: transform.rotation, scale: { x: 1, y: 1 } })
-        }, /* 调用 this.queueEntityRemoval(target, despawn) 并返回调用结果。 */ (target, despawn) => this.queueEntityRemoval(target, despawn))
+        }, /* 调用 this.queueEntityRemoval(target, despawn) 并返回调用结果。 */ (target, despawn) => this.queueEntityRemoval(target, despawn), this.gameplayWorldOptions())
         this.worldGameplay.beforeWorldPhysicsStep(fixedDelta, this.time.value.elapsed, this.time.value.frame, /* 调用 this.emitSignal(name, payload, target, source) 并返回调用结果。 */ (name, payload, target, source) => this.emitSignal(name, payload, target, source), /** 将 { type: 'load', identifier: scene } 赋给 this.pendingScene，不显式返回值。 */ scene => { this.pendingScene = { type: 'load', identifier: scene } })
         this.mediaClock.advance(fixedDelta)
         this.worldGameplay.tileMapOwner.setTileAnimationTime(this.mediaClock.seconds); this.presentation.setRuntimeCaptionTime(this.mediaClock.seconds)
         this.audio.setTransportTime({seconds:this.mediaClock.seconds,playing:true,scale:this.time.value.scale})
         this.animationTimeline.animation.update(this.worldHost.state.world.entities, fixedDelta)
+        this.updateTweens(fixedDelta)
         this.animationTimeline.timeline.update(this.worldHost.state.world.entities, fixedDelta)
         fixedScriptsMs += performance.now() - fixedScriptsStarted
       },
       /** 结构说明（自动提取）：this.worldHost.state.world.update 回调；无显式参数；直接调用 this.worldHost.state.world.stateChecksum、completeReplayFixedStep、updateProductionRuntime。 */ (_fixedDelta, stepEvents) => {
         const checksum = this.worldHost.state.world.stateChecksum(); this.replay.completeReplayFixedStep(checksum); this.productionNetwork.updateProductionRuntime(this.worldHost.state.world.entities, this.time.value.fixedDelta, this.inputSnapshot, checksum)
+        if (this.physicsRecorder.enabled) this.physicsRecorder.record(this.fixedStepSequence, this.fixedStepSequence * this.time.value.fixedDelta, this.worldHost.state.world.entities)
         // 26.43 (eventDispatch 'step'): collision and trigger callbacks run after the step that produced
         // them, before the next step's fixed_update, so a callback's commands apply to the next tick.
         if (stepEvents) {
@@ -866,6 +889,8 @@ export class GameplayRuntime {
     const observedOwner = this.beginInputObservationFrame()
     if (this.hostSuspended) return
     if (!this.active) this.beginSession()
+    // 26.44: stepping from a scrubbed physics view steps from the live state.
+    if (this.physicsRecorder.scrubbing) this.physicsRecorder.endScrub(this.worldHost.state.world.entities)
     this.flushHotReloads()
     synchronizePerformanceWorld(this.worldHost.state.world.entities)
     this.dispatchSignals()
@@ -894,9 +919,11 @@ export class GameplayRuntime {
     this.gameplayComponents.updateGameplayComponents(this.worldHost.state.world.entities, this.inputSnapshot, this.time.value.fixedDelta, /* 调用 this.emitSignal(name, payload, target, source) 并返回调用结果。 */ (name, payload, target, source) => this.emitSignal(name, payload, target, source), /** 结构说明（自动提取）：updateGameplayComponents 回调；输入 prefab、owner；直接调用 worldTransform、spawnRuntimePrefab。 */ (prefab, owner) => {
       const transform = worldTransform(owner, this.worldHost.state.world.entities)
       return this.worldGameplay.dynamicObjectsOwner.spawnRuntimePrefab(prefab, { position: transform.position, rotation: transform.rotation, scale: { x: 1, y: 1 } })
-    }, /* 调用 this.queueEntityRemoval(target, despawn) 并返回调用结果。 */ (target, despawn) => this.queueEntityRemoval(target, despawn))
+    }, /* 调用 this.queueEntityRemoval(target, despawn) 并返回调用结果。 */ (target, despawn) => this.queueEntityRemoval(target, despawn), this.gameplayWorldOptions())
     this.worldGameplay.beforeWorldPhysicsStep(this.time.value.fixedDelta, this.time.value.elapsed, this.time.value.frame, /* 调用 this.emitSignal(name, payload, target, source) 并返回调用结果。 */ (name, payload, target, source) => this.emitSignal(name, payload, target, source), /** 将 { type: 'load', identifier: scene } 赋给 this.pendingScene，不显式返回值。 */ scene => { this.pendingScene = { type: 'load', identifier: scene } })
     Object.assign(this.worldHost.state.engineDiagnostics, this.worldHost.state.world.singleStep(this.worldHost.state.globalSettings))
+    this.fixedStepSequence += 1
+    if (this.physicsRecorder.enabled) this.physicsRecorder.record(this.fixedStepSequence, this.fixedStepSequence * this.time.value.fixedDelta, this.worldHost.state.world.entities)
     const checksum = this.worldHost.state.world.stateChecksum()
     this.replay.completeReplayFixedStep(checksum)
     this.productionNetwork.updateProductionRuntime(this.worldHost.state.world.entities, this.time.value.fixedDelta, this.inputSnapshot, checksum)
@@ -907,6 +934,7 @@ export class GameplayRuntime {
     this.worldGameplay.tileMapOwner.setTileAnimationTime(this.mediaClock.seconds); this.presentation.setRuntimeCaptionTime(this.mediaClock.seconds)
     this.audio.setTransportTime({seconds:this.mediaClock.seconds,playing:false,scale:this.time.value.scale})
     this.animationTimeline.animation.update(this.worldHost.state.world.entities, this.time.value.fixedDelta)
+    this.updateTweens(this.time.value.fixedDelta)
     this.animationTimeline.timeline.update(this.worldHost.state.world.entities, this.time.value.fixedDelta)
     this.particles.update(this.time.value.fixedDelta, true)
     this.worldHost.plugins.update(this.time.value.fixedDelta)
@@ -943,6 +971,9 @@ export class GameplayRuntime {
     this.animationTimeline.markMembershipDirty()
     this.animationTimeline.animation.reset()
     this.animationTimeline.animation.onEvent = null
+    this.animationTimeline.animation.onStateChange = null
+    this.tweens.reset()
+    this.physicsRecorder.reset()
     this.animationTimeline.animation.onCommand = null
     this.animationTimeline.timeline.reset()
     this.animationTimeline.timeline.onEvent = null
@@ -1145,6 +1176,21 @@ export class GameplayRuntime {
     return bound
   }
 
+  /** 26.44: physics recording for the debugger (see PhysicsRecorder). */
+  setPhysicsRecording(enabled: boolean): void { this.physicsRecorder.enabled = enabled; if (!enabled) { if (this.physicsRecorder.scrubbing) this.physicsRecorder.endScrub(this.worldHost.state.world.entities); this.physicsRecorder.reset() } }
+  physicsRecordingStatus(): PhysicsRecorderStatus { return this.physicsRecorder.status() }
+  physicsRecordingFrame(index: number): { step: number; time: number; count: number } | null { return this.physicsRecorder.frameInfo(index) }
+  /** Shows the bodies at a recorded frame; only while paused. */
+  scrubPhysics(index: number): boolean { return this.worldHost.state.playMode === 'paused' && this.physicsRecorder.scrubTo(index, this.worldHost.state.world.entities) }
+  endPhysicsScrub(): void { this.physicsRecorder.endScrub(this.worldHost.state.world.entities) }
+  /** Rewinds the bodies to the scrubbed frame (poses and velocities) and keeps the game paused there. */
+  continuePhysicsFromScrub(): number {
+    const world = this.worldHost.state.world
+    const rewound = this.physicsRecorder.continueFromScrub({ entities: world.entities, teleport: (entity, position, angle) => world.teleport(entity, position, angle) })
+    if (rewound) { this.invalidateScriptWorld(); this.worldHost.log(`Physics rewound ${rewound} bodies to the recorded step`, 'Runtime', 'info') }
+    return rewound
+  }
+
   /** 结构说明（自动提取）：debugContinue；无显式参数；直接调用 clearScriptDebugger、requestDebugStep、requestGraphStep、this.worldHost.state.world.entities.find、processScriptCommands 等；写入 pendingGraphExecution、this.worldHost.state.playMode、pendingDebugInvocation。 */ debugContinue(): void {
     if (this.pendingGraphExecution) {
       const pending = this.pendingGraphExecution
@@ -1163,9 +1209,10 @@ export class GameplayRuntime {
     this.scriptDebugger.requestDebugStep('continue')
     if (pending) {
       const entity = this.worldHost.state.world.entities.find(/* 比较 candidate.uuid 与 pending.entityUuid，返回严格相等的判断结果。 */ candidate => candidate.uuid === pending.entityUuid)
-      if (entity) { this.invalidateScriptWorld(); this.runEntityFunction(entity, pending.functionName, pending.contact, pending.event, true, pending.logicAsset, false, pending.callbackKind) }
+      // 26.44: a line stop re-runs the callback and continues after the stop (it may stop again).
+      if (entity) { this.invalidateScriptWorld(); this.runEntityFunction(entity, pending.functionName, pending.contact, pending.event, true, pending.logicAsset, false, pending.callbackKind, pending.resume ? { ...pending.resume, mode: 'continue' } : undefined) }
     }
-    if (this.worldHost.state.playMode === 'paused') this.worldHost.state.playMode = 'playing'
+    if (this.worldHost.state.playMode === 'paused' && !this.pendingDebugInvocation) this.worldHost.state.playMode = 'playing'
   }
 
   /** 结构说明（自动提取）：debugStep；输入 mode；直接调用 clearScriptDebugger、requestDebugStep、requestGraphStep、this.worldHost.state.world.entities.find、processScriptCommands 等；写入 pendingGraphExecution、this.worldHost.state.playMode、this.graphDebug.state.paused、this.graphDebug.state.reason 等。 */ debugStep(mode: Exclude<DebugStepMode, 'continue'> = 'over'): void {
@@ -1192,7 +1239,9 @@ export class GameplayRuntime {
     this.scriptDebugger.requestDebugStep(mode)
     if (pending) {
       const entity = this.worldHost.state.world.entities.find(/* 比较 candidate.uuid 与 pending.entityUuid，返回严格相等的判断结果。 */ candidate => candidate.uuid === pending.entityUuid)
-      if (entity) { this.invalidateScriptWorld(); this.runEntityFunction(entity, pending.functionName, pending.contact, pending.event, true, pending.logicAsset, false, pending.callbackKind) }
+      if (entity) { this.invalidateScriptWorld(); this.runEntityFunction(entity, pending.functionName, pending.contact, pending.event, true, pending.logicAsset, false, pending.callbackKind, pending.resume ? { ...pending.resume, mode } : undefined) }
+      // 26.44: the step stopped at the next line of the same callback.
+      if (this.pendingDebugInvocation) return
     }
     this.worldHost.state.playMode = 'paused'
     this.scriptDebugger.state.paused = true
@@ -1451,7 +1500,7 @@ export class GameplayRuntime {
     }
   }
 
-  /** 结构说明（自动提取）：runEntityFunction；输入 entity、functionName、contact、event、bypassBreakpoint、logicAsset、duringDestruction、callbackKind；直接调用 canRun、isRemovalPending、destroying.has、resolveAsset、compiledSources.get 等；写入 source、declared、contractValidation、breakpoint.hitCount 等；包含循环处理。 */ private runEntityFunction(entity: Entity, functionName: LifecycleFunction | string, contact?: ScriptContact, event?: ScriptEvent, bypassBreakpoint = false, logicAsset?: string | null, duringDestruction = false, callbackKind?: string): void {
+  /** 结构说明（自动提取）：runEntityFunction；输入 entity、functionName、contact、event、bypassBreakpoint、logicAsset、duringDestruction、callbackKind；直接调用 canRun、isRemovalPending、destroying.has、resolveAsset、compiledSources.get 等；写入 source、declared、contractValidation、breakpoint.hitCount 等；包含循环处理。 */ private runEntityFunction(entity: Entity, functionName: LifecycleFunction | string, contact?: ScriptContact, event?: ScriptEvent, bypassBreakpoint = false, logicAsset?: string | null, duringDestruction = false, callbackKind?: string, debugResume?: ScriptDebugResume): void {
     const component = entity.script2D
     if (!this.canRun(entity) || !component) return
     if (!duringDestruction && functionName !== 'on_destroy' && (this.isRemovalPending(entity) || this.destroying.has(entity.uuid))) return
@@ -1522,13 +1571,36 @@ export class GameplayRuntime {
         return character ? {
           onFloor: character.onFloor, onWall: character.onWall, onCeiling: character.onCeiling,
           canCoyoteJump: this.worldGameplay.canUseCoyoteTime(entity), floorNormal: [character.floorNormal.x, character.floorNormal.y],
-          wallNormal: [character.wallNormal.x, character.wallNormal.y], platformVelocity: [character.platformVelocity.x, character.platformVelocity.y]
+          wallNormal: [character.wallNormal.x, character.wallNormal.y], platformVelocity: [character.platformVelocity.x, character.platformVelocity.y],
+          floorOneWay: character.floorOneWay
         } : null
       })(),
+      animator: this.animationTimeline.animation.animatorSnapshot(entity),
       gameFlow: this.gameFlow.gameFlowSnapshot(),
       networking: this.productionNetwork.productionNetworkContext()
     }
-    if (hasCallback && !bypassBreakpoint && scriptProjectSettings.debuggerEnabled && this.scriptDebugger.state.enabled && !this.scriptDebugger.state.paused) {
+    // 26.44: Rhai scripts stop at lines (VM stack and locals) by re-running the callback up to the stop.
+    const vmDebug = asset.assetType === 'script' && typeof (this.scriptRuntime as unknown as { execute_instance_debug_json?: unknown }).execute_instance_debug_json === 'function'
+    let debugProbe: { breakLines: number[]; afterEvent: number; mode: DebugStepMode; depth: number } | null = null
+    let debugPlan: { lines: ScriptBundleLines; details: ScriptBreakpoint[]; breakLine: (point: ScriptBreakpoint) => number; document: string } | null = null
+    if (vmDebug && hasCallback && scriptProjectSettings.debuggerEnabled && this.scriptDebugger.state.enabled && (debugResume || !bypassBreakpoint && !this.scriptDebugger.state.paused)) {
+      const debugSource = this.compiledDocuments.get(asset.uuid) ?? this.scriptServices.readSource(asset.uuid) ?? source
+      const legacy = (asset.script?.breakpoints ?? []).map((line, index): ScriptBreakpoint => ({ id: `line-${line}-${index}`, line, functionName: '', condition: '', hitCondition: 0, logMessage: '', enabled: true, hitCount: 0 }))
+      const details = (asset.script?.breakpointDetails?.length ? asset.script.breakpointDetails : legacy).filter(point => point.enabled)
+      if (details.length || debugResume) {
+        const { language, rich } = this.debugAnalysis(debugSource)
+        // A function breakpoint stops at the first statement of that function; a line breakpoint at its line.
+        const breakLine = (point: ScriptBreakpoint): number => {
+          const fn = point.functionName ? language.functions[point.functionName] : undefined
+          if (!fn) return point.line
+          for (let line = fn.line; line <= fn.endLine; line++) if (statementAtLine(rich, line, point.functionName)) return line
+          return fn.line
+        }
+        const lines = scriptBundleLines(source, asset.path)
+        debugPlan = { lines, details, breakLine, document: debugSource }
+        debugProbe = { breakLines: [...new Set(details.map(point => lines.toCompiled(breakLine(point))))], afterEvent: debugResume?.afterEvent ?? 0, mode: debugResume?.mode ?? 'continue', depth: debugResume?.depth ?? 0 }
+      }
+    } else if (hasCallback && !bypassBreakpoint && scriptProjectSettings.debuggerEnabled && this.scriptDebugger.state.enabled && !this.scriptDebugger.state.paused) {
       // 断点属于作者文档；模块打包可能插入前缀，不能使用生成源码的行号。
       const debugSource = this.compiledDocuments.get(asset.uuid) ?? this.scriptServices.readSource(asset.uuid) ?? source
       const { language, rich } = this.debugAnalysis(debugSource), fn = language.functions[functionName]
@@ -1559,7 +1631,51 @@ export class GameplayRuntime {
     try {
       this.ensureCompiled(asset.uuid, source)
       const revision = this.ensureScriptWorld(executionWorld), callbackJson = JSON.stringify(context), callbackStarted = performance.now()
-      const execution = parseScriptExecution(this.scriptRuntime.execute_instance_context_json(asset.uuid, hasCallback ? functionName : '', this.playSessionIdentity, revision, instanceGeneration, callbackJson), declared.contract.contract.budgets)
+      let execution: ScriptExecution
+      if (debugProbe && debugPlan) {
+        const debugRuntime = this.scriptRuntime as unknown as { execute_instance_debug_json(id: string, fn: string, epoch: number, revision: number, generation: number, context: string, probe: string): string }
+        let probe = debugProbe, completed: ScriptExecution | null = null
+        for (let attempt = 0; attempt < 1_000; attempt++) {
+          const raw = debugRuntime.execute_instance_debug_json(asset.uuid, functionName, this.playSessionIdentity, revision, instanceGeneration, callbackJson, JSON.stringify(probe))
+          const pause = (JSON.parse(raw) as { pause?: ScriptDebugPauseRecord }).pause
+          if (!pause) { completed = parseScriptExecution(raw, declared.contract.contract.budgets); break }
+          const at = debugPlan.lines.locate(pause.line)
+          const locals: Record<string, unknown> = Object.fromEntries(pause.locals.map(local => [local.name, local.value]))
+          // A breakpoint's condition, hit count and log message decide whether this stop is kept.
+          const point = at.root ? debugPlan.details.find(candidate => debugPlan!.breakLine(candidate) === at.line) : undefined
+          if (point && probe.mode !== 'into') {
+            const index = debugPlan.details.indexOf(point)
+            const allDetails = asset.script?.breakpointDetails?.length ? asset.script.breakpointDetails : null
+            const hitCount = this.recordScriptDebugHit(asset.uuid, debugPlan.document, allDetails ? allDetails.indexOf(point) : index, point, !!allDetails)
+            let stop = hitCount !== null
+            const scope = { ...context, ...locals }
+            try { if (stop && point.condition.trim()) stop = Boolean(evaluateDebugExpression(point.condition, scope)) } catch (error) {
+              this.worldHost.log(`Breakpoint condition error at ${asset.path}:${point.line}: ${this.errorMessage(error)}`, 'Script', 'error', asset.uuid); stop = false
+            }
+            if (stop && hitCount !== null && point.hitCondition > 0 && hitCount < point.hitCondition) stop = false
+            if (stop && point.logMessage.trim()) { this.worldHost.log(this.formatLogpoint(point.logMessage, scope), 'Script', 'debug', asset.uuid); stop = false }
+            const stepStop = probe.mode === 'over' ? pause.depth <= probe.depth : probe.mode === 'out' ? pause.depth < probe.depth : false
+            if (!stop && !stepStop) { probe = { ...probe, afterEvent: pause.event }; continue }
+          }
+          this.pendingDebugInvocation = { entityUuid: entity.uuid, scriptUuid: asset.uuid, functionName, contact, event, logicAsset, callbackKind, resume: { afterEvent: pause.event, depth: pause.depth } }
+          this.worldHost.state.playMode = 'paused'
+          const frames: DebugFrame[] = []
+          let line = pause.line
+          const stack = pause.stack.length ? pause.stack : [{ function: functionName, line: 0 }]
+          for (let index = stack.length - 1; index >= 0; index--) {
+            const where = debugPlan.lines.locate(line)
+            const module = where.root ? null : this.scriptServices.resolveModuleAsset(where.path)
+            frames.push({ entityUuid: entity.uuid, entityName: entity.name, scriptUuid: module?.uuid ?? asset.uuid, sourcePath: where.path, sourceRevision: debugSourceRevision(where.root ? debugPlan.document : this.scriptServices.readSource(module?.uuid ?? '') ?? ''), functionName: stack[index].function, line: where.line, depth: index })
+            line = stack[index].line
+          }
+          const reason = probe.mode === 'continue' ? `Breakpoint at ${frames[0].sourcePath}:${frames[0].line}` : `Step ${probe.mode} stopped at ${frames[0].sourcePath}:${frames[0].line}`
+          this.scriptDebugger.pauseScriptDebugger(frames[0], locals, `${reason} · the callback re-runs to this line; nothing of the stopped run was applied`, frames)
+          this.worldHost.log(`Paused at ${frames[0].sourcePath}:${frames[0].line}`, 'Script', 'debug', asset.uuid)
+          return
+        }
+        if (!completed) throw new Error('Script debugger: too many breakpoint hits in one callback (1000).')
+        execution = completed
+      } else execution = parseScriptExecution(this.scriptRuntime.execute_instance_context_json(asset.uuid, hasCallback ? functionName : '', this.playSessionIdentity, revision, instanceGeneration, callbackJson), declared.contract.contract.budgets)
       this.scriptContextDiagnostics.callbackBytes += new TextEncoder().encode(callbackJson).byteLength
       this.scriptContextDiagnostics.callbackMs += performance.now() - callbackStarted
       this.initializedScriptInstances.add(instanceKey)
@@ -1634,6 +1750,16 @@ export class GameplayRuntime {
       const animator = entity.getComponent<Animator>('Animator'); if (animator) this.animationTimeline.animation.setAnimatorParameter(animator, command.name, Math.round(finite(command.value)))
     } else if (command.type === 'animatorTrigger') {
       const animator = entity.getComponent<Animator>('Animator'); if (animator) this.animationTimeline.animation.setAnimatorParameter(animator, command.name, true)
+    } else if (command.type === 'animatorCrossfade') {
+      this.animationTimeline.animation.crossfade(entity, command.state, finite(command.seconds))
+    } else if (command.type === 'characterDropThrough') {
+      this.worldHost.state.world.dropThroughOneWay(entity, finite(command.seconds))
+    } else if ((command.type === 'tween' || command.type === 'tweenStop') && command.target) {
+      this.pendingDynamicCommands.push({ ...this.commandSource(entity), command })
+    } else if (command.type === 'tween') {
+      this.startTween(entity, command)
+    } else if (command.type === 'tweenStop') {
+      this.tweens.stop(entity, command.property)
     } else if (command.type === 'animatorPlay') {
       const animator = entity.getComponent<Animator>('Animator'); if (animator) animator.currentState = command.state.trim().slice(0, 80)
     } else if (command.type === 'audioPlay') this.audio.play(entity, this.worldHost.state.world.entities)
@@ -1736,6 +1862,8 @@ export class GameplayRuntime {
       else if (command.type === 'targetAddTag' || command.type === 'targetRemoveTag') mutation = { type: command.type === 'targetAddTag' ? 'addTag' : 'removeTag', value: command.tag }
       else if (command.type === 'targetAddGroup' || command.type === 'targetRemoveGroup') mutation = { type: command.type === 'targetAddGroup' ? 'addGroup' : 'removeGroup', value: command.group }
       else if (command.type === 'targetDestroy') { this.queueEntityRemoval(target, false); continue }
+      else if (command.type === 'tween') { this.startTween(target, command); continue }
+      else if (command.type === 'tweenStop') { this.tweens.stop(target, command.property); continue }
       if (mutation) this.worldGameplay.dynamicObjectsOwner.applyTargetMutation(target, mutation)
     }
     if (spawned) {this.worldHost.state.world.invalidateRuntime();this.animationTimeline.markMembershipDirty()}
@@ -1747,6 +1875,25 @@ export class GameplayRuntime {
   /** 结构说明（自动提取）：commandSourceActive；输入 source；直接调用 this.worldHost.state.world.entities.some。 */ private commandSourceActive(source: { sourceUuid: string; sourceGeneration: number; allowRetiredSource: boolean }): boolean {
     return source.allowRetiredSource || this.worldHost.state.world.entities.some(/* 先计算 entity.uuid === source.sourceUuid；仅当其为真值时求右侧 inspectEntityLifetimeGeneration(entity) === source.sourceGeneration，返回短路求值结果。 */ entity => entity.uuid === source.sourceUuid && this.worldGameplay.entityLifetimes.inspect(entity) === source.sourceGeneration)
   }
+  /** 26.44: starts a script tween on `entity`; an unknown property is reported once in the console. */ private startTween(entity: Entity, command: Extract<ScriptCommand, { type: 'tween' }>): void {
+    const started = this.tweens.start(entity, { property: command.property, to: command.to, seconds: command.seconds, easing: command.easing, delay: command.delay, loops: command.loops, yoyo: command.yoyo, relative: command.relative, signal: command.signal })
+    if (!started) this.worldHost.log(`tween: "${command.property}" cannot be animated on ${entity.name} (use x, y, rotation, rotation_degrees, scale_x, scale_y, scale or opacity)`, 'Script', 'warning')
+  }
+
+  /** 26.44: advances tweens on game time; finished tweens emit "tween.finished" and their own signal. */ private updateTweens(delta: number): void {
+    if (!this.tweens.size) return
+    const living = new Map(this.worldHost.state.world.entities.map(entity => [entity.uuid, entity]))
+    this.tweens.update(delta, entity => { const current = living.get(entity.uuid); return current && !this.isRemovalPending(current) ? current : null }, (entity, property, signal) => {
+      this.emitSignal('tween.finished', { property }, entity.uuid, `tween:${entity.uuid}`)
+      if (signal) this.emitSignal(signal, { property }, entity.uuid, `tween:${entity.uuid}`)
+    })
+  }
+
+  /** 26.44: world gravity and the drop-through command for the gameplay components (Platform Controller 2D). */ private gameplayWorldOptions(): GameplayWorldOptions {
+    const world = this.worldHost.state.world
+    return { gravity: finiteNumber(this.worldHost.state.globalSettings.gravity, 9.80665), dropThrough: (entity, seconds) => world.dropThroughOneWay(entity, seconds) }
+  }
+
   /** 执行时调用 (despawn ? this.pendingDespawn : this.pendingDestroy).set(entity.id, entityLifetimeGeneration(entity))；不显式返回调用结果。 */ private queueEntityRemoval(entity: Entity, despawn: boolean): void { (despawn ? this.pendingDespawn : this.pendingDestroy).set(entity.id, this.worldGameplay.entityLifetimes.generation(entity)) }
   /** 结构说明（自动提取）：isRemovalPending；输入 entity；直接调用 inspectEntityLifetimeGeneration、pendingDestroy.get、pendingDespawn.get。 */ private isRemovalPending(entity: Entity): boolean { const generation = this.worldGameplay.entityLifetimes.inspect(entity); return generation !== null && (this.pendingDestroy.get(entity.id) === generation || this.pendingDespawn.get(entity.id) === generation) }
 

@@ -499,6 +499,8 @@ export class TextInput extends ComponentBase {
 export class TileMap2D extends ComponentBase {
   readonly kind = 'TileMap2D' as const
   tileSetAsset: string | null = null
+  /** 26.44: terrain rules the editor auto-tiles this map with (editor only; not needed by the Player). */
+  terrainRulesAsset: string | null = null
   width = 32
   height = 18
   tileSize: Vec2 = { x: 1, y: 1 }
@@ -560,6 +562,10 @@ export class CharacterBody2D extends ComponentBase {
   ceilingNormal: Vec2 = { x: 0, y: -1 }
   platformVelocity: Vec2 = { x: 0, y: 0 }
   secondsSinceFloor = Number.POSITIVE_INFINITY
+  /** 26.44: UUID of the entity the character stands on ('' when not on a floor). */
+  floorEntity = ''
+  /** 26.44: the floor is a one-way platform. */
+  floorOneWay = false
 
   /** 初始化 CharacterBody2D 实例时调用 super(uuid)；不显式返回调用结果。 */ constructor(uuid?: string) { super(uuid) }
 }
@@ -696,6 +702,12 @@ export class PlatformController2D extends ComponentBase {
   airControl = 0.55
   jumpImpulse = 10
   maximumFallSpeed = 30
+  /** 26.44: seconds a jump pressed before landing is kept. */
+  jumpBufferTime = 0.1
+  /** 26.44: vertical speed kept when jump is released while rising (1 = full jump height). */
+  jumpCutFactor = 1
+  /** 26.44: axis action held down (≤ −0.5) with jump to drop through a one-way platform; empty = off. */
+  dropThroughAction = ''
 
   /** 初始化 PlatformController2D 实例时调用 super(uuid)；不显式返回调用结果。 */ constructor(uuid?: string) { super(uuid) }
 }

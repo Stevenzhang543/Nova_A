@@ -12,7 +12,7 @@
 
 <script setup lang="ts">
 import { computed, inject, ref } from 'vue'
-import type { BlockFieldSpec, BlockFieldValue } from '../../visual/blockScript'
+import { BLOCK_EASINGS, type BlockFieldSpec, type BlockFieldValue } from '../../visual/blockScript'
 import { BLOCK_EDITOR, type BlockEditorContext } from './blockEditorContext'
 
 const props = defineProps<{ spec: BlockFieldSpec; modelValue: BlockFieldValue; label: string; placeholder?: string }>()
@@ -33,6 +33,7 @@ const choices = computed(() => {
     case 'scene': return options.scenes
     case 'bus': return options.buses.map(value => ({ value, label: value }))
     case 'op': return OPERATORS
+    case 'easing': return BLOCK_EASINGS.map(value => ({ value, label: editor.copy.value.easings?.[value] ?? value }))
     default: return null
   }
 })

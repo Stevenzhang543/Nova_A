@@ -283,6 +283,13 @@ impl WasmRuntimeWorld {
         }
     }
 
+    // 26.44: 让角色向下穿过单向平台 seconds 秒（之后只要仍与单向平台重叠就继续）。
+    pub fn set_one_way_pass_through(&mut self, handle: u32, seconds: f64) -> Result<(), JsValue> {
+        self.inner
+            .set_one_way_pass_through(handle, seconds)
+            .map_err(JsValue::from_str)
+    }
+
     // 给指定刚体设置持续力和力矩。
     pub fn apply_force(&mut self, handle: u32, x: f64, y: f64, torque: f64) -> Result<(), JsValue> {
         self.inner
@@ -683,6 +690,37 @@ impl WasmScriptRuntime {
         let result = self
             .inner
             .execute_instance_context(script_id, function, epoch, revision, generation, context)
+            .map_err(|error| JsValue::from_str(&error))?;
+        serde_json::to_string(&result).map_err(|error| JsValue::from_str(&error.to_string()))
+    }
+
+    /// 26.44: one callback run under a debug probe (line breakpoints, stepping); see
+    /// `ScriptRuntime::execute_instance_debug`. The result has a `pause` field when it stopped.
+    #[allow(clippy::too_many_arguments)]
+    pub fn execute_instance_debug_json(
+        &mut self,
+        script_id: &str,
+        function: &str,
+        epoch: u32,
+        revision: u32,
+        generation: u32,
+        context_json: &str,
+        probe_json: &str,
+    ) -> Result<String, JsValue> {
+        if context_json.len() > 16 * 1024 * 1024 || probe_json.len() > 1024 * 1024 {
+            return Err(JsValue::from_str(
+                "script debug context exceeded the bridge limit",
+            ));
+        }
+        let context: ScriptContext = serde_json::from_str(context_json)
+            .map_err(|error| JsValue::from_str(&error.to_string()))?;
+        let probe: nova_script::ScriptDebugProbe = serde_json::from_str(probe_json)
+            .map_err(|error| JsValue::from_str(&error.to_string()))?;
+        let result = self
+            .inner
+            .execute_instance_context_debug(
+                script_id, function, epoch, revision, generation, context, probe,
+            )
             .map_err(|error| JsValue::from_str(&error))?;
         serde_json::to_string(&result).map_err(|error| JsValue::from_str(&error.to_string()))
     }

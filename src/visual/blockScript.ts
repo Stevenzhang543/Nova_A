@@ -13,7 +13,9 @@ export const BLOCK_SCRIPT_HEADER = '// @nova-blocks 1 '
 export const BLOCK_SCRIPT_FORMAT = 'nova-blocks'
 
 export type BlockCategory = 'events' | 'motion' | 'looks' | 'sound' | 'control' | 'variables' | 'game' | 'messages'
-export type BlockFieldKind = 'number' | 'text' | 'name' | 'action' | 'audio' | 'video' | 'prefab' | 'scene' | 'variable' | 'bus' | 'bool' | 'op' | 'object' | 'function' | 'params' | 'code' | 'state'
+export type BlockFieldKind = 'number' | 'text' | 'name' | 'action' | 'audio' | 'video' | 'prefab' | 'scene' | 'variable' | 'bus' | 'bool' | 'op' | 'object' | 'function' | 'params' | 'code' | 'state' | 'easing'
+/** 26.44: the easings offered in the Blocks (any tween easing works in scripts). */
+export const BLOCK_EASINGS = ['linear', 'sine_in_out', 'quad_in', 'quad_out', 'back_out', 'bounce_out', 'elastic_out'] as const
 export type BlockFieldValue = string | boolean
 export interface BlockFieldSpec { key: string; kind: BlockFieldKind; default: BlockFieldValue }
 
@@ -88,8 +90,16 @@ export const BLOCK_STATEMENTS: readonly BlockStatementSpec[] = [
   { type: 'turnBy', category: 'motion', fields: [field('degrees', 'number', '15')] },
   { type: 'pointAt', category: 'motion', fields: [field('degrees', 'number', '0')] },
   { type: 'setSize', category: 'motion', fields: [field('x', 'number', '1'), field('y', 'number', '1')] },
+  // 26.44: smooth motion (tweens) and one-way platforms.
+  { type: 'glideTo', category: 'motion', fields: [field('x', 'number', '0'), field('y', 'number', '0'), field('seconds', 'number', '1'), field('easing', 'easing', 'sine_in_out')] },
+  { type: 'glideBy', category: 'motion', fields: [field('x', 'number', '2'), field('y', 'number', '0'), field('seconds', 'number', '1'), field('easing', 'easing', 'sine_in_out')] },
+  { type: 'spinBy', category: 'motion', fields: [field('degrees', 'number', '360'), field('seconds', 'number', '1'), field('easing', 'easing', 'linear')] },
+  { type: 'dropThrough', category: 'motion', fields: [] },
   // Looks
   { type: 'playAnimation', category: 'looks', fields: [field('state', 'state', 'Run')] },
+  { type: 'blendAnimation', category: 'looks', fields: [field('state', 'state', 'Run'), field('seconds', 'number', '0.2')] },
+  { type: 'fadeTo', category: 'looks', fields: [field('opacity', 'number', '0'), field('seconds', 'number', '0.5')] },
+  { type: 'growTo', category: 'looks', fields: [field('scale', 'number', '1.5'), field('seconds', 'number', '0.3'), field('easing', 'easing', 'back_out')] },
   { type: 'setText', category: 'looks', fields: [field('text', 'text', 'Score: {score}')] },
   { type: 'setTextOn', category: 'looks', fields: [field('object', 'object', 'ScoreLabel'), field('text', 'text', 'Score: {score}')] },
   { type: 'show', category: 'looks', fields: [field('object', 'object', '')] },
@@ -135,6 +145,8 @@ export const BLOCK_CONDITIONS: readonly BlockConditionSpec[] = [
   { type: 'pressed', fields: [field('action', 'action', 'Jump')] },
   { type: 'onFloor', fields: [] },
   { type: 'onWall', fields: [] },
+  { type: 'onOneWay', fields: [] },
+  { type: 'animationIs', fields: [field('state', 'state', 'Run')] },
   { type: 'compare', fields: [field('a', 'number', '0'), field('op', 'op', '>'), field('b', 'number', '0')] },
   { type: 'otherHasTag', fields: [field('tag', 'name', 'coin')], needs: ['other'] },
   { type: 'chance', fields: [field('percent', 'number', '50')] },
@@ -330,6 +342,12 @@ function textExpression(raw: BlockFieldValue, state: CompileState, blockId: stri
 const stringField = (raw: BlockFieldValue) => rhaiString(String(raw ?? '').trim())
 function argumentsExpression(raw: BlockFieldValue): string { const text = String(raw ?? '').trim(); return text ? `[${text}]` : '[]' }
 
+/** 26.44: an easing name for a tween call (unknown names fall back to linear). */
+function easingField(value: BlockFieldValue | undefined): string {
+  const name = String(value ?? '').trim()
+  return rhaiString((BLOCK_EASINGS as readonly string[]).includes(name) ? name : 'linear')
+}
+
 function conditionExpression(condition: BlockCondition, state: CompileState, scope: HandlerScope, ownerId: string): string {
   const spec = conditionSpec(condition.type)
   const f = condition.fields
@@ -340,6 +358,8 @@ function conditionExpression(condition: BlockCondition, state: CompileState, sco
     case 'pressed': expression = `input_pressed(${stringField(f.action)})`; break
     case 'onFloor': expression = 'character_is_on_floor()'; break
     case 'onWall': expression = 'character_is_on_wall()'; break
+    case 'onOneWay': expression = 'character_floor_is_one_way()'; break
+    case 'animationIs': expression = `animator_state() == ${stringField(f.state)}`; break
     case 'compare': {
       const op = ['==', '!=', '<', '>', '<=', '>='].includes(String(f.op)) ? String(f.op) : '>'
       expression = `${numberExpression(f.a, state, ownerId, scope)} ${op} ${numberExpression(f.b, state, ownerId, scope)}`
@@ -399,6 +419,13 @@ function compileBlocks(blocks: readonly BlockNode[], state: CompileState, scope:
       case 'pointAt': lines.push(`set_rotation(${num('degrees')} * 0.017453292519943295);`); break
       case 'setSize': lines.push(`set_scale(${num('x')}, ${num('y')});`); break
       case 'playAnimation': lines.push(`animator_play(${stringField(f.state)});`); break
+      case 'blendAnimation': lines.push(`animator_crossfade(${stringField(f.state)}, ${num('seconds')});`); break
+      case 'fadeTo': lines.push(`tween("opacity", ${num('opacity')}, ${num('seconds')}, "linear");`); break
+      case 'growTo': lines.push(`tween("scale", ${num('scale')}, ${num('seconds')}, ${easingField(f.easing)});`); break
+      case 'glideTo': lines.push(`tween("x", ${num('x')}, ${num('seconds')}, ${easingField(f.easing)});`, `tween("y", ${num('y')}, ${num('seconds')}, ${easingField(f.easing)});`); break
+      case 'glideBy': lines.push(`tween("x", ${num('x')}, ${num('seconds')}, ${easingField(f.easing)}, #{ relative: true });`, `tween("y", ${num('y')}, ${num('seconds')}, ${easingField(f.easing)}, #{ relative: true });`); break
+      case 'spinBy': lines.push(`tween("rotation_degrees", ${num('degrees')}, ${num('seconds')}, ${easingField(f.easing)}, #{ relative: true });`); break
+      case 'dropThrough': lines.push('character_drop_through();'); break
       case 'setText': lines.push(`ui_set_text(${textExpression(f.text, state, node.id, scope)});`); break
       case 'setTextOn': lines.push(`ui_set_text_on(find_entity_handle(${stringField(f.object)}), ${textExpression(f.text, state, node.id, scope)});`); break
       case 'show': case 'hide': {

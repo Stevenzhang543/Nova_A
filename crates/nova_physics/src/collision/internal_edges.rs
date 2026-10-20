@@ -148,25 +148,38 @@ fn edge_covered_at(intervals: &[(f64, f64)], start: Vec2, end: Vec2, point: Vec2
     intervals.iter().any(|(low, high)| t >= low - slack && t <= high + slack)
 }
 
+/// What to do with a contact between a moving body and a static polygon.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum StaticContactFix {
+    Keep,
+    Drop,
+    /// The normal comes out of an internal edge or a covered corner: collide against this exposed
+    /// face of the static polygon instead (26.44).
+    Face(usize),
+}
+
 /// Decides whether a contact between a moving body and a static polygon is real. A contact whose
 /// normal comes out of an internal (covered) face, or out of a corner next to a covered edge, only
-/// exists because the static solid is split into pieces: the neighbouring piece produces the real
-/// contact on its exposed surface, so this one is dropped (returns false).
+/// exists because the static solid is split into pieces.
 ///
-/// Polygon pairs report exact face normals (separating-axis clipping). For smooth shapes the
-/// Voronoi region of the moving body's centre decides between a face and a corner contact.
-fn keep_static_contact(
+/// Smooth shapes: the Voronoi region of the moving body's centre decides between a face and a
+/// corner contact, and a contact at an internal corner is dropped (the neighbouring piece reports
+/// the face contact). Polygons: such a contact is replaced by a contact against the exposed face
+/// whose normal is closest to the original one (Box2D does the same for chain segments). Dropping
+/// it lost every contact of a tilted box pressed into a tile seam: each tile saw its seam corner
+/// and the box fell through the floor.
+fn static_contact_fix(
     static_body: &Body,
     coverage: &[Vec<(f64, f64)>],
     moving: &Body,
     manifold: &Manifold,
     static_is_a: bool,
-) -> bool {
+) -> StaticContactFix {
     let Some(edges) = static_polygon_edges(static_body) else {
-        return true;
+        return StaticContactFix::Keep;
     };
     if edges.len() != coverage.len() {
-        return true;
+        return StaticContactFix::Keep;
     }
     let outward = if static_is_a { manifold.normal } else { manifold.normal.neg() };
     let count = edges.len();
@@ -180,25 +193,71 @@ fn keep_static_contact(
     let along = end.sub(start);
     let length_squared = along.length_squared();
     if length_squared <= EPSILON {
-        return true;
+        return StaticContactFix::Keep;
     }
     let smooth = matches!(moving.shape, Shape::Ellipse { .. });
-    let face_contact = if smooth {
+    if smooth {
         let t = moving.collider_position().sub(start).dot(along) / length_squared;
-        (-1.0e-9..=1.0 + 1.0e-9).contains(&t)
-    } else {
-        edges[best].2.dot(outward) > 1.0 - 1.0e-6
-    };
-    if face_contact {
-        return !covered(best, manifold.point);
+        if (-1.0e-9..=1.0 + 1.0e-9).contains(&t) {
+            return if covered(best, manifold.point) { StaticContactFix::Drop } else { StaticContactFix::Keep };
+        }
+        let (corner, neighbour) = if t < 0.0 { (start, (best + count - 1) % count) } else { (end, (best + 1) % count) };
+        return if covered(best, corner) || covered(neighbour, corner) { StaticContactFix::Drop } else { StaticContactFix::Keep };
     }
-    if !smooth {
+    let admissible = if edges[best].2.dot(outward) > 1.0 - 1.0e-6 {
+        !covered(best, manifold.point)
+    } else {
         // A tilted polygon contact (a rotated face on a corner): use the corner nearest the point.
         let corner = if manifold.point.sub(start).length_squared() <= manifold.point.sub(end).length_squared() { start } else { end };
         let neighbour = if corner == start { (best + count - 1) % count } else { (best + 1) % count };
-        return !(covered(best, corner) || covered(neighbour, corner));
+        !(covered(best, corner) || covered(neighbour, corner))
+    };
+    if admissible {
+        return StaticContactFix::Keep;
     }
-    let t = moving.collider_position().sub(start).dot(along) / length_squared;
-    let (corner, neighbour) = if t < 0.0 { (start, (best + count - 1) % count) } else { (end, (best + 1) % count) };
-    !(covered(best, corner) || covered(neighbour, corner))
+    // The exposed face closest to the contact normal (a face with some uncovered part).
+    let exposed = |edge: usize| {
+        let mut intervals = coverage[edge].clone();
+        intervals.sort_by(|a, b| a.0.total_cmp(&b.0));
+        let mut reach = 0.0_f64;
+        for (low, high) in intervals {
+            if low > reach + 1.0e-6 {
+                return true;
+            }
+            reach = reach.max(high);
+        }
+        reach < 1.0 - 1.0e-6
+    };
+    (0..count)
+        .filter(|&edge| exposed(edge) && edges[edge].2.dot(outward) > 0.0)
+        .max_by(|&a, &b| edges[a].2.dot(outward).total_cmp(&edges[b].2.dot(outward)).then(b.cmp(&a)))
+        .map_or(StaticContactFix::Drop, StaticContactFix::Face)
+}
+
+/// Applies `static_contact_fix` to the manifold points of one shape pair. Points that are real are
+/// kept; when none is, the pair is collided again against the chosen exposed face.
+fn fix_static_manifolds(
+    static_body: &Body,
+    coverage: &[Vec<(f64, f64)>],
+    moving: &Body,
+    manifolds: Vec<Manifold>,
+    static_is_a: bool,
+    margin: f64,
+) -> Vec<Manifold> {
+    let decisions: Vec<StaticContactFix> = manifolds
+        .iter()
+        .map(|manifold| static_contact_fix(static_body, coverage, moving, manifold, static_is_a))
+        .collect();
+    if decisions.contains(&StaticContactFix::Keep) {
+        return manifolds
+            .into_iter()
+            .zip(decisions)
+            .filter(|(_, decision)| *decision == StaticContactFix::Keep)
+            .map(|(manifold, _)| manifold)
+            .collect();
+    }
+    match decisions.iter().find_map(|decision| if let StaticContactFix::Face(face) = decision { Some(*face) } else { None }) {
+        Some(face) => polygon_face_manifolds(static_body, face, moving, margin, static_is_a),
+        None => Vec::new(),
+    }
 }

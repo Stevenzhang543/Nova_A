@@ -1509,6 +1509,14 @@ export const componentFieldDescriptions: Readonly<Record<string, Readonly<Record
       "optional": false,
       "default": null
     },
+    "terrainRulesAsset": {
+      "types": [
+        "null",
+        "string"
+      ],
+      "optional": false,
+      "default": null
+    },
     "width": {
       "types": [
         "number"
@@ -2117,6 +2125,27 @@ export const componentFieldDescriptions: Readonly<Record<string, Readonly<Record
       ],
       "optional": false,
       "default": 30
+    },
+    "jumpBufferTime": {
+      "types": [
+        "number"
+      ],
+      "optional": false,
+      "default": 0.1
+    },
+    "jumpCutFactor": {
+      "types": [
+        "number"
+      ],
+      "optional": false,
+      "default": 1
+    },
+    "dropThroughAction": {
+      "types": [
+        "string"
+      ],
+      "optional": false,
+      "default": ""
     }
   },
   "TopDownController2D": {

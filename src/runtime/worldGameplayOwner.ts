@@ -16,7 +16,7 @@ import type { Entity } from '../world/Entity'
 import type { World } from '../world/World'
 import type { Connection } from '../world/Connection'
 import type { Vec2 } from '../world/types'
-import type { Area2D, AreaEffector2D, CharacterBody2D, Portal2D } from '../world/components'
+import type { Area2D, AreaEffector2D, CharacterBody2D, Portal2D, RigidBody2D } from '../world/components'
 import { finiteNumber } from '../world/geometry'
 import { worldTransform, setWorldTransform } from '../world/hierarchy'
 
@@ -54,7 +54,7 @@ export function createInitialWorldGameplayState(): WorldGameplayState { return {
   pendingStreams: 0,
   lastError: ''
 } }
-export type WorldGameplayWorld = Pick<World, 'entities' | 'connections' | 'moveCharacterBox' | 'overlapCircle' | 'overlapBox' | 'applyTransientForce' | 'shiftOrigin' | 'allocateId' | 'allocateConnectionId' | 'invalidateRuntime'>
+export type WorldGameplayWorld = Pick<World, 'entities' | 'connections' | 'moveCharacterBox' | 'overlapCircle' | 'overlapBox' | 'applyTransientForce' | 'shiftOrigin' | 'allocateId' | 'allocateConnectionId' | 'invalidateRuntime'> & Partial<Pick<World, 'entityForBodyHandle'>>
 export interface WorldGameplayOwnerHost {
   readonly world: WorldGameplayWorld
   readonly camera: WorldGameplayCamera
@@ -177,15 +177,42 @@ export class WorldGameplayOwner {
     return true
   }
 
+  // 26.44: where each character's floor was after its last move, and how that floor was moving
+  // then. A floor moved by a script or an animation (not by its velocity) is followed next tick.
+  private characterSupports = new Map<string, { support: string; x: number; y: number; rotation: number; vx: number; vy: number; w: number }>()
+
+  /** 26.44: displacement that keeps a character on a floor that was moved by a script or an
+   * animation since the last tick (the part not explained by the floor's velocity, which is carried
+   * through platformVelocity), turning with the floor around its centre. Far jumps are not followed. */
+  private supportFollow(entity: Entity, character: CharacterBody2D, fixedDelta: number): { x: number; y: number } {
+    const record = this.characterSupports.get(entity.uuid)
+    if (!record || !character.onFloor || !character.applyPlatformVelocity) return { x: 0, y: 0 }
+    // By uuid: the editor's world hands out reactive proxies outside a frame and plain objects inside.
+    const support = this.world.entities.find(candidate => candidate.uuid === record.support)
+    if (!support?.enabled) return { x: 0, y: 0 }
+    const now = worldTransform(support, this.world.entities)
+    const expected = { x: record.x + record.vx * fixedDelta, y: record.y + record.vy * fixedDelta, rotation: record.rotation + record.w * fixedDelta }
+    let turn = now.rotation - expected.rotation
+    turn = Math.atan2(Math.sin(turn), Math.cos(turn))
+    const position = worldTransform(entity, this.world.entities).position
+    const relative = { x: position.x - expected.x, y: position.y - expected.y }
+    const cos = Math.cos(turn), sin = Math.sin(turn)
+    const follow = { x: now.position.x + cos * relative.x - sin * relative.y - position.x, y: now.position.y + sin * relative.x + cos * relative.y - position.y }
+    if (!Number.isFinite(follow.x) || !Number.isFinite(follow.y) || Math.hypot(follow.x, follow.y) > 4) return { x: 0, y: 0 }
+    return Math.hypot(follow.x, follow.y) > 1e-9 ? follow : { x: 0, y: 0 }
+  }
+
   private moveCharacters(fixedDelta: number): void {
     for (const entity of this.world.entities) {
       const character = entity.getComponent<CharacterBody2D>('CharacterBody2D')
-      if (!entity.enabled || !character?.enabled || !entity.getCollider() || !entity.hasComponent('RigidBody2D')) continue
+      if (!entity.enabled || !character?.enabled || !entity.getCollider() || !entity.hasComponent('RigidBody2D')) { this.characterSupports.delete(entity.uuid); continue }
       const settings = { maxSlopeAngle: character.maxSlopeAngle * Math.PI / 180, stepHeight: character.stepHeight, floorSnap: character.floorSnap, maxSlides: character.maxSlides, safeMargin: character.safeMargin, collisionMask: character.collisionMask }
       // Refresh a moving support before carrying the character: source deletion,
       // masks, geometry or a changed velocity must take effect in this fixed tick.
-      const probe = character.applyPlatformVelocity && character.onFloor && (character.platformVelocity.x || character.platformVelocity.y)
-        ? this.world.moveCharacterBox(entity, this.colliderSize(entity), { x: 0, y: 0 }, settings) : null
+      // 26.44: the same move first follows a floor moved by a script or an animation.
+      const follow = this.supportFollow(entity, character, fixedDelta)
+      const moving = character.applyPlatformVelocity && character.onFloor && (character.platformVelocity.x || character.platformVelocity.y)
+      const probe = moving || follow.x || follow.y ? this.world.moveCharacterBox(entity, this.colliderSize(entity), follow, settings) : null
       const supported = probe ? probe.onFloor : character.onFloor
       const velocity = probe ? { x: probe.platformVelocity[0], y: probe.platformVelocity[1] } : character.platformVelocity
       const platform = character.applyPlatformVelocity && supported ? { x: velocity.x * fixedDelta, y: velocity.y * fixedDelta } : { x: 0, y: 0 }
@@ -193,16 +220,26 @@ export class WorldGameplayOwner {
       const result = this.world.moveCharacterBox(entity, this.colliderSize(entity), requested, settings)
       if (result && probe) {
         result.appliedMotion[0] += probe.appliedMotion[0]; result.appliedMotion[1] += probe.appliedMotion[1]
-        if (result.velocityMotion && probe.velocityMotion) { result.velocityMotion[0] += probe.velocityMotion[0]; result.velocityMotion[1] += probe.velocityMotion[1] }
+        // Following a moved floor is a correction like a step lift, not velocity.
+        const probeVelocity = follow.x || follow.y ? [0, 0] : probe.velocityMotion ?? [0, 0]
+        if (result.velocityMotion) { result.velocityMotion[0] += probeVelocity[0]; result.velocityMotion[1] += probeVelocity[1] }
       }
       character.requestedMotion = { x: 0, y: 0 }
-      if (!result) continue
+      if (!result) { this.characterSupports.delete(entity.uuid); continue }
       character.onFloor = result.onFloor; character.onWall = result.onWall; character.onCeiling = result.onCeiling
       character.floorNormal = { x: result.floorNormal[0], y: result.floorNormal[1] }
       character.wallNormal = { x: result.wallNormal[0], y: result.wallNormal[1] }
       character.ceilingNormal = { x: result.ceilingNormal[0], y: result.ceilingNormal[1] }
       character.platformVelocity = { x: result.platformVelocity[0], y: result.platformVelocity[1] }
       character.secondsSinceFloor = character.onFloor ? 0 : character.secondsSinceFloor + fixedDelta
+      const support = result.onFloor ? this.world.entityForBodyHandle?.(result.floorHandle) ?? null : null
+      character.floorEntity = support?.uuid ?? ''
+      character.floorOneWay = Boolean(result.onFloor && result.floorOneWay)
+      if (support) {
+        const transform = worldTransform(support, this.world.entities), body = support.getComponent<RigidBody2D>('RigidBody2D')
+        const moves = body && body.bodyType !== 'Static'
+        this.characterSupports.set(entity.uuid, { support: support.uuid, x: transform.position.x, y: transform.position.y, rotation: transform.rotation, vx: moves ? finiteNumber(body.velocity.x) : 0, vy: moves ? finiteNumber(body.velocity.y) : 0, w: moves ? finiteNumber(body.angularVelocity) : 0 })
+      } else this.characterSupports.delete(entity.uuid)
       // 26.43: velocity comes from the requested motion that was travelled. Step lifts and floor
       // snapping move the character but are not velocity; before 26.43 a 0.35 m step taken mid-air
       // became 42 m/s upward at 120 Hz and scripts reading rigid_body().velocity_y kept rising.
@@ -308,6 +345,7 @@ export class WorldGameplayOwner {
 
   shiftWorldOrigin(offset: { x: number; y: number }): void {
     this.world.shiftOrigin(offset)
+    this.characterSupports.clear()
     this.ports.navigation.shiftNavigationOrigin(offset, this.world.entities)
     this.ports.particles.shiftParticleOrigin(offset, this.world.entities)
     this.sceneStreaming?.shiftOrigin(offset)
@@ -342,6 +380,7 @@ export class WorldGameplayOwner {
 
   finishWorldSceneTransition(): void {
     this.streamGeneration++
+    this.characterSupports.clear()
     this.sceneStreaming?.detachAfterSceneTransition(); this.sceneStreaming = null; this.sceneStreamQueue.clear(); this.state.pendingStreams = this.sceneStreamQueue.size; this.prefetchedScenes.clear(); this.activePortals.clear(); this.areaOccupants.clear(); this.ports.navigation.resetNavigation(); this.ports.streaming.resetWorldStreaming(true); this.tileSceneOwner.resetTileSceneRuntime(true)
     const arrival = this.portalArrival; this.portalArrival = null
     if (arrival?.portal && this.host.activeSceneUuid === arrival.scene) {
@@ -351,10 +390,11 @@ export class WorldGameplayOwner {
     }
   }
 
-  retireWorldGameplayEntity(uuid: string): void { this.aiModule?.retireAiEntity(uuid) }
+  retireWorldGameplayEntity(uuid: string): void { this.aiModule?.retireAiEntity(uuid); this.characterSupports.delete(uuid) }
 
   resetWorldGameplay(): void {
     this.streamGeneration++
+    this.characterSupports.clear()
     this.areaOccupants.clear(); this.sceneStreamQueue.clear(); this.prefetchedScenes.clear(); this.portalArrival = null; this.activePortals.clear(); this.ports.navigation.resetNavigation(); this.aiModule?.resetAi(); this.objectPoolOwner.resetObjectPools(); this.sceneStreaming?.reset(); this.sceneStreaming = null; this.ports.streaming.resetWorldStreaming(); this.tileSceneOwner.resetTileSceneRuntime()
     this.state.lastError = ''; this.state.loadedChunks = 0; this.state.usedMemoryMb = 0; this.state.pendingStreams = 0; this.state.originOffset = { x: 0, y: 0 }; this.state.originShiftCount = 0; this.state.lastOriginShift = { x: 0, y: 0 }; this.ports.evidence.clearSimulationEvidence()
   }

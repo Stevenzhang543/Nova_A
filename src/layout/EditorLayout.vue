@@ -5,11 +5,11 @@
     <TopBar />
 
     <div ref="editorMain" class="editor-main" :data-maximized-panel="workspaceState.maximizedPanel">
-      <SideBar v-show="!state.distractionFree" :inert="Boolean(workspaceState.maximizedPanel)" />
+      <SideBar v-if="!contextInHierarchy" v-show="!state.distractionFree" :inert="Boolean(workspaceState.maximizedPanel)" />
       <div v-show="!state.distractionFree" class="dock-group left-dock" :class="{ split: workspaceState.splitDocking }" :data-drop-target="dragTarget === 'left'" @dragover="previewPanelDrop($event, 'left')" @dragleave="leavePanelDrop" @drop="dropPanel($event, 'left')">
         <template v-for="panel in workspaceState.panelOrder" :key="panel">
 <UiMotionTransition>
-          <SceneSideBar :inert="Boolean(workspaceState.maximizedPanel && workspaceState.maximizedPanel !== 'hierarchy')" v-if="panel === 'hierarchy' && state.hierarchyDock === 'left' && !isFloating('hierarchy')" v-show="showHierarchy" dock="left" draggable="true" @pointerdown.capture="preparePanelDrag" @dragstart="startPanelDrag($event, 'hierarchy')" @dragend="endPanelDrag" />
+          <SceneSideBar :context-tools="contextInHierarchy" :inert="Boolean(workspaceState.maximizedPanel && workspaceState.maximizedPanel !== 'hierarchy')" v-if="panel === 'hierarchy' && state.hierarchyDock === 'left' && !isFloating('hierarchy')" v-show="showHierarchy" dock="left" draggable="true" @pointerdown.capture="preparePanelDrag" @dragstart="startPanelDrag($event, 'hierarchy')" @dragend="endPanelDrag" />
           <ConfigPanel :inert="Boolean(workspaceState.maximizedPanel && workspaceState.maximizedPanel !== 'inspector')" v-else-if="panel === 'inspector' && inspectorLoaded && state.inspectorDock === 'left' && !isFloating('inspector')" v-show="showInspector" dock="left" draggable="true" @pointerdown.capture="preparePanelDrag" @dragstart="startPanelDrag($event, 'inspector')" @dragend="endPanelDrag" />
         </UiMotionTransition>
 </template>
@@ -37,7 +37,7 @@
       <div v-show="!state.distractionFree" class="dock-group right-dock" :class="{ split: workspaceState.splitDocking }" :data-drop-target="dragTarget === 'right'" @dragover="previewPanelDrop($event, 'right')" @dragleave="leavePanelDrop" @drop="dropPanel($event, 'right')">
         <template v-for="panel in workspaceState.panelOrder" :key="panel">
 <UiMotionTransition>
-          <SceneSideBar :inert="Boolean(workspaceState.maximizedPanel && workspaceState.maximizedPanel !== 'hierarchy')" v-if="panel === 'hierarchy' && state.hierarchyDock === 'right' && !isFloating('hierarchy')" v-show="showHierarchy" dock="right" draggable="true" @pointerdown.capture="preparePanelDrag" @dragstart="startPanelDrag($event, 'hierarchy')" @dragend="endPanelDrag" />
+          <SceneSideBar :context-tools="contextInHierarchy" :inert="Boolean(workspaceState.maximizedPanel && workspaceState.maximizedPanel !== 'hierarchy')" v-if="panel === 'hierarchy' && state.hierarchyDock === 'right' && !isFloating('hierarchy')" v-show="showHierarchy" dock="right" draggable="true" @pointerdown.capture="preparePanelDrag" @dragstart="startPanelDrag($event, 'hierarchy')" @dragend="endPanelDrag" />
           <ConfigPanel :inert="Boolean(workspaceState.maximizedPanel && workspaceState.maximizedPanel !== 'inspector')" v-else-if="panel === 'inspector' && inspectorLoaded && state.inspectorDock === 'right' && !isFloating('inspector')" v-show="showInspector" dock="right" draggable="true" @pointerdown.capture="preparePanelDrag" @dragstart="startPanelDrag($event, 'inspector')" @dragend="endPanelDrag" />
         </UiMotionTransition>
 </template>
@@ -155,6 +155,9 @@ function cycleRegion(event: KeyboardEvent): void {
 }
 onMounted(() => window.addEventListener('keydown', cycleRegion))
 onBeforeUnmount(() => { window.removeEventListener('keydown', cycleRegion); window.clearTimeout(regionCueTimer) })
+/** 26.44 G1: the context rail is merged into the docked Hierarchy; it stays a rail only when the
+ * Hierarchy is hidden, floating or an overlay (narrow layout), and in Manage, which has its own list. */
+const contextInHierarchy = computed(() => layoutMode.value !== 'narrow' && showHierarchy.value && !isFloating('hierarchy') && state.activeWorkspace !== 'manage')
 const showHierarchy = computed(/** 仅在场景或游戏视图且开关启用时显示层级。 */ () => (state.currentPage === 'scene' || state.currentPage === 'game') && (hierarchyOverlay.value ? overlayHierarchy.value : state.hierarchyVisible))
 const showInspector = computed(/** The inspector's empty state reserves its dock; selection must not resize the viewport. */ () => state.currentPage === 'scene' && (inspectorOverlay.value ? overlayInspector.value : state.inspectorVisible) && state.activeWorkspace !== 'ui')
 watch(/** 收集面板可见性及页面作为最大化恢复依赖。 */ () => [showHierarchy.value,showInspector.value,state.bottomPanelVisible,state.bottomPanelOpen,state.currentPage], /** 当前最大化面板已不可用时恢复普通布局。 */ () => {

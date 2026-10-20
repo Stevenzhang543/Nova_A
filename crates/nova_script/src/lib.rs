@@ -278,6 +278,23 @@ pub struct CharacterSnapshot {
     pub wall_normal: [f64; 2],
     #[serde(default)]
     pub platform_velocity: [f64; 2],
+    /// 26.44: the floor is a one-way platform (`character_drop_through` passes it).
+    #[serde(default)]
+    pub floor_one_way: bool,
+}
+
+/// 26.44: the entity's Animator (base layer) as seen by scripts.
+#[derive(Clone, Debug, Default, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AnimatorSnapshot {
+    #[serde(default)]
+    pub state: String,
+    #[serde(default)]
+    pub state_id: String,
+    #[serde(default)]
+    pub normalized_time: f64,
+    #[serde(default)]
+    pub in_transition: bool,
 }
 
 #[derive(Clone, Debug, Default, Deserialize)]
@@ -322,6 +339,8 @@ pub struct ScriptContext {
     pub rigid_body: Option<RigidBodySnapshot>,
     #[serde(default)]
     pub character: Option<CharacterSnapshot>,
+    #[serde(default)]
+    pub animator: Option<AnimatorSnapshot>,
     #[serde(default)]
     pub game_flow: GameFlowSnapshot,
     #[serde(default)]
@@ -395,6 +414,35 @@ pub enum ScriptCommand {
     },
     AnimatorPlay {
         state: String,
+    },
+    /// 26.44: blend from the current state to `state` over `seconds`.
+    AnimatorCrossfade {
+        state: String,
+        seconds: f64,
+    },
+    /// 26.44: the character passes one-way platforms for `seconds`.
+    CharacterDropThrough {
+        seconds: f64,
+    },
+    /// 26.44: animate a property of this entity (`target` empty) or of a handle's entity.
+    Tween {
+        target: String,
+        generation: u32,
+        property: String,
+        to: f64,
+        seconds: f64,
+        easing: String,
+        delay: f64,
+        loops: i64,
+        yoyo: bool,
+        relative: bool,
+        signal: String,
+    },
+    /// 26.44: stop tweens of this entity (`target` empty) or a handle's entity; all properties when empty.
+    TweenStop {
+        target: String,
+        generation: u32,
+        property: String,
     },
     AudioPlay,
     AudioPause,
@@ -678,6 +726,49 @@ pub struct ScriptExecution {
     pub commands: Vec<ScriptCommand>,
     pub logs: Vec<ScriptLog>,
     pub properties: BTreeMap<String, Value>,
+    /// 26.44: set when a debug run stopped at a line; nothing of that run is applied.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pause: Option<ScriptDebugPause>,
+}
+
+/// 26.44: where a debug run stops ("snapshot, abort, re-run"). Statements are numbered in the order
+/// they run; a run stops at the first statement after `after_event` that matches `mode`: a line in
+/// `break_lines` (`continue`), any statement (`into`), one at `depth` or shallower (`over`) or one
+/// shallower than `depth` (`out`); `over` and `out` also stop at a line in `break_lines`. Lines are
+/// lines of the compiled source.
+#[derive(Clone, Debug, Default, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct ScriptDebugProbe {
+    pub break_lines: Vec<usize>,
+    pub after_event: u64,
+    pub mode: String,
+    pub depth: usize,
+}
+
+#[derive(Clone, Debug, Default, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ScriptDebugPause {
+    pub event: u64,
+    pub line: usize,
+    pub column: usize,
+    pub depth: usize,
+    pub locals: Vec<ScriptDebugLocal>,
+    pub stack: Vec<ScriptDebugFrame>,
+}
+
+#[derive(Clone, Debug, Default, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ScriptDebugLocal {
+    pub name: String,
+    pub value: Value,
+    pub constant: bool,
+}
+
+#[derive(Clone, Debug, Default, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ScriptDebugFrame {
+    pub function: String,
+    pub line: usize,
 }
 
 #[derive(Default)]
@@ -850,6 +941,34 @@ impl ScriptRuntime {
         generation: u32,
         context: ScriptContext,
     ) -> Result<ScriptExecution, String> {
+        self.execute_instance_with(script_id, function, epoch, generation, context, None)
+    }
+
+    /// 26.44: runs a callback under a debug probe. When the probe stops the run, the instance state
+    /// is restored to what it was before the call and the result carries only the pause (no
+    /// commands, logs or property changes), so the host can show the stop and later re-run the
+    /// same callback with a probe that resumes after it.
+    pub fn execute_instance_debug(
+        &mut self,
+        script_id: &str,
+        function: &str,
+        epoch: u32,
+        generation: u32,
+        context: ScriptContext,
+        probe: ScriptDebugProbe,
+    ) -> Result<ScriptExecution, String> {
+        self.execute_instance_with(script_id, function, epoch, generation, context, Some(probe))
+    }
+
+    fn execute_instance_with(
+        &mut self,
+        script_id: &str,
+        function: &str,
+        epoch: u32,
+        generation: u32,
+        context: ScriptContext,
+        probe: Option<ScriptDebugProbe>,
+    ) -> Result<ScriptExecution, String> {
         if epoch == 0 || generation == 0 || context.entity.is_empty() {
             return Err("invalid live script instance identity".into());
         }
@@ -938,14 +1057,42 @@ impl ScriptRuntime {
                 }
             }
         }
-        execute_in_scope(
+        let Some(probe) = probe else {
+            return execute_in_scope(
+                &program.prepared,
+                &program.ast,
+                function,
+                context,
+                &mut instance.scope,
+                &mut instance.initialized,
+            );
+        };
+        let saved_scope = instance.scope.clone();
+        let saved_initialized = instance.initialized;
+        let properties = context.properties.clone();
+        let guard = DebugProbeGuard::enter(probe);
+        let result = execute_in_scope_with(
+            acquire_debug_host_engine(),
             &program.prepared,
             &program.ast,
             function,
             context,
             &mut instance.scope,
             &mut instance.initialized,
-        )
+        );
+        match guard.take_pause() {
+            Some(pause) => {
+                instance.scope = saved_scope;
+                instance.initialized = saved_initialized;
+                Ok(ScriptExecution {
+                    commands: Vec::new(),
+                    logs: Vec::new(),
+                    properties,
+                    pause: Some(pause),
+                })
+            }
+            None => result,
+        }
     }
 
     pub fn clear_instances(&mut self, epoch: u32) -> Result<(), String> {
@@ -1059,6 +1206,38 @@ impl ScriptRuntime {
         self.execute_instance(script_id, function, epoch, generation, context)
     }
 
+    /// 26.44: `execute_instance_context` under a debug probe (see `execute_instance_debug`).
+    #[allow(clippy::too_many_arguments)]
+    pub fn execute_instance_context_debug(
+        &mut self,
+        script_id: &str,
+        function: &str,
+        epoch: u32,
+        revision: u32,
+        generation: u32,
+        mut context: ScriptContext,
+        probe: ScriptDebugProbe,
+    ) -> Result<ScriptExecution, String> {
+        let world = self
+            .world_view
+            .as_ref()
+            .ok_or("script world context is not published")?;
+        {
+            let view = world.borrow();
+            if view.epoch != epoch || view.revision != revision {
+                return Err("stale script world revision".into());
+            }
+        }
+        if !context.entities.is_empty()
+            || !context.entity_generations.is_empty()
+            || !context.scene_entities.is_empty()
+        {
+            return Err("small script context must reference the published world".into());
+        }
+        context.shared_world = Some(Rc::clone(world));
+        self.execute_instance_debug(script_id, function, epoch, generation, context, probe)
+    }
+
     pub fn remove_entity_instances(&mut self, epoch: u32, entity: &str) -> bool {
         if self.instance_epoch != Some(epoch) {
             return false;
@@ -1121,6 +1300,26 @@ fn execute_in_scope(
     prepared: &PreparedScript,
     ast: &AST,
     function: &str,
+    context: ScriptContext,
+    scope: &mut Scope<'static>,
+    initialized: &mut bool,
+) -> Result<ScriptExecution, String> {
+    execute_in_scope_with(
+        acquire_host_engine(),
+        prepared,
+        ast,
+        function,
+        context,
+        scope,
+        initialized,
+    )
+}
+
+fn execute_in_scope_with(
+    host: Rc<HostEngine>,
+    prepared: &PreparedScript,
+    ast: &AST,
+    function: &str,
     mut context: ScriptContext,
     scope: &mut Scope<'static>,
     initialized: &mut bool,
@@ -1143,7 +1342,6 @@ fn execute_in_scope(
             ..ScriptWorldView::default()
         })));
     }
-    let host = acquire_host_engine();
     let _depth = DepthGuard::enter();
     *host.output.borrow_mut() = HostOutput::default();
     host.states.reset(&context);
@@ -1189,6 +1387,7 @@ fn execute_in_scope(
         commands: std::mem::take(&mut output.commands),
         logs: std::mem::take(&mut output.logs),
         properties,
+        pause: None,
     })
 }
 
@@ -1210,11 +1409,16 @@ thread_local! {
 struct FallbackContext {
     context: ScriptContext,
     character: CharacterSnapshot,
+    animator: AnimatorSnapshot,
 }
 
 impl FallbackContext {
     fn character_default(&self) -> &CharacterSnapshot {
         &self.character
+    }
+
+    fn animator_default(&self) -> &AnimatorSnapshot {
+        &self.animator
     }
 }
 
@@ -1355,6 +1559,167 @@ impl HostEngine {
             output,
             states,
         }
+    }
+}
+
+impl HostEngine {
+    /// 26.44: the same host engine with a statement debugger; used only for debug runs.
+    // `register_debugger` is marked volatile (deprecated) by Rhai, not removed.
+    #[allow(deprecated)]
+    fn build_debug() -> Self {
+        let output = Rc::new(RefCell::new(HostOutput::default()));
+        let states = HostCallStates::new();
+        let mut engine = build_host_engine(Rc::clone(&output), &states);
+        engine.register_debugger(
+            /* 每次运行从 Init 开始；第一个节点触发 Start，随后由回调保持逐节点步进。 */
+            |_, debugger| debugger,
+            debug_probe_event,
+        );
+        Self {
+            engine,
+            output,
+            states,
+        }
+    }
+}
+
+thread_local! {
+    static CACHED_DEBUG_HOST: RefCell<Option<Rc<HostEngine>>> = const { RefCell::new(None) };
+    static DEBUG_PROBE: RefCell<Option<DebugProbeState>> = const { RefCell::new(None) };
+}
+
+struct DebugProbeState {
+    probe: ScriptDebugProbe,
+    event: u64,
+    pause: Option<ScriptDebugPause>,
+}
+
+const MAX_DEBUG_LOCALS: usize = 256;
+
+// 26.44: counts statements of a debug run and stops it where the probe asks (see ScriptDebugProbe).
+fn debug_probe_event(
+    context: rhai::EvalContext,
+    event: rhai::debugger::DebuggerEvent,
+    node: rhai::ASTNode,
+    _source: Option<&str>,
+    position: rhai::Position,
+) -> Result<rhai::debugger::DebuggerCommand, Box<rhai::EvalAltResult>> {
+    use rhai::debugger::{DebuggerCommand, DebuggerEvent};
+    let counted = matches!(
+        event,
+        DebuggerEvent::Start | DebuggerEvent::Step | DebuggerEvent::BreakPoint(_)
+    ) && matches!(node, rhai::ASTNode::Stmt(statement) if !matches!(statement, rhai::Stmt::Block(..) | rhai::Stmt::Noop(..)))
+        && !position.is_none();
+    if !counted {
+        return Ok(DebuggerCommand::StepInto);
+    }
+    let stop = DEBUG_PROBE.with(|probe| {
+        let mut probe = probe.borrow_mut();
+        let Some(state) = probe.as_mut() else {
+            return false;
+        };
+        if state.pause.is_some() {
+            return false;
+        }
+        state.event += 1;
+        let line = position.line().unwrap_or(0);
+        let depth = context.global_runtime_state().level;
+        // Stepping over or out still stops at a breakpoint inside the code it skips.
+        let at_break = state.probe.break_lines.contains(&line);
+        let hit = state.event > state.probe.after_event
+            && match state.probe.mode.as_str() {
+                "into" => true,
+                "over" => depth <= state.probe.depth || at_break,
+                "out" => depth < state.probe.depth || at_break,
+                _ => at_break,
+            };
+        if !hit {
+            return false;
+        }
+        let locals = context
+            .scope()
+            .iter()
+            .filter(|(name, ..)| !name.starts_with('_') || name.len() > 1)
+            .take(MAX_DEBUG_LOCALS)
+            .map(|(name, constant, value)| ScriptDebugLocal {
+                name: name.to_owned(),
+                value: dynamic_to_json(value.clone())
+                    .unwrap_or_else(|| Value::String(format!("<{}>", value.type_name()))),
+                constant,
+            })
+            .collect();
+        let mut stack: Vec<ScriptDebugFrame> = context
+            .debugger()
+            .map(|debugger| {
+                debugger
+                    .call_stack()
+                    .iter()
+                    .map(|frame| ScriptDebugFrame {
+                        function: frame.fn_name.to_string(),
+                        line: frame.pos.line().unwrap_or(0),
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
+        stack.truncate(64);
+        state.pause = Some(ScriptDebugPause {
+            event: state.event,
+            line,
+            column: position.position().unwrap_or(0),
+            depth,
+            locals,
+            stack,
+        });
+        true
+    });
+    if stop {
+        Err(Box::new(rhai::EvalAltResult::ErrorTerminated(
+            Dynamic::UNIT,
+            position,
+        )))
+    } else {
+        Ok(DebuggerCommand::StepInto)
+    }
+}
+
+fn acquire_debug_host_engine() -> Rc<HostEngine> {
+    CACHED_DEBUG_HOST.with(|cached| {
+        Rc::clone(
+            cached
+                .borrow_mut()
+                .get_or_insert_with(|| Rc::new(HostEngine::build_debug())),
+        )
+    })
+}
+
+/// Installs a probe for one debug run and removes it afterwards (also on panic or early return).
+struct DebugProbeGuard;
+
+impl DebugProbeGuard {
+    fn enter(probe: ScriptDebugProbe) -> Self {
+        DEBUG_PROBE.with(|state| {
+            *state.borrow_mut() = Some(DebugProbeState {
+                probe,
+                event: 0,
+                pause: None,
+            })
+        });
+        DebugProbeGuard
+    }
+
+    fn take_pause(&self) -> Option<ScriptDebugPause> {
+        DEBUG_PROBE.with(|state| {
+            state
+                .borrow_mut()
+                .as_mut()
+                .and_then(|state| state.pause.take())
+        })
+    }
+}
+
+impl Drop for DebugProbeGuard {
+    fn drop(&mut self) {
+        DEBUG_PROBE.with(|state| *state.borrow_mut() = None);
     }
 }
 
@@ -3176,6 +3541,202 @@ fn register_command_api(
                 });
         },
     );
+    // 26.44: crossfade, Animator state reads, tweens and one-way drop-through.
+    let commands = Rc::clone(&output);
+    engine.register_fn(
+        "animator_crossfade",
+        /* 将“混合过渡到动画状态”命令加入宿主队列。 */
+        move |state: &str, seconds: FLOAT| {
+            commands
+                .borrow_mut()
+                .commands
+                .push(ScriptCommand::AnimatorCrossfade {
+                    state: state.chars().take(80).collect(),
+                    seconds: if seconds.is_finite() {
+                        seconds.clamp(0.0, 60.0)
+                    } else {
+                        0.0
+                    },
+                });
+        },
+    );
+    let animator = live_with!(|context| context
+        .animator
+        .as_ref()
+        .unwrap_or_else(|| fallback_context().animator_default()));
+    let snapshot = animator;
+    engine.register_fn(
+        "animator_state",
+        /* 当前（基础层）动画状态名。 */ move || snapshot.state.clone(),
+    );
+    let snapshot = animator;
+    engine.register_fn(
+        "animator_state_time",
+        /* 当前状态的归一化时间（循环时可超过 1）。 */
+        move || snapshot.normalized_time,
+    );
+    let snapshot = animator;
+    engine.register_fn(
+        "animator_in_transition",
+        /* 是否正在两个状态间过渡。 */ move || snapshot.in_transition,
+    );
+    let snapshot = character;
+    engine.register_fn(
+        "character_floor_is_one_way",
+        /* 脚下是否为单向平台。 */ move || snapshot.floor_one_way,
+    );
+    let commands = Rc::clone(&output);
+    engine.register_fn(
+        "character_drop_through",
+        /* 让角色在 0.25 秒内穿过单向平台。 */
+        move || {
+            commands
+                .borrow_mut()
+                .commands
+                .push(ScriptCommand::CharacterDropThrough { seconds: 0.25 });
+        },
+    );
+    let commands = Rc::clone(&output);
+    engine.register_fn(
+        "character_drop_through",
+        /* 让角色在给定秒数内穿过单向平台。 */
+        move |seconds: FLOAT| {
+            let seconds = if seconds.is_finite() {
+                seconds.clamp(0.0, 10.0)
+            } else {
+                0.25
+            };
+            commands
+                .borrow_mut()
+                .commands
+                .push(ScriptCommand::CharacterDropThrough { seconds });
+        },
+    );
+    let tween_command = /* 构造补间命令；选项映射可含 delay、loops、yoyo、relative、signal。 */ |target: String, generation: u32, property: &str, to: FLOAT, seconds: FLOAT, easing: &str, options: Option<&Map>| {
+        let number = |key: &str, fallback: f64| options.and_then(|map| map.get(key)).and_then(|value| value.as_float().ok().or_else(|| value.as_int().ok().map(|value| value as f64))).filter(|value| value.is_finite()).unwrap_or(fallback);
+        let flag = |key: &str| options.and_then(|map| map.get(key)).and_then(|value| value.as_bool().ok()).unwrap_or(false);
+        let signal = options.and_then(|map| map.get("signal")).and_then(|value| value.clone().try_cast::<String>()).unwrap_or_default();
+        ScriptCommand::Tween {
+            target,
+            generation,
+            property: property.chars().take(80).collect(),
+            to: if to.is_finite() { to } else { 0.0 },
+            seconds: if seconds.is_finite() { seconds.clamp(0.0, 3600.0) } else { 0.0 },
+            easing: easing.chars().take(40).collect(),
+            delay: number("delay", 0.0).clamp(0.0, 3600.0),
+            loops: number("loops", 0.0).clamp(-1.0, 1_000_000.0) as i64,
+            yoyo: flag("yoyo"),
+            relative: flag("relative"),
+            signal: signal.chars().take(80).collect(),
+        }
+    };
+    let commands = Rc::clone(&output);
+    engine.register_fn(
+        "tween",
+        /* 线性补间本对象的属性。 */
+        move |property: &str, to: FLOAT, seconds: FLOAT| {
+            commands.borrow_mut().commands.push(tween_command(
+                String::new(),
+                0,
+                property,
+                to,
+                seconds,
+                "linear",
+                None,
+            ));
+        },
+    );
+    let commands = Rc::clone(&output);
+    engine.register_fn(
+        "tween",
+        /* 用给定缓动补间本对象的属性。 */
+        move |property: &str, to: FLOAT, seconds: FLOAT, easing: &str| {
+            commands.borrow_mut().commands.push(tween_command(
+                String::new(),
+                0,
+                property,
+                to,
+                seconds,
+                easing,
+                None,
+            ));
+        },
+    );
+    let commands = Rc::clone(&output);
+    engine.register_fn(
+        "tween",
+        /* 用缓动和选项（delay、loops、yoyo、relative、signal）补间本对象的属性。 */
+        move |property: &str, to: FLOAT, seconds: FLOAT, easing: &str, options: Map| {
+            commands.borrow_mut().commands.push(tween_command(
+                String::new(),
+                0,
+                property,
+                to,
+                seconds,
+                easing,
+                Some(&options),
+            ));
+        },
+    );
+    let commands = Rc::clone(&output);
+    engine.register_fn(
+        "entity_tween",
+        /* 补间另一个对象（句柄）的属性。 */
+        move |handle: Map, property: &str, to: FLOAT, seconds: FLOAT, easing: &str| {
+            if let Some((target, generation)) = target_from_handle(handle) {
+                commands.borrow_mut().commands.push(tween_command(
+                    target, generation, property, to, seconds, easing, None,
+                ));
+            }
+        },
+    );
+    let commands = Rc::clone(&output);
+    engine.register_fn(
+        "tween_stop",
+        /* 停止本对象的全部补间。 */
+        move || {
+            commands
+                .borrow_mut()
+                .commands
+                .push(ScriptCommand::TweenStop {
+                    target: String::new(),
+                    generation: 0,
+                    property: String::new(),
+                });
+        },
+    );
+    let commands = Rc::clone(&output);
+    engine.register_fn(
+        "tween_stop",
+        /* 停止本对象某个属性的补间。 */
+        move |property: &str| {
+            commands
+                .borrow_mut()
+                .commands
+                .push(ScriptCommand::TweenStop {
+                    target: String::new(),
+                    generation: 0,
+                    property: property.chars().take(80).collect(),
+                });
+        },
+    );
+    let commands = Rc::clone(&output);
+    engine.register_fn(
+        "entity_tween_stop",
+        /* 停止另一个对象（句柄）的全部补间。 */
+        move |handle: Map| {
+            if let Some((target, generation)) = target_from_handle(handle) {
+                commands
+                    .borrow_mut()
+                    .commands
+                    .push(ScriptCommand::TweenStop {
+                        target,
+                        generation,
+                        property: String::new(),
+                    });
+            }
+        },
+    );
     let commands = Rc::clone(&output);
     engine.register_fn(
         "audio_play",
@@ -4983,6 +5544,116 @@ mod tests {
     }
 
     #[test]
+    fn debug_runs_stop_at_lines_step_and_leave_no_trace() {
+        let source = "let count = 0;\nfn helper(x) {\n    let y = x * 2;\n    y + 1\n}\nfn update(dt) {\n    let a = 1;\n    count += a;\n    let b = helper(a);\n    score_add(1.0);\n    print(`b=${b} count=${count}`);\n}";
+        let mut runtime = ScriptRuntime::new();
+        runtime.upsert("debug", source).unwrap();
+        let probe = |lines: &[usize], after: u64, mode: &str, depth: usize| ScriptDebugProbe {
+            break_lines: lines.to_vec(),
+            after_event: after,
+            mode: mode.into(),
+            depth,
+        };
+        // A breakpoint on line 9 stops before helper runs; count was already incremented in the
+        // stopped run but the instance is restored, so nothing of it remains.
+        let first = runtime
+            .execute_instance_debug(
+                "debug",
+                "update",
+                1,
+                3,
+                live_context("a", 3),
+                probe(&[9], 0, "continue", 0),
+            )
+            .unwrap();
+        let pause = first.pause.expect("stopped at line 9");
+        assert_eq!(pause.line, 9);
+        assert!(first.commands.is_empty() && first.logs.is_empty());
+        let local = |name: &str| {
+            pause
+                .locals
+                .iter()
+                .find(|local| local.name == name)
+                .map(|local| local.value.clone())
+        };
+        assert_eq!(local("a"), Some(Value::from(1)));
+        assert_eq!(local("count"), Some(Value::from(1)));
+        // Step into: the next statement is the first line of helper, one call level deeper.
+        let into = runtime
+            .execute_instance_debug(
+                "debug",
+                "update",
+                1,
+                3,
+                live_context("a", 3),
+                probe(&[9], pause.event, "into", pause.depth),
+            )
+            .unwrap()
+            .pause
+            .expect("stepped into helper");
+        assert_eq!(into.line, 3);
+        assert!(into.depth > pause.depth);
+        assert_eq!(
+            into.stack.last().map(|frame| frame.function.as_str()),
+            Some("helper")
+        );
+        assert_eq!(
+            into.locals
+                .iter()
+                .find(|local| local.name == "x")
+                .map(|local| local.value.clone()),
+            Some(Value::from(1))
+        );
+        // Step out of helper: back in update on the next statement.
+        let out = runtime
+            .execute_instance_debug(
+                "debug",
+                "update",
+                1,
+                3,
+                live_context("a", 3),
+                probe(&[9], into.event, "out", into.depth),
+            )
+            .unwrap()
+            .pause
+            .expect("stepped out");
+        assert_eq!(out.line, 10);
+        // Step over from line 9 skips helper's lines.
+        let over = runtime
+            .execute_instance_debug(
+                "debug",
+                "update",
+                1,
+                3,
+                live_context("a", 3),
+                probe(&[9], pause.event, "over", pause.depth),
+            )
+            .unwrap()
+            .pause
+            .expect("stepped over");
+        assert_eq!(over.line, 10);
+        // Continue past the last breakpoint: the run completes and its effects apply once.
+        let done = runtime
+            .execute_instance_debug(
+                "debug",
+                "update",
+                1,
+                3,
+                live_context("a", 3),
+                probe(&[9], pause.event, "continue", 0),
+            )
+            .unwrap();
+        assert!(done.pause.is_none());
+        assert_eq!(done.commands, vec![ScriptCommand::ScoreAdd { value: 1.0 }]);
+        assert_eq!(done.logs[0].message, "b=3 count=1");
+        // The ordinary path continues from the committed state.
+        let next = runtime
+            .execute_instance("debug", "update", 1, 3, live_context("a", 3))
+            .unwrap();
+        assert_eq!(next.logs[0].message, "b=3 count=2");
+    }
+
+    #[test]
     fn live_instances_reject_stale_lifetimes_epochs_and_reuse_after_retirement() {
         let mut runtime = ScriptRuntime::new();
         runtime
@@ -5235,6 +5906,92 @@ mod tests {
                 ScriptCommand::AudioPause,
                 ScriptCommand::AudioStop,
             ]
+        );
+    }
+
+    // 26.44: crossfade, tweens, drop-through and the Animator/character reads.
+    #[test]
+    fn animator_tween_and_drop_through_commands_and_reads() {
+        let source = r#"
+            fn update(dt) {
+                animator_crossfade("Jump", 0.2);
+                tween("x", 3.0, 0.5);
+                tween("opacity", 0.0, 1.0, "quad_out");
+                tween("rotation", 90.0, 2.0, "back_in_out", #{ delay: 0.5, loops: -1, yoyo: true, relative: true, signal: "spun" });
+                tween_stop("x");
+                tween_stop();
+                character_drop_through();
+                character_drop_through(0.4);
+                log_info(`${animator_state()}|${animator_state_time()}|${animator_in_transition()}|${character_floor_is_one_way()}`);
+            }
+        "#;
+        let mut context = context();
+        context.animator = Some(AnimatorSnapshot {
+            state: "Run".into(),
+            state_id: "run".into(),
+            normalized_time: 0.5,
+            in_transition: true,
+        });
+        context.character = Some(CharacterSnapshot {
+            on_floor: true,
+            floor_one_way: true,
+            ..CharacterSnapshot::default()
+        });
+        let execution = ScriptRuntime::new()
+            .execute(source, "update", context)
+            .unwrap();
+        let tween = |property: &str, to: f64, seconds: f64, easing: &str| ScriptCommand::Tween {
+            target: String::new(),
+            generation: 0,
+            property: property.into(),
+            to,
+            seconds,
+            easing: easing.into(),
+            delay: 0.0,
+            loops: 0,
+            yoyo: false,
+            relative: false,
+            signal: String::new(),
+        };
+        assert_eq!(
+            execution.commands,
+            vec![
+                ScriptCommand::AnimatorCrossfade {
+                    state: "Jump".into(),
+                    seconds: 0.2
+                },
+                tween("x", 3.0, 0.5, "linear"),
+                tween("opacity", 0.0, 1.0, "quad_out"),
+                ScriptCommand::Tween {
+                    target: String::new(),
+                    generation: 0,
+                    property: "rotation".into(),
+                    to: 90.0,
+                    seconds: 2.0,
+                    easing: "back_in_out".into(),
+                    delay: 0.5,
+                    loops: -1,
+                    yoyo: true,
+                    relative: true,
+                    signal: "spun".into(),
+                },
+                ScriptCommand::TweenStop {
+                    target: String::new(),
+                    generation: 0,
+                    property: "x".into()
+                },
+                ScriptCommand::TweenStop {
+                    target: String::new(),
+                    generation: 0,
+                    property: String::new()
+                },
+                ScriptCommand::CharacterDropThrough { seconds: 0.25 },
+                ScriptCommand::CharacterDropThrough { seconds: 0.4 },
+            ]
+        );
+        assert_eq!(
+            execution.logs.last().map(|log| log.message.as_str()),
+            Some("Run|0.5|true|true")
         );
     }
 

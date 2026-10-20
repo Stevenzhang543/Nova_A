@@ -9,6 +9,10 @@
       <button v-for="tab in tabs" :key="tab.id" class="panel-tab" :class="{ active: estate.bottomPanelTab === tab.id }" :data-ui-drop="dropTabTarget === tab.id ? 'before' : undefined" draggable="true" :aria-pressed="estate.bottomPanelTab === tab.id" @dragstart="startTabDrag($event, tab.id)" @dragend="finishBottomDrag" @dragover="previewTabDrop($event, tab.id)" @dragleave="dropTabTarget = null" @drop="dropTab($event, tab.id)" @click="openTab(tab.id)" :title="t(tab.label)"><EditorIcon :name="tab.icon" /><span class="tab-label">{{ t(tab.label) }}</span><i v-if="tabDirty(tab.id)" class="dirty-indicator"></i></button>
       </div>
       <div class="panel-controls">
+      <!-- 26.44 G1: three dock heights next to the free resize handle. -->
+      <div v-if="estate.bottomPanelOpen && workspaceState.maximizedPanel !== 'bottom'" class="dock-presets" role="group" :aria-label="t('dockHeight')">
+        <button v-for="preset in DOCK_PRESETS" :key="preset.id" type="button" class="dock-preset" :class="{ active: estate.bottomPanelHeight === preset.height }" :aria-pressed="estate.bottomPanelHeight === preset.height" :aria-label="t(preset.label)" :title="t(preset.label)" @click="setDockPreset(preset.height)"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="2.5" y="2.5" width="11" height="11" rx="2.5" /><rect class="dock-fill" x="4.5" :y="12 - preset.fill" width="7" :height="preset.fill" rx="1" /></svg></button>
+      </div>
       <PanelMaximizeButton v-if="estate.bottomPanelOpen" panel="bottom" />
       <button class="ui-button ui-icon-button" :class="{ active: estate.bottomPanelPinned }" :aria-pressed="estate.bottomPanelPinned" :aria-label="t(estate.bottomPanelPinned ? 'unpinPanel' : 'pinPanel')" :title="t(estate.bottomPanelPinned ? 'unpinPanel' : 'pinPanel')" @click="estate.bottomPanelPinned = !estate.bottomPanelPinned"><EditorIcon :name="estate.bottomPanelPinned ? 'unpin' : 'pin'" /></button>
       <button class="ui-button ui-icon-button" v-if="estate.bottomPanelTab === 'console' && estate.bottomPanelOpen" :aria-label="t('clearConsole')" :title="t('clearConsole')" @click="estate.logs.splice(0)"><EditorIcon name="clear" /></button>
@@ -427,7 +431,23 @@ const dockContent = ref<HTMLElement | null>(null)
 const dockContentVisible = ref(estate.bottomPanelOpen)
 const dockHeldHeight = ref<string | null>(null)
 let dockMotionGeneration = 0
-function dockNaturalHeight() { return estate.bottomPanelOpen ? `min(${estate.bottomPanelHeight}px, 42vh)` : 'auto' }
+// The cap keeps a usable canvas on short windows; the tall preset may use up to ~64% of the window.
+function dockNaturalHeight() { return estate.bottomPanelOpen ? `min(${estate.bottomPanelHeight}px, 64vh)` : 'auto' }
+/** 26.44 G1: short, medium and tall dock heights (the medium one is the default height). */
+const DOCK_PRESETS = [{ id: 'short', label: 'dockShort', height: 160, fill: 3 }, { id: 'medium', label: 'dockMedium', height: 280, fill: 5 }, { id: 'tall', label: 'dockTall', height: 440, fill: 8 }] as const
+function setDockPreset(height: number) {
+  const root = dockRoot.value
+  if (!estate.bottomPanelOpen || !root?.isConnected) { estate.bottomPanelHeight = height; estate.bottomPanelOpen = true; return }
+  if (estate.bottomPanelHeight === height) return
+  const from = root.offsetHeight, generation = ++dockMotionGeneration
+  cancelMotion(root)
+  estate.bottomPanelHeight = height
+  // Measure the new natural height in this task, then let the motion present the change.
+  root.style.height = dockNaturalHeight()
+  const to = root.offsetHeight
+  root.style.height = to + 'px'; dockHeldHeight.value = to + 'px'
+  animateBlockSize(root, from, to, () => { if (generation === dockMotionGeneration) dockHeldHeight.value = null })
+}
 function settleDockMotion() {
   ++dockMotionGeneration
   const root = dockRoot.value
@@ -874,6 +894,13 @@ function leaveFolderDrop(event: DragEvent, folder: string) { if (!(event.current
 .panel-tab:hover:not(.active){color:var(--text-primary)}
 .panel-tab.active{background:var(--surface-raised);color:var(--text-primary);box-shadow:var(--shadow-xs),var(--hairline-highlight)}
 .bottom-panel.collapsed .panel-tab.active{background:transparent;box-shadow:none;color:var(--text-secondary)}
+.dock-presets{display:flex;flex:none;align-items:center;gap:1px;margin-inline-end:var(--space-1);padding:2px;border-radius:var(--radius-pill);background:var(--surface-2)}
+.dock-preset{display:grid;place-items:center;width:24px;height:calc(var(--ui-control-height) - 8px);min-height:0;padding:0;border:0;border-radius:var(--radius-pill);background:transparent;color:var(--text-muted);cursor:pointer}
+.dock-preset:hover{color:var(--text-primary)}
+.dock-preset.active{background:var(--surface-1);color:var(--text-primary);box-shadow:var(--shadow-xs)}
+.dock-preset svg{width:14px;height:14px}
+.dock-preset rect{fill:none;stroke:currentColor;stroke-width:1.2}
+.dock-preset rect.dock-fill{fill:currentColor;stroke:none}
 .panel-controls{display:flex;flex:none;align-items:center;gap:0;padding-inline-start:var(--space-1);border-left:var(--ui-border-width) solid var(--border-separator)}
 .panel-controls>button,.panel-controls>:deep(.ui-button){width:calc(var(--ui-control-height) - 2px);height:calc(var(--ui-control-height) - 2px);min-height:0;padding:0;color:var(--text-muted)}
 .panel-controls>button.active{background:transparent;color:var(--accent)}

@@ -230,6 +230,21 @@ interface GeometryEntity {
 // Normalization runs every frame on observed objects: write only real changes, so observers are not
 // notified (and panels not re-rendered) for values that are already normal.
 function put<T extends object, K extends keyof T>(target: T, key: K, value: T[K]): void { if (target[key] !== value) target[key] = value }
+// 26.44: vertex lists already normalised to their convex hull (with the coordinates they had then),
+// so physics sync does not recompute the hull of every box collider on every step.
+const knownHulls = new WeakMap<Vec2[], Float64Array>()
+/** 26.44: the list is unchanged since it was last normalised. */ function isKnownHull(vertices: Vec2[]): boolean {
+  const known = Array.isArray(vertices) ? knownHulls.get(vertices) : undefined
+  if (!known || known.length !== vertices.length * 2) return false
+  for (let index = 0; index < vertices.length; index++) if (!Object.is(known[index * 2], vertices[index]?.x) || !Object.is(known[index * 2 + 1], vertices[index]?.y)) return false
+  return true
+}
+/** 26.44: records the list's coordinates after normalisation. */ function rememberHull(vertices: Vec2[]): void {
+  if (!Array.isArray(vertices)) return
+  const values = new Float64Array(vertices.length * 2)
+  vertices.forEach((vertex, index) => { values[index * 2] = vertex?.x; values[index * 2 + 1] = vertex?.y })
+  knownHulls.set(vertices, values)
+}
 function putPoints(target: { vertices?: Vec2[] }, points: Vec2[]): void {
   const current = target.vertices
   if (current && current.length === points.length && current.every((point, index) => point.x === points[index].x && point.y === points[index].y)) return
@@ -325,9 +340,10 @@ function putPoints(target: { vertices?: Vec2[] }, points: Vec2[]): void {
     put(collider, 'rotation', normalizeAngle(collider.rotation))
     put(collider, 'radiusX', positiveNumber(collider.radiusX, 1))
     put(collider, 'radiusY', positiveNumber(collider.radiusY, collider.radiusX))
-    if (collider.shapeModel === 'Box') {
+    if (collider.shapeModel === 'Box' && !isKnownHull(collider.vertices)) {
       const hull = convexHull(collider.vertices)
       if (hull.length >= 3 && polygonArea(hull) > MIN_AREA) putPoints(collider, hull)
+      rememberHull(collider.vertices)
     }
   }
   put(entity, 'mass', clampNumber(entity.mass, MIN_MASS, MAX_MASS, 1))

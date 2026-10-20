@@ -14,7 +14,16 @@ fn start() {
   set_rotation(transform().rotation + 15.0 * 0.017453292519943295);
   set_rotation(0.0 * 0.017453292519943295);
   set_scale(1.0, 1.0);
+  tween("x", 0.0, 1.0, "sine_in_out");
+  tween("y", 0.0, 1.0, "sine_in_out");
+  tween("x", 2.0, 1.0, "sine_in_out", #{ relative: true });
+  tween("y", 0.0, 1.0, "sine_in_out", #{ relative: true });
+  tween("rotation_degrees", 360.0, 1.0, "linear", #{ relative: true });
+  character_drop_through();
   animator_play("Run");
+  animator_crossfade("Run", 0.2);
+  tween("opacity", 0.0, 0.5, "linear");
+  tween("scale", 1.5, 0.3, "back_out");
   ui_set_text("Score: " + __blk_text(score));
   ui_set_text_on(find_entity_handle("ScoreLabel"), "Score: " + __blk_text(score));
   entity_set_enabled(find_entity_handle("ScoreLabel"), true);
@@ -24,7 +33,7 @@ fn start() {
   stop_music(1.0);
   set_bus_volume("Music", 0.5);
   play_video("Assets/Video/intro.webm", #{ skippable: true });
-  if !(input_down("Jump")) && (input_pressed("Jump")) && (character_is_on_floor()) && (character_is_on_wall()) && (0.0 > 0.0) && (random() < 50.0 / 100.0) && (true) {
+  if !(input_down("Jump")) && (input_pressed("Jump")) && (character_is_on_floor()) && (character_is_on_wall()) && (character_floor_is_one_way()) && (animator_state() == "Run") && (0.0 > 0.0) && (random() < 50.0 / 100.0) && (true) {
     score_add(1.0);
   } else {
     log_info("Hello");
@@ -77,7 +86,16 @@ fn update(dt) {
   set_rotation(transform().rotation + 15.0 * 0.017453292519943295);
   set_rotation(0.0 * 0.017453292519943295);
   set_scale(1.0, 1.0);
+  tween("x", 0.0, 1.0, "sine_in_out");
+  tween("y", 0.0, 1.0, "sine_in_out");
+  tween("x", 2.0, 1.0, "sine_in_out", #{ relative: true });
+  tween("y", 0.0, 1.0, "sine_in_out", #{ relative: true });
+  tween("rotation_degrees", 360.0, 1.0, "linear", #{ relative: true });
+  character_drop_through();
   animator_play("Run");
+  animator_crossfade("Run", 0.2);
+  tween("opacity", 0.0, 0.5, "linear");
+  tween("scale", 1.5, 0.3, "back_out");
   ui_set_text("Score: " + __blk_text(score));
   ui_set_text_on(find_entity_handle("ScoreLabel"), "Score: " + __blk_text(score));
   entity_set_enabled(find_entity_handle("ScoreLabel"), true);
@@ -87,7 +105,7 @@ fn update(dt) {
   stop_music(1.0);
   set_bus_volume("Music", 0.5);
   play_video("Assets/Video/intro.webm", #{ skippable: true });
-  if !(input_down("Jump")) && (input_pressed("Jump")) && (character_is_on_floor()) && (character_is_on_wall()) && (0.0 > 0.0) && (random() < 50.0 / 100.0) && (true) {
+  if !(input_down("Jump")) && (input_pressed("Jump")) && (character_is_on_floor()) && (character_is_on_wall()) && (character_floor_is_one_way()) && (animator_state() == "Run") && (0.0 > 0.0) && (random() < 50.0 / 100.0) && (true) {
     score_add(1.0);
   } else {
     log_info("Hello");
@@ -139,7 +157,16 @@ fn update(dt) {
     set_rotation(transform().rotation + 15.0 * 0.017453292519943295);
     set_rotation(0.0 * 0.017453292519943295);
     set_scale(1.0, 1.0);
+    tween("x", 0.0, 1.0, "sine_in_out");
+    tween("y", 0.0, 1.0, "sine_in_out");
+    tween("x", 2.0, 1.0, "sine_in_out", #{ relative: true });
+    tween("y", 0.0, 1.0, "sine_in_out", #{ relative: true });
+    tween("rotation_degrees", 360.0, 1.0, "linear", #{ relative: true });
+    character_drop_through();
     animator_play("Run");
+    animator_crossfade("Run", 0.2);
+    tween("opacity", 0.0, 0.5, "linear");
+    tween("scale", 1.5, 0.3, "back_out");
     ui_set_text("Score: " + __blk_text(score));
     ui_set_text_on(find_entity_handle("ScoreLabel"), "Score: " + __blk_text(score));
     entity_set_enabled(find_entity_handle("ScoreLabel"), true);
@@ -149,7 +176,7 @@ fn update(dt) {
     stop_music(1.0);
     set_bus_volume("Music", 0.5);
     play_video("Assets/Video/intro.webm", #{ skippable: true });
-    if !(input_down("Jump")) && (input_pressed("Jump")) && (character_is_on_floor()) && (character_is_on_wall()) && (0.0 > 0.0) && (random() < 50.0 / 100.0) && (true) {
+    if !(input_down("Jump")) && (input_pressed("Jump")) && (character_is_on_floor()) && (character_is_on_wall()) && (character_floor_is_one_way()) && (animator_state() == "Run") && (0.0 > 0.0) && (random() < 50.0 / 100.0) && (true) {
       score_add(1.0);
     } else {
       log_info("Hello");
@@ -202,7 +229,16 @@ fn update(dt) {
     set_rotation(transform().rotation + 15.0 * 0.017453292519943295);
     set_rotation(0.0 * 0.017453292519943295);
     set_scale(1.0, 1.0);
+    tween("x", 0.0, 1.0, "sine_in_out");
+    tween("y", 0.0, 1.0, "sine_in_out");
+    tween("x", 2.0, 1.0, "sine_in_out", #{ relative: true });
+    tween("y", 0.0, 1.0, "sine_in_out", #{ relative: true });
+    tween("rotation_degrees", 360.0, 1.0, "linear", #{ relative: true });
+    character_drop_through();
     animator_play("Run");
+    animator_crossfade("Run", 0.2);
+    tween("opacity", 0.0, 0.5, "linear");
+    tween("scale", 1.5, 0.3, "back_out");
     ui_set_text("Score: " + __blk_text(score));
     ui_set_text_on(find_entity_handle("ScoreLabel"), "Score: " + __blk_text(score));
     entity_set_enabled(find_entity_handle("ScoreLabel"), true);
@@ -212,7 +248,7 @@ fn update(dt) {
     stop_music(1.0);
     set_bus_volume("Music", 0.5);
     play_video("Assets/Video/intro.webm", #{ skippable: true });
-    if !(input_down("Jump")) && (input_pressed("Jump")) && (character_is_on_floor()) && (character_is_on_wall()) && (0.0 > 0.0) && (random() < 50.0 / 100.0) && (true) {
+    if !(input_down("Jump")) && (input_pressed("Jump")) && (character_is_on_floor()) && (character_is_on_wall()) && (character_floor_is_one_way()) && (animator_state() == "Run") && (0.0 > 0.0) && (random() < 50.0 / 100.0) && (true) {
       score_add(1.0);
     } else {
       log_info("Hello");
@@ -265,7 +301,16 @@ fn update(dt) {
     set_rotation(transform().rotation + 15.0 * 0.017453292519943295);
     set_rotation(0.0 * 0.017453292519943295);
     set_scale(1.0, 1.0);
+    tween("x", 0.0, 1.0, "sine_in_out");
+    tween("y", 0.0, 1.0, "sine_in_out");
+    tween("x", 2.0, 1.0, "sine_in_out", #{ relative: true });
+    tween("y", 0.0, 1.0, "sine_in_out", #{ relative: true });
+    tween("rotation_degrees", 360.0, 1.0, "linear", #{ relative: true });
+    character_drop_through();
     animator_play("Run");
+    animator_crossfade("Run", 0.2);
+    tween("opacity", 0.0, 0.5, "linear");
+    tween("scale", 1.5, 0.3, "back_out");
     ui_set_text("Score: " + __blk_text(score));
     ui_set_text_on(find_entity_handle("ScoreLabel"), "Score: " + __blk_text(score));
     entity_set_enabled(find_entity_handle("ScoreLabel"), true);
@@ -275,7 +320,7 @@ fn update(dt) {
     stop_music(1.0);
     set_bus_volume("Music", 0.5);
     play_video("Assets/Video/intro.webm", #{ skippable: true });
-    if !(input_down("Jump")) && (input_pressed("Jump")) && (character_is_on_floor()) && (character_is_on_wall()) && (0.0 > 0.0) && (random() < 50.0 / 100.0) && (true) {
+    if !(input_down("Jump")) && (input_pressed("Jump")) && (character_is_on_floor()) && (character_is_on_wall()) && (character_floor_is_one_way()) && (animator_state() == "Run") && (0.0 > 0.0) && (random() < 50.0 / 100.0) && (true) {
       score_add(1.0);
     } else {
       log_info("Hello");
@@ -329,7 +374,16 @@ fn fixed_update(dt) {
   set_rotation(transform().rotation + 15.0 * 0.017453292519943295);
   set_rotation(0.0 * 0.017453292519943295);
   set_scale(1.0, 1.0);
+  tween("x", 0.0, 1.0, "sine_in_out");
+  tween("y", 0.0, 1.0, "sine_in_out");
+  tween("x", 2.0, 1.0, "sine_in_out", #{ relative: true });
+  tween("y", 0.0, 1.0, "sine_in_out", #{ relative: true });
+  tween("rotation_degrees", 360.0, 1.0, "linear", #{ relative: true });
+  character_drop_through();
   animator_play("Run");
+  animator_crossfade("Run", 0.2);
+  tween("opacity", 0.0, 0.5, "linear");
+  tween("scale", 1.5, 0.3, "back_out");
   ui_set_text("Score: " + __blk_text(score));
   ui_set_text_on(find_entity_handle("ScoreLabel"), "Score: " + __blk_text(score));
   entity_set_enabled(find_entity_handle("ScoreLabel"), true);
@@ -339,7 +393,7 @@ fn fixed_update(dt) {
   stop_music(1.0);
   set_bus_volume("Music", 0.5);
   play_video("Assets/Video/intro.webm", #{ skippable: true });
-  if !(input_down("Jump")) && (input_pressed("Jump")) && (character_is_on_floor()) && (character_is_on_wall()) && (0.0 > 0.0) && (random() < 50.0 / 100.0) && (true) {
+  if !(input_down("Jump")) && (input_pressed("Jump")) && (character_is_on_floor()) && (character_is_on_wall()) && (character_floor_is_one_way()) && (animator_state() == "Run") && (0.0 > 0.0) && (random() < 50.0 / 100.0) && (true) {
     score_add(1.0);
   } else {
     log_info("Hello");
@@ -376,7 +430,16 @@ fn on_collision_enter(other, px, py, nx, ny, rvx, rvy) {
   set_rotation(transform().rotation + 15.0 * 0.017453292519943295);
   set_rotation(0.0 * 0.017453292519943295);
   set_scale(1.0, 1.0);
+  tween("x", 0.0, 1.0, "sine_in_out");
+  tween("y", 0.0, 1.0, "sine_in_out");
+  tween("x", 2.0, 1.0, "sine_in_out", #{ relative: true });
+  tween("y", 0.0, 1.0, "sine_in_out", #{ relative: true });
+  tween("rotation_degrees", 360.0, 1.0, "linear", #{ relative: true });
+  character_drop_through();
   animator_play("Run");
+  animator_crossfade("Run", 0.2);
+  tween("opacity", 0.0, 0.5, "linear");
+  tween("scale", 1.5, 0.3, "back_out");
   ui_set_text("Score: " + __blk_text(score));
   ui_set_text_on(find_entity_handle("ScoreLabel"), "Score: " + __blk_text(score));
   entity_set_enabled(find_entity_handle("ScoreLabel"), true);
@@ -386,7 +449,7 @@ fn on_collision_enter(other, px, py, nx, ny, rvx, rvy) {
   stop_music(1.0);
   set_bus_volume("Music", 0.5);
   play_video("Assets/Video/intro.webm", #{ skippable: true });
-  if !(input_down("Jump")) && (input_pressed("Jump")) && (character_is_on_floor()) && (character_is_on_wall()) && (0.0 > 0.0) && (entity_has_tag(other, "coin")) && (random() < 50.0 / 100.0) && (true) {
+  if !(input_down("Jump")) && (input_pressed("Jump")) && (character_is_on_floor()) && (character_is_on_wall()) && (character_floor_is_one_way()) && (animator_state() == "Run") && (0.0 > 0.0) && (entity_has_tag(other, "coin")) && (random() < 50.0 / 100.0) && (true) {
     score_add(1.0);
   } else {
     log_info("Hello");
@@ -425,7 +488,16 @@ fn on_trigger_enter(other, px, py, nx, ny, rvx, rvy) {
   set_rotation(transform().rotation + 15.0 * 0.017453292519943295);
   set_rotation(0.0 * 0.017453292519943295);
   set_scale(1.0, 1.0);
+  tween("x", 0.0, 1.0, "sine_in_out");
+  tween("y", 0.0, 1.0, "sine_in_out");
+  tween("x", 2.0, 1.0, "sine_in_out", #{ relative: true });
+  tween("y", 0.0, 1.0, "sine_in_out", #{ relative: true });
+  tween("rotation_degrees", 360.0, 1.0, "linear", #{ relative: true });
+  character_drop_through();
   animator_play("Run");
+  animator_crossfade("Run", 0.2);
+  tween("opacity", 0.0, 0.5, "linear");
+  tween("scale", 1.5, 0.3, "back_out");
   ui_set_text("Score: " + __blk_text(score));
   ui_set_text_on(find_entity_handle("ScoreLabel"), "Score: " + __blk_text(score));
   entity_set_enabled(find_entity_handle("ScoreLabel"), true);
@@ -435,7 +507,7 @@ fn on_trigger_enter(other, px, py, nx, ny, rvx, rvy) {
   stop_music(1.0);
   set_bus_volume("Music", 0.5);
   play_video("Assets/Video/intro.webm", #{ skippable: true });
-  if !(input_down("Jump")) && (input_pressed("Jump")) && (character_is_on_floor()) && (character_is_on_wall()) && (0.0 > 0.0) && (entity_has_tag(other, "coin")) && (random() < 50.0 / 100.0) && (true) {
+  if !(input_down("Jump")) && (input_pressed("Jump")) && (character_is_on_floor()) && (character_is_on_wall()) && (character_floor_is_one_way()) && (animator_state() == "Run") && (0.0 > 0.0) && (entity_has_tag(other, "coin")) && (random() < 50.0 / 100.0) && (true) {
     score_add(1.0);
   } else {
     log_info("Hello");
@@ -474,7 +546,16 @@ fn on_trigger_exit(other, px, py, nx, ny, rvx, rvy) {
   set_rotation(transform().rotation + 15.0 * 0.017453292519943295);
   set_rotation(0.0 * 0.017453292519943295);
   set_scale(1.0, 1.0);
+  tween("x", 0.0, 1.0, "sine_in_out");
+  tween("y", 0.0, 1.0, "sine_in_out");
+  tween("x", 2.0, 1.0, "sine_in_out", #{ relative: true });
+  tween("y", 0.0, 1.0, "sine_in_out", #{ relative: true });
+  tween("rotation_degrees", 360.0, 1.0, "linear", #{ relative: true });
+  character_drop_through();
   animator_play("Run");
+  animator_crossfade("Run", 0.2);
+  tween("opacity", 0.0, 0.5, "linear");
+  tween("scale", 1.5, 0.3, "back_out");
   ui_set_text("Score: " + __blk_text(score));
   ui_set_text_on(find_entity_handle("ScoreLabel"), "Score: " + __blk_text(score));
   entity_set_enabled(find_entity_handle("ScoreLabel"), true);
@@ -484,7 +565,7 @@ fn on_trigger_exit(other, px, py, nx, ny, rvx, rvy) {
   stop_music(1.0);
   set_bus_volume("Music", 0.5);
   play_video("Assets/Video/intro.webm", #{ skippable: true });
-  if !(input_down("Jump")) && (input_pressed("Jump")) && (character_is_on_floor()) && (character_is_on_wall()) && (0.0 > 0.0) && (entity_has_tag(other, "coin")) && (random() < 50.0 / 100.0) && (true) {
+  if !(input_down("Jump")) && (input_pressed("Jump")) && (character_is_on_floor()) && (character_is_on_wall()) && (character_floor_is_one_way()) && (animator_state() == "Run") && (0.0 > 0.0) && (entity_has_tag(other, "coin")) && (random() < 50.0 / 100.0) && (true) {
     score_add(1.0);
   } else {
     log_info("Hello");
@@ -524,7 +605,16 @@ fn on_signal(signal, payload, source) {
     set_rotation(transform().rotation + 15.0 * 0.017453292519943295);
     set_rotation(0.0 * 0.017453292519943295);
     set_scale(1.0, 1.0);
+    tween("x", 0.0, 1.0, "sine_in_out");
+    tween("y", 0.0, 1.0, "sine_in_out");
+    tween("x", 2.0, 1.0, "sine_in_out", #{ relative: true });
+    tween("y", 0.0, 1.0, "sine_in_out", #{ relative: true });
+    tween("rotation_degrees", 360.0, 1.0, "linear", #{ relative: true });
+    character_drop_through();
     animator_play("Run");
+    animator_crossfade("Run", 0.2);
+    tween("opacity", 0.0, 0.5, "linear");
+    tween("scale", 1.5, 0.3, "back_out");
     ui_set_text("Score: " + __blk_text(score));
     ui_set_text_on(find_entity_handle("ScoreLabel"), "Score: " + __blk_text(score));
     entity_set_enabled(find_entity_handle("ScoreLabel"), true);
@@ -534,7 +624,7 @@ fn on_signal(signal, payload, source) {
     stop_music(1.0);
     set_bus_volume("Music", 0.5);
     play_video("Assets/Video/intro.webm", #{ skippable: true });
-    if !(input_down("Jump")) && (input_pressed("Jump")) && (character_is_on_floor()) && (character_is_on_wall()) && (0.0 > 0.0) && (random() < 50.0 / 100.0) && (true) {
+    if !(input_down("Jump")) && (input_pressed("Jump")) && (character_is_on_floor()) && (character_is_on_wall()) && (character_floor_is_one_way()) && (animator_state() == "Run") && (0.0 > 0.0) && (random() < 50.0 / 100.0) && (true) {
       score_add(1.0);
     } else {
       log_info("Hello");
@@ -573,7 +663,16 @@ fn on_timer(timer) {
     set_rotation(transform().rotation + 15.0 * 0.017453292519943295);
     set_rotation(0.0 * 0.017453292519943295);
     set_scale(1.0, 1.0);
+    tween("x", 0.0, 1.0, "sine_in_out");
+    tween("y", 0.0, 1.0, "sine_in_out");
+    tween("x", 2.0, 1.0, "sine_in_out", #{ relative: true });
+    tween("y", 0.0, 1.0, "sine_in_out", #{ relative: true });
+    tween("rotation_degrees", 360.0, 1.0, "linear", #{ relative: true });
+    character_drop_through();
     animator_play("Run");
+    animator_crossfade("Run", 0.2);
+    tween("opacity", 0.0, 0.5, "linear");
+    tween("scale", 1.5, 0.3, "back_out");
     ui_set_text("Score: " + __blk_text(score));
     ui_set_text_on(find_entity_handle("ScoreLabel"), "Score: " + __blk_text(score));
     entity_set_enabled(find_entity_handle("ScoreLabel"), true);
@@ -583,7 +682,7 @@ fn on_timer(timer) {
     stop_music(1.0);
     set_bus_volume("Music", 0.5);
     play_video("Assets/Video/intro.webm", #{ skippable: true });
-    if !(input_down("Jump")) && (input_pressed("Jump")) && (character_is_on_floor()) && (character_is_on_wall()) && (0.0 > 0.0) && (random() < 50.0 / 100.0) && (true) {
+    if !(input_down("Jump")) && (input_pressed("Jump")) && (character_is_on_floor()) && (character_is_on_wall()) && (character_floor_is_one_way()) && (animator_state() == "Run") && (0.0 > 0.0) && (random() < 50.0 / 100.0) && (true) {
       score_add(1.0);
     } else {
       log_info("Hello");
@@ -621,7 +720,16 @@ fn on_destroy() {
   set_rotation(transform().rotation + 15.0 * 0.017453292519943295);
   set_rotation(0.0 * 0.017453292519943295);
   set_scale(1.0, 1.0);
+  tween("x", 0.0, 1.0, "sine_in_out");
+  tween("y", 0.0, 1.0, "sine_in_out");
+  tween("x", 2.0, 1.0, "sine_in_out", #{ relative: true });
+  tween("y", 0.0, 1.0, "sine_in_out", #{ relative: true });
+  tween("rotation_degrees", 360.0, 1.0, "linear", #{ relative: true });
+  character_drop_through();
   animator_play("Run");
+  animator_crossfade("Run", 0.2);
+  tween("opacity", 0.0, 0.5, "linear");
+  tween("scale", 1.5, 0.3, "back_out");
   ui_set_text("Score: " + __blk_text(score));
   ui_set_text_on(find_entity_handle("ScoreLabel"), "Score: " + __blk_text(score));
   entity_set_enabled(find_entity_handle("ScoreLabel"), true);
@@ -631,7 +739,7 @@ fn on_destroy() {
   stop_music(1.0);
   set_bus_volume("Music", 0.5);
   play_video("Assets/Video/intro.webm", #{ skippable: true });
-  if !(input_down("Jump")) && (input_pressed("Jump")) && (character_is_on_floor()) && (character_is_on_wall()) && (0.0 > 0.0) && (random() < 50.0 / 100.0) && (true) {
+  if !(input_down("Jump")) && (input_pressed("Jump")) && (character_is_on_floor()) && (character_is_on_wall()) && (character_floor_is_one_way()) && (animator_state() == "Run") && (0.0 > 0.0) && (random() < 50.0 / 100.0) && (true) {
     score_add(1.0);
   } else {
     log_info("Hello");
@@ -668,7 +776,16 @@ fn hit(amount, kind) {
   set_rotation(transform().rotation + 15.0 * 0.017453292519943295);
   set_rotation(0.0 * 0.017453292519943295);
   set_scale(1.0, 1.0);
+  tween("x", 0.0, 1.0, "sine_in_out");
+  tween("y", 0.0, 1.0, "sine_in_out");
+  tween("x", 2.0, 1.0, "sine_in_out", #{ relative: true });
+  tween("y", 0.0, 1.0, "sine_in_out", #{ relative: true });
+  tween("rotation_degrees", 360.0, 1.0, "linear", #{ relative: true });
+  character_drop_through();
   animator_play("Run");
+  animator_crossfade("Run", 0.2);
+  tween("opacity", 0.0, 0.5, "linear");
+  tween("scale", 1.5, 0.3, "back_out");
   ui_set_text("Score: " + __blk_text(score));
   ui_set_text_on(find_entity_handle("ScoreLabel"), "Score: " + __blk_text(score));
   entity_set_enabled(find_entity_handle("ScoreLabel"), true);
@@ -678,7 +795,7 @@ fn hit(amount, kind) {
   stop_music(1.0);
   set_bus_volume("Music", 0.5);
   play_video("Assets/Video/intro.webm", #{ skippable: true });
-  if !(input_down("Jump")) && (input_pressed("Jump")) && (character_is_on_floor()) && (character_is_on_wall()) && (0.0 > 0.0) && (random() < 50.0 / 100.0) && (true) {
+  if !(input_down("Jump")) && (input_pressed("Jump")) && (character_is_on_floor()) && (character_is_on_wall()) && (character_floor_is_one_way()) && (animator_state() == "Run") && (0.0 > 0.0) && (random() < 50.0 / 100.0) && (true) {
     score_add(1.0);
   } else {
     log_info("Hello");

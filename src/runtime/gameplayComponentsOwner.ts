@@ -13,6 +13,13 @@ import type { InputSnapshot } from './input'
 export type GameplayEmit = (name: string, payload: unknown, target: string, source: string) => void
 export type GameplaySpawn = (prefab: string, entity: Entity) => Entity | null
 export type GameplayRemove = (entity: Entity, despawn: boolean) => void
+/** 26.44: world settings and physics commands the gameplay components need from their owner. */
+export interface GameplayWorldOptions {
+  /** World gravity (m/s², downward); Platform Controller 2D falls with it. Missing: 9.80665. */
+  gravity?: number
+  /** Lets a character drop through one-way platforms for `seconds` (see World.dropThroughOneWay). */
+  dropThrough?: (entity: Entity, seconds: number) => boolean
+}
 export interface GameplayComponentDiagnostics { controllers: number; spawns: number; damageEvents: number; collections: number; expired: number; lastError: string }
 export function createInitialGameplayComponentDiagnostics(): GameplayComponentDiagnostics { return { controllers: 0, spawns: 0, damageEvents: 0, collections: 0, expired: 0, lastError: '' } }
 
@@ -32,6 +39,8 @@ export function initializeGameplayEntities(entities: readonly Entity[]): void {
 
 export class GameplayComponentsOwner {
   private verticalVelocity = new Map<string, number>()
+  // 26.44: seconds a jump press stays buffered (Platform Controller 2D jumpBufferTime).
+  private jumpBuffers = new Map<string, number>()
   private hitCooldowns = new Map<string, number>()
   // Accepted endpoints preserve the original key math, including its legacy collisions.
   private cooldownParticipants = new Map<string, { source: string; target: string }>()
@@ -43,10 +52,11 @@ export class GameplayComponentsOwner {
   initializeGameplayEntities(entities: readonly Entity[]): void { initializeGameplayEntities(entities) }
 
   /** Session cleanup preserves the original diagnostic lifetime; begin resets counters. */
-  resetRuntimeCaches(): void { this.verticalVelocity.clear(); this.hitCooldowns.clear(); this.cooldownParticipants.clear() }
+  resetRuntimeCaches(): void { this.verticalVelocity.clear(); this.jumpBuffers.clear(); this.hitCooldowns.clear(); this.cooldownParticipants.clear() }
 
   retireEntity(uuid: string): void {
     this.verticalVelocity.delete(uuid)
+    this.jumpBuffers.delete(uuid)
     for (const [key, participants] of this.cooldownParticipants) {
       if (participants.source === uuid || participants.target === uuid) {
         this.hitCooldowns.delete(key); this.cooldownParticipants.delete(key)
@@ -55,12 +65,13 @@ export class GameplayComponentsOwner {
   }
 
   beginGameplayComponents(entities: readonly Entity[]): void {
-  this.verticalVelocity.clear(); this.hitCooldowns.clear(); this.cooldownParticipants.clear(); this.diagnostics.controllers = 0; this.diagnostics.spawns = 0; this.diagnostics.damageEvents = 0; this.diagnostics.collections = 0; this.diagnostics.expired = 0; this.diagnostics.lastError = ''
+  this.verticalVelocity.clear(); this.jumpBuffers.clear(); this.hitCooldowns.clear(); this.cooldownParticipants.clear(); this.diagnostics.controllers = 0; this.diagnostics.spawns = 0; this.diagnostics.damageEvents = 0; this.diagnostics.collections = 0; this.diagnostics.expired = 0; this.diagnostics.lastError = ''
   initializeGameplayEntities(entities)
 }
 
-  updateGameplayComponents(entities: readonly Entity[], input: InputSnapshot, fixedDelta: number, emit: GameplayEmit, spawn: GameplaySpawn, remove: GameplayRemove): void {
+  updateGameplayComponents(entities: readonly Entity[], input: InputSnapshot, fixedDelta: number, emit: GameplayEmit, spawn: GameplaySpawn, remove: GameplayRemove, options: GameplayWorldOptions = {}): void {
   const dt = Math.min(.25, Math.max(0, finiteNumber(fixedDelta)))
+  const gravity = finiteNumber(options.gravity, 9.80665)
   this.diagnostics.controllers = 0
   for (const [key, remaining] of [...this.hitCooldowns]) if (remaining <= dt) { this.hitCooldowns.delete(key); this.cooldownParticipants.delete(key) } else this.hitCooldowns.set(key, remaining - dt)
   for (const entity of entities) {
@@ -106,8 +117,21 @@ export class GameplayComponentsOwner {
       let vertical = this.verticalVelocity.get(entity.uuid) ?? 0
       if (character.onFloor && vertical < 0) vertical = 0
       if (character.onCeiling && vertical > 0) vertical = 0
-      if (input.performed[platform.jumpAction] || input.pressed[platform.jumpAction]) { if (character.onFloor || character.secondsSinceFloor <= character.coyoteTime) vertical = platform.jumpImpulse }
-      vertical = Math.max(-platform.maximumFallSpeed, vertical - 9.80665 * dt); this.verticalVelocity.set(entity.uuid, vertical)
+      // 26.44: a jump pressed shortly before landing is kept for jumpBufferTime; it fires when the
+      // character is on the floor (or within coyote time) and not already rising, so one press
+      // gives one jump. Down + jump on a one-way platform drops through it instead.
+      const pressed = Boolean(input.performed[platform.jumpAction] || input.pressed[platform.jumpAction])
+      let buffered = Math.max(0, (this.jumpBuffers.get(entity.uuid) ?? 0) - dt)
+      if (pressed) buffered = Math.max(finiteNumber(platform.jumpBufferTime, 0), 1e-9)
+      const grounded = character.onFloor || character.secondsSinceFloor <= character.coyoteTime
+      const dropping = pressed && Boolean(platform.dropThroughAction) && (input.axes[platform.dropThroughAction] ?? 0) <= -.5 && character.onFloor && character.floorOneWay
+      if (dropping) { options.dropThrough?.(entity, .25); buffered = 0 }
+      else if (buffered > 0 && grounded && vertical <= 0) { vertical = platform.jumpImpulse; buffered = 0 }
+      this.jumpBuffers.set(entity.uuid, buffered)
+      // 26.44: releasing jump while rising cuts the jump (jumpCutFactor 1 keeps full height).
+      if (input.released[platform.jumpAction] && vertical > 0) vertical *= Math.min(1, Math.max(0, finiteNumber(platform.jumpCutFactor, 1)))
+      // 26.44: the world's gravity (Physics settings), not a fixed 9.80665 m/s².
+      vertical = Math.max(-platform.maximumFallSpeed, vertical - gravity * dt); this.verticalVelocity.set(entity.uuid, vertical)
       character.requestedMotion.x += character.motionVelocity.x * dt; character.requestedMotion.y += vertical * dt; this.diagnostics.controllers++
     }
     const topDown = entity.getComponent<TopDownController2D>('TopDownController2D')

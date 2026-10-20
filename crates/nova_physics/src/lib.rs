@@ -31,8 +31,6 @@ mod engine {
     // 26.43: resting contacts keep up to this much overlap, so they persist between substeps
     // (no begin/end flicker, warm starting works, stacks can sleep). Scaled down for tiny shapes.
     const LINEAR_SLOP: f64 = 0.005;
-    // 26.43: velocity iterations stop early once no contact changes a velocity by more than this.
-    const VELOCITY_TOLERANCE: f64 = 1.0e-6;
     // 26.43: per-body continuous collision samples and bisection refinements.
     const MAX_CCD_SAMPLES: usize = 2048;
     const CCD_REFINEMENT_STEPS: usize = 16;
@@ -43,6 +41,7 @@ mod engine {
     include!("collision/internal_edges.rs");
     include!("solver/contact_solver.rs");
     include!("rope/mod.rs");
+    include!("world/broad_phase.rs");
     include!("world/legacy.rs");
     include!("world/persistent.rs");
     include!("world/origin.rs");

@@ -252,7 +252,7 @@ const ASSET_COMPONENT_FIELDS: Partial<Record<ComponentKind, string[]>> = {
   Canvas: ['themeAsset'],
   Image: ['spriteAsset'],
   Text: ['fontAsset'],
-  TileMap2D: ['tileSetAsset'],
+  TileMap2D: ['tileSetAsset', 'terrainRulesAsset'],
   BehaviorTree2D: ['treeAsset'],
   StateMachine2D: ['machineAsset'],
   Spawner2D: ['prefabAsset'],

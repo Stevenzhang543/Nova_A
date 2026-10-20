@@ -693,6 +693,10 @@ export const componentPrimitiveTypes: Readonly<Record<string, Readonly<Record<st
       "null",
       "string"
     ],
+    "terrainRulesAsset": [
+      "null",
+      "string"
+    ],
     "width": [
       "number"
     ],
@@ -971,6 +975,15 @@ export const componentPrimitiveTypes: Readonly<Record<string, Readonly<Record<st
     ],
     "maximumFallSpeed": [
       "number"
+    ],
+    "jumpBufferTime": [
+      "number"
+    ],
+    "jumpCutFactor": [
+      "number"
+    ],
+    "dropThroughAction": [
+      "string"
     ]
   },
   "TopDownController2D": {

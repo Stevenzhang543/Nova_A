@@ -5,6 +5,8 @@ type AnimatorParameterValue = boolean | number
 
 export type AnimatableProperty = 'Transform.position.x' | 'Transform.position.y' | 'Transform.rotation' | 'Transform.scale.x' | 'Transform.scale.y' | 'SpriteRenderer.opacity' | 'UI.opacity'
 export type AnimatorParameterType = 'Bool' | 'Float' | 'Integer' | 'Trigger'
+/** 26.44: transition source meaning "from any state" (checked before the other transitions, as in Unity). */
+export const ANY_STATE = '__any__'
 export type KeyTangentMode = 'Auto' | 'Linear' | 'Constant' | 'Free'
 export type KeyEasing = 'Linear' | 'EaseIn' | 'EaseOut' | 'EaseInOut'
 export type AnimationInterpolation = 'Step' | 'Linear' | 'Cubic'
@@ -188,7 +190,7 @@ const TRANSITION_SYNC_MODES = new Set<TransitionSyncMode>(['None', 'NormalizedTi
     return [{ name, type, defaultValue: parameterValue(parameter.defaultValue, type) }]
   })
   const transitions = (Array.isArray(item.transitions) ? item.transitions : []).slice(0, 2000).flatMap(/** 结构说明（自动提取）：flatMap 回调；输入 transition、index；直接调用 usedStates.has、String、id、Math.min、Math.max 等。 */ (transition, index) => {
-    if (!transition || !usedStates.has(String(transition.from)) || !usedStates.has(String(transition.to))) return []
+    if (!transition || !(usedStates.has(String(transition.from)) || String(transition.from) === ANY_STATE) || !usedStates.has(String(transition.to))) return []
     return [{
       id: id(transition.id, `transition_${index + 1}`), from: String(transition.from), to: String(transition.to),
       hasExitTime: transition.hasExitTime !== false,
@@ -365,6 +367,12 @@ export type AnimationDispatch = { kind: 'event'; event: AnimationEvent; crossed:
   timedOccurrences(clip.events, previous, rawNext, length, clip.loop).forEach(/* 调用 result.push({ kind: 'event', event: entry.item, crossed: entry.crossed, order: entry.itemIndex }) 并返回调用结果。 */ entry => result.push({ kind: 'event', event: entry.item, crossed: entry.crossed, order: entry.itemIndex }))
   clip.commandTracks.forEach(/** 结构说明（自动提取）：clip.commandTracks.forEach 回调；输入 track、trackIndex；直接调用 forEach、timedOccurrences；返回表达式求值结果。 */ (track, trackIndex) => timedOccurrences(track.commands, previous, rawNext, length, clip.loop).forEach(/** 结构说明（自动提取）：forEach 回调；输入 entry；直接调用 result.push；返回表达式求值结果。 */ entry => result.push({ kind: 'command', track, command: entry.item, crossed: entry.crossed, order: 1_000_000 + trackIndex * 10_000 + entry.itemIndex })))
   return result.sort(/** 结构说明（自动提取）：result.sort 回调；输入 first、second；返回表达式求值结果。 */ (first, second) => forward ? first.crossed - second.crossed || first.order - second.order : second.crossed - first.crossed || second.order - first.order)
+}
+
+/** 26.44: a state of the controller by id, or else by name (scripts and blocks use names). */ export function findAnimatorState(controller: AnimatorControllerDocument, reference: string): AnimatorState | undefined {
+  const value = String(reference ?? '').trim()
+  if (!value) return undefined
+  return controller.states.find(state => state.id === value) ?? controller.states.find(state => state.name === value) ?? controller.states.find(state => state.name.toLowerCase() === value.toLowerCase())
 }
 
 /** 结构说明（自动提取）：conditionMatches；输入 value、condition；直接调用 Number。 */ export function conditionMatches(value: AnimatorParameterValue, condition: TransitionCondition): boolean {

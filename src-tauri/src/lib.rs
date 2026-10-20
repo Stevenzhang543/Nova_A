@@ -1976,6 +1976,73 @@ fn latency_probe_endpoint() -> Option<String> {
     Some(value.trim_end_matches('/').to_owned())
 }
 
+// 26.44: the latency probe sends its batches through the native host, so browser network policies (the
+// Local Network Access checks of recent WebView2 releases) cannot drop them. Only the configured loopback
+// collector and its two paths are reachable; the call runs off the main thread with short timeouts.
+#[tauri::command]
+async fn latency_probe_send(path: String, body: String) -> Result<String, String> {
+    let endpoint = latency_probe_endpoint().ok_or("latency probe is not configured")?;
+    if path != "/sync" && path != "/probe" {
+        return Err("unsupported latency probe path".into());
+    }
+    if body.len() > 16 * 1024 * 1024 {
+        return Err("latency probe batch is too large".into());
+    }
+    tauri::async_runtime::spawn_blocking(move || latency_probe_http(&endpoint, &path, &body))
+        .await
+        .map_err(|error| error.to_string())?
+}
+
+fn latency_probe_http(endpoint: &str, path: &str, body: &str) -> Result<String, String> {
+    use std::io::{Read, Write};
+    use std::net::ToSocketAddrs;
+    let authority = endpoint.trim_start_matches("http://");
+    let timeout = std::time::Duration::from_secs(2);
+    let addresses = authority
+        .to_socket_addrs()
+        .map_err(|error| error.to_string())?
+        .filter(|address| address.ip().is_loopback());
+    let mut stream = None;
+    for address in addresses {
+        if let Ok(connected) = std::net::TcpStream::connect_timeout(&address, timeout) {
+            stream = Some(connected);
+            break;
+        }
+    }
+    let mut stream = stream.ok_or("latency probe collector is not reachable")?;
+    stream.set_read_timeout(Some(timeout)).map_err(|error| error.to_string())?;
+    stream.set_write_timeout(Some(timeout)).map_err(|error| error.to_string())?;
+    let method = if path == "/sync" { "GET" } else { "POST" };
+    let request = format!(
+        "{method} {path} HTTP/1.1\r\nHost: {authority}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+        body.len()
+    );
+    stream
+        .write_all(request.as_bytes())
+        .and_then(|_| stream.write_all(body.as_bytes()))
+        .map_err(|error| error.to_string())?;
+    let mut response = Vec::new();
+    stream
+        .take(1024 * 1024)
+        .read_to_end(&mut response)
+        .map_err(|error| error.to_string())?;
+    let text = String::from_utf8_lossy(&response);
+    let (head, payload) = text
+        .split_once("\r\n\r\n")
+        .ok_or("malformed latency probe response")?;
+    let ok = head
+        .split_whitespace()
+        .nth(1)
+        .is_some_and(|status| status.starts_with('2'));
+    if !ok {
+        return Err(format!(
+            "latency probe collector answered {}",
+            head.lines().next().unwrap_or("")
+        ));
+    }
+    Ok(payload.to_owned())
+}
+
 // A .nova document passed as the first command-line argument (Open With / file association).
 // It is handed to the editor once per process; the editor still runs its normal open preflight.
 #[derive(Serialize)]
@@ -3735,6 +3802,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             runtime_mode,
             latency_probe_endpoint,
+            latency_probe_send,
             canvas_desynchronized,
             launch_project,
             runtime_package,

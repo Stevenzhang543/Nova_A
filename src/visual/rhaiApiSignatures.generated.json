@@ -2,13 +2,15 @@
   "format": "nova-rhai-api-signatures",
   "version": 1,
   "rhaiVersion": "1.25.1",
-  "sourceHash": "86217d219c7b82f0abffa93f9a9a0f11af9a440027ea8a32d43c0620aeeb8b58",
+  "sourceHash": "1e0a963f358258e506a68820626c73969441a2c5de1c89b4f2f52dbfa1d24937",
   "productionFeatures": [
-    "std"
+    "std",
+    "debugging"
   ],
   "introspectionFeatures": [
     "std",
-    "metadata"
+    "metadata",
+    "debugging"
   ],
   "disabled": [
     "eval",
@@ -76,7 +78,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2898
+        "line": 3263
       },
       "available": true,
       "internal": true,
@@ -10056,7 +10058,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2734
+        "line": 3099
       },
       "available": true,
       "internal": false,
@@ -10105,7 +10107,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2741
+        "line": 3106
       },
       "available": true,
       "internal": false,
@@ -10146,7 +10148,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2738
+        "line": 3103
       },
       "available": true,
       "internal": false,
@@ -10252,7 +10254,48 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2091
+        "line": 2456
+      },
+      "available": true,
+      "internal": false,
+      "operator": false,
+      "variadic": false,
+      "throws": false,
+      "profiles": [
+        "native",
+        "wasm"
+      ],
+      "documentation": ""
+    },
+    {
+      "id": "rhai:animator_crossfade_28string_2cf64_29",
+      "name": "animator_crossfade",
+      "parameters": [
+        {
+          "name": "state",
+          "type": "string",
+          "rustType": "&str",
+          "defaultLiteral": "\"\"",
+          "optional": false,
+          "mutable": false
+        },
+        {
+          "name": "seconds",
+          "type": "float",
+          "rustType": "FLOAT",
+          "defaultLiteral": "0.0",
+          "optional": false,
+          "mutable": false
+        }
+      ],
+      "returnType": "unit",
+      "rustReturnType": "()",
+      "role": "callable",
+      "origin": "host",
+      "package": null,
+      "source": {
+        "path": "crates/nova_script/src/lib.rs",
+        "line": 3546
       },
       "available": true,
       "internal": false,
@@ -10276,7 +10319,31 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2100
+        "line": 2465
+      },
+      "available": true,
+      "internal": false,
+      "operator": false,
+      "variadic": false,
+      "throws": false,
+      "profiles": [
+        "native",
+        "wasm"
+      ],
+      "documentation": ""
+    },
+    {
+      "id": "rhai:animator_in_transition_28_29",
+      "name": "animator_in_transition",
+      "parameters": [],
+      "returnType": "bool",
+      "rustReturnType": "bool",
+      "role": "callable",
+      "origin": "host",
+      "package": null,
+      "source": {
+        "path": "crates/nova_script/src/lib.rs",
+        "line": 3579
       },
       "available": true,
       "internal": false,
@@ -10309,7 +10376,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3167
+        "line": 3532
       },
       "available": true,
       "internal": false,
@@ -10350,7 +10417,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3112
+        "line": 3477
       },
       "available": true,
       "internal": false,
@@ -10391,7 +10458,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3126
+        "line": 3491
       },
       "available": true,
       "internal": false,
@@ -10432,7 +10499,55 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3140
+        "line": 3505
+      },
+      "available": true,
+      "internal": false,
+      "operator": false,
+      "variadic": false,
+      "throws": false,
+      "profiles": [
+        "native",
+        "wasm"
+      ],
+      "documentation": ""
+    },
+    {
+      "id": "rhai:animator_state_28_29",
+      "name": "animator_state",
+      "parameters": [],
+      "returnType": "string",
+      "rustReturnType": "string",
+      "role": "callable",
+      "origin": "host",
+      "package": null,
+      "source": {
+        "path": "crates/nova_script/src/lib.rs",
+        "line": 3568
+      },
+      "available": true,
+      "internal": false,
+      "operator": false,
+      "variadic": false,
+      "throws": false,
+      "profiles": [
+        "native",
+        "wasm"
+      ],
+      "documentation": ""
+    },
+    {
+      "id": "rhai:animator_state_time_28_29",
+      "name": "animator_state_time",
+      "parameters": [],
+      "returnType": "float",
+      "rustReturnType": "f64",
+      "role": "callable",
+      "origin": "host",
+      "package": null,
+      "source": {
+        "path": "crates/nova_script/src/lib.rs",
+        "line": 3573
       },
       "available": true,
       "internal": false,
@@ -10465,7 +10580,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3154
+        "line": 3519
       },
       "available": true,
       "internal": false,
@@ -10489,7 +10604,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 1494
+        "line": 1859
       },
       "available": true,
       "internal": false,
@@ -10513,7 +10628,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 1499
+        "line": 1864
       },
       "available": true,
       "internal": false,
@@ -10546,7 +10661,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 1504
+        "line": 1869
       },
       "available": true,
       "internal": false,
@@ -10570,7 +10685,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 1482
+        "line": 1847
       },
       "available": true,
       "internal": false,
@@ -10898,7 +11013,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2959
+        "line": 3324
       },
       "available": true,
       "internal": false,
@@ -10939,7 +11054,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2970
+        "line": 3335
       },
       "available": true,
       "internal": false,
@@ -11169,7 +11284,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3191
+        "line": 3752
       },
       "available": true,
       "internal": false,
@@ -11193,7 +11308,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3180
+        "line": 3741
       },
       "available": true,
       "internal": false,
@@ -11217,7 +11332,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2121
+        "line": 2486
       },
       "available": true,
       "internal": false,
@@ -11241,7 +11356,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2137
+        "line": 2502
       },
       "available": true,
       "internal": false,
@@ -11265,7 +11380,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3202
+        "line": 3763
       },
       "available": true,
       "internal": false,
@@ -11289,7 +11404,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3858
+        "line": 4419
       },
       "available": true,
       "internal": false,
@@ -11322,7 +11437,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2224
+        "line": 2589
       },
       "available": true,
       "internal": false,
@@ -11334,6 +11449,30 @@
         "wasm"
       ],
       "documentation": ""
+    },
+    {
+      "id": "rhai:back_trace_28_29",
+      "name": "back_trace",
+      "parameters": [],
+      "returnType": "array",
+      "rustReturnType": "Array",
+      "role": "callable",
+      "origin": "standard-package",
+      "package": "StandardPackage",
+      "source": {
+        "path": "rhai-1.25.1/src/packages/pkg_std.rs",
+        "line": 1
+      },
+      "available": true,
+      "internal": false,
+      "operator": false,
+      "variadic": false,
+      "throws": false,
+      "profiles": [
+        "native",
+        "wasm"
+      ],
+      "documentation": "Get an array of object maps containing the function calls stack.\nIf there is no debugging interface registered, an empty array is returned.\nAn array of strings is returned under `no_object`."
     },
     {
       "id": "rhai:bits_28i64_29",
@@ -11740,7 +11879,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2687
+        "line": 3052
       },
       "available": true,
       "internal": false,
@@ -11789,7 +11928,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2690
+        "line": 3055
       },
       "available": true,
       "internal": false,
@@ -11830,7 +11969,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2711
+        "line": 3076
       },
       "available": true,
       "internal": false,
@@ -11879,7 +12018,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2714
+        "line": 3079
       },
       "available": true,
       "internal": false,
@@ -11920,7 +12059,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2652
+        "line": 3017
       },
       "available": true,
       "internal": false,
@@ -11969,7 +12108,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2656
+        "line": 3021
       },
       "available": true,
       "internal": false,
@@ -12010,7 +12149,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2663
+        "line": 3028
       },
       "available": true,
       "internal": false,
@@ -12059,7 +12198,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2666
+        "line": 3031
       },
       "available": true,
       "internal": false,
@@ -12083,7 +12222,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3062
+        "line": 3427
       },
       "available": true,
       "internal": false,
@@ -12140,7 +12279,88 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3056
+        "line": 3421
+      },
+      "available": true,
+      "internal": false,
+      "operator": false,
+      "variadic": false,
+      "throws": false,
+      "profiles": [
+        "native",
+        "wasm"
+      ],
+      "documentation": ""
+    },
+    {
+      "id": "rhai:character_drop_through_28_29",
+      "name": "character_drop_through",
+      "parameters": [],
+      "returnType": "unit",
+      "rustReturnType": "()",
+      "role": "callable",
+      "origin": "host",
+      "package": null,
+      "source": {
+        "path": "crates/nova_script/src/lib.rs",
+        "line": 3589
+      },
+      "available": true,
+      "internal": false,
+      "operator": false,
+      "variadic": false,
+      "throws": false,
+      "profiles": [
+        "native",
+        "wasm"
+      ],
+      "documentation": ""
+    },
+    {
+      "id": "rhai:character_drop_through_28f64_29",
+      "name": "character_drop_through",
+      "parameters": [
+        {
+          "name": "seconds",
+          "type": "float",
+          "rustType": "FLOAT",
+          "defaultLiteral": "0.0",
+          "optional": false,
+          "mutable": false
+        }
+      ],
+      "returnType": "unit",
+      "rustReturnType": "()",
+      "role": "callable",
+      "origin": "host",
+      "package": null,
+      "source": {
+        "path": "crates/nova_script/src/lib.rs",
+        "line": 3600
+      },
+      "available": true,
+      "internal": false,
+      "operator": false,
+      "variadic": false,
+      "throws": false,
+      "profiles": [
+        "native",
+        "wasm"
+      ],
+      "documentation": ""
+    },
+    {
+      "id": "rhai:character_floor_is_one_way_28_29",
+      "name": "character_floor_is_one_way",
+      "parameters": [],
+      "returnType": "bool",
+      "rustReturnType": "bool",
+      "role": "callable",
+      "origin": "host",
+      "package": null,
+      "source": {
+        "path": "crates/nova_script/src/lib.rs",
+        "line": 3584
       },
       "available": true,
       "internal": false,
@@ -12164,7 +12384,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3080
+        "line": 3445
       },
       "available": true,
       "internal": false,
@@ -12188,7 +12408,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3068
+        "line": 3433
       },
       "available": true,
       "internal": false,
@@ -12212,7 +12432,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3074
+        "line": 3439
       },
       "available": true,
       "internal": false,
@@ -12236,7 +12456,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3051
+        "line": 3416
       },
       "available": true,
       "internal": false,
@@ -12260,7 +12480,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3041
+        "line": 3406
       },
       "available": true,
       "internal": false,
@@ -12284,7 +12504,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3046
+        "line": 3411
       },
       "available": true,
       "internal": false,
@@ -12308,7 +12528,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3092
+        "line": 3457
       },
       "available": true,
       "internal": false,
@@ -12332,7 +12552,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3086
+        "line": 3451
       },
       "available": true,
       "internal": false,
@@ -12356,7 +12576,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3095
+        "line": 3460
       },
       "available": true,
       "internal": false,
@@ -12594,7 +12814,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2345
+        "line": 2710
       },
       "available": true,
       "internal": false,
@@ -12627,7 +12847,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3582
+        "line": 4143
       },
       "available": true,
       "internal": false,
@@ -12660,7 +12880,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3569
+        "line": 4130
       },
       "available": true,
       "internal": false,
@@ -12907,7 +13127,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 1571
+        "line": 1936
       },
       "available": true,
       "internal": false,
@@ -12956,7 +13176,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3400
+        "line": 3961
       },
       "available": true,
       "internal": false,
@@ -14015,7 +14235,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3269
+        "line": 3830
       },
       "available": true,
       "internal": false,
@@ -14039,7 +14259,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3262
+        "line": 3823
       },
       "available": true,
       "internal": false,
@@ -14472,7 +14692,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 1719
+        "line": 2084
       },
       "available": true,
       "internal": false,
@@ -14537,7 +14757,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 1795
+        "line": 2160
       },
       "available": true,
       "internal": false,
@@ -14602,7 +14822,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 1795
+        "line": 2160
       },
       "available": true,
       "internal": false,
@@ -14651,7 +14871,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 1829
+        "line": 2194
       },
       "available": true,
       "internal": false,
@@ -14716,7 +14936,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 1795
+        "line": 2160
       },
       "available": true,
       "internal": false,
@@ -14757,7 +14977,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 1762
+        "line": 2127
       },
       "available": true,
       "internal": false,
@@ -14790,7 +15010,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 1743
+        "line": 2108
       },
       "available": true,
       "internal": false,
@@ -14814,7 +15034,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 1724
+        "line": 2089
       },
       "available": true,
       "internal": false,
@@ -14838,7 +15058,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 1735
+        "line": 2100
       },
       "available": true,
       "internal": false,
@@ -15043,7 +15263,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 1476
+        "line": 1841
       },
       "available": true,
       "internal": false,
@@ -15084,7 +15304,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3481
+        "line": 4042
       },
       "available": true,
       "internal": false,
@@ -15125,7 +15345,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3447
+        "line": 4008
       },
       "available": true,
       "internal": false,
@@ -15158,7 +15378,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3515
+        "line": 4076
       },
       "available": true,
       "internal": false,
@@ -15191,7 +15411,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2040
+        "line": 2405
       },
       "available": true,
       "internal": false,
@@ -15215,7 +15435,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 1509
+        "line": 1874
       },
       "available": true,
       "internal": false,
@@ -15248,7 +15468,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 1540
+        "line": 1905
       },
       "available": true,
       "internal": false,
@@ -15289,7 +15509,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 1977
+        "line": 2342
       },
       "available": true,
       "internal": false,
@@ -15330,7 +15550,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 1973
+        "line": 2338
       },
       "available": true,
       "internal": false,
@@ -15371,7 +15591,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 1989
+        "line": 2354
       },
       "available": true,
       "internal": false,
@@ -15412,7 +15632,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 1983
+        "line": 2348
       },
       "available": true,
       "internal": false,
@@ -15436,7 +15656,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 1523
+        "line": 1888
       },
       "available": true,
       "internal": false,
@@ -15469,7 +15689,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2032
+        "line": 2397
       },
       "available": true,
       "internal": false,
@@ -15502,7 +15722,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2048
+        "line": 2413
       },
       "available": true,
       "internal": false,
@@ -15535,7 +15755,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2056
+        "line": 2421
       },
       "available": true,
       "internal": false,
@@ -15576,7 +15796,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3498
+        "line": 4059
       },
       "available": true,
       "internal": false,
@@ -15617,7 +15837,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3464
+        "line": 4025
       },
       "available": true,
       "internal": false,
@@ -15658,7 +15878,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3383
+        "line": 3944
       },
       "available": true,
       "internal": false,
@@ -15707,7 +15927,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3330
+        "line": 3891
       },
       "available": true,
       "internal": false,
@@ -15748,7 +15968,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3348
+        "line": 3909
       },
       "available": true,
       "internal": false,
@@ -15797,7 +16017,105 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3365
+        "line": 3926
+      },
+      "available": true,
+      "internal": false,
+      "operator": false,
+      "variadic": false,
+      "throws": false,
+      "profiles": [
+        "native",
+        "wasm"
+      ],
+      "documentation": ""
+    },
+    {
+      "id": "rhai:entity_tween_28map_2cstring_2cf64_2cf64_2cstring_29",
+      "name": "entity_tween",
+      "parameters": [
+        {
+          "name": "handle",
+          "type": "map",
+          "rustType": "Map",
+          "defaultLiteral": null,
+          "optional": false,
+          "mutable": false
+        },
+        {
+          "name": "property",
+          "type": "string",
+          "rustType": "&str",
+          "defaultLiteral": "\"\"",
+          "optional": false,
+          "mutable": false
+        },
+        {
+          "name": "to",
+          "type": "float",
+          "rustType": "FLOAT",
+          "defaultLiteral": "0.0",
+          "optional": false,
+          "mutable": false
+        },
+        {
+          "name": "seconds",
+          "type": "float",
+          "rustType": "FLOAT",
+          "defaultLiteral": "0.0",
+          "optional": false,
+          "mutable": false
+        },
+        {
+          "name": "easing",
+          "type": "string",
+          "rustType": "&str",
+          "defaultLiteral": "\"\"",
+          "optional": false,
+          "mutable": false
+        }
+      ],
+      "returnType": "unit",
+      "rustReturnType": "()",
+      "role": "callable",
+      "origin": "host",
+      "package": null,
+      "source": {
+        "path": "crates/nova_script/src/lib.rs",
+        "line": 3682
+      },
+      "available": true,
+      "internal": false,
+      "operator": false,
+      "variadic": false,
+      "throws": false,
+      "profiles": [
+        "native",
+        "wasm"
+      ],
+      "documentation": ""
+    },
+    {
+      "id": "rhai:entity_tween_stop_28map_29",
+      "name": "entity_tween_stop",
+      "parameters": [
+        {
+          "name": "handle",
+          "type": "map",
+          "rustType": "Map",
+          "defaultLiteral": null,
+          "optional": false,
+          "mutable": false
+        }
+      ],
+      "returnType": "unit",
+      "rustReturnType": "()",
+      "role": "callable",
+      "origin": "host",
+      "package": null,
+      "source": {
+        "path": "crates/nova_script/src/lib.rs",
+        "line": 3724
       },
       "available": true,
       "internal": false,
@@ -15928,7 +16246,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2942
+        "line": 3307
       },
       "available": true,
       "internal": false,
@@ -15969,7 +16287,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2415
+        "line": 2780
       },
       "available": true,
       "internal": false,
@@ -16010,7 +16328,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2430
+        "line": 2795
       },
       "available": true,
       "internal": false,
@@ -16051,7 +16369,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2401
+        "line": 2766
       },
       "available": true,
       "internal": false,
@@ -16092,7 +16410,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2408
+        "line": 2773
       },
       "available": true,
       "internal": false,
@@ -16133,7 +16451,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2422
+        "line": 2787
       },
       "available": true,
       "internal": false,
@@ -16764,7 +17082,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 1529
+        "line": 1894
       },
       "available": true,
       "internal": false,
@@ -16797,7 +17115,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 1548
+        "line": 1913
       },
       "available": true,
       "internal": false,
@@ -16920,7 +17238,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3858
+        "line": 4419
       },
       "available": true,
       "internal": false,
@@ -17093,7 +17411,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3558
+        "line": 4119
       },
       "available": true,
       "internal": false,
@@ -17117,7 +17435,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2335
+        "line": 2700
       },
       "available": true,
       "internal": false,
@@ -17486,7 +17804,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 1562
+        "line": 1927
       },
       "available": true,
       "internal": false,
@@ -19690,7 +20008,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 1557
+        "line": 1922
       },
       "available": true,
       "internal": false,
@@ -20214,7 +20532,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2220
+        "line": 2585
       },
       "available": true,
       "internal": false,
@@ -20247,7 +20565,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2186
+        "line": 2551
       },
       "available": true,
       "internal": false,
@@ -20280,7 +20598,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2202
+        "line": 2567
       },
       "available": true,
       "internal": false,
@@ -20313,7 +20631,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3671
+        "line": 4232
       },
       "available": true,
       "internal": false,
@@ -20362,7 +20680,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3656
+        "line": 4217
       },
       "available": true,
       "internal": false,
@@ -20395,7 +20713,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2162
+        "line": 2527
       },
       "available": true,
       "internal": false,
@@ -20428,7 +20746,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2198
+        "line": 2563
       },
       "available": true,
       "internal": false,
@@ -20461,7 +20779,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2206
+        "line": 2571
       },
       "available": true,
       "internal": false,
@@ -20494,7 +20812,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3697
+        "line": 4258
       },
       "available": true,
       "internal": false,
@@ -20527,7 +20845,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3684
+        "line": 4245
       },
       "available": true,
       "internal": false,
@@ -20560,7 +20878,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2182
+        "line": 2547
       },
       "available": true,
       "internal": false,
@@ -20593,7 +20911,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2190
+        "line": 2555
       },
       "available": true,
       "internal": false,
@@ -20626,7 +20944,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2170
+        "line": 2535
       },
       "available": true,
       "internal": false,
@@ -20659,7 +20977,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2178
+        "line": 2543
       },
       "available": true,
       "internal": false,
@@ -20683,7 +21001,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2210
+        "line": 2575
       },
       "available": true,
       "internal": false,
@@ -20716,7 +21034,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3710
+        "line": 4271
       },
       "available": true,
       "internal": false,
@@ -20749,7 +21067,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2236
+        "line": 2601
       },
       "available": true,
       "internal": false,
@@ -20782,7 +21100,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2228
+        "line": 2593
       },
       "available": true,
       "internal": false,
@@ -20815,7 +21133,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2232
+        "line": 2597
       },
       "available": true,
       "internal": false,
@@ -20946,7 +21264,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3275
+        "line": 3836
       },
       "available": true,
       "internal": false,
@@ -21119,7 +21437,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2166
+        "line": 2531
       },
       "available": true,
       "internal": false,
@@ -22697,7 +23015,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3858
+        "line": 4419
       },
       "available": true,
       "internal": false,
@@ -22969,7 +23287,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2934
+        "line": 3299
       },
       "available": true,
       "internal": false,
@@ -23002,7 +23320,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2934
+        "line": 3299
       },
       "available": true,
       "internal": false,
@@ -23035,7 +23353,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2934
+        "line": 3299
       },
       "available": true,
       "internal": false,
@@ -23068,7 +23386,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2934
+        "line": 3299
       },
       "available": true,
       "internal": false,
@@ -25024,7 +25342,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2264
+        "line": 2629
       },
       "available": true,
       "internal": false,
@@ -25048,7 +25366,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2270
+        "line": 2635
       },
       "available": true,
       "internal": false,
@@ -25072,7 +25390,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2252
+        "line": 2617
       },
       "available": true,
       "internal": false,
@@ -25096,7 +25414,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2258
+        "line": 2623
       },
       "available": true,
       "internal": false,
@@ -25137,7 +25455,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3101
+        "line": 3466
       },
       "available": true,
       "internal": false,
@@ -25211,7 +25529,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3244
+        "line": 3805
       },
       "available": true,
       "internal": false,
@@ -25235,7 +25553,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2365
+        "line": 2730
       },
       "available": true,
       "internal": false,
@@ -25259,7 +25577,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2360
+        "line": 2725
       },
       "available": true,
       "internal": false,
@@ -25283,7 +25601,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2370
+        "line": 2735
       },
       "available": true,
       "internal": false,
@@ -25307,7 +25625,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2381
+        "line": 2746
       },
       "available": true,
       "internal": false,
@@ -25331,7 +25649,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2375
+        "line": 2740
       },
       "available": true,
       "internal": false,
@@ -25355,7 +25673,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2387
+        "line": 2752
       },
       "available": true,
       "internal": false,
@@ -25396,7 +25714,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3637
+        "line": 4198
       },
       "available": true,
       "internal": false,
@@ -25420,7 +25738,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2393
+        "line": 2758
       },
       "available": true,
       "internal": false,
@@ -25501,7 +25819,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3858
+        "line": 4419
       },
       "available": true,
       "internal": false,
@@ -25582,7 +25900,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3858
+        "line": 4419
       },
       "available": true,
       "internal": false,
@@ -25663,7 +25981,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3858
+        "line": 4419
       },
       "available": true,
       "internal": false,
@@ -25687,7 +26005,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3858
+        "line": 4419
       },
       "available": true,
       "internal": false,
@@ -25736,7 +26054,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3858
+        "line": 4419
       },
       "available": true,
       "internal": false,
@@ -25769,7 +26087,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3858
+        "line": 4419
       },
       "available": true,
       "internal": false,
@@ -25802,7 +26120,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3858
+        "line": 4419
       },
       "available": true,
       "internal": false,
@@ -25883,7 +26201,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3858
+        "line": 4419
       },
       "available": true,
       "internal": false,
@@ -25964,7 +26282,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3858
+        "line": 4419
       },
       "available": true,
       "internal": false,
@@ -26045,7 +26363,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3858
+        "line": 4419
       },
       "available": true,
       "internal": false,
@@ -27110,7 +27428,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2818
+        "line": 3183
       },
       "available": true,
       "internal": false,
@@ -27151,7 +27469,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2820
+        "line": 3185
       },
       "available": true,
       "internal": false,
@@ -27200,7 +27518,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2823
+        "line": 3188
       },
       "available": true,
       "internal": false,
@@ -27233,7 +27551,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2770
+        "line": 3135
       },
       "available": true,
       "internal": false,
@@ -27274,7 +27592,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2771
+        "line": 3136
       },
       "available": true,
       "internal": false,
@@ -27307,7 +27625,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2882
+        "line": 3247
       },
       "available": true,
       "internal": false,
@@ -27348,7 +27666,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2883
+        "line": 3248
       },
       "available": true,
       "internal": false,
@@ -27932,7 +28250,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 1997
+        "line": 2362
       },
       "available": true,
       "internal": false,
@@ -27973,7 +28291,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 1950
+        "line": 2315
       },
       "available": true,
       "internal": false,
@@ -28030,7 +28348,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2009
+        "line": 2374
       },
       "available": true,
       "internal": false,
@@ -28071,7 +28389,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 1938
+        "line": 2303
       },
       "available": true,
       "internal": false,
@@ -28095,7 +28413,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 1615
+        "line": 1980
       },
       "available": true,
       "internal": false,
@@ -28136,7 +28454,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 1627
+        "line": 1992
       },
       "available": true,
       "internal": false,
@@ -30332,7 +30650,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 1590
+        "line": 1955
       },
       "available": true,
       "internal": false,
@@ -30807,7 +31125,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2064
+        "line": 2429
       },
       "available": true,
       "internal": false,
@@ -30864,7 +31182,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2496
+        "line": 2861
       },
       "available": true,
       "internal": false,
@@ -30897,7 +31215,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2519
+        "line": 2884
       },
       "available": true,
       "internal": false,
@@ -30930,7 +31248,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2483
+        "line": 2848
       },
       "available": true,
       "internal": false,
@@ -30971,7 +31289,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2448
+        "line": 2813
       },
       "available": true,
       "internal": false,
@@ -31004,7 +31322,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2441
+        "line": 2806
       },
       "available": true,
       "internal": false,
@@ -31037,7 +31355,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2507
+        "line": 2872
       },
       "available": true,
       "internal": false,
@@ -31078,7 +31396,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2456
+        "line": 2821
       },
       "available": true,
       "internal": false,
@@ -31111,7 +31429,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3528
+        "line": 4089
       },
       "available": true,
       "internal": false,
@@ -31135,7 +31453,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3552
+        "line": 4113
       },
       "available": true,
       "internal": false,
@@ -31159,7 +31477,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3541
+        "line": 4102
       },
       "available": true,
       "internal": false,
@@ -31192,7 +31510,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3608
+        "line": 4169
       },
       "available": true,
       "internal": false,
@@ -31216,7 +31534,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2340
+        "line": 2705
       },
       "available": true,
       "internal": false,
@@ -31249,7 +31567,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3595
+        "line": 4156
       },
       "available": true,
       "internal": false,
@@ -31290,7 +31608,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2349
+        "line": 2714
       },
       "available": true,
       "internal": false,
@@ -31331,7 +31649,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3621
+        "line": 4182
       },
       "available": true,
       "internal": false,
@@ -31560,7 +31878,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3025
+        "line": 3390
       },
       "available": true,
       "internal": false,
@@ -31805,7 +32123,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2844
+        "line": 3209
       },
       "available": true,
       "internal": false,
@@ -31846,7 +32164,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2992
+        "line": 3357
       },
       "available": true,
       "internal": false,
@@ -31879,7 +32197,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3003
+        "line": 3368
       },
       "available": true,
       "internal": false,
@@ -31920,7 +32238,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3014
+        "line": 3379
       },
       "available": true,
       "internal": false,
@@ -32002,7 +32320,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2981
+        "line": 3346
       },
       "available": true,
       "internal": false,
@@ -32380,7 +32698,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3819
+        "line": 4380
       },
       "available": true,
       "internal": false,
@@ -32429,7 +32747,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3837
+        "line": 4398
       },
       "available": true,
       "internal": false,
@@ -32528,7 +32846,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 1426
+        "line": 1791
       },
       "available": false,
       "internal": false,
@@ -32561,7 +32879,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 1419
+        "line": 1784
       },
       "available": false,
       "internal": false,
@@ -32905,7 +33223,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3291
+        "line": 3852
       },
       "available": true,
       "internal": false,
@@ -33788,7 +34106,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3858
+        "line": 4419
       },
       "available": true,
       "internal": false,
@@ -33960,7 +34278,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2841
+        "line": 3206
       },
       "available": true,
       "internal": false,
@@ -33993,7 +34311,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2842
+        "line": 3207
       },
       "available": true,
       "internal": false,
@@ -34026,7 +34344,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2789
+        "line": 3154
       },
       "available": true,
       "internal": false,
@@ -34067,7 +34385,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2790
+        "line": 3155
       },
       "available": true,
       "internal": false,
@@ -34091,7 +34409,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2886
+        "line": 3251
       },
       "available": true,
       "internal": false,
@@ -34428,7 +34746,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3806
+        "line": 4367
       },
       "available": true,
       "internal": false,
@@ -34469,7 +34787,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3785
+        "line": 4346
       },
       "available": true,
       "internal": false,
@@ -34493,7 +34811,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 1900
+        "line": 2265
       },
       "available": true,
       "internal": false,
@@ -34517,7 +34835,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 1876
+        "line": 2241
       },
       "available": true,
       "internal": false,
@@ -34541,7 +34859,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 1886
+        "line": 2251
       },
       "available": true,
       "internal": false,
@@ -34565,7 +34883,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 1881
+        "line": 2246
       },
       "available": true,
       "internal": false,
@@ -34589,7 +34907,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 1895
+        "line": 2260
       },
       "available": true,
       "internal": false,
@@ -34613,7 +34931,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 1891
+        "line": 2256
       },
       "available": true,
       "internal": false,
@@ -34646,7 +34964,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3772
+        "line": 4333
       },
       "available": true,
       "internal": false,
@@ -34679,7 +34997,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3746
+        "line": 4307
       },
       "available": true,
       "internal": false,
@@ -34712,7 +35030,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3759
+        "line": 4320
       },
       "available": true,
       "internal": false,
@@ -34761,7 +35079,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3723
+        "line": 4284
       },
       "available": true,
       "internal": false,
@@ -36897,7 +37215,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 1918
+        "line": 2283
       },
       "available": true,
       "internal": false,
@@ -37067,6 +37385,234 @@
       "documentation": "Cut off the string at the specified number of characters.\n* If `len` ≤ 0, the string is cleared.\n* If `len` ≥ length of string, the string is not truncated.\n# Example\n```rhai\nlet text = \"hello, world! hello, foobar!\";\ntext.truncate(13);\nprint(text);    // prints \"hello, world!\"\ntext.truncate(10);\nprint(text);    // prints \"hello, world!\"\n```"
     },
     {
+      "id": "rhai:tween_28string_2cf64_2cf64_29",
+      "name": "tween",
+      "parameters": [
+        {
+          "name": "property",
+          "type": "string",
+          "rustType": "&str",
+          "defaultLiteral": "\"\"",
+          "optional": false,
+          "mutable": false
+        },
+        {
+          "name": "to",
+          "type": "float",
+          "rustType": "FLOAT",
+          "defaultLiteral": "0.0",
+          "optional": false,
+          "mutable": false
+        },
+        {
+          "name": "seconds",
+          "type": "float",
+          "rustType": "FLOAT",
+          "defaultLiteral": "0.0",
+          "optional": false,
+          "mutable": false
+        }
+      ],
+      "returnType": "unit",
+      "rustReturnType": "()",
+      "role": "callable",
+      "origin": "host",
+      "package": null,
+      "source": {
+        "path": "crates/nova_script/src/lib.rs",
+        "line": 3634
+      },
+      "available": true,
+      "internal": false,
+      "operator": false,
+      "variadic": false,
+      "throws": false,
+      "profiles": [
+        "native",
+        "wasm"
+      ],
+      "documentation": ""
+    },
+    {
+      "id": "rhai:tween_28string_2cf64_2cf64_2cstring_29",
+      "name": "tween",
+      "parameters": [
+        {
+          "name": "property",
+          "type": "string",
+          "rustType": "&str",
+          "defaultLiteral": "\"\"",
+          "optional": false,
+          "mutable": false
+        },
+        {
+          "name": "to",
+          "type": "float",
+          "rustType": "FLOAT",
+          "defaultLiteral": "0.0",
+          "optional": false,
+          "mutable": false
+        },
+        {
+          "name": "seconds",
+          "type": "float",
+          "rustType": "FLOAT",
+          "defaultLiteral": "0.0",
+          "optional": false,
+          "mutable": false
+        },
+        {
+          "name": "easing",
+          "type": "string",
+          "rustType": "&str",
+          "defaultLiteral": "\"\"",
+          "optional": false,
+          "mutable": false
+        }
+      ],
+      "returnType": "unit",
+      "rustReturnType": "()",
+      "role": "callable",
+      "origin": "host",
+      "package": null,
+      "source": {
+        "path": "crates/nova_script/src/lib.rs",
+        "line": 3650
+      },
+      "available": true,
+      "internal": false,
+      "operator": false,
+      "variadic": false,
+      "throws": false,
+      "profiles": [
+        "native",
+        "wasm"
+      ],
+      "documentation": ""
+    },
+    {
+      "id": "rhai:tween_28string_2cf64_2cf64_2cstring_2cmap_29",
+      "name": "tween",
+      "parameters": [
+        {
+          "name": "property",
+          "type": "string",
+          "rustType": "&str",
+          "defaultLiteral": "\"\"",
+          "optional": false,
+          "mutable": false
+        },
+        {
+          "name": "to",
+          "type": "float",
+          "rustType": "FLOAT",
+          "defaultLiteral": "0.0",
+          "optional": false,
+          "mutable": false
+        },
+        {
+          "name": "seconds",
+          "type": "float",
+          "rustType": "FLOAT",
+          "defaultLiteral": "0.0",
+          "optional": false,
+          "mutable": false
+        },
+        {
+          "name": "easing",
+          "type": "string",
+          "rustType": "&str",
+          "defaultLiteral": "\"\"",
+          "optional": false,
+          "mutable": false
+        },
+        {
+          "name": "options",
+          "type": "map",
+          "rustType": "Map",
+          "defaultLiteral": null,
+          "optional": false,
+          "mutable": false
+        }
+      ],
+      "returnType": "unit",
+      "rustReturnType": "()",
+      "role": "callable",
+      "origin": "host",
+      "package": null,
+      "source": {
+        "path": "crates/nova_script/src/lib.rs",
+        "line": 3666
+      },
+      "available": true,
+      "internal": false,
+      "operator": false,
+      "variadic": false,
+      "throws": false,
+      "profiles": [
+        "native",
+        "wasm"
+      ],
+      "documentation": ""
+    },
+    {
+      "id": "rhai:tween_stop_28_29",
+      "name": "tween_stop",
+      "parameters": [],
+      "returnType": "unit",
+      "rustReturnType": "()",
+      "role": "callable",
+      "origin": "host",
+      "package": null,
+      "source": {
+        "path": "crates/nova_script/src/lib.rs",
+        "line": 3694
+      },
+      "available": true,
+      "internal": false,
+      "operator": false,
+      "variadic": false,
+      "throws": false,
+      "profiles": [
+        "native",
+        "wasm"
+      ],
+      "documentation": ""
+    },
+    {
+      "id": "rhai:tween_stop_28string_29",
+      "name": "tween_stop",
+      "parameters": [
+        {
+          "name": "property",
+          "type": "string",
+          "rustType": "&str",
+          "defaultLiteral": "\"\"",
+          "optional": false,
+          "mutable": false
+        }
+      ],
+      "returnType": "unit",
+      "rustReturnType": "()",
+      "role": "callable",
+      "origin": "host",
+      "package": null,
+      "source": {
+        "path": "crates/nova_script/src/lib.rs",
+        "line": 3709
+      },
+      "available": true,
+      "internal": false,
+      "operator": false,
+      "variadic": false,
+      "throws": false,
+      "profiles": [
+        "native",
+        "wasm"
+      ],
+      "documentation": ""
+    },
+    {
       "id": "rhai:intrinsic:type_of",
       "name": "type_of",
       "parameters": [
@@ -37119,7 +37665,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3213
+        "line": 3774
       },
       "available": true,
       "internal": false,
@@ -37160,7 +37706,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3417
+        "line": 3978
       },
       "available": true,
       "internal": false,
@@ -37193,7 +37739,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3226
+        "line": 3787
       },
       "available": true,
       "internal": false,
@@ -37234,7 +37780,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3430
+        "line": 3991
       },
       "available": true,
       "internal": false,
@@ -37267,7 +37813,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 3858
+        "line": 4419
       },
       "available": true,
       "internal": false,
@@ -37333,7 +37879,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2248
+        "line": 2613
       },
       "available": true,
       "internal": false,
@@ -37366,7 +37912,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2240
+        "line": 2605
       },
       "available": true,
       "internal": false,
@@ -37399,7 +37945,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2244
+        "line": 2609
       },
       "available": true,
       "internal": false,
@@ -37423,7 +37969,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2282
+        "line": 2647
       },
       "available": true,
       "internal": false,
@@ -37447,7 +37993,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2294
+        "line": 2659
       },
       "available": true,
       "internal": false,
@@ -37471,7 +38017,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2276
+        "line": 2641
       },
       "available": true,
       "internal": false,
@@ -37495,7 +38041,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2288
+        "line": 2653
       },
       "available": true,
       "internal": false,
@@ -37519,7 +38065,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2306
+        "line": 2671
       },
       "available": true,
       "internal": false,
@@ -37543,7 +38089,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2300
+        "line": 2665
       },
       "available": true,
       "internal": false,
@@ -37576,7 +38122,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2174
+        "line": 2539
       },
       "available": true,
       "internal": false,
@@ -37609,7 +38155,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2216
+        "line": 2581
       },
       "available": true,
       "internal": false,
@@ -37633,7 +38179,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2312
+        "line": 2677
       },
       "available": true,
       "internal": false,
@@ -37657,7 +38203,7 @@
       "package": null,
       "source": {
         "path": "crates/nova_script/src/lib.rs",
-        "line": 2317
+        "line": 2682
       },
       "available": true,
       "internal": false,
@@ -38721,11 +39267,15 @@
     "names": [
       "after",
       "animator",
+      "animator_crossfade",
       "animator_handle",
+      "animator_in_transition",
       "animator_play",
       "animator_set_bool",
       "animator_set_float",
       "animator_set_integer",
+      "animator_state",
+      "animator_state_time",
       "animator_trigger",
       "api_current_version",
       "api_minimum_version",
@@ -38745,6 +39295,8 @@
       "call_on",
       "can_coyote_jump",
       "character_can_coyote_jump",
+      "character_drop_through",
+      "character_floor_is_one_way",
       "character_floor_normal",
       "character_is_on_ceiling",
       "character_is_on_floor",
@@ -38776,6 +39328,8 @@
       "entity_set_position",
       "entity_set_rotation",
       "entity_set_scale",
+      "entity_tween",
+      "entity_tween_stop",
       "expect",
       "find_entity",
       "find_entity_handle",
@@ -38886,6 +39440,8 @@
       "timer_resume",
       "timer_start",
       "transform",
+      "tween",
+      "tween_stop",
       "ui_set_text",
       "ui_set_text_on",
       "ui_set_value",

@@ -649,6 +649,15 @@ impl RuntimeWorld {
         )
     }
 
+    // 26.44: 让角色向下穿过单向平台 seconds 秒。
+    pub fn set_one_way_pass_through(
+        &mut self,
+        handle: u32,
+        seconds: f64,
+    ) -> Result<(), &'static str> {
+        self.physics.set_one_way_pass_through(handle, seconds)
+    }
+
     // 给指定刚体设置持续力和力矩。
     pub fn apply_force(
         &mut self,
