@@ -32,6 +32,8 @@ export interface GamepadAxisCalibration {
 }
 export interface DeviceInputSettings {
   virtualControlsEnabled: boolean
+  /** 26.43: on touch screens, show controls generated from the input map when the project defines none. */
+  automaticVirtualControls: boolean
   showVirtualControls: 'always' | 'touch-only'
   safeAreaMode: DeviceSafeAreaMode
   customSafeArea: Insets
@@ -74,8 +76,41 @@ const insets = /** 结构说明（自动提取）：insets；输入 value；直�
   return { id: `virtual-${cryptoId()}`, label: action, accessibleLabel: action, action, kind, anchor: right ? 'bottom-right' : 'bottom-left', offsetX: 24 + Math.floor(index / 2) * 84, offsetY: 24, size: kind === 'button' ? 68 : 132, opacity: .82, value: 1, deadzone: .16, hapticMs: 12 }
 }
 
+/** 26.43: touch controls generated from the input map, for games played on phones and tablets whose
+ * project defines no virtual controls. A two-dimensional movement action gets a stick; horizontal (and
+ * vertical) movement axes get arrow buttons; up to three gameplay buttons (Jump, Fire, Interact first)
+ * sit at the bottom right. Menu, pause and pointer actions are left to the game's own UI. */
+export function automaticVirtualControls(actions: readonly { name: string; kind: string; enabled?: boolean }[]): VirtualControlSettings[] {
+  const usable = actions.filter(action => action.enabled !== false && typeof action.name === 'string' && action.name)
+  const control = (id: string, action: string, kind: VirtualControlKind, anchor: VirtualControlAnchor, offsetX: number, offsetY: number, size: number, value = 1, label = action): VirtualControlSettings =>
+    ({ id: `auto-${id}`, label, accessibleLabel: label === action ? action : `${action} ${label}`, action, kind, anchor, offsetX, offsetY, size, opacity: .78, value, deadzone: .16, hapticMs: 10 })
+  const controls: VirtualControlSettings[] = []
+  const movement = usable.find(action => action.kind === 'vector2' && /move|walk|steer|direction/i.test(action.name)) ?? usable.find(action => action.kind === 'vector2' && !/look|aim|camera|pointer|scroll|navigate/i.test(action.name))
+  if (movement) controls.push(control('move', movement.name, 'stick', 'bottom-left', 28, 28, 136))
+  else {
+    const horizontal = usable.find(action => action.kind === 'axis' && /horizontal|move.?x|^move$|steer/i.test(action.name))
+    const vertical = usable.find(action => action.kind === 'axis' && /vertical|move.?y|climb/i.test(action.name))
+    if (horizontal) {
+      controls.push(control('left', horizontal.name, 'button', 'bottom-left', 24, vertical ? 92 : 32, 72, -1, '◀'))
+      controls.push(control('right', horizontal.name, 'button', 'bottom-left', vertical ? 172 : 108, vertical ? 92 : 32, 72, 1, '▶'))
+    }
+    if (vertical) {
+      controls.push(control('up', vertical.name, 'button', 'bottom-left', 98, 166, 72, 1, '▲'))
+      controls.push(control('down', vertical.name, 'button', 'bottom-left', 98, 18, 72, -1, '▼'))
+    }
+  }
+  const excluded = /pause|menu|cancel|back|debug|^ui|submit|navigate|scroll|zoom|pointer|click|look|aim|camera|console|screenshot|quit/i
+  const preferred = /jump|fire|shoot|attack|action|interact|dash|use|boost|grab|kick|restart|start/i
+  const buttons = usable.filter(action => action.kind === 'button' && !excluded.test(action.name))
+    .sort((a, b) => Number(preferred.test(b.name)) - Number(preferred.test(a.name)))
+    .slice(0, 3)
+  buttons.forEach((action, index) => controls.push(control(`button-${index}`, action.name, 'button', 'bottom-right', 28 + index * 88, 28 + (index % 2) * 40, 76, 1, action.name.length > 8 ? action.name.slice(0, 8) : action.name)))
+  return controls
+}
+
 const defaults = /** 结构说明（自动提取）：defaults；无显式参数；返回表达式求值结果。 */ (): DeviceInputSettings => ({
   virtualControlsEnabled: false,
+  automaticVirtualControls: true,
   showVirtualControls: 'touch-only',
   safeAreaMode: 'system', customSafeArea: { left: 0, top: 0, right: 0, bottom: 0 }, orientation: 'auto', referenceDpi: 160,
   hapticsEnabled: true, motionSensorsEnabled: false, sensorFrequency: 30, gamepadCalibrations: [], virtualControls: []
@@ -127,7 +162,7 @@ export function reserveDeviceInputStateAdapter() {
     if (!(minimum < center && center < maximum)) return []
     return [{ deviceId, axis, minimum, center, maximum, deadzone: bounded(value.deadzone, .12, 0, .95), invert: value.invert === true }]
   })
-  return { virtualControlsEnabled: item.virtualControlsEnabled === true, showVirtualControls: item.showVirtualControls === 'always' ? 'always' : 'touch-only', safeAreaMode: safeModes.includes(item.safeAreaMode as DeviceSafeAreaMode) ? item.safeAreaMode as DeviceSafeAreaMode : base.safeAreaMode, customSafeArea: insets(item.customSafeArea), orientation: orientations.includes(item.orientation as DeviceOrientationPolicy) ? item.orientation as DeviceOrientationPolicy : base.orientation, referenceDpi: bounded(item.referenceDpi, 160, 72, 1_200), hapticsEnabled: item.hapticsEnabled !== false, motionSensorsEnabled: item.motionSensorsEnabled === true, sensorFrequency: Math.round(bounded(item.sensorFrequency, 30, 1, 120)), gamepadCalibrations, virtualControls }
+  return { virtualControlsEnabled: item.virtualControlsEnabled === true, automaticVirtualControls: item.automaticVirtualControls !== false, showVirtualControls: item.showVirtualControls === 'always' ? 'always' : 'touch-only', safeAreaMode: safeModes.includes(item.safeAreaMode as DeviceSafeAreaMode) ? item.safeAreaMode as DeviceSafeAreaMode : base.safeAreaMode, customSafeArea: insets(item.customSafeArea), orientation: orientations.includes(item.orientation as DeviceOrientationPolicy) ? item.orientation as DeviceOrientationPolicy : base.orientation, referenceDpi: bounded(item.referenceDpi, 160, 72, 1_200), hapticsEnabled: item.hapticsEnabled !== false, motionSensorsEnabled: item.motionSensorsEnabled === true, sensorFrequency: Math.round(bounded(item.sensorFrequency, 30, 1, 120)), gamepadCalibrations, virtualControls }
 }
 
 /** 执行时调用 Object.assign(deviceInputSettings, normalizeDeviceInputSettings(source))；不显式返回调用结果。 */ export function loadDeviceInputSettings(source: unknown): void { Object.assign(deviceInputSettings, normalizeDeviceInputSettings(source)) }

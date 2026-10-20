@@ -4,14 +4,16 @@ import type {RuntimeAccessibilitySettings} from './presentationOwner'
 import type {UiReadPorts} from './uiReadPorts'
 import {layoutUiText,type UiTextLayout} from './uiTextLayout'
 import type {UiRect} from './uiLayout'
+import {cssFontStack} from '../renderer/fontStack'
 export function createUiTextPresenter(ports:Pick<UiReadPorts,'fontMetadata'|'activeFontFallbackFamilies'|'activeTextDirection'|'localize'>,readAccessibility:()=>RuntimeAccessibilitySettings) {
  if(!ports||typeof readAccessibility!=='function'||[ports.fontMetadata,ports.activeFontFallbackFamilies,ports.activeTextDirection,ports.localize].some(value=>typeof value!=='function'))throw new Error('UI_TEXT_READ_PORTS_REQUIRED')
  const fontMetadata=ports.fontMetadata.bind(ports),activeFontFallbackFamilies=ports.activeFontFallbackFamilies.bind(ports),activeTextDirection=ports.activeTextDirection.bind(ports),localize=ports.localize.bind(ports)
 
 /** 合并资源与语言字体回退，应用文本缩放、本地化和方向，生成字体、行高、对齐和描边参数。 */ function uiTextPresentation(text: Text, scale: number, locale: string, fontSize = text.fontSize, fontWeight = text.fontWeight, accessibility:RuntimeAccessibilitySettings=readAccessibility()): { value: string; font: string; size: number; lineHeight: number; direction: 'ltr' | 'rtl'; align: CanvasTextAlign; outline: number } {
   const asset = fontMetadata(text.fontAsset), imported = asset?.fallbackFamilies ?? [], fallbacks = [...new Set([...imported, ...activeFontFallbackFamilies(locale)])], size = Math.max(1, Math.min(4096, fontSize * scale * accessibility.textScale)), direction = activeTextDirection(locale)
-  const family = asset?.family ? `"${asset.family.replace(/["\\]/g, '')}"` : text.fontFamily
-  return { value: localize(text.localizationKey, text.localizationVariables, text.text, locale), font: `${fontWeight} ${size}px ${family}${fallbacks.length ? ', ' + fallbacks.map(/** 按模板 `"${value.replace(/["\\]/g, '')}"` 生成并返回字符串。 */ value => `"${value.replace(/["\\]/g, '')}"`).join(', ') : ''}`, size, lineHeight: size * 1.3, direction, align: direction === 'rtl' && text.align === 'left' ? 'right' : direction === 'rtl' && text.align === 'right' ? 'left' : text.align, outline: asset ? asset.outlineWidth * scale : 0 }
+  // 26.43: one portable stack (see renderer/fontStack.ts): author list, imported and locale fallbacks, bundled faces.
+  const family = cssFontStack(asset?.family || text.fontFamily, fallbacks)
+  return { value: localize(text.localizationKey, text.localizationVariables, text.text, locale), font: `${fontWeight} ${size}px ${family}`, size, lineHeight: size * 1.3, direction, align: direction === 'rtl' && text.align === 'left' ? 'right' : direction === 'rtl' && text.align === 'right' ? 'left' : text.align, outline: asset ? asset.outlineWidth * scale : 0 }
 }
 
 /** 按实际字体测量换行后的完整文本尺寸，缺少画布时用字数估算宽度。 */ function measureUiText(text: Text, scale: number, locale: string, width: number, context?: CanvasRenderingContext2D | null, accessibility:RuntimeAccessibilitySettings=readAccessibility()): { width: number; height: number } {

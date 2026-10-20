@@ -1,6 +1,22 @@
-# Nova_A input, output and display latency results (26.41, 26.42)
+# Nova_A input, output and display latency results (26.41–26.43)
 
-All numbers below were measured on one machine with the procedure described here (26.41: 17 October 2026; 26.42: 18 and 19 October 2026). They are not a guarantee for other hardware. Nothing in this file is estimated: a missing measurement is written N/A.
+All numbers below were measured on one machine with the procedure described here (26.41: 17 October 2026; 26.42: 18 and 19 October 2026; 26.43: 19 October 2026). They are not a guarantee for other hardware. Nothing in this file is estimated: a missing measurement is written N/A.
+
+## 26.43 exported Windows game (19 October 2026)
+
+Same machine and method as the 26.42 exported Player below. The 26.43 development build (`.cache/_latency/build-d43b.cmd`, working tree with the desktop routing to the independent Player) was copied as `export43b/My Game.exe` next to the `game.nova-pak` taken from the 26.42 export of `LatencyTest.nova` (Platformer with light and the white marker, 60 Hz, debug profile). The game window was maximized (client 2560×1494), `--roi 1278 597`; the marker calibration (17.3 → 168.6) was identical in every run. Started with `NOVA_LATENCY_PROBE` by `launch-player43.cmd` or `h43-compare.cmd`; F3 and F4 were checked by hand and closed before measuring. SendInput → capture in ms, P50 / P95, 100 trials per edge, no timeouts:
+
+| Run (19 Oct unless stated) | Key down | Key up |
+| --- | --- | --- |
+| 26.42 export, 18 Oct (`results42/player-*`) | 18.9 / 26.1 | 16.7 / 25.4 |
+| 26.42 export, same session (`results43/export42-*`) | 18.3 / 25.6 | 19.0 / 25.6 |
+| 26.43, compatibility (Vue) Player, before the desktop routing change (`results43-legacy/`) | 17.5 / 23.9 | 18.5 / 25.3 |
+| **26.43, independent Player, run 1** (`results43/player43-*`) | **15.7 / 23.9** | **17.0 / 24.5** |
+| **26.43, independent Player, run 2** (`results43/player43-run2-*`) | **17.9 / 25.7** | **17.3 / 25.3** |
+
+The independent Player is not slower than the 26.42 Player; the differences between builds are inside the spread between two runs of the same build (2.2 ms at P50), so no improvement is claimed. The fixed 60 Hz step dominates this number.
+
+Stage breakdown (handler, consumed, submit) and frame statistics: N/A. In this session the harness's loopback collector received no probe records from any build, including the 26.42 export that reported on 18 October (`probecheck/`, 10-trial check of both exports). The end-to-end numbers do not depend on the probe. The cause was not found in this round (the probe code and the native endpoint are unchanged since 26.42); it should be checked before the next stage-level comparison.
 
 ## 26.42 release build (19 October 2026)
 

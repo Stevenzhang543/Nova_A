@@ -69,8 +69,12 @@ export const editorWindowState = reactive({ native: false, fullscreen: false, ma
 /** 分别使用浏览器或原生全屏 API 切换，原生退出全屏时恢复先前可见窗口布局。 */ export async function toggleEditorFullscreen(): Promise<void> {
   if (!('__TAURI_INTERNALS__' in window)) {
     try {
-      if (document.fullscreenElement) await document.exitFullscreen(); else await document.documentElement.requestFullscreen()
-      editorWindowState.fullscreen = Boolean(document.fullscreenElement)
+      // 26.43 web: iPad Safari only offers the WebKit-prefixed API.
+      const page = document as Document & { webkitFullscreenElement?: Element | null; webkitExitFullscreen?: () => Promise<void> | void }
+      const root = document.documentElement as HTMLElement & { webkitRequestFullscreen?: () => Promise<void> | void }
+      if (document.fullscreenElement || page.webkitFullscreenElement) await (document.exitFullscreen ? document.exitFullscreen() : page.webkitExitFullscreen?.())
+      else await (root.requestFullscreen ? root.requestFullscreen() : root.webkitRequestFullscreen?.())
+      editorWindowState.fullscreen = Boolean(document.fullscreenElement || page.webkitFullscreenElement)
     } catch (error) { reportRecoverableError(error, 'Toggle browser fullscreen') }
     return
   }

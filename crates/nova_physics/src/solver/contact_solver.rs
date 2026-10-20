@@ -19,6 +19,11 @@ struct Contact {
     tangent_impulse: f64,
     is_sensor: bool,
     position_weight: f64,
+    /// 26.43: false when neither side can move this step (static, sleeping or a resting
+    /// kinematic body). Inactive contacts are still reported but not solved.
+    active: bool,
+    /// 26.43: penetration kept as contact persistence (linear slop), scaled down for tiny shapes.
+    slop: f64,
 }
 
 // 拆分刚体切片以安全取得两个不重叠的可变引用。
@@ -47,11 +52,12 @@ fn apply_pair_impulse(
     b.apply_impulse(impulse, radius_b);
 }
 
-// 按有效质量求解接触法向与摩擦速度约束，并累计冲量。
-fn solve_contact_velocity(bodies: &mut [Body], contact: &mut Contact) {
-    if contact.is_sensor {
-        return;
+// 按有效质量求解接触法向与摩擦速度约束，并累计冲量；返回本次迭代造成的最大速度变化，用于提前收敛。
+fn solve_contact_velocity(bodies: &mut [Body], contact: &mut Contact) -> f64 {
+    if contact.is_sensor || !contact.active {
+        return 0.0;
     }
+    let mut largest_change: f64 = 0.0;
 
     let (normal_mass, relative_normal_velocity) = {
         let a = &bodies[contact.body_a];
@@ -73,6 +79,7 @@ fn solve_contact_velocity(bodies: &mut [Body], contact: &mut Contact) {
         let previous_impulse = contact.normal_impulse;
         contact.normal_impulse = (previous_impulse + impulse_delta).max(0.0);
         let applied_delta = contact.normal_impulse - previous_impulse;
+        largest_change = largest_change.max(applied_delta.abs() * normal_mass);
         if applied_delta != 0.0 {
             apply_pair_impulse(
                 bodies,
@@ -101,7 +108,7 @@ fn solve_contact_velocity(bodies: &mut [Body], contact: &mut Contact) {
     };
 
     if tangent_mass <= 0.0 || contact.normal_impulse <= 0.0 {
-        return;
+        return largest_change;
     }
 
     let tangent_delta = -relative_tangent_velocity / tangent_mass;
@@ -115,6 +122,7 @@ fn solve_contact_velocity(bodies: &mut [Body], contact: &mut Contact) {
     };
     let applied_delta = new_tangent_impulse - contact.tangent_impulse;
     contact.tangent_impulse = new_tangent_impulse;
+    largest_change = largest_change.max(applied_delta.abs() * tangent_mass);
     if applied_delta != 0.0 {
         apply_pair_impulse(
             bodies,
@@ -125,11 +133,12 @@ fn solve_contact_velocity(bodies: &mut [Body], contact: &mut Contact) {
             contact.radius_b,
         );
     }
+    largest_change
 }
 
 // 利用线性及旋转有效质量修正穿透，保留允许的微小余量。
 fn correct_contact_position(bodies: &mut [Body], contact: &Contact) {
-    if contact.is_sensor {
+    if contact.is_sensor || !contact.active {
         return;
     }
     let (effective_inverse_mass, cross_a, cross_b) = {
@@ -150,7 +159,7 @@ fn correct_contact_position(bodies: &mut [Body], contact: &Contact) {
         return;
     }
     let correction_magnitude =
-        ((contact.depth - POSITION_SLOP).max(0.0) * POSITION_CORRECTION * contact.position_weight)
+        ((contact.depth - contact.slop).max(0.0) * POSITION_CORRECTION * contact.position_weight)
             / effective_inverse_mass;
     let correction = contact.normal.mul(correction_magnitude);
     let (a, b) = two_bodies_mut(bodies, contact.body_a, contact.body_b);
@@ -175,7 +184,7 @@ fn contact_cache_key(contact: &Contact) -> ContactCacheKey {
 
 // 把上一时间步缓存的法向和切向冲量重新施加到接触对。
 fn warm_start_contact(bodies: &mut [Body], contact: &Contact) {
-    if contact.is_sensor { return; }
+    if contact.is_sensor || !contact.active { return; }
     let impulse = contact.normal.mul(contact.normal_impulse).add(contact.tangent.mul(contact.tangent_impulse));
     if impulse.length_squared() > 0.0 {
         apply_pair_impulse(bodies, contact.body_a, contact.body_b, impulse, contact.radius_a, contact.radius_b);

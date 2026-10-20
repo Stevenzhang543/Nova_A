@@ -1,4 +1,4 @@
-<!-- 横屏保护层：旋转时保留编辑器实例和未保存字段，提示传送到页面根部。 -->
+<!-- 横屏保护层（仅手机）：旋转时保留编辑器实例和未保存字段，提示传送到页面根部。平板两种方向都可编辑。 -->
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onBeforeUnmount, ref } from 'vue'
 import { preferencesState } from '../store/preferences'
@@ -18,9 +18,10 @@ function synchronize() {
  frame = 0
  const viewport = window.visualViewport
  const touch = Boolean(coarse?.matches) && !('__TAURI_INTERNALS__' in window)
- const state = mobileViewport({ touch, orientation: screen.orientation?.type, width: innerWidth, height: innerHeight, visualWidth: viewport?.width, visualHeight: viewport?.height, offsetTop: viewport?.offsetTop, offsetLeft: viewport?.offsetLeft })
+ const state = mobileViewport({ touch, orientation: screen.orientation?.type, width: innerWidth, height: innerHeight, visualWidth: viewport?.width, visualHeight: viewport?.height, offsetTop: viewport?.offsetTop, offsetLeft: viewport?.offsetLeft, screenWidth: screen.width, screenHeight: screen.height })
  const root = document.documentElement
  root.dataset.mobileEditor = String(touch)
+ if (touch) root.dataset.touch = state.form; else delete root.dataset.touch
  for (const key of ['width','height','top','left'] as const) root.style.setProperty(`--mobile-${key}`, `${state[key]}px`)
  if (state.portrait !== portrait.value) {
   if (state.portrait) previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null
@@ -50,12 +51,18 @@ onBeforeUnmount(/** 释放监听和保护状态，播放器不继承横屏限制
  window.visualViewport?.removeEventListener('scroll', schedule)
  document.getElementById('app')?.removeAttribute('inert')
  delete document.documentElement.dataset.mobileEditor
+ delete document.documentElement.dataset.touch
 })
 </script>
 <template><Teleport to="body"><section v-if="portrait" ref="prompt" class="mobile-rotate" role="alertdialog" aria-modal="true" aria-labelledby="mobile-rotate-title" tabindex="-1" @keydown.tab.prevent data-testid="mobile-rotate"><h1 id="mobile-rotate-title">{{ message[0] }}</h1><p>{{ message[1] }}</p><p>{{ message[2] }}</p></section></Teleport></template>
 <style>
 .mobile-rotate{position:fixed;inset:0;z-index:2147483647;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:16px;padding:max(24px,env(safe-area-inset-top)) max(24px,env(safe-area-inset-right)) max(24px,env(safe-area-inset-bottom)) max(24px,env(safe-area-inset-left));background:var(--bg-base,#101116);color:var(--text-primary,#fff);text-align:center;overflow:auto}.mobile-rotate h1{font-size:24px}.mobile-rotate p{max-width:38em;line-height:1.6}
 :root[data-mobile-editor='true'] .editor-root{inset:auto;top:var(--mobile-top,0px);left:var(--mobile-left,0px);width:var(--mobile-width,100vw);height:var(--mobile-height,100dvh);padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);box-sizing:border-box}
-@media(pointer:coarse){:root[data-mobile-editor='true'] button,:root[data-mobile-editor='true'] select,:root[data-mobile-editor='true'] input:not([type='checkbox']):not([type='radio']){min-height:44px}:root[data-mobile-editor='true'] input,:root[data-mobile-editor='true'] textarea,:root[data-mobile-editor='true'] select{font-size:max(16px,1em)}:root[data-mobile-editor='true'] .workspace-control-row{flex-basis:52px}}
+/* 26.43: phones keep 44 px targets. Tablets use a slightly taller control geometry through the shared
+ * tokens instead of forcing every control to 44 px, so rows, labels and fields keep one rhythm (the old
+ * 44 px buttons and 16 px inputs next to 13 px labels were the misaligned text on iPad). Inputs no longer
+ * need 16 px: the viewport's maximum-scale stops Safari from zooming on focus. */
+@media(pointer:coarse){:root[data-touch='phone'] button,:root[data-touch='phone'] select,:root[data-touch='phone'] input:not([type='checkbox']):not([type='radio']){min-height:44px}:root[data-touch='phone'] .workspace-control-row{flex-basis:52px}}
+:root[data-touch='tablet']{--ui-control-height:calc(34px * var(--ui-scale));--ui-input-height:calc(34px * var(--ui-scale));--ui-tab-height:calc(32px * var(--ui-scale));--ui-tree-row-height:calc(36px * var(--ui-scale));--ui-list-row-height:calc(40px * var(--ui-scale))}
 </style>
 

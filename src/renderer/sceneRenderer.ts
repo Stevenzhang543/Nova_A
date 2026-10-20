@@ -1,4 +1,5 @@
 /** 场景绘制编排：把当前场景、相机及可绘制组件转换为渲染后端提交的绘制命令。 */
+import { cssFontStack } from './fontStack'
 import { buildGpuLighting } from './lighting2dGpu'
 import type { LightingEnvironment } from './LightingEnvironment'
 import { compoundGeometries } from '../world/compoundGeometry'
@@ -163,14 +164,6 @@ function authoredOrder(entity: Entity, base: number, entities: Entity[], worldY?
   return base + entity.authoring.zOrder + depthKey
 }
 
-/* 保留标准 CSS 字体族，其余字体名清洗引号和反斜杠后加引号。 */
-function cssFontFamily(value: string): string {
-  const family = value.trim()
-  if (!family) return ''
-  if (/^(serif|sans-serif|monospace|cursive|fantasy|system-ui|ui-serif|ui-sans-serif|ui-monospace)$/i.test(family)) return family
-  return `"${family.replace(/["\\]/g, '')}"`
-}
-
 /* 解析精灵资源并提交含视差重复、翻转、蒙皮及九宫格设置的绘制命令。 */
 type FrameSpriteMeshes = Map<Entity, ReturnType<SceneRendererEnvironment['deformSkin']>>
 /** Bounds and all cameras/repeat copies borrow one pose result during this synchronous frame. */
@@ -224,12 +217,11 @@ function submitText(renderer: Renderer2D, entity: Entity, text: TextRenderer2D, 
   if (!text.enabled || text.removed || !text.text) return
   const transform = worldTransforms?.get(entity.uuid) ?? worldTransform(entity, entities)
   const importedFont = environment.fontMetadata(text.fontAsset)
-  const fallbacks = importedFont?.fallbackFamilies.map(cssFontFamily).filter(Boolean) ?? []
-  const primaryFamily = cssFontFamily(importedFont?.family || text.fontFamily) || 'sans-serif'
+  const fontFamily = cssFontStack(importedFont?.family || text.fontFamily, importedFont?.fallbackFamilies)
   const outlineWidth = importedFont?.outlineWidth ?? 0
   renderer.submitText({
     position: authoringPosition(entity, transform.position, entities, view), rotation: transform.rotation, scale: transform.scale,
-    text: text.text, fontFamily: [primaryFamily, ...fallbacks].join(', '),
+    text: text.text, fontFamily,
     fontSize: text.fontSize, fontWeight: text.fontWeight, lineHeight: text.lineHeight,
     align: text.align, color: rgba(text.color, text.opacity), outlineColor: { r: 0, g: 0, b: 0, a: outlineWidth > 0 ? text.opacity / 100 : 0 }, outlineWidth, maxWidth: text.maxWidth,
     sortingLayer: text.sortingLayer, orderInLayer: authoredOrder(entity, text.orderInLayer, entities), material: text.material

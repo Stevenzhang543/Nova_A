@@ -2,7 +2,7 @@
 import { reactive } from 'vue'
 
 export const graphStudioState = reactive({
-  mode: 'code' as 'code' | 'graph' | 'events',
+  mode: 'code' as 'code' | 'graph' | 'events' | 'blocks',
   authoringMode: 'blocks' as 'blocks' | 'nodes',
   activeGraphUuid: '',
   activeGraphDirty: false,
@@ -10,6 +10,10 @@ export const graphStudioState = reactive({
    * validates, saves, and regenerates the exact linked script first. */
   saveActiveGraph: null as null | (() => boolean | Promise<boolean>),
   activeEventSheetUuid: '',
+  /** 26.43 Blocks editor: the open block script and its save hook (like the graph editor). */
+  activeBlockScriptUuid: '',
+  activeBlocksDirty: false,
+  saveActiveBlocks: null as null | (() => boolean | Promise<boolean>),
   paletteOpen: true,
   detailsOpen: true,
   minimapOpen: true,
@@ -25,6 +29,7 @@ export const graphStudioState = reactive({
 /** 选中指定图资源，并切换到图编辑模式。 */ export function openGraphAsset(uuid: string): void { graphStudioState.activeGraphUuid = uuid; graphStudioState.mode = 'graph' }
 /** 选中指定事件表资源，并切换到事件编辑模式。 */ export function openEventSheetAsset(uuid: string): void { graphStudioState.activeEventSheetUuid = uuid; graphStudioState.mode = 'events' }
 /** 将 'code' 赋给 graphStudioState.mode，不显式返回值。 */ export function openCodeWorkspace(): void { graphStudioState.mode = 'code' }
+/** 选中积木脚本并切换到积木模式。 */ export function openBlockScriptAsset(uuid: string): void { graphStudioState.activeBlockScriptUuid = uuid; graphStudioState.mode = 'blocks' }
 
 /** A fresh code projection gets one measured arrangement. Exact live identity
  * prevents project imports or existing manual graphs from reusing the request. */

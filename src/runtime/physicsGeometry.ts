@@ -1,4 +1,5 @@
 /** 物理形状准备：规范复合碰撞形状，计算求解器使用的几何、面积与惯性。 */
+import { stableSinCos } from '../world/stableTrig'
 import { MAX_AUTHORED_COLLIDER_POINTS, type ColliderShapeDescriptor2D, type PhysicsShapeKind } from './physicsProduction'
 import type { Vec2 } from '../world/types'
 
@@ -143,7 +144,7 @@ export interface PreparedColliderSet2D {
       const end = authored[index + 1], dx = end.x - start.x, dy = end.y - start.y, length = Math.hypot(dx, dy)
       if (length <= 1e-9) return []
       const midpoint = { x: (start.x + end.x) * .5, y: (start.y + end.y) * .5 }
-      const cosine = Math.cos(rotation), sine = Math.sin(rotation)
+      const { sine, cosine } = stableSinCos(rotation)
       const center = { x: offset.x + midpoint.x * cosine - midpoint.y * sine, y: offset.y + midpoint.x * sine + midpoint.y * cosine }
       return [baseShape(source, id, 'Segment', center, rotation + Math.atan2(dy, dx), { x: length, y: thickness }, [], index, properties)]
     })

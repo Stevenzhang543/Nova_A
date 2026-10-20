@@ -28,6 +28,7 @@
       </div>
     </header>
     <StudioDraftConflict v-if="sourceDraftConflict" :saved-source="currentSavedSource" :draft-source="draft" @keep="acceptSourceDraftBase" @discard="discardSourceDraft" />
+    <p v-if="blocksManaged" class="blocks-managed" role="note"><span>{{ blocksCopyText.codeEdited }}</span><button type="button" @click="openActiveInBlocks">{{ blocksCopyText.title }}</button></p>
 
     <div ref="studioGrid" data-measured-studio-layout :style="gridStyle" :class="['studio-grid', { 'detail-bottom': detailBottom, 'explorer-hidden': !paneLayout.primaryVisible, 'detail-hidden': !detailVisible, 'drawer-layout':paneLayout.drawer }]">
       <aside v-show="paneLayout.primaryVisible" class="project-scripts" :style="{width:paneLayout.primaryWidth+'px'}">
@@ -243,6 +244,9 @@ import {projectSessionState} from '../projects/projectSession'
 import {retainStudioDraft,readStudioDraft,clearStudioDraft,registerStudioDraftOwner,type StudioDraftCandidate} from '../editor/studioDraftRetention'
 import {queueInitialGraphLayout} from '../visual/graphStudioState'
 import StudioDraftConflict from './StudioDraftConflict.vue'
+import { isBlockScriptSource } from '../visual/blockScript'
+import { blockCopy } from '../visual/blockScriptCopy'
+import { openBlockScriptAsset } from '../visual/graphStudioState'
 import {objectOwnershipCopy} from '../editor/objectOwnershipCopy'
 import {pendingObjectAuthorNavigation,objectCallbackSpan} from '../editor/objectAuthorNavigation'
 
@@ -263,6 +267,10 @@ const conversionLabels = computed(/* 返回 conversionCopy[preferencesState.loca
 const editor = ref<HTMLTextAreaElement | null>(null), findInput = ref<HTMLInputElement | null>(null), renameInput = ref<HTMLInputElement | null>(null)
 const drafts = reactive<Record<string, string>>({}), dirtyUuids = reactive(new Set<string>())
 const draft = computed({ get: /* 根据 activeAsset.value 的真假，分别返回 drafts[activeAsset.value.uuid] ?? '' 或 ''。 */ () => activeAsset.value ? drafts[activeAsset.value.uuid] ?? '' : '', set: /** 将编辑文本写入当前脚本对应的内存草稿。 */ value => { if (activeAsset.value) drafts[activeAsset.value.uuid] = value } })
+/** 26.43: scripts written by Blocks say so; code edits are replaced when the blocks are saved again. */
+const blocksManaged = computed(() => isBlockScriptSource(draft.value))
+const blocksCopyText = computed(() => { const copy = blockCopy(preferencesState.locale).ui; return { title: copy.title, codeEdited: copy.managedByBlocks } })
+function openActiveInBlocks() { if (activeAsset.value) openBlockScriptAsset(activeAsset.value.uuid) }
 const emptyAnalysis = /** 创建没有诊断、符号或引用的初始脚本分析结果。 */ (): ScriptAnalysis => ({ apiVersion: 2, revision: 0, elapsedMs: 0, diagnostics: [], symbols: [], dependencies: [], functions: {}, references: [], tests: [], semanticTokens: [], apiUsage: [], types: [], structures: [], genericHelpers: [], statements: [] })
 const analysis = ref<ScriptAnalysis>(emptyAnalysis()), validationError = ref('')
 const scriptHasErrors = computed(/** 检查当前保存错误及分析诊断中是否存在错误级别条目。 */ () => !!validationError.value || analysis.value.diagnostics.some(/* 比较 item.severity 与 'error'，返回严格相等的判断结果。 */ item=>item.severity==='error'))
@@ -472,6 +480,7 @@ onBeforeUnmount(/** 卸载前保留所有脏草稿，解除保存与尺寸监听
 </script>
 
 <style scoped>
+.blocks-managed{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2);margin:0;padding:var(--space-2) var(--space-3);border-bottom:1px solid var(--border-subtle);background:color-mix(in srgb,var(--warning,#d89b00) 12%,var(--surface-1));font-size:var(--type-dense)}.blocks-managed button{min-height:var(--ui-control-height);border:1px solid var(--border-subtle);background:var(--surface-2)}
 .script-studio { container: source-studio / inline-size; position: relative; height: 100%; min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; background: var(--surface-1); }
 .studio-toolbar { position: relative; z-index: 15; flex: 0 0 auto; min-height: var(--ui-toolbar-height); padding: var(--space-1) var(--space-2); display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); border-bottom: var(--ui-border-width) solid var(--border-subtle); }
 .studio-title { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }.studio-title small { display: block; font-size: var(--type-caption); color: var(--text-muted); }.compact-toolbar .studio-title small { display: none; }

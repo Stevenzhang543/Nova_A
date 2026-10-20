@@ -6,6 +6,10 @@
  * the game viewport, player and authored game UI are excluded by their own scopes. */
 *, *::before, *::after { box-sizing: border-box; }
 html, body, #app { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; }
+/* 26.43 web: the editor is an app surface. No page rubber-banding or pull-to-refresh, no automatic
+ * text inflation on rotation (iOS), no double-tap zoom; pinch zoom inside the canvas is the editor's. */
+html, body { overscroll-behavior: none; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; touch-action: manipulation; }
+body { position: fixed; inset: 0; }
 body {
   background: var(--surface-app); color: var(--text-primary);
   font: var(--weight-regular) var(--type-body)/var(--line-body) var(--font-ui);

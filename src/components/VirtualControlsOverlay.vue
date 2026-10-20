@@ -2,7 +2,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, reactive, watch } from 'vue'
 import { gameplayRuntime } from '../runtime/GameplayRuntime'
-import { deviceInputSettings, deviceRuntimeState, performHaptic, refreshDeviceCapabilities, type VirtualControlSettings } from '../runtime/deviceInput'
+import { automaticVirtualControls, deviceInputSettings, deviceRuntimeState, performHaptic, refreshDeviceCapabilities, type VirtualControlSettings } from '../runtime/deviceInput'
 import { physicsState } from '../store/physics'
 import { createVirtualControlsInputOwner, type VirtualControlsRuntime } from '../runtime/virtualControlsInputOwner'
 import type { InputAction } from '../runtime/input'
@@ -12,7 +12,11 @@ const props = defineProps<{ runtime?: VirtualControlsRuntime; world?: object; in
 type VectorValue = { x: number; y: number }
 const controlValues = reactive<Record<string, VectorValue>>({})
 const pointerOwners = new Map<string, number>()
-const visible = computed(/** 检查虚拟输入开关、控件数量与当前设备显示策略。 */ () => deviceInputSettings.virtualControlsEnabled && deviceInputSettings.virtualControls.length > 0 && (deviceInputSettings.showVirtualControls === 'always' || deviceRuntimeState.capabilities.touch))
+/* 26.43: the project's controls when it defines them; otherwise, on a touch screen, controls generated
+ * from the input map (deviceInput.automaticVirtualControls), so web games are playable on iPad. */
+const configured = computed(() => deviceInputSettings.virtualControlsEnabled && deviceInputSettings.virtualControls.length > 0)
+const effectiveControls = computed<VirtualControlSettings[]>(() => configured.value ? deviceInputSettings.virtualControls : deviceInputSettings.automaticVirtualControls && deviceRuntimeState.capabilities.touch ? automaticVirtualControls(props.inputActions ?? physicsState.inputMap) : [])
+const visible = computed(/** 检查虚拟输入开关、控件数量与当前设备显示策略。 */ () => effectiveControls.value.length > 0 && (!configured.value || deviceInputSettings.showVirtualControls === 'always' || deviceRuntimeState.capabilities.touch))
 const actionKinds = computed(/** 将输入映射转换为动作名称到类型的查找表。 */ () => new Map((props.inputActions ?? physicsState.inputMap).map(/** 提取动作名称和类型作为映射条目。 */ action => [action.name, action.kind])))
 
 /** 根据自定义、关闭或自动模式返回安全区边距。 */ function safeInsets() {
@@ -77,7 +81,7 @@ const actionKinds = computed(/** 将输入映射转换为动作名称到类型�
 function bindInputOwner() {
   const runtime = props.runtime ?? gameplayRuntime
   return createVirtualControlsInputOwner(runtime, props.world ?? runtime.presentation.world, {
-    controls: () => deviceInputSettings.virtualControls,
+    controls: () => effectiveControls.value,
     current: control => controlValues[control.id] ?? { x: 0, y: 0 },
     actionKinds: () => actionKinds.value
   })
@@ -85,7 +89,7 @@ function bindInputOwner() {
 let inputOwner = bindInputOwner()
 // A component's two props update together; bind only after the complete tuple is available.
 watch(() => [props.runtime, props.world], () => { releaseAll(); inputOwner.dispose(); inputOwner = bindInputOwner() }, { flush: 'pre' })
-watch(() => JSON.stringify(deviceInputSettings.virtualControls.map(control => [control.id, control.action])), releaseAll, { flush: 'sync' })
+watch(() => JSON.stringify(effectiveControls.value.map(control => [control.id, control.action])), releaseAll, { flush: 'sync' })
 function releaseHidden(): void { if (document.hidden) releaseAll() }
 /** 刷新设备能力与安全区信息。 */ function refresh(): void { refreshDeviceCapabilities() }
 
@@ -97,7 +101,7 @@ onBeforeUnmount(/** 卸载时释放输入并移除设备变化监听。 */ () =>
   <div v-if="visible" class="virtual-controls" :style="{ '--safe-left': `${safeInsets().left}px`, '--safe-top': `${safeInsets().top}px`, '--safe-right': `${safeInsets().right}px`, '--safe-bottom': `${safeInsets().bottom}px` }" aria-label="Virtual controls">
     <div class="safe-area-outline" aria-hidden="true"></div>
     <button
-      v-for="control in deviceInputSettings.virtualControls"
+      v-for="control in effectiveControls"
       :key="control.id"
       class="virtual-control"
       :class="[`kind-${control.kind}`, { active: Math.abs(current(control).x) > .001 || Math.abs(current(control).y) > .001 }]"

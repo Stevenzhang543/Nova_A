@@ -213,7 +213,7 @@ function templatePhysicsProfile(): JsonRecord {
   return {
     uuid: stableUuid(`scene:${seed}`), name, loaded: true, layers: [1], activeLayer: 1, renderLayer: 'all',
     authoringSettings: defaultSceneAuthoringSettings(1),
-    globalSettings: { gravity: 9.80665, airFriction: .01, timeScale: 1, tickRate: TEMPLATE_TICK_RATE, maxCatchUpSteps: DEFAULT_MAX_CATCH_UP_STEPS, collisionMatrix: defaultCollisionMatrix(), interpolation: 'Interpolate', layers: defaultPhysicsLayers(), profile: templatePhysicsProfile(), timerClock: 'fixed' },
+    globalSettings: { gravity: 9.80665, airFriction: .01, timeScale: 1, tickRate: TEMPLATE_TICK_RATE, maxCatchUpSteps: DEFAULT_MAX_CATCH_UP_STEPS, collisionMatrix: defaultCollisionMatrix(), interpolation: 'Interpolate', layers: defaultPhysicsLayers(), profile: templatePhysicsProfile(), timerClock: 'fixed', eventDispatch: 'step' },
     entities, connections
   }
 }

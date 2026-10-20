@@ -1,29 +1,118 @@
-// 根据运动速度、形状尺寸和连续碰撞设置确定有界子步数。
-// 兼容扁平数据的物理世界：装载记录、构建碰撞对、分步求解并写回状态。
-fn determine_sub_steps(
-    bodies: &[Body],
-    dt: f64,
-    global_gravity: f64,
-    minimum_substeps: usize,
-) -> usize {
-    let mut required = minimum_substeps.clamp(1, MAX_SUB_STEPS);
-    for body in bodies {
-        if body.is_static || !body.continuous_collision {
+// 26.43: 连续碰撞改为逐物体扫掠。旧版用全局子步（任一快速物体最多把整个世界推到 128 个子步，
+// 仍可能穿透）；现在只对开启连续碰撞且本子步位移超过自身尺寸四分之一的物体，按其尺寸分段检测，
+// 找到首个重叠段后二分细化到最早接触点，物体停在刚接触处，由接触求解器处理反弹或停止。
+fn continuous_sweep_samples(body: &Body, travel: f64) -> usize {
+    let permitted = body.minimum_collider_extent() * 0.25;
+    if permitted.is_nan() || permitted <= 0.0 || travel <= permitted {
+        return 0;
+    }
+    ((travel / permitted).ceil() as usize).clamp(2, MAX_CCD_SAMPLES)
+}
+
+// 判断两刚体（含复合子形状）是否有会产生实体接触的重叠；传感器与单向平台的放行方向不计。
+fn bodies_touch(body_a: &Body, body_b: &Body) -> bool {
+    let variants_a = std::iter::once(None).chain((0..body_a.collider_children.len()).map(Some));
+    for child_a in variants_a {
+        let proxy_a = body_a.collider_proxy(child_a);
+        if proxy_a.is_sensor {
             continue;
         }
-        let gravity_acceleration =
-            (global_gravity + body.local_gravity).abs() * body.gravity_scale.abs();
-        let force_acceleration = body.force.length() * body.inv_mass;
-        let estimated_speed = body.velocity.length()
-            + (body.acceleration.length() + gravity_acceleration + force_acceleration) * dt;
-        let angular_surface_speed = body.angular_velocity.abs() * body.maximum_collider_radius();
-        let travel = (estimated_speed + angular_surface_speed) * dt;
-        let permitted_travel = body.minimum_collider_extent() * 0.25;
-        if permitted_travel > 0.0 {
-            required = required.max((travel / permitted_travel).ceil() as usize);
+        let variants_b =
+            std::iter::once(None).chain((0..body_b.collider_children.len()).map(Some));
+        for child_b in variants_b {
+            let proxy_b = body_b.collider_proxy(child_b);
+            if proxy_b.is_sensor || !proxy_a.can_collide_with(&proxy_b) {
+                continue;
+            }
+            if collide(&proxy_a, &proxy_b).iter().any(/* 单向平台只在阻挡方向算接触。 */ |manifold| {
+                proxy_a.accepts_one_way_contact(&proxy_b, manifold.normal)
+                    && proxy_b.accepts_one_way_contact(&proxy_a, manifold.normal.neg())
+            }) {
+                return true;
+            }
         }
     }
-    required.clamp(minimum_substeps.clamp(1, MAX_SUB_STEPS), MAX_SUB_STEPS)
+    false
+}
+
+// 合并两个包围盒。
+fn union_aabb(first: Aabb, second: Aabb) -> Aabb {
+    Aabb {
+        min_x: first.min_x.min(second.min_x),
+        max_x: first.max_x.max(second.max_x),
+        min_y: first.min_y.min(second.min_y),
+        max_y: first.max_y.max(second.max_y),
+    }
+}
+
+// 对本子步移动过快的连续碰撞刚体逐段扫掠，把它放回最早接触的位置。
+fn sweep_continuous_bodies(
+    bodies: &mut [Body],
+    start_poses: &[(Vec2, f64)],
+    bound_pairs: &HashSet<(usize, usize)>,
+) {
+    for index in 0..bodies.len() {
+        let body = &bodies[index];
+        if body.is_static || body.is_kinematic || body.sleeping || !body.continuous_collision {
+            continue;
+        }
+        let (start_position, start_angle) = start_poses[index];
+        let delta = body.position.sub(start_position);
+        let turn = normalize_angle(body.angle - start_angle);
+        let travel = delta.length() + turn.abs() * body.maximum_collider_radius();
+        let samples = continuous_sweep_samples(body, travel);
+        if samples == 0 {
+            continue;
+        }
+        let mut moving = body.clone();
+        moving.position = start_position;
+        moving.angle = start_angle;
+        let swept = union_aabb(moving.compound_aabb(), body.compound_aabb());
+        let candidates: Vec<usize> = (0..bodies.len())
+            .filter(/* 只检测扫掠范围内、未绑定且起点未重叠的物体。 */ |&other| {
+                other != index
+                    && !bound_pairs.contains(&(index.min(other), index.max(other)))
+                    && bodies[other].compound_aabb().overlaps(swept)
+                    && !bodies_touch(&moving, &bodies[other])
+            })
+            .collect();
+        if candidates.is_empty() {
+            continue;
+        }
+        let pose = /* 按比例插值本子步的位置与角度。 */ |moving: &mut Body, fraction: f64| {
+            moving.position = start_position.add(delta.mul(fraction));
+            moving.angle = normalize_angle(start_angle + turn * fraction);
+        };
+        let touches = /* 当前姿态是否碰到任一候选物体。 */ |moving: &Body, bodies: &[Body]| {
+            candidates.iter().any(|&other| bodies_touch(moving, &bodies[other]))
+        };
+        let mut clear = 0.0;
+        let mut blocked = None;
+        for sample in 1..=samples {
+            let fraction = sample as f64 / samples as f64;
+            pose(&mut moving, fraction);
+            if touches(&moving, bodies) {
+                blocked = Some(fraction);
+                break;
+            }
+            clear = fraction;
+        }
+        let Some(mut hit) = blocked else {
+            continue;
+        };
+        for _ in 0..CCD_REFINEMENT_STEPS {
+            let middle = (clear + hit) * 0.5;
+            pose(&mut moving, middle);
+            if touches(&moving, bodies) {
+                hit = middle;
+            } else {
+                clear = middle;
+            }
+        }
+        pose(&mut moving, hit);
+        bodies[index].position = moving.position;
+        bodies[index].angle = moving.angle;
+    }
 }
 
 // 清零扁平刚体记录中的本步接触诊断字段。
@@ -258,7 +347,23 @@ fn contact_from_manifold(
         tangent_impulse: 0.0,
         is_sensor: body_a_view.is_sensor || body_b_view.is_sensor,
         position_weight,
+        active: body_can_move(body_a) || body_can_move(body_b),
+        slop: LINEAR_SLOP.min(
+            0.05 * body_a_view
+                .minimum_collider_extent()
+                .min(body_b_view.minimum_collider_extent()),
+        ),
     }
+}
+
+// 26.43: 本步可能移动的刚体：醒着的动态体或任何运动学体（运动学体可能被脚本直接移动）。
+fn body_can_move(body: &Body) -> bool {
+    !body.is_static && (body.is_kinematic || !body.sleeping)
+}
+
+// 26.43: 刚体或其任一子形状是传感器。
+fn has_sensor(body: &Body) -> bool {
+    body.is_sensor || body.collider_children.iter().any(|child| child.is_sensor)
 }
 
 // 筛选碰撞候选并生成含子形状身份、材质和缓存的接触集合。
@@ -267,25 +372,46 @@ fn collect_contacts(
     bound_pairs: &HashSet<(usize, usize)>,
     data: &mut [f64],
     record_diagnostics: bool,
+    coverage: &EdgeCoverage,
 ) -> Vec<Contact> {
     let mut broad_phase: Vec<(usize, Aabb)> = bodies
         .iter()
         .enumerate()
         .map(/* 计算并返回 (index , body . compound_aabb ())，用于当前 collect_contacts 流程。 */ |(index, body)| (index, body.compound_aabb()))
         .collect();
-    broad_phase.sort_by(/* 按 a . 1 . min_x . total_cmp (& b . 1 . min_x) 比较顺序，供稳定排序使用。 */ |a, b| a.1.min_x.total_cmp(&b.1.min_x));
+    // 26.43: sweep along the axis on which the bodies are spread most (tall levels and stacks
+    // sort better along y), so fewer bounds overlap on the sweep axis.
+    let count = broad_phase.len().max(1) as f64;
+    let (mut mean_x, mut mean_y) = (0.0, 0.0);
+    for (_, bounds) in &broad_phase {
+        mean_x += (bounds.min_x + bounds.max_x) * 0.5 / count;
+        mean_y += (bounds.min_y + bounds.max_y) * 0.5 / count;
+    }
+    let (mut spread_x, mut spread_y) = (0.0, 0.0);
+    for (_, bounds) in &broad_phase {
+        spread_x += ((bounds.min_x + bounds.max_x) * 0.5 - mean_x).powi(2);
+        spread_y += ((bounds.min_y + bounds.max_y) * 0.5 - mean_y).powi(2);
+    }
+    let sweep_y = spread_y > spread_x;
+    let lower = /* 扫掠轴上的下界。 */ |bounds: &Aabb| if sweep_y { bounds.min_y } else { bounds.min_x };
+    let upper = /* 扫掠轴上的上界。 */ |bounds: &Aabb| if sweep_y { bounds.max_y } else { bounds.max_x };
+    broad_phase.sort_by(/* 按扫掠轴下界排序，相同时按索引保持确定顺序。 */ |a, b| lower(&a.1).total_cmp(&lower(&b.1)).then(a.0.cmp(&b.0)));
 
     let mut contacts = Vec::new();
     for sorted_a in 0..broad_phase.len() {
         for sorted_b in (sorted_a + 1)..broad_phase.len() {
-            let (body_a_index, aabb_a) = broad_phase[sorted_a];
-            let (body_b_index, aabb_b) = broad_phase[sorted_b];
-            if aabb_b.min_x > aabb_a.max_x {
+            let (first_index, first_bounds) = broad_phase[sorted_a];
+            let (second_index, second_bounds) = broad_phase[sorted_b];
+            if lower(&second_bounds) > upper(&first_bounds) {
                 break;
             }
-            if !aabb_a.overlaps(aabb_b) {
+            if !first_bounds.overlaps(second_bounds) {
                 continue;
             }
+            // The lower body index is always side A, whichever axis is swept, so a contact keeps
+            // its identity (and warm-start impulse) when the sweep axis changes.
+            let (body_a_index, body_b_index) =
+                (first_index.min(second_index), first_index.max(second_index));
             let ordered_pair = (
                 body_a_index.min(body_b_index),
                 body_a_index.max(body_b_index),
@@ -295,6 +421,13 @@ fn collect_contacts(
             }
             let body_a = &bodies[body_a_index];
             let body_b = &bodies[body_b_index];
+            // 26.43: two bodies that cannot be moved by contacts (static or kinematic) never
+            // exchange impulses; only sensors need their overlap. Baked TileMap rectangles are
+            // static, so this removes most pairs in tile levels.
+            let dynamic = /* 由求解器推动的刚体。 */ |body: &Body| !body.is_static && !body.is_kinematic;
+            if !dynamic(body_a) && !dynamic(body_b) && !has_sensor(body_a) && !has_sensor(body_b) {
+                continue;
+            }
             let variants_a =
                 std::iter::once(None).chain((0..body_a.collider_children.len()).map(Some));
             for child_a_index in variants_a {
@@ -306,7 +439,18 @@ fn collect_contacts(
                     if !proxy_a.can_collide_with(&proxy_b) {
                         continue;
                     }
-                    let manifolds = collide(&proxy_a, &proxy_b);
+                    let mut manifolds = collide(&proxy_a, &proxy_b);
+                    // 26.43: drop contacts through internal edges of adjacent static polygons.
+                    if child_a_index.is_none() && !proxy_b.is_static {
+                        if let Some(edges) = coverage.get(&body_a_index) {
+                            manifolds.retain(|manifold| keep_static_contact(&proxy_a, edges, &proxy_b, manifold, true));
+                        }
+                    }
+                    if child_b_index.is_none() && !proxy_a.is_static {
+                        if let Some(edges) = coverage.get(&body_b_index) {
+                            manifolds.retain(|manifold| keep_static_contact(&proxy_b, edges, &proxy_a, manifold, false));
+                        }
+                    }
                     let position_weight = 1.0 / manifolds.len().max(1) as f64;
                     for (feature_id, manifold) in manifolds.into_iter().enumerate() {
                         if !proxy_a.accepts_one_way_contact(&proxy_b, manifold.normal)
@@ -358,7 +502,12 @@ fn simulate_sub_step(
     solver_iterations: usize,
     position_iterations: usize,
     impulse_cache: &mut HashMap<ContactCacheKey, (f64, f64)>,
+    coverage: &EdgeCoverage,
 ) -> Vec<SolverContactSnapshot> {
+    let start_poses: Vec<(Vec2, f64)> = bodies
+        .iter()
+        .map(/* 记录积分前位姿，供连续碰撞扫掠。 */ |body| (body.position, body.angle))
+        .collect();
     for body in bodies.iter_mut() {
         body.integrate(context.dt, context.global_gravity, context.air_friction);
     }
@@ -370,8 +519,10 @@ fn simulate_sub_step(
             context.air_friction,
         );
     }
+    sweep_continuous_bodies(bodies, &start_poses, bound_pairs);
 
-    let mut contacts = collect_contacts(bodies, bound_pairs, data, context.record_diagnostics);
+    let mut contacts =
+        collect_contacts(bodies, bound_pairs, data, context.record_diagnostics, coverage);
     for contact in &mut contacts {
         if let Some((normal, tangent)) = impulse_cache.get(&contact_cache_key(contact)).copied() {
             contact.normal_impulse = non_negative(normal, 0.0);
@@ -386,8 +537,14 @@ fn simulate_sub_step(
         for constraint in constraints.iter_mut() {
             solve_connection_velocity(bodies, constraint, context.dt);
         }
+        let mut largest_change: f64 = 0.0;
         for contact in &mut contacts {
-            solve_contact_velocity(bodies, contact);
+            largest_change = largest_change.max(solve_contact_velocity(bodies, contact));
+        }
+        // 26.43: a converged contact set (resting stacks, sleeping islands) needs no further
+        // sweeps. Joints and ropes keep every configured iteration.
+        if constraints.is_empty() && largest_change <= VELOCITY_TOLERANCE {
+            break;
         }
     }
     // Anchor reprojection updates residual separation without regenerating collision manifolds.
@@ -406,7 +563,7 @@ fn simulate_sub_step(
         }
         let mut maximum_error: f64 = 0.0;
         for (contact, (local_a, local_b)) in contacts.iter().zip(&anchors) {
-            if contact.is_sensor {
+            if contact.is_sensor || !contact.active {
                 continue;
             }
             let a = &bodies[contact.body_a];
@@ -420,10 +577,10 @@ fn simulate_sub_step(
                     .sub(a.position.add(projected.radius_a))
                     .dot(contact.normal))
             .max(0.0);
-            maximum_error = maximum_error.max(projected.depth);
+            maximum_error = maximum_error.max(projected.depth - projected.slop);
             correct_contact_position(bodies, &projected);
         }
-        if constraints.is_empty() && maximum_error <= POSITION_SLOP * 4.0 {
+        if constraints.is_empty() && maximum_error <= LINEAR_SLOP * 0.05 {
             break;
         }
     }
@@ -524,6 +681,9 @@ struct SolverWorld {
     contacts: Vec<SolverContactSnapshot>,
     quality: SolverQuality,
     impulse_cache: HashMap<ContactCacheKey, (f64, f64)>,
+    // 26.43: internal edges of adjacent static polygons, rebuilt when a static body changes.
+    static_fingerprint: u64,
+    edge_coverage: EdgeCoverage,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -679,6 +839,8 @@ impl SolverWorld {
             contacts: Vec::new(),
             quality: quality.normalized(),
             impulse_cache: HashMap::new(),
+            static_fingerprint: 0,
+            edge_coverage: HashMap::new(),
         }
     }
 
@@ -702,12 +864,14 @@ impl SolverWorld {
             constraint.link_tensions.fill(0.0);
         }
         let bound_pairs = active_bound_pairs(&self.constraints, self.bodies.len());
-        let sub_steps = determine_sub_steps(
-            &self.bodies,
-            dt,
-            global_gravity,
-            self.quality.minimum_substeps,
-        );
+        // 26.43: fast bodies are swept individually (sweep_continuous_bodies); the configured
+        // substep count no longer grows with the fastest body in the world.
+        let sub_steps = self.quality.minimum_substeps.clamp(1, MAX_SUB_STEPS);
+        let fingerprint = static_fingerprint(&self.bodies);
+        if fingerprint != self.static_fingerprint {
+            self.edge_coverage = compute_edge_coverage(&self.bodies);
+            self.static_fingerprint = fingerprint;
+        }
         let sub_dt = dt / sub_steps as f64;
         for sub_step in 0..sub_steps {
             let contacts = simulate_sub_step(
@@ -724,6 +888,7 @@ impl SolverWorld {
                 self.quality.solver_iterations,
                 self.quality.position_iterations,
                 &mut self.impulse_cache,
+                &self.edge_coverage,
             );
             if sub_step + 1 == sub_steps {
                 self.contacts = contacts;

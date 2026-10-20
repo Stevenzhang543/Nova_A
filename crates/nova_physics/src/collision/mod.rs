@@ -216,8 +216,26 @@ fn epa(body_a: &Body, body_b: &Body, mut polytope: Vec<SupportPoint>) -> Option<
 // 组合 GJK 与 EPA，为一般凸形状生成接触结果。
 fn collide_gjk(body_a: &Body, body_b: &Body) -> Option<Manifold> {
     let simplex = gjk(body_a, body_b)?;
-    let manifold = epa(body_a, body_b, simplex)?;
+    let mut manifold = epa(body_a, body_b, simplex)?;
     if manifold.depth.is_finite() && manifold.depth > 0.0 {
+        // 26.43: the EPA edge interpolates support points, and the support point of a flat
+        // polygon face is one of its corners. Against a long box (ground, wall) the contact point
+        // then lay far from the ellipse (20 m away on a 40 m wall), the huge lever arm turned the
+        // contact impulse into spin, and fast balls passed through. A smooth shape's deepest point
+        // is exact: take the contact point from the ellipse side.
+        let normal = manifold.normal;
+        let half_depth = normal.mul(manifold.depth * 0.5);
+        if matches!(body_a.shape, Shape::Ellipse { .. }) {
+            let deepest = body_a
+                .shape
+                .support(body_a.collider_position(), body_a.collider_angle(), normal);
+            manifold.point = deepest.sub(half_depth);
+        } else if matches!(body_b.shape, Shape::Ellipse { .. }) {
+            let deepest = body_b
+                .shape
+                .support(body_b.collider_position(), body_b.collider_angle(), normal.neg());
+            manifold.point = deepest.add(half_depth);
+        }
         Some(manifold)
     } else {
         None

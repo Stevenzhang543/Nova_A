@@ -1,4 +1,5 @@
 /** 实体层级变换：缓存标识索引，合成父子变换，并在重设父级时防止环和保持世界姿态。 */
+import { stableSinCos } from './stableTrig'
 import { plainView } from './plainView'
 import type { Entity } from './Entity'
 import { finiteNumber, normalizeAngle, positiveNumber } from './geometry'
@@ -11,8 +12,7 @@ export interface WorldTransform2D {
 }
 
 /** 按弧度旋转二维向量，返回新坐标而不修改输入。 */ function rotate(point: Vec2, angle: number): Vec2 {
-  const cosine = Math.cos(angle)
-  const sine = Math.sin(angle)
+  const { sine, cosine } = stableSinCos(angle)
   return { x: point.x * cosine - point.y * sine, y: point.x * sine + point.y * cosine }
 }
 

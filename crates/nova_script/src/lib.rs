@@ -592,6 +592,60 @@ pub enum ScriptCommand {
         asset_type: String,
         source: String,
     },
+    // 26.43 脚本间调用：在当前阶段的安全边界调用另一个脚本实例的函数（延迟调用，不返回值）。
+    CallFunction {
+        target: String,
+        generation: u32,
+        function: String,
+        args: Value,
+    },
+    CallGlobal {
+        name: String,
+        function: String,
+        args: Value,
+    },
+    CallGroup {
+        group: String,
+        function: String,
+        args: Value,
+    },
+    CallLater {
+        function: String,
+        seconds: f64,
+        args: Value,
+    },
+    // 26.43 音视频脚本：一次性音效、背景音乐、总线音量与全屏视频。
+    PlaySound {
+        asset: String,
+        bus: String,
+        volume: f64,
+        pitch: f64,
+        looped: bool,
+        tag: String,
+    },
+    StopSounds {
+        tag: String,
+        fade: f64,
+    },
+    PlayMusic {
+        asset: String,
+        fade: f64,
+        volume: f64,
+    },
+    StopMusic {
+        fade: f64,
+    },
+    SetBusVolume {
+        bus: String,
+        volume: f64,
+    },
+    PlayVideo {
+        asset: String,
+        skippable: bool,
+        volume: f64,
+        looped: bool,
+    },
+    StopVideo,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -1089,8 +1143,13 @@ fn execute_in_scope(
             ..ScriptWorldView::default()
         })));
     }
-    let output = Rc::new(RefCell::new(HostOutput::default()));
-    let engine = engine_with_host(&context, Rc::clone(&output));
+    let host = acquire_host_engine();
+    let _depth = DepthGuard::enter();
+    *host.output.borrow_mut() = HostOutput::default();
+    host.states.reset(&context);
+    let _context = ContextGuard::enter(&context);
+    let engine = &host.engine;
+    let output = Rc::clone(&host.output);
     if !*initialized {
         if let Err(error) = engine.run_ast_with_scope(scope, ast) {
             scope.clear();
@@ -1101,7 +1160,7 @@ fn execute_in_scope(
         }
         *initialized = true;
     }
-    if let Err(error) = call_lifecycle(&engine, scope, ast, function, &context) {
+    if let Err(error) = call_lifecycle(engine, scope, ast, function, &context) {
         if let Some(limit) = host_output_limit_error(&output) {
             return Err(limit);
         }
@@ -1131,6 +1190,201 @@ fn execute_in_scope(
         logs: std::mem::take(&mut output.logs),
         properties,
     })
+}
+
+// ---------------------------------------------------------------------------------------------
+// 26.43 engine reuse. Every callback used to build a new Rhai Engine and register about 190 host
+// closures that captured copies of that callback's context (146 µs per callback on a desktop CPU,
+// several times that in WebAssembly). The engine is now built once per thread. Host closures read the
+// context of the callback that is running through `Live` handles, the output buffer and per-call
+// states (random seed, trace clock, spawn serial) are reset before each call.
+// ---------------------------------------------------------------------------------------------
+thread_local! {
+    static CURRENT_CONTEXT: std::cell::Cell<*const ScriptContext> = const { std::cell::Cell::new(std::ptr::null()) };
+    static FALLBACK_CONTEXT: &'static FallbackContext = Box::leak(Box::default());
+    static CACHED_HOST: RefCell<Option<Rc<HostEngine>>> = const { RefCell::new(None) };
+    static HOST_DEPTH: std::cell::Cell<u32> = const { std::cell::Cell::new(0) };
+}
+
+#[derive(Default)]
+struct FallbackContext {
+    context: ScriptContext,
+    character: CharacterSnapshot,
+}
+
+impl FallbackContext {
+    fn character_default(&self) -> &CharacterSnapshot {
+        &self.character
+    }
+}
+
+// 未在执行回调时（例如生成 API 签名）读取的空上下文。
+fn fallback_context() -> &'static FallbackContext {
+    FALLBACK_CONTEXT.with(|context| *context)
+}
+
+// 当前正在执行的回调上下文；回调之外为空上下文。
+fn current_context() -> &'static ScriptContext {
+    let pointer = CURRENT_CONTEXT.with(|current| current.get());
+    if pointer.is_null() {
+        &fallback_context().context
+    } else {
+        // SAFETY: the pointer is set by ContextGuard for exactly the duration of an engine call and
+        // points to a context owned by that call frame; host closures only run inside such a call.
+        unsafe { &*pointer }
+    }
+}
+
+/// A field of the running callback's context, read at call time.
+struct Live<T: 'static> {
+    project: fn(&'static ScriptContext) -> &'static T,
+}
+
+impl<T: 'static> Clone for Live<T> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<T: 'static> Copy for Live<T> {}
+
+impl<T: Clone + 'static> Live<T> {
+    /// `value.clone()` inside a host closure clones the running callback's value, never the handle
+    /// (inherent methods take precedence over `Clone::clone`). Copy the handle with `let a = b;`.
+    #[allow(clippy::should_implement_trait)]
+    fn clone(&self) -> T {
+        (**self).clone()
+    }
+}
+
+impl<T: 'static> std::ops::Deref for Live<T> {
+    type Target = T;
+    fn deref(&self) -> &T {
+        (self.project)(current_context())
+    }
+}
+
+impl<T: std::fmt::Display + 'static> std::fmt::Display for Live<T> {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        std::fmt::Display::fmt(&**self, formatter)
+    }
+}
+
+macro_rules! live {
+    ($($field:ident).+) => {
+        Live { project: |context: &'static ScriptContext| &context.$($field).+ }
+    };
+}
+
+macro_rules! live_with {
+    (|$context:ident| $body:expr) => {
+        Live {
+            project: |$context: &'static ScriptContext| $body,
+        }
+    };
+}
+
+macro_rules! live_world {
+    () => {
+        live_with!(|context| context
+            .shared_world
+            .as_ref()
+            .expect("host world projection"))
+    };
+}
+
+/// Sets the running callback's context and restores the previous one when the call ends.
+struct ContextGuard {
+    previous: *const ScriptContext,
+}
+
+impl ContextGuard {
+    fn enter(context: &ScriptContext) -> Self {
+        let previous =
+            CURRENT_CONTEXT.with(|current| current.replace(context as *const ScriptContext));
+        Self { previous }
+    }
+}
+
+impl Drop for ContextGuard {
+    fn drop(&mut self) {
+        CURRENT_CONTEXT.with(|current| current.set(self.previous));
+    }
+}
+
+/// Per-call mutable host state, reset before every callback.
+struct HostCallStates {
+    random: Rc<RefCell<u64>>,
+    trace_clock: Rc<RefCell<Instant>>,
+    pending_serial: Rc<RefCell<u64>>,
+}
+
+impl HostCallStates {
+    fn new() -> Self {
+        Self {
+            random: Rc::new(RefCell::new(0x6d2b79f5)),
+            trace_clock: Rc::new(RefCell::new(Instant::now())),
+            pending_serial: Rc::new(RefCell::new(0)),
+        }
+    }
+
+    fn reset(&self, context: &ScriptContext) {
+        *self.random.borrow_mut() = if context.random_seed == 0 {
+            0x6d2b79f5
+        } else {
+            context.random_seed
+        };
+        *self.trace_clock.borrow_mut() = Instant::now();
+        *self.pending_serial.borrow_mut() = 0;
+    }
+}
+
+struct HostEngine {
+    engine: Engine,
+    output: Rc<RefCell<HostOutput>>,
+    states: HostCallStates,
+}
+
+impl HostEngine {
+    fn build() -> Self {
+        let output = Rc::new(RefCell::new(HostOutput::default()));
+        let states = HostCallStates::new();
+        let engine = build_host_engine(Rc::clone(&output), &states);
+        Self {
+            engine,
+            output,
+            states,
+        }
+    }
+}
+
+/// The thread's reusable host engine; a nested call (a host function running a script) gets its own.
+fn acquire_host_engine() -> Rc<HostEngine> {
+    if HOST_DEPTH.with(|depth| depth.get()) > 0 {
+        return Rc::new(HostEngine::build());
+    }
+    CACHED_HOST.with(|cached| {
+        Rc::clone(
+            cached
+                .borrow_mut()
+                .get_or_insert_with(|| Rc::new(HostEngine::build())),
+        )
+    })
+}
+
+struct DepthGuard;
+
+impl DepthGuard {
+    fn enter() -> Self {
+        HOST_DEPTH.with(|depth| depth.set(depth.get() + 1));
+        DepthGuard
+    }
+}
+
+impl Drop for DepthGuard {
+    fn drop(&mut self) {
+        HOST_DEPTH.with(|depth| depth.set(depth.get().saturating_sub(1)));
+    }
 }
 
 // 检查沙箱宿主输出是否超过命令或文本等预算，并提供错误消息。
@@ -1179,8 +1433,14 @@ fn base_engine() -> Engine {
     engine
 }
 
-// 在基础沙箱注册各宿主接口和有界输出回调。
-fn engine_with_host(context: &ScriptContext, output: Rc<RefCell<HostOutput>>) -> Engine {
+// 在基础沙箱注册各宿主接口和有界输出回调。保留旧签名，供 API 签名生成脚本使用；宿主函数读取执行时的上下文。
+#[allow(dead_code)]
+fn engine_with_host(_context: &ScriptContext, output: Rc<RefCell<HostOutput>>) -> Engine {
+    build_host_engine(output, &HostCallStates::new())
+}
+
+// 26.43: 构造一次、可复用的宿主引擎。
+fn build_host_engine(output: Rc<RefCell<HostOutput>>, states: &HostCallStates) -> Engine {
     let mut engine = base_engine();
 
     let resource_budget = Rc::clone(&output);
@@ -1212,22 +1472,24 @@ fn engine_with_host(context: &ScriptContext, output: Rc<RefCell<HostOutput>>) ->
         },
     );
 
-    let entity = context.entity.clone();
+    let entity = live!(entity);
     engine.register_fn(
         "entity",
         /* 复制 entity . clone () 的结果，避免向调用方暴露可变宿主引用。 */
         move || entity.clone(),
     );
-    let api_version = if context.api_version == 0 {
-        CURRENT_SCRIPT_API_VERSION
-    } else {
-        context
-            .api_version
-            .clamp(MINIMUM_SCRIPT_API_VERSION, CURRENT_SCRIPT_API_VERSION)
-    };
+    let requested_api_version = live!(api_version);
     engine.register_fn(
         "api_version",
-        /* 返回当前快照值 api_version as INT。 */ move || api_version as INT,
+        /* 返回本次调用上下文请求的 API 版本（0 表示当前版本）。 */
+        move || {
+            let requested = *requested_api_version;
+            (if requested == 0 {
+                CURRENT_SCRIPT_API_VERSION
+            } else {
+                requested.clamp(MINIMUM_SCRIPT_API_VERSION, CURRENT_SCRIPT_API_VERSION)
+            }) as INT
+        },
     );
     engine.register_fn(
         "api_current_version",
@@ -1242,33 +1504,28 @@ fn engine_with_host(context: &ScriptContext, output: Rc<RefCell<HostOutput>>) ->
     engine.register_fn("api_namespace", /* 计算并返回 symbol . split ('_') . next () . unwrap_or (symbol) . to_owned ()，用于当前 engine_with_host 流程。 */ |symbol: &str| {
         symbol.split('_').next().unwrap_or(symbol).to_owned()
     });
-    let entity = context.entity.clone();
-    let generation = context
-        .shared_world
-        .as_ref()
-        .expect("host world projection")
-        .borrow()
-        .snapshot
-        .entity_generations
-        .get(&entity)
-        .copied();
+    let entity = live!(entity);
+    let world = live_world!();
     engine.register_fn(
         "entity_handle",
         /* 计算并返回 entity_handle_map (& entity , generation)，用于当前 engine_with_host 流程。 */
-        move || entity_handle_map(&entity, generation),
+        move || {
+            let generation = world
+                .borrow()
+                .snapshot
+                .entity_generations
+                .get(&*entity)
+                .copied();
+            entity_handle_map(&entity, generation)
+        },
     );
-    let entity_name = context.entity_name.clone();
+    let entity_name = live!(entity_name);
     engine.register_fn(
         "entity_name",
         /* 复制 entity_name . clone () 的结果，避免向调用方暴露可变宿主引用。 */
         move || entity_name.clone(),
     );
-    let world = Rc::clone(
-        context
-            .shared_world
-            .as_ref()
-            .expect("host world projection"),
-    );
+    let world = live_world!();
     engine.register_fn("find_entity", move |name: &str| {
         world
             .borrow()
@@ -1278,12 +1535,16 @@ fn engine_with_host(context: &ScriptContext, output: Rc<RefCell<HostOutput>>) ->
             .cloned()
             .unwrap_or_default()
     });
-    let world = Rc::clone(
-        context
-            .shared_world
-            .as_ref()
-            .expect("host world projection"),
-    );
+    // 26.43: a handle for an entity id (e.g. `other` in a collision callback) at its current generation.
+    let world = live_world!();
+    engine.register_fn("entity_handle_of", move |id: &str| {
+        let view = world.borrow();
+        match view.snapshot.entity_generations.get(id) {
+            Some(generation) => entity_handle_map(id, Some(*generation)),
+            None => handle_map(false, "Entity", "", "Entity not found"),
+        }
+    });
+    let world = live_world!();
     engine.register_fn("find_entity_handle", move |name: &str| {
         let view = world.borrow();
         view.snapshot
@@ -1292,12 +1553,12 @@ fn engine_with_host(context: &ScriptContext, output: Rc<RefCell<HostOutput>>) ->
             .map(|id| entity_handle_map(id, view.snapshot.entity_generations.get(id).copied()))
             .unwrap_or_else(|| handle_map(false, "Entity", "", "Entity not found"))
     });
-    let components = context.components.clone();
+    let components = live!(components);
     engine.register_fn("has_component", /* 判断 components . iter () . any (| component | component == kind) 是否成立，供过滤或有效性检查使用。 */ move |kind: &str| {
         components.iter().any(/* 判断 component == kind 是否成立，供过滤或有效性检查使用。 */ |component| component == kind)
     });
-    let component_entity = context.entity.clone();
-    let components = context.components.clone();
+    let component_entity = live!(entity);
+    let components = live!(components);
     engine.register_fn("get_component", /* 查找实体实际拥有的组件，返回其引用字符串；缺失则返回空串。 */ move |kind: &str| {
         components
             .iter()
@@ -1305,8 +1566,8 @@ fn engine_with_host(context: &ScriptContext, output: Rc<RefCell<HostOutput>>) ->
             .map(/* 计算并返回 format ! ("component://{component_entity}/{component}")，用于当前 engine_with_host 流程。 */ |component| format!("component://{component_entity}/{component}"))
             .unwrap_or_default()
     });
-    let component_entity = context.entity.clone();
-    let components = context.components.clone();
+    let component_entity = live!(entity);
+    let components = live!(components);
     engine.register_fn(
         "component_handle",
         /* 仅为当前实体实际拥有的组件生成有效句柄，否则返回带错误的失效句柄。 */
@@ -1346,14 +1607,10 @@ fn engine_with_host(context: &ScriptContext, output: Rc<RefCell<HostOutput>>) ->
             )
         },
     );
-    register_entity_api(&mut engine, context);
+    register_entity_api(&mut engine);
 
-    register_time_api(&mut engine, context);
-    let random_state = Rc::new(RefCell::new(if context.random_seed == 0 {
-        0x6d2b79f5
-    } else {
-        context.random_seed
-    }));
+    register_time_api(&mut engine);
+    let random_state = Rc::clone(&states.random);
     let state = Rc::clone(&random_state);
     engine.register_fn(
         "random",
@@ -1381,13 +1638,14 @@ fn engine_with_host(context: &ScriptContext, output: Rc<RefCell<HostOutput>>) ->
             minimum + (maximum - minimum) * ((*value as f64) / (u64::MAX as f64 + 1.0))
         },
     );
-    register_input_api(&mut engine, context);
-    register_game_flow_api(&mut engine, context);
-    register_network_api(&mut engine, context);
-    register_property_api(&mut engine, context);
-    register_save_api(&mut engine, context, Rc::clone(&output));
-    register_editor_automation_api(&mut engine, context, Rc::clone(&output));
-    register_command_api(&mut engine, context, output);
+    register_input_api(&mut engine);
+    register_game_flow_api(&mut engine);
+    register_network_api(&mut engine);
+    register_property_api(&mut engine);
+    register_save_api(&mut engine, Rc::clone(&output));
+    register_editor_automation_api(&mut engine, Rc::clone(&output));
+    register_link_and_media_api(&mut engine, Rc::clone(&output));
+    register_command_api(&mut engine, output, states);
     engine
 }
 
@@ -1456,19 +1714,15 @@ fn bounded_text(value: &str, maximum: usize) -> String {
 }
 
 // 仅在允许的编辑器自动化上下文注册受限编辑命令。
-fn register_editor_automation_api(
-    engine: &mut Engine,
-    context: &ScriptContext,
-    output: Rc<RefCell<HostOutput>>,
-) {
-    let enabled = context.editor_automation;
+fn register_editor_automation_api(engine: &mut Engine, output: Rc<RefCell<HostOutput>>) {
+    let enabled = live!(editor_automation);
     engine.register_fn(
         "editor_automation",
-        /* 返回当前快照值 enabled。 */ move || enabled,
+        /* 返回当前快照值 enabled。 */ move || *enabled,
     );
-    let selection = context.editor_selection.clone();
+    let selection = live!(editor_selection);
     engine.register_fn("editor_selected", /* 仅在自动化启用时读取最多二百五十六个选中实体句柄。 */ move || -> Array {
-        if !enabled {
+        if !*enabled {
             return Array::new();
         }
         selection
@@ -1477,9 +1731,9 @@ fn register_editor_automation_api(
             .map(/* 计算并返回 Dynamic :: from_map (handle_map (true , "Entity" , id , ""))，用于当前 register_editor_automation_api 流程。 */ |id| Dynamic::from_map(handle_map(true, "Entity", id, "")))
             .collect()
     });
-    let selection = context.editor_selection.clone();
-    engine.register_fn("editor_selected_count", /* 按 if enabled { INT :: try_from (selection . len ()) . unwrap_or (INT :: MAX) } else { 0 } 读取或转换可选值，保留转换失败分支。 */ move || -> INT {
-        if enabled {
+    let selection = live!(editor_selection);
+    engine.register_fn("editor_selected_count", /* 按 if *enabled { INT :: try_from (selection . len ()) . unwrap_or (INT :: MAX) } else { 0 } 读取或转换可选值，保留转换失败分支。 */ move || -> INT {
+        if *enabled {
             INT::try_from(selection.len()).unwrap_or(INT::MAX)
         } else {
             0
@@ -1490,7 +1744,7 @@ fn register_editor_automation_api(
         "editor_select",
         /* 先检查编辑器自动化权限，将“选择编辑器实体”命令加入宿主队列。 */
         move |handle: Map| {
-            if !enabled {
+            if !*enabled {
                 return false;
             }
             if let Some((target, generation)) = target_from_handle(handle) {
@@ -1509,7 +1763,7 @@ fn register_editor_automation_api(
         "editor_rename",
         /* 先检查编辑器自动化权限，将“重命名编辑器实体”命令加入宿主队列。 */
         move |handle: Map, name: &str| {
-            if !enabled {
+            if !*enabled {
                 return false;
             }
             if let Some((target, generation)) = target_from_handle(handle) {
@@ -1542,7 +1796,7 @@ fn register_editor_automation_api(
             function,
             /* 先检查编辑器自动化权限，将“在编辑器创建实体”命令加入宿主队列。 */
             move |name: &str, x: FLOAT, y: FLOAT, width: FLOAT, height: FLOAT| {
-                if !enabled
+                if !*enabled
                     || !x.is_finite()
                     || !y.is_finite()
                     || !width.is_finite()
@@ -1576,7 +1830,7 @@ fn register_editor_automation_api(
         "editor_create_text_asset",
         /* 先检查编辑器自动化权限，将“在编辑器创建文本资源”命令加入宿主队列。 */
         move |path: &str, asset_type: &str, source: &str| {
-            if !enabled {
+            if !*enabled {
                 return false;
             }
             let path = bounded_text(path.trim(), 240);
@@ -1616,24 +1870,24 @@ fn bounded_query_handles<'a>(
 }
 
 // 注册时间、帧号和固定步相关只读脚本接口。
-fn register_time_api(engine: &mut Engine, context: &ScriptContext) {
-    let time = context.time.clone();
-    let snapshot = time.clone();
+fn register_time_api(engine: &mut Engine) {
+    let time = live!(time);
+    let snapshot = time;
     engine.register_fn(
         "time_delta",
         /* 返回当前快照值 snapshot . delta。 */ move || snapshot.delta,
     );
-    let snapshot = time.clone();
+    let snapshot = time;
     engine.register_fn(
         "time_fixed_delta",
         /* 返回当前快照值 snapshot . fixed_delta。 */ move || snapshot.fixed_delta,
     );
-    let snapshot = time.clone();
+    let snapshot = time;
     engine.register_fn(
         "time_elapsed",
         /* 返回当前快照值 snapshot . elapsed。 */ move || snapshot.elapsed,
     );
-    let snapshot = time.clone();
+    let snapshot = time;
     engine.register_fn(
         "time_scale",
         /* 返回当前快照值 snapshot . scale。 */ move || snapshot.scale,
@@ -1642,7 +1896,7 @@ fn register_time_api(engine: &mut Engine, context: &ScriptContext) {
         "time_frame",
         /* 返回当前快照值 time . frame as INT。 */ move || time.frame as INT,
     );
-    let time = context.time.clone();
+    let time = live!(time);
     engine.register_fn(
         "time",
         /* 将当前时间快照字段复制到脚本映射，避免暴露可变宿主引用。 */
@@ -1659,8 +1913,8 @@ fn register_time_api(engine: &mut Engine, context: &ScriptContext) {
 }
 
 // 注册实体快照查询及受控实体访问接口。
-fn register_entity_api(engine: &mut Engine, context: &ScriptContext) {
-    let transform = context.transform.clone();
+fn register_entity_api(engine: &mut Engine) {
+    let transform = live!(transform);
     engine.register_fn(
         "transform",
         /* 把实体位置、旋转和缩放快照转换为脚本可读取的映射。 */
@@ -1680,12 +1934,7 @@ fn register_entity_api(engine: &mut Engine, context: &ScriptContext) {
             map
         },
     );
-    let world = Rc::clone(
-        context
-            .shared_world
-            .as_ref()
-            .expect("host world projection"),
-    );
+    let world = live_world!();
     engine.register_fn("query_tag", move |tag: &str, limit: INT| {
         bounded_query_handles(
             world
@@ -1697,12 +1946,7 @@ fn register_entity_api(engine: &mut Engine, context: &ScriptContext) {
             limit,
         )
     });
-    let world = Rc::clone(
-        context
-            .shared_world
-            .as_ref()
-            .expect("host world projection"),
-    );
+    let world = live_world!();
     engine.register_fn("query_group", move |group: &str, limit: INT| {
         bounded_query_handles(
             world
@@ -1714,12 +1958,42 @@ fn register_entity_api(engine: &mut Engine, context: &ScriptContext) {
             limit,
         )
     });
-    let world = Rc::clone(
-        context
-            .shared_world
-            .as_ref()
-            .expect("host world projection"),
-    );
+    // 26.43: tag and group tests for an entity id (e.g. `other` in a collision callback) or handle.
+    let world = live_world!();
+    let scene_entity_matches = move |id: &str, test: &dyn Fn(&SceneEntitySnapshot) -> bool| {
+        world
+            .borrow()
+            .snapshot
+            .scene_entities
+            .iter()
+            .find(|entity| entity.uuid == id)
+            .is_some_and(test)
+    };
+    let matches = scene_entity_matches;
+    engine.register_fn("entity_has_tag", move |id: &str, tag: &str| {
+        matches(id, &|entity| entity.tags.iter().any(|value| value == tag))
+    });
+    let matches = scene_entity_matches;
+    engine.register_fn("entity_has_tag", move |handle: Map, tag: &str| {
+        target_from_handle(handle).is_some_and(|(id, _)| {
+            matches(&id, &|entity| entity.tags.iter().any(|value| value == tag))
+        })
+    });
+    let matches = scene_entity_matches;
+    engine.register_fn("entity_in_group", move |id: &str, group: &str| {
+        matches(id, &|entity| {
+            entity.groups.iter().any(|value| value == group)
+        })
+    });
+    let matches = scene_entity_matches;
+    engine.register_fn("entity_in_group", move |handle: Map, group: &str| {
+        target_from_handle(handle).is_some_and(|(id, _)| {
+            matches(&id, &|entity| {
+                entity.groups.iter().any(|value| value == group)
+            })
+        })
+    });
+    let world = live_world!();
     engine.register_fn("query_component", move |kind: &str, limit: INT| {
         bounded_query_handles(
             world
@@ -1731,12 +2005,7 @@ fn register_entity_api(engine: &mut Engine, context: &ScriptContext) {
             limit,
         )
     });
-    let world = Rc::clone(
-        context
-            .shared_world
-            .as_ref()
-            .expect("host world projection"),
-    );
+    let world = live_world!();
     engine.register_fn(
         "query_radius",
         move |x: FLOAT, y: FLOAT, radius: FLOAT, limit: INT| {
@@ -1759,12 +2028,7 @@ fn register_entity_api(engine: &mut Engine, context: &ScriptContext) {
             )
         },
     );
-    let world = Rc::clone(
-        context
-            .shared_world
-            .as_ref()
-            .expect("host world projection"),
-    );
+    let world = live_world!();
     engine.register_fn("entity_name_on", move |handle: Map| {
         world
             .borrow()
@@ -1772,12 +2036,7 @@ fn register_entity_api(engine: &mut Engine, context: &ScriptContext) {
             .map(|entity| entity.name.clone())
             .unwrap_or_default()
     });
-    let world = Rc::clone(
-        context
-            .shared_world
-            .as_ref()
-            .expect("host world projection"),
-    );
+    let world = live_world!();
     engine.register_fn("entity_enabled_on", move |handle: Map| {
         world
             .borrow()
@@ -1785,12 +2044,7 @@ fn register_entity_api(engine: &mut Engine, context: &ScriptContext) {
             .map(|entity| entity.enabled)
             .unwrap_or(false)
     });
-    let world = Rc::clone(
-        context
-            .shared_world
-            .as_ref()
-            .expect("host world projection"),
-    );
+    let world = live_world!();
     engine.register_fn("entity_position_x_on", move |handle: Map| {
         world
             .borrow()
@@ -1798,12 +2052,7 @@ fn register_entity_api(engine: &mut Engine, context: &ScriptContext) {
             .map(|entity| entity.position[0])
             .unwrap_or(0.0)
     });
-    let world = Rc::clone(
-        context
-            .shared_world
-            .as_ref()
-            .expect("host world projection"),
-    );
+    let world = live_world!();
     engine.register_fn("entity_position_y_on", move |handle: Map| {
         world
             .borrow()
@@ -1811,13 +2060,13 @@ fn register_entity_api(engine: &mut Engine, context: &ScriptContext) {
             .map(|entity| entity.position[1])
             .unwrap_or(0.0)
     });
-    let rigid_body = context.rigid_body.clone();
+    let rigid_body = live!(rigid_body);
     engine.register_fn(
         "rigid_body",
         /* 从可选刚体快照构造有效标志、速度和质量等只读脚本字段。 */
         move || {
             let mut map = Map::new();
-            if let Some(body) = &rigid_body {
+            if let Some(body) = &*rigid_body {
                 map.insert("valid".into(), Dynamic::from_bool(true));
                 map.insert("velocity_x".into(), Dynamic::from_float(body.velocity[0]));
                 map.insert("velocity_y".into(), Dynamic::from_float(body.velocity[1]));
@@ -1837,8 +2086,8 @@ fn register_entity_api(engine: &mut Engine, context: &ScriptContext) {
             map
         },
     );
-    let component_entity = context.entity.clone();
-    let components = context.components.clone();
+    let component_entity = live!(entity);
+    let components = live!(components);
     engine.register_fn("animator", /* 判断 if components . iter () . any (| kind | kind == "Animator") { format ! ("component://{component_entity}/Animator") } else { String :: new () } 是否成立，供过滤或有效性检查使用。 */ move || {
         if components.iter().any(/* 判断 kind == "Animator" 是否成立，供过滤或有效性检查使用。 */ |kind| kind == "Animator") {
             format!("component://{component_entity}/Animator")
@@ -1846,8 +2095,8 @@ fn register_entity_api(engine: &mut Engine, context: &ScriptContext) {
             String::new()
         }
     });
-    let component_entity = context.entity.clone();
-    let components = context.components.clone();
+    let component_entity = live!(entity);
+    let components = live!(components);
     engine.register_fn(
         "animator_handle",
         /* 仅在实体拥有 Animator 时生成有效动画组件句柄。 */
@@ -1867,8 +2116,8 @@ fn register_entity_api(engine: &mut Engine, context: &ScriptContext) {
             }
         },
     );
-    let component_entity = context.entity.clone();
-    let components = context.components.clone();
+    let component_entity = live!(entity);
+    let components = live!(components);
     engine.register_fn(
         "audio_source",
         /* 仅在实体拥有音频源组件时返回对应引用字符串，否则返回空串。 */
@@ -1883,8 +2132,8 @@ fn register_entity_api(engine: &mut Engine, context: &ScriptContext) {
             }
         },
     );
-    let component_entity = context.entity.clone();
-    let components = context.components.clone();
+    let component_entity = live!(entity);
+    let components = live!(components);
     engine.register_fn(
         "audio_source_handle",
         /* 仅在实体拥有 AudioSource 时生成有效音频组件句柄。 */
@@ -1907,37 +2156,37 @@ fn register_entity_api(engine: &mut Engine, context: &ScriptContext) {
 }
 
 // 注册动作、按键、指针和设备输入快照接口。
-fn register_input_api(engine: &mut Engine, context: &ScriptContext) {
-    let input = context.input.clone();
-    let snapshot = input.clone();
+fn register_input_api(engine: &mut Engine) {
+    let input = live!(input);
+    let snapshot = input;
     engine.register_fn("input_down", /* 按 snapshot . down . get (action) . copied () . unwrap_or (false) 读取或转换可选值，保留转换失败分支。 */ move |action: &str| {
         snapshot.down.get(action).copied().unwrap_or(false)
     });
-    let snapshot = context.input.clone();
+    let snapshot = live!(input);
     engine.register_fn("is_down", /* 按 snapshot . down . get (action) . copied () . unwrap_or (false) 读取或转换可选值，保留转换失败分支。 */ move |action: &str| {
         snapshot.down.get(action).copied().unwrap_or(false)
     });
-    let snapshot = input.clone();
+    let snapshot = input;
     engine.register_fn("input_pressed", /* 按 snapshot . pressed . get (action) . copied () . unwrap_or (false) 读取或转换可选值，保留转换失败分支。 */ move |action: &str| {
         snapshot.pressed.get(action).copied().unwrap_or(false)
     });
-    let snapshot = context.input.clone();
+    let snapshot = live!(input);
     engine.register_fn("was_pressed", /* 按 snapshot . pressed . get (action) . copied () . unwrap_or (false) 读取或转换可选值，保留转换失败分支。 */ move |action: &str| {
         snapshot.pressed.get(action).copied().unwrap_or(false)
     });
-    let snapshot = input.clone();
+    let snapshot = input;
     engine.register_fn("input_released", /* 按 snapshot . released . get (action) . copied () . unwrap_or (false) 读取或转换可选值，保留转换失败分支。 */ move |action: &str| {
         snapshot.released.get(action).copied().unwrap_or(false)
     });
-    let snapshot = input.clone();
+    let snapshot = input;
     engine.register_fn("input_performed", /* 按 snapshot . performed . get (action) . copied () . unwrap_or (false) 读取或转换可选值，保留转换失败分支。 */ move |action: &str| {
         snapshot.performed.get(action).copied().unwrap_or(false)
     });
-    let snapshot = input.clone();
+    let snapshot = input;
     engine.register_fn("input_cancelled", /* 按 snapshot . cancelled . get (action) . copied () . unwrap_or (false) 读取或转换可选值，保留转换失败分支。 */ move |action: &str| {
         snapshot.cancelled.get(action).copied().unwrap_or(false)
     });
-    let snapshot = input.clone();
+    let snapshot = input;
     engine.register_fn("input_phase", /* 按 snapshot . phases . get (action) . cloned () . unwrap_or_else (| | "idle" . into ()) 读取或转换可选值，保留转换失败分支。 */ move |action: &str| {
         snapshot
             .phases
@@ -1945,121 +2194,121 @@ fn register_input_api(engine: &mut Engine, context: &ScriptContext) {
             .cloned()
             .unwrap_or_else(/* 计算并返回 "idle" . into ()，用于当前 register_input_api 流程。 */ || "idle".into())
     });
-    let snapshot = input.clone();
+    let snapshot = input;
     engine.register_fn("input_duration", /* 按 snapshot . durations . get (action) . copied () . unwrap_or (0.0) 读取或转换可选值，保留转换失败分支。 */ move |action: &str| {
         snapshot.durations.get(action).copied().unwrap_or(0.0)
     });
-    let snapshot = input.clone();
+    let snapshot = input;
     engine.register_fn("input_context_active", /* 判断 snapshot . contexts . iter () . any (| context | context == name) 是否成立，供过滤或有效性检查使用。 */ move |name: &str| {
         snapshot.contexts.iter().any(/* 判断 context == name 是否成立，供过滤或有效性检查使用。 */ |context| context == name)
     });
-    let snapshot = input.clone();
+    let snapshot = input;
     engine.register_fn("input_map_active", /* 判断 snapshot . maps . iter () . any (| map | map == name) 是否成立，供过滤或有效性检查使用。 */ move |name: &str| {
         snapshot.maps.iter().any(/* 判断 map == name 是否成立，供过滤或有效性检查使用。 */ |map| map == name)
     });
-    let snapshot = input.clone();
+    let snapshot = input;
     engine.register_fn(
         "input_scheme",
         /* 复制 snapshot . scheme . clone () 的结果，避免向调用方暴露可变宿主引用。 */
         move || snapshot.scheme.clone(),
     );
-    let snapshot = context.input.clone();
+    let snapshot = live!(input);
     engine.register_fn("was_released", /* 按 snapshot . released . get (action) . copied () . unwrap_or (false) 读取或转换可选值，保留转换失败分支。 */ move |action: &str| {
         snapshot.released.get(action).copied().unwrap_or(false)
     });
-    let snapshot = input.clone();
+    let snapshot = input;
     engine.register_fn("input_axis", /* 按 snapshot . axes . get (action) . copied () . unwrap_or (0.0) 读取或转换可选值，保留转换失败分支。 */ move |action: &str| {
         snapshot.axes.get(action).copied().unwrap_or(0.0)
     });
-    let snapshot = context.input.clone();
+    let snapshot = live!(input);
     engine.register_fn("axis", /* 按 snapshot . axes . get (action) . copied () . unwrap_or (0.0) 读取或转换可选值，保留转换失败分支。 */ move |action: &str| {
         snapshot.axes.get(action).copied().unwrap_or(0.0)
     });
-    let snapshot = input.clone();
+    let snapshot = input;
     engine.register_fn("input_vector_x", /* 按 snapshot . vectors . get (action) . map_or (0.0 , | value | value [0]) 读取或转换可选值，保留转换失败分支。 */ move |action: &str| {
         snapshot.vectors.get(action).map_or(0.0, /* 返回当前快照值 value [0]。 */ |value| value[0])
     });
-    let snapshot = input.clone();
+    let snapshot = input;
     engine.register_fn("input_vector_y", /* 按 snapshot . vectors . get (action) . map_or (0.0 , | value | value [1]) 读取或转换可选值，保留转换失败分支。 */ move |action: &str| {
         snapshot.vectors.get(action).map_or(0.0, /* 返回当前快照值 value [1]。 */ |value| value[1])
     });
-    let snapshot = input.clone();
+    let snapshot = input;
     engine.register_fn("input_vector", /* 按 vector_map (snapshot . vectors . get (action) . copied () . unwrap_or ([0.0 , 0.0])) 读取或转换可选值，保留转换失败分支。 */ move |action: &str| {
         vector_map(snapshot.vectors.get(action).copied().unwrap_or([0.0, 0.0]))
     });
-    let snapshot = context.input.clone();
+    let snapshot = live!(input);
     engine.register_fn("vector_x", /* 按 snapshot . vectors . get (action) . map_or (0.0 , | value | value [0]) 读取或转换可选值，保留转换失败分支。 */ move |action: &str| {
         snapshot.vectors.get(action).map_or(0.0, /* 返回当前快照值 value [0]。 */ |value| value[0])
     });
-    let snapshot = context.input.clone();
+    let snapshot = live!(input);
     engine.register_fn("vector_y", /* 按 snapshot . vectors . get (action) . map_or (0.0 , | value | value [1]) 读取或转换可选值，保留转换失败分支。 */ move |action: &str| {
         snapshot.vectors.get(action).map_or(0.0, /* 返回当前快照值 value [1]。 */ |value| value[1])
     });
-    let snapshot = context.input.clone();
+    let snapshot = live!(input);
     engine.register_fn("vector", /* 按 vector_map (snapshot . vectors . get (action) . copied () . unwrap_or ([0.0 , 0.0])) 读取或转换可选值，保留转换失败分支。 */ move |action: &str| {
         vector_map(snapshot.vectors.get(action).copied().unwrap_or([0.0, 0.0]))
     });
-    let snapshot = input.clone();
+    let snapshot = input;
     engine.register_fn(
         "mouse_x",
         /* 计算并返回 snapshot . mouse_position [0]，用于当前 register_input_api 流程。 */
         move || snapshot.mouse_position[0],
     );
-    let snapshot = input.clone();
+    let snapshot = input;
     engine.register_fn(
         "mouse_y",
         /* 计算并返回 snapshot . mouse_position [1]，用于当前 register_input_api 流程。 */
         move || snapshot.mouse_position[1],
     );
-    let snapshot = input.clone();
+    let snapshot = input;
     engine.register_fn(
         "mouse_world_x",
         /* 计算并返回 snapshot . mouse_world_position [0]，用于当前 register_input_api 流程。 */
         move || snapshot.mouse_world_position[0],
     );
-    let snapshot = input.clone();
+    let snapshot = input;
     engine.register_fn(
         "mouse_world_y",
         /* 计算并返回 snapshot . mouse_world_position [1]，用于当前 register_input_api 流程。 */
         move || snapshot.mouse_world_position[1],
     );
-    let snapshot = input.clone();
+    let snapshot = input;
     engine.register_fn(
         "view_min_x",
         /* 计算并返回 snapshot . view_bounds [0]，用于当前 register_input_api 流程。 */
         move || snapshot.view_bounds[0],
     );
-    let snapshot = input.clone();
+    let snapshot = input;
     engine.register_fn(
         "view_max_x",
         /* 计算并返回 snapshot . view_bounds [1]，用于当前 register_input_api 流程。 */
         move || snapshot.view_bounds[1],
     );
-    let snapshot = input.clone();
+    let snapshot = input;
     engine.register_fn(
         "view_min_y",
         /* 计算并返回 snapshot . view_bounds [2]，用于当前 register_input_api 流程。 */
         move || snapshot.view_bounds[2],
     );
-    let snapshot = input.clone();
+    let snapshot = input;
     engine.register_fn(
         "view_max_y",
         /* 计算并返回 snapshot . view_bounds [3]，用于当前 register_input_api 流程。 */
         move || snapshot.view_bounds[3],
     );
-    let snapshot = input.clone();
+    let snapshot = input;
     engine.register_fn(
         "viewport_width",
         /* 计算并返回 snapshot . viewport_size [0]，用于当前 register_input_api 流程。 */
         move || snapshot.viewport_size[0],
     );
-    let snapshot = input.clone();
+    let snapshot = input;
     engine.register_fn(
         "viewport_height",
         /* 计算并返回 snapshot . viewport_size [1]，用于当前 register_input_api 流程。 */
         move || snapshot.viewport_size[1],
     );
-    let snapshot = input.clone();
+    let snapshot = input;
     engine.register_fn(
         "wheel_x",
         /* 计算并返回 snapshot . wheel [0]，用于当前 register_input_api 流程。 */
@@ -2081,22 +2330,22 @@ fn vector_map(value: [f64; 2]) -> Map {
 }
 
 // 注册当前场景、关卡流程和游戏状态查询接口。
-fn register_game_flow_api(engine: &mut Engine, context: &ScriptContext) {
-    let flow = context.game_flow.clone();
+fn register_game_flow_api(engine: &mut Engine) {
+    let flow = live!(game_flow);
     engine.register_fn(
         "game_paused",
         /* 返回当前快照值 flow . paused。 */ move || flow.paused,
     );
-    let flow = context.game_flow.clone();
+    let flow = live!(game_flow);
     engine.register_fn(
         "score_get",
         /* 返回当前快照值 flow . score。 */ move || flow.score,
     );
-    let flow = context.game_flow.clone();
+    let flow = live!(game_flow);
     engine.register_fn("checkpoint_has", /* 判断 flow . checkpoints . iter () . any (| checkpoint | checkpoint == name) 是否成立，供过滤或有效性检查使用。 */ move |name: &str| {
         flow.checkpoints.iter().any(/* 判断 checkpoint == name 是否成立，供过滤或有效性检查使用。 */ |checkpoint| checkpoint == name)
     });
-    let values = context.game_flow.session.clone();
+    let values = live!(game_flow.session);
     engine.register_fn("session_get", /* 按 values . get (key) . and_then (json_to_dynamic) . unwrap_or (fallback) 读取或转换可选值，保留转换失败分支。 */ move |key: &str, fallback: Dynamic| {
         values
             .get(key)
@@ -2106,70 +2355,70 @@ fn register_game_flow_api(engine: &mut Engine, context: &ScriptContext) {
 }
 
 // 注册受当前上下文约束的网络状态与消息接口。
-fn register_network_api(engine: &mut Engine, context: &ScriptContext) {
-    let network = context.networking.clone();
+fn register_network_api(engine: &mut Engine) {
+    let network = live!(networking);
     engine.register_fn(
         "network_enabled",
         /* 返回当前快照值 network . enabled。 */ move || network.enabled,
     );
-    let network = context.networking.clone();
+    let network = live!(networking);
     engine.register_fn(
         "network_connected",
         /* 返回当前快照值 network . connected。 */ move || network.connected,
     );
-    let network = context.networking.clone();
+    let network = live!(networking);
     engine.register_fn(
         "network_is_authority",
         /* 返回当前快照值 network . authority。 */ move || network.authority,
     );
-    let network = context.networking.clone();
+    let network = live!(networking);
     engine.register_fn(
         "network_peer_count",
         /* 计算并返回 INT :: from (network . peer_count)，用于当前 register_network_api 流程。 */
         move || INT::from(network.peer_count),
     );
-    let network = context.networking.clone();
+    let network = live!(networking);
     engine.register_fn(
         "network_local_peer",
         /* 复制 network . local_peer_id . clone () 的结果，避免向调用方暴露可变宿主引用。 */
         move || network.local_peer_id.clone(),
     );
-    let network = context.networking.clone();
+    let network = live!(networking);
     engine.register_fn(
         "network_role",
         /* 复制 network . role . clone () 的结果，避免向调用方暴露可变宿主引用。 */
         move || network.role.clone(),
     );
-    let network = context.networking.clone();
+    let network = live!(networking);
     engine.register_fn("network_tick", /* 按 INT :: try_from (network . tick) . unwrap_or (INT :: MAX) 读取或转换可选值，保留转换失败分支。 */ move || {
         INT::try_from(network.tick).unwrap_or(INT::MAX)
     });
 }
 
 // 将宿主提供的自定义属性注册为脚本可读取值。
-fn register_property_api(engine: &mut Engine, context: &ScriptContext) {
-    let numbers = context.properties.clone();
+fn register_property_api(engine: &mut Engine) {
+    let numbers = live!(properties);
     engine.register_fn("export_value", /* 按 numbers . get (name) . and_then (Value :: as_f64) . unwrap_or (fallback) 读取或转换可选值，保留转换失败分支。 */ move |name: &str, fallback: FLOAT| {
         numbers
             .get(name)
             .and_then(Value::as_f64)
             .unwrap_or(fallback)
     });
-    let integers = context.properties.clone();
+    let integers = live!(properties);
     engine.register_fn("export_value", /* 按 integers . get (name) . and_then (Value :: as_i64) . unwrap_or (fallback) 读取或转换可选值，保留转换失败分支。 */ move |name: &str, fallback: INT| {
         integers
             .get(name)
             .and_then(Value::as_i64)
             .unwrap_or(fallback)
     });
-    let booleans = context.properties.clone();
+    let booleans = live!(properties);
     engine.register_fn("export_value", /* 按 booleans . get (name) . and_then (Value :: as_bool) . unwrap_or (fallback) 读取或转换可选值，保留转换失败分支。 */ move |name: &str, fallback: bool| {
         booleans
             .get(name)
             .and_then(Value::as_bool)
             .unwrap_or(fallback)
     });
-    let strings = context.properties.clone();
+    let strings = live!(properties);
     engine.register_fn("export_value", /* 按 strings . get (name) . and_then (Value :: as_str) . unwrap_or (fallback) . to_owned () 读取或转换可选值，保留转换失败分支。 */ move |name: &str, fallback: &str| {
         strings
             .get(name)
@@ -2177,7 +2426,7 @@ fn register_property_api(engine: &mut Engine, context: &ScriptContext) {
             .unwrap_or(fallback)
             .to_owned()
     });
-    let structured = context.properties.clone();
+    let structured = live!(properties);
     engine.register_fn("export_value", /* 按 structured . get (name) . and_then (json_to_dynamic) . unwrap_or (fallback) 读取或转换可选值，保留转换失败分支。 */ move |name: &str, fallback: Dynamic| {
         structured
             .get(name)
@@ -2187,19 +2436,15 @@ fn register_property_api(engine: &mut Engine, context: &ScriptContext) {
 }
 
 // 注册存档读取及排队写入命令，保持沙箱内的数据边界。
-fn register_save_api(
-    engine: &mut Engine,
-    context: &ScriptContext,
-    output: Rc<RefCell<HostOutput>>,
-) {
-    let values = context.save.clone();
+fn register_save_api(engine: &mut Engine, output: Rc<RefCell<HostOutput>>) {
+    let values = live!(save);
     engine.register_fn(
         "save_has",
         /* 判断 values . contains_key (key) 是否成立，供过滤或有效性检查使用。 */
         move |key: &str| values.contains_key(key),
     );
 
-    let values = context.save.clone();
+    let values = live!(save);
     engine.register_fn("save_get", /* 按 values . get (key) . and_then (json_to_dynamic) . unwrap_or (fallback) 读取或转换可选值，保留转换失败分支。 */ move |key: &str, fallback: Dynamic| {
         values
             .get(key)
@@ -2286,13 +2531,370 @@ fn register_save_api(
 }
 
 // 注册修改游戏状态的宿主命令；脚本只产生有界命令，不直接访问编辑器。
+/// Lifecycle and event callbacks are run by the runtime itself; `call_on` may not invoke them.
+/// (`call` itself is Rhai's function-pointer keyword, hence the `call_on` name.)
+const RESERVED_CALL_TARGETS: [&str; 15] = [
+    "awake",
+    "start",
+    "update",
+    "fixed_update",
+    "late_update",
+    "on_destroy",
+    "on_timer",
+    "on_task",
+    "on_signal",
+    "on_collision_enter",
+    "on_collision_stay",
+    "on_collision_exit",
+    "on_trigger_enter",
+    "on_trigger_stay",
+    "on_trigger_exit",
+];
+
+/// A callable script function name: an identifier of at most 80 characters, not a lifecycle callback.
+fn callable_function_name(name: &str) -> Option<String> {
+    let mut characters = name.chars();
+    let first = characters.next()?;
+    let valid = (first.is_ascii_alphabetic() || first == '_')
+        && characters.all(|character| character.is_ascii_alphanumeric() || character == '_')
+        && name.len() <= 80
+        && !RESERVED_CALL_TARGETS.contains(&name);
+    valid.then(|| name.to_owned())
+}
+
+/// Reads an option from a Rhai map: floats and integers are both accepted.
+fn option_float(options: &Map, key: &str, fallback: f64) -> f64 {
+    options
+        .get(key)
+        .and_then(|value| {
+            value
+                .as_float()
+                .ok()
+                .or_else(|| value.as_int().ok().map(|value| value as f64))
+        })
+        .filter(|value| value.is_finite())
+        .unwrap_or(fallback)
+}
+
+fn option_bool(options: &Map, key: &str, fallback: bool) -> bool {
+    options
+        .get(key)
+        .and_then(|value| value.as_bool().ok())
+        .unwrap_or(fallback)
+}
+
+fn option_text(options: &Map, key: &str, fallback: &str, maximum: usize) -> String {
+    options
+        .get(key)
+        .and_then(|value| value.clone().into_immutable_string().ok())
+        .map(|value| bounded_text(value.trim(), maximum))
+        .unwrap_or_else(|| fallback.to_owned())
+}
+
+// 26.43 脚本间调用与音视频 API：所有操作都作为宿主命令排队，在回调边界由运行时执行。
+// Every registration keeps an inline typed closure: the API inventory generator reads the
+// parameter names and types from these closures.
+fn register_link_and_media_api(engine: &mut Engine, output: Rc<RefCell<HostOutput>>) {
+    let report = |output: &Rc<RefCell<HostOutput>>, message: String| {
+        let mut output = output.borrow_mut();
+        if output.logs.len() < MAX_SCRIPT_LOGS {
+            output.logs.push(ScriptLog {
+                level: "error".into(),
+                message,
+            });
+        }
+    };
+    let arguments = |args: Array| dynamic_to_json(Dynamic::from_array(args));
+
+    // call_on(handle | entity id, function[, args]): runs `function(args...)` on that entity's
+    // script after the current callback phase. Handles keep their generation; a plain id
+    // (for example `other` in a collision callback) uses the entity's current generation.
+    let commands = Rc::clone(&output);
+    let push_call = move |target: Option<(String, u32)>, function: &str, args: Array| {
+        let Some(function) = callable_function_name(function) else {
+            report(&commands, format!("call_on: \u{201c}{function}\u{201d} is not a callable function name (lifecycle callbacks run on their own)"));
+            return;
+        };
+        let Some((target, generation)) = target else {
+            report(
+                &commands,
+                format!("call_on {function}: the target entity is not valid"),
+            );
+            return;
+        };
+        let Some(args) = arguments(args) else {
+            report(
+                &commands,
+                format!("call_on {function}: arguments must be serializable values"),
+            );
+            return;
+        };
+        commands
+            .borrow_mut()
+            .commands
+            .push(ScriptCommand::CallFunction {
+                target,
+                generation,
+                function,
+                args,
+            });
+    };
+    let world = live_world!();
+    let current_generation = move |id: &str| {
+        world
+            .borrow()
+            .snapshot
+            .entity_generations
+            .get(id)
+            .map(|generation| (id.to_owned(), *generation))
+    };
+    let call = push_call.clone();
+    engine.register_fn("call_on", move |handle: Map, function: &str| {
+        call(target_from_handle(handle), function, Array::new())
+    });
+    let call = push_call.clone();
+    engine.register_fn(
+        "call_on",
+        move |handle: Map, function: &str, args: Array| {
+            call(target_from_handle(handle), function, args)
+        },
+    );
+    let call = push_call.clone();
+    engine.register_fn("call_on", move |id: &str, function: &str| {
+        call(current_generation(id), function, Array::new())
+    });
+    engine.register_fn("call_on", move |id: &str, function: &str, args: Array| {
+        push_call(current_generation(id), function, args)
+    });
+
+    // call_global(name, function[, args]): calls a project global script (Project Settings >
+    // Scripting > Global scripts) by its name.
+    let commands = Rc::clone(&output);
+    let push_global = move |name: &str, function: &str, args: Array| {
+        let name = bounded_text(name.trim(), 80);
+        match (callable_function_name(function), arguments(args)) {
+            (Some(function), Some(args)) if !name.is_empty() => {
+                commands.borrow_mut().commands.push(ScriptCommand::CallGlobal {
+                    name,
+                    function,
+                    args,
+                })
+            }
+            _ => report(&commands, format!("call_global: needs a global script name, a callable function and serializable arguments (\u{201c}{name}\u{201d}.{function})")),
+        }
+    };
+    let call = push_global.clone();
+    engine.register_fn("call_global", move |name: &str, function: &str| {
+        call(name, function, Array::new())
+    });
+    engine.register_fn(
+        "call_global",
+        move |name: &str, function: &str, args: Array| push_global(name, function, args),
+    );
+
+    // call_group(group, function[, args]): calls the function on every entity in a group.
+    let commands = Rc::clone(&output);
+    let push_group = move |group: &str, function: &str, args: Array| {
+        let group = bounded_text(group.trim(), 80);
+        match (callable_function_name(function), arguments(args)) {
+            (Some(function), Some(args)) if !group.is_empty() => {
+                commands.borrow_mut().commands.push(ScriptCommand::CallGroup {
+                    group,
+                    function,
+                    args,
+                })
+            }
+            _ => report(&commands, format!("call_group: needs a group, a callable function and serializable arguments (\u{201c}{group}\u{201d}.{function})")),
+        }
+    };
+    let call = push_group.clone();
+    engine.register_fn("call_group", move |group: &str, function: &str| {
+        call(group, function, Array::new())
+    });
+    engine.register_fn(
+        "call_group",
+        move |group: &str, function: &str, args: Array| push_group(group, function, args),
+    );
+
+    // after(seconds, function[, args]): calls one of this script's functions later (game time).
+    let commands = Rc::clone(&output);
+    let push_later = move |seconds: FLOAT, function: &str, args: Array| {
+        match (callable_function_name(function), arguments(args)) {
+            (Some(function), Some(args)) if seconds.is_finite() && seconds >= 0.0 => {
+                commands.borrow_mut().commands.push(ScriptCommand::CallLater {
+                    function,
+                    seconds,
+                    args,
+                })
+            }
+            _ => report(&commands, format!("after: needs a finite non-negative delay, a callable function and serializable arguments ({function})")),
+        }
+    };
+    let call = push_later.clone();
+    engine.register_fn("after", move |seconds: FLOAT, function: &str| {
+        call(seconds, function, Array::new())
+    });
+    let call = push_later.clone();
+    engine.register_fn("after", move |seconds: INT, function: &str| {
+        call(seconds as FLOAT, function, Array::new())
+    });
+    engine.register_fn(
+        "after",
+        move |seconds: FLOAT, function: &str, args: Array| push_later(seconds, function, args),
+    );
+
+    // Audio: one-shot or looping sounds on a mixer bus, background music with crossfades,
+    // runtime bus volume. Asset references are paths ("Assets/Audio/hit.wav") or asset URIs.
+    let commands = Rc::clone(&output);
+    let push_sound = move |asset: &str, options: Map| {
+        let asset = bounded_text(asset.trim(), 512);
+        if asset.is_empty() {
+            report(&commands, "play_sound needs an audio asset".into());
+            return;
+        }
+        let volume = option_float(&options, "volume", 1.0).clamp(0.0, 4.0);
+        let pitch = option_float(&options, "pitch", 1.0).clamp(0.25, 4.0);
+        commands
+            .borrow_mut()
+            .commands
+            .push(ScriptCommand::PlaySound {
+                asset,
+                bus: option_text(&options, "bus", "SFX", 80),
+                volume,
+                pitch,
+                looped: option_bool(&options, "looped", option_bool(&options, "loop", false)),
+                tag: option_text(&options, "tag", "", 80),
+            });
+    };
+    let sound = push_sound.clone();
+    engine.register_fn("play_sound", move |asset: &str| sound(asset, Map::new()));
+    engine.register_fn("play_sound", move |asset: &str, options: Map| {
+        push_sound(asset, options)
+    });
+    let commands = Rc::clone(&output);
+    let push_stop = move |tag: &str, fade: FLOAT| {
+        commands
+            .borrow_mut()
+            .commands
+            .push(ScriptCommand::StopSounds {
+                tag: bounded_text(tag.trim(), 80),
+                fade: if fade.is_finite() {
+                    fade.clamp(0.0, 30.0)
+                } else {
+                    0.0
+                },
+            })
+    };
+    let stop = push_stop.clone();
+    engine.register_fn("stop_sounds", move |tag: &str| stop(tag, 0.0));
+    engine.register_fn("stop_sounds", move |tag: &str, fade: FLOAT| {
+        push_stop(tag, fade)
+    });
+    let commands = Rc::clone(&output);
+    let push_music = move |asset: &str, fade: FLOAT, volume: FLOAT| {
+        let asset = bounded_text(asset.trim(), 512);
+        if asset.is_empty() {
+            report(&commands, "play_music needs an audio asset".into());
+            return;
+        }
+        commands
+            .borrow_mut()
+            .commands
+            .push(ScriptCommand::PlayMusic {
+                asset,
+                fade: if fade.is_finite() {
+                    fade.clamp(0.0, 30.0)
+                } else {
+                    0.0
+                },
+                volume: if volume.is_finite() {
+                    volume.clamp(0.0, 4.0)
+                } else {
+                    1.0
+                },
+            })
+    };
+    let music = push_music.clone();
+    engine.register_fn("play_music", move |asset: &str| music(asset, 0.5, 1.0));
+    let music = push_music.clone();
+    engine.register_fn("play_music", move |asset: &str, fade: FLOAT| {
+        music(asset, fade, 1.0)
+    });
+    engine.register_fn(
+        "play_music",
+        move |asset: &str, fade: FLOAT, volume: FLOAT| push_music(asset, fade, volume),
+    );
+    let commands = Rc::clone(&output);
+    let push_stop_music = move |fade: FLOAT| {
+        commands
+            .borrow_mut()
+            .commands
+            .push(ScriptCommand::StopMusic {
+                fade: if fade.is_finite() {
+                    fade.clamp(0.0, 30.0)
+                } else {
+                    0.0
+                },
+            })
+    };
+    let stop = push_stop_music.clone();
+    engine.register_fn("stop_music", move || stop(0.5));
+    engine.register_fn("stop_music", move |fade: FLOAT| push_stop_music(fade));
+    let commands = Rc::clone(&output);
+    engine.register_fn("set_bus_volume", move |bus: &str, volume: FLOAT| {
+        let bus = bounded_text(bus.trim(), 80);
+        if bus.is_empty() || !volume.is_finite() {
+            report(
+                &commands,
+                "set_bus_volume needs a bus name and a finite volume".into(),
+            );
+            return;
+        }
+        commands
+            .borrow_mut()
+            .commands
+            .push(ScriptCommand::SetBusVolume {
+                bus,
+                volume: volume.clamp(0.0, 4.0),
+            })
+    });
+
+    // Video: a full-screen video over the game view (cutscenes, intros). When it ends or is
+    // skipped the runtime emits the signal "video.finished" with #{ asset, reason }.
+    let commands = Rc::clone(&output);
+    let push_video = move |asset: &str, options: Map| {
+        let asset = bounded_text(asset.trim(), 512);
+        if asset.is_empty() {
+            report(&commands, "play_video needs a video asset".into());
+            return;
+        }
+        commands
+            .borrow_mut()
+            .commands
+            .push(ScriptCommand::PlayVideo {
+                asset,
+                skippable: option_bool(&options, "skippable", true),
+                volume: option_float(&options, "volume", 1.0).clamp(0.0, 1.0),
+                looped: option_bool(&options, "looped", option_bool(&options, "loop", false)),
+            })
+    };
+    let video = push_video.clone();
+    engine.register_fn("play_video", move |asset: &str| video(asset, Map::new()));
+    engine.register_fn("play_video", move |asset: &str, options: Map| {
+        push_video(asset, options)
+    });
+    engine.register_fn("stop_video", move || {
+        output.borrow_mut().commands.push(ScriptCommand::StopVideo)
+    });
+}
+
 fn register_command_api(
     engine: &mut Engine,
-    context: &ScriptContext,
     output: Rc<RefCell<HostOutput>>,
+    states: &HostCallStates,
 ) {
     let traces = Rc::clone(&output);
-    let trace_clock = Rc::new(RefCell::new(Instant::now()));
+    let trace_clock = Rc::clone(&states.trace_clock);
     engine.register_fn(
         "__nova_graph_trace",
         /* 先转换可序列化数据，将“记录可视图节点执行追踪”命令加入宿主队列，并限制相关文本长度。 */
@@ -2431,59 +3033,62 @@ fn register_command_api(
         },
     );
 
-    let character = context.character.clone().unwrap_or_default();
-    let snapshot = character.clone();
+    let character = live_with!(|context| context
+        .character
+        .as_ref()
+        .unwrap_or_else(|| fallback_context().character_default()));
+    let snapshot = character;
     engine.register_fn(
         "character_is_on_floor",
         /* 返回当前快照值 snapshot . on_floor。 */ move || snapshot.on_floor,
     );
-    let snapshot = character.clone();
+    let snapshot = character;
     engine.register_fn(
         "character_is_on_wall",
         /* 返回当前快照值 snapshot . on_wall。 */ move || snapshot.on_wall,
     );
-    let snapshot = character.clone();
+    let snapshot = character;
     engine.register_fn(
         "character_is_on_ceiling",
         /* 返回当前快照值 snapshot . on_ceiling。 */ move || snapshot.on_ceiling,
     );
-    let snapshot = character.clone();
+    let snapshot = character;
     engine.register_fn(
         "character_can_coyote_jump",
         /* 返回当前快照值 snapshot . can_coyote_jump。 */
         move || snapshot.can_coyote_jump,
     );
-    let snapshot = character.clone();
+    let snapshot = character;
     engine.register_fn(
         "can_coyote_jump",
         /* 返回当前快照值 snapshot . can_coyote_jump。 */
         move || snapshot.can_coyote_jump,
     );
-    let snapshot = character.clone();
+    let snapshot = character;
     engine.register_fn(
         "character_floor_normal_x",
         /* 计算并返回 snapshot . floor_normal [0]，用于当前 register_command_api 流程。 */
         move || snapshot.floor_normal[0],
     );
-    let snapshot = character.clone();
+    let snapshot = character;
     engine.register_fn(
         "character_floor_normal_y",
         /* 计算并返回 snapshot . floor_normal [1]，用于当前 register_command_api 流程。 */
         move || snapshot.floor_normal[1],
     );
-    let snapshot = character.clone();
+    let snapshot = character;
     engine.register_fn(
         "character_floor_normal",
         /* 计算并返回 vector_map (snapshot . floor_normal)，用于当前 register_command_api 流程。 */
         move || vector_map(snapshot.floor_normal),
     );
-    let snapshot = character.clone();
+    let snapshot = character;
     engine.register_fn(
         "character_platform_velocity_x",
         /* 计算并返回 snapshot . platform_velocity [0]，用于当前 register_command_api 流程。 */
         move || snapshot.platform_velocity[0],
     );
-    let snapshot = character.clone();
+    let snapshot = character;
     engine.register_fn("character_platform_velocity", /* 计算并返回 vector_map (snapshot . platform_velocity)，用于当前 register_command_api 流程。 */ move || {
         vector_map(snapshot.platform_velocity)
     });
@@ -2680,9 +3285,9 @@ fn register_command_api(
         },
     );
     let commands = Rc::clone(&output);
-    let pending_serial = Rc::new(RefCell::new(0_u64));
-    let source_entity = context.entity.clone();
-    let invocation_id = context.invocation_id;
+    let pending_serial = Rc::clone(&states.pending_serial);
+    let source_entity = live!(entity);
+    let invocation_id = live!(invocation_id);
     engine.register_fn(
         "spawn_at",
         /* 先检查数值有限性，将“按位置实例化预制体”命令加入宿主队列，并限制相关文本长度。 */
@@ -3271,7 +3876,7 @@ fn call_lifecycle(
     let family = match context.callback_kind.as_str() {
         "update" | "late_update" | "fixed_update" | "on_timer" | "on_task" | "on_signal"
         | "on_collision_enter" | "on_collision_stay" | "on_collision_exit" | "on_trigger_enter"
-        | "on_trigger_stay" | "on_trigger_exit" => context.callback_kind.as_str(),
+        | "on_trigger_stay" | "on_trigger_exit" | "call" => context.callback_kind.as_str(),
         _ => function,
     };
     // Existing custom handlers without parameters remain callable. Typed custom
@@ -3323,6 +3928,33 @@ fn call_lifecycle(
                 )
                 .unwrap_or_default();
             engine.call_fn_with_options::<Dynamic>(options, scope, ast, function, (name,))
+        }
+        "call" => {
+            // call_on()/call_global()/call_group()/after(): the payload is the argument array. Missing
+            // arguments become () and extra ones are dropped, so the callee's arity decides.
+            let mut arguments: Vec<Dynamic> =
+                match context.event.as_ref().map(|event| &event.payload) {
+                    Some(Value::Array(values)) => values
+                        .iter()
+                        .map(|value| json_to_dynamic(value).unwrap_or(Dynamic::UNIT))
+                        .collect(),
+                    Some(Value::Null) | None => Vec::new(),
+                    Some(value) => vec![json_to_dynamic(value).unwrap_or(Dynamic::UNIT)],
+                };
+            let arities: Vec<usize> = ast
+                .iter_functions()
+                .filter(|entry| entry.name == function && entry.this_type.is_none())
+                .map(|entry| entry.params.len())
+                .collect();
+            if !arities.contains(&arguments.len()) {
+                if let Some(&arity) = arities
+                    .iter()
+                    .min_by_key(|arity| arity.abs_diff(arguments.len()))
+                {
+                    arguments.resize(arity, Dynamic::UNIT);
+                }
+            }
+            engine.call_fn_with_options::<Dynamic>(options, scope, ast, function, arguments)
         }
         "on_signal" => {
             let event = context.event.clone().unwrap_or_default();
@@ -3857,6 +4489,317 @@ fn parse_export_value(value: &str) -> Option<Value> {
 }
 
 #[cfg(test)]
+mod engine_reuse_tests {
+    use super::*;
+
+    // 26.43: the reused host engine reads the running callback's context. Two entities with different
+    // contexts run alternately on one runtime; every context-backed function must see its own values,
+    // and per-call state (random seed, spawn serials) restarts with every callback.
+    #[test]
+    fn reused_engine_reads_each_callbacks_own_context() {
+        let mut runtime = ScriptRuntime::new();
+        let source = r#"
+fn probe() {
+    print(`entity=${entity()} name=${entity_name()} handle=${entity_handle().id}`);
+    print(`delta=${time_delta()} frame=${time().frame}`);
+    print(`axis=${input_axis("Move")} down=${input_down("Jump")}`);
+    print(`x=${transform().position_x} vy=${rigid_body().velocity_y}`);
+    print(`floor=${character_is_on_floor()} coyote=${can_coyote_jump()}`);
+    print(`save=${save_get("best", 0)} session=${session_get("lap", 0)}`);
+    print(`component=${has_component("Camera2D")} api=${api_version()}`);
+    print(`random=${random()}`);
+    spawn_at("asset://prefab", 0.0, 0.0, 0.0, 1.0, 1.0);
+}
+"#;
+        runtime.upsert("probe", source).unwrap();
+        let context = |entity: &str, value: f64, flag: bool, seed: u64| {
+            let mut context = ScriptContext {
+                entity: entity.into(),
+                entity_name: format!("Name {entity}"),
+                random_seed: seed,
+                api_version: 2,
+                ..ScriptContext::default()
+            };
+            context.entity_generations.insert(entity.into(), 1);
+            context.time.delta = value;
+            context.time.frame = (value * 1000.0) as u64;
+            context.input.axes.insert("Move".into(), value);
+            context.input.down.insert("Jump".into(), flag);
+            context.transform.position = [value * 10.0, 0.0];
+            context.rigid_body = Some(RigidBodySnapshot {
+                velocity: [0.0, -value],
+                angular_velocity: 0.0,
+                mass: 1.0,
+                body_type: "Dynamic".into(),
+            });
+            context.character = flag.then(|| CharacterSnapshot {
+                on_floor: true,
+                can_coyote_jump: true,
+                ..CharacterSnapshot::default()
+            });
+            context
+                .save
+                .insert("best".into(), Value::from(value * 100.0));
+            context
+                .game_flow
+                .session
+                .insert("lap".into(), Value::from((value * 7.0).round()));
+            if flag {
+                context.components.push("Camera2D".into());
+            }
+            context
+        };
+        let run = |runtime: &mut ScriptRuntime, entity: &str, value: f64, flag: bool, seed: u64| {
+            runtime
+                .execute_instance("probe", "probe", 1, 1, context(entity, value, flag, seed))
+                .unwrap()
+        };
+        let first = run(&mut runtime, "a", 0.25, true, 7);
+        let second = run(&mut runtime, "b", 0.5, false, 9);
+        let third = run(&mut runtime, "a", 0.25, true, 7);
+        let lines = |execution: &ScriptExecution| {
+            execution
+                .logs
+                .iter()
+                .map(|log| log.message.clone())
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(lines(&first)[0], "entity=a name=Name a handle=a");
+        assert_eq!(lines(&second)[0], "entity=b name=Name b handle=b");
+        assert_eq!(lines(&first)[1], "delta=0.25 frame=250");
+        assert_eq!(lines(&second)[1], "delta=0.5 frame=500");
+        assert_eq!(lines(&first)[2], "axis=0.25 down=true");
+        assert_eq!(lines(&second)[2], "axis=0.5 down=false");
+        assert_eq!(lines(&first)[3], "x=2.5 vy=-0.25");
+        assert_eq!(lines(&second)[3], "x=5.0 vy=-0.5");
+        assert_eq!(lines(&first)[4], "floor=true coyote=true");
+        assert_eq!(lines(&second)[4], "floor=false coyote=false");
+        assert_eq!(lines(&first)[5], "save=25.0 session=2.0");
+        assert_eq!(lines(&second)[5], "save=50.0 session=4.0");
+        assert_eq!(lines(&first)[6], "component=true api=2");
+        assert_eq!(lines(&second)[6], "component=false api=2");
+        // Same seed, same random value; spawn serials restart with each callback.
+        assert_eq!(lines(&first)[7], lines(&third)[7]);
+        assert_ne!(lines(&first)[7], lines(&second)[7]);
+        assert_eq!(first.commands, third.commands);
+    }
+}
+
+#[cfg(test)]
+mod link_and_media_tests {
+    use super::*;
+
+    fn context(entity: &str) -> ScriptContext {
+        let mut context = ScriptContext {
+            entity: entity.into(),
+            api_version: 2,
+            ..ScriptContext::default()
+        };
+        context.entity_generations.insert(entity.into(), 1);
+        context.entity_generations.insert("target".into(), 4);
+        context.entities.insert("Target".into(), "target".into());
+        context
+    }
+
+    // 26.43: call_on / call_global / call_group / after queue host commands with serializable
+    // arguments; lifecycle names and invalid targets are rejected with a log, never queued.
+    #[test]
+    fn calls_are_queued_with_targets_and_arguments() {
+        let mut runtime = ScriptRuntime::new();
+        let source = r#"
+fn update(dt) {
+    let target = find_entity_handle("Target");
+    call_on(target, "hit", [3, "fire"]);
+    call_on("target", "heal");
+    call_on("missing", "heal");
+    call_global("Game", "add_score", [10]);
+    call_group("enemies", "alert");
+    after(0.5, "explode", [2.0]);
+    after(1, "beep");
+    call_on(target, "update");
+    call_on(target, "bad name");
+}
+"#;
+        runtime.upsert("caller", source).unwrap();
+        let execution = runtime
+            .execute_instance("caller", "update", 1, 1, context("self"))
+            .unwrap();
+        assert_eq!(
+            execution.commands,
+            vec![
+                ScriptCommand::CallFunction {
+                    target: "target".into(),
+                    generation: 4,
+                    function: "hit".into(),
+                    args: serde_json::json!([3, "fire"]),
+                },
+                ScriptCommand::CallFunction {
+                    target: "target".into(),
+                    generation: 4,
+                    function: "heal".into(),
+                    args: serde_json::json!([]),
+                },
+                ScriptCommand::CallGlobal {
+                    name: "Game".into(),
+                    function: "add_score".into(),
+                    args: serde_json::json!([10]),
+                },
+                ScriptCommand::CallGroup {
+                    group: "enemies".into(),
+                    function: "alert".into(),
+                    args: serde_json::json!([]),
+                },
+                ScriptCommand::CallLater {
+                    function: "explode".into(),
+                    seconds: 0.5,
+                    args: serde_json::json!([2.0]),
+                },
+                ScriptCommand::CallLater {
+                    function: "beep".into(),
+                    seconds: 1.0,
+                    args: serde_json::json!([]),
+                },
+            ]
+        );
+        let errors: Vec<_> = execution
+            .logs
+            .iter()
+            .filter(|log| log.level == "error")
+            .map(|log| log.message.as_str())
+            .collect();
+        assert_eq!(errors.len(), 3, "{errors:?}");
+        assert!(errors[0].contains("target entity is not valid"));
+        assert!(errors[1].contains("not a callable function name"));
+        assert!(errors[2].contains("not a callable function name"));
+    }
+
+    // The callee receives the argument array as parameters; its arity decides (missing -> (),
+    // extra dropped), and a zero-parameter function is still callable with arguments.
+    #[test]
+    fn called_function_receives_arguments_by_arity() {
+        let mut runtime = ScriptRuntime::new();
+        let source = r#"
+fn hit(amount, kind) { print(`hit ${amount} ${kind}`); }
+fn heal() { print("healed"); }
+fn three(a, b, c) { print(`three ${a} ${b} ${c == ()}`); }
+"#;
+        runtime.upsert("callee", source).unwrap();
+        let call = |runtime: &mut ScriptRuntime, function: &str, payload: Value| {
+            let mut context = context("target");
+            context.callback_kind = "call".into();
+            context.event = Some(EventSnapshot {
+                name: function.into(),
+                source: "self".into(),
+                payload,
+            });
+            let execution = runtime
+                .execute_instance("callee", function, 1, 4, context)
+                .unwrap();
+            execution.logs[0].message.clone()
+        };
+        assert_eq!(
+            call(&mut runtime, "hit", serde_json::json!([3, "fire"])),
+            "hit 3 fire"
+        );
+        assert_eq!(
+            call(&mut runtime, "hit", serde_json::json!([3, "fire", 9])),
+            "hit 3 fire"
+        );
+        assert_eq!(call(&mut runtime, "heal", serde_json::json!([5])), "healed");
+        assert_eq!(
+            call(&mut runtime, "three", serde_json::json!([1, 2])),
+            "three 1 2 true"
+        );
+    }
+
+    #[test]
+    fn audio_and_video_commands_are_bounded() {
+        let mut runtime = ScriptRuntime::new();
+        let source = r#"
+fn update(dt) {
+    play_sound("Assets/Audio/hit.wav");
+    play_sound("Assets/Audio/wind.ogg", #{ bus: "UI", volume: 9, pitch: 1.5, looped: true, tag: "ambience" });
+    stop_sounds("ambience", 1.0);
+    play_music("Assets/Audio/theme.ogg");
+    play_music("Assets/Audio/boss.ogg", 2.0, 0.5);
+    stop_music();
+    set_bus_volume("Music", 0.3);
+    play_video("Assets/Video/intro.webm");
+    play_video("Assets/Video/loop.webm", #{ skippable: false, "loop": true, volume: 0.25 });
+    stop_video();
+    play_sound("");
+}
+"#;
+        runtime.upsert("media", source).unwrap();
+        let execution = runtime
+            .execute_instance("media", "update", 1, 1, context("self"))
+            .unwrap();
+        assert_eq!(
+            execution.commands,
+            vec![
+                ScriptCommand::PlaySound {
+                    asset: "Assets/Audio/hit.wav".into(),
+                    bus: "SFX".into(),
+                    volume: 1.0,
+                    pitch: 1.0,
+                    looped: false,
+                    tag: String::new(),
+                },
+                ScriptCommand::PlaySound {
+                    asset: "Assets/Audio/wind.ogg".into(),
+                    bus: "UI".into(),
+                    volume: 4.0,
+                    pitch: 1.5,
+                    looped: true,
+                    tag: "ambience".into(),
+                },
+                ScriptCommand::StopSounds {
+                    tag: "ambience".into(),
+                    fade: 1.0,
+                },
+                ScriptCommand::PlayMusic {
+                    asset: "Assets/Audio/theme.ogg".into(),
+                    fade: 0.5,
+                    volume: 1.0,
+                },
+                ScriptCommand::PlayMusic {
+                    asset: "Assets/Audio/boss.ogg".into(),
+                    fade: 2.0,
+                    volume: 0.5,
+                },
+                ScriptCommand::StopMusic { fade: 0.5 },
+                ScriptCommand::SetBusVolume {
+                    bus: "Music".into(),
+                    volume: 0.3,
+                },
+                ScriptCommand::PlayVideo {
+                    asset: "Assets/Video/intro.webm".into(),
+                    skippable: true,
+                    volume: 1.0,
+                    looped: false,
+                },
+                ScriptCommand::PlayVideo {
+                    asset: "Assets/Video/loop.webm".into(),
+                    skippable: false,
+                    volume: 0.25,
+                    looped: true,
+                },
+                ScriptCommand::StopVideo,
+            ]
+        );
+        assert!(execution
+            .logs
+            .iter()
+            .any(|log| log.level == "error" && log.message.contains("play_sound needs")));
+        let json = serde_json::to_value(&execution.commands[1]).unwrap();
+        assert_eq!(json["type"], "playSound");
+        assert_eq!(json["looped"], true);
+        let json = serde_json::to_value(&execution.commands[9]).unwrap();
+        assert_eq!(json["type"], "stopVideo");
+    }
+}
+
+#[cfg(test)]
 mod tests {
     fn phase_world() -> ScriptWorldSnapshot {
         ScriptWorldSnapshot {
@@ -3885,6 +4828,31 @@ mod tests {
                 },
             ],
         }
+    }
+
+    #[test]
+    fn tag_and_group_tests_read_the_published_world() {
+        let mut runtime = ScriptRuntime::new();
+        runtime.clear_instances(1).unwrap();
+        runtime.upsert("tags", "fn update(dt) { print(entity_has_tag(\"target\", \"old\")); print(entity_has_tag(\"target\", \"new\")); print(entity_has_tag(find_entity_handle(\"Target\"), \"old\")); print(entity_in_group(\"self\", \"team\")); print(entity_has_tag(\"missing\", \"old\")); print(entity_handle_of(\"target\").generation); print(entity_handle_of(\"missing\").valid); }").unwrap();
+        let mut world = phase_world();
+        world.scene_entities[1].groups = vec!["team".into()];
+        runtime.publish_world_context(1, 1, world).unwrap();
+        let context = ScriptContext {
+            entity: "self".into(),
+            ..Default::default()
+        };
+        let logs: Vec<String> = runtime
+            .execute_instance_context("tags", "update", 1, 1, 1, context)
+            .unwrap()
+            .logs
+            .into_iter()
+            .map(|log| log.message)
+            .collect();
+        assert_eq!(
+            logs,
+            ["true", "false", "true", "true", "false", "2", "false"]
+        );
     }
 
     #[test]

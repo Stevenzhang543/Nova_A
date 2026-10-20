@@ -1,4 +1,5 @@
 /** Explicit-port HUD owner. Original layout, drawing, focus, IME and input math are preserved. */
+import { cssFontStack } from '../renderer/fontStack'
 import type {Entity} from '../world/Entity'
 import type {Button,Canvas,Checkbox,Image,Panel,ProgressBar,RectTransform,Slider,Text,TextInput} from '../world/components'
 import {themeStyle,themeVariant as applyThemeVariant,createUiThemeReader,type UiThemeDocument} from './uiThemeValues'
@@ -39,7 +40,7 @@ export interface UiAccessibilityNode { uuid: string; role: string; label: string
   }
 }
 
-/** 结构说明（自动提取）：controlFontFamily；输入 theme、locale；直接调用 replace、String、join、map、activeFontFallbackFamilies。 */ function controlFontFamily(theme: UiThemeDocument | null, locale: string, activeFontFallbackFamilies:UiReadPorts['activeFontFallbackFamilies']): string { const family = String(theme?.variables.fontFamily ?? 'Nunito Sans').replace(/["\\]/g, ''); return [family, ...activeFontFallbackFamilies(locale), 'Segoe UI', 'sans-serif'].map(/* 根据 value === 'sans-serif' 的真假，分别返回 value 或 `"${value.replace(/["\\]/g, '')}"`。 */ value => value === 'sans-serif' ? value : `"${value.replace(/["\\]/g, '')}"`).join(', ') }
+/** 结构说明（自动提取）：controlFontFamily；输入 theme、locale；直接调用 replace、String、join、map、activeFontFallbackFamilies。 */ function controlFontFamily(theme: UiThemeDocument | null, locale: string, activeFontFallbackFamilies:UiReadPorts['activeFontFallbackFamilies']): string { return cssFontStack(String(theme?.variables.fontFamily ?? 'Nunito Sans'), activeFontFallbackFamilies(locale)) }
 /** 结构说明（自动提取）：interactive；输入 entity；直接调用 some。 */ function interactive(entity: Entity): boolean { return ['Button', 'Slider', 'Checkbox', 'TextInput'].some(/* 返回 entity.getComponent<Button>(kind as 'Button')?.enabled 的当前值。 */ kind => entity.getComponent<Button>(kind as 'Button')?.enabled) }
 /** 结构说明（自动提取）：isDisabled；输入 entity；直接调用 some。 */ function isDisabled(entity: Entity): boolean { return ['Button', 'Slider', 'Checkbox', 'TextInput'].some(/** 结构说明（自动提取）：some 回调；输入 kind；直接调用 entity.getComponent。 */ kind => { const control = entity.getComponent<Button>(kind as 'Button'); return control?.enabled && !control.interactable }) }
 

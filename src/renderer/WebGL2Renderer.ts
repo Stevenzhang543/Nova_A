@@ -258,6 +258,15 @@ function textureDimensions(source: TexImageSource): { width: number; height: num
   return { width: value.width ?? 1, height: value.height ?? 1 }
 }
 
+/* 26.43 web: text is rasterised once and cached. A canvas draws with a fallback face while a web font is
+ * still loading, so every finished font load starts a new cache generation and text is drawn again with
+ * the real face. The bundled faces used by game text start loading here, before the first frame. */
+let textFontGeneration = 0
+if (typeof document !== 'undefined' && document.fonts) {
+  document.fonts.addEventListener?.('loadingdone', () => { textFontGeneration++ })
+  for (const family of ['"Nunito Sans Variable"', '"Noto Sans SC Variable"']) void document.fonts.load(`64px ${family}`, family.includes('SC') ? 'Nova 字' : 'Nova').catch(() => undefined)
+}
+
 export class WebGL2Renderer implements Renderer2D {
   readonly stats: RendererStats = { backend: 'WebGL2', drawCalls: 0, batches: 0, triangles: 0, sprites: 0, shapes: 0, text: 0, textures: 0, gpuMs: null, passes: 1, renderTargets: 1, overdraw: 0, batchBreaks: 0, atlasPages: 0, textureMemoryBytes: 0, textureUploads: 0, textureEvictions: 0, textureBudgetBytes: 0, textureBudgetExceeded: false, streamingMisses: 0, shaderCompiles: 0, shaderFallbacks: 0, contextLosses: 0, batchBreakReasons: {} }
   private readonly gl: WebGL2RenderingContext
@@ -1316,7 +1325,7 @@ void main(){ outputColor=texelFetch(u_texture,ivec2(gl_FragCoord.xy),0); }`, POS
 
   /* 将有限行数的文字和描边栅格化到受预算限制的画布，并缓存其纹理及宽高比。 */
   private textTexture(command: TextRenderCommand): CachedText | null {
-    const key = [command.text, command.fontFamily, command.fontWeight, command.fontSize, command.lineHeight, command.outlineWidth, command.outlineColor.r, command.outlineColor.g, command.outlineColor.b, command.outlineColor.a].join('|')
+    const key = [textFontGeneration, command.text, command.fontFamily, command.fontWeight, command.fontSize, command.lineHeight, command.outlineWidth, command.outlineColor.r, command.outlineColor.g, command.outlineColor.b, command.outlineColor.a].join('|')
     const existing = this.textCache.get(key)
     if (existing) { existing.lastUsedFrame = this.frameSerial; return existing }
     const fontPixels = 64

@@ -73,8 +73,11 @@ onMounted(/** 挂载时依据查询参数或原生运行模式选择入口，原
   if ('__TAURI_INTERNALS__' in window) {
     try {
       const { invoke } = await import('@tauri-apps/api/core')
-      mode.value = await invoke<boolean>('runtime_mode') ? 'player' : 'editor'
-      if (mode.value === 'editor') { await prepareEditor(); void openLaunchProject() }
+      // 26.43 P-E2: an exported desktop game runs the independent Player page (player.html, no Vue or
+      // Editor code); that page still falls back to the compatibility Player on its own when needed.
+      if (await invoke<boolean>('runtime_mode')) { location.replace(new URL('player.html', location.href).href); return }
+      mode.value = 'editor'
+      await prepareEditor(); void openLaunchProject()
       return
     } catch { /* The editor remains available if runtime detection fails. */ }
   }
@@ -131,5 +134,5 @@ async function installUnsavedQuitGuard() {
 onBeforeUnmount(/** 卸载时释放选择详情、项目变更路由、快捷键及窗口服务。 */ () => { disposeSelectValueDetails(); disposeProjectMutationRouter(); if (editorShortcutsInstalled) window.removeEventListener('keydown', handleGlobalShortcut); disposeEditorWindow() })
 </script>
 
-<style>.app-loading { height: 100vh; display: grid; place-items: center; color: var(--text-muted); background: var(--bg-base); font-weight: 700; }</style>
+<style>.app-loading { height: var(--vh100); display: grid; place-items: center; color: var(--text-muted); background: var(--bg-base); font-weight: 700; }</style>
 

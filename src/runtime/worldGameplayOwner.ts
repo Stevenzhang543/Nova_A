@@ -27,6 +27,16 @@ export interface WorldGameplayState {
   originOffset: Vec2; originShiftCount: number; lastOriginShift: Vec2
   loadedChunks: number; usedMemoryMb: number; pendingStreams: number; lastError: string
 }
+/** Project `world` settings (debug views, streaming, budgets) as plain values; owners and the independent Player share it. */
+export function normalizeWorldGameplaySettings(value: unknown): Pick<WorldGameplayState, 'navigationDebug' | 'aiDebug' | 'simulationDebug' | 'areaDebug' | 'chunkDebug' | 'streamingEnabled' | 'memoryBudgetMb' | 'originShiftThreshold'> {
+  const source = value && typeof value === 'object' ? value as Record<string, unknown> : {}
+  return {
+    navigationDebug: source.navigationDebug === true, aiDebug: source.aiDebug === true, simulationDebug: source.simulationDebug === true,
+    areaDebug: source.areaDebug === true, chunkDebug: source.chunkDebug === true, streamingEnabled: source.streamingEnabled !== false,
+    memoryBudgetMb: Math.min(65_536, Math.max(1, finiteNumber(source.memoryBudgetMb, 256))),
+    originShiftThreshold: Math.min(1e12, Math.max(1, finiteNumber(source.originShiftThreshold, 10_000)))
+  }
+}
 export function createInitialWorldGameplayState(): WorldGameplayState { return {
   navigationDebug: false,
   aiDebug: false,
@@ -139,17 +149,7 @@ export class WorldGameplayOwner {
     }
   }
 
-  loadWorldGameplaySettings(value: unknown): void {
-    const source = value && typeof value === 'object' ? value as Record<string, unknown> : {}
-    this.state.navigationDebug = source.navigationDebug === true
-    this.state.aiDebug = source.aiDebug === true
-    this.state.simulationDebug = source.simulationDebug === true
-    this.state.areaDebug = source.areaDebug === true
-    this.state.chunkDebug = source.chunkDebug === true
-    this.state.streamingEnabled = source.streamingEnabled !== false
-    this.state.memoryBudgetMb = Math.min(65_536, Math.max(1, finiteNumber(source.memoryBudgetMb, 256)))
-    this.state.originShiftThreshold = Math.min(1e12, Math.max(1, finiteNumber(source.originShiftThreshold, 10_000)))
-  }
+  loadWorldGameplaySettings(value: unknown): void { Object.assign(this.state, normalizeWorldGameplaySettings(value)) }
 
   private async ensureOptionalPackages(): Promise<void> {
     if (this.ports.packages.aiEnabled() && !this.aiModule && !this.loadingAi) {
@@ -191,7 +191,10 @@ export class WorldGameplayOwner {
       const platform = character.applyPlatformVelocity && supported ? { x: velocity.x * fixedDelta, y: velocity.y * fixedDelta } : { x: 0, y: 0 }
       const requested = { x: character.requestedMotion.x + platform.x, y: character.requestedMotion.y + platform.y }
       const result = this.world.moveCharacterBox(entity, this.colliderSize(entity), requested, settings)
-      if (result && probe) { result.appliedMotion[0] += probe.appliedMotion[0]; result.appliedMotion[1] += probe.appliedMotion[1] }
+      if (result && probe) {
+        result.appliedMotion[0] += probe.appliedMotion[0]; result.appliedMotion[1] += probe.appliedMotion[1]
+        if (result.velocityMotion && probe.velocityMotion) { result.velocityMotion[0] += probe.velocityMotion[0]; result.velocityMotion[1] += probe.velocityMotion[1] }
+      }
       character.requestedMotion = { x: 0, y: 0 }
       if (!result) continue
       character.onFloor = result.onFloor; character.onWall = result.onWall; character.onCeiling = result.onCeiling
@@ -200,7 +203,11 @@ export class WorldGameplayOwner {
       character.ceilingNormal = { x: result.ceilingNormal[0], y: result.ceilingNormal[1] }
       character.platformVelocity = { x: result.platformVelocity[0], y: result.platformVelocity[1] }
       character.secondsSinceFloor = character.onFloor ? 0 : character.secondsSinceFloor + fixedDelta
-      character.motionVelocity = { x: result.appliedMotion[0] / fixedDelta, y: result.appliedMotion[1] / fixedDelta }
+      // 26.43: velocity comes from the requested motion that was travelled. Step lifts and floor
+      // snapping move the character but are not velocity; before 26.43 a 0.35 m step taken mid-air
+      // became 42 m/s upward at 120 Hz and scripts reading rigid_body().velocity_y kept rising.
+      const travelled = result.velocityMotion ?? result.appliedMotion
+      character.motionVelocity = { x: travelled[0] / fixedDelta, y: travelled[1] / fixedDelta }
       // The query already committed the collision-safe transform. A solver velocity here
       // would integrate the kinematic body a second time during the same fixed tick.
       entity.velocity = { x: 0, y: 0 }

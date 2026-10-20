@@ -105,6 +105,7 @@ export class GameplayComponentsOwner {
       character.motionVelocity.x = approach(character.motionVelocity.x, horizontal * platform.speed, platform.acceleration * control * dt)
       let vertical = this.verticalVelocity.get(entity.uuid) ?? 0
       if (character.onFloor && vertical < 0) vertical = 0
+      if (character.onCeiling && vertical > 0) vertical = 0
       if (input.performed[platform.jumpAction] || input.pressed[platform.jumpAction]) { if (character.onFloor || character.secondsSinceFloor <= character.coyoteTime) vertical = platform.jumpImpulse }
       vertical = Math.max(-platform.maximumFallSpeed, vertical - 9.80665 * dt); this.verticalVelocity.set(entity.uuid, vertical)
       character.requestedMotion.x += character.motionVelocity.x * dt; character.requestedMotion.y += vertical * dt; this.diagnostics.controllers++

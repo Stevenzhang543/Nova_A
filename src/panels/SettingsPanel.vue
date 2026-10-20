@@ -69,9 +69,20 @@
 
       <PhysicsSettingsPanel v-show="showCard('physicsSettings globalGravity collisionLayers physicsMaterials conformance', 'project')" />
 
-      <UiPropertySection :title="t('scriptingSettings')" v-show="showCard('scriptingSettings scriptApiVersion debugger hotReload formatting lint indexing testing remoteDebugging', 'project')" >
+      <UiPropertySection :title="t('scriptingSettings')" v-show="showCard('scriptingSettings globalScripts scriptApiVersion debugger hotReload formatting lint indexing testing remoteDebugging', 'project')" >
 
         <UiPropertyRow :label="t('scriptApiVersion')"><select v-model.number="scriptSettings.apiVersion"><option :value="2">API v2</option><option :value="1">API v1 · {{ t('compatibilityMode') }}</option></select></UiPropertyRow>
+        <div class="global-scripts" data-audit="global-scripts">
+          <div class="global-scripts-head"><strong>{{ t('globalScripts') }}</strong><button type="button" class="secondary-action" data-audit="add-global-script" @click="addGlobalScript"><EditorIcon name="add" /> {{ t('addGlobalScript') }}</button></div>
+          <p>{{ t('globalScriptsHint') }}</p>
+          <p v-if="!scriptSettings.globalScripts.length" class="global-scripts-empty">{{ t('noGlobalScripts') }}</p>
+          <div v-for="(entry, index) in scriptSettings.globalScripts" :key="index" class="global-script-row">
+            <label><span>{{ t('globalScriptName') }}</span><input :value="entry.name" maxlength="64" spellcheck="false" autocomplete="off" pattern="[A-Za-z_][A-Za-z0-9_]*" @change="renameGlobalScript(index, ($event.target as HTMLInputElement).value)"></label>
+            <label><span>{{ t('globalScriptAsset') }}</span><select :value="entry.scriptAsset ?? ''" @change="entry.scriptAsset = ($event.target as HTMLSelectElement).value || null; commitGlobalScripts()"><option value="">{{ scriptAssets.length ? '—' : t('noScriptAssets') }}</option><option v-for="asset in scriptAssets" :key="asset.uuid" :value="asset.uuid">{{ asset.path }}</option></select></label>
+            <label class="global-script-toggle"><span>{{ t('globalScriptEnabled') }}</span><UiToggle :model-value="entry.enabled" @update:model-value="entry.enabled = $event; commitGlobalScripts()" /></label>
+            <button type="button" class="icon-action" :aria-label="t('removeGlobalScript')" :title="t('removeGlobalScript')" @click="removeGlobalScript(index)"><EditorIcon name="close" /></button>
+          </div>
+        </div>
         <UiPropertyRow :label="t('scriptDebugger')"><UiToggle v-model="scriptSettings.debuggerEnabled" /></UiPropertyRow>
         <UiPropertyRow :label="t('exceptionPolicy')"><select v-model="scriptSettings.exceptionPolicy"><option value="never">{{ t('never') }}</option><option value="uncaught">{{ t('uncaught') }}</option><option value="all">{{ t('allExceptions') }}</option></select></UiPropertyRow>
         <UiPropertyRow :label="t('hotReloadPolicy')"><UiToggle v-model="scriptSettings.hotReloadEnabled" /></UiPropertyRow>
@@ -220,6 +231,25 @@ import { openEditorTool } from '../editor/workspaces'
 import PhysicsSettingsPanel from '../components/PhysicsSettingsPanel.vue'
 import DeviceInputPanel from '../components/DeviceInputPanel.vue'
 import { scriptProjectSettings as scriptSettings } from '../runtime/scriptSettings'
+import { normalizeGlobalScripts, nextGlobalScriptName, MAX_GLOBAL_SCRIPTS } from '../runtime/globalScriptSettings'
+import { assetState } from '../assets/AssetDatabase'
+
+/** 26.43 global scripts: script assets that can be chosen, and list edits that keep names unique and valid. */
+const scriptAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'script' || asset.assetType === 'visualScript').map(asset => ({ uuid: asset.uuid, path: asset.path })).sort((a, b) => a.path.localeCompare(b.path)))
+function commitGlobalScripts() { scriptSettings.globalScripts = normalizeGlobalScripts(scriptSettings.globalScripts); pushHistory('Edit global scripts') }
+function addGlobalScript() {
+  if (scriptSettings.globalScripts.length >= MAX_GLOBAL_SCRIPTS) return
+  scriptSettings.globalScripts = [...scriptSettings.globalScripts, { name: nextGlobalScriptName(scriptSettings.globalScripts), scriptAsset: scriptAssets.value[0]?.uuid ?? null, enabled: true }]
+  commitGlobalScripts()
+}
+function renameGlobalScript(index: number, value: string) {
+  const name = value.trim().replace(/[^A-Za-z0-9_]/g, '_').replace(/^(?=[0-9])/, '_').slice(0, 64)
+  const others = scriptSettings.globalScripts.filter((_, other) => other !== index)
+  const entry = scriptSettings.globalScripts[index]
+  if (entry && name) entry.name = others.some(item => item.name.toLowerCase() === name.toLowerCase()) ? nextGlobalScriptName(others, name) : name
+  commitGlobalScripts()
+}
+function removeGlobalScript(index: number) { scriptSettings.globalScripts = scriptSettings.globalScripts.filter((_, other) => other !== index); commitGlobalScripts() }
 import { applyCreatorPerformanceProfile } from '../runtime/creatorLearning'
 
 /** 切换明暗主题，选择浅色时关闭高对比模式。 */ function setTheme(theme: ThemeMode) {
@@ -328,6 +358,17 @@ watch(/* 返回 prefs.locale 的当前值。 */ () => prefs.locale, /** 偏好�
 </script>
 
 <style scoped>
+/* 26.43 global scripts: one row per script; fields wrap on narrow panels and iPad portrait. */
+.global-scripts{display:grid;gap:var(--ui-field-gap);padding-block:var(--ui-field-gap);border-block-end:var(--ui-border-width) solid var(--border-separator)}
+.global-scripts-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--ui-control-gap)}
+.global-scripts-head strong{font-size:var(--type-body);color:var(--text-primary)}
+.global-script-row{min-width:0;display:flex;flex-wrap:wrap;align-items:flex-end;gap:var(--ui-control-gap)}
+.global-script-row>label{min-width:0;display:grid;gap:var(--ui-label-control-gap);flex:1 1 calc(120px * var(--ui-scale))}
+.global-script-row>label:nth-child(2){flex:2 1 calc(200px * var(--ui-scale))}
+.global-script-row>label>span{color:var(--text-muted);font-size:var(--type-caption)}
+.global-script-row input,.global-script-row select{min-width:0;width:100%}
+.global-script-row>.global-script-toggle{flex:0 0 auto;justify-items:start}
+.global-script-row>.icon-action{flex:0 0 var(--ui-control-height)}
 .matrix-card { grid-column: 1 / -1; }.related-tools .secondary-action{ margin-top: 0;}.related-tools p{ margin-left: 0;}
 .icon-action { padding: 0; border: 1px solid var(--border-subtle); color: var(--text-muted); background: var(--surface-3); width: var(--ui-control-height); height: var(--ui-control-height); min-height: var(--ui-control-height); min-width: var(--ui-control-height); border-radius: var(--radius-control); }
 .icon-action.danger:hover { color: var(--danger); border-color: var(--danger); }

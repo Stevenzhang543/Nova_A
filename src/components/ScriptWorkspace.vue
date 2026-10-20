@@ -2,8 +2,8 @@
 <template>
   <section class="script-workspace">
     <div class="logic-mode" :aria-busy="switching" :inert="switching || undefined">
-      <UiTabs class="logic-tabs" :aria-label="t('logicAuthoringMode')" :items="modeTabs" :model-value="studio.mode" @update:model-value="setMode($event as 'code' | 'graph' | 'events')" />
-      <details data-ui-motion-disclosure class="logic-help"><summary>{{ t('help') }}</summary><p>{{ studio.mode === 'graph' ? t('visualGraphContract') : studio.mode === 'events' ? t('eventSheetContract') : t('rhaiContract') }}</p></details>
+      <UiTabs class="logic-tabs" :aria-label="t('logicAuthoringMode')" :items="modeTabs" :model-value="studio.mode" @update:model-value="setMode($event as LogicMode)" />
+      <details data-ui-motion-disclosure class="logic-help"><summary>{{ t('help') }}</summary><p>{{ studio.mode === 'blocks' ? blocksCopy.ui.hint : studio.mode === 'graph' ? t('visualGraphContract') : studio.mode === 'events' ? t('eventSheetContract') : t('rhaiContract') }}</p></details>
     </div>
     <section v-if="preview" class="conversion-review" :aria-label="copy.title">
       <div class="conversion-review-actions"><UiButton v-if="conversionGate(preview.assessment) === 'review'" :disabled="switching" variant="primary" @click="continueConversion">{{ copy.continue }}</UiButton><UiButton @click="preview = null">{{ copy.cancel }}</UiButton></div>
@@ -13,7 +13,8 @@
     <KeepAlive>
       <ScriptStudio v-if="studio.mode === 'code'" id="logic-authoring-panel" role="tabpanel" aria-labelledby="logic-code-tab" ref="codeEditor" class="logic-editor" @navigate="navigate" />
       <VisualGraphEditor v-else-if="studio.mode === 'graph'" id="logic-authoring-panel" role="tabpanel" aria-labelledby="logic-graph-tab" ref="graphEditor" class="logic-editor" @navigate="navigate" />
-      <EventSheetEditor v-else ref="eventEditor" id="logic-authoring-panel" role="tabpanel" aria-labelledby="logic-events-tab" class="logic-editor" />
+      <EventSheetEditor v-else-if="studio.mode === 'events'" ref="eventEditor" id="logic-authoring-panel" role="tabpanel" aria-labelledby="logic-events-tab" class="logic-editor" />
+      <BlockScriptEditor v-else id="logic-authoring-panel" role="tabpanel" aria-labelledby="logic-blocks-tab" class="logic-editor" @open-code="setMode('code')" />
     </KeepAlive>
   </section>
 </template>
@@ -26,6 +27,9 @@ import ScriptStudio from './ScriptStudio.vue'
 import VisualGraphEditor from './VisualGraphEditor.vue'
 import EventSheetEditor from './EventSheetEditor.vue'
 import ScriptConversionPanel from './ScriptConversionPanel.vue'
+import BlockScriptEditor from './blocks/BlockScriptEditor.vue'
+import { blockCopy } from '../visual/blockScriptCopy'
+import { isBlockScriptSource } from '../visual/blockScript'
 import { preferencesState } from '../store/preferences'
 import { acceptsConversionReview, conversionCopy, conversionGate, saveBeforeNavigation, type ConversionNavigation, type ConversionSnapshot, type ConversionSpan } from '../editor/scriptConversionPresentation'
 import { graphStudioState as studio } from '../visual/graphStudioState'
@@ -37,7 +41,10 @@ import { openGraphAsset, queueInitialGraphLayout } from '../visual/graphStudioSt
 import { parseGraphDocument } from '../visual/graphTypes'
 import { addEditorLog } from '../store/editor'
 import { readEventSheet } from '../runtime/eventSheets'
+type LogicMode = 'code' | 'graph' | 'events' | 'blocks'
+const blocksCopy = computed(() => blockCopy(preferencesState.locale))
 const modeTabs = computed(() => [
+  { id: 'blocks', label: blocksCopy.value.ui.title, icon: 'list' as const, tabId: 'logic-blocks-tab', controls: 'logic-authoring-panel' },
   { id: 'code', label: t('rhaiCode'), icon: 'script' as const, tabId: 'logic-code-tab', controls: 'logic-authoring-panel' },
   { id: 'graph', label: t('visualGraph'), icon: 'graph' as const, tabId: 'logic-graph-tab', controls: 'logic-authoring-panel' },
   { id: 'events', label: t('eventSheet'), icon: 'events' as const, tabId: 'logic-events-tab', controls: 'logic-authoring-panel' },
@@ -49,7 +56,7 @@ const eventEditor = ref<{ requestLeave: () => Promise<boolean> } | null>(null)
 const switching = ref(false), switchError = ref(''), preview = shallowRef<ConversionSnapshot | null>(null)
 const copy = computed(/* 返回 conversionCopy[preferencesState.locale] 的当前值。 */ () => conversionCopy[preferencesState.locale])
 let pendingNavigation: ConversionNavigation | undefined
-/** 读取当前代码或图编辑器的转换快照。 */ function currentSnapshot() { return studio.mode === 'code' ? codeEditor.value?.getConversionSnapshot() : graphEditor.value?.getConversionSnapshot() }
+/** 读取当前代码或图编辑器的转换快照（积木与事件表没有转换快照）。 */ function currentSnapshot() { return studio.mode === 'code' ? codeEditor.value?.getConversionSnapshot() : studio.mode === 'graph' ? graphEditor.value?.getConversionSnapshot() : null }
 /** 按诊断导航请求切换目标模式。 */ async function navigate(request: ConversionNavigation) { await setMode(request.target, false, request) }
 /** 预览目标与当前模式相同则定位当前内容。 */ function navigatePreview(request: ConversionNavigation) { if (request.target === studio.mode) focusNavigation(request) }
 /** 按目标模式定位源范围或图节点。 */ function focusNavigation(request: ConversionNavigation) { if (request.target === 'code') codeEditor.value?.focusSourceRange(request.span); else graphEditor.value?.focusConversionNode(request) }
@@ -57,18 +64,18 @@ let pendingNavigation: ConversionNavigation | undefined
   const accepted = acceptsConversionReview(currentSnapshot(),preview.value)
   await setMode('graph', accepted, pendingNavigation)
 }
-/** 防止并发切换，先审核转换并保存草稿；成功后切换及定位，失败保留编辑器并显示错误。 */ async function setMode(mode: 'code' | 'graph' | 'events', acceptedSourceBacked = false, request?: ConversionNavigation): Promise<void> {
+/** 防止并发切换，先审核转换并保存草稿；成功后切换及定位，失败保留编辑器并显示错误。 */ async function setMode(mode: LogicMode, acceptedSourceBacked = false, request?: ConversionNavigation): Promise<void> {
   if (switching.value) return
   if (mode === studio.mode) { if (request) focusNavigation(request); return }
   switchError.value = ''
   const snapshot = currentSnapshot()
-  if (mode !== 'events' && snapshot) {
+  if (mode !== 'events' && mode !== 'blocks' && snapshot) {
     const gate = conversionGate(snapshot.assessment, mode === 'code' || acceptedSourceBacked)
     if (gate !== 'ready') { preview.value = snapshot; pendingNavigation = request; return }
   }
   switching.value = true
   try {
-    const saved = studio.mode === 'graph' ? await saveBeforeNavigation(studio.activeGraphDirty,studio.saveActiveGraph) : studio.mode === 'code' ? await saveBeforeNavigation(scriptStudioState.activeDirty,scriptStudioState.saveActiveDraft) : await eventEditor.value?.requestLeave() ?? false
+    const saved = studio.mode === 'blocks' ? await saveBeforeNavigation(studio.activeBlocksDirty,studio.saveActiveBlocks) : studio.mode === 'graph' ? await saveBeforeNavigation(studio.activeGraphDirty,studio.saveActiveGraph) : studio.mode === 'code' ? await saveBeforeNavigation(scriptStudioState.activeDirty,scriptStudioState.saveActiveDraft) : await eventEditor.value?.requestLeave() ?? false
     if (!saved) { switchError.value = copy.value.failed; return }
     await switchSavedMode(mode)
     if (studio.mode === mode) {
@@ -78,10 +85,22 @@ let pendingNavigation: ConversionNavigation | undefined
   } catch (error) { switchError.value = error instanceof Error ? error.message : String(error); addEditorLog(switchError.value,'Script','error') }
   finally { switching.value = false }
 }
-/** 在已保存前提下解析事件表关联逻辑或代码图伙伴，按需同步新图并安排初始布局后打开目标。 */ async function switchSavedMode(mode: 'code' | 'graph' | 'events'): Promise<void> {
+/** 在已保存前提下解析事件表关联逻辑或代码图伙伴，按需同步新图并安排初始布局后打开目标。 */ async function switchSavedMode(mode: LogicMode): Promise<void> {
   // Every destination unmounts the active editor, including Event Sheets.
   // Complete its save before changing mode so failed validation retains edits.
   if (mode === 'events') { studio.mode = 'events'; return }
+  if (mode === 'blocks') {
+    // The open code script becomes the block script when Blocks wrote it.
+    const current = studio.mode === 'code' ? scriptStudioState.activeUuid || assetState.selectedGuid : ''
+    if (current && isBlockScriptSource(readTextAsset(current))) studio.activeBlockScriptUuid = current
+    studio.mode = 'blocks'
+    return
+  }
+  if (studio.mode === 'blocks') {
+    const uuid = studio.activeBlockScriptUuid
+    if (uuid && resolveAsset(uuid)) { assetState.selectedGuid = uuid; openScriptAsset(uuid) }
+    if (mode === 'code') { studio.mode = 'code'; return }
+  }
   if (studio.mode === 'events') {
     const sheet = readEventSheet(studio.activeEventSheetUuid)
     const logic = resolveAsset(sheet?.logicAsset)

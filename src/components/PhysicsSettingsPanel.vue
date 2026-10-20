@@ -25,6 +25,7 @@
         <UiPropertyRow :label="t('maxCatchUpSteps')"><NumericExpressionInput v-model="physics.globalSettings.profile.maxCatchUpSteps" :minimum="1" :maximum="240" :step="1" resource-key="project:physics.globalSettings.profile.maxCatchUpSteps" /></UiPropertyRow>
         <UiPropertyRow :label="t('physicsInterpolation')"><select v-model="physics.globalSettings.profile.interpolation"><option value="Interpolate">{{ t('interpolate') }}</option><option value="None">{{ t('noInterpolation') }}</option></select></UiPropertyRow>
         <UiPropertyRow :label="t('timerClock')" :help="t('timerClockHelp')"><select v-model="timerClock"><option value="frame">{{ t('timerClockFrame') }}</option><option value="fixed">{{ t('timerClockFixed') }}</option></select></UiPropertyRow>
+        <UiPropertyRow :label="t('eventDispatch')" :help="t('eventDispatchHelp')"><select v-model="eventDispatch"><option value="frame">{{ t('eventDispatchFrame') }}</option><option value="step">{{ t('eventDispatchStep') }}</option></select></UiPropertyRow>
         <UiPropertyRow :label="t('sleepLinearThreshold')"><div><NumericExpressionInput v-model="physics.globalSettings.profile.sleepLinearThreshold" :minimum="0" :step="0.0001" resource-key="project:physics.globalSettings.profile.sleepLinearThreshold" /><em>m/s</em></div></UiPropertyRow>
         <UiPropertyRow :label="t('sleepAngularThreshold')"><div><NumericExpressionInput v-model="physics.globalSettings.profile.sleepAngularThreshold" :minimum="0" :step="0.0001" resource-key="project:physics.globalSettings.profile.sleepAngularThreshold" /><em>rad/s</em></div></UiPropertyRow>
         <UiPropertyRow :label="t('timeToSleep')"><div><NumericExpressionInput v-model="physics.globalSettings.profile.timeToSleep" :minimum="0" :step="0.05" resource-key="project:physics.globalSettings.profile.timeToSleep" /><em>s</em></div></UiPropertyRow>
@@ -105,6 +106,11 @@ const timerClock = computed<'frame' | 'fixed'>({
   set: value => { if (value === 'fixed') physics.globalSettings.timerClock = 'fixed'; else delete physics.globalSettings.timerClock; pushHistory('Change timer clock') }
 })
 
+/** 26.43: collision/trigger callbacks once per frame (default, before 26.43) or after each physics step. */
+const eventDispatch = computed<'frame' | 'step'>({
+  get: () => physics.globalSettings.eventDispatch === 'step' ? 'step' : 'frame',
+  set: value => { if (value === 'step') physics.globalSettings.eventDispatch = 'step'; else delete physics.globalSettings.eventDispatch; pushHistory('Change collision callback timing') }
+})
 const form17 = useSimulationFormGuard17(commit)
 const tab = ref<'simulation' | 'layers' | 'materials' | 'conformance'>('simulation')
 const tabs = [{ id: 'simulation' as const, label: 'simulationSettings' as const }, { id: 'layers' as const, label: 'collisionLayers' as const }, { id: 'materials' as const, label: 'physicsMaterials' as const }, { id: 'conformance' as const, label: 'conformance' as const }]

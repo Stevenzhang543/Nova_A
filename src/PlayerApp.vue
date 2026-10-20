@@ -7,6 +7,8 @@
       <strong>{{ headless ? t('headlessServer') : 'Nova Player' }}</strong>
       <p>{{ errorMessage ? t('playerLoadFailed', { message: errorMessage }) : ready && headless ? t('headlessServerRunning') : t('playerLoading') }}</p>
     </section>
+    <!-- 26.43 web: browsers start a game in a page; one tap takes it full screen (not shown in the desktop app). -->
+    <button v-if="fullscreenAvailable && ready && !headless" class="player-fullscreen" :class="{ hidden: fullscreenControlHidden }" type="button" :aria-label="isFullscreen ? t('exitFullscreen') : t('enterFullscreen')" :title="isFullscreen ? t('exitFullscreen') : t('enterFullscreen')" data-testid="player-fullscreen" @click="toggleFullscreen"><svg viewBox="0 0 24 24" aria-hidden="true"><path v-if="!isFullscreen" d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" /><path v-else d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" /></svg></button>
     <button v-if="runtimeInstance" class="network-inspector-toggle" type="button" :aria-expanded="networkInspectorOpen" aria-controls="runtime-network-inspector" @click="networkInspectorOpen = !networkInspectorOpen"><span class="network-dot" :class="networkState?.status ?? 'connecting'" aria-hidden="true"></span>{{ networkInspectorOpen ? t('hideNetworkInspector') : t('showNetworkInspector') }}</button>
     <Transition name="network-inspector">
       <aside v-if="runtimeInstance && networkInspectorOpen" id="runtime-network-inspector" class="runtime-network-inspector" role="region" :aria-label="t('networkInspector')">
@@ -78,6 +80,29 @@ import { productionSettings, serializeProductionSettings } from './runtime/produ
 import { OFFICIAL_AI_PACKAGE_ID, OFFICIAL_NETWORKING_PACKAGE_ID, OFFICIAL_OBJECT_POOL_PACKAGE_ID, packageEnabled, packageState } from './runtime/packages'
 
 const ready = ref(false), headless = ref(false), errorMessage = ref('')
+/* 26.43 web: full-screen control for browser players (Fullscreen API, WebKit prefix on iPad Safari). It fades
+ * after three seconds without pointer activity and comes back on the next touch or mouse move. */
+type FullscreenDocument = Document & { webkitFullscreenElement?: Element | null; webkitFullscreenEnabled?: boolean; webkitExitFullscreen?: () => Promise<void> | void }
+type FullscreenElement = HTMLElement & { webkitRequestFullscreen?: () => Promise<void> | void }
+const fullscreenDocument = document as FullscreenDocument
+const fullscreenAvailable = !('__TAURI_INTERNALS__' in window) && Boolean(fullscreenDocument.fullscreenEnabled || fullscreenDocument.webkitFullscreenEnabled)
+const isFullscreen = ref(false), fullscreenControlHidden = ref(false)
+let fullscreenHideTimer = 0
+function readFullscreen(): void { isFullscreen.value = Boolean(fullscreenDocument.fullscreenElement || fullscreenDocument.webkitFullscreenElement) }
+function wakeFullscreenControl(): void { fullscreenControlHidden.value = false; window.clearTimeout(fullscreenHideTimer); fullscreenHideTimer = window.setTimeout(() => { fullscreenControlHidden.value = true }, 3_000) }
+async function toggleFullscreen(): Promise<void> {
+  try {
+    if (isFullscreen.value) await (fullscreenDocument.exitFullscreen ? fullscreenDocument.exitFullscreen() : fullscreenDocument.webkitExitFullscreen?.())
+    else { const root = document.documentElement as FullscreenElement; await (root.requestFullscreen ? root.requestFullscreen({ navigationUI: 'hide' }) : root.webkitRequestFullscreen?.()) }
+  } catch (error) { reportRecoverableError(error, 'Player full screen', 'Runtime') }
+  readFullscreen(); wakeFullscreenControl()
+}
+if (fullscreenAvailable) {
+  document.addEventListener('fullscreenchange', readFullscreen); document.addEventListener('webkitfullscreenchange', readFullscreen)
+  window.addEventListener('pointermove', wakeFullscreenControl, { passive: true }); window.addEventListener('pointerdown', wakeFullscreenControl, { passive: true })
+  wakeFullscreenControl()
+  onBeforeUnmount(() => { document.removeEventListener('fullscreenchange', readFullscreen); document.removeEventListener('webkitfullscreenchange', readFullscreen); window.removeEventListener('pointermove', wakeFullscreenControl); window.removeEventListener('pointerdown', wakeFullscreenControl); window.clearTimeout(fullscreenHideTimer) })
+}
 type RuntimeWorldLease = Awaited<ReturnType<typeof bootstrapRuntimeWorld>>
 const playerRuntime = shallowRef<GameplayRuntimeCore | null>(null)
 const runtimeView = shallowRef<RuntimeWorldView | null>(null)
@@ -337,12 +362,18 @@ onBeforeUnmount(/** 卸载时移除退出监听、清除服务器计时器并停
 </script>
 
 <style scoped>
-.player-root { position: relative; width: 100vw; height: 100vh; overflow: hidden; background: var(--bg-canvas); }
+/* 26.43 web: the game fills the visible viewport exactly (fixed to all four edges, so neither iPad
+ * Safari's toolbar nor a desktop scrollbar can push it out of view). */
+.player-root { position: fixed; inset: 0; overflow: hidden; background: var(--bg-canvas); touch-action: none; overscroll-behavior: none; }
 .player-status { width: 100%; height: 100%; display: grid; place-content: center; justify-items: center; gap: 10px; color: var(--text-primary); }
 .player-status p { max-width: 520px; margin: 0; color: var(--text-muted); text-align: center; }
 .player-status.error p,
 .inspector-error { color: var(--danger); }
 .player-mark { width: 48px; height: 48px; display: grid; place-items: center; border-radius: 14px; color: var(--accent-contrast); background: linear-gradient(145deg, var(--accent), var(--accent-strong)); font-size: 20px; font-weight: 800; box-shadow: var(--shadow-lg); }
+.player-fullscreen { position: fixed; z-index: 32; inset-block-start: max(12px, env(safe-area-inset-top)); inset-inline-start: max(12px, env(safe-area-inset-left)); width: 40px; height: 40px; min-height: 0; padding: 8px; display: grid; place-items: center; border: 1px solid color-mix(in srgb, var(--border-subtle) 80%, transparent); border-radius: 999px; color: var(--text-primary); background: color-mix(in srgb, var(--surface-2) 72%, transparent); box-shadow: var(--shadow-lg); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); transition: opacity .3s ease; touch-action: manipulation; }
+.player-fullscreen svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.player-fullscreen.hidden { opacity: 0; }
+.player-fullscreen.hidden:focus-visible { opacity: 1; }
 .network-inspector-toggle {
   position: fixed;
   z-index: 31;
@@ -377,6 +408,7 @@ onBeforeUnmount(/** 卸载时移除退出监听、清除服务器计时器并停
   padding: 11px;
   overflow: auto;
   overscroll-behavior: contain;
+  touch-action: pan-y;
   border: 1px solid color-mix(in srgb, var(--border-subtle) 80%, transparent);
   border-radius: 14px;
   color: var(--text-primary);
@@ -413,7 +445,7 @@ onBeforeUnmount(/** 卸载时移除退出监听、清除服务器计时器并停
 .network-inspector-enter-from,
 .network-inspector-leave-to { opacity: 0; transform: translateY(-6px) scale(.985); }
 @media (max-width: 520px) {
-  .runtime-network-inspector { inset-inline: 10px; width: auto; max-height: calc(100vh - 68px - env(safe-area-inset-bottom)); }
+  .runtime-network-inspector { inset-inline: 10px; width: auto; max-height: calc(var(--vh100) - 68px - env(safe-area-inset-bottom)); }
   .network-inspector-toggle { inset-inline-end: 10px; }
 }
 @media (prefers-reduced-motion: reduce) {

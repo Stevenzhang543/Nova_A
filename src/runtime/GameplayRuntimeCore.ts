@@ -33,7 +33,7 @@ import { ReplayOwner } from './replayOwner'
 import { ProductionNetworkOwner } from './productionNetworkOwner'
 import { recordScriptFunction, shouldRecordScriptFunction } from './profiler'
 import { synchronizePerformanceWorld } from './largeWorldPerformance'
-import type { GameplayScriptServices, ScriptBreakpoint, ScriptDebugCounterOwner, ScriptDebugCounterSession } from './scriptServices'
+import type { GameplayScriptServices, ScriptResource as ScriptResourceView, ScriptBreakpoint, ScriptDebugCounterOwner, ScriptDebugCounterSession } from './scriptServices'
 import { resolveEventHandlers } from './eventSheetReader'
 import { ScriptHotReloadOwner,type HotReloadPlan } from './scriptHotReloadOwner'
 import { recordScriptCoverage, resetScriptCoverage } from './scriptCoverage'
@@ -47,6 +47,8 @@ import { activeGameCamera, gameScreenToWorld, visibleWorldBounds } from '../rend
 import { parseScriptContract, validateScriptContract, type ScriptContractReport } from './scriptContracts'
 import { eventCallbackFamily, type ObjectEventKind } from './eventSheetReader'
 import { resolveProjectScriptBundle } from './scriptModules'
+import { createGlobalScriptHosts, removeGlobalScriptHosts, type GlobalScriptHost } from './globalScripts'
+import { RuntimeVideoOwner } from './videoOwner'
 
 type LifecycleFunction = 'awake' | 'start' | 'fixed_update' | 'update' | 'late_update' | 'on_destroy' | 'on_timer' | 'on_task' | 'on_signal'
 
@@ -145,6 +147,17 @@ type ScriptCommand =
   | { type: 'uiSetValue'; value: number }
   | { type: 'navigationSetTarget'; x: number; y: number }
   | { type: 'networkRpc'; name: string; payload: unknown }
+  | { type: 'callFunction'; target: string; generation: number; function: string; args: unknown }
+  | { type: 'callGlobal'; name: string; function: string; args: unknown }
+  | { type: 'callGroup'; group: string; function: string; args: unknown }
+  | { type: 'callLater'; function: string; seconds: number; args: unknown }
+  | { type: 'playSound'; asset: string; bus: string; volume: number; pitch: number; looped: boolean; tag: string }
+  | { type: 'stopSounds'; tag: string; fade: number }
+  | { type: 'playMusic'; asset: string; fade: number; volume: number }
+  | { type: 'stopMusic'; fade: number }
+  | { type: 'setBusVolume'; bus: string; volume: number }
+  | { type: 'playVideo'; asset: string; skippable: boolean; volume: number; looped: boolean }
+  | { type: 'stopVideo' }
 
 interface ScriptContact {
   otherEntity: string
@@ -154,6 +167,11 @@ interface ScriptContact {
 }
 
 interface ScriptEvent { name: string; source: string; payload: unknown }
+type ScriptCallTarget = { kind: 'entity'; handle: RuntimeEntityHandle } | { kind: 'global'; name: string } | { kind: 'group'; group: string }
+interface PendingScriptCall { source: string; target: ScriptCallTarget; function: string; args: unknown[] }
+/** Calls run per command flush before the rest wait for the next flush (guards call loops). */
+const MAX_SCRIPT_CALLS_PER_FLUSH = 512
+const MAX_PENDING_SCRIPT_CALLS = 10_000
 interface PendingDebugInvocation { entityUuid: string; scriptUuid: string; functionName: string; contact?: ScriptContact; event?: ScriptEvent; logicAsset?: string | null; callbackKind?: string }
 interface PendingGraphExecution {
   entityUuid: string
@@ -379,6 +397,11 @@ export class GameplayRuntime {
     const audioOwner=this.worldHost.createAudioOwner(this.scriptServices)
     if(!(audioOwner instanceof RuntimeAudioOwner)||audioOwner.world!==this.worldHost.state.world||audioOwner.resources!==this.scriptServices)throw new Error('AUDIO_OWNER_MISMATCH: Supply this World and Core catalog composition.')
     this.audioOwner=audioOwner
+    this.video=new RuntimeVideoOwner(
+      reference => { const record = this.scriptServices.resolveAsset(this.resolveMediaReference(reference)) as (ScriptResourceView & { source?: string }) | null; return record ? { source: record.source ?? '', assetType: record.assetType, path: record.path } : null },
+      (asset, reason, source) => { if (this.active) this.emitSignal('video.finished', { asset, reason }, '', source || 'video') },
+      (message, level) => this.worldHost.log(message, 'Script', level)
+    )
     const animationTimelineOwner=this.worldHost.createAnimationTimelineOwner(this.scriptServices,audioOwner)
     if(!(animationTimelineOwner instanceof AnimationTimelineOwner)||animationTimelineOwner.world!==this.worldHost.state.world||animationTimelineOwner.ports.resources!==this.scriptServices)throw new Error('ANIMATION_TIMELINE_OWNER_MISMATCH: Supply this World and Core catalog composition.')
     this.animationTimelineOwner=animationTimelineOwner
@@ -411,6 +434,15 @@ export class GameplayRuntime {
   private authoredEntities = new Map<string, { origin: 'scene' | 'runtime-spawned'; data: Record<string, unknown> }>()
   private compiledExports = new Map<string, ExportedProperty[]>()
   private pendingHandleResolutions = new Map<string, PendingEntityResolution>()
+  /** 26.43 cross-script calls (call_on/call_global/call_group/after), run at the next command flush. */
+  private pendingCalls: PendingScriptCall[] = []
+  private readonly laterCalls = new Map<string, { function: string; args: unknown[]; source: string }>()
+  private callLaterSerial = 0
+  private readonly reportedCallIssues = new Set<string>()
+  private globalScriptHosts: GlobalScriptHost[] = []
+  /** 26.43 play_video(): full-screen video over the game view; ends with the "video.finished" signal. */
+  readonly video: RuntimeVideoOwner
+  private mediaPathIndex: { revision: number; byPath: Map<string, string> } | null = null
   private invocationSerial = 0
   private sessionGeneration = 0
   private playSessionIdentity = 0
@@ -601,6 +633,7 @@ export class GameplayRuntime {
     this.worldGameplay.tileMapOwner.setTileAnimationTime(0); this.presentation.setRuntimeCaptionTime(null); this.presentation.setRuntimeCaptionTime(0)
     this.audio.stopAll();this.audio.begin(this.worldHost.state.audioSettings)
     this.audio.setTransportTime({seconds:0,playing:true,scale:this.worldHost.state.globalSettings.timeScale})
+    this.globalScriptHosts = createGlobalScriptHosts(this.worldHost.state.world, scriptProjectSettings.globalScripts, reference => this.scriptServices.resolveAsset(this.resolveMediaReference(reference))?.uuid ?? null, (message, level) => this.worldHost.log(message, 'Script', level))
     for (const entity of this.worldHost.state.world.entities) this.worldGameplay.entityLifetimes.begin(entity)
     this.worldGameplay.objectPoolOwner.setPoolRuntimeHooks({ clock: /* 返回 this.time.value.elapsed 的当前值。 */ () => this.time.value.elapsed, beforeRelease: /** 结构说明（自动提取）：匿名回调；输入 entities；直接调用 destroying.add、runDestructionCallbacks、clearEntityRuntimeState、destroying.delete；包含循环处理。 */ entities => {
       this.animationTimeline.markMembershipDirty()
@@ -699,6 +732,7 @@ export class GameplayRuntime {
     if (this.hostSuspended) return
     synchronizePerformanceWorld(this.worldHost.state.world.entities)
     if (this.active) this.flushHotReloads()
+    if (this.video.playing) { this.video.setViewport(viewport); this.video.setPaused(this.worldHost.state.playMode !== 'playing') }
     if (this.worldHost.state.playMode !== 'playing') {
       if (this.active && !this.inputSuspended) {
         this.suspendInputForHost('pause')
@@ -737,7 +771,7 @@ export class GameplayRuntime {
     scriptsMs += performance.now() - timerScriptsStarted
 
     let firstFixedStep = true
-    let fixedScriptsMs = 0
+    let fixedScriptsMs = 0, stepEventsDispatched = 0
     const physicsStarted = performance.now()
     Object.assign(this.worldHost.state.engineDiagnostics, this.worldHost.state.world.update(
       frameDelta,
@@ -779,13 +813,24 @@ export class GameplayRuntime {
         this.animationTimeline.timeline.update(this.worldHost.state.world.entities, fixedDelta)
         fixedScriptsMs += performance.now() - fixedScriptsStarted
       },
-      /** 结构说明（自动提取）：this.worldHost.state.world.update 回调；无显式参数；直接调用 this.worldHost.state.world.stateChecksum、completeReplayFixedStep、updateProductionRuntime。 */ () => { const checksum = this.worldHost.state.world.stateChecksum(); this.replay.completeReplayFixedStep(checksum); this.productionNetwork.updateProductionRuntime(this.worldHost.state.world.entities, this.time.value.fixedDelta, this.inputSnapshot, checksum) }
+      /** 结构说明（自动提取）：this.worldHost.state.world.update 回调；无显式参数；直接调用 this.worldHost.state.world.stateChecksum、completeReplayFixedStep、updateProductionRuntime。 */ (_fixedDelta, stepEvents) => {
+        const checksum = this.worldHost.state.world.stateChecksum(); this.replay.completeReplayFixedStep(checksum); this.productionNetwork.updateProductionRuntime(this.worldHost.state.world.entities, this.time.value.fixedDelta, this.inputSnapshot, checksum)
+        // 26.43 (eventDispatch 'step'): collision and trigger callbacks run after the step that produced
+        // them, before the next step's fixed_update, so a callback's commands apply to the next tick.
+        if (stepEvents) {
+          stepEventsDispatched += stepEvents.length
+          if (stepEvents.length) { const started = performance.now(); this.dispatchPhysicsEvents(stepEvents); fixedScriptsMs += performance.now() - started }
+        }
+      }
     ))
     const physicsAndFixedScriptsMs = performance.now() - physicsStarted
     scriptsMs += fixedScriptsMs
     this.inputSnapshot = frameInput
     const scriptsStarted = performance.now()
-    this.dispatchPhysicsEvents(this.worldHost.state.world.events)
+    // Frame dispatch (default): all of the frame's events now. Step dispatch: the events not handed out
+    // during the steps, i.e. the last step's (still before the next step's fixed_update).
+    const frameEvents = this.worldHost.state.globalSettings.eventDispatch === 'step' ? this.worldHost.state.world.events.slice(stepEventsDispatched) : this.worldHost.state.world.events
+    if (frameEvents.length || this.worldHost.state.globalSettings.eventDispatch !== 'step') this.dispatchPhysicsEvents(frameEvents)
     this.runPhase('update')
     this.flushEntityCommands()
     this.runPhase('late_update')
@@ -889,6 +934,8 @@ export class GameplayRuntime {
     for (const entity of ending) this.destroying.add(entity.uuid)
     for (const entity of ending) this.runDestructionCallbacks(entity)
     for (const entity of ending) this.worldGameplay.entityLifetimes.retire(entity)
+    this.pendingCalls = []; this.laterCalls.clear(); this.reportedCallIssues.clear(); this.video.dispose()
+    removeGlobalScriptHosts(this.worldHost.state.world, this.globalScriptHosts); this.globalScriptHosts = []
     this.releaseScriptDebugCounterSession()
     this.pendingDestroy.clear()
     this.pendingDespawn.clear()
@@ -1619,6 +1666,21 @@ export class GameplayRuntime {
     else if (command.type === 'startTask') { const accepted = this.time.startTask(entity.uuid, command.name, command.seconds); this.scriptDebugger.updateDebugTask({ id: `${entity.uuid}:${command.name}`, name: command.name, state: accepted ? 'waiting' : 'failed', entityUuid: entity.uuid, detail: accepted ? `Waiting ${command.seconds.toFixed(3)} s` : 'Task rejected by name, duration or queue limit' }) }
     else if (command.type === 'cancelTask') { this.time.cancelTask(entity.uuid, command.name); this.scriptDebugger.updateDebugTask({ id: `${entity.uuid}:${command.name}`, name: command.name, state: 'cancelled', entityUuid: entity.uuid, detail: 'Cancelled by script' }) }
     else if (command.type === 'emitSignal') this.emitSignal(command.name, command.payload, command.target, entity.uuid)
+    else if (command.type === 'callFunction') this.queueScriptCall(entity, { kind: 'entity', handle: { id: command.target, generation: command.generation } }, command.function, command.args)
+    else if (command.type === 'callGlobal') this.queueScriptCall(entity, { kind: 'global', name: command.name }, command.function, command.args)
+    else if (command.type === 'callGroup') this.queueScriptCall(entity, { kind: 'group', group: command.group }, command.function, command.args)
+    else if (command.type === 'callLater') {
+      const name = `call:${command.function}#${++this.callLaterSerial}`
+      if (this.time.startTask(entity.uuid, name, command.seconds)) this.laterCalls.set(`${entity.uuid}\u0000${name}`, { function: command.function, args: Array.isArray(command.args) ? command.args : [], source: entity.uuid })
+      else this.worldHost.log(`${entity.name}: after(${command.seconds}, "${command.function}") rejected by the timer queue limit`, 'Script', 'error')
+    }
+    else if (command.type === 'playSound') { if (!this.audio.playScriptSound(this.resolveMediaReference(command.asset), { bus: command.bus, volume: command.volume, pitch: command.pitch, loop: command.looped, tag: command.tag })) this.reportCallIssue(`sound:${command.asset}`, `${entity.name}: play_sound could not play “${command.asset}” (missing audio asset, voice limit or no audio output)`) }
+    else if (command.type === 'stopSounds') this.audio.stopScriptSounds(command.tag, command.fade)
+    else if (command.type === 'playMusic') { if (!this.audio.playMusic(this.resolveMediaReference(command.asset), { fade: command.fade, volume: command.volume })) this.reportCallIssue(`music:${command.asset}`, `${entity.name}: play_music could not play “${command.asset}” (missing audio asset or no audio output)`) }
+    else if (command.type === 'stopMusic') this.audio.stopMusic(command.fade)
+    else if (command.type === 'setBusVolume') { if (!this.audio.setBusVolume(command.bus, command.volume)) this.reportCallIssue(`bus:${command.bus}`, `${entity.name}: set_bus_volume: unknown mixer bus “${command.bus}”`) }
+    else if (command.type === 'playVideo') this.video.play(command.asset, { skippable: command.skippable, volume: command.volume, loop: command.looped }, entity.uuid)
+    else if (command.type === 'stopVideo') this.video.stop()
     else if (command.type === 'saveSet') this.saves.setSaveValue(command.key, command.value)
     else if (command.type === 'saveDelete') this.saves.deleteSaveValue(command.key)
     else if (command.type === 'saveClear') this.saves.clearSaveValues()
@@ -1688,9 +1750,73 @@ export class GameplayRuntime {
   /** 执行时调用 (despawn ? this.pendingDespawn : this.pendingDestroy).set(entity.id, entityLifetimeGeneration(entity))；不显式返回调用结果。 */ private queueEntityRemoval(entity: Entity, despawn: boolean): void { (despawn ? this.pendingDespawn : this.pendingDestroy).set(entity.id, this.worldGameplay.entityLifetimes.generation(entity)) }
   /** 结构说明（自动提取）：isRemovalPending；输入 entity；直接调用 inspectEntityLifetimeGeneration、pendingDestroy.get、pendingDespawn.get。 */ private isRemovalPending(entity: Entity): boolean { const generation = this.worldGameplay.entityLifetimes.inspect(entity); return generation !== null && (this.pendingDestroy.get(entity.id) === generation || this.pendingDespawn.get(entity.id) === generation) }
 
+  /** Scripts name media and global scripts by path ("Assets/Audio/hit.wav", "Audio/hit.wav") or by
+   * uuid/asset:// URI. Identity lookup keeps uuid semantics, so paths are mapped to uuids here. */
+  private resolveMediaReference(reference: string): string {
+    const revision = this.scriptServices.revision()
+    if (!this.mediaPathIndex || this.mediaPathIndex.revision !== revision) {
+      const byPath = new Map<string, string>()
+      for (const item of this.scriptServices.listIdentities()) byPath.set(item.path.replace(/\\/g, '/').toLowerCase(), item.uuid)
+      this.mediaPathIndex = { revision, byPath }
+    }
+    const path = reference.trim().replace(/\\/g, '/').replace(/^\.\//, '').toLowerCase()
+    return this.mediaPathIndex.byPath.get(path) ?? this.mediaPathIndex.byPath.get(`assets/${path}`) ?? reference
+  }
+
+  /** 26.43: queue call_on/call_global/call_group/after for the next command flush (a safe boundary). */
+  private queueScriptCall(source: Entity, target: ScriptCallTarget, functionName: string, args: unknown): void {
+    if (this.pendingCalls.length >= MAX_PENDING_SCRIPT_CALLS) { this.reportCallIssue('queue-full', `Script call queue is full (${MAX_PENDING_SCRIPT_CALLS}); ${source.name}.${functionName} was dropped.`); return }
+    this.pendingCalls.push({ source: source.uuid, target, function: functionName, args: Array.isArray(args) ? args : [] })
+  }
+
+  /** Reports a script call problem once per session and kind, so a per-frame call cannot flood the console. */
+  private reportCallIssue(key: string, message: string, level: 'warning' | 'error' = 'warning'): void {
+    if (this.reportedCallIssues.has(key)) return
+    if (this.reportedCallIssues.size < 512) this.reportedCallIssues.add(key)
+    this.worldHost.log(message, 'Script', level)
+  }
+
+  private resolveCallTargets(call: PendingScriptCall): Entity[] {
+    const entities = this.worldHost.state.world.entities
+    if (call.target.kind === 'entity') {
+      const target = this.worldGameplay.dynamicObjectsOwner.resolveRuntimeHandle(call.target.handle, this.pendingHandleResolutions)
+      return target ? [target] : []
+    }
+    if (call.target.kind === 'global') {
+      const name = call.target.name, host = this.globalScriptHosts.find(candidate => candidate.name === name)
+      const entity = host ? entities.find(candidate => candidate.uuid === host.uuid) : undefined
+      if (!entity) this.reportCallIssue(`global:${name}`, `call_global: no global script named “${name}” is running (Project Settings › Scripting › Global scripts).`, 'error')
+      return entity ? [entity] : []
+    }
+    const group = call.target.group
+    return entities.filter(entity => entity.groups.includes(group))
+  }
+
+  /** Runs queued calls in order; calls made by a called function join the same queue. */
+  private drainScriptCalls(): void {
+    let budget = MAX_SCRIPT_CALLS_PER_FLUSH, index = 0
+    while (index < this.pendingCalls.length && budget > 0) {
+      if (this.pendingDebugInvocation || this.pendingGraphExecution || this.scriptDebugger.state.paused) break
+      const call = this.pendingCalls[index++]
+      budget--
+      for (const target of this.resolveCallTargets(call)) {
+        if (!target.script2D) { if (call.target.kind !== 'group') this.reportCallIssue(`noscript:${target.uuid}`, `call_on: ${target.name} has no script, so ${call.function}() was not called.`); continue }
+        this.invalidateScriptWorld()
+        this.runEntityFunction(target, call.function, undefined, { name: call.function, source: call.source, payload: call.args }, false, undefined, false, 'call')
+        const asset = this.scriptServices.resolveAsset(target.script2D.scriptAsset)
+        const declared = asset ? this.declaredFunctions.get(asset.uuid) : undefined
+        if (declared && !declared.names.has(call.function)) this.reportCallIssue(`missing:${asset!.uuid}:${call.function}`, `call: ${asset!.path} has no function ${call.function}() (called on ${target.name}).`)
+      }
+      if (this.pendingDynamicCommands.length) this.flushDynamicCommands()
+    }
+    this.pendingCalls.splice(0, index)
+    if (this.pendingCalls.length && budget === 0) this.reportCallIssue('call-budget', `More than ${MAX_SCRIPT_CALLS_PER_FLUSH} script calls in one phase (a call loop?); the rest run at the next phase.`)
+  }
+
   /** 结构说明（自动提取）：flushEntityCommands；无显式参数；直接调用 flushDynamicCommands、slice、pendingDespawn.delete、this.worldHost.state.world.entities.find、inspectEntityLifetimeGeneration 等；包含循环处理。 */ private flushEntityCommands(): void {
     this.invalidateScriptWorld()
     this.flushDynamicCommands()
+    if (this.pendingCalls.length) this.drainScriptCalls()
     for (const [id, generation] of [...this.pendingDespawn].slice(0, MAX_SCRIPT_BRIDGE_COMMANDS)) {
       this.pendingDespawn.delete(id)
       const entity = this.worldHost.state.world.entities.find(/* 比较 candidate.id 与 id，返回严格相等的判断结果。 */ candidate => candidate.id === id)
@@ -1809,6 +1935,7 @@ export class GameplayRuntime {
     for (const key of this.initializedScriptInstances) if (key.startsWith(`${entity.uuid}:`)) this.initializedScriptInstances.delete(key)
     try { this.worldGameplay.retireWorldGameplayEntity(entity.uuid) } finally { this.worldGameplayOwner.componentsOwner.retireEntity(entity.uuid) }
     this.time.removeEntity(entity.uuid); this.awakened.delete(entity.uuid); this.started.delete(entity.uuid)
+    for (const key of this.laterCalls.keys()) if (key.startsWith(`${entity.uuid}\u0000`)) this.laterCalls.delete(key)
     for (const key of this.behaviorProperties.keys()) if (key.startsWith(`${entity.uuid}:`)) this.behaviorProperties.delete(key)
     for (const key of this.contractValidations.keys()) if (key.startsWith(`${entity.uuid}:`)) this.contractValidations.delete(key)
     this.signalQueue.dropTarget(entity.uuid)
@@ -2011,6 +2138,12 @@ export class GameplayRuntime {
     for (const timer of expired) {
       if (!this.time.consumeExpiration(timer)) continue
       const entity = this.worldHost.state.world.entities.find(/* 比较 candidate.uuid 与 timer.entityUuid，返回严格相等的判断结果。 */ candidate => candidate.uuid === timer.entityUuid)
+      const later = timer.kind === 'task' ? this.laterCalls.get(`${timer.entityUuid}\u0000${timer.name}`) : undefined
+      if (later) {
+        this.laterCalls.delete(`${timer.entityUuid}\u0000${timer.name}`)
+        if (entity) this.queueScriptCall(entity, { kind: 'entity', handle: { id: entity.uuid, generation: this.worldGameplay.entityLifetimes.generation(entity) } }, later.function, later.args)
+        continue
+      }
       if (entity && timer.kind === 'timer') { this.runEntityFunction(entity, 'on_timer', undefined, { name: timer.name, source: entity.uuid, payload: null }); this.runEventSheetHandlers(entity, 'timer', timer.name, 'on_timer', undefined, { name: timer.name, source: entity.uuid, payload: null }) }
       else if (entity) { this.scriptDebugger.updateDebugTask({ id: `${entity.uuid}:${timer.name}`, name: timer.name, state: 'completed', entityUuid: entity.uuid, detail: `Completed at frame ${this.time.value.frame}` }); this.runEntityFunction(entity, 'on_task', undefined, { name: timer.name, source: entity.uuid, payload: null }); this.runEventSheetHandlers(entity, 'task', timer.name, 'on_task', undefined, { name: timer.name, source: entity.uuid, payload: null }) }
     }

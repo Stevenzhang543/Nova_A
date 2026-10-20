@@ -91,8 +91,21 @@ const defaults: Preferences = {
   return value === 'light' ? 'light' : 'dark'
 }
 
-/* 根据 value === 'de' || value === 'zh' 的真假，分别返回 value 或 'en'。 */ function normalizedLocale(value: unknown): Locale {
-  return value === 'de' || value === 'zh' ? value : 'en'
+/* 根据 value === 'de' || value === 'zh' 的真假，分别返回 value 或 'en'；未保存过语言时跟随系统语言。 */ function normalizedLocale(value: unknown): Locale {
+  return value === 'de' || value === 'zh' || value === 'en' ? value : systemLocale()
+}
+
+/** 26.43: the first start follows the system language (Chinese and German systems no longer open in
+ * English, which on a new browser or iPad looked like text not matching the desktop app); a choice made
+ * in Settings is stored and always wins. */
+export function systemLocale(languages: readonly string[] = typeof navigator !== 'undefined' ? (navigator.languages?.length ? navigator.languages : [navigator.language]) : []): Locale {
+  for (const language of languages) {
+    const code = String(language ?? '').toLowerCase()
+    if (code.startsWith('zh')) return 'zh'
+    if (code.startsWith('de')) return 'de'
+    if (code.startsWith('en')) return 'en'
+  }
+  return 'en'
 }
 
 /** 逐项校验已保存偏好、迁移旧全屏及浅色高对比设置，并为缺失或非法值补默认值。 */ function normalizedPreferences(parsed: Partial<Preferences>, resetLegacyLightContrast: boolean): Preferences {
@@ -139,7 +152,7 @@ const defaults: Preferences = {
     if (resetLegacyLightContrast) localStorage.setItem(LIGHT_CONTRAST_MIGRATION_KEY, 'done')
     return normalizedPreferences(parsed, resetLegacyLightContrast)
   } catch {
-    return { ...defaults }
+    return { ...defaults, locale: systemLocale() }
   }
 }
 

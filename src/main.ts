@@ -16,6 +16,7 @@ import { installAppBranding } from './ui/branding'
 import { installPerformanceHost } from './platform/performanceHost'
 import { installEditorPerformanceState } from './editor/performanceStateAdapter'
 import { installEditorProductionState } from './editor/productionStateAdapter'
+import { installEditorPackageState } from './editor/packageStateAdapter'
 import { installEditorScriptState } from './editor/scriptStateAdapter'
 import { installEditorInputState } from './editor/inputStateAdapter'
 import { installEditorJobScheduler } from './editor/jobSchedulerAdapter'
@@ -27,6 +28,7 @@ import { setEditorRendererGpuDiagnosticsMode } from './editor/rendererAdapter'
 
 installEditorPerformanceState()
 installEditorProductionState()
+installEditorPackageState()
 installEditorScriptState()
 installEditorInputState()
 installCrashReporter('Nova_A Editor')

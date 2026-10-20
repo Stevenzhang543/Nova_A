@@ -575,10 +575,10 @@ impl Body {
         }
         self.velocity = self.velocity.add(impulse.mul(self.inv_mass));
         self.angular_velocity += radius.cross(impulse) * self.inv_inertia;
-        if impulse.length_squared() > 1.0e-16 {
-            self.sleeping = false;
-            self.sleep_timer = 0.0;
-        }
+        // 26.43: solver impulses do not reset sleep here. The support impulse that holds a
+        // resting body against gravity used to wake it every substep, so nothing ever slept.
+        // A sleeping body that is hit gains velocity and its island wakes at the end of the step
+        // (synchronize_sleep_islands); commands from scripts wake bodies through their records.
     }
 
     // 依据速度阈值和持续时间更新休眠状态。

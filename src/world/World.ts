@@ -24,6 +24,7 @@ import init, {
   migrate_project_json
 } from '../../nova_core/pkg/nova_core.js'
 import { invalidateHierarchyIndex, localPointToWorld, setWorldTransform, worldTransform } from './hierarchy'
+import { stableSinCos } from './stableTrig'
 import { TileMap2D } from './components'
 import { defaultPhysicsLayers, defaultPhysicsProfile, normalizePhysicsMaterial, normalizePhysicsProfile, stablePhysicsEventOrder, type PhysicsInterpolationMode, type PhysicsLayerDefinition, type PhysicsSimulationProfile2D } from '../runtime/physicsProduction'
 import { encodeColliderChildren, solverShapeArea, prepareColliderSet, type SolverColliderShape2D } from '../runtime/physicsGeometry'
@@ -48,6 +49,9 @@ export interface GlobalPhysicsSettings {
   profile: PhysicsSimulationProfile2D
   /** 26.42 S-2: clock that advances script timers. Missing means 'frame' (the behaviour before 26.42). */
   timerClock?: 'frame' | 'fixed'
+  /** 26.43: when collision/trigger callbacks run. Missing means 'frame' (after all of a frame's physics
+   * steps, the behaviour before 26.43); 'step' runs them after the physics step that produced them. */
+  eventDispatch?: 'frame' | 'step'
 }
 
 export interface EngineDiagnostics {
@@ -122,6 +126,10 @@ export interface CharacterMoveResult2D {
   onWall: boolean
   onCeiling: boolean
   slideCount: number
+  /** 26.43: requested motion actually travelled (slides included), without step lifts or floor snapping. */
+  velocityMotion?: [number, number]
+  /** 26.43: the character stood on a walkable floor before the move. */
+  groundedAtStart?: boolean
 }
 
 export interface PhysicsQueryHit2D {
@@ -498,7 +506,7 @@ export class World {
     isRunning: boolean,
     globalSettings: GlobalPhysicsSettings,
     beforeFixedStep?: (fixedDelta: number) => void,
-    afterFixedStep?: (fixedDelta: number) => void
+    afterFixedStep?: (fixedDelta: number, stepEvents?: RuntimePhysicsEvent[]) => void
   ): EngineDiagnostics {
     this.lastSettings = globalSettings
     if (!this.wasmLoaded || !this.runtime) return this.diagnostics
@@ -516,7 +524,11 @@ export class World {
           this.synchronizeRuntime(globalSettings)
           this.runtime.advance_fixed_tick(gravity, airFriction)
           this.readRuntimeState(1, globalSettings)
-          afterFixedStep?.(fixedDelta)
+          // Per-step dispatch hands each step but the last its own events (the next step's sync sends
+          // callback edits to the solver). The last step's events stay queued: the host dispatches them
+          // after this frame's presentation read, so that read cannot overwrite what a callback set.
+          // The frame's `events` lists all of them either way.
+          afterFixedStep?.(fixedDelta, globalSettings.eventDispatch === 'step' && step < steps - 1 ? this.drainStepEvents() : undefined)
         }
         this.runtime.complete_advance()
       } else {
@@ -922,7 +934,7 @@ export class World {
           x: descriptor.center.x * transform.scale.x,
           y: descriptor.center.y * transform.scale.y
         }
-        const cosine = Math.cos(transform.rotation), sine = Math.sin(transform.rotation)
+        const { sine, cosine } = stableSinCos(transform.rotation)
         const worldCenter = {
           x: transform.position.x + center.x * cosine - center.y * sine,
           y: transform.position.y + center.x * sine + center.y * cosine
@@ -999,11 +1011,21 @@ export class World {
     return view.length
   }
 
-  /** 读取求解诊断和事件，将运行句柄关联回实体或连接，稳定排序并发布物理遥测；格式错误只记录警告。 */ private readDiagnostics(): void {
-    if (!this.runtime) return
+  /** Events already handed out step by step this frame (eventDispatch 'step'); readDiagnostics prepends them. */
+  private stepEventBuffer: RuntimePhysicsEvent[] = []
+  /** Drains the events of the step that just ran, mapped to stable identities and ordered. */
+  private drainStepEvents(): RuntimePhysicsEvent[] {
+    if (!this.runtime) return []
     try {
-      this.diagnostics = JSON.parse(this.runtime.diagnostics_json()) as EngineDiagnostics
-      const rawEvents = JSON.parse(this.runtime.drain_events_json()) as RuntimePhysicsEvent[]
+      const events = this.mapRuntimeEvents(JSON.parse(this.runtime.drain_events_json()) as RuntimePhysicsEvent[])
+      if (this.stepEventBuffer.length < 100_000) this.stepEventBuffer.push(...events)
+      return events
+    } catch (error) {
+      console.warn('Nova_A received malformed runtime events', error)
+      return []
+    }
+  }
+  /** 把原生事件的刚体或关节句柄补充为项目稳定 UUID 并稳定排序。 */ private mapRuntimeEvents(rawEvents: RuntimePhysicsEvent[]): RuntimePhysicsEvent[] {
       const entityByHandle = new Map<number, Entity>()
       for (const entity of this.activeBodies) {
         const handle = this.bodyHandles.get(entity.id)
@@ -1014,13 +1036,22 @@ export class World {
         const handle = this.connectionHandles.get(`${record.connection.uuid}:${record.segment}`)
         if (handle !== undefined) connectionByHandle.set(handle, record.connection)
       }
-      this.events = stablePhysicsEventOrder(rawEvents.map(/** 把原生事件的刚体或关节句柄补充为项目稳定 UUID，保留原事件字段。 */ event => ({
+      return stablePhysicsEventOrder(rawEvents.map(/** 把原生事件的刚体或关节句柄补充为项目稳定 UUID，保留原事件字段。 */ event => ({
         ...event,
         firstEntityUuid: typeof event.first === 'number' ? entityByHandle.get(event.first)?.uuid : undefined,
         secondEntityUuid: typeof event.second === 'number' ? entityByHandle.get(event.second)?.uuid : undefined,
         entityUuid: typeof event.handle === 'number' && (event.type === 'bodySleeping' || event.type === 'bodyWoke') ? entityByHandle.get(event.handle)?.uuid : undefined,
         connectionUuid: typeof event.handle === 'number' && event.type === 'jointBroken' ? connectionByHandle.get(event.handle)?.uuid : undefined
       })))
+  }
+
+  /** 读取求解诊断和事件，将运行句柄关联回实体或连接，稳定排序并发布物理遥测；格式错误只记录警告。 */ private readDiagnostics(): void {
+    if (!this.runtime) return
+    try {
+      this.diagnostics = JSON.parse(this.runtime.diagnostics_json()) as EngineDiagnostics
+      const remaining = this.mapRuntimeEvents(JSON.parse(this.runtime.drain_events_json()) as RuntimePhysicsEvent[])
+      this.events = this.stepEventBuffer.length ? [...this.stepEventBuffer, ...remaining] : remaining
+      this.stepEventBuffer = []
       this.host.recordPhysicsTelemetry?.(this.entities, this.connections, this.events, this.diagnostics, this.lastSettings.tickRate, this.lastSettings.profile)
     } catch (error) {
       console.warn('Nova_A received malformed runtime diagnostics', error)

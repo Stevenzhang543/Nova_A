@@ -4,6 +4,7 @@ import { onPackageLifecycle } from './packages'
 import { addEditorLog } from '../store/editor'
 import { assetReference, resolveAsset } from '../assets/AssetDatabase'
 import { createPluginRuntimeOwner } from './pluginRuntimeOwner'
+import { setGraphPluginContributionSource } from '../visual/graphCatalogSources'
 
 export { NOVA_PLUGIN_API_VERSION, MAX_PLUGIN_BYTES, MAX_PLUGIN_CALL_MS, PLUGIN_API_MATRIX } from './pluginRuntimeOwner'
 export type { PluginPermission, PluginContributionKind, PluginContributionDescriptor, PluginContribution, PluginManifest } from './pluginRuntimeOwner'
@@ -18,6 +19,9 @@ export const pluginState = reactive({
   contributions: [] as Array<PluginContribution & { pluginId: string; pluginName: string }>,
   generation: 0, reloads: 0, unloads: 0, isolatedFailures: 0
 })
+
+// Visual graphs list this Editor's active plugin nodes.
+setGraphPluginContributionSource(() => pluginState.contributions)
 
 export const { pluginRuntime, normalizePluginManifest, preparePackagePluginManifest, refreshPluginContributions, setPluginSafeMode, loadPluginManifests, serializePluginManifests, validateWasmPluginPackage, instantiateWasmPlugin, attachPluginAsset, setPluginPermission } = createPluginRuntimeOwner({
   state: pluginState, log: addEditorLog, clock: performance, crypto, atob, assetReference, resolveAsset,

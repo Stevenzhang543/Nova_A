@@ -25,6 +25,11 @@ interface ActiveAudio {
   terminalRelease?: () => void
   pitchVariation: number
   volumeVariation: number
+  /** 26.43 script voices: playback-rate multiplier, gain before fades, stop tag and an active fade. */
+  rate?: number
+  baseGain?: number
+  tag?: string
+  fade?: { from: number; to: number; elapsed: number; duration: number; release: boolean }
 }
 
 export class AudioRuntime {
@@ -56,8 +61,13 @@ export class AudioRuntime {
   private lastUpdateAt = 0
   private lastContextTime = 0
   private lastUnderrunAt = 0
+  private lastContextRunning = false
   private voiceSerial = 0
   private manualLimitedVoices = 0
+  /** 26.43 runtime bus volume set by scripts (set_bus_volume); multiplies the authored bus gain. */
+  private busOverrides = new Map<string, number>()
+  private musicKey: string | null = null
+  private lastFadeAt = 0
   private integratedLoudnessEnergy = 0
   private integratedLoudnessSamples = 0
   readonly diagnostics: AudioRuntimeDiagnostics = { clock:{ticks:0,seconds:0,sample:0,sampleRate:48000,playing:false,scale:1},voiceClocks:{},activeVoices: 0, streamingVoices: 0, bufferedVoices: 0, contextState: 'unavailable', busMeters: {}, limitedVoices: 0, virtualVoices: 0, baseLatencyMs: null, outputLatencyMs: null, underruns: 0, deviceChanges: 0, lastDeviceChange: '', busMeterDetails: {}, clippingEvents: 0, loudnessDb: -120, momentaryLufs: -120, integratedLufs: -120, truePeakDb: -120, crestFactorDb: 0, stolenVoices: 0, failures: [], outputDevices: [], selectedOutputDevice: 'default', recoveryCount: 0 }
@@ -65,6 +75,7 @@ export class AudioRuntime {
   /** 结构说明（自动提取）：begin；输入 settings；直接调用 normalizeAudioSettings、refreshContextForSampleRate、ensureContext、recover、applyMix；写入 settings。 */ begin(settings: AudioProjectSettings): void {
     this.cancelPendingOutputDeviceRoute(true);this.lifecycleGeneration++
     this.settings = normalizeAudioSettings(settings)
+    this.busOverrides.clear(); this.musicKey = null; this.lastFadeAt = 0
     this.refreshContextForSampleRate(); this.ensureContext(); void this.recover(); this.applyMix()
   }
 
@@ -168,7 +179,10 @@ export class AudioRuntime {
       const component = entity.getComponent<AudioSource>('AudioSource')
       return entity.enabled && component?.enabled && (component.audioClip || component.playlist.length) ? [{ entity, component }] : []
     }).sort(/* 计算表达式 first.component.voicePriority - second.component.voicePriority 并返回结果，沿用操作数的原有类型规则。 */ (first, second) => first.component.voicePriority - second.component.voicePriority)
-    for(const voice of this.uiVoices.values()){this.enforceLoopBounds(voice);if(!playing)voice.element.pause();else if(voice.started&&!voice.completed&&voice.element.paused&&!voice.manuallyPaused)void voice.element.play().catch(/* 返回 undefined 的当前值。 */ ()=>undefined);this.setPlaybackRate(voice,this.transportScale);this.syncVoiceClock(voice,playing,1,'ui:'+voice.reference)}
+    const fadeDelta=playing&&this.lastFadeAt?Math.min(.25,Math.max(0,(updateAt-this.lastFadeAt)/1000)):0;this.lastFadeAt=updateAt
+    for(const [key,voice] of [...this.uiVoices]){
+      if(voice.fade){voice.fade.elapsed+=fadeDelta;const t=voice.fade.duration>0?Math.min(1,voice.fade.elapsed/voice.fade.duration):1;this.applyScriptVoiceGain(voice,voice.fade.from+(voice.fade.to-voice.fade.from)*t);if(t>=1){const release=voice.fade.release;voice.fade=undefined;if(release){this.releaseUiVoice(key);continue}}}
+      this.enforceLoopBounds(voice);if(!playing)voice.element.pause();else if(voice.started&&!voice.completed&&voice.element.paused&&!voice.manuallyPaused)void voice.element.play().catch(/* 返回 undefined 的当前值。 */ ()=>undefined);this.setPlaybackRate(voice,this.transportScale*(voice.rate??1));this.syncVoiceClock(voice,playing,voice.rate??1,'ui:'+voice.reference)}
     for (const { entity, component } of sources) {
       const busSettings = this.settings.mixer.buses.find(/* 比较 bus.id 与 component.bus，返回严格相等的判断结果。 */ bus => bus.id === component.bus) ?? this.settings.mixer.buses.find(/* 比较 bus.id 与 'SFX'，返回严格相等的判断结果。 */ bus => bus.id === 'SFX')!
       const busVoices = voicesByBus.get(busSettings.id) ?? 0
@@ -233,11 +247,14 @@ export class AudioRuntime {
     for (const uuid of [...this.active.keys()]) if (!live.has(uuid)) this.release(uuid)
     for (const uuid of [...this.polyphonic.keys()]) if (!live.has(uuid)) this.releasePolyphonic(uuid)
     for(const [uuid,voices] of this.polyphonic)for(const voice of [...voices])if(voice.completed&&!voice.element.loop)this.releasePolyphonicVoice(uuid,voice)
-    if (playing && this.context && this.active.size && this.lastUpdateAt > 0) {
+    // An underrun is a running audio clock that fell behind wall time. A suspended or interrupted context
+    // (no user gesture yet, tab hidden, iOS interruption) does not advance on purpose and is not counted.
+    const contextRunning = this.context?.state === 'running'
+    if (playing && this.context && contextRunning && this.lastContextRunning && this.active.size && this.lastUpdateAt > 0) {
       const wallDelta = (updateAt - this.lastUpdateAt) / 1000, contextDelta = this.context.currentTime - this.lastContextTime
       if (wallDelta < 1 && wallDelta > .08 && contextDelta < wallDelta * .35 && updateAt - this.lastUnderrunAt > 500) { this.diagnostics.underruns++; this.lastUnderrunAt = updateAt }
     }
-    this.lastUpdateAt = updateAt; this.lastContextTime = this.context?.currentTime ?? 0
+    this.lastUpdateAt = updateAt; this.lastContextTime = this.context?.currentTime ?? 0; this.lastContextRunning = contextRunning
     const sounding=new Map<string,number>();for(const voice of this.allVoices())if(playing&&voice.started&&!voice.completed&&!voice.manuallyPaused&&!voice.element.paused){const visited=new Set<string>();for(let id:string|null=voice.bus;id&&!visited.has(id);id=this.settings.mixer.buses.find(/* 比较 bus.id 与 id，返回严格相等的判断结果。 */ bus=>bus.id===id)?.parent??null){visited.add(id);sounding.set(id,(sounding.get(id)??0)+1)}}
     this.updateDucking(sounding); this.updateDiagnostics(limited, virtual)
   }
@@ -330,7 +347,55 @@ export class AudioRuntime {
     if(voice.gain)voice.gain.gain.value=volume;else element.volume=clamp(volume*this.fallbackBusGain(selected.id),1,0,1)
     const release=/* 调用 this.releaseUiVoice(key) 并返回调用结果。 */ ()=>this.releaseUiVoice(key);voice.terminalRelease=release;element.addEventListener('ended',release,{once:true});element.addEventListener('error',release,{once:true});void element.play().catch(release);return true
   }
-  /** 结构说明（自动提取）：releaseUiVoice；输入 key；直接调用 uiVoices.get、voice.element.pause、voice.element.removeEventListener、voice.element.removeAttribute、voice.element.load 等。 */ private releaseUiVoice(key:string):void{const voice=this.uiVoices.get(key);if(!voice)return;voice.element.pause();voice.element.removeEventListener('timeupdate',voice.timeUpdate);if(voice.terminalRelease){voice.element.removeEventListener('ended',voice.terminalRelease);voice.element.removeEventListener('error',voice.terminalRelease)}voice.element.removeAttribute('src');voice.element.load();voice.source?.disconnect();voice.gain?.disconnect();voice.panner?.disconnect();this.voicePositions.delete(voice);this.uiVoices.delete(key)}
+  /** 26.43 play_sound(): a one-shot or looping script voice on a mixer bus (falls back to SFX). */
+  playScriptSound(reference:string|null|undefined,options:{bus?:string;volume?:number;pitch?:number;loop?:boolean;tag?:string;fadeIn?:number;keyPrefix?:string}={}):string|null{
+    const asset=this.capabilities.resources.resolveAsset(reference);if(!asset||asset.assetType!=='audio'||!asset.source||typeof this.capabilities.platform.Audio==='undefined')return null
+    this.ensureContext();this.configureMixerGraph()
+    const buses=this.settings.mixer.buses,selected=buses.find(item=>item.id===options.bus)??buses.find(item=>item.id==='SFX')??buses[0]
+    if(!selected)return null
+    const all=this.allVoices().filter(voice=>voice.started&&!voice.completed&&!voice.manuallyPaused)
+    if(all.length>=this.settings.mixer.masterVoiceLimit||all.filter(voice=>voice.bus===selected.id).length>=selected.voiceLimit){this.manualLimitedVoices++;return null}
+    const element=this.createPlayback(asset.source,asset.settings.audioSettings.streaming),component=new AudioSource();component.bus=selected.id
+    const key=`${options.keyPrefix??'script'}:${this.voiceSerial++}`,normalization=asset.settings.audioSettings.normalize?asset.settings.audioSettings.normalizationGain:1
+    const voice:ActiveAudio={reference:reference!,bus:selected.id,element,source:null,gain:null,panner:null,started:true,manuallyPaused:false,completed:false,streaming:asset.settings.audioSettings.streaming,loopStart:asset.settings.audioSettings.trimStart,loopEnd:asset.settings.audioSettings.trimEnd||asset.duration,timeUpdate:()=>this.enforceLoopBounds(voice),pitchVariation:0,volumeVariation:0,rate:clamp(options.pitch??1,1,.25,4),baseGain:normalization*clamp(options.volume??1,1,0,4),tag:options.tag||undefined}
+    element.addEventListener('timeupdate',voice.timeUpdate);this.connect(component,voice);this.uiVoices.set(key,voice)
+    element.loop=options.loop===true;element.currentTime=voice.loopStart
+    if(!this.setPlaybackRate(voice,this.transportScale*(voice.rate??1))){this.releaseUiVoice(key);return null}
+    const fadeIn=Math.max(0,options.fadeIn??0)
+    if(fadeIn>0)voice.fade={from:0,to:1,elapsed:0,duration:fadeIn,release:false}
+    this.applyScriptVoiceGain(voice,fadeIn>0?0:1)
+    const release=()=>this.releaseUiVoice(key);voice.terminalRelease=release;element.addEventListener('ended',release,{once:true});element.addEventListener('error',release,{once:true});void element.play().catch(release);return key
+  }
+  /** stop_sounds(tag[, fade]): stops script voices with that tag (an empty tag stops every script sound). */
+  stopScriptSounds(tag:string,fade=0):number{
+    let count=0
+    for(const [key,voice] of [...this.uiVoices])if(key.startsWith('script:')&&(!tag||voice.tag===tag)){count++;this.fadeOutUiVoice(key,voice,fade)}
+    return count
+  }
+  /** play_music(asset, fade, volume): one music voice on the Music bus; a new track crossfades. */
+  playMusic(reference:string|null|undefined,options:{fade?:number;volume?:number}={}):boolean{
+    const fade=Math.max(0,options.fade??0),volume=clamp(options.volume??1,1,0,4),current=this.musicKey?this.uiVoices.get(this.musicKey):undefined
+    const asset=this.capabilities.resources.resolveAsset(reference)
+    if(current&&asset&&current.reference===reference&&!current.completed){const normalization=asset.settings.audioSettings.normalize?asset.settings.audioSettings.normalizationGain:1,level=(current.baseGain??1)>0?this.currentScriptVoiceLevel(current):0;current.baseGain=normalization*volume;current.fade={from:level,to:1,elapsed:0,duration:fade,release:false};return true}
+    if(current&&this.musicKey)this.fadeOutUiVoice(this.musicKey,current,fade)
+    const buses=this.settings.mixer.buses,bus=buses.some(item=>item.id==='Music')?'Music':buses.some(item=>item.id==='Master')?'Master':undefined
+    const key=this.playScriptSound(reference,{bus,volume,loop:true,fadeIn:fade,keyPrefix:'music'})
+    this.musicKey=key
+    return key!==null
+  }
+  stopMusic(fade=0):boolean{const key=this.musicKey,voice=key?this.uiVoices.get(key):undefined;if(!key||!voice)return false;this.fadeOutUiVoice(key,voice,fade);this.musicKey=null;return true}
+  /** set_bus_volume(bus, volume): runtime multiplier on the authored bus gain, reset when play starts. */
+  setBusVolume(bus:string,volume:number):boolean{
+    if(!this.settings.mixer.buses.some(item=>item.id===bus))return false
+    this.busOverrides.set(bus,clamp(volume,1,0,4));this.applyMix()
+    for(const voice of this.uiVoices.values())if(!voice.gain)this.applyScriptVoiceGain(voice,this.currentScriptVoiceLevel(voice))
+    return true
+  }
+  /** Current fade level (0..1) of a script voice. */
+  private currentScriptVoiceLevel(voice:ActiveAudio):number{if(!voice.fade)return 1;const t=voice.fade.duration>0?Math.min(1,voice.fade.elapsed/voice.fade.duration):1;return voice.fade.from+(voice.fade.to-voice.fade.from)*t}
+  private fadeOutUiVoice(key:string,voice:ActiveAudio,fade:number):void{if(fade<=0){this.releaseUiVoice(key);return}voice.fade={from:this.currentScriptVoiceLevel(voice),to:0,elapsed:0,duration:fade,release:true}}
+  private applyScriptVoiceGain(voice:ActiveAudio,level:number):void{const gain=(voice.baseGain??1)*clamp(level,1,0,1);if(voice.gain)voice.gain.gain.value=gain;else voice.element.volume=clamp(gain*this.fallbackBusGain(voice.bus),1,0,1)}
+  /** 结构说明（自动提取）：releaseUiVoice；输入 key；直接调用 uiVoices.get、voice.element.pause、voice.element.removeEventListener、voice.element.removeAttribute、voice.element.load 等。 */ private releaseUiVoice(key:string):void{const voice=this.uiVoices.get(key);if(!voice)return;if(this.musicKey===key)this.musicKey=null;voice.element.pause();voice.element.removeEventListener('timeupdate',voice.timeUpdate);if(voice.terminalRelease){voice.element.removeEventListener('ended',voice.terminalRelease);voice.element.removeEventListener('error',voice.terminalRelease)}voice.element.removeAttribute('src');voice.element.load();voice.source?.disconnect();voice.gain?.disconnect();voice.panner?.disconnect();this.voicePositions.delete(voice);this.uiVoices.delete(key)}
   /** 结构说明（自动提取）：createPlayback；输入 source、streaming；直接调用 BufferedAudioPlayback、Audio。 */ private createPlayback(source:string,streaming:boolean):AudioPlaybackElement{return !streaming&&this.context&&this.bufferCache?new BufferedAudioPlayback(this.context,source,this.bufferCache):new (this.capabilities.platform.Audio!)(source)}
   /** 结构说明（自动提取）：allVoices；无显式参数；直接调用 active.values、flat、polyphonic.values、map、timelineVoices.values 等。 */ private allVoices():ActiveAudio[]{return [...this.active.values(),...[...this.polyphonic.values()].flat(),...[...this.timelineVoices.values()].map(/* 返回 entry.voice 的当前值。 */ entry=>entry.voice),...this.uiVoices.values()]}
   /** 结构说明（自动提取）：setPlaybackRate；输入 voice、rate；直接调用 voice.element.pause、reportFailure、Error；写入 voice.element.playbackRate。 */ private setPlaybackRate(voice:ActiveAudio,rate:number):boolean{
@@ -433,7 +498,7 @@ export class AudioRuntime {
   }
   /** 结构说明（自动提取）：fallbackBusGain；输入 id；直接调用 settings.mixer.snapshots.find、Set、visited.has、visited.add、settings.mixer.buses.find 等；写入 gain、next；返回路径包含 gain；包含循环处理。 */ private fallbackBusGain(id:string):number{
     const snapshot=this.settings.mixer.snapshots.find(/* 比较 value.id 与 this.settings.mixer.activeSnapshot，返回严格相等的判断结果。 */ value=>value.id===this.settings.mixer.activeSnapshot),visited=new Set<string>();let gain=this.settings.masterVolume*(snapshot?.masterVolume??1),next:string|null=id
-    while(next&&!visited.has(next)){visited.add(next);const bus=this.settings.mixer.buses.find(/* 比较 value.id 与 next，返回严格相等的判断结果。 */ value=>value.id===next);if(!bus)break;if(bus.mute||!this.audibleBus(bus.id))return 0;gain*=(snapshot?.busGains[bus.id]??bus.gain)*this.automationGain(bus);next=bus.parent}return gain
+    while(next&&!visited.has(next)){visited.add(next);const bus=this.settings.mixer.buses.find(/* 比较 value.id 与 next，返回严格相等的判断结果。 */ value=>value.id===next);if(!bus)break;if(bus.mute||!this.audibleBus(bus.id))return 0;gain*=(snapshot?.busGains[bus.id]??bus.gain)*this.automationGain(bus)*(this.busOverrides.get(bus.id)??1);next=bus.parent}return gain
   }
   /** 结构说明（自动提取）：applyMix；无显式参数；直接调用 configureMasterOutput、settings.mixer.snapshots.find、Math.max、master.gain.setTargetAtTime、busOutputs.get 等；包含循环处理。 */ private applyMix(): void {
     if (!this.master || !this.context) return
@@ -443,7 +508,7 @@ export class AudioRuntime {
     this.master.gain.setTargetAtTime(this.settings.masterVolume * (snapshot?.masterVolume ?? 1), this.context.currentTime, transition)
     for (const bus of this.settings.mixer.buses) {
       const output = this.busOutputs.get(bus.id); if (!output) continue
-      const requested = (snapshot?.busGains[bus.id] ?? bus.gain) * this.automationGain(bus)
+      const requested = (snapshot?.busGains[bus.id] ?? bus.gain) * this.automationGain(bus) * (this.busOverrides.get(bus.id) ?? 1)
       const audible = !bus.mute && this.audibleBus(bus.id)
       output.gain.setTargetAtTime(audible ? requested : 0, this.context.currentTime, transition)
     }
@@ -454,7 +519,7 @@ export class AudioRuntime {
     const targets=new Map<string,{reduction:number;seconds:number}>()
     for(const rule of this.settings.mixer.ducking){if(!rule.enabled)continue;const active=(voicesByBus.get(rule.triggerBus)??0)>0,previous=targets.get(rule.targetBus)??{reduction:1,seconds:0};previous.reduction*=active?Math.pow(10,rule.reductionDb/20):1;previous.seconds=Math.max(previous.seconds,active?rule.attack:rule.release);targets.set(rule.targetBus,previous)}
     const snapshot=this.settings.mixer.snapshots.find(/* 比较 value.id 与 this.settings.mixer.activeSnapshot，返回严格相等的判断结果。 */ value=>value.id===this.settings.mixer.activeSnapshot)
-    for(const [id,target] of targets){const output=this.busOutputs.get(id),bus=this.settings.mixer.buses.find(/* 比较 value.id 与 id，返回严格相等的判断结果。 */ value=>value.id===id);if(!output||!bus)continue;const gain=!bus.mute&&this.audibleBus(id)?(snapshot?.busGains[id]??bus.gain)*this.automationGain(bus)*target.reduction:0;output.gain.setTargetAtTime(gain,this.context.currentTime,Math.max(.001,target.seconds/3))}
+    for(const [id,target] of targets){const output=this.busOutputs.get(id),bus=this.settings.mixer.buses.find(/* 比较 value.id 与 id，返回严格相等的判断结果。 */ value=>value.id===id);if(!output||!bus)continue;const gain=!bus.mute&&this.audibleBus(id)?(snapshot?.busGains[id]??bus.gain)*this.automationGain(bus)*(this.busOverrides.get(id)??1)*target.reduction:0;output.gain.setTargetAtTime(gain,this.context.currentTime,Math.max(.001,target.seconds/3))}
   }
 
   /** 结构说明（自动提取）：attenuation；输入 component、distance、minimum、maximum；直接调用 Math.pow、sort、component.customAttenuation.slice、Math.max、clamp；包含循环处理。 */ private attenuation(component: AudioSource, distance: number, minimum: number, maximum: number): number {

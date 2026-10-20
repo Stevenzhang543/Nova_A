@@ -27,7 +27,7 @@ import type { RuntimeWorldView, RuntimeWorldSurface } from '../runtime/runtimeWo
 import { reportRendererReset } from '../renderer/capabilities'
 import { renderWorld } from '../renderer/sceneRenderer'
 import { assetReference, resolveAsset } from '../assets/AssetDatabase'
-import { type CharacterBody2D, type Joint2D, type RectTransform, type TextInput, type TileMap2D } from '../world/components'
+import { type RectTransform, type TextInput, type TileMap2D } from '../world/components'
 import { gameplayRuntime as editorGameplayRuntime } from '../runtime/GameplayRuntime'
 import type { GameplayRuntime } from '../runtime/GameplayRuntimeCore'
 import { GameUiRuntime, gameUiRuntime as editorGameUiRuntime, type UiAccessibilityNode } from '../runtime/gameUi'
@@ -44,7 +44,7 @@ import { beginRenderGraph, captureRenderSurface, completeRenderGraph, createRend
 import { captureRenderTexture } from '../renderer/renderTextures'
 import { activeGameCameras, resetCameraSmoothing } from '../renderer/sceneRenderer'
 import { activeRenderQuality, renderingSettings } from '../renderer/renderSettings'
-import { prepareColliderSet } from '../runtime/physicsGeometry'
+import { drawPhysicsDebug as drawSharedPhysicsDebug } from '../renderer/physicsDebugDraw'
 import { recordEntityProperties } from '../editor/animationStudioState'
 import { captureVertexBaseline, restoreVertexBaseline, type VertexBaseline } from '../editor/vertexDrag'
 import { navigationPaths, worldGameplayState } from '../runtime/worldGameplay'
@@ -1255,108 +1255,12 @@ function rulerColors(): { band: string; tick: string; text: string; edge: string
   context.restore()
 }
 
-/** 按角度旋转碰撞形状局部点。 */ function rotateLocal(point: Vec2, angle: number): Vec2 {
-  const cosine = Math.cos(angle), sine = Math.sin(angle)
-  return { x: point.x * cosine - point.y * sine, y: point.x * sine + point.y * cosine }
-}
-
-/** 准备有效碰撞形状并生成带标识、传感器及物理层信息的世界轮廓。 */ function colliderOutlines(entity: Entity) {
-  const collider = entity.getCollider()
-  if (!collider?.enabled) return []
-  const prepared = prepareColliderSet(collider, !entity.isStatic && !entity.isKinematic)
-  return prepared.shapes.map(/** 补齐圆或矩形轮廓、闭合顶点并转换到世界空间。 */ shape => {
-    let authored = shape.points
-    if (!authored.length && shape.kind === 'Circle') authored = Array.from({ length: 49 }, /** 沿四十八段圆周采样局部椭圆边界。 */ (_, index) => { const angle = index / 48 * Math.PI * 2; return { x: Math.cos(angle) * shape.size.x * .5, y: Math.sin(angle) * shape.size.y * .5 } })
-    else if (!authored.length) authored = [{x:-shape.size.x*.5,y:-shape.size.y*.5},{x:shape.size.x*.5,y:-shape.size.y*.5},{x:shape.size.x*.5,y:shape.size.y*.5},{x:-shape.size.x*.5,y:shape.size.y*.5},{x:-shape.size.x*.5,y:-shape.size.y*.5}]
-    else authored = [...authored, authored[0]]
-    const points = authored.map(/** 先旋转平移形状顶点，再应用实体层级变换。 */ vertex => { const rotated=rotateLocal(vertex,shape.rotation); return localPointToWorld(entity,{x:shape.offset.x+rotated.x,y:shape.offset.y+rotated.y},world.entities) })
-    return { points, id: shape.id, sensor: shape.sensor, physicsLayer: shape.physicsLayer }
-  })
-}
-
-/** 按物理调试开关绘制轮廓、包围盒、质心、力速度、关节和接触信息。 */ function drawPhysicsDebug(context: CanvasRenderingContext2D) {
+/** 物理调试：共用绘制（src/renderer/physicsDebugDraw.ts）；场景视图只画当前图层。 */ function drawPhysicsDebug(context: CanvasRenderingContext2D) {
   if (!physicsDebugState.enabled) return
-  context.save()
-  context.lineWidth = 1.5 / camera.scale
-  for (const entity of world.entities) {
-    if (!entity.enabled || (editorState.currentPage === 'scene' && entity.layer !== editorState.activeLayer)) continue
-    const outlines = colliderOutlines(entity)
-    const allPoints = outlines.flatMap(/* 返回 outline.points 的当前值。 */ outline => outline.points)
-    if (!allPoints.length) continue
-    if (physicsDebugState.showSleepingBodies && entity.rigidBody.sleeping) {
-      context.fillStyle = 'rgba(92,156,255,.13)'
-      for (const { points } of outlines) { if(points.length<2)continue; context.beginPath(); context.moveTo(points[0].x, points[0].y); points.slice(1).forEach(/* 调用 context.lineTo(point.x, point.y) 并返回调用结果。 */ point => context.lineTo(point.x, point.y)); context.closePath(); context.fill() }
-    }
-    if (physicsDebugState.showColliders) {
-      for (const outline of outlines) {
-        const { points } = outline
-        if(points.length<2)continue
-        context.strokeStyle = physicsDebugState.colorByPhysicsLayer ? (state.globalSettings.layers[outline.physicsLayer]?.color ?? '#62d8a0') : outline.sensor ? '#f2b45f' : entity.rigidBody.sleeping ? '#669ce8' : '#62d8a0'
-        context.beginPath(); context.moveTo(points[0].x, points[0].y); points.slice(1).forEach(/* 调用 context.lineTo(point.x, point.y) 并返回调用结果。 */ point => context.lineTo(point.x, point.y)); context.stroke()
-        if (outlines.length > 1) { const center = points.reduce(/** 累加各点平均贡献以计算调试标签中心。 */ (sum, point) => ({ x: sum.x + point.x / points.length, y: sum.y + point.y / points.length }), { x: 0, y: 0 }); context.fillStyle = context.strokeStyle; context.font = `${10 / camera.scale}px ui-monospace, monospace`; context.fillText(`#${String(outline.id).slice(-5)}`, center.x + 3 / camera.scale, center.y - 3 / camera.scale) }
-      }
-    }
-    if (physicsDebugState.showAabbs) {
-      const xs = allPoints.map(/* 返回 point.x 的当前值。 */ point => point.x), ys = allPoints.map(/* 返回 point.y 的当前值。 */ point => point.y)
-      const left = Math.min(...xs), right = Math.max(...xs), bottom = Math.min(...ys), top = Math.max(...ys)
-      context.setLineDash([4 / camera.scale, 4 / camera.scale]); context.strokeStyle = '#b786f5'; context.strokeRect(left, bottom, right - left, top - bottom); context.setLineDash([])
-    }
-    const center = worldTransform(entity, world.entities).position
-    if (physicsDebugState.showCentersOfMass) {
-      const radius = 5 / camera.scale
-      context.beginPath(); context.arc(center.x, center.y, radius, 0, Math.PI * 2); context.strokeStyle = '#ffffff'; context.stroke()
-      context.beginPath(); context.moveTo(center.x - radius, center.y); context.lineTo(center.x + radius, center.y); context.moveTo(center.x, center.y - radius); context.lineTo(center.x, center.y + radius); context.strokeStyle = '#ff9f57'; context.stroke()
-    }
-    if (physicsDebugState.showVelocities && Math.hypot(entity.velocity.x, entity.velocity.y) > 1e-9) {
-      const scale = Math.min(80 / camera.scale, 12 / camera.scale * Math.log2(2 + Math.hypot(entity.velocity.x, entity.velocity.y)))
-      const length = Math.hypot(entity.velocity.x, entity.velocity.y), dx = entity.velocity.x / length * scale, dy = entity.velocity.y / length * scale
-      context.beginPath(); context.moveTo(center.x, center.y); context.lineTo(center.x + dx, center.y + dy); context.strokeStyle = '#55c8ff'; context.stroke()
-    }
-    if (physicsDebugState.showForces && Math.hypot(entity.force.x, entity.force.y) > 1e-9) {
-      const scale = Math.min(80 / camera.scale, 10 / camera.scale * Math.log2(2 + Math.hypot(entity.force.x, entity.force.y)))
-      const length = Math.hypot(entity.force.x, entity.force.y), dx = entity.force.x / length * scale, dy = entity.force.y / length * scale
-      context.beginPath(); context.moveTo(center.x, center.y); context.lineTo(center.x + dx, center.y + dy); context.strokeStyle = '#ff7f8a'; context.stroke()
-    }
-  }
-  if (physicsDebugState.showJointConstraints) {
-    const jointKinds = ['FixedJoint2D', 'WeldJoint2D', 'DistanceJoint2D', 'RopeJoint2D', 'RevoluteJoint2D', 'MotorJoint2D', 'PrismaticJoint2D', 'SpringJoint2D'] as const
-    context.strokeStyle = '#e6b35a'; context.setLineDash([5 / camera.scale, 3 / camera.scale])
-    for (const entity of world.entities) for (const kind of jointKinds) {
-      const joint = entity.getComponent<Joint2D>(kind)
-      const target = joint?.targetEntityUuid ? world.entities.find(/* 比较 candidate.uuid 与 joint.targetEntityUuid，返回严格相等的判断结果。 */ candidate => candidate.uuid === joint.targetEntityUuid) : null
-      if (!joint?.enabled || !target) continue
-      const first = localPointToWorld(entity, joint.anchor, world.entities), second = localPointToWorld(target, joint.connectedAnchor, world.entities)
-      context.beginPath(); context.moveTo(first.x, first.y); context.lineTo(second.x, second.y); context.stroke()
-    }
-    context.setLineDash([])
-  }
-  if (physicsDebugState.showCharacterContacts) {
-    for (const entity of world.entities) {
-      const character = entity.getComponent<CharacterBody2D>('CharacterBody2D')
-      if (!character?.enabled) continue
-      const position = worldTransform(entity, world.entities).position
-      const states = [[character.onFloor, character.floorNormal, '#70df9d'], [character.onWall, character.wallNormal, '#6cb5ff'], [character.onCeiling, character.ceilingNormal, '#ffbc68']] as const
-      for (const [active, normal, color] of states) {
-        if (!active) continue
-        context.beginPath(); context.moveTo(position.x, position.y); context.lineTo(position.x + normal.x * 30 / camera.scale, position.y + normal.y * 30 / camera.scale); context.strokeStyle = color; context.stroke()
-      }
-    }
-  }
-  if (physicsDebugState.showRopeNodes) {
-    context.fillStyle = '#8bb8ff'
-    for (const connection of world.connections) for (const node of connection.ropeNodes) { context.beginPath(); context.arc(node.position.x, node.position.y, 2.5 / camera.scale, 0, Math.PI * 2); context.fill() }
-  }
-  if (physicsDebugState.showContactPoints || physicsDebugState.showNormals) {
-    for (const event of world.events) {
-      if (!Array.isArray(event.point)) continue
-      const point = { x: Number(event.point[0]), y: Number(event.point[1]) }
-      if (physicsDebugState.showContactPoints) { context.beginPath(); context.arc(point.x, point.y, 4 / camera.scale, 0, Math.PI * 2); context.fillStyle = '#ff6b78'; context.fill() }
-      if (physicsDebugState.showNormals && Array.isArray(event.normal)) {
-        context.beginPath(); context.moveTo(point.x, point.y); context.lineTo(point.x + Number(event.normal[0]) * 24 / camera.scale, point.y + Number(event.normal[1]) * 24 / camera.scale); context.strokeStyle = '#ffdf73'; context.stroke()
-      }
-    }
-  }
-  context.restore()
+  drawSharedPhysicsDebug(context, {
+    entities: world.entities, connections: world.connections, events: world.events, layerColors: state.globalSettings.layers, pixelsPerUnit: camera.scale,
+    include: entity => !(editorState.currentPage === 'scene' && entity.layer !== editorState.activeLayer)
+  }, physicsDebugState)
 }
 
 /** Only a successful current Runtime caller may supply an input token; resize/manual redraws have none. */ function render(deltaSeconds = 0, consumedInputToken?: number) {

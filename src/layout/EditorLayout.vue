@@ -1,10 +1,10 @@
 <!-- 编辑器主布局：按需加载工作区，保留画布与检查器，并管理面板停靠和空闲预热。 -->
 <template>
-  <div class="editor-root" data-control-scope="editor-shell" :data-play-mode="physicsState.playMode" :data-chrome-idle="chromeIdle || undefined" :class="{ 'read-only': recoveryState.readOnly }" @contextmenu.prevent @click="closeContextMenu">
+  <div class="editor-root" data-control-scope="editor-shell" :data-play-mode="physicsState.playMode" :data-chrome-idle="chromeIdle || undefined" :data-layout="layoutMode" :data-compact-docks="compactDocks || undefined" :class="{ 'read-only': recoveryState.readOnly }" @contextmenu.prevent @click="closeContextMenu">
     <div v-if="recoveryState.readOnly" class="read-only-banner" role="status">{{ t('readOnlyRecoveryBanner') }}</div>
     <TopBar />
 
-    <div class="editor-main" :data-maximized-panel="workspaceState.maximizedPanel">
+    <div ref="editorMain" class="editor-main" :data-maximized-panel="workspaceState.maximizedPanel">
       <SideBar v-show="!state.distractionFree" :inert="Boolean(workspaceState.maximizedPanel)" />
       <div v-show="!state.distractionFree" class="dock-group left-dock" :class="{ split: workspaceState.splitDocking }" :data-drop-target="dragTarget === 'left'" @dragover="previewPanelDrop($event, 'left')" @dragleave="leavePanelDrop" @drop="dropPanel($event, 'left')">
         <template v-for="panel in workspaceState.panelOrder" :key="panel">
@@ -22,10 +22,13 @@
           <!-- The scene is the content; its controls float above it on glass instead of taking a row. -->
           <div v-show="state.currentPage === 'scene' && state.activeWorkspace !== 'ui' && displayedWorkspace === 'canvas'" class="viewport-chrome">
             <div class="viewport-chrome-start">
+              <UiButton v-if="hierarchyOverlay && !state.distractionFree" class="panel-toggle nv-glass nv-glass--capsule" :class="{ checked: overlayHierarchy }" icon="hierarchy" :label="t('toggleHierarchy')" :aria-pressed="overlayHierarchy" data-testid="toggle-hierarchy-overlay" @click="overlayHierarchy = !overlayHierarchy" />
               <SceneTabs v-show="state.activeWorkspace === 'design' && !state.distractionFree" class="nv-glass nv-glass--capsule" />
             </div>
             <ToolBar class="viewport-chrome-tools nv-glass nv-glass--capsule" />
-            <div class="viewport-chrome-end"><LayerBar class="nv-glass nv-glass--capsule" /></div>
+            <div class="viewport-chrome-end"><LayerBar class="nv-glass nv-glass--capsule" />
+              <UiButton v-if="inspectorOverlay && !state.distractionFree" class="panel-toggle nv-glass nv-glass--capsule" :class="{ checked: overlayInspector, 'has-selection': physicsState.selectedEntityIds.length > 0 }" icon="inspector" :label="t('toggleInspector')" :aria-pressed="overlayInspector" data-testid="toggle-inspector-overlay" @click="overlayInspector = !overlayInspector" />
+            </div>
           </div>
           <UiAsyncWorkspace :view="requestedWorkspace" :loaders="workspaceLoaders" @display="displayedWorkspace = $event" />
         </div>
@@ -68,6 +71,7 @@ import CreateObjectPalette from "../components/CreateObjectPalette.vue"
 import CreatorOnboarding from "../components/CreatorOnboarding.vue"
 import WorldCanvas from "../components/WorldCanvas.vue"
 import LayerBar from "../components/LayerBar.vue"
+import UiButton from '../ui/components/UiButton.vue'
 import UiMotionTransition from '../ui/components/UiMotionTransition.vue'
 import UiAsyncWorkspace from '../ui/components/UiAsyncWorkspace.vue'
 import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
@@ -94,8 +98,65 @@ const requestedWorkspace = computed(() => state.currentPage === 'manage' || stat
 const displayedWorkspace = ref('canvas')
 
 initializeEditorWorkspaces()
-const showHierarchy = computed(/** 仅在场景或游戏视图且开关启用时显示层级。 */ () => (state.currentPage === 'scene' || state.currentPage === 'game') && state.hierarchyVisible)
-const showInspector = computed(/** The inspector's empty state reserves its dock; selection must not resize the viewport. */ () => state.currentPage === 'scene' && state.inspectorVisible && state.activeWorkspace !== 'ui')
+/* 26.43 G1/web: three widths of the editor body (container measured, so window size, split view on
+ * iPad and the UI scale all count). Wide: both panels docked. Medium (iPad landscape, small laptop
+ * windows): the hierarchy stays docked but narrower and the inspector floats over the canvas. Narrow
+ * (iPad portrait, split view): both float. Floating panels open from toggles in the viewport and do not
+ * change the docked visibility saved for wide windows. */
+const editorMain = ref<HTMLElement | null>(null)
+const layoutMode = ref<'wide' | 'medium' | 'narrow'>('wide')
+// Wide windows under 1480 px keep both panels docked but narrower, so the canvas stays at least ~640 px.
+const compactDocks = ref(false)
+const hierarchyOverlay = computed(() => layoutMode.value === 'narrow')
+const inspectorOverlay = computed(() => layoutMode.value !== 'wide')
+const overlayHierarchy = ref(false), overlayInspector = ref(false)
+let layoutObserver: ResizeObserver | null = null
+function measureLayout(width: number): void {
+  const next = width >= 1240 ? 'wide' : width >= 900 ? 'medium' : 'narrow'
+  compactDocks.value = next === 'wide' && width < 1480
+  if (next === layoutMode.value) return
+  layoutMode.value = next
+  // Entering a narrower layout starts with the canvas uncovered.
+  overlayHierarchy.value = false; overlayInspector.value = false
+}
+onMounted(() => {
+  const element = editorMain.value
+  if (!element) return
+  measureLayout(element.getBoundingClientRect().width)
+  layoutObserver = new ResizeObserver(entries => { for (const entry of entries) measureLayout(entry.contentRect.width) })
+  layoutObserver.observe(element)
+})
+onBeforeUnmount(() => { layoutObserver?.disconnect(); layoutObserver = null })
+/* 26.43 G1: F6 / Shift+F6 move the keyboard between the title bar, hierarchy, viewport, inspector and
+ * bottom panel (whichever are shown), in reading order; the reached region shows a brief outline. */
+const REGION_SELECTORS = ['.top-bar', '.left-dock', '.hierarchy-float', '.editor-content', '.right-dock', '.inspector-float', '.bottom-dock, .editor-bottom-panel, .bottom-panel']
+const FOCUSABLE = 'button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), canvas[tabindex], [tabindex]:not([tabindex="-1"])'
+function visibleRegion(element: Element | null): element is HTMLElement { return element instanceof HTMLElement && element.getClientRects().length > 0 && !element.closest('[inert]') && element.offsetWidth > 0 && element.offsetHeight > 0 && Boolean(element.querySelector(FOCUSABLE) || element.matches('.editor-content')) }
+function editorRegions(): HTMLElement[] {
+  const root = editorMain.value?.closest('.editor-root')
+  if (!root) return []
+  return REGION_SELECTORS.map(selector => root.querySelector(selector)).filter(visibleRegion).filter((element, index, list) => list.findIndex(other => other.contains(element) || element.contains(other)) === index)
+}
+let regionCueTimer = 0
+function cycleRegion(event: KeyboardEvent): void {
+  if (event.key !== 'F6' || event.ctrlKey || event.altKey || event.metaKey || event.defaultPrevented) return
+  const regions = editorRegions()
+  if (!regions.length) return
+  event.preventDefault()
+  const current = regions.findIndex(region => region.contains(document.activeElement))
+  const next = regions[current < 0 ? (event.shiftKey ? regions.length - 1 : 0) : (current + (event.shiftKey ? regions.length - 1 : 1)) % regions.length]
+  const target = next.matches('.editor-content') ? next.querySelector<HTMLElement>('canvas[tabindex], canvas') : [...next.querySelectorAll<HTMLElement>(FOCUSABLE)].find(element => element.getClientRects().length > 0)
+  if (target && target.tabIndex < 0 && target instanceof HTMLCanvasElement) target.tabIndex = 0
+  ;(target ?? next).focus({ preventScroll: true })
+  for (const region of regions) region.classList.remove('region-cue')
+  next.classList.add('region-cue')
+  window.clearTimeout(regionCueTimer)
+  regionCueTimer = window.setTimeout(() => next.classList.remove('region-cue'), 900)
+}
+onMounted(() => window.addEventListener('keydown', cycleRegion))
+onBeforeUnmount(() => { window.removeEventListener('keydown', cycleRegion); window.clearTimeout(regionCueTimer) })
+const showHierarchy = computed(/** 仅在场景或游戏视图且开关启用时显示层级。 */ () => (state.currentPage === 'scene' || state.currentPage === 'game') && (hierarchyOverlay.value ? overlayHierarchy.value : state.hierarchyVisible))
+const showInspector = computed(/** The inspector's empty state reserves its dock; selection must not resize the viewport. */ () => state.currentPage === 'scene' && (inspectorOverlay.value ? overlayInspector.value : state.inspectorVisible) && state.activeWorkspace !== 'ui')
 watch(/** 收集面板可见性及页面作为最大化恢复依赖。 */ () => [showHierarchy.value,showInspector.value,state.bottomPanelVisible,state.bottomPanelOpen,state.currentPage], /** 当前最大化面板已不可用时恢复普通布局。 */ () => {
   const panel=workspaceState.maximizedPanel
   if(panel==='hierarchy'&&!showHierarchy.value || panel==='inspector'&&!showInspector.value || panel==='bottom'&&(!state.bottomPanelVisible||!state.bottomPanelOpen||['settings','manage','script'].includes(state.currentPage)))restorePanelLayout()
@@ -192,10 +253,43 @@ function leavePanelDrop(event: DragEvent) { if (!(event.currentTarget as HTMLEle
 .editor-root[data-play-mode='playing'] .editor-content::after { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--success) 70%, transparent); }
 .editor-root[data-play-mode='paused'] .editor-content::after { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--warning) 70%, transparent); }
 .persistent-viewport { position: absolute; inset: 0; contain: layout paint; isolation: isolate; }
+/* F6 region cue: a short outline on the region the keyboard just moved to. */
+.editor-root :deep(.region-cue) { outline: 2px solid var(--focus-ring, var(--accent)); outline-offset: -2px; }
+@media (prefers-reduced-motion: no-preference) { .editor-root :deep(.region-cue) { transition: outline-color var(--motion-fast) var(--ease-standard); } }
 .persistent-viewport.inactive { visibility: hidden; pointer-events: none; }
 .floating-dock { position: absolute; z-index: 520; width: min(360px, 35vw); height: min(620px, 72vh); max-height: calc(100% - 60px); display: flex; flex-direction: column; overflow: hidden; border: var(--ui-border-width) solid var(--border-subtle); border-radius: var(--radius-dialog); background: var(--surface-1); box-shadow: var(--shadow-lg); }
 .floating-dock > header { min-height: var(--ui-panel-header-height); padding: 0 var(--space-1) 0 var(--space-3); display: flex; align-items: center; justify-content: space-between; cursor: grab; border-bottom: var(--ui-border-width) solid var(--border-separator); }
 .floating-dock > :deep(.sidebar-container), .floating-dock > :deep(.config-wrapper) { width: 100% !important; max-width: none; height: auto; min-height: 0; flex: 1; }
 .hierarchy-float { left: var(--ui-rail-width); top: var(--space-3); }
 .inspector-float { right: var(--space-3); top: var(--space-3); }
+/* 26.43 G1/web layouts. Docked panels keep their saved widths when wide; medium narrows the hierarchy
+ * and floats the inspector; narrow floats both above the canvas, each at most half the body. */
+.panel-toggle { width: calc(var(--ui-large-height)); height: calc(var(--ui-large-height)); min-height: 0; padding: 0; border-radius: var(--radius-pill); color: var(--text-secondary); position: relative; }
+.panel-toggle.checked { color: var(--accent); }
+.panel-toggle.has-selection:not(.checked)::after { content: ''; position: absolute; inset-block-start: 6px; inset-inline-end: 6px; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+.viewport-chrome-start, .viewport-chrome-end { gap: var(--space-2); align-items: flex-start; }
+.editor-root[data-layout='medium'] .dock-group > :deep(.sidebar-container:not(.panel-maximized)) { width: min(var(--ui-sidebar-width), 236px) !important; }
+.editor-root[data-compact-docks] .dock-group > :deep(.sidebar-container:not(.panel-maximized)) { max-width: 240px !important; }
+.editor-root[data-compact-docks] .dock-group > :deep(.config-wrapper:not(.panel-maximized)) { max-width: 296px !important; }
+.editor-root:not([data-layout='wide']) .dock-group > :deep(.config-wrapper:not(.panel-maximized)),
+.editor-root[data-layout='narrow'] .dock-group > :deep(.sidebar-container:not(.panel-maximized)) {
+  /* Floating panels start under the viewport's control row, so their toggles stay reachable. */
+  position: absolute; z-index: 560; inset-block: calc(var(--ui-panel-gutter) + var(--ui-large-height) + 2 * var(--space-2) + 24px) var(--ui-panel-gutter);
+  width: min(340px, calc(50% - var(--ui-rail-width))) !important;
+  box-shadow: var(--shadow-lg), inset 0 0 0 var(--ui-border-width) var(--border-separator);
+}
+.editor-root:not([data-layout='wide']) .dock-group > :deep(.config-wrapper.right:not(.panel-maximized)),
+.editor-root[data-layout='narrow'] .dock-group > :deep(.sidebar-container.right:not(.panel-maximized)) { inset-inline-end: var(--ui-panel-gutter); }
+.editor-root:not([data-layout='wide']) .dock-group > :deep(.config-wrapper.left:not(.panel-maximized)),
+.editor-root[data-layout='narrow'] .dock-group > :deep(.sidebar-container.left:not(.panel-maximized)) { inset-inline-start: calc(var(--ui-rail-width) + 2 * var(--ui-panel-gutter)); }
+.editor-root:not([data-layout='wide']) .dock-group > :deep(.config-wrapper) .panel-resize-handle,
+.editor-root[data-layout='narrow'] .dock-group > :deep(.sidebar-container) .panel-resize-handle { display: none; }
+/* A narrow viewport (iPad portrait, split view) cannot hold the tools in the top row: they become a
+ * vertical capsule on the leading edge, under the scene tabs. */
+@container viewport (max-width: 760px) {
+  .viewport-chrome { flex-wrap: nowrap; }
+  .viewport-chrome-start, .viewport-chrome-end { min-width: 0; flex: 0 1 auto; }
+  .viewport-chrome-end { margin-inline-start: auto; }
+  .viewport-chrome-tools { position: absolute; inset-inline-start: 0; inset-block-start: calc(var(--ui-large-height) + var(--space-3)); }
+}
 </style>

@@ -11,6 +11,7 @@ export const editorIconPaths = {
   down: 'M5 9l7 7 7-7',
   grid: 'M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z',
   list: 'M3 5h1m4 0h13M3 12h1m4 0h13M3 19h1m4 0h13',
+  menu: 'M4 6h16M4 12h16M4 18h16',
   pause: 'M7 4v16M17 4v16',
   step: 'M5 4l11 8-11 8zM20 4v16',
   design: 'M12 3l9 9-9 9-9-9zM12 8l4 4-4 4-4-4z',

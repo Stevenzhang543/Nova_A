@@ -120,6 +120,7 @@ let recordsByUuid = new Map<string, AssetRecord>()
   if (mime.startsWith('image/') || ['png', 'jpg', 'jpeg', 'webp', 'gif', 'svg'].includes(extension)) return 'image'
   if (mime.startsWith('audio/') || ['wav', 'ogg', 'mp3', 'flac'].includes(extension)) return 'audio'
   if (mime.startsWith('font/') || ['ttf', 'otf', 'woff', 'woff2'].includes(extension)) return 'font'
+  if (mime.startsWith('video/') || ['mp4', 'webm', 'm4v', 'ogv', 'mov'].includes(extension)) return 'video'
   if (extension === 'nova-scene' || extension === 'scene') return 'scene'
   if (extension === 'nova-prefab' || extension === 'prefab') return 'prefab'
   if (extension === 'rhai' || mime === 'text/x-rhai') return 'script'

@@ -1,8 +1,11 @@
 /** 脚本项目设置：保存并规范语言、诊断与运行相关选项。 */
+import { normalizeGlobalScripts, type GlobalScriptEntry } from './globalScriptSettings'
 
 export interface ScriptProjectSettings {
   apiVersion: 1 | 2
   customSignals: string[]
+  /** 26.43 global (autoload) scripts started before the scene and kept across scene changes. */
+  globalScripts: GlobalScriptEntry[]
   maxConsoleEntries: number
   debuggerEnabled: boolean
   hotReloadEnabled: boolean
@@ -20,6 +23,7 @@ export interface ScriptProjectSettings {
 export let scriptProjectSettings: ScriptProjectSettings = {
   apiVersion: 2,
   customSignals: [],
+  globalScripts: [],
   maxConsoleEntries: 2000,
   debuggerEnabled: true,
   hotReloadEnabled: true,
@@ -59,6 +63,7 @@ export function installScriptProjectSettingsAdapter(adapter: (target: typeof scr
     customSignals: Array.isArray(item.customSignals)
       ? [...new Set(item.customSignals.filter(/* 比较 typeof value 与 'string'，返回严格相等的判断结果。 */ value => typeof value === 'string').map(/* 调用 value.trim().slice(0, 128) 并返回调用结果。 */ value => value.trim().slice(0, 128)).filter(Boolean))].slice(0, 256)
       : [],
+    globalScripts: normalizeGlobalScripts(item.globalScripts),
     maxConsoleEntries: Math.min(10_000, Math.max(100, Math.round(Number(item.maxConsoleEntries) || 2000))),
     debuggerEnabled: item.debuggerEnabled !== false,
     hotReloadEnabled: item.hotReloadEnabled !== false,

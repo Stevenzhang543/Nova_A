@@ -22,6 +22,12 @@ pub struct CharacterMoveResult {
     pub on_wall: bool,
     pub on_ceiling: bool,
     pub slide_count: u32,
+    /// 26.43: the part of `applied_motion` that came from the requested motion (slides included).
+    /// Step-up lifts and floor snapping are position corrections and are left out, so a caller
+    /// that derives a velocity from it (motion / dt) never turns a 0.35 m step into a launch.
+    pub velocity_motion: [f64; 2],
+    /// 26.43: the character stood on a walkable floor before this move (contact probe).
+    pub grounded_at_start: bool,
 }
 
 // 检查刚体层是否命中查询掩码。
@@ -487,6 +493,29 @@ impl PhysicsWorld {
         };
         let mut position = start;
         let mut remaining = requested;
+        let mut velocity_motion = Vec2::ZERO;
+        // 26.43: steps and floor snapping only apply to a character that already stands on a
+        // walkable floor and is not moving up (as in Rapier's autostep and Unity's step offset).
+        // Before 26.43 a jumping character whose feet hit the side of a box within the step
+        // height was lifted mid-air, and the lift reached scripts as upward velocity.
+        let grounded_at_start = requested.y <= EPSILON
+            && self
+                .shape_cast_excluding(
+                    [position.x, position.y],
+                    size,
+                    angle,
+                    [0.0, -1.0],
+                    margin * 4.0 + 1.0e-4,
+                    mask,
+                    Some(handle),
+                )
+                .is_some_and(/* 只有可行走的地面算作站立。 */ |hit| {
+                    Vec2::new(hit.normal[0], hit.normal[1])
+                        .normalized_or(Vec2::new(0.0, 1.0))
+                        .y
+                        >= slope_cosine
+                });
+        result.grounded_at_start = grounded_at_start;
 
         for _ in 0..maximum_slides {
             let distance = remaining.length();
@@ -505,12 +534,15 @@ impl PhysicsWorld {
             );
             let Some(hit) = hit else {
                 position = position.add(remaining);
+                velocity_motion = velocity_motion.add(remaining);
                 remaining = Vec2::ZERO;
                 break;
             };
             let travel = (hit.distance - margin).clamp(0.0, distance);
             position = position.add(direction.mul(travel));
+            velocity_motion = velocity_motion.add(direction.mul(travel));
             let normal = Vec2::new(hit.normal[0], hit.normal[1]).normalized_or(direction.neg());
+            let hit_wall = normal.y < slope_cosine && normal.y > -slope_cosine;
             if normal.y >= slope_cosine {
                 result.on_floor = true;
                 result.floor_normal = [normal.x, normal.y];
@@ -534,28 +566,38 @@ impl PhysicsWorld {
             result.slide_count = result.slide_count.saturating_add(1);
 
             let untravelled = direction.mul((distance - travel).max(0.0));
-            if result.on_wall && step_height > EPSILON && direction.y.abs() < 0.5 {
-                let raised = position.add(Vec2::new(0.0, step_height));
-                let step_hit = self.shape_cast_excluding(
-                    [raised.x, raised.y],
+            if hit_wall
+                && grounded_at_start
+                && step_height > EPSILON
+                && direction.y.abs() < 0.5
+                && untravelled.length() > EPSILON
+            {
+                if let Some((landed, floor)) = self.try_character_step(
+                    position,
+                    untravelled,
                     size,
                     angle,
-                    [direction.x, direction.y],
-                    untravelled.length(),
+                    step_height,
+                    margin,
+                    slope_cosine,
                     mask,
-                    Some(handle),
-                );
-                let ceiling_hit = self.shape_cast_excluding(
-                    [position.x, position.y],
-                    size,
-                    angle,
-                    [0.0, 1.0],
-                    step_height + margin,
-                    mask,
-                    Some(handle),
-                );
-                if step_hit.is_none() && ceiling_hit.is_none() {
-                    position = raised.add(untravelled);
+                    handle,
+                ) {
+                    position = landed;
+                    // The horizontal part is requested motion; the lift is a correction.
+                    velocity_motion = velocity_motion.add(Vec2::new(untravelled.x, 0.0));
+                    result.on_floor = true;
+                    result.floor_normal = floor.normal;
+                    if let Some(platform) = self
+                        .bodies
+                        .iter()
+                        .find(/* 台阶顶面所属刚体。 */ |record| record.handle == floor.handle)
+                    {
+                        result.platform_velocity = [
+                            finite_or(platform.values[4], 0.0),
+                            finite_or(platform.values[5], 0.0),
+                        ];
+                    }
                     remaining = Vec2::ZERO;
                     break;
                 }
@@ -572,7 +614,33 @@ impl PhysicsWorld {
             }
         }
 
-        if floor_snap > EPSILON && !result.on_floor && requested.y <= EPSILON {
+        // A character that touched a floor during the slides but walked off its edge is no longer
+        // on the floor; snapping below may put it back on a lower floor.
+        if result.on_floor
+            && self
+                .shape_cast_excluding(
+                    [position.x, position.y],
+                    size,
+                    angle,
+                    [0.0, -1.0],
+                    margin * 4.0 + 1.0e-4,
+                    mask,
+                    Some(handle),
+                )
+                .is_none()
+        {
+            result.on_floor = false;
+            result.floor_normal = [0.0, 0.0];
+            result.platform_velocity = [0.0, 0.0];
+        }
+        // Snapping keeps a walking character on slopes and steps down; it does not pull a
+        // falling character to the ground early. A move with no vertical part (an idle refresh
+        // after a teleport) may still snap, as before 26.43.
+        if floor_snap > EPSILON
+            && !result.on_floor
+            && requested.y <= EPSILON
+            && (grounded_at_start || requested.y.abs() <= EPSILON)
+        {
             if let Some(hit) = self.shape_cast_excluding(
                 [position.x, position.y],
                 size,
@@ -607,7 +675,69 @@ impl PhysicsWorld {
         result.position = [body_position.x, body_position.y];
         result.applied_motion = [position.x - start.x, position.y - start.y];
         result.remaining_motion = [remaining.x, remaining.y];
+        result.velocity_motion = [velocity_motion.x, velocity_motion.y];
         Ok(result)
+    }
+
+    // 26.43: 抬起台阶高度、前移剩余水平位移、再向下落到可行走的台阶顶面；任何一步受阻或落点不可行走则放弃台阶。
+    #[allow(clippy::too_many_arguments)]
+    fn try_character_step(
+        &self,
+        position: Vec2,
+        untravelled: Vec2,
+        size: [f64; 2],
+        angle: f64,
+        step_height: f64,
+        margin: f64,
+        slope_cosine: f64,
+        mask: u32,
+        handle: u32,
+    ) -> Option<(Vec2, PhysicsQueryHit)> {
+        let ceiling_hit = self.shape_cast_excluding(
+            [position.x, position.y],
+            size,
+            angle,
+            [0.0, 1.0],
+            step_height + margin,
+            mask,
+            Some(handle),
+        );
+        if ceiling_hit.is_some() {
+            return None;
+        }
+        let raised = position.add(Vec2::new(0.0, step_height));
+        let forward_length = untravelled.length();
+        let forward_direction = untravelled.mul(1.0 / forward_length);
+        if self
+            .shape_cast_excluding(
+                [raised.x, raised.y],
+                size,
+                angle,
+                [forward_direction.x, forward_direction.y],
+                forward_length + margin,
+                mask,
+                Some(handle),
+            )
+            .is_some()
+        {
+            return None;
+        }
+        let forward = raised.add(untravelled);
+        let floor = self.shape_cast_excluding(
+            [forward.x, forward.y],
+            size,
+            angle,
+            [0.0, -1.0],
+            step_height + margin * 2.0,
+            mask,
+            Some(handle),
+        )?;
+        let normal = Vec2::new(floor.normal[0], floor.normal[1]).normalized_or(Vec2::new(0.0, 1.0));
+        if normal.y < slope_cosine {
+            return None;
+        }
+        let drop = (floor.distance - margin).clamp(0.0, step_height + margin);
+        Some((forward.sub(Vec2::new(0.0, drop)), floor))
     }
 }
 
@@ -861,18 +991,22 @@ mod query_tests {
         assert!(snapped.on_floor);
         assert!((snapped.position[1]).abs() < 1.0e-4);
 
+        // 26.43: a step needs a character standing on a floor; it lands on the step top.
         let mut step_world = PhysicsWorld::new();
         step_world
-            .create_body(1, 0, &box_record(0.0, 0.0, 0))
+            .create_body(1, 0, &box_record(0.0, 1.0e-5, 0))
             .unwrap();
         step_world
             .create_body(2, 1, &box_record(4.0, 0.0, 0))
             .unwrap();
+        let mut floor = box_record(0.0, -2.0, 0);
+        floor[12] = 40.0;
+        step_world.create_body(3, 2, &floor).unwrap();
         let stepped = step_world
             .move_character_box(
                 1,
                 [2.0, 2.0],
-                [8.0, 0.0],
+                [2.5, 0.0],
                 std::f64::consts::FRAC_PI_4,
                 3.0,
                 0.0,
@@ -881,8 +1015,90 @@ mod query_tests {
                 1,
             )
             .unwrap();
-        assert!(stepped.position[0] > 7.9);
-        assert!((stepped.position[1] - 3.0).abs() < 1.0e-4);
+        assert!(stepped.grounded_at_start);
+        assert!((stepped.position[0] - 2.5).abs() < 1.0e-4, "{:?}", stepped.position);
+        assert!((stepped.position[1] - 2.0).abs() < 1.0e-3, "{:?}", stepped.position);
+        assert!(stepped.on_floor);
+        // The lift is not requested motion: a script reading velocity sees no jump.
+        assert!((stepped.velocity_motion[0] - 2.5).abs() < 1.0e-4);
+        assert!(stepped.velocity_motion[1].abs() < 1.0e-9);
+    }
+
+    // 26.43 regression: a jumping character whose feet hit the side of a box just below its top
+    // edge was lifted by the step height mid-air (0.35 m in one 1/120 s step = 42 m/s upward).
+    #[test]
+    fn airborne_character_is_never_stepped_up_a_box_edge() {
+        let mut world = PhysicsWorld::new();
+        // Platformer template: player 1.1 x 1.8, platform 5 x 0.7 at (3, -1), ground at y = -4.
+        let mut player = box_record(-0.1, 0.0, 0);
+        player[12] = 1.1;
+        player[13] = 1.8;
+        world.create_body(1, 0, &player).unwrap();
+        let mut platform = box_record(3.0, -1.0, 0);
+        platform[12] = 5.0;
+        platform[13] = 0.7;
+        world.create_body(2, 1, &platform).unwrap();
+        let mut ground = box_record(0.0, -4.0, 0);
+        ground[12] = 18.0;
+        ground[13] = 1.0;
+        world.create_body(3, 2, &ground).unwrap();
+        // Feet at -0.9, platform top at -0.65: inside the 0.35 step height, falling slowly.
+        for vertical in [-0.02, 0.0, 0.05] {
+            world.set_transform(1, -0.1, 0.0, 0.0).unwrap();
+            let moved = world
+                .move_character_box(
+                    1,
+                    [1.1, 1.8],
+                    [8.0 / 120.0, vertical],
+                    std::f64::consts::FRAC_PI_4,
+                    0.35,
+                    0.15,
+                    4,
+                    1.0e-3,
+                    u32::MAX,
+                )
+                .unwrap();
+            assert!(!moved.grounded_at_start);
+            assert!(moved.on_wall, "{vertical}: {moved:?}");
+            assert!(
+                moved.applied_motion[1] <= vertical.max(0.0) + 1.0e-9,
+                "{vertical}: lifted by {}",
+                moved.applied_motion[1]
+            );
+            assert!(moved.velocity_motion[1] <= vertical.max(0.0) + 1.0e-9);
+        }
+    }
+
+    // 26.43: snapping never pulls a falling character down and is not reported as velocity.
+    #[test]
+    fn floor_snap_needs_a_grounded_character_and_is_not_velocity() {
+        let mut world = PhysicsWorld::new();
+        world.create_body(1, 0, &box_record(0.0, 0.1, 0)).unwrap();
+        let mut floor = box_record(0.0, -2.0, 0);
+        floor[12] = 40.0;
+        world.create_body(2, 1, &floor).unwrap();
+        // 0.1 above the floor and falling: no snap within one small step.
+        let falling = world
+            .move_character_box(1, [2.0, 2.0], [0.1, -0.01], 0.7, 0.0, 0.5, 4, 1.0e-5, 1)
+            .unwrap();
+        assert!(!falling.on_floor);
+        assert!((falling.position[1] - 0.09).abs() < 1.0e-6, "{:?}", falling.position);
+        // Walking down a step: a grounded character follows the floor, without a velocity spike.
+        let mut step = box_record(-3.0, -1.2, 0);
+        step[12] = 2.0;
+        step[13] = 0.4;
+        world.destroy_body(2);
+        world.create_body(3, 2, &step).unwrap();
+        let mut low = box_record(0.0, -2.2, 0);
+        low[12] = 40.0;
+        world.create_body(4, 3, &low).unwrap();
+        world.set_transform(1, -2.5, 0.0 + 1.0e-5, 0.0).unwrap();
+        let off = world
+            .move_character_box(1, [2.0, 2.0], [2.0, -0.001], 0.7, 0.0, 0.5, 4, 1.0e-5, 1)
+            .unwrap();
+        assert!(off.grounded_at_start && off.on_floor, "{off:?}");
+        assert!((off.position[1] + 0.2).abs() < 1.0e-3, "{:?}", off.position);
+        assert!(off.velocity_motion[1] <= 1.0e-9 && off.velocity_motion[1] > -1.0e-3, "{:?}", off.velocity_motion);
     }
 
     // 验证坡度限制内的旋转表面可作为地面。

@@ -12,7 +12,8 @@ import { NOVA_GRAPH_FORMAT, NOVA_GRAPH_VERSION } from '../visual/graphTypes'
 export const NOVA_RUNTIME_API_VERSION = 2
 import { NOVA_PLUGIN_API_VERSION } from './pluginApiContract'
 export { NOVA_PLUGIN_API_VERSION }
-export const NOVA_PACKAGE_MANIFEST_VERSION = 1
+import { NOVA_PACKAGE_MANIFEST_VERSION } from './packageManifestVersion'
+export { NOVA_PACKAGE_MANIFEST_VERSION }
 export const NOVA_BUILD_CLI_VERSION = 1
 export const NOVA_WORKSPACE_DOCUMENT_VERSION = 3
 export const NOVA_FEATURE_FREEZE = Object.freeze({ channel: '26.01-calendar-foundation', frozenAt: '7.0.0', lockedAt: '26.01', certifiedAt: 'pending-external', observationDays: 14, earliestApproval: '2026-09-16', externalCertificationComplete: false, nextContractDecision: 'deferred', exceptions: ['release-blocking correction', 'security correction', 'migration correctness', 'accessibility correction', 'performance correction', 'evidence or documentation correction'] })

@@ -1,7 +1,6 @@
 /** 项目包管理：规范包清单与依赖，安装、启用及移除包并校验使用边界。 */
-import { reactive } from 'vue'
 import { NOVA_ENGINE_VERSION } from '../projects/projectFormat'
-import { NOVA_PACKAGE_MANIFEST_VERSION } from './stableContracts'
+import { NOVA_PACKAGE_MANIFEST_VERSION } from './packageManifestVersion'
 
 // Package compatibility must follow the single project-format authority. Keeping
 // a release number here caused current-engine packages to be evaluated as if an
@@ -78,7 +77,7 @@ export const PACKAGE_PERMISSION_CATALOG = Object.freeze([
 ])
 const allowedPackagePermissions = new Set<string>(PACKAGE_PERMISSION_CATALOG)
 
-export const packageState = reactive({
+function createPackageState() { return {
   installed: [] as InstalledPackage[],
   lockfile: [] as PackageLockEntry[],
   offlineCache: [] as PackageManifest[],
@@ -103,7 +102,18 @@ export const packageState = reactive({
   ,vulnerabilities: [] as PackageVulnerability[]
   ,lastSecurityBulletin: ''
   ,lastSolverDiagnostic: null as PackageSolverDiagnostic | null
-})
+} }
+export type PackageState = ReturnType<typeof createPackageState>
+/** Plain package state; the Editor wraps this same object once (reactive) before its panels mount. */
+export let packageState: PackageState = createPackageState()
+let packageStateAdapterInstalled = false
+export function installPackageStateAdapter(adapter: (target: PackageState) => PackageState): void {
+  if (packageStateAdapterInstalled) return
+  const wrapped = adapter(packageState)
+  if (!wrapped || typeof wrapped !== 'object') throw new TypeError('Package state adapter must wrap the existing state object')
+  packageState = wrapped
+  packageStateAdapterInstalled = true
+}
 
 export type PackageLifecycleAction = 'enable' | 'disable' | 'uninstall' | 'update' | 'rollback'
 const packageLifecycleListeners = new Set<(id: string, action: PackageLifecycleAction) => void>()

@@ -61,6 +61,9 @@ function restoreSimulation() { runStop() }
 .actionbar .ui-button{width:calc(var(--ui-control-height) - 2px);height:calc(var(--ui-control-height) - 4px);min-height:0;min-width:0;color:var(--text-secondary)}
 .actionbar .ui-button:hover:not(:disabled){color:var(--text-primary)}
 .actionbar .play-button{color:var(--success)}
+/* 26.43 G1: Run is the one tinted primary action of the title bar; pause, step and stop stay plain. */
+.actionbar[data-play-mode='editing'] .play-button,.actionbar[data-play-mode='paused'] .play-button{background:color-mix(in srgb,var(--success) 17%,transparent)}
+.actionbar[data-play-mode='editing'] .play-button:hover:not(:disabled),.actionbar[data-play-mode='paused'] .play-button:hover:not(:disabled){background:color-mix(in srgb,var(--success) 28%,transparent);color:var(--success)}
 .actionbar .ui-button.active{background:var(--surface-raised);color:var(--text-primary);box-shadow:var(--shadow-xs)}
 .actionbar[data-play-mode='playing']{background:color-mix(in srgb,var(--success) 14%,var(--surface-inset));box-shadow:inset 0 0 0 var(--ui-border-width) color-mix(in srgb,var(--success) 40%,transparent)}
 .actionbar[data-play-mode='playing'] .play-button{background:var(--success);color:#0c1a12}

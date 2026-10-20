@@ -91,6 +91,7 @@ function normalizeGlobalSettings(): void {
   physicsState.globalSettings.interpolation = physicsState.globalSettings.interpolation === 'None' ? 'None' : 'Interpolate'
   // Only an explicit fixed clock is stored, so projects saved before 26.42 keep their exact content.
   if (physicsState.globalSettings.timerClock !== 'fixed') delete physicsState.globalSettings.timerClock
+  if (physicsState.globalSettings.eventDispatch !== 'step') delete physicsState.globalSettings.eventDispatch
   physicsState.globalSettings.profile = normalizePhysicsProfile({
     ...(physicsState.globalSettings.profile ?? defaultPhysicsProfile()),
     tickRate: physicsState.globalSettings.tickRate,
@@ -118,6 +119,9 @@ function loadGlobalSettings(scene: Record<string, unknown>): void {
   physicsState.globalSettings.interpolation = settings.interpolation === 'None' ? 'None' : 'Interpolate'
   if (settings.timerClock === 'fixed') physicsState.globalSettings.timerClock = 'fixed'
   else delete physicsState.globalSettings.timerClock
+  // 26.43: only the explicit per-step choice is stored; projects without it keep frame dispatch.
+  if (settings.eventDispatch === 'step') physicsState.globalSettings.eventDispatch = 'step'
+  else delete physicsState.globalSettings.eventDispatch
   physicsState.globalSettings.profile = normalizePhysicsProfile(settings.profile ?? {
     tickRate: physicsState.globalSettings.tickRate,
     maxCatchUpSteps: physicsState.globalSettings.maxCatchUpSteps,

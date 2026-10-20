@@ -22,6 +22,12 @@ export class RuntimeAudioOwner{
  playbackTime(entity:Entity){this.requireEntity(entity);return this.runtime.playbackTime(entity)}
  reconcileTimelineVoices(requests:readonly TimelineAudioVoiceRequest[],entities:Entity[]){this.requireEntities(entities);if(requests.length){const members=new Set(this.world.entities.map(this.unwrapEntity));if(requests.some(r=>!members.has(this.unwrapEntity(r.entity))))throw new Error('AUDIO_FOREIGN_TIMELINE_ENTITY')}return this.runtime.reconcileTimelineVoices(requests,entities)}
  playUiClip(reference:string|null|undefined,bus='UI'){return this.runtime.playUiClip(reference,bus)}
+ /** 26.43 script audio: sounds, music and runtime bus volume (see AudioRuntime). */
+ playScriptSound(reference:string|null|undefined,options:{bus?:string;volume?:number;pitch?:number;loop?:boolean;tag?:string}={}){return this.runtime.playScriptSound(reference,options)!==null}
+ stopScriptSounds(tag:string,fade=0){return this.runtime.stopScriptSounds(tag,fade)}
+ playMusic(reference:string|null|undefined,options:{fade?:number;volume?:number}={}){return this.runtime.playMusic(reference,options)}
+ stopMusic(fade=0){return this.runtime.stopMusic(fade)}
+ setBusVolume(bus:string,volume:number){return this.runtime.setBusVolume(bus,volume)}
  stopAll(){this.runtime.stopAll()}
  dispose(){return this.runtime.dispose()}
  recover(){return this.runtime.recover()}

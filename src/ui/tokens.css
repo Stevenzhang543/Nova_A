@@ -33,6 +33,11 @@
 /* ============================================================================================
  * [KEEP+CHANGED] Palette roles — dark default. Neutral Dark replaces Midnight Blue as the default.
  * ============================================================================================ */
+/* 26.43 web: the visible viewport height. 100vh is the large viewport on iOS/iPadOS Safari (taller
+ * than what is visible while the toolbar shows), so dialogs and popovers sized with it ran off-screen. */
+:root { --vh100: 100vh; }
+@supports (height: 100dvh) { :root { --vh100: 100dvh; } }
+
 :root {
   --color-background: #000000;      /* systemGroupedBackground (dark) */
   --color-surface: #1C1C1E;         /* secondarySystemGroupedBackground (dark) */

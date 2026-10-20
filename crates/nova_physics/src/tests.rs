@@ -390,6 +390,8 @@ mod tests {
             tangent_impulse: 0.0,
             is_sensor: false,
             position_weight: 1.0,
+            active: true,
+            slop: LINEAR_SLOP,
         };
         correct_contact_position(&mut bodies, &contact);
         assert!(bodies[0].position.x < 0.0);
@@ -976,17 +978,238 @@ mod tests {
         assert_eq!(output[15], 0.0);
     }
 
-    // 验证连续碰撞模式控制自适应子步数。
+    // 26.43: only continuous bodies that move more than a quarter of their size are swept.
     #[test]
-    fn continuous_mode_controls_adaptive_substeps() {
+    fn continuous_mode_controls_per_body_sweeps() {
         let mut continuous = ellipse_record(1.0, 0.0, 0.0, 0.1, 0.1);
         continuous[4] = 1_000.0;
         let continuous_body = Body::from_data(&continuous, 0);
-        assert!(determine_sub_steps(&[continuous_body], 0.1, 0.0, BASE_SUB_STEPS) > BASE_SUB_STEPS);
-
+        assert!(continuous_body.continuous_collision);
+        assert!(continuous_sweep_samples(&continuous_body, 100.0 * 0.1) > 1);
+        assert_eq!(continuous_sweep_samples(&continuous_body, 0.01), 0);
+        assert_eq!(continuous_sweep_samples(&continuous_body, 1.0e9), MAX_CCD_SAMPLES);
         continuous[47] = 0.0;
         let discrete_body = Body::from_data(&continuous, 0);
-        assert_eq!(determine_sub_steps(&[discrete_body], 0.1, 0.0, BASE_SUB_STEPS), BASE_SUB_STEPS);
+        assert!(!discrete_body.continuous_collision);
+    }
+
+    // 26.43: fast continuous bodies never pass a thin wall, at speeds where the 26.42 global
+    // substeps (capped at 128) let them through, and the world keeps its configured substeps.
+    #[test]
+    fn continuous_bullets_never_tunnel_through_a_thin_wall_at_any_speed() {
+        for speed in [50.0, 300.0, 2_000.0, 20_000.0] {
+            let mut world = PhysicsWorld::new();
+            world.set_quality_iterations(4, 8, 4, 0.001, 0.001, 0.5);
+            let mut wall = box_record(1.0, 0.0, 0.0, 0.05, 40.0);
+            wall[9] = 1.0;
+            world.create_body(1, 0, &wall).unwrap();
+            for index in 0..8_u32 {
+                let mut bullet = ellipse_record(2.0 + index as f64, -3.0 - index as f64 * 0.37, -12.0 + index as f64 * 3.0, 0.1, 0.1);
+                bullet[4] = speed;
+                bullet[17] = 0.0;
+                bullet[47] = 1.0;
+                bullet[10] = 0.0;
+                world.create_body(2 + index, 2 + index, &bullet).unwrap();
+            }
+            for _ in 0..30 {
+                world.step(1.0 / 60.0, 9.80665, 0.0);
+            }
+            let state = world.state();
+            for body in 1..=8 {
+                assert!(state[body * STRIDE + 2] < 0.0, "speed {speed}: body {body} at x={}", state[body * STRIDE + 2]);
+            }
+        }
+    }
+
+    // 26.43: a box resting on the ground sleeps, keeps one contact without begin/end flicker,
+    // and its penetration stays within the linear slop.
+    #[test]
+    fn resting_box_sleeps_without_contact_flicker() {
+        let mut world = PhysicsWorld::new();
+        world.set_quality_iterations(8, 20, 16, 0.001, 0.001, 0.5);
+        let mut ground = box_record(1.0, 0.0, -0.5, 40.0, 1.0);
+        ground[9] = 1.0;
+        world.create_body(1, 0, &ground).unwrap();
+        world.create_body(2, 1, &box_record(2.0, 0.0, 0.5, 1.0, 1.0)).unwrap();
+        let (mut started, mut ended) = (0, 0);
+        let mut slept_at = None;
+        for step in 0..240 {
+            world.step(1.0 / 120.0, 9.80665, 0.0);
+            for event in world.drain_events() {
+                match event {
+                    PhysicsEvent::ContactStarted(_) => started += 1,
+                    PhysicsEvent::ContactEnded(_) => ended += 1,
+                    PhysicsEvent::BodySleeping { handle: 2 } if slept_at.is_none() => slept_at = Some(step),
+                    _ => {}
+                }
+            }
+        }
+        let state = world.state();
+        assert_eq!((started, ended), (1, 0));
+        assert!(slept_at.is_some_and(|step| step < 120), "slept at {slept_at:?}");
+        assert!(state[STRIDE + 49] > 0.5);
+        assert!(state[STRIDE + 3] > 0.5 - LINEAR_SLOP * 1.5 && state[STRIDE + 3] <= 0.5 + 1.0e-9);
+    }
+
+    // 26.43: a sleeping box wakes when a moving box hits it.
+    #[test]
+    fn sleeping_box_wakes_when_hit() {
+        let mut world = PhysicsWorld::new();
+        let mut ground = box_record(1.0, 0.0, -0.5, 40.0, 1.0);
+        ground[9] = 1.0;
+        world.create_body(1, 0, &ground).unwrap();
+        world.create_body(2, 1, &box_record(2.0, 0.0, 0.5, 1.0, 1.0)).unwrap();
+        for _ in 0..180 {
+            world.step(1.0 / 120.0, 9.80665, 0.0);
+        }
+        assert!(world.state()[STRIDE + 49] > 0.5, "the resting box sleeps first");
+        let mut striker = box_record(3.0, -3.0, 0.5, 1.0, 1.0);
+        striker[4] = 6.0;
+        world.create_body(3, 2, &striker).unwrap();
+        for _ in 0..90 {
+            world.step(1.0 / 120.0, 9.80665, 0.0);
+        }
+        let state = world.state();
+        assert!(state[STRIDE + 2] > 0.2, "the hit box moved to x={}", state[STRIDE + 2]);
+    }
+
+    // 26.43: stacks and pyramids stay put and fall asleep (all bodies awake before 26.43).
+    #[test]
+    fn box_tower_and_pyramid_are_stable_and_sleep() {
+        for (name, layout) in [
+            ("tower", (0..10).map(|level| (0.0, 0.5 + level as f64)).collect::<Vec<_>>()),
+            ("pyramid", (0..8).flat_map(|row| (0..8 - row).map(move |column| ((column as f64 - (7 - row) as f64 * 0.5) * 1.05, 0.5 + row as f64))).collect()),
+        ] {
+            let mut world = PhysicsWorld::new();
+            world.set_quality_iterations(8, 20, 16, 0.001, 0.001, 0.5);
+            let mut ground = box_record(1.0, 0.0, -0.5, 100.0, 1.0);
+            ground[9] = 1.0;
+            ground[11] = 0.6;
+            ground[20] = 0.6;
+            world.create_body(1, 0, &ground).unwrap();
+            for (index, (x, y)) in layout.iter().enumerate() {
+                let mut body = box_record(2.0 + index as f64, *x, *y, 1.0, 1.0);
+                body[11] = 0.6;
+                body[20] = 0.6;
+                world.create_body(2 + index as u32, 1 + index as u32, &body).unwrap();
+            }
+            for _ in 0..360 {
+                world.step(1.0 / 60.0, 9.80665, 0.0);
+                world.drain_events();
+            }
+            let state = world.state();
+            for (index, (x, y)) in layout.iter().enumerate() {
+                let base = (index + 1) * STRIDE;
+                assert!((state[base + 2] - x).abs() < 0.01, "{name} {index}: x {} vs {x}", state[base + 2]);
+                assert!((state[base + 3] - y).abs() < 0.02 * (1.0 + y), "{name} {index}: y {} vs {y}", state[base + 3]);
+                assert!(state[base + 49] > 0.5, "{name} {index} is still awake");
+            }
+        }
+    }
+
+    // 26.43: two non-dynamic bodies (static, kinematic) produce no contact unless one is a sensor.
+    #[test]
+    fn static_and_kinematic_pairs_are_not_collided() {
+        let mut world = PhysicsWorld::new();
+        let mut first = box_record(1.0, 0.0, 0.0, 2.0, 2.0);
+        first[9] = 1.0;
+        let mut second = box_record(2.0, 0.5, 0.0, 2.0, 2.0);
+        second[24] = 1.0;
+        world.create_body(1, 0, &first).unwrap();
+        world.create_body(2, 1, &second).unwrap();
+        world.step(1.0 / 60.0, 9.80665, 0.0);
+        assert!(!world.drain_events().iter().any(|event| matches!(event, PhysicsEvent::ContactStarted(_))));
+        let mut sensor = box_record(3.0, 0.0, 0.5, 1.0, 1.0);
+        sensor[9] = 1.0;
+        sensor[28] = 1.0;
+        world.create_body(3, 2, &sensor).unwrap();
+        world.step(1.0 / 60.0, 9.80665, 0.0);
+        assert!(world.drain_events().iter().any(|event| matches!(event, PhysicsEvent::ContactStarted(contact) if contact.sensor)));
+    }
+
+    // 26.43: a box and a ball slide over a row of separate 1 m static tiles without catching the
+    // hidden side faces (before 26.43 the box stopped at the first seam and bounced up at 1.1 m/s).
+    #[test]
+    fn bodies_slide_over_tile_seams_without_ghost_collisions() {
+        for (shape, size) in [(0.0, 0.9), (1.0, 0.45)] {
+            let mut world = PhysicsWorld::new();
+            world.set_quality_iterations(4, 20, 16, 0.001, 0.001, 0.5);
+            for index in 0..30_u32 {
+                let mut tile = box_record(1.0 + index as f64, index as f64 - 5.0, -0.5, 1.0, 1.0);
+                tile[9] = 1.0;
+                world.create_body(1 + index, index, &tile).unwrap();
+            }
+            let mut body = if shape == 1.0 { ellipse_record(99.0, -3.0, 0.45, size, size) } else { box_record(99.0, -3.0, 0.45, size, size) };
+            body[4] = 3.0;
+            body[10] = 0.0;
+            body[48] = 0.0;
+            world.create_body(100, 100, &body).unwrap();
+            let base = 30 * STRIDE;
+            for _ in 0..240 {
+                world.step(1.0 / 120.0, 9.80665, 0.0);
+                let state = world.state();
+                assert!((state[base + 4] - 3.0).abs() < 0.01, "shape {shape}: vx {} at x {}", state[base + 4], state[base + 2]);
+                assert!(state[base + 5].abs() < 0.01, "shape {shape}: vy {} at x {}", state[base + 5], state[base + 2]);
+            }
+        }
+    }
+
+    // 26.43: exposed faces still block: a wall built from stacked tiles stops a sliding box, and a
+    // ball rolls off the end of a tile row.
+    #[test]
+    fn exposed_tile_faces_still_collide() {
+        let mut world = PhysicsWorld::new();
+        world.set_quality_iterations(4, 20, 16, 0.001, 0.001, 0.5);
+        let mut handle = 1;
+        for index in 0..8 {
+            let mut tile = box_record(handle as f64, index as f64 - 5.0, -0.5, 1.0, 1.0);
+            tile[9] = 1.0;
+            world.create_body(handle, handle, &tile).unwrap();
+            handle += 1;
+        }
+        for level in 0..3 {
+            let mut tile = box_record(handle as f64, 2.0, 0.5 + level as f64, 1.0, 1.0);
+            tile[9] = 1.0;
+            world.create_body(handle, handle, &tile).unwrap();
+            handle += 1;
+        }
+        let mut sliding = box_record(50.0, -3.0, 0.45, 0.9, 0.9);
+        sliding[4] = 3.0;
+        world.create_body(50, 50, &sliding).unwrap();
+        // The ball rolls left, off the open end of the row at x = -5.5.
+        let mut ball = ellipse_record(51.0, -4.0, 0.45, 0.45, 0.45);
+        ball[4] = -2.0;
+        world.create_body(51, 51, &ball).unwrap();
+        for _ in 0..240 {
+            world.step(1.0 / 120.0, 9.80665, 0.0);
+        }
+        let state = world.state();
+        let box_base = 11 * STRIDE;
+        assert!(state[box_base + 2] < 1.5 - 0.45 + 0.01, "the wall stops the box at x={}", state[box_base + 2]);
+        assert!(state[box_base + 2] > 1.0);
+        let ball_base = 12 * STRIDE;
+        assert!(state[ball_base + 3] < 0.0, "the ball fell past the row end: y={}", state[ball_base + 3]);
+    }
+
+    // 26.43: identical input gives an identical state checksum (replay and rollback rely on it).
+    #[test]
+    fn identical_worlds_produce_identical_checksums() {
+        let build = || {
+            let mut world = PhysicsWorld::new();
+            let mut ground = box_record(1.0, 0.0, -0.5, 40.0, 1.0);
+            ground[9] = 1.0;
+            world.create_body(1, 0, &ground).unwrap();
+            for index in 0..12_u32 {
+                let mut body = box_record(2.0 + index as f64, (index % 4) as f64 * 1.1 - 2.0, 1.0 + (index / 4) as f64 * 1.2, 1.0, 1.0);
+                body[15] = 0.3 * index as f64;
+                world.create_body(2 + index, 1 + index, &body).unwrap();
+            }
+            for _ in 0..120 {
+                world.step(1.0 / 60.0, 9.80665, 0.0);
+            }
+            world.state_checksum()
+        };
+        assert_eq!(build(), build());
     }
 
     // 验证冲量唤醒休眠刚体。
@@ -997,8 +1220,10 @@ mod tests {
         body.update_sleep_state(0.6, true, 1.0e-3, 1.0e-3, 0.5);
         assert!(body.sleeping);
         body.apply_impulse(Vec2::new(1.0, 0.0), Vec2::ZERO);
-        assert!(!body.sleeping);
         assert!(body.velocity.x > 0.0);
+        // 26.43: the velocity it received wakes it at the end of the step.
+        body.update_sleep_state(1.0 / 60.0, true, 1.0e-3, 1.0e-3, 0.5);
+        assert!(!body.sleeping);
     }
 
     // 验证静止刚体无需接触也可休眠。
@@ -1276,14 +1501,15 @@ mod tests {
         record[15] = 1.0;
         record[47] = 1.0;
         let primary = Body::from_data(&record, 0);
-        assert_eq!(determine_sub_steps(&[primary], 1.0 / 60.0, 0.0, 1), 1);
+        let turn = 1.0 / 60.0;
+        assert_eq!(continuous_sweep_samples(&primary, turn * primary.maximum_collider_radius()), 0);
 
         let mut compound = Body::from_data(&record, 0);
         let mut child = vec![0.0; COLLIDER_CHILD_STRIDE];
         child[0] = 7.0; child[2] = 10.0; child[5] = 1.0; child[6] = 1.0;
         child[8] = 1.0; child[9] = 2.0;
         compound.apply_collider_children(&child);
-        assert!(determine_sub_steps(&[compound], 1.0 / 60.0, 0.0, 1) > 1);
+        assert!(continuous_sweep_samples(&compound, turn * compound.maximum_collider_radius()) > 1);
     }
 
     // 验证不同固定频率下重力速度保持一致。

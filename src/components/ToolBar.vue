@@ -157,4 +157,10 @@ onBeforeUnmount(/** 卸载时移除工具键盘监听。 */ () => window.removeE
 .guide-controls{display:grid;gap:var(--space-1)}
 .guide-controls input,.custom-resolution input{min-width:0;width:10ch}
 .custom-resolution{flex-wrap:nowrap}
+/* 26.43: vertical capsule in narrow viewports (see EditorLayout); menus open beside it. */
+@container viewport (max-width: 760px){
+  .toolbar-content{flex-direction:column}
+  .divider{width:calc(var(--ui-icon-size) + 2px);height:1px;margin-inline:0;margin-block:var(--space-1)}
+  .menu-popover{top:0;left:calc(100% + var(--space-2));translate:none;max-width:calc(100cqw - 64px)}
+}
 </style>

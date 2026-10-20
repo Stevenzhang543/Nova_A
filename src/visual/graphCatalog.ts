@@ -1,7 +1,7 @@
 /** 可视图节点目录：从引擎 API 和例程签名生成节点定义，提供搜索及带稳定引脚身份的节点创建。 */
-import { SCRIPT_API_V2_MANIFEST, type ScriptApiV2Binding } from '../editor/scriptApi'
+import { SCRIPT_API_V2_MANIFEST, type ScriptApiV2Binding } from '../runtime/scriptApiCatalog'
 import { packageState, versionSatisfies } from '../runtime/packages'
-import { pluginState } from '../runtime/plugins'
+import { graphPluginContributions } from './graphCatalogSources'
 import { defaultGraphValue, graphUuid, type GraphNode, type GraphParameter, type GraphPin, type GraphRoutine, type GraphValue, type GraphValueType, type NovaGraphDocument } from './graphTypes'
 import { initializeSyntaxNode, SYNTAX_NODE_DEFINITIONS, syntaxNodeDefinition } from './graphSyntaxSchema'
 import { initializeSyntaxApiNode, SYNTAX_API_NODE_DEFINITIONS, syntaxApiNodeDefinition, syntaxExtensionDefinitions } from './graphSyntaxApi'
@@ -138,7 +138,7 @@ const CATALOG = new Map(GRAPH_NODE_CATALOG.map(/* 返回按声明顺序构造的
 }
 
 /** 合并当前例程、已启用且版本匹配的项目库及插件贡献节点，排除无法匹配 API 的定义。 */ export function productionGraphNodeCatalog(graph?: NovaGraphDocument, scope?: GraphRoutine | null): GraphNodeDefinition[] {
-  const pluginNodes = pluginState.contributions.filter(/* 比较 contribution.kind 与 'graphNodes'，返回严格相等的判断结果。 */ contribution => contribution.kind === 'graphNodes').flatMap(/** 从匹配的 API 生成插件节点，并保留插件标识、名称和帮助描述。 */ (contribution): GraphNodeDefinition[] => {
+  const pluginNodes = graphPluginContributions().filter(/* 比较 contribution.kind 与 'graphNodes'，返回严格相等的判断结果。 */ contribution => contribution.kind === 'graphNodes').flatMap(/** 从匹配的 API 生成插件节点，并保留插件标识、名称和帮助描述。 */ (contribution): GraphNodeDefinition[] => {
     const api = SCRIPT_API_V2_MANIFEST.entries.find(/* 比较 entry.callable 与 (contribution.entry || contribution.id)，返回严格相等的判断结果。 */ entry => entry.callable === (contribution.entry || contribution.id))
     if (!api) return []
     const definition = definitionFromApi(api)

@@ -1,37 +1,26 @@
 <!-- 顶部菜单栏：执行项目和编辑命令，管理短暂弹出菜单、焦点及全局快捷键。 -->
 <template>
-  <header ref="topBar" class="top-bar" :data-play-mode="physicsState.playMode" :style="{ '--menu-left': `${menuLeft}px` }">
+  <header ref="topBar" class="top-bar" :class="{ tiny: tinyBar }" :data-play-mode="physicsState.playMode" :style="{ '--menu-left': `${menuLeft}px` }">
     <a class="brand" href="https://whitelists.top" target="_blank" rel="noreferrer" aria-label="Nova_A by Whitelist">
       <NovaMark /><span>Nova_A</span>
     </a>
-    <nav class="menu-container" @scroll="closeMenu">
-      <div class="menu-item">
-        <button @click="toggleMenu('file')" :class="{ active: activeMenu === 'file' }">{{ t('file') }}</button>
-
+    <nav class="menu-container" :class="{ compact: compactMenus }" :aria-label="t('appMenu')" @scroll="closeMenu" @keydown="navigateMenuBar">
+      <!-- 26.43 G1: a narrow title bar (iPad portrait, split view, small windows) keeps one menu button;
+           its list opens the same menus. Alt alone moves the keyboard to the menus. -->
+      <div v-if="compactMenus" class="menu-item">
+        <button class="app-menu-button" :class="{ active: activeMenu !== null }" :aria-expanded="activeMenu !== null" aria-haspopup="menu" :aria-label="t('appMenu')" :title="t('appMenu')" data-testid="app-menu" @click="toggleMenu(activeMenu ? activeMenu : 'app')"><EditorIcon name="menu" /></button>
       </div>
-      <div class="menu-item">
-        <button @click="toggleMenu('edit')" :class="{ active: activeMenu === 'edit' }">{{ t('edit') }}</button>
-
-      </div>
-      <div class="menu-item">
-        <button @click="toggleMenu('project')" :class="{ active: activeMenu === 'project' }">{{ t('project') }}</button>
-
-      </div>
-      <div class="menu-item">
-        <button @click="toggleMenu('debug')" :class="{ active: activeMenu === 'debug' }">{{ t('debug') }}</button>
-
-      </div>
-      <div class="menu-item">
-        <button @click="toggleMenu('view')" :class="{ active: activeMenu === 'view' }">{{ t('view') }}</button>
-
-      </div>
-      <div class="menu-item">
-        <button @click="toggleMenu('help')" :class="{ active: activeMenu === 'help' }">{{ t('help') }}</button>
-
-      </div>
+      <template v-else>
+        <div v-for="menu in MENUS" :key="menu" class="menu-item">
+          <button :class="{ active: activeMenu === menu }" :aria-expanded="activeMenu === menu" aria-haspopup="menu" :data-menu="menu" @click="toggleMenu(menu)">{{ t(menu) }}</button>
+        </div>
+      </template>
       <div class="menu-item menu-popover-host">
         <Transition name="menu" @enter="positionMenu" @before-leave="deactivateMenu">
-          <div v-if="activeMenu === 'file'" :key="'file'" class="dropdown">
+          <div v-if="activeMenu === 'app'" :key="'app'" class="dropdown app-menu" role="menu">
+            <button v-for="menu in MENUS" :key="menu" role="menuitem" :data-menu="menu" @click="openFromAppMenu(menu)"><span>{{ t(menu) }}</span><EditorIcon name="forward" /></button>
+          </div>
+          <div v-else-if="activeMenu === 'file'" :key="'file'" class="dropdown">
           <button :disabled="!isEditing" @click="handleProjectManager"><span>{{ t('projectManager') }}</span></button>
           <hr>
           <button :disabled="!isEditing" @click="handleSave"><span>{{ t('saveProject') }}</span><kbd>{{ shortcutLabel('saveProject') }}</kbd></button>
@@ -126,8 +115,42 @@ import { completeTask, failTask, startTask } from '../runtime/editorFeedback'
 import { toggleEditorFullscreen } from '../runtime/editorWindow'
 import { projectTransactionState } from '../runtime/projectTransactions'
 
+const MENUS = ['file', 'edit', 'project', 'debug', 'view', 'help'] as const
 const activeMenu = ref<string | null>(null)
 const topBar = ref<HTMLElement | null>(null)
+// 26.43 G1: below this title-bar width the six menus fold into one menu button.
+const COMPACT_MENU_WIDTH = 860
+const compactMenus = ref(false), tinyBar = ref(false)
+let barObserver: ResizeObserver | null = null
+function measureBar(width: number): void { tinyBar.value = width > 0 && width < 600; const next = width > 0 && width < COMPACT_MENU_WIDTH; if (next !== compactMenus.value) { compactMenus.value = next; activeMenu.value = null } }
+/** From the compact menu list into one menu; the submenu opens under the same button. */
+function openFromAppMenu(menu: string): void { activeMenu.value = menu; void nextTick(() => topBar.value?.querySelector<HTMLElement>('.dropdown:not([inert]) button:not(:disabled)')?.focus()) }
+/** Left/Right move between menu buttons; Down opens the focused menu and enters it. */
+function navigateMenuBar(event: KeyboardEvent): void {
+  const bar = topBar.value, target = event.target as HTMLElement | null
+  if (!bar || !target) return
+  const buttons = [...bar.querySelectorAll<HTMLElement>('.menu-item > button')]
+  const index = buttons.indexOf(target)
+  if (index >= 0 && (event.key === 'ArrowRight' || event.key === 'ArrowLeft')) {
+    event.preventDefault()
+    const next = buttons[(index + (event.key === 'ArrowRight' ? 1 : buttons.length - 1)) % buttons.length]
+    next.focus()
+    if (activeMenu.value && next.dataset.menu) activeMenu.value = next.dataset.menu
+    return
+  }
+  if (index >= 0 && event.key === 'ArrowDown') {
+    event.preventDefault()
+    if (!activeMenu.value) toggleMenu(target.dataset.menu ?? 'app')
+    void nextTick(() => bar.querySelector<HTMLElement>('.dropdown:not([inert]) button:not(:disabled)')?.focus())
+    return
+  }
+  const items = [...bar.querySelectorAll<HTMLElement>('.dropdown:not([inert]) button:not(:disabled)')], item = items.indexOf(target)
+  if (item >= 0 && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) { event.preventDefault(); items[(item + (event.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length]?.focus() }
+}
+// Alt pressed and released alone (no other key, no pointer) focuses the first menu, as on Windows.
+let altAlone = false
+function trackAlt(event: KeyboardEvent): void { if (event.type === 'keydown') altAlone = event.key === 'Alt' && !event.repeat && !event.ctrlKey && !event.metaKey && !event.shiftKey; else if (event.key === 'Alt' && altAlone) { altAlone = false; if (physicsState.playMode === 'playing') return; event.preventDefault(); const first = topBar.value?.querySelector<HTMLElement>('.menu-item > button'); if (document.activeElement === first) first?.blur(); else first?.focus() } }
+function cancelAlt(): void { altAlone = false }
 const menuLeft = ref(0)
 const fileInput = ref<HTMLInputElement | null>(null)
 let disposeMenu: (() => void) | undefined
@@ -253,6 +276,12 @@ const isEditing = computed(/** 只有编辑模式且非只读恢复会话才允�
   else if (shortcutMatches(event, 'deselectAll')) { selectEntities([], 'replace'); activeMenu.value = null }
 }
 
+onMounted(() => {
+  const bar = topBar.value
+  if (bar && typeof ResizeObserver !== 'undefined') { measureBar(bar.getBoundingClientRect().width); barObserver = new ResizeObserver(entries => { for (const entry of entries) measureBar(entry.contentRect.width) }); barObserver.observe(bar) }
+  window.addEventListener('keydown', trackAlt, true); window.addEventListener('keyup', trackAlt, true); window.addEventListener('pointerdown', cancelAlt, true)
+})
+onUnmounted(() => { barObserver?.disconnect(); barObserver = null; window.removeEventListener('keydown', trackAlt, true); window.removeEventListener('keyup', trackAlt, true); window.removeEventListener('pointerdown', cancelAlt, true) })
 onMounted(/** 挂载时注册具有容错区域的短暂弹出菜单行为及全局监听，并记录初始历史。 */ () => { disposeMenu = installTransientPopover({ isOpen: /* 比较 activeMenu.value 与 null，返回严格不等的判断结果。 */ () => activeMenu.value !== null, regions: /** 返回菜单容器及尚可交互的下拉区域作为指针容错范围。 */ () => Array.from(topBar.value?.querySelectorAll<HTMLElement>('.menu-container, .dropdown:not([inert])') ?? []), close: /** 关闭弹出菜单，按请求把焦点还给原活动菜单按钮。 */ restoreFocus => { const button = topBar.value?.querySelector<HTMLElement>('.menu-item > button.active'); closeMenu(); if (restoreFocus) button?.focus() } }); window.addEventListener('keydown', handleKeyDown); window.addEventListener('resize', closeMenu); pushHistory() })
 onUnmounted(/** 卸载时移除键盘和尺寸监听并释放弹出菜单行为。 */ () => { window.removeEventListener('keydown', handleKeyDown); window.removeEventListener('resize', closeMenu); disposeMenu?.() })
 </script>
@@ -270,6 +299,9 @@ onUnmounted(/** 卸载时移除键盘和尺寸监听并释放弹出菜单行为�
 .menu-item>button{min-height:calc(var(--ui-control-height) - 2px);padding-inline:var(--space-2);border-color:transparent;background:transparent;font-weight:var(--weight-regular);color:var(--text-secondary)}
 .menu-item>button:hover,.menu-item>button.active{color:var(--text-primary)}
 .menu-item>button.active{background:var(--surface-pressed)}
+.top-bar.tiny .brand{display:none}
+.app-menu-button{width:var(--ui-control-height);padding:0!important;display:grid;place-items:center}
+.app-menu .editor-icon{color:var(--text-muted)}
 .top-workspaces{flex:1 1 auto;min-width:0;justify-content:center}
 .project-chip{display:flex;align-items:center;gap:var(--space-2);flex:0 1 auto;min-width:0;max-width:36ch;padding-inline:var(--space-2);font-size:var(--type-dense)}
 .project-chip strong{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:var(--weight-medium)}
@@ -283,7 +315,7 @@ onUnmounted(/** 卸载时移除键盘和尺寸监听并释放弹出菜单行为�
   position:fixed;top:calc(var(--ui-titlebar-height) - 2px);left:var(--menu-left);z-index:650;display:flex;flex-direction:column;gap:1px;
   min-width:30ch;overflow:auto;padding:var(--space-1);border:var(--ui-border-width) solid var(--border-subtle);border-radius:var(--radius-floating);
   background:var(--surface-popover);box-shadow:var(--shadow-md),var(--hairline-highlight);
-  max-width:min(54ch,calc(100vw - 2 * var(--ui-panel-inset)));max-height:calc(100vh - var(--ui-titlebar-height) - var(--ui-panel-inset));
+  max-width:min(54ch,calc(100vw - 2 * var(--ui-panel-inset)));max-height:calc(var(--vh100) - var(--ui-titlebar-height) - var(--ui-panel-inset));
 }
 .dropdown button{display:flex;align-items:center;justify-content:space-between;gap:var(--space-5);min-height:calc(var(--ui-control-height) - 4px);padding-block:0;text-align:left;border-color:transparent;border-radius:var(--radius-xs);background:transparent;font-weight:var(--weight-regular)}
 .dropdown button:hover:not(:disabled){background:var(--accent-fill);color:var(--accent-contrast)}
