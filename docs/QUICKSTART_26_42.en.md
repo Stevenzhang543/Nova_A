@@ -2,7 +2,7 @@
 
 This path starts from the **Platformer Scene** template, changes how the player moves, plays it and exports it for the web. After that, four short notes explain the timing rules that most often surprise new users. Everything here works offline.
 
-[中文版](./QUICKSTART_26_42.zh.md) · [Full manual](../manual/index.html) · [Scripting contract](./SCRIPTING_CONTRACT_26_23.md)
+[中文版](./QUICKSTART_26_42.zh.md) · [Full manual](../manual/index.html) · Scripting contract
 
 ## 1. Open the template (5 min)
 

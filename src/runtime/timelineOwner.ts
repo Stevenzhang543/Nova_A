@@ -8,6 +8,7 @@ import {timelineCrossings,type TimelineDocument,type TimelineClip,type TimelineT
 import type {TimelineAnimationSample} from './animationOwner'
 import {AnimationOwner} from './animationOwner'
 import {AnimationTimelineDocumentReader} from './animationTimelineDocumentReader'
+import {cloneRuntimeState} from './rewindState'
 import {validateAnimationTimelinePorts,type AnimationWorld,type AnimationTimelinePorts,type TimelinePresentation,type TimelineVoiceRequest} from './animationTimelineContracts'
 interface TimelineState { asset: string | null; time: number; clock:MediaClock; publishedTime:number; initialized:boolean; suppressDispatch:boolean; fired: Set<string>; lastUnskippedTime: number; activeCameraUuid: string | null }
 interface PendingTimelineEvent { order: number; crossed: number; target: Entity; clip: TimelineClip; type: TimelineTrackType; branchDestination?:number }
@@ -16,6 +17,10 @@ export class TimelineOwner {
  assertEntities(entities:Entity[]):void{this.animation.assertEntities(entities)}
 
   private states = new Map<string, TimelineState>()
+  /** 26.45: timeline playheads, for the debugger's rewind. */
+  captureRewind(): unknown { return cloneRuntimeState(this.states) }
+  /** 26.45: puts captured playheads back. */
+  restoreRewind(state: unknown): void { if (state instanceof Map) this.states = cloneRuntimeState(state as Map<string, TimelineState>) }
   private animationSamples:TimelineAnimationSample[]=[]
   private audioVoices:TimelineVoiceRequest[]=[]
   private traversalVisits=0

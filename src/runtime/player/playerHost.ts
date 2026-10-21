@@ -21,6 +21,8 @@ import { inputPromptState } from '../inputModality'
 import { GameUiOwner } from '../gameUiOwner'
 import { bootstrapRuntimeWorld } from '../runtimeWorldBootstrap'
 import { GameplayRuntime } from '../GameplayRuntimeCore'
+import { rebindInputAction, type InputAction } from '../input'
+import { loadInputBindings, resetInputBindings, saveInputBindings } from '../inputBindingStore'
 import { recordScriptFunction } from '../profiler'
 import { reportRecoverableError } from '../runtimeFaultRecords'
 import { loadPackageState } from '../packages'
@@ -217,6 +219,19 @@ export async function startPlayer(options: PlayerHostOptions): Promise<PlayerSes
     assertRuntimePakActive(signal)
     const runtime = new GameplayRuntime(resources.scriptServices, lease.host)
     releases.push(() => runtime.stopSession(false))
+    // 26.45: the player's own key bindings (remap buttons and `input_rebind`) are kept per game.
+    const bindingStorage = typeof localStorage === 'undefined' ? undefined : localStorage
+    const bindingProject = readPlayerProjectId(document) ?? `game:${values.build.gameName}`
+    const inputMap = lease.host.state.inputMap
+    const bindingDefaults = JSON.parse(JSON.stringify(inputMap)) as InputAction[]
+    const restoredBindings = loadInputBindings(bindingStorage, bindingProject, inputMap)
+    if (restoredBindings) log(`Input: ${restoredBindings} binding(s) restored from the player's settings`, 'Runtime', 'info')
+    const remapInput = (action: string, index: number, binding: Parameters<typeof rebindInputAction>[3]): boolean => {
+      const changed = rebindInputAction(inputMap, action, index, binding)
+      if (changed && !saveInputBindings(bindingStorage, bindingProject, bindingDefaults, inputMap)) log('Input: the new binding could not be stored', 'Runtime', 'warning')
+      return changed
+    }
+    runtime.setInputRemapSink({ remap: remapInput, reset: () => resetInputBindings(bindingStorage, bindingProject, bindingDefaults, inputMap) })
     const headless = values.build.runtimeMode === 'headless-server'
 
     let view: PlayerView | null = null, debug: PlayerDebugOverlay | null = null
@@ -236,6 +251,7 @@ export async function startPlayer(options: PlayerHostOptions): Promise<PlayerSes
       view = createPlayerView(options.container, {
         runtime, host: lease.host, surface, rendering: values.rendering, gameUi,
         setInputModality: modality => inputPrompt.setInputModality(modality),
+        remapInput: (action, index, binding) => { remapInput(action, index, binding) },
         beforeFrame: syncModality,
         label: values.build.gameName, controlsLabel: messages('virtualControls'), uiLabel: messages('gameUi'),
         log: (message, level) => log(message, 'Runtime', level)

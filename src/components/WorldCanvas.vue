@@ -39,7 +39,7 @@ import { profilerState, recordFrameProfile } from '../runtime/profiler'
 import { samplePerformanceTools } from '../runtime/performanceTools'
 import { reportFatalError, reportRecoverableError } from '../runtime/faultCenter'
 import { physicsDebugState } from '../runtime/physicsDebug'
-import { renderDebugView2D, renderLighting2D, renderPostProcessOverlay, worldPostProcessFilter } from '../renderer/lighting2d'
+import { renderDebugView2D, renderLighting2D, renderPostProcessOverlay, renderScreenFlash, worldPostProcessFilter } from '../renderer/lighting2d'
 import { beginRenderGraph, captureRenderSurface, completeRenderGraph, createRenderGraphDiagnosticsOwner, recordRenderPass, renderGraphState, type RenderGraphDiagnosticsScope } from '../renderer/renderGraph'
 import { captureRenderTexture } from '../renderer/renderTextures'
 import { activeGameCameras, resetCameraSmoothing } from '../renderer/sceneRenderer'
@@ -1314,7 +1314,7 @@ function rulerColors(): { band: string; tick: string; text: string; edge: string
   // 26.42 P-A: the Game view overlay is often empty (no light, post effect, debug view, UI or point gizmo).
   // Then it is cleared once after the last frame that drew and skipped afterwards; resizing (which also
   // covers DPR changes) clears the bitmap by itself. `?overlaySkip=0` restores the clear on every frame.
-  if (overlaySkipEnabled && isGameView && !gameOverlayHasContent(world.entities)) {
+  if (overlaySkipEnabled && isGameView && !gameOverlayHasContent(world.entities) && !gameplayRuntime.screenFlashOverlay()) {
     // Assigning the backing-store size above already cleared the bitmap.
     if (resized) overlayDrewLastFrame = false
     if (overlayDrewLastFrame) { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cvs.width, cvs.height); overlayDrewLastFrame = false; overlayStats.clears++ }
@@ -1526,6 +1526,8 @@ function finishOverlayFrame(width: number, height: number, isGameView: boolean, 
   if (!ctx) return
   const selectedIds = new Set(state.selectedEntityIds)
   const uiEntities = isGameView ? world.entities : world.entities.filter(/* 比较 entity.layer 与 editorState.activeLayer，返回严格相等的判断结果。 */ entity => entity.layer === editorState.activeLayer)
+  // 26.45: screen_flash covers the game view under the HUD.
+  if (isGameView) renderScreenFlash(ctx, width, height, gameplayRuntime.screenFlashOverlay())
   gameUiRuntime.render(ctx, width, height, uiEntities, { editor: !isGameView, selectedEntityIds: selectedIds })
   renderScreenRulers(ctx, width, height)
   const nodes = isGameView ? gameUiRuntime.accessibilityNodes() : []

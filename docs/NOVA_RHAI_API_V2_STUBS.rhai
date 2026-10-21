@@ -245,6 +245,18 @@
 // @nova-api module=input lifetime=callback thread=callback-boundary determinism=deterministic
 // input_scheme_set(name)
 // Selects a named input scheme.
+// 接口 input_prompt；模块 input；生命周期 callback；线程约束 callback-boundary；确定性 deterministic。
+// @nova-api module=input lifetime=callback thread=callback-boundary determinism=deterministic
+// input_prompt(action) -> string
+// The key, button or symbol of an action on the device in use ("Space", "A", "✕", "LMB"), for prompts in your own text.
+// 接口 input_rebind；模块 input；生命周期 callback；线程约束 callback-boundary；确定性 deterministic。
+// @nova-api module=input lifetime=callback thread=callback-boundary determinism=deterministic
+// input_rebind(action[, index])
+// Waits for the next key, mouse button or gamepad button and binds it to the action (binding `index`, default 0). Escape cancels. Sends the `input.rebound` or `input.rebind_cancelled` signal; the Player keeps the player's bindings.
+// 接口 input_bindings_reset；模块 input；生命周期 callback；线程约束 callback-boundary；确定性 deterministic。
+// @nova-api module=input lifetime=callback thread=callback-boundary determinism=deterministic
+// input_bindings_reset()
+// Puts the project's key bindings back and forgets the player's own.
 // 接口 input_axis；模块 input；生命周期 callback；线程约束 callback-boundary；确定性 deterministic。
 // @nova-api module=input lifetime=callback thread=callback-boundary determinism=deterministic
 // input_axis(action) -> float
@@ -387,6 +399,46 @@
 // @nova-api module=physics lifetime=callback thread=fixed-step determinism=deterministic
 // move_character(x, y)
 // Queues CharacterBody2D displacement for the next fixed step.
+// 接口 character_floor_is_one_way；模块 physics；生命周期 callback；线程约束 callback-boundary；确定性 deterministic。
+// @nova-api module=physics lifetime=callback thread=callback-boundary determinism=deterministic
+// character_floor_is_one_way() -> bool
+// True when the character stands on a one-way platform.
+// 接口 target_joint_move；模块 physics；生命周期 callback；线程约束 callback-boundary；确定性 deterministic。
+// @nova-api module=physics lifetime=callback thread=callback-boundary determinism=deterministic
+// target_joint_move(x, y)
+// Pulls this body toward a world point with its Target Joint (one is added when missing): drag, carry or hold it.
+// 接口 target_joint_release；模块 physics；生命周期 callback；线程约束 callback-boundary；确定性 deterministic。
+// @nova-api module=physics lifetime=callback thread=callback-boundary determinism=deterministic
+// target_joint_release()
+// Lets go of the body: its Target Joint stops pulling.
+// 接口 set_surface_speed；模块 physics；生命周期 callback；线程约束 callback-boundary；确定性 deterministic。
+// @nova-api module=physics lifetime=callback thread=callback-boundary determinism=deterministic
+// set_surface_speed(speed)
+// Makes this body a conveyor: its faces carry what rests on them at `speed` m/s (clockwise around the body for positive speeds).
+// 接口 camera_shake；模块 gameplay；生命周期 callback；线程约束 callback-boundary；确定性 deterministic。
+// @nova-api module=gameplay lifetime=callback thread=callback-boundary determinism=deterministic
+// camera_shake(amount)
+// Shakes the active camera: adds `amount` (0–1) of trauma; the view moves and turns by trauma² and calms down on its own (Camera2D shake settings). Reduced motion keeps a quarter.
+// 接口 camera_zoom；模块 gameplay；生命周期 callback；线程约束 callback-boundary；确定性 deterministic。
+// @nova-api module=gameplay lifetime=callback thread=callback-boundary determinism=deterministic
+// camera_zoom(zoom)
+// Sets the zoom of the active camera (1 is the authored size).
+// 接口 camera_follow；模块 gameplay；生命周期 callback；线程约束 callback-boundary；确定性 deterministic。
+// @nova-api module=gameplay lifetime=callback thread=callback-boundary determinism=deterministic
+// camera_follow(handle)
+// The active camera follows an object; camera_follow_none() stops following.
+// 接口 camera_follow_none；模块 gameplay；生命周期 callback；线程约束 callback-boundary；确定性 deterministic。
+// @nova-api module=gameplay lifetime=callback thread=callback-boundary determinism=deterministic
+// camera_follow_none()
+// The active camera stops following.
+// 接口 screen_flash；模块 gameplay；生命周期 callback；线程约束 callback-boundary；确定性 deterministic。
+// @nova-api module=gameplay lifetime=callback thread=callback-boundary determinism=deterministic
+// screen_flash(r, g, b, seconds)
+// Flashes the screen in a colour that fades out over `seconds` (not shown with reduced motion).
+// 接口 character_drop_through；模块 physics；生命周期 callback；线程约束 callback-boundary；确定性 deterministic。
+// @nova-api module=physics lifetime=callback thread=callback-boundary determinism=deterministic
+// character_drop_through([seconds])
+// Lets the character fall through one-way platforms (0.25 s by default; it keeps passing while it still overlaps one).
 // 接口 ui_set_text；模块 ui；生命周期 callback；线程约束 callback-boundary；确定性 deterministic。
 // @nova-api module=ui lifetime=callback thread=callback-boundary determinism=deterministic
 // ui_set_text(text)
@@ -431,7 +483,39 @@
 // 接口 animator_play；模块 animation；生命周期 callback；线程约束 callback-boundary；确定性 deterministic。
 // @nova-api module=animation lifetime=callback thread=callback-boundary determinism=deterministic
 // animator_play(state)
-// Requests an Animator state.
+// Requests an Animator state (id or name), switching at once.
+// 接口 animator_crossfade；模块 animation；生命周期 callback；线程约束 callback-boundary；确定性 deterministic。
+// @nova-api module=animation lifetime=callback thread=callback-boundary determinism=deterministic
+// animator_crossfade(state, seconds)
+// Blends from the current Animator state to another (id or name) over the given seconds.
+// 接口 animator_state；模块 animation；生命周期 callback；线程约束 callback-boundary；确定性 deterministic。
+// @nova-api module=animation lifetime=callback thread=callback-boundary determinism=deterministic
+// animator_state() -> string
+// Name of the current Animator state (base layer); "" without an Animator.
+// 接口 animator_state_time；模块 animation；生命周期 callback；线程约束 callback-boundary；确定性 deterministic。
+// @nova-api module=animation lifetime=callback thread=callback-boundary determinism=deterministic
+// animator_state_time() -> float
+// Normalised time of the current state: 0 at its start, 1 at the end of the clip (keeps counting while it loops).
+// 接口 animator_in_transition；模块 animation；生命周期 callback；线程约束 callback-boundary；确定性 deterministic。
+// @nova-api module=animation lifetime=callback thread=callback-boundary determinism=deterministic
+// animator_in_transition() -> bool
+// True while the Animator blends between two states.
+// 接口 tween；模块 animation；生命周期 callback；线程约束 callback-boundary；确定性 deterministic。
+// @nova-api module=animation lifetime=callback thread=callback-boundary determinism=deterministic
+// tween(property, to, seconds[, easing[, options]])
+// Animates x, y, rotation, rotation_degrees, scale_x, scale_y, scale or opacity of this object to a value. Easings: linear and quad, cubic, quart, quint, sine, expo, circ, back, elastic, bounce with _in, _out or _in_out. Options #{ delay, loops (-1 forever), yoyo, relative, signal }. Emits "tween.finished".
+// 接口 entity_tween；模块 animation；生命周期 callback；线程约束 callback-boundary；确定性 deterministic。
+// @nova-api module=animation lifetime=callback thread=callback-boundary determinism=deterministic
+// entity_tween(entity, property, to, seconds, easing)
+// Animates a property of another object (a handle).
+// 接口 tween_stop；模块 animation；生命周期 callback；线程约束 callback-boundary；确定性 deterministic。
+// @nova-api module=animation lifetime=callback thread=callback-boundary determinism=deterministic
+// tween_stop([property])
+// Stops this object's tweens (of one property, or all).
+// 接口 entity_tween_stop；模块 animation；生命周期 callback；线程约束 callback-boundary；确定性 deterministic。
+// @nova-api module=animation lifetime=callback thread=callback-boundary determinism=deterministic
+// entity_tween_stop(entity)
+// Stops all tweens of another object (a handle).
 // 接口 audio_source_handle；模块 audio；生命周期 scene；线程约束 callback-boundary；确定性 deterministic。
 // @nova-api module=audio lifetime=scene thread=callback-boundary determinism=deterministic
 // audio_source_handle() -> Handle<AudioSource>
@@ -621,6 +705,62 @@
 // @nova-api module=signals lifetime=callback thread=callback-boundary determinism=deterministic
 // signal_emit_to(entity_id, name, payload)
 // Queues a serializable targeted signal.
+// 接口 entity_handle_of；模块 object；生命周期 callback；线程约束 callback-boundary；确定性 deterministic。
+// @nova-api module=object lifetime=callback thread=callback-boundary determinism=deterministic
+// entity_handle_of(id) -> Handle<Entity>
+// Returns a handle for an entity id (for example other in a collision) at its current generation.
+// 接口 entity_has_tag；模块 object；生命周期 callback；线程约束 callback-boundary；确定性 deterministic。
+// @nova-api module=object lifetime=callback thread=callback-boundary determinism=deterministic
+// entity_has_tag(entity, tag) -> bool
+// True when the entity (id or handle, e.g. other in a collision) has the tag.
+// 接口 entity_in_group；模块 object；生命周期 callback；线程约束 callback-boundary；确定性 deterministic。
+// @nova-api module=object lifetime=callback thread=callback-boundary determinism=deterministic
+// entity_in_group(entity, group) -> bool
+// True when the entity (id or handle) is in the group.
+// 接口 call_on；模块 signals；生命周期 callback；线程约束 callback-boundary；确定性 deterministic。
+// @nova-api module=signals lifetime=callback thread=callback-boundary determinism=deterministic
+// call_on(entity, function, args)
+// Calls a function of another object's script after this callback phase; args is an optional array.
+// 接口 call_global；模块 signals；生命周期 callback；线程约束 callback-boundary；确定性 deterministic。
+// @nova-api module=signals lifetime=callback thread=callback-boundary determinism=deterministic
+// call_global(name, function, args)
+// Calls a function of a project global script (Project Settings › Scripting › Global scripts).
+// 接口 call_group；模块 signals；生命周期 callback；线程约束 callback-boundary；确定性 deterministic。
+// @nova-api module=signals lifetime=callback thread=callback-boundary determinism=deterministic
+// call_group(group, function, args)
+// Calls a function on every object in a group.
+// 接口 after；模块 tasks；生命周期 callback；线程约束 callback-boundary；确定性 deterministic。
+// @nova-api module=tasks lifetime=callback thread=callback-boundary determinism=deterministic
+// after(seconds, function, args)
+// Calls one of this script's functions after a game-time delay.
+// 接口 play_sound；模块 audio；生命周期 callback；线程约束 callback-boundary；确定性 deterministic。
+// @nova-api module=audio lifetime=callback thread=callback-boundary determinism=deterministic
+// play_sound(asset, options)
+// Plays a sound once (or looped) on a mixer bus; options #{ bus, volume, pitch, looped, tag }.
+// 接口 stop_sounds；模块 audio；生命周期 callback；线程约束 callback-boundary；确定性 deterministic。
+// @nova-api module=audio lifetime=callback thread=callback-boundary determinism=deterministic
+// stop_sounds(tag, fade)
+// Stops script sounds with a tag ("" stops all), optionally fading out.
+// 接口 play_music；模块 audio；生命周期 callback；线程约束 callback-boundary；确定性 deterministic。
+// @nova-api module=audio lifetime=callback thread=callback-boundary determinism=deterministic
+// play_music(asset, fade, volume)
+// Plays looping music on the Music bus; a new track crossfades.
+// 接口 stop_music；模块 audio；生命周期 callback；线程约束 callback-boundary；确定性 deterministic。
+// @nova-api module=audio lifetime=callback thread=callback-boundary determinism=deterministic
+// stop_music(fade)
+// Fades out and stops the music.
+// 接口 set_bus_volume；模块 audio；生命周期 callback；线程约束 callback-boundary；确定性 deterministic。
+// @nova-api module=audio lifetime=callback thread=callback-boundary determinism=deterministic
+// set_bus_volume(bus, volume)
+// Sets a mixer bus volume for this play session (1.0 = authored level).
+// 接口 play_video；模块 audio；生命周期 callback；线程约束 callback-boundary；确定性 deterministic。
+// @nova-api module=audio lifetime=callback thread=callback-boundary determinism=deterministic
+// play_video(asset, options)
+// Plays a full-screen video over the game view; emits "video.finished". Options #{ skippable, volume, looped }.
+// 接口 stop_video；模块 audio；生命周期 callback；线程约束 callback-boundary；确定性 deterministic。
+// @nova-api module=audio lifetime=callback thread=callback-boundary determinism=deterministic
+// stop_video()
+// Stops the playing video (emits "video.finished" with reason "stopped").
 // 接口 save_has；模块 save；生命周期 persistent-save；线程约束 callback-boundary；确定性 deterministic。
 // @nova-api module=save lifetime=persistent-save thread=callback-boundary determinism=deterministic
 // save_has(key) -> bool

@@ -136,6 +136,10 @@
 <!-- 相机跟随目标过滤回调排除当前选中实体。 -->          <PropertyRow :label="t('cameraFollowTarget')"><select v-model="selectedEntity.camera2D.followTargetUuid"><option :value="null">{{ t('none') }}</option><option v-for="entity in state.world.entities.filter(entity => entity !== selectedEntity)" :key="entity.uuid" :value="entity.uuid">{{ entity.name }}</option></select></PropertyRow>
           <PropertyRow :label="t('cameraSmoothing')"><ToggleSwitch v-model="selectedEntity.camera2D.smoothing.enabled" /></PropertyRow>
           <PropertyRow v-if="selectedEntity.camera2D.smoothing.enabled" :label="t('smoothingSpeed')" path="Camera.smoothingSpeed"><NumericExpressionInput v-model="selectedEntity.camera2D.smoothing.speed" :minimum="0" :step="0.1" :resource-key="numericResourceKey + ':selectedEntity.camera2D.smoothing.speed'" /></PropertyRow>
+          <PropertyRow :label="t('cameraShakeOffset')" path="Camera.shakeOffset"><NumericExpressionInput v-model="selectedEntity.camera2D.shake.maxOffset" :minimum="0" :step="0.05" :resource-key="numericResourceKey + ':selectedEntity.camera2D.shake.maxOffset'" /></PropertyRow>
+          <PropertyRow :label="t('cameraShakeAngle')" path="Camera.shakeAngle"><NumericExpressionInput v-model="selectedEntity.camera2D.shake.maxAngle" :minimum="0" :maximum="45" :step="0.5" :resource-key="numericResourceKey + ':selectedEntity.camera2D.shake.maxAngle'" /></PropertyRow>
+          <PropertyRow :label="t('cameraShakeFrequency')" path="Camera.shakeFrequency"><NumericExpressionInput v-model="selectedEntity.camera2D.shake.frequency" :minimum="0" :maximum="120" :step="1" :resource-key="numericResourceKey + ':selectedEntity.camera2D.shake.frequency'" /></PropertyRow>
+          <PropertyRow :label="t('cameraShakeRecovery')" path="Camera.shakeRecovery"><NumericExpressionInput v-model="selectedEntity.camera2D.shake.recovery" :minimum="0" :step="0.1" :resource-key="numericResourceKey + ':selectedEntity.camera2D.shake.recovery'" /></PropertyRow>
           <PropertyRow :label="t('cameraLimits')"><ToggleSwitch v-model="selectedEntity.camera2D.limits.enabled" /></PropertyRow>
           <PropertyRow v-if="selectedEntity.camera2D.limits.enabled" :label="t('limitLeftRight')"><div class="pair"><NumericExpressionInput v-model="selectedEntity.camera2D.limits.left" :resource-key="numericResourceKey + ':selectedEntity.camera2D.limits.left'" /><NumericExpressionInput v-model="selectedEntity.camera2D.limits.right" :resource-key="numericResourceKey + ':selectedEntity.camera2D.limits.right'" /></div></PropertyRow>
           <PropertyRow v-if="selectedEntity.camera2D.limits.enabled" :label="t('limitBottomTop')"><div class="pair"><NumericExpressionInput v-model="selectedEntity.camera2D.limits.bottom" :resource-key="numericResourceKey + ':selectedEntity.camera2D.limits.bottom'" /><NumericExpressionInput v-model="selectedEntity.camera2D.limits.top" :resource-key="numericResourceKey + ':selectedEntity.camera2D.limits.top'" /></div></PropertyRow>
@@ -281,6 +285,8 @@
           <PropertyRow :label="t('dynamicFriction')"><NumberRange v-model="selectedEntity.dynamicFriction" :min="0" :max="Math.max(1, selectedEntity.dynamicFriction)" :step="0.01" /></PropertyRow>
           <PropertyRow :label="t('frictionCombine')"><select v-model="selectedEntity.collider.material.frictionCombine"><option v-for="mode in materialCombineModes" :key="mode">{{ mode }}</option></select></PropertyRow>
           <PropertyRow :label="t('restitutionCombine')"><select v-model="selectedEntity.collider.material.restitutionCombine"><option v-for="mode in materialCombineModes" :key="mode">{{ mode }}</option></select></PropertyRow>
+          <PropertyRow :label="t('surfaceSpeed')"><NumericExpressionInput v-model="selectedEntity.collider.surfaceSpeed" :step="0.5" :title="t('surfaceSpeedHint')" :resource-key="numericResourceKey + ':selectedEntity.collider.surfaceSpeed'" /></PropertyRow>
+          <PropertyRow :label="t('rollingResistance')"><NumericExpressionInput v-model="selectedEntity.collider.rollingResistance" :minimum="0" :step="0.05" :title="t('rollingResistanceHint')" :resource-key="numericResourceKey + ':selectedEntity.collider.rollingResistance'" /></PropertyRow>
         </InspectorSection>
 
         <InspectorSection v-if="prefs.showDiagnostics && selectedEntity.hasComponent('RigidBody2D')" :title="t('collisionDiagnostics')" category="physics">
@@ -430,7 +436,7 @@ import RuntimeComponentsInspector from './RuntimeComponentsInspector.vue'
 import WorldComponentsInspector from './WorldComponentsInspector.vue'
 import GameplayComponentsInspector from './GameplayComponentsInspector.vue'
 import { connectionSharesLayer } from '../world/Connection'
-import { Animator, Area2D, AreaEffector2D, AudioListener, AudioSource, BehaviorTree2D, Button, Camera2D, CameraFollow2D, Canvas, CharacterBody2D, Checkbox, Collider2D, Collectible2D, Cooldown2D, DamageHitbox2D, GridMover2D, Health2D, Image as UIImage, Joint2D, Lifetime2D, Light2D, MouseFollower2D, NavigationAgent2D, NavigationObstacle2D, NavigationRegion2D, ObjectPool2D, Panel, ParticleEmitter2D, PlatformController2D, Portal2D, ProgressBar, Projectile2D, RectTransform, RigidBody2D, Script2D, ShadowCaster2D, ShapeRenderer2D, Skeleton2D, Slider, Spawner2D, SpriteRenderer2D, StateMachine2D, Text as UIText, TextInput, TextRenderer2D, TileMap2D, TimelinePlayer, TopDownController2D, WorldChunk2D, copyComponentValues, pasteComponentValues, type Component2D, type ComponentKind, type JointKind2D, type ScriptPropertyMetadata, type ScriptPropertyValue } from '../world/components'
+import { Animator, Area2D, AreaEffector2D, AudioListener, AudioSource, BehaviorTree2D, Button, Camera2D, CameraFollow2D, TargetJoint2D, Canvas, CharacterBody2D, Checkbox, Collider2D, Collectible2D, Cooldown2D, DamageHitbox2D, GridMover2D, Health2D, Image as UIImage, Joint2D, Lifetime2D, Light2D, MouseFollower2D, NavigationAgent2D, NavigationObstacle2D, NavigationRegion2D, ObjectPool2D, Panel, ParticleEmitter2D, PlatformController2D, Portal2D, ProgressBar, Projectile2D, RectTransform, RigidBody2D, Script2D, ShadowCaster2D, ShapeRenderer2D, Skeleton2D, Slider, Spawner2D, SpriteRenderer2D, StateMachine2D, Text as UIText, TextInput, TextRenderer2D, TileMap2D, TimelinePlayer, TopDownController2D, WorldChunk2D, copyComponentValues, pasteComponentValues, type Component2D, type ComponentKind, type JointKind2D, type ScriptPropertyMetadata, type ScriptPropertyValue } from '../world/components'
 import { Transform } from '../world/Transform'
 import { setParent, wouldCreateParentCycle } from '../world/hierarchy'
 import { applyTranslation, captureTransforms } from '../editor/gizmo'
@@ -440,7 +446,7 @@ import { normalizePhysicsMaterial, PHYSICS_SHAPE_SUPPORT, type PhysicsShapeKind 
 import { createUuid } from '../world/identity'
 import { gameplayRuntime } from '../runtime/GameplayRuntime'
 import { recordEntityProperties } from '../editor/animationStudioState'
-import { applyPrefabFromInstance, capturePrefabOverrides, comparePrefabInstance, createPrefabFromEntities, createPrefabVariantFromInstance, prefabConflictReport, resetPrefabOverride, revertPrefabInstance, unpackPrefabInstance } from '../runtime/prefabs'
+import { applyPrefabFromInstance, lastPrefabPropagation, capturePrefabOverrides, comparePrefabInstance, createPrefabFromEntities, createPrefabVariantFromInstance, prefabConflictReport, resetPrefabOverride, revertPrefabInstance, unpackPrefabInstance } from '../runtime/prefabs'
 import { unpackSceneInstance } from '../runtime/sceneInstances'
 import { propertyMetadata, type PropertyMetadata } from '../editor/propertyMetadata'
 import { componentPaletteMetadata, componentPaletteState, componentPresets, markComponentRecent, saveComponentPreset, toggleComponentFavorite, type ComponentPaletteCategory } from '../editor/componentPalette'
@@ -471,7 +477,7 @@ const PropertyRow = defineComponent({ props: { label: { type: String, required: 
   const metadata = props.path ? propertyMetadata(props.path) : undefined
   // Defaults and the write destination are reference information: they live in the row tooltip and the
   // property context menu instead of a disclosure under every field. Prefab overrides stay visible inline.
-  const overridden = Boolean(props.path) && selectedEntity.value?.prefabOverrides[props.path] !== undefined
+  const overridden = Boolean(props.path) && (selectedEntity.value?.prefabOverrides[props.path] !== undefined || overriddenInspectorPaths.value.has(props.path))
   const tooltip = props.path ? [metadata?.help, metadata ? `${propertyCopy.value.defaults}: ${metadata.defaults.join(', ')}` : '', `${propertyCopy.value.destination}: ${numericResourceKey.value}/${props.path}`].filter(Boolean).join('\n') : metadata?.help
   return h(UiPropertyRow, { label: props.label, unit: metadata?.unit, class: ['property-row', { modified: props.path && modifiedPropertyPaths.value.has(props.path), pinned: props.path && estate.pinnedInspectorProperties.includes(props.path), overridden }], 'data-property-path': props.path || undefined, title: tooltip, onContextmenu: props.path ? (event: MouseEvent) => openPropertyMenu(event, props.path) : undefined }, {
     label: () => [props.path && estate.pinnedInspectorProperties.includes(props.path) ? h(EditorIcon, {name:'pin'}) : null, props.label],
@@ -565,7 +571,7 @@ onUnmounted(registerEditorDraft({validate:/* 返回固定值 true。 */ ()=>true
 const physicsMaterialAssets = computed(/* 调用 assetState.records.filter(asset => asset.assetType === 'material' && physicsMaterialDocument(asset.uuid)) 并返回调用结果。 */ () => assetState.records.filter(/* 先计算 asset.assetType === 'material'；仅当其为真值时求右侧 physicsMaterialDocument(asset.uuid)，返回短路求值结果。 */ asset => asset.assetType === 'material' && physicsMaterialDocument(asset.uuid)))
 const colliderShapeKinds: PhysicsShapeKind[] = ['Box', 'Circle', 'Capsule', 'Segment', 'Chain', 'WorldBoundary', 'ConvexPolygon', 'ConcavePolygon']
 const materialCombineModes = ['Average', 'Minimum', 'Maximum', 'Multiply'] as const
-const colliderShapeSupport = computed(/** 组合碰撞形状支持说明，并提示动态凹形或链形限制。 */ () => { const entity=selectedEntity.value, model = entity?.collider.shapeModel ?? 'Box'; const support = PHYSICS_SHAPE_SUPPORT[model]; const blocked=(model==='ConcavePolygon'||model==='Chain')&&entity&&!entity.isStatic&&!entity.isKinematic?' Dynamic bodies must use finite convex children.':''; return `${support.simulation}: ${support.note}${blocked}` })
+const colliderShapeSupport = computed(/** 组合碰撞形状支持说明，并提示动态凹形或链形限制。 */ () => { const entity=selectedEntity.value, model = entity?.collider.shapeModel ?? 'Box'; const support = PHYSICS_SHAPE_SUPPORT[model]; const blocked=model==='Chain'&&entity&&!entity.isStatic&&!entity.isKinematic?' Dynamic bodies must use finite convex children.':''; return `${support.simulation}: ${support.note}${blocked}` })
 const colliderShapeModel = computed({ get: /* 当 selectedEntity.value?.collider.shapeModel 为 null 或 undefined 时返回 'Box'，否则保留左侧值。 */ () => selectedEntity.value?.collider.shapeModel ?? 'Box', set: /** 更新碰撞形状；世界边界强制静态非传感器并冻结旋转。 */ (kind: PhysicsShapeKind) => { const entity = selectedEntity.value; if (!entity) return; entity.collider.shapeModel = kind; if (kind === 'WorldBoundary') { entity.rigidBody.bodyType = 'Static'; entity.collider.sensor = false; entity.rigidBody.freezeRotation = true } normalizeEntity(entity); pushHistory('Change collider shape') } })
 /** 在最多三十二个子形状限制内添加默认盒形碰撞。 */ function addColliderShape() { const collider = selectedEntity.value?.getCollider(); if (!collider || collider.shapes.length >= 32) return; collider.shapes.push({ id: createUuid(), kind: 'Box', offset: { x: 0, y: 0 }, rotation: 0, size: { x: 1, y: 1 }, radius: .5, points: [], enabled: true, sensor: collider.sensor, physicsLayer: collider.physicsLayer, collisionMask: collider.collisionMask, oneWay: false, oneWayNormal: {x:0,y:1} }); pushHistory('Add collider shape') }
 /** 按有效索引删除碰撞子形状并记录历史。 */ function removeColliderShape(index: number) { const collider = selectedEntity.value?.getCollider(); if (!collider || index < 0 || index >= collider.shapes.length) return; collider.shapes.splice(index, 1); pushHistory('Remove collider shape') }
@@ -615,7 +621,7 @@ const materialAssets = computed(/** 筛选材质资源。 */ () => assetState.re
   const types = expected[resourceType] ?? []
   return types.length ? assetState.records.filter(/* 调用 types.includes(asset.assetType) 并返回调用结果。 */ asset => types.includes(asset.assetType)) : assetState.records
 }
-const optionalComponents: ComponentKind[] = ['SpriteRenderer2D', 'TextRenderer2D', 'Camera2D', 'Light2D', 'ShadowCaster2D', 'Script2D', 'Animator', 'Skeleton2D', 'TimelinePlayer', 'AudioSource', 'AudioListener', 'Canvas', 'RectTransform', 'Panel', 'Image', 'Text', 'Button', 'Slider', 'ProgressBar', 'Checkbox', 'TextInput', 'TileMap2D', 'ParticleEmitter2D', 'CharacterBody2D', 'GridMover2D', 'PlatformController2D', 'TopDownController2D', 'Health2D', 'DamageHitbox2D', 'Collectible2D', 'Projectile2D', 'Spawner2D', 'Cooldown2D', 'Lifetime2D', 'MouseFollower2D', 'CameraFollow2D', 'Area2D', 'AreaEffector2D', 'NavigationRegion2D', 'NavigationObstacle2D', 'NavigationAgent2D', 'BehaviorTree2D', 'StateMachine2D', 'WorldChunk2D', 'Portal2D', 'ObjectPool2D', 'FixedJoint2D', 'DistanceJoint2D', 'RevoluteJoint2D', 'PrismaticJoint2D', 'SpringJoint2D']
+const optionalComponents: ComponentKind[] = ['SpriteRenderer2D', 'TextRenderer2D', 'Camera2D', 'Light2D', 'ShadowCaster2D', 'Script2D', 'Animator', 'Skeleton2D', 'TimelinePlayer', 'AudioSource', 'AudioListener', 'Canvas', 'RectTransform', 'Panel', 'Image', 'Text', 'Button', 'Slider', 'ProgressBar', 'Checkbox', 'TextInput', 'TileMap2D', 'ParticleEmitter2D', 'CharacterBody2D', 'GridMover2D', 'PlatformController2D', 'TopDownController2D', 'Health2D', 'DamageHitbox2D', 'Collectible2D', 'Projectile2D', 'Spawner2D', 'Cooldown2D', 'Lifetime2D', 'MouseFollower2D', 'CameraFollow2D', 'Area2D', 'AreaEffector2D', 'NavigationRegion2D', 'NavigationObstacle2D', 'NavigationAgent2D', 'BehaviorTree2D', 'StateMachine2D', 'WorldChunk2D', 'Portal2D', 'ObjectPool2D', 'FixedJoint2D', 'DistanceJoint2D', 'RevoluteJoint2D', 'PrismaticJoint2D', 'SpringJoint2D', 'WheelJoint2D', 'TargetJoint2D']
 const inspectorCategories = [
   { id: 'all' as const, label: 'all' as const }, { id: 'general' as const, label: 'categoryGeneral' as const },
   { id: 'transform' as const, label: 'categoryTransform' as const }, { id: 'render' as const, label: 'categoryRendering' as const },
@@ -816,6 +822,18 @@ const groupsText = computed({
   set: /** 净化输入列表并写入当前实体分组。 */ value => { if (selectedEntity.value) selectedEntity.value.groups = cleanList(value) }
 })
 /* 调用 [...new Set(value.split(',').map(item => item.trim()).filter(Boolean))].slice(0, 32) 并返回调用结果。 */ function cleanList(value: string): string[] { return [...new Set(value.split(',').map(/* 调用 item.trim() 并返回调用结果。 */ item => item.trim()).filter(Boolean))].slice(0, 32) }
+// 26.45: prefab overrides name one field of one component (components.Kind.data.field); the rows
+// of the inspector that show such a field are marked overridden.
+const OVERRIDE_ROW_PREFIX: Record<string, string> = { Transform2D: 'Transform', SpriteRenderer2D: 'Sprite', Camera2D: 'Camera', Canvas: 'Canvas' }
+const overriddenInspectorPaths = computed(() => {
+  const paths = new Set<string>()
+  for (const key of Object.keys(selectedEntity.value?.prefabOverrides ?? {})) {
+    const match = /^components\.([A-Za-z0-9]+)\.data\.([A-Za-z0-9]+)/.exec(key)
+    if (match && OVERRIDE_ROW_PREFIX[match[1]]) paths.add(`${OVERRIDE_ROW_PREFIX[match[1]]}.${match[2]}`)
+    else if (key === 'enabled' || key === 'visible') paths.add(`Entity.${key}`)
+  }
+  return paths
+})
 const prefabOverrideCount = computed(/* 根据 selectedEntity.value 的真假，分别返回 Object.keys(selectedEntity.value.prefabOverrides).length 或 0。 */ () => selectedEntity.value ? Object.keys(selectedEntity.value.prefabOverrides).length : 0)
 const prefabComparison = computed(/* 根据 selectedEntity.value?.prefabAsset 的真假，分别返回 comparePrefabInstance(selectedEntity.value) 或 []。 */ () => selectedEntity.value?.prefabAsset ? comparePrefabInstance(selectedEntity.value) : [])
 const prefabConflicts = computed(/* 根据 selectedEntity.value 的真假，分别返回 prefabConflictReport(selectedEntity.value) 或 []。 */ () => selectedEntity.value ? prefabConflictReport(selectedEntity.value) : [])
@@ -918,6 +936,7 @@ const selectedValidation = computed(/* 根据 selectedEntity.value 的真假，�
   if (kind === 'WorldChunk2D') return new WorldChunk2D()
   if (kind === 'Portal2D') return new Portal2D()
   if (kind === 'ObjectPool2D') return new ObjectPool2D()
+  if (kind === 'TargetJoint2D') return new TargetJoint2D()
   if (kind.endsWith('Joint2D')) return new Joint2D(kind as JointKind2D)
   return null
 }
@@ -1141,7 +1160,12 @@ let nextInspectorControlId = 0
   const reference = createPrefabFromEntities([selectedEntity.value.id], selectedEntity.value.name)
   estate.statusText = reference ? t('prefabCreated') : t('prefabFailed')
 }
-/** 把当前实例修改应用回预制体并显示状态。 */ function applySelectedPrefab() { if (selectedEntity.value && applyPrefabFromInstance(selectedEntity.value)) estate.statusText = t('prefabApplied') }
+/** 把当前实例修改应用回预制体并显示状态。 */ function applySelectedPrefab() {
+  if (!selectedEntity.value || !applyPrefabFromInstance(selectedEntity.value)) return
+  // 26.45: say what followed beyond the open scene (closed scenes and variants).
+  const carried = lastPrefabPropagation
+  estate.statusText = carried.scenes || carried.variants ? `${t('prefabApplied')} · ${t('prefabPropagated').replace('{scenes}', String(carried.scenes)).replace('{variants}', String(carried.variants))}` : t('prefabApplied')
+}
 /** 恢复当前预制体实例并显示状态。 */ function revertSelectedPrefab() { if (selectedEntity.value && revertPrefabInstance(selectedEntity.value)) estate.statusText = t('prefabReverted') }
 /** 解包当前预制体实例并显示状态。 */ function unpackSelectedPrefab() { if (selectedEntity.value && unpackPrefabInstance(selectedEntity.value)) estate.statusText = t('prefabUnpacked') }
 /** 从当前实例创建预制体变体并显示结果。 */ function createSelectedPrefabVariant() { const entity = selectedEntity.value; if (!entity) return; const reference = createPrefabVariantFromInstance(entity); estate.statusText = reference ? t('prefabVariantCreated') : t('prefabFailed') }

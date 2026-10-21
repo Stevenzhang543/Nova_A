@@ -352,8 +352,33 @@ export class InputManager {
   private deviceListeners = new Set<(device: InputDeviceIdentity, event: 'connected' | 'disconnected') => void>()
   private recording: { startedAt: number; frames: InputRecordingFrame[] } | null = null
   private replay: { recording: InputRecording; startedAt: number; index: number; loop: boolean } | null = null
+  // 26.45: rebinding capture: the next key, mouse button or gamepad button pressed (Escape cancels).
+  private capture: { result: Pick<InputBinding, 'device' | 'code'> | 'cancelled' | null; heldButtons: Set<string> | null } | null = null
+
+  /** 26.45: starts listening for the next key, mouse button or gamepad button (for rebinding). */
+  beginBindingCapture(): void { this.capture = { result: null, heldButtons: null } }
+  cancelBindingCapture(): void { this.capture = null }
+  get capturingBinding(): boolean { return this.capture !== null }
+  /** The captured binding ('cancelled' after Escape), once; null while still listening. */
+  takeBindingCapture(): Pick<InputBinding, 'device' | 'code'> | 'cancelled' | null {
+    const result = this.capture?.result ?? null
+    if (result) this.capture = null
+    return result
+  }
+  private captureGamepadButtons(): void {
+    const capture = this.capture
+    if (!capture || capture.result) return
+    const held = new Set<string>()
+    for (const gamepad of this.readGamepads()) gamepad.buttons.forEach((button, index) => { if (button.pressed || button.value >= .5) held.add(String(index)) })
+    // Buttons already held when listening started do not count until released and pressed again.
+    if (capture.heldButtons) for (const code of held) if (!capture.heldButtons.has(code)) { capture.result = { device: 'gamepad-button', code }; return }
+    capture.heldButtons = held
+  }
 
   readonly onKeyDown = /** 结构说明（自动提取）：匿名回调；输入 event；直接调用 isTypingTarget、keyboard.add、logicalKeys.add、logicalKey、updateModifiers 等。 */ (event: KeyboardEvent) => {
+    if (this.capture && !this.capture.result && !event.repeat && !event.isComposing && !this.isTypingTarget(event.target)) {
+      this.capture.result = event.code === 'Escape' ? 'cancelled' : { device: 'keyboard', code: event.code || event.key }
+    }
     if (!event.defaultPrevented && !event.isComposing && event.keyCode !== 229 && !this.isTypingTarget(event.target) && !this.edgeOverflowed) {
       const changed = !this.keyboard.has(event.code)
       this.keyboard.add(event.code); this.logicalKeys.add(logicalKey(event.key)); this.updateModifiers(event)
@@ -362,7 +387,7 @@ export class InputManager {
     }
   }
   readonly onKeyUp = (event: KeyboardEvent) => { const changed = this.keyboard.delete(event.code); this.logicalKeys.delete(logicalKey(event.key)); this.updateModifiers(event); if (changed && latencyProbe.enabled) latencyProbe.inputReceived('key', event.code, false, event.timeStamp); if (changed) this.recordDigitalEdge('key', event.code, logicalKey(event.key), 0, false, !this.observation || !event.defaultPrevented && !event.isComposing && event.keyCode !== 229 && !this.isTypingTarget(event.target)) }
-  readonly onMouseDown = (event: MouseEvent) => { if (this.acceptMouse(event) && !this.edgeOverflowed) { const changed = !this.mouseButtons.has(event.button); this.mouseButtons.add(event.button); if (changed && latencyProbe.enabled) latencyProbe.inputReceived('mouse-button', String(event.button), true, event.timeStamp); if (changed) this.recordDigitalEdge('mouse', '', '', event.button, true, !this.observation || !event.defaultPrevented && !this.isTypingTarget(event.target)); setInputModality('mouse') } }
+  readonly onMouseDown = (event: MouseEvent) => { if (this.capture && !this.capture.result && this.acceptMouse(event)) this.capture.result = { device: 'mouse-button', code: String(event.button) }; if (this.acceptMouse(event) && !this.edgeOverflowed) { const changed = !this.mouseButtons.has(event.button); this.mouseButtons.add(event.button); if (changed && latencyProbe.enabled) latencyProbe.inputReceived('mouse-button', String(event.button), true, event.timeStamp); if (changed) this.recordDigitalEdge('mouse', '', '', event.button, true, !this.observation || !event.defaultPrevented && !this.isTypingTarget(event.target)); setInputModality('mouse') } }
   readonly onMouseUp = (event: MouseEvent) => { if (this.acceptMouse(event) && this.mouseButtons.delete(event.button)) this.recordDigitalEdge('mouse', '', '', event.button, false, !this.observation || !event.defaultPrevented && !this.isTypingTarget(event.target)) }
   readonly onMouseMove = /** 结构说明（自动提取）：匿名回调；输入 event；直接调用 acceptMouse、Math.abs、setInputModality；写入 clientX、clientY、movementX、movementY。 */ (event: MouseEvent) => { if (!this.acceptMouse(event)) return; this.clientX = event.clientX; this.clientY = event.clientY; this.movementX += event.movementX; this.movementY += event.movementY; if (Math.abs(event.movementX) + Math.abs(event.movementY) >= 1) setInputModality('mouse') }
   /** Only unhandled game-surface wheel input belongs to gameplay; editor and native controls keep scrolling. */
@@ -493,12 +518,14 @@ export class InputManager {
     this.current = emptySnapshot()
     this.recording = null
     this.replay = null
+    this.capture = null
   }
 
   /** 结构说明（自动提取）：sample；输入 actions、viewport；直接调用 sampleReplay、actions.some、some、devices.values、readGamepads 等；写入 current、sampledGamepads、snapshot.mousePosition、snapshot.wheel 等；返回路径包含 replayed、snapshot；包含循环处理。 */ sample(actions: InputAction[], viewport?: DOMRect): InputSnapshot {
     if (this.observation) { this.observation.consumed = null; this.observation.sampleSequence++ }
     const replayed = this.sampleReplay()
     if (replayed) { this.observation?.receipts.clear(); this.current = replayed; return replayed }
+    if (this.capture) this.captureGamepadButtons()
     const samplesGamepad = actions.some(/* 调用 action.bindings.some(binding => binding.device === 'gamepad-button' || binding.device === 'gamepad-axis') 并返回调用结果。 */ action => action.bindings.some(/* 先计算 binding.device === 'gamepad-button'；仅当其为假值时求右侧 binding.device === 'gamepad-axis'，返回短路求值结果。 */ binding => binding.device === 'gamepad-button' || binding.device === 'gamepad-axis')) || [...this.devices.values()].some(/* 先计算 device.kind === 'gamepad'；仅当其为真值时求右侧 device.connected，返回短路求值结果。 */ device => device.kind === 'gamepad' && device.connected)
     this.sampledGamepads = samplesGamepad ? this.readGamepads() : []
     if (samplesGamepad) { this.synchronizeGamepadInventory(this.sampledGamepads); this.detectMeaningfulGamepadActivity(this.sampledGamepads) }

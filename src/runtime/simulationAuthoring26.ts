@@ -105,7 +105,7 @@ const issueTranslationStems: Readonly<Record<string, string>> = {
     for (const descriptor of descriptors) {
       const support = PHYSICS_SHAPE_SUPPORT[descriptor.kind]
       if (!support) add('SIM-UNKNOWN-COLLIDER', 'blocked', `${entity.name} uses an unknown collider model.`, 'Choose a supported exact shape in Inspector → Physics.', { name: entity.name })
-      if ((descriptor.kind === 'Chain' || descriptor.kind === 'ConcavePolygon') && entity.rigidBody.bodyType === 'Dynamic') add('SIM-DYNAMIC-CONCAVE', 'blocked', `${entity.name} uses dynamic ${descriptor.kind}.`, 'Use Static/Kinematic or author convex compound children.', { name: entity.name, shape: descriptor.kind })
+      if (descriptor.kind === 'Chain' && entity.rigidBody.bodyType === 'Dynamic') add('SIM-DYNAMIC-CONCAVE', 'blocked', `${entity.name} uses dynamic ${descriptor.kind}.`, 'Use Static/Kinematic or author convex compound children.', { name: entity.name, shape: descriptor.kind })
       if ((descriptor.kind === 'Chain' || descriptor.kind.includes('Polygon')) && descriptor.points.length < (descriptor.kind === 'Chain' ? 2 : 3)) add('SIM-COLLIDER-POINTS', 'blocked', `${entity.name} has too few points for ${descriptor.kind}.`, 'Add the required non-degenerate collider points.', { name: entity.name, shape: descriptor.kind })
     }
   }

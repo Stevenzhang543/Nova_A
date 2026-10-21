@@ -1,6 +1,58 @@
-# Nova_A 26.38 Complete Manual
+# Nova_A 26.45 Complete Manual
 
-Engine: **26.38.0** · Project Format 2/schema 29.
+Engine: **26.45.0** · Project Format 2/schema 29.
+
+<!-- NOVA_V2645_RELEASES -->
+## 26.39–26.45 — What changed since 26.38
+
+Engine: **26.45.0** · Project Format 2/schema 29. Projects from 26.38 and later open without migration; only the engine stamp changes. Keep a copy of a project before you open it in a newer engine.
+
+### 26.45 — Physics, prefabs, input, debugging and effects
+
+- Shapes: colliders can be **Capsules** (a rectangle with round ends); dynamic **concave polygons** are split into convex pieces automatically.
+- Joints: the **Wheel joint** goes on each wheel and connects it to the chassis (suspension spring, travel limits, motor: negative speeds roll right); the **Weld joint** can be soft (linear and angular frequency); the **Target joint** pulls a body toward a point — scripts call `target_joint_move(x, y)` and `target_joint_release()`. Joints break above their force or torque.
+- Surfaces and areas: a collider can be a **conveyor** (`set_surface_speed(speed)` or the Surface speed field) and have **rolling resistance**; **Buoyancy** areas float bodies by the part under the surface (fluid density, flow, drag, angular drag); **Point gravity** pulls toward the area centre with a falloff.
+- Fast bodies set to Continuous no longer pass through each other. The physics world can be saved and restored as a whole, so a restored step replays exactly.
+- **Prefabs:** Apply to prefab updates the other instances (they keep their own overrides), the instances in scenes that are not open, and the prefab’s **variants** (a variant keeps its own changes; its instances follow too). Overrides name one field of one component.
+- **Players’ own key bindings:** a remap button in the game UI or `input_rebind(action[, index])` waits for the next key, mouse button or gamepad button (Escape cancels) and sends `input.rebound`; the Player keeps the bindings per game and `input_bindings_reset()` puts the project’s back. `input_prompt(action)` and `{input:Action}` in a Text show the key or button for the device in use.
+- **Debugging:** blocks can have breakpoints (block menu → Stop here); the paused block is outlined. The Physics recording keeps complete **keyframes** (◆): Continue from a keyframe restores physics, script variables (also hidden ones), timers, tweens and animations, so the game runs on exactly as it did; other steps rewind the bodies only.
+- **Effects:** `camera_shake(amount)` (trauma model; Camera2D → Shake distance, angle, frequency and recovery; Reduced motion keeps a quarter), `camera_zoom(zoom)`, `camera_follow(handle)`, `screen_flash(r, g, b, seconds)`. Particles with collision collide with every collider and tile map through the physics world and do not pass through thin walls; sub-emitters start where particles die.
+- Export: choosing a folder that already holds other files puts the game in a subfolder named after it. The compatibility Player is a page of its own (player-legacy.html), exported with Web builds.
+- Fixed: after Stop, Play no longer shows floors and platforms at the origin (0, 0) on fast screens.
+
+Try it: in the Platformer starter add a Capsule collider to a crate, a Buoyancy area under the water tiles, and a script on the player that calls `camera_shake(0.4)` in `on_collision_enter`. Open the Physics Monitor, play, pause, drag the recording back to a ◆ keyframe and choose Continue from here: the scene replays the same landing.
+
+### 26.44 — Solver, characters, animation and level tools
+
+- A new soft-step contact solver keeps piles calm; joints are soft constraints with limits and motors; large scenes use a dynamic AABB tree (a 1,000-box level steps several times faster).
+- Characters are pushed out of geometry, ride rotating and scripted platforms, and drop through one-way platforms (`character_drop_through()`); the Platform Controller has a jump buffer and variable jump height.
+- Animator: Any State transitions, crossfades from scripts and blocks, state signals. Tweens: `tween("x", 3.0, 0.5, "quad_out")` with 31 easings, loops and yoyo.
+- Terrain auto-tiling (16-tile and 47-tile blob rules) for every tile tool; Rhai breakpoints with locals and stepping; the first physics recording (poses only).
+
+### 26.43 — Character edges, scripting and an editor-free Player
+
+- A jumping character no longer “flies” at box edges; continuous collision per body; collision callbacks can run after each physics step.
+- Scripts call each other (`call_on`, `call_global`, `call_group`, `after`), global scripts survive scene changes, and scripts play sound, music and video.
+- Exported games start in a Player without editor code; development exports show frame statistics (F3) and the physics layer (F4). Web exports fill iPad and desktop browsers.
+
+### 26.42 — Latency, lighting and new starters
+
+- 2D lighting is drawn by the WebGL2 renderer; templates run physics at 120 Hz; a fixed-step timer clock makes timers fire on the same step at every display rate.
+- New starters: Skyline Trilogy, Pendulum Post and Reflex Lab. Reduce transparency turns glass surfaces opaque.
+
+### 26.41 — Faster frames and a quieter editor
+
+- Input-to-display latency and frame pacing were measured and shortened; the editor interface was simplified around the viewport.
+
+### 26.40 — One title bar and many fixes
+
+- One 44 px title bar with menus, workspace switcher, run controls and command field; pointer input in exported games works again; dragging with the Select tool moves objects; closing with unsaved changes asks first.
+
+### 26.39 — Component and workflow audit
+
+- A read-only audit of every component and editor workflow that planned 26.40–26.45; no behaviour or project-format change.
+
+<!-- NOVA_V2645_RELEASES_END -->
 
 <!-- NOVA_V2636_BRANDING -->
 ## 26.36 — Supplied light and dark branding
@@ -44,7 +96,7 @@ Try every workspace using long paths and populated lists, narrow and wide window
 
 Upload the Web ZIP contents to HTTP(S) root or subpath with relative assets and WASM MIME type. The editor needs no application backend for local work; optional authentication/relay needs its own compatible service. Installation/Add to Home Screen is an online shortcut: no service worker or offline reload is provided. Desktop requires its documented system runtime. Native physics JSONL CLI runs bounded physics requests only, not project/Rhai/server gameplay. Linux/macOS/device and independent accessibility acceptance require their real environments.
 
-Read FEATURE_INVENTORY_26_30.md, PANEL_INVENTORY_26_30.md, COMPETITIVE_REVIEW_26_30.md and ISSUE_CLOSURE_26_30.md for declared routes and remaining limits. Actual acceptance belongs to frozen-source reports and checksums. Troubleshooting: restore migration backup, use Recovery Browser after interrupted saves, disable a failing package, inspect Console/Build diagnostics and retain the last valid export. Never turn an unavailable platform or unexecuted panel state into a passing result.
+Actual acceptance belongs to frozen-source reports and checksums. Troubleshooting: restore migration backup, use Recovery Browser after interrupted saves, disable a failing package, inspect Console/Build diagnostics and retain the last valid export. Never turn an unavailable platform or unexecuted panel state into a passing result.
 
 
 <!-- NOVA_V2629_START -->
@@ -189,7 +241,7 @@ Choose New to reveal all forty starter templates, project name and location. Can
 
 ### Dynamic scripting and safe reload
 
-Rhai values can change type. Arrays/maps are mutable; closures capture values and function pointers invoke callbacks. Project helpers use literal module-level use declarations. Modules share one combined namespace: native Rhai import aliases and arbitrary evaluation are not supported. SCRIPTING_CONTRACT_26_23.md documents limits and permissions. Exported constant defaults support nested arrays/maps and null; maps use Rhai #{coins: 1} syntax.
+Rhai values can change type. Arrays/maps are mutable; closures capture values and function pointers invoke callbacks. Project helpers use literal module-level use declarations. Modules share one combined namespace: native Rhai import aliases and arbitrary evaluation are not supported. Exported constant defaults support nested arrays/maps and null; maps use Rhai #{coins: 1} syntax.
 
 Save a valid change during Play. The affected bundle must compile before atomic replacement. An invalid newer request cancels its older queued candidate. On failure the previous bundle continues. Compatible exported state survives; incompatible layouts need restart. Stop clears session-owned rollback data. Empty previous scripts remain valid rollback targets. Unchanged compiled programs can be shared read-only, never mutable invocation scopes.
 
@@ -249,7 +301,7 @@ Save, close and reopen. Export Web and repeat the game/menu interaction and chan
 
 ### Evidence and limits
 
-Follow `IMPLEMENTATION_TRACKER_26_22.md` for completed checks and `GAP_REGISTER_26_22.md` for unsupported effects. The lifecycle matrix records named dispositions and explicit evidence limits; classification is not a universal field pass. Development reports cannot qualify a frozen release. Independent users, assistive technology, other operating systems, signing, device audio and long-duration soak remain separate external checks.
+The lifecycle matrix records named dispositions and explicit evidence limits; classification is not a universal field pass. Development reports cannot qualify a frozen release. Independent users, assistive technology, other operating systems, signing, device audio and long-duration soak remain separate external checks.
 
 Project Save, export, Play and single-step stop when a studio has unsaved asset changes. Save that asset in its own editor, or explicitly reload/discard its draft, then retry. Numeric drafts are validated first. The dedicated animation asset preview still supports auditioning an unsaved clip. Unlinking a script from a graph removes the real link marker while preserving source code, string contents and other comments.
 
@@ -426,7 +478,7 @@ Simulation exposes latency, jitter, loss, duplicate and reorder percentages plus
 
 Instance Logs show this editor's observed events for that process; Inspector shows process identity/status. Inspect gameplay state and network events in the running player. These views are not a remote native debugger or captured child stdout. Export diagnostics for troubleshooting and check redaction before sharing.
 
-Before exporting co-op players, explicitly enable permission and Start with game runtime, choose the intended role and session, and test the actual outputs together. Local lobby players must share the supported local origin/storage context; Windows direct UDP uses a host bind port and clients pointing at that host, with distinct client bind ports. The separate server reference is a Windows renderer-disabled WebView export. It still requires the desktop host/WebView; it is not a windowless Rust server. Read NATIVE_SERVER_ARCHITECTURE_26_18.md for the real native design and acceptance gates.
+Before exporting co-op players, explicitly enable permission and Start with game runtime, choose the intended role and session, and test the actual outputs together. Local lobby players must share the supported local origin/storage context; Windows direct UDP uses a host bind port and clients pointing at that host, with distinct client bind ports. The separate server reference is a Windows renderer-disabled WebView export. It still requires the desktop host/WebView; it is not a windowless Rust server.
 
 ### Honest rollback and completion checks
 
@@ -444,7 +496,7 @@ Engine: **26.17.0** · Project Format 2/schema 29.
 
 The X/Y readout keeps its timer in the exported readout_elapsed property. Ordinary Rhai locals are initialized on each callback; use exported properties for persistent callback state.
 
-Use the separate26.17 platformer, navigation and physics-puzzle references as starting projects. Keep an original copy. The generated reference describes intended behavior; the release evidence contains the separately edited project, actual downloads and observed player behavior. Project Format2/schema29 and the existing Rhai/visual format remain unchanged. The complete declared-field map is PHYSICS_WORLD_FIELD_MATRIX_26_17.md, including nested shapes/materials/effects, all connection fields and global profiles.
+Use the separate26.17 platformer, navigation and physics-puzzle references as starting projects. Keep an original copy. The generated reference describes intended behavior; the release evidence contains the separately edited project, actual downloads and observed player behavior. Project Format2/schema29 and the existing Rhai/visual format remain unchanged.
 
 ### Author a body with deliberate units and ownership
 
@@ -1161,7 +1213,7 @@ Expected checks:12 before the multiplier edit,18 after it,12 after undo; no comm
 
 The shared source projection is limited to64,000 UTF16 characters,10,000 nodes and128 pins per node; ordered lists are grouped when necessary. Limits reject rather than truncate. Rhai integers and floats are distinct overloads: write0.0 where a float is required. The API overload palette identifies actual registered signatures. Native import aliases/namespaces, eval, await and blocking sleep are unavailable; project-local use is dependency concatenation, and timers/tasks provide supported delays. Local closures and function pointers execute, but closure identities cannot be serialized into saved properties. Syntax coverage does not replace runtime, export or user testing.
 
-Project Format2/schema29 and Graph Format1 remain unchanged. The additive language metadata identifies the new representation. Preserve a backup before opening a typed graph in an older editor. Existing legacy graphs remain usable and report any source-backed regions. For the exact syntax, API signatures and audit scope see VERSION_26_12_LANGUAGE.md, SCRIPT_SUPPORT_MATRIX_26_12.md and the separate release evidence.
+Project Format2/schema29 and Graph Format1 remain unchanged. The additive language metadata identifies the new representation. Preserve a backup before opening a typed graph in an older editor. Existing legacy graphs remain usable and report any source-backed regions.
 <!-- NOVA_V2612_END -->
 
 ## 6.2.0 behavior contracts
@@ -1347,7 +1399,7 @@ Select an asset and use the five Asset Importer tabs. **Source** owns path, sour
 
 Image Import controls filtering, mipmaps, color space, transparency, compression, PPU, pivot, trim, manual/grid/automatic slicing, animation extraction, nine-slice, polygon/collision, atlas group/rotation/trim, SVG rasterization, and target overrides. TileMap adds searchable TileSet palettes, complete paint/selection tools, per-layer collision/navigation/occlusion, world-coordinate readout, streaming boundaries, baking, bounded history, diagnostics, and copyable deterministic storage. Camera composition retains bounds, smoothing, drag margins, safe frames, previews, priorities, stacks, viewports, textures, and culling. Parallax adds repeat/mirror/depth. Paths add points, tangents, closed smoothing, `.nova-path` assets, and runtime followers.
 
-Font Import controls scalable/bitmap output, fallbacks, shaping, OpenType, hinting, oversampling, outline, SDF/MSDF, distance range, declared languages, editor/game ownership, and glyph reports for CJK, RTL, combining marks, and emoji. Missing coverage always has an action. See `docs/ASSET_PIPELINE_4_4.md`, `docs/SPRITE_TILEMAP_FONT_4_4.md`, and `docs/KNOWN_ISSUES_4_4.md`.
+Font Import controls scalable/bitmap output, fallbacks, shaping, OpenType, hinting, oversampling, outline, SDF/MSDF, distance range, declared languages, editor/game ownership, and glyph reports for CJK, RTL, combining marks, and emoji. Missing coverage always has an action.
 
 ## Nova_A 4.3 scene, hierarchy, Inspector, component, and prefab authoring
 
@@ -1355,7 +1407,7 @@ Use the loaded-scene tabs above Design to inspect dirty, external-change, valida
 
 The Hierarchy virtualizes 10,000-object scenes. Search matches names, IDs, tags, and component types; type and dedicated tag filters, saved searches, pins, selection Back/Forward, breadcrumbs, isolate, visibility, lock, enabled state, range selection, reparenting, and sibling reorder remain available. The Inspector supports multi-edit mixed values, tags/groups/layers, ownership, owner, editor-only and persistence policy, safe numeric expressions, property pins/modified-only, presets, component enable/reset/copy/paste/reorder/remove, and inline dependency/conflict validation.
 
-Prefab workflows provide Create, Instantiate, Apply, Revert, per-property Reset, Compare, Unpack, Variant, source navigation, conflict status, nesting, circular-dependency prevention, and safe selection replacement. Viewport Arrange, measure, camera frame, rulers, guides, and seven documented snap targets share exact world units. See [scene/prefab schema](../docs/SCENE_PREFAB_SCHEMA_4_3.md), [component authoring](../docs/COMPONENT_AUTHORING_4_3.md), and [Hierarchy/Inspector](../docs/HIERARCHY_INSPECTOR_4_3.md).
+Prefab workflows provide Create, Instantiate, Apply, Revert, per-property Reset, Compare, Unpack, Variant, source navigation, conflict status, nesting, circular-dependency prevention, and safe selection replacement. Viewport Arrange, measure, camera frame, rulers, guides, and seven documented snap targets share exact world units. See scene/prefab schema, component authoring, and Hierarchy/Inspector.
 
 ## Nova_A 4.2 project-integrity workflow
 
@@ -1363,21 +1415,21 @@ All authored changes enter the central undo model and dirty scope. **Edit → Un
 
 Project Manager guides **Open**, **Add existing**, **Migrate older project**, and traversal-safe bounded **Import archive**. Older schemas 5–29 receive dry-run compatibility and impact reports, a backup, Task Center log, deterministic rerun, complete validation, and rollback. A lock conflict offers a clear read-only route. **Manage → Project Health** covers validation, deterministic re-save, read-only repair preview, missing-reference mapping, stale-cache rebuild, transaction journals, recovery checkpoints, migration status, rollback, and recoverable project trash.
 
-After abnormal exit, Recovery Browser previews valid checkpoints against the manual baseline and requires Restore, Discard, or Open as copy; it never silently overwrites a manual file. External file/branch changes likewise require Compare, Reload/Keep disk, or Keep editor. See [serialization](../docs/SERIALIZATION_SPECIFICATION_4_2.md), [transactions](../docs/PROJECT_TRANSACTIONS_4_2.md), [recovery](../docs/RECOVERY_4_2.md), and [migration/rollback](../docs/MIGRATION_AND_ROLLBACK_4_2.md).
+After abnormal exit, Recovery Browser previews valid checkpoints against the manual baseline and requires Restore, Discard, or Open as copy; it never silently overwrites a manual file. External file/branch changes likewise require Compare, Reload/Keep disk, or Keep editor. See serialization, transactions, recovery, and migration/rollback.
 
 ## Nova_A 4.1 editor modernization
 
 Nova_A now has six top-level workspaces: **Design**, **Script**, **Animation**, **UI**, **Debug**, and **Manage**. The left rail is contextual. Manage contains Settings, Packages, Project Health, global Rendering policy, and Build; the bottom dock keeps contextual Assets, Console, Animation, Audio, and Profiler tools. Use Ctrl/Cmd+Shift+P for every stable command, Ctrl/Cmd+P for assets, Ctrl/Cmd+Shift+F for global search, and Ctrl/Cmd+K for context search. Workspace Manager provides six role profiles, named layouts, drag/split/floating docks, panel pinning, auto-hide, tab rearrangement, import/export, reset, and safe recovery.
 
-The editor bundles Nunito Sans Variable, Noto Sans SC Variable, and JetBrains Mono. Density never shrinks text below the readable role floor. Project Manager requires one visibly selected template, validates project name/path, exposes details, and stores guidance as a dismissible tutorial asset. Debug owns the virtualized Physics Monitor; Manage owns the summary/table/detail Project Health view and four-state build readiness. Task Center unifies long-running progress, cancellation, retry, details, logs, and resource links. See [navigation](../docs/NAVIGATION_4_1.md), [design tokens](../docs/UI_DESIGN_TOKENS_4_1.md), and [keyboard accessibility](../docs/KEYBOARD_ACCESSIBILITY_4_1.md).
+The editor bundles Nunito Sans Variable, Noto Sans SC Variable, and JetBrains Mono. Density never shrinks text below the readable role floor. Project Manager requires one visibly selected template, validates project name/path, exposes details, and stores guidance as a dismissible tutorial asset. Debug owns the virtualized Physics Monitor; Manage owns the summary/table/detail Project Health view and four-state build readiness. Task Center unifies long-running progress, cancellation, retry, details, logs, and resource links. See navigation, design tokens, and keyboard accessibility.
 
 ## Nova_A 4.0 production baseline
 
-Nova_A 4.0 is the stable Project Format 2/schema 29 baseline. Opening any external project first shows engine/schema, content counts, package compatibility, migration plan, and a preflight report. Supported 3.x upgrades require a complete source download, retain a local rollback record, migrate in memory, validate the complete document, canonicalize it, and only then replace the editor session. Newer schemas remain read-only. See [Migration](../docs/MIGRATION_4_0.md) and [Archived engines](../docs/ARCHIVED_ENGINE_GUIDANCE_4_0.md).
+Nova_A 4.0 is the stable Project Format 2/schema 29 baseline. Opening any external project first shows engine/schema, content counts, package compatibility, migration plan, and a preflight report. Supported 3.x upgrades require a complete source download, retain a local rollback record, migrate in memory, validate the complete document, canonicalize it, and only then replace the editor session. Newer schemas remain read-only. See Migration and Archived engines.
 
 Studio Status declares Stable, Beta, and Development channels, the offline known-issues feed, frozen public contracts, and privacy-reviewed diagnostics. Crash packages require explicit opt-in and remain local until the user sends them. The default templates are Empty, Platformer, Top-down, Physics Sandbox, and UI Showcase; Experimental networking remains available through Packages and references but is not presented as a Stable starter.
 
-Start with [Create and export a small game](../docs/CREATE_EXPORT_SMALL_GAME_4_0.md). The supported API index, build/CI, performance, security, accessibility, troubleshooting, support, and package guides are under `docs/`. Version 4.0 preserves every retained rendering, animation, scripting, physics, UI, audio, world, build, and extension workflow while locking schema 29, Runtime API 1, Plugin API 2, Package Manifest 1, and Build CLI 1 for compatible 4.0.x patches.
+Start with Create and export a small game. The supported API index, build/CI, performance, security, accessibility, troubleshooting, support, and package guides are under `docs/`. Version 4.0 preserves every retained rendering, animation, scripting, physics, UI, audio, world, build, and extension workflow while locking schema 29, Runtime API 1, Plugin API 2, Package Manifest 1, and Build CLI 1 for compatible 4.0.x patches.
 
 Nova_A is an open-source 2D game engine and editor. This manual describes the complete editor-to-player workflow in Nova_A 3.8.0. One world unit is one configured grid unit and one metre by default; physics values use the documented SI-style units.
 
@@ -2074,7 +2126,7 @@ Use `Physics2D.rayQuery`, `pointQuery`, `overlapQuery`, `sweep`, `nearest`, and 
 
 Distance, revolute, prismatic, weld, spring, motor, and Rope2D show anchors, limits, damping, connected collision, break thresholds, and telemetry. Rope2D also exposes 3–32 segments, compliance/stretch, bend behavior, density, radius, collision, endpoints, and break link. Endpoint owners are excluded from Rope node collision; compatible third bodies still collide.
 
-The Physics Monitor is a virtual list plus detail pane. Sort bodies, reverse ordering, pin a body, inspect a 60-step speed sparkline/delta, review collision forces, inspect joints/Rope, capture, compare, and export JSON. Profiler overlays colliders, contacts, normals, AABBs, sleep, centre of mass, velocity, force, character contacts, joints, and Rope nodes. Project Health reports physics-budget, dropped-time, and scale warnings. See `docs/PHYSICS_2D_4_5.md`, `docs/CHARACTER_CONTROLLERS_4_5.md`, and `docs/PHYSICS_DIAGNOSTICS_4_5.md`.
+The Physics Monitor is a virtual list plus detail pane. Sort bodies, reverse ordering, pin a body, inspect a 60-step speed sparkline/delta, review collision forces, inspect joints/Rope, capture, compare, and export JSON. Profiler overlays colliders, contacts, normals, AABBs, sleep, centre of mass, velocity, force, character contacts, joints, and Rope nodes. Project Health reports physics-budget, dropped-time, and scale warnings.
 
 ## Nova_A 4.6 — complete programming workflow
 
@@ -2084,7 +2136,7 @@ Rhai API v2 has 110 documented stable entries across lifecycle, scene/entity/com
 
 The debugger supports persistent grouped line/function breakpoints, conditions, hit counts, logpoints, stack/frame selection, locals, watches/evaluation, exception policy, tasks, source navigation and callback-safe stepping. Exported-player debugging is off by default, loopback-only, explicitly enabled and token-authenticated. A save is compiled and classified before hot reload; incompatible/syntax-failed candidates cannot replace the valid runtime, and each accepted change retains rollback history.
 
-Run tests for the file, project, tags or prior failures. Unit, integration, scene, UI, physics, animation and regression metadata supports fixtures, setup/teardown, cases, timeout, cancellation and captured deterministic seed. The CLI produces JSON, JUnit and JSON/LCOV coverage, supports changed selection and deterministic sharding, and returns 0 pass, 1 test failure or 2 infrastructure/usage failure. Shared-world editor tests remain serial; independent CLI shards are the supported parallel policy. See `docs/RHAI_TESTING_COVERAGE_4_6.md`, `docs/RHAI_DEBUG_PROTOCOL_V2.md`, `docs/RHAI_HOT_RELOAD_4_6.md`, and `docs/RHAI_EXTERNAL_TOOLS_4_6.md`.
+Run tests for the file, project, tags or prior failures. Unit, integration, scene, UI, physics, animation and regression metadata supports fixtures, setup/teardown, cases, timeout, cancellation and captured deterministic seed. The CLI produces JSON, JUnit and JSON/LCOV coverage, supports changed selection and deterministic sharding, and returns 0 pass, 1 test failure or 2 infrastructure/usage failure. Shared-world editor tests remain serial; independent CLI shards are the supported parallel policy.
 
 ## Nova_A 4.7 — animation and runtime UI production
 
@@ -2098,9 +2150,9 @@ Theme tokens cover colors, typography, spacing, radii, states, icons, sounds and
 
 Open **Script → Visual Graph**. The scope selector switches between the main graph and reusable functions, macros, or subgraphs. In **Structure**, add typed inputs/outputs, routine locals, custom events, interfaces, and visual-node libraries from installed project packages. Signature edits retain matching stable pins and remove incompatible wires explicitly; validation blocks missing interfaces, packages, pins, types, cycles, or identities before play/build.
 
-Use the node-header circle for a breakpoint. **Debug** provides conditions, hit counts, logpoints, watches, Continue/Step Into/Over/Out, active nodes and wires, stack, timings, errors, and coverage from the actual ordered Rust runtime trace. Reduced motion keeps the active stroke visible without movement. **Refactor** supports UUID-safe rename/find references, main-graph Extract Function, compatible Replace Node, and recorded deprecation migrations. **Diff / Merge** compares semantic identities, performs a three-way merge, and requires an explicit ours/theirs choice for every conflict. **Generated Rhai** displays the exact API-v2 execution source and creates a new one-way `.rhai` copy without overwriting the graph. Compatible saves hot reload at a frame boundary; signature or serialized-lifetime changes clearly require restart. See `docs/VISUAL_SCRIPTING_5_3.md` and `docs/VISUAL_SCRIPT_DEBUGGING_5_3.md`.
+Use the node-header circle for a breakpoint. **Debug** provides conditions, hit counts, logpoints, watches, Continue/Step Into/Over/Out, active nodes and wires, stack, timings, errors, and coverage from the actual ordered Rust runtime trace. Reduced motion keeps the active stroke visible without movement. **Refactor** supports UUID-safe rename/find references, main-graph Extract Function, compatible Replace Node, and recorded deprecation migrations. **Diff / Merge** compares semantic identities, performs a three-way merge, and requires an explicit ours/theirs choice for every conflict. **Generated Rhai** displays the exact API-v2 execution source and creates a new one-way `.rhai` copy without overwriting the graph. Compatible saves hot reload at a frame boundary; signature or serialized-lifetime changes clearly require restart.
 
-Use `docs/ANIMATION_UI_4_7.md`, `docs/ANIMATION_IMPORT_4_7.md`, and `docs/UI_LOCALIZATION_ACCESSIBILITY_4_7.md` for data contracts, validation rules, supported behavior and evidence commands. The five `*-v47-*` reference projects cover state machines, rigs, responsive HUD, multilingual RTL and accessibility.
+The five `*-v47-*` reference projects cover state machines, rigs, responsive HUD, multilingual RTL and accessibility.
 
 ## Nova_A 5.4 — gameplay framework and dynamic objects
 
@@ -2110,7 +2162,7 @@ Open **Manage → Project Settings → Input Map**, expand **Action behavior**, 
 
 Use `spawn_at` to create a prefab at a full transform and receive a pending entity handle. The handle can immediately target position/rotation/scale, enabled state, components, UI text/value, tags, groups, or destruction. `query_tag`, `query_group`, `query_component`, and `query_radius` return at most 256 typed handles. Stale, destroyed, despawned, scene-unloaded, and generation-mismatched handles log an explicit error and do nothing.
 
-Game flow scripts use pause, scene reload/load/quit, 32 named checkpoints, score, and bounded session data. Behavior trees and state machines send their active node/state, transition, coverage, errors, and timings to **Debug → Visual Debugger** and **Profiler**. Follow `docs/GAMEPLAY_FRAMEWORK_5_4.md`, `docs/DYNAMIC_OBJECT_API_5_4.md`, and `docs/INPUT_GAME_FLOW_5_4.md`.
+Game flow scripts use pause, scene reload/load/quit, 32 named checkpoints, score, and bounded session data. Behavior trees and state machines send their active node/state, transition, coverage, errors, and timings to **Debug → Visual Debugger** and **Profiler**.
 
 ## Nova_A 5.5 — materials, effects and particles
 
@@ -2136,7 +2188,7 @@ Choose an audio asset, click the waveform to place the cursor, use Left/Right fo
 
 Mixer buses retain parents, effects, sends, automation, voice limits and mute/solo. Capture a snapshot, rename it, edit master gain, choose it, and set Snapshot crossfade. Ducking rows provide enable, trigger/target bus, reduction, attack and release. Diagnostics automatically report estimated momentary/integrated LUFS, true peak, crest factor, clipping, latency, underruns, device changes and recovery. Press Recover audio after permission/output problems; hardware reconnection also invokes recovery automatically.
 
-See [the focused 5.6 guide](../docs/ANIMATION_AUDIO_CINEMATICS_5_6.md) for ordering, compatibility and qualification boundaries.
+See the focused 5.6 guide for ordering, compatibility and qualification boundaries.
 Open **Rendering → Visual material graph** and choose a material asset. **Classification: Assisted, reversible, asset-wide.** Select Sprite, UI or Light, add nodes, select each named input source, edit colors or numeric values, inspect backend capability, then Validate and Save. One Output and an acyclic graph are required. Saving persists deterministic inputs; generated GLSL remains derived. Canvas2D lists effects it cannot match; WebGL2 evaluates the complete graph. An invalid shader falls back only that material.
 
 Use **Layered 2D effects** for an ordered stack. **Classification: Manual, reversible, asset-wide.** Add Tint, Mask, Gradient, Palette, Outline, Dissolve or Distortion; select its row; edit colors, texture, strength, threshold or softness; choose blend/opacity; reorder; save. A mask needs an imported image. Unsupported Canvas effects retain the safe base color and show a warning.
@@ -2145,7 +2197,7 @@ Open **Rendering → Post processing**. **Classification: Manual plus automatic 
 
 Add `ParticleEmitter2D`, then open **Rendering → Particles**. **Classification: Assisted asset authoring, per-object application, runtime.** Create an asset from the emitter; order Spawn, Shape, Velocity, Force, Color, Size, Rotation, Collision, Events, Sub-emitter, Trail and Renderer modules; save; press Apply asset to intentionally copy values. Opening an asset never mutates the scene. CPU simulation is deterministic; WebGL2 batches compatible drawing and Canvas2D reports CPU drawing honestly.
 
-**Rendering → Diagnostics** shows actual atlas/import thumbnails, draw calls, batch breaks, overdraw, texture memory and remedies. **Classification: Automatic diagnostics, editor-only.** Capture a representative frame before changing atlas groups or quality. See `docs/MATERIALS_EFFECTS_5_5.md` and `docs/PARTICLES_POST_5_5.md`.
+**Rendering → Diagnostics** shows actual atlas/import thumbnails, draw calls, batch breaks, overdraw, texture memory and remedies. **Classification: Automatic diagnostics, editor-only.** Capture a representative frame before changing atlas groups or quality.
 
 ## Nova_A 5.7 — World Studio
 
@@ -2155,7 +2207,7 @@ For AI, enable the official package, add BehaviorTree2D and create a v2 asset. T
 
 For a streamed world, add WorldChunk2D to a cell owner and parent its content. Configure load/unload/prefetch distance, dependencies, cache policy, scene, memory estimate and save key. Dependencies must fit the project memory budget as a complete closure. Deactivation automatically captures descendant enabled state, transform and velocity; activation restores them. Use Origin shift for large coordinates and review current/peak memory and events before export.
 
-In the contextual TileMap panel, terrain rules, procedural brushes and weighted variants remain deterministic. A TileSet tile can reference a scene/prefab; during Play it instantiates within streaming radius and caches outside it. **Bake TileMap** validates chunks in the background, can be cancelled, and displays a deterministic artifact hash. See `docs/WORLDS_NAVIGATION_AI_5_7.md`.
+In the contextual TileMap panel, terrain rules, procedural brushes and weighted variants remain deterministic. A TileSet tile can reference a scene/prefab; during Play it instantiates within streaming radius and caches outside it. **Bake TileMap** validates chunks in the background, can be cancelled, and displays a deterministic artifact hash.
 
 ## Nova_A 5.8 — Network Studio
 
@@ -2167,7 +2219,7 @@ In **Replication**, select an object and add it explicitly, choose Server or Own
 
 In **Simulation & replay**, enable seeded latency, jitter, loss, duplicate or reorder behavior before testing. Record while connected, save the replay asset, then compare two assets to locate the first mismatching tick. **Multiplayer Save** captures only explicitly replicated state and verifies a checksum on restore. Endpoints, credentials and secret-like fields are excluded.
 
-Use **Diagnostics** to inspect packet/byte/bandwidth totals, invalid/rate-limited/dropped data, reliable retries, late joins, prediction, rollback, events and packet order. Export is a local, sanitized JSON file and never uploads. For a headless authority, choose a desktop Headless Server build, Server/Host role and Native UDP; validation blocks missing package, permission, authority or transport. Follow `docs/NETWORKING_REPLAY_5_8.md` for protocol rules, Rhai calls, limitations and the localhost qualification boundary.
+Use **Diagnostics** to inspect packet/byte/bandwidth totals, invalid/rate-limited/dropped data, reliable retries, late joins, prediction, rollback, events and packet order. Export is a local, sanitized JSON file and never uploads. For a headless authority, choose a desktop Headless Server build, Server/Host role and Native UDP; validation blocks missing package, permission, authority or transport.
 
 ## Nova_A 5.9 — Ecosystem Studio and platform delivery
 
@@ -2179,7 +2231,7 @@ In **Package Lab**, enter a reverse-domain ID, SemVer, publisher, archive SHA-25
 
 In **Export templates**, inspect installed target/architecture/runtime templates and their gates. Windows/Web are locally available, while independent clean-machine and signing evidence remain external. Linux/macOS stay matching-host candidates; Android stays blocked until every SDK/template/signing/device/install/input/audio gate passes. An imported file cannot declare itself trusted.
 
-In **Delivery**, refresh deterministic CI cache keys, keep delta builds with patch manifests, and create local, HTTPS or external-command connectors. Remote/external connectors require project permission. Prepare Plan validates destination and checksum but returns a non-executable plan and performs no network operation. Final deployment remains an external, explicit action. See `docs/EXTENSIONS_PLATFORM_DELIVERY_5_9.md`.
+In **Delivery**, refresh deterministic CI cache keys, keep delta builds with patch manifests, and create local, HTTPS or external-command connectors. Remote/external connectors require project permission. Prepare Plan validates destination and checksum but returns a non-executable plan and performs no network operation. Final deployment remains an external, explicit action.
 
 <!-- NOVA_V6_TEACHING_START -->
 # Nova_A 26.10 task-oriented teaching manual
@@ -20183,11 +20235,11 @@ Use this release workflow to learn, migrate, verify and ship a complete project 
 1. Open Manage → Learning Center → Platform readiness. Search for the feature you intend to use and inspect Binding, Validation, Undo, Persistence, Runtime/export, Documentation and Tests before authoring. A circle means the dimension does not apply; a dash means external evidence is still required.
 2. Start with a guided project or the creator-v2610-mixed-game reference. Follow each lesson in order: prerequisites, exact workflow, expected result, save/reload, undo/recovery, Play/Step, standalone build and accessibility checks.
 3. When opening a 6.x project, review the migration preview before applying. Confirm the source/target engines, semantic diff, backup path and deterministic checksum. The 26.10 seal changes only the supported-engine ceiling to <27.0.0; it does not rewrite schema 29 gameplay data.
-4. For code or Visual Graph behavior, edit either representation, save, inspect the synchronized counterpart and run parity/tests. Unsupported Rhai remains in a lossless Code block. Review the API browser or docs/API_SDK_26_10.md before relying on a runtime call.
+4. For code or Visual Graph behavior, edit either representation, save, inspect the synchronized counterpart and run parity/tests. Unsupported Rhai remains in a lossless Code block.
 5. Run Project Health, template/reference checks and Build validation. Build Windows on Windows and Web locally. Treat Linux/macOS as matching-host, Android as toolchain-gated experimental and iOS/console as deferred; do not turn an unavailable target into a false pass.
 6. Exercise keyboard and pointer paths in English, German and Chinese at 100–200% UI scale, high contrast and reduced motion. Save, close, reopen, recover from one intentional invalid value, then inspect release evidence and the exact eleven artifacts.
 
-**Undo and recovery:** Cancel a migration or restore its backup if the preview is unexpected. Undo document edits, use Recovery Browser after interrupted saves, disable a failing package/plugin, and keep the last valid build. Read docs/TROUBLESHOOTING_26_10.md for symptom-based recovery. Signing, clean-machine lifecycle, matching-host builds, independent observation and the real soak remain external until captured.
+**Undo and recovery:** Cancel a migration or restore its backup if the preview is unexpected. Undo document edits, use Recovery Browser after interrupted saves, disable a failing package/plugin, and keep the last valid build. Signing, clean-machine lifecycle, matching-host builds, independent observation and the real soak remain external until captured.
 
 <!-- NOVA_V6_TEACHING_END -->
 

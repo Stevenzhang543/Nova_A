@@ -115,14 +115,6 @@ export async function withBrowserAudit({ release, name, width = 1440, height = 9
     client.on('Runtime.exceptionThrown', /* 调用 errors.push(event.exceptionDetails?.exception?.description ?? event.exceptionDetails?.text) 并返回调用结果。 */ event => errors.push(event.exceptionDetails?.exception?.description ?? event.exceptionDetails?.text))
     await client.send('Runtime.enable'); await client.send('Page.enable'); browser = await client.send('Browser.getVersion'); await viewport(width, height)
     await until(readyExpression)
-    if (process.env.NOVA_AUDIT_OPERATION_COVERAGE === '1') {
-      const {createOperationCoverageMapper22} = await import('./operationCoverage22.mjs')
-      const sourceRoot = resolve(process.env.NOVA_AUDIT_COVERAGE_SOURCE_ROOT || process.cwd())
-      const inventory = JSON.parse(await readFile(join(sourceRoot, 'reports/v26.22-public-operations.json'), 'utf8'))
-      coverageMapper = await createOperationCoverageMapper22({root: sourceRoot, dist, operations: inventory.operations})
-      coverageOrigin = `http://127.0.0.1:${port}`
-      await client.send('Profiler.enable'); await client.send('Profiler.startPreciseCoverage', {callCount:true, detailed:true})
-    }
     await task({ evaluate, until, point, click, clickText, press, fill, select, capture, check, viewport, client, evidence, profile, observations, checks, release, expectedRelease, development })
     assert.deepEqual(errors, [], 'No uncaught browser exceptions')
   } catch (error) { failure = error; process.exitCode = 1; console.error(error); if (client) try { await capture('failure') } catch {} }

@@ -11,7 +11,7 @@ const colliderKinds: ColliderKind2D[] = ['BoxCollider2D', 'EllipseCollider2D', '
 /** 按类型构造渲染、碰撞、关节或注册组件，拒绝不可作为实体组件创建的类型。 */ function createComponent(kind: ComponentKind): Component2D {
   if (kind === 'ShapeRenderer2D') return new ShapeRenderer2D('Rectangle')
   if (colliderKinds.includes(kind as ColliderKind2D)) return new Collider2D(kind as ColliderKind2D)
-  if (kind.endsWith('Joint2D')) return new Joint2D(kind as JointKind2D)
+  if (kind.endsWith('Joint2D') && kind !== 'TargetJoint2D') return new Joint2D(kind as JointKind2D)
   const Constructor = (constructors as unknown as Partial<Record<ComponentKind, new () => Component2D>>)[kind]
   if (!Constructor) throw Error(`${kind} cannot be created as an entity component. Rope2D is authored as a scene connection.`)
   return new Constructor()

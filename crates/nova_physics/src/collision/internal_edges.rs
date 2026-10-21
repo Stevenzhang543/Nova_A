@@ -42,7 +42,7 @@ fn static_polygon_edges(body: &Body) -> Option<Vec<StaticEdge>> {
 
 /// Bodies whose primary polygon may own internal edges: static, solid, two-sided.
 fn coverage_candidate(body: &Body) -> bool {
-    body.is_static && !body.is_sensor && !body.one_way && matches!(body.shape, Shape::Polygon { .. })
+    body.is_static && !body.is_sensor && !body.one_way && matches!(body.shape, Shape::Polygon { radius, .. } if radius <= 0.0)
 }
 
 /// Bit-exact fingerprint of everything that decides static coverage.
@@ -63,7 +63,7 @@ fn static_fingerprint(bodies: &[Body]) -> u64 {
         mix(body.collider_offset.x.to_bits());
         mix(body.collider_offset.y.to_bits());
         mix(u64::from(body.layer) << 32 | u64::from(body.collision_mask));
-        if let Shape::Polygon { vertices } = &body.shape {
+        if let Shape::Polygon { vertices, .. } = &body.shape {
             for vertex in vertices {
                 mix(vertex.x.to_bits());
                 mix(vertex.y.to_bits());

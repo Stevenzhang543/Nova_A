@@ -112,10 +112,17 @@ interface ViteManifestEntry { file: string; css?: string[]; assets?: string[]; i
     entry.dynamicImports?.filter(includeDynamicEntry).forEach(visit)
   }
   visit(playerKey)
+  // 26.45: the compatibility Player is its own page (player-legacy.html) beside the game's index.html.
+  const legacyKey = Object.keys(manifest).find(key => key === 'player-legacy.html' || key.endsWith('/playerLegacyPage.ts'))
+  if (legacyKey) visit(legacyKey)
   const htmlResponse = await fetch('./player.html')
   if (!htmlResponse.ok) throw new Error('Nova Player HTML is missing from this build')
   const html = (await htmlResponse.text()).replace(/<title>.*?<\/title>/i, `<title>${sanitizeGameName(buildSettings.gameName)}</title>`)
   const files: ExportFile[] = [{ path: 'index.html', dataBase64: bytesToBase64(new TextEncoder().encode(html)) }]
+  if (legacyKey) {
+    const legacyResponse = await fetch('./player-legacy.html')
+    if (legacyResponse.ok) files.push({ path: 'player-legacy.html', dataBase64: bytesToBase64(new TextEncoder().encode((await legacyResponse.text()).replace(/<title>.*?<\/title>/i, `<title>${sanitizeGameName(buildSettings.gameName)}</title>`))) })
+  }
   for (const path of paths) files.push({ path, dataBase64: bytesToBase64(await fetchBytes(path)) })
   return files
 }

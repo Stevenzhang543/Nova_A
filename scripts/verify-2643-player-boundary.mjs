@@ -1,7 +1,7 @@
 /** 26.43 P-E2: the exported game's Player starts without Vue, the Editor stores, Editor components or
  * Editor i18n. Builds the real production Player bundle (in memory) and checks every module that loads
- * before the game runs: the entry chunk and its static imports. The compatibility Player stays a lazily
- * loaded chunk and is reported separately.
+ * before the game runs: the entry chunk and its static imports. 26.45: the compatibility Player is a
+ * page of its own (player-legacy.html), so nothing of it is reachable from player.html.
  *
  * Desktop exports (index.html in game mode) are handed to the same page.
  *
@@ -38,13 +38,20 @@ const observed = {
 }
 check('nothing the game needs at startup imports Vue, Editor stores/components/panels or Editor i18n', () => assert.deepEqual(observed.forbiddenAtStartup, []))
 check('the independent Player composition is in the startup bundle', () => { for (const id of ['src/runtime/player/playerHost.ts', 'src/runtime/player/playerView.ts', 'src/runtime/GameplayRuntimeCore.ts']) assert.ok(startupModules.includes(id), id) })
-check('the compatibility Player is a lazily loaded chunk (fallback only)', () => { assert.ok(observed.legacyChunkModules.includes('src/PlayerApp.vue')); assert.ok(!startupModules.includes('src/PlayerApp.vue')) })
+// 26.45: the compatibility Player is a page of its own (player-legacy.html): not even a lazy chunk of player.html.
+const legacyHtml = await readFile(join(root, 'player-legacy.html'), 'utf8').catch(() => '')
+check('the compatibility Player is a separate page (fallback only)', () => {
+  assert.deepEqual(observed.legacyChunkModules, [], 'no compatibility Player module is reachable from player.html')
+  assert.ok(!startupModules.includes('src/PlayerApp.vue'))
+  assert.match(legacyHtml, /src="\/src\/playerLegacyPage\.ts"/)
+})
 // Desktop exports (the editor binary in game mode) open index.html; App.vue must hand them to player.html,
 // which the app build packs next to index.html.
 const appSource = await readFile(join(root, 'src', 'App.vue'), 'utf8'), viteSource = await readFile(join(root, 'vite.config.ts'), 'utf8')
 check('desktop exports start the independent Player page too', () => {
   assert.match(appSource, /invoke<boolean>\('runtime_mode'\)\)\s*\{\s*location\.replace\(new URL\('player\.html', location\.href\)\.href\)/)
   assert.match(viteSource, /player:\s*resolve\(projectRoot, 'player\.html'\)/)
+  assert.match(viteSource, /playerLegacy:\s*resolve\(projectRoot, 'player-legacy\.html'\)/)
 })
 await mkdir(join(root, '.cache', 'verify'), { recursive: true })
 await writeFile(join(root, '.cache', 'verify', 'player-boundary-2643.json'), JSON.stringify({ generatedAt: new Date().toISOString(), results, observed: { ...observed, startupModuleList: startupModules.sort() } }, null, 2))

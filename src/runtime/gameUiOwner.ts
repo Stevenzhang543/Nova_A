@@ -7,6 +7,7 @@ import type {InputAction} from './input'
 import {bindUiReadPorts,type UiReadPorts,type UiAudioRead,type UiPresentationRead} from './uiReadPorts'
 import {resolveUiLayout,uiClipContains,uiItemVisibleArea,type UiLayoutItem,type UiLayoutIssue,type UiLayoutOptions,type UiRect} from './uiLayout'
 import {createUiTextPresenter} from './uiTextPresentationValues'
+import {replaceInputPromptTokens} from './inputBindingStore'
 import {truncateUtf16,uiTextGraphemes} from './uiTextLayout'
 import {UiImageTintCache} from './uiImageTint'
 export type {UiRect} from './uiLayout'
@@ -303,7 +304,12 @@ export class GameUiOwner {
     const text = entity.getComponent<Text>('Text')
     if (text?.enabled && (text.captionCategory === 'None' || (text.captionCategory === 'Dialogue' ? this.presentation().accessibility.subtitles : this.presentation().accessibility.captions))) {
       const control = button ?? panel, style = control ? themeStyle(theme, control.styleClass, button?.state.toLowerCase() ?? 'normal', control.styleOverrides) : {}
-      const display = text.inputPromptAction ? this.reads.formatInputPrompt(this.reads.inputPromptForAction(text.inputPromptAction, this.inputActions)) : undefined
+      let display = text.inputPromptAction ? this.reads.formatInputPrompt(this.reads.inputPromptForAction(text.inputPromptAction, this.inputActions)) : undefined
+      // 26.45: "Press {input:Jump} to start" shows the Jump key, button or symbol of the device in use.
+      if (display === undefined && (text.text.includes('{input:') || text.localizationKey)) {
+        const value = this.text.uiTextPresentation(text, item.scale, item.locale, undefined, undefined, this.presentation().accessibility).value
+        if (value.includes('{input:')) display = replaceInputPromptTokens(value, action => this.reads.inputPromptForAction(action, this.inputActions).symbol)
+      }
       context.fillStyle = this.presentation().accessibility.highContrast ? '#ffffff' : typeof style.foreground === 'string' ? style.foreground : color(text.color, text.opacity)
       this.text.drawUiText(context, text, rect, item.scale, item.locale, display, undefined, undefined, this.presentation().accessibility)
     }

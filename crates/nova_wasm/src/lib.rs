@@ -60,6 +60,8 @@ pub fn install_panic_reporter() {
 #[wasm_bindgen]
 pub struct WasmRuntimeWorld {
     inner: RuntimeWorld,
+    // 26.45: physics snapshots held by slot (recording keyframes, determinism checks).
+    snapshots: std::collections::HashMap<u32, nova_physics::PhysicsSnapshot>,
 }
 
 #[wasm_bindgen]
@@ -69,6 +71,7 @@ impl WasmRuntimeWorld {
     pub fn new() -> Self {
         Self {
             inner: RuntimeWorld::new(),
+            snapshots: std::collections::HashMap::new(),
         }
     }
 
@@ -158,6 +161,11 @@ impl WasmRuntimeWorld {
             /* 提供缺省或失败路径的空值：String :: from ("null")。 */
             |_| String::from("null"),
         )
+    }
+
+    // 26.45: 批量线段投射（粒子碰撞）：每段 [x0, y0, x1, y1]，每个结果 [命中, 比例, 法线 x, 法线 y, 句柄]。
+    pub fn cast_segments(&self, segments: &[f64], mask: u32) -> Vec<f64> {
+        self.inner.cast_segments(segments, mask)
     }
 
     // 将所有射线命中结果编码为 JSON。
@@ -290,6 +298,82 @@ impl WasmRuntimeWorld {
             .map_err(JsValue::from_str)
     }
 
+    // 26.45: 目标（鼠标）关节：锚点（刚体局部坐标）软性拉向世界点 target。
+    #[allow(clippy::too_many_arguments)]
+    pub fn set_body_target(
+        &mut self,
+        handle: u32,
+        anchor_x: f64,
+        anchor_y: f64,
+        target_x: f64,
+        target_y: f64,
+        hertz: f64,
+        damping_ratio: f64,
+        max_force: f64,
+    ) -> Result<(), JsValue> {
+        self.inner
+            .set_body_target(
+                handle,
+                [anchor_x, anchor_y],
+                [target_x, target_y],
+                hertz,
+                damping_ratio,
+                max_force,
+            )
+            .map_err(JsValue::from_str)
+    }
+
+    // 26.45: 释放目标关节，返回此前是否存在。
+    pub fn clear_body_target(&mut self, handle: u32) -> bool {
+        self.inner.clear_body_target(handle)
+    }
+
+    // 26.45: 传送带表面速度（m/s）与滚动阻力系数。
+    pub fn set_body_surface(
+        &mut self,
+        handle: u32,
+        tangent_speed: f64,
+        rolling_resistance: f64,
+    ) -> Result<(), JsValue> {
+        self.inner
+            .set_body_surface(handle, tangent_speed, rolling_resistance)
+            .map_err(JsValue::from_str)
+    }
+
+    // 26.45: 把当前物理状态保存到 slot，返回估计的字节数。
+    pub fn save_snapshot(&mut self, slot: u32) -> f64 {
+        let snapshot = self.inner.physics_snapshot();
+        let bytes = snapshot.approximate_bytes() as f64;
+        self.snapshots.insert(slot, snapshot);
+        bytes
+    }
+
+    // 26.45: 恢复 slot 中的快照；slot 为空时返回 false。
+    pub fn restore_snapshot(&mut self, slot: u32) -> bool {
+        let Some(snapshot) = self.snapshots.get(&slot).cloned() else {
+            return false;
+        };
+        self.inner.restore_physics_snapshot(&snapshot);
+        true
+    }
+
+    // 26.45: 快照所在的物理步数；slot 为空时为 -1。
+    pub fn snapshot_steps(&self, slot: u32) -> f64 {
+        self.snapshots
+            .get(&slot)
+            .map_or(-1.0, |snapshot| snapshot.physics_steps() as f64)
+    }
+
+    // 26.45: 丢弃一个快照。
+    pub fn drop_snapshot(&mut self, slot: u32) -> bool {
+        self.snapshots.remove(&slot).is_some()
+    }
+
+    // 26.45: 丢弃全部快照。
+    pub fn clear_snapshots(&mut self) {
+        self.snapshots.clear();
+    }
+
     // 给指定刚体设置持续力和力矩。
     pub fn apply_force(&mut self, handle: u32, x: f64, y: f64, torque: f64) -> Result<(), JsValue> {
         self.inner
@@ -349,6 +433,7 @@ impl WasmRuntimeWorld {
     // 清空运行状态及其关联缓存，供重新加载使用。
     pub fn clear(&mut self) {
         self.inner.clear();
+        self.snapshots.clear();
     }
 
     // 规范并保存固定时间设置。
@@ -526,6 +611,8 @@ impl Default for WasmRuntimeWorld {
 #[wasm_bindgen]
 pub struct WasmScriptRuntime {
     inner: ScriptRuntime,
+    // 26.45: instance snapshots held by slot (the debugger's rewind keyframes).
+    instance_snapshots: std::collections::HashMap<u32, nova_script::ScriptInstancesSnapshot>,
 }
 
 #[wasm_bindgen]
@@ -535,6 +622,7 @@ impl WasmScriptRuntime {
     pub fn new() -> Self {
         Self {
             inner: ScriptRuntime::new(),
+            instance_snapshots: std::collections::HashMap::new(),
         }
     }
 
@@ -543,6 +631,7 @@ impl WasmScriptRuntime {
     pub fn fork(&self) -> Self {
         Self {
             inner: self.inner.clone(),
+            instance_snapshots: std::collections::HashMap::new(),
         }
     }
 
@@ -748,6 +837,34 @@ impl WasmScriptRuntime {
     // 移除指定脚本编译缓存并返回是否存在。
     pub fn remove_cached(&mut self, script_id: &str) -> bool {
         self.inner.remove(script_id)
+    }
+
+    // 26.45: 把全部实例状态保存到 slot，返回实例数。
+    pub fn save_instances(&mut self, slot: u32) -> u32 {
+        let snapshot = self.inner.snapshot_instances();
+        let count = u32::try_from(snapshot.len()).unwrap_or(u32::MAX);
+        self.instance_snapshots.insert(slot, snapshot);
+        count
+    }
+
+    // 26.45: 恢复 slot 中的实例状态；slot 为空或属于另一次运行时返回 -1，否则返回恢复的实例数。
+    pub fn restore_instances(&mut self, slot: u32) -> f64 {
+        let Some(snapshot) = self.instance_snapshots.get(&slot) else {
+            return -1.0;
+        };
+        self.inner
+            .restore_instances(snapshot)
+            .map_or(-1.0, |count| count as f64)
+    }
+
+    // 26.45: 丢弃一个实例快照。
+    pub fn drop_instances(&mut self, slot: u32) -> bool {
+        self.instance_snapshots.remove(&slot).is_some()
+    }
+
+    // 26.45: 丢弃全部实例快照。
+    pub fn clear_instance_snapshots(&mut self) {
+        self.instance_snapshots.clear();
     }
 }
 

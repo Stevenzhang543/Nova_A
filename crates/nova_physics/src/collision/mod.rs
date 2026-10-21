@@ -248,9 +248,25 @@ fn collide_gjk(body_a: &Body, body_b: &Body) -> Option<Manifold> {
     }
 }
 
-// 将多边形局部顶点转换到世界空间；非多边形返回空值。
+// 将尖角多边形局部顶点转换到世界空间；椭圆与圆角形状（胶囊）返回空值。
 fn world_polygon_vertices(body: &Body) -> Option<Vec<Vec2>> {
-    let Shape::Polygon { vertices } = &body.shape else {
+    match &body.shape {
+        Shape::Polygon { radius, .. } if *radius <= 0.0 => core_world_vertices(body),
+        _ => None,
+    }
+}
+
+// 26.45: 圆角多边形的圆角半径（尖角多边形与椭圆为 0）。
+fn polygon_radius(body: &Body) -> f64 {
+    match &body.shape {
+        Shape::Polygon { radius, .. } => radius.max(0.0),
+        _ => 0.0,
+    }
+}
+
+// 26.45: 多边形（含圆角形状的核心多边形/线段）的世界顶点。
+fn core_world_vertices(body: &Body) -> Option<Vec<Vec2>> {
+    let Shape::Polygon { vertices, .. } = &body.shape else {
         return None;
     };
     Some(
@@ -313,14 +329,20 @@ fn polygon_manifolds_within(body_a: &Body, body_b: &Body, margin: f64) -> Option
     let vertices_a = world_polygon_vertices(body_a)?;
     let vertices_b = world_polygon_vertices(body_b)?;
     let center_direction = body_b.collider_position().sub(body_a.collider_position());
+    clip_polygons(&vertices_a, &vertices_b, center_direction, margin)
+}
+
+// SAT + reference-face clipping between two convex vertex sets (A's normal points from A to B).
+// 26.45: split out so rounded shapes can clip their core polygons (a capsule's core is a segment).
+fn clip_polygons(vertices_a: &[Vec2], vertices_b: &[Vec2], center_direction: Vec2, margin: f64) -> Option<Vec<Manifold>> {
     let margin = margin.max(0.0);
     // Best (least overlapping) axis of each polygon.
     let mut best = [(f64::INFINITY, Vec2::new(1.0, 0.0)); 2];
-    for (slot, vertices) in [&vertices_a, &vertices_b].into_iter().enumerate() {
+    for (slot, vertices) in [vertices_a, vertices_b].into_iter().enumerate() {
         for edge_index in 0..vertices.len() {
             let mut axis = outward_edge_normal(vertices, edge_index);
-            let (minimum_a, maximum_a) = project_polygon(&vertices_a, axis);
-            let (minimum_b, maximum_b) = project_polygon(&vertices_b, axis);
+            let (minimum_a, maximum_a) = project_polygon(vertices_a, axis);
+            let (minimum_b, maximum_b) = project_polygon(vertices_b, axis);
             let overlap = maximum_a.min(maximum_b) - minimum_a.max(minimum_b);
             if overlap <= -margin || (margin == 0.0 && overlap <= 0.0) {
                 return None;
@@ -340,9 +362,9 @@ fn polygon_manifolds_within(body_a: &Body, body_b: &Body, margin: f64) -> Option
     let (minimum_overlap, collision_normal) = if reference_is_a { best[0] } else { best[1] };
 
     let (reference_vertices, incident_vertices, reference_normal) = if reference_is_a {
-        (&vertices_a, &vertices_b, collision_normal)
+        (vertices_a, vertices_b, collision_normal)
     } else {
-        (&vertices_b, &vertices_a, collision_normal.neg())
+        (vertices_b, vertices_a, collision_normal.neg())
     };
 
     let reference_edge_index = (0..reference_vertices.len()).max_by(/* 比较参考多边形各边法线在接触法线上的投影，选择参考边。 */ |left, right| {
@@ -402,10 +424,13 @@ fn polygon_manifolds_within(body_a: &Body, body_b: &Body, margin: f64) -> Option
 // 26.44: 以参考多边形的指定面为参考面裁剪入射多边形（内部边修正用）。法线固定为该面的外法线，
 // 点的分离量沿该法线测量；保留分离量不超过 margin 的点。reference_is_a 决定法线方向约定（A 指向 B）。
 fn polygon_face_manifolds(reference: &Body, face: usize, incident: &Body, margin: f64, reference_is_a: bool) -> Vec<Manifold> {
-    let (Some(reference_vertices), Some(incident_vertices)) = (world_polygon_vertices(reference), world_polygon_vertices(incident)) else {
+    // 26.45: a rounded incident shape (capsule) is clipped with its core and its radius added.
+    let (Some(reference_vertices), Some(incident_vertices)) = (world_polygon_vertices(reference), core_world_vertices(incident)) else {
         return Vec::new();
     };
-    if reference_vertices.len() < 3 || incident_vertices.len() < 3 || face >= reference_vertices.len() {
+    let incident_radius = polygon_radius(incident);
+    let minimum_incident = if incident_radius > 0.0 { 2 } else { 3 };
+    if reference_vertices.len() < 3 || incident_vertices.len() < minimum_incident || face >= reference_vertices.len() {
         return Vec::new();
     }
     // Outward normals corrected by the centroid, so either winding works.
@@ -434,11 +459,12 @@ fn polygon_face_manifolds(reference: &Body, face: usize, incident: &Body, margin
     clipped
         .into_iter()
         .filter_map(|(point, point_feature)| {
-            let separation = point.dot(normal) - offset;
+            let core_separation = point.dot(normal) - offset;
+            let separation = core_separation - incident_radius;
             (separation <= margin.max(0.0)).then(|| Manifold {
                 normal: if reference_is_a { normal } else { normal.neg() },
                 depth: -separation,
-                point: point.sub(normal.mul(separation * 0.5)),
+                point: point.sub(normal.mul((core_separation + incident_radius) * 0.5)),
                 feature: feature_base | point_feature,
             })
         })
@@ -529,11 +555,73 @@ fn reduce_simplex(simplex: &mut Vec<(SupportPoint, f64)>) -> Option<Vec2> {
     }
 }
 
+// 26.45: the same body with its rounding removed (the core polygon or segment).
+fn core_proxy(body: &Body) -> Body {
+    let mut core = body.clone();
+    if let Shape::Polygon { radius, .. } = &mut core.shape {
+        *radius = 0.0;
+    }
+    core
+}
+
+// 26.45: contacts between polygons of which at least one is rounded (capsules), after Box2D v3's
+// rounded polygon collision: when the cores are apart, the closest features decide between one
+// point (a cap against a corner or a face) and two clipped points (parallel faces); when the cores
+// overlap, the cores are clipped. Depths and points include both radii. Pairs up to `margin` apart
+// get speculative points (negative depth).
+fn rounded_manifolds(body_a: &Body, body_b: &Body, margin: f64) -> Vec<Manifold> {
+    let (Some(vertices_a), Some(vertices_b)) = (core_world_vertices(body_a), core_world_vertices(body_b)) else {
+        return Vec::new();
+    };
+    let (radius_a, radius_b) = (polygon_radius(body_a), polygon_radius(body_b));
+    let total = radius_a + radius_b;
+    let margin = margin.max(0.0);
+    let center_direction = body_b.collider_position().sub(body_a.collider_position());
+    let rounded = |manifold: Manifold| Manifold {
+        normal: manifold.normal,
+        depth: manifold.depth + total,
+        point: manifold.point.add(manifold.normal.mul((radius_a - radius_b) * 0.5)),
+        feature: manifold.feature,
+    };
+    match gjk_distance(&core_proxy(body_a), &core_proxy(body_b)) {
+        Some((point_a, point_b, distance)) => {
+            if distance > total + margin {
+                return Vec::new();
+            }
+            let normal = point_b.sub(point_a).mul(1.0 / distance);
+            if let Some(clipped) = clip_polygons(&vertices_a, &vertices_b, center_direction, distance + LINEAR_SLOP) {
+                if clipped.len() == 2 && clipped.iter().all(|manifold| manifold.normal.dot(normal) > 0.995) {
+                    return clipped.into_iter().map(rounded).filter(|manifold| manifold.depth >= -margin).collect();
+                }
+            }
+            let surface_a = point_a.add(normal.mul(radius_a));
+            let surface_b = point_b.sub(normal.mul(radius_b));
+            vec![Manifold { normal, depth: total - distance, point: surface_a.add(surface_b).mul(0.5), feature: 0x0400_0000 }]
+        }
+        None => clip_polygons(&vertices_a, &vertices_b, center_direction, margin + total)
+            .unwrap_or_default()
+            .into_iter()
+            .map(rounded)
+            .filter(|manifold| manifold.depth >= -margin)
+            .collect(),
+    }
+}
+
+// 26.45: both shapes are polygons and at least one is rounded.
+fn rounded_pair(body_a: &Body, body_b: &Body) -> bool {
+    matches!(body_a.shape, Shape::Polygon { .. })
+        && matches!(body_b.shape, Shape::Polygon { .. })
+        && (polygon_radius(body_a) > 0.0 || polygon_radius(body_b) > 0.0)
+}
+
 // 26.44: contact generation for the solver, with a speculative margin. Pairs up to `margin` apart
 // get contacts with negative depth; overlapping pairs are handled exactly like `collide`.
 fn collide_speculative(body_a: &Body, body_b: &Body, margin: f64) -> Vec<Manifold> {
     if margin <= 0.0 {
         return collide(body_a, body_b);
+    }
+    if rounded_pair(body_a, body_b) {
+        return rounded_manifolds(body_a, body_b, margin);
     }
     if world_polygon_vertices(body_a).is_some() && world_polygon_vertices(body_b).is_some() {
         return polygon_manifolds_within(body_a, body_b, margin).unwrap_or_default();
@@ -552,6 +640,9 @@ fn collide_speculative(body_a: &Body, body_b: &Body, margin: f64) -> Vec<Manifol
 
 // 优先采用多边形流形路径，否则使用通用凸形状碰撞路径。
 fn collide(body_a: &Body, body_b: &Body) -> Vec<Manifold> {
+    if rounded_pair(body_a, body_b) {
+        return rounded_manifolds(body_a, body_b, 0.0).into_iter().filter(|manifold| manifold.depth > 0.0).collect();
+    }
     if let Some(manifolds) = polygon_manifolds(body_a, body_b) {
         return manifolds;
     }

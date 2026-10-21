@@ -586,6 +586,40 @@ impl RuntimeWorld {
     ) -> Option<PhysicsQueryHit> {
         self.physics.raycast(origin, direction, distance, mask)
     }
+    /// 26.45: many segment casts at once (particle collision). `segments` holds `[x0, y0, x1, y1]`
+    /// per segment; each result is `[hit, fraction, normal x, normal y, handle]` (hit 0 or 1, the
+    /// fraction of the segment before the hit). Segments of zero length never hit.
+    pub fn cast_segments(&self, segments: &[f64], mask: u32) -> Vec<f64> {
+        let count = (segments.len() / 4).min(65_536);
+        let mut output = vec![0.0; count * 5];
+        for index in 0..count {
+            let input = &segments[index * 4..index * 4 + 4];
+            let (dx, dy) = (input[2] - input[0], input[3] - input[1]);
+            let length = (dx * dx + dy * dy).sqrt();
+            if !length.is_finite()
+                || length <= 1.0e-12
+                || !input[0].is_finite()
+                || !input[1].is_finite()
+            {
+                continue;
+            }
+            if let Some(hit) = self.physics.raycast(
+                [input[0], input[1]],
+                [dx / length, dy / length],
+                length,
+                mask,
+            ) {
+                let result = &mut output[index * 5..index * 5 + 5];
+                result[0] = 1.0;
+                result[1] = (hit.distance / length).clamp(0.0, 1.0);
+                result[2] = hit.normal[0];
+                result[3] = hit.normal[1];
+                result[4] = f64::from(hit.handle);
+            }
+        }
+        output
+    }
+
     // 按掩码执行射线查询，返回按距离稳定排序的全部命中。
     pub fn raycast_all(
         &self,
@@ -656,6 +690,57 @@ impl RuntimeWorld {
         seconds: f64,
     ) -> Result<(), &'static str> {
         self.physics.set_one_way_pass_through(handle, seconds)
+    }
+
+    // 26.45: 目标（鼠标）关节：把刚体锚点软性拉向世界点。
+    #[allow(clippy::too_many_arguments)]
+    pub fn set_body_target(
+        &mut self,
+        handle: u32,
+        anchor: [f64; 2],
+        target: [f64; 2],
+        hertz: f64,
+        damping_ratio: f64,
+        max_force: f64,
+    ) -> Result<(), &'static str> {
+        self.physics.set_body_target(
+            handle,
+            anchor[0],
+            anchor[1],
+            target[0],
+            target[1],
+            hertz,
+            damping_ratio,
+            max_force,
+        )
+    }
+
+    // 26.45: 释放目标关节。
+    pub fn clear_body_target(&mut self, handle: u32) -> bool {
+        self.physics.clear_body_target(handle)
+    }
+
+    // 26.45: 传送带表面速度与滚动阻力。
+    pub fn set_body_surface(
+        &mut self,
+        handle: u32,
+        tangent_speed: f64,
+        rolling_resistance: f64,
+    ) -> Result<(), &'static str> {
+        self.physics
+            .set_body_surface(handle, tangent_speed, rolling_resistance)
+    }
+
+    // 26.45: 物理世界完整快照（见 PhysicsSnapshot）。
+    pub fn physics_snapshot(&self) -> nova_physics::PhysicsSnapshot {
+        self.physics.snapshot()
+    }
+
+    // 26.45: 恢复物理快照；插值从恢复后的状态重新开始，旧时间线的待处理事件丢弃。
+    pub fn restore_physics_snapshot(&mut self, snapshot: &nova_physics::PhysicsSnapshot) {
+        self.physics.restore(snapshot);
+        self.events.drain();
+        self.interpolation_reset_pending = true;
     }
 
     // 给指定刚体设置持续力和力矩。
@@ -951,6 +1036,57 @@ mod tests {
             runtime.advance(1.0 / render_rate, 0.0, 0.0);
         }
         runtime.physics().state()[2]
+    }
+
+    // 26.45: batched segment casts report the first surface crossed, its normal and the body.
+    #[test]
+    fn segment_casts_find_the_floor() {
+        let mut runtime = RuntimeWorld::new();
+        let mut floor = vec![0.0; STRIDE];
+        for (index, value) in [
+            (0, 7.0),
+            (2, 0.0),
+            (3, -0.5),
+            (8, 1.0),
+            (9, 1.0),
+            (12, 20.0),
+            (13, 1.0),
+            (17, 1.0),
+            (25, 1.0),
+            (27, 1.0),
+            (33, 1.0),
+            (47, 1.0),
+            (48, 1.0),
+        ] {
+            floor[index] = value;
+        }
+        for (corner, (x, y)) in [(-10.0, -0.5), (10.0, -0.5), (10.0, 0.5), (-10.0, 0.5)]
+            .iter()
+            .enumerate()
+        {
+            floor[34 + corner * 2] = *x;
+            floor[35 + corner * 2] = *y;
+        }
+        runtime.physics_mut().upsert_body(7, 0, &floor).unwrap();
+        runtime.single_step(0.0, 0.0);
+        let results = runtime.cast_segments(
+            &[0.0, 2.0, 0.0, -2.0, 0.0, 2.0, 0.0, 1.0, 3.0, 3.0, 3.0, 3.0],
+            u32::MAX,
+        );
+        assert_eq!(results.len(), 15);
+        assert_eq!(results[0], 1.0, "the downward segment hits");
+        assert!(
+            (results[1] - 0.5).abs() < 1.0e-6,
+            "at the floor top (y = 0): {}",
+            results[1]
+        );
+        assert!(
+            (results[3] - 1.0).abs() < 1.0e-9 && results[2].abs() < 1.0e-9,
+            "normal up"
+        );
+        assert_eq!(results[4], 7.0);
+        assert_eq!(results[5], 0.0, "a short segment above the floor misses");
+        assert_eq!(results[10], 0.0, "a zero-length segment misses");
     }
 
     // 验证固定步物理不受渲染刷新率影响。

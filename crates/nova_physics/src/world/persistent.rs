@@ -43,6 +43,43 @@ pub struct PhysicsContact {
     pub penetration: f64,
 }
 
+// 26.45: target (mouse) joint of one body, by handle.
+#[derive(Clone, Copy, Debug, PartialEq)]
+struct TargetSpec {
+    local_anchor: Vec2,
+    target: Vec2,
+    hertz: f64,
+    damping_ratio: f64,
+    max_force: f64,
+    impulse: Vec2,
+}
+
+/// 26.45: complete copy of a physics world's state (bodies, joints, contacts, warm starting, sleep,
+/// targets and surfaces). Restoring it and stepping with the same inputs reproduces the same
+/// simulation bit for bit.
+#[derive(Clone)]
+pub struct PhysicsSnapshot {
+    world: Box<PhysicsWorld>,
+}
+
+impl PhysicsSnapshot {
+    /// Rough memory use in bytes (for recording budgets).
+    pub fn approximate_bytes(&self) -> usize {
+        let world = &self.world;
+        let bodies = world.bodies.len() * (STRIDE * 8 * 5 + 900)
+            + world.bodies.iter().map(|record| record.collider_shapes.len() * 8 * 2).sum::<usize>();
+        let connections = world.connections.len() * CONNECTION_STRIDE * 8 * 3;
+        let contacts = world.contacts.len() * 200
+            + world.solver.as_ref().map_or(0, |solver| solver.impulse_cache.len() * 64 + solver.resting_pairs.values().map(Vec::len).sum::<usize>() * 260);
+        bodies + connections + contacts + 1024
+    }
+
+    /// Physics steps taken by the world when the snapshot was taken.
+    pub fn physics_steps(&self) -> u64 {
+        self.world.physics_steps
+    }
+}
+
 #[derive(Clone, Debug)]
 struct BodyRecord {
     handle: u32,
@@ -63,7 +100,7 @@ struct ConnectionRecord {
 /// Bodies and connections are rebuilt only when a configuration command marks
 /// the dense solver cache dirty. Ordinary steps advance the retained cache and
 /// reuse the state buffers.
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct PhysicsWorld {
     bodies: Vec<BodyRecord>,
     connections: Vec<ConnectionRecord>,
@@ -90,6 +127,10 @@ pub struct PhysicsWorld {
     query_cache: std::cell::RefCell<Option<std::sync::Arc<Vec<QueryProxy>>>>,
     // 26.44: characters dropping through one-way platforms: remaining seconds per body handle.
     one_way_pass: HashMap<u32, f64>,
+    // 26.45: target (mouse) joints and surface properties (conveyor speed, rolling resistance), by
+    // body handle; ordered maps keep the solver order deterministic.
+    targets: std::collections::BTreeMap<u32, TargetSpec>,
+    surfaces: std::collections::BTreeMap<u32, (f64, f64)>,
 }
 
 impl PhysicsWorld {
@@ -243,6 +284,8 @@ impl PhysicsWorld {
         self.bodies.remove(index);
         self.invalidate_query_cache();
         self.one_way_pass.remove(&handle);
+        self.targets.remove(&handle);
+        self.surfaces.remove(&handle);
         self.rebuild_indexes();
         self.configuration_dirty = true;
         self.events.push(PhysicsEvent::BodyDestroyed { handle });
@@ -391,6 +434,112 @@ impl PhysicsWorld {
         })
     }
 
+    /// 26.45: pulls the body's local `anchor` toward the world point `target` with a soft spring of
+    /// `hertz` and `damping_ratio`, using at most `max_force` (a target or mouse joint). Calling it
+    /// again moves the target and keeps the accumulated impulse.
+    #[allow(clippy::too_many_arguments)]
+    pub fn set_body_target(
+        &mut self,
+        handle: u32,
+        anchor_x: f64,
+        anchor_y: f64,
+        target_x: f64,
+        target_y: f64,
+        hertz: f64,
+        damping_ratio: f64,
+        max_force: f64,
+    ) -> Result<(), &'static str> {
+        let Some(&index) = self.body_index.get(&handle) else {
+            return Err("body handle does not exist");
+        };
+        let impulse = self.targets.get(&handle).map_or(Vec2::ZERO, |spec| spec.impulse);
+        self.targets.insert(handle, TargetSpec {
+            local_anchor: Vec2::new(finite_or(anchor_x, 0.0), finite_or(anchor_y, 0.0)),
+            target: Vec2::new(finite_or(target_x, 0.0), finite_or(target_y, 0.0)),
+            hertz: finite_or(hertz, 5.0).clamp(0.01, 1.0e3),
+            damping_ratio: non_negative(damping_ratio, 0.7).min(1.0e3),
+            max_force: non_negative(max_force, 1.0e3),
+            impulse,
+        });
+        if self.bodies[index].values[49] > 0.5 {
+            self.update_body(handle, |values| {
+                values[49] = 0.0;
+                values[50] = 0.0;
+            })?;
+        }
+        Ok(())
+    }
+
+    /// 26.45: releases a body's target joint. Returns whether it had one.
+    pub fn clear_body_target(&mut self, handle: u32) -> bool {
+        self.targets.remove(&handle).is_some()
+    }
+
+    /// 26.45: conveyor speed of the body's surfaces (m/s, clockwise around the body for positive
+    /// speeds: the top face carries things to +x) and its rolling resistance coefficient.
+    pub fn set_body_surface(&mut self, handle: u32, tangent_speed: f64, rolling_resistance: f64) -> Result<(), &'static str> {
+        let Some(&index) = self.body_index.get(&handle) else {
+            return Err("body handle does not exist");
+        };
+        let speed = finite_or(tangent_speed, 0.0).clamp(-1.0e4, 1.0e4);
+        let rolling = non_negative(rolling_resistance, 0.0).min(1.0e3);
+        if speed == 0.0 && rolling == 0.0 {
+            self.surfaces.remove(&handle);
+        } else {
+            self.surfaces.insert(handle, (speed, rolling));
+        }
+        if let Some(body) = self.solver.as_mut().and_then(|solver| solver.bodies.get_mut(index)) {
+            body.tangent_speed = speed;
+            body.rolling_resistance = rolling;
+        }
+        Ok(())
+    }
+
+    /// 26.45: a complete copy of the current state (see PhysicsSnapshot). Pending events are not part
+    /// of it.
+    pub fn snapshot(&self) -> PhysicsSnapshot {
+        let mut world = self.clone();
+        world.events.clear();
+        world.query_cache = std::cell::RefCell::new(None);
+        PhysicsSnapshot { world: Box::new(world) }
+    }
+
+    /// 26.45: returns the world to a snapshot. Events still queued are dropped (they belong to the
+    /// abandoned timeline).
+    pub fn restore(&mut self, snapshot: &PhysicsSnapshot) {
+        *self = (*snapshot.world).clone();
+        self.events.clear();
+        self.invalidate_query_cache();
+    }
+
+    // 26.45: copies targets and surfaces into the retained solver (bodies rebuilt from records start
+    // without them).
+    fn apply_body_extras(&mut self) {
+        let Some(solver) = self.solver.as_mut() else { return };
+        for (handle, (speed, rolling)) in &self.surfaces {
+            if let Some(body) = self.body_index.get(handle).and_then(|&index| solver.bodies.get_mut(index)) {
+                body.tangent_speed = *speed;
+                body.rolling_resistance = *rolling;
+            }
+        }
+        solver.targets.clear();
+        for (handle, spec) in &self.targets {
+            if let Some(&index) = self.body_index.get(handle) {
+                if index < solver.bodies.len() {
+                    solver.targets.push(BodyTarget {
+                        body: index,
+                        local_anchor: spec.local_anchor,
+                        target: spec.target,
+                        hertz: spec.hertz,
+                        damping_ratio: spec.damping_ratio,
+                        max_force: spec.max_force,
+                        impulse: spec.impulse,
+                    });
+                }
+            }
+        }
+    }
+
     // 按稳定句柄新增或更新连接记录，并保留确定性的顺序。
     pub fn upsert_connection(
         &mut self,
@@ -443,6 +592,8 @@ impl PhysicsWorld {
         self.connections.clear();
         self.invalidate_query_cache();
         self.one_way_pass.clear();
+        self.targets.clear();
+        self.surfaces.clear();
         self.body_index.clear();
         self.connection_index.clear();
         self.dense_bodies.clear();
@@ -467,6 +618,7 @@ impl PhysicsWorld {
         }
         self.previous_bodies.clear();
         self.previous_bodies.extend_from_slice(&self.dense_bodies);
+        self.apply_body_extras();
         let Some(solver) = self.solver.as_mut() else {
             return;
         };
@@ -483,6 +635,11 @@ impl PhysicsWorld {
             body.torque = finite_or(body.torque + torque, body.torque);
         }
         solver.step(dt, global_gravity, air_friction);
+        for target in &solver.targets {
+            if let Some(spec) = self.bodies.get(target.body).and_then(|record| self.targets.get_mut(&record.handle)) {
+                spec.impulse = target.impulse;
+            }
+        }
         // 26.44: one-way drop-through timers run on physics time.
         let elapsed = finite_or(dt, 0.0).max(0.0);
         for remaining in self.one_way_pass.values_mut() {

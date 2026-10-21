@@ -511,7 +511,7 @@ onBeforeUnmount(/** Release animations while the mounted row references are stil
 .state-button{opacity:0;transition:opacity var(--motion-micro) var(--ease-standard)}
 .state-button .editor-icon{width:14px;height:14px;flex-basis:14px}
 .entity-item:hover .state-button,.entity-item:focus-within .state-button,.state-button.active,.entity-item.hidden .state-button,.entity-item.locked .state-button{opacity:1}
-.status-mark{display:inline-grid;place-items:center;min-width:16px;height:16px;padding:0 3px;border-radius:4px;background:var(--surface-3);font-size:10px;font-weight:var(--weight-strong);color:var(--text-muted)}
+.status-mark{display:inline-grid;place-items:center;min-width:16px;height:16px;padding:0 3px;border-radius:4px;background:var(--surface-3);font-size:11px;font-weight:var(--weight-strong);color:var(--text-muted)}
 .status-mark.override{background:transparent;color:var(--warning)}
 .status-mark .editor-icon{width:10px;height:10px}
 .empty-state{color:var(--text-muted);padding:var(--ui-panel-inset);font-size:var(--type-dense)}

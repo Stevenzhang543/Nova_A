@@ -2,7 +2,7 @@
 
 本文从 **Platformer Scene** 模板出发：修改角色移动参数、运行、导出网页版。最后用四条短说明讲清新手最容易困惑的时序规则。全程离线可用。
 
-[English](./QUICKSTART_26_42.en.md) · [完整手册](../manual/index.html) · [脚本契约](./SCRIPTING_CONTRACT_26_23.md)
+[English](./QUICKSTART_26_42.en.md) · [完整手册](../manual/index.html) · 脚本契约
 
 ## 1. 打开模板（5 分钟）
 

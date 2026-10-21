@@ -9,7 +9,7 @@ import { CircleEntity } from '../world/CircleEntity'
 import { TriangleEntity } from '../world/TriangleEntity'
 import { finiteNumber, normalizeEntity, syncDensityFromMass } from '../world/geometry'
 import { normalizeUuid } from '../world/identity'
-import { Animator, Area2D, AreaEffector2D, AudioListener, AudioSource, BehaviorTree2D, Button, Camera2D, CameraFollow2D, Canvas, CharacterBody2D, Checkbox, Collider2D, Collectible2D, Cooldown2D, DamageHitbox2D, GridMover2D, Health2D, Lifetime2D, MouseFollower2D, PlatformController2D, Projectile2D, Spawner2D, TopDownController2D, Image as UIImage, Joint2D, Light2D, Panel, ParticleEmitter2D, ProgressBar, RectTransform, RigidBody2D, Script2D, ShadowCaster2D, NavigationAgent2D, NavigationObstacle2D, NavigationRegion2D, ObjectPool2D, Portal2D, ShapeRenderer2D, Skeleton2D, Slider, SpriteRenderer2D, StateMachine2D, Text as UIText, TextInput, TextRenderer2D, TileMap2D, TimelinePlayer, WorldChunk2D, normalizeJointBreakThreshold, pasteComponentValues, type Component2D, type ComponentKind, type ScriptPropertyValue } from '../world/components'
+import { Animator, Area2D, AreaEffector2D, AudioListener, AudioSource, BehaviorTree2D, Button, Camera2D, CameraFollow2D, Canvas, CharacterBody2D, Checkbox, Collider2D, Collectible2D, Cooldown2D, DamageHitbox2D, GridMover2D, Health2D, Lifetime2D, MouseFollower2D, TargetJoint2D, PlatformController2D, Projectile2D, Spawner2D, TopDownController2D, Image as UIImage, Joint2D, Light2D, Panel, ParticleEmitter2D, ProgressBar, RectTransform, RigidBody2D, Script2D, ShadowCaster2D, NavigationAgent2D, NavigationObstacle2D, NavigationRegion2D, ObjectPool2D, Portal2D, ShapeRenderer2D, Skeleton2D, Slider, SpriteRenderer2D, StateMachine2D, Text as UIText, TextInput, TextRenderer2D, TileMap2D, TimelinePlayer, WorldChunk2D, normalizeJointBreakThreshold, pasteComponentValues, type Component2D, type ComponentKind, type ScriptPropertyValue } from '../world/components'
 import { Transform } from '../world/Transform'
 import { normalizeParticleEmitter } from '../runtime/particleEmitterValues'
 import { normalizeTileMap } from '../runtime/tileMapValues'
@@ -31,7 +31,7 @@ export const EXTENDED_COMPONENT_KINDS = [
   'CharacterBody2D', 'Area2D', 'AreaEffector2D', 'NavigationRegion2D', 'NavigationObstacle2D', 'NavigationAgent2D', 'BehaviorTree2D', 'StateMachine2D',
   'GridMover2D', 'PlatformController2D', 'TopDownController2D', 'Health2D', 'DamageHitbox2D', 'Collectible2D', 'Projectile2D', 'Spawner2D', 'Cooldown2D', 'Lifetime2D', 'MouseFollower2D', 'CameraFollow2D',
   'WorldChunk2D', 'Portal2D', 'ObjectPool2D',
-  'FixedJoint2D', 'WeldJoint2D', 'DistanceJoint2D', 'RopeJoint2D', 'RevoluteJoint2D', 'MotorJoint2D', 'PrismaticJoint2D', 'SpringJoint2D'
+  'FixedJoint2D', 'WeldJoint2D', 'DistanceJoint2D', 'RopeJoint2D', 'RevoluteJoint2D', 'MotorJoint2D', 'PrismaticJoint2D', 'SpringJoint2D', 'WheelJoint2D', 'TargetJoint2D'
 ] as const
 export type EntityBuilderMessageKey = 'invalidEntityRecord' | 'unsupportedShape'
 export interface EntityBuilderPorts {
@@ -150,6 +150,7 @@ export function createEntityBuilder(ports: EntityBuilderPorts): EntityBuilder {
   if (kind === 'Cooldown2D') return new Cooldown2D(uuid)
   if (kind === 'Lifetime2D') return new Lifetime2D(uuid)
   if (kind === 'MouseFollower2D') return new MouseFollower2D(uuid)
+  if (kind === 'TargetJoint2D') return new TargetJoint2D(uuid)
   if (kind === 'CameraFollow2D') return new CameraFollow2D(uuid)
   if (kind === 'WorldChunk2D') return new WorldChunk2D(uuid)
   if (kind === 'Portal2D') return new Portal2D(uuid)
@@ -329,9 +330,10 @@ export function createEntityBuilder(ports: EntityBuilderPorts): EntityBuilder {
     if (!['Box', 'Circle'].includes(component.shape)) component.shape = 'Box'
   } else if (component instanceof AreaEffector2D) {
     component.priority = Math.round(clamp(component.priority, 0, -10_000, 10_000)); component.effectors = (Array.isArray(component.effectors) ? component.effectors : []).slice(0, 32).map(/** 规范化区域效果类型、身份、方向和受力参数，非法类型回退为信号效果。 */ (effect, index) => ({
-      id: typeof effect.id === 'string' ? effect.id.slice(0, 80) : `effect-${index}`, kind: ['Gravity', 'Wind', 'Drag', 'Buoyancy', 'Damage', 'Signal'].includes(effect.kind) ? effect.kind : 'Signal',
+      id: typeof effect.id === 'string' ? effect.id.slice(0, 80) : `effect-${index}`, kind: ['Gravity', 'Wind', 'Drag', 'Buoyancy', 'PointGravity', 'Damage', 'Signal'].includes(effect.kind) ? effect.kind : 'Signal',
       enabled: effect.enabled !== false, direction: safeVector(effect.direction, { x: 0, y: -1 }), strength: finiteNumber(effect.strength), drag: clamp(effect.drag, 0, 0, 1e9),
-      fluidDensity: clamp(effect.fluidDensity, 1, 0, 1e9), damagePerSecond: clamp(effect.damagePerSecond, 0, 0, 1e9), signal: typeof effect.signal === 'string' ? effect.signal.slice(0, 128) : 'area.effect'
+      fluidDensity: clamp(effect.fluidDensity, 1, 0, 1e9), damagePerSecond: clamp(effect.damagePerSecond, 0, 0, 1e9), signal: typeof effect.signal === 'string' ? effect.signal.slice(0, 128) : 'area.effect',
+      ...(effect.angularDrag !== undefined ? { angularDrag: clamp(effect.angularDrag, 0, 0, 1e9) } : {}), ...(effect.falloff !== undefined ? { falloff: (['None', 'Linear', 'InverseSquare'] as const).includes(effect.falloff) ? effect.falloff : 'None' } : {})
     }))
   } else if (component instanceof NavigationRegion2D) {
     component.polygon = (Array.isArray(component.polygon) ? component.polygon : []).slice(0, 4096).map(/* 调用 safeVector(point, { x: 0, y: 0 }) 并返回调用结果。 */ point => safeVector(point, { x: 0, y: 0 }))
@@ -360,6 +362,11 @@ export function createEntityBuilder(ports: EntityBuilderPorts): EntityBuilder {
   else if (component instanceof Spawner2D) { component.prefabAsset = typeof component.prefabAsset === 'string' ? component.prefabAsset : null; component.interval = clamp(component.interval, 1, .000001, 86_400); component.initialDelay = clamp(component.initialDelay, 0, 0, 86_400); component.burst = Math.round(clamp(component.burst, 1, 1, 256)); component.maximumAlive = Math.round(clamp(component.maximumAlive, 32, 1, 100_000)) }
   else if (component instanceof Cooldown2D) { component.duration = clamp(component.duration, 1, .000001, 86_400); component.readySignal = typeof component.readySignal === 'string' ? component.readySignal.slice(0, 128) : 'cooldown.ready' }
   else if (component instanceof Lifetime2D) component.seconds = clamp(component.seconds, 5, .000001, 86_400)
+  else if (component instanceof TargetJoint2D) {
+    component.anchor = safeVector(component.anchor, { x: 0, y: 0 }); component.target = safeVector(component.target, { x: 0, y: 0 })
+    component.frequency = clamp(component.frequency, 5, 0.01, 1000); component.dampingRatio = clamp(component.dampingRatio, 0.7, 0, 1000)
+    component.maxForce = clamp(component.maxForce, 1000, 0, 1e12); component.startAtBody = component.startAtBody !== false
+  }
   else if (component instanceof MouseFollower2D) { component.offset = safeVector(component.offset, { x: 0, y: 0 }); component.maximumSpeed = clamp(component.maximumSpeed, 0, 0, 1e9) }
   else if (component instanceof CameraFollow2D) { component.targetUuid = typeof component.targetUuid === 'string' ? component.targetUuid.slice(0, 128) : ''; component.targetTag = typeof component.targetTag === 'string' ? component.targetTag.slice(0, 80) : 'player'; component.offset = safeVector(component.offset, { x: 0, y: 0 }); component.smoothing = clamp(component.smoothing, 8, 0, 1e6); component.deadZone = safeVector(component.deadZone, { x: 0, y: 0 }); component.deadZone.x = clamp(component.deadZone.x, 0, 0, 1e9); component.deadZone.y = clamp(component.deadZone.y, 0, 0, 1e9) }
   else if (component instanceof WorldChunk2D) {
@@ -396,6 +403,8 @@ export function createEntityBuilder(ports: EntityBuilderPorts): EntityBuilder {
     // JSON uses null for an authored unlimited threshold; keep that sentinel unlimited.
     component.breakForce = normalizeJointBreakThreshold(component.breakForce)
     component.breakTorque = normalizeJointBreakThreshold(component.breakTorque)
+    component.frequency = clamp(component.frequency, component.kind === 'WheelJoint2D' ? 4 : 0, 0, 1000); component.dampingRatio = clamp(component.dampingRatio, 0.7, 0, 1000)
+    component.angularFrequency = clamp(component.angularFrequency, 0, 0, 1000); component.angularDampingRatio = clamp(component.angularDampingRatio, 0.7, 0, 1000)
   }
 }
 
@@ -622,6 +631,8 @@ export function createEntityBuilder(ports: EntityBuilderPorts): EntityBuilder {
     collider.physicsLayer = Math.min(31, Math.max(0, Math.round(finiteNumber(data.physicsLayer))))
     collider.collisionMask = Math.min(0xffff_ffff, Math.max(0, Math.round(finiteNumber(data.collisionMask, 1 << collider.physicsLayer)))) >>> 0
     collider.oneWay = data.oneWay === true
+    collider.surfaceSpeed = Math.min(1e4, Math.max(-1e4, finiteNumber(data.surfaceSpeed, 0)))
+    collider.rollingResistance = Math.min(1e3, Math.max(0, finiteNumber(data.rollingResistance, 0)))
     collider.materialAsset = typeof data.materialAsset === 'string' ? data.materialAsset : null
     copyVector(collider.oneWayNormal, data.oneWayNormal)
     const oneWayLength = Math.hypot(collider.oneWayNormal.x, collider.oneWayNormal.y)

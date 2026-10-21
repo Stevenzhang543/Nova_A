@@ -1,3 +1,6 @@
+# Nova_A keeps code, the resources the build needs and the documentation in Git.
+# Everything generated, cached, packaged or private stays out (26.45).
+
 # Logs
 logs
 *.log
@@ -7,27 +10,47 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Dependencies and package-manager stores (reusable, never committed)
 node_modules
 .pnpm-store/
-.VSCodeCounter/
+
+# Build outputs and caches (reusable caches stay on disk)
 dist
 dist-ssr
 .vite/
 .cache/
 .turbo/
+*.tsbuildinfo
+nova_core/target/
+nova_core/pkg/
+/target/
+/src-tauri/target/
+/src-tauri/gen/
+.nova-build-cache/
+
+# Test, audit and release output
 coverage/
 playwright-report/
 test-results/
 release-audits/
+/reports/
+/releases/
 stage*/
-*.tsbuildinfo
+
+# Game exports written into the repository folder (Build Settings output)
+/*.exe
+/build-info.json
+/nova-*.json
+/symbols/
+/game.nova-pak
+
+# Temporary files
 *.tmp
 *.temp
 *.local
-nova_core/target/
-/target/
-/src-tauri/target/
-/src-tauri/gen/
+*.tgz
+__pycache__/
+/_to_delete/
 
 # Local configuration and credentials. Keep the documented example.
 .env
@@ -37,6 +60,7 @@ nova_core/target/
 # Editor directories and files
 .vscode
 .idea
+.VSCodeCounter/
 .DS_Store
 Thumbs.db
 Desktop.ini
@@ -46,11 +70,11 @@ Desktop.ini
 *.sln
 *.sw?
 
-/releases/
+# Private notes
 /instructions.txt
 
 # User-provided engine reference; never part of Nova_A source packages.
-/godot-master/
+/godot-master
 
 # Workspace agent-tooling skills; third-party content, not Nova_A source.
 /.dsh/

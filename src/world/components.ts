@@ -10,9 +10,9 @@ export type CollisionMode2D = 'Discrete' | 'Continuous'
 export type TileCollision2D = 'None' | 'Box' | 'Polygon' | 'OneWay'
 export type TileBlendMode2D = 'Alpha' | 'Additive' | 'Multiply' | 'Screen'
 export type TileCellTransform2D = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15
-export type AreaEffectKind2D = 'Gravity' | 'Wind' | 'Drag' | 'Buoyancy' | 'Damage' | 'Signal'
+export type AreaEffectKind2D = 'Gravity' | 'Wind' | 'Drag' | 'Buoyancy' | 'PointGravity' | 'Damage' | 'Signal'
 export type NavigationAlgorithm2D = 'AStar' | 'HierarchicalAStar' | 'FlowField'
-export type JointKind2D = 'FixedJoint2D' | 'WeldJoint2D' | 'DistanceJoint2D' | 'RopeJoint2D' | 'RevoluteJoint2D' | 'MotorJoint2D' | 'PrismaticJoint2D' | 'SpringJoint2D'
+export type JointKind2D = 'FixedJoint2D' | 'WeldJoint2D' | 'DistanceJoint2D' | 'RopeJoint2D' | 'RevoluteJoint2D' | 'MotorJoint2D' | 'PrismaticJoint2D' | 'SpringJoint2D' | 'WheelJoint2D'
 export type RendererShape2D = 'Rectangle' | 'Ellipse' | 'Polygon' | 'Line'
 export type LightKind2D = 'Point' | 'Spot' | 'Directional' | 'Area'
 export type ColliderKind2D = 'BoxCollider2D' | 'EllipseCollider2D' | 'PolygonCollider2D'
@@ -68,6 +68,7 @@ export type ComponentKind =
   | 'RigidBody2D'
   | ColliderKind2D
   | JointKind2D
+  | 'TargetJoint2D'
   | 'Rope2D'
 
 export interface Component2D {
@@ -175,6 +176,12 @@ export class Camera2D extends ComponentBase {
   cullingMask = 0xffff_ffff
   clearColor = true
   renderTexture = ''
+  /** 26.45: camera shake (trauma model): the view moves by up to `maxOffset` world units and turns by
+   * up to `maxAngle` degrees times trauma², with smooth noise at `frequency` Hz; trauma falls by
+   * `recovery` per second. Scripts add trauma with camera_shake(amount). */
+  shake = { maxOffset: .5, maxAngle: 3, frequency: 18, recovery: 1.5 }
+  /** 26.45: current shake trauma (0–1), set at run time. */
+  trauma = 0
 
   /** 初始化 Camera2D 实例时调用 super(uuid)；不显式返回调用结果。 */ constructor(uuid?: string) { super(uuid) }
 }
@@ -591,6 +598,10 @@ export interface AreaEffect2D {
   fluidDensity: number
   damagePerSecond: number
   signal: string
+  /** 26.45 Buoyancy: rotation damping in the fluid (the fluid's flow is direction × strength). */
+  angularDrag?: number
+  /** 26.45 PointGravity: how the pull weakens with distance from the area's centre. */
+  falloff?: 'None' | 'Linear' | 'InverseSquare'
 }
 
 export class AreaEffector2D extends ComponentBase {
@@ -971,6 +982,13 @@ export class Joint2D extends ComponentBase {
   maxMotorForce = 1000
   breakForce = Number.POSITIVE_INFINITY
   breakTorque = Number.POSITIVE_INFINITY
+  /** 26.45: spring frequency (Hz) and damping ratio: the Wheel joint's suspension along its axis and
+   * the Weld joint's linear softness (0 Hz: stiff). */
+  frequency = 0
+  dampingRatio = 0.7
+  /** 26.45: Weld joint angular softness (0 Hz: stiff). */
+  angularFrequency = 0
+  angularDampingRatio = 0.7
   referenceOffset: Vec2 = { x: 0, y: 0 }
   referenceAngle = 0
   initialized = false
@@ -978,7 +996,34 @@ export class Joint2D extends ComponentBase {
   /** 初始化组件 UUID 并保存具体关节种类。 */ constructor(kind: JointKind2D, uuid?: string) {
     super(uuid)
     this.kind = kind
+    if (kind === 'WheelJoint2D') {
+      // On the wheel, connected to the chassis (the target): `connectedAnchor` is the mount point on
+      // the chassis and `axis` the suspension direction in the chassis's frame (up); the motor
+      // drives the wheel (negative speeds roll it clockwise, to the right).
+      this.axis = { x: 0, y: 1 }
+      this.frequency = 4
+      this.maxMotorForce = 50
+      this.lowerLimit = -0.25
+      this.upperLimit = 0.25
+    }
   }
+}
+
+/** 26.45: pulls this body's anchor toward a world point with a soft spring (a target or mouse joint):
+ * drag objects with the pointer, carry them, or hold them up. Scripts move `target`. */
+export class TargetJoint2D extends ComponentBase {
+  readonly kind = 'TargetJoint2D' as const
+  /** Point on this body (local, before scale). */
+  anchor: Vec2 = { x: 0, y: 0 }
+  /** World point the anchor is pulled toward. */
+  target: Vec2 = { x: 0, y: 0 }
+  frequency = 5
+  dampingRatio = 0.7
+  maxForce = 1000
+  /** Set the target to the anchor's current position when play starts. */
+  startAtBody = true
+
+  /** 初始化 TargetJoint2D 实例。 */ constructor(uuid?: string) { super(uuid) }
 }
 
 export class RigidBody2D extends ComponentBase {
@@ -1040,6 +1085,11 @@ export class Collider2D extends ComponentBase {
   collisionMask = 1
   oneWay = false
   oneWayNormal: Vec2 = { x: 0, y: 1 }
+  /** 26.45: conveyor surface speed (m/s): each face carries what rests on it, clockwise around the
+   * body for positive values (the top face moves to +x). */
+  surfaceSpeed = 0
+  /** 26.45: rolling resistance (round shapes slow down while rolling). */
+  rollingResistance = 0
   materialAsset: string | null = null
   material: PhysicsMaterial2D = {
     restitution: 0,
@@ -1062,7 +1112,7 @@ export type EntityComponent =
   | ShapeRenderer2D | SpriteRenderer2D | TextRenderer2D | Camera2D | Script2D
   | Animator | Skeleton2D | TimelinePlayer | AudioSource | AudioListener | Canvas | RectTransform | Panel | Image
   | Text | Button | Slider | ProgressBar | Checkbox | TextInput
-  | TileMap2D | CharacterBody2D | Area2D | AreaEffector2D | NavigationRegion2D | NavigationObstacle2D | NavigationAgent2D
+  | TileMap2D | CharacterBody2D | Area2D | AreaEffector2D | NavigationRegion2D | NavigationObstacle2D | NavigationAgent2D | TargetJoint2D
   | BehaviorTree2D | StateMachine2D | GridMover2D | PlatformController2D | TopDownController2D | Health2D | DamageHitbox2D
   | Collectible2D | Projectile2D | Spawner2D | Cooldown2D | Lifetime2D | MouseFollower2D | CameraFollow2D | WorldChunk2D | Portal2D | ObjectPool2D
   | ParticleEmitter2D | Light2D | ShadowCaster2D | Joint2D | RigidBody2D | Collider2D

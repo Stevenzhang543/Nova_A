@@ -1,6 +1,6 @@
 /** 导出播放器入口。26.43 起默认使用独立播放器（不含 Vue 与编辑器代码，见 src/runtime/player）；
- * 兼容播放器在下列情况下按需加载：`?legacyPlayer=1`、桌面网络测试实例、或独立播放器无法启动某个游戏
- * （自动换用兼容播放器重新加载一次）。`?legacyPlayer=0` 只用独立播放器、失败时显示错误（用于测试）。 */
+ * 兼容播放器（26.45 起是单独的页面 player-legacy.html）在下列情况下打开：`?legacyPlayer=1`、桌面网络测试实例、
+ * 或独立播放器无法启动某个游戏（自动换用兼容播放器重新加载一次）。`?legacyPlayer=0` 只用独立播放器、失败时显示错误（用于测试）。 */
 import '@fontsource-variable/nunito-sans/wght.css'
 import '@fontsource-variable/noto-sans-sc/wght.css'
 import './runtime/player/player.css'
@@ -49,18 +49,22 @@ async function closeWindow(): Promise<void> {
   if (desktop) { const { getCurrentWindow } = await import('@tauri-apps/api/window'); await getCurrentWindow().close() }
   else window.close()
 }
-async function runLegacy(root: HTMLElement): Promise<void> {
+/** 26.45: the compatibility Player is its own page (player-legacy.html, beside this one), so this
+ * page never loads Vue or Editor code. The query string (debug switches) goes along. */
+function legacyPageUrl(reason = ''): string {
+  const url = new URL('player-legacy.html', location.href)
+  url.search = location.search
+  url.searchParams.set('legacyPlayer', '1')
+  if (reason) url.searchParams.set('playerFallback', reason.slice(0, 160))
+  return url.toString()
+}
+function runLegacy(): void {
   diagnostics.mode = 'legacy'
-  root.replaceChildren()
-  const { mountLegacyPlayer } = await import('./playerLegacy')
-  mountLegacyPlayer(root)
+  location.replace(legacyPageUrl())
 }
 /** Load once more in the compatibility Player (a fresh page, so no state from this attempt remains). */
 function reloadInLegacy(reason: string): void {
-  const url = new URL(location.href)
-  url.searchParams.set('legacyPlayer', '1')
-  url.searchParams.set('playerFallback', reason.slice(0, 160))
-  location.replace(url.toString())
+  location.replace(legacyPageUrl(reason))
 }
 
 const PROGRESS: Record<PlayerLoadStage, number> = { engine: 12, package: 30, project: 52, media: 70, world: 88, running: 100 }
@@ -170,6 +174,6 @@ void (async () => {
   ;(globalThis as { __NOVA_DESYNCHRONIZED_CANVAS__?: boolean }).__NOVA_DESYNCHRONIZED_CANVAS__ = await readDesynchronizedSwitch()
   await activateLatencyProbe('web-player')
   const root = document.getElementById('app') ?? document.body
-  if (search.get('legacyPlayer') === '1' || await desktopInstanceOverrides()) await runLegacy(root)
+  if (search.get('legacyPlayer') === '1' || await desktopInstanceOverrides()) runLegacy()
   else await runIndependent(root)
 })()

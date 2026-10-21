@@ -7,7 +7,7 @@
  * project's (or automatic) virtual controls, and timeline subtitles/captions a live region. */
 import { createRenderer2D, RendererCanvasReplacementRequired, type Renderer2D } from '../../renderer/core'
 import { renderWorld } from '../../renderer/sceneRenderer'
-import { renderDebugView2D, renderLighting2D, renderPostProcessOverlay } from '../../renderer/lighting2d'
+import { renderDebugView2D, renderLighting2D, renderPostProcessOverlay, renderScreenFlash } from '../../renderer/lighting2d'
 import { boundedFrame } from '../../renderer/surfaceLimits'
 import { prepareHierarchyIndex } from '../../world/hierarchy'
 import { normalizeSimulationFrameDelta } from '../engineTiming'
@@ -31,6 +31,8 @@ export interface PlayerViewOptions {
   readonly rendering: RuntimeRenderingPolicyOwner
   readonly gameUi: GameUiOwner
   readonly setInputModality: (modality: 'touch' | 'pen' | 'mouse') => void
+  /** 26.45: a remap button in the game UI changed a binding (the host stores the player's bindings). */
+  readonly remapInput?: (action: string, bindingIndex: number, binding: { device: 'keyboard' | 'gamepad-button' | 'gamepad-axis'; code: string }) => void
   readonly label: string
   readonly controlsLabel?: string
   readonly uiLabel?: string
@@ -121,7 +123,7 @@ export function createPlayerView(container: HTMLElement, options: PlayerViewOpti
   const screenPosition = (event: { clientX: number; clientY: number }) => { const rect = overlay.getBoundingClientRect(); return { x: event.clientX - rect.left, y: event.clientY - rect.top } }
   gameUi.setCallback((entity, functionName) => runtime.invokeUiCallback(entity, functionName))
   gameUi.setInputActions(state.inputMap)
-  gameUi.setRemapCallback(() => undefined)
+  gameUi.setRemapCallback((action, bindingIndex, binding) => options.remapInput?.(action, bindingIndex, binding))
 
   function closeNativeInput(): void {
     const active = gameUi.focusedTextInput()
@@ -358,7 +360,8 @@ export function createPlayerView(container: HTMLElement, options: PlayerViewOpti
     const backingWidth = Math.max(1, Math.round(width * pixelRatio)), backingHeight = Math.max(1, Math.round(height * pixelRatio))
     const resized = overlay.width !== backingWidth || overlay.height !== backingHeight
     if (resized) { overlay.width = backingWidth; overlay.height = backingHeight }
-    if (!overlayHasContent(world.entities)) {
+    const flash = runtime.screenFlashOverlay()
+    if (!overlayHasContent(world.entities) && !flash) {
       if (overlayDrewLastFrame && !resized) { context.setTransform(1, 0, 0, 1, 0, 0); context.clearRect(0, 0, overlay.width, overlay.height) }
       overlayDrewLastFrame = false
       renderAccessibility([]); renderCaptions(); renderControls()
@@ -372,6 +375,7 @@ export function createPlayerView(container: HTMLElement, options: PlayerViewOpti
     if (!lightingOnGpu) renderLighting2D(context, world.entities, view, surface.lighting)
     if (stats.backend !== 'WebGL2') renderPostProcessOverlay(context, width, height, surface.lighting)
     renderDebugView2D(context, world.entities, view, surface.lighting)
+    renderScreenFlash(context, width, height, flash)
     gameUi.render(context, width, height, world.entities, { editor: false })
     renderAccessibility(gameUi.accessibilityNodes()); renderCaptions(); renderControls()
   }

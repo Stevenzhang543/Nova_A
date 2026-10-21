@@ -249,7 +249,9 @@ if (target === 'web') {
   const manifest = JSON.parse(await readFile(join(dist, '.vite', 'manifest.json'), 'utf8'))
   const playerKey = Object.keys(manifest).find(/* 先计算 key === 'player.html' || key.endsWith('/player.ts')；仅当其为假值时求右侧 key.endsWith('player.ts')，返回短路求值结果。 */ key => key === 'player.html' || key.endsWith('/player.ts') || key.endsWith('player.ts'))
   if (!playerKey) throw new Error('Production dist has no Nova Player entry; run pnpm build first')
-  const selected = new Set(), visitedEntries = new Set(), pendingEntries = [playerKey]
+  // 26.45: the compatibility Player is its own page (player-legacy.html) beside the game's index.html.
+  const legacyKey = Object.keys(manifest).find(key => key === 'player-legacy.html' || key.endsWith('/playerLegacyPage.ts'))
+  const selected = new Set(), visitedEntries = new Set(), pendingEntries = legacyKey ? [playerKey, legacyKey] : [playerKey]
   while (pendingEntries.length) {
     const key = pendingEntries.pop()
     if (!key || visitedEntries.has(key)) continue
@@ -265,6 +267,7 @@ if (target === 'web') {
   }
   const html = await readFile(join(dist, 'player.html'))
   await emit('index.html', html)
+  if (legacyKey) await emit('player-legacy.html', await readFile(join(dist, 'player-legacy.html')))
   for (const path of [...selected].sort()) await emit(path, await readFile(join(dist, safeRelative(path))))
 } else {
   const defaultPlayer = process.platform === 'win32' ? join(process.cwd(), 'src-tauri', 'target', 'release', 'nova_a.exe') : join(process.cwd(), 'src-tauri', 'target', 'release', 'nova_a')
@@ -344,7 +347,7 @@ if (build.delivery.sbom) {
 }
 const deployment = { format: 'nova-deployment-manifest', version: 1, engineVersion: ENGINE_VERSION, buildId, mode: build.delivery.deploymentMode, destination: deploymentDestination, releaseChannel: build.delivery.releaseChannel, implicitNetworkOperation: false, signing: { hookConfigured: signingHookConfigured, notarizationHookConfigured, execution: 'external-explicit' }, cleanMachineJob: build.delivery.cleanMachineJob === true }
 await emit('nova-deployment-manifest.json', Buffer.from(`${JSON.stringify(deployment, null, 2)}\n`))
-if (target === 'web' && build.delivery.webHeaders) await emit('_headers', Buffer.from('/*\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: strict-origin-when-cross-origin\n  Permissions-Policy: camera=(), microphone=(), geolocation=()\n\n/assets/*\n  Cache-Control: public, max-age=31536000, immutable\n\n/index.html\n  Cache-Control: no-cache\n/player.html\n  Cache-Control: no-cache\n'))
+if (target === 'web' && build.delivery.webHeaders) await emit('_headers', Buffer.from('/*\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: strict-origin-when-cross-origin\n  Permissions-Policy: camera=(), microphone=(), geolocation=()\n\n/assets/*\n  Cache-Control: public, max-age=31536000, immutable\n\n/index.html\n  Cache-Control: no-cache\n/player.html\n  Cache-Control: no-cache\n/player-legacy.html\n  Cache-Control: no-cache\n'))
 if (target !== 'web' && (build.delivery.debugSymbols !== false || build.delivery.crashSymbols !== false)) await emit('symbols/nova-symbol-map.json', Buffer.from(`${JSON.stringify({ format: 'nova-symbol-map', version: 1, engineVersion: ENGINE_VERSION, buildId, workflow: 'Archive matching PDB, dSYM, or unstripped ELF symbols under this build ID.' }, null, 2)}\n`))
 if (build.delivery?.sizeReport !== false) await emit('nova-build-size-report.json', Buffer.from(`${JSON.stringify({ format: 'nova-build-size-report', version: 1, engineVersion: ENGINE_VERSION, totalBytes: report.totalBytes, files: [...records].sort(/* 计算表达式 b.bytes - a.bytes 并返回结果，沿用操作数的原有类型规则。 */ (a, b) => b.bytes - a.bytes) }, null, 2)}\n`))
 if (build.delivery?.dependencyReport !== false) await emit('nova-dependency-report.json', Buffer.from(`${JSON.stringify({ format: 'nova-dependency-report', version: 1, engineVersion: ENGINE_VERSION, packages: project.packages?.lockfile ?? [], assets: entries.filter(/* 返回 entry.asset 的当前值。 */ entry => entry.asset).map(/** 提取已打包资产的标识、路径和类型，写入依赖报告。 */ entry => ({ uuid: entry.asset.uuid, path: entry.path, type: entry.asset.assetType })) }, null, 2)}\n`))

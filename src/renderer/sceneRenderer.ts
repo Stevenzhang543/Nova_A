@@ -66,7 +66,25 @@ function parseCssColor(value: string): RenderColor {
 }
 
 let smoothedCameraPositions = new WeakMap<Camera2D, { x: number; y: number }>()
-/** 将 new WeakMap() 赋给 smoothedCameraPositions，不显式返回值。 */ export function resetCameraSmoothing(): void { smoothedCameraPositions = new WeakMap() }
+// 26.45: render time of each shaking camera (the noise is sampled along it).
+let cameraShakeClocks = new WeakMap<Camera2D, number>()
+/** Smooth value noise in [-1, 1] along `x` (one lattice value per integer, cosine blend). */
+function shakeNoise(seed: number, x: number): number {
+  const lattice = (index: number) => { let hash = Math.imul(index ^ Math.imul(seed, 0x9e3779b1), 0x85ebca6b); hash ^= hash >>> 13; hash = Math.imul(hash, 0xc2b2ae35); hash ^= hash >>> 16; return (hash >>> 0) / 0xffff_ffff * 2 - 1 }
+  const floor = Math.floor(x), t = (1 - Math.cos((x - floor) * Math.PI)) * .5
+  return lattice(floor) * (1 - t) + lattice(floor + 1) * t
+}
+/** 26.45: the offset and turn a camera's shake adds to its view now. */
+export function cameraShakeOffset(component: Camera2D, deltaSeconds = 0): { x: number; y: number; rotation: number } {
+  const trauma = Math.min(1, Math.max(0, finite(component.trauma ?? 0, 0)))
+  if (trauma <= 0) { cameraShakeClocks.delete(component); return { x: 0, y: 0, rotation: 0 } }
+  const time = (cameraShakeClocks.get(component) ?? 0) + Math.max(0, finite(deltaSeconds, 0))
+  cameraShakeClocks.set(component, time)
+  const shake = component.shake ?? { maxOffset: .5, maxAngle: 3, frequency: 18, recovery: 1.5 }
+  const amount = trauma * trauma, phase = time * Math.max(0, finite(shake.frequency, 18))
+  return { x: finite(shake.maxOffset, .5) * amount * shakeNoise(1, phase), y: finite(shake.maxOffset, .5) * amount * shakeNoise(2, phase), rotation: finite(shake.maxAngle, 3) * Math.PI / 180 * amount * shakeNoise(3, phase) }
+}
+/** 将 new WeakMap() 赋给 smoothedCameraPositions，不显式返回值。 */ export function resetCameraSmoothing(): void { smoothedCameraPositions = new WeakMap(); cameraShakeClocks = new WeakMap() }
 interface TimelineCameraBlendOverride { fromEntityUuid: string | null; toEntityUuid: string; weight: number }
 let timelineCameraBlend: TimelineCameraBlendOverride | null = null
 /** 将 value ? { ...value, weight: Math.min(1, Math.max(0, finite(value.weight, 0))) } : null 赋给 timelineCameraBlend，不显式返回值。 */ export function setTimelineCameraBlend(value: TimelineCameraBlendOverride | null): void { timelineCameraBlend = value ? { ...value, weight: Math.min(1, Math.max(0, finite(value.weight, 0))) } : null }
@@ -95,6 +113,7 @@ export function activeGameCameras(entities: Entity[], width: number, height: num
       desired = { x: finite(desired.x, 0), y: finite(desired.y, 0) }
       if (sourceTransform) desired = { x: sourceTransform.position.x + (desired.x - sourceTransform.position.x) * cameraBlendWeight, y: sourceTransform.position.y + (desired.y - sourceTransform.position.y) * cameraBlendWeight }
       const previous = smoothedCameraPositions.get(component) ?? { ...desired }
+      const shake = cameraShakeOffset(component, deltaSeconds)
       const rotation = finite(sourceTransform ? sourceTransform.rotation + (transform.rotation - sourceTransform.rotation) * cameraBlendWeight : transform.rotation, 0)
       if (component.dragMargins.enabled && followed) {
         const extents = cameraViewportHalfExtents({ scale, offset: { x: 0, y: 0 }, viewport }, safeWidth, safeHeight)
@@ -110,11 +129,12 @@ export function activeGameCameras(entities: Entity[], width: number, height: num
       const blend = component.smoothing.enabled ? 1 - Math.exp(-Math.max(0, finite(component.smoothing.speed, 0)) * Math.max(0, finite(deltaSeconds ?? 0, 0))) : 1
       const smoothed = deltaSeconds === undefined ? previous : { x: previous.x + (desired.x - previous.x) * blend, y: previous.y + (desired.y - previous.y) * blend }
       if (deltaSeconds !== undefined) smoothedCameraPositions.set(component, smoothed)
+      const shaken = shake.x || shake.y ? { x: smoothed.x + shake.x, y: smoothed.y + shake.y } : smoothed
       const position = pixelPerfect
-        ? { x: Math.round(smoothed.x * scale) / scale, y: Math.round(smoothed.y * scale) / scale }
-        : smoothed
+        ? { x: Math.round(shaken.x * scale) / scale, y: Math.round(shaken.y * scale) / scale }
+        : shaken
       const background = sourceComponent ? { r: sourceComponent.backgroundColor.r + (component.backgroundColor.r - sourceComponent.backgroundColor.r) * cameraBlendWeight, g: sourceComponent.backgroundColor.g + (component.backgroundColor.g - sourceComponent.backgroundColor.g) * cameraBlendWeight, b: sourceComponent.backgroundColor.b + (component.backgroundColor.b - sourceComponent.backgroundColor.b) * cameraBlendWeight } : component.backgroundColor
-      return [{ entity, component, view: { scale, offset: { x: safeWidth * .5, y: safeHeight * .5 }, position, rotation, viewport }, background: rgba(background) }]
+      return [{ entity, component, view: { scale, offset: { x: safeWidth * .5, y: safeHeight * .5 }, position, rotation: rotation + shake.rotation, viewport }, background: rgba(background) }]
     })
     .sort(/* 依次比较相机优先级、堆叠顺序及实体编号。 */ (first, second) => first.component.priority - second.component.priority || first.component.stackOrder - second.component.stackOrder || first.entity.id - second.entity.id)
 }

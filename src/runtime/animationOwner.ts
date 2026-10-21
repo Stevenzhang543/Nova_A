@@ -8,6 +8,7 @@ import {MediaClock} from './mediaClock'
 import {ANY_STATE,findAnimatorState,TRACKS,defaultAnimationClip,normalizeAnimationClip,animationClipLength,sampleAnimationTrack,reduceAnimationKeys,animationDispatchesBetween,parameterValue,conditionMatches,type AnimatableProperty,type AnimationKeyframe,type AnimationEvent,type AnimationCommand,type AnimationCommandTrack,type AnimationClipDocument,type BlendTreeChild,type AnimatorState,type AnimatorTransition} from './animationDocuments'
 import {validateAnimationTimelinePorts,type AnimationWorld,type AnimationTimelinePorts,type AnimationRecordingObservers,type AnimationAuthoring} from './animationTimelineContracts'
 import {AnimationTimelineDocumentReader} from './animationTimelineDocumentReader'
+import {cloneRuntimeState} from './rewindState'
 interface LayerRuntimeState { stateId: string; time: number; clock:MediaClock; previousClock:MediaClock|null; previousStateId: string | null; previousTime: number; blendTime: number; blendDuration: number; interruption: AnimatorTransition['interruption'] }
 interface AnimatorRuntimeState { controllerAsset: string | null; layers: Map<string, LayerRuntimeState> }
 interface SampledClip { values: Map<string, { property: AnimatableProperty; targetEntityUuid: string | null; value: number }>; spriteAsset: string | null }
@@ -71,6 +72,15 @@ export class AnimationOwner {
   onStateChange: ((entity: Entity, layerId: string, previous: AnimatorState | null, next: AnimatorState) => void) | null = null
   // 26.44: crossfades requested by scripts, applied to the base layer at the next update.
   private crossfades = new Map<string, { state: string; seconds: number }>()
+  /** 26.45: animator layer clocks, clip playback and pending crossfades, for the debugger's rewind. */
+  captureRewind(): unknown { return cloneRuntimeState({ runtime: this.runtime, directPlayback: this.directPlayback, crossfades: this.crossfades }) }
+  /** 26.45: puts captured animator state back; the next update samples the clips at those times. */
+  restoreRewind(state: unknown): void {
+    const copy = cloneRuntimeState(state as { runtime?: Map<string, AnimatorRuntimeState>; directPlayback?: Map<string, DirectClipPlayback>; crossfades?: Map<string, { state: string; seconds: number }> } | null)
+    if (copy?.runtime instanceof Map) this.runtime = copy.runtime
+    if (copy?.directPlayback instanceof Map) this.directPlayback = copy.directPlayback
+    if (copy?.crossfades instanceof Map) this.crossfades = copy.crossfades
+  }
   /** 26.44: blend the entity's base layer to `state` (id or name) over `seconds`. */ crossfade(entity: Entity, state: string, seconds: number): boolean {
     if (!entity?.uuid || !String(state ?? '').trim()) return false
     this.crossfades.set(entity.uuid, { state: String(state).trim().slice(0, 80), seconds: Math.min(60, Math.max(0, finiteNumber(seconds))) })

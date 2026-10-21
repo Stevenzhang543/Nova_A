@@ -4,7 +4,7 @@
     <template v-for="(node, index) in list" :key="node.id">
       <div v-if="marker(index)" class="block-marker" :class="marker(index)" aria-hidden="true"></div>
       <div class="block-row" :data-list-key="listKey" :data-index="index" :data-block-id="node.id"
-        :class="{ selected: editor.selectedId.value === node.id, disabled: node.disabled, dragging: editor.draggingId.value === node.id, container: !!node.children, invalid: errorsOf(node).length }"
+        :class="{ selected: editor.selectedId.value === node.id, disabled: node.disabled, dragging: editor.draggingId.value === node.id, container: !!node.children, invalid: errorsOf(node).length, paused: editor.pausedBlockId.value === node.id }"
         :style="blockStyle(node)" @click.stop="editor.select(node, listKey, index)">
         <div class="block-face">
           <button type="button" class="block-grip" :aria-label="`${editor.copy.value.ui.moveUp} / ${editor.copy.value.ui.moveDown}`" :title="editor.copy.value.ui.moveUp + ' / ' + editor.copy.value.ui.moveDown" @pointerdown="editor.startDrag($event, { kind: 'move', id: node.id })" @click.stop="editor.select(node, listKey, index)"><span></span><span></span><span></span></button>
@@ -14,12 +14,15 @@
               <BlockFieldInput v-else-if="fieldSpec(node.type, part.field)" :spec="fieldSpec(node.type, part.field)!" :label="part.field" :model-value="node.fields[part.field]" @update:model-value="setField(node, part.field, $event)" />
             </template>
           </span>
+          <button v-if="node.breakpoint" type="button" class="block-breakpoint" :title="editor.copy.value.ui.removeBreakpoint" :aria-label="editor.copy.value.ui.removeBreakpoint" @click.stop="editor.toggleBreakpoint(node)"></button>
+          <span v-if="editor.pausedBlockId.value === node.id" class="block-paused" role="status">{{ editor.copy.value.ui.pausedHere }}</span>
           <details class="block-menu" @click.stop>
             <summary :aria-label="editor.copy.value.ui.remove">⋯</summary>
             <div class="block-menu-list">
               <button type="button" @click="close($event); editor.duplicate(node.id)">{{ editor.copy.value.ui.duplicate }}</button>
               <button type="button" :disabled="index === 0" @click="close($event); editor.moveRelative(node.id, -1)">{{ editor.copy.value.ui.moveUp }}</button>
               <button type="button" :disabled="index === list.length - 1" @click="close($event); editor.moveRelative(node.id, 1)">{{ editor.copy.value.ui.moveDown }}</button>
+              <button type="button" @click="close($event); editor.toggleBreakpoint(node)">{{ node.breakpoint ? editor.copy.value.ui.removeBreakpoint : editor.copy.value.ui.addBreakpoint }}</button>
               <button type="button" @click="close($event); editor.toggleDisabled(node)">{{ node.disabled ? editor.copy.value.ui.enable : editor.copy.value.ui.disable }}</button>
               <button type="button" class="danger" @click="close($event); editor.remove(node.id)">{{ editor.copy.value.ui.remove }}</button>
             </div>

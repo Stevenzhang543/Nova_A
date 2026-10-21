@@ -28,6 +28,8 @@ export const STABLE_COMPONENTS: readonly ComponentDescriptor[] = [
   { kind: 'MotorJoint2D', category: 'Physics', unique: false, summary: 'Drives relative rotation using the joint motor settings.' },
   { kind: 'PrismaticJoint2D', category: 'Physics', unique: false, summary: 'Allows motion along one axis.' },
   { kind: 'SpringJoint2D', category: 'Physics', unique: false, summary: 'Applies damped spring forces.' },
+  { kind: 'WheelJoint2D', category: 'Physics', unique: false, summary: 'On a wheel, connected to the chassis: a suspension spring along an axis and a drive motor.' },
+  { kind: 'TargetJoint2D', category: 'Physics', unique: true, summary: 'Pulls the body toward a world point with a soft spring (drag, carry, hold).' },
   { kind: 'Rope2D', category: 'Physics', unique: false, summary: 'Segmented stretchable, bendable, breakable connection.' },
   { kind: 'Script2D', category: 'Gameplay', unique: true, summary: 'Runs sandboxed Rhai or visual-graph lifecycle logic.' },
   { kind: 'Animator', category: 'Gameplay', unique: true, summary: 'Animation state machine and parameters.' },

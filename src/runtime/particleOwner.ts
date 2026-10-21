@@ -7,7 +7,12 @@ import type { Vec2 } from '../world/types'
 import type { Renderer2D } from '../renderer/types'
 import type { RendererAssetSource } from '../renderer/RendererEnvironment'
 
-export interface ParticleWorld { readonly entities: Entity[] }
+export interface ParticleWorld {
+ readonly entities: Entity[]
+ /** 26.45: segment casts against the physics world (exact shapes, tile maps, no tunnelling): per
+  * segment `[x0, y0, x1, y1]` in, `[hit, fraction, normal x, normal y]` out; null without a solver. */
+ castParticleSegments?(segments: Float64Array, mask: number, ignore: Entity | null): Float64Array | null
+}
 export interface ParticlePorts {
  readonly resources: Pick<RendererAssetSource, 'resolveTexture' | 'generation'>
  readBudget(): {particleBudget:number;adaptiveParticleScale:number}
@@ -110,6 +115,22 @@ interface EmitterState {
 }
 
 
+/** 26.45: applies segment-cast hits: the particle stops just in front of the surface and bounces
+ * (restitution) or stops. Returns the number of particles that hit. */
+function resolveParticleHits(particles: Particle[], segments: Float64Array, hits: Float64Array, component: ParticleEmitter2D): number {
+  let count = 0
+  for (let index = 0; index < particles.length && index * 4 + 3 < hits.length; index++) {
+    if (hits[index * 4] < .5) continue
+    const particle = particles[index], fraction = hits[index * 4 + 1], nx = hits[index * 4 + 2], ny = hits[index * 4 + 3]
+    const x0 = segments[index * 4], y0 = segments[index * 4 + 1], x1 = segments[index * 4 + 2], y1 = segments[index * 4 + 3]
+    particle.position = { x: x0 + (x1 - x0) * fraction + nx * .005, y: y0 + (y1 - y0) * fraction + ny * .005 }
+    if (component.collisionMode === 'Stop') particle.velocity = { x: 0, y: 0 }
+    else { const inward = particle.velocity.x * nx + particle.velocity.y * ny; if (inward < 0) { particle.velocity.x -= (1 + component.collisionRestitution) * inward * nx; particle.velocity.y -= (1 + component.collisionRestitution) * inward * ny } }
+    count++
+  }
+  return count
+}
+
 /** 结构说明（自动提取）：collideParticle；输入 particle、component、owner、entities；直接调用 target.getCollider、worldTransform、localPointToWorld、rotate、Math.max 等；写入 normalLocal、corrected、halfX、halfY 等；包含循环处理。 */ function collideParticle(particle: Particle, component: ParticleEmitter2D, owner: Entity, entities: Entity[]): number {
   for (const target of entities) {
     if (target === owner || !target.enabled) continue
@@ -181,15 +202,32 @@ export class RuntimeParticleOwner {
         const count = Math.min(component.maxParticles, Math.floor(state.emissionAccumulator))
         if (count > 0) { const emitted = emit(entity, component, state, count, entities, globalBudget - activeParticles); activeParticles += emitted; state.emissionAccumulator -= emitted }
       }
+      // 26.45: world-space particles collide through the physics world when there is one: a segment
+      // cast from where each particle was to where it moves (every collider shape, tile maps too, and
+      // fast particles cannot pass through thin walls).
+      const colliding = component.worldSpace && component.collisionMode !== 'None'
+      const segments = colliding && this.world.castParticleSegments && state.particles.length ? new Float64Array(state.particles.length * 4) : null
+      let particleIndex = 0
       for (const particle of state.particles) {
         particle.age += dt
         particle.velocity.x += component.gravity.x * dt
         particle.velocity.y += component.gravity.y * dt
+        if (segments) { segments[particleIndex * 4] = particle.position.x; segments[particleIndex * 4 + 1] = particle.position.y }
         particle.position.x += particle.velocity.x * dt
         particle.position.y += particle.velocity.y * dt
-        if (component.worldSpace && component.collisionMode !== 'None') { const hit = collideParticle(particle, component, entity, entities); collisions += hit; if (hit) this.noteEvent(component, 'collision') }
+        if (segments) { segments[particleIndex * 4 + 2] = particle.position.x; segments[particleIndex * 4 + 3] = particle.position.y }
+        particleIndex++
+        if (colliding && !segments) { const hit = collideParticle(particle, component, entity, entities); collisions += hit; if (hit) this.noteEvent(component, 'collision') }
         particle.rotation += particle.angularVelocity * dt
         if (component.trailEnabled && (particle.trail.length === 0 || Math.hypot(particle.position.x - particle.trail[particle.trail.length - 1].x, particle.position.y - particle.trail[particle.trail.length - 1].y) > .01)) { particle.trail.push({ ...particle.position }); if (particle.trail.length > component.trailLength) particle.trail.splice(0, particle.trail.length - component.trailLength) }
+      }
+      if (segments) {
+        const hits = this.world.castParticleSegments!(segments, component.collisionLayerMask, entity)
+        if (hits) {
+          const hitCount = resolveParticleHits(state.particles, segments, hits, component)
+          collisions += hitCount
+          if (hitCount) this.noteEvent(component, 'collision')
+        } else for (const particle of state.particles) { const hit = collideParticle(particle, component, entity, entities); collisions += hit; if (hit) this.noteEvent(component, 'collision') }
       }
       const expired = state.particles.filter(/* 比较 particle.age 与 particle.lifetime，返回大于或等于的判断结果。 */ particle => particle.age >= particle.lifetime)
       if (expired.length) this.noteEvent(component, 'death')

@@ -253,6 +253,12 @@ export function renderDebugView2D(context: CanvasRenderingContext2D, entities: E
   context.restore(); return performance.now() - started
 }
 
+/** 26.45: a full-screen colour flash over the game (screen_flash), drawn on the overlay. */
+export function renderScreenFlash(context: CanvasRenderingContext2D, width: number, height: number, flash: { r: number; g: number; b: number; alpha: number } | null): void {
+  if (!flash || !(flash.alpha > 0)) return
+  context.save(); context.fillStyle = `rgba(${Math.round(flash.r)},${Math.round(flash.g)},${Math.round(flash.b)},${Math.min(1, flash.alpha)})`; context.fillRect(0, 0, width, height); context.restore()
+}
+
 /* 启用后处理且暗角非零时叠加径向暗角，返回处理耗时。 */
 export function renderPostProcessOverlay(context: CanvasRenderingContext2D, width: number, height: number, suppliedEnvironment?: LightingEnvironment): number {
   const environment = resolveLightingEnvironment(suppliedEnvironment), renderingSettings = environment.settings, activePostProcessing = environment.postProcessing

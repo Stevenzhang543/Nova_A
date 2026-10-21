@@ -11,6 +11,7 @@
  * (both axes) and opacity (0–100, sprite or UI). Runtime only; the editor never imports this. */
 import type { Entity } from '../world/Entity'
 import { finiteNumber } from '../world/geometry'
+import { cloneRuntimeState } from './rewindState'
 
 export type TweenProperty = 'x' | 'y' | 'rotation' | 'rotation_degrees' | 'scale_x' | 'scale_y' | 'scale' | 'opacity'
 export type EasingFunction = (t: number) => number
@@ -142,6 +143,11 @@ export class TweenOwner {
 
   /** Forgets everything (session end). */
   reset(): void { this.tweens = [] }
+
+  /** 26.45: the running tweens, for the debugger's rewind (objects are kept by reference). */
+  captureRewind(): unknown { return cloneRuntimeState(this.tweens) }
+  /** 26.45: puts captured tweens back. */
+  restoreRewind(state: unknown): void { if (Array.isArray(state)) this.tweens = cloneRuntimeState(state as ActiveTween[]) }
 
   get size(): number { return this.tweens.length }
 

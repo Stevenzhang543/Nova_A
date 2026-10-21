@@ -28,6 +28,9 @@ export interface BlockEditorContext {
   duplicate(id: string): void
   moveRelative(id: string, delta: number): void
   toggleDisabled(node: BlockNode): void
+  /** 26.45: block breakpoints, and the block the debugger is paused at ('' when none). */
+  toggleBreakpoint(node: BlockNode): void
+  pausedBlockId: ComputedRef<string>
   addCondition(node: BlockNode): void
   removeCondition(node: BlockNode, condition: BlockCondition): void
 }

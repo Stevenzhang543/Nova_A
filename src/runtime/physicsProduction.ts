@@ -177,12 +177,12 @@ export const PHYSICS_UNITS = Object.freeze({
 export const PHYSICS_SHAPE_SUPPORT: Readonly<Record<PhysicsShapeKind, { simulation: 'exact' | 'convex-approximation' | 'static-exact' | 'blocked-dynamic'; note: string }>> = Object.freeze({
   Box: { simulation: 'exact', note: 'Oriented convex box.' },
   Circle: { simulation: 'exact', note: 'Circle and non-uniform ellipse.' },
-  Capsule: { simulation: 'convex-approximation', note: 'Deterministic 12-vertex convex approximation.' },
+  Capsule: { simulation: 'exact', note: 'Rounded segment: round ends, flat sides (26.45).' },
   Segment: { simulation: 'convex-approximation', note: 'Finite segment with an explicit collision thickness.' },
   Chain: { simulation: 'static-exact', note: 'Static/kinematic chains use deterministic finite edge children in the solver.' },
   WorldBoundary: { simulation: 'convex-approximation', note: 'Static finite boundary segment; editor validation prevents dynamic ownership.' },
-  ConvexPolygon: { simulation: 'exact', note: 'Exact for three or four vertices in the current stable ABI.' },
-  ConcavePolygon: { simulation: 'blocked-dynamic', note: 'Static polygons are safely ear-clipped; dynamic concave ownership is rejected with recovery guidance.' }
+  ConvexPolygon: { simulation: 'exact', note: 'Exact; more than four corners are split into convex pieces of up to four.' },
+  ConcavePolygon: { simulation: 'exact', note: 'Split into convex pieces (ear clipping, then merged into pieces of up to four corners); static and dynamic (26.45).' }
 })
 
 export const PHYSICS_PROFILE_LIBRARY: Readonly<Record<Exclude<PhysicsProfileId, 'Custom'>, PhysicsSimulationProfile2D>> = Object.freeze({

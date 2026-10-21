@@ -78,6 +78,9 @@ pub struct InputSnapshot {
     pub maps: Vec<String>,
     #[serde(default)]
     pub scheme: String,
+    /// 26.45: the prompt of each action for the device in use ("Space", "A", "✕", "LMB").
+    #[serde(default)]
+    pub prompts: BTreeMap<String, String>,
 }
 
 #[derive(Clone, Debug, Default, Deserialize)]
@@ -422,6 +425,45 @@ pub enum ScriptCommand {
     },
     /// 26.44: the character passes one-way platforms for `seconds`.
     CharacterDropThrough {
+        seconds: f64,
+    },
+    /// 26.45: move this body's target joint (adding one when missing) to a world point.
+    TargetJointMove {
+        x: f64,
+        y: f64,
+    },
+    /// 26.45: release this body's target joint.
+    TargetJointRelease,
+    /// 26.45: conveyor speed of this body's collider surfaces (m/s).
+    SetSurfaceSpeed {
+        speed: f64,
+    },
+    /// 26.45: wait for the next key, mouse button or gamepad button and bind it to `action`
+    /// (binding `index`); the script gets the `input.rebound` or `input.rebind_cancelled` signal.
+    InputRebind {
+        action: String,
+        index: u32,
+    },
+    /// 26.45: put the project's bindings back (the player's own are forgotten).
+    InputBindingsReset,
+    /// 26.45: shake the active camera: `amount` (0–1) is added to its trauma.
+    CameraShake {
+        amount: f64,
+    },
+    /// 26.45: zoom of the active camera.
+    CameraZoom {
+        zoom: f64,
+    },
+    /// 26.45: the active camera follows an entity (empty target: stop following).
+    CameraFollow {
+        target: String,
+        generation: u32,
+    },
+    /// 26.45: a full-screen colour flash that fades out over `seconds`.
+    ScreenFlash {
+        r: f64,
+        g: f64,
+        b: f64,
         seconds: f64,
     },
     /// 26.44: animate a property of this entity (`target` empty) or of a handle's entity.
@@ -801,6 +843,24 @@ struct ScriptInstance {
     program: Rc<CompiledScript>,
     scope: Scope<'static>,
     initialized: bool,
+}
+
+/// 26.45: the live script instances at one moment (see `ScriptRuntime::snapshot_instances`).
+pub struct ScriptInstancesSnapshot {
+    epoch: Option<u32>,
+    instances: Vec<(ScriptInstanceKey, Rc<CompiledScript>, Scope<'static>, bool)>,
+}
+
+impl ScriptInstancesSnapshot {
+    /// Number of instances held.
+    pub fn len(&self) -> usize {
+        self.instances.len()
+    }
+
+    /// True when no instance is held.
+    pub fn is_empty(&self) -> bool {
+        self.instances.is_empty()
+    }
 }
 
 #[derive(Default)]
@@ -1253,6 +1313,57 @@ impl ScriptRuntime {
 
     pub fn reset_script_instances(&mut self, script: &str) {
         self.instances.retain(|key, _| key.script != script);
+    }
+
+    /// 26.45: a copy of the live instances (their scopes and whether `awake` ran), for the
+    /// debugger's rewind. Scopes are cloned the way the debug probe saves them before a stopped run.
+    pub fn snapshot_instances(&self) -> ScriptInstancesSnapshot {
+        ScriptInstancesSnapshot {
+            epoch: self.instance_epoch,
+            instances: self
+                .instances
+                .iter()
+                .map(|(key, instance)| {
+                    (
+                        key.clone(),
+                        Rc::clone(&instance.program),
+                        instance.scope.clone(),
+                        instance.initialized,
+                    )
+                })
+                .collect(),
+        }
+    }
+
+    /// 26.45: puts the instances of a snapshot back (instances created since are dropped). A
+    /// snapshot of another play session, or instances of a script that was recompiled since, are
+    /// not restored. Returns the number of instances restored, or None for another session.
+    pub fn restore_instances(&mut self, snapshot: &ScriptInstancesSnapshot) -> Option<usize> {
+        if snapshot.epoch != self.instance_epoch {
+            return None;
+        }
+        self.instances.clear();
+        for (key, program, scope, initialized) in &snapshot.instances {
+            let current = self
+                .scripts
+                .get(&key.script)
+                .is_some_and(|live| Rc::ptr_eq(live, program));
+            let retired = self
+                .retired_generations
+                .get(&key.entity)
+                .is_some_and(|retired| key.generation <= *retired);
+            if current && !retired {
+                self.instances.insert(
+                    key.clone(),
+                    ScriptInstance {
+                        program: Rc::clone(program),
+                        scope: scope.clone(),
+                        initialized: *initialized,
+                    },
+                );
+            }
+        }
+        Some(self.instances.len())
     }
 
     /// Called once after candidate validation. Only identical compiled revisions retain private state.
@@ -2573,6 +2684,12 @@ fn register_input_api(engine: &mut Engine) {
     });
     let snapshot = input;
     engine.register_fn(
+        "input_prompt",
+        /* 26.45: 当前设备上动作的提示符号；未知动作返回空字符串。 */
+        move |action: &str| snapshot.prompts.get(action).cloned().unwrap_or_default(),
+    );
+    let snapshot = input;
+    engine.register_fn(
         "input_scheme",
         /* 复制 snapshot . scheme . clone () 的结果，避免向调用方暴露可变宿主引用。 */
         move || snapshot.scheme.clone(),
@@ -3584,6 +3701,155 @@ fn register_command_api(
     engine.register_fn(
         "character_floor_is_one_way",
         /* 脚下是否为单向平台。 */ move || snapshot.floor_one_way,
+    );
+    let commands = Rc::clone(&output);
+    engine.register_fn(
+        "target_joint_move",
+        /* 26.45: 把本物体的目标关节移到世界点（没有时添加一个）。 */
+        move |x: FLOAT, y: FLOAT| {
+            if x.is_finite() && y.is_finite() {
+                commands
+                    .borrow_mut()
+                    .commands
+                    .push(ScriptCommand::TargetJointMove { x, y });
+            }
+        },
+    );
+    let commands = Rc::clone(&output);
+    engine.register_fn(
+        "target_joint_release",
+        /* 26.45: 松开本物体的目标关节。 */
+        move || {
+            commands
+                .borrow_mut()
+                .commands
+                .push(ScriptCommand::TargetJointRelease);
+        },
+    );
+    // 26.45: `input_rebind(action)` / `input_rebind(action, index)`: the next key, mouse button or
+    // gamepad button pressed becomes the action's binding.
+    let push_rebind = {
+        let commands = Rc::clone(&output);
+        Rc::new(move |action: &str, index: INT| {
+            let action: String = action.trim().chars().take(120).collect();
+            if action.is_empty() {
+                commands.borrow_mut().logs.push(ScriptLog {
+                    level: "error".into(),
+                    message: "input_rebind requires an action name".into(),
+                });
+                return;
+            }
+            let index = u32::try_from(index.clamp(0, 31)).unwrap_or(0);
+            commands
+                .borrow_mut()
+                .commands
+                .push(ScriptCommand::InputRebind { action, index });
+        })
+    };
+    let rebind = Rc::clone(&push_rebind);
+    engine.register_fn("input_rebind", move |action: &str| rebind(action, 0));
+    let rebind = Rc::clone(&push_rebind);
+    engine.register_fn("input_rebind", move |action: &str, index: INT| {
+        rebind(action, index)
+    });
+    // 26.45: camera and screen effects.
+    let commands = Rc::clone(&output);
+    engine.register_fn("camera_shake", move |amount: FLOAT| {
+        let amount = if amount.is_finite() {
+            amount.clamp(0.0, 1.0)
+        } else {
+            0.0
+        };
+        commands
+            .borrow_mut()
+            .commands
+            .push(ScriptCommand::CameraShake { amount });
+    });
+    let commands = Rc::clone(&output);
+    engine.register_fn("camera_zoom", move |zoom: FLOAT| {
+        if zoom.is_finite() && zoom > 0.0 {
+            commands
+                .borrow_mut()
+                .commands
+                .push(ScriptCommand::CameraZoom {
+                    zoom: zoom.clamp(0.01, 100.0),
+                });
+        }
+    });
+    let commands = Rc::clone(&output);
+    engine.register_fn("camera_follow", move |handle: Map| {
+        if let Some((target, generation)) = target_from_handle(handle) {
+            commands
+                .borrow_mut()
+                .commands
+                .push(ScriptCommand::CameraFollow { target, generation });
+        }
+    });
+    let commands = Rc::clone(&output);
+    engine.register_fn("camera_follow_none", move || {
+        commands
+            .borrow_mut()
+            .commands
+            .push(ScriptCommand::CameraFollow {
+                target: String::new(),
+                generation: 0,
+            });
+    });
+    let commands = Rc::clone(&output);
+    engine.register_fn(
+        "screen_flash",
+        move |r: FLOAT, g: FLOAT, b: FLOAT, seconds: FLOAT| {
+            let channel = |value: FLOAT| {
+                if value.is_finite() {
+                    value.clamp(0.0, 255.0)
+                } else {
+                    255.0
+                }
+            };
+            let seconds = if seconds.is_finite() {
+                seconds.clamp(0.0, 10.0)
+            } else {
+                0.0
+            };
+            if seconds > 0.0 {
+                commands
+                    .borrow_mut()
+                    .commands
+                    .push(ScriptCommand::ScreenFlash {
+                        r: channel(r),
+                        g: channel(g),
+                        b: channel(b),
+                        seconds,
+                    });
+            }
+        },
+    );
+    let commands = Rc::clone(&output);
+    engine.register_fn(
+        "input_bindings_reset",
+        /* 26.45: 恢复项目的按键绑定。 */
+        move || {
+            commands
+                .borrow_mut()
+                .commands
+                .push(ScriptCommand::InputBindingsReset);
+        },
+    );
+    let commands = Rc::clone(&output);
+    engine.register_fn(
+        "set_surface_speed",
+        /* 26.45: 设置本物体碰撞表面的传送带速度（m/s）。 */
+        move |speed: FLOAT| {
+            let speed = if speed.is_finite() {
+                speed.clamp(-1.0e4, 1.0e4)
+            } else {
+                0.0
+            };
+            commands
+                .borrow_mut()
+                .commands
+                .push(ScriptCommand::SetSurfaceSpeed { speed });
+        },
     );
     let commands = Rc::clone(&output);
     engine.register_fn(
@@ -5162,6 +5428,45 @@ mod link_and_media_tests {
         context
     }
 
+    // 26.45: the debugger's rewind puts instance scopes (hidden variables too) back.
+    #[test]
+    fn instance_snapshots_restore_hidden_state() {
+        let mut runtime = ScriptRuntime::new();
+        let source = "@export let count = 0;\nlet hidden = 0;\nfn update(dt) {\n    hidden += 1;\n    count = hidden;\n}\n";
+        runtime.upsert("counter", source).unwrap();
+        let mut properties = BTreeMap::new();
+        let run = |runtime: &mut ScriptRuntime, properties: &mut BTreeMap<String, Value>| {
+            let mut context = context("self");
+            context.properties = properties.clone();
+            let execution = runtime
+                .execute_instance("counter", "update", 1, 1, context)
+                .unwrap();
+            *properties = execution.properties;
+            properties["count"].as_f64().unwrap()
+        };
+        assert_eq!(run(&mut runtime, &mut properties), 1.0);
+        let snapshot = runtime.snapshot_instances();
+        let saved = properties.clone();
+        assert_eq!(snapshot.len(), 1);
+        assert_eq!(run(&mut runtime, &mut properties), 2.0);
+        assert_eq!(run(&mut runtime, &mut properties), 3.0);
+        assert_eq!(runtime.restore_instances(&snapshot), Some(1));
+        properties = saved;
+        assert_eq!(
+            run(&mut runtime, &mut properties),
+            2.0,
+            "hidden state rewound"
+        );
+        // A recompiled script starts fresh instead of taking the old scope.
+        runtime
+            .upsert("counter", &source.replace("+= 1", "+= 10"))
+            .unwrap();
+        assert_eq!(runtime.restore_instances(&snapshot), Some(0));
+        // Another play session (epoch) does not take it at all.
+        runtime.clear_instances(2).unwrap();
+        assert_eq!(runtime.restore_instances(&snapshot), None);
+    }
+
     // 26.43: call_on / call_global / call_group / after queue host commands with serializable
     // arguments; lifecycle names and invalid targets are rejected with a log, never queued.
     #[test]
@@ -5910,6 +6215,118 @@ mod tests {
     }
 
     // 26.44: crossfade, tweens, drop-through and the Animator/character reads.
+    #[test]
+    fn target_joint_and_surface_commands() {
+        let source = r#"
+            fn update(dt) {
+                target_joint_move(2.5, -1.0);
+                target_joint_move(1.0 / 0.0, 3.0);
+                target_joint_release();
+                set_surface_speed(1.5);
+                set_surface_speed(1e9);
+            }
+        "#;
+        let execution = ScriptRuntime::new()
+            .execute(source, "update", context())
+            .unwrap();
+        assert_eq!(
+            execution.commands,
+            vec![
+                ScriptCommand::TargetJointMove { x: 2.5, y: -1.0 },
+                ScriptCommand::TargetJointRelease,
+                ScriptCommand::SetSurfaceSpeed { speed: 1.5 },
+                ScriptCommand::SetSurfaceSpeed { speed: 1.0e4 },
+            ]
+        );
+        let json = serde_json::to_string(&execution.commands[0]).unwrap();
+        assert_eq!(json, r#"{"type":"targetJointMove","x":2.5,"y":-1.0}"#);
+    }
+
+    // 26.45: camera and screen effects.
+    #[test]
+    fn camera_and_flash_commands() {
+        let source = r#"
+            fn update(dt) {
+                camera_shake(0.4);
+                camera_shake(7.0);
+                camera_zoom(2.0);
+                camera_zoom(-1.0);
+                camera_follow(find_entity_handle("Target"));
+                camera_follow_none();
+                screen_flash(255.0, 0.0, 0.0, 0.25);
+                screen_flash(255.0, 255.0, 255.0, 0.0);
+            }
+        "#;
+        let mut context = context();
+        context.entity_generations.insert("target".into(), 4);
+        context.entities.insert("Target".into(), "target".into());
+        let execution = ScriptRuntime::new()
+            .execute(source, "update", context)
+            .unwrap();
+        assert_eq!(
+            execution.commands,
+            vec![
+                ScriptCommand::CameraShake { amount: 0.4 },
+                ScriptCommand::CameraShake { amount: 1.0 },
+                ScriptCommand::CameraZoom { zoom: 2.0 },
+                ScriptCommand::CameraFollow {
+                    target: "target".into(),
+                    generation: 4
+                },
+                ScriptCommand::CameraFollow {
+                    target: String::new(),
+                    generation: 0
+                },
+                ScriptCommand::ScreenFlash {
+                    r: 255.0,
+                    g: 0.0,
+                    b: 0.0,
+                    seconds: 0.25
+                },
+            ]
+        );
+    }
+
+    // 26.45: rebinding from scripts and device prompts.
+    #[test]
+    fn input_rebind_reset_and_prompt() {
+        let source = r#"
+            fn update(dt) {
+                input_rebind("Jump");
+                input_rebind("Move", 3);
+                input_rebind("  ");
+                input_bindings_reset();
+                log_info(input_prompt("Jump") + "|" + input_prompt("Missing"));
+            }
+        "#;
+        let mut context = context();
+        context.input.prompts.insert("Jump".into(), "Space".into());
+        let execution = ScriptRuntime::new()
+            .execute(source, "update", context)
+            .unwrap();
+        assert_eq!(
+            execution.commands,
+            vec![
+                ScriptCommand::InputRebind {
+                    action: "Jump".into(),
+                    index: 0
+                },
+                ScriptCommand::InputRebind {
+                    action: "Move".into(),
+                    index: 3
+                },
+                ScriptCommand::InputBindingsReset,
+            ]
+        );
+        assert!(execution
+            .logs
+            .iter()
+            .any(|log| log.level == "error" && log.message.contains("action name")));
+        assert!(execution.logs.iter().any(|log| log.message == "Space|"));
+        let json = serde_json::to_string(&execution.commands[1]).unwrap();
+        assert_eq!(json, r#"{"type":"inputRebind","action":"Move","index":3}"#);
+    }
+
     #[test]
     fn animator_tween_and_drop_through_commands_and_reads() {
         let source = r#"

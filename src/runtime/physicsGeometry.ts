@@ -117,7 +117,81 @@ export interface PreparedColliderSet2D {
     if (!clipped) return []
   }
   if (order.length === 3) triangles.push(order.map(/* 返回 points[index] 的当前值。 */ index => points[index]))
-  return triangles
+  return mergeConvexPieces(triangles, 4)
+}
+
+/** 26.45: Hertel–Mehlhorn merge. Neighbouring pieces (sharing an edge) are joined while the union
+ * stays convex and has at most `maxVertices` corners (the solver's child shapes hold four), so a
+ * concave polygon becomes far fewer convex children than its triangles, with fewer internal edges. */
+export function mergeConvexPieces(pieces: Vec2[][], maxVertices: number): Vec2[][] {
+  const result = pieces.map(piece => [...piece])
+  const same = (a: Vec2, b: Vec2) => Math.abs(a.x - b.x) <= 1e-12 && Math.abs(a.y - b.y) <= 1e-12
+  const convex = (polygon: Vec2[]) => {
+    let sign = 0
+    for (let index = 0; index < polygon.length; index++) {
+      const turn = cross(polygon[index], polygon[(index + 1) % polygon.length], polygon[(index + 2) % polygon.length])
+      if (Math.abs(turn) <= 1e-12) return false
+      if (sign === 0) sign = Math.sign(turn)
+      else if (Math.sign(turn) !== sign) return false
+    }
+    return true
+  }
+  let merged = true
+  while (merged) {
+    merged = false
+    search: for (let first = 0; first < result.length; first++) {
+      for (let second = first + 1; second < result.length; second++) {
+        const a = result[first], b = result[second]
+        if (a.length + b.length - 2 > maxVertices) continue
+        for (let i = 0; i < a.length; i++) {
+          const a0 = a[i], a1 = a[(i + 1) % a.length]
+          for (let j = 0; j < b.length; j++) {
+            if (!same(b[j], a1) || !same(b[(j + 1) % b.length], a0)) continue
+            // a: ... a0 a1 ...  b: ... a1 a0 ...  ->  a0 (rest of b after a0, before a1) a1 (rest of a)
+            const union: Vec2[] = []
+            for (let k = 0; k < a.length; k++) union.push(a[(i + 1 + k) % a.length])
+            for (let k = 2; k < b.length; k++) union.push(b[(j + k) % b.length])
+            if (union.length <= maxVertices && convex(union)) {
+              result[first] = union
+              result.splice(second, 1)
+              merged = true
+              break search
+            }
+          }
+        }
+      }
+    }
+  }
+  return result
+}
+
+/** 26.45: outline of a capsule of the given full width and height (a rectangle with round ends),
+ * centred on the origin, for drawing. A capsule as wide as it is tall is a circle. */
+export function capsuleOutline(width: number, height: number, segments = 16): Vec2[] {
+  const radius = Math.max(5e-10, Math.min(Math.abs(width), Math.abs(height)) * .5), vertical = Math.abs(height) >= Math.abs(width)
+  const straight = Math.max(0, (vertical ? Math.abs(height) : Math.abs(width)) * .5 - radius)
+  const points: Vec2[] = []
+  for (const end of [1, -1]) {
+    const start = vertical ? (end > 0 ? 0 : Math.PI) : (end > 0 ? -Math.PI / 2 : Math.PI / 2)
+    const center = vertical ? { x: 0, y: end * straight } : { x: end * straight, y: 0 }
+    for (let sample = 0; sample <= segments; sample++) {
+      const angle = start + Math.PI * sample / segments
+      points.push({ x: center.x + Math.cos(angle) * radius, y: center.y + Math.sin(angle) * radius })
+    }
+  }
+  return points
+}
+
+/** 26.45: area and moment about the centre of a capsule (exactly as nova_physics computes them). */
+function capsuleMass(width: number, height: number, mass: number): { area: number; inertia: number } {
+  const radius = Math.max(5e-10, Math.min(width, height) * .5), straight = Math.max(0, Math.max(width, height) * .5 - radius)
+  if (straight <= 5e-10) return { area: Math.PI * radius * radius, inertia: mass * radius * radius * .5 }
+  const length = 2 * straight, boxArea = 2 * radius * length, circleArea = Math.PI * radius * radius
+  const density = mass / (boxArea + circleArea), boxMass = density * boxArea, circleMass = density * circleArea
+  const circleOffset = 4 * radius / (3 * Math.PI)
+  const circleInertia = circleMass * (.5 * radius * radius + straight * straight + 2 * straight * circleOffset)
+  const boxInertia = boxMass * (4 * radius * radius + length * length) / 12
+  return { area: boxArea + circleArea, inertia: circleInertia + boxInertia }
 }
 
 /** 结构说明（自动提取）：stableShapeId；输入 source、piece；直接调用 character.charCodeAt、Math.imul；写入 hash；包含循环处理。 */ function stableShapeId(source: string, piece: number): number {
@@ -160,8 +234,8 @@ export interface PreparedColliderSet2D {
   return { shapes: [baseShape(source, id, normalizedKind, offset, rotation, size, normalizedKind === 'ConvexPolygon' ? authored.slice(0, 4) : [], 0, properties)], decomposed: false, invalid: false }
 }
 
-/** Converts one authoring collider into exact convex children. Static chain and
- * concave shapes are accepted; dynamic concave ownership is explicitly blocked. */
+/** Converts one authoring collider into exact convex children. Static chains are accepted;
+ * 26.45: concave polygons are split into convex pieces for dynamic bodies too. */
 // 26.44: prepared shapes per collider, reused while the inputs are unchanged (compared exactly, as
 // numbers). Physics sync used to rebuild (hull, decomposition) every collider twice per fixed step
 // and once per query.
@@ -200,7 +274,6 @@ let colliderInputScratch = new Float64Array(64)
 }
 
 /** 结构说明（自动提取）：prepareColliderSet；输入 source、dynamic；直接调用 Math.min、prepareOne、shapes.push；写入 decomposed；包含循环处理。 */ function prepareColliderSetUncached(source: ColliderSource2D, dynamic: boolean): PreparedColliderSet2D {
-  if (dynamic && source.shapeModel === 'ConcavePolygon') return { shapes: [], blockedReason: 'Dynamic ConcavePolygon is unsupported. Use a static body or convex child shapes.', decomposed: false }
   if (dynamic && source.shapeModel === 'Chain') return { shapes: [], blockedReason: 'Dynamic Chain is unsupported. Use a static/kinematic body or finite convex segment children.', decomposed: false }
   const primarySize = source.shapeModel === 'Circle' ? { x: source.radiusX * 2, y: source.radiusY * 2 } : source.size
   const descriptors: ColliderShapeDescriptor2D[] = [{ id: 'primary', kind: source.shapeModel, offset: source.offset, rotation: source.rotation, size: primarySize, radius: Math.min(primarySize.x,primarySize.y)*.5, points: source.vertices, enabled: true, sensor: source.sensor, physicsLayer: source.physicsLayer, collisionMask: source.collisionMask, oneWay: source.oneWay, oneWayNormal: source.oneWayNormal }, ...source.shapes]
@@ -210,7 +283,6 @@ let colliderInputScratch = new Float64Array(64)
     if (!descriptor.enabled) continue
     if (descriptor.points.length > MAX_AUTHORED_COLLIDER_POINTS) return { shapes: [], blockedReason: `Collider '${descriptor.id}' exceeds the ${MAX_AUTHORED_COLLIDER_POINTS}-point authoring safety limit.`, decomposed: true }
     if (dynamic && descriptor.id !== 'primary' && descriptor.kind === 'WorldBoundary') return { shapes: [], blockedReason: `WorldBoundary child '${descriptor.id}' requires a static or kinematic owner.`, decomposed }
-    if (dynamic && descriptor.kind === 'ConcavePolygon') return { shapes: [], blockedReason: `Dynamic concave child '${descriptor.id}' is unsupported. Decompose it into convex children.`, decomposed }
     if (dynamic && descriptor.kind === 'Chain') return { shapes: [], blockedReason: `Dynamic chain child '${descriptor.id}' is unsupported. Use finite convex segment children.`, decomposed }
     const result = prepareOne(source, descriptor.id, descriptor.kind, descriptor.offset, descriptor.rotation, descriptor.size, descriptor.points, descriptor)
     if (result.invalid) return { shapes: [], blockedReason: `Collider '${descriptor.id}' is degenerate or self-intersecting and cannot be decomposed safely.`, decomposed: true }
@@ -253,6 +325,7 @@ let colliderInputScratch = new Float64Array(64)
 /** 结构说明（自动提取）：solverShapeArea；输入 shape、scale；直接调用 Math.abs、scaledSolverVertices、vertices.reduce。 */ export function solverShapeArea(shape: SolverColliderShape2D, scale: Vec2): number {
   if (shape.sensor) return 0
   if (shape.kind === 'Circle') return Math.PI * shape.size.x * Math.abs(scale.x) * shape.size.y * Math.abs(scale.y) * .25
+  if (shape.kind === 'Capsule') return capsuleMass(shape.size.x * Math.abs(scale.x), shape.size.y * Math.abs(scale.y), 1).area
   const vertices = scaledSolverVertices(shape, scale)
   return Math.abs(vertices.reduce(/* 计算表达式 sum + vertex.x * vertices[(index + 1) % vertices.length].y - vertex.y * vertices[(index + 1) % vertices.length].x 并返回结果，沿用操作数的原有类型规则。 */ (sum, vertex, index) => sum + vertex.x * vertices[(index + 1) % vertices.length].y - vertex.y * vertices[(index + 1) % vertices.length].x, 0)) * .5
 }
@@ -265,6 +338,8 @@ let colliderInputScratch = new Float64Array(64)
   if (shape.kind === 'Circle') {
     const radiusX = shape.size.x * Math.abs(scale.x) * .5, radiusY = shape.size.y * Math.abs(scale.y) * .5
     local = mass * (radiusX * radiusX + radiusY * radiusY) * .25
+  } else if (shape.kind === 'Capsule') {
+    local = capsuleMass(shape.size.x * Math.abs(scale.x), shape.size.y * Math.abs(scale.y), mass).inertia
   } else {
     const vertices = scaledSolverVertices(shape, scale)
     let crossSum = 0, weightedSum = 0

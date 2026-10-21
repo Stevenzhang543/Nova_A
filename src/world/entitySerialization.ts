@@ -103,6 +103,9 @@ function serializeComponent(component: Component2D): Record<string, unknown> {
       collisionMask: component.collisionMask >>> 0,
       oneWay: component.oneWay,
       oneWayNormal: { ...component.oneWayNormal },
+      // 26.45: written only when set, so existing projects keep their files unchanged.
+      ...(component.surfaceSpeed ? { surfaceSpeed: component.surfaceSpeed } : {}),
+      ...(component.rollingResistance ? { rollingResistance: component.rollingResistance } : {}),
       materialAsset: component.materialAsset,
       material: { ...component.material }
     })

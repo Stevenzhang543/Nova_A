@@ -167,7 +167,7 @@ try {
     readFile(join(root, 'crates/nova_physics/src/solver/contact_solver.rs'), 'utf8'), readFile(join(root, 'src/renderer/WebGL2Renderer.ts'), 'utf8'),
     readFile(join(root, 'src/renderer/Canvas2DRenderer.ts'), 'utf8'), readFile(join(root, 'src/renderer/sceneRenderer.ts'), 'utf8'), readFile(join(root, 'src/runtime/GameplayRuntimeCore.ts'), 'utf8')
   ])
-  check('PHYSICS-PRECISION', physicsSolver.includes('effective_inverse_mass') && physicsSolver.includes('cross_a * cross_a * a.inv_inertia') && physicsSolver.includes('a.angle = normalize_angle'), 'Penetration correction now includes rotational effective mass and angular correction for off-center contacts.')
+  check('PHYSICS-PRECISION', physicsSolver.includes('fn directional_inverse_mass') && physicsSolver.includes('cross_a * cross_a * a.inv_inertia') && physicsSolver.includes('let k12 ='), 'Soft contacts use the rotational effective mass of off-center contacts and solve two-point manifolds as a block (26.44).')
   check('RENDERER-CONTAINMENT', webglRenderer.includes('MAX_PACKET_VERTICES') && webglRenderer.includes('geometry.positions.some') && webglRenderer.includes('finally {') && canvasRenderer.includes('MAX_FRAME_COMMANDS') && canvasRenderer.includes('safeViewport') && canvasRenderer.includes('finally {') && sceneRenderer.includes('safeViewport'), 'Both render backends contain invalid geometry, camera, viewport, and resource values and always restore draw state.')
   check('RUNTIME-BRIDGE-CONTRACT', runtimeSource.includes('MAX_SCRIPT_BRIDGE_COMMANDS') && runtimeSource.includes('parseScriptExecution') && runtimeSource.includes('malformed host command'), 'The TypeScript host validates sandbox output before applying engine mutations.')
 } finally {

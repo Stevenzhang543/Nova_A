@@ -239,7 +239,7 @@
     "id": "T",
     "name": "Runtime saves",
     "paths": [
-      "runtime/saveGame.ts",
+      "editor/saveGame.ts",
       "runtime/GameplayRuntime.ts"
     ],
     "unresolvedPaths": [],

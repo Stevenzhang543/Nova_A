@@ -1,6 +1,6 @@
 /** 物理调试绘制（编辑器与独立播放器共用）：碰撞轮廓、休眠、包围盒、质心、速度与力、关节、
  * 角色控制器接触法线、绳节点、接触点与法线。调用方先把画布变换到世界坐标（y 轴向上）。 */
-import { prepareColliderSet } from '../runtime/physicsGeometry'
+import { capsuleOutline, prepareColliderSet } from '../runtime/physicsGeometry'
 import { localPointToWorld, worldTransform } from '../world/hierarchy'
 import type { CharacterBody2D, Joint2D } from '../world/components'
 import type { Entity } from '../world/Entity'
@@ -38,7 +38,7 @@ export interface PhysicsDebugFrame {
 }
 export interface PhysicsDebugCounts { colliders: number; sleeping: number; characters: number; contacts: number }
 
-const JOINT_KINDS = ['FixedJoint2D', 'WeldJoint2D', 'DistanceJoint2D', 'RopeJoint2D', 'RevoluteJoint2D', 'MotorJoint2D', 'PrismaticJoint2D', 'SpringJoint2D'] as const
+const JOINT_KINDS = ['FixedJoint2D', 'WeldJoint2D', 'DistanceJoint2D', 'RopeJoint2D', 'RevoluteJoint2D', 'MotorJoint2D', 'PrismaticJoint2D', 'SpringJoint2D', 'WheelJoint2D'] as const
 
 function rotateLocal(point: Vec2, angle: number): Vec2 {
   const cosine = Math.cos(angle), sine = Math.sin(angle)
@@ -53,6 +53,7 @@ export function colliderOutlines(entity: Entity, entities: readonly Entity[]): {
   return prepared.shapes.map(shape => {
     let authored = shape.points
     if (!authored.length && shape.kind === 'Circle') authored = Array.from({ length: 49 }, (_, index) => { const angle = index / 48 * Math.PI * 2; return { x: Math.cos(angle) * shape.size.x * .5, y: Math.sin(angle) * shape.size.y * .5 } })
+    else if (!authored.length && shape.kind === 'Capsule') { authored = capsuleOutline(shape.size.x, shape.size.y); authored = [...authored, authored[0]] }
     else if (!authored.length) authored = [{ x: -shape.size.x * .5, y: -shape.size.y * .5 }, { x: shape.size.x * .5, y: -shape.size.y * .5 }, { x: shape.size.x * .5, y: shape.size.y * .5 }, { x: -shape.size.x * .5, y: shape.size.y * .5 }, { x: -shape.size.x * .5, y: -shape.size.y * .5 }]
     else authored = [...authored, authored[0]]
     const points = authored.map(vertex => { const rotated = rotateLocal(vertex, shape.rotation); return localPointToWorld(entity, { x: shape.offset.x + rotated.x, y: shape.offset.y + rotated.y }, entities as Entity[]) })

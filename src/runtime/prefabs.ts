@@ -2,7 +2,7 @@ import {RuntimePrefabInstantiator} from './runtimePrefabInstantiator'
 import type {PrefabDocument} from '../world/sceneEntityData'
 export type {PrefabDocument} from '../world/sceneEntityData'
 /** 预制体系统：创建、实例化和更新预制资源，跟踪嵌套来源及字段覆盖。 */
-import { assetGuid, assetReference, createTextAsset, readTextAsset, resolveAsset, updateTextAssetTransactional } from '../assets/AssetDatabase'
+import { assetGuid, assetReference, assetState, createTextAsset, readTextAsset, resolveAsset, updateTextAssetTransactional } from '../assets/AssetDatabase'
 import { subtreeEntities } from '../editor/selection'
 import {
   captureEntityBundle,
@@ -12,6 +12,7 @@ import {
   selectEntities,
   serializeEntity,
   readEntityAuthoringData,
+  sceneManager,
   type EntityBundle,
   type SceneEntityData
 } from '../store/physics'
@@ -22,6 +23,7 @@ import { normalizeConnection, type Connection } from '../world/Connection'
 import type { Vec2 } from '../world/types'
 import { canonicalProjectText } from '../projects/projectCanonicalValues'
 import {createRuntimePrefabReader,prefabChecksum as checksum} from './runtimePrefabReader'
+import { applyPrefabOverride as applyOverride, diffPrefabValues as diffValues, readPrefabPath, rebaseStoredScenePrefab, rebaseVariantBundle } from './prefabRebase'
 
 
 
@@ -120,34 +122,6 @@ const prefabRecord = createRuntimePrefabReader({resolveAsset,readSource:readText
   return value
 }
 
-/** 结构说明（自动提取）：diffValues；输入 base、current、path、output；直接调用 Object.is、Array.isArray、canonicalProjectText、clone、Set 等；写入 output[…]；包含循环处理。 */ function diffValues(base: unknown, current: unknown, path: string, output: Record<string, unknown>): void {
-  if (Object.is(base, current)) return
-  if (Array.isArray(base) && Array.isArray(current)) {
-    if (canonicalProjectText(base) !== canonicalProjectText(current)) output[path] = clone(current)
-    return
-  }
-  if (base && current && typeof base === 'object' && typeof current === 'object') {
-    const keys = new Set([...Object.keys(base as object), ...Object.keys(current as object)])
-    for (const key of keys) diffValues((base as Record<string, unknown>)[key], (current as Record<string, unknown>)[key], path ? `${path}.${key}` : key, output)
-    return
-  }
-  output[path] = clone(current)
-}
-
-/** 结构说明（自动提取）：applyOverride；输入 target、path、value；直接调用 filter、path.split、test、Number、clone；写入 cursor、[…]；包含循环处理。 */ function applyOverride(target: Record<string, unknown>, path: string, value: unknown): void {
-  const segments = path.split('.').filter(Boolean)
-  let cursor: unknown = target
-  for (let index = 0; index < segments.length - 1; index++) {
-    const segment = segments[index]
-    const numeric = /^\d+$/.test(segment) ? Number(segment) : segment
-    if (!cursor || typeof cursor !== 'object') return
-    cursor = (cursor as Record<PropertyKey, unknown>)[numeric]
-  }
-  if (!cursor || typeof cursor !== 'object' || !segments.length) return
-  const last = segments[segments.length - 1]
-  ;(cursor as Record<string, unknown>)[last] = clone(value)
-}
-
 /** 结构说明（自动提取）：sourceRecord；输入 document、sourceUuid；直接调用 document.bundle.entities.find。 */ function sourceRecord(document: PrefabDocument, sourceUuid: string | null): SceneEntityData | null {
   return sourceUuid ? document.bundle.entities.find(/* 比较 record.uuid 与 sourceUuid，返回严格相等的判断结果。 */ record => record.uuid === sourceUuid) ?? null : null
 }
@@ -174,7 +148,7 @@ const prefabRecord = createRuntimePrefabReader({resolveAsset,readSource:readText
   return overrides
 }
 
-/** 结构说明（自动提取）：replacePrefabInstance；输入 instanceEntities、document、preserveOverrides；直接调用 Map、instanceEntities.flatMap、overridesBySource.set、capturePrefabOverrides、currentBySource.get 等；写入 record.uuid、record.prefabAsset、record.prefabInstanceUuid、record.prefabSourceUuid 等；返回路径包含 replacements；包含循环处理。 */ function replacePrefabInstance(instanceEntities: Entity[], document: PrefabDocument, preserveOverrides: boolean): Entity[] {
+/** 结构说明（自动提取）：replacePrefabInstance；输入 instanceEntities、document、preserveOverrides；直接调用 Map、instanceEntities.flatMap、overridesBySource.set、capturePrefabOverrides、currentBySource.get 等；写入 record.uuid、record.prefabAsset、record.prefabInstanceUuid、record.prefabSourceUuid 等；返回路径包含 replacements；包含循环处理。 */ function replacePrefabInstance(instanceEntities: Entity[], document: PrefabDocument, preserveOverrides: boolean | 'stored'): Entity[] {
   if (!instanceEntities.length) return []
   const currentBySource = new Map(instanceEntities.flatMap(/* 根据 entity.prefabSourceUuid 的真假，分别返回 [[entity.prefabSourceUuid, entity] as const] 或 []。 */ entity => entity.prefabSourceUuid ? [[entity.prefabSourceUuid, entity] as const] : []))
   const prefabAsset = instanceEntities[0].prefabAsset
@@ -182,7 +156,9 @@ const prefabRecord = createRuntimePrefabReader({resolveAsset,readSource:readText
   if (!prefabAsset || !prefabInstanceUuid) return []
   const overridesBySource = new Map<string, Record<string, unknown>>()
   for (const [sourceUuid, current] of currentBySource) {
-    overridesBySource.set(sourceUuid, preserveOverrides ? capturePrefabOverrides(current) : {})
+    // 'stored': the overrides were captured against the previous version of the document (before it
+    // was written); capturing them now would compare with the new version and undo its changes.
+    overridesBySource.set(sourceUuid, preserveOverrides === 'stored' ? clone(current.prefabOverrides) : preserveOverrides ? capturePrefabOverrides(current) : {})
   }
   const sourceToCurrentUuid = new Map<string, string>()
   const sourceToRuntimeId = new Map<string, number>()
@@ -293,9 +269,56 @@ const prefabRecord = createRuntimePrefabReader({resolveAsset,readSource:readText
   const document: PrefabDocument = { ...prefab.document, prefabVersion: 2, name: prefab.document.name, bundle: prepared, sourceChecksum: checksum(prepared) }
   if (!updateTextAssetTransactional(guid, deterministicPrefabText(document))) return false
   for (const candidate of sourceInstance) candidate.prefabOverrides = {}
-  for (const entities of otherInstances.values()) replacePrefabInstance(entities, document, true)
+  for (const entities of otherInstances.values()) replacePrefabInstance(entities, document, 'stored')
+  // 26.45: scenes that are not open and the variants of this prefab follow too.
+  const touchedScenes = new Set<string>()
+  lastPrefabPropagation = { ...propagatePrefabChange(prefab.reference, prefab.document, document, new Set([prefab.reference]), touchedScenes), scenes: touchedScenes.size }
   pushHistory('Apply prefab')
   return true
+}
+
+/** 26.45: what the last Apply carried beyond the open scene. */
+export let lastPrefabPropagation: { scenes: number; instances: number; variants: number } = { scenes: 0, instances: 0, variants: 0 }
+
+/** Whether a stored prefab reference names the same asset as `reference`. */
+function sameAsset(reference: string): (candidate: string | null | undefined) => boolean {
+  const target = resolveAsset(reference)?.uuid
+  return candidate => Boolean(candidate && target && resolveAsset(candidate)?.uuid === target)
+}
+
+/** 26.45: carries a change of a prefab from `before` to `after` to the instances in the scenes that are
+ * not open (their stored documents) and to its variants (each variant keeps what it changed, and its
+ * own instances and variants follow in turn). The open scene's instances are updated by the caller. */
+function propagatePrefabChange(reference: string, before: PrefabDocument, after: PrefabDocument, visited: Set<string>, touchedScenes: Set<string>): { scenes: number; instances: number; variants: number } {
+  const result = { scenes: 0, instances: 0, variants: 0 }
+  const matches = sameAsset(reference), newUuid = () => normalizeUuid(undefined)
+  for (const scene of sceneManager.scenes) {
+    if (scene.uuid === sceneManager.activeSceneUuid) continue
+    const count = rebaseStoredScenePrefab(scene.data, matches, before, after, newUuid)
+    if (count) { touchedScenes.add(scene.uuid); result.instances += count; sceneManager.markDirty(scene.uuid) }
+  }
+  for (const asset of assetState.records) {
+    if (asset.assetType !== 'prefab') continue
+    const variant = prefabRecord(assetReference(asset.uuid))
+    if (!variant || visited.has(variant.reference) || !matches(variant.document.variantOf)) continue
+    visited.add(variant.reference)
+    const bundle = rebaseVariantBundle(variant.document.bundle, reference, matches, before, after, newUuid)
+    const updated: PrefabDocument = { ...variant.document, bundle, sourceChecksum: checksum(bundle) }
+    // Open-scene instances of the variant: capture their overrides against the old variant first.
+    const instances = new Map<string, Entity[]>()
+    for (const entity of physicsState.world.entities) {
+      if (entity.prefabAsset !== variant.reference || !entity.prefabInstanceUuid) continue
+      capturePrefabOverrides(entity)
+      instances.set(entity.prefabInstanceUuid, [...(instances.get(entity.prefabInstanceUuid) ?? []), entity])
+    }
+    if (!updateTextAssetTransactional(asset.uuid, deterministicPrefabText(updated))) continue
+    for (const entities of instances.values()) replacePrefabInstance(entities, updated, 'stored')
+    result.variants++
+    const nested = propagatePrefabChange(variant.reference, variant.document, updated, visited, touchedScenes)
+    result.instances += nested.instances + instances.size; result.variants += nested.variants
+  }
+  result.scenes = touchedScenes.size
+  return result
 }
 
 /** 结构说明（自动提取）：unpackPrefabInstance；输入 entity；直接调用 prefabInstanceEntities、candidate.prefabLayers.pop、clone、pushHistory；写入 candidate.prefabAsset、candidate.prefabInstanceUuid、candidate.prefabSourceUuid、candidate.prefabOverrides 等；包含循环处理。 */ export function unpackPrefabInstance(entity: Entity): boolean {
@@ -330,13 +353,7 @@ const prefabRecord = createRuntimePrefabReader({resolveAsset,readSource:readText
   const prefab = prefabRecord(entity.prefabAsset)
   const source = prefab ? sourceRecord(prefab.document, entity.prefabSourceUuid) : null
   if (!source || !Object.prototype.hasOwnProperty.call(capturePrefabOverrides(entity), path)) return false
-  const baseline = canonicalRecord(source, [])
-  const segments = path.split('.').filter(Boolean)
-  let value: unknown = baseline
-  for (const segment of segments) {
-    if (!value || typeof value !== 'object') return false
-    value = (value as Record<string, unknown>)[segment]
-  }
+  const value = readPrefabPath(canonicalRecord(source, []), path)
   const current = serializeEntity(entity) as SceneEntityData
   applyOverride(current as Record<string, unknown>, path, value)
   const replacement = createEntityFromData(current, entity.id)

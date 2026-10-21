@@ -20,7 +20,8 @@ const requiredRules = [
   '.vite/', '.cache/', '.turbo/', 'coverage/', 'playwright-report/', 'test-results/',
   'release-audits/', 'stage*/', '*.tsbuildinfo', '*.tmp', '*.temp', 'nova_core/target/',
   '/target/', '/src-tauri/target/', '/src-tauri/gen/', '/releases/', '/instructions.txt',
-  '.env', '.env.*', '.vscode', '.idea', '.DS_Store', 'Thumbs.db', 'Desktop.ini'
+  '.env', '.env.*', '.vscode', '.idea', '.DS_Store', 'Thumbs.db', 'Desktop.ini',
+  '.nova-build-cache/', '/reports/', '/*.exe', '/build-info.json', '/nova-*.json', '/symbols/', '/godot-master'
 ]
 for (const rule of requiredRules) assert(activeRules.has(rule), '.gitignore is missing required transient/private rule: ' + rule)
 assert(rules.includes('!.env.example'), '.gitignore must retain the documented environment example')
@@ -72,7 +73,11 @@ const protectedPaths = [
   'Cargo.lock',
   'README.md',
   'README.zh-CN.md',
-  'docs/ROADMAP_26_01_TO_26_10.md',
+  'docs/PHYSICS_2D.md',
+  'scripts/release.cmd',
+  'public/third-party/godot-editor-icons-LICENSE.txt',
+  'reference-projects/README.md',
+  'src-tauri/icons/icon.ico',
   'manual/MANUAL.en.md',
   'manual/MANUAL.de.md',
   'manual/MANUAL.zh-CN.md'
@@ -89,7 +94,15 @@ const ignoredExamples = [
   '.cache/index',
   '.vite/deps/index.js',
   'test-results/layout.json',
-  'scratch.tmp'
+  'scratch.tmp',
+  'My Game.exe',
+  'nova-build-report.json',
+  'build-info.json',
+  'symbols/game.pdb',
+  '.nova-build-cache/manifest.json',
+  'reports/v26.22-public-operations.json',
+  'releases/v26.45/SHA256SUMS.txt',
+  'node_modules/.modules.yaml'
 ]
 for (const path of ignoredExamples) assert(isIgnored(path), '.gitignore does not cover expected generated/private path: ' + path)
 

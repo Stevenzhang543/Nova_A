@@ -1,6 +1,6 @@
 # Renderer 26.15 staged audit and edit ledger
 
-Integration notice: this journal retains historical staged paths, intermediate failures and pending-at-the-time entries. Its reviewed authored files are integrated for26.15 after26.14 was separately finalized. Current behavior and final evidence boundaries are in [26.15 release notes](RELEASE_NOTES_26_15.md); source-bound executed gates determine production/native qualification. Copied build/check roots and generated reports are not promoted as source authorities.
+Integration notice: this journal retains historical staged paths, intermediate failures and pending-at-the-time entries. Its reviewed authored files are integrated for26.15 after26.14 was separately finalized. Current behavior and final evidence boundaries are in 26.15 release notes; source-bound executed gates determine production/native qualification. Copied build/check roots and generated reports are not promoted as source authorities.
 
 This is isolated development under `.cache/development-v26.15`. The active package version and published binaries were not changed. `renderer-base-sources.json` records the original bytes and SHA256 of all fourteen edited production files. Root-owned asset/library/tilemap changes are separate; these renderer checks consume their actual staged implementations.
 

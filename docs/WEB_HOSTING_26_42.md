@@ -30,7 +30,7 @@ Reimported assets retain UUID identity; save the project and rebuild the exporte
 
 ## Optional services and platform delivery
 
-26.42 / 26.42.0 does not add a mandatory backend. A disabled networking configuration must continue to support local authoring and games. Explicitly enabled multiplayer/authentication/relay adapters require their own compatible endpoints, HTTPS/WSS and server Origin/CORS policy where applicable. Static hosting cannot supply a native UDP listener. Do not embed service secrets in public Web files. See [platform prerequisites and recipes](PLATFORM_26_29.md) and [network boundaries](NETWORK_26_29.md).
+26.42 / 26.42.0 does not add a mandatory backend. A disabled networking configuration must continue to support local authoring and games. Explicitly enabled multiplayer/authentication/relay adapters require their own compatible endpoints, HTTPS/WSS and server Origin/CORS policy where applicable. Static hosting cannot supply a native UDP listener. Do not embed service secrets in public Web files. See platform prerequisites and recipes and network boundaries.
 
 The targeted static-host check loads both root and nested editor URLs, fetches actual relative manifest/icons, checks the declared online-only policy and absence of service-worker registration, then downloads and starts an actual Web game. It does not claim browser home-screen installation or physical phone qualification. See `release-audits/v26.42-static-host-user.json` after that command has actually passed.
 

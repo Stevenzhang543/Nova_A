@@ -1,634 +1,174 @@
-# 发布打包：验证冻结源码与证据，构造精确产物清单和可复现归档。
+# Nova_A packaging: assemble the eleven-file release set from one real build.
+#
+# Releases are built from the uncommitted working tree (the maintainer commits by hand). This script
+# never runs git commands that write: no add, commit, tag, stash or archive of HEAD. The source zip is
+# built from the files git would track (tracked files that exist plus untracked, non-ignored files),
+# read with `git ls-files` only.
+#
+# Follows the established releases/v26.38 contract (names, formats, checksums). Run after
+# scripts/build-release.cmd (or scripts/release.cmd) has produced dist/ and the Tauri Windows bundles
+# from the same source. Every artifact is assembled in a staging folder first; releases/v<label> is
+# only written when all of them succeeded, and an existing release folder is never cleared wholesale.
+# The release label defaults to package.json's version without ".0" (26.45.0 -> 26.45).
 [CmdletBinding()]
-param(
-  [Parameter(Mandatory = $true)]
-  [ValidatePattern('^\d+\.\d+(?:\.\d+)?$')]
-  [string]$Version,
-  [ValidatePattern('^\d+\.\d+(?:\.\d+)?$')]
-  [string]$ReleaseLabel = '',
-  [string]$SourceSnapshot = ''
-)
+param([string]$Label = '', [string]$EvidenceDirectory = '')
 
 $ErrorActionPreference = 'Stop'
-
-# Windows PowerShell 5.1 cannot deserialize the largest or deepest project documents with
-# ConvertFrom-Json (it aborts part-way through a 3.6 MB reference project), while PowerShell 7 can.
-# These checks only need top-level scalars, and the project writer always emits them first, so read
-# those scalars directly and keep packaging runnable on the pinned Windows PowerShell runtime.
-function Get-NovaProjectAuthority {
-  param([Parameter(Mandatory = $true)][string]$LiteralPath)
-  $head = [IO.File]::ReadAllText($LiteralPath)
-  $engine = [regex]::Match($head, '"engineVersion"\s*:\s*"([^"]+)"').Groups[1].Value
-  $major = [regex]::Match($head, '"projectFormatMajor"\s*:\s*(\d+)').Groups[1].Value
-  $format = [regex]::Match($head, '"formatVersion"\s*:\s*(\d+)').Groups[1].Value
-  if ([string]::IsNullOrWhiteSpace($engine) -or [string]::IsNullOrWhiteSpace($major) -or [string]::IsNullOrWhiteSpace($format)) { throw "Project authority is missing from $LiteralPath" }
-  return [pscustomobject]@{ engineVersion = $engine; projectFormatMajor = [int]$major; formatVersion = [int]$format }
-}
-
-# 以流方式计算文件 SHA-256，返回小写十六进制并释放流与算法对象。
-function Get-Sha256Lower {
-  param(
-    [Parameter(Mandatory = $true)]
-    [string]$LiteralPath
-  )
-
-  $stream = [IO.File]::OpenRead($LiteralPath)
-  $algorithm = [Security.Cryptography.SHA256]::Create()
-  try {
-    return ([BitConverter]::ToString($algorithm.ComputeHash($stream))).Replace('-', '').ToLowerInvariant()
-  }
-  finally {
-    $algorithm.Dispose()
-    $stream.Dispose()
-  }
-}
-
+# git prints paths as UTF-8; decode them as UTF-8 regardless of the console code page.
+[Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)
+$root = Split-Path -Parent $PSScriptRoot
 . (Join-Path $PSScriptRoot 'release-policy.ps1')
+if (-not $Label) { $Label = ((Get-Content -LiteralPath (Join-Path $root 'package.json') -Raw | ConvertFrom-Json).version) -replace '\.0$', '' }
+$info = Get-CalendarReleaseInfo -Label $Label
+if ($null -eq $info) { throw "Not a calendar release label: $Label" }
+$machine = $info.MachineVersion
+$release = Join-Path $root "releases/v$Label"
+$stage = Join-Path $root ".cache/package-$Label"
+Add-Type -AssemblyName System.IO.Compression
 
-# 按主、次、修订号逐段比较版本，判断候选是否不高于上限。
-function Test-VersionAtMost {
-  param([string]$Candidate, [string]$Maximum)
-  $candidateParts = @($Candidate.Split('.') | ForEach-Object <# 把版本号的一段转换为整数，供逐段大小比较。 #> { [int]$_ })
-  $maximumParts = @($Maximum.Split('.') | ForEach-Object <# 把版本号的一段转换为整数，供逐段大小比较。 #> { [int]$_ })
-  if ($candidateParts.Count -ne 3 -or $maximumParts.Count -ne 3) { return $false }
-  for ($index = 0; $index -lt 3; $index++) {
-    if ($candidateParts[$index] -lt $maximumParts[$index]) { return $true }
-    if ($candidateParts[$index] -gt $maximumParts[$index]) { return $false }
-  }
-  return $true
-}
-
-# 按序号排序文件并固定 ZIP 条目时间，生成可复现压缩包。
-function New-DeterministicZip {
-  param([Parameter(Mandatory = $true)][string]$SourceDirectory, [Parameter(Mandatory = $true)][string]$DestinationPath)
-  Add-Type -AssemblyName System.IO.Compression
-  if (Test-Path -LiteralPath $DestinationPath) { Remove-Item -LiteralPath $DestinationPath -Force }
-  $source = (Resolve-Path -LiteralPath $SourceDirectory).Path.TrimEnd('\')
-  $stream = [IO.File]::Open($DestinationPath, [IO.FileMode]::CreateNew, [IO.FileAccess]::Write, [IO.FileShare]::None)
+# Entries use forward slashes and a fixed timestamp (as the 26.38 packager does), so the archives
+# extract correctly on every platform and repeat byte-for-byte from the same inputs.
+function New-Zip([string]$Source, [string]$Target) {
+  if (Test-Path -LiteralPath $Target) { Remove-Item -LiteralPath $Target -Force }
+  $base = (Resolve-Path -LiteralPath $Source).Path.TrimEnd('\')
+  $stream = [IO.File]::Open($Target, [IO.FileMode]::CreateNew, [IO.FileAccess]::Write, [IO.FileShare]::None)
   $archive = [IO.Compression.ZipArchive]::new($stream, [IO.Compression.ZipArchiveMode]::Create, $false)
   try {
-    [string[]]$filePaths = @(Get-ChildItem -LiteralPath $source -File -Recurse | ForEach-Object FullName)
-    [Array]::Sort($filePaths, [StringComparer]::Ordinal)
-    foreach ($filePath in $filePaths) {
-      $file = Get-Item -LiteralPath $filePath
-      $relative = $file.FullName.Substring($source.Length).TrimStart('\').Replace('\','/')
-      $entry = $archive.CreateEntry($relative, [IO.Compression.CompressionLevel]::Optimal)
+    [string[]]$files = @(Get-ChildItem -LiteralPath $base -File -Recurse | ForEach-Object FullName)
+    [Array]::Sort($files, [StringComparer]::Ordinal)
+    foreach ($file in $files) {
+      $entry = $archive.CreateEntry($file.Substring($base.Length).TrimStart('\').Replace('\', '/'), [IO.Compression.CompressionLevel]::Optimal)
       $entry.LastWriteTime = [DateTimeOffset]::new(2000, 1, 1, 0, 0, 0, [TimeSpan]::Zero)
-      $input = [IO.File]::OpenRead($file.FullName); $output = $entry.Open()
+      $input = [IO.File]::OpenRead($file); $output = $entry.Open()
       try { $input.CopyTo($output) } finally { $output.Dispose(); $input.Dispose() }
     }
-  }
-  finally { $archive.Dispose(); $stream.Dispose() }
+  } finally { $archive.Dispose(); $stream.Dispose() }
+}
+function Get-Sha256Lower([string]$Path) { (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant() }
+function Write-Utf8Lines([string]$Path, [string[]]$Lines) { [IO.File]::WriteAllText($Path, (($Lines -join "`n") + "`n"), [Text.UTF8Encoding]::new($false)) }
+function Copy-Tree([string]$From, [string]$To) {
+  New-Item -ItemType Directory -Force -Path $To | Out-Null
+  Copy-Item -Path (Join-Path $From '*') -Destination $To -Recurse -Force
 }
 
-# 校验前端、Tauri、Rust 和锁文件中的版本权威完全一致。
-function Assert-VersionAuthorities {
-  param([Parameter(Mandatory = $true)][string]$Root, [Parameter(Mandatory = $true)][string]$MachineVersion)
-  $packageVersion = (Get-Content -LiteralPath (Join-Path $Root 'package.json') -Raw | ConvertFrom-Json).version
-  $tauriVersion = (Get-Content -LiteralPath (Join-Path $Root 'src-tauri\tauri.conf.json') -Raw | ConvertFrom-Json).version
-  $workspaceCargo = [regex]::Match((Get-Content -LiteralPath (Join-Path $Root 'Cargo.toml') -Raw), '(?m)^version\s*=\s*"([^"]+)"').Groups[1].Value
-  $tauriCargo = [regex]::Match((Get-Content -LiteralPath (Join-Path $Root 'src-tauri\Cargo.toml') -Raw), '(?m)^version\s*=\s*"([^"]+)"').Groups[1].Value
-  $frontend = [regex]::Match((Get-Content -LiteralPath (Join-Path $Root 'src\projects\projectFormat.ts') -Raw), "NOVA_ENGINE_VERSION\s*=\s*'([^']+)'").Groups[1].Value
-  $rustFormat = [regex]::Match((Get-Content -LiteralPath (Join-Path $Root 'crates\nova_format\src\lib.rs') -Raw), 'CURRENT_ENGINE_VERSION:\s*&str\s*=\s*"([^"]+)"').Groups[1].Value
-  $lockEntries = @([regex]::Matches((Get-Content -LiteralPath (Join-Path $Root 'Cargo.lock') -Raw), '(?ms)^name = "nova_[^"]+"\r?\nversion = "([^"]+)"') | ForEach-Object <# 读取正则表达式第一个捕获组中的版本或校验值。 #> { $_.Groups[1].Value })
-  $lockVersions = @($lockEntries | Sort-Object -Unique)
-  $authorities = @($packageVersion, $tauriVersion, $workspaceCargo, $tauriCargo, $frontend, $rustFormat) + $lockVersions
-  if ($lockEntries.Count -lt 7 -or @($authorities | Where-Object <# 按条件 $_ -ne $MachineVersion 筛选当前条目。 #> { $_ -ne $MachineVersion }).Count -gt 0) { throw "Release version authorities do not all equal ${MachineVersion}: $($authorities -join ', ')." }
+# 1. Every input must exist and belong to this version and this build.
+$packageVersion = (Get-Content -LiteralPath (Join-Path $root 'package.json') -Raw | ConvertFrom-Json).version
+if ($packageVersion -ne $machine) { throw "package.json is $packageVersion, expected $machine" }
+$dist = Join-Path $root 'dist'
+$distIndex = Join-Path $dist 'index.html'
+if (-not (Test-Path -LiteralPath $distIndex)) { throw 'dist/index.html is missing: run the build first.' }
+$wasm = Get-ChildItem -LiteralPath (Join-Path $dist 'assets') -Filter '*.wasm' | Select-Object -First 1
+if (-not $wasm) { throw 'dist has no WebAssembly module.' }
+$bin = Join-Path $root 'src-tauri/target/release'
+$portable = Join-Path $bin 'nova_a.exe'
+$setup = Join-Path $bin "bundle/nsis/Nova_A_${machine}_x64-setup.exe"
+$msi = Join-Path $bin "bundle/msi/Nova_A_${machine}_x64_en-US.msi"
+foreach ($path in @($portable, $setup, $msi)) { if (-not (Test-Path -LiteralPath $path)) { throw "Missing Windows artifact: $path" } }
+Assert-WindowsReleaseArtifactVersions -Portable $portable -Setup $setup -Msi $msi -MachineVersion $machine
+# The bundle folders keep older builds with the same version name; refuse anything older than this dist.
+$distTime = (Get-Item -LiteralPath $distIndex).LastWriteTimeUtc
+foreach ($path in @($portable, $setup, $msi)) {
+  if ((Get-Item -LiteralPath $path).LastWriteTimeUtc -lt $distTime.AddMinutes(-1)) { throw "Stale Windows artifact (older than dist): $path" }
+}
+foreach ($doc in @("docs/RELEASE_NOTES_$($Label.Replace('.', '_')).md", "docs/EDIT_LEDGER_$($Label.Replace('.', '_')).md", "docs/WEB_HOSTING_$($Label.Replace('.', '_')).md", 'LICENSE.md')) {
+  if (-not (Test-Path -LiteralPath (Join-Path $root $doc))) { throw "Missing release document: $doc" }
 }
 
-# 按公开版本判断是否强制结构化发布证据。
-function Test-RequiresStructuredEvidence {
-  param([Parameter(Mandatory = $true)][string]$Label)
-  $calendar = Get-CalendarReleaseInfo -Label $Label
-  return $null -ne $calendar -and ($calendar.Year -gt 26 -or ($calendar.Year -eq 26 -and $calendar.Sequence -ge 6))
+if (Test-Path -LiteralPath $stage) { Remove-Item -LiteralPath $stage -Recurse -Force }
+$out = Join-Path $stage 'out'
+New-Item -ItemType Directory -Force -Path $out | Out-Null
+
+# 2. Web: the built dist plus font licences, hosting notes and the project licence.
+$web = Join-Path $stage 'web'
+Copy-Tree $dist $web
+# Font licences: the OFL texts of the bundled @fontsource-variable fonts, taken from their packages.
+New-Item -ItemType Directory -Force -Path (Join-Path $web 'FONT_LICENSES') | Out-Null
+$fontLicenses = [ordered]@{ 'nunito-sans' = 'Nunito-Sans-OFL-1.1.txt'; 'noto-sans-sc' = 'Noto-Sans-SC-OFL-1.1.txt'; 'jetbrains-mono' = 'JetBrains-Mono-OFL-1.1.txt' }
+foreach ($font in $fontLicenses.Keys) {
+  $licence = Join-Path $root "node_modules/@fontsource-variable/$font/LICENSE"
+  if (-not (Test-Path -LiteralPath $licence)) { throw "Font licence is missing: $licence (run pnpm install)" }
+  Copy-Item -LiteralPath $licence -Destination (Join-Path $web "FONT_LICENSES/$($fontLicenses[$font])") -Force
 }
+Copy-Item -LiteralPath (Join-Path $root 'LICENSE.md') -Destination (Join-Path $web 'LICENSE.md') -Force
+Copy-Item -LiteralPath (Join-Path $root "docs/WEB_HOSTING_$($Label.Replace('.', '_')).md") -Destination (Join-Path $web 'HOSTING.md') -Force
+$baseCommit = (& git -C $root rev-parse HEAD).Trim()
+$sourceCommit = "$baseCommit+working-tree"
+$webReadme = @"
+# Nova_A $Label Web Package
 
-# 按公开版本判断是否强制无界面运行时证据。
-function Test-RequiresHeadlessAuthority {
-  param([Parameter(Mandatory = $true)][string]$Label)
-  $calendar = Get-CalendarReleaseInfo -Label $Label
-  return $null -ne $calendar -and ($calendar.Year -gt 26 -or ($calendar.Year -eq 26 -and $calendar.Sequence -ge 7))
-}
+Serve this directory from an HTTP(S) origin; do not open ``index.html`` with ``file://``. ``index.html`` opens the editor and ``player.html`` the standalone player (``player-legacy.html`` is the compatibility player it falls back to). Keep file names and serve ``.wasm`` as ``application/wasm``. Hashed files under ``assets/`` can be cached as immutable; revalidate HTML and ``release-metadata.json``. Cross-origin isolation is not required. See HOSTING.md for static deployment.
 
-# 返回该版本必须具备的本地构建名称集合。
-function Get-ExpectedLocalBuildNames {
-  param([Parameter(Mandatory = $true)][string]$Label)
-  $names = @('web-editor','web-player','windows-editor','windows-nsis','windows-msi')
-  if (Test-RequiresHeadlessAuthority -Label $Label) { $names += 'windows-headless-authority' }
-  return @($names | Sort-Object)
-}
-
-# 检查当前版本示例的工程、说明和操作预期是否一致且齐全。
-function Assert-CurrentReleaseReferences {
-  param(
-    [Parameter(Mandatory = $true)][string]$ProjectRoot,
-    [Parameter(Mandatory = $true)][string]$PublicLabel,
-    [Parameter(Mandatory = $true)][string]$MachineVersion
-  )
-  $projectsRoot = Join-Path $ProjectRoot 'reference-projects\projects'
-  $matches = 0
-  foreach ($readme in @(Get-ChildItem -LiteralPath $projectsRoot -Recurse -File -Filter README.md)) {
-    $projectPath = Join-Path $readme.DirectoryName 'project.nova'
-    if (-not (Test-Path -LiteralPath $projectPath -PathType Leaf)) { continue }
-    $text = Get-Content -LiteralPath $readme.FullName -Raw
-    $engineMatch = [regex]::Match($text, 'Engine \*\*(\d+\.\d+\.\d+)\*\*')
-    $project = Get-NovaProjectAuthority -LiteralPath $projectPath
-    $readmeIsCurrent = $engineMatch.Success -and $engineMatch.Groups[1].Value -eq $MachineVersion
-    $projectIsCurrent = $project.engineVersion -eq $MachineVersion
-    if ($readmeIsCurrent -xor $projectIsCurrent) { throw "Reference authority disagrees for public $PublicLabel / machine $($MachineVersion): $($readme.DirectoryName)" }
-    if (-not $readmeIsCurrent) { continue }
-    foreach ($required in @('expected-output.json','test-controls.json')) {
-      if (-not (Test-Path -LiteralPath (Join-Path $readme.DirectoryName $required) -PathType Leaf)) { throw "Current $PublicLabel reference is missing $($required): $($readme.DirectoryName)" }
-    }
-    if ($project.projectFormatMajor -ne 2 -or $project.formatVersion -ne 29) { throw "Current $PublicLabel reference must retain Project Format 2/schema 29: $($readme.DirectoryName)" }
-    $expected = Get-Content -LiteralPath (Join-Path $readme.DirectoryName 'expected-output.json') -Raw | ConvertFrom-Json
-    $controls = Get-Content -LiteralPath (Join-Path $readme.DirectoryName 'test-controls.json') -Raw | ConvertFrom-Json
-    $id = $readme.Directory.Name
-    if ($expected.release -ne $PublicLabel -or $expected.engineVersion -ne $MachineVersion -or $expected.projectFormat -ne 2 -or $expected.schema -ne 29 -or $expected.reference -ne $id -or [string]::IsNullOrWhiteSpace([string]$expected.authoring)) { throw "Current $PublicLabel expected-output authority/schema is invalid: $id" }
-    if ($controls.release -ne $PublicLabel -or $controls.engineVersion -ne $MachineVersion -or $controls.reference -ne $id -or $controls.authoring -ne $expected.authoring -or @($controls.classification).Count -lt 1 -or @($controls.actions).Count -lt 1) { throw "Current $PublicLabel test-controls authority/behavior matrix is invalid: $id" }
-    foreach ($behavior in @($controls.actions)) { if ([string]::IsNullOrWhiteSpace([string]$behavior.action) -or [string]::IsNullOrWhiteSpace([string]$behavior.expected)) { throw "Current $PublicLabel reference has an empty behavior: $id" } }
-    $matches++
-  }
-  if ($matches -lt 1) { throw "No complete reference project identifies public $PublicLabel / machine $MachineVersion." }
-}
-
-# 校验每份证据与本地构建的路径、唯一性、字节数和哈希，并要求精确清单。
-function Assert-StructuredEvidence {
-  param(
-    [Parameter(Mandatory = $true)][string]$EvidenceRoot,
-    [Parameter(Mandatory = $true)][pscustomobject]$Manifest,
-    [Parameter(Mandatory = $true)][string]$ProjectRoot
-  )
-  $resolvedRoot = (Resolve-Path -LiteralPath $EvidenceRoot).Path
-  $rootPrefix = $resolvedRoot.TrimEnd('\') + '\'
-  $paths = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
-  foreach ($entry in @($Manifest.entries)) {
-    $relativePath = [string]$entry.path
-    $parts = $relativePath.Replace('/','\').Split('\')
-    if ([string]::IsNullOrWhiteSpace($relativePath) -or $relativePath.Replace('\','/') -eq 'evidence-manifest.json' -or [IO.Path]::IsPathRooted($relativePath) -or $parts -contains '..' -or $parts -contains '') { throw "Unsafe evidence manifest path: $relativePath" }
-    if (-not $paths.Add($relativePath.Replace('\','/'))) { throw "Duplicate evidence manifest path: $relativePath" }
-    $fullPath = [IO.Path]::GetFullPath((Join-Path $resolvedRoot $relativePath.Replace('/','\')))
-    if (-not $fullPath.StartsWith($rootPrefix, [StringComparison]::OrdinalIgnoreCase) -or -not (Test-Path -LiteralPath $fullPath -PathType Leaf)) { throw "Evidence manifest path is missing or escapes its root: $relativePath" }
-    $file = Get-Item -LiteralPath $fullPath
-    if ([string]$entry.bytes -notmatch '^\d+$' -or [string]$entry.sha256 -notmatch '^[a-f0-9]{64}$' -or $file.Length -ne [long]$entry.bytes -or (Get-Sha256Lower -LiteralPath $fullPath) -ne [string]$entry.sha256) { throw "Evidence manifest digest or byte count is stale: $relativePath" }
-  }
-  $resolvedManifest = [IO.Path]::GetFullPath((Join-Path $resolvedRoot 'evidence-manifest.json'))
-  $actualPaths = @(Get-ChildItem -LiteralPath $resolvedRoot -File -Recurse | Where-Object FullName -ne $resolvedManifest | ForEach-Object <# 将绝对文件路径转换为规范化的归档相对路径。 #> { $_.FullName.Substring($resolvedRoot.Length).TrimStart('\').Replace('\','/') } | Sort-Object -Unique)
-  if (@(Compare-Object @($paths | Sort-Object) $actualPaths).Count -gt 0) { throw 'Evidence manifest does not cover the exact unique evidence file inventory.' }
-  if (Test-RequiresStructuredEvidence -Label ([string]$Manifest.release)) {
-    $requiredEvidence = @('build/local-builds.json','build/windows-smoke.json','external/gates.json','layout/layout-browser.json','performance/benchmarks.json','performance/stability-local.json','runtime/dependency-audit.json','runtime/migration-history.json','runtime/product-audit.json','runtime/template-catalog.json','runtime/user-interactions.json','runtime/verification.json','manual/MANUAL.en.md','manual/MANUAL.de.md','manual/MANUAL.zh-CN.md','manual/index.html')
-    # 用户授权的风险范围只要求实际计划报告；后续 JS 验证仍检查必需门禁、命令、源码和散列。
-    if ($Manifest.PSObject.Properties.Name -contains 'auditPolicy' -and $Manifest.auditPolicy.kind -eq 'change-risk-v1') {
-      $qualifiedPlan = Get-Content -LiteralPath (Join-Path $resolvedRoot 'qualification/plan.json') -Raw | ConvertFrom-Json
-      if ([version]$Manifest.machineVersion -lt [version]'26.25.0' -or $qualifiedPlan.auditPolicy.kind -ne 'change-risk-v1') { throw 'Invalid scoped audit policy.' }
-      $requiredEvidence = @('build/local-builds.json','external/gates.json','manual/MANUAL.en.md','manual/MANUAL.de.md','manual/MANUAL.zh-CN.md','manual/index.html') + @($qualifiedPlan.gates | ForEach-Object <# 获取实际门禁声明的报告。 #> { $_.reports } | ForEach-Object <# 保留报告归档目标路径。 #> { $_.target })
-    }
-    if (Test-RequiresHeadlessAuthority -Label ([string]$Manifest.release)) { $requiredEvidence += 'build/headless-authority.json' }
-    foreach ($required in $requiredEvidence) {
-      if (-not $paths.Contains($required)) { throw "Structured evidence is missing required baseline entry: $required" }
-    }
-  }
-  $localBuildsPath = Join-Path $resolvedRoot 'build\local-builds.json'
-  $localBuilds = Get-Content -LiteralPath $localBuildsPath -Raw | ConvertFrom-Json
-  if ($localBuilds.status -ne 'passed') { throw 'Local-build evidence is not passed.' }
-  $projectPrefix = [IO.Path]::GetFullPath($ProjectRoot).TrimEnd('\') + '\'
-  $artifactNames = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
-  $artifactPaths = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
-  foreach ($artifact in @($localBuilds.artifacts)) {
-    if ($artifact.status -ne 'passed') { throw "Local-build evidence is incomplete for $($artifact.name)." }
-    if ([string]::IsNullOrWhiteSpace([string]$artifact.name) -or -not $artifactNames.Add([string]$artifact.name)) { throw "Duplicate or empty local-build evidence name: $($artifact.name)" }
-    $relativePath = [string]$artifact.path
-    $parts = $relativePath.Replace('/','\').Split('\')
-    if ([string]::IsNullOrWhiteSpace($relativePath) -or [IO.Path]::IsPathRooted($relativePath) -or $parts -contains '..' -or $parts -contains '' -or -not $artifactPaths.Add($relativePath.Replace('\','/'))) { throw "Unsafe or duplicate local-build artifact path: $relativePath" }
-    $fullPath = [IO.Path]::GetFullPath((Join-Path $ProjectRoot $relativePath.Replace('/','\')))
-    if ([string]$artifact.sha256 -notmatch '^[a-f0-9]{64}$' -or [string]$artifact.bytes -notmatch '^\d+$' -or -not $fullPath.StartsWith($projectPrefix, [StringComparison]::OrdinalIgnoreCase) -or -not (Test-Path -LiteralPath $fullPath -PathType Leaf) -or (Get-Item -LiteralPath $fullPath).Length -ne [long]$artifact.bytes -or (Get-Sha256Lower -LiteralPath $fullPath) -ne [string]$artifact.sha256) { throw "Local-build evidence is stale or outside the project: $relativePath" }
-  }
-  if (Test-RequiresStructuredEvidence -Label ([string]$Manifest.release)) {
-    $expectedArtifacts = Get-ExpectedLocalBuildNames -Label ([string]$Manifest.release)
-    if (@(Compare-Object $expectedArtifacts @($artifactNames | Sort-Object)).Count -gt 0) { throw "Local-build evidence does not contain the exact $($Manifest.release) artifact set." }
-  }
-}
-
-# 对短暂文件访问失败执行有界重试；用尽次数后报告具体操作错误。
-function Invoke-WithTransientFileRetry {
-  param(
-    [Parameter(Mandatory = $true)]
-    [string]$Operation,
-    [Parameter(Mandatory = $true)]
-    [scriptblock]$Action,
-    [int]$MaximumAttempts = 6
-  )
-
-  for ($attempt = 1; $attempt -le $MaximumAttempts; $attempt++) {
-    try {
-      & $Action
-      return
-    }
-    catch {
-      if ($attempt -eq $MaximumAttempts) {
-        throw "$Operation failed after $MaximumAttempts attempts: $($_.Exception.Message)"
-      }
-      Start-Sleep -Milliseconds (250 * $attempt)
-    }
-  }
-}
-
-# 读取可用的 Git 修订和工作区状态；源码快照环境明确标记无 Git 身份。
-function Get-SourceIdentity {
-  param([Parameter(Mandatory = $true)][string]$Root)
-  $gitMetadata = Join-Path $Root '.git'
-  if (Test-Path -LiteralPath $gitMetadata) {
-    $revision = (& git -c "safe.directory=$($Root.Replace('\', '/'))" -C $Root rev-parse HEAD 2>$null).Trim()
-    if ($LASTEXITCODE -eq 0 -and $revision -match '^[a-f0-9]{40,64}$') {
-      $workingTree = @(& git -c "safe.directory=$($Root.Replace('\', '/'))" -C $Root status --porcelain 2>$null)
-      if ($LASTEXITCODE -ne 0) { throw 'git status failed while determining release source identity.' }
-      return [pscustomobject]@{ Revision = $revision; State = $(if ($workingTree.Count -gt 0) { 'git-working-tree' } else { 'git-commit' }) }
-    }
-  }
-  return [pscustomobject]@{ Revision = 'unavailable-source-snapshot'; State = 'filesystem-snapshot' }
-}
-
-# 识别环境凭据、密钥及敏感配置，阻止其进入源码包。
-function Test-SensitiveSourcePath {
-  param([Parameter(Mandatory = $true)][string]$Path)
-  $name = [IO.Path]::GetFileName($Path)
-  $extension = [IO.Path]::GetExtension($name).ToLowerInvariant()
-  if ($extension -in @('.pem','.pfx','.key')) { return $true }
-  if ($name -match '^\.env(?:\..+)?$' -and $name -ne '.env.example') { return $true }
-  return $name -match '^(?:\.npmrc|\.pypirc|credentials?(?:\..+)?\.json|secrets?(?:\..+)?\.json)$'
-}
-
-# 排除依赖、构建产物、缓存和本地工作文件。
-function Test-ExcludedSourcePath {
-  param([Parameter(Mandatory = $true)][string]$Path)
-  $normalized = $Path.Replace('\','/').TrimStart('/')
-  if ($normalized -ieq 'godot-master' -or $normalized -ilike 'godot-master/*' -or $normalized -ieq 'instructions.txt') { return $true }
-  $first = $normalized.Split('/')[0]
-  if ($first -like 'stage*' -or $first -match '^(\.git|\.dsh|\.pnpm-store|\.VSCodeCounter|\.vite|\.cache|\.turbo|\.vscode|\.idea|dist|dist-ssr|node_modules|release-audits|releases|target|coverage|playwright-report|test-results|logs)$') { return $true }
-  if ($normalized -match '^(src-tauri|nova_core)/target(/|$)' -or $normalized -match '^src-tauri/gen(/|$)') { return $true }
-  $name = [IO.Path]::GetFileName($normalized)
-  if ($name -match '^(\.DS_Store|Thumbs\.db|Desktop\.ini)$' -or $name -match '^(npm|yarn|pnpm|lerna)-debug\.log' -or $name -match '\.(log|tsbuildinfo|tmp|temp|local)$' -or $name -match '\.sw.$') { return $true }
-  return $false
-}
-
-# 优先使用冻结清单，否则安全遍历非链接源文件并稳定排序。
-function Get-FilesystemSourceFiles {
-  param([Parameter(Mandatory = $true)][string]$Root)
-  if ($script:requiresFrozenSnapshot) { return @($script:frozenSourceManifest.sourceInputs | ForEach-Object path) }
-  $stack = [Collections.Generic.Stack[IO.DirectoryInfo]]::new()
-  $stack.Push([IO.DirectoryInfo]::new($Root))
-  $files = [Collections.Generic.List[string]]::new()
-  while ($stack.Count -gt 0) {
-    $directory = $stack.Pop()
-    foreach ($entry in $directory.EnumerateFileSystemInfos()) {
-      $relative = $entry.FullName.Substring($Root.Length).TrimStart('\')
-      if (Test-ExcludedSourcePath -Path $relative) { continue }
-      if (($entry.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { continue }
-      if ($entry -is [IO.DirectoryInfo]) { $stack.Push($entry) }
-      elseif ($entry -is [IO.FileInfo] -and -not (Test-SensitiveSourcePath -Path $relative)) { $files.Add($relative.Replace('\','/')) }
-    }
-  }
-  [string[]]$ordered = @($files)
-  [Array]::Sort($ordered, [StringComparer]::Ordinal)
-  return $ordered
-}
-
-# 逐文件验证证据绑定的源码大小和哈希，再核对整体清单摘要。
-function Assert-EvidenceSourceInputs {
-  param([Parameter(Mandatory = $true)][string]$ProjectRoot, [Parameter(Mandatory = $true)][pscustomobject]$Manifest)
-  $expected = [Collections.Generic.List[object]]::new()
-  foreach ($relativePath in @(Get-FilesystemSourceFiles -Root $ProjectRoot)) {
-    $file = Get-Item -LiteralPath (Join-Path $ProjectRoot $relativePath.Replace('/','\'))
-    $expected.Add([pscustomobject]@{ path = $relativePath; sha256 = Get-Sha256Lower -LiteralPath $file.FullName; bytes = $file.Length })
-  }
-  $actual = @($Manifest.sourceInputs)
-  if ($actual.Count -ne $expected.Count) { throw 'Structured evidence sourceInputs does not cover the exact current source inventory.' }
-  $lines = [Text.StringBuilder]::new()
-  for ($index = 0; $index -lt $expected.Count; $index++) {
-    $left = $expected[$index]; $right = $actual[$index]
-    if ($right.path -ne $left.path -or $right.sha256 -ne $left.sha256 -or [long]$right.bytes -ne $left.bytes) { throw "Structured evidence sourceInputs is stale at $($left.path)." }
-    [void]$lines.Append("$($left.path)`0$($left.sha256)`0$($left.bytes)`n")
-  }
-  $bytes = [Text.UTF8Encoding]::new($false).GetBytes($lines.ToString())
-  $algorithm = [Security.Cryptography.SHA256]::Create()
-  try { $digest = ([BitConverter]::ToString($algorithm.ComputeHash($bytes))).Replace('-', '').ToLowerInvariant() } finally { $algorithm.Dispose() }
-  if ([string]$Manifest.sourceInputDigest -notmatch '^[a-f0-9]{64}$' -or $Manifest.sourceInputDigest -ne $digest) { throw 'Structured evidence sourceInputDigest does not identify the exact current source inventory.' }
-}
-
-$MachineVersion = $Version
-if ($MachineVersion -notmatch '^\d+\.\d+\.\d+$') { throw "Machine version must be three-part SemVer: $MachineVersion" }
-$canonicalCalendarLabel = Get-CanonicalCalendarLabel -MachineVersion $MachineVersion
-if ([string]::IsNullOrWhiteSpace($ReleaseLabel)) { $ReleaseLabel = if ($canonicalCalendarLabel) { $canonicalCalendarLabel } else { $MachineVersion } }
-if ($canonicalCalendarLabel -and $ReleaseLabel -ne $canonicalCalendarLabel) { throw "Machine version $MachineVersion requires canonical public calendar label $canonicalCalendarLabel." }
-$Version = $ReleaseLabel
-$calendarRelease = Get-CalendarReleaseInfo -Label $Version
-if ($Version.Split('.').Count -eq 2 -and $null -eq $calendarRelease) { throw "Two-part public versions must use the calendar label YY.MM: $Version" }
-if ($null -ne $calendarRelease -and $calendarRelease.MachineVersion -ne $MachineVersion) { throw "Public calendar label $Version requires machine version $($calendarRelease.MachineVersion), not $MachineVersion." }
-$requiresStructuredEvidence = Test-RequiresStructuredEvidence -Label $Version
-$requiresFrozenSnapshot = $null -ne $calendarRelease -and ($calendarRelease.Year -gt 26 -or $calendarRelease.Sequence -ge 12)
-$projectRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
-$snapshotPath = if ([string]::IsNullOrWhiteSpace($SourceSnapshot)) { Join-Path $projectRoot ".cache\release-snapshots\v$Version\snapshot.json" } else { [IO.Path]::GetFullPath($SourceSnapshot) }
-if ($requiresFrozenSnapshot) {
-  & node (Join-Path $PSScriptRoot 'release-source-snapshot.mjs') "--verify=$snapshotPath" "--root=$projectRoot" | Out-Null
-  if ($LASTEXITCODE -ne 0) { throw 'Current source no longer matches its immutable release snapshot.' }
-  $frozenSourceManifest = Get-Content -LiteralPath $snapshotPath -Raw | ConvertFrom-Json
-  if ($frozenSourceManifest.release -ne $Version -or $frozenSourceManifest.machineVersion -ne $MachineVersion) { throw 'Frozen source identifies a different release.' }
-}
-$gitSafeDirectory = $projectRoot.Replace('\', '/')
-$sourceIdentity = Get-SourceIdentity -Root $projectRoot
-Assert-VersionAuthorities -Root $projectRoot -MachineVersion $MachineVersion
-$releaseFolderName = if ([version]$MachineVersion -ge [version]'26.34.0') { "v$Version" } elseif ([version]$MachineVersion -ge [version]'26.31.0') { $Version } else { "v$Version" }
-$finalReleaseDirectory = Join-Path (Join-Path $projectRoot 'releases') $releaseFolderName
-if (Test-Path -LiteralPath $finalReleaseDirectory) { throw "Immutable release already exists: $finalReleaseDirectory" }
-$notesPath = Join-Path $projectRoot "release-audits\v$Version-release-notes.md"
-$ledgerPath = Join-Path $projectRoot "release-audits\v$Version-edit-ledger.md"
-$benchmarkPath = Join-Path $projectRoot "release-audits\v$Version-benchmarks.json"
-$stabilityPath = Join-Path $projectRoot "release-audits\v$Version-stability-smoke.json"
-$referenceReadme = Join-Path $projectRoot 'reference-projects\README.md'
-$structuredEvidence = Join-Path $projectRoot "release-audits\evidence-v$Version"
-$structuredEvidenceManifest = Join-Path $structuredEvidence 'evidence-manifest.json'
-
-$artifacts = [ordered]@{
-  (Join-Path $projectRoot 'src-tauri\target\release\nova_a.exe') = "Nova_A-v$Version-windows-x64-portable.exe"
-  (Join-Path $projectRoot "src-tauri\target\release\bundle\msi\Nova_A_${MachineVersion}_x64_en-US.msi") = "Nova_A-v$Version-windows-x64.msi"
-  (Join-Path $projectRoot "src-tauri\target\release\bundle\nsis\Nova_A_${MachineVersion}_x64-setup.exe") = "Nova_A-v$Version-windows-x64-setup.exe"
-}
-
-$requiredInputs = @($artifacts.Keys) + @(
-  $notesPath,
-  $ledgerPath,
-  $benchmarkPath,
-  $stabilityPath,
-  $referenceReadme,
-  (Join-Path $projectRoot 'dist\index.html'),
-  (Join-Path $projectRoot 'dist\player.html'),
-  (Join-Path $projectRoot 'LICENSE.md'),
-  (Join-Path $projectRoot 'node_modules\@fontsource-variable\nunito-sans\LICENSE'),
-  (Join-Path $projectRoot 'node_modules\@fontsource-variable\noto-sans-sc\LICENSE'),
-  (Join-Path $projectRoot 'node_modules\@fontsource-variable\jetbrains-mono\LICENSE'),
-  (Join-Path $projectRoot 'package.json'),
-  (Join-Path $projectRoot 'pnpm-lock.yaml'),
-  (Join-Path $projectRoot '.gitignore'),
-  (Join-Path $projectRoot 'scripts\audit-repository-hygiene.mjs'),
-  (Join-Path $projectRoot 'Cargo.toml'),
-  (Join-Path $projectRoot 'Cargo.lock'),
-  (Join-Path $projectRoot 'README.md'),
-  (Join-Path $projectRoot 'README.zh-CN.md'),
-  (Join-Path $projectRoot 'docs\BENCHMARKS.md'),
-  (Join-Path $projectRoot 'docs\STABILITY.md'),
-  (Join-Path $projectRoot 'docs\PLATFORM_VERIFICATION.md'),
-  (Join-Path $projectRoot 'docs\COMPATIBILITY.md'),
-  (Join-Path $projectRoot 'docs\STABLE_CONTRACTS.md'),
-  (Join-Path $projectRoot 'docs\KNOWN_LIMITATIONS.md')
-)
-# 26.24 起必须随包带当前版本部署指南；在创建发布目录前验证，避免静默沿用旧说明。
-$requiresCurrentHostingGuide = [version]$MachineVersion -ge [version]'26.24.0'
-$hostingGuide = Join-Path $projectRoot $(if ($requiresCurrentHostingGuide) { 'docs\WEB_HOSTING_' + $Version.Replace('.', '_') + '.md' } else { 'docs\WEB_HOSTING_26_23.md' })
-if ($requiresCurrentHostingGuide) { $requiredInputs += $hostingGuide }
-if ($requiresStructuredEvidence) { $requiredInputs += $structuredEvidenceManifest }
-# 风险范围的未运行性能检查不生成假报告；实际计划报告仍由结构化证据逐项校验。
-if ($requiresStructuredEvidence -and (Test-Path -LiteralPath $structuredEvidenceManifest -PathType Leaf)) {
-  $scopeManifest = Get-Content -LiteralPath $structuredEvidenceManifest -Raw | ConvertFrom-Json
-  if ($scopeManifest.PSObject.Properties.Name -contains 'auditPolicy' -and $scopeManifest.auditPolicy.kind -eq 'change-risk-v1') {
-    $requiredInputs = @($requiredInputs | Where-Object <# 仅移除旧版平面性能副本要求，不移除构建或证据清单。 #> { $_ -ne $benchmarkPath -and $_ -ne $stabilityPath })
-  }
-}
-foreach ($source in $requiredInputs) {
-  if (-not (Test-Path -LiteralPath $source -PathType Leaf)) {
-    throw "Required release input is missing: $source"
-  }
-}
-Assert-WindowsReleaseArtifactVersions -Portable (Join-Path $projectRoot 'src-tauri\target\release\nova_a.exe') -Setup (Join-Path $projectRoot "src-tauri\target\release\bundle\nsis\Nova_A_${MachineVersion}_x64-setup.exe") -Msi (Join-Path $projectRoot "src-tauri\target\release\bundle\msi\Nova_A_${MachineVersion}_x64_en-US.msi") -MachineVersion $MachineVersion
-if ($requiresStructuredEvidence) {
-  $candidateEvidence = Get-Content -LiteralPath $structuredEvidenceManifest -Raw | ConvertFrom-Json
-  if ($candidateEvidence.format -ne 'nova-release-evidence-manifest' -or $candidateEvidence.version -ne 1 -or $candidateEvidence.release -ne $Version -or $candidateEvidence.machineVersion -ne $MachineVersion -or $candidateEvidence.engineVersion -ne $MachineVersion -or $candidateEvidence.localQualificationComplete -ne $true -or $candidateEvidence.localReportAuthorities.status -ne 'passed') {
-    throw "Structured evidence is stale or incomplete for public $Version / machine $MachineVersion. Run pnpm evidence:v$Version after every required report and build."
-  }
-  Assert-StructuredEvidence -EvidenceRoot $structuredEvidence -Manifest $candidateEvidence -ProjectRoot $projectRoot
-  Assert-EvidenceSourceInputs -ProjectRoot $projectRoot -Manifest $candidateEvidence
-  if ($requiresFrozenSnapshot -and $candidateEvidence.sourceInputDigest -ne $frozenSourceManifest.sourceInputDigest) { throw 'Evidence and frozen source lineage disagree.' }
-  if ($requiresFrozenSnapshot) {
-    $qualificationPath = [IO.Path]::GetFullPath((Join-Path $projectRoot $candidateEvidence.qualification.runPath))
-    if (-not $qualificationPath.StartsWith(($projectRoot.TrimEnd('\') + '\release-audits\'), [StringComparison]::OrdinalIgnoreCase)) { throw 'Qualification evidence must be an owned release-audits run.' }
-    & node (Join-Path $PSScriptRoot 'release-qualification.mjs') "--verify=$qualificationPath" "--root=$projectRoot" | Out-Null
-    if ($LASTEXITCODE -ne 0) { throw 'Qualified commands, logs, reports or build assets changed before packaging.' }
-  }
-  Assert-CurrentReleaseReferences -ProjectRoot $projectRoot -PublicLabel $Version -MachineVersion $MachineVersion
-}
-$releaseGeneratedAt = if ($requiresStructuredEvidence) { [string]$candidateEvidence.generatedAt } else { (Get-Item -LiteralPath $notesPath).LastWriteTimeUtc.ToString('o') }
-
-$releaseRoot = [System.IO.Path]::GetFullPath((Join-Path $projectRoot 'releases')).TrimEnd('\')
-New-Item -ItemType Directory -Path $releaseRoot -Force | Out-Null
-$releaseDirectory = Join-Path $releaseRoot (".v$Version-staging-" + [guid]::NewGuid().ToString('N'))
-$resolvedRelease = [System.IO.Path]::GetFullPath($releaseDirectory)
-if (-not [IO.Path]::GetDirectoryName($resolvedRelease).Equals($releaseRoot, [StringComparison]::OrdinalIgnoreCase) -or [IO.Path]::GetFileName($resolvedRelease) -notmatch "^\.v$([regex]::Escape($Version))-staging-[a-f0-9]{32}$") { throw "Unsafe release staging target: $resolvedRelease" }
-if (Test-Path -LiteralPath $resolvedRelease) { throw "Release staging target unexpectedly exists: $resolvedRelease" }
-New-Item -ItemType Directory -Path $resolvedRelease | Out-Null
-try {
-foreach ($entry in $artifacts.GetEnumerator()) {
-  Copy-Item -LiteralPath $entry.Key -Destination (Join-Path $releaseDirectory $entry.Value) -Force
-}
-Copy-Item -LiteralPath $notesPath -Destination (Join-Path $releaseDirectory 'RELEASE_NOTES.md') -Force
-Copy-Item -LiteralPath $ledgerPath -Destination (Join-Path $releaseDirectory 'EDIT_LEDGER.md') -Force
-Copy-Item -LiteralPath (Join-Path $projectRoot 'LICENSE.md') -Destination (Join-Path $releaseDirectory 'LICENSE.md') -Force
-
-$webArchive = Join-Path $releaseDirectory "Nova_A-v$Version-web.zip"
-$webStage = Join-Path ([System.IO.Path]::GetTempPath()) ("nova-a-web-" + [guid]::NewGuid().ToString('N'))
-New-Item -ItemType Directory -Path $webStage | Out-Null
-try {
-  Copy-Item -Path (Join-Path $projectRoot 'dist\*') -Destination $webStage -Recurse -Force
-  Copy-Item -LiteralPath (Join-Path $projectRoot 'LICENSE.md') -Destination (Join-Path $webStage 'LICENSE.md') -Force
-
-  if (Test-Path -LiteralPath $hostingGuide) { Copy-Item -LiteralPath $hostingGuide -Destination (Join-Path $webStage 'HOSTING.md') }
-  $fontLicenseDirectory = Join-Path $webStage 'FONT_LICENSES'
-  New-Item -ItemType Directory -Path $fontLicenseDirectory -Force | Out-Null
-  Copy-Item -LiteralPath (Join-Path $projectRoot 'node_modules\@fontsource-variable\nunito-sans\LICENSE') -Destination (Join-Path $fontLicenseDirectory 'Nunito-Sans-OFL-1.1.txt') -Force
-  Copy-Item -LiteralPath (Join-Path $projectRoot 'node_modules\@fontsource-variable\noto-sans-sc\LICENSE') -Destination (Join-Path $fontLicenseDirectory 'Noto-Sans-SC-OFL-1.1.txt') -Force
-  Copy-Item -LiteralPath (Join-Path $projectRoot 'node_modules\@fontsource-variable\jetbrains-mono\LICENSE') -Destination (Join-Path $fontLicenseDirectory 'JetBrains-Mono-OFL-1.1.txt') -Force
-  $webReadme = @"
-# Nova_A $Version Web Package
-
-Serve this directory from an HTTP(S) origin. Do not open `index.html` with `file://`; WebAssembly modules, workers, ES modules, and the bundled manual require a web server. `index.html` opens the editor and `player.html` opens the standalone player. Preserve file names and MIME types, especially `application/wasm` for `.wasm` files. HTTPS is required for production networking and other secure browser APIs. See HOSTING.md when included for static deployment and explicit Web ZIP download. Use immutable long-lived caching for hashed files under `assets/`, but revalidate HTML and `release-metadata.json`. Cross-origin isolation is not required by this release; if a host enables it, configure COOP/COEP consistently for every asset. The locally qualified browser is the pinned Edge/Chromium identity in the evidence archive; Firefox remains an explicit external gate.
-
-Verify every packaged file against `SHA256SUMS.txt`. Release metadata is in `release-metadata.json`.
+Verify every packaged file against ``SHA256SUMS.txt``. Release metadata is in ``release-metadata.json``.
 "@
-  [IO.File]::WriteAllText((Join-Path $webStage 'README.md'), $webReadme, [Text.UTF8Encoding]::new($false))
-  $webMetadata = [ordered]@{ product = 'Nova_A'; version = $Version; machineVersion = $MachineVersion; format = 'nova-web-release'; projectFormat = 2; schema = 29; sourceCommit = $sourceIdentity.Revision; sourceState = $sourceIdentity.State; generatedAt = $releaseGeneratedAt; entrypoints = @('index.html','player.html'); contentManifest = 'SHA256SUMS.txt'; runtimeCapabilities = @('2D editor','standalone player','WebAssembly physics','workers','bundled manual','local variable fonts'); hosting = [ordered]@{ protocol = 'http-or-https'; wasmMime = 'application/wasm'; hashedAssetCaching = 'immutable'; htmlCaching = 'revalidate'; crossOriginIsolationRequired = $false; spaFallbackRequired = $false } } | ConvertTo-Json -Depth 6
-  [IO.File]::WriteAllText((Join-Path $webStage 'release-metadata.json'), "$webMetadata`n", [Text.UTF8Encoding]::new($false))
-  [string[]]$webChecksumFiles = @(Get-ChildItem -LiteralPath $webStage -File -Recurse | Where-Object Name -ne 'SHA256SUMS.txt' | ForEach-Object FullName)
-  [Array]::Sort($webChecksumFiles, [StringComparer]::Ordinal)
-  $webChecksums = @($webChecksumFiles | ForEach-Object <# 计算网站暂存文件哈希并输出相对路径，形成部署校验清单。 #> { $relative = $_.Substring($webStage.Length).TrimStart('\').Replace('\','/'); "{0}  {1}" -f (Get-Sha256Lower -LiteralPath $_), $relative })
-  [IO.File]::WriteAllLines((Join-Path $webStage 'SHA256SUMS.txt'), $webChecksums, [Text.UTF8Encoding]::new($false))
-  New-DeterministicZip -SourceDirectory $webStage -DestinationPath $webArchive
-}
-finally {
-  if (Test-Path -LiteralPath $webStage) { Remove-Item -LiteralPath $webStage -Recurse -Force }
-}
+[IO.File]::WriteAllText((Join-Path $web 'README.md'), $webReadme, [Text.UTF8Encoding]::new($false))
+$webMetadata = [ordered]@{ product = 'Nova_A'; version = $Label; machineVersion = $machine; format = 'nova-web-release'; projectFormat = 2; schema = 29; sourceCommit = $sourceCommit; entrypoints = @('index.html', 'player.html', 'player-legacy.html'); contentManifest = 'SHA256SUMS.txt'; hosting = [ordered]@{ protocol = 'http-or-https'; wasmMime = 'application/wasm'; hashedAssetCaching = 'immutable'; htmlCaching = 'revalidate'; crossOriginIsolationRequired = $false } } | ConvertTo-Json -Depth 4
+[IO.File]::WriteAllText((Join-Path $web 'release-metadata.json'), "$webMetadata`n", [Text.UTF8Encoding]::new($false))
+$webBase = (Resolve-Path -LiteralPath $web).Path.TrimEnd('\')
+[string[]]$webFiles = @(Get-ChildItem -LiteralPath $webBase -File -Recurse | Where-Object Name -ne 'SHA256SUMS.txt' | ForEach-Object FullName)
+[Array]::Sort($webFiles, [StringComparer]::Ordinal)
+Write-Utf8Lines (Join-Path $web 'SHA256SUMS.txt') @($webFiles | ForEach-Object { '{0}  {1}' -f (Get-Sha256Lower $_), $_.Substring($webBase.Length).TrimStart('\').Replace('\', '/') })
+New-Zip $web (Join-Path $out "Nova_A-v$Label-web.zip")
 
-$referenceArchive = Join-Path $releaseDirectory "Nova_A-v$Version-reference-projects.zip"
-$referenceStage = Join-Path ([System.IO.Path]::GetTempPath()) ("nova-a-references-" + [guid]::NewGuid().ToString('N'))
-New-Item -ItemType Directory -Path $referenceStage | Out-Null
-try { Invoke-WithTransientFileRetry -Operation 'Reference-project archive creation' -Action <# 复制不高于当前版本的有效示例工程及共享说明，再生成确定性的示例归档。 #> {
-  foreach ($entry in @(Get-ChildItem -LiteralPath (Join-Path $projectRoot 'reference-projects') | Where-Object Name -ne 'projects')) { Copy-Item -LiteralPath $entry.FullName -Destination $referenceStage -Recurse -Force }
-  $projectsStage = Join-Path $referenceStage 'projects'; New-Item -ItemType Directory -Path $projectsStage -Force | Out-Null
-  foreach ($directory in @(Get-ChildItem -LiteralPath (Join-Path $projectRoot 'reference-projects\projects') -Directory)) {
-    $projectPath = Join-Path $directory.FullName 'project.nova'
-    if (-not (Test-Path -LiteralPath $projectPath -PathType Leaf)) { continue }
-    $engine = [string](Get-NovaProjectAuthority -LiteralPath $projectPath).engineVersion
-    if (-not (Test-VersionAtMost -Candidate $engine -Maximum $MachineVersion)) { continue }
-    Copy-Item -LiteralPath $directory.FullName -Destination (Join-Path $projectsStage $directory.Name) -Recurse -Force
-  }
-  # 26.29起将已资格验证的原生工具加入示例归档，不改变根目录十一项发布契约。
-  if ([version]$MachineVersion -ge [version]'26.29.0') {
-    $nativeReport = Get-Content -LiteralPath (Join-Path $structuredEvidence 'runtime/native-headless.json') -Raw | ConvertFrom-Json
-    $nativeBinary = Join-Path $projectRoot 'target/release/nova_headless.exe'
-    if ($nativeReport.status -ne 'passed' -or $nativeReport.engineVersion -ne $MachineVersion -or $nativeReport.artifact.path -ne 'target/release/nova_headless.exe' -or $nativeReport.artifact.sha256 -ne (Get-Sha256Lower -LiteralPath $nativeBinary) -or [long]$nativeReport.artifact.bytes -ne (Get-Item -LiteralPath $nativeBinary).Length) { throw 'Native physics binary does not match qualified evidence.' }
-    $nativeStage = Join-Path $referenceStage 'native-tools/windows-x64'
-    New-Item -ItemType Directory -Path $nativeStage -Force | Out-Null
-    Copy-Item -LiteralPath $nativeBinary -Destination (Join-Path $nativeStage 'nova_headless.exe')
-    Copy-Item -LiteralPath (Join-Path $projectRoot ('docs/NATIVE_HEADLESS_' + $Version.Replace('.','_') + '.md')) -Destination (Join-Path $nativeStage 'README.md')
-    Copy-Item -LiteralPath (Join-Path $projectRoot 'scripts/check-windows-prerequisites.ps1') -Destination (Join-Path $nativeStage 'check-windows-prerequisites.ps1')
-  }
-  New-DeterministicZip -SourceDirectory $referenceStage -DestinationPath $referenceArchive
-} }
-finally { if (Test-Path -LiteralPath $referenceStage) { Remove-Item -LiteralPath $referenceStage -Recurse -Force } }
-
-$evidenceArchive = Join-Path $releaseDirectory "Nova_A-v$Version-release-evidence.zip"
-$evidenceStage = Join-Path ([System.IO.Path]::GetTempPath()) ("nova-a-evidence-" + [guid]::NewGuid().ToString('N'))
-New-Item -ItemType Directory -Path $evidenceStage | Out-Null
+# 3. Source: the working tree as git would see it (tracked files that exist plus untracked files that
+#    are not ignored), read-only. New top-level folders that are not part of the project tree (for
+#    example a checkout of another engine placed in the repository folder) are left out.
+$sourceZip = Join-Path $out "Nova_A-v$Label-source.zip"
+$topLevel = @{}
+foreach ($name in @(& git -C $root ls-tree --name-only HEAD)) { $topLevel[$name] = $true }
+if ($LASTEXITCODE -ne 0) { throw 'git ls-tree failed' }
+[string[]]$tracked = @(& git -C $root ls-files --cached -z | ForEach-Object { $_ -split "`0" } | Where-Object { $_ })
+if ($LASTEXITCODE -ne 0) { throw 'git ls-files --cached failed' }
+[string[]]$untracked = @(& git -C $root ls-files --others --exclude-standard -z | ForEach-Object { $_ -split "`0" } | Where-Object { $_ })
+if ($LASTEXITCODE -ne 0) { throw 'git ls-files --others failed' }
+$sourceFiles = [Collections.Generic.SortedSet[string]]::new([StringComparer]::Ordinal)
+foreach ($path in $tracked + $untracked) {
+  $top = ($path -split '/')[0]
+  if ($path.Contains('/') -and -not $topLevel.ContainsKey($top)) { continue }
+  if ($path -match '(^|/)__pycache__/') { continue }
+  $item = Get-Item -LiteralPath (Join-Path $root $path) -Force -ErrorAction SilentlyContinue
+  # Links (for example a junction to another checkout) are not part of the source archive.
+  if ($item -and -not $item.PSIsContainer -and -not ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)) { [void]$sourceFiles.Add($path) }
+}
+if ($sourceFiles.Count -lt 100) { throw "Source listing looks wrong: $($sourceFiles.Count) files" }
+if (Test-Path -LiteralPath $sourceZip) { Remove-Item -LiteralPath $sourceZip -Force }
+$sourceStream = [IO.File]::Open($sourceZip, [IO.FileMode]::CreateNew, [IO.FileAccess]::Write, [IO.FileShare]::None)
+$sourceArchive = [IO.Compression.ZipArchive]::new($sourceStream, [IO.Compression.ZipArchiveMode]::Create, $false)
 try {
-  if (Test-Path -LiteralPath $structuredEvidence -PathType Container) {
-    Copy-Item -Path (Join-Path $structuredEvidence '*') -Destination $evidenceStage -Recurse -Force
+  foreach ($path in $sourceFiles) {
+    $entry = $sourceArchive.CreateEntry("Nova_A-v$Label-source/$path", [IO.Compression.CompressionLevel]::Optimal)
+    $entry.LastWriteTime = [DateTimeOffset]::new(2000, 1, 1, 0, 0, 0, [TimeSpan]::Zero)
+    $input = [IO.File]::OpenRead((Join-Path $root $path)); $output = $entry.Open()
+    try { $input.CopyTo($output) } finally { $output.Dispose(); $input.Dispose() }
   }
-  else {
-    Get-ChildItem -LiteralPath (Join-Path $projectRoot 'release-audits') -File -Filter "v$Version-*" | Copy-Item -Destination $evidenceStage -Force
-  }
-  $screenshotSource = Join-Path $projectRoot "release-audits\screenshots\v$Version"
-  if (Test-Path -LiteralPath $screenshotSource) { Copy-Item -LiteralPath $screenshotSource -Destination (Join-Path $evidenceStage 'screenshots') -Recurse -Force }
-  foreach ($source in @($notesPath, $ledgerPath, (Join-Path $projectRoot 'package.json'), (Join-Path $projectRoot 'pnpm-lock.yaml'), (Join-Path $projectRoot 'Cargo.toml'), (Join-Path $projectRoot 'Cargo.lock'), (Join-Path $projectRoot 'README.md'), (Join-Path $projectRoot 'README.zh-CN.md'))) { Copy-Item -LiteralPath $source -Destination $evidenceStage -Force }
-  foreach ($name in @('BENCHMARKS.md','STABILITY.md','PLATFORM_VERIFICATION.md','COMPATIBILITY.md','STABLE_CONTRACTS.md','KNOWN_LIMITATIONS.md')) { Copy-Item -LiteralPath (Join-Path $projectRoot "docs\$name") -Destination $evidenceStage -Force }
-  New-DeterministicZip -SourceDirectory $evidenceStage -DestinationPath $evidenceArchive
-}
-finally {
-  if (Test-Path -LiteralPath $evidenceStage) { Remove-Item -LiteralPath $evidenceStage -Recurse -Force }
-}
+} finally { $sourceArchive.Dispose(); $sourceStream.Dispose() }
+Write-Host "Source zip: $($sourceFiles.Count) files from the working tree (base commit $baseCommit)"
 
-$sourceArchive = Join-Path $releaseDirectory "Nova_A-v$Version-source.zip"
-$sourceStage = Join-Path ([System.IO.Path]::GetTempPath()) ("nova-a-source-" + [guid]::NewGuid().ToString('N'))
-$sourceTemporaryArchive = Join-Path ([System.IO.Path]::GetTempPath()) ("nova-a-source-" + [guid]::NewGuid().ToString('N') + '.zip')
-New-Item -ItemType Directory -Path $sourceStage | Out-Null
-try {
-  # Use the same policy-defined filesystem inventory as evidence generation.
-  # Git ignore state must not silently make the packaged source differ from
-  # the exact sourceInputs authority recorded in the evidence manifest.
-  $trackedAndUntracked = Get-FilesystemSourceFiles -Root $projectRoot
-  foreach ($relativePath in $trackedAndUntracked) {
-    if (Test-ExcludedSourcePath -Path $relativePath) { continue }
-    if (Test-SensitiveSourcePath -Path $relativePath) { continue }
-    if ([IO.Path]::IsPathRooted($relativePath) -or $relativePath.Replace('/','\').Split('\') -contains '..') { throw "Unsafe source archive path: $relativePath" }
-    $source = Join-Path $projectRoot $relativePath
-    if (-not (Test-Path -LiteralPath $source -PathType Leaf)) { continue }
-    $sourceItem = Get-Item -LiteralPath $source -Force
-    if (($sourceItem.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { throw "Source archive refuses a reparse-point file: $relativePath" }
-    $destination = Join-Path $sourceStage $relativePath
-    $destinationDirectory = Split-Path -Parent $destination
-    New-Item -ItemType Directory -Path $destinationDirectory -Force | Out-Null
-    Copy-Item -LiteralPath $source -Destination $destination -Force
-  }
-  New-DeterministicZip -SourceDirectory $sourceStage -DestinationPath $sourceTemporaryArchive
-  Move-Item -LiteralPath $sourceTemporaryArchive -Destination $sourceArchive -Force
-}
-finally {
-  $resolvedStage = (Resolve-Path -LiteralPath $sourceStage -ErrorAction SilentlyContinue).Path
-  $temporaryRoot = [System.IO.Path]::GetFullPath([System.IO.Path]::GetTempPath())
-  if ($resolvedStage -and $resolvedStage.StartsWith($temporaryRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
-    Remove-Item -LiteralPath $resolvedStage -Recurse -Force
-  }
-  if (Test-Path -LiteralPath $sourceTemporaryArchive) { Remove-Item -LiteralPath $sourceTemporaryArchive -Force }
-}
+# 4. Reference projects as shipped in the repository.
+New-Zip (Join-Path $root 'reference-projects') (Join-Path $out "Nova_A-v$Label-reference-projects.zip")
 
-# The source archive is created after the initial evidence tree so its exact
-# hash can be embedded without creating a circular evidence-archive hash.
-$evidenceRefresh = Join-Path ([System.IO.Path]::GetTempPath()) ("nova-a-evidence-refresh-" + [guid]::NewGuid().ToString('N'))
-New-Item -ItemType Directory -Path $evidenceRefresh | Out-Null
-try {
-  Expand-Archive -LiteralPath $evidenceArchive -DestinationPath $evidenceRefresh -Force
-  $packagedArtifacts = Get-ChildItem -LiteralPath $releaseDirectory -File |
-    Where-Object Name -NotIn @((Split-Path -Leaf $evidenceArchive), 'SHA256SUMS.txt') |
-    Sort-Object Name |
-    ForEach-Object <# 记录发布文件的名称、字节数及 SHA-256。 #> { [ordered]@{ name = $_.Name; bytes = $_.Length; sha256 = (Get-Sha256Lower -LiteralPath $_.FullName) } }
-  $artifactHashReport = [ordered]@{ format = 'nova-root-artifact-hashes'; version = 1; release = $Version; generatedAt = $releaseGeneratedAt; note = 'The evidence archive and checksum manifest are excluded to avoid circular hashes.'; artifacts = @($packagedArtifacts) } | ConvertTo-Json -Depth 6
-  $artifactHashPath = Join-Path $evidenceRefresh 'build\root-artifact-hashes.json'
-  New-Item -ItemType Directory -Path (Split-Path -Parent $artifactHashPath) -Force | Out-Null
-  [IO.File]::WriteAllText($artifactHashPath, "$artifactHashReport`n", [Text.UTF8Encoding]::new($false))
-  $manifestPath = Join-Path $evidenceRefresh 'evidence-manifest.json'
-  $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
-  [string[]]$evidenceEntryFiles = @(Get-ChildItem -LiteralPath $evidenceRefresh -File -Recurse | Where-Object FullName -ne $manifestPath | ForEach-Object FullName)
-  [Array]::Sort($evidenceEntryFiles, [StringComparer]::Ordinal)
-  $manifest.entries = @($evidenceEntryFiles |
-    ForEach-Object <# 为刷新后的证据文件记录相对路径、字节数、哈希和来源环境。 #> {
-      $file = Get-Item -LiteralPath $_
-      [pscustomobject]@{
-        path = $file.FullName.Substring($evidenceRefresh.Length).TrimStart('\').Replace('\','/')
-        sha256 = (Get-Sha256Lower -LiteralPath $file.FullName)
-        bytes = $file.Length
-        source = $manifest.source.commit
-        tool = 'Nova_A package-release.ps1'
-        environment = $manifest.environment.id
-      }
-    })
-  $manifest | ConvertTo-Json -Depth 20 | ForEach-Object <# 将序列化清单以无 BOM 的 UTF-8 写入，并补充末尾换行。 #> { [IO.File]::WriteAllText($manifestPath, "$_`n", [Text.UTF8Encoding]::new($false)) }
-  Remove-Item -LiteralPath $evidenceArchive -Force
-  New-DeterministicZip -SourceDirectory $evidenceRefresh -DestinationPath $evidenceArchive
-}
-finally {
-  if (Test-Path -LiteralPath $evidenceRefresh) { Remove-Item -LiteralPath $evidenceRefresh -Recurse -Force }
-}
+# 5. Evidence: the checks actually run for this release.
+if (-not $EvidenceDirectory) { $EvidenceDirectory = Join-Path $root ".cache/evidence-$Label" }
+if (-not (Test-Path -LiteralPath $EvidenceDirectory)) { throw "Evidence folder is missing: $EvidenceDirectory" }
+New-Zip $EvidenceDirectory (Join-Path $out "Nova_A-v$Label-release-evidence.zip")
 
-$checksumPath = Join-Path $releaseDirectory 'SHA256SUMS.txt'
-$checksumLines = Get-ChildItem -LiteralPath $releaseDirectory -File |
-  Where-Object Name -ne 'SHA256SUMS.txt' |
-  Sort-Object Name |
-  ForEach-Object <# 输出发布文件的 SHA-256 与文件名，形成标准校验和行。 #> { "{0}  {1}" -f (Get-Sha256Lower -LiteralPath $_.FullName), $_.Name }
-[System.IO.File]::WriteAllLines($checksumPath, $checksumLines, [System.Text.UTF8Encoding]::new($false))
+# 6. Windows binaries and documents.
+Copy-Item -LiteralPath $portable -Destination (Join-Path $out "Nova_A-v$Label-windows-x64-portable.exe")
+Copy-Item -LiteralPath $setup -Destination (Join-Path $out "Nova_A-v$Label-windows-x64-setup.exe")
+Copy-Item -LiteralPath $msi -Destination (Join-Path $out "Nova_A-v$Label-windows-x64.msi")
+Copy-Item -LiteralPath (Join-Path $root 'LICENSE.md') -Destination (Join-Path $out 'LICENSE.md')
+Copy-Item -LiteralPath (Join-Path $root "docs/RELEASE_NOTES_$($Label.Replace('.', '_')).md") -Destination (Join-Path $out 'RELEASE_NOTES.md')
+Copy-Item -LiteralPath (Join-Path $root "docs/EDIT_LEDGER_$($Label.Replace('.', '_')).md") -Destination (Join-Path $out 'EDIT_LEDGER.md')
+Assert-WindowsReleaseArtifactVersions -Portable (Join-Path $out "Nova_A-v$Label-windows-x64-portable.exe") -Setup (Join-Path $out "Nova_A-v$Label-windows-x64-setup.exe") -Msi (Join-Path $out "Nova_A-v$Label-windows-x64.msi") -MachineVersion $machine
 
-$expectedNames = @(
-  'EDIT_LEDGER.md', 'LICENSE.md', "Nova_A-v$Version-reference-projects.zip", "Nova_A-v$Version-release-evidence.zip",
-  "Nova_A-v$Version-source.zip", "Nova_A-v$Version-web.zip", "Nova_A-v$Version-windows-x64.msi",
-  "Nova_A-v$Version-windows-x64-portable.exe", "Nova_A-v$Version-windows-x64-setup.exe", 'RELEASE_NOTES.md', 'SHA256SUMS.txt'
-)
-if ($expectedNames.Count -ne 11) { throw 'Internal release contract must contain exactly eleven root artifacts.' }
-$actualNames = @(Get-ChildItem -LiteralPath $releaseDirectory -File | ForEach-Object Name | Sort-Object)
-$nameDifference = @(Compare-Object ($expectedNames | Sort-Object) $actualNames)
-if ($nameDifference.Count -gt 0) { throw "Release root does not contain the exact mandatory artifact set: $($nameDifference | Out-String)" }
-foreach ($line in Get-Content -LiteralPath $checksumPath) {
-  if ($line -notmatch '^([a-f0-9]{64})  (.+)$') { throw "Invalid checksum line: $line" }
-  $actualHash = Get-Sha256Lower -LiteralPath (Join-Path $releaseDirectory $Matches[2])
-  if ($actualHash -ne $Matches[1]) { throw "Checksum verification failed for $($Matches[2])" }
-}
+# 7. Checksums over every artifact.
+$lines = @(Get-ChildItem -LiteralPath $out -File | Sort-Object Name | ForEach-Object { '{0}  {1}' -f (Get-Sha256Lower $_.FullName), $_.Name })
+Write-Utf8Lines (Join-Path $out 'SHA256SUMS.txt') $lines
+$expected = @('EDIT_LEDGER.md','LICENSE.md',"Nova_A-v$Label-reference-projects.zip","Nova_A-v$Label-release-evidence.zip","Nova_A-v$Label-source.zip","Nova_A-v$Label-web.zip","Nova_A-v$Label-windows-x64-portable.exe","Nova_A-v$Label-windows-x64-setup.exe","Nova_A-v$Label-windows-x64.msi",'RELEASE_NOTES.md','SHA256SUMS.txt')
+$actual = @(Get-ChildItem -LiteralPath $out -File | ForEach-Object Name | Sort-Object)
+if (@(Compare-Object ($expected | Sort-Object) $actual).Count -gt 0) { throw "Release set differs from the eleven-file contract: $($actual -join ', ')" }
 
-& (Join-Path $PSScriptRoot 'verify-release-package.ps1') -Version $Version -MachineVersion $MachineVersion -ReleaseDirectory $releaseDirectory | Out-Null
-
-$resolvedFinalRelease = [IO.Path]::GetFullPath($finalReleaseDirectory)
-$finalReleaseParent = [IO.Path]::GetDirectoryName($resolvedFinalRelease)
-if (-not $finalReleaseParent.Equals($releaseRoot, [StringComparison]::OrdinalIgnoreCase) -or [IO.Path]::GetFileName($resolvedFinalRelease) -ne $releaseFolderName) { throw "Unsafe final release target: $resolvedFinalRelease" }
-if ($requiresFrozenSnapshot) {
-  & node (Join-Path $PSScriptRoot 'release-source-snapshot.mjs') "--verify=$snapshotPath" "--root=$projectRoot" | Out-Null
-  if ($LASTEXITCODE -ne 0) { throw 'Source changed during packaging; discard this candidate and rebuild from its frozen source.' }
-  & node (Join-Path $PSScriptRoot 'release-qualification.mjs') "--verify=$qualificationPath" "--root=$projectRoot" | Out-Null
-  if ($LASTEXITCODE -ne 0) { throw 'Qualified build outputs changed during packaging.' }
-}
-if (Test-Path -LiteralPath $resolvedFinalRelease) { throw "Immutable release already exists: $resolvedFinalRelease" }
-# Directory.Move fails if the destination appeared concurrently; Move-Item could nest it.
-[IO.Directory]::Move($releaseDirectory, $resolvedFinalRelease)
-
-Get-ChildItem -LiteralPath $resolvedFinalRelease -File | Sort-Object Name | Select-Object Name, Length, LastWriteTime
-}
-finally {
-  if (Test-Path -LiteralPath $releaseDirectory) {
-    $cleanupCandidate = [IO.Path]::GetFullPath($releaseDirectory)
-    if ([IO.Path]::GetDirectoryName($cleanupCandidate).Equals($releaseRoot, [StringComparison]::OrdinalIgnoreCase) -and [IO.Path]::GetFileName($cleanupCandidate) -match "^\.v$([regex]::Escape($Version))-staging-[a-f0-9]{32}$") {
-      Remove-Item -LiteralPath $cleanupCandidate -Recurse -Force -ErrorAction SilentlyContinue
-    }
-  }
-}
+# 8. Publish: replace only the files this script owns.
+New-Item -ItemType Directory -Force -Path $release | Out-Null
+foreach ($file in Get-ChildItem -LiteralPath $out -File) { Copy-Item -LiteralPath $file.FullName -Destination (Join-Path $release $file.Name) -Force }
+Remove-Item -LiteralPath $stage -Recurse -Force
+Get-ChildItem -LiteralPath $release | Sort-Object Name | ForEach-Object { '{0}  {1:N2} MB' -f $_.Name, ($_.Length / 1MB) }

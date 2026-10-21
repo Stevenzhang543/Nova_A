@@ -54,6 +54,12 @@
 .block-grip span{width:3px;height:3px;border-radius:50%;background:currentColor;opacity:.7;box-shadow:6px 0 0 currentColor}
 .block-grip:active{cursor:grabbing}
 .block-menu{margin-left:auto;flex:none;position:relative}
+.block-face>:is(.block-breakpoint,.block-paused){flex:none;margin-left:auto}
+.block-face>:is(.block-breakpoint,.block-paused)~:is(.block-paused,.block-menu){margin-left:0}
+/* 26.45: a breakpoint is a red dot on the block; the block the debugger stopped at is outlined. */
+.block-breakpoint{width:14px;height:14px;padding:0;border:2px solid #fff;border-radius:50%;background:var(--danger,#ff453a);box-shadow:0 0 0 1px rgba(0,0,0,.25);cursor:pointer}
+.block-paused{padding:2px 8px;border-radius:999px;background:var(--warning,#ff9f0a);color:#000;font-size:12px;font-weight:600}
+.block-row.paused{outline:3px solid var(--warning,#ff9f0a);outline-offset:2px}
 .block-menu>summary{list-style:none;display:grid;place-items:center;width:28px;height:28px;border-radius:6px;cursor:pointer;font-size:16px}
 .block-menu>summary::-webkit-details-marker{display:none}
 .block-menu>summary:hover{background:rgba(0,0,0,.15)}

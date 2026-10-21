@@ -47,6 +47,11 @@ struct ConnectionConstraint {
     lower_impulse: f64,
     upper_impulse: f64,
     motor_impulse: f64,
+    // 26.45: wheel suspension / weld softness (0 hertz = stiff). Fields 40-43 of joint records.
+    spring_hertz: f64,
+    spring_damping_ratio: f64,
+    angular_hertz: f64,
+    angular_damping_ratio: f64,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -129,7 +134,7 @@ impl ConnectionConstraint {
             broken_code,
             tension: 0.0,
             strain: 0.0,
-            joint_kind: non_negative(data[data_index + 18], 0.0).round().clamp(0.0, 6.0) as u8,
+            joint_kind: non_negative(data[data_index + 18], 0.0).round().clamp(0.0, 9.0) as u8,
             joint_axis: Vec2::new(
                 finite_or(data[data_index + 29], 1.0),
                 finite_or(data[data_index + 30], 0.0),
@@ -160,6 +165,11 @@ impl ConnectionConstraint {
             lower_impulse: 0.0,
             upper_impulse: 0.0,
             motor_impulse: 0.0,
+            // Rope records keep node data from index 29 on; only joints 7+ carry these fields.
+            spring_hertz: if data[data_index + 18] >= 6.5 { non_negative(data[data_index + 40], 0.0).min(1.0e4) } else { 0.0 },
+            spring_damping_ratio: if data[data_index + 18] >= 6.5 { non_negative(data[data_index + 41], 0.7).min(1.0e3) } else { 0.0 },
+            angular_hertz: if data[data_index + 18] >= 6.5 { non_negative(data[data_index + 42], 0.0).min(1.0e4) } else { 0.0 },
+            angular_damping_ratio: if data[data_index + 18] >= 6.5 { non_negative(data[data_index + 43], 0.7).min(1.0e3) } else { 0.0 },
         })
     }
 
@@ -619,6 +629,8 @@ fn rope_collision_body(
         one_way_normal: Vec2::new(0.0, 1.0),
         auto_inertia: false,
         collider_children: Vec::new(),
+        tangent_speed: 0.0,
+        rolling_resistance: 0.0,
     }
 }
 
@@ -1188,6 +1200,25 @@ fn warm_start_joint(bodies: &mut [Body], constraint: &ConnectionConstraint) {
             let angular_b = axial * a2 + perpendicular_impulse * s2 + constraint.angular_impulse;
             apply_joint_impulse(bodies, constraint.body_a, constraint.body_b, linear, angular_a, angular_b);
         }
+        7 => {
+            let a = &bodies[constraint.body_a];
+            let b = &bodies[constraint.body_b];
+            let delta = b.position.add(radius_b).sub(a.position.add(radius_a));
+            let axis = rotate(constraint.joint_axis, a.angle).normalized_or(Vec2::new(1.0, 0.0));
+            let perpendicular = axis.perp();
+            let (a1, a2) = (delta.add(radius_a).cross(axis), radius_b.cross(axis));
+            let (s1, s2) = (delta.add(radius_a).cross(perpendicular), radius_b.cross(perpendicular));
+            let axial = constraint.axial_impulse + constraint.lower_impulse - constraint.upper_impulse;
+            let perpendicular_impulse = constraint.linear_impulse.x;
+            let linear = axis.mul(axial).add(perpendicular.mul(perpendicular_impulse));
+            let angular_a = axial * a1 + perpendicular_impulse * s1 + constraint.motor_impulse;
+            let angular_b = axial * a2 + perpendicular_impulse * s2 + constraint.motor_impulse;
+            apply_joint_impulse(bodies, constraint.body_a, constraint.body_b, linear, angular_a, angular_b);
+        }
+        9 => {
+            let linear = constraint.linear_impulse;
+            apply_joint_impulse(bodies, constraint.body_a, constraint.body_b, linear, radius_a.cross(linear) + constraint.angular_impulse, radius_b.cross(linear) + constraint.angular_impulse);
+        }
         _ => {
             let (_, _, axis, _, _) = constraint.geometry(bodies);
             let linear = axis.mul(constraint.axial_impulse);
@@ -1249,8 +1280,134 @@ fn solve_soft_joint(bodies: &mut [Body], constraint: &mut ConnectionConstraint, 
     match constraint.joint_kind {
         3 => solve_revolute_soft(bodies, constraint, settings, use_bias),
         4 => solve_prismatic_soft(bodies, constraint, settings, use_bias),
+        7 => solve_wheel_soft(bodies, constraint, settings, use_bias),
+        9 => solve_weld_soft(bodies, constraint, settings, use_bias),
         _ => solve_distance_soft(bodies, constraint, settings, use_bias),
     }
+}
+
+// 26.45: 车轮关节（Box2D v3 b2WheelJoint）：B 的锚点沿 A 上的轴线滑动（垂直方向刚性），沿轴为悬挂弹簧
+// （频率与阻尼比），可选平移限位；电机驱动 B 相对 A 的转动（最大电机力作为最大扭矩）。
+fn solve_wheel_soft(bodies: &mut [Body], constraint: &mut ConnectionConstraint, settings: &StepSolverSettings, use_bias: bool) {
+    let (body_a, body_b) = (constraint.body_a, constraint.body_b);
+    let (radius_a, radius_b) = joint_radii(bodies, constraint);
+    let (delta, axis) = {
+        let a = &bodies[body_a];
+        let b = &bodies[body_b];
+        (b.position.add(radius_b).sub(a.position.add(radius_a)), rotate(constraint.joint_axis, a.angle).normalized_or(Vec2::new(1.0, 0.0)))
+    };
+    // Motor: relative rotation.
+    let axial_angular_mass = angular_mass(bodies, constraint);
+    if constraint.motor_enabled && constraint.max_motor_force > 0.0 && axial_angular_mass > 0.0 {
+        let relative = bodies[body_b].angular_velocity - bodies[body_a].angular_velocity;
+        let impulse = -axial_angular_mass * (relative - constraint.motor_speed);
+        let limit = constraint.max_motor_force * settings.h;
+        let accumulated = (constraint.motor_impulse + impulse).clamp(-limit, limit);
+        let applied = accumulated - constraint.motor_impulse;
+        constraint.motor_impulse = accumulated;
+        apply_joint_impulse(bodies, body_a, body_b, Vec2::ZERO, applied, applied);
+    }
+    let (a1, a2) = (delta.add(radius_a).cross(axis), radius_b.cross(axis));
+    let axial_inverse = {
+        let a = &bodies[body_a];
+        let b = &bodies[body_b];
+        a.inv_mass + b.inv_mass + a.inv_inertia * a1 * a1 + b.inv_inertia * a2 * a2
+    };
+    let axial_mass = if axial_inverse > 0.0 { 1.0 / axial_inverse } else { 0.0 };
+    let axial_speed = |bodies: &[Body]| {
+        let a = &bodies[body_a];
+        let b = &bodies[body_b];
+        axis.dot(b.velocity.sub(a.velocity)) + a2 * b.angular_velocity - a1 * a.angular_velocity
+    };
+    let translation = axis.dot(delta);
+    // Suspension spring along the axis (a physical spring: biased solve and relax alike).
+    if constraint.spring_hertz > 0.0 && axial_mass > 0.0 {
+        let softness = Softness::from_frequency(constraint.spring_hertz, constraint.spring_damping_ratio, settings.h);
+        let impulse = -axial_mass * softness.mass_scale * (axial_speed(bodies) + softness.bias_rate * translation) - softness.impulse_scale * constraint.axial_impulse;
+        constraint.axial_impulse += impulse;
+        apply_joint_impulse(bodies, body_a, body_b, axis.mul(impulse), impulse * a1, impulse * a2);
+    } else {
+        constraint.axial_impulse = 0.0;
+    }
+    if constraint.limits_enabled && axial_mass > 0.0 {
+        let (bias, softness) = one_sided_bias(translation - constraint.lower_limit, settings, use_bias);
+        let impulse = -axial_mass * softness.mass_scale * (axial_speed(bodies) + bias) - softness.impulse_scale * constraint.lower_impulse;
+        let accumulated = (constraint.lower_impulse + impulse).max(0.0);
+        let applied = accumulated - constraint.lower_impulse;
+        constraint.lower_impulse = accumulated;
+        apply_joint_impulse(bodies, body_a, body_b, axis.mul(applied), applied * a1, applied * a2);
+        let (bias, softness) = one_sided_bias(constraint.upper_limit - translation, settings, use_bias);
+        let impulse = -axial_mass * softness.mass_scale * (-axial_speed(bodies) + bias) - softness.impulse_scale * constraint.upper_impulse;
+        let accumulated = (constraint.upper_impulse + impulse).max(0.0);
+        let applied = accumulated - constraint.upper_impulse;
+        constraint.upper_impulse = accumulated;
+        apply_joint_impulse(bodies, body_a, body_b, axis.mul(-applied), -applied * a1, -applied * a2);
+    }
+    // Perpendicular: rigid (joint softness while biased).
+    let perpendicular = axis.perp();
+    let (s1, s2) = (delta.add(radius_a).cross(perpendicular), radius_b.cross(perpendicular));
+    let (perpendicular_mass, perpendicular_speed) = {
+        let a = &bodies[body_a];
+        let b = &bodies[body_b];
+        let inverse = a.inv_mass + b.inv_mass + a.inv_inertia * s1 * s1 + b.inv_inertia * s2 * s2;
+        let speed = perpendicular.dot(b.velocity.sub(a.velocity)) + s2 * b.angular_velocity - s1 * a.angular_velocity;
+        (if inverse > 0.0 { 1.0 / inverse } else { 0.0 }, speed)
+    };
+    if perpendicular_mass > 0.0 {
+        let softness = if use_bias { settings.joint_softness } else { Softness::RIGID };
+        let error = perpendicular.dot(delta);
+        let impulse = -perpendicular_mass * softness.mass_scale * (perpendicular_speed + softness.bias_rate * error) - softness.impulse_scale * constraint.linear_impulse.x;
+        constraint.linear_impulse.x += impulse;
+        apply_joint_impulse(bodies, body_a, body_b, perpendicular.mul(impulse), impulse * s1, impulse * s2);
+    }
+    let axial = constraint.axial_impulse.abs().max(constraint.lower_impulse).max(constraint.upper_impulse);
+    constraint.tension = constraint.tension.max(constraint.linear_impulse.x.abs().max(axial) / settings.h);
+    constraint.motor_torque = constraint.motor_torque.max(constraint.motor_impulse.abs() / settings.h);
+}
+
+// 26.45: 软焊接关节（Box2D v3 b2WeldJoint）：相对角与锚点重合，各自可设频率；频率为 0 时与其他关节
+// 一样只在带偏置求解时使用关节软度（近似刚性）。
+fn solve_weld_soft(bodies: &mut [Body], constraint: &mut ConnectionConstraint, settings: &StepSolverSettings, use_bias: bool) {
+    let (body_a, body_b) = (constraint.body_a, constraint.body_b);
+    let softness_for = |hertz: f64, ratio: f64| {
+        if hertz > 0.0 {
+            Some(Softness::from_frequency(hertz, ratio, settings.h))
+        } else if use_bias {
+            Some(settings.joint_softness)
+        } else {
+            None
+        }
+    };
+    let axial_mass = angular_mass(bodies, constraint);
+    if axial_mass > 0.0 {
+        let (bias, mass_scale, impulse_scale) = match softness_for(constraint.angular_hertz, constraint.angular_damping_ratio) {
+            Some(softness) => (softness.bias_rate * joint_angle(bodies, constraint), softness.mass_scale, softness.impulse_scale),
+            None => (0.0, 1.0, 0.0),
+        };
+        let relative = bodies[body_b].angular_velocity - bodies[body_a].angular_velocity;
+        let impulse = -axial_mass * mass_scale * (relative + bias) - impulse_scale * constraint.angular_impulse;
+        constraint.angular_impulse += impulse;
+        apply_joint_impulse(bodies, body_a, body_b, Vec2::ZERO, impulse, impulse);
+    }
+    let (radius_a, radius_b) = joint_radii(bodies, constraint);
+    let (error, relative_velocity, k11, k12, k22) = {
+        let a = &bodies[body_a];
+        let b = &bodies[body_b];
+        let error = b.position.add(radius_b).sub(a.position.add(radius_a));
+        let relative_velocity = b.point_velocity(radius_b).sub(a.point_velocity(radius_a));
+        let (k11, k12, k22) = binding_mass_matrix(a, b, radius_a, radius_b);
+        (error, relative_velocity, k11, k12, k22)
+    };
+    let (bias, mass_scale, impulse_scale) = match softness_for(constraint.spring_hertz, constraint.spring_damping_ratio) {
+        Some(softness) => (error.mul(softness.bias_rate), softness.mass_scale, softness.impulse_scale),
+        None => (Vec2::ZERO, 1.0, 0.0),
+    };
+    let solved = solve_symmetric_2x2(k11, k12, k22, relative_velocity.add(bias));
+    let impulse = solved.mul(-mass_scale).sub(constraint.linear_impulse.mul(impulse_scale));
+    constraint.linear_impulse = constraint.linear_impulse.add(impulse);
+    apply_joint_impulse(bodies, body_a, body_b, impulse, radius_a.cross(impulse), radius_b.cross(impulse));
+    constraint.tension = constraint.tension.max(constraint.linear_impulse.length() / settings.h);
+    constraint.motor_torque = constraint.motor_torque.max(constraint.angular_impulse.abs() / settings.h);
 }
 
 // 转动关节：电机 → 角度限位 → 锚点重合（2×2 块求解）。

@@ -45,53 +45,88 @@ fn union_aabb(first: Aabb, second: Aabb) -> Aabb {
     }
 }
 
+// 26.45: one body's motion over a substep: start position, start angle, translation and turn.
+type SweepMotion = (Vec2, f64, Vec2, f64);
+
 // 对本子步移动过快的连续碰撞刚体逐段扫掠，把它放回最早接触的位置。
+// 26.45: 另一个同样高速扫掠的连续碰撞刚体（子弹对子弹）在同一比例处插值，而不是停在终点，
+// 两颗相向的子弹因此在相遇处停下，不再互相穿过。
 fn sweep_continuous_bodies(
     bodies: &mut [Body],
     start_poses: &[(Vec2, f64)],
     bound_pairs: &HashSet<(usize, usize)>,
 ) {
-    for index in 0..bodies.len() {
+    // Fast continuous movers of this substep: (start position, start angle, translation, turn).
+    let motion = |bodies: &[Body], index: usize| -> Option<SweepMotion> {
         let body = &bodies[index];
         if body.is_static || body.is_kinematic || body.sleeping || !body.continuous_collision {
-            continue;
+            return None;
         }
         let (start_position, start_angle) = start_poses[index];
         let delta = body.position.sub(start_position);
         let turn = normalize_angle(body.angle - start_angle);
         let travel = delta.length() + turn.abs() * body.maximum_collider_radius();
-        let samples = continuous_sweep_samples(body, travel);
-        if samples == 0 {
+        (continuous_sweep_samples(body, travel) > 0).then_some((start_position, start_angle, delta, turn))
+    };
+    for index in 0..bodies.len() {
+        let Some((start_position, start_angle, delta, turn)) = motion(bodies, index) else {
             continue;
-        }
+        };
+        let body = &bodies[index];
+        let travel = delta.length() + turn.abs() * body.maximum_collider_radius();
+        let samples = continuous_sweep_samples(body, travel);
         let mut moving = body.clone();
         moving.position = start_position;
         moving.angle = start_angle;
         let swept = union_aabb(moving.compound_aabb(), body.compound_aabb());
-        let candidates: Vec<usize> = (0..bodies.len())
-            .filter(/* 只检测扫掠范围内、未绑定且起点未重叠的物体。 */ |&other| {
-                other != index
-                    && !bound_pairs.contains(&(index.min(other), index.max(other)))
-                    && bodies[other].compound_aabb().overlaps(swept)
-                    && !bodies_touch(&moving, &bodies[other])
+        // Candidates and, for other fast movers, their own sweep.
+        let candidates: Vec<(usize, Option<SweepMotion>)> = (0..bodies.len())
+            .filter(|&other| other != index && !bound_pairs.contains(&(index.min(other), index.max(other))))
+            .filter_map(|other| {
+                let other_motion = motion(bodies, other);
+                let other_bounds = match other_motion {
+                    Some((position, angle, _, _)) => {
+                        let mut start = bodies[other].clone();
+                        start.position = position;
+                        start.angle = angle;
+                        if bodies_touch(&moving, &start) {
+                            return None;
+                        }
+                        union_aabb(start.compound_aabb(), bodies[other].compound_aabb())
+                    }
+                    None => {
+                        if bodies_touch(&moving, &bodies[other]) {
+                            return None;
+                        }
+                        bodies[other].compound_aabb()
+                    }
+                };
+                other_bounds.overlaps(swept).then_some((other, other_motion))
             })
             .collect();
         if candidates.is_empty() {
             continue;
         }
-        let pose = /* 按比例插值本子步的位置与角度。 */ |moving: &mut Body, fraction: f64| {
-            moving.position = start_position.add(delta.mul(fraction));
-            moving.angle = normalize_angle(start_angle + turn * fraction);
+        let pose = /* 按比例插值本子步的位置与角度。 */ |target: &mut Body, start: Vec2, angle: f64, delta: Vec2, turn: f64, fraction: f64| {
+            target.position = start.add(delta.mul(fraction));
+            target.angle = normalize_angle(angle + turn * fraction);
         };
-        let touches = /* 当前姿态是否碰到任一候选物体。 */ |moving: &Body, bodies: &[Body]| {
-            candidates.iter().any(|&other| bodies_touch(moving, &bodies[other]))
+        let touches = /* 当前比例下是否碰到任一候选物体（高速候选同样插值）。 */ |moving: &Body, bodies: &[Body], fraction: f64| {
+            candidates.iter().any(|&(other, other_motion)| match other_motion {
+                Some((position, angle, delta, turn)) => {
+                    let mut posed = bodies[other].clone();
+                    pose(&mut posed, position, angle, delta, turn, fraction);
+                    bodies_touch(moving, &posed)
+                }
+                None => bodies_touch(moving, &bodies[other]),
+            })
         };
         let mut clear = 0.0;
         let mut blocked = None;
         for sample in 1..=samples {
             let fraction = sample as f64 / samples as f64;
-            pose(&mut moving, fraction);
-            if touches(&moving, bodies) {
+            pose(&mut moving, start_position, start_angle, delta, turn, fraction);
+            if touches(&moving, bodies, fraction) {
                 blocked = Some(fraction);
                 break;
             }
@@ -102,17 +137,69 @@ fn sweep_continuous_bodies(
         };
         for _ in 0..CCD_REFINEMENT_STEPS {
             let middle = (clear + hit) * 0.5;
-            pose(&mut moving, middle);
-            if touches(&moving, bodies) {
+            pose(&mut moving, start_position, start_angle, delta, turn, middle);
+            if touches(&moving, bodies, middle) {
                 hit = middle;
             } else {
                 clear = middle;
             }
         }
-        pose(&mut moving, hit);
+        pose(&mut moving, start_position, start_angle, delta, turn, hit);
         bodies[index].position = moving.position;
         bodies[index].angle = moving.angle;
     }
+}
+
+// 26.45: 目标（鼠标）关节：把刚体上的锚点软性拉向世界目标点（Box2D v3 b2MouseJoint），最大力限制冲量。
+#[derive(Clone, Copy, Debug)]
+struct BodyTarget {
+    body: usize,
+    local_anchor: Vec2,
+    target: Vec2,
+    hertz: f64,
+    damping_ratio: f64,
+    max_force: f64,
+    impulse: Vec2,
+}
+
+// 子步开始时重新施加累计冲量。
+fn warm_start_target(bodies: &mut [Body], target: &BodyTarget) {
+    let Some(body) = bodies.get_mut(target.body) else { return };
+    if body.inv_mass <= 0.0 || target.impulse.length_squared() == 0.0 {
+        return;
+    }
+    let radius = rotate(target.local_anchor, body.angle);
+    body.velocity = body.velocity.add(target.impulse.mul(body.inv_mass));
+    body.angular_velocity += radius.cross(target.impulse) * body.inv_inertia;
+}
+
+// 软弹簧（频率、阻尼比）求解，累计冲量长度不超过 最大力 × 子步时间。
+fn solve_target(bodies: &mut [Body], target: &mut BodyTarget, settings: &StepSolverSettings) {
+    let Some(body) = bodies.get_mut(target.body) else { return };
+    if body.inv_mass <= 0.0 || settings.h <= 0.0 {
+        return;
+    }
+    let radius = rotate(target.local_anchor, body.angle);
+    let error = body.position.add(radius).sub(target.target);
+    let velocity = body.point_velocity(radius);
+    let (im, ii) = (body.inv_mass, body.inv_inertia);
+    let k11 = im + ii * radius.y * radius.y;
+    let k12 = -ii * radius.x * radius.y;
+    let k22 = im + ii * radius.x * radius.x;
+    let softness = Softness::from_frequency(target.hertz.max(0.01), target.damping_ratio.max(0.0), settings.h);
+    let solved = solve_symmetric_2x2(k11, k12, k22, velocity.add(error.mul(softness.bias_rate)));
+    let impulse = solved.mul(-softness.mass_scale).sub(target.impulse.mul(softness.impulse_scale));
+    let previous = target.impulse;
+    let mut accumulated = previous.add(impulse);
+    let limit = target.max_force.max(0.0) * settings.h;
+    let length = accumulated.length();
+    if length > limit {
+        accumulated = accumulated.mul(if length > 0.0 { limit / length } else { 0.0 });
+    }
+    target.impulse = accumulated;
+    let applied = accumulated.sub(previous);
+    body.velocity = body.velocity.add(applied.mul(im));
+    body.angular_velocity += radius.cross(applied) * ii;
 }
 
 // 清零扁平刚体记录中的本步接触诊断字段。
@@ -342,6 +429,13 @@ fn contact_from_manifold(
         is_sensor: body_a_view.is_sensor || body_b_view.is_sensor,
         active: body_can_move(body_a) || body_can_move(body_b),
         against_immovable: false,
+        // Conveyor surfaces: A's face carries B along -tangent, B's face carries A along +tangent
+        // (tangent = normal.perp()); see Body::tangent_speed.
+        target_tangent_speed: -(body_a.tangent_speed + body_b.tangent_speed),
+        rolling_resistance: (body_a.rolling_resistance * body_a_view.rolling_radius())
+            .max(body_b.rolling_resistance * body_b_view.rolling_radius())
+            .max(0.0),
+        rolling_impulse: 0.0,
     }
 }
 
@@ -585,14 +679,17 @@ fn write_constraints(connection_data: &mut [f64], constraints: &[ConnectionConst
     }
 }
 
+#[derive(Clone)]
 struct SolverWorld {
+    // 26.45: bodies pulled toward a world point (target / mouse joints), solved every substep.
+    targets: Vec<BodyTarget>,
     data: Vec<f64>,
     connection_data: Vec<f64>,
     bodies: Vec<Body>,
     constraints: Vec<ConnectionConstraint>,
     contacts: Vec<SolverContactSnapshot>,
     quality: SolverQuality,
-    impulse_cache: HashMap<ContactCacheKey, (f64, f64)>,
+    impulse_cache: HashMap<ContactCacheKey, (f64, f64, f64)>,
     // 26.43: internal edges of adjacent static polygons, rebuilt when a static body changes.
     static_fingerprint: u64,
     edge_coverage: EdgeCoverage,
@@ -755,6 +852,7 @@ impl SolverWorld {
         }
         let constraints = read_constraints(&connection_data, body_count, &bodies);
         Self {
+            targets: Vec::new(),
             data,
             connection_data,
             bodies,
@@ -793,6 +891,13 @@ impl SolverWorld {
         }
         let bound_pairs = active_bound_pairs(&self.constraints, self.bodies.len());
         let sub_steps = self.quality.minimum_substeps.clamp(1, MAX_SUB_STEPS);
+        // 26.45: a body held by a target joint never sleeps.
+        for target in &self.targets {
+            if let Some(body) = self.bodies.get_mut(target.body) {
+                body.sleeping = false;
+                body.sleep_timer = 0.0;
+            }
+        }
         // 26.44: bodies only change between steps through `forget_resting_body` (record refresh);
         // hashing every static polygon each step cost 0.3 ms in a 1600-tile level.
         if self.statics_changed {
@@ -826,7 +931,7 @@ impl SolverWorld {
             if !keep {
                 // Collided again below: keep the impulses for warm starting.
                 for contact in list.iter() {
-                    self.impulse_cache.insert(contact_cache_key(contact), (contact.normal_impulse, contact.tangent_impulse));
+                    self.impulse_cache.insert(contact_cache_key(contact), (contact.normal_impulse, contact.tangent_impulse, contact.rolling_impulse));
                 }
             }
             keep
@@ -867,9 +972,10 @@ impl SolverWorld {
             }
         }
         for contact in &mut contacts {
-            if let Some((normal, tangent)) = self.impulse_cache.get(&contact_cache_key(contact)).copied() {
+            if let Some((normal, tangent, rolling)) = self.impulse_cache.get(&contact_cache_key(contact)).copied() {
                 contact.normal_impulse = non_negative(normal, 0.0);
                 contact.tangent_impulse = finite_or(tangent, 0.0);
+                contact.rolling_impulse = finite_or(rolling, 0.0);
             }
             prepare_contact(&self.bodies, contact);
         }
@@ -890,10 +996,16 @@ impl SolverWorld {
             for constraint in self.constraints.iter() {
                 warm_start_joint(&mut self.bodies, constraint);
             }
+            for target in &self.targets {
+                warm_start_target(&mut self.bodies, target);
+            }
             for constraint in self.constraints.iter_mut() {
                 resolve_rope_collisions(&mut self.bodies, constraint);
             }
             for _ in 0..solve_iterations {
+                for target in self.targets.iter_mut() {
+                    solve_target(&mut self.bodies, target, &settings);
+                }
                 for constraint in self.constraints.iter_mut() {
                     solve_soft_joint(&mut self.bodies, constraint, &settings, true);
                 }
@@ -911,6 +1023,9 @@ impl SolverWorld {
             }
             sweep_continuous_bodies(&mut self.bodies, &start_poses, &bound_pairs);
             for _ in 0..relax_iterations {
+                for target in self.targets.iter_mut() {
+                    solve_target(&mut self.bodies, target, &settings);
+                }
                 for constraint in self.constraints.iter_mut() {
                     solve_soft_joint(&mut self.bodies, constraint, &settings, false);
                 }
@@ -945,7 +1060,7 @@ impl SolverWorld {
         self.impulse_cache.clear();
         for contact in &contacts {
             if !contact.is_sensor && contact.active {
-                self.impulse_cache.insert(contact_cache_key(contact), (contact.normal_impulse, contact.tangent_impulse));
+                self.impulse_cache.insert(contact_cache_key(contact), (contact.normal_impulse, contact.tangent_impulse, contact.rolling_impulse));
             }
         }
         self.contacts = contact_snapshots(&self.bodies, contacts.iter().chain(resting_pairs.values().flatten()), &mut self.data, h);

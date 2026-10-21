@@ -124,6 +124,12 @@ struct Contact {
     active: bool,
     /// One side cannot be moved by contacts (static or kinematic): stiffer softness.
     against_immovable: bool,
+    /// 26.45: target relative tangent speed (conveyor surfaces of either body).
+    target_tangent_speed: f64,
+    /// 26.45: largest rolling resistance times rolling radius of the pair (on the manifold's first
+    /// point) and its accumulated angular impulse.
+    rolling_resistance: f64,
+    rolling_impulse: f64,
 }
 
 // 拆分刚体切片以安全取得两个不重叠的可变引用。
@@ -241,7 +247,7 @@ fn solve_contact_friction(bodies: &mut [Body], contact: &mut Contact) {
     if contact.is_sensor || !contact.active || contact.tangent_mass <= 0.0 {
         return;
     }
-    let tangent_speed = contact_relative_velocity(bodies, contact).dot(contact.tangent);
+    let tangent_speed = contact_relative_velocity(bodies, contact).dot(contact.tangent) - contact.target_tangent_speed;
     let candidate = contact.tangent_impulse - tangent_speed * contact.tangent_mass;
     let static_limit = contact.static_friction * contact.normal_impulse;
     let dynamic_limit = contact.dynamic_friction * contact.normal_impulse;
@@ -352,7 +358,34 @@ fn solve_contacts(bodies: &mut [Body], contacts: &mut [Contact], ranges: &[std::
             for contact in points.iter_mut() {
                 solve_contact_friction(bodies, contact);
             }
+            solve_rolling_resistance(bodies, points);
         }
+    }
+}
+
+// 26.45: rolling resistance (Box2D v3.1): an angular impulse against the relative spin, at most the
+// coefficient times the rolling radius times the manifold's normal impulse.
+fn solve_rolling_resistance(bodies: &mut [Body], points: &mut [Contact]) {
+    let Some(first) = points.first() else { return };
+    if first.rolling_resistance <= 0.0 || first.is_sensor || !first.active {
+        return;
+    }
+    let (body_a, body_b) = (first.body_a, first.body_b);
+    let inverse = bodies[body_a].inv_inertia + bodies[body_b].inv_inertia;
+    if inverse <= 0.0 {
+        return;
+    }
+    let total_normal: f64 = points.iter().map(|point| point.normal_impulse).sum();
+    let limit = first.rolling_resistance * total_normal;
+    let relative = bodies[body_b].angular_velocity - bodies[body_a].angular_velocity;
+    let previous = points[0].rolling_impulse;
+    let accumulated = (previous - relative / inverse).clamp(-limit, limit);
+    let applied = accumulated - previous;
+    points[0].rolling_impulse = accumulated;
+    if applied != 0.0 {
+        let (a, b) = two_bodies_mut(bodies, body_a, body_b);
+        a.angular_velocity -= a.inv_inertia * applied;
+        b.angular_velocity += b.inv_inertia * applied;
     }
 }
 
@@ -391,5 +424,10 @@ fn warm_start_contact(bodies: &mut [Body], contact: &Contact) {
     let impulse = contact.normal.mul(contact.normal_impulse).add(contact.tangent.mul(contact.tangent_impulse));
     if impulse.length_squared() > 0.0 {
         apply_pair_impulse(bodies, contact.body_a, contact.body_b, impulse, contact.radius_a, contact.radius_b);
+    }
+    if contact.rolling_impulse != 0.0 {
+        let (a, b) = two_bodies_mut(bodies, contact.body_a, contact.body_b);
+        a.angular_velocity -= a.inv_inertia * contact.rolling_impulse;
+        b.angular_velocity += b.inv_inertia * contact.rolling_impulse;
     }
 }

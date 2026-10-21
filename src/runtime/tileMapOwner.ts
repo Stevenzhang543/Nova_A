@@ -7,6 +7,7 @@ import {localPointToWorld,worldPointToLocal,worldTransform} from '../world/hiera
 import type {Entity} from '../world/Entity'
 import type {TileMap2D,TileCellTransform2D,TileCollision2D} from '../world/components'
 import type {Vec2} from '../world/types'
+import {decomposeSimplePolygon} from './physicsGeometry'
 import type {TileChunkRenderCommand,TextureRegion} from '../renderer/types'
 export interface TileResourceRecord {readonly uuid:string;readonly assetType:string;readonly source:string;readonly sourceModified?:number}
 export interface TileResourcePorts {readonly generation:number;textureContentRevision():number;resolveAsset(reference:string|null|undefined):TileResourceRecord|null;readTextAsset(reference:string|null|undefined):string|null;resolveImportedTileSet(asset:TileResourceRecord):TileSetDocument;resolveTextureRegion(reference:string|null|undefined,region:{x:number;y:number;width:number;height:number},filter?:'Nearest'|'Linear'):TextureRegion|null}
@@ -386,8 +387,12 @@ function advanceLocalTileRevision(component: TileMap2D): void {
     if (kind === 'Polygon' || (cellDefinition?.flags ?? 0) !== 0) {
       visited[index] = 1
       const definition = cellDefinition?.definition
-      const polygon = definition?.polygon.length && definition.polygon.length <= 4 ? definition.polygon : [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 }, { x: 0, y: 1 }]
-      result.push({
+      const fullTile = [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 }, { x: 0, y: 1 }]
+      // 26.45: tile polygons with more than four corners (or concave ones) are split into convex
+      // pieces of up to four corners instead of becoming a full square.
+      const authored = definition?.polygon.length ? definition.polygon : fullTile
+      const pieces = authored.length <= 4 ? [authored] : decomposeSimplePolygon(authored)
+      for (const polygon of pieces.length ? pieces : [fullTile]) result.push({
         center: { x: (x + .5 - component.width * .5) * component.tileSize.x, y: (y + .5 - component.height * .5) * component.tileSize.y },
         size: { ...component.tileSize }, oneWay: kind === 'OneWay',
         vertices: polygon.map(/* 调用 transformNormalizedTilePoint(point, cellDefinition?.flags ?? 0) 并返回调用结果。 */ point => transformNormalizedTilePoint(point, cellDefinition?.flags ?? 0)).map(/** 构造并返回记录 { x: (point.x - .5) * component.tileSize.x, y: (point.y - .5) * component.tileSize.y }，字段按当前实参及捕获状态求值。 */ point => ({ x: (point.x - .5) * component.tileSize.x, y: (point.y - .5) * component.tileSize.y }))

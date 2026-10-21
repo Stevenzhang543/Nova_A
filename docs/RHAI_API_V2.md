@@ -73,6 +73,9 @@ Use `// @test tags=unit timeout=1000 seed=42 cases=a|b` before `fn test_*`. The 
 - `task_cancel(name)` — Cancels an entity-owned task.
 
   Example: `task_cancel("load");`
+- `after(seconds, function, args)` — Calls one of this script's functions after a game-time delay.
+
+  Example: `after(0.5, "explode");`
 
 ## signals
 
@@ -85,6 +88,15 @@ Use `// @test tags=unit timeout=1000 seed=42 cases=a|b` before `fn test_*`. The 
 - `signal_emit_to(entity_id, name, payload)` — Queues a serializable targeted signal.
 
   Example: `signal_emit_to(entity(), "heal", 10);`
+- `call_on(entity, function, args)` — Calls a function of another object's script after this callback phase; args is an optional array.
+
+  Example: `call_on(other, "take_damage", [10]);`
+- `call_global(name, function, args)` — Calls a function of a project global script (Project Settings › Scripting › Global scripts).
+
+  Example: `call_global("Game", "add_coins", [1]);`
+- `call_group(group, function, args)` — Calls a function on every object in a group.
+
+  Example: `call_group("enemies", "alert", [position_x()]);`
 
 ## physics
 
@@ -145,6 +157,21 @@ Use `// @test tags=unit timeout=1000 seed=42 cases=a|b` before `fn test_*`. The 
 - `move_character(x, y)` — Queues CharacterBody2D displacement for the next fixed step.
 
   Example: `move_character(2.0 * dt, 0.0);`
+- `character_floor_is_one_way() -> bool` — True when the character stands on a one-way platform.
+
+  Example: `if character_floor_is_one_way() && input_pressed("Down") { character_drop_through(); }`
+- `target_joint_move(x, y)` — Pulls this body toward a world point with its Target Joint (one is added when missing): drag, carry or hold it.
+
+  Example: `target_joint_move(mouse_world_x(), mouse_world_y());`
+- `target_joint_release()` — Lets go of the body: its Target Joint stops pulling.
+
+  Example: `target_joint_release();`
+- `set_surface_speed(speed)` — Makes this body a conveyor: its faces carry what rests on them at `speed` m/s (clockwise around the body for positive speeds).
+
+  Example: `set_surface_speed(2.5);`
+- `character_drop_through([seconds])` — Lets the character fall through one-way platforms (0.25 s by default; it keeps passing while it still overlaps one).
+
+  Example: `character_drop_through();`
 
 ## object
 
@@ -214,6 +241,15 @@ Use `// @test tags=unit timeout=1000 seed=42 cases=a|b` before `fn test_*`. The 
 - `entity_destroy(handle)` — Safely destroys the validated target at the structural boundary.
 
   Example: `entity_destroy(target);`
+- `entity_handle_of(id) -> Handle<Entity>` — Returns a handle for an entity id (for example other in a collision) at its current generation.
+
+  Example: `entity_destroy(entity_handle_of(other));`
+- `entity_has_tag(entity, tag) -> bool` — True when the entity (id or handle, e.g. other in a collision) has the tag.
+
+  Example: `if entity_has_tag(other, "coin") { score_add(1.0); }`
+- `entity_in_group(entity, group) -> bool` — True when the entity (id or handle) is in the group.
+
+  Example: `if entity_in_group(other, "enemies") { }`
 
 ## component
 
@@ -292,6 +328,15 @@ Use `// @test tags=unit timeout=1000 seed=42 cases=a|b` before `fn test_*`. The 
 - `input_scheme_set(name)` — Selects a named input scheme.
 
   Example: `input_scheme_set("Gamepad");`
+- `input_prompt(action) -> string` — The key, button or symbol of an action on the device in use ("Space", "A", "✕", "LMB"), for prompts in your own text.
+
+  Example: `ui_set_text(\`Press ${input_prompt("Jump")} to jump\`);`
+- `input_rebind(action[, index])` — Waits for the next key, mouse button or gamepad button and binds it to the action (binding `index`, default 0). Escape cancels. Sends the `input.rebound` or `input.rebind_cancelled` signal; the Player keeps the player's bindings.
+
+  Example: `input_rebind("Jump");`
+- `input_bindings_reset()` — Puts the project's key bindings back and forgets the player's own.
+
+  Example: `input_bindings_reset();`
 - `input_axis(action) -> float` — Reads a scalar action.
 
   Example: `let x = input_axis("Horizontal");`
@@ -356,6 +401,54 @@ Use `// @test tags=unit timeout=1000 seed=42 cases=a|b` before `fn test_*`. The 
 
   Example: `let move = vector("Move");`
 
+## gameplay
+
+- `camera_shake(amount)` — Shakes the active camera: adds `amount` (0–1) of trauma; the view moves and turns by trauma² and calms down on its own (Camera2D shake settings). Reduced motion keeps a quarter.
+
+  Example: `camera_shake(0.5);`
+- `camera_zoom(zoom)` — Sets the zoom of the active camera (1 is the authored size).
+
+  Example: `camera_zoom(1.5);`
+- `camera_follow(handle)` — The active camera follows an object; camera_follow_none() stops following.
+
+  Example: `camera_follow(find_entity_handle("Player"));`
+- `camera_follow_none()` — The active camera stops following.
+
+  Example: `camera_follow_none();`
+- `screen_flash(r, g, b, seconds)` — Flashes the screen in a colour that fades out over `seconds` (not shown with reduced motion).
+
+  Example: `screen_flash(255.0, 255.0, 255.0, 0.2);`
+- `game_pause(paused)` — Pauses or resumes scaled gameplay while input/update callbacks remain available.
+
+  Example: `game_pause(true);`
+- `game_paused() -> bool` — Reports the current gameplay pause state.
+
+  Example: `if game_paused() { }`
+- `checkpoint_set(name)` — Captures bounded scene transforms, health, score, and session state.
+
+  Example: `checkpoint_set("room-2");`
+- `checkpoint_has(name) -> bool` — Reports whether a runtime checkpoint exists.
+
+  Example: `if checkpoint_has("room-2") { }`
+- `checkpoint_restore(name)` — Restores a same-scene checkpoint or fails explicitly.
+
+  Example: `checkpoint_restore("room-2");`
+- `score_get() -> float` — Returns the bounded session score.
+
+  Example: `let score = score_get();`
+- `score_set(value)` — Sets the bounded session score.
+
+  Example: `score_set(0.0);`
+- `score_add(value)` — Adds to the bounded session score.
+
+  Example: `score_add(10.0);`
+- `session_get(key, fallback) -> value` — Reads a bounded serializable session value.
+
+  Example: `let wave = session_get("wave", 1);`
+- `session_set(key, value)` — Writes a bounded serializable session value.
+
+  Example: `session_set("wave", 2);`
+
 ## ui
 
 - `ui_set_text(text)` — Sets Text or TextRenderer2D content on this entity.
@@ -391,9 +484,33 @@ Use `// @test tags=unit timeout=1000 seed=42 cases=a|b` before `fn test_*`. The 
 - `animator_trigger(name)` — Raises an Animator trigger.
 
   Example: `animator_trigger("jump");`
-- `animator_play(state)` — Requests an Animator state.
+- `animator_play(state)` — Requests an Animator state (id or name), switching at once.
 
   Example: `animator_play("Run");`
+- `animator_crossfade(state, seconds)` — Blends from the current Animator state to another (id or name) over the given seconds.
+
+  Example: `animator_crossfade("Jump", 0.15);`
+- `animator_state() -> string` — Name of the current Animator state (base layer); "" without an Animator.
+
+  Example: `if animator_state() == "Run" { }`
+- `animator_state_time() -> float` — Normalised time of the current state: 0 at its start, 1 at the end of the clip (keeps counting while it loops).
+
+  Example: `if animator_state_time() >= 1.0 { }`
+- `animator_in_transition() -> bool` — True while the Animator blends between two states.
+
+  Example: `if !animator_in_transition() { }`
+- `tween(property, to, seconds[, easing[, options]])` — Animates x, y, rotation, rotation_degrees, scale_x, scale_y, scale or opacity of this object to a value. Easings: linear and quad, cubic, quart, quint, sine, expo, circ, back, elastic, bounce with _in, _out or _in_out. Options #{ delay, loops (-1 forever), yoyo, relative, signal }. Emits "tween.finished".
+
+  Example: `tween("y", 2.0, 0.5, "back_out", #{ relative: true });`
+- `entity_tween(entity, property, to, seconds, easing)` — Animates a property of another object (a handle).
+
+  Example: `entity_tween(find_entity_handle("Door"), "y", 3.0, 1.0, "sine_in_out");`
+- `tween_stop([property])` — Stops this object's tweens (of one property, or all).
+
+  Example: `tween_stop("x");`
+- `entity_tween_stop(entity)` — Stops all tweens of another object (a handle).
+
+  Example: `entity_tween_stop(find_entity_handle("Door"));`
 
 ## audio
 
@@ -412,6 +529,27 @@ Use `// @test tags=unit timeout=1000 seed=42 cases=a|b` before `fn test_*`. The 
 - `audio_stop()` — Stops this entity AudioSource.
 
   Example: `audio_stop();`
+- `play_sound(asset, options)` — Plays a sound once (or looped) on a mixer bus; options #{ bus, volume, pitch, looped, tag }.
+
+  Example: `play_sound("Assets/Audio/coin.wav", #{ volume: 0.8, pitch: 1.2 });`
+- `stop_sounds(tag, fade)` — Stops script sounds with a tag ("" stops all), optionally fading out.
+
+  Example: `stop_sounds("ambience", 1.0);`
+- `play_music(asset, fade, volume)` — Plays looping music on the Music bus; a new track crossfades.
+
+  Example: `play_music("Assets/Audio/theme.ogg", 1.5);`
+- `stop_music(fade)` — Fades out and stops the music.
+
+  Example: `stop_music(2.0);`
+- `set_bus_volume(bus, volume)` — Sets a mixer bus volume for this play session (1.0 = authored level).
+
+  Example: `set_bus_volume("Music", 0.5);`
+- `play_video(asset, options)` — Plays a full-screen video over the game view; emits "video.finished". Options #{ skippable, volume, looped }.
+
+  Example: `play_video("Assets/Video/intro.webm");`
+- `stop_video()` — Stops the playing video (emits "video.finished" with reason "stopped").
+
+  Example: `stop_video();`
 
 ## navigation
 
@@ -442,39 +580,6 @@ Use `// @test tags=unit timeout=1000 seed=42 cases=a|b` before `fn test_*`. The 
 - `scene_quit()` — Requests clean runtime shutdown.
 
   Example: `scene_quit();`
-
-## gameplay
-
-- `game_pause(paused)` — Pauses or resumes scaled gameplay while input/update callbacks remain available.
-
-  Example: `game_pause(true);`
-- `game_paused() -> bool` — Reports the current gameplay pause state.
-
-  Example: `if game_paused() { }`
-- `checkpoint_set(name)` — Captures bounded scene transforms, health, score, and session state.
-
-  Example: `checkpoint_set("room-2");`
-- `checkpoint_has(name) -> bool` — Reports whether a runtime checkpoint exists.
-
-  Example: `if checkpoint_has("room-2") { }`
-- `checkpoint_restore(name)` — Restores a same-scene checkpoint or fails explicitly.
-
-  Example: `checkpoint_restore("room-2");`
-- `score_get() -> float` — Returns the bounded session score.
-
-  Example: `let score = score_get();`
-- `score_set(value)` — Sets the bounded session score.
-
-  Example: `score_set(0.0);`
-- `score_add(value)` — Adds to the bounded session score.
-
-  Example: `score_add(10.0);`
-- `session_get(key, fallback) -> value` — Reads a bounded serializable session value.
-
-  Example: `let wave = session_get("wave", 1);`
-- `session_set(key, value)` — Writes a bounded serializable session value.
-
-  Example: `session_set("wave", 2);`
 
 ## network
 

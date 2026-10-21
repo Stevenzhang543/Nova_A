@@ -1,6 +1,6 @@
 # Isolated26.14 runtime development
 
-Integration notice: this historical development journal retains staged paths, intermediate failures and pending-at-the-time findings. Its reviewed authored files are integrated into the26.14 candidate after26.13 was separately finalized. Copied Cargo/support trees, scratch typecheck-stage.mjs and generated stage outputs were excluded. Current behavior and final evidence boundaries are in [26.14 release notes](RELEASE_NOTES_26_14.md); executed-gate records determine production qualification.
+Integration notice: this historical development journal retains staged paths, intermediate failures and pending-at-the-time findings. Its reviewed authored files are integrated into the26.14 candidate after26.13 was separately finalized. Copied Cargo/support trees, scratch typecheck-stage.mjs and generated stage outputs were excluded. Current behavior and final evidence boundaries are in 26.14 release notes; executed-gate records determine production qualification.
 
 This directory is a development overlay, not a qualified release. All changes are staged beneath `.cache/development-v26.14`; they must be merged against the eventual26.13 source before integration. `base-sources.json` records the fifteen original runtime/store/entity/Rust/CLI/validation source copies and hashes. The scratch Cargo workspace intentionally retains baseline26.12.0 metadata; it is not a version authority or release artifact. No active source, WASM package, native release binary or qualification report is overwritten by these stage checks.
 
@@ -904,7 +904,7 @@ WebGPU 独立缓存证据：同实际 NVIDIA 硬件族 Sprite MJS 对照 12/12�
 | src/runtime/GameplayRuntime.ts | 更新 | 旧Editor入口明确配置legacy兼容；显式服务入口使用独立Owner。 |
 | src/runtime/GameplayRuntimeCore.ts | 更新 | 实际begin/fixed-step/参数/stop及7个存档脚本调用使用自身Owner；结构安全点标脏；存档延迟创建避免模块环。 |
 | src/components/WorldCanvas.vue | 更新 | 实际运行时Owner接入时间轴展示，shallowRef/triggerRef更新；完整template/style字节不变。 |
-| src/runtime/saveGame.ts | 更新 | 保留16个旧API及原Editor响应式种子门面；格式/校验/journal语义不变。 |
+| src/editor/saveGame.ts（26.45 起自 src/runtime 移入） | 更新 | 保留16个旧API及原Editor响应式种子门面；格式/校验/journal语义不变。 |
 | src/editor/saveOwnerAdapter.ts | 新增 | Editor注入存储、时间、取消及项目端口；外部世界复制schema迁移配置，防止Editor后续修改污染。 |
 | src/runtime/runtimeSaveOwner.ts | 新增 | 搬迁全部37个存档函数到独立状态闭包及显式平台端口；保留v1/v2、备份、恢复及serializer。 |
 | scripts/lib/animationOwnerContract.mjs | 新增 | 验证17实际源码的完整逆变换及原算法；静态Save→Animation→M1归一化，无可变注册表。 |

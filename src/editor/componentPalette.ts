@@ -7,7 +7,7 @@ export type ComponentPaletteCategory = 'Core' | '2D' | 'Physics' | 'Gameplay' | 
 export interface ComponentPaletteMetadata { category: ComponentPaletteCategory; compatibility: 'Stable' | 'Experimental' | 'Package'; required: ComponentKind[]; summary: string }
 export interface ComponentPreset { id: string; name: string; kind: ComponentKind; values: Record<string, unknown>; createdAt: string }
 
-const physics = new Set<ComponentKind>(['RigidBody2D', 'BoxCollider2D', 'EllipseCollider2D', 'PolygonCollider2D', 'FixedJoint2D', 'WeldJoint2D', 'DistanceJoint2D', 'RopeJoint2D', 'RevoluteJoint2D', 'MotorJoint2D', 'PrismaticJoint2D', 'SpringJoint2D', 'Rope2D', 'Area2D'])
+const physics = new Set<ComponentKind>(['RigidBody2D', 'BoxCollider2D', 'EllipseCollider2D', 'PolygonCollider2D', 'FixedJoint2D', 'WeldJoint2D', 'DistanceJoint2D', 'RopeJoint2D', 'RevoluteJoint2D', 'MotorJoint2D', 'PrismaticJoint2D', 'SpringJoint2D', 'WheelJoint2D', 'TargetJoint2D', 'Rope2D', 'Area2D'])
 const ui = new Set<ComponentKind>(['Canvas', 'RectTransform', 'Panel', 'Image', 'Text', 'Button', 'Slider', 'ProgressBar', 'Checkbox', 'TextInput'])
 const audio = new Set<ComponentKind>(['AudioSource', 'AudioListener'])
 const navigation = new Set<ComponentKind>(['NavigationRegion2D', 'NavigationObstacle2D', 'NavigationAgent2D'])

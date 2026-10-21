@@ -125,21 +125,36 @@
 
   <UiPropertySection :title="(t(joint.kind))" v-for="joint in visibleJoints" :key="joint.uuid" >
     <template #actions><UiButton icon="clear" @click="remove(joint.kind)" :label="t('remove')" /></template>
-    <UiPropertyRow :label="t('connectedBody')"><select v-model="joint.targetEntityUuid" @change="joint.initialized = false"><option :value="null">{{ t('none') }}</option><option v-for="entity in jointTargets" :key="entity.uuid" :value="entity.uuid">{{ entity.name }}_{{ entity.id }}</option></select></UiPropertyRow>
+    <UiPropertyRow :label="joint.kind === 'WheelJoint2D' ? t('wheelChassis') : t('connectedBody')"><select v-model="joint.targetEntityUuid" @change="joint.initialized = false"><option :value="null">{{ t('none') }}</option><option v-for="entity in jointTargets" :key="entity.uuid" :value="entity.uuid">{{ entity.name }}_{{ entity.id }}</option></select></UiPropertyRow>
     <UiPropertyRow :label="t('anchor')"><div><NumericExpressionInput v-model="joint.anchor.x" :step="1" :resource-key="entity.uuid + ':' + joint.uuid + ':anchor.x'" /><NumericExpressionInput v-model="joint.anchor.y" :step="1" :resource-key="entity.uuid + ':' + joint.uuid + ':anchor.y'" /></div></UiPropertyRow>
-    <UiPropertyRow :label="t('connectedAnchor')"><div><NumericExpressionInput v-model="joint.connectedAnchor.x" :step="1" :resource-key="entity.uuid + ':' + joint.uuid + ':connectedAnchor.x'" /><NumericExpressionInput v-model="joint.connectedAnchor.y" :step="1" :resource-key="entity.uuid + ':' + joint.uuid + ':connectedAnchor.y'" /></div></UiPropertyRow>
+    <UiPropertyRow :label="joint.kind === 'WheelJoint2D' ? t('chassisMount') : t('connectedAnchor')"><div><NumericExpressionInput v-model="joint.connectedAnchor.x" :step="1" :resource-key="entity.uuid + ':' + joint.uuid + ':connectedAnchor.x'" /><NumericExpressionInput v-model="joint.connectedAnchor.y" :step="1" :resource-key="entity.uuid + ':' + joint.uuid + ':connectedAnchor.y'" /></div></UiPropertyRow>
     <UiPropertyRow :label="t('collideConnected')"><input v-model="joint.collideConnected" type="checkbox"></UiPropertyRow>
     <UiPropertyRow :label="t('jointDistance')" v-if="joint.kind === 'DistanceJoint2D' || joint.kind === 'RopeJoint2D' || joint.kind === 'SpringJoint2D'"><NumericExpressionInput v-model="joint.distance" :minimum="0" :step="1" :resource-key="entity.uuid + ':' + joint.uuid + ':distance'" /></UiPropertyRow>
     <UiPropertyRow :label="t('stiffness')" v-if="joint.kind === 'SpringJoint2D'"><NumericExpressionInput v-model="joint.stiffness" :minimum="0" :step="1" :resource-key="entity.uuid + ':' + joint.uuid + ':stiffness'" /></UiPropertyRow>
     <UiPropertyRow :label="t('connectionDamping')" v-if="joint.kind === 'SpringJoint2D'"><NumericExpressionInput v-model="joint.damping" :minimum="0" :step="1" :resource-key="entity.uuid + ':' + joint.uuid + ':damping'" /></UiPropertyRow>
-    <UiPropertyRow :label="t('jointAxis')" v-if="joint.kind === 'PrismaticJoint2D'"><div><NumericExpressionInput v-model="joint.axis.x" :step="1" :resource-key="entity.uuid + ':' + joint.uuid + ':axis.x'" /><NumericExpressionInput v-model="joint.axis.y" :step="1" :resource-key="entity.uuid + ':' + joint.uuid + ':axis.y'" /></div></UiPropertyRow>
-    <UiPropertyRow :label="t('jointLimits')" v-if="joint.kind === 'PrismaticJoint2D'"><input v-model="joint.limitsEnabled" type="checkbox"></UiPropertyRow>
-    <UiPropertyRow :label="t('limitRange')" v-if="joint.kind === 'PrismaticJoint2D' && joint.limitsEnabled"><div><NumericExpressionInput v-model="joint.lowerLimit" :step="1" :resource-key="entity.uuid + ':' + joint.uuid + ':lowerLimit'" /><NumericExpressionInput v-model="joint.upperLimit" :step="1" :resource-key="entity.uuid + ':' + joint.uuid + ':upperLimit'" /></div></UiPropertyRow>
-    <UiPropertyRow :label="t('jointMotor')" v-if="joint.kind === 'RevoluteJoint2D' || joint.kind === 'MotorJoint2D'"><input v-model="joint.motorEnabled" type="checkbox"></UiPropertyRow>
+    <UiPropertyRow :label="t('jointAxis')" v-if="joint.kind === 'PrismaticJoint2D' || joint.kind === 'WheelJoint2D'"><div><NumericExpressionInput v-model="joint.axis.x" :step="1" :resource-key="entity.uuid + ':' + joint.uuid + ':axis.x'" /><NumericExpressionInput v-model="joint.axis.y" :step="1" :resource-key="entity.uuid + ':' + joint.uuid + ':axis.y'" /></div></UiPropertyRow>
+    <UiPropertyRow :label="t('jointLimits')" v-if="joint.kind === 'PrismaticJoint2D' || joint.kind === 'WheelJoint2D'"><input v-model="joint.limitsEnabled" type="checkbox"></UiPropertyRow>
+    <UiPropertyRow :label="t('limitRange')" v-if="(joint.kind === 'PrismaticJoint2D' || joint.kind === 'WheelJoint2D') && joint.limitsEnabled"><div><NumericExpressionInput v-model="joint.lowerLimit" :step="1" :resource-key="entity.uuid + ':' + joint.uuid + ':lowerLimit'" /><NumericExpressionInput v-model="joint.upperLimit" :step="1" :resource-key="entity.uuid + ':' + joint.uuid + ':upperLimit'" /></div></UiPropertyRow>
+    <UiPropertyRow :label="t('jointMotor')" v-if="joint.kind === 'RevoluteJoint2D' || joint.kind === 'MotorJoint2D' || joint.kind === 'WheelJoint2D'"><input v-model="joint.motorEnabled" type="checkbox"></UiPropertyRow>
     <UiPropertyRow :label="t('motorSpeed')" v-if="joint.motorEnabled"><NumericExpressionInput v-model="joint.motorSpeed" :step="0.1" :resource-key="entity.uuid + ':' + joint.uuid + ':motorSpeed'" /></UiPropertyRow>
     <UiPropertyRow :label="t('maxMotorForce')" v-if="joint.motorEnabled"><NumericExpressionInput v-model="joint.maxMotorForce" :minimum="0" :step="1" :resource-key="entity.uuid + ':' + joint.uuid + ':maxMotorForce'" /></UiPropertyRow>
+    <UiPropertyRow :label="joint.kind === 'WheelJoint2D' ? t('suspensionFrequency') : t('weldLinearFrequency')" v-if="joint.kind === 'WheelJoint2D' || joint.kind === 'WeldJoint2D'"><NumericExpressionInput v-model="joint.frequency" :minimum="0" :step="0.5" :resource-key="entity.uuid + ':' + joint.uuid + ':frequency'" /></UiPropertyRow>
+    <UiPropertyRow :label="t('springDampingRatio')" v-if="(joint.kind === 'WheelJoint2D' || joint.kind === 'WeldJoint2D') && joint.frequency > 0"><NumericExpressionInput v-model="joint.dampingRatio" :minimum="0" :step="0.1" :resource-key="entity.uuid + ':' + joint.uuid + ':dampingRatio'" /></UiPropertyRow>
+    <UiPropertyRow :label="t('weldAngularFrequency')" v-if="joint.kind === 'WeldJoint2D'"><NumericExpressionInput v-model="joint.angularFrequency" :minimum="0" :step="0.5" :resource-key="entity.uuid + ':' + joint.uuid + ':angularFrequency'" /></UiPropertyRow>
+    <UiPropertyRow :label="t('angularDampingRatio')" v-if="joint.kind === 'WeldJoint2D' && joint.angularFrequency > 0"><NumericExpressionInput v-model="joint.angularDampingRatio" :minimum="0" :step="0.1" :resource-key="entity.uuid + ':' + joint.uuid + ':angularDampingRatio'" /></UiPropertyRow>
     <UiPropertyRow :label="t('breakForce')"><LimitNumberInput v-model="joint.breakForce" :resource-key="`${entity.uuid}/${joint.uuid}/breakForce`" :label="t('breakForce')" /></UiPropertyRow>
     <UiPropertyRow :label="t('breakTorque')"><LimitNumberInput v-model="joint.breakTorque" :resource-key="`${entity.uuid}/${joint.uuid}/breakTorque`" :label="t('breakTorque')" /></UiPropertyRow>
+  </UiPropertySection>
+
+  <UiPropertySection :title="(t('TargetJoint2D'))" v-if="targetJoint && componentVisible('TargetJoint2D', t('TargetJoint2D'))" >
+    <template #actions><UiButton icon="clear" @click="remove('TargetJoint2D')" :label="t('remove')" /></template>
+    <p class="renderer-capability-hint">{{ t('targetJointHint') }}</p>
+    <UiPropertyRow :label="t('anchor')"><div><NumericExpressionInput v-model="targetJoint.anchor.x" :step="0.1" :resource-key="entity.uuid + ':' + targetJoint.uuid + ':anchor.x'" /><NumericExpressionInput v-model="targetJoint.anchor.y" :step="0.1" :resource-key="entity.uuid + ':' + targetJoint.uuid + ':anchor.y'" /></div></UiPropertyRow>
+    <UiPropertyRow :label="t('targetPoint')"><div><NumericExpressionInput v-model="targetJoint.target.x" :step="0.1" :resource-key="entity.uuid + ':' + targetJoint.uuid + ':target.x'" /><NumericExpressionInput v-model="targetJoint.target.y" :step="0.1" :resource-key="entity.uuid + ':' + targetJoint.uuid + ':target.y'" /></div></UiPropertyRow>
+    <UiPropertyRow :label="t('targetStartsAtBody')"><input v-model="targetJoint.startAtBody" type="checkbox"></UiPropertyRow>
+    <UiPropertyRow :label="t('springFrequency')"><NumericExpressionInput v-model="targetJoint.frequency" :minimum="0.01" :step="0.5" :resource-key="entity.uuid + ':' + targetJoint.uuid + ':frequency'" /></UiPropertyRow>
+    <UiPropertyRow :label="t('springDampingRatio')"><NumericExpressionInput v-model="targetJoint.dampingRatio" :minimum="0" :step="0.1" :resource-key="entity.uuid + ':' + targetJoint.uuid + ':dampingRatio'" /></UiPropertyRow>
+    <UiPropertyRow :label="t('targetMaxForce')"><NumericExpressionInput v-model="targetJoint.maxForce" :minimum="0" :step="10" :resource-key="entity.uuid + ':' + targetJoint.uuid + ':maxForce'" /></UiPropertyRow>
   </UiPropertySection>
 
   <UiPropertySection :title="(t('rectTransform'))" v-if="rectTransform && componentVisible('RectTransform', t('rectTransform'))" >
@@ -250,7 +265,7 @@ import { directionalShadowHint } from '../editor/lightInspectorCopy'
 import { beginHistoryTransaction, commitHistoryTransaction, cancelHistoryTransaction, createUiEntity, physicsState, pushHistory, type UiElementKind } from '../store/physics'
 import type { Entity } from '../world/Entity'
 import type {
-  Animator, AudioListener, AudioSource, Button, Canvas, Checkbox, ComponentKind, Image, Joint2D, Light2D, Panel,
+  Animator, AudioListener, AudioSource, Button, Canvas, Checkbox, ComponentKind, Image, Joint2D, Light2D, Panel, TargetJoint2D,
   ParticleEmitter2D, ProgressBar, RectTransform, ShadowCaster2D, Skeleton2D, Slider, Text, TextInput, TileMap2D, TimelinePlayer
 } from '../world/components'
 import type { InspectorCategory } from '../store/editor'
@@ -295,7 +310,8 @@ const tileMap = computed(/* 调用 props.entity.getComponent<TileMap2D>('TileMap
 const particleEmitter = computed(/* 调用 props.entity.getComponent<ParticleEmitter2D>('ParticleEmitter2D') 并返回调用结果。 */ () => props.entity.getComponent<ParticleEmitter2D>('ParticleEmitter2D'))
 const light = computed(/* 调用 props.entity.getComponent<Light2D>('Light2D') 并返回调用结果。 */ () => props.entity.getComponent<Light2D>('Light2D'))
 const shadowCaster = computed(/* 调用 props.entity.getComponent<ShadowCaster2D>('ShadowCaster2D') 并返回调用结果。 */ () => props.entity.getComponent<ShadowCaster2D>('ShadowCaster2D'))
-const jointKinds = ['FixedJoint2D', 'WeldJoint2D', 'DistanceJoint2D', 'RopeJoint2D', 'RevoluteJoint2D', 'MotorJoint2D', 'PrismaticJoint2D', 'SpringJoint2D'] as const
+const targetJoint = computed(/* 26.45: target (mouse) joint of this body. */ () => props.entity.getComponent<TargetJoint2D>('TargetJoint2D'))
+const jointKinds = ['FixedJoint2D', 'WeldJoint2D', 'DistanceJoint2D', 'RopeJoint2D', 'RevoluteJoint2D', 'MotorJoint2D', 'PrismaticJoint2D', 'SpringJoint2D', 'WheelJoint2D'] as const
 const joints = computed(/** 枚举已知关节种类并收集实体实际拥有的关节组件。 */ () => jointKinds.flatMap(/** 读取指定种类关节，存在时返回单项，否则不产生条目。 */ kind => { const component = props.entity.getComponent<Joint2D>(kind); return component ? [component] : [] }))
 const visibleJoints = computed(/* 调用 joints.value.filter(joint => componentVisible(joint.kind, t(joint.kind))) 并返回调用结果。 */ () => joints.value.filter(/* 调用 componentVisible(joint.kind, t(joint.kind)) 并返回调用结果。 */ joint => componentVisible(joint.kind, t(joint.kind))))
 const jointTargets = computed(/** 筛选其他具有刚体及碰撞体的实体作为关节目标。 */ () => physicsState.world.entities.filter(/* 先计算 entity !== props.entity && entity.hasComponent('RigidBody2D')；仅当其为真值时求右侧 entity.getCollider()，返回短路求值结果。 */ entity => entity !== props.entity && entity.hasComponent('RigidBody2D') && entity.getCollider()))

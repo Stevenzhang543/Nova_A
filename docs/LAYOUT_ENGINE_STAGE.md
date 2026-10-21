@@ -1,6 +1,6 @@
 # 26.13 layout engine staging
 
-Integration notice: this journal preserves the original staged findings, failure results and pending-at-the-time entries. The reviewed files are now integrated for the26.13 candidate after26.12 was finalized. Final scope/status is in [26.13 release notes](RELEASE_NOTES_26_13.md) and its executed-gate evidence. Historical measurements are not relabeled as production qualification.
+Integration notice: this journal preserves the original staged findings, failure results and pending-at-the-time entries. The reviewed files are now integrated for the26.13 candidate after26.12 was finalized. Final scope/status is in 26.13 release notes and its executed-gate evidence. Historical measurements are not relabeled as production qualification.
 
 These files are isolated below `.cache/development-v26.13`, excluded from the 26.12 source snapshot. They do not constitute an integrated 26.13 editor or release. No `src`, release authorities, `dist` or qualification candidate was changed by this staged work.
 

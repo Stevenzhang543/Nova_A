@@ -1,6 +1,58 @@
-# Nova_A 26.38 – Vollständiges Handbuch
+# Nova_A 26.45 – Vollständiges Handbuch
 
-Engine: **26.38.0** · Project Format 2/schema 29.
+Engine: **26.45.0** · Project Format 2/schema 29.
+
+<!-- NOVA_V2645_RELEASES -->
+## 26.39–26.45 — Was sich seit 26.38 geändert hat
+
+Engine: **26.45.0** · Project Format 2/schema 29. Projekte ab 26.38 öffnen ohne Migration; nur der Engine-Stempel ändert sich. Vor dem Öffnen in einer neueren Engine eine Kopie des Projekts anlegen.
+
+### 26.45 — Physik, Prefabs, Eingabe, Debugging und Effekte
+
+- Formen: Collider können **Kapseln** sein (Rechteck mit runden Enden); dynamische **konkave Polygone** werden automatisch in konvexe Teile zerlegt.
+- Gelenke: Das **Radgelenk** sitzt auf jedem Rad und verbindet es mit dem Fahrgestell (Federung, Federweg, Motor: negative Drehzahl rollt nach rechts); das **Schweißgelenk** kann weich sein (lineare und Winkelfrequenz); das **Zielgelenk** zieht einen Körper zu einem Punkt — Skripte rufen `target_joint_move(x, y)` und `target_joint_release()` auf. Gelenke brechen oberhalb ihrer Kraft- oder Drehmomentgrenze.
+- Oberflächen und Bereiche: Ein Collider kann ein **Förderband** sein (`set_surface_speed(speed)` oder das Feld Oberflächengeschwindigkeit) und **Rollwiderstand** haben; **Auftriebsbereiche** lassen Körper nach dem Teil unter der Oberfläche schwimmen (Dichte, Strömung, Widerstand, Winkelwiderstand); **Punktgravitation** zieht mit Abfall zur Bereichsmitte.
+- Schnelle Körper mit Continuous durchdringen sich nicht mehr. Die Physikwelt lässt sich vollständig speichern und wiederherstellen; ein wiederhergestellter Schritt läuft exakt gleich weiter.
+- **Prefabs:** Auf Prefab anwenden aktualisiert die anderen Instanzen (mit ihren eigenen Überschreibungen), die Instanzen in nicht geöffneten Szenen und die **Varianten** des Prefabs (eine Variante behält ihre Änderungen; ihre Instanzen folgen). Überschreibungen benennen ein Feld einer Komponente.
+- **Eigene Tastenbelegung der Spieler:** Eine Umbelegungstaste in der Spiel-UI oder `input_rebind(action[, index])` wartet auf die nächste Taste, Maustaste oder Gamepad-Taste (Escape bricht ab) und sendet `input.rebound`; der Player speichert die Belegung je Spiel, `input_bindings_reset()` stellt die des Projekts wieder her. `input_prompt(action)` und `{input:Aktion}` in einem Text zeigen die Taste für das benutzte Gerät.
+- **Debugging:** Blöcke können Haltepunkte haben (Blockmenü → Hier anhalten); der angehaltene Block wird umrandet. Die Physikaufzeichnung speichert vollständige **Schlüsselbilder** (◆): Von einem Schlüsselbild fortsetzen stellt Physik, Skriptvariablen (auch verborgene), Timer, Tweens und Animationen wieder her, sodass das Spiel genau wie zuvor weiterläuft; andere Schritte setzen nur die Körper zurück.
+- **Effekte:** `camera_shake(amount)` (Trauma-Modell; Camera2D → Wackelweite, -winkel, -frequenz und Abklingen; Reduzierte Bewegung behält ein Viertel), `camera_zoom(zoom)`, `camera_follow(handle)`, `screen_flash(r, g, b, seconds)`. Partikel mit Kollision kollidieren über die Physikwelt mit jedem Collider und jeder Kachelkarte und gehen nicht durch dünne Wände; Sub-Emitter starten, wo Partikel enden.
+- Export: Ein Ordner, der schon andere Dateien enthält, bekommt das Spiel in einem Unterordner mit dem Spielnamen. Der Kompatibilitäts-Player ist eine eigene Seite (player-legacy.html) und wird mit Web-Builds exportiert.
+- Behoben: Nach Stopp zeigt Abspielen Böden und Plattformen auf schnellen Bildschirmen nicht mehr im Ursprung (0, 0).
+
+Ausprobieren: Im Plattformer-Starter einer Kiste einen Kapsel-Collider geben, unter die Wasserkacheln einen Auftriebsbereich legen und im Spielerskript in `on_collision_enter` `camera_shake(0.4)` aufrufen. Physikmonitor öffnen, spielen, pausieren, die Aufzeichnung zu einem ◆-Schlüsselbild zurückziehen und Von hier fortsetzen wählen: Die Szene spielt dieselbe Landung erneut ab.
+
+### 26.44 — Solver, Figuren, Animation und Level-Werkzeuge
+
+- Ein neuer Soft-Step-Kontaktlöser hält Stapel ruhig; Gelenke sind weiche Bedingungen mit Grenzen und Motoren; große Szenen nutzen einen dynamischen AABB-Baum.
+- Figuren werden aus Geometrie geschoben, fahren auf drehenden und skriptgesteuerten Plattformen mit und fallen durch Einwegplattformen (`character_drop_through()`); der Plattform-Controller hat Sprungpuffer und variable Sprunghöhe.
+- Animator: Übergänge aus Any State, Überblendungen aus Skripten und Blöcken, Zustandssignale. Tweens: `tween("x", 3.0, 0.5, "quad_out")` mit 31 Kurven, Schleifen und Yoyo.
+- Gelände-Autotiling (16- und 47-Kachel-Regeln) für alle Kachelwerkzeuge; Rhai-Haltepunkte mit lokalen Variablen und Schrittbetrieb; die erste Physikaufzeichnung (nur Posen).
+
+### 26.43 — Figurenkanten, Skripte und ein Player ohne Editor
+
+- Eine springende Figur „fliegt“ nicht mehr an Kistenkanten; kontinuierliche Kollision pro Körper; Kollisionsrückrufe können nach jedem Physikschritt laufen.
+- Skripte rufen einander auf (`call_on`, `call_global`, `call_group`, `after`), globale Skripte überdauern Szenenwechsel, Skripte spielen Klang, Musik und Video.
+- Exportierte Spiele starten in einem Player ohne Editorcode; Entwicklungs-Exporte zeigen Bildstatistik (F3) und Physikebene (F4). Web-Exporte füllen iPad- und Desktop-Browser.
+
+### 26.42 — Latenz, Licht und neue Starter
+
+- 2D-Licht zeichnet der WebGL2-Renderer; Vorlagen rechnen Physik mit 120 Hz; ein Festschritt-Timertakt lässt Timer bei jeder Bildrate im selben Schritt auslösen.
+- Neue Starter: Skyline Trilogy, Pendulum Post und Reflex Lab. Transparenz reduzieren macht Glasflächen deckend.
+
+### 26.41 — Schnellere Bilder und ein ruhigerer Editor
+
+- Eingabe-zu-Anzeige-Latenz und Bildtakt wurden gemessen und verkürzt; die Editoroberfläche wurde um die Ansicht vereinfacht.
+
+### 26.40 — Eine Titelleiste und viele Korrekturen
+
+- Eine 44-px-Titelleiste mit Menüs, Arbeitsbereichswahl, Spielsteuerung und Befehlsfeld; Zeigereingaben in exportierten Spielen funktionieren wieder; Ziehen mit dem Auswahlwerkzeug verschiebt Objekte; Schließen mit ungespeicherten Änderungen fragt nach.
+
+### 26.39 — Prüfung von Komponenten und Abläufen
+
+- Eine reine Prüfung aller Komponenten und Editorabläufe als Grundlage für 26.40–26.45; kein geändertes Verhalten oder Projektformat.
+
+<!-- NOVA_V2645_RELEASES_END -->
 
 <!-- NOVA_V2636_BRANDING -->
 ## 26.36 — Geliefertes Logo für helle und dunkle Oberflächen
@@ -187,7 +239,7 @@ Neu öffnet Name, Speicherort und alle vierzig Vorlagen. Abbrechen oder Escape s
 
 ### Dynamische Skripte und Neuladen
 
-Rhai unterstützt dynamische Werte, veränderbare Arrays und Maps, Closures und Funktionszeiger. Projektmodule verwenden literales use und einen gemeinsamen Namensraum. Native Import-Aliase und freie Auswertung sind gesperrt. Exportierte Konstanten unterstützen verschachtelte Arrays/Maps und null. Zuerst wird das betroffene Programmpaket geprüft, danach atomar ersetzt. Ein neuer ungültiger Auftrag verwirft den älteren wartenden Auftrag desselben Skripts. Bei Fehlern läuft das alte Programm weiter; kompatibler exportierter Zustand bleibt erhalten. Stop beendet die Rücknahmezuordnung der Sitzung. SCRIPTING_CONTRACT_26_23.md dokumentiert Grenzen und Berechtigungen.
+Rhai unterstützt dynamische Werte, veränderbare Arrays und Maps, Closures und Funktionszeiger. Projektmodule verwenden literales use und einen gemeinsamen Namensraum. Native Import-Aliase und freie Auswertung sind gesperrt. Exportierte Konstanten unterstützen verschachtelte Arrays/Maps und null. Zuerst wird das betroffene Programmpaket geprüft, danach atomar ersetzt. Ein neuer ungültiger Auftrag verwirft den älteren wartenden Auftrag desselben Skripts. Bei Fehlern läuft das alte Programm weiter; kompatibler exportierter Zustand bleibt erhalten. Stop beendet die Rücknahmezuordnung der Sitzung.
 
 ### Anzeige und Bedienung
 
@@ -237,7 +289,7 @@ Speichern, schließen und öffnen Sie das Projekt erneut. Exportieren Sie Web un
 
 ### Nachweise und Grenzen
 
-Abgeschlossene Prüfungen stehen in `IMPLEMENTATION_TRACKER_26_22.md`, nicht ausgeführte Fähigkeiten in `GAP_REGISTER_26_22.md`. Die Lebenszyklusmatrix enthält benannte Zuordnungen und ausdrückliche Nachweisgrenzen; eine Zuordnung ist keine vollständige Feldfreigabe. Entwicklungsberichte qualifizieren keine eingefrorene Veröffentlichung. Unabhängige Benutzer, assistive Technik, andere Betriebssysteme, Signierung, Geräte-Audio und Langzeittests bleiben gesonderte externe Prüfungen.
+Die Lebenszyklusmatrix enthält benannte Zuordnungen und ausdrückliche Nachweisgrenzen; eine Zuordnung ist keine vollständige Feldfreigabe. Entwicklungsberichte qualifizieren keine eingefrorene Veröffentlichung. Unabhängige Benutzer, assistive Technik, andere Betriebssysteme, Signierung, Geräte-Audio und Langzeittests bleiben gesonderte externe Prüfungen.
 
 Projekt speichern, Export, Wiedergabe und Einzelschritt werden bei ungespeicherten Asset-Änderungen in einem Studio angehalten. Speichern Sie das Asset in seinem Editor oder laden Sie es ausdrücklich neu, um den Entwurf zu verwerfen. Versuchen Sie den Vorgang danach erneut. Zahlenentwürfe werden zuerst geprüft. Die eigene Animationsvorschau kann weiterhin ungespeicherte Clips abspielen. Beim Trennen eines Skripts vom Graphen wird nur die tatsächliche Verknüpfungsmarkierung entfernt; Quelltext, Zeichenketten und andere Kommentare bleiben erhalten.
 
@@ -409,7 +461,7 @@ Simulation bietet Latenz, Jitter, Verlust, Duplikate, Umordnung und Seed. Prüfe
 
 Instanz-Logs zeigen vom Editor beobachtete Ereignisse; Inspector zeigt Prozessidentität und Status. Spielzustand und Netzwerkereignisse werden im laufenden Spieler geprüft. Das ist kein nativer Ferndebugger und keine vollständige Standardausgabe des Kindprozesses. Diagnoseexporte vor dem Teilen auf sensible Inhalte prüfen.
 
-Aktiviere vor dem Export ausdrücklich Berechtigung und automatischen Spielstart und teste die tatsächlichen Spieler zusammen. Lokale Browser-Sitzungen benötigen den gleichen unterstützten Ursprung/Speicherkontext. Bei direktem Windows-UDP verbindet sich jeder Client mit dem Host-Port und verwendet einen eigenen Bind-Port. Die separate Serverreferenz exportiert einen Windows-Spieler mit deaktiviertem Renderer und WebView. Sie ist kein fensterloser Rust-Server. Architektur und erforderliche Paritätsprüfungen stehen in NATIVE_SERVER_ARCHITECTURE_26_18.md.
+Aktiviere vor dem Export ausdrücklich Berechtigung und automatischen Spielstart und teste die tatsächlichen Spieler zusammen. Lokale Browser-Sitzungen benötigen den gleichen unterstützten Ursprung/Speicherkontext. Bei direktem Windows-UDP verbindet sich jeder Client mit dem Host-Port und verwendet einen eigenen Bind-Port. Die separate Serverreferenz exportiert einen Windows-Spieler mit deaktiviertem Renderer und WebView. Sie ist kein fensterloser Rust-Server.
 
 ### Grenzen und eigene Abnahme
 
@@ -427,7 +479,7 @@ Engine: **26.17.0** · Project Format 2/schema 29.
 
 Die X/Y-Anzeige speichert ihren Zeitgeber in der exportierten Eigenschaft readout_elapsed. Gewöhnliche Rhai-Variablen werden bei jedem Callback neu initialisiert; dauerhafter Zustand gehört in exportierte Eigenschaften.
 
-Verwenden Sie die separaten26.17-Referenzen für Platformer, Navigation und Physikrätsel. Behalten Sie eine Originalkopie. Generierte Projekte sind Ausgangspunkte; die Release-Evidenz enthält separat bearbeitete, gespeicherte Projekte und tatsächlich ausgeführte Player. Project Format2/Schema29 sowie Rhai-/Visual-Formate bleiben erhalten. PHYSICS_WORLD_FIELD_MATRIX_26_17.md ordnet jedes deklarierte Feld einschließlich Teilformen, Materialien, Effekten, Verbindungen und Profilen seinem Auswertungspfad zu.
+Verwenden Sie die separaten26.17-Referenzen für Platformer, Navigation und Physikrätsel. Behalten Sie eine Originalkopie. Generierte Projekte sind Ausgangspunkte; die Release-Evidenz enthält separat bearbeitete, gespeicherte Projekte und tatsächlich ausgeführte Player. Project Format2/Schema29 sowie Rhai-/Visual-Formate bleiben erhalten.
 
 ### Körper, Einheiten und Bewegungsbesitz
 
@@ -1142,7 +1194,7 @@ Prüfe12 vor der Änderung,18 danach und12 nach Rückgängig; drei Wechsel ohne 
 
 Die Projektion begrenzt Module auf64.000 UTF16-Zeichen,10.000 Knoten und128 Pins je Knoten. Lange Listen werden gruppiert; Überschreitungen werden abgelehnt und nicht abgeschnitten. Rhai unterscheidet Integer und Float: Für Float-Parameter ist beispielsweise0.0 nötig. Die API-Palette nennt tatsächlich registrierte Überladungen. Native import-Aliase/Namensräume, eval, await und blockierendes sleep stehen nicht bereit. Lokales use verbindet Abhängigkeiten; Timer und Tasks liefern unterstützte Verzögerungen. Lokale Closures/Funktionszeiger laufen, ihre Identitäten sind aber nicht als Projekteigenschaften speicherbar. Syntaxabdeckung ersetzt keinen Laufzeit-, Export- oder Benutzertest.
 
-Project Format2/Schema29 und Graph Format1 bleiben erhalten. Zusätzliche Sprachmetadaten kennzeichnen die neue Darstellung. Sichere Projekte vor dem Öffnen typisierter Graphen in alten Editoren. Bestehende Ablaufgraphen bleiben nutzbar und zeigen Quelltextbereiche an. Syntax, Signaturen und Testgrenzen stehen in VERSION_26_12_LANGUAGE.md, SCRIPT_SUPPORT_MATRIX_26_12.md und den getrennten Release-Nachweisen.
+Project Format2/Schema29 und Graph Format1 bleiben erhalten. Zusätzliche Sprachmetadaten kennzeichnen die neue Darstellung. Sichere Projekte vor dem Öffnen typisierter Graphen in alten Editoren. Bestehende Ablaufgraphen bleiben nutzbar und zeigen Quelltextbereiche an.
 <!-- NOVA_V2612_END -->
 
 ## 6.2.0 Verhaltensverträge
@@ -1326,7 +1378,7 @@ Die Szenen-Tabs über Design zeigen ungespeicherte, externe, geprüfte und Prefa
 
 Die Hierarchie virtualisiert 10.000 Objekte. Suche umfasst Name, ID, Tags und Komponenten; Typ- und eigene Tag-Filter, gespeicherte Suchen, Pins, Auswahl Zurück/Vorwärts, Breadcrumbs, Isolation, Sichtbarkeit, Sperre, Aktivierung, Bereichsauswahl, Umhängen und Sortieren bleiben verfügbar. Der Inspektor bietet gemischte Mehrfachwerte, Tags/Gruppen/Ebenen, Eigentum, Nur-Editor/Persistenz, sichere Rechenausdrücke, Pins/Änderungsfilter, Vorgaben und vollständige Komponentenwerkzeuge mit Abhängigkeits-/Konfliktprüfung.
 
-Prefabs unterstützen Erstellen, Instanziieren, Anwenden, Zurücksetzen, Eigenschafts-Reset, Vergleich, Entpacken, Varianten, Quellnavigation, Konflikte, Verschachtelung, Zyklusschutz und sicheren Auswahlersatz. Ansichts-Ausrichtung, Messung, Kamera-Rahmen, Lineale, Hilfslinien und sieben Snap-Ziele verwenden exakte Welteinheiten. Siehe [Schema](../docs/SCENE_PREFAB_SCHEMA_4_3.md), [Komponenten](../docs/COMPONENT_AUTHORING_4_3.md) und [Hierarchie/Inspektor](../docs/HIERARCHY_INSPECTOR_4_3.md).
+Prefabs unterstützen Erstellen, Instanziieren, Anwenden, Zurücksetzen, Eigenschafts-Reset, Vergleich, Entpacken, Varianten, Quellnavigation, Konflikte, Verschachtelung, Zyklusschutz und sicheren Auswahlersatz. Ansichts-Ausrichtung, Messung, Kamera-Rahmen, Lineale, Hilfslinien und sieben Snap-Ziele verwenden exakte Welteinheiten. Siehe Schema, Komponenten und Hierarchie/Inspektor.
 
 ## Nova_A 4.2 – Projektintegrität
 
@@ -1342,9 +1394,9 @@ Nunito Sans Variable, Noto Sans SC Variable und JetBrains Mono werden lokal mitg
 
 ## Nova_A 4.0 – Produktionsbasis
 
-Nova_A 4.0 ist die stabile Basis für Project Format 2, Schema 29. Vor dem Öffnen externer Projekte zeigt die Vorabprüfung Engine/Schema, Inhalte, Pakete und Migrationsschritte. Unterstützte 3.x-Projekte erhalten ein Pflicht-Backup und eine lokale Rollback-Kopie, werden im Speicher migriert, vollständig validiert und erst danach in die Sitzung übernommen. Neuere Schemas bleiben schreibgeschützt. Siehe [Migration](../docs/MIGRATION_4_0.md) und [archivierte Engines](../docs/ARCHIVED_ENGINE_GUIDANCE_4_0.md).
+Nova_A 4.0 ist die stabile Basis für Project Format 2, Schema 29. Vor dem Öffnen externer Projekte zeigt die Vorabprüfung Engine/Schema, Inhalte, Pakete und Migrationsschritte. Unterstützte 3.x-Projekte erhalten ein Pflicht-Backup und eine lokale Rollback-Kopie, werden im Speicher migriert, vollständig validiert und erst danach in die Sitzung übernommen. Neuere Schemas bleiben schreibgeschützt. Siehe Migration und archivierte Engines.
 
-Studio Status erklärt Stable-, Beta- und Development-Kanal, Offline-Problemliste, feste Verträge und datenschutzgeprüfte Diagnosen. Absturzpakete sind freiwillig und bleiben lokal. Experimentelles Networking ist weiterhin als optionales Paket/Referenz verfügbar, jedoch keine Stable-Startvorlage. Der Einstieg [Kleines Spiel erstellen und exportieren](../docs/CREATE_EXPORT_SMALL_GAME_4_0.md) führt durch Autoring, Test und Export.
+Studio Status erklärt Stable-, Beta- und Development-Kanal, Offline-Problemliste, feste Verträge und datenschutzgeprüfte Diagnosen. Absturzpakete sind freiwillig und bleiben lokal. Experimentelles Networking ist weiterhin als optionales Paket/Referenz verfügbar, jedoch keine Stable-Startvorlage. Der Einstieg Kleines Spiel erstellen und exportieren führt durch Autoring, Test und Export.
 
 ## Nova_A 3.8 – Weltdaten
 
@@ -1875,7 +1927,7 @@ Spuren unterstützen Animation, Audio, Kamera, Ereignis, Sichtbarkeit, Script Ca
 
 Im Wellenformeditor setzt ein Klick den Cursor, Pfeile verschieben 10 ms und Ziehen markiert einen Bereich. **Loop-Bereich** speichert eine benannte Schleife; Preview beginnt am Cursor. Busse behalten Effekte, Sends, Automation und Limits. Snapshots können umbenannt, im Master-Gain bearbeitet und mit gewählter Dauer überblendet werden. Ducking zeigt Aktivierung, Trigger-/Zielbus, Reduktion, Attack und Release. Diagnose meldet geschätzte momentane/integrierte LUFS, True Peak, Crest-Faktor, Clipping, Latenz, Underruns sowie Gerätewechsel/-wiederherstellung.
 
-Details: [5.6-Anleitung](../docs/ANIMATION_AUDIO_CINEMATICS_5_6.md).
+Details: 5.6-Anleitung.
 Öffne **Rendering → Visueller Materialgraph** und wähle ein Material. **Klassifikation: Unterstützt, umkehrbar, assetweit.** Wähle Sprite, UI oder Licht, füge Knoten hinzu, verbinde benannte Eingänge, bearbeite Farben/Werte, prüfe das Backend und speichere nach der Validierung. Genau ein Output und ein azyklischer Graph sind Pflicht. Canvas2D nennt Fallbacks; WebGL2 berechnet den vollständigen Graph. Ein Shaderfehler betrifft nur dieses Material.
 
 **Geschichtete 2D-Effekte** sind ein geordneter Stapel. **Klassifikation: Manuell, umkehrbar, assetweit.** Füge Färbung, Maske, Verlauf, Palette, Kontur, Auflösen oder Verzerrung hinzu; bearbeite Farbe/Textur/Stärke/Schwelle/Weichheit, Mischmodus, Deckkraft und Reihenfolge. Masken benötigen ein Bild-Asset.
@@ -1884,7 +1936,7 @@ Unter **Post-Processing** bearbeitest/duplizierst du Vorgaben und legst Kameravo
 
 Füge `ParticleEmitter2D` hinzu und öffne **Partikel**. **Klassifikation: Unterstützte Asset-Erstellung, Anwendung pro Objekt, Laufzeit.** Erzeuge ein Asset, ordne Spawn-, Form-, Geschwindigkeits-, Kraft-, Farb-, Größen-, Rotations-, Kollisions-, Ereignis-, Sub-Emitter-, Spur- und Renderer-Module, speichere und wende es ausdrücklich an. Bloßes Öffnen verändert kein Szenenobjekt. CPU-Simulation ist deterministisch; WebGL2 bündelt die Ausgabe, Canvas2D meldet CPU-Ausgabe korrekt.
 
-**Diagnose** zeigt echte Atlas-/Import-Miniaturen, Draw Calls, Batch-Unterbrechungen, Overdraw, Texturspeicher und Maßnahmen. **Klassifikation: Automatisch, nur Editor.** Details: `docs/MATERIALS_EFFECTS_5_5.md` und `docs/PARTICLES_POST_5_5.md`.
+**Diagnose** zeigt echte Atlas-/Import-Miniaturen, Draw Calls, Batch-Unterbrechungen, Overdraw, Texturspeicher und Maßnahmen.
 
 ## Nova_A 5.7 — Weltstudio
 
@@ -1892,7 +1944,7 @@ Füge `ParticleEmitter2D` hinzu und öffne **Partikel**. **Klassifikation: Unter
 
 Für KI: offizielles Paket aktivieren, BehaviorTree2D hinzufügen und ein v2-Asset erstellen. Die Vorlage nimmt `player`-Tags wahr, schreibt `target.count/uuid/distance` ins Blackboard und wählt den stabil höchsten Nutzwert. Play zeigt Knoten, Blackboard, Wahrnehmung und Bewertungen. V1 bleibt kompatibel; 10.000 Objekte und 2.048 fällige Ticks pro Frame sind harte Grenzen.
 
-WorldChunk2D kommt an einen Zellbesitzer; Inhalte werden untergeordnet. Lade-/Entlade-/Vorladedistanz, Abhängigkeiten, Cache, Szene, Speicher und Speicherschlüssel konfigurieren. Die vollständige Abhängigkeitsgruppe muss ins Budget passen. Deaktivierung erfasst Zustand, Transform und Geschwindigkeit; Aktivierung stellt sie wieder her. TileMap-Regeln/Brushes bleiben deterministisch, Szenen-/Prefab-Kacheln streamen zur Laufzeit, und der abbrechbare Hintergrund-Bake zeigt einen Artefakt-Hash. Details: `docs/WORLDS_NAVIGATION_AI_5_7.md`.
+WorldChunk2D kommt an einen Zellbesitzer; Inhalte werden untergeordnet. Lade-/Entlade-/Vorladedistanz, Abhängigkeiten, Cache, Szene, Speicher und Speicherschlüssel konfigurieren. Die vollständige Abhängigkeitsgruppe muss ins Budget passen. Deaktivierung erfasst Zustand, Transform und Geschwindigkeit; Aktivierung stellt sie wieder her. TileMap-Regeln/Brushes bleiben deterministisch, Szenen-/Prefab-Kacheln streamen zur Laufzeit, und der abbrechbare Hintergrund-Bake zeigt einen Artefakt-Hash.
 
 ## Nova_A 5.8 — Netzwerkstudio
 
@@ -1902,7 +1954,7 @@ Unter **Protokoll** gehören Transform-/Eingabe-Snapshots auf unzuverlässig seq
 
 Unter **Replikation** ein Objekt ausdrücklich hinzufügen, Server-/Besitzerautorität wählen und nur Transform, Rotation oder Geschwindigkeit aktivieren. Snapshot-Rate, Interpolation, Vorhersage und Abgleichschwelle steuern den Laufzeitpfad. Eingabe und Physik-Prüfsumme werden pro Fixed Step im Rollback-Fenster gespeichert; Diagnose zeigt Abweichung, Rollback und erneut abgespielte Eingaben.
 
-Unter **Simulation & Replay** deterministische Latenz, Jitter, Verlust, Duplikate, Reihenfolge und Seed einstellen. Verbunden aufnehmen und zwei Assets vergleichen, um den ersten abweichenden Tick zu finden. Ein Multiplayer-Speicherstand enthält nur ausdrücklich replizierten Zustand und wird per Prüfsumme validiert. **Diagnose** zeigt Pakete, Bytes, Bandbreite, Ablehnungen, Wiederholungen, spätes Beitreten und Korrekturen; Export bleibt lokal und bereinigt. Headless-Autorität erfordert Desktop, Server/Host, Native UDP, Paket und Berechtigung. Details: `docs/NETWORKING_REPLAY_5_8.md`.
+Unter **Simulation & Replay** deterministische Latenz, Jitter, Verlust, Duplikate, Reihenfolge und Seed einstellen. Verbunden aufnehmen und zwei Assets vergleichen, um den ersten abweichenden Tick zu finden. Ein Multiplayer-Speicherstand enthält nur ausdrücklich replizierten Zustand und wird per Prüfsumme validiert. **Diagnose** zeigt Pakete, Bytes, Bandbreite, Ablehnungen, Wiederholungen, spätes Beitreten und Korrekturen; Export bleibt lokal und bereinigt. Headless-Autorität erfordert Desktop, Server/Host, Native UDP, Paket und Berechtigung.
 
 ## Nova_A 5.9 — Ökosystem-Studio und Plattformauslieferung
 
@@ -1912,7 +1964,7 @@ Ein Plugin deklariert nur benötigte Rechte für Docks, Inspektoren, Importer, K
 
 Im **Paketlabor** Reverse-Domain-ID, SemVer, Herausgeber, Archiv-SHA-256, Lizenz sowie HTTPS-Dokumentation/Sicherheitsseite eintragen. Die kanonische Anfrage extern mit Ed25519 signieren; niemals einen privaten Schlüssel einfügen. Öffentlichen Schlüssel und Base64-Signatur prüfen und Zertifizierung starten. Unsichere Pfade, versteckte Programme, unbekannte Rechte, Archivbomben, mehr als 50.000 Dateien oder über 512 MB werden blockiert. Registry-Import/-Export bleibt offline und enthält nur Manifeste.
 
-**Exportvorlagen** zeigt Ziel, Architektur, Laufzeit und Nachweisgrenzen. Windows/Web sind lokal verfügbar; saubere Fremdmaschine und Signatur bleiben extern. Linux/macOS benötigen den passenden Host; Android bleibt bis zu allen SDK-/Vorlagen-/Signatur-/Geräte-/Installations-/Eingabe-/Audioprüfungen blockiert. In **Auslieferung** sind Cache-Schlüssel deterministisch, Delta-Builds an Patch-Manifeste gebunden und Remote-/Befehlsverbinder berechtigungspflichtig. Plan vorbereiten führt nichts aus und greift nicht auf das Netzwerk zu. Siehe `docs/EXTENSIONS_PLATFORM_DELIVERY_5_9.md`.
+**Exportvorlagen** zeigt Ziel, Architektur, Laufzeit und Nachweisgrenzen. Windows/Web sind lokal verfügbar; saubere Fremdmaschine und Signatur bleiben extern. Linux/macOS benötigen den passenden Host; Android bleibt bis zu allen SDK-/Vorlagen-/Signatur-/Geräte-/Installations-/Eingabe-/Audioprüfungen blockiert. In **Auslieferung** sind Cache-Schlüssel deterministisch, Delta-Builds an Patch-Manifeste gebunden und Remote-/Befehlsverbinder berechtigungspflichtig. Plan vorbereiten führt nichts aus und greift nicht auf das Netzwerk zu.
 
 <!-- NOVA_V6_TEACHING_START -->
 # Nova_A 26.10 aufgabenorientiertes Lehrhandbuch
@@ -19916,11 +19968,11 @@ Mit diesem Ablauf ein vollständiges Projekt lernen, migrieren, prüfen und ausl
 1. Verwalten → Lernzentrum → Plattformbereitschaft öffnen. Die gewünschte Funktion suchen und Bindung, Validierung, Rückgängig, Speicherung, Laufzeit/Export, Dokumentation und Tests prüfen. Kreis bedeutet nicht anwendbar; Strich bedeutet externe Evidenz.
 2. Mit einem geführten Projekt oder creator-v2610-mixed-game beginnen. Voraussetzungen, exakte Schritte, Ergebnis, Speichern/Laden, Rückgängig/Wiederherstellung, Play/Step, Standalone-Build und Barrierefreiheit der Reihe nach prüfen.
 3. Beim Öffnen eines 6.x-Projekts zuerst die Migrationsvorschau lesen. Quell-/Zielversion, semantischen Diff, Backup und deterministische Prüfsumme prüfen. Der 26.10-Siegel ändert nur die Obergrenze auf <27.0.0 und keine Schema-29-Spieldaten.
-4. Rhai oder Visual Graph bearbeiten, speichern, die synchronisierte Gegenseite und Paritätstests prüfen. Nicht unterstütztes Rhai bleibt verlustfrei im Code-Block. Vor Runtime-Aufrufen API-Browser oder docs/API_SDK_26_10.md verwenden.
+4. Rhai oder Visual Graph bearbeiten, speichern, die synchronisierte Gegenseite und Paritätstests prüfen. Nicht unterstütztes Rhai bleibt verlustfrei im Code-Block.
 5. Projektzustand, Vorlagen/Referenzen und Build-Validierung ausführen. Windows unter Windows und Web lokal bauen. Linux/macOS benötigen Matching Host, Android ist experimentell/toolchain-gebunden, iOS/Konsolen sind verschoben.
 6. Tastatur und Zeiger auf Englisch, Deutsch und Chinesisch bei 100–200 %, hohem Kontrast und reduzierter Bewegung prüfen. Speichern, neu öffnen, einen absichtlich falschen Wert beheben und elf Release-Dateien kontrollieren.
 
-**Rückgängig und Wiederherstellung:** Bei unerwarteter Vorschau abbrechen oder Backup wiederherstellen. Dokumentänderungen rückgängig machen, Recovery Browser nach unterbrochenem Speichern verwenden, fehlerhafte Pakete/Plugins deaktivieren und den letzten gültigen Build behalten. docs/TROUBLESHOOTING_26_10.md erklärt die Fehlerbehebung. Externe Nachweise bleiben offen.
+**Rückgängig und Wiederherstellung:** Bei unerwarteter Vorschau abbrechen oder Backup wiederherstellen. Dokumentänderungen rückgängig machen, Recovery Browser nach unterbrochenem Speichern verwenden, fehlerhafte Pakete/Plugins deaktivieren und den letzten gültigen Build behalten. Externe Nachweise bleiben offen.
 
 <!-- NOVA_V6_TEACHING_END -->
 

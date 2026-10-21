@@ -1224,6 +1224,22 @@ fn safe_game_name(value: &str) -> String {
 }
 
 // 为游戏导出选择默认输出目录。
+/// 26.45: a chosen folder that already holds other files (a project folder, Documents…) gets the build
+/// in a subfolder named after the game, so an export never scatters its files among unrelated ones.
+/// An empty folder, or one holding an earlier Nova_A build of a game (its nova-platform-config.json),
+/// is used as it is.
+fn export_root_in(selected: PathBuf, game_name: &str) -> PathBuf {
+    let earlier_build = selected.join("nova-platform-config.json").is_file();
+    let occupied = fs::read_dir(&selected)
+        .map(|mut entries| entries.next().is_some())
+        .unwrap_or(false);
+    if occupied && !earlier_build {
+        selected.join(game_name)
+    } else {
+        selected
+    }
+}
+
 fn default_output_root(game_name: &str) -> PathBuf {
     let home = std::env::var_os(if cfg!(windows) { "USERPROFILE" } else { "HOME" })
         .map(PathBuf::from)
@@ -2851,7 +2867,7 @@ fn export_game_core(request: ExportRequest) -> Result<ExportResult, String> {
         if !selected.is_absolute() {
             return Err("export output directory must be an absolute path".into());
         }
-        selected
+        export_root_in(selected, &game_name)
     };
     let pack = decode_base64_limited(
         &request.pack_base64,
@@ -3355,7 +3371,7 @@ fn export_game_core(request: ExportRequest) -> Result<ExportResult, String> {
         &mut changed_files,
     )?;
     if request.target == "web" && request.delivery.web_headers {
-        let headers = b"/*\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: strict-origin-when-cross-origin\n  Permissions-Policy: camera=(), microphone=(), geolocation=()\n\n/assets/*\n  Cache-Control: public, max-age=31536000, immutable\n\n/index.html\n  Cache-Control: no-cache\n/player.html\n  Cache-Control: no-cache\n";
+        let headers = b"/*\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: strict-origin-when-cross-origin\n  Permissions-Policy: camera=(), microphone=(), geolocation=()\n\n/assets/*\n  Cache-Control: public, max-age=31536000, immutable\n\n/index.html\n  Cache-Control: no-cache\n/player.html\n  Cache-Control: no-cache\n/player-legacy.html\n  Cache-Control: no-cache\n";
         tracked_write(
             &root,
             "_headers",
@@ -3852,6 +3868,28 @@ pub fn run() {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // 26.45: exports into a folder with other files go to a subfolder named after the game.
+    #[test]
+    fn exports_into_occupied_folders_use_a_game_subfolder() {
+        let base = std::env::temp_dir().join(format!("nova-export-root-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&base);
+        let empty = base.join("empty");
+        let occupied = base.join("occupied");
+        let earlier = base.join("earlier");
+        for folder in [&empty, &occupied, &earlier] {
+            fs::create_dir_all(folder).unwrap();
+        }
+        fs::write(occupied.join("Cargo.toml"), b"[package]").unwrap();
+        fs::write(earlier.join("nova-platform-config.json"), b"{}").unwrap();
+        fs::write(earlier.join("game.nova-pak"), b"x").unwrap();
+        assert_eq!(export_root_in(empty.clone(), "My Game"), empty);
+        assert_eq!(export_root_in(occupied.clone(), "My Game"), occupied.join("My Game"));
+        assert_eq!(export_root_in(earlier.clone(), "My Game"), earlier);
+        let missing = base.join("missing");
+        assert_eq!(export_root_in(missing.clone(), "My Game"), missing);
+        let _ = fs::remove_dir_all(&base);
+    }
 
     // 构造指定运行模式和网络权限的测试工程。
     fn network_project(runtime_mode: &str, granted_permissions: &[&str]) -> serde_json::Value {

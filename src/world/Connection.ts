@@ -66,6 +66,11 @@ export interface Connection {
   maxMotorForce: number
   breakForce: number
   breakTorque: number
+  /** 26.45: wheel suspension / weld softness (Hz, damping ratio); weld angular softness. */
+  springFrequency?: number
+  springDampingRatio?: number
+  angularFrequency?: number
+  angularDampingRatio?: number
 }
 
 export const ROPE_NODE_CAPACITY = 32
@@ -554,7 +559,7 @@ export const CONNECTION_STRIDE = ROPE_NODE_DATA_OFFSET + ROPE_NODE_CAPACITY * 4
   connection.name = typeof connection.name === 'string' && connection.name.trim()
     ? connection.name.trim().slice(0, 80)
     : `Connection ${connection.id}`
-  const componentTypes: Connection['componentType'][] = ['Rope2D', 'FixedJoint2D', 'WeldJoint2D', 'DistanceJoint2D', 'RopeJoint2D', 'RevoluteJoint2D', 'MotorJoint2D', 'PrismaticJoint2D', 'SpringJoint2D']
+  const componentTypes: Connection['componentType'][] = ['Rope2D', 'FixedJoint2D', 'WeldJoint2D', 'DistanceJoint2D', 'RopeJoint2D', 'RevoluteJoint2D', 'MotorJoint2D', 'PrismaticJoint2D', 'SpringJoint2D', 'WheelJoint2D']
   connection.componentType = connection.binding === true ? 'FixedJoint2D' : componentTypes.includes(connection.componentType) ? connection.componentType : 'Rope2D'
   connection.enabled = connection.enabled !== false
   connection.style = connection.style === 'curved' || connection.style === 'manual' ? connection.style : 'straight'
@@ -611,23 +616,28 @@ export const CONNECTION_STRIDE = ROPE_NODE_DATA_OFFSET + ROPE_NODE_CAPACITY * 4
     if (!entity.enabled) continue
     for (const component of entity.componentMap.values()) {
       if (!(component instanceof Joint2D) || !component.enabled || component.removed || !component.targetEntityUuid) continue
-      const target = entities.find(/* 比较 candidate.uuid 与 component.targetEntityUuid，返回严格相等的判断结果。 */ candidate => candidate.uuid === component.targetEntityUuid)
-      if (!target || target === entity || !target.enabled) continue
-      const transformA = worldTransform(entity, entities)
+      const connected = entities.find(/* 比较 candidate.uuid 与 component.targetEntityUuid，返回严格相等的判断结果。 */ candidate => candidate.uuid === component.targetEntityUuid)
+      if (!connected || connected === entity || !connected.enabled) continue
+      // 26.45: a Wheel joint lives on the wheel and connects it to the chassis (its target), so a car
+      // can have one per wheel; the solver's first body is the chassis, whose frame holds the axis.
+      const wheel = component.kind === 'WheelJoint2D'
+      const owner = wheel ? connected : entity, target = wheel ? entity : connected
+      const ownerAnchor = wheel ? component.connectedAnchor : component.anchor, targetAnchor = wheel ? component.anchor : component.connectedAnchor
+      const transformA = worldTransform(owner, entities)
       const transformB = worldTransform(target, entities)
       if (!component.initialized) {
         component.referenceOffset = rotate({ x: transformB.position.x - transformA.position.x, y: transformB.position.y - transformA.position.y }, -transformA.rotation)
         component.referenceAngle = normalizeAngle(transformB.rotation - transformA.rotation)
         component.initialized = true
       }
-      const connection = createConnection(-Math.max(1, entity.id), entities, [entity.id, target.id], ['center', 'center'])
+      const connection = createConnection(-Math.max(1, entity.id), entities, [owner.id, target.id], ['center', 'center'])
       connection.uuid = component.uuid
       connection.name = component.kind
       connection.componentType = component.kind
       connection.enabled = component.enabled
       connection.anchors = [
-        { entityId: entity.id, mode: 'local', localPoint: { ...component.anchor }, index: 0, sideT: .5 },
-        { entityId: target.id, mode: 'local', localPoint: { ...component.connectedAnchor }, index: 0, sideT: .5 }
+        { entityId: owner.id, mode: 'local', localPoint: { ...ownerAnchor }, index: 0, sideT: .5 },
+        { entityId: target.id, mode: 'local', localPoint: { ...targetAnchor }, index: 0, sideT: .5 }
       ]
       connection.restLengths = [component.kind === 'RevoluteJoint2D' || component.kind === 'MotorJoint2D' ? 1e-6 : component.distance]
       connection.stretchable = component.kind === 'SpringJoint2D'
@@ -648,6 +658,10 @@ export const CONNECTION_STRIDE = ROPE_NODE_DATA_OFFSET + ROPE_NODE_CAPACITY * 4
       connection.maxMotorForce = component.maxMotorForce
       connection.breakForce = component.breakForce
       connection.breakTorque = component.breakTorque
+      connection.springFrequency = component.frequency
+      connection.springDampingRatio = component.dampingRatio
+      connection.angularFrequency = component.angularFrequency
+      connection.angularDampingRatio = component.angularDampingRatio
       result.push(connection)
     }
   }

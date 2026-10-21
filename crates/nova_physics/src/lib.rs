@@ -50,13 +50,15 @@ mod engine {
 
     #[cfg(test)]
     include!("tests.rs");
+    #[cfg(test)]
+    include!("tests_2645.rs");
 }
 
 pub use engine::{
     step_physics, step_physics_with_connections, CharacterMoveResult, PhysicsContact, PhysicsEvent,
-    PhysicsFilteredHit2D, PhysicsQueryHit, PhysicsQueryKind2D, PhysicsQueryRequest2D, PhysicsWorld,
-    COLLIDER_CHILD_STRIDE, CONNECTION_STRIDE, LEGACY_STRIDE, ROPE_NODE_CAPACITY,
-    ROPE_NODE_DATA_OFFSET, STRIDE, V1_2_STRIDE, V3_3_STRIDE,
+    PhysicsFilteredHit2D, PhysicsQueryHit, PhysicsQueryKind2D, PhysicsQueryRequest2D,
+    PhysicsSnapshot, PhysicsWorld, COLLIDER_CHILD_STRIDE, CONNECTION_STRIDE, LEGACY_STRIDE,
+    ROPE_NODE_CAPACITY, ROPE_NODE_DATA_OFFSET, STRIDE, V1_2_STRIDE, V3_3_STRIDE,
 };
 
 pub mod body {

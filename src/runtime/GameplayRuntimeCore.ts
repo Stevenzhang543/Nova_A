@@ -9,7 +9,7 @@ import { hierarchyOrder, worldTransform, setWorldTransform, subtreeEntities } fr
 import { SignalQueue, type SignalQueueStats } from './signalQueue'
 import { InputConsumptionLedger, type InputConsumptionStats } from './inputConsumption'
 import type { RuntimePhysicsEvent } from '../world/World'
-import { INPUT_EDGE_CAPACITY, InputManager, type InputActionEdge, type InputSnapshot, type InputReceiptObservation, type InputSampleObservation, type InputObservationResetReason } from './input'
+import { INPUT_EDGE_CAPACITY, InputManager, inputPromptForAction, rebindInputAction, type InputBinding, type InputActionEdge, type InputSnapshot, type InputReceiptObservation, type InputSampleObservation, type InputObservationResetReason } from './input'
 import { RuntimeTime, type TimerExpiration } from './time'
 import { executeScriptTestSuite } from './scriptTestExecution'
 import { WasmScriptRuntime } from '../../nova_core/pkg/nova_core.js'
@@ -28,7 +28,8 @@ import { ScriptDebugOwner, debugSourceRevision, evaluateDebugExpression, type De
 import { scriptProjectSettings } from './scriptSettings'
 import { WorldGameplayOwner } from './worldGameplayOwner'
 import { GraphDebugOwner, type GraphTraceCommand } from './graphDebugOwner'
-import type { CharacterBody2D } from '../world/components'
+import type { Camera2D, CharacterBody2D } from '../world/components'
+import { TargetJoint2D } from '../world/components'
 import { ReplayOwner } from './replayOwner'
 import { ProductionNetworkOwner } from './productionNetworkOwner'
 import { recordScriptFunction, shouldRecordScriptFunction } from './profiler'
@@ -50,7 +51,31 @@ import { resolveProjectScriptBundle, scriptBundleLines, type ScriptBundleLines }
 import { createGlobalScriptHosts, removeGlobalScriptHosts, type GlobalScriptHost } from './globalScripts'
 import { RuntimeVideoOwner } from './videoOwner'
 import { TweenOwner } from './tweens'
-import { PhysicsRecorder, type PhysicsRecorderStatus } from './physicsRecorder'
+import { blockBreakpointLines } from '../visual/blockScript'
+import { PhysicsRecorder, type PhysicsRecorderKeyframes, type PhysicsRecorderStatus } from './physicsRecorder'
+import { captureComponentFields, cloneRuntimeState, restoreComponentFields, type ComponentFieldsSnapshot } from './rewindState'
+import type { RuntimeTimeRewind } from './time'
+
+/** 26.45: where run-time rebinding goes (see GameplayRuntime.setInputRemapSink). */
+export interface GameplayInputRemapSink {
+  remap(action: string, index: number, binding: Pick<InputBinding, 'device' | 'code'>): boolean
+  reset(): void
+}
+
+/** 26.45: the game state of one rewind keyframe (see rewindKeyframeStore). */
+interface GameplayRewindState {
+  layout: string
+  step: number
+  components: ComponentFieldsSnapshot[]
+  behaviors: Map<string, Record<string, ScriptPropertyValue>>
+  initialized: Set<string>
+  time: RuntimeTimeRewind
+  media: MediaClock
+  tweens: unknown
+  animation: unknown
+  timeline: unknown
+  bytes: number
+}
 
 type LifecycleFunction = 'awake' | 'start' | 'fixed_update' | 'update' | 'late_update' | 'on_destroy' | 'on_timer' | 'on_task' | 'on_signal'
 
@@ -109,6 +134,15 @@ type ScriptCommand =
   | { type: 'animatorPlay'; state: string }
   | { type: 'animatorCrossfade'; state: string; seconds: number }
   | { type: 'characterDropThrough'; seconds: number }
+  | { type: 'targetJointMove'; x: number; y: number }
+  | { type: 'targetJointRelease' }
+  | { type: 'setSurfaceSpeed'; speed: number }
+  | { type: 'inputRebind'; action: string; index: number }
+  | { type: 'inputBindingsReset' }
+  | { type: 'cameraShake'; amount: number }
+  | { type: 'cameraZoom'; zoom: number }
+  | { type: 'cameraFollow'; target: string; generation: number }
+  | { type: 'screenFlash'; r: number; g: number; b: number; seconds: number }
   | { type: 'tween'; target: string; generation: number; property: string; to: number; seconds: number; easing: string; delay: number; loops: number; yoyo: boolean; relative: boolean; signal: string }
   | { type: 'tweenStop'; target: string; generation: number; property: string }
   | { type: 'audioPlay' }
@@ -423,6 +457,13 @@ export class GameplayRuntime {
   }
 
   readonly input = new InputManager()
+  // 26.45: a script asked to rebind an action; the next key or button pressed completes it.
+  private pendingRebind: { action: string; index: number; entityUuid: string } | null = null
+  private inputRemapSink: GameplayInputRemapSink | null = null
+  private inputPrompts: Record<string, string> = {}
+  // 26.45: the screen flash in progress (screen_flash), faded out on game time.
+  private screenFlash: { r: number; g: number; b: number; seconds: number; remaining: number } | null = null
+  private inputPromptsKey = ''
   readonly time = new RuntimeTime()
   private readonly mediaClock=new MediaClock()
   readonly diagnostics: RuntimeDiagnostics = { scripts: 0, scriptErrors: 0, lifecycleCalls: 0, activeTimers: 0, sceneSwitches: 0, timings: { inputMs: 0, physicsMs: 0, scriptsMs: 0, animationMs: 0, audioMs: 0, assetsMs: 0 } }
@@ -442,6 +483,8 @@ export class GameplayRuntime {
   private readonly tweens = new TweenOwner()
   // 26.44: ring buffer of body states per fixed step for scrubbing and continuing while paused.
   private readonly physicsRecorder = new PhysicsRecorder()
+  // 26.45: the game state of the recording's keyframes, by ring slot (see rewindKeyframeStore).
+  private readonly rewindKeyframes = new Map<number, GameplayRewindState>()
   private pendingDynamicCommands: Array<{ sourceUuid: string; sourceGeneration: number; allowRetiredSource: boolean; command: Exclude<ScriptCommand, GraphTraceCommand> }> = []
   private callbackWorld: Entity[] | null = null
   private authoredEntities = new Map<string, { origin: 'scene' | 'runtime-spawned'; data: Record<string, unknown> }>()
@@ -638,6 +681,7 @@ export class GameplayRuntime {
     this.authoredEntities.clear(); this.compiledExports.clear()
     for (const entity of this.worldHost.state.world.entities) this.captureAuthoredEntity(entity, 'scene')
     this.physicsRecorder.reset()
+    this.pendingRebind = null; this.input.cancelBindingCapture(); this.inputPromptsKey = ''
     this.active = true
     const sessionGeneration = ++this.sessionGeneration
     this.animationTimeline.markMembershipDirty()
@@ -777,6 +821,8 @@ export class GameplayRuntime {
     const inputStarted = performance.now()
     this.lastInputSampleAt = inputStarted
     const frameInput = this.decorateViewportInput(this.input.sample(this.worldHost.state.inputMap, viewport), viewport)
+    if (this.pendingRebind) this.finishInputRebind()
+    this.refreshInputPrompts()
     const observedSample = observedOwner ? this.input.lastConsumedInputObservation : null
     let observedFixedCount = 0
     const observedReplay = observedOwner ? this.replay.state.mode === 'playback' : false
@@ -857,6 +903,7 @@ export class GameplayRuntime {
     this.runPhase('update')
     this.flushEntityCommands()
     this.runPhase('late_update')
+    this.updateScreenEffects(this.time.value.delta)
     scriptsMs += performance.now() - scriptsStarted
     const animationStarted = performance.now()
     this.particles.update(this.time.value.delta, true)
@@ -974,6 +1021,7 @@ export class GameplayRuntime {
     this.animationTimeline.animation.onStateChange = null
     this.tweens.reset()
     this.physicsRecorder.reset()
+    this.pendingRebind = null; this.input.cancelBindingCapture()
     this.animationTimeline.animation.onCommand = null
     this.animationTimeline.timeline.reset()
     this.animationTimeline.timeline.onEvent = null
@@ -1176,10 +1224,124 @@ export class GameplayRuntime {
     return bound
   }
 
-  /** 26.44: physics recording for the debugger (see PhysicsRecorder). */
-  setPhysicsRecording(enabled: boolean): void { this.physicsRecorder.enabled = enabled; if (!enabled) { if (this.physicsRecorder.scrubbing) this.physicsRecorder.endScrub(this.worldHost.state.world.entities); this.physicsRecorder.reset() } }
+  /** 26.45: the camera a script's camera commands act on: its own, else the first active camera. */
+  private scriptCamera(entity: Entity): Camera2D | null {
+    const own = entity.getComponent<Camera2D>('Camera2D')
+    if (own?.enabled && !own.removed) return own
+    const cameras = this.worldHost.state.world.entities.flatMap(candidate => { const camera = candidate.getComponent<Camera2D>('Camera2D'); return candidate.enabled && camera?.enabled && !camera.removed && camera.active ? [{ entity: candidate, camera }] : [] })
+    cameras.sort((first, second) => first.camera.priority - second.camera.priority || first.camera.stackOrder - second.camera.stackOrder || first.entity.id - second.entity.id)
+    return cameras[0]?.camera ?? null
+  }
+
+  /** 26.45: camera trauma recovers and the screen flash fades on game time. */
+  private updateScreenEffects(delta: number): void {
+    const step = Math.max(0, finiteNumber(delta, 0))
+    if (step <= 0) return
+    for (const entity of this.worldHost.state.world.entities) {
+      const camera = entity.getComponent<Camera2D>('Camera2D')
+      if (camera && camera.trauma > 0) camera.trauma = Math.max(0, camera.trauma - Math.max(0, finiteNumber(camera.shake?.recovery, 1.5)) * step)
+    }
+    if (this.screenFlash) { this.screenFlash.remaining -= step; if (this.screenFlash.remaining <= 0) this.screenFlash = null }
+  }
+
+  /** 26.45: the flash to draw over the game now (renderScreenFlash), or null. */
+  screenFlashOverlay(): { r: number; g: number; b: number; alpha: number } | null {
+    const flash = this.screenFlash
+    return flash ? { r: flash.r, g: flash.g, b: flash.b, alpha: Math.max(0, flash.remaining / flash.seconds) * .85 } : null
+  }
+
+  /** 26.45: where run-time rebinding goes. The Player stores the player's bindings; without a sink
+   * (the editor) the live input map is changed for this session. */
+  setInputRemapSink(sink: GameplayInputRemapSink | null): void { this.inputRemapSink = sink }
+
+  /** 26.45: completes a script's `input_rebind` once a key or button was pressed (Escape cancels). */
+  private finishInputRebind(): void {
+    const pending = this.pendingRebind, captured = this.input.takeBindingCapture()
+    if (!pending || !captured) return
+    this.pendingRebind = null
+    if (captured === 'cancelled') { this.emitSignal('input.rebind_cancelled', { action: pending.action, index: pending.index }, pending.entityUuid, 'input'); return }
+    const changed = this.inputRemapSink ? this.inputRemapSink.remap(pending.action, pending.index, captured) : rebindInputAction(this.worldHost.state.inputMap, pending.action, pending.index, captured)
+    this.inputPromptsKey = ''
+    this.refreshInputPrompts()
+    if (!changed) { this.emitSignal('input.rebind_cancelled', { action: pending.action, index: pending.index }, pending.entityUuid, 'input'); return }
+    this.emitSignal('input.rebound', { action: pending.action, index: pending.index, device: captured.device, code: captured.code, prompt: this.inputPrompts[pending.action] ?? '' }, pending.entityUuid, 'input')
+  }
+
+  /** 26.45: the prompt symbol of every action for the device in use (scripts read `input_prompt`). */
+  private refreshInputPrompts(): void {
+    const actions = this.worldHost.state.inputMap
+    const first = actions.length ? inputPromptForAction(actions[0].name, actions) : null
+    const key = `${actions.length}:${first?.modality ?? ''}:${actions.map(action => action.bindings.map(binding => `${binding.device}/${binding.code}`).join(',')).join(';')}`
+    if (key === this.inputPromptsKey) return
+    this.inputPromptsKey = key
+    this.inputPrompts = Object.fromEntries(actions.slice(0, 256).map(action => [action.name, inputPromptForAction(action.name, actions).symbol]))
+  }
+
+  /** 26.44: physics recording for the debugger (see PhysicsRecorder). 26.45: with complete keyframes. */
+  setPhysicsRecording(enabled: boolean): void {
+    this.physicsRecorder.keyframes ??= this.rewindKeyframeStore()
+    this.physicsRecorder.enabled = enabled
+    if (!enabled) { if (this.physicsRecorder.scrubbing) this.physicsRecorder.endScrub(this.worldHost.state.world.entities); this.physicsRecorder.reset() }
+  }
+  /** 26.45: how the last continue from the recording went (exact keyframe or poses only). */
+  physicsRecordingLastContinue(): { exact: boolean; step: number } | null { return this.physicsRecorder.lastContinue }
+  /** 26.45: the nearest complete keyframe at or before a recorded frame (-1: none). */
+  physicsRecordingKeyframe(index: number): number { return this.physicsRecorder.keyframeAtOrBefore(index) }
+
+  /** 26.45: complete keyframes for the physics recording: the solver snapshot and the script
+   * instances' scopes (both kept in WASM by slot) plus the game state kept here: script variables,
+   * timers, tweens, animator and timeline playheads and the step counter. */
+  private rewindKeyframeStore(): PhysicsRecorderKeyframes {
+    type InstanceSnapshots = { save_instances?(slot: number): number; restore_instances?(slot: number): number; drop_instances?(slot: number): boolean; clear_instance_snapshots?(): void }
+    const scripts = () => this.scriptRuntime as unknown as InstanceSnapshots | null
+    return {
+      save: slot => {
+        const world = this.worldHost.state.world
+        const bytes = world.saveRuntimeSnapshot(slot)
+        if (bytes <= 0) return 0
+        scripts()?.save_instances?.(slot)
+        const state = this.captureRewindState(world.runtimeLayoutKey())
+        this.rewindKeyframes.set(slot, state)
+        return bytes + state.bytes
+      },
+      restore: slot => {
+        const world = this.worldHost.state.world, state = this.rewindKeyframes.get(slot)
+        // Bodies or joints added or removed since: the snapshot no longer fits the scene.
+        if (!state || state.layout !== world.runtimeLayoutKey() || !world.restoreRuntimeSnapshot(slot)) return false
+        const instances = scripts()?.restore_instances?.(slot) ?? -1
+        if (instances < 0) this.worldHost.log('Rewind: script variables kept their current values (the scripts were reloaded since)', 'Runtime', 'warning')
+        this.restoreRewindState(state)
+        return true
+      },
+      drop: slot => { this.worldHost.state.world.dropRuntimeSnapshot(slot); scripts()?.drop_instances?.(slot); this.rewindKeyframes.delete(slot) },
+      clear: () => { this.worldHost.state.world.clearRuntimeSnapshots(); scripts()?.clear_instance_snapshots?.(); this.rewindKeyframes.clear() }
+    }
+  }
+
+  private captureRewindState(layout: string): GameplayRewindState {
+    const components = captureComponentFields(this.worldHost.state.world.entities)
+    const animation = this.animationTimeline.animation.captureRewind(), timeline = this.animationTimeline.timeline.captureRewind()
+    return {
+      layout, step: this.fixedStepSequence, components,
+      behaviors: cloneRuntimeState(this.behaviorProperties), initialized: new Set(this.initializedScriptInstances),
+      time: this.time.captureRewind(), media: cloneRuntimeState(this.mediaClock), tweens: this.tweens.captureRewind(), animation, timeline,
+      bytes: 4096 + components.length * 384 + this.behaviorProperties.size * 256
+    }
+  }
+
+  private restoreRewindState(state: GameplayRewindState): void {
+    restoreComponentFields(this.worldHost.state.world.entities, state.components)
+    this.behaviorProperties = cloneRuntimeState(state.behaviors)
+    this.initializedScriptInstances = new Set(state.initialized)
+    this.time.restoreRewind(state.time)
+    Object.assign(this.mediaClock, cloneRuntimeState(state.media))
+    this.tweens.restoreRewind(state.tweens)
+    this.animationTimeline.animation.restoreRewind(state.animation)
+    this.animationTimeline.timeline.restoreRewind(state.timeline)
+    this.fixedStepSequence = state.step
+  }
   physicsRecordingStatus(): PhysicsRecorderStatus { return this.physicsRecorder.status() }
-  physicsRecordingFrame(index: number): { step: number; time: number; count: number } | null { return this.physicsRecorder.frameInfo(index) }
+  physicsRecordingFrame(index: number): { step: number; time: number; count: number; keyframe: boolean } | null { return this.physicsRecorder.frameInfo(index) }
   /** Shows the bodies at a recorded frame; only while paused. */
   scrubPhysics(index: number): boolean { return this.worldHost.state.playMode === 'paused' && this.physicsRecorder.scrubTo(index, this.worldHost.state.world.entities) }
   endPhysicsScrub(): void { this.physicsRecorder.endScrub(this.worldHost.state.world.entities) }
@@ -1187,7 +1349,11 @@ export class GameplayRuntime {
   continuePhysicsFromScrub(): number {
     const world = this.worldHost.state.world
     const rewound = this.physicsRecorder.continueFromScrub({ entities: world.entities, teleport: (entity, position, angle) => world.teleport(entity, position, angle) })
-    if (rewound) { this.invalidateScriptWorld(); this.worldHost.log(`Physics rewound ${rewound} bodies to the recorded step`, 'Runtime', 'info') }
+    if (rewound) {
+      this.invalidateScriptWorld()
+      const exact = this.physicsRecorder.lastContinue?.exact
+      this.worldHost.log(exact ? `Rewound to recorded step ${this.physicsRecorder.lastContinue?.step}: physics, script variables, timers and animations` : `Physics rewound ${rewound} bodies to the recorded step (poses only)`, 'Runtime', 'info')
+    }
     return rewound
   }
 
@@ -1550,7 +1716,7 @@ export class GameplayRuntime {
       components: entity.components.map(/* 返回 value.kind 的当前值。 */ value => value.kind),
       time: { ...this.time.value },
       randomSeed: Math.floor(this.replay.deterministicRandom() * 0x1_0000_0000),
-      input: this.inputSnapshot,
+      input: { ...this.inputSnapshot, prompts: this.inputPrompts },
       contact,
       event,
       properties: primaryBehavior ? component.properties : (this.behaviorProperties.get(behaviorKey) ?? {}),
@@ -1587,6 +1753,8 @@ export class GameplayRuntime {
       const debugSource = this.compiledDocuments.get(asset.uuid) ?? this.scriptServices.readSource(asset.uuid) ?? source
       const legacy = (asset.script?.breakpoints ?? []).map((line, index): ScriptBreakpoint => ({ id: `line-${line}-${index}`, line, functionName: '', condition: '', hitCondition: 0, logMessage: '', enabled: true, hitCount: 0 }))
       const details = (asset.script?.breakpointDetails?.length ? asset.script.breakpointDetails : legacy).filter(point => point.enabled)
+      // 26.45: breakpoints on blocks of a Blocks script stop at the line the block compiles to.
+      for (const point of blockBreakpointLines(debugSource)) details.push({ id: `block-${point.blockId}`, line: point.line, functionName: '', condition: '', hitCondition: 0, logMessage: '', enabled: true, hitCount: 0 })
       if (details.length || debugResume) {
         const { language, rich } = this.debugAnalysis(debugSource)
         // A function breakpoint stops at the first statement of that function; a line breakpoint at its line.
@@ -1645,7 +1813,8 @@ export class GameplayRuntime {
           const point = at.root ? debugPlan.details.find(candidate => debugPlan!.breakLine(candidate) === at.line) : undefined
           if (point && probe.mode !== 'into') {
             const index = debugPlan.details.indexOf(point)
-            const allDetails = asset.script?.breakpointDetails?.length ? asset.script.breakpointDetails : null
+            // Block breakpoints (26.45) live in the Blocks document, not in the asset's breakpoint list.
+            const allDetails = !point.id.startsWith('block-') && asset.script?.breakpointDetails?.length ? asset.script.breakpointDetails : null
             const hitCount = this.recordScriptDebugHit(asset.uuid, debugPlan.document, allDetails ? allDetails.indexOf(point) : index, point, !!allDetails)
             let stop = hitCount !== null
             const scope = { ...context, ...locals }
@@ -1754,6 +1923,34 @@ export class GameplayRuntime {
       this.animationTimeline.animation.crossfade(entity, command.state, finite(command.seconds))
     } else if (command.type === 'characterDropThrough') {
       this.worldHost.state.world.dropThroughOneWay(entity, finite(command.seconds))
+    } else if (command.type === 'targetJointMove') {
+      // 26.45: a script-driven target joint; the first move adds one (starting at the new point).
+      let target = entity.getComponent<TargetJoint2D>('TargetJoint2D')
+      if (!target) { const created = new TargetJoint2D(); created.startAtBody = false; target = entity.addComponent(created) }
+      target.enabled = true
+      target.target = { x: finite(command.x), y: finite(command.y) }
+    } else if (command.type === 'targetJointRelease') {
+      const target = entity.getComponent<TargetJoint2D>('TargetJoint2D'); if (target) target.enabled = false
+    } else if (command.type === 'inputRebind') {
+      this.pendingRebind = { action: String(command.action ?? '').trim().slice(0, 120), index: Math.max(0, Math.min(31, Math.round(finite(command.index)))), entityUuid: entity.uuid }
+      this.input.beginBindingCapture()
+    } else if (command.type === 'inputBindingsReset') {
+      if (this.inputRemapSink) this.inputRemapSink.reset()
+      else this.worldHost.log('input_bindings_reset: the editor keeps the project bindings (the Player resets the player\'s own)', 'Script', 'info', entity.uuid)
+    } else if (command.type === 'cameraShake' || command.type === 'cameraZoom' || command.type === 'cameraFollow') {
+      const camera = this.scriptCamera(entity)
+      if (!camera) { this.worldHost.log(`${command.type === 'cameraShake' ? 'camera_shake' : command.type === 'cameraZoom' ? 'camera_zoom' : 'camera_follow'}: there is no active camera`, 'Script', 'warning', entity.uuid); return }
+      if (command.type === 'cameraShake') {
+        // Reduced motion (accessibility) keeps a quarter of the shake.
+        const scale = this.presentation.state.accessibility.reducedMotion ? .25 : 1
+        camera.trauma = Math.min(1, Math.max(0, finite(camera.trauma ?? 0) + Math.max(0, finite(command.amount)) * scale))
+      } else if (command.type === 'cameraZoom') camera.zoom = Math.min(100, Math.max(.01, finite(command.zoom) || 1))
+      else camera.followTargetUuid = command.target && this.worldHost.state.world.entities.some(candidate => candidate.uuid === command.target) ? command.target : null
+    } else if (command.type === 'screenFlash') {
+      const seconds = Math.min(10, Math.max(0, finite(command.seconds)))
+      if (seconds > 0 && !this.presentation.state.accessibility.reducedMotion) this.screenFlash = { r: finite(command.r), g: finite(command.g), b: finite(command.b), seconds, remaining: seconds }
+    } else if (command.type === 'setSurfaceSpeed') {
+      const collider = entity.getCollider(); if (collider) collider.surfaceSpeed = finite(command.speed)
     } else if ((command.type === 'tween' || command.type === 'tweenStop') && command.target) {
       this.pendingDynamicCommands.push({ ...this.commandSource(entity), command })
     } else if (command.type === 'tween') {
@@ -2037,6 +2234,17 @@ export class GameplayRuntime {
   /** 结构说明（自动提取）：dispatchPhysicsEvents；输入 events；直接调用 processGameplayContacts、this.worldHost.state.world.entities.find、worldTransform、runEntityFunction、runEventSheetHandlers 等；包含循环处理。 */ private dispatchPhysicsEvents(events: RuntimePhysicsEvent[]): void {
     this.invalidateScriptWorld()
     this.gameplayComponents.processGameplayContacts(events, this.worldHost.state.world.entities, /* 调用 this.emitSignal(name, payload, target, source) 并返回调用结果。 */ (name, payload, target, source) => this.emitSignal(name, payload, target, source), /* 调用 this.queueEntityRemoval(target, despawn) 并返回调用结果。 */ (target, despawn) => this.queueEntityRemoval(target, despawn), value => this.gameFlow.addRuntimeScore(value))
+    // 26.45: a joint that broke tells the objects it joined (signal `joint.broken`).
+    for (const event of events) {
+      if (event.type !== 'jointBroken' || !event.connectionUuid) continue
+      const entities = this.worldHost.state.world.entities
+      const owner = entities.find(entity => [...entity.componentMap.values()].some(component => component.uuid === event.connectionUuid))
+      const component = owner ? [...owner.componentMap.values()].find(candidate => candidate.uuid === event.connectionUuid) as unknown as { kind: string; targetEntityUuid?: string | null } | undefined : undefined
+      const connection = owner ? null : this.worldHost.state.world.connections.find(candidate => candidate.uuid === event.connectionUuid)
+      const joined = owner ? [owner.uuid, component?.targetEntityUuid ?? ''] : (connection?.anchors ?? []).map(anchor => entities.find(entity => entity.id === anchor.entityId)?.uuid ?? '')
+      const payload = { joint: event.connectionUuid, kind: component?.kind ?? connection?.componentType ?? 'Connection' }
+      for (const uuid of [...new Set(joined)].filter(Boolean)) this.emitSignal('joint.broken', payload, uuid, 'physics')
+    }
     for (const event of events) {
       if (!event.firstEntityUuid || !event.secondEntityUuid) continue
       const first = this.worldHost.state.world.entities.find(/* 比较 entity.uuid 与 event.firstEntityUuid，返回严格相等的判断结果。 */ entity => entity.uuid === event.firstEntityUuid)

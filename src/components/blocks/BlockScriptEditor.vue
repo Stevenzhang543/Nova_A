@@ -107,7 +107,7 @@ import BlockStack from './BlockStack.vue'
 import BlockFieldInput from './BlockFieldInput.vue'
 import { BLOCK_EDITOR, type BlockDragPayload, type BlockEditorContext, type BlockPosition } from './blockEditorContext'
 import {
-  BLOCK_CATEGORY_COLORS, BLOCK_EVENTS, BLOCK_STATEMENTS, blockLists, blockScriptCode, blockScriptSource, cloneBlock, compileBlockScript, createBlock, createBlockScript, createCondition, createHandler,
+  BLOCK_CATEGORY_COLORS, BLOCK_EVENTS, BLOCK_STATEMENTS, blockLists, blockScriptCode, blockSourceLines, blockScriptSource, cloneBlock, compileBlockScript, createBlock, createBlockScript, createCondition, createHandler,
   formatBlockProblem, handlerEventSpec, isBlockScriptSource, locateBlock, moveBlock, normalizeBlockScript, parseBlockScriptSource, statementSpec, validIdentifier,
   type BlockCategory, type BlockCondition, type BlockDiagnostic, type BlockNode, type BlockScriptDocument
 } from '../../visual/blockScript'
@@ -119,6 +119,7 @@ import { assetGuid, assetReference, assetState, createTextAsset, readTextAsset, 
 import { physicsState, pushHistory, sceneManager } from '../../store/physics'
 import { addEditorLog } from '../../store/editor'
 import { gameplayRuntime } from '../../runtime/GameplayRuntime'
+import { scriptDebugState } from '../../runtime/scriptDebug'
 import { Script2D } from '../../world/components'
 
 const emit = defineEmits<{ 'open-code': [] }>()
@@ -276,6 +277,16 @@ function moveRelative(id: string, delta: number) {
   mutate(() => { const [node] = found.list.splice(found.index, 1); found.list.splice(target, 0, node) })
 }
 function toggleDisabled(node: BlockNode) { mutate(() => { node.disabled = !node.disabled }) }
+// 26.45: block breakpoints (stored in the blocks document; the debugger stops where the block's code starts).
+function toggleBreakpoint(node: BlockNode) { mutate(() => { if (node.breakpoint) delete node.breakpoint; else node.breakpoint = true }) }
+const pausedBlockId = computed(() => {
+  const frame = scriptDebugState.callStack[0], uuid = activeUuid.value
+  if (!scriptDebugState.paused || !frame || !uuid || frame.scriptUuid !== uuid) return ''
+  const source = readTextAsset(uuid)
+  if (!source) return ''
+  for (const [id, line] of blockSourceLines(source)) if (line === frame.line) return id
+  return ''
+})
 function addCondition(node: BlockNode) { mutate(() => { node.conditions = [...(node.conditions ?? []), createCondition('compare')] }) }
 function removeCondition(node: BlockNode, condition: BlockCondition) { mutate(() => { node.conditions = (node.conditions ?? []).filter(item => item.id !== condition.id) }) }
 function select(node: BlockNode, key: string, index: number) { selectedId.value = node.id; cursor.value = { key, index: index + 1 } }
@@ -369,7 +380,7 @@ function onKeydown(event: KeyboardEvent) {
   else if (event.key === 'Escape') selectedId.value = ''
 }
 
-const context: BlockEditorContext = { copy, options, valueListId, objectListId, selectedId, cursor, drop, draggingId, diagnostics, problemText, mutate, select, setCursor, startDrag, remove, duplicate, moveRelative, toggleDisabled, addCondition, removeCondition }
+const context: BlockEditorContext = { copy, options, valueListId, objectListId, selectedId, cursor, drop, draggingId, diagnostics, problemText, mutate, select, setCursor, startDrag, remove, duplicate, moveRelative, toggleDisabled, toggleBreakpoint, pausedBlockId, addCondition, removeCondition }
 provide(BLOCK_EDITOR, context)
 defineExpose({ save: saveNow })
 </script>

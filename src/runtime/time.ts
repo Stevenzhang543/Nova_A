@@ -1,5 +1,6 @@
 /** 游戏时间状态：处理帧时间、缩放与计时操作，向运行子系统提供一致时间信息。 */
 import { normalizeSimulationFrameDelta } from './engineTiming'
+import { cloneRuntimeState } from './rewindState'
 export interface TimeSnapshot {
   delta: number
   fixedDelta: number
@@ -25,6 +26,9 @@ export interface TimerExpiration {
   kind: 'timer' | 'task'
   generation: number
 }
+
+/** 26.45: a captured clock and timer set (see RuntimeTime.captureRewind). */
+export interface RuntimeTimeRewind { value: TimeSnapshot; timers: Map<string, RuntimeTimer> }
 
 export const MAX_RUNTIME_TIMERS = 10_000
 export const MAX_TIMER_EXPIRATIONS_PER_FRAME = 4_096
@@ -115,6 +119,19 @@ export class RuntimeTime {
       }
     }
     return expired
+  }
+
+  /** 26.45: the clock and the timers, for the debugger's rewind. */
+  captureRewind(): RuntimeTimeRewind { return cloneRuntimeState({ value: { ...this.value }, timers: this.timers }) }
+
+  /** 26.45: puts a captured clock and timers back (expirations not yet handed out are dropped). */
+  restoreRewind(state: RuntimeTimeRewind): void {
+    const copy = cloneRuntimeState(state)
+    Object.assign(this.value, copy.value)
+    this.timers = copy.timers
+    // Generations keep growing so an expiration of the abandoned timeline never matches.
+    this.generation = Math.max(this.generation, ...[...copy.timers.values()].map(timer => timer.generation))
+    this.pending.clear()
   }
 
   /** 按模板 `${entityUuid}\u0000${kind}\u0000${name}` 生成并返回字符串。 */ private key(entityUuid: string, name: string, kind: 'timer' | 'task'): string { return `${entityUuid}\u0000${kind}\u0000${name}` }

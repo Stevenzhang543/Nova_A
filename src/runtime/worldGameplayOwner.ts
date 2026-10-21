@@ -16,7 +16,8 @@ import type { Entity } from '../world/Entity'
 import type { World } from '../world/World'
 import type { Connection } from '../world/Connection'
 import type { Vec2 } from '../world/types'
-import type { Area2D, AreaEffector2D, CharacterBody2D, Portal2D, RigidBody2D } from '../world/components'
+import type { Area2D, AreaEffect2D, AreaEffector2D, CharacterBody2D, Portal2D, RigidBody2D } from '../world/components'
+import { areaWorldRegion, colliderWorldPolygons, submergedPart } from './areaPhysics'
 import { finiteNumber } from '../world/geometry'
 import { worldTransform, setWorldTransform } from '../world/hierarchy'
 
@@ -54,7 +55,7 @@ export function createInitialWorldGameplayState(): WorldGameplayState { return {
   pendingStreams: 0,
   lastError: ''
 } }
-export type WorldGameplayWorld = Pick<World, 'entities' | 'connections' | 'moveCharacterBox' | 'overlapCircle' | 'overlapBox' | 'applyTransientForce' | 'shiftOrigin' | 'allocateId' | 'allocateConnectionId' | 'invalidateRuntime'> & Partial<Pick<World, 'entityForBodyHandle'>>
+export type WorldGameplayWorld = Pick<World, 'entities' | 'connections' | 'lastSettings' | 'moveCharacterBox' | 'overlapCircle' | 'overlapBox' | 'applyTransientForce' | 'shiftOrigin' | 'allocateId' | 'allocateConnectionId' | 'invalidateRuntime'> & Partial<Pick<World, 'entityForBodyHandle' | 'physicsPose'>>
 export interface WorldGameplayOwnerHost {
   readonly world: WorldGameplayWorld
   readonly camera: WorldGameplayCamera
@@ -277,16 +278,52 @@ export class WorldGameplayOwner {
       for (const uuid of current) if (!before.has(uuid)) emitSignal('area.entered', { area: entity.uuid }, uuid, entity.uuid)
       for (const uuid of before) if (!current.has(uuid)) emitSignal('area.exited', { area: entity.uuid }, uuid, entity.uuid)
       this.areaOccupants.set(entity.uuid, current)
+      let region: ReturnType<typeof areaWorldRegion> | null = null
       for (const member of members) for (const effect of effector?.effectors.slice(0, 32) ?? []) {
         if (!effect.enabled) continue
         const directionLength = Math.hypot(effect.direction.x, effect.direction.y) || 1
         if (effect.kind === 'Gravity' || effect.kind === 'Wind') this.world.applyTransientForce(member, { x: effect.direction.x / directionLength * effect.strength * member.mass, y: effect.direction.y / directionLength * effect.strength * member.mass })
         else if (effect.kind === 'Drag') this.world.applyTransientForce(member, { x: -member.velocity.x * Math.max(0, effect.drag), y: -member.velocity.y * Math.max(0, effect.drag) })
-        else if (effect.kind === 'Buoyancy') this.world.applyTransientForce(member, { x: 0, y: Math.max(0, effect.fluidDensity) * 9.80665 * member.mass })
+        else if (effect.kind === 'Buoyancy') {
+          region ??= areaWorldRegion(entity, area, this.world.entities)
+          this.applyBuoyancy(member, effect, region.polygon)
+        } else if (effect.kind === 'PointGravity') {
+          region ??= areaWorldRegion(entity, area, this.world.entities)
+          const position = this.world.physicsPose?.(member)?.position ?? worldTransform(member, this.world.entities).position
+          const dx = region.center.x - position.x, dy = region.center.y - position.y, distance = Math.hypot(dx, dy)
+          if (distance > 1e-6) {
+            const reach = Math.max(1e-6, region.radius)
+            const scale = effect.falloff === 'Linear' ? Math.max(0, 1 - distance / reach) : effect.falloff === 'InverseSquare' ? Math.min(100, (reach / distance) ** 2) : 1
+            const pull = effect.strength * scale * member.mass / distance
+            this.world.applyTransientForce(member, { x: dx * pull, y: dy * pull })
+          }
+        }
         else if (effect.kind === 'Damage') emitSignal('area.damage', { amount: Math.max(0, effect.damagePerSecond) * fixedDelta, area: entity.uuid }, member.uuid, entity.uuid)
         else emitSignal(effect.signal || 'area.effect', { area: entity.uuid, strength: effect.strength }, member.uuid, entity.uuid)
       }
     }
+  }
+
+  /** 26.45: buoyancy from the submerged part of the body (Archimedes: fluid density × submerged
+   * area × gravity, applied at the submerged centroid, so floating bodies tilt upright), drag toward
+   * the fluid's flow (direction × strength) scaled by the submerged area, and angular drag. */
+  private applyBuoyancy(member: Entity, effect: AreaEffect2D, region: Vec2[]): void {
+    // The solver pose: the display pose can lag a step behind while interpolating, which would
+    // weaken the damping of the bobbing.
+    const pose = this.world.physicsPose?.(member) ?? null
+    const part = submergedPart(colliderWorldPolygons(member, this.world.entities, pose), region)
+    if (part.area <= 1e-12) return
+    const density = Math.max(0, effect.fluidDensity), gravity = Math.abs(finiteNumber(this.world.lastSettings?.gravity, 9.80665))
+    const position = pose?.position ?? worldTransform(member, this.world.entities).position
+    const arm = { x: part.centroid.x - position.x, y: part.centroid.y - position.y }
+    const directionLength = Math.hypot(effect.direction.x, effect.direction.y)
+    const flow = directionLength > 0 ? { x: effect.direction.x / directionLength * effect.strength, y: effect.direction.y / directionLength * effect.strength } : { x: 0, y: 0 }
+    const spin = finiteNumber(member.angularVelocity, 0)
+    const pointVelocity = { x: member.velocity.x - spin * arm.y - flow.x, y: member.velocity.y + spin * arm.x - flow.y }
+    const dragScale = Math.max(0, effect.drag) * density * part.area
+    const force = { x: -dragScale * pointVelocity.x, y: density * part.area * gravity - dragScale * pointVelocity.y }
+    const torque = arm.x * force.y - arm.y * force.x - Math.max(0, effect.angularDrag ?? 0) * density * part.area * spin
+    this.world.applyTransientForce(member, force, torque)
   }
 
   private focusPosition(): { x: number; y: number } {

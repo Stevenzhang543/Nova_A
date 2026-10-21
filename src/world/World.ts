@@ -25,7 +25,7 @@ import init, {
 } from '../../nova_core/pkg/nova_core.js'
 import { invalidateHierarchyIndex, localPointToWorld, setWorldTransform, worldTransform } from './hierarchy'
 import { stableSinCos } from './stableTrig'
-import { TileMap2D } from './components'
+import { TileMap2D, type TargetJoint2D } from './components'
 import { defaultPhysicsLayers, defaultPhysicsProfile, normalizePhysicsMaterial, normalizePhysicsProfile, stablePhysicsEventOrder, type PhysicsInterpolationMode, type PhysicsLayerDefinition, type PhysicsSimulationProfile2D } from '../runtime/physicsProduction'
 import { encodeColliderChildren, solverShapeArea, prepareColliderSet, type SolverColliderShape2D } from '../runtime/physicsGeometry'
 import { DEFAULT_MAX_CATCH_UP_STEPS, normalizeSimulationFrameDelta } from '../runtime/engineTiming'
@@ -325,7 +325,11 @@ interface ConnectionRecord {
   data[index + 15] = connection.style === 'curved' ? Math.abs(connection.curvature) : manualBend
   data[index + 16] = 1
   data[index + 17] = connection.breakState === 'snapped' ? 1 : connection.breakState === 'torn' ? 2 : 0
-  data[index + 18] = connection.componentType === 'FixedJoint2D' || connection.componentType === 'WeldJoint2D' ? 1
+  // 26.45: a Weld joint with a spring frequency is a soft weld (9); Wheel joints are 7.
+  const softWeld = connection.componentType === 'WeldJoint2D' && ((connection.springFrequency ?? 0) > 0 || (connection.angularFrequency ?? 0) > 0)
+  data[index + 18] = softWeld ? 9
+    : connection.componentType === 'WheelJoint2D' ? 7
+    : connection.componentType === 'FixedJoint2D' || connection.componentType === 'WeldJoint2D' ? 1
     : connection.componentType === 'DistanceJoint2D' ? 2
       : connection.componentType === 'RevoluteJoint2D' || connection.componentType === 'MotorJoint2D' ? 3
         : connection.componentType === 'PrismaticJoint2D' ? 4
@@ -353,6 +357,10 @@ interface ConnectionRecord {
     data[index + 37] = connection.maxMotorForce
     data[index + 38] = connection.breakForce
     data[index + 39] = connection.breakTorque
+    data[index + 40] = connection.springFrequency ?? 0
+    data[index + 41] = connection.springDampingRatio ?? 0.7
+    data[index + 42] = connection.angularFrequency ?? 0
+    data[index + 43] = connection.angularDampingRatio ?? 0.7
   }
   for (let nodeIndex = 0; nodeIndex < nodeCount; nodeIndex++) {
     const node = connection.ropeNodes[nodeIndex]
@@ -412,6 +420,10 @@ export class World {
   private bodyRecords = new Map<number, Float64Array>()
   private nativeBodyPoses = new Map<number, { x: number; y: number; rotation: number }>()
   private colliderChildRecords = new Map<number, Float64Array>()
+  // 26.45: surface (conveyor speed, rolling resistance) and target joint last sent per body handle.
+  private bodySurfaces = new Map<number, string>()
+  private bodyTargets = new Map<number, string>()
+  private startedTargets = new WeakSet<TargetJoint2D>()
   private connectionRecords = new Map<number, Float64Array>()
   private bodyOrders = new Map<number, number>()
   private connectionOrders = new Map<number, number>()
@@ -426,7 +438,8 @@ export class World {
   private activeConnectionRecords: ConnectionRecord[] = []
   private runtimeJointConnections = new Map<string, Connection>()
   private timingSignature = ''
-  private lastSettings: GlobalPhysicsSettings = { gravity: 9.8, airFriction: .01, timeScale: 1, tickRate: 60, maxCatchUpSteps: DEFAULT_MAX_CATCH_UP_STEPS, collisionMatrix: defaultCollisionMatrix(), interpolation: 'Interpolate', layers: defaultPhysicsLayers(), profile: defaultPhysicsProfile() }
+  /** 26.45: readable by world owners (area effects use its gravity). */
+  lastSettings: GlobalPhysicsSettings = { gravity: 9.8, airFriction: .01, timeScale: 1, tickRate: 60, maxCatchUpSteps: DEFAULT_MAX_CATCH_UP_STEPS, collisionMatrix: defaultCollisionMatrix(), interpolation: 'Interpolate', layers: defaultPhysicsLayers(), profile: defaultPhysicsProfile() }
   wasmError: Error | null = null
   readonly wasmReady: Promise<void>
   diagnostics: EngineDiagnostics = {
@@ -674,6 +687,67 @@ export class World {
     return this.events.filter(/* 先计算 event.firstEntityUuid === entityUuid；仅当其为假值时求右侧 event.secondEntityUuid === entityUuid，返回短路求值结果。 */ event => event.firstEntityUuid === entityUuid || event.secondEntityUuid === entityUuid)
   }
 
+  /** 26.45: identifies the solver's body and joint layout (handles in order); a physics snapshot
+   * can only be restored while it is unchanged. */
+  runtimeLayoutKey(): string {
+    let key = ''
+    for (const entity of this.activeBodies) key += `${this.bodyHandles.get(entity.id) ?? -1},`
+    key += '|'
+    for (const record of this.activeConnectionRecords) key += `${this.connectionHandles.get(`${record.connection.uuid}:${record.segment}`) ?? -1},`
+    return key
+  }
+
+  /** 26.45: segment casts for particles (see ParticleWorld.castParticleSegments); hits on the body
+   * of `ignore` (the emitter's own) do not count. */
+  castParticleSegments(segments: Float64Array, mask: number, ignore: Entity | null): Float64Array | null {
+    const runtime = this.runtime as unknown as { cast_segments?(segments: Float64Array, mask: number): Float64Array } | null
+    if (!this.wasmLoaded || !runtime?.cast_segments) return null
+    this.prepareQuery()
+    const raw = runtime.cast_segments(segments, mask >>> 0), ignored = ignore ? this.bodyHandles.get(ignore.id) : undefined
+    const result = new Float64Array(Math.floor(raw.length / 5) * 4)
+    for (let index = 0; index * 5 + 4 < raw.length; index++) {
+      if (raw[index * 5] < .5 || raw[index * 5 + 4] === ignored) continue
+      result[index * 4] = 1; result[index * 4 + 1] = raw[index * 5 + 1]; result[index * 4 + 2] = raw[index * 5 + 2]; result[index * 4 + 3] = raw[index * 5 + 3]
+    }
+    return result
+  }
+
+  /** 26.45: the body's pose after the last fixed step (the solver's, not the interpolated display
+   * pose); null when the entity has no body in the solver. */
+  physicsPose(entity: Entity): { position: Vec2; rotation: number } | null {
+    const handle = this.bodyHandles.get(entity.id), pose = handle === undefined ? undefined : this.nativeBodyPoses.get(handle)
+    return pose ? { position: { x: pose.x, y: pose.y }, rotation: pose.rotation } : null
+  }
+
+  /** 26.45: complete solver snapshots kept in WASM by slot (the debugger's rewind keyframes).
+   * Returns the snapshot's approximate size in bytes (0 without a solver). */
+  saveRuntimeSnapshot(slot: number): number {
+    const runtime = this.runtime as unknown as { save_snapshot?(slot: number): number } | null
+    return runtime?.save_snapshot ? runtime.save_snapshot(slot) : 0
+  }
+
+  /** 26.45: restores a snapshot and shows it (see adoptRuntimeState); false when the slot is empty. */
+  restoreRuntimeSnapshot(slot: number): boolean {
+    const runtime = this.runtime as unknown as { restore_snapshot?(slot: number): boolean } | null
+    if (!runtime?.restore_snapshot || !runtime.restore_snapshot(slot)) return false
+    this.adoptRuntimeState()
+    return true
+  }
+
+  dropRuntimeSnapshot(slot: number): void { (this.runtime as unknown as { drop_snapshot?(slot: number): boolean } | null)?.drop_snapshot?.(slot) }
+  clearRuntimeSnapshots(): void { (this.runtime as unknown as { clear_snapshots?(): void } | null)?.clear_snapshots?.() }
+
+  /** 26.45: after the solver state was replaced (a restored snapshot), shows it: bodies, ropes and
+   * joints take the solver's poses and velocities, and conveyor/target settings are sent again. */
+  adoptRuntimeState(): void {
+    if (!this.runtime) return
+    this.bodySurfaces.clear()
+    this.bodyTargets.clear()
+    this.readRuntimeState(1, this.lastSettings)
+    this.events = []
+    this.stepEventBuffer = []
+  }
+
   /** 先更新实体世界姿态；已存在运行句柄时同步传送求解器，原生失败返回假。 */ teleport(entity: Entity, position: Vec2, angle = worldTransform(entity, this.entities).rotation): boolean {
     const transform = worldTransform(entity, this.entities)
     const target = { x: finiteNumber(position.x, transform.position.x), y: finiteNumber(position.y, transform.position.y) }
@@ -781,6 +855,9 @@ export class World {
     this.bodyRecords.clear()
     this.nativeBodyPoses.clear()
     this.colliderChildRecords.clear()
+    this.bodySurfaces.clear()
+    this.bodyTargets.clear()
+    this.startedTargets = new WeakSet<TargetJoint2D>()
     this.connectionRecords.clear()
     this.bodyOrders.clear()
     this.connectionOrders.clear()
@@ -900,6 +977,7 @@ export class World {
         runtime.upsert_collider_shapes(handle, children)
         this.storeRecord(this.colliderChildRecords, handle, children)
       }
+      this.synchronizeBodyExtras(runtime, entity, handle)
     })
     for (const [entityId, handle] of [...this.bodyHandles]) {
       if (liveBodies.has(entityId)) continue
@@ -909,6 +987,8 @@ export class World {
       this.nativeBodyPoses.delete(handle)
       this.colliderChildRecords.delete(handle)
       this.bodyOrders.delete(handle)
+      this.bodySurfaces.delete(handle)
+      this.bodyTargets.delete(handle)
     }
 
     const joints = connectionsFromJointComponents(this.entities), liveJoints = new Set(joints.map(/* 返回 connection.uuid 的当前值。 */ connection => connection.uuid))
@@ -1018,6 +1098,11 @@ export class World {
     if (!this.runtime) return
     const stateLength = this.runtime.state_len()
     const bodyLength = this.runtime.body_state_len()
+    // 26.45: the solver rebuilds its state at its next step. Until then (the world was cleared or
+    // bodies were added or removed since the last step) the state does not describe these bodies;
+    // reading it gave every body an empty record, and static bodies, which are not read again,
+    // stayed at (0, 0). In the editor this happened when Play began on a frame without a fixed step.
+    if (bodyLength !== this.activeBodies.length * PHYSICS_STRIDE) return
     this.stateBuffer = ensureBuffer(this.stateBuffer, stateLength)
     this.previousBodyBuffer = ensureBuffer(this.previousBodyBuffer, bodyLength)
     if (this.copyBorrowedRuntimeState(false, this.stateBuffer, stateLength) !== stateLength) return
@@ -1066,6 +1151,42 @@ export class World {
   }
 
   /** Borrow and copy within one synchronous call; no pointer/view survives a tick or await. */
+  /** 26.45: conveyor speed, rolling resistance and the target joint of one body, sent when changed. */
+  private synchronizeBodyExtras(runtime: WasmRuntimeWorld, entity: Entity, handle: number): void {
+    const extras = runtime as unknown as Partial<{
+      set_body_surface(handle: number, speed: number, rolling: number): void
+      set_body_target(handle: number, ax: number, ay: number, tx: number, ty: number, hertz: number, ratio: number, maxForce: number): void
+      clear_body_target(handle: number): boolean
+    }>
+    const collider = entity.collider
+    const speed = finiteNumber(collider?.surfaceSpeed, 0), rolling = Math.max(0, finiteNumber(collider?.rollingResistance, 0))
+    const surfaceKey = speed || rolling ? `${speed}:${rolling}` : ''
+    if ((this.bodySurfaces.get(handle) ?? '') !== surfaceKey && extras.set_body_surface) {
+      extras.set_body_surface(handle, speed, rolling)
+      if (surfaceKey) this.bodySurfaces.set(handle, surfaceKey); else this.bodySurfaces.delete(handle)
+    }
+    const target = entity.getComponent<TargetJoint2D>('TargetJoint2D')
+    if (target?.enabled && !target.removed && !entity.isStatic && !entity.isKinematic) {
+      const transform = worldTransform(entity, this.entities), scale = transform.scale
+      if (target.startAtBody && !this.startedTargets.has(target)) {
+        // The target starts where the anchor is, so the body does not jump when play starts.
+        const { sine, cosine } = stableSinCos(transform.rotation)
+        const local = { x: target.anchor.x * scale.x, y: target.anchor.y * scale.y }
+        target.target = { x: transform.position.x + local.x * cosine - local.y * sine, y: transform.position.y + local.x * sine + local.y * cosine }
+      }
+      this.startedTargets.add(target)
+      const anchor = { x: target.anchor.x * scale.x, y: target.anchor.y * scale.y }
+      const key = [anchor.x, anchor.y, target.target.x, target.target.y, target.frequency, target.dampingRatio, target.maxForce].join(':')
+      if (this.bodyTargets.get(handle) !== key && extras.set_body_target) {
+        extras.set_body_target(handle, anchor.x, anchor.y, finiteNumber(target.target.x), finiteNumber(target.target.y), target.frequency, target.dampingRatio, target.maxForce)
+        this.bodyTargets.set(handle, key)
+      }
+    } else if (this.bodyTargets.has(handle)) {
+      extras.clear_body_target?.(handle)
+      this.bodyTargets.delete(handle)
+    }
+  }
+
   private copyBorrowedRuntimeState(previous: boolean, target: Float64Array, expectedLength: number): number {
     if (!this.runtime) return 0
     const view: unknown = previous ? this.runtime.previous_body_state_view() : this.runtime.state_view()

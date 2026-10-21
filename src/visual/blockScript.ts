@@ -32,6 +32,8 @@ export interface BlockNode {
   conditions?: BlockCondition[]
   mode?: 'all' | 'any'
   disabled?: boolean
+  /** 26.45: the debugger stops before this block runs. */
+  breakpoint?: boolean
 }
 export interface BlockHandler { id: string; event: string; fields: Record<string, BlockFieldValue>; blocks: BlockNode[]; collapsed?: boolean; disabled?: boolean }
 export interface BlockVariable { name: string; initial: string }
@@ -239,6 +241,7 @@ export function normalizeBlockScript(value: unknown): BlockScriptDocument {
     if (!spec) return []
     const result: BlockNode = { id: typeof node.id === 'string' ? node.id : blockId(), type: spec.type, fields: fieldsOf(node.fields, spec.fields) }
     if (node.disabled === true) result.disabled = true
+    if (node.breakpoint === true) result.breakpoint = true
     if (spec.container) result.children = blocks(node.children, depth + 1)
     if (spec.container === 'if') { result.otherwise = blocks(node.otherwise, depth + 1); result.conditions = conditions(node.conditions); result.mode = node.mode === 'any' ? 'any' : 'all' }
     return [result]
@@ -372,12 +375,26 @@ function conditionExpression(condition: BlockCondition, state: CompileState, sco
   return condition.negate ? `!(${expression})` : `(${expression})`
 }
 
+// 26.45: the first line a block compiles to carries this marker until the code is assembled; the
+// markers become the block → line map (for block breakpoints) and are removed from the code.
+const BLOCK_LINE_MARK = ' //@@block:'
+const BLOCK_LINE_PATTERN = / \/\/@@block:([A-Za-z0-9_-]+)$/
+
 function compileBlocks(blocks: readonly BlockNode[], state: CompileState, scope: HandlerScope): string[] {
   const lines: string[] = []
   for (const node of blocks) {
     if (node.disabled) continue
     const spec = statementSpec(node.type)
     if (!spec) continue
+    const firstLine = lines.length
+    compileBlock(node, spec, lines, state, scope)
+    if (lines.length > firstLine && /^[A-Za-z0-9_-]+$/.test(node.id)) lines[firstLine] += `${BLOCK_LINE_MARK}${node.id}`
+  }
+  return lines
+}
+
+function compileBlock(node: BlockNode, spec: BlockStatementSpec, lines: string[], state: CompileState, scope: HandlerScope): void {
+  {
     for (const required of spec.fields) if (['audio', 'video', 'prefab', 'scene'].includes(required.kind) && !String(node.fields[required.key] ?? '').trim()) problem(state, 'error', node.id, required.kind === 'audio' ? 'chooseSound' : required.kind === 'video' ? 'chooseVideo' : required.kind === 'prefab' ? 'choosePrefab' : 'chooseScene')
     if (node.type === 'setTextOn' && !String(node.fields.object ?? '').trim()) problem(state, 'error', node.id, 'chooseObject')
     for (const need of spec.needs ?? []) if (!scope[need]) problem(state, 'error', node.id, need === 'dt' ? 'needsFrame' : 'needsContact')
@@ -495,7 +512,6 @@ function compileBlocks(blocks: readonly BlockNode[], state: CompileState, scope:
       }
     }
   }
-  return lines
 }
 
 /** Valid Rhai literal for a variable's initial value: number, true/false, or text. */
@@ -508,7 +524,7 @@ function initialValue(raw: string): string {
 }
 
 /** Compiles the document to Rhai. Handlers of the same callback merge in document order. */
-export function compileBlockScript(input: BlockScriptDocument): { code: string; diagnostics: BlockDiagnostic[] } {
+export function compileBlockScript(input: BlockScriptDocument): { code: string; diagnostics: BlockDiagnostic[]; blockLines: Map<string, number> } {
   const document = normalizeBlockScript(input)
   const state: CompileState = { diagnostics: [], variables: new Set(document.variables.map(variable => variable.name)), extraFunctions: [], waitSerial: 0, usesPlatformer: false, usesTextHelper: false }
   const callbacks = new Map<string, { signature: string; body: string[] }>()
@@ -558,7 +574,43 @@ export function compileBlockScript(input: BlockScriptDocument): { code: string; 
   for (const { signature, body } of callbacks.values()) lines.push(`${signature} {`, ...indent(body), '}')
   lines.push(...functions, ...state.extraFunctions)
   if (state.usesTextHelper) lines.push('fn __blk_text(value) {', '  if type_of(value) == "f64" && value == value.floor() && value.abs() < 1.0e15 { value.to_int().to_string() } else { value.to_string() }', '}')
-  return { code: `${lines.join('\n')}\n`, diagnostics: state.diagnostics }
+  // Code lines are 1-based; in the stored source they follow the header line.
+  const blockLines = new Map<string, number>()
+  lines.forEach((line, index) => {
+    const parts = line.split('\n')
+    const last = parts[parts.length - 1], match = BLOCK_LINE_PATTERN.exec(last)
+    if (!match) return
+    parts[parts.length - 1] = last.slice(0, match.index)
+    lines[index] = parts.join('\n')
+    const offset = lines.slice(0, index).reduce((count, text) => count + text.split('\n').length, 0)
+    blockLines.set(match[1], offset + parts.length)
+  })
+  return { code: `${lines.join('\n')}\n`, diagnostics: state.diagnostics, blockLines }
+}
+
+/** 26.45: line (in the stored source, after the header line) where each block starts. */
+const blockLineCache = new Map<string, Map<string, number>>()
+export function blockSourceLines(source: string): Map<string, number> {
+  const cached = blockLineCache.get(source)
+  if (cached) return cached
+  const document = parseBlockScriptSource(source)
+  const lines = new Map<string, number>()
+  if (document) for (const [id, line] of compileBlockScript(document).blockLines) lines.set(id, line + 1)
+  if (blockLineCache.size > 32) blockLineCache.clear()
+  blockLineCache.set(source, lines)
+  return lines
+}
+
+/** 26.45: the blocks of a Blocks script that have a breakpoint, with their source lines. */
+export function blockBreakpointLines(source: string): Array<{ blockId: string; line: number }> {
+  const document = parseBlockScriptSource(source)
+  if (!document) return []
+  const lines = blockSourceLines(source), result: Array<{ blockId: string; line: number }> = []
+  for (const list of blockLists(document).values()) for (const node of list) {
+    const line = node.breakpoint && !node.disabled ? lines.get(node.id) : undefined
+    if (line) result.push({ blockId: node.id, line })
+  }
+  return result
 }
 
 // ---------------------------------------------------------------------------------------------

@@ -1,8 +1,34 @@
 // 刚体内部表示：形状支撑点、惯性、复合碰撞体、积分、冲量与休眠。
 #[derive(Clone, Debug)]
 enum Shape {
-    Polygon { vertices: Vec<Vec2> },
+    /// 26.45: a convex polygon rounded by `radius` (0 = sharp corners). Two vertices with a radius
+    /// form a true capsule (Box2D v3 style rounded shapes): smooth caps, flat sides.
+    Polygon { vertices: Vec<Vec2>, radius: f64 },
     Ellipse { radius_x: f64, radius_y: f64 },
+}
+
+// 26.45: capsule with the given full width and height: a segment along the long axis rounded by half
+// the short side. A capsule as wide as it is tall is a circle.
+fn capsule_shape(width: f64, height: f64) -> Shape {
+    let width = width.max(MIN_DIMENSION);
+    let height = height.max(MIN_DIMENSION);
+    let radius = (width.min(height) * 0.5).max(MIN_DIMENSION * 0.5);
+    let vertical = height >= width;
+    let straight = ((if vertical { height } else { width }) * 0.5 - radius).max(0.0);
+    if straight <= MIN_DIMENSION * 0.5 {
+        return Shape::Ellipse { radius_x: radius, radius_y: radius };
+    }
+    let (start, end) = if vertical {
+        (Vec2::new(0.0, -straight), Vec2::new(0.0, straight))
+    } else {
+        (Vec2::new(-straight, 0.0), Vec2::new(straight, 0.0))
+    };
+    Shape::Polygon { vertices: vec![start, end], radius }
+}
+
+// 26.45: sharp polygon.
+fn sharp_polygon(vertices: Vec<Vec2>) -> Shape {
+    Shape::Polygon { vertices, radius: 0.0 }
 }
 
 #[derive(Clone, Debug)]
@@ -23,7 +49,7 @@ impl Shape {
     fn support(&self, position: Vec2, angle: f64, direction: Vec2) -> Vec2 {
         let direction = direction.normalized_or(Vec2::new(1.0, 0.0));
         match self {
-            Self::Polygon { vertices } => {
+            Self::Polygon { vertices, radius } => {
                 let local_direction = inverse_rotate(direction, angle);
                 let mut best = vertices[0];
                 let mut best_projection = best.dot(local_direction);
@@ -34,7 +60,8 @@ impl Shape {
                         best_projection = projection;
                     }
                 }
-                position.add(rotate(best, angle))
+                let core = position.add(rotate(best, angle));
+                if *radius > 0.0 { core.add(direction.mul(*radius)) } else { core }
             }
             Self::Ellipse { radius_x, radius_y } => {
                 let local_direction = inverse_rotate(direction, angle);
@@ -56,12 +83,20 @@ impl Shape {
     fn area(&self) -> f64 {
         match self {
             Self::Ellipse { radius_x, radius_y } => std::f64::consts::PI * radius_x * radius_y,
-            Self::Polygon { vertices } => {
+            Self::Polygon { vertices, radius } => {
                 let mut twice_area = 0.0;
+                let mut perimeter = 0.0;
                 for index in 0..vertices.len() {
-                    twice_area += vertices[index].cross(vertices[(index + 1) % vertices.len()]);
+                    let next = vertices[(index + 1) % vertices.len()];
+                    twice_area += vertices[index].cross(next);
+                    perimeter += next.sub(vertices[index]).length();
                 }
-                twice_area.abs() * 0.5
+                let core = twice_area.abs() * 0.5;
+                if *radius > 0.0 {
+                    core + perimeter * radius + std::f64::consts::PI * radius * radius
+                } else {
+                    core
+                }
             }
         }
     }
@@ -72,7 +107,45 @@ impl Shape {
             Self::Ellipse { radius_x, radius_y } => {
                 mass * (radius_x * radius_x + radius_y * radius_y) * 0.25
             }
-            Self::Polygon { vertices } => {
+            Self::Polygon { vertices, radius } if *radius > 0.0 && vertices.len() == 2 => {
+                // 26.45: capsule (Box2D b2ComputeCapsuleMass): a box between two half circles,
+                // about the segment's midpoint, then moved to the shape's origin.
+                let (start, end) = (vertices[0], vertices[1]);
+                let length = end.sub(start).length();
+                let box_area = 2.0 * radius * length;
+                let circle_area = std::f64::consts::PI * radius * radius;
+                let density = mass / (box_area + circle_area).max(MIN_AREA);
+                let (box_mass, circle_mass) = (density * box_area, density * circle_area);
+                let half = 0.5 * length;
+                let circle_offset = 4.0 * radius / (3.0 * std::f64::consts::PI);
+                let circle_inertia = circle_mass * (0.5 * radius * radius + half * half + 2.0 * half * circle_offset);
+                let box_inertia = box_mass * (4.0 * radius * radius + length * length) / 12.0;
+                let center = start.add(end).mul(0.5);
+                circle_inertia + box_inertia + mass * center.length_squared()
+            }
+            Self::Polygon { vertices, radius } if *radius > 0.0 => {
+                // Rounded polygon: the polygon with its corners pushed out by the radius
+                // (Box2D's approximation), with the same mass.
+                let count = vertices.len();
+                let inflated: Vec<Vec2> = (0..count)
+                    .map(|index| {
+                        let previous = vertices[(index + count - 1) % count];
+                        let current = vertices[index];
+                        let next = vertices[(index + 1) % count];
+                        let edge_in = current.sub(previous);
+                        let edge_out = next.sub(current);
+                        let outward = Vec2::new(edge_in.y, -edge_in.x).normalized_or(Vec2::ZERO)
+                            .add(Vec2::new(edge_out.y, -edge_out.x).normalized_or(Vec2::ZERO))
+                            .normalized_or(Vec2::ZERO);
+                        // Winding may be either way: push away from the centroid.
+                        let centroid = vertices.iter().fold(Vec2::ZERO, |sum, vertex| sum.add(*vertex)).mul(1.0 / count as f64);
+                        let outward = if outward.dot(current.sub(centroid)) < 0.0 { outward.neg() } else { outward };
+                        current.add(outward.mul(std::f64::consts::SQRT_2 * radius))
+                    })
+                    .collect();
+                sharp_polygon(inflated).inertia(mass)
+            }
+            Self::Polygon { vertices, .. } => {
                 let mut cross_sum = 0.0;
                 let mut weighted_sum = 0.0;
                 for index in 0..vertices.len() {
@@ -97,13 +170,14 @@ impl Shape {
     fn characteristic_extent(&self) -> f64 {
         match self {
             Self::Ellipse { radius_x, radius_y } => radius_x.min(*radius_y),
-            Self::Polygon { vertices } => {
+            Self::Polygon { vertices, radius } if vertices.len() == 2 => *radius,
+            Self::Polygon { vertices, radius } => {
                 let mut minimum_edge = f64::INFINITY;
                 for index in 0..vertices.len() {
                     let edge = vertices[(index + 1) % vertices.len()].sub(vertices[index]);
                     minimum_edge = minimum_edge.min(edge.length());
                 }
-                minimum_edge * 0.5
+                minimum_edge * 0.5 + radius
             }
         }
         .max(MIN_DIMENSION)
@@ -123,7 +197,7 @@ impl Shape {
                     max_y: position.y + extent_y,
                 }
             }
-            Self::Polygon { vertices } => {
+            Self::Polygon { vertices, radius } => {
                 let mut aabb = Aabb {
                     min_x: f64::INFINITY,
                     max_x: f64::NEG_INFINITY,
@@ -136,6 +210,12 @@ impl Shape {
                     aabb.max_x = aabb.max_x.max(world.x);
                     aabb.min_y = aabb.min_y.min(world.y);
                     aabb.max_y = aabb.max_y.max(world.y);
+                }
+                if *radius > 0.0 {
+                    aabb.min_x -= radius;
+                    aabb.max_x += radius;
+                    aabb.min_y -= radius;
+                    aabb.max_y += radius;
                 }
                 aabb
             }
@@ -184,9 +264,22 @@ struct Body {
     one_way_normal: Vec2,
     auto_inertia: bool,
     collider_children: Vec<ColliderChild>,
+    /// 26.45: conveyor speed of this body's surfaces (m/s): each face carries what touches it along
+    /// the face, clockwise around the body for positive speeds (the top face moves to +x).
+    tangent_speed: f64,
+    /// 26.45: rolling resistance coefficient (Box2D v3.1); slows rolling circles and capsules.
+    rolling_resistance: f64,
 }
 
 impl Body {
+    // 26.45: radius used for rolling resistance (round shapes only).
+    fn rolling_radius(&self) -> f64 {
+        match &self.shape {
+            Shape::Ellipse { radius_x, radius_y } => radius_x.min(*radius_y),
+            Shape::Polygon { radius, .. } => *radius,
+        }
+    }
+
     // 读取稳定扁平 ABI 中的刚体字段，清理非法值并构造形状、质量和运动状态。
     fn from_data(data: &[f64], data_index: usize) -> Self {
         // Shape codes are part of the stable editor/native ABI: 0 polygon/box,
@@ -206,38 +299,20 @@ impl Body {
                 radius_y: scale_height,
             }
         } else if shape_code == 2 {
-            // The current native shape representation is convex polygonal, so
-            // capsules use a fixed-sample approximation.  A fixed sample count
-            // keeps collision ordering and replays deterministic on every host.
-            let width = scale_width.max(MIN_DIMENSION);
-            let height = scale_height.max(MIN_DIMENSION);
-            let radius = (width.min(height) * 0.5).max(MIN_DIMENSION * 0.5);
-            let vertical = height >= width;
-            let straight = ((if vertical { height } else { width }) * 0.5 - radius).max(0.0);
-            let mut vertices = Vec::with_capacity(12);
-            for sample in 0..12 {
-                let angle = std::f64::consts::TAU * sample as f64 / 12.0;
-                let direction = Vec2::new(angle.cos(), angle.sin());
-                let center = if vertical {
-                    Vec2::new(0.0, if direction.y >= 0.0 { straight } else { -straight })
-                } else {
-                    Vec2::new(if direction.x >= 0.0 { straight } else { -straight }, 0.0)
-                };
-                vertices.push(center.add(direction.mul(radius)));
-            }
-            Shape::Polygon { vertices: convex_hull(vertices) }
+            // 26.45: a true capsule (rounded segment) instead of the 12-sided approximation.
+            capsule_shape(scale_width, scale_height)
         } else if shape_code == 3 {
             // A zero-area mathematical segment cannot produce a stable contact
             // manifold.  Nova_A therefore models it as a finite, explicitly
             // sized segment whose minor axis is never below MIN_DIMENSION.
             let half_width = scale_width.max(MIN_DIMENSION) * 0.5;
             let half_height = scale_height.max(MIN_DIMENSION) * 0.5;
-            Shape::Polygon { vertices: vec![
+            sharp_polygon(vec![
                 Vec2::new(-half_width, -half_height),
                 Vec2::new(half_width, -half_height),
                 Vec2::new(half_width, half_height),
                 Vec2::new(-half_width, half_height),
-            ] }
+            ])
         } else {
             let mut vertices = Vec::new();
             for vertex_index in 0..4 {
@@ -253,11 +328,7 @@ impl Body {
             }
             let mut vertices = convex_hull(vertices);
             if vertices.len() < 3
-                || (Shape::Polygon {
-                    vertices: vertices.clone(),
-                })
-                .area()
-                    <= MIN_AREA
+                || sharp_polygon(vertices.clone()).area() <= MIN_AREA
             {
                 let half_width = scale_width * 0.5;
                 let half_height = scale_height * 0.5;
@@ -268,7 +339,7 @@ impl Body {
                     Vec2::new(-half_width, half_height),
                 ];
             }
-            Shape::Polygon { vertices }
+            sharp_polygon(vertices)
         };
 
         let auto_inertia = data[data_index + 25] > 0.5;
@@ -360,6 +431,8 @@ impl Body {
             .normalized_or(Vec2::new(0.0, 1.0)),
             auto_inertia,
             collider_children: Vec::new(),
+            tangent_speed: 0.0,
+            rolling_resistance: 0.0,
         }
     }
 
@@ -373,25 +446,14 @@ impl Body {
             let shape = if shape_code == 1 {
                 Shape::Ellipse { radius_x: width * 0.5, radius_y: height * 0.5 }
             } else if shape_code == 2 {
-                let radius = (width.min(height) * 0.5).max(MIN_DIMENSION * 0.5);
-                let vertical = height >= width;
-                let straight = ((if vertical { height } else { width }) * 0.5 - radius).max(0.0);
-                let mut vertices = Vec::with_capacity(12);
-                for sample in 0..12 {
-                    let angle = std::f64::consts::TAU * sample as f64 / 12.0;
-                    let direction = Vec2::new(angle.cos(), angle.sin());
-                    let center = if vertical { Vec2::new(0.0, if direction.y >= 0.0 { straight } else { -straight }) }
-                        else { Vec2::new(if direction.x >= 0.0 { straight } else { -straight }, 0.0) };
-                    vertices.push(center.add(direction.mul(radius)));
-                }
-                Shape::Polygon { vertices: convex_hull(vertices) }
+                capsule_shape(width, height)
             } else if shape_code == 3 {
                 let half_width = width.max(MIN_DIMENSION) * 0.5;
                 let half_height = height.max(MIN_DIMENSION) * 0.5;
-                Shape::Polygon { vertices: vec![
+                sharp_polygon(vec![
                     Vec2::new(-half_width, -half_height), Vec2::new(half_width, -half_height),
                     Vec2::new(half_width, half_height), Vec2::new(-half_width, half_height),
-                ] }
+                ])
             } else {
                 let mut vertices = Vec::new();
                 for vertex_index in 0..4 {
@@ -399,11 +461,11 @@ impl Body {
                     if !vertices.iter().any(/* 判断 existing . sub (vertex) . length_squared () <= EPSILON * EPSILON 是否成立，供过滤或有效性检查使用。 */ |existing: &Vec2| existing.sub(vertex).length_squared() <= EPSILON * EPSILON) { vertices.push(vertex); }
                 }
                 let mut vertices = convex_hull(vertices);
-                if vertices.len() < 3 || (Shape::Polygon { vertices: vertices.clone() }).area() <= MIN_AREA {
+                if vertices.len() < 3 || sharp_polygon(vertices.clone()).area() <= MIN_AREA {
                     let half_width = width * 0.5; let half_height = height * 0.5;
                     vertices = vec![Vec2::new(-half_width, -half_height), Vec2::new(half_width, -half_height), Vec2::new(half_width, half_height), Vec2::new(-half_width, half_height)];
                 }
-                Shape::Polygon { vertices }
+                sharp_polygon(vertices)
             };
             self.collider_children.push(ColliderChild {
                 id: finite_or(record[0], 0.0).round().clamp(0.0, u32::MAX as f64) as u32,

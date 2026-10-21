@@ -18,7 +18,7 @@
 import UiButton from '../ui/components/UiButton.vue'
 import { computed, ref } from 'vue'
 import { t } from '../i18n'
-import { clearSaveValues, commitSaveSlotAsync, listSaveSlots, loadSaveSlotAsync, recoverSaveSlot, saveGameState, useSaveProject } from '../runtime/saveGame'
+import { clearSaveValues, commitSaveSlotAsync, listSaveSlots, loadSaveSlotAsync, recoverSaveSlot, saveGameState, useSaveProject } from '../editor/saveGame'
 
 useSaveProject()
 const slot = ref(saveGameState.slot)

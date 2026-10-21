@@ -56,7 +56,7 @@ import { hydrateProjectManifest, serializeProjectManifest } from '../projects/pr
 import { canonicalProjectText } from '../projects/projectData'
 import { recordManualSave, recoveryState, storeRecoverySnapshot } from '../runtime/recovery'
 import { loadPluginManifests, serializePluginManifests } from '../runtime/plugins'
-import { useSaveProject } from '../runtime/saveGame'
+import { useSaveProject } from '../editor/saveGame'
 import { loadRenderingSettings, serializeRenderingSettings } from '../renderer/renderSettings'
 import { clearRenderTextures } from '../renderer/renderTextures'
 import { beginPhysicsMonitorSession, recordPhysicsTelemetry } from '../runtime/physicsMonitor'

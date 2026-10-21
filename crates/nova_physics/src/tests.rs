@@ -156,14 +156,12 @@ mod tests {
         };
         assert!((ellipse.inertia(4.0) - 5.0).abs() < 1.0e-10);
 
-        let rectangle = Shape::Polygon {
-            vertices: vec![
-                Vec2::new(-2.0, -1.0),
-                Vec2::new(2.0, -1.0),
-                Vec2::new(2.0, 1.0),
-                Vec2::new(-2.0, 1.0),
-            ],
-        };
+        let rectangle = sharp_polygon(vec![
+            Vec2::new(-2.0, -1.0),
+            Vec2::new(2.0, -1.0),
+            Vec2::new(2.0, 1.0),
+            Vec2::new(-2.0, 1.0),
+        ]);
         let expected = 4.0 * (4.0_f64.powi(2) + 2.0_f64.powi(2)) / 12.0;
         assert!((rectangle.inertia(4.0) - expected).abs() < 1.0e-10);
     }
@@ -295,17 +293,34 @@ mod tests {
         assert!(body.inertia.is_finite());
     }
 
-    // 验证胶囊形状凸近似有限且可复现。
+    // 26.45: a capsule is a rounded segment with the exact capsule area and inertia.
     #[test]
-    fn capsule_shape_uses_a_finite_deterministic_convex_approximation() {
+    fn capsule_shape_is_a_rounded_segment_with_exact_mass_properties() {
         let mut input = box_record(1.0, 0.0, 0.0, 2.0, 6.0);
         input[1] = 2.0;
         let body = Body::from_data(&input, 0);
-        let Shape::Polygon { ref vertices } = body.shape else { panic!("capsule must be convex") };
-        assert_eq!(vertices.len(), 12);
-        assert!(vertices.iter().all(/* 在当前宏表达式中计算 vertex . x . is_finite () && vertex . y . is_finite ()，供查询映射、过滤或断言使用。 */ |vertex| vertex.x.is_finite() && vertex.y.is_finite()));
-        assert!(Shape::Polygon { vertices: vertices.clone() }.area() > 8.0);
-        assert!(body.inertia.is_finite());
+        let Shape::Polygon { ref vertices, radius } = body.shape else { panic!("capsule must be a rounded segment") };
+        assert_eq!(vertices.len(), 2);
+        assert!((radius - 1.0).abs() < 1.0e-12);
+        let expected_area = 2.0 * 4.0 * 1.0 + std::f64::consts::PI;
+        assert!((body.shape.area() - expected_area).abs() < 1.0e-10);
+        // Inertia against a finely sampled polygon of the same outline.
+        let mut outline = Vec::new();
+        for sample in 0..512 {
+            let angle = std::f64::consts::TAU * sample as f64 / 512.0;
+            let direction = Vec2::new(angle.cos(), angle.sin());
+            let center = Vec2::new(0.0, if direction.y >= 0.0 { 2.0 } else { -2.0 });
+            outline.push(center.add(direction));
+        }
+        let sampled = sharp_polygon(outline).inertia(1.0);
+        assert!((body.shape.inertia(1.0) - sampled).abs() / sampled < 2.0e-3, "{} vs {}", body.shape.inertia(1.0), sampled);
+        // The support point includes the rounding.
+        let top = body.shape.support(Vec2::ZERO, 0.0, Vec2::new(0.0, 1.0));
+        assert!((top.y - 3.0).abs() < 1.0e-12);
+        // A square capsule is a circle.
+        let mut square = box_record(1.0, 0.0, 0.0, 2.0, 2.0);
+        square[1] = 2.0;
+        assert!(matches!(Body::from_data(&square, 0).shape, Shape::Ellipse { .. }));
     }
 
     // 验证有限线段保留明确指定的厚度。
@@ -398,6 +413,9 @@ mod tests {
             is_sensor: false,
             active: true,
             against_immovable: false,
+            target_tangent_speed: 0.0,
+            rolling_resistance: 0.0,
+            rolling_impulse: 0.0,
         };
         prepare_contact(&bodies, &mut contact);
         assert!(contact.against_immovable);
@@ -1221,6 +1239,9 @@ mod tests {
             is_sensor: false,
             active: true,
             against_immovable: false,
+            target_tangent_speed: 0.0,
+            rolling_resistance: 0.0,
+            rolling_impulse: 0.0,
         };
         prepare_contact(&bodies, &mut contact);
         let before = bodies[0].velocity;

@@ -72,8 +72,77 @@ fn point_in_body(body: &Body, point: Vec2) -> bool {
         Shape::Ellipse { radius_x, radius_y } => {
             (local.x / radius_x).powi(2) + (local.y / radius_y).powi(2) <= 1.0 + EPSILON
         }
-        Shape::Polygon { vertices } => polygon_contains(vertices, local),
+        Shape::Polygon { vertices, radius } if *radius > 0.0 => {
+            polygon_contains(vertices, local) || distance_to_core(vertices, local) <= radius + EPSILON
+        }
+        Shape::Polygon { vertices, .. } => polygon_contains(vertices, local),
     }
+}
+
+// 26.45: distance from a point to a polygon's boundary (or a segment), in the shape's frame.
+fn distance_to_core(vertices: &[Vec2], point: Vec2) -> f64 {
+    let mut best = f64::INFINITY;
+    for index in 0..vertices.len() {
+        let a = vertices[index];
+        let edge = vertices[(index + 1) % vertices.len()].sub(a);
+        let length_squared = edge.length_squared();
+        let t = if length_squared > 0.0 { (point.sub(a).dot(edge) / length_squared).clamp(0.0, 1.0) } else { 0.0 };
+        best = best.min(a.add(edge.mul(t)).sub(point).length());
+    }
+    best
+}
+
+// 26.45: ray against a rounded polygon (capsule): the polygon's edges pushed out by the radius and
+// circles at its corners. `direction` is normalized and the origin is outside the shape.
+fn ray_rounded(body: &Body, vertices: &[Vec2], radius: f64, origin: Vec2, direction: Vec2, distance: f64) -> Option<PhysicsQueryHit> {
+    let position = body.collider_position();
+    let angle = body.collider_angle();
+    let world: Vec<Vec2> = vertices.iter().map(|vertex| position.add(rotate(*vertex, angle))).collect();
+    let centroid = world.iter().fold(Vec2::ZERO, |sum, vertex| sum.add(*vertex)).mul(1.0 / world.len().max(1) as f64);
+    let mut best: Option<(f64, Vec2)> = None;
+    let mut consider = |t: f64, normal: Vec2| {
+        if (0.0..=distance).contains(&t) && best.map_or(true, |(current, _)| t < current) {
+            best = Some((t, normal));
+        }
+    };
+    for corner in &world {
+        let offset = origin.sub(*corner);
+        let b = offset.dot(direction);
+        let c = offset.length_squared() - radius * radius;
+        let discriminant = b * b - c;
+        if discriminant >= 0.0 {
+            let t = -b - discriminant.sqrt();
+            let point = origin.add(direction.mul(t));
+            consider(t, point.sub(*corner).normalized_or(direction.neg()));
+        }
+    }
+    for index in 0..world.len() {
+        let a = world[index];
+        let b = world[(index + 1) % world.len()];
+        let edge = b.sub(a);
+        let length_squared = edge.length_squared();
+        if length_squared <= EPSILON * EPSILON {
+            continue;
+        }
+        let mut normal = Vec2::new(edge.y, -edge.x).normalized_or(Vec2::new(1.0, 0.0));
+        if world.len() >= 3 && normal.dot(a.add(b).mul(0.5).sub(centroid)) < 0.0 {
+            normal = normal.neg();
+        }
+        let approach = direction.dot(normal);
+        if approach >= -EPSILON {
+            continue;
+        }
+        let t = a.add(normal.mul(radius)).sub(origin).dot(normal) / approach;
+        let point = origin.add(direction.mul(t));
+        let along = point.sub(a.add(normal.mul(radius))).dot(edge) / length_squared;
+        if (0.0..=1.0).contains(&along) {
+            consider(t, normal);
+        }
+    }
+    best.map(|(t, normal)| {
+        let point = origin.add(direction.mul(t));
+        PhysicsQueryHit { handle: 0, point: [point.x, point.y], normal: [normal.x, normal.y], distance: t }
+    })
 }
 
 // 求射线与具体形状的精确交点、法线和距离。
@@ -121,7 +190,8 @@ fn ray_body(body: &Body, origin: Vec2, direction: Vec2, distance: f64) -> Option
                 distance: t,
             })
         }
-        Shape::Polygon { vertices } => {
+        Shape::Polygon { vertices, radius } if *radius > 0.0 => ray_rounded(body, vertices, *radius, origin, direction, distance),
+        Shape::Polygon { vertices, .. } => {
             let world_vertices: Vec<Vec2> = vertices
                 .iter()
                 .map(/* 计算并返回 body . collider_position () . add (rotate (* vertex , body . collider_angle ()))，用于当前 ray_body 流程。 */ |vertex| {
@@ -215,19 +285,19 @@ fn query_shape(shape: Shape, position: Vec2, angle: f64) -> Body {
         one_way_normal: Vec2::new(0.0, 1.0),
         auto_inertia: false,
         collider_children: Vec::new(),
+        tangent_speed: 0.0,
+        rolling_resistance: 0.0,
     }
 }
 
 // 根据半宽和半高构造矩形凸多边形。
 fn box_shape(half_width: f64, half_height: f64) -> Shape {
-    Shape::Polygon {
-        vertices: vec![
-            Vec2::new(-half_width, -half_height),
-            Vec2::new(half_width, -half_height),
-            Vec2::new(half_width, half_height),
-            Vec2::new(-half_width, half_height),
-        ],
-    }
+    sharp_polygon(vec![
+        Vec2::new(-half_width, -half_height),
+        Vec2::new(half_width, -half_height),
+        Vec2::new(half_width, half_height),
+        Vec2::new(-half_width, half_height),
+    ])
 }
 
 // 计算射线穿越轴对齐边界盒的有效距离区间。
@@ -1403,7 +1473,7 @@ fn cast_box_against_body(
         };
         return Some(hit);
     }
-    if let Shape::Polygon { vertices } = &body.shape {
+    if let Shape::Polygon { vertices, .. } = &body.shape {
         // Continuous SAT: intersect the exact time interval on every separating axis.
         // Thin/rotated targets cannot fall between a finite number of sample positions.
         let mut axes = vec![

@@ -11,13 +11,13 @@ Build physics experiments, platformers, top-down games, animated scenes and inte
 | Area | Tools |
 | --- | --- |
 | Scenes and objects | Hierarchy, transforms, multi-selection, reusable scenes and prefabs, component Inspector, snapping and viewport tools. |
-| 2D physics | Rust simulation with bodies, colliders, sensors, character controllers, joints, ropes, collision layers and spatial queries. |
+| 2D physics | Rust simulation with bodies, colliders (boxes, circles, capsules, convex and concave polygons), sensors, character controllers, joints (including wheel and target joints), ropes, buoyancy and force areas, conveyor surfaces, collision layers and spatial queries. |
 | Rendering | Nova_A's own renderer, with WebGL2 as the compatibility baseline; sprites, cameras, TileMaps, materials, lights and particles. |
-| Gameplay | Rhai scripts, visual graphs and event authoring, input mapping, signals and gameplay components. |
+| Gameplay | Rhai scripts, Blocks and visual graphs, input mapping with player-rebindable keys, signals, camera effects and gameplay components. |
 | Animation and audio | Animation tracks, state transitions, timelines, 2D rigs, audio sources and mixer tools. |
 | Game interfaces | Canvas layouts, interactive controls, themes, localization and accessibility settings. |
 | Assets | Import, preview and organize sprites, atlases, tiles, fonts, audio, scripts and reusable resources. |
-| Editing and debugging | Customizable workspaces, light/dark themes, Comfortable controls, keyboard shortcuts, Undo/Redo, project recovery, Console and Profiler. |
+| Editing and debugging | Customizable workspaces, light/dark themes, Comfortable controls, keyboard shortcuts, Undo/Redo, project recovery, Console, Profiler, script and block breakpoints, and a physics recording you can rewind and continue from. |
 
 The [capability catalog](./docs/engine/CAPABILITY_CATALOG.md) describes individual tools. The [feature matrix](./docs/engine/FEATURE_MATRIX.md) records their implementation and verification scope.
 
@@ -85,10 +85,10 @@ Desktop development needs the host's compiler and WebView libraries. Use the pre
 pnpm check
 pnpm test:core
 cargo clippy --workspace --all-targets -- -D warnings
-pnpm audit:manual
+pnpm check:repository
 ```
 
-These commands check TypeScript, run the Rust workspace tests, lint Rust code and audit the manual. Native builds, visual interaction, exported games and performance need their corresponding checks as well. Use `pnpm run audit` for combined repository audits; `pnpm audit` is pnpm's dependency-security command.
+These commands check TypeScript, run the Rust workspace tests, lint Rust code and run the repository checks (generated component tables, manual, template catalog, ignore rules, typography). Behaviour checks live in `scripts/verify-*.mjs`; run one with `node scripts/<name>.mjs` (browser checks use Microsoft Edge, or the Chromium named by `NOVA_AUDIT_BROWSER`). On Windows, `scripts\release.cmd` runs every check, builds the editor, the desktop bundles and the Web package, and writes the release set to `releases\v<version>`; it never commits.
 
 ## Repository map
 
@@ -100,10 +100,10 @@ These commands check TypeScript, run the Rust workspace tests, lint Rust code an
 | `crates/` | Rust math, physics, runtime, Rhai scripting, project format, WASM boundary and headless modules. |
 | `nova_core/` | Core compatibility entry and generated WASM package. |
 | `src-tauri/` | Desktop application host and native integration. |
-| `scripts/`, `tests/` | Build tools, checks and test fixtures. |
+| `scripts/`, `tests/` | Build and release tools, generators, checks and test fixtures. |
 | `manual/`, `docs/` | User documentation, engineering specifications and version-specific records. |
 | `reference-projects/` | Example projects and tutorials. |
-| `releases/` | Packaged versions, release notes, evidence and checksums. |
+| `releases/` | Packaged versions (not in Git): release notes, evidence and checksums. |
 
 Rust modules provide the simulation, physics, scripting and format foundations. The editor uses Vue 3; game rendering uses Nova_A's custom renderer. Editor/Runtime/Player separation and related migration details are documented in the engineering tracker.
 
@@ -111,9 +111,9 @@ Projects use versioned schemas and stable object/resource identities. Supported 
 
 ## Contributing
 
-Read [AGENTS.md](./AGENTS.md) and the relevant engineering documents before changing architecture or runtime contracts. Keep changes focused, protect existing projects and run checks covering the affected behavior. Include reproduction steps and platform information when reporting a bug.
+Read the relevant engineering documents under `docs/` before changing architecture or runtime contracts: Runtime, Renderer and Player code must not depend on the editor or Vue stores. Keep changes focused, protect existing projects and run checks covering the affected behavior. Include reproduction steps and platform information when reporting a bug.
 
-Release history belongs in version-specific release notes and edit ledgers under `docs/` and `releases/`; implementation progress belongs in [the engineering tracker](./docs/RUNTIME_STAGE.md).
+Release history belongs in the version records under `docs/` (`RELEASE_NOTES_<version>.md`, `EDIT_LEDGER_<version>.md`, `DEV_PLAN_<version>.md`); implementation progress belongs in [the engineering tracker](./docs/RUNTIME_STAGE.md).
 
 ## License
 

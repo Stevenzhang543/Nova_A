@@ -27,6 +27,7 @@ export default defineConfig(/** 提供 Vue 插件、多入口输出和 Tauri 开
       input: {
         editor: resolve(projectRoot, 'index.html'),
         player: resolve(projectRoot, 'player.html'),
+        playerLegacy: resolve(projectRoot, 'player-legacy.html'),
         manual: resolve(projectRoot, 'manual/index.html')
       },
       output: {

@@ -180,6 +180,8 @@ export const releaseEngineeringState = reactive({
     '/index.html',
     '  Cache-Control: no-cache',
     '/player.html',
+    '  Cache-Control: no-cache',
+    '/player-legacy.html',
     '  Cache-Control: no-cache'
   ].join('\n') + '\n'
 }

@@ -43,7 +43,7 @@ fn closest_collider_point(body: &Body, point: Vec2) -> Vec2 {
     }
     let local = inverse_rotate(point.sub(body.collider_position()), body.collider_angle());
     let closest = match &body.shape {
-        Shape::Polygon { vertices } => {
+        Shape::Polygon { vertices, radius } => {
             let mut closest = vertices[0];
             let mut best = f64::INFINITY;
             for index in 0..vertices.len() {
@@ -62,7 +62,12 @@ fn closest_collider_point(body: &Body, point: Vec2) -> Vec2 {
                     closest = candidate;
                 }
             }
-            closest
+            // 26.45: rounded shapes: the surface lies `radius` beyond the core.
+            if *radius > 0.0 {
+                closest.add(local.sub(closest).normalized_or(Vec2::ZERO).mul(*radius))
+            } else {
+                closest
+            }
         }
         Shape::Ellipse {
             radius_x: a,

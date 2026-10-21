@@ -7,7 +7,7 @@ Engine26.38.0 · Project Format2/schema29. The 26.38 reference pair carries the 
 
 - [Coin Trail — mixed](projects/creator-v2638-mixed-game/README.md)
 - [Renderer-disabled authority](projects/server-v2638-headless-authority/README.md)
-- [26.38 release notes and scope](../docs/RELEASE_NOTES_26_38.md)
+- 26.38 release notes and scope
 
 
 <!-- NOVA_V2637_REFERENCES -->
@@ -26,7 +26,7 @@ Engine26.36.0 · Project Format2/schema29. The current Coin Trail mixed-authorin
 
 - [Coin Trail — mixed](projects/creator-v2636-mixed-game/README.md)
 - [Renderer-disabled authority](projects/server-v2636-headless-authority/README.md)
-- [26.36 release notes and scope](../docs/RELEASE_NOTES_26_36.md)
+- 26.36 release notes and scope
 
 Historical projects and their expected outputs below remain unchanged.
 <!-- NOVA_V2636_REFERENCES_END -->
@@ -43,8 +43,8 @@ Engine26.17.0 · Project Format2/schema29. These generated projects describe exp
 - [Coin Trail — blocks](projects/creator-v2617-blocks-game/README.md)
 - [Coin Trail — mixed](projects/creator-v2617-mixed-game/README.md)
 - [Renderer-disabled authority](projects/server-v2617-headless-authority/README.md)
-- [Complete physics/world lesson](../docs/PHYSICS_WORLD_LESSON_26_17.en.md)
-- [All declared physics/world fields](../docs/PHYSICS_WORLD_FIELD_MATRIX_26_17.md)
+- Complete physics/world lesson
+- All declared physics/world fields
 <!-- NOVA_V2617_REFERENCES_END -->
 
 <!-- NOVA_V2616_REFERENCES -->
@@ -57,7 +57,7 @@ Engine26.16.0 · Project Format2/schema29. The animated menu joins title animati
 - [Coin Trail — blocks](projects/creator-v2616-blocks-game/README.md)
 - [Coin Trail — mixed](projects/creator-v2616-mixed-game/README.md)
 - [Renderer-disabled authority](projects/server-v2616-headless-authority/README.md)
-- [Complete26.16 lesson](../docs/ANIMATION_AUDIO_INTERFACE_LESSON_26_16.en.md)
+- Complete26.16 lesson
 <!-- NOVA_V2616_REFERENCES_END -->
 
 ## Nova_A 26.15 asset/rendering and cumulative references
